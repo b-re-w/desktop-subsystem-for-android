@@ -1667,11 +1667,9 @@ Each has an icon in the taskbar's notification area. Stopping an app ends its wo
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Who scales this app when its window moves to a monitor of another scale.
-• App: the app redraws at the new scale, and text stays sharp.
-• App, for an app that does not say it handles this: Android recreates its screen and keeps its state, so it may redraw briefly.
-• System: the app keeps its scale and DSA scales its window to the same physical size. Text can look a little blurry.
-• Automatic: App for apps that say they handle it, System for the others.
-Automatic and System never restart the app.</value>
+• App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale and text stays sharp: Android recreates its screen once and keeps its state, so it redraws briefly.
+• System: the app keeps its scale and DSA scales its window to the same physical size. The app is never recreated. Text can look a little blurry.
+• Automatic: App, for every app.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Scaling: automatic</value>

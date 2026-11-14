@@ -3341,8 +3341,8 @@ fn fr30_dsa_app_window_changes_and_resets_an_apps_window_settings() {
     let output = dsa(&endpoint, "app-window com.example.notes");
     assert_eq!(
         stdout(&output).trim(),
-        "com.example.notes: resizable, opens at 400 x 700 dp, scales its own way on another \
-         monitor"
+        "com.example.notes: resizable, opens at 400 x 700 dp, redraws at another monitor's \
+         scale once a move ends (the default)"
     );
     let reset = json_of(&dsa(&endpoint, "app-window com.example.notes reset --json"));
     assert_eq!(reset["apps"][0]["start_size"], serde_json::Value::Null);

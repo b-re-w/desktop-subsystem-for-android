@@ -32,8 +32,8 @@ class HostRequestsTest {
         .setResizeTask(ResizeTask.newBuilder().setTaskId(taskId).setWidth(width).setHeight(height).setLive(live))
         .build().toByteArray()
 
-    private fun density(taskId: Int, densityDpi: Int) = Envelope.newBuilder()
-        .setSetTaskDensity(SetTaskDensity.newBuilder().setTaskId(taskId).setDensityDpi(densityDpi))
+    private fun density(taskId: Int, densityDpi: Int, recreate: Boolean = false) = Envelope.newBuilder()
+        .setSetTaskDensity(SetTaskDensity.newBuilder().setTaskId(taskId).setDensityDpi(densityDpi).setRecreate(recreate))
         .build().toByteArray()
 
     private fun launchShortcut(packageName: String, shortcutId: String) = Envelope.newBuilder()
@@ -82,6 +82,13 @@ class HostRequestsTest {
 
         assertEquals(RequestResult.Resize(3, Size(1280, 720)), requests.handle(resize(3, 1280, 720)))
         assertEquals(RequestResult.Density(3, 320), requests.handle(density(3, 320)))
+    }
+
+    @Test
+    fun fr4_a_density_from_a_move_that_ended_asks_for_the_activity_to_be_recreated() {
+        reported += 3
+
+        assertEquals(RequestResult.Density(3, 262, recreate = true), requests.handle(density(3, 262, recreate = true)))
     }
 
     private fun caption(taskId: Int, height: Int) = Envelope.newBuilder()

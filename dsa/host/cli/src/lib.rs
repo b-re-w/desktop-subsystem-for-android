@@ -62,13 +62,12 @@
 //! app's windows cannot be resized or maximized, and an app with a start size opens its windows
 //! at that size, in Android's desktop dp (1/117.23 inch, 0.819 of a pixel at a scale of 100%).
 //! `--dpi-scaling` says how the app follows its window to a monitor of another scale: `app`
-//! gives it the new monitor's density and it
-//! redraws (Android recreates the screen of an app that does not say it handles a change of
-//! density, and restores its state, so it may redraw briefly), `system` keeps its
-//! density and scales the window to the same physical size, and `system-forced` would give a
-//! new density to any app without a restart, which needs a framework change that is not made
-//! yet, so it works as `system` until then. `auto`, the default, is `app` for an app that says
-//! it handles a change of density and `system` for any other; neither restarts the app.
+//! scales the window while it is dragged, then gives the app the new monitor's density when
+//! the move ends, and Android recreates its screen once and restores its state, so it redraws
+//! briefly; `system` keeps its density and scales the window to the same physical size, and
+//! never recreates the app; and `system-forced` would give a new density to any app without
+//! a restart, which needs a framework change that is not made yet, so it works as `system`
+//! until then. `auto`, the default, is `app` for every app.
 //! `--fullscreen screen|window|default` says where the app's clear full screen request shows (a
 //! video player's full screen button): on the whole screen, inside its window, or as the
 //! `app-fullscreen` setting for every app says. `--immersive` says the same for the app hiding
@@ -2268,8 +2267,10 @@ fn app_window_json(app: &AppWindowSettings) -> Value {
 /// How `dsa app-window` says an app follows its window to a monitor of another scale.
 fn describe_dpi_scaling(scaling: DpiScaling) -> String {
     match scaling {
-        DpiScaling::Auto => "scales its own way on another monitor".to_string(),
-        DpiScaling::App => "redraws at another monitor's scale".to_string(),
+        DpiScaling::Auto => {
+            "redraws at another monitor's scale once a move ends (the default)".to_string()
+        }
+        DpiScaling::App => "redraws at another monitor's scale once a move ends".to_string(),
         DpiScaling::System => "is scaled by DSA on another monitor".to_string(),
         DpiScaling::SystemForced if DpiScaling::FORCED_AVAILABLE => {
             "is given another monitor's scale without a restart".to_string()
