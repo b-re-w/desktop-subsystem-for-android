@@ -134,6 +134,7 @@ class AndroidTaskSource(
                 fullscreenTheme = themes.asks(top),
                 orientation = orientations.of(info.taskId, info.topActivity?.flattenToShortString(), declared),
             ),
+            leftFreeform = fields.windowingMode(info) == WINDOWING_MODE_FULLSCREEN,
             pictureInPicture = fields.windowingMode(info) == WINDOWING_MODE_PINNED,
             transparentCaption = fields.transparentCaption(info),
             // Whether Back lands on a screen the user saw is the agent's to tell, from the

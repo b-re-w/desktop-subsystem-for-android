@@ -273,6 +273,44 @@ class AndroidTaskActions(
     }
 
     /**
+     * Puts the task in the freeform windowing mode at [freeformBounds], or in the fullscreen
+     * one with null, in one WindowContainerTransaction (setWindowingMode, and setBounds for
+     * freeform). A task whose app left freeform for fullscreen comes back to its host window
+     * this way, at the size it had, when the user keeps its full screen inside the window.
+     */
+    override fun setWindowingMode(taskId: Int, freeformBounds: TaskBounds?): Boolean = try {
+        val token = taskToken(taskId)
+        if (token == null) {
+            false
+        } else {
+            val tokenClass = Class.forName("android.window.WindowContainerToken")
+            val transactionClass = Class.forName("android.window.WindowContainerTransaction")
+            val transaction = transactionClass.getConstructor().newInstance()
+            // WindowConfiguration.WINDOWING_MODE_FULLSCREEN is 1.
+            val mode = if (freeformBounds != null) WINDOWING_MODE_FREEFORM else 1
+            transactionClass.getMethod("setWindowingMode", tokenClass, Int::class.javaPrimitiveType)
+                .invoke(transaction, token, mode)
+            if (freeformBounds != null) {
+                transactionClass.getMethod("setBounds", tokenClass, Rect::class.java).invoke(
+                    transaction,
+                    token,
+                    Rect(freeformBounds.left, freeformBounds.top, freeformBounds.right, freeformBounds.bottom),
+                )
+            }
+            commit(transactionClass, transaction)
+        }
+    } catch (e: ReflectiveOperationException) {
+        log.warn("the framework cannot change task $taskId's windowing mode", e)
+        false
+    } catch (e: LinkageError) {
+        log.warn("the framework cannot change task $taskId's windowing mode", e)
+        false
+    } catch (e: RuntimeException) {
+        log.warn("the framework refused to change task $taskId's windowing mode", e)
+        false
+    }
+
+    /**
      * Applies [transaction] through the window organizer controller, which needs
      * MANAGE_ACTIVITY_TASKS, not a registered organizer. False when the framework has no
      * controller.

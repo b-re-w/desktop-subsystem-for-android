@@ -279,6 +279,8 @@ pub struct TaskWindows {
     app_windows: BTreeMap<String, AppWindowSettings>,
     /// Where every app without its own choice shows its full screen.
     fullscreen_defaults: FullScreenDefaults,
+    /// Whether each task was last told to keep a clear full screen request inside its window.
+    told_full_screen: BTreeMap<i32, bool>,
     /// Tasks whose window opens once the guest has given them their start size.
     pending: BTreeMap<i32, PendingOpen>,
     /// The mode and resizability each window was last told.
@@ -630,6 +632,7 @@ impl TaskWindows {
                 self.told_modes.remove(task_id);
                 self.cursors.remove(task_id);
                 self.bands.remove(task_id);
+                self.told_full_screen.remove(task_id);
                 if self.pending.remove(task_id).is_some() {
                     self.closing.remove(task_id);
                     self.tasks.remove(task_id);
@@ -997,6 +1000,7 @@ impl TaskWindows {
             .into_iter()
             .filter_map(|task_id| self.recaption(task_id))
             .collect();
+        requests.extend(self.full_screen_requests());
         requests.extend(self.size_reconfigures(now));
         requests
     }
@@ -1016,6 +1020,35 @@ impl TaskWindows {
         *given = scale;
         *given_cleared = cleared;
         Some(caption_request(task_id, given_band(*band, cleared), scale))
+    }
+
+    /// The requests that tell each task with a window where a clear full screen request of its
+    /// app shows, when that differs from what it was last told: the guest keeps a task that
+    /// leaves freeform for fullscreen inside its window, at the size it had, only when the
+    /// user's setting says so.
+    fn full_screen_requests(&mut self) -> Vec<TaskRequest> {
+        let mut requests = Vec::new();
+        for task_id in self.windows() {
+            let Some(task) = self.tasks.get(&task_id) else {
+                continue;
+            };
+            let in_window = full_screen_place(
+                crate::tasks::FullScreenRequest::Explicit,
+                self.app_windows.get(&task.package_name),
+                self.fullscreen_defaults,
+            ) == Some(FullScreenPlace::Window);
+            // The guest lets every task fill the screen until it is told otherwise.
+            let told = self
+                .told_full_screen
+                .get(&task_id)
+                .copied()
+                .unwrap_or(false);
+            if told != in_window {
+                self.told_full_screen.insert(task_id, in_window);
+                requests.push(TaskRequest::SetFullScreen { task_id, in_window });
+            }
+        }
+        requests
     }
 
     /// Whether `task_id` is given no title band: its app asks to fill the screen. Its window
@@ -1065,6 +1098,7 @@ impl TaskWindows {
         self.told_modes.clear();
         self.cursors.clear();
         self.bands.clear();
+        self.told_full_screen.clear();
         changes
     }
 
@@ -1095,6 +1129,7 @@ impl TaskWindows {
             .retain(|task_id, _| present.contains(task_id));
         self.cursors.retain(|task_id, _| present.contains(task_id));
         self.bands.retain(|task_id, _| present.contains(task_id));
+        self.told_full_screen.clear();
         self.displays.clear();
         for event in current {
             changes.extend(self.apply(event));
@@ -2404,6 +2439,45 @@ mod tests {
                 task_id: 1,
                 mode: WindowMode::Normal,
                 resizable: true,
+            }]
+        );
+    }
+
+    #[test]
+    fn fr30_the_guest_hears_to_keep_a_task_that_leaves_freeform_inside_its_window() {
+        let now = Instant::now();
+        let mut windows = TaskWindows::new();
+        windows.apply(&updated(1, "Player"));
+        // The default fills the screen, which the guest does without being told.
+        assert!(windows.reconfigures(now).is_empty());
+        let package = windows.package_of(1).unwrap().to_string();
+        windows.set_app_windows(&[AppWindowSettings {
+            package_name: package.clone(),
+            fullscreen: FullScreenPlace::Window,
+            ..AppWindowSettings::default()
+        }]);
+        assert_eq!(
+            windows.reconfigures(now),
+            vec![TaskRequest::SetFullScreen {
+                task_id: 1,
+                in_window: true,
+            }]
+        );
+        // Told once.
+        assert!(windows.reconfigures(now).is_empty());
+        // Back to the whole screen, by the app's choice or by the default for every app.
+        windows.set_app_windows(&[]);
+        windows.set_full_screen_defaults(crate::app_windows::FullScreenDefaults {
+            fullscreen: FullScreenPlace::Window,
+            immersive: FullScreenPlace::Window,
+        });
+        assert!(windows.reconfigures(now).is_empty());
+        windows.set_full_screen_defaults(crate::app_windows::FullScreenDefaults::default());
+        assert_eq!(
+            windows.reconfigures(now),
+            vec![TaskRequest::SetFullScreen {
+                task_id: 1,
+                in_window: false,
             }]
         );
     }

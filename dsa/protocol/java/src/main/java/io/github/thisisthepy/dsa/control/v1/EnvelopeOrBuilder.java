@@ -1526,6 +1526,17 @@ public interface EnvelopeOrBuilder extends
   io.github.thisisthepy.dsa.control.v1.SetTaskCaption getSetTaskCaption();
 
   /**
+   * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+   * @return Whether the setTaskFullScreen field is set.
+   */
+  boolean hasSetTaskFullScreen();
+  /**
+   * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+   * @return The setTaskFullScreen.
+   */
+  io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen getSetTaskFullScreen();
+
+  /**
    * <code>.dsa.control.v1.SystemSettings system_settings = 340;</code>
    * @return Whether the systemSettings field is set.
    */

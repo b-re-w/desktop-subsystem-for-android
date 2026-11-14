@@ -89,6 +89,21 @@ class HostRequestsTest {
         .build().toByteArray()
 
     @Test
+    fun fr30_where_a_tasks_full_screen_shows_is_handed_back_for_a_reported_task() {
+        val frame = { taskId: Int, inWindow: Boolean ->
+            Envelope.newBuilder()
+                .setSetTaskFullScreen(
+                    io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen.newBuilder().setTaskId(taskId).setInWindow(inWindow),
+                )
+                .build().toByteArray()
+        }
+        assertTrue(requests.handle(frame(5, true)) is RequestResult.SizeRefused)
+        reported += 5
+        assertEquals(RequestResult.FullScreen(5, true), requests.handle(frame(5, true)))
+        assertEquals(RequestResult.FullScreen(5, false), requests.handle(frame(5, false)))
+    }
+
+    @Test
     fun fr22_the_reach_of_a_windows_icon_and_buttons_is_handed_back_with_its_height() {
         reported += 3
         val frame = Envelope.newBuilder()

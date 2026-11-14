@@ -160,6 +160,16 @@ pub struct SetTaskCaption {
     #[prost(uint32, tag = "4")]
     pub end_width: u32,
 }
+/// Where a task's window shows a clear full screen request of its app: asks the caller's
+/// Android to keep a task that leaves freeform for fullscreen inside its window, at the bounds
+/// it had (`in_window`), or to let it fill the screen.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetTaskFullScreen {
+    #[prost(int32, tag = "1")]
+    pub task_id: i32,
+    #[prost(bool, tag = "2")]
+    pub in_window: bool,
+}
 /// Turns the connection into a stream of input for the caller's Android: after the answer
 /// (Done), the client sends only PointerEvent, KeyEvent and text input frames, which the
 /// service passes on as they come, without answering them. Input is never waited on, so a pointer that moves
@@ -3042,7 +3052,7 @@ pub struct Request {
     pub id: u64,
     #[prost(
         oneof = "request::Body",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 48, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702"
     )]
     pub body: ::core::option::Option<request::Body>,
 }
@@ -3126,6 +3136,8 @@ pub mod request {
         UninstallApp(super::UninstallApp),
         #[prost(message, tag = "45")]
         SetTaskCaption(super::SetTaskCaption),
+        #[prost(message, tag = "48")]
+        SetTaskFullScreen(super::SetTaskFullScreen),
         #[prost(message, tag = "70")]
         WatchLog(super::WatchLog),
         #[prost(message, tag = "71")]
