@@ -486,7 +486,7 @@ mod tests {
     }
 
     #[test]
-    fn fr35_the_polkit_prompt_names_the_adb_shell_as_the_developer_shell() {
+    fn fr35_the_polkit_prompt_names_the_adb_shell_as_the_adb_shell() {
         let mut shell = request();
         shell.app.package_name = "com.android.shell".into();
         shell.app.label = "Shell".into();
@@ -496,10 +496,10 @@ mod tests {
         assert_eq!(prompt.ask(&shell, WAIT), PromptAnswer::Approved);
         let checks = prompt.authority.checks.lock().unwrap();
         let details = &checks[0].1;
-        assert_eq!(detail(details, "app"), "개발자 셸 (adb)");
+        assert_eq!(detail(details, "app"), "adb 셸");
         assert_eq!(
             detail(details, "polkit.message"),
-            "개발자 셸 (adb)에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`"
+            "adb 셸에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`"
         );
         // A terminal, not DSA's icon and not a package's.
         assert_eq!(detail(details, "polkit.icon_name"), SHELL_ICON_NAME);

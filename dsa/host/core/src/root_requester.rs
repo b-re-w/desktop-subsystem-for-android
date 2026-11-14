@@ -93,8 +93,8 @@ impl Requester {
 /// The name of `adb shell` in the prompt.
 pub fn developer_shell_name(language: Language) -> &'static str {
     match language {
-        Language::English => "Developer shell (adb)",
-        Language::Korean => "개발자 셸 (adb)",
+        Language::English => "adb shell",
+        Language::Korean => "adb 셸",
     }
 }
 
@@ -261,11 +261,8 @@ mod tests {
         // The same service in a second Android user.
         assert_eq!(system_name(101_000, Language::English), "Android system");
         assert_eq!(system_name(1013, Language::Korean), "Android 시스템 서비스");
-        assert_eq!(developer_shell_name(Language::Korean), "개발자 셸 (adb)");
-        assert_eq!(
-            developer_shell_name(Language::English),
-            "Developer shell (adb)"
-        );
+        assert_eq!(developer_shell_name(Language::Korean), "adb 셸");
+        assert_eq!(developer_shell_name(Language::English), "adb shell");
     }
 
     #[test]

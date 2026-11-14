@@ -1288,11 +1288,8 @@ mod tests {
         shell.uid = 2000;
         assert!(root.answer(&shell).approved);
         let seen = fake.seen.lock().unwrap();
-        assert_eq!(seen[0].app_name(), "Developer shell (adb)");
-        assert_eq!(
-            seen[0].message(),
-            "Developer shell (adb) wants to run `id` as root."
-        );
+        assert_eq!(seen[0].app_name(), "adb shell");
+        assert_eq!(seen[0].message(), "adb shell wants to run `id` as root.");
         drop(seen);
         // Refused, su fails.
         let refusing = FakePrompt::new(PromptAnswer::Denied);
@@ -1341,15 +1338,15 @@ mod tests {
     }
 
     #[test]
-    fn fr35_the_root_prompt_names_the_adb_shell_as_the_developer_shell() {
+    fn fr35_the_root_prompt_names_the_adb_shell_as_the_adb_shell() {
         use crate::root_elevation::ADB_SHELL_PACKAGE;
         let mut shell = request(ADB_SHELL_PACKAGE);
         // Whatever label the guest gives the shell package, it is not the name shown.
         shell.app.label = "Shell".into();
         shell.uid = 2000;
         assert_eq!(shell.requester(), Requester::DeveloperShell);
-        assert_eq!(shell.name_in(Language::Korean), "개발자 셸 (adb)");
-        assert_eq!(shell.name_in(Language::English), "Developer shell (adb)");
+        assert_eq!(shell.name_in(Language::Korean), "adb 셸");
+        assert_eq!(shell.name_in(Language::English), "adb shell");
         assert_eq!(
             shell.detail_in(Language::English),
             "com.android.shell (uid 2000)"
@@ -1357,14 +1354,14 @@ mod tests {
         assert_eq!(shell.prompt_icon(), PromptIcon::Generic(GenericIcon::Shell));
         assert_eq!(
             shell.message_in(Language::Korean),
-            "개발자 셸 (adb)에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`"
+            "adb 셸에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`"
         );
         let mut interactive = shell.clone();
         interactive.command.clear();
         interactive.interactive = true;
         assert_eq!(
             interactive.message_in(Language::Korean),
-            "개발자 셸 (adb)에서 루트 셸을 열려고 합니다."
+            "adb 셸에서 루트 셸을 열려고 합니다."
         );
         assert_eq!(interactive.command_text_in(Language::Korean), "대화형 셸");
         // The shell uid names the shell even when the package list left the package out, and
@@ -1374,7 +1371,7 @@ mod tests {
         assert_eq!(by_uid.requester(), Requester::DeveloperShell);
         // Keeping root for the shell is asked under the same name.
         let keep = ApprovalRequest::keep_root(shell.app.clone());
-        assert_eq!(keep.name_in(Language::Korean), "개발자 셸 (adb)");
+        assert_eq!(keep.name_in(Language::Korean), "adb 셸");
     }
 
     #[test]
