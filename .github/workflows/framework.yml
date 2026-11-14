@@ -294,6 +294,14 @@ jobs:
   # communication with the server", android17 in run 43637660922, 50 minutes into the build). So
   # the build runs with fewer jobs at the lowest priority (build-services.sh), swapped pages are
   # compressed in memory first, and the kernel's OOM killer takes the build before the agent.
+  #
+  # With all that, android17's analysis still printed nothing for 58 minutes until GitHub took
+  # the runner away (run 43644988414), while android16's took 9 minutes in the same run.
+  # build-services.sh says what was found and what it does about it: Android 17 turns Soong's
+  # incremental analysis on, which a single analysis of a fresh tree only pays for, and the Go
+  # memory limit never reached the analysis in either version. It also prints the memory, the
+  # swap and the disk every minute, and stops an analysis that takes longer than
+  # DSA_ANALYSIS_MINUTES itself, so that a build that does not fit says what it was short of.
   services:
     name: Build services.jar (ubuntu-24.04, ${{ matrix.android }})
     needs: versions
@@ -392,10 +400,13 @@ jobs:
       # build-services.sh stops itself after DSA_BUILD_MINUTES, before the step's limit, so that
       # a build out of time says so; it also says when it ran out of disk or memory.
       # DSA_SERVICES_JOBS is ninja's job count: build-services.sh says why 2 and not the runner's 4.
+      # DSA_ANALYSIS_MINUTES bounds the analysis alone: android16's takes 9 minutes, and the two
+      # that lost their runner had been silent for 50 and 58.
       - name: Build services.jar
         timeout-minutes: 300
         env:
           DSA_BUILD_MINUTES: 285
+          DSA_ANALYSIS_MINUTES: 45
           DSA_SERVICES_JOBS: 2
         run: |
           start=$SECONDS

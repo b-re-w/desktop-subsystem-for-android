@@ -25,6 +25,28 @@
 # time says so before the job's limit stops it without a word. A failure says whether it was the
 # disk, the memory or the time.
 #
+# The analysis is the step that did not fit. Android 16's takes 9 minutes on a standard runner;
+# Android 17's printed nothing for 58 minutes and then GitHub took the runner away (run
+# 43644988414), with no figure in the log to say why. Two things were found in the pinned
+# build/soong, and the script answers both:
+#   - Android 17's release configuration turns Soong's incremental analysis on
+#     (RELEASE_SOONG_INCREMENTAL_ANALYSIS; the build's banner says SOONG_INCREMENTAL_ANALYSIS=true
+#     and soong_build runs with --incremental-build-actions). Beside the ninja files, the
+#     analysis then hashes and serialises every module's providers and writes them, and a second
+#     copy of every module's ninja statements, to key-value stores under out/soong, so that a
+#     later analysis of the same tree can skip the modules that did not change. This build
+#     analyses a fresh tree once and throws it away, so that work buys nothing and costs memory
+#     and disk the runner does not have. SOONG_INCREMENTAL_ANALYSIS=false turns it off; Android
+#     16's Soong does not read the variable and never had it on.
+#   - GOMEMLIMIT never reached soong_build: soong_ui starts it with an empty environment
+#     (`env -i`), so its heap grew to twice what is live before Go collected it, in both
+#     versions. framework_lock.py soong-memory-limit changes soong_ui's source in the tree to
+#     hand the variable on.
+# So that the next failure says why, a line a minute gives the memory, the swap, the pressure,
+# the disk and the largest processes while the build runs, and the analysis is stopped after
+# DSA_ANALYSIS_MINUTES (45 by default), while the runner still answers, not after an hour of
+# silence.
+#
 # The runner has 4 processors and 16 GiB, and its own agent must keep answering GitHub while the
 # build runs: when the build took every processor and swapped hard, the agent went silent and
 # GitHub gave the job up. So the build leaves it room:
@@ -36,7 +58,9 @@
 #     and metalava never run beside each other.
 #   - GOMEMLIMIT=10GiB for Soong's analysis, which is Go: by default its heap grows to twice what
 #     is live before it collects, and the limit makes it collect sooner instead of growing into
-#     swap. It leaves 6 GiB for the runner, the page cache and kati.
+#     swap. It leaves 6 GiB for the runner and the page cache the ninja files are written
+#     through. Should more than the limit be live, Go spends at most half its time collecting
+#     and lets the heap pass the limit, so the limit slows the analysis and never stops it.
 #   - The lowest processor and disk priority (nice 19, ionice best effort 7), so the agent runs
 #     first whenever it needs to.
 #   - The highest OOM score (choom 1000): when memory runs out, the kernel stops the build, which
@@ -53,6 +77,12 @@ lock="$repo/dsa/guest/framework/framework-lock.json"
 minutes="${DSA_BUILD_MINUTES:-280}"
 deadline=$(( SECONDS + minutes * 60 ))
 jobs="${DSA_SERVICES_JOBS:-2}"
+analysis_minutes="${DSA_ANALYSIS_MINUTES:-45}"
+# A bound on the next build step alone, in minutes (0: only the script's own), and what a step
+# stopped for its time was given.
+step_minutes=0
+stopped_after="the $minutes minutes the job gives it (DSA_BUILD_MINUTES)"
+stop_at="$deadline"
 
 target="$(jq -r --arg a "$android" '.versions[] | select(.android == $a) | .target' "$lock")"
 release="$(jq -r --arg a "$android" '.versions[] | select(.android == $a) | .release' "$lock")"
@@ -68,14 +98,55 @@ room() {
   echo "::endgroup::"
 }
 
+# One line of what the build has of the runner now: the memory still available, the swap in use
+# and how much of it zswap holds compressed in memory, the pages waiting to be written, the
+# share of the last 10 seconds some task (and every task) waited for memory and for the disk,
+# the disk left, the load, and the three largest processes with what each has in memory and in
+# swap.
+room_line() {
+  local memory pressure disk largest
+  memory="$(awk '
+    /^MemTotal:/ { total = $2 } /^MemAvailable:/ { available = $2 }
+    /^SwapTotal:/ { swap = $2 } /^SwapFree:/ { swap_free = $2 }
+    /^Zswap:/ { pool = $2 } /^Zswapped:/ { held = $2 } /^Dirty:/ { dirty = $2 }
+    END { printf "memory %.1f of %.1f GiB available, swap %.1f of %.1f GiB used (zswap holds %.1f GiB in %.1f), %.1f GiB to write",
+          available / 1048576, total / 1048576, (swap - swap_free) / 1048576, swap / 1048576,
+          held / 1048576, pool / 1048576, dirty / 1048576 }' /proc/meminfo 2>/dev/null || true)"
+  pressure="$(for what in memory io; do
+    awk -v what="$what" '{ split($2, avg, "="); share[$1] = avg[2] }
+      END { printf "%s %s/%s %% ", what, share["some"], share["full"] }' "/proc/pressure/$what" 2>/dev/null || true
+  done)"
+  disk="$(df -BM --output=avail "$top" 2>/dev/null | tail -1 | tr -d ' M' || true)"
+  largest="$(ps -eo rss=,pid=,comm= --sort=-rss 2>/dev/null | head -3 | awk '{
+      swapped = 0; status = "/proc/" $2 "/status"
+      while ((getline line < status) > 0) if (line ~ /^VmSwap:/) { split(line, field, " "); swapped = field[2] }
+      close(status)
+      printf "%s%s %.1f GiB (and %.1f in swap)", (NR > 1 ? ", " : ""), $3, $1 / 1048576, swapped / 1048576
+    }' || true)"
+  echo "[room $(date -u +%H:%M:%S)] $memory; waiting for ${pressure% }; disk ${disk:-?} MiB free; load $(cut -d' ' -f1 /proc/loadavg); largest: $largest"
+}
+
+# room_line every DSA_ROOM_SECONDS (60 by default) until the script ends. It runs at the
+# shell's own priority, not the build's, so it still prints when the build has the runner busy.
+watch_room() {
+  local every="${DSA_ROOM_SECONDS:-60}" nap=
+  trap '[[ -z "$nap" ]] || kill "$nap" 2>/dev/null; exit 0' TERM
+  while true; do
+    sleep "$every" &
+    nap=$!
+    wait "$nap" || true
+    room_line || true
+  done
+}
+
 # Says why a build step failed: the disk, the memory, the time, or the build itself.
 explain() {
   local status="$1" what="$2" avail logs
   avail="$(df -k --output=avail "$top" | tail -1 | tr -d ' ')"
   logs="$(cat out/error.log out/soong.log 2>/dev/null || true)"
   room "after the failed $what"
-  if (( status == 124 || status == 137 && SECONDS >= deadline )); then
-    echo "::error::$what ran out of time: it was stopped after the $minutes minutes the job gives it (DSA_BUILD_MINUTES)"
+  if (( status == 124 || status == 137 && SECONDS >= stop_at )); then
+    echo "::error::$what ran out of time: it was stopped after $stopped_after; the [room] lines above say what it was short of"
   elif (( avail < 2 * 1024 * 1024 )) || grep -q "No space left on device" <<< "$logs"; then
     echo "::error::$what ran out of disk: $(( avail / 1024 )) MiB left on the tree's disk"
   elif sudo dmesg 2>/dev/null | grep -qiE "out of memory|oom-kill|killed process" \
@@ -95,11 +166,17 @@ explain() {
 
 # soong_ui, as m runs it, within what is left of the time, with the room the notes above give the
 # runner. choom, nice and ionice each run the next command in their own process, so timeout's
-# signal reaches soong_ui.
+# signal reaches soong_ui. step_minutes, when set, bounds this one step sooner.
 build() {
   local what="$1" left status=0
   shift
   left=$(( deadline - SECONDS ))
+  stopped_after="the $minutes minutes the job gives it (DSA_BUILD_MINUTES)"
+  if (( step_minutes > 0 && step_minutes * 60 < left )); then
+    left=$(( step_minutes * 60 ))
+    stopped_after="the $step_minutes minutes this step is given"
+  fi
+  stop_at=$(( SECONDS + left ))
   (( left > 60 )) || { explain 124 "$what"; }
   timeout --signal=TERM --kill-after=120 "$left" \
     choom -n 1000 -- nice -n 19 ionice -c 2 -n 7 \
@@ -109,6 +186,8 @@ build() {
 
 # Every patch, the ones to Java sources included: the whole tree has every file they change.
 uv run "$repo/dsa/guest/framework/apply-patches.py" --android "$android" --top "$top"
+# soong_ui is built from this source when the build starts, so the change is in the first run.
+uv run "$repo/dsa/guest/framework/framework_lock.py" soong-memory-limit "$top/build/soong/ui/build/soong.go"
 
 cd "$top"
 export ALLOW_MISSING_DEPENDENCIES=true
@@ -122,7 +201,9 @@ export SOONG_NINJA=ninja
 # The memory limits of the notes at the top.
 export NINJA_HIGHMEM_NUM_JOBS=1
 export GOMEMLIMIT=10GiB
-echo "building with $jobs ninja jobs, $NINJA_HIGHMEM_NUM_JOBS high memory job, GOMEMLIMIT=$GOMEMLIMIT"
+# One analysis of a fresh tree: nothing would ever read the caches an incremental analysis keeps.
+export SOONG_INCREMENTAL_ANALYSIS=false
+echo "building with $jobs ninja jobs, $NINJA_HIGHMEM_NUM_JOBS high memory job, GOMEMLIMIT=$GOMEMLIMIT, SOONG_INCREMENTAL_ANALYSIS=$SOONG_INCREMENTAL_ANALYSIS"
 
 set +u
 # shellcheck disable=SC1091
@@ -132,9 +213,27 @@ set -u
 product_out="$(get_build_var PRODUCT_OUT)"
 room "before the analysis"
 
+watch_room &
+watcher=$!
+trap 'kill "$watcher" 2>/dev/null || true' EXIT
+
 # The analysis of the whole tree, and the ninja files, with nothing built.
+analysis_start=$SECONDS
+step_minutes="$analysis_minutes"
 build "the analysis of the tree" nothing
+step_minutes=0
+echo "analysed the tree in $(( (SECONDS - analysis_start) / 60 )) minutes"
 room "after the analysis"
+du -sh out/soong/*.ninja 2>/dev/null | sort -rh | head -5 || true
+# How soong_build was started, from the rule soong_ui wrote for it: with the memory limit, and
+# without the incremental analysis.
+bootstrap=out/soong/bootstrap.ninja
+if [[ -f "$bootstrap" ]]; then
+  grep -q "GOMEMLIMIT=$GOMEMLIMIT" "$bootstrap" \
+    || echo "::warning::soong_build ran without GOMEMLIMIT: $bootstrap does not name it"
+  ! grep -q -- "--incremental-build-actions" "$bootstrap" \
+    || echo "::warning::soong_build ran its incremental analysis although SOONG_INCREMENTAL_ANALYSIS is false"
+fi
 
 ninja_file="$(ls -t out/combined-*.ninja 2>/dev/null | head -1 || true)"
 [[ -n "$ninja_file" ]] || ninja_file="out/soong/build.$TARGET_PRODUCT.ninja"
