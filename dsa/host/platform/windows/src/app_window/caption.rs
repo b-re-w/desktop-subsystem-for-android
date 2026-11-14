@@ -799,12 +799,25 @@ impl CaptionWindow {
             height,
             ..CaptionLayout::new(0, height, dpi, 0).band()
         };
+        self.report_band(band, report);
+    }
+
+    /// Reports `band` when it differs from the one last reported.
+    fn report_band(&self, band: CaptionBand, report: &dyn Fn(FromHost)) {
         if self.reported.replace(band) != band {
             report(FromHost::Caption {
                 task_id: self.task_id,
                 band,
             });
         }
+    }
+
+    /// Reports that the window has no title bar (it fills the monitor), so the task has no top
+    /// inset. The band is reported again when the title bar comes back
+    /// ([`Self::report_height`]), even at the height it had before: the task's inset was 0 in
+    /// between, and an app that reads its inset once kept its toolbar under the caption.
+    pub fn report_none(&self, report: &dyn Fn(FromHost)) {
+        self.report_band(CaptionBand::default(), report);
     }
 
     /// Draws the title bar as it is now, unless that is what was drawn last.
@@ -1187,6 +1200,36 @@ mod tests {
         unsafe { caption.set_back(none, true, None) };
         assert!(!caption.release_back(9500));
         assert_eq!(sent(), 0);
+    }
+
+    #[test]
+    fn fr22_the_title_bar_band_is_reported_again_when_full_screen_ends() {
+        let (input, _guest) = std::sync::mpsc::channel();
+        let caption = CaptionWindow::new(7, WS_OVERLAPPEDWINDOW, 0, 1, input);
+        let reports = std::cell::RefCell::new(Vec::new());
+        let report = |message: FromHost| reports.borrow_mut().push(message);
+        let band = CaptionBand {
+            height: 58,
+            start_width: 70,
+            end_width: 276,
+        };
+        caption.report_band(band, &report);
+        // The same band again says nothing new.
+        caption.report_band(band, &report);
+        // Full screen takes the title bar away, and the task's inset with it.
+        caption.report_none(&report);
+        // Back in a window the band is reported again, though it is the one it had before:
+        // the task was at 0 in between.
+        caption.report_band(band, &report);
+        let reported: Vec<CaptionBand> = reports
+            .borrow()
+            .iter()
+            .map(|message| match message {
+                FromHost::Caption { task_id: 7, band } => *band,
+                other => panic!("unexpected report {other:?}"),
+            })
+            .collect();
+        assert_eq!(reported, vec![band, CaptionBand::default(), band]);
     }
 
     #[test]

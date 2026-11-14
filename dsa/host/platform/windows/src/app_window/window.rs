@@ -46,7 +46,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
-use dsa_host_core::compositor::caption::{BandSample, CaptionBand};
+use dsa_host_core::compositor::caption::BandSample;
 use dsa_host_core::compositor::task_windows::fit_within;
 use dsa_host_core::compositor::window_hosts::{FromHost, ToHost};
 use dsa_host_core::compositor::window_mode::{picture_in_picture_place, ModeState, WindowMode};
@@ -1520,11 +1520,9 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
             let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
             let style = (style & !TASK_STYLE) | WS_POPUP;
             SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
-            // No title bar, so no top inset: the app draws to the monitor's top edge.
-            (data.report)(FromHost::Caption {
-                task_id: data.task_id,
-                band: CaptionBand::default(),
-            });
+            // No title bar, so no top inset: the app draws to the monitor's top edge. The band
+            // is forgotten with it, so the title bar's return reports it again.
+            data.caption.report_none(&*data.report);
             if let Some(presenter) = data.presenter.borrow().as_deref() {
                 presenter.hide_caption();
             }

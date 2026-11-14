@@ -22,6 +22,8 @@ public interface ITaskStackListener extends IInterface {
 
     void onTaskFocusChanged(int taskId, boolean focused) throws RemoteException;
 
+    void onActivityRequestedOrientationChanged(int taskId, int requestedOrientation) throws RemoteException;
+
     abstract class Stub extends Binder implements ITaskStackListener {
         public Stub() {
             throw new RuntimeException("Stub!");
