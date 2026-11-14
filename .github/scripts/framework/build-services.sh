@@ -24,6 +24,24 @@
 # DSA_BUILD_MINUTES (280 by default) bounds the whole script, so that a build that runs out of
 # time says so before the job's limit stops it without a word. A failure says whether it was the
 # disk, the memory or the time.
+#
+# The runner has 4 processors and 16 GiB, and its own agent must keep answering GitHub while the
+# build runs: when the build took every processor and swapped hard, the agent went silent and
+# GitHub gave the job up. So the build leaves it room:
+#   - DSA_SERVICES_JOBS (2 by default) ninja jobs, not one per processor. The Java steps are the
+#     large ones: javac runs with a heap of up to 4 GiB, and R8 and metalava, which Soong puts
+#     in its high memory pool, with as much or more, so four at once ask for more than the
+#     runner has before any of it swaps. Two leave about 8 GiB for the rest.
+#   - One high memory job at a time (NINJA_HIGHMEM_NUM_JOBS=1), whatever the job count, so R8
+#     and metalava never run beside each other.
+#   - GOMEMLIMIT=10GiB for Soong's analysis, which is Go: by default its heap grows to twice what
+#     is live before it collects, and the limit makes it collect sooner instead of growing into
+#     swap. It leaves 6 GiB for the runner, the page cache and kati.
+#   - The lowest processor and disk priority (nice 19, ionice best effort 7), so the agent runs
+#     first whenever it needs to.
+#   - The highest OOM score (choom 1000): when memory runs out, the kernel stops the build, which
+#     explain() then reports, and not the agent, which the workflow guards with -1000.
+#   - --skip-soong-tests: Soong's own Go tests are not built and run before the analysis.
 set -euo pipefail
 
 top="$(cd "$1" && pwd)"
@@ -34,6 +52,7 @@ repo="$(cd "$here/../../.." && pwd)"
 lock="$repo/dsa/guest/framework/framework-lock.json"
 minutes="${DSA_BUILD_MINUTES:-280}"
 deadline=$(( SECONDS + minutes * 60 ))
+jobs="${DSA_SERVICES_JOBS:-2}"
 
 target="$(jq -r --arg a "$android" '.versions[] | select(.android == $a) | .target' "$lock")"
 release="$(jq -r --arg a "$android" '.versions[] | select(.android == $a) | .release' "$lock")"
@@ -74,14 +93,17 @@ explain() {
   exit "$status"
 }
 
-# soong_ui, as m runs it, within what is left of the time.
+# soong_ui, as m runs it, within what is left of the time, with the room the notes above give the
+# runner. choom, nice and ionice each run the next command in their own process, so timeout's
+# signal reaches soong_ui.
 build() {
   local what="$1" left status=0
   shift
   left=$(( deadline - SECONDS ))
   (( left > 60 )) || { explain 124 "$what"; }
   timeout --signal=TERM --kill-after=120 "$left" \
-    build/soong/soong_ui.bash --make-mode -j"$(nproc)" "$@" || status=$?
+    choom -n 1000 -- nice -n 19 ionice -c 2 -n 7 \
+    build/soong/soong_ui.bash --make-mode --skip-soong-tests -j"$jobs" "$@" || status=$?
   (( status == 0 )) || explain "$status" "$what"
 }
 
@@ -97,6 +119,10 @@ export BUILD_USERNAME=dsa-framework BUILD_HOSTNAME=github-actions
 export WITH_DEXPREOPT=false
 # Android 17 runs siso by default; ninja is in build-tools.
 export SOONG_NINJA=ninja
+# The memory limits of the notes at the top.
+export NINJA_HIGHMEM_NUM_JOBS=1
+export GOMEMLIMIT=10GiB
+echo "building with $jobs ninja jobs, $NINJA_HIGHMEM_NUM_JOBS high memory job, GOMEMLIMIT=$GOMEMLIMIT"
 
 set +u
 # shellcheck disable=SC1091
