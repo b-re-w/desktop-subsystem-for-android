@@ -1,0 +1,61 @@
+Subject: Close the color buffers a guest closed last, once their delay has passed
+
+A ColorBuffer whose last reference the guest closes is not destroyed at once: it goes on a
+delayed close list, since a guest's gralloc may free a buffer and register it again within
+moments. The list was looked at only inside the next closeColorBuffer, which destroyed what had
+waited a second or more. Whatever was closed last therefore stayed until some other buffer was
+closed. When a video ends, its app's surface lets go of all its buffers within the same second
+(a 4K stream's queue holds a dozen or more YUV ColorBuffers of 11 to 17 MiB each), so the whole
+batch waited for the next close; with one still app left open (a music player that draws
+nothing new), that never came, and the renderer kept the video's buffers. On the owner's PC
+(0.2.4-dev) the renderer held about 580 MiB more private memory five minutes after a 4K YouTube
+video closed than it did with one app before; this list is where the code keeps the video's
+buffers after their last close.
+
+FrameBuffer::closeDelayedColorBuffers now destroys every ColorBuffer on the list whose delay has
+passed, under the same locks the close takes, and says how many. The renderer's trim calls it
+once a second, so a closed buffer goes one to two seconds after its last close, whether or not
+anything closes after it. The delay itself, and what it protects, are unchanged.
+
+diff --git a/host/FrameBuffer.h b/host/FrameBuffer.h
+--- a/host/FrameBuffer.h
++++ b/host/FrameBuffer.h
+@@ -235,2 +235,10 @@
+     void closeColorBuffer(HandleType p_colorbuffer);
+
++    // Destroys the ColorBuffers whose last reference the guest closed at least the close
++    // delay ago and that nothing opened since. closeColorBuffer does it only for what waited
++    // before it, so the buffers closed last (a whole video's, which go within one second)
++    // otherwise stayed until another buffer was closed. Returns how many were destroyed. An
++    // embedder calls it now and then.
++    int closeDelayedColorBuffers();
++
+     // Destroy a Buffer created previously. |p_buffer| is its handle value as
+diff --git a/host/FrameBuffer.cpp b/host/FrameBuffer.cpp
+--- a/host/FrameBuffer.cpp
++++ b/host/FrameBuffer.cpp
+@@ -1386,3 +1386,26 @@
+ }
+
++int FrameBuffer::closeDelayedColorBuffers() {
++    // With the guest's reference count pipe the guest destroys its buffers itself, and the
++    // list is never filled.
++    if (m_refCountPipeEnabled) {
++        return 0;
++    }
++    AutoLock mutex(m_lock);
++    size_t before = 0;
++    {
++        AutoLock colorBufferMapLock(m_colorBufferMapLock);
++        if (m_colorBufferDelayedCloseList.empty()) {
++            return 0;
++        }
++        before = m_colorbuffers.size();
++    }
++    performDelayedColorBufferCloseLocked(false);
++    AutoLock colorBufferMapLock(m_colorBufferMapLock);
++    const size_t after = m_colorbuffers.size();
++    return after < before ? static_cast<int>(before - after) : 0;
++}
++
+ void FrameBuffer::decColorBufferRefCountNoDestroy(HandleType p_colorbuffer) {
