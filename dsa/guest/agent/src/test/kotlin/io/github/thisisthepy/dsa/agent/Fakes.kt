@@ -348,17 +348,90 @@ class FakeWindowing(var acceptAfter: Int = 0) : WindowingControl {
 }
 
 /** The framework's input: records what was injected, on a clock the test moves. */
+/**
+ * Takes injected input as the framework does. Motion events go through the same checks as the
+ * framework's input verifier, which tracks each device's hovering and touching pointers on its
+ * display: a HOVER_ENTER while the device hovers, a HOVER_EXIT while it does not, an
+ * ACTION_DOWN while it hovers or is down, an ACTION_CANCEL without FLAG_CANCELED, and a
+ * move, pointer change or lift that does not match the pointers down are refused, and do not
+ * go in [injected]. A HOVER_MOVE without a HOVER_ENTER starts a hover, as the framework allows.
+ */
 class FakeInjector : InputInjector {
     val injected = mutableListOf<InjectedMotion>()
+
+    /** The motion events refused by the checks, with the reason, as the framework logs it. */
+    val rejected = mutableListOf<Pair<InjectedMotion, String>>()
     var clock = 1000L
     var refuse = false
+
+    private val hovering = HashMap<Int, MutableSet<Int>>()
+    private val touching = HashMap<Int, MutableSet<Int>>()
 
     override fun now() = clock
 
     override fun inject(motion: InjectedMotion): Boolean {
         if (refuse) return false
+        val reason = verify(motion)
+        if (reason != null) {
+            rejected += motion to reason
+            return false
+        }
         injected += motion
         return true
+    }
+
+    /** Applies [motion] to the device's state; the reason it is refused, or null. */
+    private fun verify(motion: InjectedMotion): String? {
+        val device = motion.deviceId
+        val ids = motion.pointers.map { it.id }.toSet()
+        val down = touching[device].orEmpty()
+        val index = (motion.action and android.view.MotionEvent.ACTION_POINTER_INDEX_MASK) shr
+            android.view.MotionEvent.ACTION_POINTER_INDEX_SHIFT
+        when (motion.action and android.view.MotionEvent.ACTION_MASK) {
+            android.view.MotionEvent.ACTION_HOVER_ENTER -> {
+                if (hovering.containsKey(device)) return "Invalid HOVER_ENTER event - pointers already hovering for device $device"
+                hovering[device] = ids.toMutableSet()
+            }
+            android.view.MotionEvent.ACTION_HOVER_MOVE -> hovering[device] = ids.toMutableSet()
+            android.view.MotionEvent.ACTION_HOVER_EXIT -> {
+                if (hovering.remove(device) == null) return "Invalid HOVER_EXIT event - no pointers hovering for device $device"
+            }
+            android.view.MotionEvent.ACTION_DOWN -> {
+                if (touching.containsKey(device)) return "Invalid DOWN event - pointers already down for device $device"
+                if (hovering.containsKey(device)) return "Invalid DOWN event - pointers hovering for device $device"
+                touching[device] = ids.toMutableSet()
+            }
+            android.view.MotionEvent.ACTION_POINTER_DOWN -> {
+                val id = motion.pointers[index].id
+                if (device !in touching || id in down || ids - id != down) {
+                    return "Invalid POINTER_DOWN event for pointer $id of device $device"
+                }
+                touching.getValue(device).add(id)
+            }
+            android.view.MotionEvent.ACTION_MOVE -> {
+                if (ids != down) return "Invalid MOVE event - pointers $ids do not match those down, $down"
+            }
+            android.view.MotionEvent.ACTION_POINTER_UP -> {
+                val id = motion.pointers[index].id
+                if (ids != down || down.size < 2) return "Invalid POINTER_UP event for pointer $id of device $device"
+                touching.getValue(device).remove(id)
+            }
+            android.view.MotionEvent.ACTION_UP -> {
+                if (ids != down || down.size != 1) return "Invalid UP event - pointers $ids do not match those down, $down"
+                touching.remove(device)
+            }
+            android.view.MotionEvent.ACTION_CANCEL -> {
+                if (motion.flags and CANCELED == 0) return "For ACTION_CANCEL, must set FLAG_CANCELED"
+                if (ids != down) return "Invalid CANCEL event - pointers $ids do not match those down, $down"
+                touching.remove(device)
+            }
+        }
+        return null
+    }
+
+    private companion object {
+        /** MotionEvent.FLAG_CANCELED. */
+        const val CANCELED = 0x20
     }
 
     val keys = mutableListOf<InjectedKey>()
