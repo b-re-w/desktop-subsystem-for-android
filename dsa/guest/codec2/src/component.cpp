@@ -663,8 +663,10 @@ void Component::picture(const Frame& frame, uint64_t ticket, Clock::time_point a
         // of it is written, so none is left as zeros (green) or as an older picture.
         AHardwareBuffer_Desc desc{};
         AHardwareBuffer_describe(buffer, &desc);
+        // From the message, or from the memory shared with the host: a single copy either way,
+        // and a picture in shared memory gives its slot back once the frame is gone.
         const WriteResult written = writePicture(
-            reinterpret_cast<const uint8_t*>(frame.nv12.data()), frame.nv12.size(), frame.width, frame.height,
+            pictureBytes(frame), pictureSize(frame), frame.width, frame.height,
             frame.stride, BufferSize{desc.width, desc.height},
             [buffer](YuvPlanes* yuv, uint32_t* planeCount) {
                 AHardwareBuffer_Planes planes{};

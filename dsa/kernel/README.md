@@ -66,6 +66,15 @@ zram writes pages that stay cold for long to a backing file on the guest's data 
 so every page zstd had compressed again looked unused since boot;
 `patches/zram-recompress-keeps-access-time.patch` keeps it.
 
+The host decodes the guest's video on its own GPU and writes each decoded picture into memory it
+shares with the VM (on Windows an HCS shared memory region), so a 4K picture of about 11 MiB no
+longer crosses the video port's socket. `patches/dsa-shared-memory.patch` adds the driver
+(`CONFIG_DSA_SHARED_MEMORY`): once init writes where the region is to
+`/sys/module/dsa_shared_memory/parameters/video_pictures` (the host says it on the control
+channel, after the VM has started), the codec HAL maps it, read only and without struct pages,
+through `/dev/dsa_video_pictures`. The driver takes only a range outside the guest's RAM that holds
+the region's header, and only once a boot.
+
 Android mounts each APEX package as a read-only ext4 image, about 75 of them with Google Play.
 Upstream ext4 gives every mount a workqueue for converting unwritten extents, and with it a
 rescuer thread (`ext4-rsv-conversion`) that stays for the life of the mount, though a read-only

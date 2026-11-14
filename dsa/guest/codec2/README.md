@@ -18,6 +18,14 @@ and AV1, each offered only when the host's GPU decodes it.
    buffer of the app's surface (through `IGraphicBufferAllocator`), or a buffer of its own when
    the app reads the pictures itself, and finishes the work the picture came from with the
    picture's rectangle as the block's crop.
+5. Where the host shares memory with the guest for decoded pictures (`src/picture_region.h`),
+   the `VideoFrame` carries no bytes, only the number and place of a slot of that memory,
+   which DSA's kernel maps for this HAL through `/dev/dsa_video_pictures`. The component copies
+   the picture from the slot instead, the one copy it makes either way, and the slot goes back
+   to the host (`VideoSlotReturned`) once the frame is gone, however its picture ended. A slot
+   cannot become the app's buffer: the app's buffers come from its surface, which allocates
+   them in the guest's own memory. Without that memory (an image without the driver, a host
+   that shares none), every picture comes in its message as before.
 
 The buffers are YV12 (`src/output_buffer.h`), as the platform's software decoders allocate
 for a surface, at the picture's size rounded up to 2; samples past the picture repeat its

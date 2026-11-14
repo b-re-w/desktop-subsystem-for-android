@@ -9,3 +9,9 @@
 (allow mediacodec self (vsock_socket (create connect read write getattr setopt getopt shutdown)))
 (allow mediacodec gpu_device (dir (search)))
 (allow mediacodec gpu_device (chr_file (open read write ioctl getattr map)))
+
+; The pictures the host decodes come in memory the host shares with the guest, which the HAL
+; maps read only through /dev/dsa_video_pictures (memory.cil declares its type): it asks the
+; region's size (the driver's one ioctl, 0x80084450) and maps it. No other domain may open it.
+(allow mediacodec dsa_video_pictures_device (chr_file (open read ioctl getattr map)))
+(allowx mediacodec dsa_video_pictures_device (ioctl chr_file (0x4450)))

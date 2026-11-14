@@ -238,11 +238,54 @@ pub fn picture_from_surface_area(
     chroma_row: usize,
     area: Area,
 ) -> Option<Picture> {
-    let (width, height) = (area.width, area.height);
-    let (w, h) = (width as usize, height as usize);
+    let stride = picture_stride(area.width);
+    let len = Picture::nv12_len(area.width, area.height, stride)?;
+    let mut nv12 = vec![0u8; len];
+    if !picture_into(&mut nv12, data, format, pitch, chroma_row, area) {
+        return None;
+    }
+    Some(Picture {
+        id,
+        width: area.width,
+        height: area.height,
+        stride,
+        nv12,
+        slot: None,
+    })
+}
+
+/// The stride of a picture of `width` read out of a surface: the width rounded up to 2, so
+/// each chroma row holds whole pairs.
+pub fn picture_stride(width: u32) -> u32 {
+    width + (width & 1)
+}
+
+/// As [`picture_from_surface_area`], into `out`, which is exactly the picture's NV12 length
+/// for a stride of [`picture_stride`] (a slot of the shared picture region, say). False, with
+/// `out` left as it may be, when the geometry does not fit.
+pub fn picture_into(
+    out: &mut [u8],
+    data: &[u8],
+    format: SurfaceFormat,
+    pitch: usize,
+    chroma_row: usize,
+    area: Area,
+) -> bool {
+    picture_into_checked(out, data, format, pitch, chroma_row, area).is_some()
+}
+
+fn picture_into_checked(
+    out: &mut [u8],
+    data: &[u8],
+    format: SurfaceFormat,
+    pitch: usize,
+    chroma_row: usize,
+    area: Area,
+) -> Option<()> {
+    let (w, h) = (area.width as usize, area.height as usize);
     let (left, top) = (area.left as usize, area.top as usize);
     let sample = format.bytes_per_sample();
-    let stride = w + (w & 1);
+    let stride = picture_stride(area.width) as usize;
     if w == 0 || h == 0 || left % 2 != 0 || top % 2 != 0 {
         return None;
     }
@@ -250,6 +293,9 @@ pub fn picture_from_surface_area(
         return None;
     }
     let chroma_rows = h.div_ceil(2);
+    if out.len() != stride.checked_mul(h.checked_add(chroma_rows)?)? {
+        return None;
+    }
     // The chroma of the area's first row: each chroma row covers two luma rows.
     let chroma_first = chroma_row.checked_add(top / 2)?;
     let needed = pitch.checked_mul(chroma_first.checked_add(chroma_rows)?)?;
@@ -257,12 +303,19 @@ pub fn picture_from_surface_area(
         return None;
     }
     let column = left * sample;
-    let mut nv12 = Vec::with_capacity(stride * (h + chroma_rows));
-    let mut copy_row = |start: usize| match format {
-        SurfaceFormat::Nv12 => nv12.extend_from_slice(&data[start..start + stride]),
-        // Little-endian 16-bit samples: the high byte holds the top 8 bits.
-        SurfaceFormat::P010 => {
-            nv12.extend((0..stride).map(|x| data[start + 2 * x + 1]));
+    let mut rows = out.chunks_exact_mut(stride);
+    let mut copy_row = |start: usize| {
+        let Some(row) = rows.next() else {
+            return;
+        };
+        match format {
+            SurfaceFormat::Nv12 => row.copy_from_slice(&data[start..start + stride]),
+            // Little-endian 16-bit samples: the high byte holds the top 8 bits.
+            SurfaceFormat::P010 => {
+                for (x, byte) in row.iter_mut().enumerate() {
+                    *byte = data[start + 2 * x + 1];
+                }
+            }
         }
     };
     for row in 0..h {
@@ -273,13 +326,7 @@ pub fn picture_from_surface_area(
     for row in 0..chroma_rows {
         copy_row((chroma_first + row) * pitch + column);
     }
-    Some(Picture {
-        id,
-        width,
-        height,
-        stride: stride as u32,
-        nv12,
-    })
+    Some(())
 }
 
 /// The picture size a packet's own header gives, for the formats whose decoders may report

@@ -131,6 +131,8 @@ public  final class Envelope extends
     VIDEO_FLUSH(125),
     VIDEO_FLUSHED(126),
     VIDEO_ERROR(127),
+    VIDEO_SLOT_RETURNED(128),
+    GUEST_SHARED_MEMORY(129),
     LOG_STREAM(130),
     LOG_DUMP(131),
     LOG_RECORDS(132),
@@ -344,6 +346,8 @@ public  final class Envelope extends
         case 125: return VIDEO_FLUSH;
         case 126: return VIDEO_FLUSHED;
         case 127: return VIDEO_ERROR;
+        case 128: return VIDEO_SLOT_RETURNED;
+        case 129: return GUEST_SHARED_MEMORY;
         case 130: return LOG_STREAM;
         case 131: return LOG_DUMP;
         case 132: return LOG_RECORDS;
@@ -5997,6 +6001,106 @@ public  final class Envelope extends
    */
   private void clearVideoError() {
     if (bodyCase_ == 127) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
+  public static final int VIDEO_SLOT_RETURNED_FIELD_NUMBER = 128;
+  /**
+   * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+   */
+  @java.lang.Override
+  public boolean hasVideoSlotReturned() {
+    return bodyCase_ == 128;
+  }
+  /**
+   * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.VideoSlotReturned getVideoSlotReturned() {
+    if (bodyCase_ == 128) {
+       return (io.github.thisisthepy.dsa.control.v1.VideoSlotReturned) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.VideoSlotReturned.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+   */
+  private void setVideoSlotReturned(io.github.thisisthepy.dsa.control.v1.VideoSlotReturned value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 128;
+  }
+  /**
+   * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+   */
+  private void mergeVideoSlotReturned(io.github.thisisthepy.dsa.control.v1.VideoSlotReturned value) {
+    value.getClass();
+  if (bodyCase_ == 128 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.VideoSlotReturned.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.VideoSlotReturned.newBuilder((io.github.thisisthepy.dsa.control.v1.VideoSlotReturned) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 128;
+  }
+  /**
+   * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+   */
+  private void clearVideoSlotReturned() {
+    if (bodyCase_ == 128) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
+  public static final int GUEST_SHARED_MEMORY_FIELD_NUMBER = 129;
+  /**
+   * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+   */
+  @java.lang.Override
+  public boolean hasGuestSharedMemory() {
+    return bodyCase_ == 129;
+  }
+  /**
+   * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.GuestSharedMemory getGuestSharedMemory() {
+    if (bodyCase_ == 129) {
+       return (io.github.thisisthepy.dsa.control.v1.GuestSharedMemory) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.GuestSharedMemory.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+   */
+  private void setGuestSharedMemory(io.github.thisisthepy.dsa.control.v1.GuestSharedMemory value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 129;
+  }
+  /**
+   * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+   */
+  private void mergeGuestSharedMemory(io.github.thisisthepy.dsa.control.v1.GuestSharedMemory value) {
+    value.getClass();
+  if (bodyCase_ == 129 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.GuestSharedMemory.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.GuestSharedMemory.newBuilder((io.github.thisisthepy.dsa.control.v1.GuestSharedMemory) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 129;
+  }
+  /**
+   * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+   */
+  private void clearGuestSharedMemory() {
+    if (bodyCase_ == 129) {
       bodyCase_ = 0;
       body_ = null;
     }
@@ -15792,6 +15896,102 @@ public  final class Envelope extends
     }
 
     /**
+     * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+     */
+    @java.lang.Override
+    public boolean hasVideoSlotReturned() {
+      return instance.hasVideoSlotReturned();
+    }
+    /**
+     * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.VideoSlotReturned getVideoSlotReturned() {
+      return instance.getVideoSlotReturned();
+    }
+    /**
+     * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+     */
+    public Builder setVideoSlotReturned(io.github.thisisthepy.dsa.control.v1.VideoSlotReturned value) {
+      copyOnWrite();
+      instance.setVideoSlotReturned(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+     */
+    public Builder setVideoSlotReturned(
+        io.github.thisisthepy.dsa.control.v1.VideoSlotReturned.Builder builderForValue) {
+      copyOnWrite();
+      instance.setVideoSlotReturned(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+     */
+    public Builder mergeVideoSlotReturned(io.github.thisisthepy.dsa.control.v1.VideoSlotReturned value) {
+      copyOnWrite();
+      instance.mergeVideoSlotReturned(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+     */
+    public Builder clearVideoSlotReturned() {
+      copyOnWrite();
+      instance.clearVideoSlotReturned();
+      return this;
+    }
+
+    /**
+     * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+     */
+    @java.lang.Override
+    public boolean hasGuestSharedMemory() {
+      return instance.hasGuestSharedMemory();
+    }
+    /**
+     * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.GuestSharedMemory getGuestSharedMemory() {
+      return instance.getGuestSharedMemory();
+    }
+    /**
+     * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+     */
+    public Builder setGuestSharedMemory(io.github.thisisthepy.dsa.control.v1.GuestSharedMemory value) {
+      copyOnWrite();
+      instance.setGuestSharedMemory(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+     */
+    public Builder setGuestSharedMemory(
+        io.github.thisisthepy.dsa.control.v1.GuestSharedMemory.Builder builderForValue) {
+      copyOnWrite();
+      instance.setGuestSharedMemory(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+     */
+    public Builder mergeGuestSharedMemory(io.github.thisisthepy.dsa.control.v1.GuestSharedMemory value) {
+      copyOnWrite();
+      instance.mergeGuestSharedMemory(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+     */
+    public Builder clearGuestSharedMemory() {
+      copyOnWrite();
+      instance.clearGuestSharedMemory();
+      return this;
+    }
+
+    /**
      * <code>.dsa.control.v1.LogStream log_stream = 130;</code>
      */
     @java.lang.Override
@@ -20077,6 +20277,8 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.VideoFlush.class,
             io.github.thisisthepy.dsa.control.v1.VideoFlushed.class,
             io.github.thisisthepy.dsa.control.v1.VideoError.class,
+            io.github.thisisthepy.dsa.control.v1.VideoSlotReturned.class,
+            io.github.thisisthepy.dsa.control.v1.GuestSharedMemory.class,
             io.github.thisisthepy.dsa.control.v1.LogStream.class,
             io.github.thisisthepy.dsa.control.v1.LogDump.class,
             io.github.thisisthepy.dsa.control.v1.LogRecords.class,
@@ -20185,7 +20387,7 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.LaunchPlacement.class,
           };
           java.lang.String info =
-              "\u0000\u00c6\u0001\u0000\u0001\u02c6\u00c6\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u00c8\u0001\u0000\u0001\u02c6\u00c8\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
               "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
               "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000" +
@@ -20196,23 +20398,24 @@ public  final class Envelope extends
               "<\u0000N<\u0000O<\u0000P<\u0000Q<\u0000R<\u0000S<\u0000Z<\u0000[<\u0000\\<\u0000" +
               "]<\u0000^<\u0000_<\u0000`<\u0000a<\u0000b<\u0000c<\u0000d<\u0000e<\u0000f<\u0000" +
               "g<\u0000h<\u0000i<\u0000j<\u0000k<\u0000n<\u0000x<\u0000y<\u0000z<\u0000{<\u0000" +
-              "|<\u0000}<\u0000~<\u0000<\u0000\u0082<\u0000\u0083<\u0000\u0084<\u0000\u0085<\u0000" +
-              "\u0086<\u0000\u0087<\u0000\u0088<\u0000\u008c<\u0000\u008d<\u0000\u0098<\u0000\u0099" +
-              "<\u0000\u009a<\u0000\u009b<\u0000\u009c<\u0000\u00c8<\u0000\u00c9<\u0000\u00ca<\u0000" +
-              "\u00dc<\u0000\u00dd<\u0000\u00de<\u0000\u00df<\u0000\u00f0<\u0000\u00f1<\u0000\u00f2" +
-              "<\u0000\u0104<\u0000\u0105<\u0000\u0106<\u0000\u0107<\u0000\u0108<\u0000\u0109<\u0000" +
-              "\u010a<\u0000\u010b<\u0000\u0122<\u0000\u0123<\u0000\u0154<\u0000\u0155<\u0000\u0156" +
-              "<\u0000\u0157<\u0000\u0158<\u0000\u015e<\u0000\u015f<\u0000\u0160<\u0000\u0161<\u0000" +
-              "\u0162<\u0000\u0179<\u0000\u017c<\u0000\u017d<\u0000\u017e<\u0000\u017f<\u0000\u0192" +
-              "<\u0000\u0193<\u0000\u0194<\u0000\u0195<\u0000\u0196<\u0000\u0197<\u0000\u0198<\u0000" +
-              "\u0199<\u0000\u019a<\u0000\u019b<\u0000\u019c<\u0000\u019d<\u0000\u019e<\u0000\u019f" +
-              "<\u0000\u01d6<\u0000\u01d7<\u0000\u01d8<\u0000\u01d9<\u0000\u026c<\u0000\u026d<\u0000" +
-              "\u026e<\u0000\u026f<\u0000\u0270<\u0000\u0271<\u0000\u0272<\u0000\u0273<\u0000\u0274" +
-              "<\u0000\u0275<\u0000\u0276<\u0000\u0277<\u0000\u0280<\u0000\u0281<\u0000\u0282<\u0000" +
-              "\u0283<\u0000\u0284<\u0000\u0285<\u0000\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289" +
-              "<\u0000\u028a<\u0000\u028b<\u0000\u028c<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000" +
-              "\u0290<\u0000\u0291<\u0000\u0292<\u0000\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab" +
-              "<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3<\u0000\u02c6<\u0000";
+              "|<\u0000}<\u0000~<\u0000<\u0000\u0080<\u0000\u0081<\u0000\u0082<\u0000\u0083<\u0000" +
+              "\u0084<\u0000\u0085<\u0000\u0086<\u0000\u0087<\u0000\u0088<\u0000\u008c<\u0000\u008d" +
+              "<\u0000\u0098<\u0000\u0099<\u0000\u009a<\u0000\u009b<\u0000\u009c<\u0000\u00c8<\u0000" +
+              "\u00c9<\u0000\u00ca<\u0000\u00dc<\u0000\u00dd<\u0000\u00de<\u0000\u00df<\u0000\u00f0" +
+              "<\u0000\u00f1<\u0000\u00f2<\u0000\u0104<\u0000\u0105<\u0000\u0106<\u0000\u0107<\u0000" +
+              "\u0108<\u0000\u0109<\u0000\u010a<\u0000\u010b<\u0000\u0122<\u0000\u0123<\u0000\u0154" +
+              "<\u0000\u0155<\u0000\u0156<\u0000\u0157<\u0000\u0158<\u0000\u015e<\u0000\u015f<\u0000" +
+              "\u0160<\u0000\u0161<\u0000\u0162<\u0000\u0179<\u0000\u017c<\u0000\u017d<\u0000\u017e" +
+              "<\u0000\u017f<\u0000\u0192<\u0000\u0193<\u0000\u0194<\u0000\u0195<\u0000\u0196<\u0000" +
+              "\u0197<\u0000\u0198<\u0000\u0199<\u0000\u019a<\u0000\u019b<\u0000\u019c<\u0000\u019d" +
+              "<\u0000\u019e<\u0000\u019f<\u0000\u01d6<\u0000\u01d7<\u0000\u01d8<\u0000\u01d9<\u0000" +
+              "\u026c<\u0000\u026d<\u0000\u026e<\u0000\u026f<\u0000\u0270<\u0000\u0271<\u0000\u0272" +
+              "<\u0000\u0273<\u0000\u0274<\u0000\u0275<\u0000\u0276<\u0000\u0277<\u0000\u0280<\u0000" +
+              "\u0281<\u0000\u0282<\u0000\u0283<\u0000\u0284<\u0000\u0285<\u0000\u0286<\u0000\u0287" +
+              "<\u0000\u0288<\u0000\u0289<\u0000\u028a<\u0000\u028b<\u0000\u028c<\u0000\u028d<\u0000" +
+              "\u028e<\u0000\u028f<\u0000\u0290<\u0000\u0291<\u0000\u0292<\u0000\u02a8<\u0000\u02a9" +
+              "<\u0000\u02aa<\u0000\u02ab<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3<\u0000\u02c6<\u0000" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

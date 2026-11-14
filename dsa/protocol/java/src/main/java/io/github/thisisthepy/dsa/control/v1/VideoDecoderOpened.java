@@ -92,6 +92,47 @@ public  final class VideoDecoderOpened extends
     
   }
 
+  public static final int SHARED_PICTURES_FIELD_NUMBER = 3;
+  private boolean sharedPictures_;
+  /**
+   * <pre>
+   * Whether this stream's pictures may come in the shared picture region. When it is false,
+   * every picture comes in its message.
+   * </pre>
+   *
+   * <code>bool shared_pictures = 3;</code>
+   * @return The sharedPictures.
+   */
+  @java.lang.Override
+  public boolean getSharedPictures() {
+    return sharedPictures_;
+  }
+  /**
+   * <pre>
+   * Whether this stream's pictures may come in the shared picture region. When it is false,
+   * every picture comes in its message.
+   * </pre>
+   *
+   * <code>bool shared_pictures = 3;</code>
+   * @param value The sharedPictures to set.
+   */
+  private void setSharedPictures(boolean value) {
+    
+    sharedPictures_ = value;
+  }
+  /**
+   * <pre>
+   * Whether this stream's pictures may come in the shared picture region. When it is false,
+   * every picture comes in its message.
+   * </pre>
+   *
+   * <code>bool shared_pictures = 3;</code>
+   */
+  private void clearSharedPictures() {
+    
+    sharedPictures_ = false;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.VideoDecoderOpened parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -269,6 +310,49 @@ public  final class VideoDecoderOpened extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Whether this stream's pictures may come in the shared picture region. When it is false,
+     * every picture comes in its message.
+     * </pre>
+     *
+     * <code>bool shared_pictures = 3;</code>
+     * @return The sharedPictures.
+     */
+    @java.lang.Override
+    public boolean getSharedPictures() {
+      return instance.getSharedPictures();
+    }
+    /**
+     * <pre>
+     * Whether this stream's pictures may come in the shared picture region. When it is false,
+     * every picture comes in its message.
+     * </pre>
+     *
+     * <code>bool shared_pictures = 3;</code>
+     * @param value The sharedPictures to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSharedPictures(boolean value) {
+      copyOnWrite();
+      instance.setSharedPictures(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Whether this stream's pictures may come in the shared picture region. When it is false,
+     * every picture comes in its message.
+     * </pre>
+     *
+     * <code>bool shared_pictures = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSharedPictures() {
+      copyOnWrite();
+      instance.clearSharedPictures();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.VideoDecoderOpened)
   }
   @java.lang.Override
@@ -287,10 +371,11 @@ public  final class VideoDecoderOpened extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "ok_",
             "error_",
+            "sharedPictures_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0007\u0002\u0208" +
-              "";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0007\u0002\u0208" +
+              "\u0003\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

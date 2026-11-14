@@ -112,6 +112,53 @@ public  final class VideoDecoderOpen extends
     height_ = 0;
   }
 
+  public static final int PICTURE_REGION_ID_FIELD_NUMBER = 4;
+  private long pictureRegionId_;
+  /**
+   * <pre>
+   * The id the guest read from the header of the shared picture region it maps (see
+   * GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+   * writes pictures to, the two see the same memory, and the host may send this stream's
+   * pictures there (VideoFrame.slot) instead of in the messages.
+   * </pre>
+   *
+   * <code>uint64 picture_region_id = 4;</code>
+   * @return The pictureRegionId.
+   */
+  @java.lang.Override
+  public long getPictureRegionId() {
+    return pictureRegionId_;
+  }
+  /**
+   * <pre>
+   * The id the guest read from the header of the shared picture region it maps (see
+   * GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+   * writes pictures to, the two see the same memory, and the host may send this stream's
+   * pictures there (VideoFrame.slot) instead of in the messages.
+   * </pre>
+   *
+   * <code>uint64 picture_region_id = 4;</code>
+   * @param value The pictureRegionId to set.
+   */
+  private void setPictureRegionId(long value) {
+    
+    pictureRegionId_ = value;
+  }
+  /**
+   * <pre>
+   * The id the guest read from the header of the shared picture region it maps (see
+   * GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+   * writes pictures to, the two see the same memory, and the host may send this stream's
+   * pictures there (VideoFrame.slot) instead of in the messages.
+   * </pre>
+   *
+   * <code>uint64 picture_region_id = 4;</code>
+   */
+  private void clearPictureRegionId() {
+    
+    pictureRegionId_ = 0L;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.VideoDecoderOpen parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -314,6 +361,55 @@ public  final class VideoDecoderOpen extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The id the guest read from the header of the shared picture region it maps (see
+     * GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+     * writes pictures to, the two see the same memory, and the host may send this stream's
+     * pictures there (VideoFrame.slot) instead of in the messages.
+     * </pre>
+     *
+     * <code>uint64 picture_region_id = 4;</code>
+     * @return The pictureRegionId.
+     */
+    @java.lang.Override
+    public long getPictureRegionId() {
+      return instance.getPictureRegionId();
+    }
+    /**
+     * <pre>
+     * The id the guest read from the header of the shared picture region it maps (see
+     * GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+     * writes pictures to, the two see the same memory, and the host may send this stream's
+     * pictures there (VideoFrame.slot) instead of in the messages.
+     * </pre>
+     *
+     * <code>uint64 picture_region_id = 4;</code>
+     * @param value The pictureRegionId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPictureRegionId(long value) {
+      copyOnWrite();
+      instance.setPictureRegionId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The id the guest read from the header of the shared picture region it maps (see
+     * GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+     * writes pictures to, the two see the same memory, and the host may send this stream's
+     * pictures there (VideoFrame.slot) instead of in the messages.
+     * </pre>
+     *
+     * <code>uint64 picture_region_id = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPictureRegionId() {
+      copyOnWrite();
+      instance.clearPictureRegionId();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.VideoDecoderOpen)
   }
   @java.lang.Override
@@ -333,10 +429,11 @@ public  final class VideoDecoderOpen extends
             "codec_",
             "width_",
             "height_",
+            "pictureRegionId_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\f\u0002\u000b" +
-              "\u0003\u000b";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\f\u0002\u000b" +
+              "\u0003\u000b\u0004\u0003";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

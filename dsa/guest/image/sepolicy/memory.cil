@@ -197,3 +197,29 @@
 (typeattributeset property_type (dsa_host_memory_prop))
 (typeattributeset vendor_property_type (dsa_host_memory_prop))
 (allow vendor_init dsa_host_memory_prop (file (read open getattr map)))
+
+; The memory the host shares with the guest for decoded video pictures (dsa_shared_memory in
+; DSA's kernel, dsa-memory.rc). dsa-channeld sets where it is in vendor.dsa.video_pictures when
+; the host says (channeld.cil), and init writes that to the driver's parameter,
+; /sys/module/dsa_shared_memory/parameters/video_pictures, which gets a type of its own: nothing
+; but init may write it, so no process can point the driver at other memory. The driver then
+; lets the codec HAL map that range, read only, through /dev/dsa_video_pictures, whose type
+; only the codec HAL may open (codec2.cil): it holds the pictures of every app's video.
+(type dsa_sysfs_shared_memory)
+(roletype object_r dsa_sysfs_shared_memory)
+(typeattributeset fs_type (dsa_sysfs_shared_memory))
+(typeattributeset sysfs_type (dsa_sysfs_shared_memory))
+(genfscon sysfs "/module/dsa_shared_memory" (u object_r dsa_sysfs_shared_memory ((s0) (s0))))
+(allow vendor_init dsa_sysfs_shared_memory (dir (search)))
+(allow vendor_init dsa_sysfs_shared_memory (file (write open getattr)))
+(type dsa_video_pictures_prop)
+(roletype object_r dsa_video_pictures_prop)
+(typeattributeset property_type (dsa_video_pictures_prop))
+(typeattributeset vendor_property_type (dsa_video_pictures_prop))
+(allow vendor_init dsa_video_pictures_prop (file (read open getattr map)))
+(type dsa_video_pictures_device)
+(roletype object_r dsa_video_pictures_device)
+(typeattributeset dev_type (dsa_video_pictures_device))
+; init lets every user read the device (dsa-memory.rc); the rules above and codec2.cil decide
+; which domain may open it.
+(allow vendor_init dsa_video_pictures_device (chr_file (getattr setattr)))

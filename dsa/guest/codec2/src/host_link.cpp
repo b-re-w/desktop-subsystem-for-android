@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "log.h"
+#include "picture_region.h"
 
 namespace dsa::codec2 {
 
@@ -103,7 +104,10 @@ std::unique_ptr<HostDecoder> HostDecoder::open(Codec codec, uint32_t width, uint
         return nullptr;
     }
     std::vector<uint8_t> frame;
-    if (!writeAll(fd, withLength(encodeOpen(codec, width, height))) || !readHostFrame(fd, &frame)) {
+    // The id of the memory shared with the host, which this process maps: the host sends the
+    // stream's pictures there when it writes to the same memory.
+    const uint64_t region = PictureRegion::instance().id();
+    if (!writeAll(fd, withLength(encodeOpen(codec, width, height, region))) || !readHostFrame(fd, &frame)) {
         *error = "the host did not answer the request for a decoder";
         ::close(fd);
         return nullptr;
@@ -122,7 +126,40 @@ std::unique_ptr<HostDecoder> HostDecoder::open(Codec codec, uint32_t width, uint
     timeval none{0, 0};
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &none, sizeof(none));
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &none, sizeof(none));
-    return adopt(fd, std::move(onMessage));
+    const bool shared = opened->sharedPictures;
+    if (region != 0 && !shared) {
+        CODEC_LOGW("the host sends this stream's pictures through the video port, though shared memory is mapped");
+    }
+    std::unique_ptr<HostDecoder> decoder = adopt(fd, std::move(onMessage));
+    decoder->mSharedPictures = shared;
+    return decoder;
+}
+
+void HostDecoder::SlotReturns::giveBack(uint32_t slot) {
+    std::lock_guard<std::mutex> guard(lock);
+    // Never dropped by a flush: a slot the host does not get back is one fewer for the stream.
+    if (link != nullptr) {
+        link->send(encodeSlotReturned(slot), false, std::chrono::milliseconds(100));
+    }
+}
+
+MessageReader::Handler withSharedPictures(MessageReader::Handler onMessage,
+                                          std::shared_ptr<HostDecoder::SlotReturns> returns) {
+    return [onMessage = std::move(onMessage), returns = std::move(returns)](HostMessage message) {
+        if (auto* frame = std::get_if<Frame>(&message); frame != nullptr && frame->slot != 0) {
+            auto picture = std::make_shared<SharedPicture>();
+            const uint64_t rows = uint64_t{frame->height} + (uint64_t{frame->height} + 1) / 2;
+            const size_t length = static_cast<size_t>(uint64_t{frame->stride} * rows);
+            // A slot outside the memory has no bytes: the picture is not written, and its slot
+            // still goes back.
+            picture->data = PictureRegion::instance().slice(frame->slotOffset, length);
+            picture->size = picture->data != nullptr ? length : 0;
+            const uint32_t slot = frame->slot;
+            picture->giveBack = [returns, slot] { returns->giveBack(slot); };
+            frame->shared = std::move(picture);
+        }
+        onMessage(std::move(message));
+    };
 }
 
 std::unique_ptr<HostDecoder> HostDecoder::adopt(int fd, MessageHandler onMessage) {
@@ -138,7 +175,8 @@ constexpr size_t kMaxQueuedBytes = 16 * 1024 * 1024;
 HostDecoder::HostDecoder(int fd, MessageHandler onMessage)
     : mFd(fd),
       mOutgoing(kMaxQueuedBytes),
-      mReader(std::make_unique<MessageReader>(fd, std::move(onMessage))) {}
+      mReturns(std::make_shared<SlotReturns>(this)),
+      mReader(std::make_unique<MessageReader>(fd, withSharedPictures(std::move(onMessage), mReturns))) {}
 
 HostDecoder::~HostDecoder() { close(); }
 
@@ -173,6 +211,12 @@ void HostDecoder::write() {
 void HostDecoder::close() {
     if (mClosed.exchange(true)) {
         return;
+    }
+    // A picture that outlives the link gives its slot back to no one: the host takes every
+    // slot of the connection back as it ends.
+    {
+        std::lock_guard<std::mutex> guard(mReturns->lock);
+        mReturns->link = nullptr;
     }
     // Nothing more is handed on, not even the socket's end as the host going away.
     if (mReader) {

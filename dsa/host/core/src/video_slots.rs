@@ -1,0 +1,427 @@
+//! Decoded video pictures in memory the host shares with the guest, instead of in messages.
+//!
+//! A decoded 4K picture is about 11 MiB of NV12. Sent in a [`VideoFrame`] it is copied into
+//! the message, through the socket and out of it again, and a 4K stream spent longer sending
+//! and waiting than decoding. When the guest sees a region of host memory as physical memory
+//! of its own (on Windows an HCS shared memory region backed by a named section that the
+//! window manager maps too), the host writes each picture into a slot of that region and the
+//! message carries only the slot's number and place ([`VideoFrame::slot`],
+//! [`VideoFrame::slot_offset`]). The guest's codec HAL copies the picture from there into the
+//! app's buffer and hands the slot back ([`VideoSlotReturned`]).
+//!
+//! A slot has one owner at a time. The host takes it ([`StreamSlots::take`]), writes it
+//! ([`StreamSlots::write`]), lends it to the guest with the message ([`StreamSlots::lend`])
+//! and does not write it again until the guest gives it back ([`StreamSlots::give_back`]) or
+//! the connection ends (dropping the [`StreamSlots`]), which takes every slot of that stream
+//! back. A guest that never gives a slot back holds at most [`SLOTS_PER_STREAM`] of them, and
+//! only for as long as its connection lasts.
+//!
+//! The region starts with a header the host writes when it makes the region
+//! ([`write_header`]): the magic [`MAGIC`], an id that is new for each region, and the
+//! region's length, each eight bytes, little endian. The guest reads the id from its own
+//! mapping and names it when it opens a decoder; the host uses the region for that stream only
+//! when the id is the one it reads from its own mapping, so both are known to see the same
+//! memory. Slots start at [`SLOTS_START`].
+//!
+//! The memory is given back when no stream uses it: once the last stream of a region ends,
+//! the slots it touched are discarded ([`SharedRegion::discard`]), so a region costs physical
+//! memory only while video plays.
+//!
+//! Nothing here names a host operating system API. The platform supplies the region.
+//!
+//! [`VideoFrame`]: dsa_protocol::control::VideoFrame
+//! [`VideoFrame::slot`]: dsa_protocol::control::VideoFrame::slot
+//! [`VideoFrame::slot_offset`]: dsa_protocol::control::VideoFrame::slot_offset
+//! [`VideoSlotReturned`]: dsa_protocol::control::VideoSlotReturned
+
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex, MutexGuard};
+
+/// The name the region goes by in [`GuestSharedMemory`](dsa_protocol::control::GuestSharedMemory).
+pub const REGION_NAME: &str = "video_pictures";
+
+/// The first eight bytes of the region's header.
+pub const MAGIC: [u8; 8] = *b"DSAVPIC1";
+
+/// Where the slots start: the header has the first 64 KiB to itself.
+pub const SLOTS_START: usize = 64 * 1024;
+
+/// Each slot starts on, and is a whole number of, 64 KiB: the largest page a host or guest
+/// maps such memory in.
+pub const SLOT_ALIGNMENT: usize = 64 * 1024;
+
+/// The most slots one stream holds at once (written, or lent to the guest). Four 4K pictures
+/// fit a region of the default size; the guest takes a picture as soon as its app has a buffer
+/// for it, so a stream seldom has more than two lent.
+pub const SLOTS_PER_STREAM: usize = 4;
+
+/// The region's size unless the user's settings give another: room for [`SLOTS_PER_STREAM`]
+/// 4K pictures (4096 by 2304 NV12, 13.5 MiB each) after the header.
+pub const DEFAULT_REGION_BYTES: u64 = 64 * 1024 * 1024;
+
+/// The smallest region worth making: the header and one 1080p picture.
+pub const MIN_REGION_BYTES: u64 = (SLOTS_START + 4 * 1024 * 1024) as u64;
+
+/// Memory the host shares with the guest, mapped into this process.
+pub trait SharedRegion: Send + Sync {
+    /// The start of this process's view of the region.
+    fn as_ptr(&self) -> *mut u8;
+    /// The view's length in bytes.
+    fn len(&self) -> usize;
+    /// Whether the view is empty; never, for a region that can hold a slot.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// Nothing uses `len` bytes from `offset` now: the platform may give their physical pages
+    /// back. Their contents need not survive.
+    fn discard(&self, offset: usize, len: usize) {
+        let _ = (offset, len);
+    }
+}
+
+/// Writes the region's header into its first bytes: [`MAGIC`], `id` and `len`.
+pub fn write_header(bytes: &mut [u8], id: u64, len: u64) -> bool {
+    if bytes.len() < 24 {
+        return false;
+    }
+    bytes[..8].copy_from_slice(&MAGIC);
+    bytes[8..16].copy_from_slice(&id.to_le_bytes());
+    bytes[16..24].copy_from_slice(&len.to_le_bytes());
+    true
+}
+
+/// The id and the length a region's header gives, or `None` when it has no header.
+pub fn read_header(bytes: &[u8]) -> Option<(u64, u64)> {
+    if bytes.len() < 24 || bytes[..8] != MAGIC {
+        return None;
+    }
+    let id = u64::from_le_bytes(bytes[8..16].try_into().ok()?);
+    let len = u64::from_le_bytes(bytes[16..24].try_into().ok()?);
+    Some((id, len))
+}
+
+/// A new id for a region: random, and never 0 (which says "no region").
+pub fn new_region_id() -> u64 {
+    let mut bytes = [0u8; 8];
+    loop {
+        if getrandom::getrandom(&mut bytes).is_err() {
+            // Without the system's randomness, the time still makes a new id for each region.
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos() as u64)
+                .unwrap_or(1);
+            bytes = (nanos ^ u64::from(std::process::id())).to_le_bytes();
+        }
+        let id = u64::from_le_bytes(bytes);
+        if id != 0 {
+            return id;
+        }
+    }
+}
+
+/// A slot of the region: its number, which the guest gives back, and the bytes it covers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Slot {
+    pub number: u32,
+    pub offset: u64,
+    /// The bytes of the picture it holds; the slot itself is this rounded up to
+    /// [`SLOT_ALIGNMENT`].
+    pub len: usize,
+}
+
+struct Held {
+    /// The bytes the slot covers, a whole number of [`SLOT_ALIGNMENT`].
+    span: usize,
+    stream: u64,
+    number: u32,
+    /// Sent to the guest: the host does not write it until it comes back.
+    lent: bool,
+}
+
+#[derive(Default)]
+struct State {
+    /// The slots held now, by offset.
+    held: BTreeMap<usize, Held>,
+    next_number: u32,
+    next_stream: u64,
+    streams: usize,
+    /// The furthest byte any slot reached since the region was last discarded.
+    touched_end: usize,
+}
+
+/// The slots of one region, shared by every stream that sends its pictures there.
+pub struct PictureSlots {
+    region: Arc<dyn SharedRegion>,
+    id: u64,
+    state: Mutex<State>,
+}
+
+impl PictureSlots {
+    /// The slots of `region`, whose header the host wrote. An error says why the region cannot
+    /// carry pictures.
+    pub fn open(region: Arc<dyn SharedRegion>) -> Result<Arc<PictureSlots>, String> {
+        let len = region.len();
+        if (len as u64) < MIN_REGION_BYTES {
+            return Err(format!(
+                "the shared picture region of {len} bytes is smaller than {MIN_REGION_BYTES}"
+            ));
+        }
+        // SAFETY: the view is `len` bytes long and outlives this read.
+        let header = unsafe { std::slice::from_raw_parts(region.as_ptr(), 24) };
+        let (id, said) = read_header(header).ok_or_else(|| {
+            "the shared picture region has no header; the service did not make it".to_string()
+        })?;
+        if said > len as u64 || id == 0 {
+            return Err(format!(
+                "the shared picture region's header says {said} bytes and id {id:x}, but the \
+                 view has {len}"
+            ));
+        }
+        Ok(Arc::new(PictureSlots {
+            region,
+            id,
+            state: Mutex::new(State {
+                next_number: 1,
+                ..State::default()
+            }),
+        }))
+    }
+
+    /// The id in the region's header, which the guest names when it maps the same region.
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    /// The bytes the slots may use, after the header.
+    pub fn capacity(&self) -> usize {
+        self.region.len().saturating_sub(SLOTS_START) / SLOT_ALIGNMENT * SLOT_ALIGNMENT
+    }
+
+    fn state(&self) -> MutexGuard<'_, State> {
+        self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// A stream that sends its pictures here. Its slots come back when it is dropped.
+    pub fn stream(self: &Arc<Self>) -> StreamSlots {
+        let mut state = self.state();
+        let stream = state.next_stream;
+        state.next_stream += 1;
+        state.streams += 1;
+        StreamSlots {
+            slots: Arc::clone(self),
+            stream,
+        }
+    }
+
+    /// How many slots are held now, by every stream.
+    pub fn held(&self) -> usize {
+        self.state().held.len()
+    }
+}
+
+/// One stream's use of the region: the slots it takes, writes, lends to the guest and gets
+/// back. Dropping it takes back every slot it still holds.
+pub struct StreamSlots {
+    slots: Arc<PictureSlots>,
+    stream: u64,
+}
+
+impl StreamSlots {
+    /// The id of the region.
+    pub fn region_id(&self) -> u64 {
+        self.slots.id
+    }
+
+    /// How many slots this stream holds.
+    pub fn held(&self) -> usize {
+        let state = self.slots.state();
+        state
+            .held
+            .values()
+            .filter(|h| h.stream == self.stream)
+            .count()
+    }
+
+    /// A slot for a picture of `len` bytes, or `None` when this stream already holds
+    /// [`SLOTS_PER_STREAM`] or the region has no room: the picture then goes in its message.
+    pub fn take(&self, len: usize) -> Option<Slot> {
+        if len == 0 {
+            return None;
+        }
+        let span = len.checked_next_multiple_of(SLOT_ALIGNMENT)?;
+        let end = SLOTS_START + self.slots.capacity();
+        let mut state = self.slots.state();
+        let mine = state
+            .held
+            .values()
+            .filter(|h| h.stream == self.stream)
+            .count();
+        if mine >= SLOTS_PER_STREAM {
+            return None;
+        }
+        // The first gap that fits, in order of offset.
+        let mut at = SLOTS_START;
+        for (&offset, held) in &state.held {
+            if offset >= at + span {
+                break;
+            }
+            at = at.max(offset + held.span);
+        }
+        if at + span > end {
+            return None;
+        }
+        let number = state.next_number;
+        state.next_number = state.next_number.wrapping_add(1).max(1);
+        state.held.insert(
+            at,
+            Held {
+                span,
+                stream: self.stream,
+                number,
+                lent: false,
+            },
+        );
+        state.touched_end = state.touched_end.max(at + span);
+        Some(Slot {
+            number,
+            offset: at as u64,
+            len,
+        })
+    }
+
+    /// Lets `fill` write the slot's bytes, while this stream holds it and has not lent it.
+    /// Returns what `fill` returned, or false when the slot is not this stream's to write.
+    pub fn write(&self, slot: &Slot, fill: impl FnOnce(&mut [u8]) -> bool) -> bool {
+        let offset = slot.offset as usize;
+        {
+            let state = self.slots.state();
+            match state.held.get(&offset) {
+                Some(held)
+                    if held.stream == self.stream
+                        && held.number == slot.number
+                        && !held.lent
+                        && slot.len <= held.span => {}
+                _ => return false,
+            }
+        }
+        // SAFETY: the slot's bytes lie inside the view (`take` placed them there), and no one
+        // else writes them: the slot is this stream's, and not lent, until this stream lends it
+        // or gives it back, which takes `&self` on this same stream after `fill` returns.
+        let bytes = unsafe {
+            std::slice::from_raw_parts_mut(self.slots.region.as_ptr().add(offset), slot.len)
+        };
+        fill(bytes)
+    }
+
+    /// The slot goes to the guest with its picture's message: the host does not write it until
+    /// the guest gives it back. False when it is not this stream's.
+    pub fn lend(&self, slot: &Slot) -> bool {
+        let mut state = self.slots.state();
+        match state.held.get_mut(&(slot.offset as usize)) {
+            Some(held) if held.stream == self.stream && held.number == slot.number => {
+                held.lent = true;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// The slot numbered `number` is this stream's to reuse: the guest gave it back, or the
+    /// host dropped its picture before sending it. False for a number this stream does not
+    /// hold, which changes nothing.
+    pub fn give_back(&self, number: u32) -> bool {
+        let mut state = self.slots.state();
+        let found = state
+            .held
+            .iter()
+            .find(|(_, h)| h.stream == self.stream && h.number == number)
+            .map(|(&offset, _)| offset);
+        match found {
+            Some(offset) => {
+                state.held.remove(&offset);
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+impl Drop for StreamSlots {
+    fn drop(&mut self) {
+        let discard = {
+            let mut state = self.slots.state();
+            state.held.retain(|_, h| h.stream != self.stream);
+            state.streams = state.streams.saturating_sub(1);
+            if state.streams == 0 && state.touched_end > SLOTS_START {
+                let end = std::mem::take(&mut state.touched_end);
+                Some(end - SLOTS_START)
+            } else {
+                None
+            }
+        };
+        // The last stream is gone: what the pictures touched goes back to the host.
+        if let Some(len) = discard {
+            self.slots.region.discard(SLOTS_START, len);
+        }
+    }
+}
+
+/// A region in this process's own memory, for tests and for hosts that share none: it is
+/// what the platform's region would be, without a guest to see it.
+pub struct MemoryRegion {
+    bytes: Box<[std::cell::UnsafeCell<u8>]>,
+    discarded: Mutex<Vec<(usize, usize)>>,
+}
+
+// SAFETY: the bytes are only written through `StreamSlots::write`, whose slots never overlap.
+unsafe impl Sync for MemoryRegion {}
+// SAFETY: as above; the bytes are owned.
+unsafe impl Send for MemoryRegion {}
+
+impl MemoryRegion {
+    /// A region of `len` bytes with its header written, id `id`.
+    pub fn new(len: usize, id: u64) -> MemoryRegion {
+        let bytes: Vec<std::cell::UnsafeCell<u8>> =
+            (0..len).map(|_| std::cell::UnsafeCell::new(0)).collect();
+        let region = MemoryRegion {
+            bytes: bytes.into_boxed_slice(),
+            discarded: Mutex::new(Vec::new()),
+        };
+        // SAFETY: the region is new and this is the only reference.
+        let all = unsafe { std::slice::from_raw_parts_mut(region.as_ptr(), len) };
+        write_header(all, id, len as u64);
+        region
+    }
+
+    /// The bytes from `offset`, as the guest would read them.
+    pub fn read(&self, offset: usize, len: usize) -> Vec<u8> {
+        let end = (offset + len).min(self.bytes.len());
+        // SAFETY: inside the region; a copy taken while nothing writes it in the tests.
+        unsafe { std::slice::from_raw_parts(self.as_ptr().add(offset), end - offset) }.to_vec()
+    }
+
+    /// Every range discarded so far.
+    pub fn discarded(&self) -> Vec<(usize, usize)> {
+        self.discarded
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+}
+
+impl SharedRegion for MemoryRegion {
+    fn as_ptr(&self) -> *mut u8 {
+        std::cell::UnsafeCell::raw_get(self.bytes.as_ptr())
+    }
+
+    fn len(&self) -> usize {
+        self.bytes.len()
+    }
+
+    fn discard(&self, offset: usize, len: usize) {
+        self.discarded
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push((offset, len));
+    }
+}

@@ -3158,7 +3158,10 @@ class GuestMemoryTests(unittest.TestCase):
             + make_image.FILES_PROPERTY_CONTEXT + "\n"
             + make_image.ROOT_ELEVATION_PROPERTY_CONTEXT + "\n"
             + make_image.DNS_PROPERTY_CONTEXT + "\n"
+            + make_image.HOST_MEMORY_PROPERTY_CONTEXT + "\n"
+            + make_image.VIDEO_PICTURES_PROPERTY_CONTEXT + "\n"
             + "".join(context + "\n" for context in make_image.GAPPS_COMPILE_PROPERTY_CONTEXTS.values())
+            + "".join(context + "\n" for context in make_image.APP_MEMORY_PROPERTY_CONTEXTS.values())
         )
         self.assertEqual(make_image.update_vendor_property_contexts(all_of_them), all_of_them)
 
@@ -8916,6 +8919,51 @@ class SlimSystemServerTests(unittest.TestCase):
         script = (Path(make_image.__file__).parent / "check-image.py").read_text()
         self.assertIn("make_image.boot_receivers_left(z.read(name))", script)
         self.assertIn("make_image.BOOT_RECEIVER_FREE_APKS", script)
+
+
+class SharedPictureMemoryTests(unittest.TestCase):
+    """The memory the host shares for decoded video pictures: dsa-channeld sets where it is, init
+    hands it to the kernel's driver, and only the codec HAL may map the driver's device."""
+
+    HERE = Path(make_image.__file__).parent
+    MEMORY = (HERE / "sepolicy/memory.cil").read_text()
+    CHANNELD = (HERE / "sepolicy/channeld.cil").read_text()
+    CODEC2 = (HERE / "sepolicy/codec2.cil").read_text()
+    RC = (HERE / "dsa-memory.rc").read_text()
+
+    def test_pr7_init_hands_the_kernel_where_the_picture_memory_is(self):
+        self.assertIn(
+            "on property:vendor.dsa.video_pictures=*\n"
+            "    write /sys/module/dsa_shared_memory/parameters/video_pictures "
+            "${vendor.dsa.video_pictures}\n",
+            self.RC.replace("\r\n", "\n"),
+        )
+        self.assertIn(make_image.VIDEO_PICTURES_PROPERTY_CONTEXT,
+                      make_image.update_vendor_property_contexts("").splitlines())
+        self.assertEqual(make_image.VIDEO_PICTURES_PROPERTY, "vendor.dsa.video_pictures")
+
+    def test_pr7_only_the_daemon_sets_it_and_only_init_writes_the_driver(self):
+        self.assertIn('(genfscon sysfs "/module/dsa_shared_memory" (u object_r dsa_sysfs_shared_memory '
+                      '((s0) (s0))))', self.MEMORY)
+        policy = self.MEMORY + self.CHANNELD + self.CODEC2
+        writers = re.findall(r"\(allow\s+(\S+)\s+dsa_sysfs_shared_memory\s+\(\s*file\s+\([^)]*\bwrite\b", policy)
+        self.assertEqual(writers, ["vendor_init"])
+        setters = re.findall(r"\(allow\s+(\S+)\s+dsa_video_pictures_prop\s+\(\s*property_service\s+\([^)]*\bset\b",
+                             policy)
+        self.assertEqual(setters, ["dsa_channeld"])
+
+    def test_pr7_only_the_codec_hal_maps_the_pictures_and_only_for_reading(self):
+        policy = self.MEMORY + self.CHANNELD + self.CODEC2
+        openers = [(who, perms) for who, perms in
+                   re.findall(r"\(allow\s+(\S+)\s+dsa_video_pictures_device\s+\(\s*chr_file\s+\(([^)]*)\)", policy)
+                   if "open" in perms.split()]
+        self.assertEqual([who for who, _ in openers], ["mediacodec"])
+        self.assertNotIn("write", openers[0][1].split())
+        self.assertIn("map", openers[0][1].split())
+        self.assertIn("(allowx mediacodec dsa_video_pictures_device (ioctl chr_file (0x4450)))", self.CODEC2)
+        for codec2 in (False, True):
+            contexts = make_image.update_vendor_file_contexts("", codec2=codec2).splitlines()
+            self.assertIn(make_image.VIDEO_PICTURES_DEVICE_CONTEXT, contexts)
 
 
 if __name__ == "__main__":

@@ -3098,6 +3098,21 @@ HCS에는 바로 이 목적의 장치가 문서에 있다.
 
 이 절은 조사다. 설계, 영역 크기, 기본값은 프로토타입 1-3의 결과를 보고 소유자가 정한다. SPEC과 INTENT는 바꾸지 않았다.
 
+### 구현 1: 동영상 그림 (2026-11-15, PR-7)
+
+소유자가 2026-11-15에 공유 메모리를 동영상 그림부터 넣기로 정했고 SPEC에 PR-7(`Agreed`)을 더했다. 같은 날 소유자 PC(Intel Arc와 RTX 4050 노트북, Windows 11)에서 4K AV1(3840x1920, NV12 한 장 약 11 MB)이 8-16 fps였고, 장마다 디코딩 5 ms, GPU에서 꺼내기 5 ms, 게스트가 가져가기를 기다리기 약 54 ms, 보내기 약 62 ms였다(`dsa-wm.log`의 `video:` 줄). 아래는 그래픽(gfxstream) 경로가 아니라 동영상 경로에 위 1과 3의 모양을 적용한 것이다. 이 PC에서 빌드하거나 돌리지 않았다. 확인은 CI와 소유자 PC의 실기에서 한다.
+
+1. 영역. 서비스(`dsa-hostd`)는 VM을 만들기 전에 페이지 파일 기반 섹션 `Global\DSA-VideoPictures-<사용자 SID>`(기본 64 MiB, `video_shared_memory_mb`, 0이면 없음)를 만들고(`SEC_COMMIT`, DACL은 SYSTEM, `S-1-5-83-0`, 그 사용자), 머리(`DSAVPIC1`, 부팅마다 새 id, 길이)를 쓴 뒤, HCS 문서의 `Devices.SharedMemory.Regions`에 `AllowGuestWrite: false`로 넣는다(`picture_region.rs`, `vm.rs`). HCS가 그 문서를 거절하면 영역 없이 다시 만든다. VM이 시작되면 `{"PropertyTypes":["SharedMemoryRegion"]}` 질의의 `SharedMemoryRegionInfo`에서 주소를 읽어, 제어 데몬이 핸드셰이크를 마칠 때 `GuestSharedMemory`로 보낸다(`GuestLauncher::shared_memory`). 섹션 핸들은 R42 1의 2가 권한 `DuplicateHandle` 대신 이름과 좁힌 DACL로 연다. 창 관리자(`dsa-wm`)가 사용자 세션에서 따로 뜨고, 이름에 SID가 들어 있어 다른 사용자가 열 수 없기 때문이다.
+2. 주소의 단위. 위 1의 3에서 HCS가 알린 값이 "페이지 번호처럼 보였다"고 했으므로, 서비스는 값을 그대로 넘기고 게스트 드라이버가 그 값과 그 값을 페이지 번호로 본 주소 둘 중 머리가 있는 쪽을 고른다. 후보는 페이지 정렬이고 게스트 RAM과 겹치지 않아야 한다(`region_intersects`).
+3. 게스트 커널. `patches/dsa-shared-memory.patch`의 `drivers/misc/dsa_shared_memory.c`(`CONFIG_DSA_SHARED_MEMORY=y`). init이 `/sys/module/dsa_shared_memory/parameters/video_pictures`에 `0x<주소>,<길이>`를 쓰면 그 범위를 `request_mem_region`으로 잡고, `/dev/dsa_video_pictures`가 그 범위만 읽기 전용으로 `remap_pfn_range`(`VM_PFNMAP`, struct page 없음)한다. 크기는 ioctl 하나(`_IOR('D', 0x50, __u64)`)로 알린다. 한 부팅에 첫 값만 받는다. R42 3의 1이 말한 허가 표와 앱마다의 범위 검사는 없다. 이 영역은 앱이 아니라 코덱 HAL 하나(SELinux `mediacodec`)만 열기 때문이다. 그래픽 경로에 쓸 때는 다시 필요하다.
+4. 게스트 사용자 공간. `dsa-channeld`가 `GuestSharedMemory`를 받아 `vendor.dsa.video_pictures`를 정하고, `dsa-memory.rc`가 그 값을 커널에 쓴다. 속성은 데몬만, 매개변수는 init만 쓸 수 있다(`memory.cil`, `channeld.cil`). 코덱 HAL은 장치를 한 번 매핑하고(`picture_region.cpp`), 디코더를 열 때 머리의 id를 `VideoDecoderOpen.picture_region_id`로 보낸다.
+5. 호스트의 고리. 창 관리자는 첫 스트림이 열릴 때 섹션을 이름으로 열어 매핑하고, 머리의 id가 게스트가 보낸 id와 같을 때만 그 스트림의 그림을 슬롯으로 보낸다(`VideoDecoderOpened.shared_pictures`). Media Foundation 디코더는 스테이징 텍스처에서 슬롯으로 바로 쓴다(복사 한 번, 지금의 "GPU에서 꺼내기"). 메시지는 `VideoFrame.slot`, `slot_offset`만 싣는다. 슬롯은 64 KiB 단위의 첫 맞춤 할당이고, 스트림마다 넷까지다(`dsa_host_core::video_slots`). 게스트가 `VideoSlotReturned`로 돌려줄 때까지 호스트는 그 슬롯을 쓰지 않는다. 패킷을 디코딩하기 전, 스트림이 셋 이상 쥐고 있으면 최대 200 ms 돌려받기를 기다리고, 그래도 자리가 없으면 그 그림만 메시지로 보낸다. 연결이 끝나면 그 연결의 슬롯이 모두 돌아온다.
+6. 게스트의 복사. 앱의 출력 버퍼는 앱 서피스의 `IGraphicBufferAllocator`가 게스트 RAM에서 주므로, 슬롯을 앱 버퍼로 넘길 수 없다(gralloc이 이 영역에서 할당하지 않는다). 그래서 HAL은 슬롯에서 앱 버퍼로 한 번 복사한다. 지금도 메시지에서 한 번 복사하므로 게스트의 복사 수는 같고, 소켓을 지나는 복사(호스트 직렬화, hvsocket, 게스트 역직렬화)가 없어진다. 슬롯은 그 프레임의 마지막 사본이 사라질 때(쓰였든, 플러시로 버려졌든) 돌아간다.
+7. 메모리(NFR-1, NFR-2). 마지막 스트림이 끝나면 창 관리자가 닿았던 슬롯 범위에 `DiscardVirtualMemory`를 걸고, 뷰를 놓는다. VM이 멈추면 서비스가 섹션을 닫는다. 위 4의 3과 위험 2(VM 작업자가 그 페이지를 놓는지)는 그대로 미지수이고, PR-7의 수동 기준이 잰다.
+8. 통계. `video:` 줄은 슬롯으로 간 그림이 있으면 "N in shared memory, M in messages, waiting for the guest to give slots back X ms a packet"을 붙이고, 메시지로 간 그림이 없으면 "waiting for the guest to take a picture"와 "send"를 싣지 않는다.
+
+확인하지 못한 것: 위 "프로토타입 1"의 모든 항목(DSA의 VM에서 영역이 보이는지, 주소의 단위, 게스트 `memcpy` 대역폭), 해제한 페이지가 vmmem에서 돌아오는지(프로토타입 2), 커널 드라이버의 빌드(CI만), 4K60 58 fps(실기).
+
 ## R43. 직접 매핑 모드에서 vmmem의 메모리가 오히려 700-850 MiB 는 까닭과 고친 것 (NFR-1, NFR-2)
 
 **질문.** 소유자 PC(0.2.4-dev.15, Windows 11)에서 R39의 직접 매핑 모드(시스템 디스크와 추가 기능 디스크를 Hyper-V `VirtualPMem`으로 붙이고 erofs를 `dax=always`로 마운트)를 켜자 게스트 페이지 캐시(유휴 153 -> 93 MiB)와 VM private(90-250 MiB)는 줄었는데, vmmem의 작업 집합(`dsa memory`의 "resident")은 700-850 MiB 늘었다(유휴 5분 568 -> 1303 MiB, Play를 띄운 1분 867 -> 1719 MiB). Hyper-V는 영구 메모리의 파일을 어떻게 매핑하는가, 그 페이지는 무엇으로 세는가, 누가 돌려줄 수 있는가.

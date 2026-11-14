@@ -1820,6 +1820,11 @@ message VideoDecoderOpen {
   VideoCodec codec = 1;
   uint32 width = 2;
   uint32 height = 3;
+  // The id the guest read from the header of the shared picture region it maps (see
+  // GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+  // writes pictures to, the two see the same memory, and the host may send this stream's
+  // pictures there (VideoFrame.slot) instead of in the messages.
+  uint64 picture_region_id = 4;
 }
 
 // Host to guest: the answer to VideoDecoderOpen. When `ok` is false, `error` says, in words
@@ -1827,6 +1832,9 @@ message VideoDecoderOpen {
 message VideoDecoderOpened {
   bool ok = 1;
   string error = 2;
+  // Whether this stream's pictures may come in the shared picture region. When it is false,
+  // every picture comes in its message.
+  bool shared_pictures = 3;
 }
 
 // Guest to host: one access unit of the stream, in decode order. `frame_index` is the
@@ -1858,6 +1866,33 @@ message VideoFrame {
   uint32 stride = 5;
   bytes nv12 = 6;
   bool end_of_stream = 7;
+  // Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+  // bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+  // read until it sends VideoSlotReturned with this number; the host does not write it
+  // before then. Every slot of a connection is the host's again when the connection ends.
+  uint32 slot = 8;
+  uint64 slot_offset = 9;
+}
+
+// Guest to host: the guest has read the picture in `slot` (VideoFrame.slot), or dropped it,
+// and the slot is the host's again. A number that is not one of this connection's slots
+// held by the guest is ignored.
+message VideoSlotReturned {
+  uint32 slot = 1;
+}
+
+// Host to the guest's control daemon, after the handshake: a region of host memory the VM
+// sees as its own physical memory, which host and guest share without copying. The guest
+// kernel maps it for the guest's users of it; the host writes it, and the guest only reads.
+// `name` says what it is for ("video_pictures": decoded video pictures, see VideoFrame.slot).
+// A host that has no such region sends none. The "video_pictures" region starts with a
+// header the host writes: the eight bytes "DSAVPIC1", then the region's id and its length in
+// bytes, each eight bytes little endian (the id is what VideoDecoderOpen.picture_region_id
+// names). Its slots start 64 KiB in.
+message GuestSharedMemory {
+  string name = 1;
+  uint64 guest_physical_address = 2;
+  uint64 length = 3;
 }
 
 // Guest to host: drop every packet and picture held, as for a seek. The host answers with
@@ -3294,6 +3329,8 @@ message Envelope {
     VideoFlush video_flush = 125;
     VideoFlushed video_flushed = 126;
     VideoError video_error = 127;
+    VideoSlotReturned video_slot_returned = 128;
+    GuestSharedMemory guest_shared_memory = 129;
     LogStream log_stream = 130;
     LogDump log_dump = 131;
     LogRecords log_records = 132;

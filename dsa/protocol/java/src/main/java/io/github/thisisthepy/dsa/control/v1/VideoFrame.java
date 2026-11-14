@@ -208,6 +208,79 @@ public  final class VideoFrame extends
     endOfStream_ = false;
   }
 
+  public static final int SLOT_FIELD_NUMBER = 8;
+  private int slot_;
+  /**
+   * <pre>
+   * Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+   * bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+   * read until it sends VideoSlotReturned with this number; the host does not write it
+   * before then. Every slot of a connection is the host's again when the connection ends.
+   * </pre>
+   *
+   * <code>uint32 slot = 8;</code>
+   * @return The slot.
+   */
+  @java.lang.Override
+  public int getSlot() {
+    return slot_;
+  }
+  /**
+   * <pre>
+   * Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+   * bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+   * read until it sends VideoSlotReturned with this number; the host does not write it
+   * before then. Every slot of a connection is the host's again when the connection ends.
+   * </pre>
+   *
+   * <code>uint32 slot = 8;</code>
+   * @param value The slot to set.
+   */
+  private void setSlot(int value) {
+    
+    slot_ = value;
+  }
+  /**
+   * <pre>
+   * Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+   * bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+   * read until it sends VideoSlotReturned with this number; the host does not write it
+   * before then. Every slot of a connection is the host's again when the connection ends.
+   * </pre>
+   *
+   * <code>uint32 slot = 8;</code>
+   */
+  private void clearSlot() {
+    
+    slot_ = 0;
+  }
+
+  public static final int SLOT_OFFSET_FIELD_NUMBER = 9;
+  private long slotOffset_;
+  /**
+   * <code>uint64 slot_offset = 9;</code>
+   * @return The slotOffset.
+   */
+  @java.lang.Override
+  public long getSlotOffset() {
+    return slotOffset_;
+  }
+  /**
+   * <code>uint64 slot_offset = 9;</code>
+   * @param value The slotOffset to set.
+   */
+  private void setSlotOffset(long value) {
+    
+    slotOffset_ = value;
+  }
+  /**
+   * <code>uint64 slot_offset = 9;</code>
+   */
+  private void clearSlotOffset() {
+    
+    slotOffset_ = 0L;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.VideoFrame parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -510,6 +583,83 @@ public  final class VideoFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+     * bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+     * read until it sends VideoSlotReturned with this number; the host does not write it
+     * before then. Every slot of a connection is the host's again when the connection ends.
+     * </pre>
+     *
+     * <code>uint32 slot = 8;</code>
+     * @return The slot.
+     */
+    @java.lang.Override
+    public int getSlot() {
+      return instance.getSlot();
+    }
+    /**
+     * <pre>
+     * Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+     * bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+     * read until it sends VideoSlotReturned with this number; the host does not write it
+     * before then. Every slot of a connection is the host's again when the connection ends.
+     * </pre>
+     *
+     * <code>uint32 slot = 8;</code>
+     * @param value The slot to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSlot(int value) {
+      copyOnWrite();
+      instance.setSlot(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+     * bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+     * read until it sends VideoSlotReturned with this number; the host does not write it
+     * before then. Every slot of a connection is the host's again when the connection ends.
+     * </pre>
+     *
+     * <code>uint32 slot = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSlot() {
+      copyOnWrite();
+      instance.clearSlot();
+      return this;
+    }
+
+    /**
+     * <code>uint64 slot_offset = 9;</code>
+     * @return The slotOffset.
+     */
+    @java.lang.Override
+    public long getSlotOffset() {
+      return instance.getSlotOffset();
+    }
+    /**
+     * <code>uint64 slot_offset = 9;</code>
+     * @param value The slotOffset to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSlotOffset(long value) {
+      copyOnWrite();
+      instance.setSlotOffset(value);
+      return this;
+    }
+    /**
+     * <code>uint64 slot_offset = 9;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSlotOffset() {
+      copyOnWrite();
+      instance.clearSlotOffset();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.VideoFrame)
   }
   @java.lang.Override
@@ -533,10 +683,12 @@ public  final class VideoFrame extends
             "stride_",
             "nv12_",
             "endOfStream_",
+            "slot_",
+            "slotOffset_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0003\u0002\u0002" +
-              "\u0003\u000b\u0004\u000b\u0005\u000b\u0006\n\u0007\u0007";
+              "\u0000\t\u0000\u0000\u0001\t\t\u0000\u0000\u0000\u0001\u0003\u0002\u0002\u0003\u000b" +
+              "\u0004\u000b\u0005\u000b\u0006\n\u0007\u0007\b\u000b\t\u0003";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
