@@ -87,7 +87,8 @@
                     </Grid.RowDefinitions>
 
                     <Button x:Name="PART_ToggleButton" Grid.Row="0" Width="40" Height="36" Margin="0,2,0,2"
-                            HorizontalAlignment="Left" Foreground="{DynamicResource NavigationViewItemForeground}">
+                            HorizontalAlignment="Left" Foreground="{DynamicResource NavigationViewItemForeground}"
+                            AutomationProperties.Name="{l:Text A11y_NavToggle}">
                         <Button.Template>
                             <ControlTemplate TargetType="{x:Type Button}">
                                 <Border x:Name="ToggleBorder" Background="Transparent"

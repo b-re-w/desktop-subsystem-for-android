@@ -1,6 +1,145 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "A11y_ItemName": {
+      "comment": "VoiceOver's name for a control repeated in every row of a list: {0} is what it does (Open), {1} the row (the app's name).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{0}, {1}"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{1} {0}"
+          }
+        }
+      }
+    },
+    "A11y_Notice": {
+      "comment": "What VoiceOver says when a banner appears: {0} its title, {1} its message.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{0}. {1}"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{0}. {1}"
+          }
+        }
+      }
+    },
+    "A11y_LogLine": {
+      "comment": "A log row as VoiceOver reads it: {0} the time, {1} the priority as a word, {2} the tag, {3} the message.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{0}, {1}, {2}: {3}"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{0}, {1}, {2}: {3}"
+          }
+        }
+      }
+    },
+    "A11y_LogDropped": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{0} records dropped"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 {0}개가 빠졌습니다"
+          }
+        }
+      }
+    },
+    "A11y_LogPriority": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lowest priority shown"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표시할 최소 우선순위"
+          }
+        }
+      }
+    },
+    "A11y_Loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "불러오는 중"
+          }
+        }
+      }
+    },
+    "A11y_Copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사했습니다"
+          }
+        }
+      }
+    },
+    "A11y_Close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
     "AppsDesktopShortcutButton.Content": {
       "extractionState": "manual",
       "localizations": {

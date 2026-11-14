@@ -45,11 +45,14 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Text NetworkAddressLabel.Text}" Margin="0,0,16,4" />
-                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkAddresses, Mode=OneWay}" />
+                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkAddresses, Mode=OneWay}"
+                                     AutomationProperties.Name="{l:Text NetworkAddressLabel.Text}" />
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Text NetworkDnsLabel.Text}" Margin="0,0,16,4" />
-                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkDns, Mode=OneWay}" />
+                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkDns, Mode=OneWay}"
+                                     AutomationProperties.Name="{l:Text NetworkDnsLabel.Text}" />
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Text NetworkGatewayLabel.Text}" Margin="0,0,16,0" />
-                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="2" Grid.Column="1" Text="{Binding NetworkGateway, Mode=OneWay}" />
+                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="2" Grid.Column="1" Text="{Binding NetworkGateway, Mode=OneWay}"
+                                     AutomationProperties.Name="{l:Text NetworkGatewayLabel.Text}" />
                         </Grid>
                     </ui:CardControl.Header>
                 </ui:CardControl>
@@ -63,7 +66,8 @@
                         </StackPanel>
                     </ui:CardControl.Header>
                     <ui:ToggleSwitch x:Name="AdvancedNetworkingSwitch" IsChecked="{Binding AdvancedNetworking, Mode=OneWay}"
-                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnAdvancedNetworkingToggled" />
+                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnAdvancedNetworkingToggled"
+                                     AutomationProperties.Name="{l:Text AdvancedNetworkingCard.Header}" />
                 </ui:CardControl>
                 <ui:InfoBar Title="{l:Text NetworkRestartBar.Title}" Message="{l:Text NetworkRestartBar.Message}"
                             Severity="Informational" IsClosable="False"
@@ -113,7 +117,8 @@
                         </StackPanel>
                     </ui:CardControl.Header>
                     <ui:ToggleSwitch x:Name="DeveloperModeSwitch" IsChecked="{Binding DeveloperMode, Mode=OneWay}"
-                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnDeveloperModeToggled" />
+                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnDeveloperModeToggled"
+                                     AutomationProperties.Name="{l:Text DeveloperModeCard.Header}" />
                 </ui:CardControl>
                 <ui:CardControl Icon="{ui:SymbolIcon ArrowSync24}">
                     <ui:CardControl.Header>
@@ -140,10 +145,12 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:Name="AdbCommand" Style="{StaticResource SelectableCode}" VerticalAlignment="Center"
-                                             Text="{Binding AdbConnect, Mode=OneWay}" />
+                                             Text="{Binding AdbConnect, Mode=OneWay}"
+                                             AutomationProperties.Name="{l:Text AdbCard.Header}" />
                                     <ui:Button x:Name="AdbCopyButton" Grid.Column="1" Margin="8,0,0,0" MinWidth="32" Width="32" Height="32" Padding="0"
                                                Appearance="Transparent" Icon="{ui:SymbolIcon Copy24}" Click="OnCopyAdbCommand"
-                                               ToolTip="{l:Text CopyButton.ToolTip}" AutomationProperties.Name="{l:Text CopyButton.ToolTip}" />
+                                               ToolTip="{l:Text CopyButton.ToolTip}"
+                                               AutomationProperties.Name="{l:ItemName CopyButton.ToolTip, Item=AdbCard.Header}" />
                                 </Grid>
                             </Border>
                         </StackPanel>

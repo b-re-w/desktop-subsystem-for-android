@@ -195,9 +195,12 @@ pub fn backup(ctx: &Shared, page: &Rc<Page>) {
             busy_row.clone(),
             result_row.clone(),
         );
+        let spinner = spinner.clone();
         Rc::new(move |job: BackupJob| {
             running.set(Some(job));
             busy_row.set_title(&view::backup_busy_text(job));
+            // The spinner says what it waits for, as the row beside it does.
+            accessible_name(&spinner, &view::backup_busy_text(job));
             busy_row.set_visible(job.is_long());
             result_row.set_visible(false);
             buttons();

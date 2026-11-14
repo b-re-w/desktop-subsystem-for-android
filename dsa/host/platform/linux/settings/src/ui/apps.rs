@@ -124,9 +124,9 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         .placeholder_text(tr("Search apps"))
         .valign(gtk::Align::Center)
         .build();
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    // A placeholder is not a name: a screen reader says it only while the box is empty.
+    accessible_name(&search, &tr("Search apps"));
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     header.append(&search);
     header.append(&refresh);
     installed.set_header_suffix(Some(&header));
@@ -267,7 +267,7 @@ fn app_row(
     let row = expander_row(&app.label, &view::app_detail(app));
     row.add_prefix(&png_image(&app.icon_png, "application-x-executable", 32));
 
-    let open = button(&tr("Open"));
+    let open = item_button(&tr("Open"), &app.label);
     row.add_suffix(&open);
     {
         let (ctx, page, package) = (ctx.clone(), page.clone(), app.package.clone());
@@ -743,9 +743,7 @@ pub fn background(ctx: &Shared) -> gtk::Widget {
         &tr("Apps"),
         Some(&tr("These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used.")),
     );
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     intro.set_header_suffix(Some(&refresh));
     let rows = Rows::new(intro);
     page.add(&rows.group);
@@ -804,8 +802,8 @@ pub fn background(ctx: &Shared) -> gtk::Widget {
                         };
                         let row = action_row(&app.label, &detail);
                         row.add_prefix(&png_image(&app.icon_png, "application-x-executable", 32));
-                        let open = button(&tr("Open"));
-                        let stop = button(&tr("Stop"));
+                        let open = item_button(&tr("Open"), &app.label);
+                        let stop = item_button(&tr("Stop"), &app.label);
                         stop.add_css_class("destructive-action");
                         row.add_suffix(&open);
                         row.add_suffix(&stop);
@@ -903,9 +901,7 @@ pub fn widgets(ctx: &Shared) -> gtk::Widget {
         &tr("On your desktop"),
         Some(&tr("Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page.")),
     );
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     placed.set_header_suffix(Some(&refresh));
     let placed = Rows::new(placed);
     page.add(&placed.group);
@@ -963,7 +959,7 @@ pub fn widgets(ctx: &Shared) -> gtk::Widget {
                             ],
                         );
                         let row = action_row(&widget.label, &format!("{} · {detail}", widget.app));
-                        let remove = button(&tr("Remove"));
+                        let remove = item_button(&tr("Remove"), &widget.label);
                         row.add_suffix(&remove);
                         let (ctx, id) = (ctx2.clone(), widget.id);
                         let done = trf("{0} was removed from your desktop.", &[&widget.label]);
@@ -986,7 +982,7 @@ pub fn widgets(ctx: &Shared) -> gtk::Widget {
                         }
                         let row = action_row(&offer.label, &detail.join(" · "));
                         row.add_prefix(&offer_image(offer));
-                        let add = button(&tr("Add to desktop"));
+                        let add = item_button(&tr("Add to desktop"), &offer.label);
                         row.add_suffix(&add);
                         let (ctx, provider) = (ctx2.clone(), offer.provider.clone());
                         let done = trf("{0} is on your desktop.", &[&offer.label]);

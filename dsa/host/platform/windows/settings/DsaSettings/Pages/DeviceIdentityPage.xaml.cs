@@ -41,6 +41,8 @@ public partial class DeviceIdentityPage : Page
         {
             return;
         }
+        // The check mark is only seen; a screen reader says it in words.
+        Announce.Say(SpecsCopyButton, App.Text.Get("A11y_Copied"));
         SpecsCopyButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Checkmark24 };
         await System.Threading.Tasks.Task.Delay(1500);
         SpecsCopyButton.Icon = null;

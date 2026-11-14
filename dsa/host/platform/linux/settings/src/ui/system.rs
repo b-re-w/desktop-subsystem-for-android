@@ -39,7 +39,7 @@ pub fn identity(ctx: &Shared) -> gtk::Widget {
         &tr("Device specifications"),
         Some(&tr("These follow this computer and are read again each time Android starts.\nAndroid's Settings shows the device name and the chip.\nThe model name shows only here, as Android's Settings has no place for it.")),
     );
-    let copy = gtk::Button::with_label(&tr("Copy"));
+    let copy = item_button(&tr("Copy"), &tr("Device specifications"));
     copy.add_css_class("flat");
     specs.set_header_suffix(Some(&copy));
     let spec_rows: Rc<Vec<(&'static str, adw::ActionRow)>> = Rc::new(
@@ -208,6 +208,7 @@ pub fn identity(ctx: &Shared) -> gtk::Widget {
             if let Some(identity) = known.borrow().as_ref() {
                 let text = identity.about_text(view::identity_label, &tr("Not reported"));
                 button.clipboard().set_text(&text);
+                announce(button, &tr("Copied"), false);
             }
         });
     }
@@ -323,9 +324,7 @@ pub fn identity(ctx: &Shared) -> gtk::Widget {
 pub fn network(ctx: &Shared) -> gtk::Widget {
     let page = Rc::new(Page::new());
     let status = group(&tr("Android's network"), None);
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     status.set_header_suffix(Some(&refresh));
     let mode = action_row("", "");
     mode.set_title(&tr("Connection"));
@@ -524,10 +523,12 @@ pub fn advanced(ctx: &Shared) -> gtk::Widget {
     };
     let machine_switch = |name: &'static str, title: String, subtitle: String| {
         let (ctx, show) = (ctx.clone(), show.clone());
-        Switch::new(&title, &subtitle, move |on| {
+        let switch = Switch::new(&title, &subtitle, move |on| {
             let show = show.clone();
             request(&ctx, move |c| c.set_machine(name, on), move |r| show(r));
-        })
+        });
+        needs_administrator(&switch.row, &subtitle);
+        switch
     };
 
     // Files.

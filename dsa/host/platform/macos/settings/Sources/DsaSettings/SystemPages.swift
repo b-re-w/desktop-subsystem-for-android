@@ -16,6 +16,7 @@ struct GeneralPage: View {
                     Spacer()
                     if vm.isBusy {
                         ProgressView().controlSize(.small)
+                            .accessibilityLabel(T("GeneralStateCard.Header"))
                     }
                     Text(vm.stateText).foregroundStyle(.secondary)
                     Button(T("StartButton.Content")) { Task { await vm.start() } }.disabled(!vm.canStart)
@@ -37,7 +38,7 @@ struct GeneralPage: View {
                     Task { await vm.freeze() }
                 }
             }
-            Section(T("GeneralMoreHeader.Text")) {
+            Section(heading: T("GeneralMoreHeader.Text")) {
                 LinkRow(title: T("OpenLogsCard.Header"), detail: T("OpenLogsCard.Description")) {
                     Shell.open(folder: Shell.userLogFolder)
                 }
@@ -92,6 +93,8 @@ struct MemoryPage: View {
                     RowLabel(title: T("MemoryLimitCard.Header"), detail: T("MemoryLimitCard.Description"))
                 }
                 .disabled(!settings.canChange)
+                .accessibilityLabel(T("MemoryLimitCard.Header"))
+                .accessibilityHint(T("MemoryLimitCard.Description"))
                 if vm.hasVmSize {
                     ValueRow(title: T("MemoryVmSizeCard.Header"), detail: T("MemoryVmSizeCard.Description"), value: vm.vmSize)
                     if vm.guestReported {
@@ -102,14 +105,14 @@ struct MemoryPage: View {
                     }
                 }
             }
-            Section(T("MemoryHostHeader.Text")) {
+            Section(heading: T("MemoryHostHeader.Text")) {
                 ValueRow(title: T("MemoryHostTotalCard.Header"), detail: T("MemoryHostTotalCard.Description"), value: vm.hostTotal)
                 ForEach(Array(vm.hostRows.enumerated()), id: \.offset) { MemoryRowView(row: $0.element) }
                 if vm.hostNotRunning {
                     Text(T("MemoryHostNone.Text")).foregroundStyle(.secondary)
                 }
             }
-            Section(T("MemoryGuestHeader.Text")) {
+            Section(heading: T("MemoryGuestHeader.Text")) {
                 if vm.guestReported {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
@@ -118,20 +121,22 @@ struct MemoryPage: View {
                             Text("\(vm.guestAvailable) \(T("MemoryAvailableOf.Text")) \(vm.guestTotal)").monospacedDigit()
                         }
                         ProgressView(value: vm.guestUsedFraction)
+                            .accessibilityLabel(T("MemoryGuestTotalCard.Header"))
                         Note(text: vm.guestAge)
                     }
                     ForEach(Array(vm.guestRows.enumerated()), id: \.offset) { MemoryRowView(row: $0.element) }
                 } else {
-                    Banner(kind: .info, title: T("MemoryGuestNoneBar.Title"), message: T("MemoryGuestNoneBar.Message"))
+                    Banner(kind: .info, title: T("MemoryGuestNoneBar.Title"), message: T("MemoryGuestNoneBar.Message"),
+                           announces: false)
                 }
             }
             if vm.kernelReported {
-                Section(T("MemoryKernelHeader.Text")) {
+                Section(heading: T("MemoryKernelHeader.Text")) {
                     ForEach(Array(vm.kernelRows.enumerated()), id: \.offset) { MemoryRowView(row: $0.element) }
                 }
             }
             if vm.guestReported {
-                Section(T("MemoryTopHeader.Text")) {
+                Section(heading: T("MemoryTopHeader.Text")) {
                     ForEach(Array(vm.guestProcessRows.enumerated()), id: \.offset) { MemoryRowView(row: $0.element) }
                 }
             }
@@ -167,8 +172,10 @@ struct DisplayPage: View {
                     RowLabel(title: T("RenderGpuCard.Header"), detail: T("RenderGpuCard.Description"))
                 }
                 .disabled(!vm.canChange)
+                .accessibilityLabel(T("RenderGpuCard.Header"))
+                .accessibilityHint(T("RenderGpuCard.Description"))
                 ValueRow(title: T("DisplayGpuCard.Header"), detail: T("DisplayGpuCard.Description"), value: vm.displayGpuName)
-                Banner(kind: .info, title: "", message: T("RenderGpuAppliesBar.Message"))
+                Banner(kind: .info, title: "", message: T("RenderGpuAppliesBar.Message"), announces: false)
             }
             Section {
                 ButtonRow(title: T("RestartWindowManagerCard.Header"), detail: T("RestartWindowManagerCard.Description"),
@@ -215,14 +222,20 @@ struct AdministratorSwitchRow: View {
         HStack {
             RowLabel(title: title, detail: detail)
             Image(systemName: "lock.shield").foregroundStyle(.secondary).help(T("AdminShield.ToolTip"))
+                .accessibilityLabel(T("AdminShield.ToolTip"))
             Spacer()
             if needsAdministrator {
                 Button(T("ChangeAsAdmin.Content"), action: asAdministrator)
+                    .accessibilityLabel(AccessibleText.itemName(appText, "ChangeAsAdmin.Content", title))
             }
+            // The switch has no label on screen: its row's title is its name, and the shield's
+            // words follow it, so VoiceOver does not leave them to a tool tip.
             Toggle("", isOn: Binding(get: { isOn }, set: { value in Task { await set(value) } }))
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .disabled(!canChange)
+                .accessibilityLabel(title)
+                .accessibilityHint(detail.isEmpty ? T("AdminShield.ToolTip") : detail + "\n" + T("AdminShield.ToolTip"))
         }
     }
 }
@@ -241,12 +254,13 @@ struct UpdatesPage: View {
             BannerSection(shown: vm.error != nil, kind: .error, title: T("SettingsErrorBar.Title"), message: vm.error ?? "")
             BannerSection(shown: android.error != nil, kind: .error, title: T("SettingsErrorBar.Title"), message: android.error ?? "")
             BannerSection(shown: vm.needsAdministrator, kind: .warning, title: T("AdminBar.Title"), message: T("AdminBar.Message"))
-            Section(T("UpdatesAndroidHeader.Text")) {
+            Section(heading: T("UpdatesAndroidHeader.Text")) {
                 HStack {
                     Text(android.versionText).font(.title3.weight(.semibold))
                     Spacer()
                     if android.isBusy {
                         ProgressView().controlSize(.small)
+                            .accessibilityLabel(T("A11y_Loading"))
                     }
                     Text(android.imageVersion).foregroundStyle(.secondary).textSelection(.enabled)
                 }
@@ -258,9 +272,11 @@ struct UpdatesPage: View {
                         HStack(alignment: .firstTextBaseline) {
                             RowLabel(title: T("AndroidUpdateCard.Header"), detail: android.updateStatusText)
                             Image(systemName: "lock.shield").foregroundStyle(.secondary).help(T("AdminShield.ToolTip"))
+                                .accessibilityLabel(T("AdminShield.ToolTip"))
                         }
                         if let percent = android.downloadPercent {
                             ProgressView(value: Double(percent), total: 100)
+                                .accessibilityLabel(T("AndroidUpdateCard.Header"))
                         }
                     }
                     Spacer()
@@ -271,6 +287,7 @@ struct UpdatesPage: View {
                             .disabled(!android.canRestartNow)
                     }
                     Button(T("AndroidCheckButton.Content")) { checkNow() }.disabled(!android.canCheckNow)
+                        .accessibilityHint(T("AdminShield.ToolTip"))
                 }
                 SwitchRow(title: T("ImageAutoRestartCard.Header"), detail: T("ImageAutoRestartCard.Description"),
                           isOn: vm.imageAutoRestart, enabled: vm.canChange) { await vm.setImageAutoRestart($0) }
@@ -290,13 +307,17 @@ struct UpdatesPage: View {
                             RowLabel(title: T("AndroidChooseCard.Header"),
                                      detail: T("AndroidChooseCard.Description") + "\n" + android.supportedText)
                             Image(systemName: "lock.shield").foregroundStyle(.secondary).help(T("AdminShield.ToolTip"))
+                                .accessibilityLabel(T("AdminShield.ToolTip"))
                         }
                     }
+                    .accessibilityLabel(T("AndroidChooseCard.Header"))
+                    .accessibilityHint(T("AdminShield.ToolTip"))
                     Button(T("AndroidApplyButton.Content")) { apply() }.disabled(!android.canApply)
+                        .accessibilityHint(T("AdminShield.ToolTip"))
                 }
                 Note(text: T("AndroidChooseNote.Text"))
             }
-            Section(T("UpdatesProgramHeader.Text")) {
+            Section(heading: T("UpdatesProgramHeader.Text")) {
                 if general.hasUpdateNotice {
                     Banner(kind: .info, title: T("UpdateNoticeBar.Title"), message: general.updateNotice)
                 }
@@ -449,6 +470,7 @@ struct AboutPage: View {
             Section {
                 HStack(spacing: 14) {
                     Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 64, height: 64)
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(T("AboutProductCard.Header")).font(.title3.weight(.semibold))
                         Text(T("AboutProductCard.Description")).foregroundStyle(.secondary)

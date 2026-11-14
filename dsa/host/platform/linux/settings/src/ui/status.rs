@@ -61,6 +61,9 @@ pub fn general(ctx: &Shared) -> gtk::Widget {
     page.add(&more);
 
     let log_dir: Rc<RefCell<Option<String>>> = Rc::default();
+    // Whether the page has shown the state once: what it shows when it opens is read with the
+    // page, and only what appears or changes later is told to a screen reader.
+    let filled = Rc::new(std::cell::Cell::new(false));
     let show: Rc<dyn Fn(Result<Status, crate::api::Failure>)> = {
         let page = page.clone();
         let (start, stop, freeze) = (start.clone(), stop.clone(), freeze.clone());
@@ -93,9 +96,16 @@ pub fn general(ctx: &Shared) -> gtk::Widget {
                     status.and_then(|s| s.update_notice.clone()),
                 ),
             ] {
+                let text = value.as_deref().unwrap_or_default();
+                let appeared =
+                    !text.is_empty() && (!row.is_visible() || label.label().as_str() != text);
+                if appeared && filled.get() {
+                    announce(row, &format!("{}: {text}", row.title()), false);
+                }
                 row.set_visible(value.is_some());
-                label.set_label(value.as_deref().unwrap_or_default());
+                label.set_label(text);
             }
+            filled.set(true);
         })
     };
     let busy = {
@@ -168,9 +178,7 @@ pub fn memory(ctx: &Shared) -> gtk::Widget {
     let page = Rc::new(Page::new());
 
     let host = group(&tr("On this computer"), None);
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     host.set_header_suffix(Some(&refresh));
     let (total_row, total_label) = value_row(&tr("In use on this computer"), "");
     total_row.set_subtitle(&tr(
@@ -458,6 +466,7 @@ fn android_groups(ctx: &Shared, page: &Rc<Page>, image: &adw::PreferencesGroup) 
         .width_request(120)
         .visible(false)
         .build();
+    accessible_name(&progress, &tr("Android update"));
     update_row.add_suffix(&progress);
     // Shown while a downloaded image waits for this user's Android to restart.
     let restart = button(&tr("Restart now"));
@@ -466,6 +475,9 @@ fn android_groups(ctx: &Shared, page: &Rc<Page>, image: &adw::PreferencesGroup) 
     update_row.add_suffix(&restart);
     let restart_button = restart.clone();
     let check = button(&tr("Check now"));
+    // The image is every user's, so checking asks for an administrator; a screen reader says
+    // so with the button, as the group's description does on screen.
+    needs_administrator(&check, "");
     update_row.add_suffix(&check);
     running.add(&update_row);
     // The user's own switch: restarting into a downloaded image by itself.
@@ -518,6 +530,7 @@ fn android_groups(ctx: &Shared, page: &Rc<Page>, image: &adw::PreferencesGroup) 
     };
     let apply = button(&tr("Change"));
     apply.add_css_class("suggested-action");
+    needs_administrator(&apply, "");
     combo.row.add_suffix(&apply);
     choose.add(&combo.row);
     page.add(&choose);
@@ -732,6 +745,7 @@ pub fn updates(ctx: &Shared) -> gtk::Widget {
     };
     *channel_switch.borrow_mut() = Some(switch);
     if let Some(switch) = channel_switch.borrow().as_ref() {
+        needs_administrator(&switch.row, &switch.row.subtitle().unwrap_or_default());
         program.add(&switch.row);
     }
     {
@@ -777,6 +791,7 @@ pub fn updates(ctx: &Shared) -> gtk::Widget {
     };
     *image_switch.borrow_mut() = Some(switch);
     if let Some(switch) = image_switch.borrow().as_ref() {
+        needs_administrator(&switch.row, &switch.row.subtitle().unwrap_or_default());
         image.add(&switch.row);
     }
     // Android first (what runs, its update, the version choice), then DSA itself.
@@ -827,6 +842,7 @@ fn program_progress(ctx: &Shared, program: &adw::PreferencesGroup) {
         .width_request(120)
         .tooltip_text(tr("Updating DSA"))
         .build();
+    accessible_name(&bar, &tr("Updating DSA"));
     progress_row.add_suffix(&bar);
     progress_row.set_visible(false);
     let (ended_row, ended_label) = value_row(&tr("Update of DSA"), "");
@@ -861,6 +877,10 @@ fn program_progress(ctx: &Shared, program: &adw::PreferencesGroup) {
             progress_row.set_subtitle(&lines.join("\n"));
             match follower.ended_text() {
                 Some((succeeded, text)) => {
+                    // How the update ended appears without moving the focus.
+                    if !ended_row.is_visible() || ended_label.label().as_str() != text {
+                        announce(&ended_row, &text, !succeeded);
+                    }
                     ended_label.set_label(&text);
                     if succeeded {
                         ended_row.remove_css_class("error");

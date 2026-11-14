@@ -56,10 +56,13 @@ pub fn logs(ctx: &Shared) -> gtk::Widget {
     let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let priority = gtk::DropDown::from_strings(&refs);
     priority.set_selected(2);
+    accessible_name(&priority, &tr("Lowest priority shown"));
     let filter = gtk::SearchEntry::builder()
         .placeholder_text(tr("Filter by tag or text"))
         .hexpand(true)
         .build();
+    // A placeholder is not a name: a screen reader says it only while the box is empty.
+    accessible_name(&filter, &tr("Filter by tag or text"));
     let pause = gtk::ToggleButton::with_label(&tr("Pause"));
     let save = gtk::Button::with_label(&tr("Save diagnostics"));
     save.add_css_class("suggested-action");
@@ -127,12 +130,14 @@ pub fn logs(ctx: &Shared) -> gtk::Widget {
                     *reading.borrow_mut() = Some(Reading { child, lines });
                 }
                 Err(failure) => {
-                    banner.set_title(&format!(
-                        "{}: {}",
-                        tr("The log cannot be read"),
-                        view::problem_text(&failure).replace('\n', " ")
-                    ));
-                    banner.set_revealed(true);
+                    reveal_banner(
+                        &banner,
+                        &format!(
+                            "{}: {}",
+                            tr("The log cannot be read"),
+                            view::problem_text(&failure).replace('\n', " ")
+                        ),
+                    );
                 }
             }
         })
@@ -169,12 +174,14 @@ pub fn logs(ctx: &Shared) -> gtk::Widget {
                             }
                         }
                         Err(failure) => {
-                            banner.set_title(&format!(
-                                "{}: {}",
-                                tr("The log cannot be read"),
-                                view::problem_text(&failure).replace('\n', " ")
-                            ));
-                            banner.set_revealed(true);
+                            reveal_banner(
+                                &banner,
+                                &format!(
+                                    "{}: {}",
+                                    tr("The log cannot be read"),
+                                    view::problem_text(&failure).replace('\n', " ")
+                                ),
+                            );
                         }
                     }
                 }
@@ -252,11 +259,13 @@ pub fn logs(ctx: &Shared) -> gtk::Widget {
                         move |c| c.collect_diagnostics(&path),
                         move |r| {
                             button.set_sensitive(true);
-                            match r {
-                                Ok(_) => status
-                                    .set_label(&trf("Saved the diagnostics to {0}.", &[&shown])),
-                                Err(failure) => status.set_label(&view::problem_text(&failure)),
-                            }
+                            let (said, failed) = match r {
+                                Ok(_) => (trf("Saved the diagnostics to {0}.", &[&shown]), false),
+                                Err(failure) => (view::problem_text(&failure), true),
+                            };
+                            status.set_label(&said);
+                            // The line changes without moving the focus.
+                            announce(&status, &said, failed);
                         },
                     );
                 },
@@ -333,8 +342,16 @@ fn copy_lines(list: &gtk::ListBox, shown: &Rc<RefCell<Vec<LogLine>>>) {
 
 /// One log line as a row of columns: time, PID, TID, priority and the body. The app's font is
 /// proportional, so the fields have fixed widths to line up; the body has none and runs into
-/// the list's horizontal scroll bar.
+/// the list's horizontal scroll bar. A screen reader reads the row as one sentence: the time,
+/// the priority as a word, the tag and the message.
 fn log_row(line: &LogLine) -> gtk::Widget {
+    let item = gtk::ListBoxRow::new();
+    item.set_child(Some(&log_columns(line)));
+    accessible_name(&item, &view::log_line_spoken(line));
+    item.upcast()
+}
+
+fn log_columns(line: &LogLine) -> gtk::Widget {
     let columns = line.columns();
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     row.set_margin_start(6);
