@@ -3187,3 +3187,14 @@ hwcomposer와 호스트 합성기는 틀리지 않았으므로 거기서 옮기�
 
 - Android 17의 `services.jar`와 `DecorView`. 소유자 PC의 이미지는 Android 17인데 dex는 Android 16 것만 읽었다. R30에서 두 버전의 `enforceInsetsPolicyForTarget` 소스가 같은 꼴임을 보았다.
 - 기기에서 대화 상자의 `mFloatingInsets`나 루트 뷰의 위치를 직접 보지 않았다. `adb shell dumpsys activity top`으로 대화 상자 창의 `InsetsController` 상태에 `captionBar` 소스가 있는지, 뷰 계층에서 DecorView의 `top`이 58인지 보면 확인된다.
+
+### 결정 (2026-11-15)
+
+소유자가 1을 골랐고, 그 방법으로 Framework 빌드가 `services.jar`를 소스에서 패치해 빌드하는 것을 승인했다. SPEC FR-22의 약속은 그대로다.
+
+- 패치: `dsa/guest/framework/patches/frameworks/base/android16`과 `android17`의 `0003-give-a-dialog-no-caption-inset.patch`. `enforceInsetsPolicyForTarget`은 부모만큼 크지 않은 창(`!attrs.isFullscreen()`: 대화 상자, 컨텍스트 메뉴)과 창 관리자가 띠 아래에 놓는 창(`getFitInsetsTypes()`에 `captionBar()`나 `statusBars()`가 있다)에서 캡션 바 소스를 지운다. 태스크의 전체 크기 edge-to-edge 창은 그대로 받는다. 상태 표시줄 소스는 지금처럼 남는다. 고정한 소스를 내려받아 보니 Android 16에는 같은 규칙이 `relativeInsets` 플래그가 꺼졌을 때만 도는 꼴로 남아 있었고(공개 빌드는 플래그를 켜므로 R8이 지웠다, 위의 dex 관찰과 맞는다), Android 17에는 없다. 그래서 플래그 없이 다시 넣었다. 조건에서 Android의 `getFitInsetsTypes() != 0`을 캡션 바와 상태 표시줄 비트로 좁혔다. 둘 다 아닌 유형만 맞추는 전체 크기 창은 띠에 겹치므로 캡션 바 인셋을 받아야 한다.
+- `services.jar`의 dex 편집 셋도 소스 패치로 옮겼다. 떠 있는 창이 `systemBars()`를 받는 R30의 편집은 같은 0003에, `getNativelySupported64BitAbis`는 0004에, WebView zygote를 첫 렌더러와 함께 띄우는 편집은 0005(`ensureZygoteStarted`를 비운다)에 있다. 이미지가 빌드의 jar를 쓰면 dex 편집을 하지 않는다. check-image의 세 검사는 어느 jar에도 그대로 맞는다.
+- 빌드: 자바 프레임워크는 플랫폼 대부분에 닿으므로 네이티브 파일을 만드는 줄인 트리로는 빌드하지 않는다. Framework build 워크플로에 `Build services.jar` 작업을 더했다. 고정한 매니페스트(SHA-256으로 확인)가 기본으로 동기화하는 모든 프로젝트를 그 커밋으로 받고(`framework_lock.py services-lock`, Clang과 Rust 프리빌트만 네이티브 잠금처럼 일부), 공개 빌드 자신의 제품(`aosp_cf_x86_64_only_phone`)과 릴리스 구성으로 `system/framework/services.jar`만 dexpreopt 없이 빌드한다(`.github/scripts/framework/build-services.sh`). dex는 아키텍처와 상관없으므로 x86_64 대상 하나로 두 이미지에 쓴다. 네이티브 빌드는 자바 소스만 바꾸는 패치를 적용하지 않는다(`apply-patches.py --native`).
+- 이미지: 각 아키텍처의 Framework 작업이 그 `services.jar`를 자기 아티팩트에 넣고(`collect.py --services`), make-image.py `--framework`는 그 jar를 공개 빌드의 것 대신 넣는다. dexpreopt 없는 빌드는 dex를 압축하므로 공개 빌드처럼 dex를 압축 없이 정렬해 저장하고(`image_services_jar`), 편집한 jar처럼 게스트의 부트 이미지에 맞춰 다시 컴파일한다. image.json의 `framework`가 이미지에 들어간 jar의 SHA-256을 적고, check-image가 같은 jar인지 본다. services 작업이 실패하면 아티팩트에 jar가 없고, 이미지는 예전처럼 공개 빌드의 jar를 dex 편집한다(그 이미지의 대화 상자는 여전히 어긋난다).
+
+확인하지 못한 것: 이 변경은 CI에서 돌지 않았다. 전체 트리를 받는 크기(수십 GB)와 표준 러너(16 GiB 메모리, 스왑 12+24 GiB)에서 Soong 분석과 자바 빌드가 시간 안에 끝나는지, 패치가 고정한 소스에 그대로 적용되는지(`check-patches.sh`)는 Framework build를 손으로 돌려 봐야 안다. 기기에서 대화 상자가 그려진 자리에서 눌리는지도 그 뒤에 본다.
