@@ -33,6 +33,10 @@ namespace Dsa.Setup
         {
             this.app = app;
             this.InitializeComponent();
+            // The window's language picks the font WPF falls back to for the characters Segoe UI
+            // lacks: Yu Gothic for Japanese, Microsoft YaHei or JhengHei for Chinese, Malgun
+            // Gothic for Korean, so each draws in its own forms.
+            this.Language = System.Windows.Markup.XmlLanguage.GetLanguage(Text.Language.Tag);
             this.dark = Palette.IsDark();
             Palette.Apply(this, this.dark);
             if (!Palette.HasMica)

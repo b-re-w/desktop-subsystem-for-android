@@ -2518,4 +2518,69 @@ For high definition, use this computer's own browser or app.</value>
   <data name="A11y_Help" xml:space="preserve">
     <value>Help</value>
   </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>Install {0}?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>Package Name:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>Publisher:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>Version:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>Source:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>Capabilities ({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>More</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>Less</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} is a split APK bundle that cannot be installed: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} is a split APK bundle that cannot be read, so it cannot be installed.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} is an Android App Bundle. App Bundles are a publishing format for app stores and cannot be installed as they are.
+Making APKs of one means signing them with another key, and the app would then no longer take updates from where it came from.
+Get the app as an APK, or as an .xapk, .apks or .apkm bundle.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} is an encrypted bundle, so its APKs cannot be read. Some older .apkm files are, and only the app that made them opens them.
+Get the app as an APK, or as a newer bundle.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} holds a split APK signed with another certificate than its base APK, so the bundle was changed after it was made.
+Android would refuse it.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} cannot run in DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} cannot run in DSA: its native code is none that DSA's Android runs, which runs 64-bit code only.
+Get the app's x86_64 or arm64-v8a build.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} is not a valid APK file.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa ended with code {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>{0} icon</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>APK files and split APK bundles</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>All files</value>
+  </data>
 </root>

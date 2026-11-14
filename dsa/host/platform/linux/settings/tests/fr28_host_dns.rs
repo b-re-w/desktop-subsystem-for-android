@@ -54,12 +54,30 @@ fn fr28_a_service_that_does_not_say_who_answers_names_shows_the_dns_servers() {
 
 #[test]
 fn fr28_the_dns_texts_are_translated() {
-    let po = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/po/ko.po")).unwrap();
-    for text in [
-        "DNS",
-        "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps.",
-        "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}",
+    for language in [
+        "ko", "ja", "zh_CN", "zh_TW", "es", "fr", "de", "pt_BR", "ru", "it", "vi", "id", "tr",
     ] {
-        assert!(po.contains(&format!("msgid \"{text}\"")), "ko.po lacks {text}");
+        let path = format!("{}/po/{language}.po", env!("CARGO_MANIFEST_DIR"));
+        let po = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("{path}: {e}"))
+            .replace("\r\n", "\n");
+        for text in [
+            "DNS",
+            "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps.",
+            "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}",
+        ] {
+            let id = format!("msgid \"{text}\"\nmsgstr \"");
+            let at = po
+                .find(&id)
+                .unwrap_or_else(|| panic!("{language}.po lacks {text}"));
+            let rest = &po[at + id.len()..];
+            let translated = &rest[..rest.find("\"\n").unwrap_or(rest.len())];
+            assert!(!translated.is_empty(), "{language}.po leaves {text} untranslated");
+            assert_eq!(
+                text.contains("{0}"),
+                translated.contains("{0}"),
+                "{language}.po: {translated}"
+            );
+        }
     }
 }

@@ -31,9 +31,7 @@ pub(super) fn loading_of(shared: &Arc<Shared>) -> IRawElementProviderFragment {
 }
 
 fn display_loading_name() -> &'static str {
-    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
-    // SAFETY: reads the user's display language.
-    loading_name(is_korean(unsafe { GetUserDefaultUILanguage() }))
+    loading_name(display_language())
 }
 
 impl LoadingProvider {
@@ -771,14 +769,31 @@ impl IScrollItemProvider_Impl for NodeProvider_Impl {
 
 /// The default action's name in the user's display language.
 fn action_name(long: bool) -> &'static str {
-    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
-    // SAFETY: reads the user's display language.
-    let korean = is_korean(unsafe { GetUserDefaultUILanguage() });
-    match (long, korean) {
-        (false, false) => "Click",
-        (true, false) => "Long press",
-        (false, true) => "누르기",
-        (true, true) => "길게 누르기",
+    action_name_in(long, display_language())
+}
+
+/// The default action's name in `language`: a click, or a long press when `long`.
+pub(super) fn action_name_in(long: bool, language: UiLanguage) -> &'static str {
+    let (click, long_press) = match language {
+        UiLanguage::English => ("Click", "Long press"),
+        UiLanguage::Korean => ("누르기", "길게 누르기"),
+        UiLanguage::Japanese => ("クリック", "長押し"),
+        UiLanguage::ChineseSimplified => ("单击", "长按"),
+        UiLanguage::ChineseTraditional => ("按一下", "長按"),
+        UiLanguage::Spanish => ("Hacer clic", "Mantener presionado"),
+        UiLanguage::French => ("Cliquer", "Appui long"),
+        UiLanguage::German => ("Klicken", "Lange drücken"),
+        UiLanguage::PortugueseBrazil => ("Clicar", "Manter pressionado"),
+        UiLanguage::Russian => ("Нажать", "Долгое нажатие"),
+        UiLanguage::Italian => ("Fai clic", "Pressione prolungata"),
+        UiLanguage::Vietnamese => ("Nhấp", "Nhấn giữ"),
+        UiLanguage::Indonesian => ("Klik", "Tekan lama"),
+        UiLanguage::Turkish => ("Tıkla", "Uzun bas"),
+    };
+    if long {
+        long_press
+    } else {
+        click
     }
 }
 

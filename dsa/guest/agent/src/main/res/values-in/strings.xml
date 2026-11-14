@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_target_name">Bagikan di PC</string>
+    <string name="share_unavailable">PC tidak dapat dijangkau, jadi ini tidak dapat dibagikan di sana.</string>
+    <string name="share_failed">PC tidak dapat membagikan ini: %1$s</string>
+</resources>

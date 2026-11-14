@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_target_name">PC\'de paylaş</string>
+    <string name="share_unavailable">PC\'ye ulaşılamadığı için orada paylaşılamıyor.</string>
+    <string name="share_failed">PC bunu paylaşamadı: %1$s</string>
+</resources>

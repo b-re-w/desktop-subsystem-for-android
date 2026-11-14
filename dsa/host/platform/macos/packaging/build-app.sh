@@ -141,11 +141,17 @@ cp "$here/icon/MenuBarTemplate.png" "$here/icon/MenuBarTemplate@2x.png" "$app/Co
 rm -rf "$out/DSA.icon"
 cp -R "$here/icon/DSA.icon" "$out/DSA.icon"
 
-# The settings app's texts: its String Catalog compiled to the English and Korean string
-# tables the bundle looks up in the user's language.
+# The settings app's texts: its String Catalog compiled to a string table for each of the
+# fourteen languages the bundle declares (CFBundleLocalizations), looked up in the user's
+# language. A language the catalog left out would show its keys, so the build stops.
 xcrun xcstringstool compile "$settings_package/Resources/Localizable.xcstrings" \
     --output-directory "$app/Contents/Resources"
-for language in en ko; do
+declared="$(/usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$app/Contents/Info.plist")"
+for language in en ko ja zh-Hans zh-Hant es fr de pt-BR ru it vi id tr; do
+    if ! grep -qx "[[:space:]]*$language" <<<"$declared"; then
+        echo "Info.plist does not list $language in CFBundleLocalizations" >&2
+        exit 1
+    fi
     table="$app/Contents/Resources/$language.lproj/Localizable.strings"
     if [[ ! -s "$table" ]]; then
         echo "the String Catalog gave no $language table ($table)" >&2

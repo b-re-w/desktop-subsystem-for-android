@@ -27,8 +27,7 @@ public class MemoryLimitTextTests
     }
 
     [Theory]
-    [InlineData("Strings.resx")]
-    [InlineData("Strings.ko.resx")]
+    [MemberData(nameof(StringTables.Files), MemberType = typeof(StringTables))]
     public void Fr17_automatic_memory_limit_names_no_fixed_size(string file)
     {
         var text = Description(file);

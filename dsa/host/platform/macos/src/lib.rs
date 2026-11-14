@@ -27,6 +27,8 @@
 //!   Android follows.
 //! - [`wm`]: the window manager (`dsa-wm`): the renderer, the guest's graphics streams, and
 //!   one window host per app, each given its tasks' frames.
+//! - [`ui_language`]: which of DSA's languages the host's own words are in, from the user's
+//!   preferred languages.
 //! - [`root_approval`]: the administrator dialog an Android app's root request waits for,
 //!   through Authorization Services.
 //! - [`keychain`], [`secure_enclave`] and `host_services`: the app data backup in `~/DSA Backup`,
@@ -53,6 +55,7 @@ pub mod power;
 pub mod root_approval;
 pub mod secure_enclave;
 pub mod shell;
+pub mod ui_language;
 pub mod user_disk;
 /// The image's VHDX disks read into raw images, shared with the Linux host.
 pub use dsa_host_unix::vhdx;

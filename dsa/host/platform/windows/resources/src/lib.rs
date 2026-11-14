@@ -10,10 +10,56 @@
 //! [`embed`] writes a `.res` file the linker takes as it is, and the window manager uses
 //! [`version_info`] and [`icon_group`] to rewrite a copy of the app window host.
 //!
-//! [`names`] holds every name the desktop shows, in one place.
+//! [`names`] holds every name the desktop shows, in one place, and [`languages`] the languages
+//! they are translated into.
+
+pub mod languages {
+    //! The fourteen languages DSA's interface is translated into, in the order every
+    //! translated table here lists them (English first, as the README lists its
+    //! translations), and the Windows language IDs each is written under.
+
+    /// How many languages there are.
+    pub const COUNT: usize = 14;
+
+    /// Each language's tag: `en`, `ko`, `ja`, `zh-CN`, `zh-TW`, `es`, `fr`, `de`, `pt-BR`,
+    /// `ru`, `it`, `vi`, `id`, `tr`.
+    pub const TAGS: [&str; COUNT] = [
+        "en", "ko", "ja", "zh-CN", "zh-TW", "es", "fr", "de", "pt-BR", "ru", "it", "vi", "id", "tr",
+    ];
+
+    /// The Windows language IDs (LANGIDs) each language's resources are written under, so
+    /// Windows' resource loader finds them for a user of any of them: the language's own ID
+    /// first, then the regions that read the same translation, then the language's neutral
+    /// ID, which the loader tries for a region not listed. Hong Kong (0x0C04) and Macao
+    /// (0x1404) read Traditional Chinese with Taiwan; Singapore (0x1004) reads Simplified
+    /// Chinese with China; Portugal (0x0816) reads Brazilian Portuguese.
+    pub const LANGIDS: [&[u16]; COUNT] = [
+        &[0x0409, 0x0809, 0x0009],
+        &[0x0412, 0x0012],
+        &[0x0411, 0x0011],
+        &[0x0804, 0x1004, 0x0004],
+        &[0x0404, 0x0C04, 0x1404, 0x7C04],
+        &[0x0C0A, 0x080A, 0x000A],
+        &[0x040C, 0x000C],
+        &[0x0407, 0x0007],
+        &[0x0416, 0x0816, 0x0016],
+        &[0x0419, 0x0019],
+        &[0x0410, 0x0010],
+        &[0x042A, 0x002A],
+        &[0x0421, 0x0021],
+        &[0x041F, 0x001F],
+    ];
+
+    /// The position of the language tagged `tag` in [`TAGS`].
+    pub fn index(tag: &str) -> Option<usize> {
+        TAGS.iter().position(|t| *t == tag)
+    }
+}
 
 pub mod names {
     //! What the desktop calls each DSA program. Renaming one is a change here alone.
+
+    use super::languages::COUNT;
 
     /// The product every DSA program belongs to.
     pub const PRODUCT: &str = "Desktop Subsystem for Android";
@@ -23,12 +69,44 @@ pub mod names {
     pub const SERVICE: &str = "Desktop Subsystem for Android Service";
     /// The window manager (`dsa-wm.exe`), as Task Manager lists it.
     pub const WINDOW_MANAGER: &str = "DSA Window Manager";
-    /// The window manager's name on a Korean desktop.
-    pub const WINDOW_MANAGER_KO: &str = "Android용 창 관리자";
+    /// The window manager's name in every language, in [`super::languages::TAGS`]' order.
+    /// Android is never the first word of a name, so a language that would put "for Android"
+    /// first puts it after the name.
+    pub const WINDOW_MANAGER_NAMES: [&str; COUNT] = [
+        WINDOW_MANAGER,
+        "Android용 창 관리자",
+        "ウィンドウ マネージャー (Android 用)",
+        "适用于 Android 的窗口管理器",
+        "適用於 Android 的視窗管理員",
+        "Administrador de ventanas para Android",
+        "Gestionnaire de fenêtres pour Android",
+        "Fenster-Manager für Android",
+        "Gerenciador de janelas para Android",
+        "Диспетчер окон для Android",
+        "Gestore finestre per Android",
+        "Trình quản lý cửa sổ cho Android",
+        "Pengelola jendela untuk Android",
+        "Pencere yöneticisi (Android için)",
+    ];
     /// The graphics renderer (`dsa-gfx.exe`), which the window manager starts.
     pub const RENDERER: &str = "Graphics renderer for Android";
-    /// The graphics renderer's name on a Korean desktop.
-    pub const RENDERER_KO: &str = "Android용 그래픽 렌더러";
+    /// The graphics renderer's name in every language, in [`super::languages::TAGS`]' order.
+    pub const RENDERER_NAMES: [&str; COUNT] = [
+        RENDERER,
+        "Android용 그래픽 렌더러",
+        "グラフィックス レンダラー (Android 用)",
+        "适用于 Android 的图形渲染器",
+        "適用於 Android 的圖形轉譯器",
+        "Representador de gráficos para Android",
+        "Moteur de rendu graphique pour Android",
+        "Grafikrenderer für Android",
+        "Renderizador gráfico para Android",
+        "Графический отрисовщик для Android",
+        "Renderer grafico per Android",
+        "Trình kết xuất đồ họa cho Android",
+        "Perender grafis untuk Android",
+        "Grafik işleyici (Android için)",
+    ];
     /// The command line tool (`dsa.exe`).
     pub const CLI: &str = "Desktop Subsystem for Android command line";
     /// The app window host as installed (`dsa-app-window.exe`). Each app's copy carries the
@@ -66,47 +144,199 @@ pub mod shell {
     /// column shows it.
     pub const APK_BUNDLE_FILE_TYPE: u16 = 111;
 
-    /// Every string, as (ID, English, Korean).
-    pub const STRINGS: &[(u16, &str, &str)] = &[
-        (OPEN_IN_ANDROID_APP, "Open in an Android app", "Android 앱에서 열기"),
-        (SHARE_WITH_ANDROID_APP, "Share with an Android app", "Android 앱으로 공유"),
+    /// Every string, as its ID and its words in every language, in
+    /// [`super::languages::TAGS`]' order (English first).
+    pub const STRINGS: &[(u16, [&str; super::languages::COUNT])] = &[
+        (
+            OPEN_IN_ANDROID_APP,
+            [
+                "Open in an Android app",
+                "Android 앱에서 열기",
+                "Android アプリで開く",
+                "在 Android 应用中打开",
+                "在 Android 應用程式中開啟",
+                "Abrir en una aplicación de Android",
+                "Ouvrir dans une application Android",
+                "In einer Android-App öffnen",
+                "Abrir em um app Android",
+                "Открыть в приложении Android",
+                "Apri in un'app Android",
+                "Mở trong ứng dụng Android",
+                "Buka di aplikasi Android",
+                "Bir Android uygulamasında aç",
+            ],
+        ),
+        (
+            SHARE_WITH_ANDROID_APP,
+            [
+                "Share with an Android app",
+                "Android 앱으로 공유",
+                "Android アプリで共有",
+                "使用 Android 应用共享",
+                "使用 Android 應用程式分享",
+                "Compartir con una aplicación de Android",
+                "Partager avec une application Android",
+                "Mit einer Android-App teilen",
+                "Compartilhar com um app Android",
+                "Поделиться с приложением Android",
+                "Condividi con un'app Android",
+                "Chia sẻ với ứng dụng Android",
+                "Bagikan dengan aplikasi Android",
+                "Bir Android uygulamasıyla paylaş",
+            ],
+        ),
         (
             SETTINGS_SHORTCUT_DESCRIPTION,
-            "Settings and state of Desktop Subsystem for Android",
-            "Desktop Subsystem for Android의 설정과 상태",
+            [
+                "Settings and state of Desktop Subsystem for Android",
+                "Desktop Subsystem for Android의 설정과 상태",
+                "Desktop Subsystem for Android の設定と状態",
+                "Desktop Subsystem for Android 的设置和状态",
+                "Desktop Subsystem for Android 的設定與狀態",
+                "Configuración y estado de Desktop Subsystem for Android",
+                "Paramètres et état de Desktop Subsystem for Android",
+                "Einstellungen und Status von Desktop Subsystem for Android",
+                "Configurações e estado do Desktop Subsystem for Android",
+                "Параметры и состояние Desktop Subsystem for Android",
+                "Impostazioni e stato di Desktop Subsystem for Android",
+                "Cài đặt và trạng thái của Desktop Subsystem for Android",
+                "Pengaturan dan status Desktop Subsystem for Android",
+                "Desktop Subsystem for Android ayarları ve durumu",
+            ],
         ),
-        (INSTALL_IN_ANDROID, "Install in Android", "Android에 설치"),
-        (APK_FILE_TYPE, "APK app package", "APK 앱 패키지"),
-        (NAVIGATION_NAME, "Android", "Android"),
+        (
+            INSTALL_IN_ANDROID,
+            [
+                "Install in Android",
+                "Android에 설치",
+                "Android にインストール",
+                "安装到 Android",
+                "安裝到 Android",
+                "Instalar en Android",
+                "Installer dans Android",
+                "In Android installieren",
+                "Instalar no Android",
+                "Установить в Android",
+                "Installa in Android",
+                "Cài đặt vào Android",
+                "Instal di Android",
+                "Android'e yükle",
+            ],
+        ),
+        (
+            APK_FILE_TYPE,
+            [
+                "APK app package",
+                "APK 앱 패키지",
+                "APK アプリ パッケージ",
+                "APK 应用包",
+                "APK 應用程式套件",
+                "Paquete de aplicación APK",
+                "Package d'application APK",
+                "APK-App-Paket",
+                "Pacote de app APK",
+                "Пакет приложения APK",
+                "Pacchetto app APK",
+                "Gói ứng dụng APK",
+                "Paket aplikasi APK",
+                "APK uygulama paketi",
+            ],
+        ),
+        (NAVIGATION_NAME, ["Android"; super::languages::COUNT]),
         (
             NAVIGATION_TIP,
-            "The shared storage of your Android",
-            "내 Android의 공유 저장소",
+            [
+                "The shared storage of your Android",
+                "내 Android의 공유 저장소",
+                "お使いの Android の共有ストレージ",
+                "你的 Android 的共享存储",
+                "您的 Android 的共用儲存空間",
+                "El almacenamiento compartido de su Android",
+                "Le stockage partagé de votre Android",
+                "Der gemeinsame Speicher Ihres Android",
+                "O armazenamento compartilhado do seu Android",
+                "Общее хранилище вашего Android",
+                "Lo spazio di archiviazione condiviso del tuo Android",
+                "Bộ nhớ dùng chung của Android của bạn",
+                "Penyimpanan bersama Android Anda",
+                "Android'inizin paylaşılan depolama alanı",
+            ],
         ),
         (
             SERVICE_DESCRIPTION,
-            "Runs each user's Android in its own virtual machine and answers the dsa command and the desktop apps.",
-            "사용자마다 Android를 자체 가상 머신에서 실행하고, dsa 명령과 데스크톱 앱의 요청에 응답합니다.",
+            [
+                "Runs each user's Android in its own virtual machine and answers the dsa command and the desktop apps.",
+                "사용자마다 Android를 자체 가상 머신에서 실행하고, dsa 명령과 데스크톱 앱의 요청에 응답합니다.",
+                "ユーザーごとに Android を専用の仮想マシンで実行し、dsa コマンドとデスクトップ アプリの要求に応答します。",
+                "在各自的虚拟机中运行每个用户的 Android，并响应 dsa 命令和桌面应用的请求。",
+                "在各自的虛擬機器中執行每位使用者的 Android，並回應 dsa 命令和桌面應用程式的要求。",
+                "Ejecuta el Android de cada usuario en su propia máquina virtual y responde al comando dsa y a las aplicaciones de escritorio.",
+                "Exécute l'Android de chaque utilisateur dans sa propre machine virtuelle et répond à la commande dsa et aux applications de bureau.",
+                "Führt das Android jedes Benutzers in einem eigenen virtuellen Computer aus und beantwortet den Befehl dsa und die Desktop-Apps.",
+                "Executa o Android de cada usuário em sua própria máquina virtual e responde ao comando dsa e aos apps da área de trabalho.",
+                "Запускает Android каждого пользователя в отдельной виртуальной машине и отвечает на команду dsa и запросы классических приложений.",
+                "Esegue l'Android di ogni utente nella propria macchina virtuale e risponde al comando dsa e alle app desktop.",
+                "Chạy Android của từng người dùng trong máy ảo riêng và phản hồi lệnh dsa cùng các ứng dụng máy tính.",
+                "Menjalankan Android setiap pengguna di mesin virtualnya sendiri dan menjawab perintah dsa serta aplikasi desktop.",
+                "Her kullanıcının Android'ini kendi sanal makinesinde çalıştırır ve dsa komutuna ve masaüstü uygulamalarına yanıt verir.",
+            ],
         ),
-        (APK_INSTALLER_NAME, "APK Installer", "APK 설치 관리자"),
-        (APK_BUNDLE_FILE_TYPE, "Split APK bundle", "분할 APK 묶음"),
+        (
+            APK_INSTALLER_NAME,
+            [
+                "APK Installer",
+                "APK 설치 관리자",
+                "APK インストーラー",
+                "APK 安装程序",
+                "APK 安裝程式",
+                "Instalador de APK",
+                "Programme d'installation d'APK",
+                "APK-Installationsprogramm",
+                "Instalador de APK",
+                "Установщик APK",
+                "Programma di installazione APK",
+                "Trình cài đặt APK",
+                "Penginstal APK",
+                "APK Yükleyici",
+            ],
+        ),
+        (
+            APK_BUNDLE_FILE_TYPE,
+            [
+                "Split APK bundle",
+                "분할 APK 묶음",
+                "分割 APK バンドル",
+                "拆分 APK 包",
+                "分割 APK 套件組合",
+                "Paquete de APK dividido",
+                "Ensemble d'APK fractionnés",
+                "Geteiltes APK-Bundle",
+                "Pacote de APK dividido",
+                "Разделенный пакет APK",
+                "Bundle APK suddiviso",
+                "Gói APK tách",
+                "Bundel APK terpisah",
+                "Bölünmüş APK paketi",
+            ],
+        ),
     ];
 
     /// The English string `id`, which the installer also writes as the plain fallback.
     pub fn english(id: u16) -> Option<&'static str> {
-        STRINGS.iter().find(|s| s.0 == id).map(|s| s.1)
+        in_language(id, 0)
     }
 
-    /// The Korean string `id`.
-    pub fn korean(id: u16) -> Option<&'static str> {
-        STRINGS.iter().find(|s| s.0 == id).map(|s| s.2)
+    /// The string `id` in the language at `language` in [`super::languages::TAGS`].
+    pub fn in_language(id: u16, language: usize) -> Option<&'static str> {
+        STRINGS
+            .iter()
+            .find(|s| s.0 == id)
+            .and_then(|s| s.1.get(language).copied())
     }
 }
 
 /// English (United States), the language of every program's main version information.
 pub const LANG_EN_US: u16 = 0x0409;
-/// Korean, for the names that have a Korean translation.
-pub const LANG_KO_KR: u16 = 0x0412;
 /// The code page the strings are in: Unicode.
 pub const CODE_PAGE_UNICODE: u16 = 1200;
 
@@ -448,12 +678,19 @@ pub fn icon_resources(file: &[u8], group_id: u16, first_id: u16) -> Result<Vec<R
     Ok(resources)
 }
 
-/// The English and Korean string tables of the words in [`shell`].
+/// The string tables of the words in [`shell`]: one in every language, under each of its
+/// Windows language IDs ([`languages::LANGIDS`]).
 pub fn shell_string_tables() -> Vec<Resource> {
-    let english: Vec<(u16, &str)> = shell::STRINGS.iter().map(|s| (s.0, s.1)).collect();
-    let korean: Vec<(u16, &str)> = shell::STRINGS.iter().map(|s| (s.0, s.2)).collect();
-    let mut tables = string_table(&english, LANG_EN_US);
-    tables.extend(string_table(&korean, LANG_KO_KR));
+    let mut tables = Vec::new();
+    for (language, ids) in languages::LANGIDS.iter().enumerate() {
+        let strings: Vec<(u16, &str)> = shell::STRINGS
+            .iter()
+            .map(|(id, words)| (*id, words[language]))
+            .collect();
+        for id in *ids {
+            tables.extend(string_table(&strings, *id));
+        }
+    }
     tables
 }
 
@@ -497,11 +734,13 @@ pub fn res_file(resources: &[Resource]) -> Vec<u8> {
     out
 }
 
-/// The resources of a DSA program: its version information in English, and in Korean when
-/// `description_ko` is given, and its icon.
+/// The resources of a DSA program: its version information in English, and, when its name is
+/// translated (`descriptions`, the name in every language in [`languages::TAGS`]' order), in
+/// every language under each of its Windows language IDs; and its icon. The English block
+/// under US English always names the program as `strings` does.
 pub fn program_resources(
     strings: &VersionStrings,
-    description_ko: Option<&str>,
+    descriptions: Option<&[&str; languages::COUNT]>,
     icon: &[IconImage],
 ) -> Vec<Resource> {
     let mut resources = vec![Resource {
@@ -510,17 +749,21 @@ pub fn program_resources(
         language: LANG_EN_US,
         data: version_info(strings, LANG_EN_US),
     }];
-    if let Some(description) = description_ko {
-        let korean = VersionStrings {
-            description: description.to_string(),
-            ..strings.clone()
-        };
-        resources.push(Resource {
-            kind: RT_VERSION,
-            id: VERSION_ID,
-            language: LANG_KO_KR,
-            data: version_info(&korean, LANG_KO_KR),
-        });
+    if let Some(descriptions) = descriptions {
+        for (description, ids) in descriptions.iter().zip(languages::LANGIDS) {
+            let translated = VersionStrings {
+                description: description.to_string(),
+                ..strings.clone()
+            };
+            for id in ids.iter().filter(|id| **id != LANG_EN_US) {
+                resources.push(Resource {
+                    kind: RT_VERSION,
+                    id: VERSION_ID,
+                    language: *id,
+                    data: version_info(&translated, *id),
+                });
+            }
+        }
     }
     for (index, image) in icon.iter().enumerate() {
         resources.push(Resource {
@@ -546,15 +789,22 @@ pub fn program_resources(
 /// Microsoft linker; elsewhere it does nothing.
 ///
 /// The version is `DSA_VERSION` when the installer build sets it, else the crate's.
-pub fn embed(bin: &str, description: &str, description_ko: Option<&str>, icon_file: &str) {
-    embed_with(bin, description, description_ko, icon_file, Vec::new());
+/// `descriptions` is the program's name in every language ([`program_resources`]), or `None`
+/// for a name that is not translated.
+pub fn embed(
+    bin: &str,
+    description: &str,
+    descriptions: Option<&[&str; languages::COUNT]>,
+    icon_file: &str,
+) {
+    embed_with(bin, description, descriptions, icon_file, Vec::new());
 }
 
 /// [`embed`], with `extra` resources (such as [`shell_string_tables`]) beside them.
 pub fn embed_with(
     bin: &str,
     description: &str,
-    description_ko: Option<&str>,
+    descriptions: Option<&[&str; languages::COUNT]>,
     icon_file: &str,
     extra: Vec<Resource>,
 ) {
@@ -581,7 +831,7 @@ pub fn embed_with(
     };
     let out_dir = std::env::var("OUT_DIR").expect("a build script has OUT_DIR");
     let path = std::path::Path::new(&out_dir).join(format!("{bin}.res"));
-    let mut resources = program_resources(&strings, description_ko, &icon);
+    let mut resources = program_resources(&strings, descriptions, &icon);
     resources.extend(extra);
     std::fs::write(&path, res_file(&resources))
         .unwrap_or_else(|why| panic!("writing {}: {why}", path.display()));
@@ -610,37 +860,139 @@ mod tests {
         haystack.windows(needle.len()).any(|w| w == needle)
     }
 
+    /// The string `id` as LoadString reads it from the string tables of `language`.
+    fn load_string(tables: &[Resource], language: u16, id: u16) -> Option<Vec<u8>> {
+        let block = tables
+            .iter()
+            .find(|r| r.kind == RT_STRING && r.language == language && r.id == id / 16 + 1)?;
+        // Walk to the entry the way LoadString does.
+        let mut at = 0;
+        for _ in 0..id % 16 {
+            let len = u16::from_le_bytes([block.data[at], block.data[at + 1]]) as usize;
+            at += 2 + 2 * len;
+        }
+        let len = u16::from_le_bytes([block.data[at], block.data[at + 1]]) as usize;
+        Some(block.data[at + 2..at + 2 + 2 * len].to_vec())
+    }
+
     #[test]
     fn fr9_shell_words_have_a_korean_string_table() {
         let tables = shell_string_tables();
-        let korean: Vec<&Resource> = tables
-            .iter()
-            .filter(|r| r.kind == RT_STRING && r.language == LANG_KO_KR)
-            .collect();
-        assert!(!korean.is_empty());
-        for (id, english, ko) in shell::STRINGS {
+        let korean = languages::index("ko").unwrap();
+        for (id, words) in shell::STRINGS {
+            let (english, ko) = (words[0], words[korean]);
             assert!(!ko.contains("안드로이드"), "{id} transliterates Android");
-            let block = korean.iter().find(|r| r.id == id / 16 + 1).unwrap();
-            // Walk to the entry the way LoadString does.
-            let mut at = 0;
-            for _ in 0..id % 16 {
-                let len = u16::from_le_bytes([block.data[at], block.data[at + 1]]) as usize;
-                at += 2 + 2 * len;
-            }
-            let len = u16::from_le_bytes([block.data[at], block.data[at + 1]]) as usize;
-            assert_eq!(&block.data[at + 2..at + 2 + 2 * len], utf16(ko).as_slice());
+            assert_eq!(load_string(&tables, 0x0412, *id), Some(utf16(ko)));
             if *id != shell::NAVIGATION_NAME {
                 assert_ne!(english, ko, "{id} has no Korean");
             }
         }
         assert_eq!(
-            shell::korean(shell::OPEN_IN_ANDROID_APP),
+            shell::in_language(shell::OPEN_IN_ANDROID_APP, korean),
             Some("Android 앱에서 열기")
         );
         assert_eq!(
             shell::english(shell::SHARE_WITH_ANDROID_APP),
             Some("Share with an Android app")
         );
+    }
+
+    #[test]
+    fn fr17_shell_words_have_a_string_table_for_every_language_id() {
+        let tables = shell_string_tables();
+        // Every language, and the regions that read the same translation.
+        let expected: [(u16, &str); 20] = [
+            (0x0409, "en"),
+            (0x0412, "ko"),
+            (0x0411, "ja"),
+            (0x0804, "zh-CN"),
+            (0x1004, "zh-CN"),
+            (0x0404, "zh-TW"),
+            (0x0C04, "zh-TW"),
+            (0x1404, "zh-TW"),
+            (0x0C0A, "es"),
+            (0x040C, "fr"),
+            (0x0407, "de"),
+            (0x0416, "pt-BR"),
+            (0x0816, "pt-BR"),
+            (0x0419, "ru"),
+            (0x0410, "it"),
+            (0x042A, "vi"),
+            (0x0421, "id"),
+            (0x041F, "tr"),
+            (0x0004, "zh-CN"),
+            (0x7C04, "zh-TW"),
+        ];
+        for (langid, tag) in expected {
+            let language = languages::index(tag).unwrap();
+            assert!(
+                languages::LANGIDS[language].contains(&langid),
+                "{langid:#06x}"
+            );
+            for (id, words) in shell::STRINGS {
+                assert_eq!(
+                    load_string(&tables, langid, *id),
+                    Some(utf16(words[language])),
+                    "{id} under {langid:#06x}"
+                );
+            }
+        }
+        // No language ID is listed for two languages.
+        let mut all: Vec<u16> = languages::LANGIDS
+            .iter()
+            .flat_map(|ids| ids.iter().copied())
+            .collect();
+        let count = all.len();
+        all.sort();
+        all.dedup();
+        assert_eq!(all.len(), count);
+    }
+
+    #[test]
+    fn fr17_every_shell_word_is_translated_into_every_language() {
+        assert_eq!(languages::TAGS.len(), languages::COUNT);
+        for (id, words) in shell::STRINGS {
+            for (language, text) in words.iter().enumerate() {
+                let tag = languages::TAGS[language];
+                assert!(!text.trim().is_empty(), "{id} is empty in {tag}");
+                assert!(
+                    !text.contains(char::from_u32(0x2014).unwrap()),
+                    "{id} has an em dash in {tag}"
+                );
+                // Android and the product name are never translated or transliterated.
+                if words[0].contains("Android") {
+                    assert!(text.contains("Android"), "{id} in {tag}: {text}");
+                }
+                if words[0].contains("Desktop Subsystem for Android") {
+                    assert!(
+                        text.contains("Desktop Subsystem for Android"),
+                        "{id} in {tag}"
+                    );
+                }
+                if words[0].contains("dsa") {
+                    assert!(text.contains("dsa"), "{id} in {tag}");
+                }
+                if language != 0 && *id != shell::NAVIGATION_NAME {
+                    assert_ne!(*text, words[0], "{id} has no translation in {tag}");
+                }
+            }
+        }
+        for names in [names::WINDOW_MANAGER_NAMES, names::RENDERER_NAMES] {
+            for (language, name) in names.iter().enumerate() {
+                let tag = languages::TAGS[language];
+                assert!(!name.trim().is_empty(), "{tag}");
+                assert!(!name.contains(char::from_u32(0x2014).unwrap()), "{tag}");
+                assert!(
+                    name.contains("Android") || name.contains("DSA"),
+                    "{tag}: {name}"
+                );
+                // Android is never the first word of a name, but where Korean grammar puts
+                // it there, as it always has.
+                if tag != "ko" {
+                    assert!(!name.starts_with("Android"), "{tag}: {name}");
+                }
+            }
+        }
     }
 
     #[test]
@@ -666,10 +1018,10 @@ mod tests {
         assert!(contains(&info, &0xFEEF_04BDu32.to_le_bytes()));
         let korean = version_info(
             &VersionStrings {
-                description: names::WINDOW_MANAGER_KO.into(),
+                description: names::WINDOW_MANAGER_NAMES[1].into(),
                 ..strings()
             },
-            LANG_KO_KR,
+            0x0412,
         );
         assert!(contains(&korean, &utf16("Android용 창 관리자")));
         assert!(contains(&korean, &utf16("041204B0")));
@@ -680,7 +1032,8 @@ mod tests {
     fn nfr5_the_renderer_process_names_itself_in_english_and_korean() {
         // Task Manager lists dsa-gfx.exe by these, beside the window manager.
         assert_eq!(names::RENDERER, "Graphics renderer for Android");
-        assert_eq!(names::RENDERER_KO, "Android용 그래픽 렌더러");
+        assert_eq!(names::RENDERER_NAMES[1], "Android용 그래픽 렌더러");
+        assert_eq!(names::RENDERER_NAMES[0], names::RENDERER);
         let renderer = VersionStrings {
             description: names::RENDERER.into(),
             internal_name: "dsa-gfx".into(),
@@ -688,7 +1041,7 @@ mod tests {
         };
         let resources = program_resources(
             &renderer,
-            Some(names::RENDERER_KO),
+            Some(&names::RENDERER_NAMES),
             &parse_ico(include_bytes!("../../installer/setup-ui/assets/logo.ico")).unwrap(),
         );
         let english = resources
@@ -705,10 +1058,45 @@ mod tests {
         ));
         let korean = resources
             .iter()
-            .find(|r| r.kind == RT_VERSION && r.language == LANG_KO_KR)
+            .find(|r| r.kind == RT_VERSION && r.language == 0x0412)
             .expect("a Korean version block");
         assert!(contains(&korean.data, &utf16("Android용 그래픽 렌더러")));
         assert!(resources.iter().any(|r| r.kind == RT_GROUP_ICON));
+    }
+
+    #[test]
+    fn fr17_the_translated_names_are_version_information_in_every_language_id() {
+        for names in [names::WINDOW_MANAGER_NAMES, names::RENDERER_NAMES] {
+            let strings = VersionStrings {
+                description: names[0].into(),
+                ..strings()
+            };
+            let resources = program_resources(&strings, Some(&names), &[]);
+            let versions: Vec<&Resource> =
+                resources.iter().filter(|r| r.kind == RT_VERSION).collect();
+            // One block per language ID, none twice.
+            let ids: usize = languages::LANGIDS.iter().map(|ids| ids.len()).sum();
+            assert_eq!(versions.len(), ids);
+            for (language, ids) in languages::LANGIDS.iter().enumerate() {
+                for id in *ids {
+                    let block = versions
+                        .iter()
+                        .find(|r| r.language == *id)
+                        .unwrap_or_else(|| panic!("no version block under {id:#06x}"));
+                    assert!(
+                        contains(&block.data, &utf16(names[language])),
+                        "{id:#06x} does not name {}",
+                        names[language]
+                    );
+                    assert!(contains(&block.data, &utf16(&format!("{id:04X}04B0"))));
+                    assert!(contains(&block.data, &utf16(names::PRODUCT)));
+                }
+            }
+        }
+        // A program whose name is not translated has English alone.
+        let english = program_resources(&strings(), None, &[]);
+        assert_eq!(english.len(), 1);
+        assert_eq!(english[0].language, LANG_EN_US);
     }
 
     #[test]
@@ -808,12 +1196,12 @@ mod tests {
     fn fr3_a_res_file_holds_each_resource_on_a_four_byte_boundary() {
         let resources = program_resources(
             &strings(),
-            Some(names::WINDOW_MANAGER_KO),
+            Some(&names::WINDOW_MANAGER_NAMES),
             &parse_ico(include_bytes!("../../installer/setup-ui/assets/logo.ico")).unwrap(),
         );
         assert!(resources
             .iter()
-            .any(|r| r.kind == RT_VERSION && r.language == LANG_KO_KR));
+            .any(|r| r.kind == RT_VERSION && r.language == 0x0412));
         let file = res_file(&resources);
         assert_eq!(&file[..8], &[0, 0, 0, 0, 32, 0, 0, 0]);
         // Walk the entries the way the linker does.

@@ -1,0 +1,2585 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The texts of DSA Settings in Vietnamese, read through ResourceManager. Each key has the same meaning in every language. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Cài đặt DSA</value>
+  </data>
+  <data name="AppTitle.Text" xml:space="preserve">
+    <value>Cài đặt DSA</value>
+  </data>
+  <data name="NavGeneral.Content" xml:space="preserve">
+    <value>Chung</value>
+  </data>
+  <data name="NavMemory.Content" xml:space="preserve">
+    <value>Bộ nhớ</value>
+  </data>
+  <data name="NavDisplay.Content" xml:space="preserve">
+    <value>Màn hình và GPU</value>
+  </data>
+  <data name="NavUpdates.Content" xml:space="preserve">
+    <value>Cập nhật</value>
+  </data>
+  <data name="NavAdvanced.Content" xml:space="preserve">
+    <value>Nâng cao</value>
+  </data>
+  <data name="NavAbout.Content" xml:space="preserve">
+    <value>Giới thiệu</value>
+  </data>
+  <data name="GeneralTitle.Text" xml:space="preserve">
+    <value>Chung</value>
+  </data>
+  <data name="GeneralErrorBar.Title" xml:space="preserve">
+    <value>Đã xảy ra sự cố</value>
+  </data>
+  <data name="GeneralStateCard.Header" xml:space="preserve">
+    <value>Trạng thái</value>
+  </data>
+  <data name="GeneralStateCard.Description" xml:space="preserve">
+    <value>Desktop Subsystem for Android™ chạy Android trong một máy ảo nhẹ riêng và hiển thị mỗi ứng dụng trong cửa sổ riêng.</value>
+  </data>
+  <data name="StartButton.Content" xml:space="preserve">
+    <value>Khởi động</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>Dừng</value>
+  </data>
+  <data name="ProblemBar.Title" xml:space="preserve">
+    <value>Android chưa sẵn sàng</value>
+  </data>
+  <data name="LastReasonBar.Title" xml:space="preserve">
+    <value>Lần dừng gần nhất</value>
+  </data>
+  <data name="LastReason_Requested" xml:space="preserve">
+    <value>Android đã dừng theo yêu cầu. Hãy khởi động lại khi bạn cần.</value>
+  </data>
+  <data name="LastReason_Updating" xml:space="preserve">
+    <value>DSA đang được cập nhật. Hãy khởi động lại Android khi cập nhật xong.</value>
+  </data>
+  <data name="LastReason_Virtualization" xml:space="preserve">
+    <value>Ảo hóa đang tắt hoặc thiếu Hyper-V. Hãy bật Nền tảng Máy ảo, rồi khởi động lại PC.</value>
+  </data>
+  <data name="LastReason_InvalidConfiguration" xml:space="preserve">
+    <value>Windows đã từ chối cài đặt cho máy ảo của Android. Hãy cập nhật hoặc cài đặt lại DSA.</value>
+  </data>
+  <data name="LastReason_OutOfMemory" xml:space="preserve">
+    <value>Không đủ bộ nhớ để khởi động Android. Hãy đóng các ứng dụng khác và thử lại.</value>
+  </data>
+  <data name="LastReason_Disk" xml:space="preserve">
+    <value>Sự cố ổ đĩa khiến Android không khởi động được. Hãy giải phóng dung lượng hoặc kiểm tra ổ đĩa, rồi thử lại.</value>
+  </data>
+  <data name="LastReason_TimedOut" xml:space="preserve">
+    <value>Android khởi động quá lâu. Hãy thử khởi động lại.</value>
+  </data>
+  <data name="LastReason_Lost" xml:space="preserve">
+    <value>Android đã dừng đột ngột. Hãy thử khởi động lại.</value>
+  </data>
+  <data name="LastReason_General" xml:space="preserve">
+    <value>Không thể khởi động Android. Hãy thử lại, và xem chi tiết nếu vẫn không thành công.</value>
+  </data>
+  <data name="LastReasonDetails.Header" xml:space="preserve">
+    <value>Chi tiết</value>
+  </data>
+  <data name="LastReasonCopy.ToolTip" xml:space="preserve">
+    <value>Sao chép chi tiết</value>
+  </data>
+  <data name="UpdateNoticeBar.Title" xml:space="preserve">
+    <value>Cập nhật</value>
+  </data>
+  <data name="UpdateNotice_AndroidUpdated" xml:space="preserve">
+    <value>Android đã được cập nhật lên {0}.</value>
+  </data>
+  <data name="UpdateNotice_AndroidInstalled" xml:space="preserve">
+    <value>Đã cài đặt Android {0}.</value>
+  </data>
+  <data name="UpdateNotice_AndroidChosen" xml:space="preserve">
+    <value>Đã chọn Android {0}. DSA tải xuống ngay bây giờ và dùng nó vào lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
+    <value>Android {0} không khởi động được ({1}), nên Android {2} được dùng lại.
+Android {0} sẽ được thử lại khi có bản dựng mới hơn của nó hoặc phiên bản DSA mới.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
+    <value>Android {0} không khởi động được ({1}), nên Android {2} được dùng lại.
+Android {2} chưa khởi động xong ({3}). Hãy khởi động lại Android để hoàn tất.</value>
+  </data>
+  <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
+    <value>Android {0} không khởi động được ({1}), và không có ảnh nào khác được cài đặt.
+DSA sẽ tải xuống ảnh khác nếu có. Phiên bản DSA tiếp theo sẽ thử lại ảnh này.</value>
+  </data>
+  <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
+    <value>Android {0} vẫn được giữ ở chế độ dùng thử và không phải là nguyên nhân: {1}</value>
+  </data>
+  <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
+    <value>DSA đã được cập nhật lên {0}.</value>
+  </data>
+  <data name="UpdateNotice_DsaDownloaded" xml:space="preserve">
+    <value>Đã tải xuống DSA {0}. Bản này sẽ được cài đặt khi Android không chạy.</value>
+  </data>
+  <data name="UpdateNotice_DsaInstalling" xml:space="preserve">
+    <value>Đang cài đặt DSA {0}. Dịch vụ sẽ khởi động lại khi xong.</value>
+  </data>
+  <data name="UpdateNotice_DsaFailed" xml:space="preserve">
+    <value>Không thể cập nhật DSA lên {0} ({1}). DSA {2} vẫn được cài đặt.</value>
+  </data>
+  <data name="GeneralMoreHeader.Text" xml:space="preserve">
+    <value>Thêm</value>
+  </data>
+  <data name="OpenLogsCard.Header" xml:space="preserve">
+    <value>Mở thư mục nhật ký của tôi</value>
+  </data>
+  <data name="OpenLogsCard.Description" xml:space="preserve">
+    <value>Nhật ký của trình quản lý cửa sổ và các cửa sổ ứng dụng, dùng để báo cáo sự cố.</value>
+  </data>
+  <data name="RefreshCard.Header" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="RefreshCard.Description" xml:space="preserve">
+    <value>Hỏi lại dịch vụ DSA về trạng thái.</value>
+  </data>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>Không xác định</value>
+  </data>
+  <data name="State_Stopped" xml:space="preserve">
+    <value>Đã dừng</value>
+  </data>
+  <data name="State_Starting" xml:space="preserve">
+    <value>Đang khởi động</value>
+  </data>
+  <data name="State_Active" xml:space="preserve">
+    <value>Đang chạy</value>
+  </data>
+  <data name="State_Dozing" xml:space="preserve">
+    <value>Doze (nhàn rỗi)</value>
+  </data>
+  <data name="State_Frozen" xml:space="preserve">
+    <value>Đã đóng băng</value>
+  </data>
+  <data name="State_Stopping" xml:space="preserve">
+    <value>Đang dừng</value>
+  </data>
+  <data name="State_Stalled" xml:space="preserve">
+    <value>Chưa sẵn sàng</value>
+  </data>
+  <data name="Problem_CliMissing" xml:space="preserve">
+    <value>Không thể chạy lệnh dsa. Hãy cài đặt lại DSA.</value>
+  </data>
+  <data name="Problem_ServiceUnreachable" xml:space="preserve">
+    <value>Dịch vụ DSA không chạy.</value>
+  </data>
+  <data name="Problem_Refused" xml:space="preserve">
+    <value>Dịch vụ DSA không thể thực hiện việc này.</value>
+  </data>
+  <data name="Problem_Unreadable" xml:space="preserve">
+    <value>Không đọc được phản hồi của lệnh dsa. Hãy cài đặt lại DSA.</value>
+  </data>
+  <data name="MemoryTitle.Text" xml:space="preserve">
+    <value>Bộ nhớ</value>
+  </data>
+  <data name="MemoryRefreshButton.Content" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="MemoryErrorBar.Title" xml:space="preserve">
+    <value>Không đo được bộ nhớ</value>
+  </data>
+  <data name="MemoryHostHeader.Text" xml:space="preserve">
+    <value>Trên PC này</value>
+  </data>
+  <data name="MemoryHostTotalCard.Header" xml:space="preserve">
+    <value>Đang dùng trên PC này</value>
+  </data>
+  <data name="MemoryHostTotalCard.Description" xml:space="preserve">
+    <value>RAM mà máy ảo, trình quản lý cửa sổ và các cửa sổ ứng dụng đang chiếm giữ.</value>
+  </data>
+  <data name="MemoryHostNone.Text" xml:space="preserve">
+    <value>Android không chạy, nên không chiếm bộ nhớ trên PC này.</value>
+  </data>
+  <data name="MemoryGuestHeader.Text" xml:space="preserve">
+    <value>Bên trong Android</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Title" xml:space="preserve">
+    <value>Chưa có báo cáo</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Message" xml:space="preserve">
+    <value>Android báo cáo cách nó dùng bộ nhớ vài phút sau khi khởi động.</value>
+  </data>
+  <data name="MemoryGuestTotalCard.Header" xml:space="preserve">
+    <value>Khả dụng cho Android</value>
+  </data>
+  <data name="MemoryAvailableOf.Text" xml:space="preserve">
+    <value>khả dụng trên tổng số</value>
+  </data>
+  <data name="MemoryTopHeader.Text" xml:space="preserve">
+    <value>Các tiến trình lớn nhất</value>
+  </data>
+  <data name="Role_Vm" xml:space="preserve">
+    <value>Máy ảo (vmmem)</value>
+  </data>
+  <data name="Role_WindowManager" xml:space="preserve">
+    <value>Trình quản lý cửa sổ</value>
+  </data>
+  <data name="Role_Renderer" xml:space="preserve">
+    <value>Trình kết xuất đồ họa</value>
+  </data>
+  <data name="Role_AppWindow" xml:space="preserve">
+    <value>Cửa sổ ứng dụng</value>
+  </data>
+  <data name="Memory_ProcessDetail" xml:space="preserve">
+    <value>Tiến trình {0}, {1} riêng</value>
+  </data>
+  <data name="Memory_ReportAge" xml:space="preserve">
+    <value>Đã báo cáo {0} giây trước</value>
+  </data>
+  <data name="Memory_Apps" xml:space="preserve">
+    <value>Ứng dụng và hệ thống</value>
+  </data>
+  <data name="Memory_AppsDetail" xml:space="preserve">
+    <value>{0} trong bộ nhớ, {1} đã nén</value>
+  </data>
+  <data name="Memory_Cache" xml:space="preserve">
+    <value>Bộ nhớ đệm</value>
+  </data>
+  <data name="Memory_CacheDetail" xml:space="preserve">
+    <value>Nội dung tệp được giữ trong bộ nhớ. Android loại bỏ chúng khi cần bộ nhớ.</value>
+  </data>
+  <data name="Memory_Kernel" xml:space="preserve">
+    <value>Bộ nhớ đệm kernel</value>
+  </data>
+  <data name="Memory_KernelDetail" xml:space="preserve">
+    <value>Bộ nhớ đệm mà kernel có thể giải phóng khi cần.</value>
+  </data>
+  <data name="Memory_Shared" xml:space="preserve">
+    <value>Bộ nhớ dùng chung</value>
+  </data>
+  <data name="Memory_Zram" xml:space="preserve">
+    <value>Bộ nhớ nén</value>
+  </data>
+  <data name="Memory_ZramDetail" xml:space="preserve">
+    <value>Chứa {0} trang, đã nén</value>
+  </data>
+  <data name="Memory_Free" xml:space="preserve">
+    <value>Trống</value>
+  </data>
+  <data name="Memory_GuestProcessDetail" xml:space="preserve">
+    <value>Tiến trình {0}</value>
+  </data>
+  <data name="Memory_GuestProcessGooglePlay" xml:space="preserve">
+    <value>Tiến trình {0}, Dịch vụ Google Play</value>
+  </data>
+  <data name="Memory_GooglePlay" xml:space="preserve">
+    <value>Dịch vụ Google Play</value>
+  </data>
+  <data name="Memory_GooglePlayDetail" xml:space="preserve">
+    <value>Các ứng dụng Google bạn đã cài, {0} tiến trình: {1}</value>
+  </data>
+  <data name="Memory_Unknown" xml:space="preserve">
+    <value>không xác định</value>
+  </data>
+  <data name="DisplayTitle.Text" xml:space="preserve">
+    <value>Màn hình và GPU</value>
+  </data>
+  <data name="SettingsErrorBar.Title" xml:space="preserve">
+    <value>Cài đặt chưa được thay đổi</value>
+  </data>
+  <data name="RenderGpuCard.Header" xml:space="preserve">
+    <value>GPU kết xuất</value>
+  </data>
+  <data name="RenderGpuCard.Description" xml:space="preserve">
+    <value>GPU vẽ các ứng dụng Android. Mặc định là GPU của màn hình chính, để khung hình ở trên một GPU và GPU rời của laptop được nghỉ.</value>
+  </data>
+  <data name="Gpu_Display" xml:space="preserve">
+    <value>GPU của màn hình chính (khuyên dùng)</value>
+  </data>
+  <data name="Gpu_Integrated" xml:space="preserve">
+    <value>GPU tích hợp</value>
+  </data>
+  <data name="Gpu_Discrete" xml:space="preserve">
+    <value>GPU rời (ví dụ cho trò chơi)</value>
+  </data>
+  <data name="DisplayGpuCard.Header" xml:space="preserve">
+    <value>GPU của màn hình chính</value>
+  </data>
+  <data name="DisplayGpuCard.Description" xml:space="preserve">
+    <value>GPU mà lựa chọn mặc định đang dùng để kết xuất.</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Title" xml:space="preserve">
+    <value>Áp dụng sau khi khởi động lại</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
+    <value>GPU kết xuất mới có hiệu lực khi trình quản lý cửa sổ khởi động lại: lần đăng nhập tới, hoặc khi bạn khởi động lại bên dưới.</value>
+  </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Trình điều khiển Vulkan</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Ứng dụng Android vẽ qua Vulkan. GPU không có trình điều khiển Vulkan có thể dùng Dozen (Vulkan on Direct3D 12) từ OpenCL, OpenGL, and Vulkan Compatibility Pack của Microsoft. Áp dụng khi trình quản lý cửa sổ khởi động lại.</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>Tự động: trình điều khiển của GPU, chỉ dùng Dozen khi không có (khuyên dùng)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>Chỉ trình điều khiển Vulkan riêng của GPU</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>Chỉ Dozen (để thử nghiệm và so sánh)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>Trình quản lý cửa sổ chưa cho biết nó đang kết xuất bằng gì.</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>Đang kết xuất qua trình điều khiển Vulkan của GPU.</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>Đang kết xuất qua Dozen (Vulkan on Direct3D 12).</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>Đang kết xuất qua Dozen trên CPU: GPU này không có trình điều khiển Direct3D 12.</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>Không có Vulkan để kết xuất, nên Android không khởi động. Hãy cài Compatibility Pack từ Microsoft Store hoặc bằng winget install Microsoft.OpenCLGLVulkanCompatibilityPack, rồi đăng xuất và đăng nhập lại.</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>Tải Compatibility Pack trong Microsoft Store</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android đang vẽ bằng CPU</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>GPU của PC này không có trình điều khiển Direct3D 12, nên ứng dụng vẫn chạy nhưng trò chơi và hiệu ứng động sẽ chậm.</value>
+  </data>
+  <data name="TouchGesturesCard.Header" xml:space="preserve">
+    <value>Tắt cử chỉ chạm của Windows trong cửa sổ ứng dụng DSA</value>
+  </data>
+  <data name="TouchGesturesCard.Description" xml:space="preserve">
+    <value>Khi một cửa sổ DSA ở phía trước, cử chỉ ba và bốn ngón của Windows bị tắt, để ứng dụng nhận đến mười ngón.
+Bật theo mặc định. Các ứng dụng khác giữ cử chỉ bạn đã đặt trong Cài đặt Windows.</value>
+  </data>
+  <data name="TouchGestures_Failed" xml:space="preserve">
+    <value>Không thể dùng cài đặt này: Windows từ chối thay đổi cử chỉ chạm ({0}). Bạn có thể tắt chúng cho mọi ứng dụng trong Cài đặt Windows.</value>
+  </data>
+  <data name="TouchGestures_NoReason" xml:space="preserve">
+    <value>không có lý do</value>
+  </data>
+  <data name="TouchSettingsLink.Content" xml:space="preserve">
+    <value>Mở cài đặt cảm ứng</value>
+  </data>
+  <data name="RestartWindowManagerCard.Header" xml:space="preserve">
+    <value>Khởi động lại trình quản lý cửa sổ</value>
+  </data>
+  <data name="RestartWindowManagerCard.Description" xml:space="preserve">
+    <value>Các cửa sổ ứng dụng Android đang mở sẽ đóng rồi mở lại.</value>
+  </data>
+  <data name="RestartWindowManagerButton.Content" xml:space="preserve">
+    <value>Khởi động lại</value>
+  </data>
+  <data name="RestartWindowManagerTitle" xml:space="preserve">
+    <value>Khởi động lại trình quản lý cửa sổ?</value>
+  </data>
+  <data name="RestartWindowManagerBody" xml:space="preserve">
+    <value>Các cửa sổ ứng dụng Android sẽ đóng trong giây lát.
+
+Android và các ứng dụng vẫn tiếp tục chạy.</value>
+  </data>
+  <data name="RestartWindowManagerAction" xml:space="preserve">
+    <value>Khởi động lại</value>
+  </data>
+  <data name="RestartWindowManagerFailed" xml:space="preserve">
+    <value>Không thể khởi động lại trình quản lý cửa sổ</value>
+  </data>
+  <data name="UpdatesTitle.Text" xml:space="preserve">
+    <value>Cập nhật</value>
+  </data>
+  <data name="ProgramUpdatesCard.Header" xml:space="preserve">
+    <value>Tự động cập nhật DSA</value>
+  </data>
+  <data name="ProgramUpdatesCard.Description" xml:space="preserve">
+    <value>Tải xuống các phiên bản DSA mới đã ký và cài đặt chúng khi không có Android nào đang chạy.</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Header" xml:space="preserve">
+    <value>Nhận phiên bản phát hành trước</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Description" xml:space="preserve">
+    <value>Cài cả các phiên bản vẫn đang được hoàn thiện. Mọi bản phát hành trước 1.0 đều là bản phát hành trước.
+Tắt mục này không bao giờ đưa DSA lùi lại: DSA sẽ chờ một bản ổn định mới hơn.</value>
+  </data>
+  <data name="ImageUpdatesCard.Header" xml:space="preserve">
+    <value>Tự động cập nhật ảnh Android</value>
+  </data>
+  <data name="ImageUpdatesCard.Description" xml:space="preserve">
+    <value>Tải xuống các bản cập nhật bảo mật đã ký và phiên bản Android mới. Áp dụng khi Android khởi động lại, theo cài đặt bên dưới.</value>
+  </data>
+  <data name="UpdatesMachineNote.Text" xml:space="preserve">
+    <value>Các cài đặt này áp dụng cho mọi người dùng của PC này, nên chỉ quản trị viên mới thay đổi được.
+Công tắc luôn tắt là tính năng mà bản cài đặt này không cung cấp.</value>
+  </data>
+  <data name="AdminBar.Title" xml:space="preserve">
+    <value>Cần quyền quản trị viên</value>
+  </data>
+  <data name="AdminBar.Message" xml:space="preserve">
+    <value>Cài đặt cập nhật áp dụng cho mọi người dùng của PC này, nên chỉ quản trị viên mới thay đổi được.
+Hãy dùng Thay đổi với tư cách quản trị viên, và Windows sẽ hỏi quyền.</value>
+  </data>
+  <data name="AdminShield.ToolTip" xml:space="preserve">
+    <value>Chỉ quản trị viên mới có thể thay đổi cài đặt này.</value>
+  </data>
+  <data name="ChangeAsAdmin.Content" xml:space="preserve">
+    <value>Thay đổi với tư cách quản trị viên</value>
+  </data>
+  <data name="ElevatedFailed" xml:space="preserve">
+    <value>Cài đặt chưa được thay đổi (dsa kết thúc với mã {0}).</value>
+  </data>
+  <data name="ElevationDeclined" xml:space="preserve">
+    <value>Cài đặt chưa được thay đổi vì không được cấp quyền quản trị viên.</value>
+  </data>
+  <data name="UpdateNowHeader.Text" xml:space="preserve">
+    <value>Cài đặt ngay</value>
+  </data>
+  <data name="UpdateNowCard.Header" xml:space="preserve">
+    <value>Cài đặt phiên bản DSA mới nhất ngay</value>
+  </data>
+  <data name="UpdateNowCard.Description" xml:space="preserve">
+    <value>Android của mọi người dùng sẽ dừng trong khi cài đặt chạy.</value>
+  </data>
+  <data name="UpdateNowButton.Content" xml:space="preserve">
+    <value>Cài đặt ngay</value>
+  </data>
+  <data name="UpdateNowTitle" xml:space="preserve">
+    <value>Cài đặt phiên bản mới nhất ngay?</value>
+  </data>
+  <data name="UpdateNowBody" xml:space="preserve">
+    <value>DSA sẽ dừng Android của mọi người dùng và cài phiên bản mới nhất.
+
+Dịch vụ DSA khởi động lại khi cài đặt xong.</value>
+  </data>
+  <data name="UpdateNowAction" xml:space="preserve">
+    <value>Cài đặt</value>
+  </data>
+  <data name="UpdateNowFailed" xml:space="preserve">
+    <value>DSA chưa được cập nhật</value>
+  </data>
+  <data name="ProgramUpdateCard.Header" xml:space="preserve">
+    <value>Đang cập nhật DSA</value>
+  </data>
+  <data name="ProgramUpdateDone.Title" xml:space="preserve">
+    <value>Đã cập nhật DSA</value>
+  </data>
+  <data name="ProgramUpdate_Starting" xml:space="preserve">
+    <value>Đang chuẩn bị bản cập nhật</value>
+  </data>
+  <data name="ProgramUpdate_Downloading" xml:space="preserve">
+    <value>Đang tải xuống DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_StoppingAndroid" xml:space="preserve">
+    <value>Đang dừng Android để cài đặt DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Installing" xml:space="preserve">
+    <value>Đang cài đặt DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Restarting" xml:space="preserve">
+    <value>DSA đang khởi động lại để hoàn tất cập nhật</value>
+  </data>
+  <data name="ProgramUpdate_Version" xml:space="preserve">
+    <value>Phiên bản {0}</value>
+  </data>
+  <data name="ProgramUpdate_KeepOpen" xml:space="preserve">
+    <value>Đừng đóng DSA hoặc khởi động ứng dụng Android cho đến khi cập nhật xong.</value>
+  </data>
+  <data name="ProgramUpdate_Applied" xml:space="preserve">
+    <value>Đã cập nhật lên {0}</value>
+  </data>
+  <data name="ProgramUpdate_Failed" xml:space="preserve">
+    <value>Không thể cập nhật lên {0}. Phiên bản trước đó vẫn được cài đặt.</value>
+  </data>
+  <data name="ProgramUpdate_NotBack" xml:space="preserve">
+    <value>DSA chưa hoạt động trở lại sau khi cập nhật lên {0}. Nếu DSA không sớm khởi động, hãy khởi động lại máy tính.</value>
+  </data>
+  <data name="AdvancedTitle.Text" xml:space="preserve">
+    <value>Nâng cao</value>
+  </data>
+  <data name="FilesHeader.Text" xml:space="preserve">
+    <value>Tệp</value>
+  </data>
+  <data name="FileSharingCard.Header" xml:space="preserve">
+    <value>Chia sẻ thư mục Windows với Android</value>
+  </data>
+  <data name="FileSharingCard.Description" xml:space="preserve">
+    <value>Hiển thị các thư mục chọn bên dưới trong bộ nhớ dùng chung của Android, trong thư mục Host. Bật theo mặc định.
+Ứng dụng Android cần quyền bộ nhớ của Android, và chỉ làm được những gì tài khoản Windows của bạn được phép.</value>
+  </data>
+  <data name="SharedFoldersCard.Header" xml:space="preserve">
+    <value>Thư mục được chia sẻ</value>
+  </data>
+  <data name="SharedFoldersCard.Description" xml:space="preserve">
+    <value>Thư mục bạn bỏ chọn sẽ bị gỡ khỏi Android ngay lập tức.</value>
+  </data>
+  <data name="Folder_Documents" xml:space="preserve">
+    <value>Tài liệu</value>
+  </data>
+  <data name="Folder_Downloads" xml:space="preserve">
+    <value>Tải xuống</value>
+  </data>
+  <data name="Folder_Pictures" xml:space="preserve">
+    <value>Ảnh</value>
+  </data>
+  <data name="Folder_Music" xml:space="preserve">
+    <value>Nhạc</value>
+  </data>
+  <data name="Folder_Videos" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Folder_Desktop" xml:space="preserve">
+    <value>Màn hình nền</value>
+  </data>
+  <data name="AndroidFilesCard.Header" xml:space="preserve">
+    <value>Tệp Android</value>
+  </data>
+  <data name="AndroidFilesCard.Description" xml:space="preserve">
+    <value>Mở các tệp mà ứng dụng Android đã lưu, như ảnh và tệp tải xuống, trong File Explorer. Android sẽ khởi động nếu chưa chạy.
+Mục Android trong ngăn điều hướng của File Explorer cũng mở các tệp này.</value>
+  </data>
+  <data name="FilesDropCard.Header" xml:space="preserve">
+    <value>Gửi tệp đến ứng dụng Android</value>
+  </data>
+  <data name="FilesNote.Text" xml:space="preserve">
+    <value>Để gửi tệp đến ứng dụng Android, hãy kéo tệp từ File Explorer vào cửa sổ của ứng dụng. APK bạn thả vào sẽ được cài đặt.</value>
+  </data>
+  <data name="LinksCard.Header" xml:space="preserve">
+    <value>Mở liên kết web trong ứng dụng Android</value>
+  </data>
+  <data name="LinksCard.Description" xml:space="preserve">
+    <value>Mặc định tắt: liên kết trong ứng dụng Android mở bằng trình duyệt Windows. Khi bật, chúng mở trong ứng dụng Android như trên điện thoại.
+Liên kết mà một ứng dụng đã cài xác minh là của mình luôn mở trong ứng dụng đó.</value>
+  </data>
+  <data name="ArmHeader.Text" xml:space="preserve">
+    <value>Ứng dụng ARM</value>
+  </data>
+  <data name="ArmCard.Header" xml:space="preserve">
+    <value>Chạy ứng dụng chỉ dành cho ARM</value>
+  </data>
+  <data name="ArmCard.Description" xml:space="preserve">
+    <value>Cho phép ứng dụng chỉ dành cho bộ xử lý ARM cài và chạy ở đây qua trình dịch ARM. Áp dụng từ lần khởi động Android tiếp theo.
+Chỉ ứng dụng ARM 64-bit (arm64-v8a) chạy được.
+Android dùng trình dịch mã nguồn mở có sẵn, trừ khi bạn cài của Google bên dưới hoặc cái khác bằng dsa arm-translation install.</value>
+  </data>
+  <data name="ArmRestartBar.Title" xml:space="preserve">
+    <value>Khởi động lại Android để áp dụng</value>
+  </data>
+  <data name="ArmRestartBar.Message" xml:space="preserve">
+    <value>Android đã khởi động trước thay đổi này. Hãy dừng rồi khởi động lại Android để ứng dụng ARM áp dụng thay đổi.</value>
+  </data>
+  <data name="ArmDefaultCard.Header" xml:space="preserve">
+    <value>Dùng trình dịch mặc định</value>
+  </data>
+  <data name="ArmDefaultButton.Content" xml:space="preserve">
+    <value>Dùng</value>
+  </data>
+  <data name="Arm_DefaultDescription" xml:space="preserve">
+    <value>{0} {1} ({2}) đi kèm Android này và được dùng trừ khi bạn cài trình dịch khác.
+Quay lại trình dịch này sẽ gỡ gói đã cài, từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="Arm_SupportedDefault" xml:space="preserve">
+    <value>Được hỗ trợ bởi {0} {1} ({2}), trình dịch đi kèm Android này.</value>
+  </data>
+  <data name="Arm_DefaultTurnedOff" xml:space="preserve">
+    <value>Không được hỗ trợ: {0} {1} đang tắt.</value>
+  </data>
+  <data name="ArmRemoveCard.Header" xml:space="preserve">
+    <value>Gỡ bỏ gói dịch ARM</value>
+  </data>
+  <data name="ArmRemoveCard.Description" xml:space="preserve">
+    <value>Xóa gói khỏi đĩa tiện ích bổ sung của bạn. Các ứng dụng ARM bạn đã cài vẫn còn, nhưng không chạy sau khi Android khởi động lại.</value>
+  </data>
+  <data name="ArmRemoveButton.Content" xml:space="preserve">
+    <value>Gỡ bỏ</value>
+  </data>
+  <data name="Arm_NotSupported" xml:space="preserve">
+    <value>Không được hỗ trợ: chưa cài gói dịch ARM nào.</value>
+  </data>
+  <data name="Arm_Supported" xml:space="preserve">
+    <value>Được hỗ trợ bởi {0} {1} ({2}).</value>
+  </data>
+  <data name="Arm_TurnedOff" xml:space="preserve">
+    <value>Không được hỗ trợ: {0} {1} đã được cài nhưng đang tắt.</value>
+  </data>
+  <data name="Arm_NoLicense" xml:space="preserve">
+    <value>không có thông tin giấy phép</value>
+  </data>
+  <data name="Arm_Abis" xml:space="preserve">
+    <value>Android cài ứng dụng cho: {0}</value>
+  </data>
+  <data name="Arm_NotRunning" xml:space="preserve">
+    <value>Android không chạy, nên chưa biết hiện nó hỗ trợ những gì.</value>
+  </data>
+  <data name="ArmGoogleCard.Header" xml:space="preserve">
+    <value>Trình dịch ARM của Google</value>
+  </data>
+  <data name="ArmGoogleCard.Description" xml:space="preserve">
+    <value>Cài trình dịch ARM từ ảnh trình giả lập Android của Google cho phiên bản Android này.
+Tải khoảng 2 GB từ Google, chỉ giữ lại trình dịch và xóa phần còn lại. Không có gì được tải xuống cho đến khi bạn đồng ý.
+Một gói tạo từ trình dịch khác, như Digitalis, cũng làm được việc tương tự.</value>
+  </data>
+  <data name="ArmGoogleButton.Content" xml:space="preserve">
+    <value>Tải xuống</value>
+  </data>
+  <data name="ArmGoogleTermsLink.Content" xml:space="preserve">
+    <value>Giấy phép Android SDK</value>
+  </data>
+  <data name="ArmGoogleConfirm.Title" xml:space="preserve">
+    <value>Tải trình dịch ARM của Google?</value>
+  </data>
+  <data name="ArmGoogleConfirm.Action" xml:space="preserve">
+    <value>Chấp nhận và tải xuống</value>
+  </data>
+  <data name="ArmGoogle_Notice" xml:space="preserve">
+    <value>DSA tải ảnh trình giả lập Android cho phiên bản Android này từ Google và chỉ lấy ra trình dịch ARM của nó.
+
+• Tải xuống: khoảng 2 GB, sẽ bị xóa sau đó.
+• Nguồn: {0}
+• Điều khoản: trình dịch là phần mềm của Google theo Giấy phép Android SDK ({1}). Khi tải xuống, bạn chấp nhận các điều khoản đó.
+• Trình dịch hoạt động từ lần khởi động Android tiếp theo.
+
+DSA không phân phối hay chuyển giao trình dịch.</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Title" xml:space="preserve">
+    <value>Đang tải trình dịch ARM của Google</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Message" xml:space="preserve">
+    <value>Đang tải khoảng 2 GB từ Google và lấy trình dịch ra. Việc này mất vài phút.</value>
+  </data>
+  <data name="GappsHeader.Text" xml:space="preserve">
+    <value>Google Play</value>
+  </data>
+  <data name="GappsCard.Header" xml:space="preserve">
+    <value>Dịch vụ Google Play và Play Store</value>
+  </data>
+  <data name="GappsCard.Description" xml:space="preserve">
+    <value>Cài LiteGapps Core, một gói công khai có Dịch vụ Google Play, Play Store và đồng bộ tài khoản cho phiên bản Android này.
+DSA không kèm theo ứng dụng của Google. Áp dụng từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="GappsInstallButton.Content" xml:space="preserve">
+    <value>Cài đặt</value>
+  </data>
+  <data name="GappsInstallingBar.Title" xml:space="preserve">
+    <value>Đang cài đặt Google Play</value>
+  </data>
+  <data name="GappsInstallingBar.Message" xml:space="preserve">
+    <value>Đang tải xuống và cài đặt Google Play. Việc này có thể mất vài phút.</value>
+  </data>
+  <data name="GappsRestartBar.Title" xml:space="preserve">
+    <value>Khởi động lại Android để áp dụng</value>
+  </data>
+  <data name="GappsRestartBar.Message" xml:space="preserve">
+    <value>Android đã khởi động trước thay đổi này. Hãy dừng rồi khởi động lại Android để áp dụng cho Google Play.</value>
+  </data>
+  <data name="GappsRemoveCard.Header" xml:space="preserve">
+    <value>Gỡ bỏ Google Play</value>
+  </data>
+  <data name="GappsRemoveCard.Description" xml:space="preserve">
+    <value>Xóa các ứng dụng của Google khỏi đĩa tiện ích bổ sung, từ lần khởi động Android tiếp theo.
+Ứng dụng từ Play Store vẫn còn, nhưng những ứng dụng cần Dịch vụ Google Play có thể ngừng hoạt động.</value>
+  </data>
+  <data name="GappsRemoveButton.Content" xml:space="preserve">
+    <value>Gỡ bỏ</value>
+  </data>
+  <data name="GappsTermsCard.Header" xml:space="preserve">
+    <value>Điều khoản của Google</value>
+  </data>
+  <data name="GappsTermsCard.Description" xml:space="preserve">
+    <value>Dịch vụ Google Play và Play Store là phần mềm của Google và tuân theo điều khoản của Google.
+DSA không phân phối chúng. DSA chỉ tải gói LiteGapps công khai khi bạn yêu cầu.</value>
+  </data>
+  <data name="GappsTermsLink.Content" xml:space="preserve">
+    <value>Điều khoản dịch vụ của Google</value>
+  </data>
+  <data name="GappsRegisterCard.Header" xml:space="preserve">
+    <value>Đăng ký thiết bị này với Google</value>
+  </data>
+  <data name="GappsRegisterCard.Description" xml:space="preserve">
+    <value>Android ở đây không được Google chứng nhận, nên Google có thể từ chối cho bạn đăng nhập cho đến khi bạn đăng ký thiết bị này.
+1. Mở trang đăng ký và đăng nhập bằng tài khoản Google của bạn.
+2. Nhập Android ID của thiết bị này.
+3. Khởi động lại Android và đăng nhập lại.</value>
+  </data>
+  <data name="GappsRegisterLink.Content" xml:space="preserve">
+    <value>Mở trang đăng ký</value>
+  </data>
+  <data name="GappsDeviceIdLabel.Text" xml:space="preserve">
+    <value>Android ID</value>
+  </data>
+  <data name="Gapps_NotInstalled" xml:space="preserve">
+    <value>Chưa cài đặt: Android không có Dịch vụ Google Play hay Play Store.</value>
+  </data>
+  <data name="Gapps_Installed" xml:space="preserve">
+    <value>Đã cài đặt: LiteGapps Core {0} cho Android {1} ({2}).</value>
+  </data>
+  <data name="Gapps_InstalledPending" xml:space="preserve">
+    <value>Đã cài đặt: LiteGapps Core {0} cho Android {1} ({2}). Được dùng từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="Gapps_RemovedPending" xml:space="preserve">
+    <value>Đã gỡ bỏ: ứng dụng của Google sẽ rời Android ở lần khởi động tiếp theo.</value>
+  </data>
+  <data name="Gapps_ReinstallNeeded" xml:space="preserve">
+    <value>LiteGapps Core {0} cho Android {1} ({2}), từ DSA cũ hơn, không còn được dùng, nên Android khởi động mà không có ứng dụng Google.
+Hãy cài đặt lại Google Play.</value>
+  </data>
+  <data name="Gapps_Source" xml:space="preserve">
+    <value>Tải từ LiteGapps: {0}</value>
+  </data>
+  <data name="Gapps_DeviceId" xml:space="preserve">
+    <value>Android ID: {0}</value>
+  </data>
+  <data name="Gapps_NoDeviceId" xml:space="preserve">
+    <value>Android ID hiện ở đây khi Google Play đã được cài đặt và Android đã khởi động cùng nó.</value>
+  </data>
+  <data name="DeveloperHeader.Text" xml:space="preserve">
+    <value>Nhà phát triển</value>
+  </data>
+  <data name="DeveloperModeCard.Header" xml:space="preserve">
+    <value>Chế độ nhà phát triển</value>
+  </data>
+  <data name="DeveloperModeCard.Description" xml:space="preserve">
+    <value>Cho phép adb trên PC này kết nối với Android mà không cần xác nhận trong Android, qua một cổng chỉ PC này truy cập được.
+Tắt theo mặc định. Hãy tắt khi bạn dùng xong.</value>
+  </data>
+  <data name="AdbAutoConnectCard.Header" xml:space="preserve">
+    <value>Tự động kết nối adb</value>
+  </data>
+  <data name="AdbAutoConnectCard.Description" xml:space="preserve">
+    <value>Khi chế độ nhà phát triển bật, Android hiện trong adb devices và Android Studio mà không cần adb connect. Bật theo mặc định.
+Sau adb disconnect, tính năng này tắt cho đến khi máy chủ adb khởi động lại.</value>
+  </data>
+  <data name="AdbAutoConnect_Off" xml:space="preserve">
+    <value>Không kết nối: chế độ nhà phát triển hoặc kết nối tự động đang tắt.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForServer" xml:space="preserve">
+    <value>Đang chờ adb: Android kết nối khi adb khởi động trên PC này.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForAndroid" xml:space="preserve">
+    <value>Đang chờ Android: sẽ kết nối khi Android đang chạy.</value>
+  </data>
+  <data name="AdbAutoConnect_Attached" xml:space="preserve">
+    <value>Đã kết nối: adb liệt kê Android.</value>
+  </data>
+  <data name="AdbAutoConnect_Detached" xml:space="preserve">
+    <value>Đã ngắt kết nối bằng adb disconnect. Android kết nối lại khi máy chủ adb khởi động lại.</value>
+  </data>
+  <data name="AdbCard.Header" xml:space="preserve">
+    <value>Kết nối adb</value>
+  </data>
+  <data name="AdbCard.Description" xml:space="preserve">
+    <value>Khi chế độ nhà phát triển bật và Android đang chạy, hãy chạy lệnh này:</value>
+  </data>
+  <data name="CopyButton.ToolTip" xml:space="preserve">
+    <value>Sao chép</value>
+  </data>
+  <data name="AdbPortLabel.Text" xml:space="preserve">
+    <value>Cổng</value>
+  </data>
+  <data name="ClipboardCard.Header" xml:space="preserve">
+    <value>Chia sẻ bộ nhớ tạm với Android</value>
+  </data>
+  <data name="ClipboardCard.Description" xml:space="preserve">
+    <value>Văn bản bạn sao chép trong Windows có thể dán vào ứng dụng Android, và ngược lại. Bật theo mặc định.
+Hình ảnh ở lại nơi chúng được sao chép.</value>
+  </data>
+  <data name="FreezeCard.Header" xml:space="preserve">
+    <value>Đóng băng Android khi nhàn rỗi</value>
+  </data>
+  <data name="FreezeCard.Description" xml:space="preserve">
+    <value>Tắt theo mặc định: Android nhàn rỗi sẽ vào Doze và vẫn nhận thông báo.
+Khi bị đóng băng, Android không dùng CPU nhưng không nhận gì cho đến khi bạn mở một ứng dụng.</value>
+  </data>
+  <data name="FreezeNowCard.Header" xml:space="preserve">
+    <value>Đóng băng Android ngay</value>
+  </data>
+  <data name="FreezeNowCard.Description" xml:space="preserve">
+    <value>Dừng mọi tiến trình trong Android cho đến khi bạn mở lại một cửa sổ của nó. Thông báo, báo thức và widget cũng dừng theo.</value>
+  </data>
+  <data name="FreezeNowButton.Content" xml:space="preserve">
+    <value>Đóng băng</value>
+  </data>
+  <data name="MemoryLimitCard.Header" xml:space="preserve">
+    <value>Giới hạn bộ nhớ</value>
+  </data>
+  <data name="MemoryLimitCard.Description" xml:space="preserve">
+    <value>Lượng bộ nhớ tối đa Android có thể dùng. Android chỉ lấy bộ nhớ khi cần và trả lại khi xong.
+Tự động: tối đa bằng bộ nhớ của PC này trừ phần Windows giữ lại. Áp dụng từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="MemoryLimit_Auto" xml:space="preserve">
+    <value>Tự động</value>
+  </data>
+  <data name="MemoryVmSizeCard.Header" xml:space="preserve">
+    <value>VM của Android hiện tại</value>
+  </data>
+  <data name="MemoryVmSizeCard.Description" xml:space="preserve">
+    <value>Bộ nhớ VM đang giữ trên PC này, và Android dùng bao nhiêu trong đó</value>
+  </data>
+  <data name="MemoryGuestUsedLabel.Text" xml:space="preserve">
+    <value>Android đang dùng</value>
+  </data>
+  <data name="MemoryBeyondGuestLabel.Text" xml:space="preserve">
+    <value>Trống, chưa trả lại</value>
+  </data>
+  <data name="MemoryKernelHeader.Text" xml:space="preserve">
+    <value>Kernel của Android</value>
+  </data>
+  <data name="Memory_KernelSlab" xml:space="preserve">
+    <value>Đối tượng kernel</value>
+  </data>
+  <data name="Memory_KernelSlabDetail" xml:space="preserve">
+    <value>Bộ nhớ kernel giữ cho dữ liệu riêng và không thể thu hồi</value>
+  </data>
+  <data name="Memory_KernelStacks" xml:space="preserve">
+    <value>Ngăn xếp luồng</value>
+  </data>
+  <data name="Memory_KernelPageTables" xml:space="preserve">
+    <value>Bảng trang</value>
+  </data>
+  <data name="Memory_KernelVmalloc" xml:space="preserve">
+    <value>Ánh xạ kernel (vmalloc)</value>
+  </data>
+  <data name="Memory_KernelPercpu" xml:space="preserve">
+    <value>Dữ liệu theo từng CPU</value>
+  </data>
+  <data name="Memory_KernelUnaccounted" xml:space="preserve">
+    <value>Trình điều khiển</value>
+  </data>
+  <data name="Memory_KernelUnaccountedDetail" xml:space="preserve">
+    <value>Phần không bộ đếm nào ghi nhận, như bộ đệm GPU và DMA</value>
+  </data>
+  <data name="Memory_KernelReserved" xml:space="preserve">
+    <value>Dành riêng khi khởi động</value>
+  </data>
+  <data name="Memory_KernelReservedDetail" xml:space="preserve">
+    <value>Mã kernel, cấu trúc trang và bộ đệm, trong {0} được cấp; vùng liên tục {1}</value>
+  </data>
+  <data name="DiagnosticsHeader.Text" xml:space="preserve">
+    <value>Chẩn đoán</value>
+  </data>
+  <data name="InputTraceCard.Header" xml:space="preserve">
+    <value>Theo dõi nhập liệu</value>
+  </data>
+  <data name="InputTraceCard.Description" xml:space="preserve">
+    <value>Mọi tiến trình DSA ghi lại lúc mỗi lần chạm, nhấp và phím đến, để đo độ trễ từ nhập liệu đến hình ảnh. Tắt theo mặc định.</value>
+  </data>
+  <data name="ResizeTraceCard.Header" xml:space="preserve">
+    <value>Theo dõi thay đổi kích thước</value>
+  </data>
+  <data name="ResizeTraceCard.Description" xml:space="preserve">
+    <value>Mọi tiến trình DSA ghi lại từng giai đoạn của mỗi lần đổi kích thước cửa sổ, để tìm chỗ chậm hoặc nhấp nháy. Tắt theo mặc định.</value>
+  </data>
+  <data name="DiagnosticsNote.Text" xml:space="preserve">
+    <value>Dữ liệu theo dõi được ghi vào nhật ký DSA bên dưới và làm chúng lớn lên, nên chỉ bật khi cần báo cáo sự cố.
+Các cài đặt này áp dụng cho mọi người dùng của PC này, nên chỉ quản trị viên mới thay đổi được.</value>
+  </data>
+  <data name="LogsHeader.Text" xml:space="preserve">
+    <value>Nhật ký</value>
+  </data>
+  <data name="UserLogsCard.Header" xml:space="preserve">
+    <value>Mở thư mục nhật ký của tôi</value>
+  </data>
+  <data name="UserLogsCard.Description" xml:space="preserve">
+    <value>Nhật ký của trình quản lý cửa sổ và các cửa sổ ứng dụng của bạn.</value>
+  </data>
+  <data name="ServiceLogsCard.Header" xml:space="preserve">
+    <value>Mở thư mục nhật ký của dịch vụ (quản trị viên)</value>
+  </data>
+  <data name="ServiceLogsCard.Description" xml:space="preserve">
+    <value>Nhật ký của dịch vụ DSA và của chính Android.</value>
+  </data>
+  <data name="CommandLineHeader.Text" xml:space="preserve">
+    <value>Dòng lệnh</value>
+  </data>
+  <data name="CommandLineCard.Header" xml:space="preserve">
+    <value>Lệnh dsa</value>
+  </data>
+  <data name="CommandLineCard.Description" xml:space="preserve">
+    <value>Mọi thứ trên các trang này cũng có thể dùng từ terminal.</value>
+  </data>
+  <data name="AboutTitle.Text" xml:space="preserve">
+    <value>Giới thiệu</value>
+  </data>
+  <data name="AboutProductCard.Header" xml:space="preserve">
+    <value>Desktop Subsystem for Android™</value>
+  </data>
+  <data name="AboutProductCard.Description" xml:space="preserve">
+    <value>Thisisthepy</value>
+  </data>
+  <data name="AboutAppVersionCard.Header" xml:space="preserve">
+    <value>Phiên bản Cài đặt DSA</value>
+  </data>
+  <data name="AboutServiceVersionCard.Header" xml:space="preserve">
+    <value>Phiên bản dịch vụ DSA</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Header" xml:space="preserve">
+    <value>Phiên bản ảnh Android</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Description" xml:space="preserve">
+    <value>Ảnh Android được khởi động ở lần tiếp theo. Bản cập nhật ảnh sẽ thay đổi nó.</value>
+  </data>
+  <data name="AboutLicenseCard.Header" xml:space="preserve">
+    <value>Giấy phép</value>
+  </data>
+  <data name="AboutLicenseCard.Description" xml:space="preserve">
+    <value>DSA được cấp phép theo Apache License 2.0. Mở giấy phép của mọi thành phần đi kèm.</value>
+  </data>
+  <data name="AboutSourceCard.Header" xml:space="preserve">
+    <value>Mã nguồn</value>
+  </data>
+  <data name="AboutIndependent.Text" xml:space="preserve">
+    <value>Desktop Subsystem for Android là một dự án mã nguồn mở độc lập.
+DSA không liên kết với Microsoft hay Google, và không được hai công ty này xác nhận hoặc tài trợ.</value>
+  </data>
+  <data name="AboutTrademark.Text" xml:space="preserve">
+    <value>Android là nhãn hiệu của Google LLC.</value>
+  </data>
+  <data name="FolderMissingTitle" xml:space="preserve">
+    <value>Không thể mở thư mục</value>
+  </data>
+  <data name="FolderMissingBody" xml:space="preserve">
+    <value>{0} chưa tồn tại, hoặc bạn không có quyền mở.</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="Install_BusyTitle" xml:space="preserve">
+    <value>Đang cài đặt</value>
+  </data>
+  <data name="Install_Busy" xml:space="preserve">
+    <value>Đang cài đặt {0} trong Android…</value>
+  </data>
+  <data name="Install_DoneTitle" xml:space="preserve">
+    <value>Đã cài đặt</value>
+  </data>
+  <data name="Install_FailedTitle" xml:space="preserve">
+    <value>Chưa cài đặt</value>
+  </data>
+  <data name="Install_Installed" xml:space="preserve">
+    <value>Đã cài đặt {0} ({1}). Hãy mở nó từ menu Bắt đầu.</value>
+  </data>
+  <data name="Install_Refused" xml:space="preserve">
+    <value>{0} chưa được cài đặt: {1} ({2})</value>
+  </data>
+  <data name="Install_NotSent" xml:space="preserve">
+    <value>{0} không đến được Android. {1}</value>
+  </data>
+  <data name="Install_NotApk" xml:space="preserve">
+    <value>Chỉ có thể cài đặt tệp APK: {0}</value>
+  </data>
+  <data name="Install_Reason_incompatible" xml:space="preserve">
+    <value>ứng dụng không chạy trên Android này: ứng dụng cần loại bộ xử lý khác, phiên bản Android mới hơn hoặc tính năng thiết bị này không có.</value>
+  </data>
+  <data name="Install_Reason_conflicting-signature" xml:space="preserve">
+    <value>ứng dụng đã được cài đặt, được ký bằng khóa khác. Hãy gỡ cài đặt nó trong Android trước.</value>
+  </data>
+  <data name="Install_Reason_invalid-apk" xml:space="preserve">
+    <value>tệp không phải là APK đã ký mà Android đọc được.</value>
+  </data>
+  <data name="Install_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android không còn chỗ cho ứng dụng.</value>
+  </data>
+  <data name="Install_Reason_downgrade" xml:space="preserve">
+    <value>phiên bản mới hơn của ứng dụng đã được cài đặt. Hãy gỡ cài đặt nó trong Android trước.</value>
+  </data>
+  <data name="Install_Reason_blocked" xml:space="preserve">
+    <value>chính sách của Android này không cho phép ứng dụng.</value>
+  </data>
+  <data name="Install_Reason_other" xml:space="preserve">
+    <value>Android không cài đặt ứng dụng.</value>
+  </data>
+  <data name="NavWidgets.Content" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="WidgetsTitle.Text" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="WidgetsRefreshButton.Content" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="WidgetsIntro.Text" xml:space="preserve">
+    <value>Đặt widget mà ứng dụng Android cung cấp lên màn hình nền. Android khởi động khi bạn mở trang này.
+• Mỗi widget có cửa sổ riêng, nằm dưới các cửa sổ khác của bạn.
+• Nhấn giữ widget để chỉnh sửa: kéo để di chuyển, và kéo các tay cầm để đổi kích thước.
+• Nhấp chuột phải vào widget để xem cài đặt, kích thước và Gỡ bỏ.</value>
+  </data>
+  <data name="WidgetsErrorBar.Title" xml:space="preserve">
+    <value>Không thể đọc hoặc thay đổi widget</value>
+  </data>
+  <data name="WidgetsDoneBar.Title" xml:space="preserve">
+    <value>Xong</value>
+  </data>
+  <data name="WidgetsPlacedHeader.Text" xml:space="preserve">
+    <value>Trên màn hình nền</value>
+  </data>
+  <data name="WidgetsPlacedNone.Text" xml:space="preserve">
+    <value>Chưa có widget nào trên màn hình nền.</value>
+  </data>
+  <data name="WidgetsGalleryHeader.Text" xml:space="preserve">
+    <value>Widget mà ứng dụng của bạn cung cấp</value>
+  </data>
+  <data name="WidgetsGalleryNone.Text" xml:space="preserve">
+    <value>Không có ứng dụng nào trong Android cung cấp widget.</value>
+  </data>
+  <data name="WidgetsAddButton.Content" xml:space="preserve">
+    <value>Thêm vào màn hình nền</value>
+  </data>
+  <data name="WidgetsRemoveButton.Content" xml:space="preserve">
+    <value>Gỡ bỏ</value>
+  </data>
+  <data name="Widgets_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Widgets_Setup" xml:space="preserve">
+    <value>yêu cầu bạn thiết lập</value>
+  </data>
+  <data name="Widgets_At" xml:space="preserve">
+    <value>Tại {0}, {1}, {2} × {3}</value>
+  </data>
+  <data name="Widgets_Placed" xml:space="preserve">
+    <value>{0} đã ở trên màn hình nền.</value>
+  </data>
+  <data name="Widgets_Removed" xml:space="preserve">
+    <value>Đã gỡ {0} khỏi màn hình nền.</value>
+  </data>
+  <data name="ApkWindow_Caption" xml:space="preserve">
+    <value>Trình cài đặt APK</value>
+  </data>
+  <data name="ApkWindow_Reading" xml:space="preserve">
+    <value>Đang đọc tệp</value>
+  </data>
+  <data name="ApkWindow_Install" xml:space="preserve">
+    <value>Cài đặt</value>
+  </data>
+  <data name="ApkWindow_Update" xml:space="preserve">
+    <value>Cập nhật</value>
+  </data>
+  <data name="ApkWindow_Reinstall" xml:space="preserve">
+    <value>Cài đặt lại</value>
+  </data>
+  <data name="ApkWindow_Cancel" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="ApkWindow_Close" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="ApkWindow_Open" xml:space="preserve">
+    <value>Khởi chạy</value>
+  </data>
+  <data name="ApkWindow_AndroidChip" xml:space="preserve">
+    <value>Android {0} trở lên</value>
+  </data>
+  <data name="ApkWindow_SummaryUpdate" xml:space="preserve">
+    <value>{0} đã được cài đặt. Thao tác này cập nhật từ phiên bản {1} lên phiên bản {2}. Dữ liệu của ứng dụng được giữ nguyên.</value>
+  </data>
+  <data name="ApkWindow_SummaryReinstall" xml:space="preserve">
+    <value>{0} phiên bản {1} đã được cài đặt. Thao tác này cài lại cùng phiên bản. Dữ liệu của ứng dụng được giữ nguyên.</value>
+  </data>
+  <data name="ApkWindow_SummaryDowngrade" xml:space="preserve">
+    <value>{0} phiên bản {1} đã được cài đặt, còn tệp này là phiên bản cũ hơn {2}. Android không cài phiên bản cũ đè lên phiên bản mới.
+Để dùng tệp này, hãy gỡ cài đặt ứng dụng trong Android trước.</value>
+  </data>
+  <data name="ApkWindow_SummarySignature" xml:space="preserve">
+    <value>{0} đã được cài đặt, được ký bằng khóa khác với tệp này. Để bảo vệ dữ liệu của ứng dụng, Android không cho phép thay thế nó.
+Để dùng tệp này, hãy gỡ cài đặt ứng dụng trong Android trước.</value>
+  </data>
+  <data name="ApkWindow_FactPackage" xml:space="preserve">
+    <value>Gói</value>
+  </data>
+  <data name="ApkWindow_FactVersion" xml:space="preserve">
+    <value>Phiên bản</value>
+  </data>
+  <data name="ApkWindow_FactInstalled" xml:space="preserve">
+    <value>Bản đã cài</value>
+  </data>
+  <data name="ApkWindow_FactAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="ApkWindow_FactSize" xml:space="preserve">
+    <value>Kích thước</value>
+  </data>
+  <data name="ApkWindow_FactAbis" xml:space="preserve">
+    <value>Bộ xử lý</value>
+  </data>
+  <data name="ApkWindow_FactSigner" xml:space="preserve">
+    <value>Người ký</value>
+  </data>
+  <data name="ApkWindow_AndroidRange" xml:space="preserve">
+    <value>{0} trở lên, dành cho {1}</value>
+  </data>
+  <data name="ApkWindow_VersionText" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ApkWindow_ApiLevel" xml:space="preserve">
+    <value>Cấp API {0}</value>
+  </data>
+  <data name="ApkWindow_AndroidVersion" xml:space="preserve">
+    <value>Android {0} (API {1})</value>
+  </data>
+  <data name="ApkWindow_Signer" xml:space="preserve">
+    <value>SHA-256 {1} (chữ ký {0})</value>
+  </data>
+  <data name="ApkWindow_Unsigned" xml:space="preserve">
+    <value>Chưa được ký. Android chỉ cài ứng dụng đã ký.</value>
+  </data>
+  <data name="ApkWindow_NoPermissions" xml:space="preserve">
+    <value>Ứng dụng không yêu cầu quyền nào.</value>
+  </data>
+  <data name="ApkWindow_Sensitive" xml:space="preserve">
+    <value>Android sẽ hỏi bạn trước</value>
+  </data>
+  <data name="ApkWindow_StartingTitle" xml:space="preserve">
+    <value>Đang khởi động Android</value>
+  </data>
+  <data name="ApkWindow_StartingDetail" xml:space="preserve">
+    <value>Android khởi động một lần, rồi luôn sẵn sàng cho các ứng dụng của bạn.</value>
+  </data>
+  <data name="ApkWindow_CheckingTitle" xml:space="preserve">
+    <value>Đang kiểm tra ứng dụng</value>
+  </data>
+  <data name="ApkWindow_CheckingDetail" xml:space="preserve">
+    <value>Đang kiểm tra xem ứng dụng đã được cài đặt chưa.</value>
+  </data>
+  <data name="ApkWindow_InstallingTitle" xml:space="preserve">
+    <value>Đang cài đặt {0}</value>
+  </data>
+  <data name="ApkWindow_SendingDetail" xml:space="preserve">
+    <value>Đang sao chép ứng dụng sang Android</value>
+  </data>
+  <data name="ApkWindow_AndroidInstallingDetail" xml:space="preserve">
+    <value>Android đang cài đặt ứng dụng</value>
+  </data>
+  <data name="ApkWindow_Cancelling" xml:space="preserve">
+    <value>Đang dừng</value>
+  </data>
+  <data name="ApkWindow_Cancelled" xml:space="preserve">
+    <value>Đã dừng cài đặt. Không có gì thay đổi.</value>
+  </data>
+  <data name="ApkWindow_DoneTitle" xml:space="preserve">
+    <value>Đã cài đặt {0}</value>
+  </data>
+  <data name="ApkWindow_UpdatedTitle" xml:space="preserve">
+    <value>Đã cập nhật {0}</value>
+  </data>
+  <data name="ApkWindow_DoneText" xml:space="preserve">
+    <value>Khởi chạy ngay, hoặc sau này từ menu Bắt đầu.</value>
+  </data>
+  <data name="ApkWindow_FailedTitle" xml:space="preserve">
+    <value>Chưa cài đặt</value>
+  </data>
+  <data name="ApkWindow_NotApkTitle" xml:space="preserve">
+    <value>Không thể cài đặt tệp này</value>
+  </data>
+  <data name="ApkWindow_StartFailed" xml:space="preserve">
+    <value>Android không khởi động, nên ứng dụng chưa được cài đặt. {0}</value>
+  </data>
+  <data name="ApkWindow_NotSent" xml:space="preserve">
+    <value>Ứng dụng không đến được Android. {0}</value>
+  </data>
+  <data name="ApkWindow_ReasonWithWords" xml:space="preserve">
+    <value>{0} Android cho biết: {1}</value>
+  </data>
+  <data name="ApkWindow_OpenFailed" xml:space="preserve">
+    <value>Không thể mở {0}. {1}</value>
+  </data>
+  <data name="ApkWindow_Reason_incompatible" xml:space="preserve">
+    <value>Ứng dụng không chạy trên Android này: ứng dụng cần loại bộ xử lý khác, phiên bản Android mới hơn, hoặc tính năng thiết bị này không có.</value>
+  </data>
+  <data name="ApkWindow_Reason_conflicting-signature" xml:space="preserve">
+    <value>Ứng dụng đã được cài đặt, được ký bằng khóa khác. Hãy gỡ cài đặt nó trong Android trước.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-apk" xml:space="preserve">
+    <value>Tệp không phải là APK đã ký mà Android đọc được.</value>
+  </data>
+  <data name="ApkWindow_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android không còn chỗ cho ứng dụng. Hãy giải phóng dung lượng trong Android và thử lại.</value>
+  </data>
+  <data name="ApkWindow_Reason_downgrade" xml:space="preserve">
+    <value>Phiên bản mới hơn của ứng dụng đã được cài đặt. Hãy gỡ cài đặt nó trong Android trước.</value>
+  </data>
+  <data name="ApkWindow_Reason_blocked" xml:space="preserve">
+    <value>Chính sách của Android này không cho phép ứng dụng.</value>
+  </data>
+  <data name="ApkWindow_Reason_other" xml:space="preserve">
+    <value>Android không cài đặt ứng dụng.</value>
+  </data>
+  <data name="ApkWindow_AbiWarning" xml:space="preserve">
+    <value>Ứng dụng này chỉ có mã cho bộ xử lý {0}, không có cho bộ xử lý của PC này.
+Android chỉ chạy được ứng dụng khi có gói dịch ARM, và có thể từ chối cài đặt.</value>
+  </data>
+  <data name="ApkWindow_Abi32Warning" xml:space="preserve">
+    <value>Ứng dụng này chỉ có mã cho bộ xử lý {0}.
+Trình dịch ARM chỉ chạy mã ARM 64-bit (arm64-v8a), nên Android có thể từ chối cài đặt, hoặc ứng dụng có thể không khởi động.</value>
+  </data>
+  <data name="ApkWindow_LaunchFailedAfterInstall" xml:space="preserve">
+    <value>{0} đã được cài đặt, nhưng không mở được. {1}</value>
+  </data>
+  <data name="ApkWindow_LaunchWhenReady" xml:space="preserve">
+    <value>Khởi chạy khi sẵn sàng</value>
+  </data>
+  <data name="NavLogs.Content" xml:space="preserve">
+    <value>Nhật ký</value>
+  </data>
+  <data name="LogsTitle.Text" xml:space="preserve">
+    <value>Nhật ký</value>
+  </data>
+  <data name="LogsNote.Text" xml:space="preserve">
+    <value>Android chỉ gửi nhật ký khi trang này đang mở, và không ghi gì vào ổ đĩa.
+Lưu chẩn đoán gom những gì một báo cáo sự cố cần vào một tệp zip.</value>
+  </data>
+  <data name="LogsSaveButton.Content" xml:space="preserve">
+    <value>Lưu chẩn đoán</value>
+  </data>
+  <data name="LogsFilter.PlaceholderText" xml:space="preserve">
+    <value>Lọc theo thẻ hoặc văn bản</value>
+  </data>
+  <data name="LogsPause.Content" xml:space="preserve">
+    <value>Tạm dừng</value>
+  </data>
+  <data name="LogsErrorBar.Title" xml:space="preserve">
+    <value>Không thể đọc nhật ký</value>
+  </data>
+  <data name="LogsStatusBar.Title" xml:space="preserve">
+    <value>Chẩn đoán</value>
+  </data>
+  <data name="Logs_Paused" xml:space="preserve">
+    <value>Đã tạm dừng. {0} dòng mới đang chờ.</value>
+  </data>
+  <data name="Logs_Saving" xml:space="preserve">
+    <value>Đang thu thập dữ liệu chẩn đoán. Việc này mất một phút hoặc lâu hơn.</value>
+  </data>
+  <data name="Logs_Saved" xml:space="preserve">
+    <value>Đã lưu dữ liệu chẩn đoán vào {0}.</value>
+  </data>
+  <data name="Logs_SaveDialogTitle" xml:space="preserve">
+    <value>Lưu chẩn đoán</value>
+  </data>
+  <data name="Logs_SaveDialogFilter" xml:space="preserve">
+    <value>Tệp nén Zip</value>
+  </data>
+  <data name="Logs_Priority_V" xml:space="preserve">
+    <value>Chi tiết</value>
+  </data>
+  <data name="Logs_Priority_D" xml:space="preserve">
+    <value>Gỡ lỗi</value>
+  </data>
+  <data name="Logs_Priority_I" xml:space="preserve">
+    <value>Thông tin</value>
+  </data>
+  <data name="Logs_Priority_W" xml:space="preserve">
+    <value>Cảnh báo</value>
+  </data>
+  <data name="Logs_Priority_E" xml:space="preserve">
+    <value>Lỗi</value>
+  </data>
+  <data name="Logs_Priority_F" xml:space="preserve">
+    <value>Nghiêm trọng</value>
+  </data>
+  <data name="NavIdentity.Content" xml:space="preserve">
+    <value>Danh tính thiết bị</value>
+  </data>
+  <data name="IdentityTitle.Text" xml:space="preserve">
+    <value>Danh tính thiết bị</value>
+  </data>
+  <data name="IdentityIntro.Text" xml:space="preserve">
+    <value>Tên và dấu vân tay bản dựng mà Android báo cho ứng dụng. Để trống một ô để giữ giá trị đang hiển thị trong đó.
+Thay đổi được áp dụng từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="IdentityWarning.Title" xml:space="preserve">
+    <value>Ứng dụng có thể nhận ra</value>
+  </data>
+  <data name="IdentityWarning.Message" xml:space="preserve">
+    <value>Thay đổi kiểu máy hoặc dấu vân tay có thể thay đổi cách ứng dụng hoạt động.
+Một số ứng dụng kiểm tra thiết bị trước khi chạy, và kiểm tra thanh toán và tính toàn vẹn có thể không thành công.</value>
+  </data>
+  <data name="IdentityDoneBar.Title" xml:space="preserve">
+    <value>Danh tính thiết bị</value>
+  </data>
+  <data name="IdentitySaveButton.Content" xml:space="preserve">
+    <value>Lưu</value>
+  </data>
+  <data name="IdentityResetButton.Content" xml:space="preserve">
+    <value>Khôi phục mặc định</value>
+  </data>
+  <data name="IdentityRestartButton.Content" xml:space="preserve">
+    <value>Khởi động lại Android ngay</value>
+  </data>
+  <data name="IdentityResetConfirmTitle" xml:space="preserve">
+    <value>Khôi phục danh tính thiết bị?</value>
+  </data>
+  <data name="IdentityResetConfirmBody" xml:space="preserve">
+    <value>Mọi giá trị trở về mặc định: giá trị của máy tính này, hoặc của chính DSA khi máy tính không cho biết.
+
+Áp dụng từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="IdentityNamesHeader.Text" xml:space="preserve">
+    <value>Thiết bị</value>
+  </data>
+  <data name="IdentityFingerprintHeader.Text" xml:space="preserve">
+    <value>Dấu vân tay bản dựng</value>
+  </data>
+  <data name="IdentityPreview.Text" xml:space="preserve">
+    <value>Dấu vân tay từ lần khởi động tiếp theo</value>
+  </data>
+  <data name="Identity_Saved" xml:space="preserve">
+    <value>Đã lưu. Android dùng nó từ lần khởi động tiếp theo.</value>
+  </data>
+  <data name="Identity_SavedRestart" xml:space="preserve">
+    <value>Đã lưu. Hãy khởi động lại Android để dùng ngay.</value>
+  </data>
+  <data name="Identity_Reset" xml:space="preserve">
+    <value>Đã trở về mặc định. Android dùng chúng từ lần khởi động tiếp theo.</value>
+  </data>
+  <data name="Identity_ResetRestart" xml:space="preserve">
+    <value>Đã trở về mặc định. Hãy khởi động lại Android để dùng ngay.</value>
+  </data>
+  <data name="Identity_Restarted" xml:space="preserve">
+    <value>Android đã khởi động lại với danh tính này.</value>
+  </data>
+  <data name="Identity_FromComputer" xml:space="preserve">
+    <value>Mặc định: từ máy tính này</value>
+  </data>
+  <data name="Identity_FromDsa" xml:space="preserve">
+    <value>Mặc định: giá trị của DSA</value>
+  </data>
+  <data name="Identity_NotSaid" xml:space="preserve">
+    <value>Máy tính này không cho biết; Android giữ giá trị riêng.</value>
+  </data>
+  <data name="IdentityComputerHeader.Text" xml:space="preserve">
+    <value>Từ máy tính này</value>
+  </data>
+  <data name="IdentityComputerNote.Text" xml:space="preserve">
+    <value>Các giá trị này theo máy tính và được đọc lại mỗi lần Android khởi động, nên tên máy tính mới có hiệu lực từ lần khởi động sau.
+Cài đặt của Android hiển thị tên thiết bị và chip. Tên kiểu máy chỉ hiển thị ở đây.</value>
+  </data>
+  <data name="Identity_model_name" xml:space="preserve">
+    <value>Tên kiểu máy</value>
+  </data>
+  <data name="Identity_model_name_Description" xml:space="preserve">
+    <value>Tên mà máy tính được bán ra (ro.product.marketname).</value>
+  </data>
+  <data name="Identity_device_name" xml:space="preserve">
+    <value>Tên thiết bị</value>
+  </data>
+  <data name="Identity_device_name_Description" xml:space="preserve">
+    <value>Tên của máy tính, mà Cài đặt, Bluetooth và Wi-Fi Direct hiển thị cho thiết bị.</value>
+  </data>
+  <data name="Identity_soc_manufacturer" xml:space="preserve">
+    <value>Nhà sản xuất chip</value>
+  </data>
+  <data name="Identity_soc_manufacturer_Description" xml:space="preserve">
+    <value>Build.SOC_MANUFACTURER: nhà sản xuất bộ xử lý của máy tính.</value>
+  </data>
+  <data name="Identity_soc_model" xml:space="preserve">
+    <value>Kiểu chip</value>
+  </data>
+  <data name="Identity_soc_model_Description" xml:space="preserve">
+    <value>Build.SOC_MODEL: bộ xử lý của máy tính.</value>
+  </data>
+  <data name="Identity_manufacturer" xml:space="preserve">
+    <value>Nhà sản xuất</value>
+  </data>
+  <data name="Identity_manufacturer_Description" xml:space="preserve">
+    <value>Build.MANUFACTURER. Tối đa 64 ký tự ASCII in được.</value>
+  </data>
+  <data name="Identity_manufacturer_Invalid" xml:space="preserve">
+    <value>Dùng 1 đến 64 ký tự ASCII in được, không có dấu cách ở đầu hoặc cuối.</value>
+  </data>
+  <data name="Identity_brand" xml:space="preserve">
+    <value>Thương hiệu</value>
+  </data>
+  <data name="Identity_brand_Description" xml:space="preserve">
+    <value>Build.BRAND, và phần đầu của dấu vân tay. Chữ cái, chữ số, '.', '_' và '-'.</value>
+  </data>
+  <data name="Identity_brand_Invalid" xml:space="preserve">
+    <value>Dùng tối đa 32 chữ cái, chữ số, '.', '_' hoặc '-', bắt đầu bằng chữ cái hoặc chữ số.</value>
+  </data>
+  <data name="Identity_model" xml:space="preserve">
+    <value>Kiểu máy</value>
+  </data>
+  <data name="Identity_model_Description" xml:space="preserve">
+    <value>Build.MODEL, tên mà ứng dụng hiển thị cho thiết bị này.</value>
+  </data>
+  <data name="Identity_model_Invalid" xml:space="preserve">
+    <value>Dùng 1 đến 64 ký tự ASCII in được, không có dấu cách ở đầu hoặc cuối.</value>
+  </data>
+  <data name="Identity_device" xml:space="preserve">
+    <value>Thiết bị</value>
+  </data>
+  <data name="Identity_device_Description" xml:space="preserve">
+    <value>Build.DEVICE. Chữ cái, chữ số, '.', '_' và '-'.</value>
+  </data>
+  <data name="Identity_device_Invalid" xml:space="preserve">
+    <value>Dùng tối đa 32 chữ cái, chữ số, '.', '_' hoặc '-', bắt đầu bằng chữ cái hoặc chữ số.</value>
+  </data>
+  <data name="Identity_name" xml:space="preserve">
+    <value>Tên sản phẩm</value>
+  </data>
+  <data name="Identity_name_Description" xml:space="preserve">
+    <value>Build.PRODUCT. Chữ cái, chữ số, '.', '_' và '-'.</value>
+  </data>
+  <data name="Identity_name_Invalid" xml:space="preserve">
+    <value>Dùng tối đa 32 chữ cái, chữ số, '.', '_' hoặc '-', bắt đầu bằng chữ cái hoặc chữ số.</value>
+  </data>
+  <data name="Identity_characteristics" xml:space="preserve">
+    <value>Kiểu dáng</value>
+  </data>
+  <data name="Identity_characteristics_Description" xml:space="preserve">
+    <value>ro.build.characteristics: tablet (bố cục màn hình lớn), default (điện thoại), hoặc các từ khác phân cách bằng dấu phẩy.</value>
+  </data>
+  <data name="Identity_characteristics_Invalid" xml:space="preserve">
+    <value>Dùng các từ chữ thường gồm chữ cái, chữ số và '_', phân cách bằng dấu phẩy.</value>
+  </data>
+  <data name="Identity_fingerprint_release" xml:space="preserve">
+    <value>Bản phát hành</value>
+  </data>
+  <data name="Identity_fingerprint_release_Description" xml:space="preserve">
+    <value>Bản phát hành Android trong dấu vân tay.</value>
+  </data>
+  <data name="Identity_fingerprint_release_Invalid" xml:space="preserve">
+    <value>Dùng 1 đến 64 chữ cái, chữ số, '.', '_' hoặc '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_id" xml:space="preserve">
+    <value>ID bản dựng</value>
+  </data>
+  <data name="Identity_fingerprint_id_Description" xml:space="preserve">
+    <value>ID bản dựng trong dấu vân tay.</value>
+  </data>
+  <data name="Identity_fingerprint_id_Invalid" xml:space="preserve">
+    <value>Dùng 1 đến 64 chữ cái, chữ số, '.', '_' hoặc '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental" xml:space="preserve">
+    <value>Phiên bản tăng dần</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Description" xml:space="preserve">
+    <value>Phiên bản bản dựng tăng dần trong dấu vân tay.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Invalid" xml:space="preserve">
+    <value>Dùng 1 đến 64 chữ cái, chữ số, '.', '_' hoặc '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_type" xml:space="preserve">
+    <value>Loại bản dựng</value>
+  </data>
+  <data name="Identity_fingerprint_type_Description" xml:space="preserve">
+    <value>user, userdebug hoặc eng. Chỉ dấu vân tay ghi như vậy; Android vẫn là bản dựng user.</value>
+  </data>
+  <data name="Identity_fingerprint_type_Invalid" xml:space="preserve">
+    <value>Dùng user, userdebug hoặc eng.</value>
+  </data>
+  <data name="Identity_fingerprint_tags" xml:space="preserve">
+    <value>Thẻ</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Description" xml:space="preserve">
+    <value>Chẳng hạn release-keys.</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Invalid" xml:space="preserve">
+    <value>Dùng chữ cái, chữ số, '.', '_', '-' hoặc ','.</value>
+  </data>
+  <data name="Identity_fingerprint" xml:space="preserve">
+    <value>Toàn bộ dấu vân tay</value>
+  </data>
+  <data name="Identity_fingerprint_Description" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags
+Khi được đặt, đây là Build.FINGERPRINT, bất kể các phần ở trên là gì.</value>
+  </data>
+  <data name="Identity_fingerprint_Invalid" xml:space="preserve">
+    <value>Hãy viết theo dạng brand/name/device:release/id/incremental:type/tags, với loại là user, userdebug hoặc eng.</value>
+  </data>
+  <data name="NavApps.Content" xml:space="preserve">
+    <value>Ứng dụng</value>
+  </data>
+  <data name="AppsTitle.Text" xml:space="preserve">
+    <value>Ứng dụng</value>
+  </data>
+  <data name="AppsRefreshButton.Content" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="AppsIntro.Text" xml:space="preserve">
+    <value>Các ứng dụng Android được cài trên PC này. Android khởi động khi bạn mở trang này.
+Mở ứng dụng, thay đổi quyền, bộ nhớ và thông báo của ứng dụng trong Thông tin ứng dụng, hoặc gỡ cài đặt ứng dụng bạn đã cài.
+Chúng cũng có trong Cài đặt Windows, tại Ứng dụng &gt; Ứng dụng đã cài đặt.</value>
+  </data>
+  <data name="AppsErrorBar.Title" xml:space="preserve">
+    <value>Không thể đọc hoặc thay đổi ứng dụng</value>
+  </data>
+  <data name="AppsDoneBar.Title" xml:space="preserve">
+    <value>Xong</value>
+  </data>
+  <data name="AppsManageCard.Title" xml:space="preserve">
+    <value>Quản lý ứng dụng</value>
+  </data>
+  <data name="AppsManageCard.Description" xml:space="preserve">
+    <value>Mở danh sách ứng dụng trong cài đặt riêng của Android</value>
+  </data>
+  <data name="AppsInstalledHeader.Text" xml:space="preserve">
+    <value>Ứng dụng đã cài đặt</value>
+  </data>
+  <data name="AppsSearch.PlaceholderText" xml:space="preserve">
+    <value>Tìm kiếm ứng dụng</value>
+  </data>
+  <data name="AppsNone.Text" xml:space="preserve">
+    <value>Chưa có ứng dụng nào được cài trong Android. Hãy mở một tệp APK để cài đặt.</value>
+  </data>
+  <data name="AppsNoMatch.Text" xml:space="preserve">
+    <value>Không có ứng dụng nào khớp với tìm kiếm của bạn.</value>
+  </data>
+  <data name="AppsOpenButton.Content" xml:space="preserve">
+    <value>Mở</value>
+  </data>
+  <data name="AppsInfoButton.Content" xml:space="preserve">
+    <value>Thông tin ứng dụng</value>
+  </data>
+  <data name="AppsDesktopShortcutButton.Content" xml:space="preserve">
+    <value>Tạo lối tắt trên màn hình nền</value>
+  </data>
+  <data name="Apps_DesktopShortcutMade" xml:space="preserve">
+    <value>Đã có lối tắt đến {0} trên màn hình nền.</value>
+  </data>
+  <data name="AppsUninstallButton.Content" xml:space="preserve">
+    <value>Gỡ cài đặt</value>
+  </data>
+  <data name="AppsUninstallConfirmTitle" xml:space="preserve">
+    <value>Gỡ cài đặt {0}?</value>
+  </data>
+  <data name="AppsUninstallConfirmBody" xml:space="preserve">
+    <value>{0} và dữ liệu của nó sẽ bị xóa khỏi Android.
+
+Không thể hoàn tác thao tác này.</value>
+  </data>
+  <data name="Apps_Count" xml:space="preserve">
+    <value>{0} ứng dụng</value>
+  </data>
+  <data name="Apps_CountMatching" xml:space="preserve">
+    <value>{0} trên {1} ứng dụng</value>
+  </data>
+  <data name="Apps_Version" xml:space="preserve">
+    <value>Phiên bản {0}</value>
+  </data>
+  <data name="Apps_Installed" xml:space="preserve">
+    <value>Đã cài đặt {0}</value>
+  </data>
+  <data name="Apps_System" xml:space="preserve">
+    <value>Một phần của Android</value>
+  </data>
+  <data name="Apps_SystemTip" xml:space="preserve">
+    <value>Ứng dụng này là một phần của Android và không thể gỡ cài đặt.</value>
+  </data>
+  <data name="Apps_Uninstalled" xml:space="preserve">
+    <value>Đã gỡ cài đặt {0}.</value>
+  </data>
+  <data name="Apps_NotUninstalled" xml:space="preserve">
+    <value>{0} chưa được gỡ cài đặt: {1} ({2})</value>
+  </data>
+  <data name="Apps_Refused_not-installed" xml:space="preserve">
+    <value>ứng dụng không còn được cài đặt</value>
+  </data>
+  <data name="Apps_Refused_system-app" xml:space="preserve">
+    <value>ứng dụng là một phần của Android</value>
+  </data>
+  <data name="Apps_Refused_blocked" xml:space="preserve">
+    <value>Android không cho phép, vì ứng dụng là quản trị viên thiết bị hoặc bị một chính sách giữ lại</value>
+  </data>
+  <data name="Apps_Refused_other" xml:space="preserve">
+    <value>Android không thể gỡ cài đặt ứng dụng</value>
+  </data>
+  <data name="UninstallWindow_Caption" xml:space="preserve">
+    <value>Gỡ cài đặt ứng dụng Android</value>
+  </data>
+  <data name="UninstallWindow_Version" xml:space="preserve">
+    <value>Phiên bản {0}</value>
+  </data>
+  <data name="UninstallWindow_Close" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="UninstallWindow_Busy" xml:space="preserve">
+    <value>Đang gỡ cài đặt {0}</value>
+  </data>
+  <data name="UninstallWindow_BusyDetail" xml:space="preserve">
+    <value>Đang xóa ứng dụng và dữ liệu của nó khỏi Android. Android sẽ khởi động trước nếu chưa chạy.</value>
+  </data>
+  <data name="UninstallWindow_DoneTitle" xml:space="preserve">
+    <value>Đã gỡ cài đặt</value>
+  </data>
+  <data name="UninstallWindow_DoneText" xml:space="preserve">
+    <value>Đã xóa {0} khỏi Android.</value>
+  </data>
+  <data name="UninstallWindow_FailedTitle" xml:space="preserve">
+    <value>Chưa gỡ cài đặt</value>
+  </data>
+  <data name="UninstallWindow_Refused" xml:space="preserve">
+    <value>{0} chưa được gỡ cài đặt: {1}.</value>
+  </data>
+  <data name="UninstallWindow_RefusedDetail" xml:space="preserve">
+    <value>{0} chưa được gỡ cài đặt: {1} ({2}).</value>
+  </data>
+  <data name="NavBackground.Content" xml:space="preserve">
+    <value>Đang chạy nền</value>
+  </data>
+  <data name="BackgroundTitle.Text" xml:space="preserve">
+    <value>Đang chạy nền</value>
+  </data>
+  <data name="BackgroundRefreshButton.Content" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="BackgroundIntro.Text" xml:space="preserve">
+    <value>Các ứng dụng Android này vẫn chạy sau khi cửa sổ của chúng đóng, để phát nhạc, tải tệp xuống, giữ VPN bật hoặc làm việc khác.
+Mỗi ứng dụng có biểu tượng trong vùng thông báo của thanh tác vụ. Dừng ứng dụng sẽ kết thúc công việc của nó và giải phóng bộ nhớ.</value>
+  </data>
+  <data name="BackgroundErrorBar.Title" xml:space="preserve">
+    <value>Không thể đọc hoặc thay đổi các ứng dụng chạy nền</value>
+  </data>
+  <data name="BackgroundDoneBar.Title" xml:space="preserve">
+    <value>Xong</value>
+  </data>
+  <data name="BackgroundAppsHeader.Text" xml:space="preserve">
+    <value>Ứng dụng</value>
+  </data>
+  <data name="BackgroundNone.Text" xml:space="preserve">
+    <value>Không có ứng dụng nào chạy nền.</value>
+  </data>
+  <data name="BackgroundOpenButton.Content" xml:space="preserve">
+    <value>Mở</value>
+  </data>
+  <data name="BackgroundStopButton.Content" xml:space="preserve">
+    <value>Dừng</value>
+  </data>
+  <data name="BackgroundStoppingHeader.Text" xml:space="preserve">
+    <value>Dừng ứng dụng</value>
+  </data>
+  <data name="BackgroundAskCard.Header" xml:space="preserve">
+    <value>Hỏi trước khi dừng ứng dụng từ vùng thông báo</value>
+  </data>
+  <data name="BackgroundAskCard.Description" xml:space="preserve">
+    <value>Bật lại mục này nếu bạn đã chọn không được hỏi lại.</value>
+  </data>
+  <data name="Background_Playing" xml:space="preserve">
+    <value>Đang phát {0}</value>
+  </data>
+  <data name="Background_Paused" xml:space="preserve">
+    <value>Đã tạm dừng: {0}</value>
+  </data>
+  <data name="Background_Stopped" xml:space="preserve">
+    <value>Đã dừng {0}.</value>
+  </data>
+  <data name="AppsResizable.Content" xml:space="preserve">
+    <value>Đổi kích thước được</value>
+  </data>
+  <data name="AppsResizable.ToolTip" xml:space="preserve">
+    <value>Bạn có thể đổi kích thước và phóng to cửa sổ của ứng dụng này hay không. Khi tắt, mỗi cửa sổ giữ kích thước lúc mở.</value>
+  </data>
+  <data name="AppsStartSize.ToolTip" xml:space="preserve">
+    <value>Kích thước khi cửa sổ của ứng dụng này mở</value>
+  </data>
+  <data name="Apps_StartSize_Auto" xml:space="preserve">
+    <value>Mở ở kích thước Android chọn</value>
+  </data>
+  <data name="Apps_StartSize_PhonePortrait" xml:space="preserve">
+    <value>Điện thoại, dọc ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_PhoneLandscape" xml:space="preserve">
+    <value>Điện thoại, ngang ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletPortrait" xml:space="preserve">
+    <value>Máy tính bảng, dọc ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletLandscape" xml:space="preserve">
+    <value>Máy tính bảng, ngang ({0} × {1})</value>
+  </data>
+  <data name="Apps_WindowChanged" xml:space="preserve">
+    <value>Cửa sổ của {0} theo cài đặt mới từ cửa sổ được mở tiếp theo.</value>
+  </data>
+  <data name="AppsDpiScaling.Name" xml:space="preserve">
+    <value>Co giãn trên màn hình khác</value>
+  </data>
+  <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
+    <value>Ai co giãn ứng dụng này khi cửa sổ của nó chuyển sang màn hình có tỷ lệ khác.
+• Ứng dụng: DSA co giãn cửa sổ khi bạn kéo. Khi bạn thả, ứng dụng vẽ lại ở tỷ lệ mới và chữ vẫn sắc nét: Android tạo lại màn hình một lần và giữ trạng thái, nên ứng dụng vẽ lại trong chốc lát.
+• Hệ thống: ứng dụng giữ tỷ lệ của nó và DSA co giãn cửa sổ về cùng kích thước thực. Ứng dụng không bao giờ bị tạo lại. Chữ có thể hơi mờ.
+• Tự động: Hệ thống cho các ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, như YouTube; Ứng dụng cho mọi ứng dụng khác.</value>
+  </data>
+  <data name="Apps_DpiScaling_Auto" xml:space="preserve">
+    <value>Co giãn: tự động</value>
+  </data>
+  <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
+    <value>Co giãn: hệ thống (khuyên dùng cho ứng dụng này)</value>
+  </data>
+  <data name="Apps_DpiScaling_App" xml:space="preserve">
+    <value>Thực hiện co giãn: ứng dụng</value>
+  </data>
+  <data name="Apps_DpiScaling_System" xml:space="preserve">
+    <value>Thực hiện co giãn: hệ thống</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
+    <value>Thực hiện co giãn: hệ thống (bắt buộc)</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
+    <value>Thực hiện co giãn: hệ thống (bắt buộc), chưa khả dụng</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
+    <value>Hệ thống (bắt buộc) đưa tỷ lệ mới cho ứng dụng mà không khởi động lại nó, kể cả khi ứng dụng không báo là xử lý được.
+Chưa khả dụng: cần một thay đổi trong framework Android mà bản dựng này chưa có, nên hiện tại nó hoạt động như Hệ thống.</value>
+  </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>Toàn màn hình</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>Nơi ứng dụng hiển thị khi yêu cầu toàn màn hình rõ ràng, như nút toàn màn hình của trình phát video. F11 luôn bật/tắt toàn màn hình.</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>Ẩn thanh</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>Nơi ứng dụng này hiển thị khi ẩn các thanh mà không yêu cầu toàn màn hình, như một luồng video ngắn.</value>
+  </data>
+  <data name="Apps_FullScreen_Default" xml:space="preserve">
+    <value>Theo mặc định</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>Trên toàn màn hình</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>Bên trong cửa sổ</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>Toàn màn hình của ứng dụng</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>Nơi yêu cầu toàn màn hình của ứng dụng hiển thị, như nút toàn màn hình của video. Khi trên toàn màn hình, thanh tiêu đề hiện ở mép trên. Lựa chọn riêng của ứng dụng trên trang Ứng dụng được ưu tiên.</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>Ứng dụng ẩn thanh của mình</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>Nơi ứng dụng hiển thị khi chỉ ẩn các thanh của mình, như một luồng video ngắn.</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>Trên toàn màn hình</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>Bên trong cửa sổ</value>
+  </data>
+  <data name="NavNetwork.Content" xml:space="preserve">
+    <value>Mạng</value>
+  </data>
+  <data name="NetworkTitle.Text" xml:space="preserve">
+    <value>Mạng</value>
+  </data>
+  <data name="NetworkStatusCard.Header" xml:space="preserve">
+    <value>Mạng của Android</value>
+  </data>
+  <data name="NetworkRefreshButton.Content" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="Network_ModeNat" xml:space="preserve">
+    <value>Kết nối qua PC này (NAT). Ứng dụng Android thấy đây là Wi-Fi, không tính phí dữ liệu.</value>
+  </data>
+  <data name="Network_ModeAdvanced" xml:space="preserve">
+    <value>Kết nối với mạng của PC này như một thiết bị riêng (mạng nâng cao).</value>
+  </data>
+  <data name="Network_ModeOff" xml:space="preserve">
+    <value>Android không chạy, nên chưa có mạng.</value>
+  </data>
+  <data name="Network_ModeUnknown" xml:space="preserve">
+    <value>Dịch vụ DSA không báo cáo mạng. Hãy cập nhật DSA để xem.</value>
+  </data>
+  <data name="Network_None" xml:space="preserve">
+    <value>Không có</value>
+  </data>
+  <data name="Network_DnsHost" xml:space="preserve">
+    <value>Được trình phân giải của PC này trả lời, nên tệp hosts, VPN và bộ lọc DNS của PC áp dụng cho ứng dụng Android.</value>
+  </data>
+  <data name="Network_DnsFallback" xml:space="preserve">
+    <value>Trình phân giải của PC này không trả lời, nên Android hỏi máy chủ DNS của mạng: {0}</value>
+  </data>
+  <data name="NetworkAddressLabel.Text" xml:space="preserve">
+    <value>Địa chỉ</value>
+  </data>
+  <data name="NetworkDnsLabel.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="NetworkGatewayLabel.Text" xml:space="preserve">
+    <value>Cổng kết nối</value>
+  </data>
+  <data name="NetworkProblemBar.Title" xml:space="preserve">
+    <value>Mạng nâng cao không được sử dụng</value>
+  </data>
+  <data name="NetworkAdvancedHeader.Text" xml:space="preserve">
+    <value>Nâng cao</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Header" xml:space="preserve">
+    <value>Mạng nâng cao</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Description" xml:space="preserve">
+    <value>Android tham gia mạng của PC này như một thiết bị riêng: thiết bị khác truy cập được ứng dụng Android, và ngược lại. Tắt theo mặc định.
+Chương trình trên PC này luôn truy cập được máy chủ trong Android qua địa chỉ ở trên.</value>
+  </data>
+  <data name="NetworkRestartBar.Title" xml:space="preserve">
+    <value>Khởi động lại Android để áp dụng</value>
+  </data>
+  <data name="NetworkRestartBar.Message" xml:space="preserve">
+    <value>Thay đổi được áp dụng vào lần khởi động Android tiếp theo. Hãy dừng Android trên trang Chung, rồi mở một ứng dụng.</value>
+  </data>
+  <data name="NetworkCertificatesHeader.Text" xml:space="preserve">
+    <value>Chứng chỉ tin cậy</value>
+  </data>
+  <data name="HostCertificatesCard.Header" xml:space="preserve">
+    <value>Dùng chứng chỉ gốc được thêm vào PC này</value>
+  </data>
+  <data name="HostCertificatesCard.Description" xml:space="preserve">
+    <value>Ứng dụng Android tin cậy chứng chỉ gốc được thêm vào PC này, như của công ty bạn hoặc của chương trình bảo mật. Bật theo mặc định.
+Chứng chỉ gốc đi kèm Windows không được liệt kê. Thay đổi được áp dụng ngay.</value>
+  </data>
+  <data name="CertificatesNone.Text" xml:space="preserve">
+    <value>Không tìm thấy chứng chỉ gốc nào được thêm vào PC này.</value>
+  </data>
+  <data name="Certificate_IssuedBy" xml:space="preserve">
+    <value>Do {0} cấp</value>
+  </data>
+  <data name="Certificate_SourceMachine" xml:space="preserve">
+    <value>Cơ quan chứng nhận gốc tin cậy của PC này</value>
+  </data>
+  <data name="Certificate_SourceMachineGroupPolicy" xml:space="preserve">
+    <value>Cơ quan chứng nhận gốc tin cậy của PC này, do Chính sách Nhóm đặt</value>
+  </data>
+  <data name="Certificate_SourceMachineEnterprise" xml:space="preserve">
+    <value>Cơ quan chứng nhận gốc tin cậy của PC này, do tổ chức của bạn đặt</value>
+  </data>
+  <data name="Certificate_SourceUser" xml:space="preserve">
+    <value>Cơ quan chứng nhận gốc tin cậy của bạn</value>
+  </data>
+  <data name="Certificate_SourceUserGroupPolicy" xml:space="preserve">
+    <value>Cơ quan chứng nhận gốc tin cậy của bạn, do Chính sách Nhóm đặt</value>
+  </data>
+  <data name="Certificate_SourceAdmin" xml:space="preserve">
+    <value>Được quản trị viên của PC này thêm vào</value>
+  </data>
+  <data name="Certificate_SourceSystem" xml:space="preserve">
+    <value>Được thêm vào kho chứng chỉ của hệ thống</value>
+  </data>
+  <data name="BackupHeader.Text" xml:space="preserve">
+    <value>Sao lưu</value>
+  </data>
+  <data name="BackupUnavailableBar.Title" xml:space="preserve">
+    <value>Hiện không thể dùng bản sao lưu</value>
+  </data>
+  <data name="BackupErrorBar.Title" xml:space="preserve">
+    <value>Thao tác không thành công</value>
+  </data>
+  <data name="BackupResultBar.Title" xml:space="preserve">
+    <value>Xong</value>
+  </data>
+  <data name="BackupCard.Header" xml:space="preserve">
+    <value>Sao lưu dữ liệu ứng dụng</value>
+  </data>
+  <data name="BackupCard.Description" xml:space="preserve">
+    <value>Android sao lưu dữ liệu ứng dụng vào thư mục người dùng của bạn, được mã hóa bằng khóa mà Windows giữ cho bạn.
+Hãy khôi phục sau khi đặt lại dữ liệu, hoặc trên PC khác bằng khóa khôi phục.</value>
+  </data>
+  <data name="BackupNowButton.Content" xml:space="preserve">
+    <value>Sao lưu ngay</value>
+  </data>
+  <data name="BackupRestoreButton.Content" xml:space="preserve">
+    <value>Khôi phục</value>
+  </data>
+  <data name="BackupRestoreConfirm.Title" xml:space="preserve">
+    <value>Khôi phục dữ liệu ứng dụng từ bản sao lưu?</value>
+  </data>
+  <data name="BackupRestoreConfirm.Action" xml:space="preserve">
+    <value>Khôi phục</value>
+  </data>
+  <data name="RecoveryKeyCard.Header" xml:space="preserve">
+    <value>Khóa khôi phục</value>
+  </data>
+  <data name="RecoveryKeyCard.Description" xml:space="preserve">
+    <value>Khóa khôi phục mở bản sao lưu của bạn trên PC khác, hoặc sau khi cài đặt lại Windows.
+Nếu không có khóa, chỉ tài khoản Windows này trên PC này mới đọc được bản sao lưu.</value>
+  </data>
+  <data name="RecoveryKeyShowButton.Content" xml:space="preserve">
+    <value>Hiện khóa khôi phục</value>
+  </data>
+  <data name="RecoveryKeyHideButton.Content" xml:space="preserve">
+    <value>Ẩn</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Header" xml:space="preserve">
+    <value>Dùng khóa khôi phục</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Description" xml:space="preserve">
+    <value>Để khôi phục bản sao lưu từ PC khác, hãy chép thư mục DSA Backup của nó vào thư mục người dùng và nhập khóa khôi phục của bản đó.</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Placeholder" xml:space="preserve">
+    <value>Khóa khôi phục</value>
+  </data>
+  <data name="UseRecoveryKeyButton.Content" xml:space="preserve">
+    <value>Dùng khóa</value>
+  </data>
+  <data name="Backup_NoService" xml:space="preserve">
+    <value>Dịch vụ DSA chưa cho biết tình trạng bản sao lưu. Hãy mở lại trang này sau giây lát.</value>
+  </data>
+  <data name="Backup_Unavailable" xml:space="preserve">
+    <value>Hiện không thể dùng thư mục sao lưu hoặc khóa của nó.</value>
+  </data>
+  <data name="Backup_Folder" xml:space="preserve">
+    <value>Thư mục: {0}</value>
+  </data>
+  <data name="Backup_Last" xml:space="preserve">
+    <value>Lần sao lưu gần nhất: {0}</value>
+  </data>
+  <data name="Backup_Never" xml:space="preserve">
+    <value>chưa bao giờ</value>
+  </data>
+  <data name="Backup_Apps" xml:space="preserve">
+    <value>Ứng dụng trong bản sao lưu: {0} ({1})</value>
+  </data>
+  <data name="Backup_LastError" xml:space="preserve">
+    <value>Sự cố gần nhất: {0}</value>
+  </data>
+  <data name="Backup_Done" xml:space="preserve">
+    <value>Đã sao lưu dữ liệu của {0} ứng dụng.</value>
+  </data>
+  <data name="Backup_DoneSome" xml:space="preserve">
+    <value>Đã sao lưu dữ liệu của {0} ứng dụng; không thể sao lưu {1} ứng dụng.</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>Đã khôi phục dữ liệu của {0} ứng dụng và cài đặt {1} ứng dụng.</value>
+  </data>
+  <data name="Backup_RestoredSome" xml:space="preserve">
+    <value>Đã khôi phục dữ liệu của {0} ứng dụng và cài đặt {1} ứng dụng; không thể khôi phục {2} ứng dụng.</value>
+  </data>
+  <data name="Backup_RestoreWarning" xml:space="preserve">
+    <value>Mỗi ứng dụng trong bản sao lưu sẽ nhận dữ liệu của bản sao lưu thay cho dữ liệu hiện có.
+
+• Ứng dụng bị thiếu sẽ được cài đặt lại.
+• Android sẽ khởi động nếu chưa chạy.</value>
+  </data>
+  <data name="Backup_KeyAdvice" xml:space="preserve">
+    <value>Hãy ghi lại khóa hoặc lưu trong trình quản lý mật khẩu, tách khỏi PC này. Bất kỳ ai có khóa và thư mục sao lưu đều đọc được nó.</value>
+  </data>
+  <data name="Backup_KeyEmpty" xml:space="preserve">
+    <value>Hãy nhập khóa khôi phục trước.</value>
+  </data>
+  <data name="Backup_KeyUsed" xml:space="preserve">
+    <value>Khóa khôi phục được giữ làm khóa sao lưu của bạn. Giờ có thể khôi phục thư mục sao lưu tạo bằng khóa này tại đây.</value>
+  </data>
+  <data name="BackupSwitchCard.Header" xml:space="preserve">
+    <value>Sao lưu dữ liệu ứng dụng vào PC này</value>
+  </data>
+  <data name="BackupSwitchCard.Description" xml:space="preserve">
+    <value>Giữ thêm một bản sao mã hóa của dữ liệu ứng dụng Android trên PC này, để khôi phục sau khi đặt lại dữ liệu hoặc trên PC khác.
+Tắt cho đến khi bạn bật.</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>Sao lưu đang tắt. Không có bản sao lưu nào được tạo, và không có dữ liệu ứng dụng nào được giữ trên PC này.</value>
+  </data>
+  <data name="Backup_OffKept" xml:space="preserve">
+    <value>Sao lưu đang tắt. Các bản sao lưu trước đây của {0} ứng dụng ({1}) vẫn được giữ trong thư mục DSA Backup.</value>
+  </data>
+  <data name="Backup_DeleteQuestion" xml:space="preserve">
+    <value>Bản sao lưu của {0} ứng dụng ({1}) vẫn được giữ trên PC này.
+
+Xóa chúng cùng khóa của chúng, hay giữ lại để khôi phục sau?</value>
+  </data>
+  <data name="BackupOffConfirm.Title" xml:space="preserve">
+    <value>Tắt sao lưu</value>
+  </data>
+  <data name="BackupOffConfirm.Delete" xml:space="preserve">
+    <value>Xóa bản sao lưu</value>
+  </data>
+  <data name="BackupOffConfirm.Keep" xml:space="preserve">
+    <value>Giữ lại</value>
+  </data>
+  <data name="Backup_TurnedOn" xml:space="preserve">
+    <value>Sao lưu đã bật. Từ giờ Android sẽ sao lưu dữ liệu ứng dụng vào PC này.</value>
+  </data>
+  <data name="Backup_TurnedOff" xml:space="preserve">
+    <value>Sao lưu đã tắt. Các bản sao lưu đã tạo vẫn được giữ.</value>
+  </data>
+  <data name="Backup_TurnedOffDeleted" xml:space="preserve">
+    <value>Sao lưu đã tắt, và các bản sao lưu cùng khóa của chúng đã bị xóa.</value>
+  </data>
+  <data name="KeyProtectionCard.Header" xml:space="preserve">
+    <value>Bảo vệ khóa của Android</value>
+  </data>
+  <data name="KeyProtection_None" xml:space="preserve">
+    <value>Khóa của Android được bảo vệ khi Android khởi động lần đầu.</value>
+  </data>
+  <data name="KeyProtection_Tpm" xml:space="preserve">
+    <value>Được niêm phong bằng TPM của PC này. Bản sao đĩa Android không thể mở khóa của ứng dụng hay bộ nhớ mã hóa của Android ở nơi khác.</value>
+  </data>
+  <data name="KeyProtection_Dpapi" xml:space="preserve">
+    <value>Windows giữ khóa cho riêng tài khoản của bạn vì PC này thiếu TPM dùng được. Thiếu tài khoản này, bản sao đĩa Android không mở được khóa.
+Khi TPM hoạt động, DSA sẽ niêm phong khóa bằng TPM.</value>
+  </data>
+  <data name="KeyProtection_Hardware" xml:space="preserve">
+    <value>Được niêm phong bằng {0}.</value>
+  </data>
+  <data name="KeyProtection_Store" xml:space="preserve">
+    <value>Được {0} giữ.</value>
+  </data>
+  <data name="KeyProtection_Why" xml:space="preserve">
+    <value>Lý do không dùng TPM: {0}</value>
+  </data>
+  <data name="KeyProblemBar.Title" xml:space="preserve">
+    <value>Không thể mở khóa của Android</value>
+  </data>
+  <data name="ResetDataHeader.Text" xml:space="preserve">
+    <value>Đặt lại</value>
+  </data>
+  <data name="ResetDataCard.Header" xml:space="preserve">
+    <value>Đặt lại dữ liệu Android</value>
+  </data>
+  <data name="ResetDataCard.Description" xml:space="preserve">
+    <value>Xóa mọi ứng dụng bạn đã cài, tài khoản của bạn và toàn bộ dữ liệu ứng dụng, để Android khởi động như lúc mới cài đặt.
+Ảnh Android và các cài đặt này được giữ nguyên.</value>
+  </data>
+  <data name="ResetDataButton.Content" xml:space="preserve">
+    <value>Đặt lại</value>
+  </data>
+  <data name="ResetDataConfirm.Title" xml:space="preserve">
+    <value>Đặt lại dữ liệu Android?</value>
+  </data>
+  <data name="ResetDataConfirm.Action" xml:space="preserve">
+    <value>Đặt lại</value>
+  </data>
+  <data name="ResetData_Warning" xml:space="preserve">
+    <value>Thao tác này xóa khỏi Android:
+• mọi ứng dụng bạn đã cài
+• các tài khoản bạn đã đăng nhập
+• dữ liệu của mọi ứng dụng
+
+Android sẽ dừng ngay, và lần sau khởi động như lúc mới cài đặt. Ảnh Android và cài đặt của DSA được giữ nguyên.
+
+Không thể hoàn tác thao tác này.</value>
+  </data>
+  <data name="ResetDoneBar.Title" xml:space="preserve">
+    <value>Đã đặt lại dữ liệu Android</value>
+  </data>
+  <data name="ResetDoneBar.Message" xml:space="preserve">
+    <value>Ứng dụng tiếp theo bạn mở sẽ khởi động Android như lúc mới cài đặt.</value>
+  </data>
+  <data name="Toggle.On" xml:space="preserve">
+    <value>Bật</value>
+  </data>
+  <data name="Toggle.Off" xml:space="preserve">
+    <value>Tắt</value>
+  </data>
+  <data name="AndroidRunningHeader.Text" xml:space="preserve">
+    <value>Đang chạy</value>
+  </data>
+  <data name="Android_Major" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="Android_Unknown" xml:space="preserve">
+    <value>Không xác định</value>
+  </data>
+  <data name="Android_Supported" xml:space="preserve">
+    <value>Phiên bản được hỗ trợ: Android {0}</value>
+  </data>
+  <data name="Android_Switching" xml:space="preserve">
+    <value>Đã chọn Android {0}. Phiên bản này đang được tải xuống và sẽ được dùng vào lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="AndroidSwitchingBar.Title" xml:space="preserve">
+    <value>Đang thay đổi phiên bản Android</value>
+  </data>
+  <data name="AndroidBuildCard.Header" xml:space="preserve">
+    <value>Bản dựng</value>
+  </data>
+  <data name="AndroidPatchCard.Header" xml:space="preserve">
+    <value>Cấp bản vá bảo mật</value>
+  </data>
+  <data name="AndroidChooseHeader.Text" xml:space="preserve">
+    <value>Phiên bản Android</value>
+  </data>
+  <data name="AndroidChooseCard.Header" xml:space="preserve">
+    <value>Phiên bản sử dụng</value>
+  </data>
+  <data name="AndroidChooseCard.Description" xml:space="preserve">
+    <value>DSA hỗ trợ hai phiên bản Android mới nhất. Một số ứng dụng chỉ chạy trên một trong hai.</value>
+  </data>
+  <data name="Android_ChoiceLatest" xml:space="preserve">
+    <value>Luôn mới nhất (hiện là Android {0})</value>
+  </data>
+  <data name="Android_ChoiceMajor" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="AndroidApplyButton.Content" xml:space="preserve">
+    <value>Thay đổi</value>
+  </data>
+  <data name="AndroidChooseNote.Text" xml:space="preserve">
+    <value>Mọi người dùng của máy tính này chạy cùng phiên bản Android, nên việc thay đổi cần quản trị viên.
+Phiên bản đã chọn tiếp tục nhận bản cập nhật bảo mật. Khi hết hỗ trợ, DSA chuyển sang phiên bản tiếp theo và giữ ứng dụng của bạn.</value>
+  </data>
+  <data name="AndroidUpConfirm.Title" xml:space="preserve">
+    <value>Chuyển sang Android mới hơn?</value>
+  </data>
+  <data name="AndroidUpConfirm.Body" xml:space="preserve">
+    <value>Android {0} sẽ được tải xuống và dùng từ lần khởi động Android tiếp theo. Ứng dụng và dữ liệu của chúng được chuyển theo.
+
+Quay lại sau này sẽ xóa dữ liệu.</value>
+  </data>
+  <data name="AndroidDownConfirm.Title" xml:space="preserve">
+    <value>Xóa dữ liệu Android để chuyển sang phiên bản cũ hơn?</value>
+  </data>
+  <data name="AndroidDownConfirm.Action" xml:space="preserve">
+    <value>Xóa dữ liệu và thay đổi</value>
+  </data>
+  <data name="Android_DownWarning" xml:space="preserve">
+    <value>Android {0} cũ hơn Android {1} đang chạy, và không đọc được dữ liệu do phiên bản mới hơn ghi.
+
+Việc chuyển sẽ xóa dữ liệu Android của mọi người dùng trên máy tính này:
+• mọi ứng dụng họ đã cài
+• các tài khoản họ đã đăng nhập
+• dữ liệu của mọi ứng dụng
+
+Sau đó Android của mỗi người dùng khởi động như lúc mới cài đặt. Cài đặt của DSA được giữ nguyên.
+
+Không thể hoàn tác thao tác này.</value>
+  </data>
+  <data name="ApkWindow_AbiWarningTitle" xml:space="preserve">
+    <value>Ứng dụng này có thể không chạy trên PC này</value>
+  </data>
+  <data name="ApkWindow_InstalledTitle" xml:space="preserve">
+    <value>Đã được cài đặt</value>
+  </data>
+  <data name="ApkWindow_DowngradeTitle" xml:space="preserve">
+    <value>Đã cài phiên bản mới hơn</value>
+  </data>
+  <data name="ApkWindow_SignatureTitle" xml:space="preserve">
+    <value>Được ký bằng khóa khác</value>
+  </data>
+  <data name="AppsRunAsArm.Content" xml:space="preserve">
+    <value>Chạy dưới dạng ARM</value>
+  </data>
+  <data name="Apps_RunAsArm_system-app" xml:space="preserve">
+    <value>Ứng dụng là một phần của Android chạy theo cách Android đã cài chúng.</value>
+  </data>
+  <data name="Apps_RunAsArm_no-arm-libraries" xml:space="preserve">
+    <value>Không có APK nào của ứng dụng này trên thiết bị chứa mã ARM của nó.</value>
+  </data>
+  <data name="Apps_RunAsArm_translation-off" xml:space="preserve">
+    <value>Dịch ARM chưa bật. Hãy bật trong Ứng dụng ARM và khởi động lại Android.</value>
+  </data>
+  <data name="Apps_RunAsArm_arm-only" xml:space="preserve">
+    <value>Ứng dụng này chỉ có mã ARM, nên luôn chạy dưới dạng ARM.</value>
+  </data>
+  <data name="Apps_RunAsArm_unknown" xml:space="preserve">
+    <value>Phiên bản DSA này không biết ứng dụng có thể chạy dưới dạng ARM hay không.</value>
+  </data>
+  <data name="AppsRunAsArmEraseTitle" xml:space="preserve">
+    <value>Xóa dữ liệu của {0}?</value>
+  </data>
+  <data name="AppsRunAsArmEraseBody" xml:space="preserve">
+    <value>Android không thể thay đổi cách {0} chạy mà vẫn giữ dữ liệu của nó.
+
+Cài đặt lại sẽ xóa dữ liệu của nó: thông tin đăng nhập, cài đặt và các tệp nó tự lưu.</value>
+  </data>
+  <data name="AppsRunAsArmEraseButton" xml:space="preserve">
+    <value>Xóa và cài đặt lại</value>
+  </data>
+  <data name="Apps_RunAsArmKept" xml:space="preserve">
+    <value>{0} được giữ nguyên, cùng với dữ liệu của nó.</value>
+  </data>
+  <data name="Apps_RunAsArmOn" xml:space="preserve">
+    <value>{0} giờ chạy dưới dạng ARM.</value>
+  </data>
+  <data name="Apps_RunAsArmOff" xml:space="preserve">
+    <value>{0} giờ chạy mã x86_64 của nó.</value>
+  </data>
+  <data name="Apps_RunAsArmNotChanged" xml:space="preserve">
+    <value>{0} chưa được cài đặt lại: {1} ({2})</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_not-installed" xml:space="preserve">
+    <value>ứng dụng không còn được cài đặt</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_system-app" xml:space="preserve">
+    <value>ứng dụng là một phần của Android</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_no-libraries" xml:space="preserve">
+    <value>APK của ứng dụng trên thiết bị không chứa mã cho việc đó</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_translation-off" xml:space="preserve">
+    <value>dịch ARM chưa bật</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_data-would-be-erased" xml:space="preserve">
+    <value>dữ liệu của ứng dụng sẽ bị xóa</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_other" xml:space="preserve">
+    <value>Android đã từ chối</value>
+  </data>
+  <data name="ApkWindow_BundleTitle" xml:space="preserve">
+    <value>Gói APK phân tách</value>
+  </data>
+  <data name="ApkWindow_BundleSummary" xml:space="preserve">
+    <value>{0} gồm nhiều APK. {1} APK mà PC này cần được cài đặt cùng nhau, tổng cộng {2}.</value>
+  </data>
+  <data name="ApkWindow_BundleSummaryObb" xml:space="preserve">
+    <value>{0} gồm nhiều APK. {1} APK mà PC này cần được cài đặt cùng với các tệp mở rộng, tổng cộng {2}.</value>
+  </data>
+  <data name="ApkWindow_FactApks" xml:space="preserve">
+    <value>APK</value>
+  </data>
+  <data name="ApkWindow_ApksValue" xml:space="preserve">
+    <value>{0} (bản gốc và {1} phần tách)</value>
+  </data>
+  <data name="ApkWindow_FactObbs" xml:space="preserve">
+    <value>Tệp mở rộng</value>
+  </data>
+  <data name="Install_Reason_app-bundle" xml:space="preserve">
+    <value>đây là Android App Bundle, dùng để tải lên cửa hàng ứng dụng. Hãy lấy ứng dụng dưới dạng APK, hoặc gói .xapk, .apks hay .apkm.</value>
+  </data>
+  <data name="Install_Reason_encrypted-bundle" xml:space="preserve">
+    <value>gói đã được mã hóa, nên không đọc được các APK của nó. Hãy lấy ứng dụng dưới dạng APK, hoặc gói mới hơn.</value>
+  </data>
+  <data name="Install_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>một APK phân tách trong gói được ký bằng khóa khác với APK gốc, nên Android sẽ từ chối.</value>
+  </data>
+  <data name="Install_Reason_invalid-bundle" xml:space="preserve">
+    <value>gói không phải là một ứng dụng mà Android có thể cài đặt.</value>
+  </data>
+  <data name="ApkWindow_Reason_app-bundle" xml:space="preserve">
+    <value>Đây là Android App Bundle, dùng để tải lên cửa hàng ứng dụng. Hãy lấy ứng dụng dưới dạng APK, hoặc gói .xapk, .apks hay .apkm.</value>
+  </data>
+  <data name="ApkWindow_Reason_encrypted-bundle" xml:space="preserve">
+    <value>Gói đã được mã hóa, nên không đọc được các APK của nó. Hãy lấy ứng dụng dưới dạng APK, hoặc gói mới hơn.</value>
+  </data>
+  <data name="ApkWindow_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>Một APK phân tách trong gói được ký bằng khóa khác với APK gốc, nên Android sẽ từ chối.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-bundle" xml:space="preserve">
+    <value>Gói không phải là một ứng dụng mà Android có thể cài đặt.</value>
+  </data>
+  <data name="ApkWindow_Reason_translation-off" xml:space="preserve">
+    <value>Ứng dụng chỉ chạy dưới dạng mã ARM (arm64-v8a), và dịch ARM chưa bật.
+Hãy bật trong Ứng dụng ARM, khởi động lại Android và cài đặt lại ứng dụng.</value>
+  </data>
+  <data name="UpdatesAndroidHeader.Text" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="UpdatesProgramHeader.Text" xml:space="preserve">
+    <value>DSA</value>
+  </data>
+  <data name="AndroidFollowsCard.Header" xml:space="preserve">
+    <value>Phiên bản theo dõi</value>
+  </data>
+  <data name="Android_FollowsLatest" xml:space="preserve">
+    <value>Phiên bản mới nhất được hỗ trợ (hiện là Android {0})</value>
+  </data>
+  <data name="Android_FollowsMajor" xml:space="preserve">
+    <value>Android {0} và các bản cập nhật bảo mật của nó</value>
+  </data>
+  <data name="AndroidUpdateCard.Header" xml:space="preserve">
+    <value>Cập nhật Android</value>
+  </data>
+  <data name="Android_UpToDate" xml:space="preserve">
+    <value>Không có bản cập nhật Android nào đang chờ. DSA kiểm tra hằng ngày và khởi động lại Android để cập nhật khi không còn cửa sổ ứng dụng.</value>
+  </data>
+  <data name="AndroidCheckButton.Content" xml:space="preserve">
+    <value>Kiểm tra ngay</value>
+  </data>
+  <data name="Android_RestartPending" xml:space="preserve">
+    <value>Đã tải xuống Android {0}. Hãy khởi động lại Android để dùng ngay.</value>
+  </data>
+  <data name="AndroidRestartButton.Content" xml:space="preserve">
+    <value>Khởi động lại ngay</value>
+  </data>
+  <data name="AndroidRestartConfirm.Title" xml:space="preserve">
+    <value>Khởi động lại Android ngay?</value>
+  </data>
+  <data name="AndroidRestartConfirm.Body" xml:space="preserve">
+    <value>Android sẽ khởi động lại vào Android {0}.
+
+Các cửa sổ ứng dụng sẽ đóng. Hãy mở lại ứng dụng khi Android đã khởi động xong.</value>
+  </data>
+  <data name="ImageAutoRestartCard.Header" xml:space="preserve">
+    <value>Tự khởi động lại Android vào bản cập nhật</value>
+  </data>
+  <data name="ImageAutoRestartCard.Description" xml:space="preserve">
+    <value>Khởi động lại Android vào bản cập nhật đã tải ngay khi không có cửa sổ ứng dụng nào mở. Nếu có, DSA hỏi trước hoặc chờ bạn đóng chúng.
+Bật theo mặc định. Khi tắt, bản cập nhật được dùng vào lần tiếp theo bạn khởi động Android.</value>
+  </data>
+  <data name="IdentitySpecsCard.Header" xml:space="preserve">
+    <value>Thông số thiết bị</value>
+  </data>
+  <data name="IdentityCopyButton.Content" xml:space="preserve">
+    <value>Sao chép</value>
+  </data>
+  <data name="IdentityAndroidHeader.Text" xml:space="preserve">
+    <value>Những gì Android báo cáo</value>
+  </data>
+  <data name="Identity_NotReported" xml:space="preserve">
+    <value>Không được báo cáo</value>
+  </data>
+  <data name="AppsRoot.Name" xml:space="preserve">
+    <value>Quyền root</value>
+  </data>
+  <data name="Apps_Root_off" xml:space="preserve">
+    <value>Root: không cho phép</value>
+  </data>
+  <data name="Apps_Root_ask" xml:space="preserve">
+    <value>Root: hỏi mỗi lần</value>
+  </data>
+  <data name="Apps_Root_remember" xml:space="preserve">
+    <value>Root: ghi nhớ (không hỏi)</value>
+  </data>
+  <data name="Apps_RootGroup" xml:space="preserve">
+    <value>Dùng chung ID người dùng với {0}. Android không phân biệt được các ứng dụng này, nên chúng dùng chung một cài đặt quyền root.
+Thay đổi ở đây sẽ thay đổi cho tất cả. Nếu bất kỳ ứng dụng nào là Không cho phép, không ứng dụng nào dùng được su.</value>
+  </data>
+  <data name="Apps_RootTip_unavailable" xml:space="preserve">
+    <value>Quyền root đang tắt trên PC này. Quản trị viên bật nó trong Nâng cao.</value>
+  </data>
+  <data name="Apps_RootTip_unknown" xml:space="preserve">
+    <value>Dịch vụ DSA không báo cáo cấp root của ứng dụng này. Hãy cập nhật DSA để chọn ở đây.</value>
+  </data>
+  <data name="Apps_RootNotChanged" xml:space="preserve">
+    <value>Cấp root của {0} chưa được thay đổi: {1}</value>
+  </data>
+  <data name="Apps_RootSet_off" xml:space="preserve">
+    <value>{0} không thể dùng root nữa. su sẽ biến mất với ứng dụng này từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="Apps_RootSet_ask" xml:space="preserve">
+    <value>Giờ {0} sẽ hỏi quản trị viên của PC này mỗi lần dùng su. Nếu trước đây không thấy su, từ lần khởi động Android tiếp theo nó sẽ thấy.</value>
+  </data>
+  <data name="Apps_RootSet_remember" xml:space="preserve">
+    <value>Giờ {0} dùng su mà không hỏi. Nếu trước đây không thấy su, từ lần khởi động Android tiếp theo nó sẽ thấy.</value>
+  </data>
+  <data name="AppsRootOffBar.Title" xml:space="preserve">
+    <value>Quyền root đang tắt</value>
+  </data>
+  <data name="AppsRootOffBar.Message" xml:space="preserve">
+    <value>Không ứng dụng nào dùng được su. Quản trị viên PC này có thể bật quyền root trong Nâng cao, rồi bạn chọn cấp cho từng ứng dụng ở đây.</value>
+  </data>
+  <data name="AppsRootNote.Text" xml:space="preserve">
+    <value>Quyền root:
+• Không cho phép ẩn su khỏi ứng dụng.
+• Hỏi mỗi lần hiện lời nhắc quản trị viên kèm tên ứng dụng cho mỗi yêu cầu. Một lần chấp thuận kéo dài 15 phút.
+• Ghi nhớ chấp thuận mà không hỏi, nên việc chọn nó cần quản trị viên chấp thuận.</value>
+  </data>
+  <data name="RootHeader.Text" xml:space="preserve">
+    <value>Quyền root</value>
+  </data>
+  <data name="RootElevationCard.Header" xml:space="preserve">
+    <value>Cho phép ứng dụng Android yêu cầu quyền root</value>
+  </data>
+  <data name="RootElevationCard.Description" xml:space="preserve">
+    <value>Ứng dụng bạn cho phép ở trang Ứng dụng có thể chạy lệnh với quyền root khi quản trị viên PC này chấp thuận, như sudo. Mặc định tắt.
+Ảnh Android, thuộc tính bản dựng và SELinux được giữ nguyên.</value>
+  </data>
+  <data name="RootElevationAdminReason.Text" xml:space="preserve">
+    <value>Chỉ quản trị viên mới thay đổi được mục này, vì nó áp dụng cho mọi người dùng của PC này.
+Hãy dùng Thay đổi với tư cách quản trị viên, và Windows sẽ hỏi quyền.</value>
+  </data>
+  <data name="RootElevationRestartBar.Title" xml:space="preserve">
+    <value>Khởi động lại Android để áp dụng</value>
+  </data>
+  <data name="RootElevationRestartBar.Message" xml:space="preserve">
+    <value>Quyền root thay đổi từ lần khởi động Android tiếp theo. Hãy dừng Android trên trang Chung, rồi mở một ứng dụng.</value>
+  </data>
+  <data name="RootLogCard.Header" xml:space="preserve">
+    <value>Nơi ghi lại các yêu cầu</value>
+  </data>
+  <data name="RootElevation_LogAt" xml:space="preserve">
+    <value>Mỗi yêu cầu được giữ trong nhật ký dịch vụ kèm ứng dụng, thời gian, việc có được chấp thuận hay không và lệnh: {0}</value>
+  </data>
+  <data name="RootElevation_LogUnknown" xml:space="preserve">
+    <value>Mỗi yêu cầu được giữ trong nhật ký dịch vụ kèm ứng dụng, thời gian, việc có được chấp thuận hay không và lệnh.</value>
+  </data>
+  <data name="RootNote.Text" xml:space="preserve">
+    <value>Chọn cấp của từng ứng dụng trên trang Ứng dụng. Mỗi người dùng chọn cho các ứng dụng trong Android của riêng mình.</value>
+  </data>
+  <data name="AppsAdbShell.Text" xml:space="preserve">
+    <value>adb shell</value>
+  </data>
+  <data name="WidevineHeader.Text" xml:space="preserve">
+    <value>Nội dung được bảo vệ</value>
+  </data>
+  <data name="WidevineCard.Header" xml:space="preserve">
+    <value>Widevine</value>
+  </data>
+  <data name="WidevineCard.Description" xml:space="preserve">
+    <value>Cho phép ứng dụng phát trực tuyến phát video được bảo vệ. Áp dụng từ lần khởi động Android tiếp theo.
+Tải khoảng 2 GB từ Google theo Giấy phép Android SDK, chỉ giữ lại Widevine và xóa phần còn lại.</value>
+  </data>
+  <data name="WidevineInstallButton.Content" xml:space="preserve">
+    <value>Tải xuống</value>
+  </data>
+  <data name="WidevineConfirm.Title" xml:space="preserve">
+    <value>Tải Widevine từ Google?</value>
+  </data>
+  <data name="WidevineConfirm.Action" xml:space="preserve">
+    <value>Chấp nhận và tải xuống</value>
+  </data>
+  <data name="Widevine_Notice" xml:space="preserve">
+    <value>DSA tải ảnh trình giả lập Android cho phiên bản Android này từ Google và chỉ lấy ra mô-đun Widevine của nó, không chỉnh sửa.
+
+• Tải xuống: khoảng 2 GB, sẽ bị xóa sau đó.
+• Nguồn: {0}
+• Điều khoản: Widevine là phần mềm của Google theo Giấy phép Android SDK ({1}). Khi tải xuống, bạn chấp nhận các điều khoản đó.
+• Chất lượng: cấp bảo mật L3, nên dịch vụ phát trực tuyến chỉ gửi tối đa độ nét tiêu chuẩn (SD).
+• Widevine hoạt động từ lần khởi động Android tiếp theo.
+
+DSA không phân phối hay chuyển giao Widevine.</value>
+  </data>
+  <data name="WidevineInstallingBar.Title" xml:space="preserve">
+    <value>Đang tải Widevine</value>
+  </data>
+  <data name="WidevineInstallingBar.Message" xml:space="preserve">
+    <value>Đang tải khoảng 2 GB từ Google và lấy Widevine ra. Việc này mất vài phút.</value>
+  </data>
+  <data name="WidevineRestartBar.Title" xml:space="preserve">
+    <value>Khởi động lại Android để áp dụng</value>
+  </data>
+  <data name="WidevineRestartBar.Message" xml:space="preserve">
+    <value>Android dùng thay đổi này từ lần khởi động tiếp theo.</value>
+  </data>
+  <data name="WidevineQualityCard.Header" xml:space="preserve">
+    <value>Chỉ độ nét tiêu chuẩn</value>
+  </data>
+  <data name="Widevine_Quality" xml:space="preserve">
+    <value>Widevine ở đây có cấp bảo mật L3, nên dịch vụ phát trực tuyến chỉ gửi tối đa độ nét tiêu chuẩn (SD).
+Để xem độ nét cao, hãy dùng trình duyệt hoặc ứng dụng của chính máy tính này.</value>
+  </data>
+  <data name="WidevineRemoveCard.Header" xml:space="preserve">
+    <value>Gỡ bỏ Widevine</value>
+  </data>
+  <data name="WidevineRemoveCard.Description" xml:space="preserve">
+    <value>Gỡ mô-đun và các chứng chỉ thiết bị mà nó đã lưu, từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="WidevineRemoveButton.Content" xml:space="preserve">
+    <value>Gỡ bỏ</value>
+  </data>
+  <data name="WidevineTermsLink.Content" xml:space="preserve">
+    <value>Giấy phép Android SDK</value>
+  </data>
+  <data name="Widevine_NotInstalled" xml:space="preserve">
+    <value>Chưa cài đặt.</value>
+  </data>
+  <data name="Widevine_Installed" xml:space="preserve">
+    <value>Đã cài đặt: từ ảnh {0} của Google cho Android {1} ({2}).</value>
+  </data>
+  <data name="Widevine_InstalledPending" xml:space="preserve">
+    <value>Đã cài đặt: từ ảnh {0} của Google cho Android {1} ({2}). Được dùng từ lần khởi động Android tiếp theo.</value>
+  </data>
+  <data name="Widevine_RemovedPending" xml:space="preserve">
+    <value>Đã gỡ bỏ. Android vẫn dùng nó cho đến lần khởi động tiếp theo.</value>
+  </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}. {1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}, {1}, {2}: {3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>Đã bỏ qua {0} bản ghi</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>Mức ưu tiên thấp nhất được hiển thị</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>Đang tải</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>Đã sao chép</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>Hiện hoặc ẩn ngăn điều hướng</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>Thu nhỏ</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>Phóng to</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>Khôi phục</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>Trợ giúp</value>
+  </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>Cài đặt {0}?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>Tên gói:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>Nhà phát hành:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>Phiên bản:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>Nguồn:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>Khả năng ({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>Thêm</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>Ít hơn</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} là gói APK phân tách không thể cài đặt: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} là gói APK phân tách không đọc được, nên không thể cài đặt.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} là Android App Bundle. App Bundle là định dạng phát hành cho cửa hàng ứng dụng và không thể cài đặt trực tiếp.
+Muốn tạo APK từ nó thì phải ký bằng khóa khác, và khi đó ứng dụng sẽ không còn nhận được bản cập nhật từ nguồn gốc của nó.
+Hãy lấy ứng dụng dưới dạng APK, hoặc gói .xapk, .apks hay .apkm.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} là gói đã mã hóa, nên không đọc được các APK của nó. Một số tệp .apkm cũ là như vậy, và chỉ ứng dụng tạo ra chúng mới mở được.
+Hãy lấy ứng dụng dưới dạng APK, hoặc gói mới hơn.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} chứa một APK phân tách được ký bằng chứng chỉ khác với APK gốc, nghĩa là gói đã bị thay đổi sau khi được tạo.
+Android sẽ từ chối nó.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} không thể chạy trong DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} không thể chạy trong DSA: mã native của nó không chạy được trên Android của DSA, vốn chỉ chạy mã 64 bit.
+Hãy lấy bản dựng x86_64 hoặc arm64-v8a của ứng dụng.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} không phải là tệp APK hợp lệ.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa đã kết thúc với mã {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Biểu tượng {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>Tệp APK và gói APK phân tách</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Tất cả tệp</value>
+  </data>
+</root>

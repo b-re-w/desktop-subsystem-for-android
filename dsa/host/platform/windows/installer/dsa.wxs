@@ -316,7 +316,7 @@
             </Component>
             <!-- Every word Explorer, the Start menu and the Services console show for DSA is an
                  indirect string (@file,-id) into the string table of the installed
-                 dsa-app-window.exe, which holds it in English and Korean, so each user sees the
+                 dsa-app-window.exe, which holds it in each of DSA's fourteen interface languages, so each user sees the
                  words in their own display language although the package is the machine's.
                  The IDs are dsa_exe_resources::shell in resources/src/lib.rs. -->
             <!-- Two entries in the context menu of every file (on Windows 11, under Show more

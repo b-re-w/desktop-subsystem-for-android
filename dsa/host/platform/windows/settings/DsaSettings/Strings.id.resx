@@ -1,0 +1,2585 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The texts of DSA Settings in Indonesian, read through ResourceManager. Each key has the same meaning in every language. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Pengaturan DSA</value>
+  </data>
+  <data name="AppTitle.Text" xml:space="preserve">
+    <value>Pengaturan DSA</value>
+  </data>
+  <data name="NavGeneral.Content" xml:space="preserve">
+    <value>Umum</value>
+  </data>
+  <data name="NavMemory.Content" xml:space="preserve">
+    <value>Memori</value>
+  </data>
+  <data name="NavDisplay.Content" xml:space="preserve">
+    <value>Layar &amp; GPU</value>
+  </data>
+  <data name="NavUpdates.Content" xml:space="preserve">
+    <value>Pembaruan</value>
+  </data>
+  <data name="NavAdvanced.Content" xml:space="preserve">
+    <value>Lanjutan</value>
+  </data>
+  <data name="NavAbout.Content" xml:space="preserve">
+    <value>Tentang</value>
+  </data>
+  <data name="GeneralTitle.Text" xml:space="preserve">
+    <value>Umum</value>
+  </data>
+  <data name="GeneralErrorBar.Title" xml:space="preserve">
+    <value>Terjadi kesalahan</value>
+  </data>
+  <data name="GeneralStateCard.Header" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="GeneralStateCard.Description" xml:space="preserve">
+    <value>Desktop Subsystem for Android™ menjalankan Android di VM ringan tersendiri dan menampilkan setiap aplikasi di jendelanya sendiri.</value>
+  </data>
+  <data name="StartButton.Content" xml:space="preserve">
+    <value>Mulai</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>Hentikan</value>
+  </data>
+  <data name="ProblemBar.Title" xml:space="preserve">
+    <value>Android belum siap</value>
+  </data>
+  <data name="LastReasonBar.Title" xml:space="preserve">
+    <value>Terakhir dihentikan</value>
+  </data>
+  <data name="LastReason_Requested" xml:space="preserve">
+    <value>Android dihentikan atas permintaan. Mulai lagi saat Anda membutuhkannya.</value>
+  </data>
+  <data name="LastReason_Updating" xml:space="preserve">
+    <value>DSA sedang diperbarui. Mulai Android lagi setelah pembaruan selesai.</value>
+  </data>
+  <data name="LastReason_Virtualization" xml:space="preserve">
+    <value>Virtualisasi nonaktif atau Hyper-V tidak ada. Aktifkan Platform Mesin Virtual, lalu mulai ulang PC.</value>
+  </data>
+  <data name="LastReason_InvalidConfiguration" xml:space="preserve">
+    <value>Windows menolak pengaturan untuk mesin virtual Android. Perbarui atau instal ulang DSA.</value>
+  </data>
+  <data name="LastReason_OutOfMemory" xml:space="preserve">
+    <value>Memori tidak cukup untuk memulai Android. Tutup aplikasi lain, lalu coba lagi.</value>
+  </data>
+  <data name="LastReason_Disk" xml:space="preserve">
+    <value>Masalah disk mencegah Android dimulai. Kosongkan ruang atau periksa drive, lalu coba lagi.</value>
+  </data>
+  <data name="LastReason_TimedOut" xml:space="preserve">
+    <value>Android terlalu lama untuk dimulai. Coba mulai lagi.</value>
+  </data>
+  <data name="LastReason_Lost" xml:space="preserve">
+    <value>Android berhenti secara tidak terduga. Coba mulai lagi.</value>
+  </data>
+  <data name="LastReason_General" xml:space="preserve">
+    <value>Android tidak dapat dimulai. Coba lagi, dan periksa detailnya jika terus gagal.</value>
+  </data>
+  <data name="LastReasonDetails.Header" xml:space="preserve">
+    <value>Detail</value>
+  </data>
+  <data name="LastReasonCopy.ToolTip" xml:space="preserve">
+    <value>Salin detail</value>
+  </data>
+  <data name="UpdateNoticeBar.Title" xml:space="preserve">
+    <value>Pembaruan</value>
+  </data>
+  <data name="UpdateNotice_AndroidUpdated" xml:space="preserve">
+    <value>Android telah diperbarui ke {0}.</value>
+  </data>
+  <data name="UpdateNotice_AndroidInstalled" xml:space="preserve">
+    <value>Android {0} telah diinstal.</value>
+  </data>
+  <data name="UpdateNotice_AndroidChosen" xml:space="preserve">
+    <value>Android {0} dipilih. DSA mengunduhnya sekarang, dan versi ini digunakan saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
+    <value>Android {0} tidak dapat dimulai ({1}), jadi Android {2} digunakan lagi.
+Android {0} dicoba lagi setelah build yang lebih baru darinya atau versi DSA baru tersedia.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
+    <value>Android {0} tidak dapat dimulai ({1}), jadi Android {2} digunakan lagi.
+Android {2} belum selesai dimulai ({3}). Mulai Android lagi untuk mem-boot-nya.</value>
+  </data>
+  <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
+    <value>Android {0} tidak dapat dimulai ({1}), dan tidak ada image lain yang terinstal.
+DSA mengunduh image lain jika ada. Versi DSA berikutnya mencoba image ini lagi.</value>
+  </data>
+  <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
+    <value>Android {0} tetap dalam masa uji dan bukan penyebabnya: {1}</value>
+  </data>
+  <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
+    <value>DSA telah diperbarui ke {0}.</value>
+  </data>
+  <data name="UpdateNotice_DsaDownloaded" xml:space="preserve">
+    <value>DSA {0} telah diunduh. Versi ini diinstal saat Android tidak berjalan.</value>
+  </data>
+  <data name="UpdateNotice_DsaInstalling" xml:space="preserve">
+    <value>Menginstal DSA {0}. Layanan dimulai ulang setelah selesai.</value>
+  </data>
+  <data name="UpdateNotice_DsaFailed" xml:space="preserve">
+    <value>Gagal memperbarui DSA ke {0} ({1}). DSA {2} masih terinstal.</value>
+  </data>
+  <data name="GeneralMoreHeader.Text" xml:space="preserve">
+    <value>Lainnya</value>
+  </data>
+  <data name="OpenLogsCard.Header" xml:space="preserve">
+    <value>Buka folder log saya</value>
+  </data>
+  <data name="OpenLogsCard.Description" xml:space="preserve">
+    <value>Log pengelola jendela dan jendela aplikasi, untuk melaporkan masalah.</value>
+  </data>
+  <data name="RefreshCard.Header" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="RefreshCard.Description" xml:space="preserve">
+    <value>Tanyakan status lagi ke layanan DSA.</value>
+  </data>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>Tidak diketahui</value>
+  </data>
+  <data name="State_Stopped" xml:space="preserve">
+    <value>Berhenti</value>
+  </data>
+  <data name="State_Starting" xml:space="preserve">
+    <value>Memulai</value>
+  </data>
+  <data name="State_Active" xml:space="preserve">
+    <value>Berjalan</value>
+  </data>
+  <data name="State_Dozing" xml:space="preserve">
+    <value>Doze (diam)</value>
+  </data>
+  <data name="State_Frozen" xml:space="preserve">
+    <value>Dibekukan</value>
+  </data>
+  <data name="State_Stopping" xml:space="preserve">
+    <value>Menghentikan</value>
+  </data>
+  <data name="State_Stalled" xml:space="preserve">
+    <value>Belum siap</value>
+  </data>
+  <data name="Problem_CliMissing" xml:space="preserve">
+    <value>Perintah dsa tidak dapat dijalankan. Instal ulang DSA.</value>
+  </data>
+  <data name="Problem_ServiceUnreachable" xml:space="preserve">
+    <value>Layanan DSA tidak berjalan.</value>
+  </data>
+  <data name="Problem_Refused" xml:space="preserve">
+    <value>Layanan DSA tidak dapat melakukan ini.</value>
+  </data>
+  <data name="Problem_Unreadable" xml:space="preserve">
+    <value>Jawaban perintah dsa tidak dapat dibaca. Instal ulang DSA.</value>
+  </data>
+  <data name="MemoryTitle.Text" xml:space="preserve">
+    <value>Memori</value>
+  </data>
+  <data name="MemoryRefreshButton.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="MemoryErrorBar.Title" xml:space="preserve">
+    <value>Memori tidak dapat diukur</value>
+  </data>
+  <data name="MemoryHostHeader.Text" xml:space="preserve">
+    <value>Di PC ini</value>
+  </data>
+  <data name="MemoryHostTotalCard.Header" xml:space="preserve">
+    <value>Digunakan di PC ini</value>
+  </data>
+  <data name="MemoryHostTotalCard.Description" xml:space="preserve">
+    <value>RAM yang saat ini dipakai mesin virtual, pengelola jendela, dan jendela aplikasi.</value>
+  </data>
+  <data name="MemoryHostNone.Text" xml:space="preserve">
+    <value>Android tidak berjalan, jadi tidak memakai memori di PC ini.</value>
+  </data>
+  <data name="MemoryGuestHeader.Text" xml:space="preserve">
+    <value>Di dalam Android</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Title" xml:space="preserve">
+    <value>Belum ada laporan</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Message" xml:space="preserve">
+    <value>Android melaporkan penggunaan memorinya beberapa menit setelah dimulai.</value>
+  </data>
+  <data name="MemoryGuestTotalCard.Header" xml:space="preserve">
+    <value>Tersedia untuk Android</value>
+  </data>
+  <data name="MemoryAvailableOf.Text" xml:space="preserve">
+    <value>tersedia dari</value>
+  </data>
+  <data name="MemoryTopHeader.Text" xml:space="preserve">
+    <value>Proses terbesar</value>
+  </data>
+  <data name="Role_Vm" xml:space="preserve">
+    <value>Mesin virtual (vmmem)</value>
+  </data>
+  <data name="Role_WindowManager" xml:space="preserve">
+    <value>Pengelola jendela</value>
+  </data>
+  <data name="Role_Renderer" xml:space="preserve">
+    <value>Perender grafis</value>
+  </data>
+  <data name="Role_AppWindow" xml:space="preserve">
+    <value>Jendela aplikasi</value>
+  </data>
+  <data name="Memory_ProcessDetail" xml:space="preserve">
+    <value>Proses {0}, {1} privat</value>
+  </data>
+  <data name="Memory_ReportAge" xml:space="preserve">
+    <value>Dilaporkan {0} detik yang lalu</value>
+  </data>
+  <data name="Memory_Apps" xml:space="preserve">
+    <value>Aplikasi dan sistem</value>
+  </data>
+  <data name="Memory_AppsDetail" xml:space="preserve">
+    <value>{0} di memori, {1} terkompresi</value>
+  </data>
+  <data name="Memory_Cache" xml:space="preserve">
+    <value>Cache</value>
+  </data>
+  <data name="Memory_CacheDetail" xml:space="preserve">
+    <value>Isi file yang disimpan di memori. Android membuangnya saat membutuhkan memori.</value>
+  </data>
+  <data name="Memory_Kernel" xml:space="preserve">
+    <value>Cache kernel</value>
+  </data>
+  <data name="Memory_KernelDetail" xml:space="preserve">
+    <value>Cache kernel yang dapat dibebaskan kernel saat dibutuhkan.</value>
+  </data>
+  <data name="Memory_Shared" xml:space="preserve">
+    <value>Memori bersama</value>
+  </data>
+  <data name="Memory_Zram" xml:space="preserve">
+    <value>Memori terkompresi</value>
+  </data>
+  <data name="Memory_ZramDetail" xml:space="preserve">
+    <value>Menyimpan halaman sebesar {0}, terkompresi</value>
+  </data>
+  <data name="Memory_Free" xml:space="preserve">
+    <value>Kosong</value>
+  </data>
+  <data name="Memory_GuestProcessDetail" xml:space="preserve">
+    <value>Proses {0}</value>
+  </data>
+  <data name="Memory_GuestProcessGooglePlay" xml:space="preserve">
+    <value>Proses {0}, layanan Google Play</value>
+  </data>
+  <data name="Memory_GooglePlay" xml:space="preserve">
+    <value>Layanan Google Play</value>
+  </data>
+  <data name="Memory_GooglePlayDetail" xml:space="preserve">
+    <value>Aplikasi Google yang Anda instal, {0} proses: {1}</value>
+  </data>
+  <data name="Memory_Unknown" xml:space="preserve">
+    <value>tidak diketahui</value>
+  </data>
+  <data name="DisplayTitle.Text" xml:space="preserve">
+    <value>Layar &amp; GPU</value>
+  </data>
+  <data name="SettingsErrorBar.Title" xml:space="preserve">
+    <value>Pengaturan tidak diubah</value>
+  </data>
+  <data name="RenderGpuCard.Header" xml:space="preserve">
+    <value>GPU rendering</value>
+  </data>
+  <data name="RenderGpuCard.Description" xml:space="preserve">
+    <value>GPU yang menggambar aplikasi Android. Bawaannya GPU monitor utama, sehingga frame tetap di satu GPU dan GPU diskrit laptop dapat tidur.</value>
+  </data>
+  <data name="Gpu_Display" xml:space="preserve">
+    <value>GPU monitor utama (disarankan)</value>
+  </data>
+  <data name="Gpu_Integrated" xml:space="preserve">
+    <value>GPU terintegrasi</value>
+  </data>
+  <data name="Gpu_Discrete" xml:space="preserve">
+    <value>GPU diskrit (misalnya, untuk game)</value>
+  </data>
+  <data name="DisplayGpuCard.Header" xml:space="preserve">
+    <value>GPU monitor utama</value>
+  </data>
+  <data name="DisplayGpuCard.Description" xml:space="preserve">
+    <value>Tempat pilihan bawaan merender saat ini.</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Title" xml:space="preserve">
+    <value>Berlaku setelah dimulai ulang</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
+    <value>GPU rendering baru berlaku saat pengelola jendela dimulai lagi: saat masuk berikutnya, atau saat Anda memulai ulangnya di bawah.</value>
+  </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Driver Vulkan</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Aplikasi Android menggambar melalui Vulkan. GPU tanpa driver Vulkan dapat memakai Dozen (Vulkan on Direct3D 12) dari OpenCL, OpenGL, and Vulkan Compatibility Pack milik Microsoft. Berlaku saat pengelola jendela dimulai lagi.</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>Otomatis: driver GPU, Dozen hanya jika tidak ada (disarankan)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>Hanya driver Vulkan milik GPU</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>Hanya Dozen (untuk menguji dan membandingkan)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>Pengelola jendela belum memberi tahu apa yang dipakainya untuk merender.</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>Saat ini merender melalui driver Vulkan milik GPU.</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>Saat ini merender melalui Dozen (Vulkan on Direct3D 12).</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>Saat ini merender melalui Dozen di CPU: GPU ini tidak memiliki driver Direct3D 12.</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>Tidak ada Vulkan untuk merender, jadi Android tidak dimulai. Instal Compatibility Pack dari Microsoft Store, atau dengan winget install Microsoft.OpenCLGLVulkanCompatibilityPack, lalu keluar dan masuk lagi.</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>Dapatkan Compatibility Pack di Microsoft Store</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android menggambar di CPU</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>GPU PC ini tidak memiliki driver Direct3D 12, jadi aplikasi berfungsi, tetapi game dan animasi akan lambat.</value>
+  </data>
+  <data name="TouchGesturesCard.Header" xml:space="preserve">
+    <value>Matikan gerakan sentuh Windows di jendela aplikasi DSA</value>
+  </data>
+  <data name="TouchGesturesCard.Description" xml:space="preserve">
+    <value>Selama jendela DSA berada di depan, gerakan tiga dan empat jari Windows dimatikan, sehingga aplikasi menerima hingga sepuluh jari.
+Aktif secara bawaan. Aplikasi lain tetap memakai gerakan yang Anda atur di Pengaturan Windows.</value>
+  </data>
+  <data name="TouchGestures_Failed" xml:space="preserve">
+    <value>Tidak dapat dipakai: Windows menolak mengubah gerakan sentuhnya ({0}). Anda dapat mematikannya untuk semua aplikasi di Pengaturan Windows.</value>
+  </data>
+  <data name="TouchGestures_NoReason" xml:space="preserve">
+    <value>tidak ada alasan yang diberikan</value>
+  </data>
+  <data name="TouchSettingsLink.Content" xml:space="preserve">
+    <value>Buka pengaturan sentuh</value>
+  </data>
+  <data name="RestartWindowManagerCard.Header" xml:space="preserve">
+    <value>Mulai ulang pengelola jendela</value>
+  </data>
+  <data name="RestartWindowManagerCard.Description" xml:space="preserve">
+    <value>Jendela aplikasi Android yang terbuka akan tertutup lalu muncul kembali.</value>
+  </data>
+  <data name="RestartWindowManagerButton.Content" xml:space="preserve">
+    <value>Mulai ulang</value>
+  </data>
+  <data name="RestartWindowManagerTitle" xml:space="preserve">
+    <value>Mulai ulang pengelola jendela?</value>
+  </data>
+  <data name="RestartWindowManagerBody" xml:space="preserve">
+    <value>Jendela aplikasi Android tertutup sebentar.
+
+Android dan aplikasinya tetap berjalan.</value>
+  </data>
+  <data name="RestartWindowManagerAction" xml:space="preserve">
+    <value>Mulai ulang</value>
+  </data>
+  <data name="RestartWindowManagerFailed" xml:space="preserve">
+    <value>Pengelola jendela tidak dapat dimulai ulang</value>
+  </data>
+  <data name="UpdatesTitle.Text" xml:space="preserve">
+    <value>Pembaruan</value>
+  </data>
+  <data name="ProgramUpdatesCard.Header" xml:space="preserve">
+    <value>Perbarui DSA secara otomatis</value>
+  </data>
+  <data name="ProgramUpdatesCard.Description" xml:space="preserve">
+    <value>Unduh versi baru DSA yang ditandatangani dan instal saat tidak ada Android yang berjalan.</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Header" xml:space="preserve">
+    <value>Dapatkan versi pra-rilis</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Description" xml:space="preserve">
+    <value>Instal juga versi yang masih disempurnakan. Setiap rilis sebelum 1.0 adalah pra-rilis.
+Mematikan ini tidak pernah memundurkan DSA: DSA menunggu rilis stabil yang lebih baru.</value>
+  </data>
+  <data name="ImageUpdatesCard.Header" xml:space="preserve">
+    <value>Perbarui image Android secara otomatis</value>
+  </data>
+  <data name="ImageUpdatesCard.Description" xml:space="preserve">
+    <value>Unduh pembaruan keamanan dan versi baru Android yang ditandatangani. Berlaku saat Android dimulai ulang, sesuai pengaturan di bawah.</value>
+  </data>
+  <data name="UpdatesMachineNote.Text" xml:space="preserve">
+    <value>Pengaturan ini berlaku untuk setiap pengguna PC ini, jadi hanya administrator yang dapat mengubahnya.
+Sakelar yang tetap nonaktif tidak ditawarkan oleh instalasi ini.</value>
+  </data>
+  <data name="AdminBar.Title" xml:space="preserve">
+    <value>Diperlukan hak administrator</value>
+  </data>
+  <data name="AdminBar.Message" xml:space="preserve">
+    <value>Pengaturan pembaruan berlaku untuk setiap pengguna PC ini, jadi hanya administrator yang dapat mengubahnya.
+Gunakan Ubah sebagai administrator, dan Windows akan meminta izin.</value>
+  </data>
+  <data name="AdminShield.ToolTip" xml:space="preserve">
+    <value>Hanya administrator yang dapat mengubah pengaturan ini.</value>
+  </data>
+  <data name="ChangeAsAdmin.Content" xml:space="preserve">
+    <value>Ubah sebagai administrator</value>
+  </data>
+  <data name="ElevatedFailed" xml:space="preserve">
+    <value>Pengaturan tidak diubah (dsa berakhir dengan kode {0}).</value>
+  </data>
+  <data name="ElevationDeclined" xml:space="preserve">
+    <value>Pengaturan tidak diubah, karena hak administrator tidak diberikan.</value>
+  </data>
+  <data name="UpdateNowHeader.Text" xml:space="preserve">
+    <value>Instal sekarang</value>
+  </data>
+  <data name="UpdateNowCard.Header" xml:space="preserve">
+    <value>Instal versi DSA terbaru sekarang</value>
+  </data>
+  <data name="UpdateNowCard.Description" xml:space="preserve">
+    <value>Android setiap pengguna berhenti selama penyiapan berjalan.</value>
+  </data>
+  <data name="UpdateNowButton.Content" xml:space="preserve">
+    <value>Instal sekarang</value>
+  </data>
+  <data name="UpdateNowTitle" xml:space="preserve">
+    <value>Instal versi terbaru sekarang?</value>
+  </data>
+  <data name="UpdateNowBody" xml:space="preserve">
+    <value>DSA menghentikan Android setiap pengguna dan menginstal versi terbaru.
+
+Layanan DSA dimulai ulang setelah penyiapan selesai.</value>
+  </data>
+  <data name="UpdateNowAction" xml:space="preserve">
+    <value>Instal</value>
+  </data>
+  <data name="UpdateNowFailed" xml:space="preserve">
+    <value>DSA tidak diperbarui</value>
+  </data>
+  <data name="ProgramUpdateCard.Header" xml:space="preserve">
+    <value>Memperbarui DSA</value>
+  </data>
+  <data name="ProgramUpdateDone.Title" xml:space="preserve">
+    <value>DSA telah diperbarui</value>
+  </data>
+  <data name="ProgramUpdate_Starting" xml:space="preserve">
+    <value>Menyiapkan pembaruan</value>
+  </data>
+  <data name="ProgramUpdate_Downloading" xml:space="preserve">
+    <value>Mengunduh DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_StoppingAndroid" xml:space="preserve">
+    <value>Menghentikan Android untuk menginstal DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Installing" xml:space="preserve">
+    <value>Menginstal DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Restarting" xml:space="preserve">
+    <value>DSA dimulai ulang untuk menyelesaikan pembaruan</value>
+  </data>
+  <data name="ProgramUpdate_Version" xml:space="preserve">
+    <value>Versi {0}</value>
+  </data>
+  <data name="ProgramUpdate_KeepOpen" xml:space="preserve">
+    <value>Jangan tutup DSA atau memulai aplikasi Android hingga pembaruan selesai.</value>
+  </data>
+  <data name="ProgramUpdate_Applied" xml:space="preserve">
+    <value>Diperbarui ke {0}</value>
+  </data>
+  <data name="ProgramUpdate_Failed" xml:space="preserve">
+    <value>Gagal memperbarui ke {0}. Versi sebelumnya masih terinstal.</value>
+  </data>
+  <data name="ProgramUpdate_NotBack" xml:space="preserve">
+    <value>DSA belum kembali setelah pembaruan ke {0}. Jika DSA tidak segera dimulai, mulai ulang komputer.</value>
+  </data>
+  <data name="AdvancedTitle.Text" xml:space="preserve">
+    <value>Lanjutan</value>
+  </data>
+  <data name="FilesHeader.Text" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="FileSharingCard.Header" xml:space="preserve">
+    <value>Bagikan folder Windows dengan Android</value>
+  </data>
+  <data name="FileSharingCard.Description" xml:space="preserve">
+    <value>Menampilkan folder yang dipilih di bawah dalam penyimpanan bersama Android, di folder Host. Aktif secara bawaan.
+Aplikasi Android memerlukan izin penyimpanan Android, dan hanya dapat melakukan apa yang boleh dilakukan akun Windows Anda.</value>
+  </data>
+  <data name="SharedFoldersCard.Header" xml:space="preserve">
+    <value>Folder bersama</value>
+  </data>
+  <data name="SharedFoldersCard.Description" xml:space="preserve">
+    <value>Folder yang tidak Anda centang langsung dicabut dari Android.</value>
+  </data>
+  <data name="Folder_Documents" xml:space="preserve">
+    <value>Dokumen</value>
+  </data>
+  <data name="Folder_Downloads" xml:space="preserve">
+    <value>Unduhan</value>
+  </data>
+  <data name="Folder_Pictures" xml:space="preserve">
+    <value>Gambar</value>
+  </data>
+  <data name="Folder_Music" xml:space="preserve">
+    <value>Musik</value>
+  </data>
+  <data name="Folder_Videos" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Folder_Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="AndroidFilesCard.Header" xml:space="preserve">
+    <value>File Android</value>
+  </data>
+  <data name="AndroidFilesCard.Description" xml:space="preserve">
+    <value>Membuka file yang disimpan aplikasi Android, seperti foto dan unduhan, di File Explorer. Android dimulai jika tidak berjalan.
+Android di panel navigasi File Explorer juga membukanya.</value>
+  </data>
+  <data name="FilesDropCard.Header" xml:space="preserve">
+    <value>Kirim file ke aplikasi Android</value>
+  </data>
+  <data name="FilesNote.Text" xml:space="preserve">
+    <value>Untuk mengirim file ke aplikasi Android, seret file dari File Explorer ke jendela aplikasi. APK yang Anda jatuhkan akan diinstal.</value>
+  </data>
+  <data name="LinksCard.Header" xml:space="preserve">
+    <value>Buka tautan web di aplikasi Android</value>
+  </data>
+  <data name="LinksCard.Description" xml:space="preserve">
+    <value>Bawaannya nonaktif: tautan yang diketuk di aplikasi Android dibuka browser Windows. Jika aktif, dibuka aplikasi Android, seperti di ponsel.
+Tautan yang telah diverifikasi aplikasi terinstal sebagai miliknya selalu terbuka di aplikasi itu.</value>
+  </data>
+  <data name="ArmHeader.Text" xml:space="preserve">
+    <value>Aplikasi ARM</value>
+  </data>
+  <data name="ArmCard.Header" xml:space="preserve">
+    <value>Jalankan aplikasi yang hanya dibuat untuk ARM</value>
+  </data>
+  <data name="ArmCard.Description" xml:space="preserve">
+    <value>Aplikasi khusus prosesor ARM dapat diinstal dan berjalan di sini lewat penerjemah ARM. Berlaku saat Android dimulai berikutnya.
+Hanya aplikasi ARM 64-bit (arm64-v8a) yang berjalan.
+Penerjemah sumber terbuka bawaan dipakai, kecuali Anda menginstal milik Google di bawah atau lainnya via dsa arm-translation install.</value>
+  </data>
+  <data name="ArmRestartBar.Title" xml:space="preserve">
+    <value>Mulai ulang Android untuk menerapkan</value>
+  </data>
+  <data name="ArmRestartBar.Message" xml:space="preserve">
+    <value>Android dimulai sebelum perubahan ini. Hentikan lalu mulai Android agar aplikasi ARM mengikutinya.</value>
+  </data>
+  <data name="ArmDefaultCard.Header" xml:space="preserve">
+    <value>Gunakan penerjemah bawaan</value>
+  </data>
+  <data name="ArmDefaultButton.Content" xml:space="preserve">
+    <value>Gunakan</value>
+  </data>
+  <data name="Arm_DefaultDescription" xml:space="preserve">
+    <value>{0} {1} ({2}) disertakan dengan Android ini dan digunakan kecuali Anda menginstal penerjemah lain.
+Kembali ke penerjemah ini menghapus paket yang terinstal, mulai saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="Arm_SupportedDefault" xml:space="preserve">
+    <value>Didukung oleh {0} {1} ({2}), penerjemah yang disertakan dengan Android ini.</value>
+  </data>
+  <data name="Arm_DefaultTurnedOff" xml:space="preserve">
+    <value>Tidak didukung: {0} {1} dinonaktifkan.</value>
+  </data>
+  <data name="ArmRemoveCard.Header" xml:space="preserve">
+    <value>Hapus paket terjemahan ARM</value>
+  </data>
+  <data name="ArmRemoveCard.Description" xml:space="preserve">
+    <value>Menghapus paket dari disk add-on Anda. Aplikasi ARM yang Anda instal tetap ada, tetapi tidak berjalan setelah Android dimulai ulang.</value>
+  </data>
+  <data name="ArmRemoveButton.Content" xml:space="preserve">
+    <value>Hapus</value>
+  </data>
+  <data name="Arm_NotSupported" xml:space="preserve">
+    <value>Tidak didukung: tidak ada paket terjemahan ARM yang terinstal.</value>
+  </data>
+  <data name="Arm_Supported" xml:space="preserve">
+    <value>Didukung oleh {0} {1} ({2}).</value>
+  </data>
+  <data name="Arm_TurnedOff" xml:space="preserve">
+    <value>Tidak didukung: {0} {1} terinstal tetapi dinonaktifkan.</value>
+  </data>
+  <data name="Arm_NoLicense" xml:space="preserve">
+    <value>lisensi tidak disebutkan</value>
+  </data>
+  <data name="Arm_Abis" xml:space="preserve">
+    <value>Android menginstal aplikasi untuk: {0}</value>
+  </data>
+  <data name="Arm_NotRunning" xml:space="preserve">
+    <value>Android tidak berjalan, jadi dukungannya saat ini tidak diketahui.</value>
+  </data>
+  <data name="ArmGoogleCard.Header" xml:space="preserve">
+    <value>Penerjemah ARM Google</value>
+  </data>
+  <data name="ArmGoogleCard.Description" xml:space="preserve">
+    <value>Menginstal penerjemah ARM dari image emulator Android milik Google untuk versi Android ini.
+Mengunduh sekitar 2 GB dari Google, hanya menyimpan penerjemahnya, dan menghapus sisanya. Tidak ada yang diunduh sebelum Anda setuju.
+Paket yang dibuat dari penerjemah lain, seperti Digitalis, melakukan hal yang sama.</value>
+  </data>
+  <data name="ArmGoogleButton.Content" xml:space="preserve">
+    <value>Dapatkan</value>
+  </data>
+  <data name="ArmGoogleTermsLink.Content" xml:space="preserve">
+    <value>Android SDK License</value>
+  </data>
+  <data name="ArmGoogleConfirm.Title" xml:space="preserve">
+    <value>Dapatkan penerjemah ARM Google?</value>
+  </data>
+  <data name="ArmGoogleConfirm.Action" xml:space="preserve">
+    <value>Setuju dan unduh</value>
+  </data>
+  <data name="ArmGoogle_Notice" xml:space="preserve">
+    <value>DSA mengunduh image emulator Android untuk versi Android ini dari Google dan hanya mengambil penerjemah ARM-nya.
+
+• Unduhan: sekitar 2 GB, dihapus setelahnya.
+• Sumber: {0}
+• Ketentuan: penerjemah adalah perangkat lunak Google di bawah Android SDK License ({1}). Dengan mengunduhnya, Anda menyetujuinya.
+• Penerjemah berfungsi saat Android dimulai berikutnya.
+
+DSA tidak menyertakan atau meneruskan penerjemah ini.</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Title" xml:space="preserve">
+    <value>Mendapatkan penerjemah ARM Google</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Message" xml:space="preserve">
+    <value>Mengunduh sekitar 2 GB dari Google dan mengambil penerjemahnya. Proses ini memerlukan beberapa menit.</value>
+  </data>
+  <data name="GappsHeader.Text" xml:space="preserve">
+    <value>Google Play</value>
+  </data>
+  <data name="GappsCard.Header" xml:space="preserve">
+    <value>Layanan Google Play dan Play Store</value>
+  </data>
+  <data name="GappsCard.Description" xml:space="preserve">
+    <value>Menginstal LiteGapps Core, paket publik berisi layanan Google Play, Play Store, dan sinkronisasi akun untuk versi Android ini.
+DSA tidak menyertakan aplikasi Google. Berlaku saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="GappsInstallButton.Content" xml:space="preserve">
+    <value>Instal</value>
+  </data>
+  <data name="GappsInstallingBar.Title" xml:space="preserve">
+    <value>Menginstal Google Play</value>
+  </data>
+  <data name="GappsInstallingBar.Message" xml:space="preserve">
+    <value>Mengunduh dan menginstal Google Play. Proses ini dapat memerlukan beberapa menit.</value>
+  </data>
+  <data name="GappsRestartBar.Title" xml:space="preserve">
+    <value>Mulai ulang Android untuk menerapkan ini</value>
+  </data>
+  <data name="GappsRestartBar.Message" xml:space="preserve">
+    <value>Android dimulai sebelum perubahan ini. Hentikan Android lalu mulai lagi untuk menerapkannya ke Google Play.</value>
+  </data>
+  <data name="GappsRemoveCard.Header" xml:space="preserve">
+    <value>Hapus Google Play</value>
+  </data>
+  <data name="GappsRemoveCard.Description" xml:space="preserve">
+    <value>Menghapus aplikasi Google dari disk add-on Anda, mulai saat Android dimulai berikutnya.
+Aplikasi dari Play Store tetap ada, tetapi aplikasi yang memerlukan layanan Google Play mungkin berhenti berfungsi.</value>
+  </data>
+  <data name="GappsRemoveButton.Content" xml:space="preserve">
+    <value>Hapus</value>
+  </data>
+  <data name="GappsTermsCard.Header" xml:space="preserve">
+    <value>Ketentuan Google</value>
+  </data>
+  <data name="GappsTermsCard.Description" xml:space="preserve">
+    <value>Layanan Google Play dan Play Store adalah perangkat lunak Google dan tunduk pada ketentuan Google.
+DSA tidak mendistribusikannya. DSA hanya mengunduh paket publik LiteGapps saat Anda memintanya.</value>
+  </data>
+  <data name="GappsTermsLink.Content" xml:space="preserve">
+    <value>Persyaratan Layanan Google</value>
+  </data>
+  <data name="GappsRegisterCard.Header" xml:space="preserve">
+    <value>Daftarkan perangkat ini ke Google</value>
+  </data>
+  <data name="GappsRegisterCard.Description" xml:space="preserve">
+    <value>Android di sini tidak tersertifikasi Google, jadi Google mungkin menolak Anda masuk hingga perangkat ini didaftarkan.
+1. Buka halaman pendaftaran dan masuk dengan akun Google Anda.
+2. Masukkan Android ID perangkat ini.
+3. Mulai ulang Android dan masuk lagi.</value>
+  </data>
+  <data name="GappsRegisterLink.Content" xml:space="preserve">
+    <value>Buka halaman pendaftaran</value>
+  </data>
+  <data name="GappsDeviceIdLabel.Text" xml:space="preserve">
+    <value>Android ID</value>
+  </data>
+  <data name="Gapps_NotInstalled" xml:space="preserve">
+    <value>Tidak terinstal: Android tidak memiliki layanan Google Play atau Play Store.</value>
+  </data>
+  <data name="Gapps_Installed" xml:space="preserve">
+    <value>Terinstal: LiteGapps Core {0} untuk Android {1} ({2}).</value>
+  </data>
+  <data name="Gapps_InstalledPending" xml:space="preserve">
+    <value>Terinstal: LiteGapps Core {0} untuk Android {1} ({2}). Digunakan mulai saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="Gapps_RemovedPending" xml:space="preserve">
+    <value>Dihapus: aplikasi Google hilang dari Android saat dimulai berikutnya.</value>
+  </data>
+  <data name="Gapps_ReinstallNeeded" xml:space="preserve">
+    <value>LiteGapps Core {0} untuk Android {1} ({2}), dari DSA versi lama, tidak lagi digunakan, jadi Android dimulai tanpa aplikasi Google.
+Instal Google Play lagi.</value>
+  </data>
+  <data name="Gapps_Source" xml:space="preserve">
+    <value>Diunduh dari LiteGapps: {0}</value>
+  </data>
+  <data name="Gapps_DeviceId" xml:space="preserve">
+    <value>Android ID: {0}</value>
+  </data>
+  <data name="Gapps_NoDeviceId" xml:space="preserve">
+    <value>Android ID muncul di sini setelah Google Play diinstal dan Android dimulai dengannya.</value>
+  </data>
+  <data name="DeveloperHeader.Text" xml:space="preserve">
+    <value>Pengembang</value>
+  </data>
+  <data name="DeveloperModeCard.Header" xml:space="preserve">
+    <value>Mode pengembang</value>
+  </data>
+  <data name="DeveloperModeCard.Description" xml:space="preserve">
+    <value>Memungkinkan adb di PC ini terhubung ke Android tanpa meminta izin di Android, melalui port yang hanya dapat dijangkau PC ini.
+Nonaktif secara bawaan. Matikan setelah selesai.</value>
+  </data>
+  <data name="AdbAutoConnectCard.Header" xml:space="preserve">
+    <value>Hubungkan adb secara otomatis</value>
+  </data>
+  <data name="AdbAutoConnectCard.Description" xml:space="preserve">
+    <value>Selama mode pengembang aktif, Android muncul di adb devices dan Android Studio tanpa adb connect. Aktif secara bawaan.
+Setelah adb disconnect, koneksi tetap mati hingga server adb dimulai ulang.</value>
+  </data>
+  <data name="AdbAutoConnect_Off" xml:space="preserve">
+    <value>Tidak terhubung: mode pengembang atau koneksi otomatis nonaktif.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForServer" xml:space="preserve">
+    <value>Menunggu adb: Android terhubung saat adb dimulai di PC ini.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForAndroid" xml:space="preserve">
+    <value>Menunggu Android: terhubung setelah Android berjalan.</value>
+  </data>
+  <data name="AdbAutoConnect_Attached" xml:space="preserve">
+    <value>Terhubung: adb mencantumkan Android.</value>
+  </data>
+  <data name="AdbAutoConnect_Detached" xml:space="preserve">
+    <value>Terputus dengan adb disconnect. Android terhubung lagi saat server adb dimulai ulang.</value>
+  </data>
+  <data name="AdbCard.Header" xml:space="preserve">
+    <value>Hubungkan adb</value>
+  </data>
+  <data name="AdbCard.Description" xml:space="preserve">
+    <value>Selama mode pengembang aktif dan Android berjalan, jalankan perintah ini:</value>
+  </data>
+  <data name="CopyButton.ToolTip" xml:space="preserve">
+    <value>Salin</value>
+  </data>
+  <data name="AdbPortLabel.Text" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="ClipboardCard.Header" xml:space="preserve">
+    <value>Bagikan papan klip dengan Android</value>
+  </data>
+  <data name="ClipboardCard.Description" xml:space="preserve">
+    <value>Teks yang Anda salin di Windows dapat ditempel di aplikasi Android, dan sebaliknya. Aktif secara bawaan.
+Gambar tetap berada di tempat gambar disalin.</value>
+  </data>
+  <data name="FreezeCard.Header" xml:space="preserve">
+    <value>Bekukan Android saat diam</value>
+  </data>
+  <data name="FreezeCard.Description" xml:space="preserve">
+    <value>Nonaktif secara bawaan: Android yang diam masuk Doze dan tetap menerima pemberitahuan.
+Saat dibekukan, Android tidak memakai CPU tetapi tidak menerima apa pun hingga Anda membuka aplikasi.</value>
+  </data>
+  <data name="FreezeNowCard.Header" xml:space="preserve">
+    <value>Bekukan Android sekarang</value>
+  </data>
+  <data name="FreezeNowCard.Description" xml:space="preserve">
+    <value>Menghentikan setiap proses di Android hingga Anda membuka salah satu jendelanya lagi. Pemberitahuan, alarm, dan widget ikut berhenti.</value>
+  </data>
+  <data name="FreezeNowButton.Content" xml:space="preserve">
+    <value>Bekukan</value>
+  </data>
+  <data name="MemoryLimitCard.Header" xml:space="preserve">
+    <value>Batas memori</value>
+  </data>
+  <data name="MemoryLimitCard.Description" xml:space="preserve">
+    <value>Memori terbanyak yang boleh dipakai Android. Android hanya mengambil memori sesuai kebutuhan dan mengembalikannya setelah selesai.
+Otomatis: hingga memori PC ini dikurangi bagian yang disimpan Windows. Berlaku saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="MemoryLimit_Auto" xml:space="preserve">
+    <value>Otomatis</value>
+  </data>
+  <data name="MemoryVmSizeCard.Header" xml:space="preserve">
+    <value>VM Android saat ini</value>
+  </data>
+  <data name="MemoryVmSizeCard.Description" xml:space="preserve">
+    <value>Memori yang dipakai VM di PC ini, dan berapa banyak yang digunakan Android</value>
+  </data>
+  <data name="MemoryGuestUsedLabel.Text" xml:space="preserve">
+    <value>Digunakan oleh Android</value>
+  </data>
+  <data name="MemoryBeyondGuestLabel.Text" xml:space="preserve">
+    <value>Kosong, belum dikembalikan</value>
+  </data>
+  <data name="MemoryKernelHeader.Text" xml:space="preserve">
+    <value>Kernel Android</value>
+  </data>
+  <data name="Memory_KernelSlab" xml:space="preserve">
+    <value>Objek kernel</value>
+  </data>
+  <data name="Memory_KernelSlabDetail" xml:space="preserve">
+    <value>Memori yang disimpan kernel untuk datanya sendiri dan tidak dapat diambil kembali</value>
+  </data>
+  <data name="Memory_KernelStacks" xml:space="preserve">
+    <value>Stack thread</value>
+  </data>
+  <data name="Memory_KernelPageTables" xml:space="preserve">
+    <value>Tabel halaman</value>
+  </data>
+  <data name="Memory_KernelVmalloc" xml:space="preserve">
+    <value>Pemetaan kernel (vmalloc)</value>
+  </data>
+  <data name="Memory_KernelPercpu" xml:space="preserve">
+    <value>Data per CPU</value>
+  </data>
+  <data name="Memory_KernelUnaccounted" xml:space="preserve">
+    <value>Driver</value>
+  </data>
+  <data name="Memory_KernelUnaccountedDetail" xml:space="preserve">
+    <value>Yang tidak disebut penghitung mana pun, seperti buffer GPU dan DMA</value>
+  </data>
+  <data name="Memory_KernelReserved" xml:space="preserve">
+    <value>Dicadangkan saat boot</value>
+  </data>
+  <data name="Memory_KernelReservedDetail" xml:space="preserve">
+    <value>Kode kernel, struktur halaman, dan buffer, dari {0} yang diberikan; area berurutan {1}</value>
+  </data>
+  <data name="DiagnosticsHeader.Text" xml:space="preserve">
+    <value>Diagnostik</value>
+  </data>
+  <data name="InputTraceCard.Header" xml:space="preserve">
+    <value>Pelacakan input</value>
+  </data>
+  <data name="InputTraceCard.Description" xml:space="preserve">
+    <value>Setiap proses DSA mencatat kapan sentuhan, klik, dan tombol tiba, agar jeda dari input ke gambar dapat diukur. Nonaktif secara bawaan.</value>
+  </data>
+  <data name="ResizeTraceCard.Header" xml:space="preserve">
+    <value>Pelacakan ubah ukuran</value>
+  </data>
+  <data name="ResizeTraceCard.Description" xml:space="preserve">
+    <value>Setiap proses DSA mencatat tiap tahap pengubahan ukuran jendela, untuk menemukan bagian yang lambat atau berkedip. Nonaktif secara bawaan.</value>
+  </data>
+  <data name="DiagnosticsNote.Text" xml:space="preserve">
+    <value>Pelacakan masuk ke log DSA di bawah dan membuatnya membesar, jadi aktifkan hanya untuk melaporkan masalah.
+Pelacakan berlaku untuk setiap pengguna PC ini, jadi hanya administrator yang dapat mengubahnya.</value>
+  </data>
+  <data name="LogsHeader.Text" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="UserLogsCard.Header" xml:space="preserve">
+    <value>Buka folder log saya</value>
+  </data>
+  <data name="UserLogsCard.Description" xml:space="preserve">
+    <value>Log pengelola jendela dan jendela aplikasi Anda.</value>
+  </data>
+  <data name="ServiceLogsCard.Header" xml:space="preserve">
+    <value>Buka folder log layanan (administrator)</value>
+  </data>
+  <data name="ServiceLogsCard.Description" xml:space="preserve">
+    <value>Log layanan DSA dan Android itu sendiri.</value>
+  </data>
+  <data name="CommandLineHeader.Text" xml:space="preserve">
+    <value>Baris perintah</value>
+  </data>
+  <data name="CommandLineCard.Header" xml:space="preserve">
+    <value>Perintah dsa</value>
+  </data>
+  <data name="CommandLineCard.Description" xml:space="preserve">
+    <value>Semua yang ada di halaman ini juga tersedia dari terminal.</value>
+  </data>
+  <data name="AboutTitle.Text" xml:space="preserve">
+    <value>Tentang</value>
+  </data>
+  <data name="AboutProductCard.Header" xml:space="preserve">
+    <value>Desktop Subsystem for Android™</value>
+  </data>
+  <data name="AboutProductCard.Description" xml:space="preserve">
+    <value>Thisisthepy</value>
+  </data>
+  <data name="AboutAppVersionCard.Header" xml:space="preserve">
+    <value>Versi Pengaturan DSA</value>
+  </data>
+  <data name="AboutServiceVersionCard.Header" xml:space="preserve">
+    <value>Versi layanan DSA</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Header" xml:space="preserve">
+    <value>Versi image Android</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Description" xml:space="preserve">
+    <value>Image Android yang di-boot saat dimulai berikutnya. Pembaruan image mengubahnya.</value>
+  </data>
+  <data name="AboutLicenseCard.Header" xml:space="preserve">
+    <value>Lisensi</value>
+  </data>
+  <data name="AboutLicenseCard.Description" xml:space="preserve">
+    <value>DSA dilisensikan di bawah Apache License 2.0. Buka lisensi setiap komponen yang disertakannya.</value>
+  </data>
+  <data name="AboutSourceCard.Header" xml:space="preserve">
+    <value>Kode sumber</value>
+  </data>
+  <data name="AboutIndependent.Text" xml:space="preserve">
+    <value>Desktop Subsystem for Android adalah proyek sumber terbuka yang independen.
+DSA tidak berafiliasi dengan, tidak didukung oleh, dan tidak disponsori oleh Microsoft maupun Google.</value>
+  </data>
+  <data name="AboutTrademark.Text" xml:space="preserve">
+    <value>Android is a trademark of Google LLC.</value>
+  </data>
+  <data name="FolderMissingTitle" xml:space="preserve">
+    <value>Folder tidak dapat dibuka</value>
+  </data>
+  <data name="FolderMissingBody" xml:space="preserve">
+    <value>{0} belum ada, atau Anda tidak boleh membukanya.</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>Batal</value>
+  </data>
+  <data name="Install_BusyTitle" xml:space="preserve">
+    <value>Menginstal</value>
+  </data>
+  <data name="Install_Busy" xml:space="preserve">
+    <value>Menginstal {0} di Android…</value>
+  </data>
+  <data name="Install_DoneTitle" xml:space="preserve">
+    <value>Terinstal</value>
+  </data>
+  <data name="Install_FailedTitle" xml:space="preserve">
+    <value>Tidak terinstal</value>
+  </data>
+  <data name="Install_Installed" xml:space="preserve">
+    <value>{0} telah diinstal ({1}). Buka dari menu Mulai.</value>
+  </data>
+  <data name="Install_Refused" xml:space="preserve">
+    <value>{0} tidak diinstal: {1} ({2})</value>
+  </data>
+  <data name="Install_NotSent" xml:space="preserve">
+    <value>{0} tidak sampai ke Android. {1}</value>
+  </data>
+  <data name="Install_NotApk" xml:space="preserve">
+    <value>Hanya file APK yang dapat diinstal: {0}</value>
+  </data>
+  <data name="Install_Reason_incompatible" xml:space="preserve">
+    <value>aplikasi tidak berjalan di Android ini: perlu jenis prosesor lain, Android yang lebih baru, atau fitur yang tidak ada di perangkat ini.</value>
+  </data>
+  <data name="Install_Reason_conflicting-signature" xml:space="preserve">
+    <value>aplikasi sudah terinstal, ditandatangani dengan kunci lain. Copot instalasinya di Android terlebih dahulu.</value>
+  </data>
+  <data name="Install_Reason_invalid-apk" xml:space="preserve">
+    <value>file bukan APK bertanda tangan yang dapat dibaca Android.</value>
+  </data>
+  <data name="Install_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android tidak memiliki ruang untuk aplikasi.</value>
+  </data>
+  <data name="Install_Reason_downgrade" xml:space="preserve">
+    <value>versi aplikasi yang lebih baru sudah terinstal. Copot instalasinya di Android terlebih dahulu.</value>
+  </data>
+  <data name="Install_Reason_blocked" xml:space="preserve">
+    <value>kebijakan Android ini tidak mengizinkan aplikasi.</value>
+  </data>
+  <data name="Install_Reason_other" xml:space="preserve">
+    <value>Android tidak menginstal aplikasi.</value>
+  </data>
+  <data name="NavWidgets.Content" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="WidgetsTitle.Text" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="WidgetsRefreshButton.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="WidgetsIntro.Text" xml:space="preserve">
+    <value>Tempatkan widget yang ditawarkan aplikasi Android Anda di desktop. Android dimulai saat Anda membuka halaman ini.
+• Setiap widget mendapat jendelanya sendiri, di bawah jendela Anda yang lain.
+• Tekan lama widget untuk mengeditnya: seret untuk memindahkannya, dan seret pegangannya untuk mengubah ukurannya.
+• Klik kanan widget untuk pengaturan, ukuran, dan Hapus.</value>
+  </data>
+  <data name="WidgetsErrorBar.Title" xml:space="preserve">
+    <value>Widget tidak dapat dibaca atau diubah</value>
+  </data>
+  <data name="WidgetsDoneBar.Title" xml:space="preserve">
+    <value>Selesai</value>
+  </data>
+  <data name="WidgetsPlacedHeader.Text" xml:space="preserve">
+    <value>Di desktop Anda</value>
+  </data>
+  <data name="WidgetsPlacedNone.Text" xml:space="preserve">
+    <value>Belum ada widget di desktop Anda.</value>
+  </data>
+  <data name="WidgetsGalleryHeader.Text" xml:space="preserve">
+    <value>Widget yang ditawarkan aplikasi Anda</value>
+  </data>
+  <data name="WidgetsGalleryNone.Text" xml:space="preserve">
+    <value>Tidak ada aplikasi di Android yang menawarkan widget.</value>
+  </data>
+  <data name="WidgetsAddButton.Content" xml:space="preserve">
+    <value>Tambahkan ke desktop</value>
+  </data>
+  <data name="WidgetsRemoveButton.Content" xml:space="preserve">
+    <value>Hapus</value>
+  </data>
+  <data name="Widgets_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Widgets_Setup" xml:space="preserve">
+    <value>meminta Anda untuk menyiapkannya</value>
+  </data>
+  <data name="Widgets_At" xml:space="preserve">
+    <value>Di {0}, {1}, {2} × {3}</value>
+  </data>
+  <data name="Widgets_Placed" xml:space="preserve">
+    <value>{0} ada di desktop Anda.</value>
+  </data>
+  <data name="Widgets_Removed" xml:space="preserve">
+    <value>{0} telah dihapus dari desktop Anda.</value>
+  </data>
+  <data name="ApkWindow_Caption" xml:space="preserve">
+    <value>APK Installer</value>
+  </data>
+  <data name="ApkWindow_Reading" xml:space="preserve">
+    <value>Membaca file</value>
+  </data>
+  <data name="ApkWindow_Install" xml:space="preserve">
+    <value>Instal</value>
+  </data>
+  <data name="ApkWindow_Update" xml:space="preserve">
+    <value>Perbarui</value>
+  </data>
+  <data name="ApkWindow_Reinstall" xml:space="preserve">
+    <value>Instal lagi</value>
+  </data>
+  <data name="ApkWindow_Cancel" xml:space="preserve">
+    <value>Batal</value>
+  </data>
+  <data name="ApkWindow_Close" xml:space="preserve">
+    <value>Tutup</value>
+  </data>
+  <data name="ApkWindow_Open" xml:space="preserve">
+    <value>Luncurkan</value>
+  </data>
+  <data name="ApkWindow_AndroidChip" xml:space="preserve">
+    <value>Android {0} atau yang lebih baru</value>
+  </data>
+  <data name="ApkWindow_SummaryUpdate" xml:space="preserve">
+    <value>{0} sudah terinstal. Ini memperbaruinya dari versi {1} ke versi {2}. Datanya tetap ada.</value>
+  </data>
+  <data name="ApkWindow_SummaryReinstall" xml:space="preserve">
+    <value>{0} versi {1} sudah terinstal. Ini menginstal versi yang sama lagi. Datanya tetap ada.</value>
+  </data>
+  <data name="ApkWindow_SummaryDowngrade" xml:space="preserve">
+    <value>{0} versi {1} sudah terinstal, dan file ini adalah versi lama {2}. Android tidak menginstal versi lama di atas versi yang lebih baru.
+Untuk memakai file ini, copot instalasi aplikasi di Android terlebih dahulu.</value>
+  </data>
+  <data name="ApkWindow_SummarySignature" xml:space="preserve">
+    <value>{0} sudah terinstal, ditandatangani dengan kunci lain dari file ini. Demi keamanan data aplikasi, Android tidak mengizinkannya diganti.
+Untuk memakai file ini, copot instalasi aplikasi di Android terlebih dahulu.</value>
+  </data>
+  <data name="ApkWindow_FactPackage" xml:space="preserve">
+    <value>Paket</value>
+  </data>
+  <data name="ApkWindow_FactVersion" xml:space="preserve">
+    <value>Versi</value>
+  </data>
+  <data name="ApkWindow_FactInstalled" xml:space="preserve">
+    <value>Terinstal saat ini</value>
+  </data>
+  <data name="ApkWindow_FactAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="ApkWindow_FactSize" xml:space="preserve">
+    <value>Ukuran</value>
+  </data>
+  <data name="ApkWindow_FactAbis" xml:space="preserve">
+    <value>Prosesor</value>
+  </data>
+  <data name="ApkWindow_FactSigner" xml:space="preserve">
+    <value>Ditandatangani oleh</value>
+  </data>
+  <data name="ApkWindow_AndroidRange" xml:space="preserve">
+    <value>{0} atau yang lebih baru, dibuat untuk {1}</value>
+  </data>
+  <data name="ApkWindow_VersionText" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ApkWindow_ApiLevel" xml:space="preserve">
+    <value>API level {0}</value>
+  </data>
+  <data name="ApkWindow_AndroidVersion" xml:space="preserve">
+    <value>Android {0} (API {1})</value>
+  </data>
+  <data name="ApkWindow_Signer" xml:space="preserve">
+    <value>SHA-256 {1} (tanda tangan {0})</value>
+  </data>
+  <data name="ApkWindow_Unsigned" xml:space="preserve">
+    <value>Tidak ditandatangani. Android hanya menginstal aplikasi yang ditandatangani.</value>
+  </data>
+  <data name="ApkWindow_NoPermissions" xml:space="preserve">
+    <value>Aplikasi ini tidak meminta izin apa pun.</value>
+  </data>
+  <data name="ApkWindow_Sensitive" xml:space="preserve">
+    <value>Android meminta izin Anda terlebih dahulu</value>
+  </data>
+  <data name="ApkWindow_StartingTitle" xml:space="preserve">
+    <value>Memulai Android</value>
+  </data>
+  <data name="ApkWindow_StartingDetail" xml:space="preserve">
+    <value>Android dimulai sekali, lalu tetap siap untuk aplikasi Anda.</value>
+  </data>
+  <data name="ApkWindow_CheckingTitle" xml:space="preserve">
+    <value>Memeriksa aplikasi</value>
+  </data>
+  <data name="ApkWindow_CheckingDetail" xml:space="preserve">
+    <value>Memeriksa apakah aplikasi sudah terinstal.</value>
+  </data>
+  <data name="ApkWindow_InstallingTitle" xml:space="preserve">
+    <value>Menginstal {0}</value>
+  </data>
+  <data name="ApkWindow_SendingDetail" xml:space="preserve">
+    <value>Menyalin aplikasi ke Android</value>
+  </data>
+  <data name="ApkWindow_AndroidInstallingDetail" xml:space="preserve">
+    <value>Android sedang menginstal aplikasi</value>
+  </data>
+  <data name="ApkWindow_Cancelling" xml:space="preserve">
+    <value>Menghentikan</value>
+  </data>
+  <data name="ApkWindow_Cancelled" xml:space="preserve">
+    <value>Instalasi dihentikan. Tidak ada yang diubah.</value>
+  </data>
+  <data name="ApkWindow_DoneTitle" xml:space="preserve">
+    <value>{0} telah diinstal</value>
+  </data>
+  <data name="ApkWindow_UpdatedTitle" xml:space="preserve">
+    <value>{0} telah diperbarui</value>
+  </data>
+  <data name="ApkWindow_DoneText" xml:space="preserve">
+    <value>Luncurkan sekarang, atau nanti dari menu Mulai.</value>
+  </data>
+  <data name="ApkWindow_FailedTitle" xml:space="preserve">
+    <value>Tidak terinstal</value>
+  </data>
+  <data name="ApkWindow_NotApkTitle" xml:space="preserve">
+    <value>File ini tidak dapat diinstal</value>
+  </data>
+  <data name="ApkWindow_StartFailed" xml:space="preserve">
+    <value>Android tidak dimulai, jadi aplikasi tidak diinstal. {0}</value>
+  </data>
+  <data name="ApkWindow_NotSent" xml:space="preserve">
+    <value>Aplikasi tidak sampai ke Android. {0}</value>
+  </data>
+  <data name="ApkWindow_ReasonWithWords" xml:space="preserve">
+    <value>{0} Pesan Android: {1}</value>
+  </data>
+  <data name="ApkWindow_OpenFailed" xml:space="preserve">
+    <value>{0} tidak dapat dibuka. {1}</value>
+  </data>
+  <data name="ApkWindow_Reason_incompatible" xml:space="preserve">
+    <value>Aplikasi tidak berjalan di Android ini: perlu jenis prosesor lain, Android yang lebih baru, atau fitur yang tidak ada di perangkat ini.</value>
+  </data>
+  <data name="ApkWindow_Reason_conflicting-signature" xml:space="preserve">
+    <value>Aplikasi sudah terinstal, ditandatangani dengan kunci lain. Copot instalasinya di Android terlebih dahulu.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-apk" xml:space="preserve">
+    <value>File bukan APK bertanda tangan yang dapat dibaca Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android tidak memiliki ruang untuk aplikasi. Kosongkan sebagian ruang di Android, lalu coba lagi.</value>
+  </data>
+  <data name="ApkWindow_Reason_downgrade" xml:space="preserve">
+    <value>Versi aplikasi yang lebih baru sudah terinstal. Copot instalasinya di Android terlebih dahulu.</value>
+  </data>
+  <data name="ApkWindow_Reason_blocked" xml:space="preserve">
+    <value>Kebijakan Android ini tidak mengizinkan aplikasi.</value>
+  </data>
+  <data name="ApkWindow_Reason_other" xml:space="preserve">
+    <value>Android tidak menginstal aplikasi.</value>
+  </data>
+  <data name="ApkWindow_AbiWarning" xml:space="preserve">
+    <value>Aplikasi ini hanya memiliki kode untuk prosesor {0}, bukan untuk prosesor PC ini.
+Android hanya menjalankannya dengan paket terjemahan ARM, dan mungkin menolak menginstalnya.</value>
+  </data>
+  <data name="ApkWindow_Abi32Warning" xml:space="preserve">
+    <value>Aplikasi ini hanya memiliki kode untuk prosesor {0}.
+Penerjemah ARM hanya menjalankan kode ARM 64-bit (arm64-v8a), jadi Android mungkin menolak menginstalnya, atau aplikasi bisa gagal dimulai.</value>
+  </data>
+  <data name="ApkWindow_LaunchFailedAfterInstall" xml:space="preserve">
+    <value>{0} telah diinstal, tetapi tidak terbuka. {1}</value>
+  </data>
+  <data name="ApkWindow_LaunchWhenReady" xml:space="preserve">
+    <value>Luncurkan saat siap</value>
+  </data>
+  <data name="NavLogs.Content" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="LogsTitle.Text" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="LogsNote.Text" xml:space="preserve">
+    <value>Android mengirim lognya hanya selama halaman ini terbuka, dan tidak ada yang ditulis ke disk.
+Simpan diagnostik mengumpulkan apa yang dibutuhkan laporan masalah ke dalam satu file zip.</value>
+  </data>
+  <data name="LogsSaveButton.Content" xml:space="preserve">
+    <value>Simpan diagnostik</value>
+  </data>
+  <data name="LogsFilter.PlaceholderText" xml:space="preserve">
+    <value>Filter menurut tag atau teks</value>
+  </data>
+  <data name="LogsPause.Content" xml:space="preserve">
+    <value>Jeda</value>
+  </data>
+  <data name="LogsErrorBar.Title" xml:space="preserve">
+    <value>Log tidak dapat dibaca</value>
+  </data>
+  <data name="LogsStatusBar.Title" xml:space="preserve">
+    <value>Diagnostik</value>
+  </data>
+  <data name="Logs_Paused" xml:space="preserve">
+    <value>Dijeda. {0} baris baru sedang menunggu.</value>
+  </data>
+  <data name="Logs_Saving" xml:space="preserve">
+    <value>Mengumpulkan diagnostik. Proses ini memerlukan satu menit atau lebih.</value>
+  </data>
+  <data name="Logs_Saved" xml:space="preserve">
+    <value>Diagnostik disimpan ke {0}.</value>
+  </data>
+  <data name="Logs_SaveDialogTitle" xml:space="preserve">
+    <value>Simpan diagnostik</value>
+  </data>
+  <data name="Logs_SaveDialogFilter" xml:space="preserve">
+    <value>Arsip zip</value>
+  </data>
+  <data name="Logs_Priority_V" xml:space="preserve">
+    <value>Verbose</value>
+  </data>
+  <data name="Logs_Priority_D" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+  <data name="Logs_Priority_I" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="Logs_Priority_W" xml:space="preserve">
+    <value>Peringatan</value>
+  </data>
+  <data name="Logs_Priority_E" xml:space="preserve">
+    <value>Kesalahan</value>
+  </data>
+  <data name="Logs_Priority_F" xml:space="preserve">
+    <value>Fatal</value>
+  </data>
+  <data name="NavIdentity.Content" xml:space="preserve">
+    <value>Identitas perangkat</value>
+  </data>
+  <data name="IdentityTitle.Text" xml:space="preserve">
+    <value>Identitas perangkat</value>
+  </data>
+  <data name="IdentityIntro.Text" xml:space="preserve">
+    <value>Nama dan sidik jari build yang dilaporkan Android ke aplikasi. Biarkan kotak kosong untuk mempertahankan nilai yang tampil di dalamnya.
+Perubahan berlaku saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="IdentityWarning.Title" xml:space="preserve">
+    <value>Aplikasi mungkin menyadarinya</value>
+  </data>
+  <data name="IdentityWarning.Message" xml:space="preserve">
+    <value>Mengubah model atau sidik jari dapat mengubah perilaku aplikasi.
+Beberapa aplikasi memeriksa perangkat sebelum berjalan, dan pemeriksaan pembayaran serta integritas mungkin gagal.</value>
+  </data>
+  <data name="IdentityDoneBar.Title" xml:space="preserve">
+    <value>Identitas perangkat</value>
+  </data>
+  <data name="IdentitySaveButton.Content" xml:space="preserve">
+    <value>Simpan</value>
+  </data>
+  <data name="IdentityResetButton.Content" xml:space="preserve">
+    <value>Atur ulang ke bawaan</value>
+  </data>
+  <data name="IdentityRestartButton.Content" xml:space="preserve">
+    <value>Mulai ulang Android sekarang</value>
+  </data>
+  <data name="IdentityResetConfirmTitle" xml:space="preserve">
+    <value>Atur ulang identitas perangkat?</value>
+  </data>
+  <data name="IdentityResetConfirmBody" xml:space="preserve">
+    <value>Setiap nilai kembali ke bawaannya: milik komputer ini, atau milik DSA jika komputer tidak menyebutkannya.
+
+Berlaku saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="IdentityNamesHeader.Text" xml:space="preserve">
+    <value>Perangkat</value>
+  </data>
+  <data name="IdentityFingerprintHeader.Text" xml:space="preserve">
+    <value>Sidik jari build</value>
+  </data>
+  <data name="IdentityPreview.Text" xml:space="preserve">
+    <value>Sidik jari mulai saat dimulai berikutnya</value>
+  </data>
+  <data name="Identity_Saved" xml:space="preserve">
+    <value>Disimpan. Android menggunakannya saat dimulai berikutnya.</value>
+  </data>
+  <data name="Identity_SavedRestart" xml:space="preserve">
+    <value>Disimpan. Mulai ulang Android untuk menggunakannya sekarang.</value>
+  </data>
+  <data name="Identity_Reset" xml:space="preserve">
+    <value>Kembali ke bawaan. Android menggunakannya saat dimulai berikutnya.</value>
+  </data>
+  <data name="Identity_ResetRestart" xml:space="preserve">
+    <value>Kembali ke bawaan. Mulai ulang Android untuk menggunakannya sekarang.</value>
+  </data>
+  <data name="Identity_Restarted" xml:space="preserve">
+    <value>Android dimulai lagi dengan identitas ini.</value>
+  </data>
+  <data name="Identity_FromComputer" xml:space="preserve">
+    <value>Bawaan: dari komputer ini</value>
+  </data>
+  <data name="Identity_FromDsa" xml:space="preserve">
+    <value>Bawaan: nilai DSA</value>
+  </data>
+  <data name="Identity_NotSaid" xml:space="preserve">
+    <value>Komputer ini tidak menyebutkannya; Android mempertahankan nilainya sendiri.</value>
+  </data>
+  <data name="IdentityComputerHeader.Text" xml:space="preserve">
+    <value>Dari komputer ini</value>
+  </data>
+  <data name="IdentityComputerNote.Text" xml:space="preserve">
+    <value>Nilai ini mengikuti komputer ini dan dibaca ulang tiap kali Android dimulai, jadi nama baru komputer dipakai saat dimulai berikutnya.
+Pengaturan Android menampilkan nama perangkat dan chip. Nama model hanya ditampilkan di sini.</value>
+  </data>
+  <data name="Identity_model_name" xml:space="preserve">
+    <value>Nama model</value>
+  </data>
+  <data name="Identity_model_name_Description" xml:space="preserve">
+    <value>Nama komputer saat dijual (ro.product.marketname).</value>
+  </data>
+  <data name="Identity_device_name" xml:space="preserve">
+    <value>Nama perangkat</value>
+  </data>
+  <data name="Identity_device_name_Description" xml:space="preserve">
+    <value>Nama komputer, yang ditampilkan Pengaturan, Bluetooth, dan Wi-Fi Direct untuk perangkat ini.</value>
+  </data>
+  <data name="Identity_soc_manufacturer" xml:space="preserve">
+    <value>Produsen chip</value>
+  </data>
+  <data name="Identity_soc_manufacturer_Description" xml:space="preserve">
+    <value>Build.SOC_MANUFACTURER: pembuat prosesor komputer.</value>
+  </data>
+  <data name="Identity_soc_model" xml:space="preserve">
+    <value>Model chip</value>
+  </data>
+  <data name="Identity_soc_model_Description" xml:space="preserve">
+    <value>Build.SOC_MODEL: prosesor komputer.</value>
+  </data>
+  <data name="Identity_manufacturer" xml:space="preserve">
+    <value>Produsen</value>
+  </data>
+  <data name="Identity_manufacturer_Description" xml:space="preserve">
+    <value>Build.MANUFACTURER. Hingga 64 karakter ASCII yang dapat dicetak.</value>
+  </data>
+  <data name="Identity_manufacturer_Invalid" xml:space="preserve">
+    <value>Gunakan 1 hingga 64 karakter ASCII yang dapat dicetak, tanpa spasi di awal atau akhir.</value>
+  </data>
+  <data name="Identity_brand" xml:space="preserve">
+    <value>Merek</value>
+  </data>
+  <data name="Identity_brand_Description" xml:space="preserve">
+    <value>Build.BRAND, dan bagian pertama sidik jari. Huruf, angka, '.', '_', dan '-'.</value>
+  </data>
+  <data name="Identity_brand_Invalid" xml:space="preserve">
+    <value>Gunakan hingga 32 huruf, angka, '.', '_', atau '-', diawali huruf atau angka.</value>
+  </data>
+  <data name="Identity_model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Identity_model_Description" xml:space="preserve">
+    <value>Build.MODEL, nama yang ditampilkan aplikasi untuk perangkat ini.</value>
+  </data>
+  <data name="Identity_model_Invalid" xml:space="preserve">
+    <value>Gunakan 1 hingga 64 karakter ASCII yang dapat dicetak, tanpa spasi di awal atau akhir.</value>
+  </data>
+  <data name="Identity_device" xml:space="preserve">
+    <value>Perangkat</value>
+  </data>
+  <data name="Identity_device_Description" xml:space="preserve">
+    <value>Build.DEVICE. Huruf, angka, '.', '_', dan '-'.</value>
+  </data>
+  <data name="Identity_device_Invalid" xml:space="preserve">
+    <value>Gunakan hingga 32 huruf, angka, '.', '_', atau '-', diawali huruf atau angka.</value>
+  </data>
+  <data name="Identity_name" xml:space="preserve">
+    <value>Nama produk</value>
+  </data>
+  <data name="Identity_name_Description" xml:space="preserve">
+    <value>Build.PRODUCT. Huruf, angka, '.', '_', dan '-'.</value>
+  </data>
+  <data name="Identity_name_Invalid" xml:space="preserve">
+    <value>Gunakan hingga 32 huruf, angka, '.', '_', atau '-', diawali huruf atau angka.</value>
+  </data>
+  <data name="Identity_characteristics" xml:space="preserve">
+    <value>Faktor bentuk</value>
+  </data>
+  <data name="Identity_characteristics_Description" xml:space="preserve">
+    <value>ro.build.characteristics: tablet (tata letak layar besar), default (ponsel), atau kata lain yang dipisahkan koma.</value>
+  </data>
+  <data name="Identity_characteristics_Invalid" xml:space="preserve">
+    <value>Gunakan kata berhuruf kecil dari huruf, angka, dan '_', dipisahkan koma.</value>
+  </data>
+  <data name="Identity_fingerprint_release" xml:space="preserve">
+    <value>Rilis</value>
+  </data>
+  <data name="Identity_fingerprint_release_Description" xml:space="preserve">
+    <value>Rilis Android di dalam sidik jari.</value>
+  </data>
+  <data name="Identity_fingerprint_release_Invalid" xml:space="preserve">
+    <value>Gunakan 1 hingga 64 huruf, angka, '.', '_', atau '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_id" xml:space="preserve">
+    <value>ID build</value>
+  </data>
+  <data name="Identity_fingerprint_id_Description" xml:space="preserve">
+    <value>ID build di dalam sidik jari.</value>
+  </data>
+  <data name="Identity_fingerprint_id_Invalid" xml:space="preserve">
+    <value>Gunakan 1 hingga 64 huruf, angka, '.', '_', atau '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental" xml:space="preserve">
+    <value>Versi inkremental</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Description" xml:space="preserve">
+    <value>Versi build inkremental di dalam sidik jari.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Invalid" xml:space="preserve">
+    <value>Gunakan 1 hingga 64 huruf, angka, '.', '_', atau '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_type" xml:space="preserve">
+    <value>Jenis build</value>
+  </data>
+  <data name="Identity_fingerprint_type_Description" xml:space="preserve">
+    <value>user, userdebug, atau eng. Hanya sidik jari yang menyebutkannya; Android tetap build user.</value>
+  </data>
+  <data name="Identity_fingerprint_type_Invalid" xml:space="preserve">
+    <value>Gunakan user, userdebug, atau eng.</value>
+  </data>
+  <data name="Identity_fingerprint_tags" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Description" xml:space="preserve">
+    <value>Seperti release-keys.</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Invalid" xml:space="preserve">
+    <value>Gunakan huruf, angka, '.', '_', '-', atau ','.</value>
+  </data>
+  <data name="Identity_fingerprint" xml:space="preserve">
+    <value>Seluruh sidik jari</value>
+  </data>
+  <data name="Identity_fingerprint_Description" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags
+Jika diisi, inilah Build.FINGERPRINT, apa pun isi bagian di atas.</value>
+  </data>
+  <data name="Identity_fingerprint_Invalid" xml:space="preserve">
+    <value>Tulis sebagai brand/name/device:release/id/incremental:type/tags, dengan jenis user, userdebug, atau eng.</value>
+  </data>
+  <data name="NavApps.Content" xml:space="preserve">
+    <value>Aplikasi</value>
+  </data>
+  <data name="AppsTitle.Text" xml:space="preserve">
+    <value>Aplikasi</value>
+  </data>
+  <data name="AppsRefreshButton.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="AppsIntro.Text" xml:space="preserve">
+    <value>Aplikasi Android yang terinstal di PC ini. Android dimulai saat Anda membuka halaman ini.
+Buka aplikasi, ubah izin, penyimpanan, dan pemberitahuannya di Info aplikasi, atau copot aplikasi yang Anda instal.
+Aplikasi ini juga tercantum di Pengaturan Windows pada Aplikasi &gt; Aplikasi yang diinstal.</value>
+  </data>
+  <data name="AppsErrorBar.Title" xml:space="preserve">
+    <value>Aplikasi tidak dapat dibaca atau diubah</value>
+  </data>
+  <data name="AppsDoneBar.Title" xml:space="preserve">
+    <value>Selesai</value>
+  </data>
+  <data name="AppsManageCard.Title" xml:space="preserve">
+    <value>Kelola aplikasi</value>
+  </data>
+  <data name="AppsManageCard.Description" xml:space="preserve">
+    <value>Buka daftar aplikasi di pengaturan Android sendiri</value>
+  </data>
+  <data name="AppsInstalledHeader.Text" xml:space="preserve">
+    <value>Aplikasi yang diinstal</value>
+  </data>
+  <data name="AppsSearch.PlaceholderText" xml:space="preserve">
+    <value>Cari aplikasi</value>
+  </data>
+  <data name="AppsNone.Text" xml:space="preserve">
+    <value>Belum ada aplikasi yang terinstal di Android. Buka file APK untuk menginstalnya.</value>
+  </data>
+  <data name="AppsNoMatch.Text" xml:space="preserve">
+    <value>Tidak ada aplikasi yang cocok dengan pencarian Anda.</value>
+  </data>
+  <data name="AppsOpenButton.Content" xml:space="preserve">
+    <value>Buka</value>
+  </data>
+  <data name="AppsInfoButton.Content" xml:space="preserve">
+    <value>Info aplikasi</value>
+  </data>
+  <data name="AppsDesktopShortcutButton.Content" xml:space="preserve">
+    <value>Buat pintasan desktop</value>
+  </data>
+  <data name="Apps_DesktopShortcutMade" xml:space="preserve">
+    <value>Pintasan ke {0} ada di desktop.</value>
+  </data>
+  <data name="AppsUninstallButton.Content" xml:space="preserve">
+    <value>Copot instalasi</value>
+  </data>
+  <data name="AppsUninstallConfirmTitle" xml:space="preserve">
+    <value>Copot instalasi {0}?</value>
+  </data>
+  <data name="AppsUninstallConfirmBody" xml:space="preserve">
+    <value>{0} dan datanya akan dihapus dari Android.
+
+Tindakan ini tidak dapat dibatalkan.</value>
+  </data>
+  <data name="Apps_Count" xml:space="preserve">
+    <value>{0} aplikasi</value>
+  </data>
+  <data name="Apps_CountMatching" xml:space="preserve">
+    <value>{0} dari {1} aplikasi</value>
+  </data>
+  <data name="Apps_Version" xml:space="preserve">
+    <value>Versi {0}</value>
+  </data>
+  <data name="Apps_Installed" xml:space="preserve">
+    <value>Diinstal {0}</value>
+  </data>
+  <data name="Apps_System" xml:space="preserve">
+    <value>Bagian dari Android</value>
+  </data>
+  <data name="Apps_SystemTip" xml:space="preserve">
+    <value>Aplikasi ini adalah bagian dari Android dan tidak dapat dicopot.</value>
+  </data>
+  <data name="Apps_Uninstalled" xml:space="preserve">
+    <value>{0} telah dicopot.</value>
+  </data>
+  <data name="Apps_NotUninstalled" xml:space="preserve">
+    <value>{0} tidak dicopot: {1} ({2})</value>
+  </data>
+  <data name="Apps_Refused_not-installed" xml:space="preserve">
+    <value>aplikasi sudah tidak terinstal</value>
+  </data>
+  <data name="Apps_Refused_system-app" xml:space="preserve">
+    <value>aplikasi adalah bagian dari Android</value>
+  </data>
+  <data name="Apps_Refused_blocked" xml:space="preserve">
+    <value>Android tidak mengizinkannya, karena aplikasi adalah administrator perangkat atau dipertahankan oleh kebijakan</value>
+  </data>
+  <data name="Apps_Refused_other" xml:space="preserve">
+    <value>Android tidak dapat mencopotnya</value>
+  </data>
+  <data name="UninstallWindow_Caption" xml:space="preserve">
+    <value>Copot instalasi aplikasi Android</value>
+  </data>
+  <data name="UninstallWindow_Version" xml:space="preserve">
+    <value>Versi {0}</value>
+  </data>
+  <data name="UninstallWindow_Close" xml:space="preserve">
+    <value>Tutup</value>
+  </data>
+  <data name="UninstallWindow_Busy" xml:space="preserve">
+    <value>Mencopot instalasi {0}</value>
+  </data>
+  <data name="UninstallWindow_BusyDetail" xml:space="preserve">
+    <value>Menghapus aplikasi dan datanya dari Android. Android dimulai terlebih dahulu jika tidak berjalan.</value>
+  </data>
+  <data name="UninstallWindow_DoneTitle" xml:space="preserve">
+    <value>Dicopot</value>
+  </data>
+  <data name="UninstallWindow_DoneText" xml:space="preserve">
+    <value>{0} telah dihapus dari Android.</value>
+  </data>
+  <data name="UninstallWindow_FailedTitle" xml:space="preserve">
+    <value>Tidak dicopot</value>
+  </data>
+  <data name="UninstallWindow_Refused" xml:space="preserve">
+    <value>{0} tidak dicopot: {1}.</value>
+  </data>
+  <data name="UninstallWindow_RefusedDetail" xml:space="preserve">
+    <value>{0} tidak dicopot: {1} ({2}).</value>
+  </data>
+  <data name="NavBackground.Content" xml:space="preserve">
+    <value>Berjalan di latar belakang</value>
+  </data>
+  <data name="BackgroundTitle.Text" xml:space="preserve">
+    <value>Berjalan di latar belakang</value>
+  </data>
+  <data name="BackgroundRefreshButton.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="BackgroundIntro.Text" xml:space="preserve">
+    <value>Aplikasi Android ini tetap berjalan setelah jendelanya ditutup, untuk memutar musik, mengunduh file, menjaga VPN, atau tugas lain.
+Masing-masing memiliki ikon di area pemberitahuan bilah tugas. Menghentikan aplikasi mengakhiri pekerjaannya dan membebaskan memorinya.</value>
+  </data>
+  <data name="BackgroundErrorBar.Title" xml:space="preserve">
+    <value>Aplikasi yang berjalan di latar belakang tidak dapat dibaca atau diubah</value>
+  </data>
+  <data name="BackgroundDoneBar.Title" xml:space="preserve">
+    <value>Selesai</value>
+  </data>
+  <data name="BackgroundAppsHeader.Text" xml:space="preserve">
+    <value>Aplikasi</value>
+  </data>
+  <data name="BackgroundNone.Text" xml:space="preserve">
+    <value>Tidak ada aplikasi yang berjalan di latar belakang.</value>
+  </data>
+  <data name="BackgroundOpenButton.Content" xml:space="preserve">
+    <value>Buka</value>
+  </data>
+  <data name="BackgroundStopButton.Content" xml:space="preserve">
+    <value>Hentikan</value>
+  </data>
+  <data name="BackgroundStoppingHeader.Text" xml:space="preserve">
+    <value>Menghentikan aplikasi</value>
+  </data>
+  <data name="BackgroundAskCard.Header" xml:space="preserve">
+    <value>Tanyakan sebelum menghentikan aplikasi dari area pemberitahuan</value>
+  </data>
+  <data name="BackgroundAskCard.Description" xml:space="preserve">
+    <value>Aktifkan lagi jika sebelumnya Anda memilih untuk tidak ditanya lagi.</value>
+  </data>
+  <data name="Background_Playing" xml:space="preserve">
+    <value>Memutar {0}</value>
+  </data>
+  <data name="Background_Paused" xml:space="preserve">
+    <value>Dijeda: {0}</value>
+  </data>
+  <data name="Background_Stopped" xml:space="preserve">
+    <value>{0} telah dihentikan.</value>
+  </data>
+  <data name="AppsResizable.Content" xml:space="preserve">
+    <value>Dapat diubah ukurannya</value>
+  </data>
+  <data name="AppsResizable.ToolTip" xml:space="preserve">
+    <value>Apakah Anda dapat mengubah ukuran dan memaksimalkan jendela aplikasi ini. Jika nonaktif, jendela tetap berukuran seperti saat dibuka.</value>
+  </data>
+  <data name="AppsStartSize.ToolTip" xml:space="preserve">
+    <value>Ukuran saat jendela aplikasi ini dibuka</value>
+  </data>
+  <data name="Apps_StartSize_Auto" xml:space="preserve">
+    <value>Terbuka dengan ukuran yang dipilih Android</value>
+  </data>
+  <data name="Apps_StartSize_PhonePortrait" xml:space="preserve">
+    <value>Ponsel, potret ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_PhoneLandscape" xml:space="preserve">
+    <value>Ponsel, lanskap ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletPortrait" xml:space="preserve">
+    <value>Tablet, potret ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletLandscape" xml:space="preserve">
+    <value>Tablet, lanskap ({0} × {1})</value>
+  </data>
+  <data name="Apps_WindowChanged" xml:space="preserve">
+    <value>Jendela {0} mengikuti pengaturan baru mulai dari jendela berikutnya yang dibuka.</value>
+  </data>
+  <data name="AppsDpiScaling.Name" xml:space="preserve">
+    <value>Penskalaan di monitor lain</value>
+  </data>
+  <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
+    <value>Siapa yang menskalakan aplikasi ini saat jendelanya berpindah ke monitor dengan skala lain.
+• Aplikasi: DSA menskalakan jendela saat diseret. Setelah dilepas, aplikasi menggambar ulang pada skala baru dan teks tetap tajam: Android membuat ulang layarnya sekali dengan status tetap, jadi ada jeda singkat.
+• Sistem: aplikasi tetap pada skalanya; DSA menskalakan jendela ke ukuran fisik sama tanpa membuat ulang aplikasi. Teks bisa sedikit buram.
+• Otomatis: Sistem untuk aplikasi yang rusak saat skalanya berubah selagi berjalan, seperti YouTube; Aplikasi untuk semua aplikasi lain.</value>
+  </data>
+  <data name="Apps_DpiScaling_Auto" xml:space="preserve">
+    <value>Penskalaan: otomatis</value>
+  </data>
+  <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
+    <value>Penskalaan: sistem (disarankan untuk aplikasi ini)</value>
+  </data>
+  <data name="Apps_DpiScaling_App" xml:space="preserve">
+    <value>Penskalaan dilakukan oleh: aplikasi</value>
+  </data>
+  <data name="Apps_DpiScaling_System" xml:space="preserve">
+    <value>Penskalaan dilakukan oleh: sistem</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
+    <value>Penskalaan dilakukan oleh: sistem (dipaksa)</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
+    <value>Penskalaan dilakukan oleh: sistem (dipaksa), belum tersedia</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
+    <value>Sistem (dipaksa) memberikan skala baru ke aplikasi tanpa memulai ulangnya, meskipun aplikasi tidak menyatakan dapat menanganinya.
+Belum tersedia: fitur ini memerlukan perubahan framework Android yang tidak ada di build ini, jadi kini berfungsi seperti Sistem.</value>
+  </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>Layar penuh</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>Tempat aplikasi ini tampil saat jelas meminta layar penuh, seperti tombol layar penuh pemutar video. F11 selalu mengalihkan layar penuh.</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>Bilah disembunyikan</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>Tempat aplikasi ini tampil saat menyembunyikan bilahnya tanpa meminta layar penuh, seperti feed video pendek.</value>
+  </data>
+  <data name="Apps_FullScreen_Default" xml:space="preserve">
+    <value>Ikuti bawaan</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>Di seluruh layar</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>Di dalam jendela</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>Layar penuh aplikasi</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>Tempat permintaan layar penuh aplikasi tampil, seperti tombol layar penuh video. Di seluruh layar, bilah judul muncul di tepi atas. Pilihan per aplikasi di halaman Aplikasi diutamakan.</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>Aplikasi yang menyembunyikan bilahnya</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>Tempat aplikasi tampil saat hanya menyembunyikan bilahnya, seperti feed video pendek.</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>Di seluruh layar</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>Di dalam jendela</value>
+  </data>
+  <data name="NavNetwork.Content" xml:space="preserve">
+    <value>Jaringan</value>
+  </data>
+  <data name="NetworkTitle.Text" xml:space="preserve">
+    <value>Jaringan</value>
+  </data>
+  <data name="NetworkStatusCard.Header" xml:space="preserve">
+    <value>Jaringan Android</value>
+  </data>
+  <data name="NetworkRefreshButton.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Network_ModeNat" xml:space="preserve">
+    <value>Terhubung melalui PC ini (NAT). Aplikasi Android melihatnya sebagai Wi-Fi, tanpa biaya data.</value>
+  </data>
+  <data name="Network_ModeAdvanced" xml:space="preserve">
+    <value>Terhubung ke jaringan PC ini sebagai perangkat tersendiri (jaringan lanjutan).</value>
+  </data>
+  <data name="Network_ModeOff" xml:space="preserve">
+    <value>Android tidak berjalan, jadi belum memiliki jaringan.</value>
+  </data>
+  <data name="Network_ModeUnknown" xml:space="preserve">
+    <value>Layanan DSA tidak melaporkan jaringan. Perbarui DSA untuk melihatnya.</value>
+  </data>
+  <data name="Network_None" xml:space="preserve">
+    <value>Tidak ada</value>
+  </data>
+  <data name="Network_DnsHost" xml:space="preserve">
+    <value>Dijawab oleh resolver PC ini, jadi file hosts, VPN, dan filter DNS-nya berlaku untuk aplikasi Android.</value>
+  </data>
+  <data name="Network_DnsFallback" xml:space="preserve">
+    <value>Resolver PC ini tidak menjawab, jadi Android bertanya ke server DNS jaringan: {0}</value>
+  </data>
+  <data name="NetworkAddressLabel.Text" xml:space="preserve">
+    <value>Alamat</value>
+  </data>
+  <data name="NetworkDnsLabel.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="NetworkGatewayLabel.Text" xml:space="preserve">
+    <value>Gateway</value>
+  </data>
+  <data name="NetworkProblemBar.Title" xml:space="preserve">
+    <value>Jaringan lanjutan tidak digunakan</value>
+  </data>
+  <data name="NetworkAdvancedHeader.Text" xml:space="preserve">
+    <value>Lanjutan</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Header" xml:space="preserve">
+    <value>Jaringan lanjutan</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Description" xml:space="preserve">
+    <value>Android masuk ke jaringan PC ini sebagai perangkat sendiri: perangkat lain dan aplikasi Android saling menjangkau. Nonaktif secara bawaan.
+Program di PC ini selalu dapat menjangkau server di Android pada alamat di atas.</value>
+  </data>
+  <data name="NetworkRestartBar.Title" xml:space="preserve">
+    <value>Mulai ulang Android untuk menerapkan</value>
+  </data>
+  <data name="NetworkRestartBar.Message" xml:space="preserve">
+    <value>Perubahan berlaku saat Android dimulai berikutnya. Hentikan Android di halaman Umum, lalu buka aplikasi.</value>
+  </data>
+  <data name="NetworkCertificatesHeader.Text" xml:space="preserve">
+    <value>Sertifikat tepercaya</value>
+  </data>
+  <data name="HostCertificatesCard.Header" xml:space="preserve">
+    <value>Gunakan sertifikat root yang ditambahkan ke PC ini</value>
+  </data>
+  <data name="HostCertificatesCard.Description" xml:space="preserve">
+    <value>Aplikasi Android memercayai sertifikat root tambahan di PC ini, seperti milik perusahaan Anda atau program keamanan. Aktif secara bawaan.
+Sertifikat root bawaan Windows tidak dicantumkan. Perubahan langsung berlaku.</value>
+  </data>
+  <data name="CertificatesNone.Text" xml:space="preserve">
+    <value>Tidak ditemukan sertifikat root tambahan di PC ini.</value>
+  </data>
+  <data name="Certificate_IssuedBy" xml:space="preserve">
+    <value>Diterbitkan oleh {0}</value>
+  </data>
+  <data name="Certificate_SourceMachine" xml:space="preserve">
+    <value>Otoritas Sertifikasi Root Tepercaya PC ini</value>
+  </data>
+  <data name="Certificate_SourceMachineGroupPolicy" xml:space="preserve">
+    <value>Otoritas Sertifikasi Root Tepercaya PC ini, diatur oleh Kebijakan Grup</value>
+  </data>
+  <data name="Certificate_SourceMachineEnterprise" xml:space="preserve">
+    <value>Otoritas Sertifikasi Root Tepercaya PC ini, diatur oleh organisasi Anda</value>
+  </data>
+  <data name="Certificate_SourceUser" xml:space="preserve">
+    <value>Otoritas Sertifikasi Root Tepercaya Anda</value>
+  </data>
+  <data name="Certificate_SourceUserGroupPolicy" xml:space="preserve">
+    <value>Otoritas Sertifikasi Root Tepercaya Anda, diatur oleh Kebijakan Grup</value>
+  </data>
+  <data name="Certificate_SourceAdmin" xml:space="preserve">
+    <value>Ditambahkan oleh administrator PC ini</value>
+  </data>
+  <data name="Certificate_SourceSystem" xml:space="preserve">
+    <value>Ditambahkan ke penyimpanan sertifikat sistem</value>
+  </data>
+  <data name="BackupHeader.Text" xml:space="preserve">
+    <value>Cadangan</value>
+  </data>
+  <data name="BackupUnavailableBar.Title" xml:space="preserve">
+    <value>Cadangan tidak dapat digunakan saat ini</value>
+  </data>
+  <data name="BackupErrorBar.Title" xml:space="preserve">
+    <value>Tindakan itu tidak berhasil</value>
+  </data>
+  <data name="BackupResultBar.Title" xml:space="preserve">
+    <value>Selesai</value>
+  </data>
+  <data name="BackupCard.Header" xml:space="preserve">
+    <value>Cadangkan data aplikasi</value>
+  </data>
+  <data name="BackupCard.Description" xml:space="preserve">
+    <value>Android mencadangkan data aplikasinya ke folder pengguna Anda, dienkripsi dengan kunci yang disimpan Windows untuk Anda.
+Pulihkan setelah reset data, atau di PC lain dengan kunci pemulihan.</value>
+  </data>
+  <data name="BackupNowButton.Content" xml:space="preserve">
+    <value>Cadangkan sekarang</value>
+  </data>
+  <data name="BackupRestoreButton.Content" xml:space="preserve">
+    <value>Pulihkan</value>
+  </data>
+  <data name="BackupRestoreConfirm.Title" xml:space="preserve">
+    <value>Pulihkan data aplikasi dari cadangan?</value>
+  </data>
+  <data name="BackupRestoreConfirm.Action" xml:space="preserve">
+    <value>Pulihkan</value>
+  </data>
+  <data name="RecoveryKeyCard.Header" xml:space="preserve">
+    <value>Kunci pemulihan</value>
+  </data>
+  <data name="RecoveryKeyCard.Description" xml:space="preserve">
+    <value>Kunci pemulihan membuka cadangan Anda di PC lain, atau setelah Windows diinstal ulang.
+Tanpa kunci ini, hanya akun Windows ini di PC ini yang dapat membaca cadangan.</value>
+  </data>
+  <data name="RecoveryKeyShowButton.Content" xml:space="preserve">
+    <value>Tampilkan kunci pemulihan</value>
+  </data>
+  <data name="RecoveryKeyHideButton.Content" xml:space="preserve">
+    <value>Sembunyikan</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Header" xml:space="preserve">
+    <value>Gunakan kunci pemulihan</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Description" xml:space="preserve">
+    <value>Untuk memulihkan cadangan dari PC lain, salin folder DSA Backup-nya ke folder pengguna Anda dan masukkan kunci pemulihannya.</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Placeholder" xml:space="preserve">
+    <value>Kunci pemulihan</value>
+  </data>
+  <data name="UseRecoveryKeyButton.Content" xml:space="preserve">
+    <value>Gunakan kunci</value>
+  </data>
+  <data name="Backup_NoService" xml:space="preserve">
+    <value>Layanan DSA tidak memberi tahu status cadangan Anda. Buka halaman ini lagi sebentar lagi.</value>
+  </data>
+  <data name="Backup_Unavailable" xml:space="preserve">
+    <value>Folder cadangan atau kuncinya tidak dapat digunakan saat ini.</value>
+  </data>
+  <data name="Backup_Folder" xml:space="preserve">
+    <value>Folder: {0}</value>
+  </data>
+  <data name="Backup_Last" xml:space="preserve">
+    <value>Cadangan terakhir: {0}</value>
+  </data>
+  <data name="Backup_Never" xml:space="preserve">
+    <value>belum pernah</value>
+  </data>
+  <data name="Backup_Apps" xml:space="preserve">
+    <value>Aplikasi dalam cadangan: {0} ({1})</value>
+  </data>
+  <data name="Backup_LastError" xml:space="preserve">
+    <value>Masalah terakhir: {0}</value>
+  </data>
+  <data name="Backup_Done" xml:space="preserve">
+    <value>Data {0} aplikasi telah dicadangkan.</value>
+  </data>
+  <data name="Backup_DoneSome" xml:space="preserve">
+    <value>Data {0} aplikasi telah dicadangkan; {1} tidak dapat dicadangkan.</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>Data {0} aplikasi telah dipulihkan dan {1} aplikasi diinstal.</value>
+  </data>
+  <data name="Backup_RestoredSome" xml:space="preserve">
+    <value>Data {0} aplikasi telah dipulihkan dan {1} aplikasi diinstal; {2} tidak dapat dipulihkan.</value>
+  </data>
+  <data name="Backup_RestoreWarning" xml:space="preserve">
+    <value>Setiap aplikasi dalam cadangan mendapat data dari cadangan sebagai pengganti datanya saat ini.
+
+• Aplikasi yang tidak ada akan diinstal lagi.
+• Android dimulai jika tidak berjalan.</value>
+  </data>
+  <data name="Backup_KeyAdvice" xml:space="preserve">
+    <value>Catat kunci atau simpan di pengelola kata sandi, jauh dari PC ini. Siapa pun yang punya kunci dan folder cadangan Anda dapat membacanya.</value>
+  </data>
+  <data name="Backup_KeyEmpty" xml:space="preserve">
+    <value>Masukkan kunci pemulihan terlebih dahulu.</value>
+  </data>
+  <data name="Backup_KeyUsed" xml:space="preserve">
+    <value>Kunci pemulihan disimpan sebagai kunci cadangan Anda. Folder cadangan yang dibuat dengannya kini dapat dipulihkan di sini.</value>
+  </data>
+  <data name="BackupSwitchCard.Header" xml:space="preserve">
+    <value>Cadangkan data aplikasi ke PC ini</value>
+  </data>
+  <data name="BackupSwitchCard.Description" xml:space="preserve">
+    <value>Menyimpan salinan kedua terenkripsi data pengguna aplikasi Android di PC ini, untuk dipulihkan setelah reset data atau di PC lain.
+Nonaktif hingga Anda mengaktifkannya.</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>Pencadangan nonaktif. Tidak ada cadangan yang dibuat, dan tidak ada data aplikasi yang disimpan di PC ini.</value>
+  </data>
+  <data name="Backup_OffKept" xml:space="preserve">
+    <value>Pencadangan nonaktif. Cadangan sebelumnya dari {0} aplikasi ({1}) masih disimpan di folder DSA Backup Anda.</value>
+  </data>
+  <data name="Backup_DeleteQuestion" xml:space="preserve">
+    <value>Cadangan {0} aplikasi ({1}) masih disimpan di PC ini.
+
+Hapus juga cadangan beserta kuncinya, atau simpan untuk dipulihkan nanti?</value>
+  </data>
+  <data name="BackupOffConfirm.Title" xml:space="preserve">
+    <value>Matikan pencadangan</value>
+  </data>
+  <data name="BackupOffConfirm.Delete" xml:space="preserve">
+    <value>Hapus cadangan</value>
+  </data>
+  <data name="BackupOffConfirm.Keep" xml:space="preserve">
+    <value>Simpan</value>
+  </data>
+  <data name="Backup_TurnedOn" xml:space="preserve">
+    <value>Pencadangan aktif. Mulai sekarang Android mencadangkan data aplikasinya ke PC ini.</value>
+  </data>
+  <data name="Backup_TurnedOff" xml:space="preserve">
+    <value>Pencadangan nonaktif. Cadangan yang sudah dibuat tetap disimpan.</value>
+  </data>
+  <data name="Backup_TurnedOffDeleted" xml:space="preserve">
+    <value>Pencadangan nonaktif, serta cadangan dan kuncinya telah dihapus.</value>
+  </data>
+  <data name="KeyProtectionCard.Header" xml:space="preserve">
+    <value>Perlindungan kunci Android</value>
+  </data>
+  <data name="KeyProtection_None" xml:space="preserve">
+    <value>Kunci Android mendapat perlindungannya saat Android pertama kali dimulai.</value>
+  </data>
+  <data name="KeyProtection_Tpm" xml:space="preserve">
+    <value>Disegel oleh TPM PC ini. Salinan disk Android tidak dapat membuka kunci aplikasi atau penyimpanan terenkripsi Android di tempat lain.</value>
+  </data>
+  <data name="KeyProtection_Dpapi" xml:space="preserve">
+    <value>Disimpan Windows hanya untuk akun Anda, karena tidak ada TPM yang berfungsi. Salinan disk Android tak bisa membuka kunci tanpa akun Anda.
+Setelah TPM berfungsi, DSA menyegel kunci dengannya.</value>
+  </data>
+  <data name="KeyProtection_Hardware" xml:space="preserve">
+    <value>Disegel oleh {0}.</value>
+  </data>
+  <data name="KeyProtection_Store" xml:space="preserve">
+    <value>Disimpan oleh {0}.</value>
+  </data>
+  <data name="KeyProtection_Why" xml:space="preserve">
+    <value>Alasan tidak memakai TPM: {0}</value>
+  </data>
+  <data name="KeyProblemBar.Title" xml:space="preserve">
+    <value>Kunci Android tidak dapat dibuka</value>
+  </data>
+  <data name="ResetDataHeader.Text" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="ResetDataCard.Header" xml:space="preserve">
+    <value>Reset data Android</value>
+  </data>
+  <data name="ResetDataCard.Description" xml:space="preserve">
+    <value>Menghapus setiap aplikasi yang Anda instal, akun Anda, dan semua data aplikasi, sehingga Android dimulai seperti saat pertama diinstal.
+Image Android dan pengaturan ini tetap ada.</value>
+  </data>
+  <data name="ResetDataButton.Content" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="ResetDataConfirm.Title" xml:space="preserve">
+    <value>Reset data Android?</value>
+  </data>
+  <data name="ResetDataConfirm.Action" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="ResetData_Warning" xml:space="preserve">
+    <value>Ini menghapus dari Android:
+• setiap aplikasi yang Anda instal
+• akun tempat Anda masuk
+• data setiap aplikasi
+
+Android berhenti sekarang, dan dimulai berikutnya seperti saat pertama diinstal. Image Android dan pengaturan DSA tetap ada.
+
+Tindakan ini tidak dapat dibatalkan.</value>
+  </data>
+  <data name="ResetDoneBar.Title" xml:space="preserve">
+    <value>Data Android telah direset</value>
+  </data>
+  <data name="ResetDoneBar.Message" xml:space="preserve">
+    <value>Aplikasi berikutnya yang Anda buka memulai Android seperti saat pertama diinstal.</value>
+  </data>
+  <data name="Toggle.On" xml:space="preserve">
+    <value>Aktif</value>
+  </data>
+  <data name="Toggle.Off" xml:space="preserve">
+    <value>Nonaktif</value>
+  </data>
+  <data name="AndroidRunningHeader.Text" xml:space="preserve">
+    <value>Berjalan sekarang</value>
+  </data>
+  <data name="Android_Major" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="Android_Unknown" xml:space="preserve">
+    <value>Tidak diketahui</value>
+  </data>
+  <data name="Android_Supported" xml:space="preserve">
+    <value>Versi yang didukung: Android {0}</value>
+  </data>
+  <data name="Android_Switching" xml:space="preserve">
+    <value>Android {0} dipilih. Versi ini diunduh sekarang dan digunakan saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="AndroidSwitchingBar.Title" xml:space="preserve">
+    <value>Mengubah versi Android</value>
+  </data>
+  <data name="AndroidBuildCard.Header" xml:space="preserve">
+    <value>Build</value>
+  </data>
+  <data name="AndroidPatchCard.Header" xml:space="preserve">
+    <value>Tingkat patch keamanan</value>
+  </data>
+  <data name="AndroidChooseHeader.Text" xml:space="preserve">
+    <value>Versi Android</value>
+  </data>
+  <data name="AndroidChooseCard.Header" xml:space="preserve">
+    <value>Versi yang digunakan</value>
+  </data>
+  <data name="AndroidChooseCard.Description" xml:space="preserve">
+    <value>DSA mendukung dua versi Android terbaru. Beberapa aplikasi hanya berjalan di salah satunya.</value>
+  </data>
+  <data name="Android_ChoiceLatest" xml:space="preserve">
+    <value>Selalu yang terbaru (saat ini Android {0})</value>
+  </data>
+  <data name="Android_ChoiceMajor" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="AndroidApplyButton.Content" xml:space="preserve">
+    <value>Ubah</value>
+  </data>
+  <data name="AndroidChooseNote.Text" xml:space="preserve">
+    <value>Setiap pengguna komputer ini menjalankan versi Android yang sama, jadi mengubahnya memerlukan administrator.
+Versi terpilih terus mendapat pembaruan keamanan. Saat dukungannya berakhir, DSA pindah ke versi berikutnya dan aplikasi Anda tetap ada.</value>
+  </data>
+  <data name="AndroidUpConfirm.Title" xml:space="preserve">
+    <value>Pindah ke Android yang lebih baru?</value>
+  </data>
+  <data name="AndroidUpConfirm.Body" xml:space="preserve">
+    <value>Android {0} diunduh dan digunakan mulai saat Android dimulai berikutnya. Aplikasi Anda dan datanya ikut pindah.
+
+Kembali lagi nanti akan menghapus data.</value>
+  </data>
+  <data name="AndroidDownConfirm.Title" xml:space="preserve">
+    <value>Hapus data Android untuk pindah ke versi lama?</value>
+  </data>
+  <data name="AndroidDownConfirm.Action" xml:space="preserve">
+    <value>Hapus data dan ubah</value>
+  </data>
+  <data name="Android_DownWarning" xml:space="preserve">
+    <value>Android {0} lebih lama daripada Android {1} yang berjalan sekarang, dan tidak dapat membaca data yang ditulis versi lebih baru.
+
+Pindah akan menghapus data Android setiap pengguna komputer ini:
+• setiap aplikasi yang mereka instal
+• akun tempat mereka masuk
+• data setiap aplikasi
+
+Android setiap pengguna lalu dimulai seperti saat pertama diinstal. Pengaturan DSA tetap ada.
+
+Tindakan ini tidak dapat dibatalkan.</value>
+  </data>
+  <data name="ApkWindow_AbiWarningTitle" xml:space="preserve">
+    <value>Aplikasi ini mungkin tidak berjalan di PC ini</value>
+  </data>
+  <data name="ApkWindow_InstalledTitle" xml:space="preserve">
+    <value>Sudah terinstal</value>
+  </data>
+  <data name="ApkWindow_DowngradeTitle" xml:space="preserve">
+    <value>Versi yang lebih baru sudah terinstal</value>
+  </data>
+  <data name="ApkWindow_SignatureTitle" xml:space="preserve">
+    <value>Ditandatangani dengan kunci lain</value>
+  </data>
+  <data name="AppsRunAsArm.Content" xml:space="preserve">
+    <value>Jalankan sebagai ARM</value>
+  </data>
+  <data name="Apps_RunAsArm_system-app" xml:space="preserve">
+    <value>Aplikasi yang merupakan bagian dari Android berjalan seperti saat diinstal Android.</value>
+  </data>
+  <data name="Apps_RunAsArm_no-arm-libraries" xml:space="preserve">
+    <value>Tidak ada APK aplikasi ini di perangkat yang berisi kode ARM-nya.</value>
+  </data>
+  <data name="Apps_RunAsArm_translation-off" xml:space="preserve">
+    <value>Terjemahan ARM tidak aktif. Aktifkan di Aplikasi ARM dan mulai ulang Android.</value>
+  </data>
+  <data name="Apps_RunAsArm_arm-only" xml:space="preserve">
+    <value>Aplikasi ini hanya memiliki kode ARM, jadi selalu berjalan sebagai ARM.</value>
+  </data>
+  <data name="Apps_RunAsArm_unknown" xml:space="preserve">
+    <value>Versi DSA ini tidak dapat mengetahui apakah aplikasi dapat berjalan sebagai ARM.</value>
+  </data>
+  <data name="AppsRunAsArmEraseTitle" xml:space="preserve">
+    <value>Hapus data {0}?</value>
+  </data>
+  <data name="AppsRunAsArmEraseBody" xml:space="preserve">
+    <value>Android tidak dapat mengubah cara {0} berjalan sambil mempertahankan datanya.
+
+Menginstalnya lagi akan menghapus datanya: info masuk, pengaturan, dan file yang disimpannya sendiri.</value>
+  </data>
+  <data name="AppsRunAsArmEraseButton" xml:space="preserve">
+    <value>Hapus dan instal lagi</value>
+  </data>
+  <data name="Apps_RunAsArmKept" xml:space="preserve">
+    <value>{0} dibiarkan seperti semula, beserta datanya.</value>
+  </data>
+  <data name="Apps_RunAsArmOn" xml:space="preserve">
+    <value>{0} kini berjalan sebagai ARM.</value>
+  </data>
+  <data name="Apps_RunAsArmOff" xml:space="preserve">
+    <value>{0} kini menjalankan kode x86_64-nya.</value>
+  </data>
+  <data name="Apps_RunAsArmNotChanged" xml:space="preserve">
+    <value>{0} tidak diinstal lagi: {1} ({2})</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_not-installed" xml:space="preserve">
+    <value>aplikasi sudah tidak terinstal</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_system-app" xml:space="preserve">
+    <value>aplikasi adalah bagian dari Android</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_no-libraries" xml:space="preserve">
+    <value>APK-nya di perangkat tidak berisi kode untuk itu</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_translation-off" xml:space="preserve">
+    <value>terjemahan ARM tidak aktif</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_data-would-be-erased" xml:space="preserve">
+    <value>datanya akan terhapus</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_other" xml:space="preserve">
+    <value>Android menolak</value>
+  </data>
+  <data name="ApkWindow_BundleTitle" xml:space="preserve">
+    <value>Bundel split APK</value>
+  </data>
+  <data name="ApkWindow_BundleSummary" xml:space="preserve">
+    <value>{0} terdiri dari beberapa APK. {1} APK yang dibutuhkan PC ini diinstal bersama, total {2}.</value>
+  </data>
+  <data name="ApkWindow_BundleSummaryObb" xml:space="preserve">
+    <value>{0} terdiri dari beberapa APK. {1} APK yang dibutuhkan PC ini diinstal bersama file ekspansinya, total {2}.</value>
+  </data>
+  <data name="ApkWindow_FactApks" xml:space="preserve">
+    <value>APK</value>
+  </data>
+  <data name="ApkWindow_ApksValue" xml:space="preserve">
+    <value>{0} (APK dasar dan {1} split)</value>
+  </data>
+  <data name="ApkWindow_FactObbs" xml:space="preserve">
+    <value>File ekspansi</value>
+  </data>
+  <data name="Install_Reason_app-bundle" xml:space="preserve">
+    <value>ini Android App Bundle, untuk diunggah ke toko aplikasi. Dapatkan aplikasi sebagai APK, atau bundel .xapk, .apks, atau .apkm.</value>
+  </data>
+  <data name="Install_Reason_encrypted-bundle" xml:space="preserve">
+    <value>bundel dienkripsi, jadi APK-nya tidak dapat dibaca. Dapatkan aplikasi sebagai APK, atau sebagai bundel yang lebih baru.</value>
+  </data>
+  <data name="Install_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>split APK dari bundel ditandatangani dengan kunci yang berbeda dari APK dasarnya, jadi Android akan menolaknya.</value>
+  </data>
+  <data name="Install_Reason_invalid-bundle" xml:space="preserve">
+    <value>bundel bukan satu aplikasi yang dapat diinstal Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_app-bundle" xml:space="preserve">
+    <value>Ini Android App Bundle, untuk diunggah ke toko aplikasi. Dapatkan aplikasi sebagai APK, atau bundel .xapk, .apks, atau .apkm.</value>
+  </data>
+  <data name="ApkWindow_Reason_encrypted-bundle" xml:space="preserve">
+    <value>Bundel dienkripsi, jadi APK-nya tidak dapat dibaca. Dapatkan aplikasi sebagai APK, atau sebagai bundel yang lebih baru.</value>
+  </data>
+  <data name="ApkWindow_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>Split APK dari bundel ditandatangani dengan kunci yang berbeda dari APK dasarnya, jadi Android akan menolaknya.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-bundle" xml:space="preserve">
+    <value>Bundel bukan satu aplikasi yang dapat diinstal Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_translation-off" xml:space="preserve">
+    <value>Aplikasi hanya berjalan sebagai kode ARM (arm64-v8a), dan terjemahan ARM tidak aktif.
+Aktifkan di Aplikasi ARM, mulai ulang Android, lalu instal aplikasi lagi.</value>
+  </data>
+  <data name="UpdatesAndroidHeader.Text" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="UpdatesProgramHeader.Text" xml:space="preserve">
+    <value>DSA</value>
+  </data>
+  <data name="AndroidFollowsCard.Header" xml:space="preserve">
+    <value>Versi yang diikuti</value>
+  </data>
+  <data name="Android_FollowsLatest" xml:space="preserve">
+    <value>Versi terbaru yang didukung (saat ini Android {0})</value>
+  </data>
+  <data name="Android_FollowsMajor" xml:space="preserve">
+    <value>Android {0} dan pembaruan keamanannya</value>
+  </data>
+  <data name="AndroidUpdateCard.Header" xml:space="preserve">
+    <value>Pembaruan Android</value>
+  </data>
+  <data name="Android_UpToDate" xml:space="preserve">
+    <value>Tidak ada pembaruan Android tertunda. DSA memeriksa tiap hari dan memulai ulang Android ke pembaruan saat tak ada jendela aplikasi terbuka.</value>
+  </data>
+  <data name="AndroidCheckButton.Content" xml:space="preserve">
+    <value>Periksa sekarang</value>
+  </data>
+  <data name="Android_RestartPending" xml:space="preserve">
+    <value>Android {0} telah diunduh. Mulai ulang Android untuk menggunakannya sekarang.</value>
+  </data>
+  <data name="AndroidRestartButton.Content" xml:space="preserve">
+    <value>Mulai ulang sekarang</value>
+  </data>
+  <data name="AndroidRestartConfirm.Title" xml:space="preserve">
+    <value>Mulai ulang Android sekarang?</value>
+  </data>
+  <data name="AndroidRestartConfirm.Body" xml:space="preserve">
+    <value>Android dimulai ulang ke Android {0}.
+
+Jendela aplikasinya tertutup. Buka lagi aplikasinya setelah Android dimulai.</value>
+  </data>
+  <data name="ImageAutoRestartCard.Header" xml:space="preserve">
+    <value>Mulai ulang Android ke pembaruan secara otomatis</value>
+  </data>
+  <data name="ImageAutoRestartCard.Description" xml:space="preserve">
+    <value>Bila tak ada jendela aplikasi terbuka, Android langsung dimulai ulang ke pembaruan. Jika ada, DSA bertanya atau menunggu jendela ditutup.
+Aktif secara bawaan. Jika nonaktif, pembaruan dipakai saat Anda memulai Android berikutnya.</value>
+  </data>
+  <data name="IdentitySpecsCard.Header" xml:space="preserve">
+    <value>Spesifikasi perangkat</value>
+  </data>
+  <data name="IdentityCopyButton.Content" xml:space="preserve">
+    <value>Salin</value>
+  </data>
+  <data name="IdentityAndroidHeader.Text" xml:space="preserve">
+    <value>Yang dilaporkan Android</value>
+  </data>
+  <data name="Identity_NotReported" xml:space="preserve">
+    <value>Tidak dilaporkan</value>
+  </data>
+  <data name="AppsRoot.Name" xml:space="preserve">
+    <value>Akses root</value>
+  </data>
+  <data name="Apps_Root_off" xml:space="preserve">
+    <value>Root: tidak diizinkan</value>
+  </data>
+  <data name="Apps_Root_ask" xml:space="preserve">
+    <value>Root: tanyakan setiap kali</value>
+  </data>
+  <data name="Apps_Root_remember" xml:space="preserve">
+    <value>Root: ingat (tanpa bertanya)</value>
+  </data>
+  <data name="Apps_RootGroup" xml:space="preserve">
+    <value>Berbagi ID pengguna dengan {0}. Android tidak dapat membedakan aplikasi ini, jadi semuanya berbagi satu pengaturan akses root.
+Mengubahnya di sini mengubahnya untuk semua. Jika salah satunya Tidak diizinkan, tidak satu pun dapat memakai su.</value>
+  </data>
+  <data name="Apps_RootTip_unavailable" xml:space="preserve">
+    <value>Akses root nonaktif untuk PC ini. Administrator dapat mengaktifkannya di Lanjutan.</value>
+  </data>
+  <data name="Apps_RootTip_unknown" xml:space="preserve">
+    <value>Layanan DSA tidak melaporkan tingkat root aplikasi ini. Perbarui DSA untuk memilihnya di sini.</value>
+  </data>
+  <data name="Apps_RootNotChanged" xml:space="preserve">
+    <value>Tingkat root {0} tidak diubah: {1}</value>
+  </data>
+  <data name="Apps_RootSet_off" xml:space="preserve">
+    <value>{0} tidak dapat memakai root lagi. su hilang untuknya mulai saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="Apps_RootSet_ask" xml:space="preserve">
+    <value>{0} kini meminta izin administrator PC ini tiap kali memakai su. Jika su belum terlihat, su tampil saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="Apps_RootSet_remember" xml:space="preserve">
+    <value>{0} kini memakai su tanpa bertanya. Jika su belum terlihat, su tampil saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="AppsRootOffBar.Title" xml:space="preserve">
+    <value>Akses root nonaktif</value>
+  </data>
+  <data name="AppsRootOffBar.Message" xml:space="preserve">
+    <value>Tak ada aplikasi yang dapat memakai su. Administrator PC ini dapat mengaktifkan root di Lanjutan, lalu pilih tingkat tiap aplikasi di sini.</value>
+  </data>
+  <data name="AppsRootNote.Text" xml:space="preserve">
+    <value>Akses root:
+• Tidak diizinkan menyembunyikan su dari aplikasi.
+• Tanyakan setiap kali menampilkan prompt administrator dengan nama aplikasi untuk setiap permintaan. Persetujuan berlaku 15 menit.
+• Ingat menyetujui tanpa bertanya, jadi memilihnya memerlukan persetujuan administrator.</value>
+  </data>
+  <data name="RootHeader.Text" xml:space="preserve">
+    <value>Akses root</value>
+  </data>
+  <data name="RootElevationCard.Header" xml:space="preserve">
+    <value>Izinkan aplikasi Android meminta root</value>
+  </data>
+  <data name="RootElevationCard.Description" xml:space="preserve">
+    <value>Dengan izin administrator, aplikasi yang diizinkan di halaman Aplikasi dapat menjalankan perintah root, seperti sudo. Bawaannya nonaktif.
+Image Android, properti build-nya, dan SELinux tetap seperti semula.</value>
+  </data>
+  <data name="RootElevationAdminReason.Text" xml:space="preserve">
+    <value>Hanya administrator yang dapat mengubah ini, karena berlaku untuk setiap pengguna PC ini.
+Gunakan Ubah sebagai administrator, dan Windows akan meminta izin.</value>
+  </data>
+  <data name="RootElevationRestartBar.Title" xml:space="preserve">
+    <value>Mulai ulang Android untuk menerapkan</value>
+  </data>
+  <data name="RootElevationRestartBar.Message" xml:space="preserve">
+    <value>Perubahan akses root berlaku saat Android dimulai berikutnya. Hentikan Android di halaman Umum, lalu buka aplikasi.</value>
+  </data>
+  <data name="RootLogCard.Header" xml:space="preserve">
+    <value>Tempat permintaan dicatat</value>
+  </data>
+  <data name="RootElevation_LogAt" xml:space="preserve">
+    <value>Setiap permintaan disimpan di log layanan beserta aplikasi, waktu, status persetujuan, dan perintahnya: {0}</value>
+  </data>
+  <data name="RootElevation_LogUnknown" xml:space="preserve">
+    <value>Setiap permintaan disimpan di log layanan beserta aplikasi, waktu, status persetujuan, dan perintahnya.</value>
+  </data>
+  <data name="RootNote.Text" xml:space="preserve">
+    <value>Pilih tingkat tiap aplikasi di halaman Aplikasi. Setiap pengguna memilih untuk aplikasi di Android miliknya sendiri.</value>
+  </data>
+  <data name="AppsAdbShell.Text" xml:space="preserve">
+    <value>adb shell</value>
+  </data>
+  <data name="WidevineHeader.Text" xml:space="preserve">
+    <value>Konten yang dilindungi</value>
+  </data>
+  <data name="WidevineCard.Header" xml:space="preserve">
+    <value>Widevine</value>
+  </data>
+  <data name="WidevineCard.Description" xml:space="preserve">
+    <value>Memungkinkan aplikasi streaming memutar video yang dilindungi. Berlaku saat Android dimulai berikutnya.
+Mengunduh sekitar 2 GB dari Google di bawah Android SDK License, hanya menyimpan Widevine, dan menghapus sisanya.</value>
+  </data>
+  <data name="WidevineInstallButton.Content" xml:space="preserve">
+    <value>Dapatkan</value>
+  </data>
+  <data name="WidevineConfirm.Title" xml:space="preserve">
+    <value>Dapatkan Widevine dari Google?</value>
+  </data>
+  <data name="WidevineConfirm.Action" xml:space="preserve">
+    <value>Setuju dan unduh</value>
+  </data>
+  <data name="Widevine_Notice" xml:space="preserve">
+    <value>DSA mengunduh image emulator Android untuk versi Android ini dari Google dan hanya mengambil modul Widevine-nya, tanpa diubah.
+
+• Unduhan: sekitar 2 GB, dihapus setelahnya.
+• Sumber: {0}
+• Ketentuan: Widevine adalah perangkat lunak Google di bawah Android SDK License ({1}). Dengan mengunduhnya, Anda menyetujuinya.
+• Kualitas: tingkat keamanan L3, jadi layanan streaming mengirim paling tinggi definisi standar (SD).
+• Widevine berfungsi saat Android dimulai berikutnya.
+
+DSA tidak menyertakan atau meneruskan Widevine.</value>
+  </data>
+  <data name="WidevineInstallingBar.Title" xml:space="preserve">
+    <value>Mendapatkan Widevine</value>
+  </data>
+  <data name="WidevineInstallingBar.Message" xml:space="preserve">
+    <value>Mengunduh sekitar 2 GB dari Google dan mengambil Widevine. Proses ini memerlukan beberapa menit.</value>
+  </data>
+  <data name="WidevineRestartBar.Title" xml:space="preserve">
+    <value>Mulai ulang Android untuk menerapkan</value>
+  </data>
+  <data name="WidevineRestartBar.Message" xml:space="preserve">
+    <value>Android menggunakan perubahan ini saat dimulai berikutnya.</value>
+  </data>
+  <data name="WidevineQualityCard.Header" xml:space="preserve">
+    <value>Hanya definisi standar</value>
+  </data>
+  <data name="Widevine_Quality" xml:space="preserve">
+    <value>Widevine di sini memakai tingkat keamanan L3, jadi layanan streaming mengirim paling tinggi definisi standar (SD).
+Untuk definisi tinggi, gunakan browser atau aplikasi komputer ini sendiri.</value>
+  </data>
+  <data name="WidevineRemoveCard.Header" xml:space="preserve">
+    <value>Hapus Widevine</value>
+  </data>
+  <data name="WidevineRemoveCard.Description" xml:space="preserve">
+    <value>Menghapus modul dan sertifikat perangkat yang disimpannya, mulai saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="WidevineRemoveButton.Content" xml:space="preserve">
+    <value>Hapus</value>
+  </data>
+  <data name="WidevineTermsLink.Content" xml:space="preserve">
+    <value>Android SDK License</value>
+  </data>
+  <data name="Widevine_NotInstalled" xml:space="preserve">
+    <value>Tidak terinstal.</value>
+  </data>
+  <data name="Widevine_Installed" xml:space="preserve">
+    <value>Terinstal: dari image Google {0} untuk Android {1} ({2}).</value>
+  </data>
+  <data name="Widevine_InstalledPending" xml:space="preserve">
+    <value>Terinstal: dari image Google {0} untuk Android {1} ({2}). Digunakan mulai saat Android dimulai berikutnya.</value>
+  </data>
+  <data name="Widevine_RemovedPending" xml:space="preserve">
+    <value>Dihapus. Android tetap menggunakannya hingga dimulai berikutnya.</value>
+  </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}. {1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}, {1}, {2}: {3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>{0} catatan terlewat</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>Prioritas terendah yang ditampilkan</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>Memuat</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>Disalin</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>Tampilkan atau sembunyikan navigasi</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>Tutup</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>Minimalkan</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>Maksimalkan</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>Pulihkan</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>Bantuan</value>
+  </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>Instal {0}?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>Nama Paket:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>Penerbit:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>Versi:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>Sumber:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>Kemampuan ({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>Selengkapnya</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>Lebih sedikit</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} adalah bundel split APK yang tidak dapat diinstal: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} adalah bundel split APK yang tidak dapat dibaca, jadi tidak dapat diinstal.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} adalah Android App Bundle. App Bundle adalah format publikasi untuk toko aplikasi dan tidak dapat diinstal begitu saja.
+Membuat APK darinya berarti menandatanganinya dengan kunci lain, dan aplikasi tidak lagi mendapat pembaruan dari sumbernya.
+Dapatkan aplikasi sebagai APK, atau bundel .xapk, .apks, atau .apkm.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} adalah bundel terenkripsi, APK-nya tidak dapat dibaca. Sebagian .apkm lama seperti ini, hanya bisa dibuka aplikasi pembuatnya.
+Dapatkan aplikasi sebagai APK, atau sebagai bundel yang lebih baru.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} berisi split APK yang ditandatangani dengan sertifikat berbeda dari APK dasarnya, jadi bundel diubah setelah dibuat.
+Android akan menolaknya.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} tidak dapat berjalan di DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} tidak dapat berjalan di DSA: kode native-nya tidak didukung Android di DSA, yang hanya menjalankan kode 64-bit.
+Dapatkan build x86_64 atau arm64-v8a dari aplikasi tersebut.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} bukan file APK yang valid.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa berakhir dengan kode {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Ikon {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>File APK dan bundel split APK</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Semua file</value>
+  </data>
+</root>

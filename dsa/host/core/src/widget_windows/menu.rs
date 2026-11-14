@@ -12,6 +12,7 @@
 //! closes when the service says the widget is gone, so the settings app and every other
 //! watcher learn of it the same way.
 
+use crate::ui_language::UiLanguage;
 use crate::widgets::{clamp_size, Placement, WidgetProvider};
 
 /// A size the Resize menu offers.
@@ -139,23 +140,10 @@ pub struct MenuText {
     pub widget: &'static str,
 }
 
-/// The menu's words: Korean for a Korean display language, else English.
-pub fn menu_text(korean: bool) -> MenuText {
-    if korean {
-        MenuText {
-            settings: "위젯 설정",
-            resize: "크기 선택",
-            move_widget: "이동",
-            size: "크기 조정",
-            remove: "제거",
-            small: "작게",
-            default: "기본 크기",
-            large: "크게",
-            extra_large: "아주 크게",
-            widget: "위젯",
-        }
-    } else {
-        MenuText {
+/// The menu's words in `lang`.
+pub fn menu_text(lang: UiLanguage) -> MenuText {
+    match lang {
+        UiLanguage::English => MenuText {
             settings: "Widget settings",
             resize: "Resize",
             move_widget: "Move",
@@ -166,7 +154,163 @@ pub fn menu_text(korean: bool) -> MenuText {
             large: "Large",
             extra_large: "Extra large",
             widget: "Widget",
-        }
+        },
+        UiLanguage::Korean => MenuText {
+            settings: "위젯 설정",
+            resize: "크기 선택",
+            move_widget: "이동",
+            size: "크기 조정",
+            remove: "제거",
+            small: "작게",
+            default: "기본 크기",
+            large: "크게",
+            extra_large: "아주 크게",
+            widget: "위젯",
+        },
+        UiLanguage::Japanese => MenuText {
+            settings: "ウィジェットの設定",
+            resize: "サイズの選択",
+            move_widget: "移動",
+            size: "サイズ変更",
+            remove: "削除",
+            small: "小",
+            default: "標準サイズ",
+            large: "大",
+            extra_large: "特大",
+            widget: "ウィジェット",
+        },
+        UiLanguage::ChineseSimplified => MenuText {
+            settings: "小组件设置",
+            resize: "选择大小",
+            move_widget: "移动",
+            size: "大小",
+            remove: "删除",
+            small: "小",
+            default: "默认大小",
+            large: "大",
+            extra_large: "特大",
+            widget: "小组件",
+        },
+        UiLanguage::ChineseTraditional => MenuText {
+            settings: "小工具設定",
+            resize: "選擇大小",
+            move_widget: "移動",
+            size: "大小",
+            remove: "移除",
+            small: "小",
+            default: "預設大小",
+            large: "大",
+            extra_large: "特大",
+            widget: "小工具",
+        },
+        UiLanguage::Spanish => MenuText {
+            settings: "Configuración del widget",
+            resize: "Cambiar tamaño",
+            move_widget: "Mover",
+            size: "Tamaño",
+            remove: "Quitar",
+            small: "Pequeño",
+            default: "Tamaño predeterminado",
+            large: "Grande",
+            extra_large: "Muy grande",
+            widget: "Widget",
+        },
+        UiLanguage::French => MenuText {
+            settings: "Paramètres du widget",
+            resize: "Redimensionner",
+            move_widget: "Déplacer",
+            size: "Taille",
+            remove: "Supprimer",
+            small: "Petit",
+            default: "Taille par défaut",
+            large: "Grand",
+            extra_large: "Très grand",
+            widget: "Widget",
+        },
+        UiLanguage::German => MenuText {
+            settings: "Widget-Einstellungen",
+            resize: "Größe ändern",
+            move_widget: "Verschieben",
+            size: "Größe",
+            remove: "Entfernen",
+            small: "Klein",
+            default: "Standardgröße",
+            large: "Groß",
+            extra_large: "Sehr groß",
+            widget: "Widget",
+        },
+        UiLanguage::PortugueseBrazil => MenuText {
+            settings: "Configurações do widget",
+            resize: "Redimensionar",
+            move_widget: "Mover",
+            size: "Tamanho",
+            remove: "Remover",
+            small: "Pequeno",
+            default: "Tamanho padrão",
+            large: "Grande",
+            extra_large: "Muito grande",
+            widget: "Widget",
+        },
+        UiLanguage::Russian => MenuText {
+            settings: "Настройки виджета",
+            resize: "Изменить размер",
+            move_widget: "Переместить",
+            size: "Размер",
+            remove: "Удалить",
+            small: "Маленький",
+            default: "Стандартный размер",
+            large: "Большой",
+            extra_large: "Очень большой",
+            widget: "Виджет",
+        },
+        UiLanguage::Italian => MenuText {
+            settings: "Impostazioni widget",
+            resize: "Ridimensiona",
+            move_widget: "Sposta",
+            size: "Dimensione",
+            remove: "Rimuovi",
+            small: "Piccolo",
+            default: "Dimensione predefinita",
+            large: "Grande",
+            extra_large: "Molto grande",
+            widget: "Widget",
+        },
+        UiLanguage::Vietnamese => MenuText {
+            settings: "Cài đặt tiện ích",
+            resize: "Đổi kích thước",
+            move_widget: "Di chuyển",
+            size: "Kích thước",
+            remove: "Gỡ bỏ",
+            small: "Nhỏ",
+            default: "Kích thước mặc định",
+            large: "Lớn",
+            extra_large: "Rất lớn",
+            widget: "Tiện ích",
+        },
+        UiLanguage::Indonesian => MenuText {
+            settings: "Pengaturan widget",
+            resize: "Ubah ukuran",
+            move_widget: "Pindahkan",
+            size: "Ukuran",
+            remove: "Hapus",
+            small: "Kecil",
+            default: "Ukuran default",
+            large: "Besar",
+            extra_large: "Sangat besar",
+            widget: "Widget",
+        },
+        UiLanguage::Turkish => MenuText {
+            settings: "Pencere öğesi ayarları",
+            resize: "Yeniden boyutlandır",
+            move_widget: "Taşı",
+            size: "Boyut",
+            remove: "Kaldır",
+            small: "Küçük",
+            default: "Varsayılan boyut",
+            large: "Büyük",
+            extra_large: "Çok büyük",
+            widget: "Pencere öğesi",
+        },
     }
 }
 
@@ -290,7 +434,7 @@ mod tests {
 
     #[test]
     fn fr12_right_clicking_a_widget_offers_resize_and_remove() {
-        let text = menu_text(false);
+        let text = menu_text(UiLanguage::English);
         let menu = entries(&text, &clock(), &at(180, 110));
         assert!(matches!(&menu[0], Entry::Sizes { label, .. } if label == "Resize"));
         assert_eq!(menu[3], Entry::Separator);
@@ -329,7 +473,7 @@ mod tests {
 
     #[test]
     fn fr12_the_widget_menu_offers_settings_only_for_a_widget_that_can_be_set_up_again() {
-        let text = menu_text(true);
+        let text = menu_text(UiLanguage::Korean);
         let plain = entries(&text, &clock(), &at(180, 110));
         assert!(!plain.iter().any(|entry| matches!(
             entry,
@@ -362,8 +506,11 @@ mod tests {
     /// Move only.
     #[test]
     fn fr18_widget_menu_lists_move_and_size_in_both_languages() {
-        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
-            let text = menu_text(korean);
+        for (lang, words) in [
+            (UiLanguage::English, ["Move", "Size"]),
+            (UiLanguage::Korean, ["이동", "크기 조정"]),
+        ] {
+            let text = menu_text(lang);
             let menu = entries(&text, &clock(), &at(180, 110));
             let items: Vec<(u32, &str)> = menu
                 .iter()
@@ -404,9 +551,58 @@ mod tests {
         };
         assert_eq!(size_choices(&fixed).len(), 1);
         assert_eq!(
-            menu_name(&menu_text(false), &WidgetProvider::default()),
+            menu_name(&menu_text(UiLanguage::English), &WidgetProvider::default()),
             "Widget"
         );
-        assert_eq!(menu_name(&menu_text(false), &clock()), "Clock");
+        assert_eq!(
+            menu_name(&menu_text(UiLanguage::English), &clock()),
+            "Clock"
+        );
+    }
+
+    fn all_words(text: &MenuText) -> [&'static str; 10] {
+        [
+            text.settings,
+            text.resize,
+            text.move_widget,
+            text.size,
+            text.remove,
+            text.small,
+            text.default,
+            text.large,
+            text.extra_large,
+            text.widget,
+        ]
+    }
+
+    /// Every interface language has every word of the widget menu, none empty and none with an
+    /// em dash, and Size and Resize stay two different words.
+    #[test]
+    fn fr17_the_widget_menu_has_every_word_in_every_language() {
+        for lang in UiLanguage::ALL {
+            let text = menu_text(lang);
+            for word in all_words(&text) {
+                assert!(!word.trim().is_empty(), "{lang:?}");
+                assert!(
+                    !word.contains(char::from_u32(0x2014).unwrap()),
+                    "{lang:?}: {word}"
+                );
+            }
+            assert_ne!(text.size, text.resize, "{lang:?}");
+            let label = size_label(
+                &text,
+                &SizeChoice {
+                    name: SizeName::Large,
+                    width_dp: 270,
+                    height_dp: 165,
+                },
+            );
+            assert!(label.ends_with("(270 × 165)"), "{lang:?}: {label}");
+        }
+        assert_eq!(
+            menu_text(UiLanguage::from_tag_or_english("nl-NL")),
+            menu_text(UiLanguage::English)
+        );
+        assert_eq!(menu_text(UiLanguage::German).remove, "Entfernen");
     }
 }

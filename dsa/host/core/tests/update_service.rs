@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::UserAndroid;
 use dsa_host_core::session::{GuestLauncher, Session, SessionConfig, SessionState};
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::update::manifest::{self, FileEntry, ImageEntry, Manifest, FORMAT};
 use dsa_host_core::update::policy::InstalledImage;
 use dsa_host_core::update::service::{
@@ -1108,7 +1109,7 @@ fn fr14_the_desktop_is_told_once_before_and_once_after_an_image_update() {
     assert!(check().is_some());
     let shown = shown_on_desktop(&desktop, "alice");
     assert_eq!(keys(&shown), ["dsa:update:android:ready:16.0.2"]);
-    let english = in_user_language(shown[0].clone(), false);
+    let english = in_user_language(shown[0].clone(), UiLanguage::English);
     assert_eq!(english.title, "Android update ready");
     assert!(
         english.text.contains("used the next time Android starts"),
@@ -1116,7 +1117,7 @@ fn fr14_the_desktop_is_told_once_before_and_once_after_an_image_update() {
         english.text
     );
     assert_eq!(
-        in_user_language(shown[0].clone(), true).title,
+        in_user_language(shown[0].clone(), UiLanguage::Korean).title,
         "Android 업데이트가 준비되었습니다"
     );
     // Checked again and watched again: the same version is not shown twice.
@@ -1128,7 +1129,7 @@ fn fr14_the_desktop_is_told_once_before_and_once_after_an_image_update() {
     let shown = shown_on_desktop(&desktop, "alice");
     assert_eq!(keys(&shown), ["dsa:update:android:applied:16.0.2"]);
     assert_eq!(
-        in_user_language(shown[0].clone(), false).text,
+        in_user_language(shown[0].clone(), UiLanguage::English).text,
         "Android 16.0.2 started and is now in use."
     );
     assert!(shown_on_desktop(&desktop, "alice").is_empty());
@@ -1162,7 +1163,7 @@ fn fr14_a_desktop_that_was_away_is_told_only_how_the_update_ended() {
     let (_service, desktop) = desktops(&android);
     let shown = shown_on_desktop(&desktop, "alice");
     assert_eq!(keys(&shown), ["dsa:update:android:failed:16.0.2"]);
-    let english = in_user_language(shown[0].clone(), false);
+    let english = in_user_language(shown[0].clone(), UiLanguage::English);
     assert_eq!(english.title, "Android update failed");
     assert!(
         english.text.starts_with("Android 16.0.2 was not applied.")
@@ -1171,7 +1172,7 @@ fn fr14_a_desktop_that_was_away_is_told_only_how_the_update_ended() {
         english.text
     );
     assert_eq!(
-        in_user_language(shown[0].clone(), true).title,
+        in_user_language(shown[0].clone(), UiLanguage::Korean).title,
         "Android 업데이트에 실패했습니다"
     );
     assert!(shown_on_desktop(&desktop, "alice").is_empty());
@@ -1349,9 +1350,9 @@ fn fr14_a_downloaded_image_is_applied_without_the_user_restarting() {
             ["dsa:update:android:restart:16.0.2"],
             "asked, without the news that it waits for the next start"
         );
-        let asked = in_user_language(shown[0].clone(), false);
+        let asked = in_user_language(shown[0].clone(), UiLanguage::English);
         assert_eq!(asked.title, "Restart Android to update");
-        let actions: Vec<&str> = buttons_of(&asked.key, false)
+        let actions: Vec<&str> = buttons_of(&asked.key, UiLanguage::English)
             .iter()
             .map(|button| button.action)
             .collect();
@@ -1428,7 +1429,7 @@ fn fr14_a_downloaded_image_is_applied_without_the_user_restarting() {
         let shown = shown_on_desktop(&desktop, "alice");
         assert_eq!(keys(&shown), ["dsa:update:android:ready:16.0.2"]);
         assert!(
-            in_user_language(shown[0].clone(), false)
+            in_user_language(shown[0].clone(), UiLanguage::English)
                 .text
                 .contains("used the next time Android starts"),
             "{:?}",

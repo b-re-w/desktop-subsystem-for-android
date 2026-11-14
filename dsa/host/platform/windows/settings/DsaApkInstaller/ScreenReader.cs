@@ -52,7 +52,8 @@ internal static class ScreenReader
     }
 
     /// <summary>The text as a sentence: trimmed, and ending in a full stop unless it ends in one
-    /// already, or in a question mark, an exclamation mark or an ellipsis.</summary>
+    /// already, or in a question mark, an exclamation mark or an ellipsis, Latin or the
+    /// full-width ones Japanese and Chinese write.</summary>
     private static string Sentence(string? text)
     {
         var trimmed = (text ?? string.Empty).Trim();
@@ -60,7 +61,7 @@ internal static class ScreenReader
         {
             return trimmed;
         }
-        var last = trimmed[^1];
-        return last is '.' or '?' or '!' or '…' ? trimmed : trimmed + ".";
+        var last = trimmed[trimmed.Length - 1];
+        return last is '.' or '?' or '!' or '…' or '。' or '？' or '！' ? trimmed : trimmed + ".";
     }
 }

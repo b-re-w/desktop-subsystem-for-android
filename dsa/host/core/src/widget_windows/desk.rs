@@ -37,6 +37,7 @@ use super::keyboard::{self, KeyStep, KeyboardEdit, KeyboardMode};
 use super::menu::{self, choice_of, size_choices, Entry, MenuChoice, MenuText};
 use super::paint::{draw_lifted, Image, Look};
 use super::service::{placed_report, WindowCommand, WindowReport};
+use crate::ui_language::UiLanguage;
 use crate::widgets::{Placement, Widget, WidgetFrame};
 
 /// How far the pointer moves before a press is a drag, in device-independent pixels: the
@@ -324,8 +325,8 @@ pub struct Desk {
 
 impl Desk {
     /// A desk with no windows, drawn in `look`, opening windows at `dpi`, with its menu in
-    /// Korean when `korean`, and its frames decoded by `decode`.
-    pub fn new(look: Look, dpi: u32, korean: bool, decode: Decode) -> Desk {
+    /// `lang`, and its frames decoded by `decode`.
+    pub fn new(look: Look, dpi: u32, lang: UiLanguage, decode: Decode) -> Desk {
         Desk {
             windows: BTreeMap::new(),
             effects: Vec::new(),
@@ -333,7 +334,7 @@ impl Desk {
             look,
             dpi: dpi.max(1),
             areas: Vec::new(),
-            text: menu::menu_text(korean),
+            text: menu::menu_text(lang),
             decode,
         }
     }
@@ -1109,7 +1110,7 @@ mod tests {
         Desk::new(
             Look::new(false, 0xFF35_84E4),
             dpi,
-            false,
+            UiLanguage::English,
             Box::new(|png: &[u8]| {
                 crate::png::decode(png)
                     .map(|image| Image::from_rgba(image.width, image.height, &image.pixels))

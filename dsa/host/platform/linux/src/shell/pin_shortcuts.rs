@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
 use dsa_host_core::tasks::PinShortcutRequest;
+use dsa_host_core::ui_language::UiLanguage;
 
 use super::desktop_entry::app_id;
 use super::notifications::{body_text, Notify};
@@ -20,29 +21,150 @@ pub const CANCEL: &str = "dsa-pin-cancel";
 /// How long a question waits for the user before it is declined.
 pub const ASK_FOR: Duration = Duration::from_secs(180);
 
-/// The `Notify` call that asks the user about `request`, in Korean when `korean`.
-pub fn question(request: &PinShortcutRequest, korean: bool) -> Notify {
+/// The question's words in one language: its summary (with `{name}`, the shortcut's name),
+/// its body (with `{app}`, the app's), and the two buttons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct QuestionText {
+    pub summary: &'static str,
+    pub body: &'static str,
+    pub add: &'static str,
+    pub cancel: &'static str,
+}
+
+/// The question's words in `language`.
+pub fn question_text(language: UiLanguage) -> QuestionText {
+    let words = |summary, body, add, cancel| QuestionText {
+        summary,
+        body,
+        add,
+        cancel,
+    };
+    match language {
+        UiLanguage::English => words(
+            "Add \u{201c}{name}\u{201d} to the desktop?",
+            "{app} wants to put this shortcut on your desktop.",
+            "Add to desktop",
+            "Cancel",
+        ),
+        UiLanguage::Korean => words(
+            "\u{201c}{name}\u{201d}을(를) 바탕 화면에 추가할까요?",
+            "{app}에서 이 바로 가기를 바탕 화면에 두려고 합니다.",
+            "바탕 화면에 추가",
+            "취소",
+        ),
+        UiLanguage::Japanese => words(
+            "「{name}」をデスクトップに追加しますか？",
+            "{app} がこのショートカットをデスクトップに置こうとしています。",
+            "デスクトップに追加",
+            "キャンセル",
+        ),
+        UiLanguage::ChineseSimplified => words(
+            "要将\u{201c}{name}\u{201d}添加到桌面吗？",
+            "{app} 想将此快捷方式放到你的桌面上。",
+            "添加到桌面",
+            "取消",
+        ),
+        UiLanguage::ChineseTraditional => words(
+            "要將「{name}」新增到桌面嗎？",
+            "{app} 想將這個捷徑放到你的桌面上。",
+            "新增到桌面",
+            "取消",
+        ),
+        UiLanguage::Spanish => words(
+            "¿Desea añadir \u{ab}{name}\u{bb} al escritorio?",
+            "{app} quiere poner este acceso directo en su escritorio.",
+            "Añadir al escritorio",
+            "Cancelar",
+        ),
+        UiLanguage::French => words(
+            "Ajouter \u{ab}\u{a0}{name}\u{a0}\u{bb} au bureau\u{a0}?",
+            "{app} souhaite placer ce raccourci sur votre bureau.",
+            "Ajouter au bureau",
+            "Annuler",
+        ),
+        UiLanguage::German => words(
+            "\u{201e}{name}\u{201c} zum Desktop hinzufügen?",
+            "{app} möchte diese Verknüpfung auf Ihrem Desktop ablegen.",
+            "Zum Desktop hinzufügen",
+            "Abbrechen",
+        ),
+        UiLanguage::PortugueseBrazil => words(
+            "Adicionar \u{201c}{name}\u{201d} à área de trabalho?",
+            "{app} quer colocar este atalho na sua área de trabalho.",
+            "Adicionar à área de trabalho",
+            "Cancelar",
+        ),
+        UiLanguage::Russian => words(
+            "Добавить \u{ab}{name}\u{bb} на рабочий стол?",
+            "{app} хочет поместить этот ярлык на ваш рабочий стол.",
+            "Добавить на рабочий стол",
+            "Отмена",
+        ),
+        UiLanguage::Italian => words(
+            "Aggiungere \u{201c}{name}\u{201d} al desktop?",
+            "{app} vuole aggiungere questa scorciatoia al desktop.",
+            "Aggiungi al desktop",
+            "Annulla",
+        ),
+        UiLanguage::Vietnamese => words(
+            "Thêm \u{201c}{name}\u{201d} vào màn hình nền?",
+            "{app} muốn đặt lối tắt này trên màn hình nền của bạn.",
+            "Thêm vào màn hình nền",
+            "Hủy",
+        ),
+        UiLanguage::Indonesian => words(
+            "Tambahkan \u{201c}{name}\u{201d} ke desktop?",
+            "{app} ingin menaruh pintasan ini di desktop Anda.",
+            "Tambahkan ke desktop",
+            "Batal",
+        ),
+        UiLanguage::Turkish => words(
+            "\u{201c}{name}\u{201d} masaüstüne eklensin mi?",
+            "{app}, bu kısayolu masaüstünüze koymak istiyor.",
+            "Masaüstüne ekle",
+            "İptal",
+        ),
+    }
+}
+
+/// `template` with its `{key}` placeholders replaced by their values, in one pass, so a value
+/// that itself holds braces is left as it is.
+fn fill(template: &str, values: &[(&str, &str)]) -> String {
+    let mut out = String::with_capacity(template.len());
+    let mut rest = template;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open..];
+        match values
+            .iter()
+            .find(|(key, _)| after.starts_with(&format!("{{{key}}}")))
+        {
+            Some((key, value)) => {
+                out.push_str(value);
+                rest = &after[key.len() + 2..];
+            }
+            None => {
+                out.push('{');
+                rest = &after[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The `Notify` call that asks the user about `request`, in `language`.
+pub fn question(request: &PinShortcutRequest, language: UiLanguage) -> Notify {
     let app = if request.app_label.trim().is_empty() {
         request.package_name.as_str()
     } else {
         request.app_label.as_str()
     };
     let name = request.shortcut.label();
-    let (summary, body, add, cancel) = if korean {
-        (
-            format!("\u{201c}{name}\u{201d}을(를) 바탕 화면에 추가할까요?"),
-            format!("{app}에서 이 바로 가기를 바탕 화면에 두려고 합니다."),
-            "바탕 화면에 추가",
-            "취소",
-        )
-    } else {
-        (
-            format!("Add \u{201c}{name}\u{201d} to the desktop?"),
-            format!("{app} wants to put this shortcut on your desktop."),
-            "Add to desktop",
-            "Cancel",
-        )
-    };
+    let text = question_text(language);
+    let summary = fill(text.summary, &[("name", name)]);
+    let body = fill(text.body, &[("app", app)]);
+    let (add, cancel) = (text.add, text.cancel);
     Notify {
         app_name: app.to_string(),
         replaces_id: 0,
@@ -124,15 +246,48 @@ mod tests {
 
     #[test]
     fn fr7_a_pin_request_asks_with_add_to_desktop_and_cancel() {
-        let asked = question(&request(1), false);
+        let asked = question(&request(1), UiLanguage::English);
         assert_eq!(asked.actions, vec![ADD, "Add to desktop", CANCEL, "Cancel"]);
         assert!(asked.summary.contains("Ana <3"));
         assert!(asked.body.starts_with("Chat"));
         assert_eq!(asked.desktop_entry, "dsa-com.example.chat");
         assert!(asked.resident);
-        let korean = question(&request(1), true);
+        let korean = question(&request(1), UiLanguage::Korean);
         assert_eq!(korean.actions[1], "바탕 화면에 추가");
         assert_eq!(korean.actions[3], "취소");
+    }
+
+    #[test]
+    fn fr17_a_pin_request_asks_in_every_interface_language() {
+        use dsa_host_core::ui_language::placeholders;
+        let english = question_text(UiLanguage::English);
+        for language in UiLanguage::ALL {
+            let text = question_text(language);
+            for words in [text.summary, text.body, text.add, text.cancel] {
+                assert!(!words.trim().is_empty(), "{language:?}");
+                assert!(
+                    !words.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?}: {words}"
+                );
+            }
+            assert_eq!(placeholders(text.summary), placeholders(english.summary));
+            assert_eq!(placeholders(text.body), placeholders(english.body));
+            assert!(placeholders(text.add).is_empty() && placeholders(text.cancel).is_empty());
+            if language != UiLanguage::English {
+                assert_ne!(text.add, english.add, "{language:?}");
+            }
+            let asked = question(&request(1), language);
+            // The shortcut and the app are named; no placeholder is left.
+            assert!(asked.summary.contains("Ana <3"), "{language:?}");
+            assert!(asked.body.contains("Chat"), "{language:?}");
+            assert!(!asked.summary.contains("{name}") && !asked.body.contains("{app}"));
+            assert_eq!(asked.actions[0], ADD);
+            assert_eq!(asked.actions[1], text.add);
+            assert_eq!(asked.actions[2], CANCEL);
+            assert_eq!(asked.actions[3], text.cancel);
+        }
+        assert_eq!(fill("{app} {name}", &[("app", "{name}")]), "{name} {name}");
+        assert_eq!(fill("{other}", &[("app", "x")]), "{other}");
     }
 
     #[test]

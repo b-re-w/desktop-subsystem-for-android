@@ -21,6 +21,9 @@ use std::path::{Path, PathBuf};
 
 use dsa_host_core::compositor::window_hosts::is_valid_package;
 use dsa_host_core::tasks::{is_valid_shortcut_id, jump_list_shortcuts, AppInfo, AppShortcut};
+use dsa_host_core::ui_language::UiLanguage;
+
+use crate::interface_language::locale_keys;
 
 /// The key each entry names its package with.
 pub const PACKAGE_KEY: &str = "X-DSA-Package";
@@ -80,6 +83,59 @@ fn escape(value: &str) -> String {
         }
     }
     escaped
+}
+
+/// The name of an app entry's action that opens the app's settings, in `language`.
+pub fn app_settings_name(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "App settings",
+        UiLanguage::Korean => "앱 설정",
+        UiLanguage::Japanese => "アプリの設定",
+        UiLanguage::ChineseSimplified => "应用设置",
+        UiLanguage::ChineseTraditional => "應用程式設定",
+        UiLanguage::Spanish => "Configuración de la aplicación",
+        UiLanguage::French => "Paramètres de l'application",
+        UiLanguage::German => "App-Einstellungen",
+        UiLanguage::PortugueseBrazil => "Configurações do app",
+        UiLanguage::Russian => "Настройки приложения",
+        UiLanguage::Italian => "Impostazioni app",
+        UiLanguage::Vietnamese => "Cài đặt ứng dụng",
+        UiLanguage::Indonesian => "Pengaturan aplikasi",
+        UiLanguage::Turkish => "Uygulama ayarları",
+    }
+}
+
+/// The name of an app entry's action that uninstalls the app, in `language`.
+pub fn uninstall_name(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "Uninstall",
+        UiLanguage::Korean => "제거",
+        UiLanguage::Japanese => "アンインストール",
+        UiLanguage::ChineseSimplified => "卸载",
+        UiLanguage::ChineseTraditional => "解除安裝",
+        UiLanguage::Spanish => "Desinstalar",
+        UiLanguage::French => "Désinstaller",
+        UiLanguage::German => "Deinstallieren",
+        UiLanguage::PortugueseBrazil => "Desinstalar",
+        UiLanguage::Russian => "Удалить",
+        UiLanguage::Italian => "Disinstalla",
+        UiLanguage::Vietnamese => "Gỡ cài đặt",
+        UiLanguage::Indonesian => "Copot pemasangan",
+        UiLanguage::Turkish => "Kaldır",
+    }
+}
+
+/// The lines of the key `key` in every interface language: the English value under the key
+/// itself, then each translation under its locale keys (`Name[ko]`, `Name[zh_TW]`), so the
+/// desktop shows the entry in its own language whatever language DSA runs in.
+fn translated(key: &str, words: fn(UiLanguage) -> &'static str) -> String {
+    let mut lines = format!("{key}={}\n", escape(words(UiLanguage::English)));
+    for language in UiLanguage::ALL {
+        for locale in locale_keys(language) {
+            lines.push_str(&format!("{key}[{locale}]={}\n", escape(words(language))));
+        }
+    }
+    lines
 }
 
 /// An argument of `Exec`, quoted when it has to be, as the spec quotes them.
@@ -169,13 +225,13 @@ pub fn entry_with(
         ));
     }
     text.push_str("\n[Desktop Action settings]\n");
-    text.push_str("Name=App settings\n");
+    text.push_str(&translated("Name", app_settings_name));
     text.push_str(&format!(
         "Exec={}\n",
         exec(program, &["--app-settings", package])
     ));
     text.push_str("\n[Desktop Action uninstall]\n");
-    text.push_str("Name=Uninstall\n");
+    text.push_str(&translated("Name", uninstall_name));
     text.push_str(&format!(
         "Exec={}\n",
         exec(program, &["--uninstall", package])
@@ -686,6 +742,50 @@ mod tests {
         assert!(text.contains("--uninstall com.example.notes"));
         assert!(text.contains("\nActions=settings;uninstall;\n"));
         assert_eq!(package_of(&text), Some("com.example.notes"));
+    }
+
+    #[test]
+    fn fr17_an_apps_entry_names_its_actions_in_every_interface_language() {
+        let text = entry(
+            &app("com.example.notes", "Notes"),
+            Path::new("/usr/lib/dsa/dsa-compositor"),
+            None,
+        );
+        assert!(text.contains("\nName=App settings\n"));
+        assert!(text.contains("\nName=Uninstall\n"));
+        assert!(text.contains("\nName[ko]=앱 설정\n"));
+        assert!(text.contains("\nName[ja]=アンインストール\n"));
+        // A region that shares a translation has its own key, as desktops look keys up.
+        assert!(text.contains("\nName[zh_HK]=應用程式設定\n"));
+        assert!(text.contains("\nName[pt]=Configurações do app\n"));
+        for language in UiLanguage::ALL {
+            for words in [app_settings_name(language), uninstall_name(language)] {
+                assert!(!words.trim().is_empty(), "{language:?}");
+                assert!(
+                    !words.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?}"
+                );
+                if language != UiLanguage::English {
+                    assert_ne!(words, app_settings_name(UiLanguage::English));
+                    assert_ne!(words, uninstall_name(UiLanguage::English));
+                }
+            }
+            for locale in locale_keys(language) {
+                assert!(
+                    text.contains(&format!(
+                        "\nName[{locale}]={}\n",
+                        app_settings_name(language)
+                    )),
+                    "{locale}"
+                );
+                assert!(
+                    text.contains(&format!("\nName[{locale}]={}\n", uninstall_name(language))),
+                    "{locale}"
+                );
+            }
+        }
+        // The app's own name is its label, in no language of DSA's.
+        assert!(!text.contains("\nName[ko]=Notes\n"));
     }
 
     #[test]

@@ -1224,7 +1224,7 @@ impl EventSink for BusSink {
 }
 
 fn locale_of(access: &Access) -> String {
-    if access.korean() { "ko_KR" } else { "en_US" }.to_string()
+    crate::interface_language::posix_locale(access.language()).to_string()
 }
 
 fn locale(shared: &Shared) -> String {

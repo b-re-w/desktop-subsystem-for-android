@@ -22,12 +22,24 @@ public class NavigationPaneWidthTests
 
     private static readonly Dictionary<char, double> Latin = new()
     {
-        [' '] = 4, ['&'] = 10.5,
-        ['A'] = 9.5, ['D'] = 10.5, ['G'] = 10.5, ['I'] = 4, ['L'] = 7, ['M'] = 13, ['N'] = 11,
-        ['P'] = 8.5, ['R'] = 9, ['U'] = 10.5, ['W'] = 14,
-        ['a'] = 7.5, ['b'] = 8.5, ['c'] = 7, ['d'] = 8.5, ['e'] = 7.5, ['g'] = 8.5, ['h'] = 8.5,
-        ['i'] = 3.5, ['k'] = 7, ['l'] = 3.5, ['m'] = 12.5, ['n'] = 8.5, ['o'] = 8.5, ['p'] = 8.5,
-        ['r'] = 5, ['s'] = 6, ['t'] = 5, ['u'] = 8.5, ['v'] = 7, ['w'] = 11, ['y'] = 7,
+        [' '] = 4, ['&'] = 10.5, ['\''] = 3.5, ['-'] = 5, ['.'] = 3.5,
+        ['A'] = 9.5, ['B'] = 9, ['C'] = 9.5, ['D'] = 10.5, ['E'] = 7.5, ['F'] = 7, ['G'] = 10.5,
+        ['H'] = 11, ['I'] = 4, ['J'] = 5, ['K'] = 9, ['L'] = 7, ['M'] = 13, ['N'] = 11,
+        ['O'] = 11.5, ['P'] = 8.5, ['Q'] = 11.5, ['R'] = 9, ['S'] = 8, ['T'] = 8, ['U'] = 10.5,
+        ['V'] = 9.5, ['W'] = 14, ['X'] = 9, ['Y'] = 8.5, ['Z'] = 8.5,
+        ['a'] = 7.5, ['b'] = 8.5, ['c'] = 7, ['d'] = 8.5, ['e'] = 7.5, ['f'] = 5, ['g'] = 8.5,
+        ['h'] = 8.5, ['i'] = 3.5, ['j'] = 3.5, ['k'] = 7, ['l'] = 3.5, ['m'] = 12.5, ['n'] = 8.5,
+        ['o'] = 8.5, ['p'] = 8.5, ['q'] = 8.5, ['r'] = 5, ['s'] = 6, ['t'] = 5, ['u'] = 8.5,
+        ['v'] = 7, ['w'] = 11, ['x'] = 7, ['y'] = 7, ['z'] = 6.5, ['ß'] = 8.5, ['ı'] = 3.5,
+        ['đ'] = 8.5, ['Đ'] = 11,
+    };
+
+    /// <summary>The fourteen string tables the pane's labels come from.</summary>
+    private static readonly string[] Tables =
+    {
+        "Strings.resx", "Strings.ko.resx", "Strings.ja.resx", "Strings.zh-CN.resx", "Strings.zh-TW.resx",
+        "Strings.es.resx", "Strings.fr.resx", "Strings.de.resx", "Strings.pt-BR.resx", "Strings.ru.resx",
+        "Strings.it.resx", "Strings.vi.resx", "Strings.id.resx", "Strings.tr.resx",
     };
 
     private static string SettingsFile(string file)
@@ -45,11 +57,23 @@ public class NavigationPaneWidthTests
 
     private static double Width(string label) => label.Sum(c =>
     {
-        if (c >= '가' && c <= '힣')
+        // Hangul, kana and Han: a full 14 px em, more than their fonts draw.
+        if ((c >= '가' && c <= '힣') || (c >= '぀' && c <= 'ヿ') || (c >= '一' && c <= '鿿'))
         {
             return 14.0;
         }
-        Assert.True(Latin.TryGetValue(c, out var w), $"no width for '{c}' in '{label}'; add it to the table");
+        // Cyrillic: as wide as the widest Latin letters of its case.
+        if (c >= 'Ѐ' && c <= 'ӿ')
+        {
+            return char.IsUpper(c) ? 13.0 : 8.5;
+        }
+        if (Latin.TryGetValue(c, out var w))
+        {
+            return w;
+        }
+        // A Latin letter with marks (é, ộ, ç, ğ) is as wide as its base letter.
+        var basic = c.ToString().Normalize(System.Text.NormalizationForm.FormD)[0];
+        Assert.True(Latin.TryGetValue(basic, out w), $"no width for '{c}' in '{label}'; add it to the table");
         return w;
     });
 
@@ -59,7 +83,7 @@ public class NavigationPaneWidthTests
         var keys = Regex.Matches(xaml, @"<l:PaneItem Content=""\{l:Text (Nav\w+\.Content)\}""")
             .Select(m => m.Groups[1].Value).ToList();
         Assert.NotEmpty(keys);
-        foreach (var resx in new[] { "Strings.resx", "Strings.ko.resx" })
+        foreach (var resx in Tables)
         {
             var values = XDocument.Load(SettingsFile(resx)).Root!.Elements("data")
                 .ToDictionary(d => (string)d.Attribute("name")!, d => (string)d.Element("value")!);
@@ -77,7 +101,9 @@ public class NavigationPaneWidthTests
         var xaml = File.ReadAllText(SettingsFile("MainWindow.xaml"));
         Assert.Contains($"OpenPaneLength=\"{OpenPaneLength}\"", xaml);
 
-        var longest = Labels().Max(Width);
+        // English and Korean set the pane's width; every other language has to fit in it
+        // (the next test), so a long translation is shortened rather than widening the pane.
+        var longest = Labels().Take(2 * Labels().Count() / Tables.Length).Max(Width);
         var needed = Math.Ceiling((IconColumn + LabelGap + longest + TrailingGap) / 4) * 4;
         Assert.Equal(OpenPaneLength, Math.Max(200, needed));
     }

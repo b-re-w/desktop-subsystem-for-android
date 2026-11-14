@@ -39,8 +39,8 @@ use super::widget_panels::{
     argb_of, button, desk_point, dpi_of_backing, force_click, key, look, menu_items, panel_frame,
     widget_level, MenuItem, COLLECTION_BEHAVIOR, DESKTOP_ICON_LEVEL_KEY, STYLE,
 };
-use crate::compositor::menu_bar::korean;
 use crate::objc::{class, ns_string, on_main, CGPoint, CGRect, CGSize};
+use crate::ui_language::current as ui_language;
 
 #[link(name = "CoreGraphics", kind = "framework")]
 extern "C" {
@@ -856,7 +856,7 @@ pub fn run_main(
     let dpi = dpi_of_backing(unsafe { main_scale() });
     PANELS.with(|panels| {
         *panels.borrow_mut() = Some(Panels {
-            desk: Desk::new(look(dark, accent), dpi, korean(), decode),
+            desk: Desk::new(look(dark, accent), dpi, ui_language(), decode),
             panels: BTreeMap::new(),
             reports,
             dirty: BTreeSet::new(),

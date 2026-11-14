@@ -23,11 +23,13 @@
 //! Android items go to the window rules as `FromHost::MenuChosen` and become requests to the
 //! guest ([`menu_work`]), or open DSA Settings at the app's page.
 //!
-//! The items speak Korean when the session reads Korean, else English.
+//! The items speak the session's interface language (`crate::interface_language`), English
+//! when DSA has no translation for it.
 
 use dsa_host_core::compositor::caption::scaled;
 use dsa_host_core::compositor::window_hosts::{MenuAction, MenuWork};
 use dsa_host_core::tasks::{AppSettingsPage, TaskRequest};
+use dsa_host_core::ui_language::UiLanguage;
 
 use super::title_bar::Coverage;
 
@@ -306,27 +308,10 @@ pub struct MenuText {
     pub screenshot_file: &'static str,
 }
 
-/// The menu's words: Korean for a session that reads Korean, else English.
-pub fn menu_text(korean: bool) -> MenuText {
-    if korean {
-        MenuText {
-            minimize: "최소화",
-            maximize: "최대화",
-            restore: "복원",
-            move_window: "이동",
-            size: "크기 조정",
-            close: "닫기",
-            full_screen: "전체 화면",
-            new_window: "새 창",
-            screenshot: "스크린샷",
-            aspect_ratio: "화면 비율",
-            open_by_default: "링크 열기 설정",
-            app_info: "앱 정보",
-            more_options: "창 메뉴 더 보기",
-            screenshot_file: "스크린샷",
-        }
-    } else {
-        MenuText {
+/// The menu's words in `language`, with the desktop's own words for the window's items.
+pub fn menu_text(language: UiLanguage) -> MenuText {
+    match language {
+        UiLanguage::English => MenuText {
             minimize: "Minimize",
             maximize: "Maximize",
             restore: "Restore",
@@ -341,7 +326,215 @@ pub fn menu_text(korean: bool) -> MenuText {
             app_info: "App info",
             more_options: "More window options",
             screenshot_file: "Screenshot",
-        }
+        },
+        UiLanguage::Korean => MenuText {
+            minimize: "최소화",
+            maximize: "최대화",
+            restore: "복원",
+            move_window: "이동",
+            size: "크기 조정",
+            close: "닫기",
+            full_screen: "전체 화면",
+            new_window: "새 창",
+            screenshot: "스크린샷",
+            aspect_ratio: "화면 비율",
+            open_by_default: "링크 열기 설정",
+            app_info: "앱 정보",
+            more_options: "창 메뉴 더 보기",
+            screenshot_file: "스크린샷",
+        },
+        UiLanguage::Japanese => MenuText {
+            minimize: "最小化",
+            maximize: "最大化",
+            restore: "元のサイズに戻す",
+            move_window: "移動",
+            size: "サイズ変更",
+            close: "閉じる",
+            full_screen: "全画面表示",
+            new_window: "新しいウィンドウ",
+            screenshot: "スクリーンショット",
+            aspect_ratio: "アスペクト比",
+            open_by_default: "デフォルトで開く",
+            app_info: "アプリ情報",
+            more_options: "その他のウィンドウ オプション",
+            screenshot_file: "スクリーンショット",
+        },
+        UiLanguage::ChineseSimplified => MenuText {
+            minimize: "最小化",
+            maximize: "最大化",
+            restore: "还原",
+            move_window: "移动",
+            size: "大小",
+            close: "关闭",
+            full_screen: "全屏",
+            new_window: "新建窗口",
+            screenshot: "屏幕截图",
+            aspect_ratio: "宽高比",
+            open_by_default: "默认打开",
+            app_info: "应用信息",
+            more_options: "更多窗口选项",
+            screenshot_file: "屏幕截图",
+        },
+        UiLanguage::ChineseTraditional => MenuText {
+            minimize: "最小化",
+            maximize: "最大化",
+            restore: "還原",
+            move_window: "移動",
+            size: "大小",
+            close: "關閉",
+            full_screen: "全螢幕",
+            new_window: "新增視窗",
+            screenshot: "螢幕截圖",
+            aspect_ratio: "長寬比",
+            open_by_default: "預設開啟",
+            app_info: "應用程式資訊",
+            more_options: "更多視窗選項",
+            screenshot_file: "螢幕截圖",
+        },
+        UiLanguage::Spanish => MenuText {
+            minimize: "Minimizar",
+            maximize: "Maximizar",
+            restore: "Restaurar",
+            move_window: "Mover",
+            size: "Tamaño",
+            close: "Cerrar",
+            full_screen: "Pantalla completa",
+            new_window: "Nueva ventana",
+            screenshot: "Captura de pantalla",
+            aspect_ratio: "Relación de aspecto",
+            open_by_default: "Abrir de forma predeterminada",
+            app_info: "Información de la aplicación",
+            more_options: "Más opciones de ventana",
+            screenshot_file: "Captura de pantalla",
+        },
+        UiLanguage::French => MenuText {
+            minimize: "Réduire",
+            maximize: "Agrandir",
+            restore: "Restaurer",
+            move_window: "Déplacer",
+            size: "Taille",
+            close: "Fermer",
+            full_screen: "Plein écran",
+            new_window: "Nouvelle fenêtre",
+            screenshot: "Capture d'écran",
+            aspect_ratio: "Format d'image",
+            open_by_default: "Ouvrir par défaut",
+            app_info: "Infos sur l'application",
+            more_options: "Plus d'options de fenêtre",
+            screenshot_file: "Capture d'écran",
+        },
+        UiLanguage::German => MenuText {
+            minimize: "Minimieren",
+            maximize: "Maximieren",
+            restore: "Wiederherstellen",
+            move_window: "Verschieben",
+            size: "Größe ändern",
+            close: "Schließen",
+            full_screen: "Vollbild",
+            new_window: "Neues Fenster",
+            screenshot: "Bildschirmfoto",
+            aspect_ratio: "Seitenverhältnis",
+            open_by_default: "Standardmäßig öffnen",
+            app_info: "App-Info",
+            more_options: "Weitere Fensteroptionen",
+            screenshot_file: "Bildschirmfoto",
+        },
+        UiLanguage::PortugueseBrazil => MenuText {
+            minimize: "Minimizar",
+            maximize: "Maximizar",
+            restore: "Restaurar",
+            move_window: "Mover",
+            size: "Tamanho",
+            close: "Fechar",
+            full_screen: "Tela inteira",
+            new_window: "Nova janela",
+            screenshot: "Captura de tela",
+            aspect_ratio: "Proporção",
+            open_by_default: "Abrir por padrão",
+            app_info: "Informações do app",
+            more_options: "Mais opções de janela",
+            screenshot_file: "Captura de tela",
+        },
+        UiLanguage::Russian => MenuText {
+            minimize: "Свернуть",
+            maximize: "Развернуть",
+            restore: "Восстановить",
+            move_window: "Переместить",
+            size: "Размер",
+            close: "Закрыть",
+            full_screen: "Во весь экран",
+            new_window: "Новое окно",
+            screenshot: "Снимок экрана",
+            aspect_ratio: "Соотношение сторон",
+            open_by_default: "Открывать по умолчанию",
+            app_info: "О приложении",
+            more_options: "Другие параметры окна",
+            screenshot_file: "Снимок экрана",
+        },
+        UiLanguage::Italian => MenuText {
+            minimize: "Riduci a icona",
+            maximize: "Ingrandisci",
+            restore: "Ripristina",
+            move_window: "Sposta",
+            size: "Ridimensiona",
+            close: "Chiudi",
+            full_screen: "Schermo intero",
+            new_window: "Nuova finestra",
+            screenshot: "Screenshot",
+            aspect_ratio: "Proporzioni",
+            open_by_default: "Apri per impostazione predefinita",
+            app_info: "Informazioni app",
+            more_options: "Altre opzioni finestra",
+            screenshot_file: "Screenshot",
+        },
+        UiLanguage::Vietnamese => MenuText {
+            minimize: "Thu nhỏ",
+            maximize: "Phóng to",
+            restore: "Khôi phục",
+            move_window: "Di chuyển",
+            size: "Kích thước",
+            close: "Đóng",
+            full_screen: "Toàn màn hình",
+            new_window: "Cửa sổ mới",
+            screenshot: "Ảnh chụp màn hình",
+            aspect_ratio: "Tỷ lệ khung hình",
+            open_by_default: "Mở theo mặc định",
+            app_info: "Thông tin ứng dụng",
+            more_options: "Tùy chọn cửa sổ khác",
+            screenshot_file: "Ảnh chụp màn hình",
+        },
+        UiLanguage::Indonesian => MenuText {
+            minimize: "Minimalkan",
+            maximize: "Maksimalkan",
+            restore: "Pulihkan",
+            move_window: "Pindahkan",
+            size: "Ubah ukuran",
+            close: "Tutup",
+            full_screen: "Layar penuh",
+            new_window: "Jendela baru",
+            screenshot: "Screenshot",
+            aspect_ratio: "Rasio aspek",
+            open_by_default: "Buka secara default",
+            app_info: "Info aplikasi",
+            more_options: "Opsi jendela lainnya",
+            screenshot_file: "Screenshot",
+        },
+        UiLanguage::Turkish => MenuText {
+            minimize: "Simge durumuna küçült",
+            maximize: "Ekranı kapla",
+            restore: "Önceki boyut",
+            move_window: "Taşı",
+            size: "Boyutlandır",
+            close: "Kapat",
+            full_screen: "Tam ekran",
+            new_window: "Yeni pencere",
+            screenshot: "Ekran görüntüsü",
+            aspect_ratio: "En boy oranı",
+            open_by_default: "Varsayılan olarak aç",
+            app_info: "Uygulama bilgileri",
+            more_options: "Diğer pencere seçenekleri",
+            screenshot_file: "Ekran görüntüsü",
+        },
     }
 }
 
@@ -363,15 +556,6 @@ pub fn label(text: &MenuText, item: MenuItem) -> Option<&'static str> {
         MenuItem::AppInfo => text.app_info,
         MenuItem::MoreOptions => text.more_options,
     })
-}
-
-/// Whether a session reads Korean: the language gettext would choose its messages in, from
-/// `LC_ALL`, `LC_MESSAGES` or `LANG`, the first that is set, as `var` reads them.
-pub fn reads_korean_in(var: impl Fn(&str) -> Option<String>) -> bool {
-    ["LC_ALL", "LC_MESSAGES", "LANG"]
-        .into_iter()
-        .find_map(|name| var(name).filter(|value| !value.is_empty()))
-        .is_some_and(|locale| locale.starts_with("ko"))
 }
 
 /// The height of an item at 100%, in pixels.
@@ -745,34 +929,67 @@ mod tests {
     }
 
     #[test]
-    fn fr22_the_window_menu_speaks_korean_and_english() {
-        for korean in [false, true] {
-            let text = menu_text(korean);
+    fn fr17_the_window_menu_speaks_every_interface_language() {
+        let every = [
+            MenuItem::Restore,
+            MenuItem::Move,
+            MenuItem::Size,
+            MenuItem::Minimize,
+            MenuItem::Maximize,
+            MenuItem::Close,
+            MenuItem::FullScreen,
+            MenuItem::NewWindow,
+            MenuItem::Screenshot,
+            MenuItem::AspectRatio,
+            MenuItem::OpenByDefault,
+            MenuItem::AppInfo,
+            MenuItem::MoreOptions,
+        ];
+        let english = menu_text(UiLanguage::English);
+        for language in UiLanguage::ALL {
+            let text = menu_text(language);
             let labels: Vec<&str> = items(false, true, true)
                 .into_iter()
                 .filter_map(|item| label(&text, item))
                 .collect();
-            assert_eq!(labels.len(), 12);
-            assert!(labels.iter().all(|label| !label.is_empty()));
+            assert_eq!(labels.len(), 12, "{language:?}");
+            for item in every {
+                let words = label(&text, item).unwrap();
+                assert!(!words.trim().is_empty(), "{language:?} {item:?}");
+                assert!(
+                    !words.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?} {item:?}"
+                );
+                assert!(!words.contains('{'), "{language:?} {item:?}");
+            }
+            assert!(!text.screenshot_file.trim().is_empty(), "{language:?}");
+            // A screenshot's file name is a name, with no folder in it.
+            assert!(!text.screenshot_file.contains('/'), "{language:?}");
+            if language != UiLanguage::English {
+                assert_ne!(text.app_info, english.app_info, "{language:?}");
+                assert_ne!(text.more_options, english.more_options, "{language:?}");
+            }
         }
-        assert_eq!(menu_text(false).new_window, "New window");
-        assert_eq!(menu_text(true).app_info, "앱 정보");
-        assert_eq!(menu_text(false).more_options, "More window options");
-        assert_eq!(menu_text(true).more_options, "창 메뉴 더 보기");
-        assert_eq!(menu_text(true).move_window, "이동");
-        assert_eq!(menu_text(true).size, "크기 조정");
-        assert_eq!(menu_text(true).screenshot_file, "스크린샷");
-        let korean = |name: &str| (name == "LANG").then(|| "ko_KR.UTF-8".to_string());
-        let english = |name: &str| (name == "LANG").then(|| "en_US.UTF-8".to_string());
-        // LC_ALL comes first, as gettext reads it.
-        let both = |name: &str| match name {
-            "LC_ALL" => Some("en_GB.UTF-8".to_string()),
-            "LANG" => Some("ko_KR.UTF-8".to_string()),
-            _ => None,
-        };
-        assert!(reads_korean_in(korean));
-        assert!(!reads_korean_in(english));
-        assert!(!reads_korean_in(both));
+        assert_eq!(menu_text(UiLanguage::Japanese).close, "閉じる");
+        assert_eq!(
+            menu_text(UiLanguage::ChineseTraditional).full_screen,
+            "全螢幕"
+        );
+        assert_eq!(menu_text(UiLanguage::German).close, "Schließen");
+        assert_eq!(menu_text(UiLanguage::Turkish).maximize, "Ekranı kapla");
+    }
+
+    #[test]
+    fn fr22_the_window_menu_speaks_korean_and_english() {
+        let english = menu_text(UiLanguage::English);
+        let korean = menu_text(UiLanguage::Korean);
+        assert_eq!(english.new_window, "New window");
+        assert_eq!(korean.app_info, "앱 정보");
+        assert_eq!(english.more_options, "More window options");
+        assert_eq!(korean.more_options, "창 메뉴 더 보기");
+        assert_eq!(korean.move_window, "이동");
+        assert_eq!(korean.size, "크기 조정");
+        assert_eq!(korean.screenshot_file, "스크린샷");
     }
 
     #[test]

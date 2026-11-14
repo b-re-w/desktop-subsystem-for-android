@@ -48,11 +48,11 @@ use dsa_protocol::control;
 use crate::resize_trace::utc_stamp;
 use crate::root_elevation::{AppLevel, Decision, DecisionDenied, Level, Policy};
 use crate::root_requester::{
-    app_id, developer_shell_name, system_name, GenericIcon, Language, Requester, FIRST_APP_ID,
-    SHELL_APP_ID,
+    app_id, developer_shell_name, system_name, GenericIcon, Requester, FIRST_APP_ID, SHELL_APP_ID,
 };
 use crate::settings::SettingsStore;
 use crate::tasks::AppInfo;
+use crate::ui_language::UiLanguage;
 
 /// The file in a [`FolderApprover`]'s folder where each asked request is appended as one JSON
 /// line.
@@ -183,9 +183,10 @@ impl ApprovalRequest {
         self
     }
 
-    /// The language the prompt's words are in.
-    pub fn language(&self) -> Language {
-        Language::of(&self.language)
+    /// The language the prompt's words are in: the interface language for the user's first
+    /// display language, English when DSA has no translation for it.
+    pub fn language(&self) -> UiLanguage {
+        UiLanguage::from_tag_or_english(&self.language)
     }
 
     /// Sets the apps in a shared user ID group, with their names and icons as the guest listed
@@ -250,13 +251,13 @@ impl ApprovalRequest {
 
     /// The name the log and the prompt's English give who asks: see [`Self::name_in`].
     pub fn app_name(&self) -> String {
-        self.name_in(Language::English)
+        self.name_in(UiLanguage::English)
     }
 
     /// Who asks, by name in `language`: an app by its label (its package when the guest gave
     /// none), the apps of a shared user ID by theirs, `adb shell` as the developer shell, and
     /// Android's own services in words.
-    pub fn name_in(&self, language: Language) -> String {
+    pub fn name_in(&self, language: UiLanguage) -> String {
         match self.requester() {
             Requester::DeveloperShell => developer_shell_name(language).to_string(),
             Requester::System => system_name(self.uid, language).to_string(),
@@ -273,8 +274,9 @@ impl ApprovalRequest {
     /// The smaller second line under the name: the package (packages, for a shared user ID or
     /// an Android service), with the uid for a requester that is not an app. Empty for an app
     /// the guest gave no label, whose name is its package already.
-    pub fn detail_in(&self, language: Language) -> String {
+    pub fn detail_in(&self, language: UiLanguage) -> String {
         const SHOWN: usize = 3;
+        let words = prompt_words(language);
         let packages = package_group(self.package());
         let listed = |packages: &[&str]| {
             let mut text = packages
@@ -284,11 +286,8 @@ impl ApprovalRequest {
                 .collect::<Vec<_>>()
                 .join(", ");
             if packages.len() > SHOWN {
-                let more = packages.len() - SHOWN;
-                text.push_str(&match language {
-                    Language::English => format!(" and {more} more"),
-                    Language::Korean => format!(" 외 {more}개"),
-                });
+                let more = (packages.len() - SHOWN).to_string();
+                text.push_str(&fill(words.and_more, &[("more", &more)]));
             }
             text
         };
@@ -309,10 +308,7 @@ impl ApprovalRequest {
                     .iter()
                     .map(|app| app.package_name.as_str())
                     .collect();
-                match language {
-                    Language::English => format!("{}: one shared user ID", listed(&shared)),
-                    Language::Korean => format!("{}: 사용자 ID를 함께 씀", listed(&shared)),
-                }
+                format!("{}{}", listed(&shared), words.shared_user_id)
             }
             Requester::App => {
                 if self.app.label.trim().is_empty() {
@@ -346,22 +342,19 @@ impl ApprovalRequest {
     /// What is asked for, in words for a prompt that shows it on a line of its own: the
     /// command as a shell would read it, "an interactive shell", or keeping root.
     pub fn command_text(&self) -> String {
-        self.command_text_in(Language::English)
+        self.command_text_in(UiLanguage::English)
     }
 
     /// [`Self::command_text`] in `language`.
-    pub fn command_text_in(&self, language: Language) -> String {
-        match (self.purpose, language) {
-            (Purpose::Run, _) if !self.command.is_empty() => {
+    pub fn command_text_in(&self, language: UiLanguage) -> String {
+        let words = prompt_words(language);
+        match self.purpose {
+            Purpose::Run if !self.command.is_empty() => {
                 command_text(&self.command, self.interactive)
             }
-            (Purpose::Run, Language::English) => command_text(&[], self.interactive),
-            (Purpose::Run, Language::Korean) if self.interactive => "대화형 셸".to_string(),
-            (Purpose::Run, Language::Korean) => "셸".to_string(),
-            (Purpose::KeepRoot, Language::English) => {
-                "any command, from now on without asking each time".to_string()
-            }
-            (Purpose::KeepRoot, Language::Korean) => "앞으로 묻지 않고 모든 명령".to_string(),
+            Purpose::Run if self.interactive => words.interactive_shell.to_string(),
+            Purpose::Run => words.shell.to_string(),
+            Purpose::KeepRoot => words.any_command.to_string(),
         }
     }
 
@@ -386,21 +379,26 @@ impl ApprovalRequest {
 
     /// The sentence the administrator prompt shows, in English: see [`Self::message_in`].
     pub fn message(&self) -> String {
-        self.message_in(Language::English)
+        self.message_in(UiLanguage::English)
     }
 
     /// The sentence the administrator prompt shows in `language`: who asks, by name with the
     /// package beside it, and what they want. When several apps share the user ID, it lists
     /// all of them and says they share a user ID.
-    pub fn message_in(&self, language: Language) -> String {
-        let korean = language == Language::Korean;
-        let what = self.what_in(language);
+    pub fn message_in(&self, language: UiLanguage) -> String {
+        let words = prompt_words(language);
+        // Only a command is named in the sentence; a shell and keeping root have sentences of
+        // their own.
+        let what = format!("`{}`", self.command_line());
         let named = |app: &AppInfo| {
             let label = app.label.trim();
-            match (label.is_empty() || label == app.package_name, korean) {
-                (true, _) => app.package_name.clone(),
-                (false, false) => format!("{label} ({})", app.package_name),
-                (false, true) => format!("{label}({})", app.package_name),
+            if label.is_empty() || label == app.package_name {
+                app.package_name.clone()
+            } else {
+                fill(
+                    words.labelled,
+                    &[("label", label), ("package", &app.package_name)],
+                )
             }
         };
         let requester = self.requester();
@@ -411,64 +409,360 @@ impl ApprovalRequest {
                 .map(named)
                 .collect::<Vec<_>>()
                 .join(", ");
-            return match (self.purpose, korean) {
-                (Purpose::KeepRoot, false) => format!(
-                    "The Android apps {names} share a user ID and want to run commands as root \
-                     without asking each time."
-                ),
-                (Purpose::Run, false) if self.command.is_empty() => format!(
-                    "The Android apps {names} share a user ID and want to open a root shell."
-                ),
-                (Purpose::Run, false) => format!(
-                    "The Android apps {names} share a user ID and want to run {what} as root."
-                ),
-                (Purpose::KeepRoot, true) => format!(
-                    "사용자 ID를 함께 쓰는 Android 앱 {names}에서 앞으로 묻지 않고 루트 권한으로 \
-                     명령을 실행하려고 합니다."
-                ),
-                (Purpose::Run, true) if self.command.is_empty() => {
-                    format!("사용자 ID를 함께 쓰는 Android 앱 {names}에서 루트 셸을 열려고 합니다.")
-                }
-                (Purpose::Run, true) => format!(
-                    "사용자 ID를 함께 쓰는 Android 앱 {names}에서 다음 명령을 루트 권한으로 \
-                     실행하려고 합니다: {what}"
-                ),
+            let sentence = match self.purpose {
+                Purpose::KeepRoot => words.shared_keep_root,
+                Purpose::Run if self.command.is_empty() => words.shared_shell,
+                Purpose::Run => words.shared_run,
             };
+            return fill(sentence, &[("names", &names), ("what", &what)]);
         }
-        let who = match (requester, korean) {
-            (Requester::DeveloperShell, _) => self.name_in(language),
-            (Requester::System, false) => format!("{} (uid {})", self.name_in(language), self.uid),
-            (Requester::System, true) => format!("{}(uid {})", self.name_in(language), self.uid),
-            (_, false) => format!("The Android app {}", named(&self.app)),
-            (_, true) => format!("Android 앱 {}", named(&self.app)),
+        let who = match requester {
+            Requester::DeveloperShell => self.name_in(language),
+            Requester::System => fill(
+                words.service_uid,
+                &[
+                    ("name", &self.name_in(language)),
+                    ("uid", &self.uid.to_string()),
+                ],
+            ),
+            _ => fill(words.android_app, &[("app", &named(&self.app))]),
         };
-        match (self.purpose, korean) {
-            (Purpose::KeepRoot, false) => {
-                format!("{who} wants to run commands as root without asking each time.")
+        let sentence = match self.purpose {
+            Purpose::KeepRoot => words.keep_root,
+            Purpose::Run if self.command.is_empty() => words.open_shell,
+            Purpose::Run => words.run,
+        };
+        fill(sentence, &[("who", &who), ("what", &what)])
+    }
+}
+
+/// `template` with each `{name}` among `values` replaced by its value, in one pass, so a value
+/// that holds braces itself (a command such as `echo {who}`) is shown as it is.
+fn fill(template: &str, values: &[(&str, &str)]) -> String {
+    let mut out = String::with_capacity(template.len());
+    let mut rest = template;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let value = after.find('}').and_then(|close| {
+            let name = &after[..close];
+            values
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (*value, close))
+        });
+        match value {
+            Some((value, close)) => {
+                out.push_str(value);
+                rest = &after[close + 1..];
             }
-            (Purpose::Run, false) if self.command.is_empty() => {
-                format!("{who} wants to open a root shell.")
-            }
-            (Purpose::Run, false) => format!("{who} wants to run {what} as root."),
-            (Purpose::KeepRoot, true) => {
-                format!("{who}에서 앞으로 묻지 않고 루트 권한으로 명령을 실행하려고 합니다.")
-            }
-            (Purpose::Run, true) if self.command.is_empty() => {
-                format!("{who}에서 루트 셸을 열려고 합니다.")
-            }
-            (Purpose::Run, true) => {
-                format!("{who}에서 다음 명령을 루트 권한으로 실행하려고 합니다: {what}")
+            None => {
+                out.push('{');
+                rest = after;
             }
         }
     }
+    out.push_str(rest);
+    out
+}
 
-    /// [`Self::what`] in `language`.
-    fn what_in(&self, language: Language) -> String {
-        match (self.purpose, language) {
-            (Purpose::Run, _) if !self.command.is_empty() => format!("`{}`", self.command_line()),
-            (Purpose::KeepRoot, Language::Korean) => "묻지 않는 루트 권한".to_string(),
-            _ => self.what(),
-        }
+/// The words of the administrator prompt in one language. `{who}` is who asks, `{names}` the
+/// apps of a shared user ID, `{what}` the command in backticks.
+struct PromptWords {
+    /// After the first packages of a long list: `{more}` is how many more there are.
+    and_more: &'static str,
+    /// After the packages of a shared user ID.
+    shared_user_id: &'static str,
+    interactive_shell: &'static str,
+    shell: &'static str,
+    /// What keeping root asks for, on a line of its own.
+    any_command: &'static str,
+    /// An app with a label of its own: `{label}` and `{package}`.
+    labelled: &'static str,
+    /// One of Android's own services: `{name}` and `{uid}`.
+    service_uid: &'static str,
+    /// An app that asks: `{app}`.
+    android_app: &'static str,
+    keep_root: &'static str,
+    open_shell: &'static str,
+    run: &'static str,
+    shared_keep_root: &'static str,
+    shared_shell: &'static str,
+    shared_run: &'static str,
+}
+
+fn prompt_words(language: UiLanguage) -> PromptWords {
+    match language {
+        UiLanguage::English => PromptWords {
+            and_more: " and {more} more",
+            shared_user_id: ": one shared user ID",
+            interactive_shell: "an interactive shell",
+            shell: "a shell",
+            any_command: "any command, from now on without asking each time",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "The Android app {app}",
+            keep_root: "{who} wants to run commands as root without asking each time.",
+            open_shell: "{who} wants to open a root shell.",
+            run: "{who} wants to run {what} as root.",
+            shared_keep_root: "The Android apps {names} share a user ID and want to run commands \
+                               as root without asking each time.",
+            shared_shell: "The Android apps {names} share a user ID and want to open a root \
+                           shell.",
+            shared_run: "The Android apps {names} share a user ID and want to run {what} as \
+                         root.",
+        },
+        UiLanguage::Korean => PromptWords {
+            and_more: " 외 {more}개",
+            shared_user_id: ": 사용자 ID를 함께 씀",
+            interactive_shell: "대화형 셸",
+            shell: "셸",
+            any_command: "앞으로 묻지 않고 모든 명령",
+            labelled: "{label}({package})",
+            service_uid: "{name}(uid {uid})",
+            android_app: "Android 앱 {app}",
+            keep_root: "{who}에서 앞으로 묻지 않고 루트 권한으로 명령을 실행하려고 합니다.",
+            open_shell: "{who}에서 루트 셸을 열려고 합니다.",
+            run: "{who}에서 다음 명령을 루트 권한으로 실행하려고 합니다: {what}",
+            shared_keep_root: "사용자 ID를 함께 쓰는 Android 앱 {names}에서 앞으로 묻지 않고 \
+                               루트 권한으로 명령을 실행하려고 합니다.",
+            shared_shell: "사용자 ID를 함께 쓰는 Android 앱 {names}에서 루트 셸을 열려고 \
+                           합니다.",
+            shared_run: "사용자 ID를 함께 쓰는 Android 앱 {names}에서 다음 명령을 루트 권한으로 \
+                         실행하려고 합니다: {what}",
+        },
+        UiLanguage::Japanese => PromptWords {
+            and_more: " ほか {more} 件",
+            shared_user_id: ": 共有ユーザー ID",
+            interactive_shell: "対話型シェル",
+            shell: "シェル",
+            any_command: "今後は毎回確認せずにすべてのコマンド",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "Android アプリ {app}",
+            keep_root: "{who} が、今後は毎回確認せずに root としてコマンドを実行しようとして\
+                        います。",
+            open_shell: "{who} が root シェルを開こうとしています。",
+            run: "{who} が次のコマンドを root として実行しようとしています: {what}",
+            shared_keep_root: "ユーザー ID を共有する Android アプリ {names} が、今後は毎回確認\
+                               せずに root としてコマンドを実行しようとしています。",
+            shared_shell: "ユーザー ID を共有する Android アプリ {names} が root シェルを開こう\
+                           としています。",
+            shared_run: "ユーザー ID を共有する Android アプリ {names} が次のコマンドを root \
+                         として実行しようとしています: {what}",
+        },
+        UiLanguage::ChineseSimplified => PromptWords {
+            and_more: " 及其他 {more} 个",
+            shared_user_id: "：共享一个用户 ID",
+            interactive_shell: "交互式 shell",
+            shell: "shell",
+            any_command: "今后无需每次询问即可运行的任何命令",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "Android 应用 {app}",
+            keep_root: "{who} 想要今后无需每次询问即以 root 身份运行命令。",
+            open_shell: "{who} 想要打开 root shell。",
+            run: "{who} 想要以 root 身份运行以下命令：{what}",
+            shared_keep_root: "共享用户 ID 的 Android 应用 {names} 想要今后无需每次询问即以 \
+                               root 身份运行命令。",
+            shared_shell: "共享用户 ID 的 Android 应用 {names} 想要打开 root shell。",
+            shared_run: "共享用户 ID 的 Android 应用 {names} 想要以 root 身份运行以下命令：\
+                         {what}",
+        },
+        UiLanguage::ChineseTraditional => PromptWords {
+            and_more: " 及其他 {more} 個",
+            shared_user_id: "：共用一個使用者 ID",
+            interactive_shell: "互動式 shell",
+            shell: "shell",
+            any_command: "今後不必每次詢問即可執行的任何命令",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "Android 應用程式 {app}",
+            keep_root: "{who} 想要今後不必每次詢問即以 root 身分執行命令。",
+            open_shell: "{who} 想要開啟 root shell。",
+            run: "{who} 想要以 root 身分執行下列命令：{what}",
+            shared_keep_root: "共用使用者 ID 的 Android 應用程式 {names} 想要今後不必每次詢問即以 \
+                               root 身分執行命令。",
+            shared_shell: "共用使用者 ID 的 Android 應用程式 {names} 想要開啟 root shell。",
+            shared_run: "共用使用者 ID 的 Android 應用程式 {names} 想要以 root 身分執行下列命令：\
+                         {what}",
+        },
+        UiLanguage::Spanish => PromptWords {
+            and_more: " y {more} más",
+            shared_user_id: ": un ID de usuario compartido",
+            interactive_shell: "un shell interactivo",
+            shell: "un shell",
+            any_command: "cualquier comando, a partir de ahora sin preguntar cada vez",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "La aplicación de Android {app}",
+            keep_root: "{who} quiere ejecutar comandos como root sin preguntar cada vez.",
+            open_shell: "{who} quiere abrir un shell de root.",
+            run: "{who} quiere ejecutar {what} como root.",
+            shared_keep_root: "Las aplicaciones de Android {names} comparten un ID de usuario y \
+                               quieren ejecutar comandos como root sin preguntar cada vez.",
+            shared_shell: "Las aplicaciones de Android {names} comparten un ID de usuario y \
+                           quieren abrir un shell de root.",
+            shared_run: "Las aplicaciones de Android {names} comparten un ID de usuario y quieren \
+                         ejecutar {what} como root.",
+        },
+        UiLanguage::French => PromptWords {
+            and_more: " et {more} de plus",
+            shared_user_id: " : un ID utilisateur partagé",
+            interactive_shell: "un shell interactif",
+            shell: "un shell",
+            any_command: "toute commande, désormais sans demander à chaque fois",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "L'application Android {app}",
+            keep_root: "{who} souhaite exécuter des commandes en tant que root sans demander à \
+                        chaque fois.",
+            open_shell: "{who} souhaite ouvrir un shell root.",
+            run: "{who} souhaite exécuter {what} en tant que root.",
+            shared_keep_root: "Les applications Android {names} partagent un ID utilisateur et \
+                               souhaitent exécuter des commandes en tant que root sans demander \
+                               à chaque fois.",
+            shared_shell: "Les applications Android {names} partagent un ID utilisateur et \
+                           souhaitent ouvrir un shell root.",
+            shared_run: "Les applications Android {names} partagent un ID utilisateur et \
+                         souhaitent exécuter {what} en tant que root.",
+        },
+        UiLanguage::German => PromptWords {
+            and_more: " und {more} weitere",
+            shared_user_id: ": eine gemeinsame Benutzer-ID",
+            interactive_shell: "eine interaktive Shell",
+            shell: "eine Shell",
+            any_command: "beliebige Befehle, ab jetzt ohne jedes Mal zu fragen",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "Die Android-App {app}",
+            keep_root: "{who} möchte Befehle als root ausführen, ohne jedes Mal zu fragen.",
+            open_shell: "{who} möchte eine root-Shell öffnen.",
+            run: "{who} möchte {what} als root ausführen.",
+            shared_keep_root: "Die Android-Apps {names} teilen sich eine Benutzer-ID und möchten \
+                               Befehle als root ausführen, ohne jedes Mal zu fragen.",
+            shared_shell: "Die Android-Apps {names} teilen sich eine Benutzer-ID und möchten \
+                           eine root-Shell öffnen.",
+            shared_run: "Die Android-Apps {names} teilen sich eine Benutzer-ID und möchten \
+                         {what} als root ausführen.",
+        },
+        UiLanguage::PortugueseBrazil => PromptWords {
+            and_more: " e mais {more}",
+            shared_user_id: ": um ID de usuário compartilhado",
+            interactive_shell: "um shell interativo",
+            shell: "um shell",
+            any_command: "qualquer comando, de agora em diante sem perguntar toda vez",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "O app Android {app}",
+            keep_root: "{who} quer executar comandos como root sem perguntar toda vez.",
+            open_shell: "{who} quer abrir um shell root.",
+            run: "{who} quer executar {what} como root.",
+            shared_keep_root: "Os apps Android {names} compartilham um ID de usuário e querem \
+                               executar comandos como root sem perguntar toda vez.",
+            shared_shell: "Os apps Android {names} compartilham um ID de usuário e querem abrir \
+                           um shell root.",
+            shared_run: "Os apps Android {names} compartilham um ID de usuário e querem executar \
+                         {what} como root.",
+        },
+        UiLanguage::Russian => PromptWords {
+            and_more: " и ещё {more}",
+            shared_user_id: ": общий идентификатор пользователя",
+            interactive_shell: "интерактивная оболочка",
+            shell: "оболочка",
+            any_command: "любые команды, отныне без запроса каждый раз",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "Приложение Android {app}",
+            keep_root: "{who} хочет выполнять команды от имени root без запроса каждый раз.",
+            open_shell: "{who} хочет открыть оболочку root.",
+            run: "{who} хочет выполнить {what} от имени root.",
+            shared_keep_root: "Приложения Android {names} используют общий идентификатор \
+                               пользователя и хотят выполнять команды от имени root без запроса \
+                               каждый раз.",
+            shared_shell: "Приложения Android {names} используют общий идентификатор \
+                           пользователя и хотят открыть оболочку root.",
+            shared_run: "Приложения Android {names} используют общий идентификатор пользователя \
+                         и хотят выполнить {what} от имени root.",
+        },
+        UiLanguage::Italian => PromptWords {
+            and_more: " e altri {more}",
+            shared_user_id: ": un ID utente condiviso",
+            interactive_shell: "una shell interattiva",
+            shell: "una shell",
+            any_command: "qualsiasi comando, d'ora in poi senza chiedere ogni volta",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "L'app Android {app}",
+            keep_root: "{who} vuole eseguire comandi come root senza chiedere ogni volta.",
+            open_shell: "{who} vuole aprire una shell root.",
+            run: "{who} vuole eseguire {what} come root.",
+            shared_keep_root: "Le app Android {names} condividono un ID utente e vogliono \
+                               eseguire comandi come root senza chiedere ogni volta.",
+            shared_shell: "Le app Android {names} condividono un ID utente e vogliono aprire una \
+                           shell root.",
+            shared_run: "Le app Android {names} condividono un ID utente e vogliono eseguire \
+                         {what} come root.",
+        },
+        UiLanguage::Vietnamese => PromptWords {
+            and_more: " và {more} gói khác",
+            shared_user_id: ": dùng chung một ID người dùng",
+            interactive_shell: "một shell tương tác",
+            shell: "một shell",
+            any_command: "mọi lệnh, từ nay không hỏi lại mỗi lần",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "Ứng dụng Android {app}",
+            keep_root: "{who} muốn chạy lệnh với quyền root mà không hỏi mỗi lần.",
+            open_shell: "{who} muốn mở một shell root.",
+            run: "{who} muốn chạy {what} với quyền root.",
+            shared_keep_root: "Các ứng dụng Android {names} dùng chung một ID người dùng và muốn \
+                               chạy lệnh với quyền root mà không hỏi mỗi lần.",
+            shared_shell: "Các ứng dụng Android {names} dùng chung một ID người dùng và muốn mở \
+                           một shell root.",
+            shared_run: "Các ứng dụng Android {names} dùng chung một ID người dùng và muốn chạy \
+                         {what} với quyền root.",
+        },
+        UiLanguage::Indonesian => PromptWords {
+            and_more: " dan {more} lainnya",
+            shared_user_id: ": satu ID pengguna bersama",
+            interactive_shell: "shell interaktif",
+            shell: "shell",
+            any_command: "perintah apa pun, mulai sekarang tanpa bertanya setiap kali",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "Aplikasi Android {app}",
+            keep_root: "{who} ingin menjalankan perintah sebagai root tanpa bertanya setiap \
+                        kali.",
+            open_shell: "{who} ingin membuka shell root.",
+            run: "{who} ingin menjalankan {what} sebagai root.",
+            shared_keep_root: "Aplikasi Android {names} berbagi satu ID pengguna dan ingin \
+                               menjalankan perintah sebagai root tanpa bertanya setiap kali.",
+            shared_shell: "Aplikasi Android {names} berbagi satu ID pengguna dan ingin membuka \
+                           shell root.",
+            shared_run: "Aplikasi Android {names} berbagi satu ID pengguna dan ingin menjalankan \
+                         {what} sebagai root.",
+        },
+        UiLanguage::Turkish => PromptWords {
+            and_more: " ve {more} tane daha",
+            shared_user_id: ": ortak bir kullanıcı kimliği",
+            interactive_shell: "etkileşimli bir kabuk",
+            shell: "bir kabuk",
+            any_command: "bundan sonra her seferinde sormadan her komut",
+            labelled: "{label} ({package})",
+            service_uid: "{name} (uid {uid})",
+            android_app: "{app} Android uygulaması",
+            keep_root: "{who}, her seferinde sormadan komutları root olarak çalıştırmak istiyor.",
+            open_shell: "{who}, bir root kabuğu açmak istiyor.",
+            run: "{who}, {what} komutunu root olarak çalıştırmak istiyor.",
+            shared_keep_root: "{names} Android uygulamaları ortak bir kullanıcı kimliği \
+                               kullanıyor ve her seferinde sormadan komutları root olarak \
+                               çalıştırmak istiyor.",
+            shared_shell: "{names} Android uygulamaları ortak bir kullanıcı kimliği kullanıyor ve \
+                           bir root kabuğu açmak istiyor.",
+            shared_run: "{names} Android uygulamaları ortak bir kullanıcı kimliği kullanıyor ve \
+                         {what} komutunu root olarak çalıştırmak istiyor.",
+        },
     }
 }
 
@@ -1373,7 +1667,7 @@ mod tests {
         app.app.caption_icon_png = vec![0x89, b'P', b'N', b'G', 2];
         let app = app.with_language("ko-KR");
         assert_eq!(app.requester(), Requester::App);
-        assert_eq!(app.language(), Language::Korean);
+        assert_eq!(app.language(), UiLanguage::Korean);
         // The label is the name; the package is only the second line.
         assert_eq!(app.name_in(app.language()), "백업 도구");
         assert_eq!(app.detail_in(app.language()), "com.example.backup");
@@ -1383,20 +1677,20 @@ mod tests {
             PromptIcon::App(&[0x89, b'P', b'N', b'G', 1])
         );
         assert_eq!(
-            app.message_in(Language::Korean),
+            app.message_in(UiLanguage::Korean),
             "Android 앱 백업 도구(com.example.backup)에서 다음 명령을 루트 권한으로 \
              실행하려고 합니다: `id`"
         );
         assert_eq!(
-            app.message_in(Language::English),
+            app.message_in(UiLanguage::English),
             "The Android app 백업 도구 (com.example.backup) wants to run `id` as root."
         );
         // An app the guest has not described is named by its package, with no second line.
         let mut bare = request("com.example.bare");
         bare.app.label.clear();
         bare.app.icon_png.clear();
-        assert_eq!(bare.name_in(Language::Korean), "com.example.bare");
-        assert_eq!(bare.detail_in(Language::Korean), "");
+        assert_eq!(bare.name_in(UiLanguage::Korean), "com.example.bare");
+        assert_eq!(bare.detail_in(UiLanguage::Korean), "");
         assert_eq!(bare.prompt_icon(), PromptIcon::None);
     }
 
@@ -1408,25 +1702,25 @@ mod tests {
         shell.app.label = "Shell".into();
         shell.uid = 2000;
         assert_eq!(shell.requester(), Requester::DeveloperShell);
-        assert_eq!(shell.name_in(Language::Korean), "adb 셸");
-        assert_eq!(shell.name_in(Language::English), "adb shell");
+        assert_eq!(shell.name_in(UiLanguage::Korean), "adb 셸");
+        assert_eq!(shell.name_in(UiLanguage::English), "adb shell");
         assert_eq!(
-            shell.detail_in(Language::English),
+            shell.detail_in(UiLanguage::English),
             "com.android.shell (uid 2000)"
         );
         assert_eq!(shell.prompt_icon(), PromptIcon::Generic(GenericIcon::Shell));
         assert_eq!(
-            shell.message_in(Language::Korean),
+            shell.message_in(UiLanguage::Korean),
             "adb 셸에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`"
         );
         let mut interactive = shell.clone();
         interactive.command.clear();
         interactive.interactive = true;
         assert_eq!(
-            interactive.message_in(Language::Korean),
+            interactive.message_in(UiLanguage::Korean),
             "adb 셸에서 루트 셸을 열려고 합니다."
         );
-        assert_eq!(interactive.command_text_in(Language::Korean), "대화형 셸");
+        assert_eq!(interactive.command_text_in(UiLanguage::Korean), "대화형 셸");
         // The shell uid names the shell even when the package list left the package out, and
         // in a second Android user.
         let mut by_uid = request("");
@@ -1434,7 +1728,7 @@ mod tests {
         assert_eq!(by_uid.requester(), Requester::DeveloperShell);
         // Keeping root for the shell is asked under the same name.
         let keep = ApprovalRequest::keep_root(shell.app.clone());
-        assert_eq!(keep.name_in(Language::Korean), "adb 셸");
+        assert_eq!(keep.name_in(UiLanguage::Korean), "adb 셸");
     }
 
     #[test]
@@ -1443,10 +1737,10 @@ mod tests {
         system.uid = 1000;
         system.app.label = "Android System".into();
         assert_eq!(system.requester(), Requester::System);
-        assert_eq!(system.name_in(Language::Korean), "Android 시스템");
-        assert_eq!(system.name_in(Language::English), "Android system");
+        assert_eq!(system.name_in(UiLanguage::Korean), "Android 시스템");
+        assert_eq!(system.name_in(UiLanguage::English), "Android system");
         assert_eq!(
-            system.detail_in(Language::Korean),
+            system.detail_in(UiLanguage::Korean),
             "android, com.android.settings, com.android.providers.settings 외 1개 (uid 1000)"
         );
         assert_eq!(
@@ -1454,7 +1748,7 @@ mod tests {
             PromptIcon::Generic(GenericIcon::System)
         );
         assert_eq!(
-            system.message_in(Language::English),
+            system.message_in(UiLanguage::English),
             "Android system (uid 1000) wants to run `id` as root."
         );
         // An app uid is never taken for Android's own.
@@ -1486,9 +1780,9 @@ mod tests {
             ])
             .with_language("ko");
         assert_eq!(shared.requester(), Requester::SharedApps);
-        assert_eq!(shared.name_in(Language::Korean), "공유 하나, 공유 둘");
+        assert_eq!(shared.name_in(UiLanguage::Korean), "공유 하나, 공유 둘");
         assert_eq!(
-            shared.detail_in(Language::Korean),
+            shared.detail_in(UiLanguage::Korean),
             "com.shared.one, com.shared.two: 사용자 ID를 함께 씀"
         );
         // The first app in the group that has an icon.
@@ -1497,8 +1791,134 @@ mod tests {
             PromptIcon::App(&[0x89, b'P', b'N', b'G', 9])
         );
         assert!(shared
-            .message_in(Language::Korean)
+            .message_in(UiLanguage::Korean)
             .starts_with("사용자 ID를 함께 쓰는 Android 앱 공유 하나(com.shared.one), 공유 둘(com.shared.two)에서"));
+    }
+
+    /// The prompt speaks the user's first display language when DSA has it, else English, as
+    /// the interface languages map system locales.
+    #[test]
+    fn fr17_the_root_prompt_language_follows_the_users_first_language() {
+        let cases = [
+            ("ko-KR", UiLanguage::Korean),
+            ("ko_KR.UTF-8", UiLanguage::Korean),
+            ("KO", UiLanguage::Korean),
+            ("en-US", UiLanguage::English),
+            ("ja-JP", UiLanguage::Japanese),
+            ("zh-Hant-HK", UiLanguage::ChineseTraditional),
+            ("zh-SG", UiLanguage::ChineseSimplified),
+            ("pt-PT", UiLanguage::PortugueseBrazil),
+            ("in-ID", UiLanguage::Indonesian),
+            ("nl-NL", UiLanguage::English),
+            ("", UiLanguage::English),
+        ];
+        for (tag, language) in cases {
+            assert_eq!(
+                request("com.ask.app").with_language(tag).language(),
+                language,
+                "{tag}"
+            );
+        }
+    }
+
+    /// Every requester and every purpose has its prompt in every interface language: the
+    /// sentence names who asks and the command as English does, nothing is left empty or
+    /// unfilled, and no em dash shows.
+    #[test]
+    fn fr17_the_root_prompt_reads_in_every_language() {
+        let mut shell = request(crate::root_elevation::ADB_SHELL_PACKAGE);
+        shell.uid = 2000;
+        let mut system = request("android");
+        system.uid = 1000;
+        let mut keep = ApprovalRequest::keep_root(request("com.ask.app").app);
+        keep.app.label = "Root Checker".into();
+        let mut interactive = request("com.ask.app");
+        interactive.command.clear();
+        interactive.interactive = true;
+        let mut many = request("a.one, a.two, a.three, a.four, a.five");
+        many.uid = 1013;
+        let shared_apps: Vec<AppInfo> = ["com.shared.one", "com.shared.two"]
+            .iter()
+            .map(|package| AppInfo {
+                package_name: (*package).into(),
+                label: format!("Label {package}"),
+                ..Default::default()
+            })
+            .collect();
+        let shared = request("com.shared.one, com.shared.two").with_shared_apps(shared_apps);
+        let mut shared_keep = shared.clone();
+        shared_keep.purpose = Purpose::KeepRoot;
+        let mut shared_shell = shared.clone();
+        shared_shell.command.clear();
+        let requests = [
+            request("com.ask.app"),
+            shell,
+            system,
+            keep,
+            interactive,
+            many,
+            shared,
+            shared_keep,
+            shared_shell,
+        ];
+        let dash = char::from_u32(0x2014).unwrap();
+        for language in UiLanguage::ALL {
+            for asked in &requests {
+                let message = asked.message_in(language);
+                let name = asked.name_in(language);
+                let detail = asked.detail_in(language);
+                let command = asked.command_text_in(language);
+                assert!(!message.trim().is_empty(), "{language:?}");
+                assert!(!name.trim().is_empty(), "{language:?}");
+                assert!(!command.trim().is_empty(), "{language:?}");
+                for words in [&message, &name, &detail, &command] {
+                    assert!(!words.contains(dash), "{language:?}: {words}");
+                    for left in ["{who}", "{what}", "{names}", "{app}", "{more}", "{uid}"] {
+                        assert!(!words.contains(left), "{language:?}: {words}");
+                    }
+                }
+                if asked.purpose == Purpose::Run && !asked.command.is_empty() {
+                    assert!(message.contains("`id`"), "{language:?}: {message}");
+                }
+                match asked.requester() {
+                    Requester::App => {
+                        assert!(
+                            message.contains(&asked.app.label),
+                            "{language:?}: {message}"
+                        )
+                    }
+                    Requester::SharedApps => {
+                        for app in &asked.shared_apps {
+                            assert!(message.contains(&app.label), "{language:?}: {message}");
+                            assert!(message.contains(&app.package_name), "{language:?}");
+                        }
+                    }
+                    Requester::System => assert!(
+                        message.contains(&format!("uid {}", asked.uid)),
+                        "{language:?}: {message}"
+                    ),
+                    Requester::DeveloperShell => {
+                        assert!(message.contains("adb"), "{language:?}: {message}")
+                    }
+                }
+            }
+            // A long list says how many more packages there are.
+            let more = requests[5].detail_in(language);
+            assert!(more.contains('2'), "{language:?}: {more}");
+        }
+    }
+
+    #[test]
+    fn fr17_a_command_with_braces_is_shown_as_it_is() {
+        let mut asked = request("com.ask.app");
+        asked.command = vec!["echo".into(), "{who}{what}".into()];
+        for language in UiLanguage::ALL {
+            let message = asked.message_in(language);
+            assert!(
+                message.contains("`echo '{who}{what}'`"),
+                "{language:?}: {message}"
+            );
+        }
     }
 
     #[test]

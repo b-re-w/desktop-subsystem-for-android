@@ -123,7 +123,7 @@ impl State {
     fn menu_entries(&self, task_id: i32, dpi: u32) -> Option<(MenuLayout, Vec<Option<Coverage>>)> {
         let text = self.text.as_ref()?;
         let window = self.windows.get(&task_id)?;
-        let words = menu_text(self.korean);
+        let words = menu_text(self.language);
         let maximized = window.model.states.maximized && window.pip.is_none();
         let entries = items(maximized, window.model.resizable, window.multiple_windows);
         let px = f64::from(dsa_host_core::compositor::caption::scaled(TEXT_AT_100, dpi));
@@ -610,7 +610,7 @@ impl State {
             png: OnceLock::new(),
         });
         self.set_clipboard_shot(Arc::clone(&shot), serial);
-        let prefix = menu_text(self.korean).screenshot_file;
+        let prefix = menu_text(self.language).screenshot_file;
         let spawned = std::thread::Builder::new()
             .name("dsa-screenshot".into())
             .spawn(move || match screenshot::save(shot.png(), prefix) {

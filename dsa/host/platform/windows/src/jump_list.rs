@@ -18,6 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use dsa_host_core::tasks::{jump_list_shortcuts, AppShortcut};
+use dsa_host_core::ui_language::UiLanguage;
 use serde::{Deserialize, Serialize};
 
 use crate::desktop_shortcuts::{shortcut_arguments, write_icon, CREATE_DESKTOP_SHORTCUT_ARGUMENT};
@@ -52,26 +53,35 @@ pub struct Texts {
 
 impl Texts {
     pub fn english() -> Texts {
-        Texts {
-            create_desktop_shortcut: "Create desktop shortcut",
-        }
+        Texts::of(UiLanguage::English)
     }
 
-    pub fn korean() -> Texts {
+    /// The words in `language`.
+    pub fn of(language: UiLanguage) -> Texts {
+        let create_desktop_shortcut = match language {
+            UiLanguage::English => "Create desktop shortcut",
+            UiLanguage::Korean => "바탕 화면 바로 가기 만들기",
+            UiLanguage::Japanese => "デスクトップ ショートカットの作成",
+            UiLanguage::ChineseSimplified => "创建桌面快捷方式",
+            UiLanguage::ChineseTraditional => "建立桌面捷徑",
+            UiLanguage::Spanish => "Crear acceso directo en el escritorio",
+            UiLanguage::French => "Créer un raccourci sur le Bureau",
+            UiLanguage::German => "Desktopverknüpfung erstellen",
+            UiLanguage::PortugueseBrazil => "Criar atalho na área de trabalho",
+            UiLanguage::Russian => "Создать ярлык на рабочем столе",
+            UiLanguage::Italian => "Crea collegamento sul desktop",
+            UiLanguage::Vietnamese => "Tạo lối tắt trên màn hình nền",
+            UiLanguage::Indonesian => "Buat pintasan desktop",
+            UiLanguage::Turkish => "Masaüstü kısayolu oluştur",
+        };
         Texts {
-            create_desktop_shortcut: "바탕 화면 바로 가기 만들기",
+            create_desktop_shortcut,
         }
     }
 
     /// The words in the user's display language.
     pub fn for_user() -> Texts {
-        // SAFETY: reads the user's display language.
-        let language = unsafe { windows_sys::Win32::Globalization::GetUserDefaultUILanguage() };
-        if crate::compositor::widget_menu::is_korean(language) {
-            Texts::korean()
-        } else {
-            Texts::english()
-        }
+        Texts::of(crate::ui_language::user_language())
     }
 }
 

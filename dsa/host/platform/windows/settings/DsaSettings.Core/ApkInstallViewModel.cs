@@ -72,18 +72,17 @@ public sealed class ApkInstallViewModel : ObservableObject
     public string Title { get; private set; }
     public string Subtitle { get; private set; } = "";
     /// <summary>The big title: asks about the app while the install is the user's to decide or
-    /// is under way, and is the bare name before the file is read and on the result screens.
-    /// This and the labels below are English in every language, so they are not in the string
-    /// tables.</summary>
+    /// is under way, and is the bare name before the file is read and on the result screens.</summary>
     public string HeroTitle => _apk is not null && Page is ApkInstallPage.Details or ApkInstallPage.Progress
-        ? $"Install {Title}?"
+        ? F("ApkWindow_InstallQuestion", Title)
         : Title;
-    /// <summary>The labels of the lines under the title, in the label column. English in
-    /// every language, as the title is.</summary>
-    public const string PackageLabel = "Package Name:";
-    public const string PublisherLabel = "Publisher:";
-    public const string VersionLabel = "Version:";
-    public const string SourceLabel = "Source:";
+    /// <summary>The labels of the lines under the title, in the label column.</summary>
+    public string PackageLabel => _text.Get("ApkWindow_PackageLabel");
+    public string PublisherLabel => _text.Get("ApkWindow_PublisherLabel");
+    public string VersionLabel => _text.Get("ApkWindow_VersionLabel");
+    public string SourceLabel => _text.Get("ApkWindow_SourceLabel");
+    /// <summary>What a screen reader calls the app's icon once the file gives one.</summary>
+    public string IconName => F("ApkWindow_AppIcon", Title);
     /// <summary>The values of those lines, in the value column.</summary>
     public string PackageValue { get; private set; } = "";
     /// <summary>Who signed the app, where App Installer names the publisher: an APK carries no
@@ -99,7 +98,7 @@ public sealed class ApkInstallViewModel : ObservableObject
     public string PublisherLine => PublisherValue.Length > 0 ? $"{PublisherLabel} {PublisherValue}" : "";
     /// <summary>The link under the permissions: More while they are folded, Less once they
     /// are not.</summary>
-    public string MoreLabel => IsExpanded ? "Less" : "More";
+    public string MoreLabel => _text.Get(IsExpanded ? "ApkWindow_Less" : "ApkWindow_More");
     /// <summary>How many permissions show before More is pressed.</summary>
     public const int PreviewCount = 3;
     /// <summary>Whether More was pressed, so the permissions and the rest of what the file says
@@ -199,7 +198,7 @@ public sealed class ApkInstallViewModel : ObservableObject
     private void FailUnsupported(string error = "")
     {
         var (kind, detail) = UnsupportedFile.FromRefusal(error) ?? (UnsupportedFile.Classify(Path), "");
-        Fail(_text.Get("ApkWindow_NotApkTitle"), UnsupportedFile.Message(kind, FileName, detail));
+        Fail(_text.Get("ApkWindow_NotApkTitle"), UnsupportedFile.Message(_text, kind, FileName, detail));
     }
 
     /// <summary>Why an app with native code may not run here, or empty. Code for this PC's own
@@ -311,7 +310,7 @@ public sealed class ApkInstallViewModel : ObservableObject
             .ToList();
         PermissionsHeader = apk.Permissions.Count == 0
             ? _text.Get("ApkWindow_NoPermissions")
-            : $"Capabilities ({apk.Permissions.Count}):";
+            : F("ApkWindow_CapabilitiesHeader", apk.Permissions.Count);
         Page = ApkInstallPage.Details;
         ChangedAll();
     }
@@ -483,7 +482,7 @@ public sealed class ApkInstallViewModel : ObservableObject
                 words is null ? reason : F("ApkWindow_ReasonWithWords", reason, words));
             return;
         }
-        Fail(_text.Get("ApkWindow_FailedTitle"), F("ApkWindow_NotSent", detail.Length > 0 ? detail : $"dsa ended with code {result.ExitCode}"));
+        Fail(_text.Get("ApkWindow_FailedTitle"), F("ApkWindow_NotSent", detail.Length > 0 ? detail : F("ApkWindow_DsaEnded", result.ExitCode)));
     }
 
     /// <summary>Opens the app just installed, as "Launch when ready" asks. When it does not

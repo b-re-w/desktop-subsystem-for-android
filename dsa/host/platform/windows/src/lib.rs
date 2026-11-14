@@ -59,6 +59,8 @@
 //!   (the reading part on Windows only).
 //! - [`start_menu`]: a Start menu shortcut for each app installed in the user's Android, which
 //!   Windows search finds (Windows only).
+//! - [`ui_language`]: the language DSA's own words are shown in, from the user's Windows
+//!   display language.
 
 /// The DSA release this program belongs to. The installer build sets `DSA_VERSION` to the
 /// release's version; a plain `cargo build` falls back to the crate's version.
@@ -149,6 +151,7 @@ pub mod setup;
 #[cfg(windows)]
 pub mod start_menu;
 pub mod ui_automation;
+pub mod ui_language;
 pub mod uninstall;
 #[cfg(windows)]
 pub mod user_disk;

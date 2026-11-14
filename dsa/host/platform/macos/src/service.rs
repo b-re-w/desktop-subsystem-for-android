@@ -592,11 +592,15 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
     session.set_adb_advertise(crate::adb_discovery::advertiser());
     session.set_android_files_connect(dial(dsa_host_core::file_share::ANDROID_FILES_PORT));
     // An app's root request that needs the administrator is asked through macOS's own
-    // administrator dialog, by the levels in the user's settings.
-    let prompt = Arc::new(crate::root_approval::AuthorizationPrompt::new(
-        crate::root_approval::SecurityAuthorization,
-        shared.user.boot_dir().join("prompt-icons"),
-    ));
+    // administrator dialog, by the levels in the user's settings, in the language the rest of
+    // DSA on this Mac shows.
+    let prompt = Arc::new(
+        crate::root_approval::AuthorizationPrompt::new(
+            crate::root_approval::SecurityAuthorization,
+            shared.user.boot_dir().join("prompt-icons"),
+        )
+        .in_language_of(crate::ui_language::current),
+    );
     // While VoiceOver runs the dialog has longer to be answered, as hearing it read out takes
     // longer than reading it.
     session.set_root_approval(Arc::new(

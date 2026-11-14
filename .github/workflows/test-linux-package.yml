@@ -174,7 +174,16 @@ jobs:
               /usr/share/icons/hicolor/symbolic/apps/io.github.thisisthepy.DSA.ApkInstaller-symbolic.svg \
               /usr/share/icons/hicolor/scalable/apps/io.github.thisisthepy.DSA.Files.svg \
               /usr/share/icons/hicolor/symbolic/apps/io.github.thisisthepy.DSA.Files-symbolic.svg \
-              /usr/share/locale/ko/LC_MESSAGES/dsa-settings.mo; do
+              /usr/share/locale/ko/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/ja/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/zh_CN/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/zh_TW/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/pt_BR/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/tr/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/zh_HK/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/zh_MO/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/zh_SG/LC_MESSAGES/dsa-settings.mo \
+              /usr/share/locale/pt/LC_MESSAGES/dsa-settings.mo; do
             grep -q "\.$path\$\|\.$path -> " .scratch/deb-contents || { echo "the .deb has no $path"; exit 1; }
             grep -qx "$path" .scratch/rpm-contents || { echo "the .rpm has no $path"; exit 1; }
           done
