@@ -431,7 +431,7 @@ mod tests {
     }
 
     #[test]
-    fn fr35_the_macos_dialog_names_the_adb_shell_as_the_developer_shell() {
+    fn fr35_the_macos_dialog_names_the_adb_shell_as_the_adb_shell() {
         let dir = icons("shell");
         let mut shell = request();
         shell.app.package_name = "com.android.shell".into();
@@ -444,7 +444,7 @@ mod tests {
         let asked = prompt.api.asked.lock().unwrap();
         assert_eq!(
             asked[0].0,
-            "개발자 셸 (adb)에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`\n\
+            "adb 셸에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`\n\
              com.android.shell (uid 2000)"
         );
         // A generic terminal icon, drawn by the host, in place of none.
