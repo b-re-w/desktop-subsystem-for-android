@@ -19,10 +19,25 @@
 # out, so a run that stops partway makes the next one shorter. With its cache a build takes
 # about 20 minutes; without it, up to two and a half hours.
 #
+# The jobs, in order:
+#   1. versions: checks the lock against each build's manifest and the patches against the
+#      pinned source, and lists the versions and architectures.
+#   2. native (per Android version and architecture) and services (per Android version) start
+#      together as soon as it passes. The native build keeps its files as the intermediate
+#      artifact framework-native-<android>-<arch>-<version>; the services build keeps
+#      services.jar as framework-services-<android>-<version>.
+#   3. framework (per Android version and architecture) waits for both, adds services.jar to
+#      the native files when the services build made it, and keeps the result as
+#      framework-<android>-<arch>-<version>, the artifact the image release takes. It is the
+#      only job that keeps that artifact, so the artifact never exists without services.jar
+#      while the services build might still make it. A job can wait only for a whole matrix, not
+#      one of its jobs, so each framework job waits for every native and services job; that is
+#      still sooner than the native builds waiting for the services builds before they start.
+#
 # The Development build needs only the newest Android's x86_64 files, and takes them as soon as
-# that job has passed, while the others still run (release-image.yml). So the newest Android
-# comes first in the matrix, and x86_64 before arm64, which starts that job first when runners
-# are short.
+# the framework job for those has passed, while the others still run (release-image.yml). So the
+# newest Android comes first in the matrices, and x86_64 before arm64, which starts those jobs
+# first when runners are short.
 
 name: Framework build
 
@@ -102,129 +117,12 @@ jobs:
             .github/scripts/framework/check-patches.sh "$android" "$RUNNER_TEMP/patch-check-$android"
           done
 
-  # services.jar, with DSA's window manager, package manager and WebView service changes. The
-  # Java framework reaches across most of the platform, so it is built in a tree of every project
-  # the published build's manifest syncs by default (framework_lock.py services-lock), with the
-  # build's own product and release configuration. A dex file is the same for every
-  # architecture, so one build serves the images of both; the framework jobs below take it into
-  # their artifacts. It fits a standard runner's disk (145 GB) only as follows: the runner's
-  # unused toolchains go (free-disk.sh --deep), the tree leaves out what only native builds and
-  # other devices read (framework_lock.py SERVICES_TREE_SKIPPED), and the build makes services'
-  # dex jar alone, not its install path, which would also build its JNI, native and Rust
-  # dependencies. Soong's analysis of the whole tree needs more memory than the runner has, so a
-  # large swap file is added for it, and build-services.sh gives it back to the disk when the
-  # analysis is done.
-  services:
-    name: Build services.jar (ubuntu-24.04, ${{ matrix.android }})
+  # SurfaceFlinger, libhwui, libEGL, libandroid_runtime and the KeyMint, in the reduced tree. It
+  # starts with the services build and does not wait for it: services.jar is added to its files
+  # afterwards, by the framework job below.
+  native:
+    name: Build the native framework (ubuntu-24.04, ${{ matrix.android }}, ${{ matrix.arch }})
     needs: versions
-    runs-on: ubuntu-24.04
-    timeout-minutes: 355
-    strategy:
-      fail-fast: false
-      matrix:
-        android: ${{ fromJSON(needs.versions.outputs.android) }}
-    env:
-      ANDROID_BRANCH: ${{ matrix.android }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Make room on the runner
-        run: .github/scripts/translator/free-disk.sh dsa-services --deep
-
-      - name: Add swap for the analysis of the whole tree
-        run: |
-          swap_dir="$(dirname "$(swapon --show=NAME --noheadings | grep dsa-swap | head -1)")"
-          sudo fallocate -l 24G "$swap_dir/dsa-swap-services"
-          sudo chmod 600 "$swap_dir/dsa-swap-services"
-          sudo mkswap "$swap_dir/dsa-swap-services" >/dev/null
-          sudo swapon "$swap_dir/dsa-swap-services"
-          # build-services.sh turns it off and deletes it once the analysis is done.
-          echo "DSA_ANALYSIS_SWAP=$swap_dir/dsa-swap-services" >> "$GITHUB_ENV"
-          free -h
-          df -h / /mnt
-
-      - name: Install the build tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends jq
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Read the pins
-        id: pins
-        run: echo "version=$(uv run dsa/guest/framework/framework_lock.py version "$ANDROID_BRANCH")" >> "$GITHUB_OUTPUT"
-
-      - name: Fetch the whole pinned tree
-        run: |
-          start=$SECONDS
-          url="$(jq -r --arg a "$ANDROID_BRANCH" '.versions[] | select(.android == $a) | .manifest.url' dsa/guest/framework/framework-lock.json)"
-          curl -fsSL --retry 8 --retry-all-errors -o "$RUNNER_TEMP/manifest.xml" "$url"
-          uv run dsa/guest/framework/framework_lock.py services-lock "$ANDROID_BRANCH" "$RUNNER_TEMP/manifest.xml" "$RUNNER_TEMP/services-lock.json"
-          uv run .github/scripts/translator/fetch-source.py --lock "$RUNNER_TEMP/services-lock.json" \
-            --android "$ANDROID_BRANCH" --top "$DSA_TRANSLATOR_WORK/aosp" --jobs 8
-          echo "fetched in $(( (SECONDS - start) / 60 )) minutes"
-          # The tree leaves the VNDK snapshots out (SERVICES_TREE_SKIPPED), but the board
-          # configuration stops with "VNDK version 31 not found" unless each version the product
-          # names (PRODUCT_EXTRA_VNDK_VERSIONS) has a build file one folder down
-          # (board_config.mk: $(wildcard prebuilts/vndk/v<n>/*/Android.bp)). An empty
-          # Android.bp, which defines no module, satisfies that check; the build allows the
-          # modules the snapshot would define to be missing.
-          { grep -o 'path="prebuilts/vndk/[^"]*"' "$RUNNER_TEMP/manifest.xml" || true; } | cut -d'"' -f2 | sort -u |
-            while read -r vndk; do
-              mkdir -p "$DSA_TRANSLATOR_WORK/aosp/$vndk/x86_64"
-              echo "// Left out of the services.jar tree; this file only passes the VNDK check." \
-                > "$DSA_TRANSLATOR_WORK/aosp/$vndk/x86_64/Android.bp"
-              echo "stub $vndk"
-            done
-          du -sh "$DSA_TRANSLATOR_WORK/aosp"
-          echo "::group::The largest folders of the tree"
-          du -x -h -d 3 "$DSA_TRANSLATOR_WORK/aosp" 2>/dev/null | sort -rh | head -60 || true
-          echo "::endgroup::"
-          df -h / /mnt
-
-      # build-services.sh stops itself after DSA_BUILD_MINUTES, before the step's limit, so that
-      # a build out of time says so; it also says when it ran out of disk or memory.
-      - name: Build services.jar
-        timeout-minutes: 300
-        env:
-          DSA_BUILD_MINUTES: 285
-        run: |
-          start=$SECONDS
-          .github/scripts/framework/build-services.sh "$DSA_TRANSLATOR_WORK/aosp" "$ANDROID_BRANCH" "$DSA_TRANSLATOR_WORK/services"
-          echo "built in $(( (SECONDS - start) / 60 )) minutes"
-          df -h / /mnt
-
-      - name: Keep services.jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: framework-services-${{ matrix.android }}-${{ steps.pins.outputs.version }}
-          path: ${{ env.DSA_TRANSLATOR_WORK }}/services/
-          if-no-files-found: error
-          retention-days: 90
-
-      - name: Keep the build's logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: framework-services-logs-${{ matrix.android }}
-          path: |
-            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/error.log
-            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/soong.log
-            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/verbose.log*
-            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/soong_ui.log*
-            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/.dsa-patches.json
-          if-no-files-found: ignore
-          include-hidden-files: true
-          retention-days: 30
-
-  framework:
-    name: Build the framework (ubuntu-24.04, ${{ matrix.android }}, ${{ matrix.arch }})
-    # After the services build, whose services.jar goes into this job's artifact. Should that
-    # build fail, the artifact has no services.jar, and make-image.py edits the published
-    # build's as before; the dialogs of that image keep the caption bar inset.
-    needs: [versions, services]
-    if: ${{ !cancelled() && needs.versions.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 355
     permissions:
@@ -334,39 +232,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: .github/scripts/framework/ccache-artifact.sh prune "framework-ccache-${{ matrix.android }}-${{ matrix.arch }}" "${{ steps.keep-ccache.outputs.artifact-id }}"
 
-      - name: Download services.jar
-        id: services
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: framework-services-${{ matrix.android }}-${{ steps.pins.outputs.version }}
-          path: ${{ env.DSA_TRANSLATOR_WORK }}/services
-
+      # Without services.jar, which the framework job adds (collect.py --add-services), so that
+      # the folder ends up as one collected with it.
       - name: Collect the files the image takes
         id: collect
-        env:
-          HAVE_SERVICES: ${{ steps.services.outcome == 'success' }}
         run: |
           out="$DSA_TRANSLATOR_WORK/framework"
-          services=()
-          if [[ "$HAVE_SERVICES" == true ]]; then
-            services=(--services "$DSA_TRANSLATOR_WORK/services")
-          else
-            echo "::warning::the services build made no services.jar, so the image edits the published build's and its dialogs keep the caption bar inset"
-          fi
           uv run dsa/guest/framework/collect.py --android "$ANDROID_BRANCH" --arch "${{ matrix.arch }}" \
             --product-out "$DSA_TRANSLATOR_WORK/aosp/out/target/product/dsa_framework" \
-            --top "$DSA_TRANSLATOR_WORK/aosp" --out "$out" "${services[@]}"
+            --top "$DSA_TRANSLATOR_WORK/aosp" --out "$out"
           find "$out" -type f -exec ls -l {} +
           echo "out=$out" >> "$GITHUB_OUTPUT"
 
-      - name: Keep the framework files
+      # Not the artifact the image release takes (that is the framework job's), so a reader never
+      # finds the native files before services.jar has had its chance to join them. Only the
+      # framework job reads it, in this run or a re-run of that job.
+      - name: Keep the native files
         uses: actions/upload-artifact@v4
         with:
-          name: framework-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}
+          name: framework-native-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}
           path: ${{ steps.collect.outputs.out }}/
           if-no-files-found: error
-          retention-days: 90
+          overwrite: true
+          retention-days: 30
 
       - name: Keep the build's logs
         if: always()
@@ -387,3 +275,228 @@ jobs:
           # The .dsa-* files start with a dot, which upload-artifact skips unless told otherwise.
           include-hidden-files: true
           retention-days: 30
+
+  # services.jar, with DSA's window manager, package manager and WebView service changes. The
+  # Java framework reaches across most of the platform, so it is built in a tree of every project
+  # the published build's manifest syncs by default (framework_lock.py services-lock), with the
+  # build's own product and release configuration. A dex file is the same for every
+  # architecture, so one build serves the images of both; the framework job below adds it to
+  # each architecture's native files. It fits a standard runner's disk (145 GB) only as follows:
+  # the runner's unused toolchains go (free-disk.sh --deep), the tree leaves out what only native
+  # builds and other devices read (framework_lock.py SERVICES_TREE_SKIPPED), and the build makes
+  # services' dex jar alone, not its install path, which would also build its JNI, native and
+  # Rust dependencies. Soong's analysis of the whole tree needs more memory than the runner has,
+  # so a large swap file is added for it, and build-services.sh gives it back to the disk when
+  # the analysis is done.
+  #
+  # The runner has 4 processors and 16 GiB. When the build took all of them and swapped hard,
+  # the runner's own agent stopped answering and GitHub gave the job up ("The hosted runner lost
+  # communication with the server", android17 in run 43637660922, 50 minutes into the build). So
+  # the build runs with fewer jobs at the lowest priority (build-services.sh), swapped pages are
+  # compressed in memory first, and the kernel's OOM killer takes the build before the agent.
+  services:
+    name: Build services.jar (ubuntu-24.04, ${{ matrix.android }})
+    needs: versions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        android: ${{ fromJSON(needs.versions.outputs.android) }}
+    env:
+      ANDROID_BRANCH: ${{ matrix.android }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make room on the runner
+        run: .github/scripts/translator/free-disk.sh dsa-services --deep
+
+      # 24 GiB beside free-disk.sh's 12 GiB. It cannot be larger: with both swap files the disk
+      # has 99 GB free before the fetch and 17 GB after it (run 43633250360), and the analysis
+      # writes its ninja files into that.
+      - name: Add swap for the analysis of the whole tree
+        run: |
+          swap_dir="$(dirname "$(swapon --show=NAME --noheadings | grep dsa-swap | head -1)")"
+          sudo fallocate -l 24G "$swap_dir/dsa-swap-services"
+          sudo chmod 600 "$swap_dir/dsa-swap-services"
+          sudo mkswap "$swap_dir/dsa-swap-services" >/dev/null
+          sudo swapon "$swap_dir/dsa-swap-services"
+          # build-services.sh turns it off and deletes it once the analysis is done.
+          echo "DSA_ANALYSIS_SWAP=$swap_dir/dsa-swap-services" >> "$GITHUB_ENV"
+          free -h
+          df -h / /mnt
+
+      # The headroom that keeps the runner answering while the build swaps.
+      - name: Keep the runner responsive under memory pressure
+        run: |
+          # zswap keeps pages on their way to swap compressed in memory, in at most 20 % of it
+          # (about 3 GiB), and writes them to the disk only when that pool is full. Heaps of
+          # small objects, as Soong's and the Java tools' are, compress well, so much of the
+          # swapping never waits for the disk, whose queue is what stalls every other process.
+          zswap=/sys/module/zswap/parameters
+          if [[ -e "$zswap/enabled" ]]; then
+            echo 20 | sudo tee "$zswap/max_pool_percent" >/dev/null || true
+            echo 1 | sudo tee "$zswap/enabled" >/dev/null || true
+            echo "zswap: enabled $(cat "$zswap/enabled"), pool $(cat "$zswap/max_pool_percent") %, $(cat "$zswap/compressor")"
+          fi
+          # kswapd starts reclaiming earlier (a gap of 2 % of memory, about 320 MiB, between its
+          # watermarks instead of 0.1 %), so a process that needs a page finds a free one rather
+          # than reclaiming one itself while the build holds the disk.
+          sudo sysctl -q -w vm.watermark_scale_factor=200 || true
+          # The runner's own processes are the last the OOM killer may take; build-services.sh
+          # makes the build the first.
+          for pid in $(pgrep -f 'Runner\.(Listener|Worker)|hosted-compute-agent|provjobd' || true); do
+            echo -1000 | sudo tee "/proc/$pid/oom_score_adj" >/dev/null && echo "protected $(ps -o comm= -p "$pid") ($pid)" || true
+          done
+
+      - name: Install the build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends jq
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Read the pins
+        id: pins
+        run: echo "version=$(uv run dsa/guest/framework/framework_lock.py version "$ANDROID_BRANCH")" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the whole pinned tree
+        run: |
+          start=$SECONDS
+          url="$(jq -r --arg a "$ANDROID_BRANCH" '.versions[] | select(.android == $a) | .manifest.url' dsa/guest/framework/framework-lock.json)"
+          curl -fsSL --retry 8 --retry-all-errors -o "$RUNNER_TEMP/manifest.xml" "$url"
+          uv run dsa/guest/framework/framework_lock.py services-lock "$ANDROID_BRANCH" "$RUNNER_TEMP/manifest.xml" "$RUNNER_TEMP/services-lock.json"
+          uv run .github/scripts/translator/fetch-source.py --lock "$RUNNER_TEMP/services-lock.json" \
+            --android "$ANDROID_BRANCH" --top "$DSA_TRANSLATOR_WORK/aosp" --jobs 8
+          echo "fetched in $(( (SECONDS - start) / 60 )) minutes"
+          # The tree leaves the VNDK snapshots out (SERVICES_TREE_SKIPPED), but the board
+          # configuration stops with "VNDK version 31 not found" unless each version the product
+          # names (PRODUCT_EXTRA_VNDK_VERSIONS) has a build file one folder down
+          # (board_config.mk: $(wildcard prebuilts/vndk/v<n>/*/Android.bp)). An empty
+          # Android.bp, which defines no module, satisfies that check; the build allows the
+          # modules the snapshot would define to be missing.
+          { grep -o 'path="prebuilts/vndk/[^"]*"' "$RUNNER_TEMP/manifest.xml" || true; } | cut -d'"' -f2 | sort -u |
+            while read -r vndk; do
+              mkdir -p "$DSA_TRANSLATOR_WORK/aosp/$vndk/x86_64"
+              echo "// Left out of the services.jar tree; this file only passes the VNDK check." \
+                > "$DSA_TRANSLATOR_WORK/aosp/$vndk/x86_64/Android.bp"
+              echo "stub $vndk"
+            done
+          du -sh "$DSA_TRANSLATOR_WORK/aosp"
+          echo "::group::The largest folders of the tree"
+          du -x -h -d 3 "$DSA_TRANSLATOR_WORK/aosp" 2>/dev/null | sort -rh | head -60 || true
+          echo "::endgroup::"
+          df -h / /mnt
+
+      # build-services.sh stops itself after DSA_BUILD_MINUTES, before the step's limit, so that
+      # a build out of time says so; it also says when it ran out of disk or memory.
+      # DSA_SERVICES_JOBS is ninja's job count: build-services.sh says why 2 and not the runner's 4.
+      - name: Build services.jar
+        timeout-minutes: 300
+        env:
+          DSA_BUILD_MINUTES: 285
+          DSA_SERVICES_JOBS: 2
+        run: |
+          start=$SECONDS
+          .github/scripts/framework/build-services.sh "$DSA_TRANSLATOR_WORK/aosp" "$ANDROID_BRANCH" "$DSA_TRANSLATOR_WORK/services"
+          echo "built in $(( (SECONDS - start) / 60 )) minutes"
+          df -h / /mnt
+
+      - name: Keep services.jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: framework-services-${{ matrix.android }}-${{ steps.pins.outputs.version }}
+          path: ${{ env.DSA_TRANSLATOR_WORK }}/services/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Keep the build's logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: framework-services-logs-${{ matrix.android }}
+          path: |
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/error.log
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/soong.log
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/verbose.log*
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/soong_ui.log*
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/.dsa-patches.json
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 30
+
+  # The artifact the image release takes: the native files, with services.jar when the services
+  # build made it. Should that build fail, the artifact has no services.jar, and make-image.py
+  # edits the published build's as before; the dialogs of that image keep the caption bar inset.
+  # Should the native build of this version and architecture fail, this job fails too and keeps
+  # nothing. release-image.yml looks for this job by its name.
+  framework:
+    name: Pack the framework files (ubuntu-24.04, ${{ matrix.android }}, ${{ matrix.arch }})
+    needs: [versions, native, services]
+    if: ${{ !cancelled() && needs.versions.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        android: ${{ fromJSON(needs.versions.outputs.android) }}
+        arch: ${{ fromJSON(needs.versions.outputs.arch) }}
+    env:
+      ANDROID_BRANCH: ${{ matrix.android }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Read the pins
+        id: pins
+        run: echo "version=$(uv run dsa/guest/framework/framework_lock.py version "$ANDROID_BRANCH")" >> "$GITHUB_OUTPUT"
+
+      - name: Download the native files
+        id: native
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: framework-native-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}
+          path: ${{ runner.temp }}/framework
+
+      - name: Check the native build kept its files
+        if: steps.native.outcome != 'success'
+        run: |
+          echo "::error::the native build of $ANDROID_BRANCH for ${{ matrix.arch }} kept no files; its job, \"Build the native framework (ubuntu-24.04, $ANDROID_BRANCH, ${{ matrix.arch }})\", says why"
+          exit 1
+
+      - name: Download services.jar
+        id: services
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: framework-services-${{ matrix.android }}-${{ steps.pins.outputs.version }}
+          path: ${{ runner.temp }}/services
+
+      - name: Add services.jar to the native files
+        id: collect
+        env:
+          HAVE_SERVICES: ${{ steps.services.outcome == 'success' }}
+        run: |
+          out="$RUNNER_TEMP/framework"
+          if [[ "$HAVE_SERVICES" == true ]]; then
+            uv run dsa/guest/framework/collect.py --add-services "$RUNNER_TEMP/services" --out "$out"
+          else
+            echo "::warning::the services build made no services.jar, so the image edits the published build's and its dialogs keep the caption bar inset"
+          fi
+          find "$out" -type f -exec ls -l {} +
+          echo "out=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the framework files
+        uses: actions/upload-artifact@v4
+        with:
+          name: framework-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}
+          path: ${{ steps.collect.outputs.out }}/
+          if-no-files-found: error
+          # Re-running a failed native job re-runs every framework job after it, the passed ones
+          # too, which keep the same files again.
+          overwrite: true
+          retention-days: 90
