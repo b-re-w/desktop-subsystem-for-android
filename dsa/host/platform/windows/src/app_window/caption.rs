@@ -784,6 +784,7 @@ impl CaptionWindow {
             let fill = BandSample {
                 fill: Some(palette.rest),
                 luminance: None,
+                range: None,
             };
             caption_icon::background_luminance(fill, false, self.shown())
         } else {
