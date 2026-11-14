@@ -115,11 +115,12 @@ struct AppRowView: View {
                 .frame(maxWidth: 260)
                 .disabled(vm.isBusy)
                 // How the app's windows follow a monitor of another scale: the app redraws, or
-                // its window is scaled. Auto and system never restart the app.
+                // its window is scaled. Auto and system never restart the app. Auto reads as
+                // system for an app on DSA's built-in list of apps that break when scaled.
                 Picker(T("AppsDpiScaling.Name"), selection: Binding(
                     get: { row.dpiScalingIndex },
                     set: { index in Task { await vm.setDpiScaling(row.package, index) } })) {
-                    ForEach(Array(vm.dpiScalingChoices.enumerated()), id: \.offset) { item in
+                    ForEach(Array(row.dpiScalingChoices.enumerated()), id: \.offset) { item in
                         Text(item.element.label).tag(item.offset)
                     }
                 }

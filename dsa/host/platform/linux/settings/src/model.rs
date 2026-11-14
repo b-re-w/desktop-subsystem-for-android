@@ -805,12 +805,15 @@ pub struct AppWindow {
     pub immersive: FullScreenPlace,
 }
 
-/// Every app's window settings, and whether this build of Android scales an app the System
-/// (forced) way yet.
+/// Every app's window settings, whether this build of Android scales an app the System
+/// (forced) way yet, and the apps whose automatic choice is System.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AppWindows {
     pub apps: Vec<AppWindow>,
     pub system_forced_available: bool,
+    /// DSA's built-in list of apps that break when their density changes while they run, so
+    /// that their automatic choice is System. Empty from a `dsa` that does not name it.
+    pub system_scaled_by_default: Vec<String>,
 }
 
 impl AppWindow {
@@ -2225,6 +2228,12 @@ impl Client {
         Ok(AppWindows {
             apps: items(&json, "apps").iter().map(AppWindow::read).collect(),
             system_forced_available: flag(&json, "system_forced_available", false),
+            system_scaled_by_default: items(&json, "system_scaled_by_default")
+                .iter()
+                .filter_map(|package| package.as_str())
+                .filter(|package| !package.is_empty())
+                .map(str::to_string)
+                .collect(),
         })
     }
 

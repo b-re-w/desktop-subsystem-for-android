@@ -13,14 +13,29 @@ use serde::{Deserialize, Serialize};
 use crate::compositor::window_sizing::MIN_CLIENT_DP;
 use crate::tasks::FullScreenRequest;
 
+/// The apps whose windows DSA scales the system way unless the user chose otherwise: apps that
+/// break when their density changes while they run, so that only restarting their process
+/// would repair them. [`DpiScaling::Auto`] is [`DpiScaling::System`] for these and
+/// [`DpiScaling::App`] for every other app. This is the only copy of the list: the window
+/// manager, `dsa app-window` and, through it, the settings apps all read it from here.
+pub const SYSTEM_SCALED_BY_DEFAULT: &[&str] = &[
+    // YouTube keeps values that depend on the density in its process. Moved to a monitor of
+    // another scale, its bottom tabs are squashed and covered by the content, and its
+    // miniplayer turns green, whether it handles the new density itself or its activity is
+    // recreated; only a restart of its process draws it right again. Scaled the system way it
+    // stays whole, and its text is sharp enough on a 125% monitor (measured on 2026-11-14).
+    "com.google.android.youtube",
+];
+
 /// How an app follows its window to a monitor of another scale, as a user chooses it, the way
 /// Windows lets a user choose who performs the high DPI scaling of a desktop program.
 /// [`DpiScaling::System`] never recreates the app's activity; the default recreates it once
-/// per move, when the move ends.
+/// per move, when the move ends, except for the apps in [`SYSTEM_SCALED_BY_DEFAULT`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum DpiScaling {
-    /// What [`DpiScaling::App`] does, for every app.
+    /// DSA's choice for the app ([`DpiScaling::default_for`]): [`DpiScaling::System`] for an
+    /// app in [`SYSTEM_SCALED_BY_DEFAULT`], [`DpiScaling::App`] for any other.
     #[default]
     Auto,
     /// The task takes the new monitor's density, and the app redraws at it: its text stays
@@ -81,7 +96,32 @@ impl DpiScaling {
             .find(|scaling| scaling.name() == name)
     }
 
-    /// What a task's window does with this choice.
+    /// What [`DpiScaling::Auto`] is for `package`: [`DpiScaling::System`] for an app in
+    /// [`SYSTEM_SCALED_BY_DEFAULT`], [`DpiScaling::App`] for any other. Never `Auto`.
+    pub fn default_for(package: &str) -> DpiScaling {
+        if SYSTEM_SCALED_BY_DEFAULT.contains(&package) {
+            DpiScaling::System
+        } else {
+            DpiScaling::App
+        }
+    }
+
+    /// This choice for `package`, with [`DpiScaling::Auto`] as DSA's choice for that app.
+    pub fn resolved_for(self, package: &str) -> DpiScaling {
+        match self {
+            DpiScaling::Auto => DpiScaling::default_for(package),
+            chosen => chosen,
+        }
+    }
+
+    /// What the window of a task of `package` does with this choice: what
+    /// [`DpiScaling::mode`] says of [`DpiScaling::resolved_for`].
+    pub fn mode_for(self, package: &str) -> ScalingMode {
+        self.resolved_for(package).mode()
+    }
+
+    /// What a task's window does with this choice, for an app outside
+    /// [`SYSTEM_SCALED_BY_DEFAULT`] ([`DpiScaling::mode_for`] takes the list into account).
     ///
     /// [`DpiScaling::Auto`] and [`DpiScaling::App`] give the task the new monitor's density
     /// once its move ends, and the guest recreates its activity then, whether or not the app
@@ -400,6 +440,49 @@ mod tests {
         // It needs a framework change that is not made yet.
         const { assert!(!DpiScaling::FORCED_AVAILABLE) };
         assert_eq!(DpiScaling::SystemForced.mode(), ScalingMode::System);
+    }
+
+    #[test]
+    fn fr4_youtube_scales_the_system_way_by_default() {
+        let youtube = "com.google.android.youtube";
+        assert!(SYSTEM_SCALED_BY_DEFAULT.contains(&youtube));
+        assert_eq!(DpiScaling::default_for(youtube), DpiScaling::System);
+        assert_eq!(DpiScaling::Auto.resolved_for(youtube), DpiScaling::System);
+        assert_eq!(DpiScaling::Auto.mode_for(youtube), ScalingMode::System);
+        // An app not on the list takes each monitor's density.
+        assert_eq!(
+            DpiScaling::default_for("com.example.notes"),
+            DpiScaling::App
+        );
+        assert_eq!(
+            DpiScaling::Auto.mode_for("com.example.notes"),
+            ScalingMode::App
+        );
+        // Every entry is a package name, and none is there twice.
+        for (i, package) in SYSTEM_SCALED_BY_DEFAULT.iter().enumerate() {
+            assert!(crate::compositor::window_hosts::is_valid_package(package));
+            assert!(!SYSTEM_SCALED_BY_DEFAULT[..i].contains(package));
+        }
+    }
+
+    #[test]
+    fn fr4_the_users_choice_wins_over_the_built_in_list() {
+        let youtube = "com.google.android.youtube";
+        assert_eq!(DpiScaling::App.resolved_for(youtube), DpiScaling::App);
+        assert_eq!(DpiScaling::App.mode_for(youtube), ScalingMode::App);
+        assert_eq!(DpiScaling::System.mode_for(youtube), ScalingMode::System);
+        assert_eq!(
+            DpiScaling::SystemForced.mode_for(youtube),
+            DpiScaling::SystemForced.mode()
+        );
+        // The list changes only what auto means: a choice for another app stays as it is.
+        for scaling in [
+            DpiScaling::App,
+            DpiScaling::System,
+            DpiScaling::SystemForced,
+        ] {
+            assert_eq!(scaling.resolved_for("com.example.notes"), scaling);
+        }
     }
 
     #[test]
