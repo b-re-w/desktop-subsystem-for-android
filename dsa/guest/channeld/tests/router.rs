@@ -12,7 +12,7 @@ use dsa_protocol::control::envelope::Body;
 use dsa_protocol::control::{
     AgentConnected, AppInfo, AuthProof, CloseTask, Envelope, GuestBoot, Hello, LaunchApp,
     LocationRequest, PowerHint, PowerHintKind, PowerState, Rect, TaskFrames, TaskRemoved,
-    TaskUpdated,
+    TaskUpdated, TasksShown,
 };
 
 /// A client's callback that keeps what it is given, and can be made to die.
@@ -94,6 +94,26 @@ fn fr3_frames_from_the_host_reach_every_listener() {
 
     assert_eq!(agent.frames(), vec![close.clone(), launch.clone()]);
     assert_eq!(composer.frames(), vec![close, launch]);
+}
+
+#[test]
+fn nfr1_the_agent_hears_which_task_windows_the_user_can_see() {
+    let (router, _host) = router();
+    let agent = Arc::new(Recorder::default());
+    router.subscribe(AGENT, agent.clone());
+    // The agent reports tasks 3 and 5; the host shows only 3.
+    router.from_guest(AGENT, task_updated(3)).unwrap();
+    router.from_guest(AGENT, task_updated(5)).unwrap();
+    let shown = frame(Body::TasksShown(TasksShown { task_ids: vec![3] }));
+    router.from_host(&shown);
+    // The agent trims the app of task 5, and the daemon's reclaim still counts what is shown.
+    assert_eq!(agent.frames(), vec![shown.clone()]);
+    assert_eq!(router.tasks_shown(), 1);
+    // A process that subscribes later hears it after the tasks it names.
+    let again = Arc::new(Recorder::default());
+    router.subscribe(COMPOSER, again.clone());
+    assert_eq!(again.frames().last(), Some(&shown));
+    assert_eq!(again.frames().len(), 3);
 }
 
 #[test]

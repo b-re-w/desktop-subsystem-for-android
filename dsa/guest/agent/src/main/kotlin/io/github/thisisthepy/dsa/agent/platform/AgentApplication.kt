@@ -120,6 +120,7 @@ class AgentApplication : Application() {
             languageSetup = AndroidLanguageServicesSetup(this),
             appAudio = AndroidAppAudio(this, log),
             appVolumes = AndroidAppVolumeStore(this),
+            appMemory = AndroidAppMemory(this),
             shareNotice = { reason ->
                 val main = android.os.Handler(mainLooper)
                 main.post {

@@ -58,7 +58,10 @@ import io.github.thisisthepy.dsa.agent.power.DevicePower
 import io.github.thisisthepy.dsa.agent.power.Lifecycle
 import io.github.thisisthepy.dsa.agent.memory.AppProcesses
 import io.github.thisisthepy.dsa.agent.memory.BackgroundProcesses
+import io.github.thisisthepy.dsa.agent.memory.AppMemoryPort
 import io.github.thisisthepy.dsa.agent.memory.CachedProcesses
+import io.github.thisisthepy.dsa.agent.memory.HiddenApps
+import io.github.thisisthepy.dsa.agent.memory.UsedAppsCompile
 import io.github.thisisthepy.dsa.agent.memory.ClosedApps
 import io.github.thisisthepy.dsa.agent.memory.MemoryReporter
 import io.github.thisisthepy.dsa.agent.memory.MemorySource
@@ -236,6 +239,8 @@ class Agent(
     shareNotice: (String) -> Unit = {},
     appAudio: AppAudioPort = AppAudioPort.NONE,
     appVolumes: AppVolumeStore = AppVolumeStore.memory(),
+    /** Trims the apps the user cannot see and compiles the apps the user opens. */
+    private val appMemory: AppMemoryPort = AppMemoryPort.NONE,
 ) {
     private val network = NetworkSetup(wifi, log, privateDns)
     private val channel = ChannelClient(
@@ -493,6 +498,16 @@ class Agent(
         log,
         isConnected = { channel.connected },
     )
+    private val hiddenApps = HiddenApps(
+        appMemory,
+        scheduler,
+        log,
+        clock,
+        playing = { appAudio.playing() },
+        hasForegroundService = appProcesses::hasForegroundService,
+        ownPackage = ownPackage,
+    )
+    private val usedAppsCompile = UsedAppsCompile(appMemory, scheduler, log, clock, ownPackage)
     private val networkLocation = NetworkLocation({ frame -> channel.send(frame) }, log, isConnected = { channel.connected })
     private val geocoder = HostGeocoder({ frame -> channel.send(frame) }, log, isConnected = { channel.connected }, scheduler)
     private val accessibilityExport = AccessibilityExport(
@@ -526,6 +541,12 @@ class Agent(
             closedApps.configure()
             cachedProcesses?.start()
             playServices.start()
+            try {
+                // The package manager's broadcasts arrive on the main thread.
+                appMemory.start { packageName -> scheduler.post { usedAppsCompile.packageChanged(packageName) } }
+            } catch (e: Exception) {
+                log.warn("could not follow app updates; an updated app is compiled again after the next boot", e)
+            }
             try {
                 inputMethods.useHostInputMethod()
             } catch (e: Exception) {
@@ -886,6 +907,29 @@ class Agent(
         if (any) refresh()
     }
 
+    /**
+     * What the trims of the apps the user cannot see and the compiles of the apps the user
+     * opens follow: which task windows the user can see, whether any window is shown, and the
+     * host's power. Each frame goes on to whatever else acts on it.
+     */
+    private fun appMemoryFrame(envelope: Envelope) {
+        try {
+            when (envelope.bodyCase) {
+                Envelope.BodyCase.SCREEN_STATE -> {
+                    hiddenApps.screen(envelope.screenState.on)
+                    usedAppsCompile.screen(envelope.screenState.on)
+                }
+                Envelope.BodyCase.TASKS_SHOWN -> hiddenApps.shown(envelope.tasksShown.taskIdsList.toSet())
+                Envelope.BodyCase.POWER_STATE -> envelope.powerState.let {
+                    usedAppsCompile.power(it.acOnline, it.batteryPresent, it.powerSaver)
+                }
+                else -> Unit
+            }
+        } catch (e: Exception) {
+            log.warn("following which apps the user can see failed", e)
+        }
+    }
+
     /** Injects the frame if it is key or text input. False for any other frame. */
     private fun input(frame: ByteArray): Boolean {
         val envelope = try {
@@ -894,6 +938,7 @@ class Agent(
             return false
         }
         if (envelope.bodyCase == Envelope.BodyCase.SCREEN_STATE) widgetManager.screen(envelope.screenState.on)
+        appMemoryFrame(envelope)
         if (lifecycle.handle(envelope)) return true
         try {
             if (widgetManager.handle(envelope)) return true
@@ -1177,6 +1222,8 @@ class Agent(
         // Every task's app keeps its processes, a task the host was not told of included.
         cachedProcesses?.tasks(packages + running.mapNotNull { it.packageName })
         appSound.tasks(packages, reporter.focusedTask()?.let(reporter::reportedPackage))
+        hiddenApps.tasks(reported.mapNotNull { taskId -> reporter.reportedPackage(taskId)?.let { taskId to it } }.toMap())
+        usedAppsCompile.tasks(packages)
     }
 
     /**
