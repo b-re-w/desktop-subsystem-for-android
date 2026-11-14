@@ -1,5 +1,7 @@
 # Uninstalling
 
+**English** · [한국어](ko/uninstall.md) · [日本語](ja/uninstall.md) · [简体中文](zh-CN/uninstall.md) · [繁體中文](zh-TW/uninstall.md) · [Español](es/uninstall.md) · [Français](fr/uninstall.md) · [Deutsch](de/uninstall.md) · [Português (Brasil)](pt-BR/uninstall.md) · [Русский](ru/uninstall.md) · [Italiano](it/uninstall.md) · [Tiếng Việt](vi/uninstall.md) · [Bahasa Indonesia](id/uninstall.md) · [Türkçe](tr/uninstall.md)
+
 ## Windows
 
 Uninstall Desktop Subsystem for Android™ (DSA) in either way:

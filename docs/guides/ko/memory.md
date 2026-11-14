@@ -1,46 +1,53 @@
 # 메모리와 유휴 동작
 
-Desktop Subsystem for Android™(DSA)는 Android가 멈출 때뿐 아니라 실행 중에도 메모리를 PC에 돌려줍니다.
-따로 설정할 것은 없습니다. 이 페이지는 어떤 일이 일어나는지, 그리고 사용량을 확인하는 방법을 설명합니다.
+[English](../memory.md) · **한국어** · [日本語](../ja/memory.md) · [简体中文](../zh-CN/memory.md) · [繁體中文](../zh-TW/memory.md) · [Español](../es/memory.md) · [Français](../fr/memory.md) · [Deutsch](../de/memory.md) · [Português (Brasil)](../pt-BR/memory.md) · [Русский](../ru/memory.md) · [Italiano](../it/memory.md) · [Tiếng Việt](../vi/memory.md) · [Bahasa Indonesia](../id/memory.md) · [Türkçe](../tr/memory.md)
+
+Desktop Subsystem for Android™(DSA)는 Android가 멈출 때뿐 아니라 실행 중에도 메모리를 PC에
+돌려줍니다. 따로 설정할 것은 없습니다. 이 페이지는 어떤 일이 일어나는지, 그리고 그것을 확인하는
+방법을 설명합니다.
 
 ## Android의 메모리 사용량 보기
 
 DSA 설정의 **메모리** 페이지를 열거나 `dsa memory`를 실행합니다. 둘 다 다음을 보여 줍니다.
 
 - **이 PC에서**: Android 가상 머신, 창 관리자, 앱 창마다 차지한 메모리
-- **안드로이드 안에서**: 사용 중인 메모리, 캐시, 압축 메모리, 가장 큰 프로세스. Android는 시작하고 몇 분
-  뒤에 이 내역을 보고합니다.
+- **Android 안에서**: 사용 중인 메모리, 캐시, 압축 메모리, 가장 큰 프로세스. Android는 시작하고
+  몇 분 뒤에 이 내역을 보고합니다.
 
 ## 유휴 상태, Doze
 
-모든 Android 창을 닫거나 최소화한 지 30초가 지나면, 주머니 속 휴대폰처럼 Android 화면이 꺼지고 Doze 상태로
-들어갑니다.
+모든 Android 창을 닫거나 최소화한 지 30초가 지나면, 주머니 속 휴대폰처럼 Android 화면이 꺼지고
+Doze 상태로 들어갑니다.
 
 - Doze 상태에서도 알림, 알람, 위젯은 동작합니다. 그 사이 CPU는 쉽니다.
-- `dsa status`는 `Dozing`, DSA 설정 **일반** 페이지는 **대기(Doze)**로 표시합니다.
+- `dsa status`는 `Dozing`으로, DSA 설정 **일반** 페이지는 **대기(Doze)** 상태로 표시합니다.
 - Android 창을 하나라도 띄우면 곧바로 깨어납니다.
 
-Android는 PC의 절전도 따릅니다. PC가 절전 모드로 들어가기 전에 상태를 저장하고, 깨어나면 시계를 맞춥니다.
+Android는 PC의 절전도 따릅니다. PC가 절전 모드로 들어가기 전에 상태를 저장하고, 깨어나면 시계를
+맞춥니다.
 
 ## 일시 정지 (기본값 꺼짐)
 
-일시 정지(freeze)는 Android의 모든 프로세스를 멈춥니다. CPU를 전혀 쓰지 않지만 알림, 알람, 위젯도 함께
-멈춥니다. 그래서 사용자가 요청하지 않는 한 DSA는 Android를 일시 정지하지 않습니다.
+일시 정지(freeze)는 Android의 모든 프로세스를 멈춥니다. CPU를 전혀 쓰지 않지만 알림, 알람,
+위젯도 함께 멈춥니다. 그래서 사용자가 요청하지 않는 한 DSA는 Android를 일시 정지하지 않습니다.
 
-- 지금 일시 정지하려면: **일반** 페이지 **지금 안드로이드 일시 정지**의 **일시 정지**를 누르거나
+- 지금 일시 정지하려면: **일반** 페이지 **지금 Android 일시 정지**의 **일시 정지**를 누르거나
   `dsa freeze`를 실행합니다.
-- Doze 30분 뒤에 일시 정지하려면: **고급** 페이지에서 **유휴 상태에서 안드로이드 일시 정지**를 켜거나
-  `dsa settings set freeze on`을 실행합니다.
+- Doze 30분 뒤에 일시 정지하려면: **고급** 페이지에서 **유휴 상태에서 Android 일시 정지**를
+  켜거나 `dsa settings set freeze on`을 실행합니다.
 - Android 창을 열거나 창에 입력하면 다시 동작합니다.
 
 ## 메모리가 돌아가는 방식
 
 - Android 가상 머신은 Android가 메모리를 처음 쓸 때에만 PC에서 가져옵니다.
 - Android가 비운 메모리는 실행 중에도 PC로 돌아갑니다.
-- 앱의 마지막 창을 닫으면 Android가 그 앱의 프로세스를 끝내므로, 쓰던 메모리가 몇 초 안에 돌아갑니다.
-  바탕 화면에 위젯이 있는 앱이나, 음악 재생처럼 백그라운드에서 일하는 앱은 계속 실행됩니다.
-- 열린 앱 창이 없는 동안 Android는 파일 캐시를 비우고 쓰지 않는 메모리를 압축 메모리로 옮겨, 더 많은
-  메모리가 돌아가게 합니다.
+- 앱의 마지막 창을 닫으면 Android가 그 앱의 프로세스를 끝내므로, 쓰던 메모리가 몇 초 안에
+  돌아갑니다. 바탕 화면에 위젯이 있는 앱이나, 음악 재생처럼 백그라운드에서 일하는 앱은 계속
+  실행됩니다.
+- 창도, 알림도, 소리도, 위젯도 없이 백그라운드 서비스를 계속 돌리는 앱은 5분 뒤에 중지됩니다.
+  Android가 그 앱을 거듭 다시 시작하면 DSA는 매번 더 오래, 최대 1시간까지 기다립니다.
+- 열린 앱 창이 없는 동안 Android는 파일 캐시를 비우고 쓰지 않는 메모리를 압축 메모리로 옮겨, 더
+  많은 메모리가 돌아가게 합니다.
 - 창 관리자는 마지막 앱 창이 닫히고 30초가 지나면 쓰지 않는 메모리를 돌려줍니다.
 
 ## 메모리 한도
@@ -57,5 +64,5 @@ dsa settings set memory-limit auto   # 자동으로 되돌립니다
 
 ---
 
-Android는 Google LLC의 상표입니다. Windows는 Microsoft 그룹의 상표입니다. DSA는 Google, Microsoft와
-제휴하거나 그들의 보증 또는 후원을 받지 않습니다.
+Android는 Google LLC의 상표입니다. Windows는 Microsoft 그룹의 상표입니다. DSA는 Google,
+Microsoft와 제휴하거나 그들의 보증 또는 후원을 받지 않습니다.

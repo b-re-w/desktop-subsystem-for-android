@@ -3,7 +3,7 @@
 These guides explain how to install and use Desktop Subsystem for Android™ (DSA), and what
 to do when something goes wrong.
 
-**English** · [한국어](ko/README.md)
+**English** · [한국어](ko/README.md) · [日本語](ja/README.md) · [简体中文](zh-CN/README.md) · [繁體中文](zh-TW/README.md) · [Español](es/README.md) · [Français](fr/README.md) · [Deutsch](de/README.md) · [Português (Brasil)](pt-BR/README.md) · [Русский](ru/README.md) · [Italiano](it/README.md) · [Tiếng Việt](vi/README.md) · [Bahasa Indonesia](id/README.md) · [Türkçe](tr/README.md)
 
 They describe the current development version. The latest release can lack some of what
 is described here; its release notes list what it contains. Anything not finished says so.
@@ -11,7 +11,7 @@ is described here; its release notes list what it contains. Anything not finishe
 | Guide | What you can do with it |
 |---|---|
 | [Getting started](getting-started.md) | Install DSA on Windows, and see the status on Linux and macOS |
-| [Apps and windows](apps.md) | Open apps, work with their windows, notifications, widgets and background apps |
+| [Apps and windows](apps.md) | Open apps, work with their windows and full screen, notifications, widgets, background apps, Google Play, Widevine, ARM apps and root access |
 | [Installing APKs](install-apks.md) | Install apps from APK files, and find out why an install was refused |
 | [Files](files.md) | Open Android's files in File Explorer, and send files to Android apps |
 | [Android versions](android-versions.md) | See and change which Android version runs |

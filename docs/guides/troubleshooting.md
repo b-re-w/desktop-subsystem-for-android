@@ -1,5 +1,7 @@
 # Troubleshooting and logs
 
+**English** · [한국어](ko/troubleshooting.md) · [日本語](ja/troubleshooting.md) · [简体中文](zh-CN/troubleshooting.md) · [繁體中文](zh-TW/troubleshooting.md) · [Español](es/troubleshooting.md) · [Français](fr/troubleshooting.md) · [Deutsch](de/troubleshooting.md) · [Português (Brasil)](pt-BR/troubleshooting.md) · [Русский](ru/troubleshooting.md) · [Italiano](it/troubleshooting.md) · [Tiếng Việt](vi/troubleshooting.md) · [Bahasa Indonesia](id/troubleshooting.md) · [Türkçe](tr/troubleshooting.md)
+
 This page helps you find out why Desktop Subsystem for Android™ (DSA) does not work, read
 Android's log, and send a problem report. It covers Windows, and Linux where noted.
 
