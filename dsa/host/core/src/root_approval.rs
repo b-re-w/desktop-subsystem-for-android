@@ -43,6 +43,10 @@ use dsa_protocol::control;
 
 use crate::resize_trace::utc_stamp;
 use crate::root_elevation::{AppLevel, Decision, DecisionDenied, Level, Policy};
+use crate::root_requester::{
+    app_id, developer_shell_name, system_name, GenericIcon, Language, Requester, FIRST_APP_ID,
+    SHELL_APP_ID,
+};
 use crate::settings::SettingsStore;
 use crate::tasks::AppInfo;
 
@@ -92,6 +96,20 @@ pub struct ApprovalRequest {
     /// When the calling app shares its Android user ID (`android:sharedUserId`) with other apps,
     /// every app in the group, so the prompt shows all of them and says they share a user ID.
     pub shared_apps: Vec<AppInfo>,
+    /// The user's first display language as a BCP 47 tag, which the prompt's words are in;
+    /// empty when the host has not said, which is English.
+    pub language: String,
+}
+
+/// The icon the prompt shows for who asks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PromptIcon<'a> {
+    /// The app's launcher icon, a PNG as the guest drew it.
+    App(&'a [u8]),
+    /// A generic icon, for a requester that is not an app.
+    Generic(GenericIcon),
+    /// None the guest drew: the platform shows DSA's own.
+    None,
 }
 
 impl ApprovalRequest {
@@ -127,7 +145,22 @@ impl ApprovalRequest {
             interactive: request.interactive,
             purpose: Purpose::Run,
             shared_apps,
+            language: String::new(),
         }
+    }
+
+    /// Has the prompt speak the language `tag` (a BCP 47 tag), the user's first display
+    /// language. An empty tag leaves it as it is.
+    pub fn with_language(mut self, tag: &str) -> ApprovalRequest {
+        if !tag.trim().is_empty() {
+            self.language = tag.trim().to_string();
+        }
+        self
+    }
+
+    /// The language the prompt's words are in.
+    pub fn language(&self) -> Language {
+        Language::of(&self.language)
     }
 
     /// Sets the apps in a shared user ID group, with their names and icons as the guest listed
@@ -173,26 +206,137 @@ impl ApprovalRequest {
         &self.app.icon_png
     }
 
-    /// The app's name for the prompt and the log: its label, else its package. `adb shell`
-    /// is named as such, whatever the shell package's label.
-    pub fn app_name(&self) -> &str {
-        if crate::root_elevation::is_adb_shell(self.package()) {
-            return crate::root_elevation::ADB_SHELL_NAME;
-        }
-        let label = self.app.label.trim();
-        if label.is_empty() {
-            &self.app.package_name
+    /// Who asks: `adb shell` (Android's shell uid, or the shell package), one of Android's
+    /// own services (a uid below the first app's), the apps of a shared user ID, or one app.
+    pub fn requester(&self) -> Requester {
+        let known_uid = self.purpose == Purpose::Run && self.uid != 0;
+        let id = app_id(self.uid);
+        if crate::root_elevation::is_adb_shell(self.package()) || (known_uid && id == SHELL_APP_ID)
+        {
+            Requester::DeveloperShell
+        } else if known_uid && id < FIRST_APP_ID {
+            Requester::System
+        } else if self.shared_apps.len() > 1 {
+            Requester::SharedApps
         } else {
-            label
+            Requester::App
         }
+    }
+
+    /// The name the log and the prompt's English give who asks: see [`Self::name_in`].
+    pub fn app_name(&self) -> String {
+        self.name_in(Language::English)
+    }
+
+    /// Who asks, by name in `language`: an app by its label (its package when the guest gave
+    /// none), the apps of a shared user ID by theirs, `adb shell` as the developer shell, and
+    /// Android's own services in words.
+    pub fn name_in(&self, language: Language) -> String {
+        match self.requester() {
+            Requester::DeveloperShell => developer_shell_name(language).to_string(),
+            Requester::System => system_name(self.uid, language).to_string(),
+            Requester::SharedApps => self
+                .shared_apps
+                .iter()
+                .map(label_or_package)
+                .collect::<Vec<_>>()
+                .join(", "),
+            Requester::App => label_or_package(&self.app).to_string(),
+        }
+    }
+
+    /// The smaller second line under the name: the package (packages, for a shared user ID or
+    /// an Android service), with the uid for a requester that is not an app. Empty for an app
+    /// the guest gave no label, whose name is its package already.
+    pub fn detail_in(&self, language: Language) -> String {
+        const SHOWN: usize = 3;
+        let packages = package_group(self.package());
+        let listed = |packages: &[&str]| {
+            let mut text = packages
+                .iter()
+                .take(SHOWN)
+                .copied()
+                .collect::<Vec<_>>()
+                .join(", ");
+            if packages.len() > SHOWN {
+                let more = packages.len() - SHOWN;
+                text.push_str(&match language {
+                    Language::English => format!(" and {more} more"),
+                    Language::Korean => format!(" 외 {more}개"),
+                });
+            }
+            text
+        };
+        match self.requester() {
+            Requester::DeveloperShell => {
+                let uid = if self.uid == 0 {
+                    SHELL_APP_ID
+                } else {
+                    self.uid
+                };
+                format!("{} (uid {uid})", crate::root_elevation::ADB_SHELL_PACKAGE)
+            }
+            Requester::System if packages.is_empty() => format!("uid {}", self.uid),
+            Requester::System => format!("{} (uid {})", listed(&packages), self.uid),
+            Requester::SharedApps => {
+                let shared: Vec<&str> = self
+                    .shared_apps
+                    .iter()
+                    .map(|app| app.package_name.as_str())
+                    .collect();
+                match language {
+                    Language::English => format!("{}: one shared user ID", listed(&shared)),
+                    Language::Korean => format!("{}: 사용자 ID를 함께 씀", listed(&shared)),
+                }
+            }
+            Requester::App => {
+                if self.app.label.trim().is_empty() {
+                    String::new()
+                } else {
+                    self.package().to_string()
+                }
+            }
+        }
+    }
+
+    /// The icon the prompt shows: the app's launcher icon; for a shared user ID, the first
+    /// app's that has one; a generic icon for the developer shell and Android's services.
+    pub fn prompt_icon(&self) -> PromptIcon<'_> {
+        let requester = self.requester();
+        if let Some(icon) = requester.generic_icon() {
+            return PromptIcon::Generic(icon);
+        }
+        let drawn = if requester == Requester::SharedApps {
+            self.shared_apps
+                .iter()
+                .chain(std::iter::once(&self.app))
+                .map(|app| app.icon_png.as_slice())
+                .find(|png| !png.is_empty())
+        } else {
+            Some(self.app.icon_png.as_slice()).filter(|png| !png.is_empty())
+        };
+        drawn.map_or(PromptIcon::None, PromptIcon::App)
     }
 
     /// What is asked for, in words for a prompt that shows it on a line of its own: the
     /// command as a shell would read it, "an interactive shell", or keeping root.
     pub fn command_text(&self) -> String {
-        match self.purpose {
-            Purpose::Run => command_text(&self.command, self.interactive),
-            Purpose::KeepRoot => "any command, from now on without asking each time".to_string(),
+        self.command_text_in(Language::English)
+    }
+
+    /// [`Self::command_text`] in `language`.
+    pub fn command_text_in(&self, language: Language) -> String {
+        match (self.purpose, language) {
+            (Purpose::Run, _) if !self.command.is_empty() => {
+                command_text(&self.command, self.interactive)
+            }
+            (Purpose::Run, Language::English) => command_text(&[], self.interactive),
+            (Purpose::Run, Language::Korean) if self.interactive => "대화형 셸".to_string(),
+            (Purpose::Run, Language::Korean) => "셸".to_string(),
+            (Purpose::KeepRoot, Language::English) => {
+                "any command, from now on without asking each time".to_string()
+            }
+            (Purpose::KeepRoot, Language::Korean) => "앞으로 묻지 않고 모든 명령".to_string(),
         }
     }
 
@@ -215,52 +359,101 @@ impl ApprovalRequest {
         }
     }
 
-    /// The sentence the administrator prompt shows: the app by name and package, and what it
-    /// wants. When several apps share the user ID, it lists all of them and says they share a
-    /// user ID.
+    /// The sentence the administrator prompt shows, in English: see [`Self::message_in`].
     pub fn message(&self) -> String {
-        if self.shared_apps.len() > 1 {
+        self.message_in(Language::English)
+    }
+
+    /// The sentence the administrator prompt shows in `language`: who asks, by name with the
+    /// package beside it, and what they want. When several apps share the user ID, it lists
+    /// all of them and says they share a user ID.
+    pub fn message_in(&self, language: Language) -> String {
+        let korean = language == Language::Korean;
+        let what = self.what_in(language);
+        let named = |app: &AppInfo| {
+            let label = app.label.trim();
+            match (label.is_empty() || label == app.package_name, korean) {
+                (true, _) => app.package_name.clone(),
+                (false, false) => format!("{label} ({})", app.package_name),
+                (false, true) => format!("{label}({})", app.package_name),
+            }
+        };
+        let requester = self.requester();
+        if requester == Requester::SharedApps {
             let names = self
                 .shared_apps
                 .iter()
-                .map(|app| {
-                    let label = app.label.trim();
-                    if label.is_empty() || label == app.package_name {
-                        app.package_name.clone()
-                    } else {
-                        format!("{label} ({})", app.package_name)
-                    }
-                })
+                .map(named)
                 .collect::<Vec<_>>()
                 .join(", ");
-            return match self.purpose {
-                Purpose::KeepRoot => format!(
+            return match (self.purpose, korean) {
+                (Purpose::KeepRoot, false) => format!(
                     "The Android apps {names} share a user ID and want to run commands as root \
                      without asking each time."
                 ),
-                Purpose::Run if self.command.is_empty() => format!(
+                (Purpose::Run, false) if self.command.is_empty() => format!(
                     "The Android apps {names} share a user ID and want to open a root shell."
                 ),
-                Purpose::Run => format!(
-                    "The Android apps {names} share a user ID and want to run {} as root.",
-                    self.what()
+                (Purpose::Run, false) => format!(
+                    "The Android apps {names} share a user ID and want to run {what} as root."
+                ),
+                (Purpose::KeepRoot, true) => format!(
+                    "사용자 ID를 함께 쓰는 Android 앱 {names}에서 앞으로 묻지 않고 루트 권한으로 \
+                     명령을 실행하려고 합니다."
+                ),
+                (Purpose::Run, true) if self.command.is_empty() => {
+                    format!("사용자 ID를 함께 쓰는 Android 앱 {names}에서 루트 셸을 열려고 합니다.")
+                }
+                (Purpose::Run, true) => format!(
+                    "사용자 ID를 함께 쓰는 Android 앱 {names}에서 다음 명령을 루트 권한으로 \
+                     실행하려고 합니다: {what}"
                 ),
             };
         }
-        let app = if crate::root_elevation::is_adb_shell(self.package()) {
-            self.app_name().to_string()
-        } else if self.app_name() == self.package() {
-            format!("The Android app {}", self.package())
-        } else {
-            format!("The Android app {} ({})", self.app_name(), self.package())
+        let who = match (requester, korean) {
+            (Requester::DeveloperShell, _) => self.name_in(language),
+            (Requester::System, false) => format!("{} (uid {})", self.name_in(language), self.uid),
+            (Requester::System, true) => format!("{}(uid {})", self.name_in(language), self.uid),
+            (_, false) => format!("The Android app {}", named(&self.app)),
+            (_, true) => format!("Android 앱 {}", named(&self.app)),
         };
-        match self.purpose {
-            Purpose::KeepRoot => {
-                format!("{app} wants to run commands as root without asking each time.")
+        match (self.purpose, korean) {
+            (Purpose::KeepRoot, false) => {
+                format!("{who} wants to run commands as root without asking each time.")
             }
-            Purpose::Run if self.command.is_empty() => format!("{app} wants to open a root shell."),
-            Purpose::Run => format!("{app} wants to run {} as root.", self.what()),
+            (Purpose::Run, false) if self.command.is_empty() => {
+                format!("{who} wants to open a root shell.")
+            }
+            (Purpose::Run, false) => format!("{who} wants to run {what} as root."),
+            (Purpose::KeepRoot, true) => {
+                format!("{who}에서 앞으로 묻지 않고 루트 권한으로 명령을 실행하려고 합니다.")
+            }
+            (Purpose::Run, true) if self.command.is_empty() => {
+                format!("{who}에서 루트 셸을 열려고 합니다.")
+            }
+            (Purpose::Run, true) => {
+                format!("{who}에서 다음 명령을 루트 권한으로 실행하려고 합니다: {what}")
+            }
         }
+    }
+
+    /// [`Self::what`] in `language`.
+    fn what_in(&self, language: Language) -> String {
+        match (self.purpose, language) {
+            (Purpose::Run, _) if !self.command.is_empty() => format!("`{}`", self.command_line()),
+            (Purpose::KeepRoot, Language::Korean) => "묻지 않는 루트 권한".to_string(),
+            _ => self.what(),
+        }
+    }
+}
+
+/// An app's label, or its package when the guest gave none.
+fn label_or_package(app: &AppInfo) -> &str {
+    let label = app.label.trim();
+    if label.is_empty() {
+        &app.package_name
+    } else {
+        label
     }
 }
 
@@ -376,7 +569,7 @@ impl FolderApprover {
             "{{\"request_id\":{},\"package\":\"{}\",\"app_name\":\"{}\",\"uid\":{},\"icon_bytes\":{},\"command\":[{}],\"interactive\":{},\"message\":\"{}\"}}\n",
             request.request_id,
             escape_json(request.package()),
-            escape_json(request.app_name()),
+            escape_json(&request.app_name()),
             request.uid,
             request.icon_png().len(),
             command,
@@ -855,7 +1048,12 @@ impl RootApproval {
     /// Asks the administrator to let `app` keep root without asking each time, as moving it
     /// to that level needs. Blocks at most the prompt's time. `Err` says why not.
     pub fn approve_keep_root(&self, app: AppInfo) -> Result<(), String> {
-        let request = ApprovalRequest::keep_root(app);
+        self.approve_keep_root_request(ApprovalRequest::keep_root(app))
+    }
+
+    /// [`Self::approve_keep_root`] for a request made with [`ApprovalRequest::keep_root`],
+    /// which may carry the language the prompt speaks.
+    pub fn approve_keep_root_request(&self, request: ApprovalRequest) -> Result<(), String> {
         let deadline = Instant::now() + self.timeout;
         let outcome = match self.wait_for_turn(deadline) {
             None => Outcome::TimedOut,
@@ -971,6 +1169,7 @@ mod tests {
             interactive: false,
             purpose: Purpose::Run,
             shared_apps: Vec::new(),
+            language: String::new(),
         }
     }
 
@@ -1089,8 +1288,11 @@ mod tests {
         shell.uid = 2000;
         assert!(root.answer(&shell).approved);
         let seen = fake.seen.lock().unwrap();
-        assert_eq!(seen[0].app_name(), "adb shell");
-        assert_eq!(seen[0].message(), "adb shell wants to run `id` as root.");
+        assert_eq!(seen[0].app_name(), "Developer shell (adb)");
+        assert_eq!(
+            seen[0].message(),
+            "Developer shell (adb) wants to run `id` as root."
+        );
         drop(seen);
         // Refused, su fails.
         let refusing = FakePrompt::new(PromptAnswer::Denied);
@@ -1101,6 +1303,142 @@ mod tests {
         let root = elevation(fake.clone(), levels(true, &[]));
         assert!(!root.answer(&shell).approved);
         assert_eq!(fake.asked.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn fr35_the_root_prompt_names_an_app_by_its_label_and_icon() {
+        let mut app = request("com.example.backup");
+        app.app.label = "백업 도구".into();
+        app.app.icon_png = vec![0x89, b'P', b'N', b'G', 1];
+        app.app.caption_icon_png = vec![0x89, b'P', b'N', b'G', 2];
+        let app = app.with_language("ko-KR");
+        assert_eq!(app.requester(), Requester::App);
+        assert_eq!(app.language(), Language::Korean);
+        // The label is the name; the package is only the second line.
+        assert_eq!(app.name_in(app.language()), "백업 도구");
+        assert_eq!(app.detail_in(app.language()), "com.example.backup");
+        // The launcher icon, as the app list and the window's program show it.
+        assert_eq!(
+            app.prompt_icon(),
+            PromptIcon::App(&[0x89, b'P', b'N', b'G', 1])
+        );
+        assert_eq!(
+            app.message_in(Language::Korean),
+            "Android 앱 백업 도구(com.example.backup)에서 다음 명령을 루트 권한으로 \
+             실행하려고 합니다: `id`"
+        );
+        assert_eq!(
+            app.message_in(Language::English),
+            "The Android app 백업 도구 (com.example.backup) wants to run `id` as root."
+        );
+        // An app the guest has not described is named by its package, with no second line.
+        let mut bare = request("com.example.bare");
+        bare.app.label.clear();
+        bare.app.icon_png.clear();
+        assert_eq!(bare.name_in(Language::Korean), "com.example.bare");
+        assert_eq!(bare.detail_in(Language::Korean), "");
+        assert_eq!(bare.prompt_icon(), PromptIcon::None);
+    }
+
+    #[test]
+    fn fr35_the_root_prompt_names_the_adb_shell_as_the_developer_shell() {
+        use crate::root_elevation::ADB_SHELL_PACKAGE;
+        let mut shell = request(ADB_SHELL_PACKAGE);
+        // Whatever label the guest gives the shell package, it is not the name shown.
+        shell.app.label = "Shell".into();
+        shell.uid = 2000;
+        assert_eq!(shell.requester(), Requester::DeveloperShell);
+        assert_eq!(shell.name_in(Language::Korean), "개발자 셸 (adb)");
+        assert_eq!(shell.name_in(Language::English), "Developer shell (adb)");
+        assert_eq!(
+            shell.detail_in(Language::English),
+            "com.android.shell (uid 2000)"
+        );
+        assert_eq!(shell.prompt_icon(), PromptIcon::Generic(GenericIcon::Shell));
+        assert_eq!(
+            shell.message_in(Language::Korean),
+            "개발자 셸 (adb)에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`"
+        );
+        let mut interactive = shell.clone();
+        interactive.command.clear();
+        interactive.interactive = true;
+        assert_eq!(
+            interactive.message_in(Language::Korean),
+            "개발자 셸 (adb)에서 루트 셸을 열려고 합니다."
+        );
+        assert_eq!(interactive.command_text_in(Language::Korean), "대화형 셸");
+        // The shell uid names the shell even when the package list left the package out, and
+        // in a second Android user.
+        let mut by_uid = request("");
+        by_uid.uid = 102_000;
+        assert_eq!(by_uid.requester(), Requester::DeveloperShell);
+        // Keeping root for the shell is asked under the same name.
+        let keep = ApprovalRequest::keep_root(shell.app.clone());
+        assert_eq!(keep.name_in(Language::Korean), "개발자 셸 (adb)");
+    }
+
+    #[test]
+    fn fr35_the_root_prompt_names_android_system_uids_in_words() {
+        let mut system = request("android, com.android.settings, com.android.providers.settings, com.android.location.fused");
+        system.uid = 1000;
+        system.app.label = "Android System".into();
+        assert_eq!(system.requester(), Requester::System);
+        assert_eq!(system.name_in(Language::Korean), "Android 시스템");
+        assert_eq!(system.name_in(Language::English), "Android system");
+        assert_eq!(
+            system.detail_in(Language::Korean),
+            "android, com.android.settings, com.android.providers.settings 외 1개 (uid 1000)"
+        );
+        assert_eq!(
+            system.prompt_icon(),
+            PromptIcon::Generic(GenericIcon::System)
+        );
+        assert_eq!(
+            system.message_in(Language::English),
+            "Android system (uid 1000) wants to run `id` as root."
+        );
+        // An app uid is never taken for Android's own.
+        assert_eq!(request("com.ask.app").requester(), Requester::App);
+    }
+
+    #[test]
+    fn fr35_the_root_prompt_names_a_shared_user_id_by_its_apps() {
+        let su = control::SuRequest {
+            request_id: 4,
+            package: "com.shared.one, com.shared.two".into(),
+            uid: 10_150,
+            command: vec!["id".into()],
+            interactive: false,
+        };
+        let shared = ApprovalRequest::from_su(&su, None)
+            .with_shared_apps(vec![
+                AppInfo {
+                    package_name: "com.shared.one".into(),
+                    label: "공유 하나".into(),
+                    ..Default::default()
+                },
+                AppInfo {
+                    package_name: "com.shared.two".into(),
+                    label: "공유 둘".into(),
+                    icon_png: vec![0x89, b'P', b'N', b'G', 9],
+                    ..Default::default()
+                },
+            ])
+            .with_language("ko");
+        assert_eq!(shared.requester(), Requester::SharedApps);
+        assert_eq!(shared.name_in(Language::Korean), "공유 하나, 공유 둘");
+        assert_eq!(
+            shared.detail_in(Language::Korean),
+            "com.shared.one, com.shared.two: 사용자 ID를 함께 씀"
+        );
+        // The first app in the group that has an icon.
+        assert_eq!(
+            shared.prompt_icon(),
+            PromptIcon::App(&[0x89, b'P', b'N', b'G', 9])
+        );
+        assert!(shared
+            .message_in(Language::Korean)
+            .starts_with("사용자 ID를 함께 쓰는 Android 앱 공유 하나(com.shared.one), 공유 둘(com.shared.two)에서"));
     }
 
     #[test]

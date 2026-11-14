@@ -798,6 +798,9 @@ struct Shared {
     /// Who decides the su calls of the guest's apps, once the platform says, with a way to
     /// send each decision from the thread that waits for the administrator.
     root_approval: Mutex<Option<(Arc<RootApproval>, Sender<Command>)>>,
+    /// The user's first display language as the host last said it (a BCP 47 tag; empty while
+    /// it has not), which the administrator prompt names who asks for root in.
+    prompt_language: Mutex<String>,
     /// The backups, passkeys and KeyMint root key the platform serves the guest.
     host_services: Mutex<host_services::HostServices>,
 }
@@ -1076,6 +1079,14 @@ impl Shared {
         }
         hub.watchers
             .retain(|watcher| watcher.send(event.clone()).is_ok());
+    }
+
+    /// The user's first display language as the host last said it; empty while it has not.
+    fn prompt_language(&self) -> String {
+        self.prompt_language
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// The installed app `package`, as the guest last listed it.
@@ -1480,6 +1491,7 @@ impl Session {
             device_name: Mutex::new(None),
             root_config: Mutex::new(RootElevationNow::default()),
             root_approval: Mutex::new(None),
+            prompt_language: Mutex::new(String::new()),
             host_services: Mutex::new(host_services::HostServices::default()),
         });
         let freeze_delay = config.freeze_after.unwrap_or(DEFAULT_FREEZE_AFTER);
@@ -2529,7 +2541,15 @@ impl Session {
     /// Records the host's system settings (time zone, languages, regional format, theme and
     /// accent color). The guest's agent is told now if it is there, and each time it connects.
     pub fn set_system_settings(&self, settings: SystemSettings) {
-        let input = SystemInput::Settings(settings.checked());
+        let settings = settings.checked();
+        if let Some(language) = settings.locales.first() {
+            *self
+                .shared
+                .prompt_language
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()) = language.clone();
+        }
+        let input = SystemInput::Settings(settings);
         let _ = self.commands.send(Command::System(input));
     }
 
@@ -2566,7 +2586,9 @@ impl Session {
                 package_name: package.to_string(),
                 ..Default::default()
             });
-        approval.approve_keep_root(app)
+        let request = crate::root_approval::ApprovalRequest::keep_root(app)
+            .with_language(&self.shared.prompt_language());
+        approval.approve_keep_root_request(request)
     }
 
     /// Gives the guest's agent the device name `source` says each time it connects, which the
@@ -4848,6 +4870,7 @@ impl Worker {
                 .collect();
             approval_request = approval_request.with_shared_apps(shared_apps);
         }
+        let approval_request = approval_request.with_language(&self.shared.prompt_language());
         let shared = Arc::clone(&self.shared);
         let request_id = request.request_id;
         let spawned = thread::Builder::new()

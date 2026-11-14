@@ -139,6 +139,7 @@ pub mod renderer;
 pub mod resize_trace;
 pub mod root_approval;
 pub mod root_elevation;
+pub mod root_requester;
 pub mod sensors;
 pub mod session;
 pub mod settings;

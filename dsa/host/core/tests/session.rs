@@ -6215,6 +6215,65 @@ fn fr35_an_ask_apps_su_request_is_answered_by_the_hosts_administrator_prompt() {
 }
 
 #[test]
+fn fr35_the_root_prompt_speaks_the_users_language() {
+    use dsa_host_core::root_approval::{
+        ApprovalPrompt, ApprovalRequest, PromptAnswer, RootApproval,
+    };
+    use dsa_host_core::root_elevation::{AppLevel, Level};
+    use dsa_host_core::root_requester::Language;
+
+    struct LanguagePrompt {
+        seen: Mutex<Vec<ApprovalRequest>>,
+    }
+
+    impl ApprovalPrompt for LanguagePrompt {
+        fn ask(&self, request: &ApprovalRequest, _timeout: Duration) -> PromptAnswer {
+            self.seen.lock().unwrap().push(request.clone());
+            PromptAnswer::Approved
+        }
+    }
+
+    let (session, mut agent, _launcher) = active_session();
+    let prompt = Arc::new(LanguagePrompt {
+        seen: Mutex::new(Vec::new()),
+    });
+    session.set_root_approval(Arc::new(RootApproval::with_levels(
+        "user",
+        prompt.clone(),
+        Arc::new(|| {
+            (
+                true,
+                vec![AppLevel {
+                    package: "com.android.shell".into(),
+                    level: Level::Ask,
+                }],
+            )
+        }),
+        Arc::new(|_: &str| {}),
+    )));
+    session.set_system_settings(seoul_settings(false));
+
+    send_body(
+        &mut agent,
+        Body::SuRequest(dsa_protocol::control::SuRequest {
+            request_id: 9,
+            package: "com.android.shell".into(),
+            uid: 2000,
+            command: vec!["id".into()],
+            interactive: false,
+        }),
+    );
+    assert!(next_su_decision(&mut agent).approved);
+    assert_eq!(session.approve_keep_root("com.keep.app"), Ok(()));
+    let seen = prompt.seen.lock().unwrap();
+    assert_eq!(seen.len(), 2);
+    for request in seen.iter() {
+        assert_eq!(request.language(), Language::Korean, "{request:?}");
+    }
+    assert_eq!(seen[0].name_in(seen[0].language()), "개발자 셸 (adb)");
+}
+
+#[test]
 fn fr35_letting_an_app_keep_root_is_asked_through_the_sessions_prompt() {
     use dsa_host_core::root_approval::{PromptAnswer, RootApproval};
     let (session, _agent, _launcher) = active_session();

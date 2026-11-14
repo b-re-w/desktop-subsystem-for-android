@@ -7,10 +7,12 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use dsa_host_core::root_approval::PromptAnswer;
+use dsa_host_core::root_approval::{ApprovalRequest, PromptAnswer, Purpose};
+use dsa_host_core::tasks::AppInfo;
 use dsa_host_windows::root_approval::{
-    answer_of_exit, approval_arguments, exit, helper_mode, is_pipe_name, pipe_name,
-    wait_for_answer, HelperMode, PromptProcess, APPROVAL_ARGUMENT, APPROVED_ARGUMENT, RECEIVED,
+    answer_of_exit, approval_arguments, confirm_text, exit, helper_mode, is_pipe_name, pipe_name,
+    prompt_program, wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_ARGUMENT,
+    APPROVED_ARGUMENT, RECEIVED, SHARED_PROGRAM_KEY, SHELL_PROGRAM_KEY, SYSTEM_PROGRAM_KEY,
 };
 use dsa_transport::local::{self, Peer};
 
@@ -190,14 +192,36 @@ fn fr35_a_program_that_ends_without_an_approval_never_approves() {
 fn fr35_the_window_program_reads_what_the_service_asks() {
     let pipe = secret();
     assert!(is_pipe_name(&pipe));
-    let line = approval_arguments(&pipe, "Backup \"Pro\"", "sh -c 'echo hi'");
+    let words = AskedWords {
+        label: "Backup \"Pro\"".into(),
+        detail: "com.example.backup".into(),
+        command: "sh -c 'echo hi'".into(),
+        korean: true,
+    };
+    let line = approval_arguments(&pipe, &words);
     let args: Vec<String> = line.split(' ').map(str::to_string).collect();
     assert_eq!(
         helper_mode(&args),
         Some(HelperMode::Ask {
             pipe: pipe.clone(),
-            label: "Backup \"Pro\"".into(),
-            command: "sh -c 'echo hi'".into(),
+            words: words.clone(),
+        })
+    );
+    // An empty line still leaves every other flag its value.
+    let bare = AskedWords {
+        detail: String::new(),
+        korean: false,
+        ..words.clone()
+    };
+    let args: Vec<String> = approval_arguments(&pipe, &bare)
+        .split(' ')
+        .map(str::to_string)
+        .collect();
+    assert_eq!(
+        helper_mode(&args),
+        Some(HelperMode::Ask {
+            pipe: pipe.clone(),
+            words: bare,
         })
     );
     let elevated = vec![APPROVED_ARGUMENT.to_string(), pipe.clone()];
@@ -215,4 +239,98 @@ fn fr35_the_window_program_reads_what_the_service_asks() {
         helper_mode(&["--package".into(), "com.example".into()]),
         None
     );
+}
+
+fn su_from(package: &str, uid: u32, label: &str, icon: &[u8]) -> ApprovalRequest {
+    ApprovalRequest {
+        request_id: 1,
+        app: AppInfo {
+            package_name: package.into(),
+            label: label.into(),
+            icon_png: icon.to_vec(),
+            ..Default::default()
+        },
+        uid,
+        command: vec!["id".into()],
+        interactive: false,
+        purpose: Purpose::Run,
+        shared_apps: Vec::new(),
+        language: "ko-KR".into(),
+    }
+}
+
+#[test]
+fn fr35_the_root_prompt_names_an_app_by_its_label_and_icon() {
+    let icon = [0x89, b'P', b'N', b'G', 7];
+    let request = su_from("com.example.backup", 10_200, "백업", &icon);
+    // The app's own window program: its label is the name UAC shows, its icon the icon.
+    let (folder, app) = prompt_program(&request);
+    assert_eq!(folder, "com.example.backup");
+    assert_eq!(app.label, "백업");
+    assert_eq!(app.icon_png, icon);
+    let words = AskedWords::of(&request);
+    assert_eq!(words.label, "백업");
+    assert_eq!(words.detail, "com.example.backup");
+    assert!(words.korean);
+    // With UAC off, the program's own dialog has the name, then the package under it.
+    let shown = confirm_text(&words.label, &words.detail, &words.command, words.korean);
+    assert_eq!(shown.caption, "백업: 관리자 승인");
+    assert!(
+        shown
+            .text
+            .starts_with("백업\ncom.example.backup\n\nAndroid에서 다음을 루트 권한으로"),
+        "{}",
+        shown.text
+    );
+    let english = confirm_text("Backup", "com.example.backup", "id", false);
+    assert!(english
+        .text
+        .starts_with("Backup\ncom.example.backup\n\nwants to run this"));
+}
+
+#[test]
+fn fr35_the_root_prompt_names_the_adb_shell_as_the_developer_shell() {
+    let request = su_from("com.android.shell", 2000, "Shell", &[]);
+    let (folder, app) = prompt_program(&request);
+    // A program of its own, never the folder of an Android package.
+    assert_eq!(folder, SHELL_PROGRAM_KEY);
+    assert_eq!(app.package_name, SHELL_PROGRAM_KEY);
+    assert_eq!(app.label, "개발자 셸 (adb)");
+    // A generic terminal icon the host draws, in place of DSA's own.
+    assert_eq!(&app.icon_png[1..4], b"PNG");
+    let words = AskedWords::of(&request);
+    assert_eq!(words.detail, "com.android.shell (uid 2000)");
+
+    let mut english = request.clone();
+    english.language = "en-US".into();
+    assert_eq!(prompt_program(&english).1.label, "Developer shell (adb)");
+
+    let system = su_from("android", 1000, "Android System", &[]);
+    let (folder, app) = prompt_program(&system);
+    assert_eq!(folder, SYSTEM_PROGRAM_KEY);
+    assert_eq!(app.label, "Android 시스템");
+    assert_ne!(app.icon_png, prompt_program(&request).1.icon_png);
+}
+
+#[test]
+fn fr35_the_root_prompt_names_a_shared_user_id_by_its_apps() {
+    let icon = [0x89, b'P', b'N', b'G', 3];
+    let mut request = su_from("com.shared.one, com.shared.two", 10_150, "", &[]);
+    request.shared_apps = vec![
+        AppInfo {
+            package_name: "com.shared.one".into(),
+            label: "하나".into(),
+            ..Default::default()
+        },
+        AppInfo {
+            package_name: "com.shared.two".into(),
+            label: "둘".into(),
+            icon_png: icon.to_vec(),
+            ..Default::default()
+        },
+    ];
+    let (folder, app) = prompt_program(&request);
+    assert_eq!(folder, SHARED_PROGRAM_KEY);
+    assert_eq!(app.label, "하나, 둘");
+    assert_eq!(app.icon_png, icon);
 }
