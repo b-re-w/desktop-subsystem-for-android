@@ -90,6 +90,7 @@ add_executable(dsa-codec2
     src/component.cpp
     src/decoder_interface.cpp
     src/host_link.cpp
+    src/picture_region.cpp
     src/video_messages.cpp
     src/picture_copy.cpp
     src/output_buffer.cpp

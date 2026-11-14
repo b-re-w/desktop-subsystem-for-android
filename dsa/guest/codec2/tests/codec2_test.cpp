@@ -6,7 +6,10 @@
 // planes. The protocol folder is the only argument.
 
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
+
+#include <cstring>
 
 #include <algorithm>
 #include <atomic>
@@ -28,6 +31,7 @@
 #include "output_buffer.h"
 #include "output_gate.h"
 #include "picture_copy.h"
+#include "picture_region.h"
 #include "picture_stats.h"
 #include "send_queue.h"
 #include "test_main.h"
@@ -909,6 +913,130 @@ TEST(fr26_a_call_to_an_app_whose_process_is_gone_says_so) {
     EXPECT_TRUE(!peerIsGone(kExTransactionFailed, 0));
     // A service specific error (a surface with no buffer) is not that.
     EXPECT_TRUE(!peerIsGone(-8, kC2Blocking));
+}
+
+namespace {
+
+// A region of shared picture memory in the test's own memory: its header, then room for slots.
+std::vector<uint8_t> pictureRegion(uint64_t id, size_t size) {
+    std::vector<uint8_t> region(size, 0);
+    std::memcpy(region.data(), "DSAVPIC1", 8);
+    for (int i = 0; i < 8; ++i) {
+        region[8 + i] = static_cast<uint8_t>(id >> (8 * i));
+        region[16 + i] = static_cast<uint8_t>(static_cast<uint64_t>(size) >> (8 * i));
+    }
+    return region;
+}
+
+}  // namespace
+
+TEST(pr7_the_open_names_the_shared_picture_memory_as_the_protocol_vector) {
+    EXPECT_EQ(encodeOpen(Codec::H264, 1280, 720, 42), vector("video_decoder_open_shared"));
+    EXPECT_EQ(encodeOpen(Codec::H264, 1280, 720, 0), vector("video_decoder_open"));
+}
+
+TEST(pr7_a_slot_given_back_encodes_as_the_protocol_vector) {
+    EXPECT_EQ(encodeSlotReturned(5), vector("video_slot_returned"));
+}
+
+TEST(pr7_a_picture_in_a_slot_decodes_with_its_slot_and_no_bytes) {
+    const std::vector<uint8_t> bytes = vector("video_frame_in_slot");
+    const HostMessage message = decodeHostFrame(bytes.data(), bytes.size());
+    const auto* frame = std::get_if<Frame>(&message);
+    EXPECT_TRUE(frame != nullptr);
+    if (frame) {
+        EXPECT_EQ(frame->slot, 1u);
+        EXPECT_EQ(frame->slotOffset, 65536u);
+        EXPECT_TRUE(frame->nv12.empty());
+        EXPECT_TRUE(!carriesNoPicture(*frame));
+        // Until the link finds its bytes, it has none.
+        EXPECT_TRUE(pictureBytes(*frame) == nullptr);
+        EXPECT_EQ(pictureSize(*frame), 0u);
+    }
+}
+
+TEST(pr7_the_region_header_and_its_slots_are_read_only_inside_it) {
+    std::vector<uint8_t> region = pictureRegion(0x1122334455667788ULL, 128 * 1024);
+    EXPECT_EQ(pictureRegionId(region.data(), region.size()), 0x1122334455667788ULL);
+    EXPECT_EQ(pictureRegionId(region.data(), 16), 0u);
+    // A header that says more than the mapping holds names no region.
+    EXPECT_EQ(pictureRegionId(region.data(), 64 * 1024), 0u);
+    region[0] = 'X';
+    EXPECT_EQ(pictureRegionId(region.data(), region.size()), 0u);
+    EXPECT_TRUE(pictureRegionSlice(region.data(), region.size(), 65536, 6) == region.data() + 65536);
+    EXPECT_TRUE(pictureRegionSlice(region.data(), region.size(), 0, 6) == nullptr);
+    EXPECT_TRUE(pictureRegionSlice(region.data(), region.size(), 128 * 1024 - 5, 6) == nullptr);
+    EXPECT_TRUE(pictureRegionSlice(region.data(), region.size(), ~0ULL, 6) == nullptr);
+    EXPECT_TRUE(pictureRegionSlice(nullptr, 0, 65536, 6) == nullptr);
+}
+
+TEST(pr7_a_picture_in_a_slot_is_read_from_the_shared_memory_and_its_slot_goes_back) {
+    std::vector<uint8_t> region = pictureRegion(7, 128 * 1024);
+    const uint8_t picture[6] = {0x10, 0x20, 0x30, 0x40, 0x80, 0x90};
+    std::memcpy(region.data() + 65536, picture, sizeof(picture));
+    PictureRegion::instance().useForTest(region.data(), region.size());
+    EXPECT_EQ(PictureRegion::instance().id(), 7u);
+
+    int fds[2];
+    EXPECT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, fds), 0);
+    std::mutex lock;
+    std::condition_variable arrived;
+    std::vector<Frame> frames;
+    std::unique_ptr<HostDecoder> link = HostDecoder::adopt(fds[0], [&](HostMessage message) {
+        if (auto* frame = std::get_if<Frame>(&message)) {
+            std::lock_guard<std::mutex> guard(lock);
+            frames.push_back(std::move(*frame));
+            arrived.notify_all();
+        }
+    });
+    EXPECT_TRUE(writeHostFrame(fds[1], vector("video_frame_in_slot")));
+    {
+        std::unique_lock<std::mutex> guard(lock);
+        EXPECT_TRUE(arrived.wait_for(guard, milliseconds(2000), [&] { return !frames.empty(); }));
+    }
+    {
+        std::lock_guard<std::mutex> guard(lock);
+        EXPECT_EQ(frames.size(), 1u);
+        if (!frames.empty()) {
+            // The bytes are the shared memory's own, not a copy.
+            EXPECT_TRUE(pictureBytes(frames[0]) == region.data() + 65536);
+            EXPECT_EQ(pictureSize(frames[0]), sizeof(picture));
+        }
+    }
+    // Nothing goes back while the picture is held.
+    timeval quick{0, 100 * 1000};
+    setsockopt(fds[1], SOL_SOCKET, SO_RCVTIMEO, &quick, sizeof(quick));
+    std::vector<uint8_t> returned;
+    EXPECT_TRUE(!readHostFrame(fds[1], &returned));
+    // Once the last copy of the frame goes, its slot goes back to the host.
+    {
+        std::lock_guard<std::mutex> guard(lock);
+        frames.clear();
+    }
+    timeval patient{2, 0};
+    setsockopt(fds[1], SOL_SOCKET, SO_RCVTIMEO, &patient, sizeof(patient));
+    EXPECT_TRUE(readHostFrame(fds[1], &returned));
+    EXPECT_EQ(returned, encodeSlotReturned(1));
+
+    // A slot outside the memory has no bytes, and still goes back.
+    PictureRegion::instance().useForTest(region.data(), 64 * 1024);
+    EXPECT_TRUE(writeHostFrame(fds[1], vector("video_frame_in_slot")));
+    {
+        std::unique_lock<std::mutex> guard(lock);
+        EXPECT_TRUE(arrived.wait_for(guard, milliseconds(2000), [&] { return !frames.empty(); }));
+        if (!frames.empty()) {
+            EXPECT_TRUE(pictureBytes(frames[0]) == nullptr);
+            EXPECT_EQ(pictureSize(frames[0]), 0u);
+        }
+        frames.clear();
+    }
+    EXPECT_TRUE(readHostFrame(fds[1], &returned));
+    EXPECT_EQ(returned, encodeSlotReturned(1));
+
+    link->close();
+    link.reset();
+    close(fds[1]);
+    PictureRegion::instance().useForTest(nullptr, 0);
 }
 
 int main(int argc, char** argv) {

@@ -12,6 +12,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
@@ -60,6 +61,19 @@ class HostDecoder {
     // (see MessageReader::stop() for a close from inside the handler).
     void close();
 
+    // Whether the host said this stream's pictures may come in the shared memory.
+    bool sharedPictures() const { return mSharedPictures; }
+
+    // Where the slots of pictures in the shared memory go back: to the link while it is open,
+    // nowhere once it has closed (the host takes every slot of a connection back when it ends).
+    // A frame's picture holds this, so it outlives the link.
+    struct SlotReturns {
+        explicit SlotReturns(HostDecoder* link) : link(link) {}
+        void giveBack(uint32_t slot);
+        std::mutex lock;
+        HostDecoder* link;
+    };
+
    private:
     HostDecoder(int fd, MessageHandler onMessage);
     void write();
@@ -68,8 +82,16 @@ class HostDecoder {
     SendQueue mOutgoing;
     std::atomic<bool> mClosed{false};
     std::atomic<bool> mWriteFailed{false};
+    bool mSharedPictures = false;
+    // Before the reader, which hands frames that hold it from the moment it starts.
+    std::shared_ptr<SlotReturns> mReturns;
     std::unique_ptr<MessageReader> mReader;
     std::thread mWriter;
 };
+
+// `onMessage`, given each frame whose picture is in a slot of the shared memory with the
+// picture's bytes (Frame::shared) and with the slot's way back to the host through `returns`.
+MessageReader::Handler withSharedPictures(MessageReader::Handler onMessage,
+                                          std::shared_ptr<HostDecoder::SlotReturns> returns);
 
 }  // namespace dsa::codec2
