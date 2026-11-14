@@ -2494,6 +2494,47 @@ enum NodeAction {
   NODE_ACTION_FOCUS = 6;
   NODE_ACTION_ACCESSIBILITY_FOCUS = 7;
   NODE_ACTION_SELECT = 8;
+  // Select characters of an editable node's text (AccessibilityAction.selection_start to
+  // selection_end), or put the cursor there.
+  NODE_ACTION_SET_SELECTION = 9;
+  NODE_ACTION_EXPAND = 10;
+  NODE_ACTION_COLLAPSE = 11;
+  // Set a slider's value to AccessibilityAction.progress.
+  NODE_ACTION_SET_PROGRESS = 12;
+  NODE_ACTION_SHOW_ON_SCREEN = 13;
+  // Scroll a list or a grid to AccessibilityAction.row and column.
+  NODE_ACTION_SCROLL_TO_POSITION = 14;
+}
+
+// A list's or a grid's size.
+message NodeCollection {
+  int32 rows = 1;
+  int32 columns = 2;
+  bool hierarchical = 3;
+}
+
+// Where an item is in its list or grid.
+message NodeCollectionItem {
+  int32 row = 1;
+  int32 row_span = 2;
+  int32 column = 3;
+  int32 column_span = 4;
+  bool heading = 5;
+}
+
+// The Android window a top-level node is the root of.
+message NodeWindow {
+  string title = 1;
+  bool modal = 2;
+  bool popup = 3;
+}
+
+// Service to client, on a connection that watches a task's tree: something a screen reader
+// should say, an app's announcement or a toast.
+message AccessibilityAnnouncement {
+  string text = 1;
+  bool assertive = 2;
+  bool toast = 3;
 }
 
 // The range a slider or a progress bar has, and where it stands in it.
@@ -2531,6 +2572,20 @@ message AccessibilityNode {
   NodeRange range = 21;
   repeated NodeAction actions = 22;
   string state_description = 23;
+  bool accessibility_focused = 24;
+  // An editable node's selection in UTF-16 code units of its text, while has_text_selection.
+  int32 text_selection_start = 25;
+  int32 text_selection_end = 26;
+  bool has_text_selection = 27;
+  uint32 heading_level = 28;
+  bool link = 29;
+  string url = 30;
+  NodeCollection collection = 31;
+  NodeCollectionItem collection_item = 32;
+  // 0 not announced, 1 politely, 2 at once.
+  int32 live_region = 33;
+  string pane_title = 34;
+  NodeWindow window = 35;
 }
 
 // A task's accessibility tree, or what changed in it, on a connection that watches it
@@ -2546,6 +2601,8 @@ message AccessibilityTree {
   repeated uint32 removed_ids = 6;
   // The node with the input focus, or 0 for none.
   uint32 focused_id = 7;
+  // The node with the accessibility focus, or 0 for none.
+  uint32 accessibility_focused_id = 8;
 }
 
 // Client to service, on a connection that watches a task's tree: do something to one of its
@@ -2557,6 +2614,20 @@ message AccessibilityAction {
   NodeAction action = 3;
   string text = 4;
   uint32 request_id = 5;
+  // The selection, for NODE_ACTION_SET_SELECTION.
+  int32 selection_start = 6;
+  int32 selection_end = 7;
+  float progress = 8;
+  int32 row = 9;
+  int32 column = 10;
+}
+
+// Client to service, on a connection that watches a task's tree: whether a screen reader (or
+// another assistive technology that follows focus) listens for the window's events. While any
+// watch of the task says so, Android sends focus changes at once and other changes sooner;
+// otherwise it keeps its usual waits. A watch starts as not listening.
+message AccessibilityListening {
+  bool listening = 1;
 }
 
 // What came of an AccessibilityAction.
@@ -2928,6 +2999,8 @@ message Envelope {
     AccessibilityTree accessibility_tree = 17;
     AccessibilityAction accessibility_action = 18;
     AccessibilityActionResult accessibility_action_result = 19;
+    AccessibilityListening accessibility_listening = 22;
+    AccessibilityAnnouncement accessibility_announcement = 23;
     WidgetEvent widget_event = 20;
     LogEntries log_entries = 50;
     DiagnosticsData diagnostics_data = 51;

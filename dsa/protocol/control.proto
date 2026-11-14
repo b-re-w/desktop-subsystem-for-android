@@ -2124,6 +2124,18 @@ message AccessibilityWatch {
   bool on = 2;
 }
 
+// Host to guest, to the agent: whether a screen reader (or another assistive technology that
+// follows focus) listens for the events of a watched task. While one does, the agent sends a
+// focus change at once, as a change that holds only the nodes it touches, and other changes
+// after a short wait (25 ms, at most one tree every 50 ms), reading only the part of the
+// task that changed. While none does (the default for every watch), the agent keeps its
+// usual waits (100 ms, at most one tree every 250 ms), so a user with no screen reader pays
+// nothing more. The host says it again after every AccessibilityWatch `on`.
+message AccessibilityListening {
+  int32 task_id = 1;
+  bool listening = 2;
+}
+
 // What can be done to an accessibility node, as the host asks it and as a node says it
 // supports.
 enum NodeAction {
@@ -2142,6 +2154,45 @@ enum NodeAction {
   NODE_ACTION_ACCESSIBILITY_FOCUS = 7;
   // Select it, as an item of a list or a tab.
   NODE_ACTION_SELECT = 8;
+  // Select the characters of an editable node's text from AccessibilityAction.selection_start
+  // to selection_end, or put the cursor there when the two are equal.
+  NODE_ACTION_SET_SELECTION = 9;
+  // Expand or collapse it, as a group of a tree or a drop-down.
+  NODE_ACTION_EXPAND = 10;
+  NODE_ACTION_COLLAPSE = 11;
+  // Set a slider's value to AccessibilityAction.progress.
+  NODE_ACTION_SET_PROGRESS = 12;
+  // Scroll its container so it is on the screen.
+  NODE_ACTION_SHOW_ON_SCREEN = 13;
+  // Scroll a list or a grid to AccessibilityAction.row and column, which need not be on the
+  // screen: how a client reaches an item a virtualized list has not made yet.
+  NODE_ACTION_SCROLL_TO_POSITION = 14;
+}
+
+// A list's or a grid's size, from Android's CollectionInfo.
+message NodeCollection {
+  int32 rows = 1;
+  int32 columns = 2;
+  bool hierarchical = 3;
+}
+
+// Where an item is in its list or grid, from Android's CollectionItemInfo.
+message NodeCollectionItem {
+  int32 row = 1;
+  int32 row_span = 2;
+  int32 column = 3;
+  int32 column_span = 4;
+  bool heading = 5;
+}
+
+// The Android window a top-level node is the root of.
+message NodeWindow {
+  // The window's title, or the pane title of its root.
+  string title = 1;
+  // Over the task's main window, as a dialog is: input goes to it alone.
+  bool modal = 2;
+  // A pop-up: a menu, a drop-down list.
+  bool popup = 3;
 }
 
 // The range a slider or a progress bar has, and where it stands in it.
@@ -2187,13 +2238,46 @@ message AccessibilityNode {
   repeated NodeAction actions = 22;
   // The node's state in words, when the app gives one ("On", "50 percent").
   string state_description = 23;
+  // Whether the node has the accessibility focus, which a screen reader's cursor follows.
+  bool accessibility_focused = 24;
+  // Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+  // of its text; equal for a cursor. Set only while has_text_selection is.
+  int32 text_selection_start = 25;
+  int32 text_selection_end = 26;
+  bool has_text_selection = 27;
+  // A heading's level, 1 to 9, or 0 when the app does not say.
+  uint32 heading_level = 28;
+  // A link, with where it goes when the app says.
+  bool link = 29;
+  string url = 30;
+  // Set for a list or a grid, and for an item of one.
+  NodeCollection collection = 31;
+  NodeCollectionItem collection_item = 32;
+  // How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+  int32 live_region = 33;
+  // The title of the pane the node is, when the app names one (a screen of an activity).
+  string pane_title = 34;
+  // Set for a top-level node: the window it is the root of.
+  NodeWindow window = 35;
+}
+
+// Guest to host, from the agent: something a screen reader should say for a watched task: an
+// app's announcement or a toast it showed. Sent only while a screen reader listens.
+message AccessibilityAnnouncement {
+  int32 task_id = 1;
+  string text = 2;
+  // Said at once, cutting what is being said, rather than after it.
+  bool assertive = 3;
+  // A toast rather than an announcement.
+  bool toast = 4;
 }
 
 // Guest to host, from the agent: a task's accessibility tree, or what changed in it. A full
 // tree (`full`) replaces whatever the host had and starts a new epoch; node IDs of earlier
 // epochs mean nothing in it. A change carries the epoch it applies to, each node that is new
 // or changed (whole), and the IDs of the nodes that are gone. The agent sends a few of these
-// a second at most, however fast the task's content changes.
+// a second at most, however fast the task's content changes, except while a screen reader
+// listens (AccessibilityListening), when a focus change goes at once.
 message AccessibilityTree {
   int32 task_id = 1;
   uint32 epoch = 2;
@@ -2204,6 +2288,8 @@ message AccessibilityTree {
   repeated uint32 removed_ids = 6;
   // The node with the input focus, or 0 for none.
   uint32 focused_id = 7;
+  // The node with the accessibility focus, or 0 for none.
+  uint32 accessibility_focused_id = 8;
 }
 
 // Host to guest, to the agent: do something to a node of a task, for a host accessibility
@@ -2220,6 +2306,14 @@ message AccessibilityAction {
   string text = 5;
   // Names the action in its answer.
   uint32 request_id = 6;
+  // The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+  int32 selection_start = 7;
+  int32 selection_end = 8;
+  // The new value, for NODE_ACTION_SET_PROGRESS.
+  float progress = 9;
+  // The place, for NODE_ACTION_SCROLL_TO_POSITION.
+  int32 row = 10;
+  int32 column = 11;
 }
 
 // Guest to host, from the agent: what came of an AccessibilityAction.
@@ -3313,6 +3407,8 @@ message Envelope {
     AccessibilityTree accessibility_tree = 81;
     AccessibilityAction accessibility_action = 82;
     AccessibilityActionResult accessibility_action_result = 83;
+    AccessibilityListening accessibility_listening = 84;
+    AccessibilityAnnouncement accessibility_announcement = 85;
     AudioOutputOpen audio_output_open = 100;
     AudioOutputReady audio_output_ready = 101;
     AudioPcm audio_pcm = 102;
