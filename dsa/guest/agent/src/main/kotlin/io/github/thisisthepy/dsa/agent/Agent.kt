@@ -426,7 +426,18 @@ class Agent(
         clock = clock,
     )
     private val cachedProcesses = backgroundProcesses?.let {
-        CachedProcesses(it, scheduler, log, clock, isConnected = { channel.connected }, ownPackage = ownPackage)
+        CachedProcesses(
+            it,
+            scheduler,
+            log,
+            clock,
+            isConnected = { channel.connected },
+            ownPackage = ownPackage,
+            shownPackages = {
+                notifications.active().map { notice -> notice.packageName }.toSet() +
+                    widgets.placedIds().mapNotNull { id -> widgets.info(id)?.packageName }
+            },
+        )
     }
     private val playServices =DesktopPlayServices(componentStates, scheduler, log, clock)
     private val freeform = FreeformSetup(windowing, scheduler, log)

@@ -20,6 +20,9 @@ class FakeBackgroundProcesses : BackgroundProcesses {
     val foreground = mutableSetOf<String>()
     val ended = mutableListOf<String>()
     var readable = true
+    var playing: Set<String>? = emptySet()
+
+    override fun playingPackages(): Set<String>? = playing
 
     fun score(process: AppProcess): Int = scores[process.pid] ?: when {
         process.persistent -> -800
@@ -59,6 +62,7 @@ class CachedProcessesTest {
     private val scheduler = FakeScheduler()
     private val log = RecordingLog()
     private var connected = true
+    private var shown: Set<String> = emptySet()
     private val policy = CachedProcesses(
         processes,
         scheduler,
@@ -66,7 +70,108 @@ class CachedProcessesTest {
         clock = { scheduler.now },
         isConnected = { connected },
         ownPackage = AGENT,
+        shownPackages = { shown },
     )
+
+    private fun serving(pid: Int, uid: Int, name: String, vararg packages: String) =
+        AppProcess(pid, uid, name, packages.toList(), state = CachedProcesses.STATE_SERVICE)
+
+    /** Looks once now and once after the time a process may only run services. */
+    private fun idleServing() {
+        policy.check()
+        scheduler.advance(CachedProcesses.SERVICE_IDLE_MILLIS)
+        policy.check()
+    }
+
+    @Test
+    fun nfr1_a_windowless_app_that_only_runs_a_service_is_ended_after_the_service_idle_time() {
+        // What the owner's guest held after YouTube closed: APKPure with no window, its
+        // started service keeping it out of the cached states, so the cached rule never saw it.
+        processes.processes += serving(6454, 10117, "com.apkpure.aegon", "com.apkpure.aegon")
+        policy.check()
+        scheduler.advance(CachedProcesses.SERVICE_IDLE_MILLIS - 1)
+        policy.check()
+        assertTrue(processes.ended.isEmpty())
+        scheduler.advance(1)
+        policy.check()
+        assertEquals(listOf("com.apkpure.aegon"), processes.ended)
+        assertTrue(
+            log.lines.toString(),
+            log.lines.contains(
+                "info: ended background com.apkpure.aegon (pid 6454, only services for 300 s, no task window, " +
+                    "no foreground service, no playback): PSS 70 MiB, 28 MiB resident and 42 MiB swapped out to zram",
+            ),
+        )
+    }
+
+    @Test
+    fun nfr1_a_service_app_that_plays_audio_shows_a_notification_or_has_a_widget_is_kept() {
+        processes.processes += serving(300, 10150, "org.example.radio", "org.example.radio")
+        processes.processes += serving(301, 10151, "org.example.mail", "org.example.mail")
+        processes.processes += serving(302, 10152, "org.example.weather", "org.example.weather")
+        processes.playing = setOf("org.example.radio")
+        shown = setOf("org.example.mail", "org.example.weather")
+        idleServing()
+        assertTrue(processes.ended.isEmpty())
+    }
+
+    @Test
+    fun nfr1_the_audio_effect_app_is_kept_while_anything_plays_and_ended_after() {
+        processes.processes += serving(400, 10050, "com.android.musicfx", "com.android.musicfx")
+        processes.processes += AppProcess(401, 10160, "com.spotify.music", listOf("com.spotify.music"), state = 4)
+        processes.foreground += "com.spotify.music"
+        processes.playing = setOf("com.spotify.music")
+        idleServing()
+        assertTrue(processes.ended.isEmpty())
+        // The music stops: the effect app goes at its next look.
+        processes.playing = emptySet()
+        scheduler.advance(CachedProcesses.BLOCKED_RETRY_MILLIS)
+        policy.check()
+        assertEquals(listOf("com.android.musicfx"), processes.ended)
+        assertEquals(setOf("com.spotify.music"), names())
+    }
+
+    @Test
+    fun nfr1_a_service_process_is_kept_when_playback_cannot_be_read() {
+        processes.processes += serving(500, 10170, "org.example.sync", "org.example.sync")
+        processes.playing = null
+        idleServing()
+        scheduler.advance(CachedProcesses.BLOCKED_RETRY_MILLIS)
+        policy.check()
+        assertTrue(processes.ended.isEmpty())
+        assertEquals(1, log.lines.count { it.startsWith("warn: could not read which apps play audio") })
+    }
+
+    @Test
+    fun nfr1_a_system_persistent_foreground_or_bound_service_process_is_kept() {
+        processes.processes += serving(600, 1000, "com.android.systemui.helper", "com.android.helper")
+        processes.processes += serving(601, 10180, "org.example.keeper", "org.example.keeper").copy(persistent = true)
+        processes.processes += serving(602, 10181, "org.example.upload", "org.example.upload")
+        processes.foreground += "org.example.upload"
+        // Bound by a perceptible client: its score is above the service level.
+        val bound = serving(603, 10182, "org.example.provider", "org.example.provider")
+        processes.processes += bound
+        processes.scores[bound.pid] = 200
+        processes.processes += serving(604, 10183, "org.example.notes:sync", "org.example.notes")
+        policy.tasks(setOf("org.example.notes"))
+        idleServing()
+        assertTrue(processes.ended.toString(), processes.ended.isEmpty())
+    }
+
+    @Test
+    fun nfr1_a_service_process_that_comes_back_waits_longer_each_time() {
+        processes.processes += serving(700, 10190, "org.example.sticky", "org.example.sticky")
+        idleServing()
+        assertEquals(1, processes.ended.size)
+        // The system restarts its sticky service a minute later.
+        scheduler.advance(60_000)
+        processes.processes += serving(701, 10190, "org.example.sticky", "org.example.sticky")
+        idleServing()
+        assertEquals(1, processes.ended.size)
+        scheduler.advance(CachedProcesses.SERVICE_IDLE_MILLIS)
+        policy.check()
+        assertEquals(2, processes.ended.size)
+    }
 
     private fun cachedEmpty(pid: Int, uid: Int, name: String, vararg packages: String) =
         AppProcess(pid, uid, name, packages.toList(), state = CACHED_EMPTY)
