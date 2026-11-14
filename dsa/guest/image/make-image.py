@@ -286,19 +286,13 @@ SETTINGS_CODE_WITHOUT_BLUETOOTH = {
     ],
 }
 
-# Settings code that pads its home list's bottom itself, edited in Settings.apk's dex files.
-# Android 17's home page (TopLevelSettings.setPaddingHorizontal) pads its list's bottom by
-# dashboard_padding_bottom (16 dp) when isRunningInFreeformWindow, which asks whether the
-# window shows a caption bar. That padding stands in for the navigation bar inset Android's
-# own desktop windows lack. A DSA window shows the agent's caption bar inset, so the method
-# said yes, and the home list alone would end 16 dp above the window's bottom edge, a band
-# under it that no other app and no other Settings list has: a DSA task has no navigation
-# bar inset, and its lists reach the window's bottom edge as an app lays them out without a
-# navigation bar. The method says no, so the home list ends where Settings' other lists end.
-# Android 16's home page has no such method, and nothing changes there.
-SETTINGS_CODE_FREEFORM_PADDING = {
-    "Lcom/android/settings/homepage/TopLevelSettings;->isRunningInFreeformWindow": ("return false", None),
-}
+# Android 17's Settings home page (TopLevelSettings.setPaddingHorizontal) pads its list's
+# bottom by dashboard_padding_bottom (16 dp) when isRunningInFreeformWindow, which asks
+# whether the window shows a caption bar. That padding stands in for the navigation bar inset
+# Android's own desktop windows lack, so the last card does not sit on the window's bottom
+# edge. A DSA window has no navigation bar inset either, so Settings keeps that padding as
+# Android's desktop windows show it: nothing below edits the method.
+SETTINGS_FREEFORM_WINDOW = "Lcom/android/settings/homepage/TopLevelSettings;->isRunningInFreeformWindow"
 
 # PermissionController lives in the permission APEX, which is unpacked, edited and packed
 # again before signing (see edit_permission_apex).
@@ -2604,11 +2598,10 @@ def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_att
 
 def edit_settings_apk(data, name):
     """Settings.apk without the preferences, and the code, that need the Bluetooth service,
-    with its home list ending on the window's bottom edge as its other lists do
-    (SETTINGS_CODE_FREEFORM_PADDING),
     and with its pages' large titles opening expanded or folded as the Settings overlay's theme
-    says (SETTINGS_TITLE_EXPANDED)."""
-    return edit_apk(data, name, code={**SETTINGS_CODE_WITHOUT_BLUETOOTH, **SETTINGS_CODE_FREEFORM_PADDING},
+    says (SETTINGS_TITLE_EXPANDED). Its home list keeps Android's own freeform padding
+    (SETTINGS_FREEFORM_WINDOW)."""
+    return edit_apk(data, name, code=SETTINGS_CODE_WITHOUT_BLUETOOTH,
                     controllers=SETTINGS_CONTROLLERS_WITHOUT_BLUETOOTH, theme_attributes=SETTINGS_TITLE_EXPANDED)
 
 

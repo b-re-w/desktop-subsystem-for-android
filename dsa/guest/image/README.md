@@ -188,12 +188,12 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
 - Settings, Files and the permission screens take the space below the last row of a list
   from the navigation bar inset alone (SettingsLib's `EdgeToEdgeUtils` and Files'
   `BaseActivity` pad their content by it). A task has none, so their lists end on the
-  window's bottom edge, as every app's do, and nothing adds a margin of its own: it would be a
-  band no other app has. Android 17's Settings home page adds `dashboard_padding_bottom`
-  (16 dp) when its window shows a caption bar (`TopLevelSettings.isRunningInFreeformWindow`),
-  padding that stands in for the navigation bar inset Android's own desktop windows lack. A
-  DSA task shows a caption bar inset, so that method says no
-  (`SETTINGS_CODE_FREEFORM_PADDING`), and the home list ends where Settings' other lists end.
+  window's bottom edge, as every app's do, and DSA adds no margin of its own. Android 17's
+  Settings home page adds `dashboard_padding_bottom` (16 dp) when its window shows a caption
+  bar (`TopLevelSettings.isRunningInFreeformWindow`), padding that stands in for the
+  navigation bar inset Android's own desktop windows lack. A DSA task has no navigation bar
+  inset either, so the home page keeps that padding unedited, as Android's desktop windows
+  show it, and its last card does not sit on the window's bottom edge.
   PermissionController lives in the permission APEX, which `make-image.py` unpacks with
   otatools' `deapexer`, edits (its cards' corners) and packs with `apexer` before signing, as
   signing itself packs it, and checks again after signing. `check-image.py` fails an image
