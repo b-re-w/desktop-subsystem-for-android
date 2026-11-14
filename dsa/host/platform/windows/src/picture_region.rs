@@ -14,16 +14,29 @@
 //! `NT VIRTUAL MACHINE\Virtual Machines`, S-1-5-83-0) and the user the VM belongs to, whose
 //! window manager writes it. Its name carries that user's SID, so each user's VM has its own.
 //!
-//! A section commits its whole size against the system's commit limit when it is made (page
-//! file, not memory); a page takes memory only once a picture is written to it. The window
-//! manager discards what it touched once the last video closes, and lets the view go; the
-//! section goes with the VM. Whether the VM worker keeps the pages it mapped after the window
-//! manager discards them is measured on a real PC.
+//! The section only reserves its size (`SEC_RESERVE`), as the graphics sections do
+//! (`crate::graphics_region`): a section made committed charges its whole size against the
+//! system's commit limit at once, and HCS takes a reserved one and maps it for the VM without
+//! committing it. The service commits the header's 64 KiB when it makes the section
+//! ([`prepare_section`]), the only part anyone reads before a picture: the window manager
+//! checks the header when it opens the section, and the guest kernel when it is told where the
+//! region is. The window manager commits each slot's pages in its own view before it first
+//! writes the slot (`dsa_host_core::video_slots`), and the guest reads a slot only once the
+//! host has written it and named it in a message, so the guest never reaches a page that is
+//! only reserved. A committed page stays committed until the section closes with the VM, so
+//! the commit is the high-water mark of the slots the window manager wrote. A page takes
+//! memory only once a picture is written to it; the window manager discards what it touched
+//! once the last video closes, which gives the memory back while the commit stays, and lets
+//! the view go. Whether the VM worker keeps the pages it mapped after the window manager
+//! discards them is measured on a real PC.
 //!
 //! What this module decides (the name, the access list, the document's entry, reading the
-//! address HCS reports) is tested on every platform; making and mapping the section is
-//! Windows only.
+//! address HCS reports, what is committed and cleared when the section is made) is tested on
+//! every platform; making and mapping the section is Windows only.
 
+use std::io;
+
+use dsa_host_core::video_slots::{new_region_id, write_header, SLOTS_START};
 use serde_json::{json, Value};
 
 /// Who may open the section: SYSTEM, the VM worker processes, and `user_sid`, who may map it
@@ -137,6 +150,62 @@ pub fn guest_address_from_properties(properties: &str, section_name: &str) -> Op
     })
 }
 
+/// The pages of the service's view of a section that may only reserve its size.
+pub trait SectionPages {
+    /// The view's length in bytes.
+    fn len(&self) -> usize;
+    /// Whether the view is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// Commits the pages of `len` bytes from `offset`; pages committed already cost nothing
+    /// more. Fails when the system refuses (its commit limit is reached).
+    fn commit(&mut self, offset: usize, len: usize) -> io::Result<()>;
+    /// The ranges of the view that are committed, as `(offset, len)`, in order.
+    fn committed(&self) -> Vec<(usize, usize)>;
+    /// Zeroes `len` committed bytes from `offset` and gives their pages back.
+    fn scrub(&mut self, offset: usize, len: usize);
+    /// The `len` committed bytes from `offset`, to write.
+    fn bytes_mut(&mut self, offset: usize, len: usize) -> &mut [u8];
+}
+
+/// Readies the view `pages` of a section of `length` bytes for a new boot and returns the id
+/// its header now names. A section that `existed` already (a window manager kept its view of
+/// the boot before) has every committed page zeroed and given back first, so no picture of
+/// the last boot reaches this one; its pages that are only reserved are left alone, since
+/// writing one faults. Then the header's pages are committed and the header written. Fails,
+/// and the boot goes without the region, when the section is smaller than `length` or the
+/// system will not commit the header.
+pub fn prepare_section(
+    pages: &mut dyn SectionPages,
+    existed: bool,
+    length: u64,
+) -> io::Result<u64> {
+    if (pages.len() as u64) < length || pages.len() < SLOTS_START {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            format!(
+                "the section is already open with {} bytes, not {length}",
+                pages.len()
+            ),
+        ));
+    }
+    if existed {
+        for (offset, len) in pages.committed() {
+            pages.scrub(offset, len);
+        }
+    }
+    pages.commit(0, SLOTS_START).map_err(|why| {
+        io::Error::new(
+            why.kind(),
+            format!("the video pictures' region header could not be committed ({why})"),
+        )
+    })?;
+    let id = new_region_id();
+    write_header(pages.bytes_mut(0, 24), id, length);
+    Ok(id)
+}
+
 #[cfg(windows)]
 pub use system::{PictureSection, SectionView};
 
@@ -145,7 +214,7 @@ mod system {
     use std::io;
     use std::sync::Arc;
 
-    use dsa_host_core::video_slots::{new_region_id, write_header, SharedRegion};
+    use dsa_host_core::video_slots::SharedRegion;
     use windows_sys::Win32::Foundation::{
         CloseHandle, GetLastError, LocalFree, ERROR_ALREADY_EXISTS, HANDLE, HLOCAL,
         INVALID_HANDLE_VALUE,
@@ -156,9 +225,11 @@ mod system {
     use windows_sys::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
     use windows_sys::Win32::System::Memory::{
         CreateFileMappingW, DiscardVirtualMemory, MapViewOfFile, OpenFileMappingW, UnmapViewOfFile,
-        VirtualQuery, FILE_MAP_READ, FILE_MAP_WRITE, MEMORY_BASIC_INFORMATION,
-        MEMORY_MAPPED_VIEW_ADDRESS, PAGE_READWRITE, SEC_COMMIT,
+        VirtualAlloc, VirtualQuery, FILE_MAP_READ, FILE_MAP_WRITE, MEMORY_BASIC_INFORMATION,
+        MEMORY_MAPPED_VIEW_ADDRESS, MEM_COMMIT, PAGE_READWRITE, SEC_RESERVE,
     };
+
+    use super::SectionPages;
 
     fn wide(text: &str) -> Vec<u16> {
         text.encode_utf16().chain([0]).collect()
@@ -186,10 +257,13 @@ mod system {
     }
 
     impl PictureSection {
-        /// Makes the section `name` of `length` bytes, which `sddl` admits, and writes the
-        /// region's header with a new id. A section of that name that is still open (a window
-        /// manager kept its view of the boot before) is taken as it is, its header written
-        /// again: the new boot's guest then names the new id.
+        /// Makes the section `name` of `length` bytes, which `sddl` admits and which only
+        /// reserves its size, commits the header's pages and writes the region's header with a
+        /// new id ([`super::prepare_section`]). A section of that name that is still open (a
+        /// window manager kept its view of the boot before) is taken as it is: its committed
+        /// pages are zeroed and given back and its header written again, so the new boot's
+        /// guest names the new id. Fails, and the boot goes without the region, when the
+        /// system will not commit the header.
         pub fn create(name: &str, sddl: &str, length: u64) -> io::Result<PictureSection> {
             let sddl_w = wide(sddl);
             let mut descriptor: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
@@ -216,7 +290,7 @@ mod system {
                 CreateFileMappingW(
                     INVALID_HANDLE_VALUE,
                     &attributes,
-                    PAGE_READWRITE | SEC_COMMIT,
+                    PAGE_READWRITE | SEC_RESERVE,
                     (length >> 32) as u32,
                     length as u32,
                     name_w.as_ptr(),
@@ -232,20 +306,9 @@ mod system {
                 return Err(error);
             }
             let handle = Handle(handle);
-            let view = View::map(handle.0)?;
-            if existed && (view.len as u64) < length {
-                return Err(io::Error::new(
-                    io::ErrorKind::AlreadyExists,
-                    format!(
-                        "{name} is already open with {} bytes, not {length}",
-                        view.len
-                    ),
-                ));
-            }
-            let id = new_region_id();
-            // SAFETY: the view is at least 24 bytes long and this process's own mapping.
-            let header = unsafe { std::slice::from_raw_parts_mut(view.base, 24) };
-            write_header(header, id, length);
+            let mut view = View::map(handle.0)?;
+            let id = super::prepare_section(&mut view, existed, length)
+                .map_err(|why| io::Error::new(why.kind(), format!("{name}: {why}")))?;
             drop(view);
             Ok(PictureSection {
                 _handle: handle,
@@ -269,26 +332,116 @@ mod system {
             if address.Value.is_null() {
                 return Err(io::Error::last_os_error());
             }
-            // SAFETY: a plain structure, for which all zeros is a valid value.
-            let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
-            // SAFETY: a query of the view just mapped.
-            let got = unsafe {
-                VirtualQuery(
-                    address.Value,
-                    &mut info,
-                    std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
-                )
-            };
-            let view = View {
-                base: address.Value.cast(),
-                len: if got == 0 { 0 } else { info.RegionSize },
-            };
+            // The view's length: every range of the one allocation the view is. The first range
+            // alone is not it for a section that only reserves its size (the video pictures'
+            // and the graphics memory), whose committed first pages end that range.
+            let base: *mut u8 = address.Value.cast();
+            let mut len = 0usize;
+            loop {
+                // SAFETY: a plain structure, for which all zeros is a valid value.
+                let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+                // SAFETY: a query of an address; it reads nothing there.
+                let got = unsafe {
+                    VirtualQuery(
+                        base.wrapping_add(len).cast(),
+                        &mut info,
+                        std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+                    )
+                };
+                if got == 0 || info.RegionSize == 0 || info.AllocationBase != address.Value {
+                    break;
+                }
+                len += info.RegionSize;
+            }
+            let view = View { base, len };
             if view.len < 24 {
                 return Err(io::Error::other(
                     "the section's view has no room for a header",
                 ));
             }
             Ok(view)
+        }
+
+        /// Commits the pages of `len` bytes from `offset` of the view; pages committed already
+        /// cost nothing more. Fails when the system refuses (its commit limit is reached).
+        fn commit_range(&self, offset: usize, len: usize) -> io::Result<()> {
+            match offset.checked_add(len) {
+                Some(end) if end <= self.len => {}
+                _ => return Err(io::Error::other("a commit outside the section's view")),
+            }
+            if len == 0 {
+                return Ok(());
+            }
+            // SAFETY: a range of this view; committing touches no page.
+            let at = unsafe {
+                VirtualAlloc(
+                    self.base.add(offset).cast(),
+                    len,
+                    MEM_COMMIT,
+                    PAGE_READWRITE,
+                )
+            };
+            if at.is_null() {
+                return Err(io::Error::last_os_error());
+            }
+            Ok(())
+        }
+    }
+
+    impl SectionPages for View {
+        fn len(&self) -> usize {
+            self.len
+        }
+
+        fn commit(&mut self, offset: usize, len: usize) -> io::Result<()> {
+            self.commit_range(offset, len)
+        }
+
+        fn committed(&self) -> Vec<(usize, usize)> {
+            let mut ranges = Vec::new();
+            let mut offset = 0;
+            while offset < self.len {
+                // SAFETY: a plain structure, for which all zeros is a valid value.
+                let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+                // SAFETY: a query of a page of this view; it reads nothing there.
+                let got = unsafe {
+                    VirtualQuery(
+                        self.base.add(offset).cast(),
+                        &mut info,
+                        std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+                    )
+                };
+                if got == 0 || info.RegionSize == 0 {
+                    break;
+                }
+                let end = (offset + info.RegionSize).min(self.len);
+                if info.State == MEM_COMMIT {
+                    ranges.push((offset, end - offset));
+                }
+                offset = end;
+            }
+            ranges
+        }
+
+        fn scrub(&mut self, offset: usize, len: usize) {
+            let end = offset.saturating_add(len).min(self.len);
+            if offset >= end {
+                return;
+            }
+            // SAFETY: committed pages of this view (`committed` said so), which nothing reads
+            // now: the VM that used them is gone and the next one has not started.
+            unsafe {
+                std::ptr::write_bytes(self.base.add(offset), 0, end - offset);
+                DiscardVirtualMemory(self.base.add(offset).cast(), end - offset);
+            }
+        }
+
+        fn bytes_mut(&mut self, offset: usize, len: usize) -> &mut [u8] {
+            let end = offset.saturating_add(len).min(self.len);
+            let offset = offset.min(end);
+            // SAFETY: inside the view, committed by the caller first (`prepare_section`
+            // commits the header before it writes it), and borrowed from `self` mutably.
+            unsafe { std::slice::from_raw_parts_mut(self.base.add(offset), end - offset) }
         }
     }
 
@@ -316,7 +469,9 @@ mod system {
     unsafe impl Sync for SectionView {}
 
     impl SectionView {
-        /// Opens the section `name` the service made and maps all of it.
+        /// Opens the section `name` the service made and maps all of it. Only the header is
+        /// committed; each slot's pages are committed before its first picture
+        /// ([`SharedRegion::commit`]), and nothing here touches the rest.
         pub fn open(name: &str) -> io::Result<Arc<SectionView>> {
             let name_w = wide(name);
             // SAFETY: a NUL-terminated name.
@@ -341,6 +496,15 @@ mod system {
 
         fn len(&self) -> usize {
             self.view.len
+        }
+
+        /// Commits the pages in this process's view (`VirtualAlloc`, `MEM_COMMIT`): the section
+        /// only reserves its size, and the commit holds for every view of it, the VM's too,
+        /// until the section closes.
+        fn commit(&self, offset: usize, len: usize) -> Result<(), String> {
+            self.view
+                .commit_range(offset, len)
+                .map_err(|e| e.to_string())
         }
 
         /// Gives the pages back to Windows: their contents are dropped and they are taken out

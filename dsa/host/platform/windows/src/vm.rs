@@ -24,6 +24,9 @@
 //! - Hyper-V sockets limited to SYSTEM and the user the VM belongs to;
 //! - a region of memory the window manager shares with the guest for decoded video pictures,
 //!   which the guest reads but cannot write (see `crate::picture_region`);
+//! - two regions the renderer shares with the guest for graphics memory: one the guest writes
+//!   (host-visible memory and staging copies) and the grants table it only reads (see
+//!   `crate::graphics_region`);
 //! - the guest's console on the first serial port (COM1 on x86_64, a PL011 UART on ARM64),
 //!   which HCS connects to a named pipe the host serves, as WSL does for its debug console.
 //!   A Linux guest prints there from the first instruction (`earlycon`), so a boot that fails
@@ -153,6 +156,10 @@ pub struct AndroidVmConfig {
     /// `crate::picture_region`). `None` attaches none, and every picture goes through the
     /// video port.
     pub picture_region: Option<crate::picture_region::PictureRegion>,
+    /// The sections the VM shares with the renderer for graphics memory, attached as two
+    /// shared memory regions (see `crate::graphics_region`). `None` attaches neither, and every
+    /// host-visible byte goes through the graphics stream.
+    pub graphics_region: Option<crate::graphics_region::GraphicsRegion>,
 }
 
 /// How a direct-mapped boot attaches the read-only disks (see
@@ -575,8 +582,11 @@ impl AndroidVmConfig {
             devices["NetworkAdapters"] = json!({});
             devices["NetworkAdapters"][NETWORK_ADAPTER_NAME] = adapter.to_hcs();
         }
-        if let Some(region) = &self.picture_region {
-            devices["SharedMemory"] = region.to_hcs();
+        if let Some(shared) = crate::graphics_region::shared_memory_device(
+            self.picture_region.as_ref(),
+            self.graphics_region.as_ref(),
+        ) {
+            devices["SharedMemory"] = shared;
         }
         let mut memory = json!({
             "SizeInMB": memory_mb,

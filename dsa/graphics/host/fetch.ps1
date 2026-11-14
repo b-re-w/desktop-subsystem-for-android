@@ -95,6 +95,8 @@ git -C $GfxstreamDir clean -fdx
 # Without 0036 a GLES app (through ANGLE) is offered no ASTC on a GPU that lacks it (NVIDIA and
 # AMD desktop GPUs, Intel Arc), even though the renderer decodes ASTC on the GPU for Vulkan apps
 # there, and the log does not say whether ASTC is native, decoded on the GPU or unavailable.
+# Without 0037 every byte of a guest's host-visible memory and of a gralloc buffer's CPU upload
+# or read back crosses the stream, even where the service shares graphics memory with the VM.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -129,7 +131,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0033-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0034-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0035-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0036-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0036-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0037-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName
