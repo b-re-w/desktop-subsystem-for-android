@@ -1,19 +1,29 @@
 diff --git a/mm/page_reporting.c b/mm/page_reporting.c
 --- a/mm/page_reporting.c
 +++ b/mm/page_reporting.c
-@@ -47,7 +47,14 @@
+@@ -47,7 +47,24 @@
   */
  EXPORT_SYMBOL_GPL(page_reporting_order);
 
 -#define PAGE_REPORTING_DELAY	(2 * HZ)
 +/*
-+ * Report freed pages to the host at once. Upstream waits two seconds before each pass
-+ * so a queue builds up, and a pass that runs out of its budget waits two seconds again
-+ * before the next, so a large free (an app closing, a cache drop) reached the host only
-+ * slice by slice, over many seconds. Memory a desktop guest frees belongs back on the
-+ * host now; each pass still reports in batches.
++ * How long a pass waits after the free that asked for it, and after a pass that ran out of
++ * its budget, in milliseconds (page_reporting.delay_ms). Upstream always waits two seconds,
++ * so a large free (an app closing, a cache drop) reached the host only slice by slice, over
++ * many seconds; 0, the default here, reports at once.
++ *
++ * At once is costly where the guest frees and allocates the same memory many times a second.
++ * A video's pictures (11 MiB each at 4K, 30 a second) are freed and allocated again within
++ * milliseconds: at order 0 every one of them was reported, the host took its pages back, and
++ * the next allocation faulted them in again, some 20 GiB a minute on a desktop that played a
++ * 4K video, and 6 GiB a minute after it. A short delay lets memory freed and reused within it
++ * stay with the guest, while what stays free still goes back within a few passes. The host
++ * sets it on the command line.
 + */
-+#define PAGE_REPORTING_DELAY	0
++static unsigned int page_reporting_delay_ms __read_mostly;
++module_param_named(delay_ms, page_reporting_delay_ms, uint, 0644);
++MODULE_PARM_DESC(delay_ms, "How long a free page reporting pass waits, in milliseconds");
++#define PAGE_REPORTING_DELAY	msecs_to_jiffies(page_reporting_delay_ms)
  static struct page_reporting_dev_info __rcu *pr_dev_info __read_mostly;
 
  enum {
