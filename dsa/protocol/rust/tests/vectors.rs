@@ -35,6 +35,7 @@ use dsa_protocol::control::{
     VideoCapabilities, VideoCodec, VideoCodecSupport, VideoDecoderOpen, VideoFlush, VideoFrame,
     VideoPacket,
 };
+use dsa_protocol::control::{GuestSharedMemory, VideoSlotReturned};
 use dsa_protocol::control::{
     PrintJob, PrintJobCancel, PrintJobChunk, PrintJobResult, PrintOutcome,
 };
@@ -217,6 +218,28 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 codec: VideoCodec::H264 as i32,
                 width: 1280,
                 height: 720,
+                picture_region_id: 0,
+            })),
+        ),
+        (
+            "video_decoder_open_shared",
+            wrap(Body::VideoDecoderOpen(VideoDecoderOpen {
+                codec: VideoCodec::H264 as i32,
+                width: 1280,
+                height: 720,
+                picture_region_id: 42,
+            })),
+        ),
+        (
+            "video_slot_returned",
+            wrap(Body::VideoSlotReturned(VideoSlotReturned { slot: 5 })),
+        ),
+        (
+            "guest_shared_memory",
+            wrap(Body::GuestSharedMemory(GuestSharedMemory {
+                name: "video_pictures".into(),
+                guest_physical_address: 0x1_0800_0000,
+                length: 64 * 1024 * 1024,
             })),
         ),
         ("video_flush", wrap(Body::VideoFlush(VideoFlush {}))),
@@ -276,6 +299,22 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 stride: 2,
                 nv12: vec![0x10, 0x10, 0x10, 0x10, 0x80, 0x80],
                 end_of_stream: false,
+                slot: 0,
+                slot_offset: 0,
+            })),
+        ),
+        (
+            "video_frame_in_slot",
+            wrap(Body::VideoFrame(VideoFrame {
+                frame_index: 3,
+                timestamp_us: 100_000,
+                width: 2,
+                height: 2,
+                stride: 2,
+                nv12: Vec::new(),
+                end_of_stream: false,
+                slot: 1,
+                slot_offset: 65_536,
             })),
         ),
         (

@@ -251,6 +251,7 @@ impl VideoDecoder for ConcealingDecoder {
             height: 2,
             stride: 2,
             nv12: vec![value; 6],
+            slot: None,
         }])
     }
 
@@ -340,6 +341,7 @@ fn opened(codec: VideoCodec) -> Opened {
             codec: codec as i32,
             width: 640,
             height: 360,
+            picture_region_id: 0,
         }),
     );
     assert!(matches!(next(guest.as_mut()), Body::VideoDecoderOpened(o) if o.ok));

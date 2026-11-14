@@ -115,6 +115,22 @@ public final class VectorsTest {
                         .setWidth(1280)
                         .setHeight(720))
                 .build());
+        cases.put("video_decoder_open_shared", Envelope.newBuilder()
+                .setVideoDecoderOpen(VideoDecoderOpen.newBuilder()
+                        .setCodec(VideoCodec.VIDEO_CODEC_H264)
+                        .setWidth(1280)
+                        .setHeight(720)
+                        .setPictureRegionId(42))
+                .build());
+        cases.put("video_slot_returned", Envelope.newBuilder()
+                .setVideoSlotReturned(VideoSlotReturned.newBuilder().setSlot(5))
+                .build());
+        cases.put("guest_shared_memory", Envelope.newBuilder()
+                .setGuestSharedMemory(GuestSharedMemory.newBuilder()
+                        .setName("video_pictures")
+                        .setGuestPhysicalAddress(0x108000000L)
+                        .setLength(64L * 1024 * 1024))
+                .build());
         cases.put("video_flush", Envelope.newBuilder()
                 .setVideoFlush(VideoFlush.newBuilder())
                 .build());
@@ -162,6 +178,16 @@ public final class VectorsTest {
                         .setHeight(2)
                         .setStride(2)
                         .setNv12(ByteString.copyFrom(new byte[] {0x10, 0x10, 0x10, 0x10, (byte) 0x80, (byte) 0x80})))
+                .build());
+        cases.put("video_frame_in_slot", Envelope.newBuilder()
+                .setVideoFrame(VideoFrame.newBuilder()
+                        .setFrameIndex(3)
+                        .setTimestampUs(100000)
+                        .setWidth(2)
+                        .setHeight(2)
+                        .setStride(2)
+                        .setSlot(1)
+                        .setSlotOffset(65536))
                 .build());
         cases.put("video_packet", Envelope.newBuilder()
                 .setVideoPacket(VideoPacket.newBuilder()
