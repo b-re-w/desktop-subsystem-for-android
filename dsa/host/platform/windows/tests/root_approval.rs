@@ -289,13 +289,13 @@ fn fr35_the_root_prompt_names_an_app_by_its_label_and_icon() {
 }
 
 #[test]
-fn fr35_the_root_prompt_names_the_adb_shell_as_the_developer_shell() {
+fn fr35_the_root_prompt_names_the_adb_shell_as_the_adb_shell() {
     let request = su_from("com.android.shell", 2000, "Shell", &[]);
     let (folder, app) = prompt_program(&request);
     // A program of its own, never the folder of an Android package.
     assert_eq!(folder, SHELL_PROGRAM_KEY);
     assert_eq!(app.package_name, SHELL_PROGRAM_KEY);
-    assert_eq!(app.label, "개발자 셸 (adb)");
+    assert_eq!(app.label, "adb 셸");
     // A generic terminal icon the host draws, in place of DSA's own.
     assert_eq!(&app.icon_png[1..4], b"PNG");
     let words = AskedWords::of(&request);
@@ -303,7 +303,7 @@ fn fr35_the_root_prompt_names_the_adb_shell_as_the_developer_shell() {
 
     let mut english = request.clone();
     english.language = "en-US".into();
-    assert_eq!(prompt_program(&english).1.label, "Developer shell (adb)");
+    assert_eq!(prompt_program(&english).1.label, "adb shell");
 
     let system = su_from("android", 1000, "Android System", &[]);
     let (folder, app) = prompt_program(&system);

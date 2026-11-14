@@ -6270,7 +6270,7 @@ fn fr35_the_root_prompt_speaks_the_users_language() {
     for request in seen.iter() {
         assert_eq!(request.language(), Language::Korean, "{request:?}");
     }
-    assert_eq!(seen[0].name_in(seen[0].language()), "개발자 셸 (adb)");
+    assert_eq!(seen[0].name_in(seen[0].language()), "adb 셸");
 }
 
 #[test]
