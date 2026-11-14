@@ -304,14 +304,16 @@ pub struct HostConfig {
     pub direct_mapped_images: bool,
     /// The size in MiB of the memory the VM shares with the window manager for decoded video
     /// pictures (64 when absent, 0 for none). Decoded pictures go there instead of through the
-    /// video port, a copy each; the size is fixed when the VM is made, counts against the
-    /// system's commit limit, and takes memory only while video plays.
+    /// video port, a copy each; the size is fixed when the VM is made and only reserved. The
+    /// system's commit limit is charged only for the slots the window manager has written, up
+    /// to the most it used, until the VM stops, and memory is taken only while video plays.
     #[serde(default)]
     pub video_shared_memory_mb: Option<u64>,
     /// The size in MiB of the memory the VM shares with the graphics renderer (256 when absent,
     /// 0 for none). Apps' Vulkan host-visible memory and gralloc buffers' CPU uploads and read
     /// backs go there instead of through the graphics stream; the size is fixed when the VM is
-    /// made, counts against the system's commit limit, and takes memory only where the guest or
+    /// made and only reserved. The system's commit limit is charged only for what grants used,
+    /// up to the most at once, until the VM stops, and memory is taken only where the guest or
     /// the GPU writes, which the renderer gives back when an app frees it.
     #[serde(default)]
     pub graphics_shared_memory_mb: Option<u64>,
