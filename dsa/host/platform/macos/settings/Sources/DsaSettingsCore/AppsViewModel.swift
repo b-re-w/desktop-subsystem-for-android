@@ -308,12 +308,15 @@ public final class AppsService {
         try await windowSettingsList().apps
     }
 
-    /// The user's window settings for every app that has any, by package, and whether this
-    /// build of Android scales an app the System (forced) way yet. A dsa that does not say
-    /// counts as one whose Android cannot.
-    public func windowSettingsList() async throws -> (apps: [String: AppWindowSetting], systemForcedAvailable: Bool) {
+    /// The user's window settings for every app that has any, by package, whether this build
+    /// of Android scales an app the System (forced) way yet, and the apps whose automatic choice
+    /// is System: DSA's built-in list of apps that break when their density changes while they
+    /// run. A dsa that does not say counts as one whose Android cannot, and with no such list.
+    public func windowSettingsList() async throws
+        -> (apps: [String: AppWindowSetting], systemForcedAvailable: Bool, systemScaledByDefault: Set<String>) {
         let json = try await service.runJson(["app-window"])
-        return (AppsService.readWindowSettings(json), json.bool("system_forced_available"))
+        let listed = Set(json["system_scaled_by_default"].items.compactMap(\.string).filter { !$0.isEmpty })
+        return (AppsService.readWindowSettings(json), json.bool("system_forced_available"), listed)
     }
 
     /// Where every app without its own choice shows a clear full screen request and its bars
@@ -410,6 +413,9 @@ public struct AppRow: Equatable, Identifiable, Sendable {
     /// (forced) and not available yet, why it works like System, in the user's language.
     public var dpiScalingIndex = 0
     public var dpiScalingTip: String?
+    /// The scaling choices for this app: `dpiScalingChoices`, with the automatic one named
+    /// System for an app on DSA's built-in list of apps that break when their density changes.
+    public var dpiScalingChoices: [DpiScalingChoice] = []
     /// Where the app's full screen choices are among `fullScreenChoices`.
     public var fullScreenIndex = 0
     public var immersiveIndex = 0
@@ -447,6 +453,9 @@ public final class AppsViewModel: ObservableObject {
     @Published public private(set) var windows: [String: AppWindowSetting] = [:]
     /// Whether this build of Android scales an app the System (forced) way yet.
     @Published public private(set) var systemForcedAvailable = false
+    /// The apps DSA scales the System way unless the user chose otherwise, because they break
+    /// when their density changes while they run.
+    @Published public private(set) var systemScaledByDefault: Set<String> = []
     /// Where every app without its own choice shows a clear full screen request and its bars
     /// hidden alone, as indexes of `defaultFullScreenPlaces`.
     @Published public private(set) var fullScreenDefaultIndex = 0
@@ -564,6 +573,23 @@ public final class AppsViewModel: ObservableObject {
         }
     }
 
+    /// The scaling choices for `package`: those of `dpiScalingChoices`, with the automatic one
+    /// named System for an app on DSA's built-in list of apps that break when their density
+    /// changes while they run.
+    public func dpiScalingChoices(for package: String) -> [DpiScalingChoice] {
+        let choices = dpiScalingChoices
+        guard systemScaledByDefault.contains(package) else {
+            return choices
+        }
+        return choices.map { choice in
+            var named = choice
+            if choice.scaling == .auto {
+                named.label = text.get("Apps_DpiScaling_AutoSystem")
+            }
+            return named
+        }
+    }
+
     /// Why System (forced) works like System for now, while it is the app's choice and not
     /// available; otherwise nil.
     public func dpiScalingTip(_ setting: AppWindowSetting) -> String? {
@@ -598,6 +624,7 @@ public final class AppsViewModel: ObservableObject {
             resizable: !window.fixedSize, startSizeIndex: startSizeIndex(window),
             dpiScalingIndex: DpiScaling.allCases.firstIndex(of: window.dpiScaling) ?? 0,
             dpiScalingTip: dpiScalingTip(window),
+            dpiScalingChoices: dpiScalingChoices(for: app.package),
             fullScreenIndex: FullScreenPlace.allCases.firstIndex(of: window.fullScreen) ?? 0,
             immersiveIndex: FullScreenPlace.allCases.firstIndex(of: window.immersive) ?? 0,
             runAsArm: app.runAsArm.on, canRunAsArm: app.runAsArm.available,
@@ -686,12 +713,14 @@ public final class AppsViewModel: ObservableObject {
                 let list = try await service.windowSettingsList()
                 windows = list.apps
                 systemForcedAvailable = list.systemForcedAvailable
+                systemScaledByDefault = list.systemScaledByDefault
                 let defaults = try await service.fullScreenDefaults()
                 fullScreenDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.fullScreen) ?? 0
                 immersiveDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.immersive) ?? 1
             } catch let failed as DsaError where failed.problem == .refused {
                 windows = [:]
                 systemForcedAvailable = false
+                systemScaledByDefault = []
             }
             return nil
         }

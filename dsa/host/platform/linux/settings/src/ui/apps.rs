@@ -137,6 +137,8 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
     let windows: Rc<RefCell<HashMap<String, AppWindow>>> = Rc::default();
     // Whether Android scales an app the System (forced) way yet.
     let forced: Rc<Cell<bool>> = Rc::default();
+    // The apps DSA scales the System way unless the user chose otherwise.
+    let scaled: Rc<RefCell<Vec<String>>> = Rc::default();
 
     // Builds the list again from what is known, as the search says.
     let render: Hook = Rc::default();
@@ -152,6 +154,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let search = search.clone();
         let reload = reload.clone();
         let forced = forced.clone();
+        let scaled = scaled.clone();
         *render.borrow_mut() = Some(Rc::new(move || {
             rows.clear();
             let all = apps.borrow();
@@ -183,6 +186,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                     group_note,
                     window,
                     forced.get(),
+                    scaled.borrow().contains(&app.package),
                     reload.clone(),
                 );
                 // The app App info was opened for: its row opens and comes into view, once.
@@ -203,9 +207,10 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let (ctx, page, apps, windows) = (ctx.clone(), page.clone(), apps.clone(), windows.clone());
         let render = render.clone();
         let forced = forced.clone();
+        let scaled = scaled.clone();
         *reload.borrow_mut() = Some(Rc::new(move || {
             let (page, apps, render) = (page.clone(), apps.clone(), render.clone());
-            let (windows, forced) = (windows.clone(), forced.clone());
+            let (windows, forced, scaled) = (windows.clone(), forced.clone(), scaled.clone());
             request(
                 &ctx,
                 |c| Ok((c.apps()?, c.app_window_list().unwrap_or_default())),
@@ -217,6 +222,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                     if let Ok((list, settings)) = r {
                         *apps.borrow_mut() = Some(list);
                         forced.set(settings.system_forced_available);
+                        *scaled.borrow_mut() = settings.system_scaled_by_default;
                         *windows.borrow_mut() = settings
                             .apps
                             .into_iter()
@@ -247,6 +253,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
     page.root.clone().upcast()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn app_row(
     ctx: &Shared,
     page: &Rc<Page>,
@@ -254,6 +261,7 @@ fn app_row(
     group_note: Option<String>,
     window: Option<AppWindow>,
     system_forced_available: bool,
+    system_scaled_by_default: bool,
     reload: Hook,
 ) -> adw::ExpanderRow {
     let row = expander_row(&app.label, &view::app_detail(app));
@@ -416,8 +424,10 @@ fn app_row(
     };
     size.set(&labels, index as u32);
     row.add_row(&size.row);
-    // Auto and System never restart the app; System (forced) is marked while Android cannot do it.
-    let dpi_choices = view::dpi_scaling_choices(system_forced_available);
+    // Auto and System never restart the app; System (forced) is marked while Android cannot do it,
+    // and Auto reads as System for an app on DSA's built-in list.
+    let dpi_choices =
+        view::dpi_scaling_choices_for(system_scaled_by_default, system_forced_available);
     let dpi = {
         let state = state.clone();
         Combo::new(

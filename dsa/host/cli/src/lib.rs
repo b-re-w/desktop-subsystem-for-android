@@ -67,14 +67,17 @@
 //! briefly; `system` keeps its density and scales the window to the same physical size, and
 //! never recreates the app; and `system-forced` would give a new density to any app without
 //! a restart, which needs a framework change that is not made yet, so it works as `system`
-//! until then. `auto`, the default, is `app` for every app.
+//! until then. `auto`, the default, is `system` for the apps on DSA's built-in list of apps that
+//! break when their density changes while they run (YouTube), and `app` for every other app.
 //! `--fullscreen screen|window|default` says where the app's clear full screen request shows (a
 //! video player's full screen button): on the whole screen, inside its window, or as the
 //! `app-fullscreen` setting for every app says. `--immersive` says the same for the app hiding
 //! both its bars alone (`app-immersive`).
 //! `reset` puts the app back to the defaults. With `--json` it prints `apps`, each with `package`, `fixed_size`, `start_size`
-//! (null for none, else `[width, height]`), `dpi_scaling`, `fullscreen` and `immersive`,
-//! `system_forced_available`, whether `system-forced` does what it says yet, and `defaults`,
+//! (null for none, else `[width, height]`), `dpi_scaling`, `default_dpi_scaling` (what `auto`
+//! is for that app: `system` or `app`), `fullscreen` and `immersive`,
+//! `system_forced_available`, whether `system-forced` does what it says yet,
+//! `system_scaled_by_default`, the packages whose `auto` is `system`, and `defaults`,
 //! the `fullscreen` and `immersive` choices every app without its own follows.
 //!
 //! It acts on the Android of the user who runs it: the service learns that user from the
@@ -422,7 +425,7 @@ use dsa_host_core::apk::{InstallKind, InstallOutcome, InstalledPackage};
 use dsa_host_core::apk_bundle::{Bundle, Device, InstallFile, Refusal, Selection};
 use dsa_host_core::apk_info::{signing, ApkInfo, Icon, Layer, Vector};
 use dsa_host_core::app_windows::{
-    AppWindowSettings, DpiScaling, FullScreenDefaults, FullScreenPlace,
+    AppWindowSettings, DpiScaling, FullScreenDefaults, FullScreenPlace, SYSTEM_SCALED_BY_DEFAULT,
 };
 use dsa_host_core::arm_translation::{self, google};
 use dsa_host_core::background::{BackgroundApp, BackgroundCommand, MediaSession, Playback};
@@ -2259,14 +2262,21 @@ fn app_window_json(app: &AppWindowSettings) -> Value {
         "fixed_size": app.fixed_size,
         "start_size": app.start_size_dp.map(|(width, height)| json!([width, height])),
         "dpi_scaling": app.dpi_scaling.name(),
+        "default_dpi_scaling": DpiScaling::default_for(&app.package_name).name(),
         "fullscreen": app.fullscreen.name(),
         "immersive": app.immersive.name(),
     })
 }
 
-/// How `dsa app-window` says an app follows its window to a monitor of another scale.
-fn describe_dpi_scaling(scaling: DpiScaling) -> String {
+/// How `dsa app-window` says the app `package` follows its window to a monitor of another
+/// scale.
+fn describe_dpi_scaling(scaling: DpiScaling, package: &str) -> String {
     match scaling {
+        DpiScaling::Auto if DpiScaling::default_for(package) == DpiScaling::System => {
+            "is scaled by DSA on another monitor (the default for this app, which breaks when \
+             its density changes while it runs)"
+                .to_string()
+        }
         DpiScaling::Auto => {
             "redraws at another monitor's scale once a move ends (the default)".to_string()
         }
@@ -2304,7 +2314,7 @@ fn describe_app_window(app: &AppWindowSettings) -> String {
     let mut line = format!(
         "{}: {resizable}, {size}, {}",
         app.package_name,
-        describe_dpi_scaling(app.dpi_scaling)
+        describe_dpi_scaling(app.dpi_scaling, &app.package_name)
     );
     // An app that follows the default for every app says nothing more.
     if app.fullscreen != FullScreenPlace::Default {
@@ -2379,6 +2389,9 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
         json!({
             "apps": shown.iter().map(app_window_json).collect::<Vec<_>>(),
             "system_forced_available": DpiScaling::FORCED_AVAILABLE,
+            // The apps whose auto is system, so a settings app can say so of an app that has
+            // no entry here.
+            "system_scaled_by_default": SYSTEM_SCALED_BY_DEFAULT,
             "defaults": {
                 "fullscreen": every_app.fullscreen.name(),
                 "immersive": every_app.immersive.name(),
