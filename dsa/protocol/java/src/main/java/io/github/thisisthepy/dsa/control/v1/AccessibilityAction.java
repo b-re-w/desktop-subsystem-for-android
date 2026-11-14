@@ -260,6 +260,172 @@ public  final class AccessibilityAction extends
     requestId_ = 0;
   }
 
+  public static final int SELECTION_START_FIELD_NUMBER = 7;
+  private int selectionStart_;
+  /**
+   * <pre>
+   * The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+   * </pre>
+   *
+   * <code>int32 selection_start = 7;</code>
+   * @return The selectionStart.
+   */
+  @java.lang.Override
+  public int getSelectionStart() {
+    return selectionStart_;
+  }
+  /**
+   * <pre>
+   * The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+   * </pre>
+   *
+   * <code>int32 selection_start = 7;</code>
+   * @param value The selectionStart to set.
+   */
+  private void setSelectionStart(int value) {
+    
+    selectionStart_ = value;
+  }
+  /**
+   * <pre>
+   * The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+   * </pre>
+   *
+   * <code>int32 selection_start = 7;</code>
+   */
+  private void clearSelectionStart() {
+    
+    selectionStart_ = 0;
+  }
+
+  public static final int SELECTION_END_FIELD_NUMBER = 8;
+  private int selectionEnd_;
+  /**
+   * <code>int32 selection_end = 8;</code>
+   * @return The selectionEnd.
+   */
+  @java.lang.Override
+  public int getSelectionEnd() {
+    return selectionEnd_;
+  }
+  /**
+   * <code>int32 selection_end = 8;</code>
+   * @param value The selectionEnd to set.
+   */
+  private void setSelectionEnd(int value) {
+    
+    selectionEnd_ = value;
+  }
+  /**
+   * <code>int32 selection_end = 8;</code>
+   */
+  private void clearSelectionEnd() {
+    
+    selectionEnd_ = 0;
+  }
+
+  public static final int PROGRESS_FIELD_NUMBER = 9;
+  private float progress_;
+  /**
+   * <pre>
+   * The new value, for NODE_ACTION_SET_PROGRESS.
+   * </pre>
+   *
+   * <code>float progress = 9;</code>
+   * @return The progress.
+   */
+  @java.lang.Override
+  public float getProgress() {
+    return progress_;
+  }
+  /**
+   * <pre>
+   * The new value, for NODE_ACTION_SET_PROGRESS.
+   * </pre>
+   *
+   * <code>float progress = 9;</code>
+   * @param value The progress to set.
+   */
+  private void setProgress(float value) {
+    
+    progress_ = value;
+  }
+  /**
+   * <pre>
+   * The new value, for NODE_ACTION_SET_PROGRESS.
+   * </pre>
+   *
+   * <code>float progress = 9;</code>
+   */
+  private void clearProgress() {
+    
+    progress_ = 0F;
+  }
+
+  public static final int ROW_FIELD_NUMBER = 10;
+  private int row_;
+  /**
+   * <pre>
+   * The place, for NODE_ACTION_SCROLL_TO_POSITION.
+   * </pre>
+   *
+   * <code>int32 row = 10;</code>
+   * @return The row.
+   */
+  @java.lang.Override
+  public int getRow() {
+    return row_;
+  }
+  /**
+   * <pre>
+   * The place, for NODE_ACTION_SCROLL_TO_POSITION.
+   * </pre>
+   *
+   * <code>int32 row = 10;</code>
+   * @param value The row to set.
+   */
+  private void setRow(int value) {
+    
+    row_ = value;
+  }
+  /**
+   * <pre>
+   * The place, for NODE_ACTION_SCROLL_TO_POSITION.
+   * </pre>
+   *
+   * <code>int32 row = 10;</code>
+   */
+  private void clearRow() {
+    
+    row_ = 0;
+  }
+
+  public static final int COLUMN_FIELD_NUMBER = 11;
+  private int column_;
+  /**
+   * <code>int32 column = 11;</code>
+   * @return The column.
+   */
+  @java.lang.Override
+  public int getColumn() {
+    return column_;
+  }
+  /**
+   * <code>int32 column = 11;</code>
+   * @param value The column to set.
+   */
+  private void setColumn(int value) {
+    
+    column_ = value;
+  }
+  /**
+   * <code>int32 column = 11;</code>
+   */
+  private void clearColumn() {
+    
+    column_ = 0;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.AccessibilityAction parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -615,6 +781,182 @@ public  final class AccessibilityAction extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+     * </pre>
+     *
+     * <code>int32 selection_start = 7;</code>
+     * @return The selectionStart.
+     */
+    @java.lang.Override
+    public int getSelectionStart() {
+      return instance.getSelectionStart();
+    }
+    /**
+     * <pre>
+     * The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+     * </pre>
+     *
+     * <code>int32 selection_start = 7;</code>
+     * @param value The selectionStart to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSelectionStart(int value) {
+      copyOnWrite();
+      instance.setSelectionStart(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+     * </pre>
+     *
+     * <code>int32 selection_start = 7;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSelectionStart() {
+      copyOnWrite();
+      instance.clearSelectionStart();
+      return this;
+    }
+
+    /**
+     * <code>int32 selection_end = 8;</code>
+     * @return The selectionEnd.
+     */
+    @java.lang.Override
+    public int getSelectionEnd() {
+      return instance.getSelectionEnd();
+    }
+    /**
+     * <code>int32 selection_end = 8;</code>
+     * @param value The selectionEnd to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSelectionEnd(int value) {
+      copyOnWrite();
+      instance.setSelectionEnd(value);
+      return this;
+    }
+    /**
+     * <code>int32 selection_end = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSelectionEnd() {
+      copyOnWrite();
+      instance.clearSelectionEnd();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The new value, for NODE_ACTION_SET_PROGRESS.
+     * </pre>
+     *
+     * <code>float progress = 9;</code>
+     * @return The progress.
+     */
+    @java.lang.Override
+    public float getProgress() {
+      return instance.getProgress();
+    }
+    /**
+     * <pre>
+     * The new value, for NODE_ACTION_SET_PROGRESS.
+     * </pre>
+     *
+     * <code>float progress = 9;</code>
+     * @param value The progress to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProgress(float value) {
+      copyOnWrite();
+      instance.setProgress(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The new value, for NODE_ACTION_SET_PROGRESS.
+     * </pre>
+     *
+     * <code>float progress = 9;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProgress() {
+      copyOnWrite();
+      instance.clearProgress();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The place, for NODE_ACTION_SCROLL_TO_POSITION.
+     * </pre>
+     *
+     * <code>int32 row = 10;</code>
+     * @return The row.
+     */
+    @java.lang.Override
+    public int getRow() {
+      return instance.getRow();
+    }
+    /**
+     * <pre>
+     * The place, for NODE_ACTION_SCROLL_TO_POSITION.
+     * </pre>
+     *
+     * <code>int32 row = 10;</code>
+     * @param value The row to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRow(int value) {
+      copyOnWrite();
+      instance.setRow(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The place, for NODE_ACTION_SCROLL_TO_POSITION.
+     * </pre>
+     *
+     * <code>int32 row = 10;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRow() {
+      copyOnWrite();
+      instance.clearRow();
+      return this;
+    }
+
+    /**
+     * <code>int32 column = 11;</code>
+     * @return The column.
+     */
+    @java.lang.Override
+    public int getColumn() {
+      return instance.getColumn();
+    }
+    /**
+     * <code>int32 column = 11;</code>
+     * @param value The column to set.
+     * @return This builder for chaining.
+     */
+    public Builder setColumn(int value) {
+      copyOnWrite();
+      instance.setColumn(value);
+      return this;
+    }
+    /**
+     * <code>int32 column = 11;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearColumn() {
+      copyOnWrite();
+      instance.clearColumn();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.AccessibilityAction)
   }
   @java.lang.Override
@@ -637,10 +979,16 @@ public  final class AccessibilityAction extends
             "action_",
             "text_",
             "requestId_",
+            "selectionStart_",
+            "selectionEnd_",
+            "progress_",
+            "row_",
+            "column_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0004\u0002\u000b" +
-              "\u0003\u000b\u0004\f\u0005\u0208\u0006\u000b";
+              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001\u0004\u0002\u000b" +
+              "\u0003\u000b\u0004\f\u0005\u0208\u0006\u000b\u0007\u0004\b\u0004\t\u0001\n\u0004" +
+              "\u000b\u0004";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

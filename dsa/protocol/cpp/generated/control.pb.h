@@ -51,6 +51,12 @@ extern AccessibilityActionDefaultTypeInternal _AccessibilityAction_default_insta
 class AccessibilityActionResult;
 struct AccessibilityActionResultDefaultTypeInternal;
 extern AccessibilityActionResultDefaultTypeInternal _AccessibilityActionResult_default_instance_;
+class AccessibilityAnnouncement;
+struct AccessibilityAnnouncementDefaultTypeInternal;
+extern AccessibilityAnnouncementDefaultTypeInternal _AccessibilityAnnouncement_default_instance_;
+class AccessibilityListening;
+struct AccessibilityListeningDefaultTypeInternal;
+extern AccessibilityListeningDefaultTypeInternal _AccessibilityListening_default_instance_;
 class AccessibilityNode;
 struct AccessibilityNodeDefaultTypeInternal;
 extern AccessibilityNodeDefaultTypeInternal _AccessibilityNode_default_instance_;
@@ -462,9 +468,18 @@ extern NativeLibrariesDefaultTypeInternal _NativeLibraries_default_instance_;
 class NativeLibraryCrash;
 struct NativeLibraryCrashDefaultTypeInternal;
 extern NativeLibraryCrashDefaultTypeInternal _NativeLibraryCrash_default_instance_;
+class NodeCollection;
+struct NodeCollectionDefaultTypeInternal;
+extern NodeCollectionDefaultTypeInternal _NodeCollection_default_instance_;
+class NodeCollectionItem;
+struct NodeCollectionItemDefaultTypeInternal;
+extern NodeCollectionItemDefaultTypeInternal _NodeCollectionItem_default_instance_;
 class NodeRange;
 struct NodeRangeDefaultTypeInternal;
 extern NodeRangeDefaultTypeInternal _NodeRange_default_instance_;
+class NodeWindow;
+struct NodeWindowDefaultTypeInternal;
+extern NodeWindowDefaultTypeInternal _NodeWindow_default_instance_;
 class NotificationClicked;
 struct NotificationClickedDefaultTypeInternal;
 extern NotificationClickedDefaultTypeInternal _NotificationClicked_default_instance_;
@@ -720,6 +735,8 @@ extern WidgetUpdatedDefaultTypeInternal _WidgetUpdated_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::dsa::control::v1::AccessibilityAction* Arena::CreateMaybeMessage<::dsa::control::v1::AccessibilityAction>(Arena*);
 template<> ::dsa::control::v1::AccessibilityActionResult* Arena::CreateMaybeMessage<::dsa::control::v1::AccessibilityActionResult>(Arena*);
+template<> ::dsa::control::v1::AccessibilityAnnouncement* Arena::CreateMaybeMessage<::dsa::control::v1::AccessibilityAnnouncement>(Arena*);
+template<> ::dsa::control::v1::AccessibilityListening* Arena::CreateMaybeMessage<::dsa::control::v1::AccessibilityListening>(Arena*);
 template<> ::dsa::control::v1::AccessibilityNode* Arena::CreateMaybeMessage<::dsa::control::v1::AccessibilityNode>(Arena*);
 template<> ::dsa::control::v1::AccessibilityTree* Arena::CreateMaybeMessage<::dsa::control::v1::AccessibilityTree>(Arena*);
 template<> ::dsa::control::v1::AccessibilityWatch* Arena::CreateMaybeMessage<::dsa::control::v1::AccessibilityWatch>(Arena*);
@@ -857,7 +874,10 @@ template<> ::dsa::control::v1::MediaSession* Arena::CreateMaybeMessage<::dsa::co
 template<> ::dsa::control::v1::MediaSessionGone* Arena::CreateMaybeMessage<::dsa::control::v1::MediaSessionGone>(Arena*);
 template<> ::dsa::control::v1::NativeLibraries* Arena::CreateMaybeMessage<::dsa::control::v1::NativeLibraries>(Arena*);
 template<> ::dsa::control::v1::NativeLibraryCrash* Arena::CreateMaybeMessage<::dsa::control::v1::NativeLibraryCrash>(Arena*);
+template<> ::dsa::control::v1::NodeCollection* Arena::CreateMaybeMessage<::dsa::control::v1::NodeCollection>(Arena*);
+template<> ::dsa::control::v1::NodeCollectionItem* Arena::CreateMaybeMessage<::dsa::control::v1::NodeCollectionItem>(Arena*);
 template<> ::dsa::control::v1::NodeRange* Arena::CreateMaybeMessage<::dsa::control::v1::NodeRange>(Arena*);
+template<> ::dsa::control::v1::NodeWindow* Arena::CreateMaybeMessage<::dsa::control::v1::NodeWindow>(Arena*);
 template<> ::dsa::control::v1::NotificationClicked* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationClicked>(Arena*);
 template<> ::dsa::control::v1::NotificationDismissed* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationDismissed>(Arena*);
 template<> ::dsa::control::v1::NotificationRemoved* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationRemoved>(Arena*);
@@ -1578,12 +1598,18 @@ enum NodeAction : int {
   NODE_ACTION_FOCUS = 6,
   NODE_ACTION_ACCESSIBILITY_FOCUS = 7,
   NODE_ACTION_SELECT = 8,
+  NODE_ACTION_SET_SELECTION = 9,
+  NODE_ACTION_EXPAND = 10,
+  NODE_ACTION_COLLAPSE = 11,
+  NODE_ACTION_SET_PROGRESS = 12,
+  NODE_ACTION_SHOW_ON_SCREEN = 13,
+  NODE_ACTION_SCROLL_TO_POSITION = 14,
   NodeAction_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::min(),
   NodeAction_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::max()
 };
 bool NodeAction_IsValid(int value);
 constexpr NodeAction NodeAction_MIN = NODE_ACTION_UNSPECIFIED;
-constexpr NodeAction NodeAction_MAX = NODE_ACTION_SELECT;
+constexpr NodeAction NodeAction_MAX = NODE_ACTION_SCROLL_TO_POSITION;
 constexpr int NodeAction_ARRAYSIZE = NodeAction_MAX + 1;
 
 const std::string& NodeAction_Name(NodeAction value);
@@ -25800,6 +25826,630 @@ class AccessibilityWatch final :
 };
 // -------------------------------------------------------------------
 
+class AccessibilityListening final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.AccessibilityListening) */ {
+ public:
+  inline AccessibilityListening() : AccessibilityListening(nullptr) {}
+  ~AccessibilityListening() override;
+  explicit PROTOBUF_CONSTEXPR AccessibilityListening(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  AccessibilityListening(const AccessibilityListening& from);
+  AccessibilityListening(AccessibilityListening&& from) noexcept
+    : AccessibilityListening() {
+    *this = ::std::move(from);
+  }
+
+  inline AccessibilityListening& operator=(const AccessibilityListening& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline AccessibilityListening& operator=(AccessibilityListening&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const AccessibilityListening& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const AccessibilityListening* internal_default_instance() {
+    return reinterpret_cast<const AccessibilityListening*>(
+               &_AccessibilityListening_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    145;
+
+  friend void swap(AccessibilityListening& a, AccessibilityListening& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(AccessibilityListening* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(AccessibilityListening* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  AccessibilityListening* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<AccessibilityListening>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const AccessibilityListening& from);
+  void MergeFrom(const AccessibilityListening& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(AccessibilityListening* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.AccessibilityListening";
+  }
+  protected:
+  explicit AccessibilityListening(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kTaskIdFieldNumber = 1,
+    kListeningFieldNumber = 2,
+  };
+  // int32 task_id = 1;
+  void clear_task_id();
+  int32_t task_id() const;
+  void set_task_id(int32_t value);
+  private:
+  int32_t _internal_task_id() const;
+  void _internal_set_task_id(int32_t value);
+  public:
+
+  // bool listening = 2;
+  void clear_listening();
+  bool listening() const;
+  void set_listening(bool value);
+  private:
+  bool _internal_listening() const;
+  void _internal_set_listening(bool value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityListening)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    int32_t task_id_;
+    bool listening_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
+class NodeCollection final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.NodeCollection) */ {
+ public:
+  inline NodeCollection() : NodeCollection(nullptr) {}
+  ~NodeCollection() override;
+  explicit PROTOBUF_CONSTEXPR NodeCollection(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  NodeCollection(const NodeCollection& from);
+  NodeCollection(NodeCollection&& from) noexcept
+    : NodeCollection() {
+    *this = ::std::move(from);
+  }
+
+  inline NodeCollection& operator=(const NodeCollection& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NodeCollection& operator=(NodeCollection&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const NodeCollection& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const NodeCollection* internal_default_instance() {
+    return reinterpret_cast<const NodeCollection*>(
+               &_NodeCollection_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    146;
+
+  friend void swap(NodeCollection& a, NodeCollection& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(NodeCollection* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NodeCollection* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NodeCollection* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<NodeCollection>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const NodeCollection& from);
+  void MergeFrom(const NodeCollection& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(NodeCollection* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.NodeCollection";
+  }
+  protected:
+  explicit NodeCollection(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kRowsFieldNumber = 1,
+    kColumnsFieldNumber = 2,
+    kHierarchicalFieldNumber = 3,
+  };
+  // int32 rows = 1;
+  void clear_rows();
+  int32_t rows() const;
+  void set_rows(int32_t value);
+  private:
+  int32_t _internal_rows() const;
+  void _internal_set_rows(int32_t value);
+  public:
+
+  // int32 columns = 2;
+  void clear_columns();
+  int32_t columns() const;
+  void set_columns(int32_t value);
+  private:
+  int32_t _internal_columns() const;
+  void _internal_set_columns(int32_t value);
+  public:
+
+  // bool hierarchical = 3;
+  void clear_hierarchical();
+  bool hierarchical() const;
+  void set_hierarchical(bool value);
+  private:
+  bool _internal_hierarchical() const;
+  void _internal_set_hierarchical(bool value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.NodeCollection)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    int32_t rows_;
+    int32_t columns_;
+    bool hierarchical_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
+class NodeCollectionItem final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.NodeCollectionItem) */ {
+ public:
+  inline NodeCollectionItem() : NodeCollectionItem(nullptr) {}
+  ~NodeCollectionItem() override;
+  explicit PROTOBUF_CONSTEXPR NodeCollectionItem(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  NodeCollectionItem(const NodeCollectionItem& from);
+  NodeCollectionItem(NodeCollectionItem&& from) noexcept
+    : NodeCollectionItem() {
+    *this = ::std::move(from);
+  }
+
+  inline NodeCollectionItem& operator=(const NodeCollectionItem& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NodeCollectionItem& operator=(NodeCollectionItem&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const NodeCollectionItem& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const NodeCollectionItem* internal_default_instance() {
+    return reinterpret_cast<const NodeCollectionItem*>(
+               &_NodeCollectionItem_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    147;
+
+  friend void swap(NodeCollectionItem& a, NodeCollectionItem& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(NodeCollectionItem* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NodeCollectionItem* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NodeCollectionItem* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<NodeCollectionItem>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const NodeCollectionItem& from);
+  void MergeFrom(const NodeCollectionItem& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(NodeCollectionItem* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.NodeCollectionItem";
+  }
+  protected:
+  explicit NodeCollectionItem(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kRowFieldNumber = 1,
+    kRowSpanFieldNumber = 2,
+    kColumnFieldNumber = 3,
+    kColumnSpanFieldNumber = 4,
+    kHeadingFieldNumber = 5,
+  };
+  // int32 row = 1;
+  void clear_row();
+  int32_t row() const;
+  void set_row(int32_t value);
+  private:
+  int32_t _internal_row() const;
+  void _internal_set_row(int32_t value);
+  public:
+
+  // int32 row_span = 2;
+  void clear_row_span();
+  int32_t row_span() const;
+  void set_row_span(int32_t value);
+  private:
+  int32_t _internal_row_span() const;
+  void _internal_set_row_span(int32_t value);
+  public:
+
+  // int32 column = 3;
+  void clear_column();
+  int32_t column() const;
+  void set_column(int32_t value);
+  private:
+  int32_t _internal_column() const;
+  void _internal_set_column(int32_t value);
+  public:
+
+  // int32 column_span = 4;
+  void clear_column_span();
+  int32_t column_span() const;
+  void set_column_span(int32_t value);
+  private:
+  int32_t _internal_column_span() const;
+  void _internal_set_column_span(int32_t value);
+  public:
+
+  // bool heading = 5;
+  void clear_heading();
+  bool heading() const;
+  void set_heading(bool value);
+  private:
+  bool _internal_heading() const;
+  void _internal_set_heading(bool value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.NodeCollectionItem)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    int32_t row_;
+    int32_t row_span_;
+    int32_t column_;
+    int32_t column_span_;
+    bool heading_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
+class NodeWindow final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.NodeWindow) */ {
+ public:
+  inline NodeWindow() : NodeWindow(nullptr) {}
+  ~NodeWindow() override;
+  explicit PROTOBUF_CONSTEXPR NodeWindow(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  NodeWindow(const NodeWindow& from);
+  NodeWindow(NodeWindow&& from) noexcept
+    : NodeWindow() {
+    *this = ::std::move(from);
+  }
+
+  inline NodeWindow& operator=(const NodeWindow& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NodeWindow& operator=(NodeWindow&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const NodeWindow& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const NodeWindow* internal_default_instance() {
+    return reinterpret_cast<const NodeWindow*>(
+               &_NodeWindow_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    148;
+
+  friend void swap(NodeWindow& a, NodeWindow& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(NodeWindow* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NodeWindow* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NodeWindow* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<NodeWindow>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const NodeWindow& from);
+  void MergeFrom(const NodeWindow& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(NodeWindow* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.NodeWindow";
+  }
+  protected:
+  explicit NodeWindow(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kTitleFieldNumber = 1,
+    kModalFieldNumber = 2,
+    kPopupFieldNumber = 3,
+  };
+  // string title = 1;
+  void clear_title();
+  const std::string& title() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_title(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_title();
+  PROTOBUF_NODISCARD std::string* release_title();
+  void set_allocated_title(std::string* title);
+  private:
+  const std::string& _internal_title() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_title(const std::string& value);
+  std::string* _internal_mutable_title();
+  public:
+
+  // bool modal = 2;
+  void clear_modal();
+  bool modal() const;
+  void set_modal(bool value);
+  private:
+  bool _internal_modal() const;
+  void _internal_set_modal(bool value);
+  public:
+
+  // bool popup = 3;
+  void clear_popup();
+  bool popup() const;
+  void set_popup(bool value);
+  private:
+  bool _internal_popup() const;
+  void _internal_set_popup(bool value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.NodeWindow)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr title_;
+    bool modal_;
+    bool popup_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
 class NodeRange final :
     public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.NodeRange) */ {
  public:
@@ -25839,7 +26489,7 @@ class NodeRange final :
                &_NodeRange_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    145;
+    149;
 
   friend void swap(NodeRange& a, NodeRange& b) {
     a.Swap(&b);
@@ -25991,7 +26641,7 @@ class AccessibilityNode final :
                &_AccessibilityNode_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    146;
+    150;
 
   friend void swap(AccessibilityNode& a, AccessibilityNode& b) {
     a.Swap(&b);
@@ -26063,8 +26713,13 @@ class AccessibilityNode final :
     kHintFieldNumber = 6,
     kViewIdFieldNumber = 7,
     kStateDescriptionFieldNumber = 23,
+    kUrlFieldNumber = 30,
+    kPaneTitleFieldNumber = 34,
     kBoundsFieldNumber = 8,
     kRangeFieldNumber = 21,
+    kCollectionFieldNumber = 31,
+    kCollectionItemFieldNumber = 32,
+    kWindowFieldNumber = 35,
     kIdFieldNumber = 1,
     kCheckableFieldNumber = 9,
     kCheckedFieldNumber = 10,
@@ -26078,6 +26733,13 @@ class AccessibilityNode final :
     kEditableFieldNumber = 18,
     kPasswordFieldNumber = 19,
     kHeadingFieldNumber = 20,
+    kTextSelectionStartFieldNumber = 25,
+    kTextSelectionEndFieldNumber = 26,
+    kAccessibilityFocusedFieldNumber = 24,
+    kHasTextSelectionFieldNumber = 27,
+    kLinkFieldNumber = 29,
+    kHeadingLevelFieldNumber = 28,
+    kLiveRegionFieldNumber = 33,
   };
   // repeated uint32 child_ids = 2;
   int child_ids_size() const;
@@ -26202,6 +26864,34 @@ class AccessibilityNode final :
   std::string* _internal_mutable_state_description();
   public:
 
+  // string url = 30;
+  void clear_url();
+  const std::string& url() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_url(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_url();
+  PROTOBUF_NODISCARD std::string* release_url();
+  void set_allocated_url(std::string* url);
+  private:
+  const std::string& _internal_url() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_url(const std::string& value);
+  std::string* _internal_mutable_url();
+  public:
+
+  // string pane_title = 34;
+  void clear_pane_title();
+  const std::string& pane_title() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_pane_title(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_pane_title();
+  PROTOBUF_NODISCARD std::string* release_pane_title();
+  void set_allocated_pane_title(std::string* pane_title);
+  private:
+  const std::string& _internal_pane_title() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_pane_title(const std::string& value);
+  std::string* _internal_mutable_pane_title();
+  public:
+
   // .dsa.control.v1.Rect bounds = 8;
   bool has_bounds() const;
   private:
@@ -26237,6 +26927,60 @@ class AccessibilityNode final :
   void unsafe_arena_set_allocated_range(
       ::dsa::control::v1::NodeRange* range);
   ::dsa::control::v1::NodeRange* unsafe_arena_release_range();
+
+  // .dsa.control.v1.NodeCollection collection = 31;
+  bool has_collection() const;
+  private:
+  bool _internal_has_collection() const;
+  public:
+  void clear_collection();
+  const ::dsa::control::v1::NodeCollection& collection() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::NodeCollection* release_collection();
+  ::dsa::control::v1::NodeCollection* mutable_collection();
+  void set_allocated_collection(::dsa::control::v1::NodeCollection* collection);
+  private:
+  const ::dsa::control::v1::NodeCollection& _internal_collection() const;
+  ::dsa::control::v1::NodeCollection* _internal_mutable_collection();
+  public:
+  void unsafe_arena_set_allocated_collection(
+      ::dsa::control::v1::NodeCollection* collection);
+  ::dsa::control::v1::NodeCollection* unsafe_arena_release_collection();
+
+  // .dsa.control.v1.NodeCollectionItem collection_item = 32;
+  bool has_collection_item() const;
+  private:
+  bool _internal_has_collection_item() const;
+  public:
+  void clear_collection_item();
+  const ::dsa::control::v1::NodeCollectionItem& collection_item() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::NodeCollectionItem* release_collection_item();
+  ::dsa::control::v1::NodeCollectionItem* mutable_collection_item();
+  void set_allocated_collection_item(::dsa::control::v1::NodeCollectionItem* collection_item);
+  private:
+  const ::dsa::control::v1::NodeCollectionItem& _internal_collection_item() const;
+  ::dsa::control::v1::NodeCollectionItem* _internal_mutable_collection_item();
+  public:
+  void unsafe_arena_set_allocated_collection_item(
+      ::dsa::control::v1::NodeCollectionItem* collection_item);
+  ::dsa::control::v1::NodeCollectionItem* unsafe_arena_release_collection_item();
+
+  // .dsa.control.v1.NodeWindow window = 35;
+  bool has_window() const;
+  private:
+  bool _internal_has_window() const;
+  public:
+  void clear_window();
+  const ::dsa::control::v1::NodeWindow& window() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::NodeWindow* release_window();
+  ::dsa::control::v1::NodeWindow* mutable_window();
+  void set_allocated_window(::dsa::control::v1::NodeWindow* window);
+  private:
+  const ::dsa::control::v1::NodeWindow& _internal_window() const;
+  ::dsa::control::v1::NodeWindow* _internal_mutable_window();
+  public:
+  void unsafe_arena_set_allocated_window(
+      ::dsa::control::v1::NodeWindow* window);
+  ::dsa::control::v1::NodeWindow* unsafe_arena_release_window();
 
   // uint32 id = 1;
   void clear_id();
@@ -26355,6 +27099,69 @@ class AccessibilityNode final :
   void _internal_set_heading(bool value);
   public:
 
+  // int32 text_selection_start = 25;
+  void clear_text_selection_start();
+  int32_t text_selection_start() const;
+  void set_text_selection_start(int32_t value);
+  private:
+  int32_t _internal_text_selection_start() const;
+  void _internal_set_text_selection_start(int32_t value);
+  public:
+
+  // int32 text_selection_end = 26;
+  void clear_text_selection_end();
+  int32_t text_selection_end() const;
+  void set_text_selection_end(int32_t value);
+  private:
+  int32_t _internal_text_selection_end() const;
+  void _internal_set_text_selection_end(int32_t value);
+  public:
+
+  // bool accessibility_focused = 24;
+  void clear_accessibility_focused();
+  bool accessibility_focused() const;
+  void set_accessibility_focused(bool value);
+  private:
+  bool _internal_accessibility_focused() const;
+  void _internal_set_accessibility_focused(bool value);
+  public:
+
+  // bool has_text_selection = 27;
+  void clear_has_text_selection();
+  bool has_text_selection() const;
+  void set_has_text_selection(bool value);
+  private:
+  bool _internal_has_text_selection() const;
+  void _internal_set_has_text_selection(bool value);
+  public:
+
+  // bool link = 29;
+  void clear_link();
+  bool link() const;
+  void set_link(bool value);
+  private:
+  bool _internal_link() const;
+  void _internal_set_link(bool value);
+  public:
+
+  // uint32 heading_level = 28;
+  void clear_heading_level();
+  uint32_t heading_level() const;
+  void set_heading_level(uint32_t value);
+  private:
+  uint32_t _internal_heading_level() const;
+  void _internal_set_heading_level(uint32_t value);
+  public:
+
+  // int32 live_region = 33;
+  void clear_live_region();
+  int32_t live_region() const;
+  void set_live_region(int32_t value);
+  private:
+  int32_t _internal_live_region() const;
+  void _internal_set_live_region(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityNode)
  private:
   class _Internal;
@@ -26373,8 +27180,13 @@ class AccessibilityNode final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr hint_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr view_id_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr state_description_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr url_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr pane_title_;
     ::dsa::control::v1::Rect* bounds_;
     ::dsa::control::v1::NodeRange* range_;
+    ::dsa::control::v1::NodeCollection* collection_;
+    ::dsa::control::v1::NodeCollectionItem* collection_item_;
+    ::dsa::control::v1::NodeWindow* window_;
     uint32_t id_;
     bool checkable_;
     bool checked_;
@@ -26388,6 +27200,181 @@ class AccessibilityNode final :
     bool editable_;
     bool password_;
     bool heading_;
+    int32_t text_selection_start_;
+    int32_t text_selection_end_;
+    bool accessibility_focused_;
+    bool has_text_selection_;
+    bool link_;
+    uint32_t heading_level_;
+    int32_t live_region_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
+class AccessibilityAnnouncement final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.AccessibilityAnnouncement) */ {
+ public:
+  inline AccessibilityAnnouncement() : AccessibilityAnnouncement(nullptr) {}
+  ~AccessibilityAnnouncement() override;
+  explicit PROTOBUF_CONSTEXPR AccessibilityAnnouncement(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  AccessibilityAnnouncement(const AccessibilityAnnouncement& from);
+  AccessibilityAnnouncement(AccessibilityAnnouncement&& from) noexcept
+    : AccessibilityAnnouncement() {
+    *this = ::std::move(from);
+  }
+
+  inline AccessibilityAnnouncement& operator=(const AccessibilityAnnouncement& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline AccessibilityAnnouncement& operator=(AccessibilityAnnouncement&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const AccessibilityAnnouncement& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const AccessibilityAnnouncement* internal_default_instance() {
+    return reinterpret_cast<const AccessibilityAnnouncement*>(
+               &_AccessibilityAnnouncement_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    151;
+
+  friend void swap(AccessibilityAnnouncement& a, AccessibilityAnnouncement& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(AccessibilityAnnouncement* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(AccessibilityAnnouncement* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  AccessibilityAnnouncement* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<AccessibilityAnnouncement>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const AccessibilityAnnouncement& from);
+  void MergeFrom(const AccessibilityAnnouncement& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(AccessibilityAnnouncement* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.AccessibilityAnnouncement";
+  }
+  protected:
+  explicit AccessibilityAnnouncement(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kTextFieldNumber = 2,
+    kTaskIdFieldNumber = 1,
+    kAssertiveFieldNumber = 3,
+    kToastFieldNumber = 4,
+  };
+  // string text = 2;
+  void clear_text();
+  const std::string& text() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_text(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_text();
+  PROTOBUF_NODISCARD std::string* release_text();
+  void set_allocated_text(std::string* text);
+  private:
+  const std::string& _internal_text() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_text(const std::string& value);
+  std::string* _internal_mutable_text();
+  public:
+
+  // int32 task_id = 1;
+  void clear_task_id();
+  int32_t task_id() const;
+  void set_task_id(int32_t value);
+  private:
+  int32_t _internal_task_id() const;
+  void _internal_set_task_id(int32_t value);
+  public:
+
+  // bool assertive = 3;
+  void clear_assertive();
+  bool assertive() const;
+  void set_assertive(bool value);
+  private:
+  bool _internal_assertive() const;
+  void _internal_set_assertive(bool value);
+  public:
+
+  // bool toast = 4;
+  void clear_toast();
+  bool toast() const;
+  void set_toast(bool value);
+  private:
+  bool _internal_toast() const;
+  void _internal_set_toast(bool value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityAnnouncement)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr text_;
+    int32_t task_id_;
+    bool assertive_;
+    bool toast_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -26434,7 +27421,7 @@ class AccessibilityTree final :
                &_AccessibilityTree_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    147;
+    152;
 
   friend void swap(AccessibilityTree& a, AccessibilityTree& b) {
     a.Swap(&b);
@@ -26505,6 +27492,7 @@ class AccessibilityTree final :
     kEpochFieldNumber = 2,
     kFullFieldNumber = 3,
     kFocusedIdFieldNumber = 7,
+    kAccessibilityFocusedIdFieldNumber = 8,
   };
   // repeated uint32 root_ids = 4;
   int root_ids_size() const;
@@ -26604,6 +27592,15 @@ class AccessibilityTree final :
   void _internal_set_focused_id(uint32_t value);
   public:
 
+  // uint32 accessibility_focused_id = 8;
+  void clear_accessibility_focused_id();
+  uint32_t accessibility_focused_id() const;
+  void set_accessibility_focused_id(uint32_t value);
+  private:
+  uint32_t _internal_accessibility_focused_id() const;
+  void _internal_set_accessibility_focused_id(uint32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityTree)
  private:
   class _Internal;
@@ -26621,6 +27618,7 @@ class AccessibilityTree final :
     uint32_t epoch_;
     bool full_;
     uint32_t focused_id_;
+    uint32_t accessibility_focused_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -26667,7 +27665,7 @@ class AccessibilityAction final :
                &_AccessibilityAction_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    148;
+    153;
 
   friend void swap(AccessibilityAction& a, AccessibilityAction& b) {
     a.Swap(&b);
@@ -26737,6 +27735,11 @@ class AccessibilityAction final :
     kNodeIdFieldNumber = 3,
     kActionFieldNumber = 4,
     kRequestIdFieldNumber = 6,
+    kSelectionStartFieldNumber = 7,
+    kSelectionEndFieldNumber = 8,
+    kProgressFieldNumber = 9,
+    kRowFieldNumber = 10,
+    kColumnFieldNumber = 11,
   };
   // string text = 5;
   void clear_text();
@@ -26797,6 +27800,51 @@ class AccessibilityAction final :
   void _internal_set_request_id(uint32_t value);
   public:
 
+  // int32 selection_start = 7;
+  void clear_selection_start();
+  int32_t selection_start() const;
+  void set_selection_start(int32_t value);
+  private:
+  int32_t _internal_selection_start() const;
+  void _internal_set_selection_start(int32_t value);
+  public:
+
+  // int32 selection_end = 8;
+  void clear_selection_end();
+  int32_t selection_end() const;
+  void set_selection_end(int32_t value);
+  private:
+  int32_t _internal_selection_end() const;
+  void _internal_set_selection_end(int32_t value);
+  public:
+
+  // float progress = 9;
+  void clear_progress();
+  float progress() const;
+  void set_progress(float value);
+  private:
+  float _internal_progress() const;
+  void _internal_set_progress(float value);
+  public:
+
+  // int32 row = 10;
+  void clear_row();
+  int32_t row() const;
+  void set_row(int32_t value);
+  private:
+  int32_t _internal_row() const;
+  void _internal_set_row(int32_t value);
+  public:
+
+  // int32 column = 11;
+  void clear_column();
+  int32_t column() const;
+  void set_column(int32_t value);
+  private:
+  int32_t _internal_column() const;
+  void _internal_set_column(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityAction)
  private:
   class _Internal;
@@ -26811,6 +27859,11 @@ class AccessibilityAction final :
     uint32_t node_id_;
     int action_;
     uint32_t request_id_;
+    int32_t selection_start_;
+    int32_t selection_end_;
+    float progress_;
+    int32_t row_;
+    int32_t column_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -26857,7 +27910,7 @@ class AccessibilityActionResult final :
                &_AccessibilityActionResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    149;
+    154;
 
   friend void swap(AccessibilityActionResult& a, AccessibilityActionResult& b) {
     a.Swap(&b);
@@ -27025,7 +28078,7 @@ class AudioOutputOpen final :
                &_AudioOutputOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    150;
+    155;
 
   friend void swap(AudioOutputOpen& a, AudioOutputOpen& b) {
     a.Swap(&b);
@@ -27204,7 +28257,7 @@ class AudioOutputReady final :
                &_AudioOutputReady_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    151;
+    156;
 
   friend void swap(AudioOutputReady& a, AudioOutputReady& b) {
     a.Swap(&b);
@@ -27345,7 +28398,7 @@ class AudioPcm final :
                &_AudioPcm_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    152;
+    157;
 
   friend void swap(AudioPcm& a, AudioPcm& b) {
     a.Swap(&b);
@@ -27491,7 +28544,7 @@ class AudioInputOpen final :
                &_AudioInputOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    153;
+    158;
 
   friend void swap(AudioInputOpen& a, AudioInputOpen& b) {
     a.Swap(&b);
@@ -27670,7 +28723,7 @@ class AudioInputOpened final :
                &_AudioInputOpened_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    154;
+    159;
 
   friend void swap(AudioInputOpened& a, AudioInputOpened& b) {
     a.Swap(&b);
@@ -27816,7 +28869,7 @@ class AudioOutputControl final :
                &_AudioOutputControl_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    155;
+    160;
 
   friend void swap(AudioOutputControl& a, AudioOutputControl& b) {
     a.Swap(&b);
@@ -27946,7 +28999,7 @@ class AppAudioStream final :
                &_AppAudioStream_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    156;
+    161;
 
   friend void swap(AppAudioStream& a, AppAudioStream& b) {
     a.Swap(&b);
@@ -28135,7 +29188,7 @@ class AppAudio final :
                &_AppAudio_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    157;
+    162;
 
   friend void swap(AppAudio& a, AppAudio& b) {
     a.Swap(&b);
@@ -28274,7 +29327,7 @@ class SetAppVolume final :
                &_SetAppVolume_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    158;
+    163;
 
   friend void swap(SetAppVolume& a, SetAppVolume& b) {
     a.Swap(&b);
@@ -28431,7 +29484,7 @@ class LogStream final :
                &_LogStream_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    159;
+    164;
 
   friend void swap(LogStream& a, LogStream& b) {
     a.Swap(&b);
@@ -28594,7 +29647,7 @@ class LogDump final :
                &_LogDump_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    160;
+    165;
 
   friend void swap(LogDump& a, LogDump& b) {
     a.Swap(&b);
@@ -28746,7 +29799,7 @@ class LogRecord final :
                &_LogRecord_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    161;
+    166;
 
   friend void swap(LogRecord& a, LogRecord& b) {
     a.Swap(&b);
@@ -28974,7 +30027,7 @@ class LogRecords final :
                &_LogRecords_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    162;
+    167;
 
   friend void swap(LogRecords& a, LogRecords& b) {
     a.Swap(&b);
@@ -29151,7 +30204,7 @@ class CollectDiagnostics final :
                &_CollectDiagnostics_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    163;
+    168;
 
   friend void swap(CollectDiagnostics& a, CollectDiagnostics& b) {
     a.Swap(&b);
@@ -29281,7 +30334,7 @@ class DiagnosticsFile final :
                &_DiagnosticsFile_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    164;
+    169;
 
   friend void swap(DiagnosticsFile& a, DiagnosticsFile& b) {
     a.Swap(&b);
@@ -29454,7 +30507,7 @@ class DiagnosticsDone final :
                &_DiagnosticsDone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    165;
+    170;
 
   friend void swap(DiagnosticsDone& a, DiagnosticsDone& b) {
     a.Swap(&b);
@@ -29600,7 +30653,7 @@ class PrintJob final :
                &_PrintJob_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    166;
+    171;
 
   friend void swap(PrintJob& a, PrintJob& b) {
     a.Swap(&b);
@@ -29866,7 +30919,7 @@ class PrintJobChunk final :
                &_PrintJobChunk_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    167;
+    172;
 
   friend void swap(PrintJobChunk& a, PrintJobChunk& b) {
     a.Swap(&b);
@@ -30023,7 +31076,7 @@ class PrintJobCancel final :
                &_PrintJobCancel_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    168;
+    173;
 
   friend void swap(PrintJobCancel& a, PrintJobCancel& b) {
     a.Swap(&b);
@@ -30153,7 +31206,7 @@ class PrintJobResult final :
                &_PrintJobResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    169;
+    174;
 
   friend void swap(PrintJobResult& a, PrintJobResult& b) {
     a.Swap(&b);
@@ -30310,7 +31363,7 @@ class CameraMode final :
                &_CameraMode_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    170;
+    175;
 
   friend void swap(CameraMode& a, CameraMode& b) {
     a.Swap(&b);
@@ -30473,7 +31526,7 @@ class CameraDevice final :
                &_CameraDevice_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    171;
+    176;
 
   friend void swap(CameraDevice& a, CameraDevice& b) {
     a.Swap(&b);
@@ -30666,7 +31719,7 @@ class CameraList final :
                &_CameraList_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    172;
+    177;
 
   friend void swap(CameraList& a, CameraList& b) {
     a.Swap(&b);
@@ -30805,7 +31858,7 @@ class CameraOpen final :
                &_CameraOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    173;
+    178;
 
   friend void swap(CameraOpen& a, CameraOpen& b) {
     a.Swap(&b);
@@ -30973,7 +32026,7 @@ class CameraOpened final :
                &_CameraOpened_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    174;
+    179;
 
   friend void swap(CameraOpened& a, CameraOpened& b) {
     a.Swap(&b);
@@ -31152,7 +32205,7 @@ class CameraFrame final :
                &_CameraFrame_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    175;
+    180;
 
   friend void swap(CameraFrame& a, CameraFrame& b) {
     a.Swap(&b);
@@ -31342,7 +32395,7 @@ class CameraStop final :
                &_CameraStop_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    176;
+    181;
 
   friend void swap(CameraStop& a, CameraStop& b) {
     a.Swap(&b);
@@ -31459,7 +32512,7 @@ class CameraStill final :
                &_CameraStill_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    177;
+    182;
 
   friend void swap(CameraStill& a, CameraStill& b) {
     a.Swap(&b);
@@ -31622,7 +32675,7 @@ class CameraStillTaken final :
                &_CameraStillTaken_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    178;
+    183;
 
   friend void swap(CameraStillTaken& a, CameraStillTaken& b) {
     a.Swap(&b);
@@ -31784,7 +32837,7 @@ class CameraError final :
                &_CameraError_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    179;
+    184;
 
   friend void swap(CameraError& a, CameraError& b) {
     a.Swap(&b);
@@ -31919,7 +32972,7 @@ class SystemSettings final :
                &_SystemSettings_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    180;
+    185;
 
   friend void swap(SystemSettings& a, SystemSettings& b) {
     a.Swap(&b);
@@ -32151,7 +33204,7 @@ class DeviceName final :
                &_DeviceName_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    181;
+    186;
 
   friend void swap(DeviceName& a, DeviceName& b) {
     a.Swap(&b);
@@ -32286,7 +33339,7 @@ class GamepadConnected final :
                &_GamepadConnected_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    182;
+    187;
 
   friend void swap(GamepadConnected& a, GamepadConnected& b) {
     a.Swap(&b);
@@ -32465,7 +33518,7 @@ class GamepadDisconnected final :
                &_GamepadDisconnected_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    183;
+    188;
 
   friend void swap(GamepadDisconnected& a, GamepadDisconnected& b) {
     a.Swap(&b);
@@ -32595,7 +33648,7 @@ class GamepadState final :
                &_GamepadState_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    184;
+    189;
 
   friend void swap(GamepadState& a, GamepadState& b) {
     a.Swap(&b);
@@ -32802,7 +33855,7 @@ class GamepadRumble final :
                &_GamepadRumble_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    185;
+    190;
 
   friend void swap(GamepadRumble& a, GamepadRumble& b) {
     a.Swap(&b);
@@ -32965,7 +34018,7 @@ class BackupUpload final :
                &_BackupUpload_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    186;
+    191;
 
   friend void swap(BackupUpload& a, BackupUpload& b) {
     a.Swap(&b);
@@ -33122,7 +34175,7 @@ class BackupCommit final :
                &_BackupCommit_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    187;
+    192;
 
   friend void swap(BackupCommit& a, BackupCommit& b) {
     a.Swap(&b);
@@ -33354,7 +34407,7 @@ class BackupDiscard final :
                &_BackupDiscard_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    188;
+    193;
 
   friend void swap(BackupDiscard& a, BackupDiscard& b) {
     a.Swap(&b);
@@ -33484,7 +34537,7 @@ class BackupClear final :
                &_BackupClear_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    189;
+    194;
 
   friend void swap(BackupClear& a, BackupClear& b) {
     a.Swap(&b);
@@ -33630,7 +34683,7 @@ class BackupAnswer final :
                &_BackupAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    190;
+    195;
 
   friend void swap(BackupAnswer& a, BackupAnswer& b) {
     a.Swap(&b);
@@ -33798,7 +34851,7 @@ class BackupQuery final :
                &_BackupQuery_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    191;
+    196;
 
   friend void swap(BackupQuery& a, BackupQuery& b) {
     a.Swap(&b);
@@ -33928,7 +34981,7 @@ class BackupPackage final :
                &_BackupPackage_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    192;
+    197;
 
   friend void swap(BackupPackage& a, BackupPackage& b) {
     a.Swap(&b);
@@ -34144,7 +35197,7 @@ class BackupContents final :
                &_BackupContents_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    193;
+    198;
 
   friend void swap(BackupContents& a, BackupContents& b) {
     a.Swap(&b);
@@ -34348,7 +35401,7 @@ class BackupFetch final :
                &_BackupFetch_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    194;
+    199;
 
   friend void swap(BackupFetch& a, BackupFetch& b) {
     a.Swap(&b);
@@ -34543,7 +35596,7 @@ class BackupFetchData final :
                &_BackupFetchData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    195;
+    200;
 
   friend void swap(BackupFetchData& a, BackupFetchData& b) {
     a.Swap(&b);
@@ -34749,7 +35802,7 @@ class BackupRun final :
                &_BackupRun_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    196;
+    201;
 
   friend void swap(BackupRun& a, BackupRun& b) {
     a.Swap(&b);
@@ -34879,7 +35932,7 @@ class BackupRestore final :
                &_BackupRestore_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    197;
+    202;
 
   friend void swap(BackupRestore& a, BackupRestore& b) {
     a.Swap(&b);
@@ -35046,7 +36099,7 @@ class BackupRunResult final :
                &_BackupRunResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    198;
+    203;
 
   friend void swap(BackupRunResult& a, BackupRunResult& b) {
     a.Swap(&b);
@@ -35225,7 +36278,7 @@ class BackupSetting final :
                &_BackupSetting_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    199;
+    204;
 
   friend void swap(BackupSetting& a, BackupSetting& b) {
     a.Swap(&b);
@@ -35355,7 +36408,7 @@ class HostCertificates final :
                &_HostCertificates_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    200;
+    205;
 
   friend void swap(HostCertificates& a, HostCertificates& b) {
     a.Swap(&b);
@@ -35511,7 +36564,7 @@ class PasskeyRequest final :
                &_PasskeyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    201;
+    206;
 
   friend void swap(PasskeyRequest& a, PasskeyRequest& b) {
     a.Swap(&b);
@@ -35758,7 +36811,7 @@ class PasskeyResponse final :
                &_PasskeyResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    202;
+    207;
 
   friend void swap(PasskeyResponse& a, PasskeyResponse& b) {
     a.Swap(&b);
@@ -35931,7 +36984,7 @@ class KeyMintRootKeyRequest final :
                &_KeyMintRootKeyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    203;
+    208;
 
   friend void swap(KeyMintRootKeyRequest& a, KeyMintRootKeyRequest& b) {
     a.Swap(&b);
@@ -36048,7 +37101,7 @@ class KeyMintRootKey final :
                &_KeyMintRootKey_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    204;
+    209;
 
   friend void swap(KeyMintRootKey& a, KeyMintRootKey& b) {
     a.Swap(&b);
@@ -36199,7 +37252,7 @@ class DnsQuery final :
                &_DnsQuery_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    205;
+    210;
 
   friend void swap(DnsQuery& a, DnsQuery& b) {
     a.Swap(&b);
@@ -36356,7 +37409,7 @@ class DnsAnswer final :
                &_DnsAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    206;
+    211;
 
   friend void swap(DnsAnswer& a, DnsAnswer& b) {
     a.Swap(&b);
@@ -36502,7 +37555,7 @@ class ListSpeechVoices final :
                &_ListSpeechVoices_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    207;
+    212;
 
   friend void swap(ListSpeechVoices& a, ListSpeechVoices& b) {
     a.Swap(&b);
@@ -36619,7 +37672,7 @@ class SpeechVoice final :
                &_SpeechVoice_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    208;
+    213;
 
   friend void swap(SpeechVoice& a, SpeechVoice& b) {
     a.Swap(&b);
@@ -36808,7 +37861,7 @@ class SpeechVoices final :
                &_SpeechVoices_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    209;
+    214;
 
   friend void swap(SpeechVoices& a, SpeechVoices& b) {
     a.Swap(&b);
@@ -36974,7 +38027,7 @@ class SpeakText final :
                &_SpeakText_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    210;
+    215;
 
   friend void swap(SpeakText& a, SpeakText& b) {
     a.Swap(&b);
@@ -37174,7 +38227,7 @@ class SpeechAudio final :
                &_SpeechAudio_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    211;
+    216;
 
   friend void swap(SpeechAudio& a, SpeechAudio& b) {
     a.Swap(&b);
@@ -37342,7 +38395,7 @@ class SpeechDone final :
                &_SpeechDone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    212;
+    217;
 
   friend void swap(SpeechDone& a, SpeechDone& b) {
     a.Swap(&b);
@@ -37499,7 +38552,7 @@ class StopSpeaking final :
                &_StopSpeaking_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    213;
+    218;
 
   friend void swap(StopSpeaking& a, StopSpeaking& b) {
     a.Swap(&b);
@@ -37629,7 +38682,7 @@ class StartRecognition final :
                &_StartRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    214;
+    219;
 
   friend void swap(StartRecognition& a, StartRecognition& b) {
     a.Swap(&b);
@@ -37808,7 +38861,7 @@ class StopRecognition final :
                &_StopRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    215;
+    220;
 
   friend void swap(StopRecognition& a, StopRecognition& b) {
     a.Swap(&b);
@@ -37938,7 +38991,7 @@ class CancelRecognition final :
                &_CancelRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    216;
+    221;
 
   friend void swap(CancelRecognition& a, CancelRecognition& b) {
     a.Swap(&b);
@@ -38068,7 +39121,7 @@ class RecognitionEvent final :
                &_RecognitionEvent_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    217;
+    222;
 
   friend void swap(RecognitionEvent& a, RecognitionEvent& b) {
     a.Swap(&b);
@@ -38286,7 +39339,7 @@ class CheckSpelling final :
                &_CheckSpelling_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    218;
+    223;
 
   friend void swap(CheckSpelling& a, CheckSpelling& b) {
     a.Swap(&b);
@@ -38469,7 +39522,7 @@ class SpellingMistake final :
                &_SpellingMistake_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    219;
+    224;
 
   friend void swap(SpellingMistake& a, SpellingMistake& b) {
     a.Swap(&b);
@@ -38647,7 +39700,7 @@ class SpellingText final :
                &_SpellingText_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    220;
+    225;
 
   friend void swap(SpellingText& a, SpellingText& b) {
     a.Swap(&b);
@@ -38786,7 +39839,7 @@ class SpellingResult final :
                &_SpellingResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    221;
+    226;
 
   friend void swap(SpellingResult& a, SpellingResult& b) {
     a.Swap(&b);
@@ -39038,6 +40091,8 @@ class Envelope final :
     kAccessibilityTree = 81,
     kAccessibilityAction = 82,
     kAccessibilityActionResult = 83,
+    kAccessibilityListening = 84,
+    kAccessibilityAnnouncement = 85,
     kAudioOutputOpen = 100,
     kAudioOutputReady = 101,
     kAudioPcm = 102,
@@ -39151,7 +40206,7 @@ class Envelope final :
                &_Envelope_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    222;
+    227;
 
   friend void swap(Envelope& a, Envelope& b) {
     a.Swap(&b);
@@ -39310,6 +40365,8 @@ class Envelope final :
     kAccessibilityTreeFieldNumber = 81,
     kAccessibilityActionFieldNumber = 82,
     kAccessibilityActionResultFieldNumber = 83,
+    kAccessibilityListeningFieldNumber = 84,
+    kAccessibilityAnnouncementFieldNumber = 85,
     kAudioOutputOpenFieldNumber = 100,
     kAudioOutputReadyFieldNumber = 101,
     kAudioPcmFieldNumber = 102,
@@ -41125,6 +42182,42 @@ class Envelope final :
   void unsafe_arena_set_allocated_accessibility_action_result(
       ::dsa::control::v1::AccessibilityActionResult* accessibility_action_result);
   ::dsa::control::v1::AccessibilityActionResult* unsafe_arena_release_accessibility_action_result();
+
+  // .dsa.control.v1.AccessibilityListening accessibility_listening = 84;
+  bool has_accessibility_listening() const;
+  private:
+  bool _internal_has_accessibility_listening() const;
+  public:
+  void clear_accessibility_listening();
+  const ::dsa::control::v1::AccessibilityListening& accessibility_listening() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::AccessibilityListening* release_accessibility_listening();
+  ::dsa::control::v1::AccessibilityListening* mutable_accessibility_listening();
+  void set_allocated_accessibility_listening(::dsa::control::v1::AccessibilityListening* accessibility_listening);
+  private:
+  const ::dsa::control::v1::AccessibilityListening& _internal_accessibility_listening() const;
+  ::dsa::control::v1::AccessibilityListening* _internal_mutable_accessibility_listening();
+  public:
+  void unsafe_arena_set_allocated_accessibility_listening(
+      ::dsa::control::v1::AccessibilityListening* accessibility_listening);
+  ::dsa::control::v1::AccessibilityListening* unsafe_arena_release_accessibility_listening();
+
+  // .dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;
+  bool has_accessibility_announcement() const;
+  private:
+  bool _internal_has_accessibility_announcement() const;
+  public:
+  void clear_accessibility_announcement();
+  const ::dsa::control::v1::AccessibilityAnnouncement& accessibility_announcement() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::AccessibilityAnnouncement* release_accessibility_announcement();
+  ::dsa::control::v1::AccessibilityAnnouncement* mutable_accessibility_announcement();
+  void set_allocated_accessibility_announcement(::dsa::control::v1::AccessibilityAnnouncement* accessibility_announcement);
+  private:
+  const ::dsa::control::v1::AccessibilityAnnouncement& _internal_accessibility_announcement() const;
+  ::dsa::control::v1::AccessibilityAnnouncement* _internal_mutable_accessibility_announcement();
+  public:
+  void unsafe_arena_set_allocated_accessibility_announcement(
+      ::dsa::control::v1::AccessibilityAnnouncement* accessibility_announcement);
+  ::dsa::control::v1::AccessibilityAnnouncement* unsafe_arena_release_accessibility_announcement();
 
   // .dsa.control.v1.AudioOutputOpen audio_output_open = 100;
   bool has_audio_output_open() const;
@@ -43116,6 +44209,8 @@ class Envelope final :
   void set_has_accessibility_tree();
   void set_has_accessibility_action();
   void set_has_accessibility_action_result();
+  void set_has_accessibility_listening();
+  void set_has_accessibility_announcement();
   void set_has_audio_output_open();
   void set_has_audio_output_ready();
   void set_has_audio_pcm();
@@ -43327,6 +44422,8 @@ class Envelope final :
       ::dsa::control::v1::AccessibilityTree* accessibility_tree_;
       ::dsa::control::v1::AccessibilityAction* accessibility_action_;
       ::dsa::control::v1::AccessibilityActionResult* accessibility_action_result_;
+      ::dsa::control::v1::AccessibilityListening* accessibility_listening_;
+      ::dsa::control::v1::AccessibilityAnnouncement* accessibility_announcement_;
       ::dsa::control::v1::AudioOutputOpen* audio_output_open_;
       ::dsa::control::v1::AudioOutputReady* audio_output_ready_;
       ::dsa::control::v1::AudioPcm* audio_pcm_;
@@ -59515,6 +60612,312 @@ inline void AccessibilityWatch::set_on(bool value) {
 
 // -------------------------------------------------------------------
 
+// AccessibilityListening
+
+// int32 task_id = 1;
+inline void AccessibilityListening::clear_task_id() {
+  _impl_.task_id_ = 0;
+}
+inline int32_t AccessibilityListening::_internal_task_id() const {
+  return _impl_.task_id_;
+}
+inline int32_t AccessibilityListening::task_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityListening.task_id)
+  return _internal_task_id();
+}
+inline void AccessibilityListening::_internal_set_task_id(int32_t value) {
+  
+  _impl_.task_id_ = value;
+}
+inline void AccessibilityListening::set_task_id(int32_t value) {
+  _internal_set_task_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityListening.task_id)
+}
+
+// bool listening = 2;
+inline void AccessibilityListening::clear_listening() {
+  _impl_.listening_ = false;
+}
+inline bool AccessibilityListening::_internal_listening() const {
+  return _impl_.listening_;
+}
+inline bool AccessibilityListening::listening() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityListening.listening)
+  return _internal_listening();
+}
+inline void AccessibilityListening::_internal_set_listening(bool value) {
+  
+  _impl_.listening_ = value;
+}
+inline void AccessibilityListening::set_listening(bool value) {
+  _internal_set_listening(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityListening.listening)
+}
+
+// -------------------------------------------------------------------
+
+// NodeCollection
+
+// int32 rows = 1;
+inline void NodeCollection::clear_rows() {
+  _impl_.rows_ = 0;
+}
+inline int32_t NodeCollection::_internal_rows() const {
+  return _impl_.rows_;
+}
+inline int32_t NodeCollection::rows() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollection.rows)
+  return _internal_rows();
+}
+inline void NodeCollection::_internal_set_rows(int32_t value) {
+  
+  _impl_.rows_ = value;
+}
+inline void NodeCollection::set_rows(int32_t value) {
+  _internal_set_rows(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollection.rows)
+}
+
+// int32 columns = 2;
+inline void NodeCollection::clear_columns() {
+  _impl_.columns_ = 0;
+}
+inline int32_t NodeCollection::_internal_columns() const {
+  return _impl_.columns_;
+}
+inline int32_t NodeCollection::columns() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollection.columns)
+  return _internal_columns();
+}
+inline void NodeCollection::_internal_set_columns(int32_t value) {
+  
+  _impl_.columns_ = value;
+}
+inline void NodeCollection::set_columns(int32_t value) {
+  _internal_set_columns(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollection.columns)
+}
+
+// bool hierarchical = 3;
+inline void NodeCollection::clear_hierarchical() {
+  _impl_.hierarchical_ = false;
+}
+inline bool NodeCollection::_internal_hierarchical() const {
+  return _impl_.hierarchical_;
+}
+inline bool NodeCollection::hierarchical() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollection.hierarchical)
+  return _internal_hierarchical();
+}
+inline void NodeCollection::_internal_set_hierarchical(bool value) {
+  
+  _impl_.hierarchical_ = value;
+}
+inline void NodeCollection::set_hierarchical(bool value) {
+  _internal_set_hierarchical(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollection.hierarchical)
+}
+
+// -------------------------------------------------------------------
+
+// NodeCollectionItem
+
+// int32 row = 1;
+inline void NodeCollectionItem::clear_row() {
+  _impl_.row_ = 0;
+}
+inline int32_t NodeCollectionItem::_internal_row() const {
+  return _impl_.row_;
+}
+inline int32_t NodeCollectionItem::row() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollectionItem.row)
+  return _internal_row();
+}
+inline void NodeCollectionItem::_internal_set_row(int32_t value) {
+  
+  _impl_.row_ = value;
+}
+inline void NodeCollectionItem::set_row(int32_t value) {
+  _internal_set_row(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollectionItem.row)
+}
+
+// int32 row_span = 2;
+inline void NodeCollectionItem::clear_row_span() {
+  _impl_.row_span_ = 0;
+}
+inline int32_t NodeCollectionItem::_internal_row_span() const {
+  return _impl_.row_span_;
+}
+inline int32_t NodeCollectionItem::row_span() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollectionItem.row_span)
+  return _internal_row_span();
+}
+inline void NodeCollectionItem::_internal_set_row_span(int32_t value) {
+  
+  _impl_.row_span_ = value;
+}
+inline void NodeCollectionItem::set_row_span(int32_t value) {
+  _internal_set_row_span(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollectionItem.row_span)
+}
+
+// int32 column = 3;
+inline void NodeCollectionItem::clear_column() {
+  _impl_.column_ = 0;
+}
+inline int32_t NodeCollectionItem::_internal_column() const {
+  return _impl_.column_;
+}
+inline int32_t NodeCollectionItem::column() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollectionItem.column)
+  return _internal_column();
+}
+inline void NodeCollectionItem::_internal_set_column(int32_t value) {
+  
+  _impl_.column_ = value;
+}
+inline void NodeCollectionItem::set_column(int32_t value) {
+  _internal_set_column(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollectionItem.column)
+}
+
+// int32 column_span = 4;
+inline void NodeCollectionItem::clear_column_span() {
+  _impl_.column_span_ = 0;
+}
+inline int32_t NodeCollectionItem::_internal_column_span() const {
+  return _impl_.column_span_;
+}
+inline int32_t NodeCollectionItem::column_span() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollectionItem.column_span)
+  return _internal_column_span();
+}
+inline void NodeCollectionItem::_internal_set_column_span(int32_t value) {
+  
+  _impl_.column_span_ = value;
+}
+inline void NodeCollectionItem::set_column_span(int32_t value) {
+  _internal_set_column_span(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollectionItem.column_span)
+}
+
+// bool heading = 5;
+inline void NodeCollectionItem::clear_heading() {
+  _impl_.heading_ = false;
+}
+inline bool NodeCollectionItem::_internal_heading() const {
+  return _impl_.heading_;
+}
+inline bool NodeCollectionItem::heading() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeCollectionItem.heading)
+  return _internal_heading();
+}
+inline void NodeCollectionItem::_internal_set_heading(bool value) {
+  
+  _impl_.heading_ = value;
+}
+inline void NodeCollectionItem::set_heading(bool value) {
+  _internal_set_heading(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeCollectionItem.heading)
+}
+
+// -------------------------------------------------------------------
+
+// NodeWindow
+
+// string title = 1;
+inline void NodeWindow::clear_title() {
+  _impl_.title_.ClearToEmpty();
+}
+inline const std::string& NodeWindow::title() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeWindow.title)
+  return _internal_title();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void NodeWindow::set_title(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.title_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeWindow.title)
+}
+inline std::string* NodeWindow::mutable_title() {
+  std::string* _s = _internal_mutable_title();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.NodeWindow.title)
+  return _s;
+}
+inline const std::string& NodeWindow::_internal_title() const {
+  return _impl_.title_.Get();
+}
+inline void NodeWindow::_internal_set_title(const std::string& value) {
+  
+  _impl_.title_.Set(value, GetArenaForAllocation());
+}
+inline std::string* NodeWindow::_internal_mutable_title() {
+  
+  return _impl_.title_.Mutable(GetArenaForAllocation());
+}
+inline std::string* NodeWindow::release_title() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.NodeWindow.title)
+  return _impl_.title_.Release();
+}
+inline void NodeWindow::set_allocated_title(std::string* title) {
+  if (title != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.title_.SetAllocated(title, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.title_.IsDefault()) {
+    _impl_.title_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.NodeWindow.title)
+}
+
+// bool modal = 2;
+inline void NodeWindow::clear_modal() {
+  _impl_.modal_ = false;
+}
+inline bool NodeWindow::_internal_modal() const {
+  return _impl_.modal_;
+}
+inline bool NodeWindow::modal() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeWindow.modal)
+  return _internal_modal();
+}
+inline void NodeWindow::_internal_set_modal(bool value) {
+  
+  _impl_.modal_ = value;
+}
+inline void NodeWindow::set_modal(bool value) {
+  _internal_set_modal(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeWindow.modal)
+}
+
+// bool popup = 3;
+inline void NodeWindow::clear_popup() {
+  _impl_.popup_ = false;
+}
+inline bool NodeWindow::_internal_popup() const {
+  return _impl_.popup_;
+}
+inline bool NodeWindow::popup() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NodeWindow.popup)
+  return _internal_popup();
+}
+inline void NodeWindow::_internal_set_popup(bool value) {
+  
+  _impl_.popup_ = value;
+}
+inline void NodeWindow::set_popup(bool value) {
+  _internal_set_popup(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NodeWindow.popup)
+}
+
+// -------------------------------------------------------------------
+
 // NodeRange
 
 // float min = 1;
@@ -60411,6 +61814,630 @@ inline void AccessibilityNode::set_allocated_state_description(std::string* stat
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityNode.state_description)
 }
 
+// bool accessibility_focused = 24;
+inline void AccessibilityNode::clear_accessibility_focused() {
+  _impl_.accessibility_focused_ = false;
+}
+inline bool AccessibilityNode::_internal_accessibility_focused() const {
+  return _impl_.accessibility_focused_;
+}
+inline bool AccessibilityNode::accessibility_focused() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.accessibility_focused)
+  return _internal_accessibility_focused();
+}
+inline void AccessibilityNode::_internal_set_accessibility_focused(bool value) {
+  
+  _impl_.accessibility_focused_ = value;
+}
+inline void AccessibilityNode::set_accessibility_focused(bool value) {
+  _internal_set_accessibility_focused(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.accessibility_focused)
+}
+
+// int32 text_selection_start = 25;
+inline void AccessibilityNode::clear_text_selection_start() {
+  _impl_.text_selection_start_ = 0;
+}
+inline int32_t AccessibilityNode::_internal_text_selection_start() const {
+  return _impl_.text_selection_start_;
+}
+inline int32_t AccessibilityNode::text_selection_start() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.text_selection_start)
+  return _internal_text_selection_start();
+}
+inline void AccessibilityNode::_internal_set_text_selection_start(int32_t value) {
+  
+  _impl_.text_selection_start_ = value;
+}
+inline void AccessibilityNode::set_text_selection_start(int32_t value) {
+  _internal_set_text_selection_start(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.text_selection_start)
+}
+
+// int32 text_selection_end = 26;
+inline void AccessibilityNode::clear_text_selection_end() {
+  _impl_.text_selection_end_ = 0;
+}
+inline int32_t AccessibilityNode::_internal_text_selection_end() const {
+  return _impl_.text_selection_end_;
+}
+inline int32_t AccessibilityNode::text_selection_end() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.text_selection_end)
+  return _internal_text_selection_end();
+}
+inline void AccessibilityNode::_internal_set_text_selection_end(int32_t value) {
+  
+  _impl_.text_selection_end_ = value;
+}
+inline void AccessibilityNode::set_text_selection_end(int32_t value) {
+  _internal_set_text_selection_end(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.text_selection_end)
+}
+
+// bool has_text_selection = 27;
+inline void AccessibilityNode::clear_has_text_selection() {
+  _impl_.has_text_selection_ = false;
+}
+inline bool AccessibilityNode::_internal_has_text_selection() const {
+  return _impl_.has_text_selection_;
+}
+inline bool AccessibilityNode::has_text_selection() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.has_text_selection)
+  return _internal_has_text_selection();
+}
+inline void AccessibilityNode::_internal_set_has_text_selection(bool value) {
+  
+  _impl_.has_text_selection_ = value;
+}
+inline void AccessibilityNode::set_has_text_selection(bool value) {
+  _internal_set_has_text_selection(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.has_text_selection)
+}
+
+// uint32 heading_level = 28;
+inline void AccessibilityNode::clear_heading_level() {
+  _impl_.heading_level_ = 0u;
+}
+inline uint32_t AccessibilityNode::_internal_heading_level() const {
+  return _impl_.heading_level_;
+}
+inline uint32_t AccessibilityNode::heading_level() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.heading_level)
+  return _internal_heading_level();
+}
+inline void AccessibilityNode::_internal_set_heading_level(uint32_t value) {
+  
+  _impl_.heading_level_ = value;
+}
+inline void AccessibilityNode::set_heading_level(uint32_t value) {
+  _internal_set_heading_level(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.heading_level)
+}
+
+// bool link = 29;
+inline void AccessibilityNode::clear_link() {
+  _impl_.link_ = false;
+}
+inline bool AccessibilityNode::_internal_link() const {
+  return _impl_.link_;
+}
+inline bool AccessibilityNode::link() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.link)
+  return _internal_link();
+}
+inline void AccessibilityNode::_internal_set_link(bool value) {
+  
+  _impl_.link_ = value;
+}
+inline void AccessibilityNode::set_link(bool value) {
+  _internal_set_link(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.link)
+}
+
+// string url = 30;
+inline void AccessibilityNode::clear_url() {
+  _impl_.url_.ClearToEmpty();
+}
+inline const std::string& AccessibilityNode::url() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.url)
+  return _internal_url();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void AccessibilityNode::set_url(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.url)
+}
+inline std::string* AccessibilityNode::mutable_url() {
+  std::string* _s = _internal_mutable_url();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.AccessibilityNode.url)
+  return _s;
+}
+inline const std::string& AccessibilityNode::_internal_url() const {
+  return _impl_.url_.Get();
+}
+inline void AccessibilityNode::_internal_set_url(const std::string& value) {
+  
+  _impl_.url_.Set(value, GetArenaForAllocation());
+}
+inline std::string* AccessibilityNode::_internal_mutable_url() {
+  
+  return _impl_.url_.Mutable(GetArenaForAllocation());
+}
+inline std::string* AccessibilityNode::release_url() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.AccessibilityNode.url)
+  return _impl_.url_.Release();
+}
+inline void AccessibilityNode::set_allocated_url(std::string* url) {
+  if (url != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.url_.SetAllocated(url, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.url_.IsDefault()) {
+    _impl_.url_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityNode.url)
+}
+
+// .dsa.control.v1.NodeCollection collection = 31;
+inline bool AccessibilityNode::_internal_has_collection() const {
+  return this != internal_default_instance() && _impl_.collection_ != nullptr;
+}
+inline bool AccessibilityNode::has_collection() const {
+  return _internal_has_collection();
+}
+inline void AccessibilityNode::clear_collection() {
+  if (GetArenaForAllocation() == nullptr && _impl_.collection_ != nullptr) {
+    delete _impl_.collection_;
+  }
+  _impl_.collection_ = nullptr;
+}
+inline const ::dsa::control::v1::NodeCollection& AccessibilityNode::_internal_collection() const {
+  const ::dsa::control::v1::NodeCollection* p = _impl_.collection_;
+  return p != nullptr ? *p : reinterpret_cast<const ::dsa::control::v1::NodeCollection&>(
+      ::dsa::control::v1::_NodeCollection_default_instance_);
+}
+inline const ::dsa::control::v1::NodeCollection& AccessibilityNode::collection() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.collection)
+  return _internal_collection();
+}
+inline void AccessibilityNode::unsafe_arena_set_allocated_collection(
+    ::dsa::control::v1::NodeCollection* collection) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.collection_);
+  }
+  _impl_.collection_ = collection;
+  if (collection) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.AccessibilityNode.collection)
+}
+inline ::dsa::control::v1::NodeCollection* AccessibilityNode::release_collection() {
+  
+  ::dsa::control::v1::NodeCollection* temp = _impl_.collection_;
+  _impl_.collection_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::dsa::control::v1::NodeCollection* AccessibilityNode::unsafe_arena_release_collection() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.AccessibilityNode.collection)
+  
+  ::dsa::control::v1::NodeCollection* temp = _impl_.collection_;
+  _impl_.collection_ = nullptr;
+  return temp;
+}
+inline ::dsa::control::v1::NodeCollection* AccessibilityNode::_internal_mutable_collection() {
+  
+  if (_impl_.collection_ == nullptr) {
+    auto* p = CreateMaybeMessage<::dsa::control::v1::NodeCollection>(GetArenaForAllocation());
+    _impl_.collection_ = p;
+  }
+  return _impl_.collection_;
+}
+inline ::dsa::control::v1::NodeCollection* AccessibilityNode::mutable_collection() {
+  ::dsa::control::v1::NodeCollection* _msg = _internal_mutable_collection();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.AccessibilityNode.collection)
+  return _msg;
+}
+inline void AccessibilityNode::set_allocated_collection(::dsa::control::v1::NodeCollection* collection) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.collection_;
+  }
+  if (collection) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(collection);
+    if (message_arena != submessage_arena) {
+      collection = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, collection, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.collection_ = collection;
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityNode.collection)
+}
+
+// .dsa.control.v1.NodeCollectionItem collection_item = 32;
+inline bool AccessibilityNode::_internal_has_collection_item() const {
+  return this != internal_default_instance() && _impl_.collection_item_ != nullptr;
+}
+inline bool AccessibilityNode::has_collection_item() const {
+  return _internal_has_collection_item();
+}
+inline void AccessibilityNode::clear_collection_item() {
+  if (GetArenaForAllocation() == nullptr && _impl_.collection_item_ != nullptr) {
+    delete _impl_.collection_item_;
+  }
+  _impl_.collection_item_ = nullptr;
+}
+inline const ::dsa::control::v1::NodeCollectionItem& AccessibilityNode::_internal_collection_item() const {
+  const ::dsa::control::v1::NodeCollectionItem* p = _impl_.collection_item_;
+  return p != nullptr ? *p : reinterpret_cast<const ::dsa::control::v1::NodeCollectionItem&>(
+      ::dsa::control::v1::_NodeCollectionItem_default_instance_);
+}
+inline const ::dsa::control::v1::NodeCollectionItem& AccessibilityNode::collection_item() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.collection_item)
+  return _internal_collection_item();
+}
+inline void AccessibilityNode::unsafe_arena_set_allocated_collection_item(
+    ::dsa::control::v1::NodeCollectionItem* collection_item) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.collection_item_);
+  }
+  _impl_.collection_item_ = collection_item;
+  if (collection_item) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.AccessibilityNode.collection_item)
+}
+inline ::dsa::control::v1::NodeCollectionItem* AccessibilityNode::release_collection_item() {
+  
+  ::dsa::control::v1::NodeCollectionItem* temp = _impl_.collection_item_;
+  _impl_.collection_item_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::dsa::control::v1::NodeCollectionItem* AccessibilityNode::unsafe_arena_release_collection_item() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.AccessibilityNode.collection_item)
+  
+  ::dsa::control::v1::NodeCollectionItem* temp = _impl_.collection_item_;
+  _impl_.collection_item_ = nullptr;
+  return temp;
+}
+inline ::dsa::control::v1::NodeCollectionItem* AccessibilityNode::_internal_mutable_collection_item() {
+  
+  if (_impl_.collection_item_ == nullptr) {
+    auto* p = CreateMaybeMessage<::dsa::control::v1::NodeCollectionItem>(GetArenaForAllocation());
+    _impl_.collection_item_ = p;
+  }
+  return _impl_.collection_item_;
+}
+inline ::dsa::control::v1::NodeCollectionItem* AccessibilityNode::mutable_collection_item() {
+  ::dsa::control::v1::NodeCollectionItem* _msg = _internal_mutable_collection_item();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.AccessibilityNode.collection_item)
+  return _msg;
+}
+inline void AccessibilityNode::set_allocated_collection_item(::dsa::control::v1::NodeCollectionItem* collection_item) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.collection_item_;
+  }
+  if (collection_item) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(collection_item);
+    if (message_arena != submessage_arena) {
+      collection_item = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, collection_item, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.collection_item_ = collection_item;
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityNode.collection_item)
+}
+
+// int32 live_region = 33;
+inline void AccessibilityNode::clear_live_region() {
+  _impl_.live_region_ = 0;
+}
+inline int32_t AccessibilityNode::_internal_live_region() const {
+  return _impl_.live_region_;
+}
+inline int32_t AccessibilityNode::live_region() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.live_region)
+  return _internal_live_region();
+}
+inline void AccessibilityNode::_internal_set_live_region(int32_t value) {
+  
+  _impl_.live_region_ = value;
+}
+inline void AccessibilityNode::set_live_region(int32_t value) {
+  _internal_set_live_region(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.live_region)
+}
+
+// string pane_title = 34;
+inline void AccessibilityNode::clear_pane_title() {
+  _impl_.pane_title_.ClearToEmpty();
+}
+inline const std::string& AccessibilityNode::pane_title() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.pane_title)
+  return _internal_pane_title();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void AccessibilityNode::set_pane_title(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.pane_title_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityNode.pane_title)
+}
+inline std::string* AccessibilityNode::mutable_pane_title() {
+  std::string* _s = _internal_mutable_pane_title();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.AccessibilityNode.pane_title)
+  return _s;
+}
+inline const std::string& AccessibilityNode::_internal_pane_title() const {
+  return _impl_.pane_title_.Get();
+}
+inline void AccessibilityNode::_internal_set_pane_title(const std::string& value) {
+  
+  _impl_.pane_title_.Set(value, GetArenaForAllocation());
+}
+inline std::string* AccessibilityNode::_internal_mutable_pane_title() {
+  
+  return _impl_.pane_title_.Mutable(GetArenaForAllocation());
+}
+inline std::string* AccessibilityNode::release_pane_title() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.AccessibilityNode.pane_title)
+  return _impl_.pane_title_.Release();
+}
+inline void AccessibilityNode::set_allocated_pane_title(std::string* pane_title) {
+  if (pane_title != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.pane_title_.SetAllocated(pane_title, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.pane_title_.IsDefault()) {
+    _impl_.pane_title_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityNode.pane_title)
+}
+
+// .dsa.control.v1.NodeWindow window = 35;
+inline bool AccessibilityNode::_internal_has_window() const {
+  return this != internal_default_instance() && _impl_.window_ != nullptr;
+}
+inline bool AccessibilityNode::has_window() const {
+  return _internal_has_window();
+}
+inline void AccessibilityNode::clear_window() {
+  if (GetArenaForAllocation() == nullptr && _impl_.window_ != nullptr) {
+    delete _impl_.window_;
+  }
+  _impl_.window_ = nullptr;
+}
+inline const ::dsa::control::v1::NodeWindow& AccessibilityNode::_internal_window() const {
+  const ::dsa::control::v1::NodeWindow* p = _impl_.window_;
+  return p != nullptr ? *p : reinterpret_cast<const ::dsa::control::v1::NodeWindow&>(
+      ::dsa::control::v1::_NodeWindow_default_instance_);
+}
+inline const ::dsa::control::v1::NodeWindow& AccessibilityNode::window() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityNode.window)
+  return _internal_window();
+}
+inline void AccessibilityNode::unsafe_arena_set_allocated_window(
+    ::dsa::control::v1::NodeWindow* window) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.window_);
+  }
+  _impl_.window_ = window;
+  if (window) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.AccessibilityNode.window)
+}
+inline ::dsa::control::v1::NodeWindow* AccessibilityNode::release_window() {
+  
+  ::dsa::control::v1::NodeWindow* temp = _impl_.window_;
+  _impl_.window_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::dsa::control::v1::NodeWindow* AccessibilityNode::unsafe_arena_release_window() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.AccessibilityNode.window)
+  
+  ::dsa::control::v1::NodeWindow* temp = _impl_.window_;
+  _impl_.window_ = nullptr;
+  return temp;
+}
+inline ::dsa::control::v1::NodeWindow* AccessibilityNode::_internal_mutable_window() {
+  
+  if (_impl_.window_ == nullptr) {
+    auto* p = CreateMaybeMessage<::dsa::control::v1::NodeWindow>(GetArenaForAllocation());
+    _impl_.window_ = p;
+  }
+  return _impl_.window_;
+}
+inline ::dsa::control::v1::NodeWindow* AccessibilityNode::mutable_window() {
+  ::dsa::control::v1::NodeWindow* _msg = _internal_mutable_window();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.AccessibilityNode.window)
+  return _msg;
+}
+inline void AccessibilityNode::set_allocated_window(::dsa::control::v1::NodeWindow* window) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.window_;
+  }
+  if (window) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(window);
+    if (message_arena != submessage_arena) {
+      window = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, window, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.window_ = window;
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityNode.window)
+}
+
+// -------------------------------------------------------------------
+
+// AccessibilityAnnouncement
+
+// int32 task_id = 1;
+inline void AccessibilityAnnouncement::clear_task_id() {
+  _impl_.task_id_ = 0;
+}
+inline int32_t AccessibilityAnnouncement::_internal_task_id() const {
+  return _impl_.task_id_;
+}
+inline int32_t AccessibilityAnnouncement::task_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAnnouncement.task_id)
+  return _internal_task_id();
+}
+inline void AccessibilityAnnouncement::_internal_set_task_id(int32_t value) {
+  
+  _impl_.task_id_ = value;
+}
+inline void AccessibilityAnnouncement::set_task_id(int32_t value) {
+  _internal_set_task_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAnnouncement.task_id)
+}
+
+// string text = 2;
+inline void AccessibilityAnnouncement::clear_text() {
+  _impl_.text_.ClearToEmpty();
+}
+inline const std::string& AccessibilityAnnouncement::text() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAnnouncement.text)
+  return _internal_text();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void AccessibilityAnnouncement::set_text(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.text_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAnnouncement.text)
+}
+inline std::string* AccessibilityAnnouncement::mutable_text() {
+  std::string* _s = _internal_mutable_text();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.AccessibilityAnnouncement.text)
+  return _s;
+}
+inline const std::string& AccessibilityAnnouncement::_internal_text() const {
+  return _impl_.text_.Get();
+}
+inline void AccessibilityAnnouncement::_internal_set_text(const std::string& value) {
+  
+  _impl_.text_.Set(value, GetArenaForAllocation());
+}
+inline std::string* AccessibilityAnnouncement::_internal_mutable_text() {
+  
+  return _impl_.text_.Mutable(GetArenaForAllocation());
+}
+inline std::string* AccessibilityAnnouncement::release_text() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.AccessibilityAnnouncement.text)
+  return _impl_.text_.Release();
+}
+inline void AccessibilityAnnouncement::set_allocated_text(std::string* text) {
+  if (text != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.text_.SetAllocated(text, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.text_.IsDefault()) {
+    _impl_.text_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityAnnouncement.text)
+}
+
+// bool assertive = 3;
+inline void AccessibilityAnnouncement::clear_assertive() {
+  _impl_.assertive_ = false;
+}
+inline bool AccessibilityAnnouncement::_internal_assertive() const {
+  return _impl_.assertive_;
+}
+inline bool AccessibilityAnnouncement::assertive() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAnnouncement.assertive)
+  return _internal_assertive();
+}
+inline void AccessibilityAnnouncement::_internal_set_assertive(bool value) {
+  
+  _impl_.assertive_ = value;
+}
+inline void AccessibilityAnnouncement::set_assertive(bool value) {
+  _internal_set_assertive(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAnnouncement.assertive)
+}
+
+// bool toast = 4;
+inline void AccessibilityAnnouncement::clear_toast() {
+  _impl_.toast_ = false;
+}
+inline bool AccessibilityAnnouncement::_internal_toast() const {
+  return _impl_.toast_;
+}
+inline bool AccessibilityAnnouncement::toast() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAnnouncement.toast)
+  return _internal_toast();
+}
+inline void AccessibilityAnnouncement::_internal_set_toast(bool value) {
+  
+  _impl_.toast_ = value;
+}
+inline void AccessibilityAnnouncement::set_toast(bool value) {
+  _internal_set_toast(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAnnouncement.toast)
+}
+
 // -------------------------------------------------------------------
 
 // AccessibilityTree
@@ -60629,6 +62656,26 @@ inline void AccessibilityTree::set_focused_id(uint32_t value) {
   // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityTree.focused_id)
 }
 
+// uint32 accessibility_focused_id = 8;
+inline void AccessibilityTree::clear_accessibility_focused_id() {
+  _impl_.accessibility_focused_id_ = 0u;
+}
+inline uint32_t AccessibilityTree::_internal_accessibility_focused_id() const {
+  return _impl_.accessibility_focused_id_;
+}
+inline uint32_t AccessibilityTree::accessibility_focused_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityTree.accessibility_focused_id)
+  return _internal_accessibility_focused_id();
+}
+inline void AccessibilityTree::_internal_set_accessibility_focused_id(uint32_t value) {
+  
+  _impl_.accessibility_focused_id_ = value;
+}
+inline void AccessibilityTree::set_accessibility_focused_id(uint32_t value) {
+  _internal_set_accessibility_focused_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityTree.accessibility_focused_id)
+}
+
 // -------------------------------------------------------------------
 
 // AccessibilityAction
@@ -60781,6 +62828,106 @@ inline void AccessibilityAction::_internal_set_request_id(uint32_t value) {
 inline void AccessibilityAction::set_request_id(uint32_t value) {
   _internal_set_request_id(value);
   // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.request_id)
+}
+
+// int32 selection_start = 7;
+inline void AccessibilityAction::clear_selection_start() {
+  _impl_.selection_start_ = 0;
+}
+inline int32_t AccessibilityAction::_internal_selection_start() const {
+  return _impl_.selection_start_;
+}
+inline int32_t AccessibilityAction::selection_start() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAction.selection_start)
+  return _internal_selection_start();
+}
+inline void AccessibilityAction::_internal_set_selection_start(int32_t value) {
+  
+  _impl_.selection_start_ = value;
+}
+inline void AccessibilityAction::set_selection_start(int32_t value) {
+  _internal_set_selection_start(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.selection_start)
+}
+
+// int32 selection_end = 8;
+inline void AccessibilityAction::clear_selection_end() {
+  _impl_.selection_end_ = 0;
+}
+inline int32_t AccessibilityAction::_internal_selection_end() const {
+  return _impl_.selection_end_;
+}
+inline int32_t AccessibilityAction::selection_end() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAction.selection_end)
+  return _internal_selection_end();
+}
+inline void AccessibilityAction::_internal_set_selection_end(int32_t value) {
+  
+  _impl_.selection_end_ = value;
+}
+inline void AccessibilityAction::set_selection_end(int32_t value) {
+  _internal_set_selection_end(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.selection_end)
+}
+
+// float progress = 9;
+inline void AccessibilityAction::clear_progress() {
+  _impl_.progress_ = 0;
+}
+inline float AccessibilityAction::_internal_progress() const {
+  return _impl_.progress_;
+}
+inline float AccessibilityAction::progress() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAction.progress)
+  return _internal_progress();
+}
+inline void AccessibilityAction::_internal_set_progress(float value) {
+  
+  _impl_.progress_ = value;
+}
+inline void AccessibilityAction::set_progress(float value) {
+  _internal_set_progress(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.progress)
+}
+
+// int32 row = 10;
+inline void AccessibilityAction::clear_row() {
+  _impl_.row_ = 0;
+}
+inline int32_t AccessibilityAction::_internal_row() const {
+  return _impl_.row_;
+}
+inline int32_t AccessibilityAction::row() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAction.row)
+  return _internal_row();
+}
+inline void AccessibilityAction::_internal_set_row(int32_t value) {
+  
+  _impl_.row_ = value;
+}
+inline void AccessibilityAction::set_row(int32_t value) {
+  _internal_set_row(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.row)
+}
+
+// int32 column = 11;
+inline void AccessibilityAction::clear_column() {
+  _impl_.column_ = 0;
+}
+inline int32_t AccessibilityAction::_internal_column() const {
+  return _impl_.column_;
+}
+inline int32_t AccessibilityAction::column() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAction.column)
+  return _internal_column();
+}
+inline void AccessibilityAction::_internal_set_column(int32_t value) {
+  
+  _impl_.column_ = value;
+}
+inline void AccessibilityAction::set_column(int32_t value) {
+  _internal_set_column(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.column)
 }
 
 // -------------------------------------------------------------------
@@ -76011,6 +78158,154 @@ inline ::dsa::control::v1::AccessibilityActionResult* Envelope::mutable_accessib
   return _msg;
 }
 
+// .dsa.control.v1.AccessibilityListening accessibility_listening = 84;
+inline bool Envelope::_internal_has_accessibility_listening() const {
+  return body_case() == kAccessibilityListening;
+}
+inline bool Envelope::has_accessibility_listening() const {
+  return _internal_has_accessibility_listening();
+}
+inline void Envelope::set_has_accessibility_listening() {
+  _impl_._oneof_case_[0] = kAccessibilityListening;
+}
+inline void Envelope::clear_accessibility_listening() {
+  if (_internal_has_accessibility_listening()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.body_.accessibility_listening_;
+    }
+    clear_has_body();
+  }
+}
+inline ::dsa::control::v1::AccessibilityListening* Envelope::release_accessibility_listening() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.Envelope.accessibility_listening)
+  if (_internal_has_accessibility_listening()) {
+    clear_has_body();
+    ::dsa::control::v1::AccessibilityListening* temp = _impl_.body_.accessibility_listening_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.body_.accessibility_listening_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::dsa::control::v1::AccessibilityListening& Envelope::_internal_accessibility_listening() const {
+  return _internal_has_accessibility_listening()
+      ? *_impl_.body_.accessibility_listening_
+      : reinterpret_cast< ::dsa::control::v1::AccessibilityListening&>(::dsa::control::v1::_AccessibilityListening_default_instance_);
+}
+inline const ::dsa::control::v1::AccessibilityListening& Envelope::accessibility_listening() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.Envelope.accessibility_listening)
+  return _internal_accessibility_listening();
+}
+inline ::dsa::control::v1::AccessibilityListening* Envelope::unsafe_arena_release_accessibility_listening() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:dsa.control.v1.Envelope.accessibility_listening)
+  if (_internal_has_accessibility_listening()) {
+    clear_has_body();
+    ::dsa::control::v1::AccessibilityListening* temp = _impl_.body_.accessibility_listening_;
+    _impl_.body_.accessibility_listening_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void Envelope::unsafe_arena_set_allocated_accessibility_listening(::dsa::control::v1::AccessibilityListening* accessibility_listening) {
+  clear_body();
+  if (accessibility_listening) {
+    set_has_accessibility_listening();
+    _impl_.body_.accessibility_listening_ = accessibility_listening;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.Envelope.accessibility_listening)
+}
+inline ::dsa::control::v1::AccessibilityListening* Envelope::_internal_mutable_accessibility_listening() {
+  if (!_internal_has_accessibility_listening()) {
+    clear_body();
+    set_has_accessibility_listening();
+    _impl_.body_.accessibility_listening_ = CreateMaybeMessage< ::dsa::control::v1::AccessibilityListening >(GetArenaForAllocation());
+  }
+  return _impl_.body_.accessibility_listening_;
+}
+inline ::dsa::control::v1::AccessibilityListening* Envelope::mutable_accessibility_listening() {
+  ::dsa::control::v1::AccessibilityListening* _msg = _internal_mutable_accessibility_listening();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.Envelope.accessibility_listening)
+  return _msg;
+}
+
+// .dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;
+inline bool Envelope::_internal_has_accessibility_announcement() const {
+  return body_case() == kAccessibilityAnnouncement;
+}
+inline bool Envelope::has_accessibility_announcement() const {
+  return _internal_has_accessibility_announcement();
+}
+inline void Envelope::set_has_accessibility_announcement() {
+  _impl_._oneof_case_[0] = kAccessibilityAnnouncement;
+}
+inline void Envelope::clear_accessibility_announcement() {
+  if (_internal_has_accessibility_announcement()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.body_.accessibility_announcement_;
+    }
+    clear_has_body();
+  }
+}
+inline ::dsa::control::v1::AccessibilityAnnouncement* Envelope::release_accessibility_announcement() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.Envelope.accessibility_announcement)
+  if (_internal_has_accessibility_announcement()) {
+    clear_has_body();
+    ::dsa::control::v1::AccessibilityAnnouncement* temp = _impl_.body_.accessibility_announcement_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.body_.accessibility_announcement_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::dsa::control::v1::AccessibilityAnnouncement& Envelope::_internal_accessibility_announcement() const {
+  return _internal_has_accessibility_announcement()
+      ? *_impl_.body_.accessibility_announcement_
+      : reinterpret_cast< ::dsa::control::v1::AccessibilityAnnouncement&>(::dsa::control::v1::_AccessibilityAnnouncement_default_instance_);
+}
+inline const ::dsa::control::v1::AccessibilityAnnouncement& Envelope::accessibility_announcement() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.Envelope.accessibility_announcement)
+  return _internal_accessibility_announcement();
+}
+inline ::dsa::control::v1::AccessibilityAnnouncement* Envelope::unsafe_arena_release_accessibility_announcement() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:dsa.control.v1.Envelope.accessibility_announcement)
+  if (_internal_has_accessibility_announcement()) {
+    clear_has_body();
+    ::dsa::control::v1::AccessibilityAnnouncement* temp = _impl_.body_.accessibility_announcement_;
+    _impl_.body_.accessibility_announcement_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void Envelope::unsafe_arena_set_allocated_accessibility_announcement(::dsa::control::v1::AccessibilityAnnouncement* accessibility_announcement) {
+  clear_body();
+  if (accessibility_announcement) {
+    set_has_accessibility_announcement();
+    _impl_.body_.accessibility_announcement_ = accessibility_announcement;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.Envelope.accessibility_announcement)
+}
+inline ::dsa::control::v1::AccessibilityAnnouncement* Envelope::_internal_mutable_accessibility_announcement() {
+  if (!_internal_has_accessibility_announcement()) {
+    clear_body();
+    set_has_accessibility_announcement();
+    _impl_.body_.accessibility_announcement_ = CreateMaybeMessage< ::dsa::control::v1::AccessibilityAnnouncement >(GetArenaForAllocation());
+  }
+  return _impl_.body_.accessibility_announcement_;
+}
+inline ::dsa::control::v1::AccessibilityAnnouncement* Envelope::mutable_accessibility_announcement() {
+  ::dsa::control::v1::AccessibilityAnnouncement* _msg = _internal_mutable_accessibility_announcement();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.Envelope.accessibility_announcement)
+  return _msg;
+}
+
 // .dsa.control.v1.AudioOutputOpen audio_output_open = 100;
 inline bool Envelope::_internal_has_audio_output_open() const {
   return body_case() == kAudioOutputOpen;
@@ -83793,6 +86088,16 @@ inline Envelope::BodyCase Envelope::body_case() const {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
