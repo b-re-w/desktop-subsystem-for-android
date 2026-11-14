@@ -868,13 +868,14 @@ class AccessibilityExport(
             while (next < nodes.size) {
                 val place = next
                 val node = nodes[place]
-                val children = try {
+                val real = try {
                     asker.ask { node.handle.children() }
                 } catch (e: Busy) {
                     throw e
                 } catch (e: Exception) {
                     emptyList()
-                } + AddedNode.of(node.handle, node.info)
+                }
+                val children = real + AddedNode.of(node.handle, node.info)
                 for (child in children) {
                     if (seen.size >= MAX_NODES || bytes >= MAX_TREE_BYTES) {
                         truncated = true

@@ -430,7 +430,7 @@ impl ITextRangeProvider_Impl for TextRange_Impl {
             }
         };
         let haystack = fold(&all[start..end]);
-        let needle = fold(text.as_wide());
+        let needle = fold(&text.to_string().encode_utf16().collect::<Vec<u16>>());
         if needle.is_empty() || needle.len() > haystack.len() || haystack.len() != end - start {
             return none();
         }

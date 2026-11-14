@@ -695,11 +695,10 @@ impl IRawElementProviderAdviseEvents_Impl for RootProvider_Impl {
         _: *const SAFEARRAY,
     ) -> windows::core::Result<()> {
         if event == UIA_AutomationFocusChangedEventId {
-            let _ = self.shared.focus_listeners.fetch_update(
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-                |count| Some((count - 1).max(0)),
-            );
+            // A removal UI Automation reports twice never leaves the count below none.
+            if self.shared.focus_listeners.fetch_sub(1, Ordering::Relaxed) <= 0 {
+                self.shared.focus_listeners.store(0, Ordering::Relaxed);
+            }
         }
         Ok(())
     }
@@ -2024,8 +2023,8 @@ mod tests {
         );
         assert_eq!(control_type::WINDOW, UIA_WindowControlTypeId.0);
         assert_eq!(control_type::HYPERLINK, UIA_HyperlinkControlTypeId.0);
-        assert_eq!(HeadingLevel_None, 80050);
-        assert_eq!(HeadingLevel2, 80052);
+        assert_eq!(HeadingLevel_None.0, 80050);
+        assert_eq!(HeadingLevel2.0, 80052);
         assert_eq!(ScrollAmount_LargeIncrement.0, 3);
         assert_eq!(ScrollAmount_SmallDecrement.0, 1);
     }
@@ -2241,7 +2240,7 @@ mod tests {
         ApiConnect,
         dsa_host_core::host_api_conformance::RunningService,
     ) {
-        use dsa_host_core::host_api::UserAndroids;
+        use dsa_host_core::host_api::{UserAndroid, UserAndroids};
         use dsa_host_core::host_api_conformance::{FakeAndroids, RunningService};
         let (listener, connector) = dsa_transport::local::pair();
         let androids = Arc::new(FakeAndroids::default());

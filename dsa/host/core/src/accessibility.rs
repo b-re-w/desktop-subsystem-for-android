@@ -1019,7 +1019,8 @@ impl Tree {
             }
         }
         changes.roots_changed = update.full || update.roots != self.roots;
-        let client_focus = self.next_client_focus(&update);
+        let client_focus =
+            self.next_client_focus(update.full, update.focused, update.accessibility_focused);
         if client_focus != self.client_focus || (update.full && client_focus.is_some()) {
             changes.focus = client_focus;
         }
@@ -1037,18 +1038,21 @@ impl Tree {
 
     /// The client focus once `update` is applied: the focus that moved (the input focus when
     /// both did), else the one that still holds the node it held, else whichever there is.
-    fn next_client_focus(&self, update: &TreeUpdate) -> Option<u32> {
-        let (input, access) = (update.focused, update.accessibility_focused);
-        let input_moved = input.is_some() && (update.full || input != self.focused);
-        let access_moved =
-            access.is_some() && (update.full || access != self.accessibility_focused);
+    fn next_client_focus(
+        &self,
+        full: bool,
+        input: Option<u32>,
+        access: Option<u32>,
+    ) -> Option<u32> {
+        let input_moved = input.is_some() && (full || input != self.focused);
+        let access_moved = access.is_some() && (full || access != self.accessibility_focused);
         if input_moved {
             return input;
         }
         if access_moved {
             return access;
         }
-        let kept = (!update.full)
+        let kept = (!full)
             .then_some(self.client_focus)
             .flatten()
             .filter(|id| Some(*id) == input || Some(*id) == access);
