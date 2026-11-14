@@ -109,9 +109,9 @@ use crate::settings::{Settings, SettingsStore};
 use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
-    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, PinShortcutRequest,
-    StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest, TaskRequestError,
-    TaskWatch,
+    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, LaunchPlacement,
+    PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest,
+    TaskRequestError, TaskWatch,
 };
 use crate::touch_gestures::TouchGesturesState;
 use crate::update::alerts::{self as update_alerts, UpdateAlert};
@@ -5226,6 +5226,16 @@ impl HostApiService {
                     recreate: density.recreate,
                 },
             ),
+            Some(request::Body::LaunchPlacement(placement)) => self.request(
+                peer,
+                TaskRequest::PlaceLaunches(LaunchPlacement {
+                    density_dpi: placement.density_dpi,
+                    width: placement.width,
+                    height: placement.height,
+                    monitor_width: placement.monitor_width,
+                    monitor_height: placement.monitor_height,
+                }),
+            ),
             Some(request::Body::SetTaskCaption(caption)) => self.request(
                 peer,
                 TaskRequest::SetCaption {
@@ -5312,6 +5322,7 @@ impl HostApiService {
                         | request::Body::LaunchApp(_)
                         | request::Body::ResizeTask(_)
                         | request::Body::SetTaskDensity(_)
+                        | request::Body::LaunchPlacement(_)
                         | request::Body::SetTaskCaption(_)
                         | request::Body::SetTaskFullScreen(_)
                         | request::Body::SetWindowsShown(_)
@@ -7840,6 +7851,18 @@ impl HostApiClient {
         }))
     }
 
+    /// Tells the caller's Android which monitor the window of the next task it starts opens
+    /// on, so the task starts at that monitor's density and size there.
+    pub fn place_launches(&mut self, placement: &LaunchPlacement) -> Result<(), ClientError> {
+        self.done(request::Body::LaunchPlacement(types::LaunchPlacement {
+            density_dpi: placement.density_dpi,
+            width: placement.width,
+            height: placement.height,
+            monitor_width: placement.monitor_width,
+            monitor_height: placement.monitor_height,
+        }))
+    }
+
     /// Asks the caller's Android to give a task a top inset of `height` pixels, which its
     /// window's title bar covers.
     pub fn set_task_caption(
@@ -7899,6 +7922,7 @@ impl HostApiClient {
             TaskRequest::SetFullScreen { task_id, in_window } => {
                 self.set_task_full_screen(*task_id, *in_window)
             }
+            TaskRequest::PlaceLaunches(placement) => self.place_launches(placement),
             TaskRequest::WindowsShown { shown } => self.set_windows_shown(*shown),
             TaskRequest::TasksShown { task_ids } => self.set_tasks_shown(task_ids),
             TaskRequest::StopApp { package_name } => self.stop_app(package_name),

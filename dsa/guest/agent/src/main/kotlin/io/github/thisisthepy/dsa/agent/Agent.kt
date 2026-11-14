@@ -804,6 +804,18 @@ class Agent(
                 fullScreenHolds.hostSays(result.taskId, result.inWindow)
                 requestRefresh()
             }
+            is RequestResult.Placement -> {
+                val placement = result.placement
+                log.info(
+                    if (placement == null) {
+                        "new tasks start at Android's own density"
+                    } else {
+                        "new tasks start at ${placement.densityDpi} dpi within " +
+                            "${placement.room.width}x${placement.room.height}"
+                    },
+                )
+                arranger.placeLaunches(placement)
+            }
             is RequestResult.SizeRefused -> log.warn("did not resize task ${result.taskId}: ${result.reason}")
             is RequestResult.Malformed -> log.warn("dropped a frame: ${result.reason}")
             is RequestResult.NotForTheAgent -> Unit
@@ -1114,7 +1126,11 @@ class Agent(
         if (!channel.connected) return
         val placedTasks = running.map { task ->
             val placed = bounds[task.taskId]
-            val moved = if (placed == null || placed == task.bounds) task else task.copy(bounds = placed)
+            // A new task being given its window's monitor's density is reported at it, with
+            // the bounds it is going to, so its window opens at that size 1:1.
+            val density = arranger.densityToReport(task.taskId, task.densityDpi)
+            val dense = if (density == task.densityDpi) task else task.copy(densityDpi = density)
+            val moved = if (placed == null || placed == task.bounds) dense else dense.copy(bounds = placed)
             val controls = captions.controls(moved.taskId, moved.bounds, moved.transparentCaption, exclusion)
             if (controls.isEmpty()) moved else moved.copy(captionInteractive = controls)
         }

@@ -34,7 +34,7 @@ use std::time::{Duration, Instant};
 
 use super::task_windows::{fit_within, window_size};
 pub use crate::app_windows::ScalingMode;
-use crate::tasks::{Bounds, Task, TaskRequest};
+use crate::tasks::{Bounds, LaunchPlacement, Task, TaskRequest};
 
 /// How large a window shows each of its task's pixels: `.0` window pixels per `.1` task
 /// pixels, in lowest terms. `(1, 1)` is 1:1.
@@ -175,6 +175,26 @@ pub fn density_for_dpi(dpi: u32) -> u32 {
     let density = (u64::from(dpi) * u64::from(DENSITY_PER_SCALE) + u64::from(BASE_DPI) / 2)
         / u64::from(BASE_DPI);
     (density & !1).min(u64::from(u32::MAX - 1)) as u32
+}
+
+/// What the guest needs, before it starts a task, to start it at the density and size of the
+/// monitor its window will open on: a monitor of `dpi` whose work area is `work` pixels and
+/// whole area `monitor` pixels, where a task window's frame takes `frame` pixels in each
+/// direction. The task's window opens at the task's size, 1:1, so the task is kept within the
+/// largest client area a window has there.
+pub fn launch_placement(
+    dpi: u32,
+    work: (u32, u32),
+    frame: (u32, u32),
+    monitor: (u32, u32),
+) -> LaunchPlacement {
+    LaunchPlacement {
+        density_dpi: density_for_dpi(dpi),
+        width: work.0.saturating_sub(frame.0).max(1),
+        height: work.1.saturating_sub(frame.1).max(1),
+        monitor_width: monitor.0,
+        monitor_height: monitor.1,
+    }
 }
 
 /// `dp` density-independent pixels of an app drawn at `density`, in pixels, rounded to the
@@ -596,8 +616,25 @@ impl WindowSizing {
     ///
     /// A task that keeps its density opens at the same size to the eye: its window shows it
     /// scaled, and no density is asked for.
+    ///
+    /// Opening is not a move that ended, so the density request never has the guest recreate
+    /// the task's activity: the guest starts a task at the density and size of the monitor its
+    /// window opens on ([`crate::tasks::LaunchPlacement`]), and a task it could not start that
+    /// way takes the density as a plain change, which an app that handles one redraws at.
+    /// Recreating an app right after it opens would show it starting twice.
     pub fn opened(&mut self, dpi: u32) -> ((u32, u32), Option<TaskRequest>) {
-        let request = self.dpi_changed(dpi);
+        let request = self.dpi_changed(dpi).map(|request| match request {
+            TaskRequest::SetDensity {
+                task_id,
+                density_dpi,
+                ..
+            } => TaskRequest::SetDensity {
+                task_id,
+                density_dpi,
+                recreate: false,
+            },
+            other => other,
+        });
         let size = rescale(self.guest, self.density, density_for_dpi(dpi));
         let size = match self.max_client_size() {
             Some(max) => fit_within(size, max),
@@ -1720,7 +1757,10 @@ mod tests {
     #[test]
     fn fr4_the_first_scale_a_window_reports_is_where_it_opened() {
         let mut sizing = WindowSizing::new(&task(400, 300, 130));
-        assert_eq!(sizing.dpi_reported(192), (Some((806, 605)), density(262)));
+        assert_eq!(
+            sizing.dpi_reported(192),
+            (Some((806, 605)), opening_density(262))
+        );
         // The window reports its new size; the task is asked for it.
         assert_eq!(
             sizing.view_resized((806, 605), Instant::now()),
@@ -1736,13 +1776,67 @@ mod tests {
     #[test]
     fn fr4_a_window_opens_at_its_monitors_scale() {
         let mut on_200 = WindowSizing::new(&task(548, 974, 130));
-        assert_eq!(on_200.opened(192), ((607, 1080), density(262)));
+        assert_eq!(on_200.opened(192), ((607, 1080), opening_density(262)));
         let mut on_100 = WindowSizing::new(&task(548, 974, 130));
         assert_eq!(on_100.opened(96), ((548, 974), None));
         let mut on_150 = WindowSizing::new(&task(400, 300, 130));
-        assert_eq!(on_150.opened(144), ((603, 452), density(196)));
+        assert_eq!(on_150.opened(144), ((603, 452), opening_density(196)));
         // A task whose density the agent could not read keeps its size.
         let mut unknown = WindowSizing::new(&task(400, 300, 0));
-        assert_eq!(unknown.opened(192), ((400, 300), density(262)));
+        assert_eq!(unknown.opened(192), ((400, 300), opening_density(262)));
+    }
+
+    /// The density a window that opened asks for: a plain change, no recreate.
+    fn opening_density(density_dpi: u32) -> Option<TaskRequest> {
+        Some(TaskRequest::SetDensity {
+            task_id: 7,
+            density_dpi,
+            recreate: false,
+        })
+    }
+
+    #[test]
+    fn fr4_an_app_is_not_recreated_right_after_it_opens() {
+        // The guest could not start the task at the 125% monitor's density: the window that
+        // opens there asks for it as a plain change, never with the activity recreated.
+        let mut sizing = WindowSizing::new(&task(1247, 745, 262));
+        let (_, request) = sizing.dpi_reported(120);
+        assert_eq!(request, opening_density(164));
+        // A real move afterwards still recreates it once, as before.
+        let mut sizing = WindowSizing::new(&task(1247, 745, 262));
+        sizing.dpi_reported(192);
+        assert_eq!(sizing.dpi_changed(120), density(164));
+    }
+
+    #[test]
+    fn fr4_a_launch_names_the_density_and_room_of_the_monitor_it_opens_on() {
+        // A 125% monitor of 2560x1440 whose taskbar takes 60 pixels, with a frame of 16 by 9.
+        assert_eq!(
+            launch_placement(120, (2560, 1380), (16, 9), (2560, 1440)),
+            LaunchPlacement {
+                density_dpi: 164,
+                width: 2544,
+                height: 1371,
+                monitor_width: 2560,
+                monitor_height: 1440,
+            }
+        );
+        // A monitor that reports no DPI counts as 100%.
+        assert_eq!(
+            launch_placement(0, (8, 8), (16, 9), (8, 8)).density_dpi,
+            130
+        );
+        assert_eq!(launch_placement(0, (8, 8), (16, 9), (8, 8)).width, 1);
+    }
+
+    #[test]
+    fn fr4_an_app_opened_on_another_monitor_starts_at_that_monitors_density() {
+        // The guest started the task at the density of the 125% monitor its window opens on
+        // (164 dpi) and at its size there: the window opens at that size, 1:1, and nothing is
+        // asked of the guest, so the app's first frame is already right.
+        let mut sizing = WindowSizing::new(&task(780, 466, 164));
+        assert_eq!(sizing.dpi_reported(120), (None, None));
+        assert_eq!(sizing.scale(), (1, 1));
+        assert_eq!(sizing.view_resized((780, 466), Instant::now()), None);
     }
 }
