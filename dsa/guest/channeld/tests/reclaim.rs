@@ -18,11 +18,8 @@ fn memory(free: u64, cached: u64) -> MemInfo {
     MemInfo {
         mem_total_kb: 4096 * MIB,
         mem_free_kb: free * MIB,
-        buffers_kb: 0,
         cached_kb: cached * MIB,
-        shmem_kb: 0,
-        slab_reclaimable_kb: 0,
-        anon_pages_kb: 0,
+        ..MemInfo::default()
     }
 }
 
@@ -439,6 +436,82 @@ fn nfr1_file_refaults_raise_the_working_set_target_and_hold_the_trim() {
         reclaimer.decide_under(secs(30), 1, &cache, false),
         Some(Reason::Gradual)
     );
+}
+
+#[test]
+fn nfr1_the_log_says_what_each_reclaim_step_returned() {
+    use dsa_guest_channeld::reclaim::{reclaim_outcome_line, ReclaimReading};
+    let parsed = MemInfo::parse(
+        "MemFree: 100 kB\nSUnreclaim:  106496 kB\nSwapTotal: 1009664 kB\nSwapFree: 450560 kB\n",
+    );
+    assert_eq!(parsed.slab_unreclaimable_kb, 104 * MIB);
+    assert_eq!(parsed.swap_total_kb - parsed.swap_free_kb, 546 * MIB);
+    // Five minutes after a 4K video ended: 451 MiB of page cache, 104 MiB of unreclaimable
+    // slab, 546 MiB swapped out in 119 MiB of zram.
+    let before = ReclaimReading {
+        memory: MemInfo {
+            mem_free_kb: 300 * MIB,
+            cached_kb: 451 * MIB,
+            slab_reclaimable_kb: 60 * MIB,
+            ..parsed
+        },
+        zram: Some((536 * MIB, 119 * MIB)),
+        reported_kb: Some(200 * MIB),
+    };
+    let after = ReclaimReading {
+        memory: MemInfo {
+            mem_free_kb: 790 * MIB,
+            cached_kb: 20 * MIB,
+            slab_reclaimable_kb: 18 * MIB,
+            slab_unreclaimable_kb: 100 * MIB,
+            ..parsed
+        },
+        zram: Some((536 * MIB, 101 * MIB)),
+        reported_kb: Some(780 * MIB),
+    };
+    let line = reclaim_outcome_line("the reclaim (AppClosed)", &before, &after, secs(1));
+    assert_eq!(
+        line,
+        "the reclaim (AppClosed) returned in 1000 ms: free 300 -> 790 MiB; page cache 451 -> 20 \
+         MiB; reclaimable kernel caches 60 -> 18 MiB; unreclaimable kernel caches 104 -> 100 MiB; \
+         app memory 0 -> 0 MiB; swapped 546 -> 546 MiB; zram 536 MiB in 119 -> 536 MiB in 101; \
+         taken back by the host 200 -> 780 MiB"
+    );
+    // What cannot be read is left out rather than shown as zero.
+    let unread = ReclaimReading {
+        zram: None,
+        reported_kb: None,
+        ..after
+    };
+    let line = reclaim_outcome_line("the working set trim", &before, &unread, secs(0));
+    assert!(!line.contains("zram"), "{line}");
+    assert!(!line.contains("taken back"), "{line}");
+}
+
+#[test]
+fn nfr1_a_streaming_app_holds_the_trim_back_for_half_a_minute_at_most() {
+    // Two windows shown while a video streams: what it wrote to its cache comes back on every
+    // look, so the refaults never stop. The page cache stood at 849 MiB, past the 640 MiB two
+    // shown windows may keep.
+    let mut reclaimer = Reclaimer::new(ReclaimPolicy::default());
+    let cache = memory(1500, 900);
+    reclaimer.refaults(0);
+    let mut refaults = 0;
+    let mut look = |reclaimer: &mut Reclaimer, at: u64| {
+        refaults += 40 * MIB;
+        reclaimer.refaults(refaults);
+        reclaimer.decide_under(secs(at), 2, &cache, false)
+    };
+    for at in 0..6 {
+        assert_eq!(look(&mut reclaimer, at * 5), None, "look {at}");
+    }
+    // The seventh look trims anyway, down to the target the refaults raised, which never goes
+    // past what two shown windows may keep.
+    assert_eq!(look(&mut reclaimer, 30), Some(Reason::Gradual));
+    assert_eq!(reclaimer.working_set_target_kb(), 640 * MIB);
+    assert_eq!(reclaimer.trim_mib(), 900 - 640);
+    // And the hold starts again from nothing.
+    assert_eq!(look(&mut reclaimer, 35), None);
 }
 
 #[test]
