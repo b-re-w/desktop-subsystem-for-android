@@ -366,7 +366,15 @@ pub enum TaskRequest {
         live: bool,
     },
     /// The task's window is on a monitor of another scale: the task draws at this density.
-    SetDensity { task_id: i32, density_dpi: u32 },
+    /// With `recreate`, the window's move has ended and the guest recreates the task's top
+    /// activity at the new density (restoring its saved state), even when the app says it
+    /// handles a change of density itself: some apps that say so lay out only part of their
+    /// screen again and leave the rest at the old density.
+    SetDensity {
+        task_id: i32,
+        density_dpi: u32,
+        recreate: bool,
+    },
     /// The task's window draws its title bar over the top `height` pixels of the task: the
     /// task gets a top system bar inset of that height. 0 removes it. `start_width` and
     /// `end_width` are how far the window's icon and its caption buttons reach into the band
@@ -433,7 +441,13 @@ impl TaskRequest {
             TaskRequest::SetDensity {
                 task_id,
                 density_dpi,
+                recreate: false,
             } => format!("draw task {task_id} at {density_dpi} dpi"),
+            TaskRequest::SetDensity {
+                task_id,
+                density_dpi,
+                recreate: true,
+            } => format!("draw task {task_id} at {density_dpi} dpi and recreate its activity"),
             TaskRequest::SetCaption {
                 task_id, height, ..
             } => format!("give task {task_id} a title bar inset of {height} pixels"),
@@ -985,12 +999,14 @@ mod tests {
         let density = TaskRequest::SetDensity {
             task_id: 1,
             density_dpi: 320,
+            recreate: true,
         };
         let requests = vec![
             resize(1, 500),
             TaskRequest::SetDensity {
                 task_id: 1,
                 density_dpi: 240,
+                recreate: true,
             },
             density.clone(),
             resize(1, 1000),

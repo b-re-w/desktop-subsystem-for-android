@@ -3138,9 +3138,11 @@ impl Session {
             TaskRequest::SetDensity {
                 task_id,
                 density_dpi,
+                recreate,
             } => Body::SetTaskDensity(control::SetTaskDensity {
                 task_id,
                 density_dpi,
+                recreate,
             }),
             TaskRequest::SetCaption {
                 task_id,

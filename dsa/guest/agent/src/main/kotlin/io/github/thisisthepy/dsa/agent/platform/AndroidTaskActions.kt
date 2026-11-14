@@ -31,6 +31,7 @@ class AndroidTaskActions(
 ) : TaskActions {
     private val themes = FullScreenThemes(context, log)
     private var warnedNoDensity = false
+    private var warnedNoRecreate = false
     private var warnedNoInsets = false
 
     /** Owns the inset sources the agent gives tasks, which name their owner. */
@@ -223,6 +224,41 @@ class AndroidTaskActions(
         if (densityDpi != null) clear += "setDensityDpi" to listOf(densityDpi)
         if (!noScreenOverrides && applyTransaction(taskId, bounds, clear, ::warnNoScreenOverrides)) return ResizeOutcome.APPLIED
         return resizeTask(taskId, bounds, densityDpi)
+    }
+
+    /**
+     * Has Android recreate the shown activities of [packageName] through
+     * IActivityManager.scheduleApplicationInfoChanged, the call the framework makes when an
+     * app's resource overlays change (it needs CHANGE_CONFIGURATION). The window manager gives
+     * the app's activities a new asset sequence, a configuration change no app can say it
+     * handles, so each shown activity is relaunched with its window kept and its saved state
+     * restored, while its process goes on (playback and connections survive). An activity
+     * that is not shown is recreated when it is shown next. It reaches every task of the
+     * package, not only [taskId]: they share the app's resources.
+     */
+    override fun recreateActivities(taskId: Int, packageName: String): Boolean = try {
+        val manager = Class.forName("android.app.ActivityManager").getMethod("getService").invoke(null)
+        val userId = android.os.UserHandle::class.java.getMethod("getIdentifier")
+            .invoke(android.os.Process.myUserHandle()) as Int
+        Class.forName("android.app.IActivityManager")
+            .getMethod("scheduleApplicationInfoChanged", List::class.java, Int::class.javaPrimitiveType)
+            .invoke(manager, listOf(packageName), userId)
+        true
+    } catch (e: ReflectiveOperationException) {
+        warnNoRecreate(e)
+        false
+    } catch (e: LinkageError) {
+        warnNoRecreate(e)
+        false
+    } catch (e: RuntimeException) {
+        warnNoRecreate(e)
+        false
+    }
+
+    private fun warnNoRecreate(error: Throwable) {
+        if (warnedNoRecreate) return
+        warnedNoRecreate = true
+        log.warn("could not have the framework recreate an app's activities; an app redraws a new density on its own", error)
     }
 
     /**

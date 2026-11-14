@@ -2098,13 +2098,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Who adjusts this app when its window moves to a monitor of another scale.\n• App: the app redraws at the new scale, so text stays sharp. Some apps redraw briefly as they move, keeping their state.\n• System: DSA scales the window to the same size. Text can look a little blurry.\n• Automatic: App for apps that say they handle it, System for the rest.\nAutomatic and System never restart the app."
+            "value": "Who adjusts this app when its window moves to a monitor of another scale.\n• App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, so text stays sharp; it redraws briefly, keeping its state.\n• System: DSA scales the window to the same size, and never recreates the app. Text can look a little blurry.\n• Automatic: App, for every app."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 앱의 창이 배율이 다른 모니터로 갈 때 누가 크기를 맞출지 정합니다.\n• 앱: 앱이 새 배율로 다시 그려 글자가 선명합니다. 일부 앱은 옮길 때 상태를 지킨 채 잠깐 다시 그려집니다.\n• 시스템: DSA가 창을 같은 크기로 늘이거나 줄입니다. 글자가 조금 흐려질 수 있습니다.\n• 자동: 직접 처리한다고 밝힌 앱은 앱, 나머지는 시스템을 씁니다.\n자동과 시스템은 앱을 재시작하지 않습니다."
+            "value": "이 앱의 창이 배율이 다른 모니터로 갈 때 누가 크기를 맞출지 정합니다.\n• 앱: 창을 끄는 동안에는 DSA가 창을 늘이거나 줄입니다. 손을 떼면 앱이 새 배율로 다시 그려 글자가 선명합니다. 상태를 지킨 채 잠깐 다시 그려집니다.\n• 시스템: DSA가 창을 같은 크기로 늘이거나 줄이고, 앱을 다시 만들지 않습니다. 글자가 조금 흐려질 수 있습니다.\n• 자동: 모든 앱에 앱을 씁니다."
           }
         }
       }

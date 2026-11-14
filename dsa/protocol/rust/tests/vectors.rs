@@ -181,6 +181,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             wrap(Body::SetTaskDensity(SetTaskDensity {
                 task_id: 42,
                 density_dpi: 240,
+                recreate: false,
             })),
         ),
         (
