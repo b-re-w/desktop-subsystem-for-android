@@ -82,6 +82,14 @@ DSA_GFX_EXPORT int dsa_gfx_simulate_device_loss(void);
 DSA_GFX_EXPORT uint64_t dsa_gfx_device_generation(void);
 DSA_GFX_EXPORT uint64_t dsa_gfx_device_losses(void);
 
+/* gfxstream renderer features to set beside the backend's own, as a comma-separated list of
+ * `Name:enabled` or `Name:disabled` (gfxstream's STREAM_RENDERER_PARAM_RENDERER_FEATURES).
+ * The embedder sets them before dsa_gfx_init for the Vulkan implementation it chose: on Dozen
+ * (Vulkan on Direct3D 12) without VK_EXT_external_memory_host it turns
+ * VulkanAllocateHostMemory off. Returns 0, or -1 when the renderer is already running or the
+ * list is too long. NULL or "" clears them. */
+DSA_GFX_EXPORT int dsa_gfx_set_renderer_features(const char* features);
+
 /* Initializes the host gfxstream renderer (Vulkan only, surfaceless). */
 DSA_GFX_EXPORT int dsa_gfx_init(uint32_t width, uint32_t height);
 

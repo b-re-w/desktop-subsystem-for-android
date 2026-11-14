@@ -157,5 +157,6 @@ pub mod user_registry;
 pub mod video_decoder;
 pub mod vm;
 pub mod vm_listener;
+pub mod vulkan_driver;
 #[cfg(windows)]
 pub mod window_manager;

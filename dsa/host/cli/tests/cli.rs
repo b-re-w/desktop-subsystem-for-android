@@ -1007,6 +1007,92 @@ fn json_of(output: &Output) -> serde_json::Value {
 }
 
 #[test]
+fn pr3_dsa_settings_set_vulkan_driver_takes_auto_native_or_dozen() {
+    use dsa_cli::Change;
+    assert_eq!(
+        parse(&args("settings set vulkan-driver Dozen"))
+            .unwrap()
+            .change,
+        Some(Change::VulkanDriver("dozen".into()))
+    );
+    assert_eq!(
+        parse(&args("settings set vulkan-driver native"))
+            .unwrap()
+            .change,
+        Some(Change::VulkanDriver("native".into()))
+    );
+    assert_eq!(
+        parse(&args("settings set vulkan-driver auto"))
+            .unwrap()
+            .change,
+        Some(Change::VulkanDriver("auto".into()))
+    );
+    let refused = parse(&args("settings set vulkan-driver swiftshader")).unwrap_err();
+    assert!(refused.contains("dozen"), "{refused}");
+}
+
+#[test]
+fn pr3_the_settings_show_the_vulkan_driver_and_what_the_renderer_runs_on() {
+    use dsa_host_core::graphics_state::GraphicsState;
+    use dsa_host_core::host_api::SettingsReport;
+    let report = SettingsReport {
+        settings: dsa_host_core::settings::Settings {
+            vulkan_driver: "dozen".into(),
+            ..Default::default()
+        },
+        facts: Default::default(),
+        network: None,
+        adb_auto_connect_state: Default::default(),
+        touch_gestures: Default::default(),
+        graphics: GraphicsState::LayeredOnCpu("Microsoft Basic Render Driver".into()),
+        adb_shell_root: String::new(),
+        imported_certificates: Vec::new(),
+    };
+    let json = dsa_cli::settings_json(&report);
+    assert_eq!(json["vulkan_driver"], "dozen");
+    assert_eq!(json["graphics_state"], "dozen-cpu");
+    let line = dsa_cli::describe_settings(&report)
+        .lines()
+        .find(|line| line.starts_with("Vulkan driver:"))
+        .map(str::to_string)
+        .expect("a Vulkan driver line");
+    assert!(line.contains("dozen") && line.contains("CPU"), "{line}");
+    let none = dsa_cli::describe_graphics(&GraphicsState::Unavailable("install it".into()));
+    assert!(
+        none.contains("does not start") && none.contains("install it"),
+        "{none}"
+    );
+}
+
+#[test]
+fn pr3_dsa_gpus_lists_the_vulkan_devices_and_the_pack() {
+    let vulkan = serde_json::json!({
+        "devices": [
+            {"name": "Intel(R) Arc(TM) Graphics", "kind": "native", "cpu": false},
+            {"name": "Microsoft Direct3D12 (Intel(R) Arc(TM) Graphics)", "kind": "dozen", "cpu": false},
+            {"name": "Microsoft Direct3D12 (Microsoft Basic Render Driver)", "kind": "dozen", "cpu": true},
+        ],
+        "compatibility_pack": "C:\\Program Files\\WindowsApps\\Microsoft.D3DMappingLayers",
+        "auto": {"outcome": "native", "reason": "rendering on Intel(R) Arc(TM) Graphics"},
+        "native": {"outcome": "native", "reason": "rendering on Intel(R) Arc(TM) Graphics"},
+        "dozen": {"outcome": "dozen", "reason": "rendering through Dozen"},
+    });
+    let text = dsa_cli::describe_vulkan(&vulkan);
+    assert!(
+        text.contains("Intel(R) Arc(TM) Graphics (native driver)"),
+        "{text}"
+    );
+    assert!(text.contains("(Dozen (Vulkan on Direct3D 12))"), "{text}");
+    assert!(text.contains("(Dozen on the CPU)"), "{text}");
+    assert!(text.contains("Compatibility Pack: installed"), "{text}");
+    assert!(
+        text.contains("vulkan-driver dozen: rendering through Dozen"),
+        "{text}"
+    );
+    assert_eq!(dsa_cli::describe_vulkan(&serde_json::Value::Null), "");
+}
+
+#[test]
 fn fr17_dsa_settings_set_is_parsed() {
     use dsa_cli::Change;
     let invocation = parse(&args("settings set render-gpu discrete --json")).unwrap();
@@ -1147,6 +1233,7 @@ fn fr28_the_settings_list_the_root_certificates_found_and_where() {
         network: None,
         adb_auto_connect_state: Default::default(),
         touch_gestures: Default::default(),
+        graphics: Default::default(),
         adb_shell_root: String::new(),
         imported_certificates: vec![ImportedCertificate {
             subject: "CN=Filter Root, O=Example Filter".into(),
@@ -1184,6 +1271,7 @@ fn fr5_the_touch_gestures_line_says_why_it_cannot_be_used_and_is_hidden_without_
         network: None,
         adb_auto_connect_state: Default::default(),
         touch_gestures: state,
+        graphics: Default::default(),
         adb_shell_root: String::new(),
         imported_certificates: Vec::new(),
     };
@@ -3697,6 +3785,7 @@ fn fr15_settings_say_where_program_updates_come_from() {
         network: None,
         adb_auto_connect_state: Default::default(),
         touch_gestures: Default::default(),
+        graphics: Default::default(),
         adb_shell_root: String::new(),
         imported_certificates: Vec::new(),
     };
@@ -4196,6 +4285,7 @@ fn fr15_dsa_settings_chooses_whether_to_take_prereleases() {
         network: None,
         adb_auto_connect_state: Default::default(),
         touch_gestures: Default::default(),
+        graphics: Default::default(),
         adb_shell_root: String::new(),
         imported_certificates: Vec::new(),
     };
@@ -4229,6 +4319,7 @@ fn fr35_the_settings_apps_read_root_elevation_and_each_apps_level() {
         network: None,
         adb_auto_connect_state: Default::default(),
         touch_gestures: Default::default(),
+        graphics: Default::default(),
         adb_shell_root: String::new(),
         imported_certificates: Vec::new(),
     };

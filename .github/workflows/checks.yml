@@ -26,6 +26,11 @@ on:
         type: boolean
         required: false
         default: true
+      graphics_dozen:
+        description: "Graphics test: also run the Windows renderer on Dozen (Vulkan on Direct3D 12) over WARP"
+        type: boolean
+        required: false
+        default: false
       image:
         description: "Image test: make the guest image and boot it for the boot checks"
         type: boolean
@@ -102,6 +107,8 @@ jobs:
       contents: read
       actions: write
     uses: ./.github/workflows/test-graphics.yml
+    with:
+      dozen_on_warp: ${{ inputs.graphics_dozen }}
     secrets: inherit
 
   image:

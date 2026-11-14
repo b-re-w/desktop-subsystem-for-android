@@ -30,12 +30,13 @@ use windows_sys::Win32::System::ProcessStatus::{
 };
 use windows_sys::Win32::System::Threading::{GetCurrentProcess, TerminateProcess};
 
-use super::{report_gpu, request_of};
+use super::{report_gpu, report_vulkan_driver, request_of, vulkan_driver_of};
 use crate::compositor::adapter::{DisplayPresenter, DisplaySink, GfxstreamAdapter};
 use crate::guid::Guid;
 use crate::hvsocket::RawHvSocketListener;
 use crate::pipe::SameUserPipeConnector;
 use crate::vm_listener::{BindFn, VmBoundListener, VmIdSlot};
+use crate::vulkan_driver::{self, DriverOutcome};
 
 /// What the renderer calls itself in its handshake.
 pub fn build() -> String {
@@ -283,19 +284,67 @@ pub fn run(args: &[String]) -> ! {
         link.note(&why);
     }
 
-    let request = request_of(&start);
+    // Which Vulkan: a native driver, or Dozen from the Compatibility Pack where no GPU has
+    // one. What the choice needs of the Vulkan loader goes into this process's environment
+    // before gfxstream loads the loader, and nowhere else.
+    let vulkan = vulkan_driver_of(&start);
+    let found = vulkan_driver::look();
+    let plan = vulkan_driver::plan(vulkan, &found, &request_of(&start));
+    for (name, value) in &plan.env {
+        std::env::set_var(name, value);
+    }
+    let request = plan.request.clone().unwrap_or_else(|| request_of(&start));
     // `GFXSTREAM_BACKEND_PATH` names another backend library, as the renderer's tests do;
     // otherwise it is the one installed beside this program.
     let backend = std::env::var_os("GFXSTREAM_BACKEND_PATH")
         .map(std::path::PathBuf::from)
         .filter(|path| path.is_file());
-    let adapter = Arc::new(GfxstreamAdapter::on_gpu(backend, &request));
+    let adapter = Arc::new(if plan.outcome == DriverOutcome::None {
+        // Nothing to run on: gfxstream would only fail, or settle on a device that cannot
+        // take the windows' textures.
+        GfxstreamAdapter::without_backend(plan.reason.clone())
+    } else {
+        GfxstreamAdapter::on_gpu_with(backend, &request, &plan.features)
+    });
     let mut started = Started {
         process_id: std::process::id(),
         notes: adapter.notes().to_vec(),
         ..Started::default()
     };
-    report_gpu(&mut started, adapter.renderer_gpu().as_ref());
+    let gpu = adapter.renderer_gpu();
+    report_gpu(&mut started, gpu.as_ref());
+    let (outcome, reason) = if adapter.is_available() {
+        let outcome = vulkan_driver::outcome_for(
+            &plan,
+            &found,
+            gpu.as_ref().map(|gpu| gpu.name.as_str()),
+            gpu.as_ref().and_then(|gpu| gpu.luid),
+        );
+        let reason = if outcome == plan.outcome {
+            plan.reason.clone()
+        } else {
+            format!(
+                "{}; but gfxstream took {}, so it renders there",
+                plan.reason,
+                gpu.as_ref()
+                    .map_or("another device", |gpu| gpu.name.as_str())
+            )
+        };
+        (outcome, reason)
+    } else if plan.outcome == DriverOutcome::None {
+        (DriverOutcome::None, plan.reason.clone())
+    } else {
+        (
+            DriverOutcome::None,
+            format!(
+                "{}; but gfxstream could not start on it ({}); {}",
+                plan.reason,
+                adapter.notes().join("; "),
+                vulkan_driver::install_guidance()
+            ),
+        )
+    };
+    report_vulkan_driver(&mut started, outcome, &reason);
     let sink = Arc::new(RemoteSink::new(Arc::clone(&link)));
     let frame_path = if adapter.is_available() {
         match adapter.present_displays(Some(Arc::clone(&sink) as Arc<dyn DisplaySink>)) {

@@ -92,6 +92,7 @@ use crate::files::{self, FileAction, FileTransfer};
 use crate::gamepads::{GamepadEvent, GamepadInfo, GamepadRumble, GamepadState};
 use crate::gapps::{self, GappsPackage, GuestGapps};
 use crate::geocode::{self, GeocodeOutcome, GeocodeQuery};
+use crate::graphics_state::GraphicsState;
 use crate::guest_log::{DiagnosticsEvent, LogDumpEvent, LogEntry, LogFilter, LogWatch};
 use crate::ime::{ImeCursor, ImeEditor, ImeEvent};
 use crate::input::{InputEvent, PointerEvent};
@@ -1986,6 +1987,9 @@ pub struct SettingsReport {
     /// Whether the caller's window manager can turn the host's touch gestures off, as it last
     /// told the service. Unknown until it has, and from a service that does not report it.
     pub touch_gestures: TouchGesturesState,
+    /// What the caller's graphics renderer runs on, as their window manager last told the
+    /// service. Unknown until it has, and from a service that does not report it.
+    pub graphics: GraphicsState,
     /// How far `adb shell` may elevate to root: "off", "ask" or "remember" while developer
     /// mode is on, "unavailable" while root elevation is off, and empty while developer mode is
     /// off (adb is closed) or from a service that does not report it.
@@ -2383,6 +2387,8 @@ pub struct HostApiService {
     default_arm_translation: Option<DefaultArmTranslationSource>,
     /// What each user's window manager last said about the host's touch gestures, by user.
     touch_gestures: Mutex<HashMap<String, TouchGesturesState>>,
+    /// What each user's window manager last said its graphics renderer runs on, by user.
+    graphics: Mutex<HashMap<String, GraphicsState>>,
 }
 
 /// Says what the build of the image a user's Android starts from is, by user.
@@ -2427,6 +2433,7 @@ impl HostApiService {
             addon_change: Mutex::new(()),
             default_arm_translation: None,
             touch_gestures: Mutex::new(HashMap::new()),
+            graphics: Mutex::new(HashMap::new()),
         }
     }
 
@@ -5274,6 +5281,22 @@ impl HostApiService {
             Some(request::Body::ReportTouchGestures(report)) => {
                 self.report_touch_gestures(peer, report)
             }
+            Some(request::Body::ReportGraphics(report)) => self.report_graphics(peer, report),
+            // An Android with nothing to draw on would boot to empty windows and say nothing
+            // of why; the caller learns what to install instead.
+            Some(request::Body::StartSession(_))
+                if self.graphics_of(&peer.user).refuses_start().is_some() =>
+            {
+                let why = self
+                    .graphics_of(&peer.user)
+                    .refuses_start()
+                    .unwrap_or_default();
+                eprintln!(
+                    "local API: not starting the Android of {}: {why}",
+                    peer.user
+                );
+                error(ErrorCode::Unavailable, why)
+            }
             Some(request::Body::ActOnNotification(act)) => self.act_on_notification(peer, act),
             Some(request::Body::ReportPrintJob(report)) => self.report_print_job(peer, report),
             Some(request::Body::ReportGeocode(report)) => self.report_geocode(peer, report),
@@ -5405,6 +5428,7 @@ impl HostApiService {
                         | request::Body::WatchPasskeys(_)
                         | request::Body::ReportPasskeyCeremony(_)
                         | request::Body::ReportTouchGestures(_)
+                        | request::Body::ReportGraphics(_)
                         | request::Body::WatchGeocoding(_)
                         | request::Body::ReportGeocode(_)
                         | request::Body::WatchShares(_)
@@ -6607,11 +6631,53 @@ impl HostApiService {
                 wire.adb_auto_connect_state = self.adb_auto_connect_now(&peer.user);
                 wire.adb_shell_root = self.adb_shell_root_now(&peer.user, &settings);
                 self.touch_gestures_now(&peer.user, &mut wire);
+                self.graphics_now(&peer.user, &mut wire);
                 wire.imported_certificates = self.host_certificates_now(&peer.user);
                 response::Body::Settings(wire)
             }
             Err(why) => error(ErrorCode::Unavailable, why),
         }
+    }
+
+    /// What the caller's window manager last said its graphics renderer runs on, into `wire`.
+    fn graphics_now(&self, user: &str, wire: &mut types::Settings) {
+        let state = self.graphics_of(user);
+        wire.graphics_state = state.as_str().to_string();
+        wire.graphics_detail = state.detail().to_string();
+    }
+
+    /// What the window manager of `user` last said its graphics renderer runs on.
+    fn graphics_of(&self, user: &str) -> GraphicsState {
+        self.graphics
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(user)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Keeps what the caller's window manager says its graphics renderer runs on: for the
+    /// settings it reports next, and to keep an Android with nothing to draw on from starting.
+    fn report_graphics(&self, peer: &Peer, report: types::ReportGraphics) -> response::Body {
+        let state = GraphicsState::from_wire(&report.state, &report.detail);
+        let mut reports = self.graphics.lock().unwrap_or_else(|e| e.into_inner());
+        if reports.get(&peer.user) != Some(&state) {
+            eprintln!(
+                "local API: the graphics renderer of {} runs on {}: {}",
+                peer.user,
+                match &state {
+                    GraphicsState::Unknown => "something it does not say",
+                    GraphicsState::Native(_) => "a native Vulkan driver",
+                    GraphicsState::Layered(_) => "Dozen (Vulkan on Direct3D 12)",
+                    GraphicsState::LayeredOnCpu(_) =>
+                        "Dozen on the software Direct3D 12 device (the CPU draws)",
+                    GraphicsState::Unavailable(_) => "nothing: it found no Vulkan it can use",
+                },
+                state.detail()
+            );
+        }
+        reports.insert(peer.user.clone(), state);
+        response::Body::Done(types::Done {})
     }
 
     /// The root certificates added to the computer that the caller's Android is given, as its
@@ -6743,6 +6809,15 @@ impl HostApiService {
             image_auto_restart: wanted.image_auto_restart,
             host_certificates: wanted.host_certificates,
             app_full_screen: app_full_screen_from_wire(wanted.app_fullscreen, wanted.app_immersive),
+            // A client older than the setting sends none, which keeps what the user chose.
+            vulkan_driver: if wanted.vulkan_driver.trim().is_empty() {
+                store
+                    .get(&peer.user)
+                    .map(|current| current.vulkan_driver)
+                    .unwrap_or_else(|_| crate::settings::VULKAN_DRIVERS[0].to_string())
+            } else {
+                wanted.vulkan_driver
+            },
             adb_port: match u16::try_from(wanted.adb_port) {
                 Ok(port) => port,
                 Err(_) => {
@@ -6820,7 +6895,8 @@ impl HostApiService {
                         ResizeTrace::new(settings.resize_trace, Instant::now());
                 }
                 eprintln!(
-                    "local API: {} changed the settings: render GPU {}, freeze {}, clipboard \
+                    "local API: {} changed the settings: render GPU {}, Vulkan driver {}, \
+                     freeze {}, clipboard \
                      {}, links in Android {}, program updates {} ({} channel), image updates \
                      {}, input trace {}, resize trace {}, developer mode {} (adb port {}, \
                      auto-connect {}), file sharing {} ({}), advanced networking {}, touch \
@@ -6828,6 +6904,7 @@ impl HostApiService {
                      app full screen on the {} (bars hidden alone: on the {})",
                     peer.user,
                     settings.render_gpu,
+                    settings.vulkan_driver,
                     on_off(settings.freeze),
                     on_off(settings.clipboard),
                     on_off(settings.links_in_android),
@@ -6880,6 +6957,7 @@ impl HostApiService {
                 wire.adb_auto_connect_state = self.adb_auto_connect_now(&peer.user);
                 wire.adb_shell_root = self.adb_shell_root_now(&peer.user, &settings);
                 self.touch_gestures_now(&peer.user, &mut wire);
+                self.graphics_now(&peer.user, &mut wire);
                 wire.imported_certificates = self.host_certificates_now(&peer.user);
                 response::Body::Settings(wire)
             }
@@ -6947,6 +7025,9 @@ fn settings_to_wire(settings: &Settings, facts: &ServiceFacts) -> types::Setting
         imported_certificates: Vec::new(),
         touch_gestures_state: String::new(),
         touch_gestures_problem: String::new(),
+        vulkan_driver: settings.vulkan_driver.clone(),
+        graphics_state: String::new(),
+        graphics_detail: String::new(),
         adb_shell_root: String::new(),
         network: None,
         program_updates_available: facts.program_updates_available,
@@ -6989,6 +7070,9 @@ fn settings_from_wire(settings: types::Settings) -> SettingsReport {
                 settings.app_fullscreen,
                 settings.app_immersive,
             ),
+            // An older service sends none: its renderer chooses as `auto` does.
+            vulkan_driver: crate::settings::normalise_vulkan_driver(&settings.vulkan_driver)
+                .unwrap_or_else(|_| crate::settings::VULKAN_DRIVERS[0].to_string()),
         },
         facts: ServiceFacts {
             version: settings.version,
@@ -7004,6 +7088,7 @@ fn settings_from_wire(settings: types::Settings) -> SettingsReport {
             &settings.touch_gestures_state,
             &settings.touch_gestures_problem,
         ),
+        graphics: GraphicsState::from_wire(&settings.graphics_state, &settings.graphics_detail),
         adb_shell_root: settings.adb_shell_root,
         imported_certificates: settings
             .imported_certificates
@@ -7256,6 +7341,15 @@ impl HostApiClient {
                 problem: state.problem().to_string(),
             },
         ))
+    }
+
+    /// Tells the service what the caller's graphics renderer runs on, which the settings then
+    /// report; while it is unavailable the service does not start the caller's Android.
+    pub fn report_graphics(&mut self, state: &GraphicsState) -> Result<(), ClientError> {
+        self.done(request::Body::ReportGraphics(types::ReportGraphics {
+            state: state.as_str().to_string(),
+            detail: state.detail().to_string(),
+        }))
     }
 
     /// Asks the service to install the newest version of DSA now. Downloading it can take
