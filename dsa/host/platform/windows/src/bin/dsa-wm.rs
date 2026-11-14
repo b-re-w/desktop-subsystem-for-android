@@ -30,7 +30,7 @@ fn main() {
     use dsa_host_windows::compositor::display_gpu::{adapter_names, display_sources};
     use dsa_host_windows::compositor::graphics_notice::{self, GraphicsNotices};
     use dsa_host_windows::compositor::log::{default_log_file, CompositorLogger};
-    use dsa_host_windows::compositor::notifications::{user_reads_korean, DsaNews};
+    use dsa_host_windows::compositor::notifications::{user_language, DsaNews};
     use dsa_host_windows::compositor::shutdown::SignOutListener;
     use dsa_host_windows::compositor::single_instance::SingleInstanceMutex;
     use dsa_host_windows::compositor::{Compositor, CompositorConfig};
@@ -213,7 +213,7 @@ fn main() {
                 .unwrap_or_else(|e| e.into_inner())
                 .should_tell(state)
             {
-                if let Some(notice) = graphics_notice::notification(state, user_reads_korean()) {
+                if let Some(notice) = graphics_notice::notification(state, user_language()) {
                     news.lock()
                         .unwrap_or_else(|e| e.into_inner())
                         .push_back(notice);

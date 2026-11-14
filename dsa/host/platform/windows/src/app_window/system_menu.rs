@@ -13,9 +13,11 @@
 //! The window host takes the screenshot itself ([`super::screenshot`]), since it has the
 //! window's frames, and turns full screen on and off itself, as it does for F11. Every other item goes to the window manager as `FromHost::MenuChosen`.
 //!
-//! The items speak the user's display language when DSA has it (Korean), else English.
+//! The items speak the user's display language when DSA has it, else English
+//! ([`crate::ui_language`]).
 
 use dsa_host_core::compositor::window_hosts::MenuAction;
+use dsa_host_core::ui_language::UiLanguage;
 
 /// One entry of the Android part of the system menu.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -108,28 +110,146 @@ pub struct MenuText {
     pub screenshot_file: &'static str,
 }
 
-/// The menu's words: Korean for a Korean display language, else English.
-pub fn menu_text(korean: bool) -> MenuText {
-    if korean {
-        MenuText {
-            full_screen: "전체 화면(&F)",
-            new_window: "새 창(&E)",
-            screenshot: "스크린샷(&H)",
-            aspect_ratio: "화면 비율(&A)",
-            open_by_default: "링크 열기 설정(&O)",
-            app_info: "앱 정보(&I)",
-            screenshot_file: "스크린샷",
-        }
-    } else {
-        MenuText {
-            full_screen: "&Full screen",
-            new_window: "N&ew window",
-            screenshot: "Screens&hot",
-            aspect_ratio: "&Aspect ratio",
-            open_by_default: "&Open by default",
-            app_info: "App &info",
-            screenshot_file: "Screenshot",
-        }
+/// The menu's words in `language`. The access keys differ from those of Windows' own items in
+/// the same language ([`super::window_menu::window_text`]).
+pub fn menu_text(language: UiLanguage) -> MenuText {
+    let [full_screen, new_window, screenshot, aspect_ratio, open_by_default, app_info, screenshot_file] =
+        match language {
+            UiLanguage::English => [
+                "&Full screen",
+                "N&ew window",
+                "Screens&hot",
+                "&Aspect ratio",
+                "&Open by default",
+                "App &info",
+                "Screenshot",
+            ],
+            UiLanguage::Korean => [
+                "전체 화면(&F)",
+                "새 창(&E)",
+                "스크린샷(&H)",
+                "화면 비율(&A)",
+                "링크 열기 설정(&O)",
+                "앱 정보(&I)",
+                "스크린샷",
+            ],
+            UiLanguage::Japanese => [
+                "全画面表示(&F)",
+                "新しいウィンドウ(&E)",
+                "スクリーンショット(&H)",
+                "縦横比(&A)",
+                "デフォルトで開く(&O)",
+                "アプリ情報(&I)",
+                "スクリーンショット",
+            ],
+            UiLanguage::ChineseSimplified => [
+                "全屏(&F)",
+                "新建窗口(&E)",
+                "屏幕截图(&H)",
+                "宽高比(&A)",
+                "默认打开(&O)",
+                "应用信息(&I)",
+                "屏幕截图",
+            ],
+            UiLanguage::ChineseTraditional => [
+                "全螢幕(&F)",
+                "新增視窗(&E)",
+                "螢幕擷取畫面(&H)",
+                "長寬比(&A)",
+                "預設開啟(&O)",
+                "應用程式資訊(&I)",
+                "螢幕擷取畫面",
+            ],
+            UiLanguage::Spanish => [
+                "&Pantalla completa",
+                "Nu&eva ventana",
+                "Capt&ura de pantalla",
+                "Rel&ación de aspecto",
+                "Abrir &de forma predeterminada",
+                "&Información de la aplicación",
+                "Captura de pantalla",
+            ],
+            UiLanguage::French => [
+                "&Plein écran",
+                "&Nouvelle fenêtre",
+                "&Capture d'écran",
+                "R&apport hauteur/largeur",
+                "&Ouvrir par défaut",
+                "&Infos sur l'appli",
+                "Capture d'écran",
+            ],
+            UiLanguage::German => [
+                "Voll&bild",
+                "Neues &Fenster",
+                "Scr&eenshot",
+                "Se&itenverhältnis",
+                "S&tandardmäßig öffnen",
+                "&App-Info",
+                "Screenshot",
+            ],
+            UiLanguage::PortugueseBrazil => [
+                "Tela &inteira",
+                "Nova &janela",
+                "Ca&ptura de tela",
+                "Pr&oporção",
+                "&Abrir por padrão",
+                "Informações &do app",
+                "Captura de tela",
+            ],
+            UiLanguage::Russian => [
+                "Во весь &экран",
+                "&Новое окно",
+                "Сни&мок экрана",
+                "Соо&тношение сторон",
+                "&Открывать по умолчанию",
+                "О при&ложении",
+                "Снимок экрана",
+            ],
+            UiLanguage::Italian => [
+                "Sc&hermo intero",
+                "&Nuova finestra",
+                "Screensh&ot",
+                "&Proporzioni",
+                "&Apri per impostazione predefinita",
+                "In&formazioni app",
+                "Screenshot",
+            ],
+            UiLanguage::Vietnamese => [
+                "Toàn màn &hình",
+                "&Cửa sổ mới",
+                "Ảnh chụp &màn hình",
+                "Tỷ &lệ khung hình",
+                "Mở th&eo mặc định",
+                "Thông t&in ứng dụng",
+                "Ảnh chụp màn hình",
+            ],
+            UiLanguage::Indonesian => [
+                "&Layar penuh",
+                "Jendela &baru",
+                "Tan&gkapan layar",
+                "&Rasio aspek",
+                "Buka se&cara default",
+                "&Info aplikasi",
+                "Tangkapan layar",
+            ],
+            UiLanguage::Turkish => [
+                "Tam ekra&n",
+                "Yeni &pencere",
+                "Ekr&an görüntüsü",
+                "En b&oy oranı",
+                "&Varsayılan olarak aç",
+                "&Uygulama bilgisi",
+                "Ekran görüntüsü",
+            ],
+        };
+    MenuText {
+        full_screen,
+        new_window,
+        screenshot,
+        aspect_ratio,
+        open_by_default,
+        app_info,
+        screenshot_file,
     }
 }
 
@@ -149,10 +269,7 @@ pub fn label(text: &MenuText, item: SystemMenuItem) -> Option<&'static str> {
 /// The menu's words in the user's display language.
 #[cfg(windows)]
 pub fn display_text() -> MenuText {
-    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
-    // SAFETY: reads the user's display language.
-    let language = unsafe { GetUserDefaultUILanguage() };
-    menu_text(crate::compositor::widget_menu::is_korean(language))
+    menu_text(crate::ui_language::user_language())
 }
 
 /// Makes the Android part of `hwnd`'s system menu again: the entries [`items`] gives for
@@ -258,8 +375,8 @@ mod tests {
 
     #[test]
     fn fr22_the_system_menu_speaks_korean_and_english() {
-        for korean in [false, true] {
-            let text = menu_text(korean);
+        for language in [UiLanguage::English, UiLanguage::Korean] {
+            let text = menu_text(language);
             let labels: Vec<&str> = items(true)
                 .into_iter()
                 .filter_map(|item| label(&text, item))
@@ -275,8 +392,41 @@ mod tests {
                 keys.push(key);
             }
         }
-        assert_eq!(menu_text(false).new_window, "N&ew window");
-        assert_eq!(menu_text(true).app_info, "앱 정보(&I)");
-        assert_eq!(menu_text(true).screenshot_file, "스크린샷");
+        assert_eq!(menu_text(UiLanguage::English).new_window, "N&ew window");
+        assert_eq!(menu_text(UiLanguage::Korean).app_info, "앱 정보(&I)");
+        assert_eq!(menu_text(UiLanguage::Korean).screenshot_file, "스크린샷");
+    }
+
+    #[test]
+    fn fr17_the_system_menu_speaks_every_language() {
+        use crate::ui_language::assert_translation;
+        let english = menu_text(UiLanguage::English);
+        for language in UiLanguage::ALL {
+            let text = menu_text(language);
+            let mut keys = Vec::new();
+            for item in items(true) {
+                let (Some(en), Some(marked)) = (label(&english, item), label(&text, item)) else {
+                    continue;
+                };
+                assert_translation(language, &format!("{item:?}"), en, marked);
+                // Exactly one access key, and no two items share one.
+                assert_eq!(marked.matches('&').count(), 1, "{marked}");
+                let at = marked.find('&').unwrap();
+                let key = marked[at + 1..].chars().next().unwrap();
+                let key: String = key.to_uppercase().collect();
+                assert!(!keys.contains(&key), "{language:?}: {marked}");
+                keys.push(key);
+            }
+            assert_translation(
+                language,
+                "the screenshot file name",
+                english.screenshot_file,
+                text.screenshot_file,
+            );
+            // A file name Windows accepts.
+            assert!(!text
+                .screenshot_file
+                .contains(['\\', '/', ':', '*', '?', '"', '<', '>', '|']));
+        }
     }
 }

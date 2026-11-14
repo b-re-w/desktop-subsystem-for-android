@@ -237,7 +237,8 @@ after two minutes. `"keep_window_manager": false` turns this off.
   rounded corners: a 24 px rounded square of dark grey at 85% with three light dots, the
   same in light and dark themes, which takes presses in a 32 px square for touch. Clicking it, or right-clicking the widget, opens the widget's menu:
   Widget settings, for a widget whose app lets it be set up again, Resize, with the sizes
-  the widget allows, and Remove (in Korean when that is the display language). The menu is
+  the widget allows, and Remove (in the display language, in any of the fourteen languages
+  DSA's interface is translated into, else English). The menu is
   a Windows 11 menu drawn by the window manager, with rounded corners, the acrylic backdrop
   (a solid fill on Windows 10 or with transparency effects off), the light or dark theme,
   icons and full keyboard use, and UI Automation reads it as a menu. Widget settings opens
@@ -265,7 +266,8 @@ after two minutes. `"keep_window_manager": false` turns this off.
   task, titled by the task's label and sized by the task's size in Android, and to close
   it when the task ends. Closing a window asks Android to end its task.
 - The graphics renderer runs in a process of its own, `dsa-gfx.exe`, which Task Manager
-  shows as "Graphics renderer for Android" ("Android용 그래픽 렌더러" on a Korean desktop).
+  shows as "Graphics renderer for Android" ("Android용 그래픽 렌더러" on a Korean desktop,
+  and in the display language in each of DSA's interface languages).
   `dsa-wm` starts it from beside itself and tells it which VM to take streams from. The
   renderer accepts the guest's graphics streams on Hyper-V sockets, ports 5566 and 5567, and
   hands them to `gfxstream_backend.dll`, which is installed beside it. It copies each task's
@@ -840,7 +842,8 @@ links in Android apps instead of the default browser, off by default, developer 
 its adb address, the input and resize trace switches, which only an administrator changes,
 and the log folders) and
 About, built from cards, with Mica behind the window where Windows has it. It follows the
-system's theme, accent colour and language (English and Korean). The Windows App SDK and
+system's theme, accent colour and language (any of the fourteen languages DSA's interface is
+translated into, else English). The Windows App SDK and
 WinUI 3 are not used, because their runtime's licence is not open source.
 
 It changes nothing itself. It runs `dsa` with `--json` (`dsa status`, `dsa settings`,

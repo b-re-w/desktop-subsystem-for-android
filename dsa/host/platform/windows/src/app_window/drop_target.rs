@@ -189,7 +189,7 @@ fn deliver(package: &str, api: &ApiConnect, note: &dyn Fn(&str), task_id: i32, p
                 ));
                 super::launch::tell_user(
                     "Desktop Subsystem for Android",
-                    &format!("A dropped file could not be sent to the app. {why}."),
+                    &super::messages::drop_not_sent(&why),
                 );
             }
         }

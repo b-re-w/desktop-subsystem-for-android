@@ -24,6 +24,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 
 use super::system_menu::{self, MenuText, SystemMenuItem};
 use crate::compositor::fluent_menu::{MenuEntry, MenuItem};
+use dsa_host_core::ui_language::UiLanguage;
 
 /// `SC_MOUSEMENU`: the system menu opened by the mouse, which windows-sys does not name.
 const SC_MOUSEMENU: u32 = 0xF090;
@@ -147,30 +148,145 @@ pub struct WindowText {
     pub name: &'static str,
 }
 
-/// Windows' own words: Korean for a Korean display language, else English.
-pub fn window_text(korean: bool) -> WindowText {
-    if korean {
-        WindowText {
-            restore: "복원(&R)",
-            move_window: "이동(&M)",
-            size: "크기 조정(&S)",
-            minimize: "최소화(&N)",
-            maximize: "최대화(&X)",
-            close: "닫기(&C)",
-            close_shortcut: "Alt+F4",
-            name: "시스템",
-        }
-    } else {
-        WindowText {
-            restore: "&Restore",
-            move_window: "&Move",
-            size: "&Size",
-            minimize: "Mi&nimize",
-            maximize: "Ma&ximize",
-            close: "&Close",
-            close_shortcut: "Alt+F4",
-            name: "System",
-        }
+/// Windows' own words in `language`, as Windows' system menu writes them in that language.
+pub fn window_text(language: UiLanguage) -> WindowText {
+    let [restore, move_window, size, minimize, maximize, close, name] = match language {
+        UiLanguage::English => [
+            "&Restore",
+            "&Move",
+            "&Size",
+            "Mi&nimize",
+            "Ma&ximize",
+            "&Close",
+            "System",
+        ],
+        UiLanguage::Korean => [
+            "복원(&R)",
+            "이동(&M)",
+            "크기 조정(&S)",
+            "최소화(&N)",
+            "최대화(&X)",
+            "닫기(&C)",
+            "시스템",
+        ],
+        UiLanguage::Japanese => [
+            "元のサイズに戻す(&R)",
+            "移動(&M)",
+            "サイズ変更(&S)",
+            "最小化(&N)",
+            "最大化(&X)",
+            "閉じる(&C)",
+            "システム",
+        ],
+        UiLanguage::ChineseSimplified => [
+            "还原(&R)",
+            "移动(&M)",
+            "大小(&S)",
+            "最小化(&N)",
+            "最大化(&X)",
+            "关闭(&C)",
+            "系统",
+        ],
+        UiLanguage::ChineseTraditional => [
+            "還原(&R)",
+            "移動(&M)",
+            "大小(&S)",
+            "最小化(&N)",
+            "最大化(&X)",
+            "關閉(&C)",
+            "系統",
+        ],
+        UiLanguage::Spanish => [
+            "&Restaurar",
+            "&Mover",
+            "&Tamaño",
+            "Mi&nimizar",
+            "Ma&ximizar",
+            "&Cerrar",
+            "Sistema",
+        ],
+        UiLanguage::French => [
+            "&Restaurer",
+            "&Déplacer",
+            "&Taille",
+            "Réd&uire",
+            "A&grandir",
+            "&Fermer",
+            "Système",
+        ],
+        UiLanguage::German => [
+            "&Wiederherstellen",
+            "&Verschieben",
+            "&Größe ändern",
+            "Mi&nimieren",
+            "Ma&ximieren",
+            "&Schließen",
+            "System",
+        ],
+        UiLanguage::PortugueseBrazil => [
+            "&Restaurar",
+            "&Mover",
+            "&Tamanho",
+            "Mi&nimizar",
+            "Ma&ximizar",
+            "&Fechar",
+            "Sistema",
+        ],
+        UiLanguage::Russian => [
+            "&Восстановить",
+            "&Переместить",
+            "&Размер",
+            "&Свернуть",
+            "Р&азвернуть",
+            "&Закрыть",
+            "Система",
+        ],
+        UiLanguage::Italian => [
+            "&Ripristina",
+            "&Sposta",
+            "Ri&dimensiona",
+            "Rid&uci a icona",
+            "In&grandisci",
+            "&Chiudi",
+            "Sistema",
+        ],
+        UiLanguage::Vietnamese => [
+            "&Khôi phục",
+            "&Di chuyển",
+            "Kích &thước",
+            "Thu &nhỏ",
+            "&Phóng to",
+            "Đón&g",
+            "Hệ thống",
+        ],
+        UiLanguage::Indonesian => [
+            "&Pulihkan",
+            "Pin&dahkan",
+            "&Ukuran",
+            "Mi&nimalkan",
+            "Ma&ksimalkan",
+            "&Tutup",
+            "Sistem",
+        ],
+        UiLanguage::Turkish => [
+            "&Geri Yükle",
+            "&Taşı",
+            "&Boyut",
+            "&Simge Durumuna Küçült",
+            "&Ekranı Kapla",
+            "&Kapat",
+            "Sistem",
+        ],
+    };
+    WindowText {
+        restore,
+        move_window,
+        size,
+        minimize,
+        maximize,
+        close,
+        close_shortcut: "Alt+F4",
+        name,
     }
 }
 
@@ -185,7 +301,12 @@ pub fn plain_label(marked: &str) -> (String, Option<char>) {
                 Some('&') => label.push('&'),
                 Some(next) => {
                     if key.is_none() {
-                        key = Some(next.to_ascii_uppercase());
+                        // Upper case in any script: Cyrillic and Vietnamese keys as well.
+                        let mut upper = next.to_uppercase();
+                        key = Some(match (upper.next(), upper.next()) {
+                            (Some(one), None) => one,
+                            _ => next,
+                        });
                     }
                     label.push(next);
                 }
@@ -308,7 +429,6 @@ unsafe fn anchor_point(hwnd: HWND, opening: Opening, cell_bottom_left: (i32, i32
 /// `hwnd` is a live window of the calling thread, and no state of its window procedure is
 /// borrowed while the menu runs.
 pub unsafe fn show(hwnd: HWND, opening: Opening, cell: (i32, i32, u32, u32), resizable: bool) {
-    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
     use windows_sys::Win32::Graphics::Gdi::ScreenToClient;
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
         GetDoubleClickTime, GetKeyState, VK_LBUTTON,
@@ -330,9 +450,9 @@ pub unsafe fn show(hwnd: HWND, opening: Opening, cell: (i32, i32, u32, u32), res
         resizable,
         new_window: has_new_window(hwnd),
     };
-    let korean = crate::compositor::widget_menu::is_korean(GetUserDefaultUILanguage());
-    let text = window_text(korean);
-    let menu = entries(&state, &text, &system_menu::menu_text(korean));
+    let language = crate::ui_language::user_language();
+    let text = window_text(language);
+    let menu = entries(&state, &text, &system_menu::menu_text(language));
     let (x, y) = anchor_point(hwnd, opening, cell_bottom_left);
     let chosen = crate::compositor::fluent_menu::show(crate::compositor::fluent_menu::Request {
         owner: hwnd as isize,
@@ -434,7 +554,11 @@ mod tests {
             resizable: true,
             ..WindowState::default()
         };
-        let menu = entries(&state, &window_text(false), &system_menu::menu_text(false));
+        let menu = entries(
+            &state,
+            &window_text(UiLanguage::English),
+            &system_menu::menu_text(UiLanguage::English),
+        );
         let closing: Vec<u32> = menu
             .iter()
             .filter_map(MenuEntry::item)
@@ -501,7 +625,11 @@ mod tests {
             new_window: true,
             ..WindowState::default()
         };
-        let menu = entries(&normal, &window_text(false), &system_menu::menu_text(false));
+        let menu = entries(
+            &normal,
+            &window_text(UiLanguage::English),
+            &system_menu::menu_text(UiLanguage::English),
+        );
         let some = |label: &str| Some(label.to_string());
         assert_eq!(
             labels(&menu),
@@ -560,8 +688,8 @@ mod tests {
         };
         let menu = entries(
             &maximized,
-            &window_text(false),
-            &system_menu::menu_text(false),
+            &window_text(UiLanguage::English),
+            &system_menu::menu_text(UiLanguage::English),
         );
         let enabled: Vec<bool> = menu
             .iter()
@@ -576,7 +704,11 @@ mod tests {
             new_window: false,
             ..WindowState::default()
         };
-        let menu = entries(&fixed, &window_text(false), &system_menu::menu_text(false));
+        let menu = entries(
+            &fixed,
+            &window_text(UiLanguage::English),
+            &system_menu::menu_text(UiLanguage::English),
+        );
         let enabled: Vec<bool> = menu
             .iter()
             .filter_map(MenuEntry::item)
@@ -586,7 +718,11 @@ mod tests {
         assert_eq!(enabled, [false, true, false, true, false, true]);
         assert!(!labels(&menu).contains(&some("New window")));
         // In Korean, Windows' own words with the same keys.
-        let korean = entries(&normal, &window_text(true), &system_menu::menu_text(true));
+        let korean = entries(
+            &normal,
+            &window_text(UiLanguage::Korean),
+            &system_menu::menu_text(UiLanguage::Korean),
+        );
         assert_eq!(korean[0].item().unwrap().label, "복원(R)");
         assert_eq!(korean[0].item().unwrap().access_key, Some('R'));
         assert_eq!(korean[6].item().unwrap().label, "닫기(C)");
@@ -598,5 +734,67 @@ mod tests {
         assert_eq!(plain_label("앱 정보(&I)"), ("앱 정보(I)".into(), Some('I')));
         assert_eq!(plain_label("A && B"), ("A & B".into(), None));
         assert_eq!(plain_label("Plain"), ("Plain".into(), None));
+        assert_eq!(plain_label("Р&азвернуть"), ("Развернуть".into(), Some('А')));
+    }
+
+    #[test]
+    fn fr17_the_window_menu_speaks_every_language_with_one_key_per_item() {
+        use crate::ui_language::assert_translation;
+        let normal = WindowState {
+            resizable: true,
+            new_window: true,
+            ..WindowState::default()
+        };
+        let english = window_text(UiLanguage::English);
+        let english_menu = entries(
+            &normal,
+            &english,
+            &system_menu::menu_text(UiLanguage::English),
+        );
+        for language in UiLanguage::ALL {
+            let text = window_text(language);
+            for (what, en, word) in [
+                ("Restore", english.restore, text.restore),
+                ("Move", english.move_window, text.move_window),
+                ("Size", english.size, text.size),
+                ("Minimize", english.minimize, text.minimize),
+                ("Maximize", english.maximize, text.maximize),
+                ("Close", english.close, text.close),
+                ("the menu's name", english.name, text.name),
+            ] {
+                assert_translation(language, what, en, word);
+            }
+            let menu = entries(&normal, &text, &system_menu::menu_text(language));
+            assert_eq!(menu.len(), english_menu.len(), "{language:?}");
+            // Windows' items and the Android ones together: every item has its key, the
+            // first such letter in its label (the one underlined), and no two share one.
+            let mut keys = Vec::new();
+            for item in menu.iter().filter_map(MenuEntry::item) {
+                let key = item.access_key.expect(&item.label);
+                let first = item
+                    .label
+                    .chars()
+                    .find(|c| c.to_uppercase().eq(key.to_uppercase()));
+                assert_eq!(
+                    first.map(|c| c.to_uppercase().collect::<String>()),
+                    Some(key.to_uppercase().collect::<String>()),
+                    "{language:?}: {}",
+                    item.label
+                );
+                assert!(
+                    !keys.contains(&key),
+                    "{language:?}: {} repeats {key}",
+                    item.label
+                );
+                keys.push(key);
+            }
+            assert_eq!(text.close_shortcut, "Alt+F4");
+        }
+        // A key typed on a Russian, Vietnamese or Turkish layout picks its item in either case.
+        use crate::compositor::fluent_menu::same_key;
+        assert!(same_key('А', 'а'));
+        assert!(same_key('Э', 'э'));
+        assert!(same_key('R', 'r'));
+        assert!(!same_key('А', 'A'), "Cyrillic A is not Latin A");
     }
 }

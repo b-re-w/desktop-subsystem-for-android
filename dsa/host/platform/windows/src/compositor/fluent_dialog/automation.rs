@@ -25,7 +25,29 @@ use windows::Win32::System::Com::SAFEARRAY;
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::*;
 
+use dsa_host_core::ui_language::UiLanguage;
+
 use super::{Control, DialogLayout, DialogState, DialogText};
+
+/// What a screen reader calls the dialog's kind, in `language`, as Windows names a dialog.
+pub fn dialog_type_name(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "dialog",
+        UiLanguage::Korean => "대화 상자",
+        UiLanguage::Japanese => "ダイアログ",
+        UiLanguage::ChineseSimplified => "对话框",
+        UiLanguage::ChineseTraditional => "對話方塊",
+        UiLanguage::Spanish => "cuadro de diálogo",
+        UiLanguage::French => "boîte de dialogue",
+        UiLanguage::German => "Dialogfeld",
+        UiLanguage::PortugueseBrazil => "caixa de diálogo",
+        UiLanguage::Russian => "диалоговое окно",
+        UiLanguage::Italian => "finestra di dialogo",
+        UiLanguage::Vietnamese => "hộp thoại",
+        UiLanguage::Indonesian => "dialog",
+        UiLanguage::Turkish => "iletişim kutusu",
+    }
+}
 use crate::app_window::accessibility::{
     none, not_available, safe_array, variant_bool, variant_empty, variant_i4, variant_str,
 };
@@ -372,7 +394,9 @@ impl IRawElementProviderSimple_Impl for DialogProvider_Impl {
         Ok(match property {
             UIA_ControlTypePropertyId => variant_i4(WINDOW),
             UIA_IsDialogPropertyId => variant_bool(true),
-            UIA_LocalizedControlTypePropertyId => variant_str("dialog"),
+            UIA_LocalizedControlTypePropertyId => {
+                variant_str(dialog_type_name(crate::ui_language::user_language()))
+            }
             UIA_NamePropertyId => variant_str(&view.name),
             UIA_IsKeyboardFocusablePropertyId => variant_bool(false),
             UIA_IsControlElementPropertyId => variant_bool(true),
@@ -776,6 +800,19 @@ mod tests {
                 Some("Stop")
             );
         }
+    }
+
+    #[test]
+    fn fr17_a_dialog_is_called_a_dialog_in_every_language() {
+        for language in UiLanguage::ALL {
+            crate::ui_language::assert_translation(
+                language,
+                "dialog",
+                dialog_type_name(UiLanguage::English),
+                dialog_type_name(language),
+            );
+        }
+        assert_eq!(dialog_type_name(UiLanguage::Korean), "대화 상자");
     }
 
     #[test]

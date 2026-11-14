@@ -44,7 +44,8 @@
 //! ("뒤로"), whose Invoke sends the task Back as a click on the arrow does. Then come
 //! "Minimize" ("최소화"), "Maximize" ("최대화"), named "Restore" ("이전 크기로") while the
 //! window is maximized or fills its monitor, and "Close" ("닫기"); each Invoke posts the
-//! command a click on the button posts. Names follow the display language, Korean or English.
+//! command a click on the button posts. Names follow the display language
+//! ([`crate::ui_language`]), as Windows names its own caption buttons in it.
 //! A button's bounds are the cell the window draws it in, on the screen. While a window that
 //! fills its monitor keeps its title bar hidden, its buttons stay in the tree and say they are
 //! off the screen (`IsOffscreen`). The window raises structure change events as buttons come
@@ -90,6 +91,7 @@ use dsa_host_core::compositor::window_sizing::{frame_placement, FramePlacement};
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::host_api::HostApiClient;
 use dsa_host_core::input::{InputEvent, WindowGeometry};
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_transport::Connector;
 use windows::core::{
     implement, Error, IUnknown, IUnknownImpl, Interface, BOOL, BSTR, HRESULT, PCWSTR,
@@ -102,7 +104,6 @@ use windows::Win32::UI::Accessibility::*;
 
 use super::caption::back_keys;
 use crate::compositor::log::{note, CompositorLogger};
-use crate::compositor::widget_menu::is_korean;
 use crate::ui_automation::{
     control_type, control_type_of, heading_level, is_content_element, is_control_element,
     patterns_of, row_at_percent, scroll_action, Pattern,
@@ -114,12 +115,23 @@ pub type ClientRect = (i32, i32, u32, u32);
 /// What the window says of itself (its item status) while its app opens: until the first
 /// frame it shows only the splash, and a screen reader would otherwise read an empty window
 /// with no hint that something is coming. `None` once the app shows.
-fn loading_status(korean: bool, loading: bool) -> Option<&'static str> {
-    match (loading, korean) {
-        (false, _) => None,
-        (true, true) => Some("앱을 여는 중"),
-        (true, false) => Some("Opening the app"),
-    }
+fn loading_status(language: UiLanguage, loading: bool) -> Option<&'static str> {
+    loading.then_some(match language {
+        UiLanguage::English => "Opening the app",
+        UiLanguage::Korean => "앱을 여는 중",
+        UiLanguage::Japanese => "アプリを開いています",
+        UiLanguage::ChineseSimplified => "正在打开应用",
+        UiLanguage::ChineseTraditional => "正在開啟應用程式",
+        UiLanguage::Spanish => "Abriendo la aplicación",
+        UiLanguage::French => "Ouverture de l'application",
+        UiLanguage::German => "App wird geöffnet",
+        UiLanguage::PortugueseBrazil => "Abrindo o app",
+        UiLanguage::Russian => "Открытие приложения",
+        UiLanguage::Italian => "Apertura dell'app",
+        UiLanguage::Vietnamese => "Đang mở ứng dụng",
+        UiLanguage::Indonesian => "Membuka aplikasi",
+        UiLanguage::Turkish => "Uygulama açılıyor",
+    })
 }
 
 /// Whether the window `hwnd` has not yet presented its app's first frame, as the presenter
@@ -187,37 +199,138 @@ impl CaptionKind {
     }
 }
 
-/// A title bar button's name in the user's display language, Korean or English. The maximize
-/// button is named Restore while the window is `maximized` (or fills its monitor), as the
-/// glyph it shows then says.
-fn caption_name(kind: CaptionKind, maximized: bool, korean: bool) -> &'static str {
-    match (kind, korean) {
-        (CaptionKind::Back, true) => "뒤로",
-        (CaptionKind::Back, false) => "Back",
-        (CaptionKind::SystemMenu, true) => "시스템 메뉴",
-        (CaptionKind::SystemMenu, false) => "System menu",
-        (CaptionKind::Minimize, true) => "최소화",
-        (CaptionKind::Minimize, false) => "Minimize",
-        (CaptionKind::Maximize, true) if maximized => "이전 크기로",
-        (CaptionKind::Maximize, false) if maximized => "Restore",
-        (CaptionKind::Maximize, true) => "최대화",
-        (CaptionKind::Maximize, false) => "Maximize",
-        (CaptionKind::Close, true) => "닫기",
-        (CaptionKind::Close, false) => "Close",
+/// The title bar buttons' names in `language`, as Windows names its own caption buttons:
+/// Back, System menu, Minimize, Maximize, Restore and Close.
+fn caption_names(language: UiLanguage) -> [&'static str; 6] {
+    match language {
+        UiLanguage::English => [
+            "Back",
+            "System menu",
+            "Minimize",
+            "Maximize",
+            "Restore",
+            "Close",
+        ],
+        UiLanguage::Korean => [
+            "뒤로",
+            "시스템 메뉴",
+            "최소화",
+            "최대화",
+            "이전 크기로",
+            "닫기",
+        ],
+        UiLanguage::Japanese => [
+            "戻る",
+            "システム メニュー",
+            "最小化",
+            "最大化",
+            "元に戻す (縮小)",
+            "閉じる",
+        ],
+        UiLanguage::ChineseSimplified => {
+            ["返回", "系统菜单", "最小化", "最大化", "向下还原", "关闭"]
+        }
+        UiLanguage::ChineseTraditional => {
+            ["返回", "系統功能表", "最小化", "最大化", "還原", "關閉"]
+        }
+        UiLanguage::Spanish => [
+            "Atrás",
+            "Menú del sistema",
+            "Minimizar",
+            "Maximizar",
+            "Restaurar",
+            "Cerrar",
+        ],
+        UiLanguage::French => [
+            "Retour",
+            "Menu système",
+            "Réduire",
+            "Agrandir",
+            "Restaurer",
+            "Fermer",
+        ],
+        UiLanguage::German => [
+            "Zurück",
+            "Systemmenü",
+            "Minimieren",
+            "Maximieren",
+            "Wiederherstellen",
+            "Schließen",
+        ],
+        UiLanguage::PortugueseBrazil => [
+            "Voltar",
+            "Menu do sistema",
+            "Minimizar",
+            "Maximizar",
+            "Restaurar",
+            "Fechar",
+        ],
+        UiLanguage::Russian => [
+            "Назад",
+            "Системное меню",
+            "Свернуть",
+            "Развернуть",
+            "Восстановить",
+            "Закрыть",
+        ],
+        UiLanguage::Italian => [
+            "Indietro",
+            "Menu di sistema",
+            "Riduci a icona",
+            "Ingrandisci",
+            "Ripristina",
+            "Chiudi",
+        ],
+        UiLanguage::Vietnamese => [
+            "Quay lại",
+            "Menu hệ thống",
+            "Thu nhỏ",
+            "Phóng to",
+            "Khôi phục",
+            "Đóng",
+        ],
+        UiLanguage::Indonesian => [
+            "Kembali",
+            "Menu sistem",
+            "Minimalkan",
+            "Maksimalkan",
+            "Pulihkan",
+            "Tutup",
+        ],
+        UiLanguage::Turkish => [
+            "Geri",
+            "Sistem menüsü",
+            "Simge durumuna küçült",
+            "Ekranı kapla",
+            "Önceki boyut",
+            "Kapat",
+        ],
     }
 }
 
-/// The back button's name in the user's display language: Korean or English.
-#[cfg(test)]
-fn back_name(korean: bool) -> &'static str {
-    caption_name(CaptionKind::Back, false, korean)
+/// A title bar button's name in `language`. The maximize button is named Restore while the
+/// window is `maximized` (or fills its monitor), as the glyph it shows then says.
+fn caption_name(kind: CaptionKind, maximized: bool, language: UiLanguage) -> &'static str {
+    let [back, system_menu, minimize, maximize, restore, close] = caption_names(language);
+    match kind {
+        CaptionKind::Back => back,
+        CaptionKind::SystemMenu => system_menu,
+        CaptionKind::Minimize => minimize,
+        CaptionKind::Maximize if maximized => restore,
+        CaptionKind::Maximize => maximize,
+        CaptionKind::Close => close,
+    }
 }
 
-/// Whether the user's display language is Korean now, which the buttons are named in.
-fn display_korean() -> bool {
-    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
-    // SAFETY: reads the user's display language.
-    is_korean(unsafe { GetUserDefaultUILanguage() })
+/// The back button's name in `language`.
+#[cfg(test)]
+fn back_name(language: UiLanguage) -> &'static str {
+    caption_name(CaptionKind::Back, false, language)
+}
+
+/// The user's display language now, which the buttons are named in.
+fn display_language() -> UiLanguage {
+    crate::ui_language::user_language()
 }
 
 /// The title bar's buttons as the window draws them now: their cells in client pixels and
@@ -323,12 +436,23 @@ fn caption_command(kind: CaptionKind, cells: &CaptionCells) -> Option<(u32, isiz
 /// The loading item's runtime ID, as unlike a node's as the back button's.
 const LOADING_RUNTIME_ID: [i32; 2] = [UiaAppendRuntimeId as i32, 0x4c4f_4144];
 
-/// What the loading item says in the user's display language.
-fn loading_name(korean: bool) -> &'static str {
-    if korean {
-        "불러오는 중"
-    } else {
-        "Loading"
+/// What the loading item says in `language`.
+fn loading_name(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "Loading",
+        UiLanguage::Korean => "불러오는 중",
+        UiLanguage::Japanese => "読み込み中",
+        UiLanguage::ChineseSimplified => "正在加载",
+        UiLanguage::ChineseTraditional => "正在載入",
+        UiLanguage::Spanish => "Cargando",
+        UiLanguage::French => "Chargement",
+        UiLanguage::German => "Wird geladen",
+        UiLanguage::PortugueseBrazil => "Carregando",
+        UiLanguage::Russian => "Загрузка",
+        UiLanguage::Italian => "Caricamento",
+        UiLanguage::Vietnamese => "Đang tải",
+        UiLanguage::Indonesian => "Memuat",
+        UiLanguage::Turkish => "Yükleniyor",
     }
 }
 
@@ -875,7 +999,7 @@ impl IRawElementProviderSimple_Impl for RootProvider_Impl {
             UIA_FrameworkIdPropertyId => variant_str("Android"),
             UIA_ProviderDescriptionPropertyId => variant_str("Desktop Subsystem for Android"),
             UIA_ItemStatusPropertyId => {
-                match loading_status(display_korean(), self.shared.loading()) {
+                match loading_status(display_language(), self.shared.loading()) {
                     Some(status) => variant_str(status),
                     None => variant_empty(),
                 }
@@ -1217,17 +1341,17 @@ enum Target {
     Node(u32),
 }
 
-/// What a title bar button says of `property`, its title bar being `cells`, named in Korean
-/// when `korean`.
+/// What a title bar button says of `property`, its title bar being `cells`, named in
+/// `language`.
 fn caption_property(
     kind: CaptionKind,
     cells: &CaptionCells,
     property: UIA_PROPERTY_ID,
-    korean: bool,
+    language: UiLanguage,
 ) -> VARIANT {
     match property {
         UIA_ControlTypePropertyId => variant_i4(UIA_ButtonControlTypeId.0),
-        UIA_NamePropertyId => variant_str(caption_name(kind, cells.maximized, korean)),
+        UIA_NamePropertyId => variant_str(caption_name(kind, cells.maximized, language)),
         UIA_AutomationIdPropertyId => variant_str(kind.automation_id()),
         UIA_AcceleratorKeyPropertyId => match kind.accelerator() {
             Some(keys) => variant_str(keys),
@@ -1275,7 +1399,7 @@ impl IRawElementProviderSimple_Impl for CaptionProvider_Impl {
             self.kind,
             &cells,
             property,
-            display_korean(),
+            display_language(),
         ))
     }
 
@@ -1888,7 +2012,7 @@ impl AccessibilityWindow {
             if !UiaClientsAreListening().as_bool() {
                 return;
             }
-            let old = variant_str(loading_status(display_korean(), true).unwrap_or_default());
+            let old = variant_str(loading_status(display_language(), true).unwrap_or_default());
             let new = variant_empty();
             let _ =
                 UiaRaiseAutomationPropertyChangedEvent(root, UIA_ItemStatusPropertyId, &old, &new);
@@ -1948,9 +2072,9 @@ impl EventTarget {
             return;
         }
         let root = self.root.clone();
-        let korean = display_korean();
+        let language = display_language();
         for (kind, change) in caption_changes {
-            raise_caption(&shared, &root, kind, change, korean);
+            raise_caption(&shared, &root, kind, change, language);
         }
         for announcement in &announcements {
             patterns::raise_announcement(&root, announcement);
@@ -2146,7 +2270,7 @@ fn raise_caption(
     root: &IRawElementProviderSimple,
     kind: CaptionKind,
     change: CaptionChange,
-    korean: bool,
+    language: UiLanguage,
 ) {
     let mut runtime = kind.runtime_id();
     let button = || {
@@ -2196,8 +2320,8 @@ fn raise_caption(
         ),
         CaptionChange::Renamed { from, to } => property(
             UIA_NamePropertyId,
-            variant_str(caption_name(kind, from, korean)),
-            variant_str(caption_name(kind, to, korean)),
+            variant_str(caption_name(kind, from, language)),
+            variant_str(caption_name(kind, to, language)),
         ),
         CaptionChange::Offscreen(now) => property(
             UIA_IsOffscreenPropertyId,
@@ -2477,11 +2601,58 @@ mod tests {
 
     #[test]
     fn fr22_the_back_arrow_is_a_button_named_back_for_ui_automation() {
-        assert_eq!(back_name(true), "뒤로");
-        assert_eq!(back_name(false), "Back");
+        use crate::ui_language::from_langid;
+        assert_eq!(back_name(UiLanguage::Korean), "뒤로");
+        assert_eq!(back_name(UiLanguage::English), "Back");
         // The language IDs Windows gives Korean and US English.
-        assert_eq!(back_name(is_korean(0x0412)), "뒤로");
-        assert_eq!(back_name(is_korean(0x0409)), "Back");
+        assert_eq!(back_name(from_langid(0x0412)), "뒤로");
+        assert_eq!(back_name(from_langid(0x0409)), "Back");
+    }
+
+    #[test]
+    fn fr17_the_window_is_read_out_in_every_language() {
+        use crate::ui_language::assert_translation;
+        let english = caption_names(UiLanguage::English);
+        let what = [
+            "Back",
+            "System menu",
+            "Minimize",
+            "Maximize",
+            "Restore",
+            "Close",
+        ];
+        for language in UiLanguage::ALL {
+            let names = caption_names(language);
+            for ((what, en), name) in what.iter().zip(english).zip(names) {
+                assert_translation(language, what, en, name);
+            }
+            // Maximize and Restore are told apart in every language.
+            assert_ne!(names[3], names[4], "{language:?}");
+            assert_translation(
+                language,
+                "Opening the app",
+                loading_status(UiLanguage::English, true).unwrap(),
+                loading_status(language, true).unwrap(),
+            );
+            assert_eq!(loading_status(language, false), None);
+            assert_translation(
+                language,
+                "Loading",
+                loading_name(UiLanguage::English),
+                loading_name(language),
+            );
+            for long in [false, true] {
+                assert_translation(
+                    language,
+                    "the default action",
+                    patterns::action_name_in(long, UiLanguage::English),
+                    patterns::action_name_in(long, language),
+                );
+            }
+            if language != UiLanguage::English {
+                assert_ne!(loading_name(language), "Loading", "{language:?}");
+            }
+        }
     }
 
     const BACK: RootChild = RootChild::Caption(CaptionKind::Back);
@@ -2641,8 +2812,11 @@ mod tests {
         }
     }
 
-    fn name_of(kind: CaptionKind, cells: &CaptionCells, korean: bool) -> String {
-        let name = caption_property(kind, cells, UIA_NamePropertyId, korean);
+    const EN: UiLanguage = UiLanguage::English;
+    const KO: UiLanguage = UiLanguage::Korean;
+
+    fn name_of(kind: CaptionKind, cells: &CaptionCells, language: UiLanguage) -> String {
+        let name = caption_property(kind, cells, UIA_NamePropertyId, language);
         let text = text_of(&name).expect("a name");
         free_variant(name);
         text
@@ -2650,10 +2824,10 @@ mod tests {
 
     #[test]
     fn fr18_a_window_says_it_is_opening_its_app_until_the_first_frame() {
-        assert_eq!(loading_status(false, true), Some("Opening the app"));
-        assert_eq!(loading_status(true, true), Some("앱을 여는 중"));
-        assert_eq!(loading_status(false, false), None);
-        assert_eq!(loading_status(true, false), None);
+        assert_eq!(loading_status(EN, true), Some("Opening the app"));
+        assert_eq!(loading_status(KO, true), Some("앱을 여는 중"));
+        assert_eq!(loading_status(EN, false), None);
+        assert_eq!(loading_status(KO, false), None);
     }
 
     #[test]
@@ -2665,23 +2839,21 @@ mod tests {
     #[test]
     fn fr18_caption_buttons_are_named_in_the_display_language() {
         let cells = title_bar(false);
-        let names = |korean| {
+        let names = |language| {
             [
                 CaptionKind::SystemMenu,
                 CaptionKind::Minimize,
                 CaptionKind::Maximize,
                 CaptionKind::Close,
             ]
-            .map(|kind| name_of(kind, &cells, korean))
+            .map(|kind| name_of(kind, &cells, language))
         };
-        assert_eq!(
-            names(false),
-            ["System menu", "Minimize", "Maximize", "Close"]
-        );
-        assert_eq!(names(true), ["시스템 메뉴", "최소화", "최대화", "닫기"]);
-        assert_eq!(name_of(CaptionKind::Back, &title_bar(true), true), "뒤로");
+        assert_eq!(names(EN), ["System menu", "Minimize", "Maximize", "Close"]);
+        assert_eq!(names(KO), ["시스템 메뉴", "최소화", "최대화", "닫기"]);
+        assert_eq!(names(UiLanguage::German)[3], "Schließen");
+        assert_eq!(name_of(CaptionKind::Back, &title_bar(true), KO), "뒤로");
         for kind in CaptionKind::ALL {
-            let control = caption_property(kind, &cells, UIA_ControlTypePropertyId, false);
+            let control = caption_property(kind, &cells, UIA_ControlTypePropertyId, EN);
             // SAFETY: the tag and member a VARIANT of an integer has.
             let control_type = unsafe {
                 let inner = &control.Anonymous.Anonymous;
@@ -2695,14 +2867,14 @@ mod tests {
     fn fr18_maximize_button_is_named_restore_while_maximized() {
         let layout = CaptionLayout::new(800, 31, 96, 0);
         let maximized = CaptionCells::of(&layout, false, true, true, false);
-        assert_eq!(name_of(CaptionKind::Maximize, &maximized, false), "Restore");
+        assert_eq!(name_of(CaptionKind::Maximize, &maximized, EN), "Restore");
         assert_eq!(
-            name_of(CaptionKind::Maximize, &maximized, true),
+            name_of(CaptionKind::Maximize, &maximized, KO),
             "이전 크기로"
         );
         let normal = CaptionCells::of(&layout, false, false, true, false);
-        assert_eq!(name_of(CaptionKind::Maximize, &normal, false), "Maximize");
-        assert_eq!(name_of(CaptionKind::Maximize, &normal, true), "최대화");
+        assert_eq!(name_of(CaptionKind::Maximize, &normal, EN), "Maximize");
+        assert_eq!(name_of(CaptionKind::Maximize, &normal, KO), "최대화");
         // A client is told the name changed, with both names.
         assert_eq!(
             caption_changes(&normal, &maximized),
@@ -2722,7 +2894,7 @@ mod tests {
         let layout = CaptionLayout::new(1920, 31, 96, 0);
         let hidden = CaptionCells::of(&layout, false, true, true, true);
         for kind in hidden.kinds() {
-            let offscreen = caption_property(kind, &hidden, UIA_IsOffscreenPropertyId, false);
+            let offscreen = caption_property(kind, &hidden, UIA_IsOffscreenPropertyId, EN);
             assert_eq!(truth_of(&offscreen), Some(true), "{kind:?}");
         }
         // Hidden, no point finds them: the app is drawn there.
@@ -2730,12 +2902,7 @@ mod tests {
         assert_eq!(caption_at(&hidden, left as f64 + 4.0, 10.0), None);
         // Revealed, they are on the screen, and each says so.
         let revealed = CaptionCells::of(&layout, false, true, true, false);
-        let shown = caption_property(
-            CaptionKind::Close,
-            &revealed,
-            UIA_IsOffscreenPropertyId,
-            false,
-        );
+        let shown = caption_property(CaptionKind::Close, &revealed, UIA_IsOffscreenPropertyId, EN);
         assert_eq!(truth_of(&shown), Some(false));
         assert_eq!(
             caption_at(&revealed, left as f64 + 4.0, 10.0),
@@ -2751,7 +2918,7 @@ mod tests {
                 .collect::<Vec<_>>()
         );
         // Its middle button is Restore, which leaves full screen.
-        assert_eq!(name_of(CaptionKind::Maximize, &hidden, false), "Restore");
+        assert_eq!(name_of(CaptionKind::Maximize, &hidden, EN), "Restore");
     }
 
     #[test]
@@ -2788,12 +2955,7 @@ mod tests {
         // A window fixed in size cannot be maximized: the button says so and does nothing.
         let fixed = CaptionCells::of(&layout, false, false, false, false);
         assert_eq!(caption_command(CaptionKind::Maximize, &fixed), None);
-        let enabled = caption_property(
-            CaptionKind::Maximize,
-            &fixed,
-            UIA_IsEnabledPropertyId,
-            false,
-        );
+        let enabled = caption_property(CaptionKind::Maximize, &fixed, UIA_IsEnabledPropertyId, EN);
         assert_eq!(truth_of(&enabled), Some(false));
         assert_eq!(
             caption_changes(&normal, &fixed),
@@ -3184,8 +3346,8 @@ mod tests {
             vec![RootChild::Caption(CaptionKind::Back), RootChild::Loading]
         );
         assert_eq!(root_children_of(&[], &[4], false), vec![RootChild::Node(4)]);
-        assert_eq!(loading_name(true), "불러오는 중");
-        assert_eq!(loading_name(false), "Loading");
+        assert_eq!(loading_name(KO), "불러오는 중");
+        assert_eq!(loading_name(EN), "Loading");
         for kind in CaptionKind::ALL {
             assert_ne!(LOADING_RUNTIME_ID, kind.runtime_id());
         }
