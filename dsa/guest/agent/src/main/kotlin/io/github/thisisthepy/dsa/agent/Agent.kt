@@ -776,8 +776,11 @@ class Agent(
                 accessibilityExport.resizing(result.taskId)
             }
             is RequestResult.Density -> {
-                log.info("task ${result.taskId} draws at ${result.densityDpi} dpi")
-                arranger.setDensity(result.taskId, result.densityDpi)
+                log.info(
+                    "task ${result.taskId} draws at ${result.densityDpi} dpi" +
+                        if (result.recreate) ", its window's move has ended" else "",
+                )
+                arranger.setDensity(result.taskId, result.densityDpi, result.recreate)
                 accessibilityExport.resizing(result.taskId)
             }
             is RequestResult.Caption -> {

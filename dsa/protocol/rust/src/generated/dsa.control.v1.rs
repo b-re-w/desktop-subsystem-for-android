@@ -217,12 +217,21 @@ pub struct ResizeTask {
 /// Host to guest: the task's window is on a monitor of another scale; the task's app draws
 /// at `density_dpi` (130 at a scale of 100%). The host sends the matching ResizeTask right
 /// after it, and the agent applies both together, so the app relays out once.
+///
+/// `recreate` is set when the window's move has ended (the user let go of it, or a move the
+/// desktop made is complete): once the task draws at the new density, the agent has Android
+/// recreate the task's top activity, which restores its saved state, even when the app says
+/// it handles a change of density itself. Some apps that say so lay out only part of their
+/// screen again and leave the rest at the old density. An activity that does not say so is
+/// recreated by Android anyway, so the agent asks for nothing more.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SetTaskDensity {
     #[prost(int32, tag = "1")]
     pub task_id: i32,
     #[prost(uint32, tag = "2")]
     pub density_dpi: u32,
+    #[prost(bool, tag = "3")]
+    pub recreate: bool,
 }
 /// Host to guest: the task's window draws its title bar over the top `height` pixels of the
 /// task (guest display pixels, which are the window's). The agent gives the task a top system

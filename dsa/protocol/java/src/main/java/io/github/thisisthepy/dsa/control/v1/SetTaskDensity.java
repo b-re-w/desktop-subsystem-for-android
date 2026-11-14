@@ -8,6 +8,12 @@ package io.github.thisisthepy.dsa.control.v1;
  * Host to guest: the task's window is on a monitor of another scale; the task's app draws
  * at `density_dpi` (130 at a scale of 100%). The host sends the matching ResizeTask right
  * after it, and the agent applies both together, so the app relays out once.
+ * `recreate` is set when the window's move has ended (the user let go of it, or a move the
+ * desktop made is complete): once the task draws at the new density, the agent has Android
+ * recreate the task's top activity, which restores its saved state, even when the app says
+ * it handles a change of density itself. Some apps that say so lay out only part of their
+ * screen again and leave the rest at the old density. An activity that does not say so is
+ * recreated by Android anyway, so the agent asks for nothing more.
  * </pre>
  *
  * Protobuf type {@code dsa.control.v1.SetTaskDensity}
@@ -69,6 +75,32 @@ public  final class SetTaskDensity extends
   private void clearDensityDpi() {
     
     densityDpi_ = 0;
+  }
+
+  public static final int RECREATE_FIELD_NUMBER = 3;
+  private boolean recreate_;
+  /**
+   * <code>bool recreate = 3;</code>
+   * @return The recreate.
+   */
+  @java.lang.Override
+  public boolean getRecreate() {
+    return recreate_;
+  }
+  /**
+   * <code>bool recreate = 3;</code>
+   * @param value The recreate to set.
+   */
+  private void setRecreate(boolean value) {
+    
+    recreate_ = value;
+  }
+  /**
+   * <code>bool recreate = 3;</code>
+   */
+  private void clearRecreate() {
+    
+    recreate_ = false;
   }
 
   public static io.github.thisisthepy.dsa.control.v1.SetTaskDensity parseFrom(
@@ -157,6 +189,12 @@ public  final class SetTaskDensity extends
    * Host to guest: the task's window is on a monitor of another scale; the task's app draws
    * at `density_dpi` (130 at a scale of 100%). The host sends the matching ResizeTask right
    * after it, and the agent applies both together, so the app relays out once.
+   * `recreate` is set when the window's move has ended (the user let go of it, or a move the
+   * desktop made is complete): once the task draws at the new density, the agent has Android
+   * recreate the task's top activity, which restores its saved state, even when the app says
+   * it handles a change of density itself. Some apps that say so lay out only part of their
+   * screen again and leave the rest at the old density. An activity that does not say so is
+   * recreated by Android anyway, so the agent asks for nothing more.
    * </pre>
    *
    * Protobuf type {@code dsa.control.v1.SetTaskDensity}
@@ -228,6 +266,34 @@ public  final class SetTaskDensity extends
       return this;
     }
 
+    /**
+     * <code>bool recreate = 3;</code>
+     * @return The recreate.
+     */
+    @java.lang.Override
+    public boolean getRecreate() {
+      return instance.getRecreate();
+    }
+    /**
+     * <code>bool recreate = 3;</code>
+     * @param value The recreate to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRecreate(boolean value) {
+      copyOnWrite();
+      instance.setRecreate(value);
+      return this;
+    }
+    /**
+     * <code>bool recreate = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRecreate() {
+      copyOnWrite();
+      instance.clearRecreate();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.SetTaskDensity)
   }
   @java.lang.Override
@@ -246,10 +312,11 @@ public  final class SetTaskDensity extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "taskId_",
             "densityDpi_",
+            "recreate_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0004\u0002\u000b" +
-              "";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0004\u0002\u000b" +
+              "\u0003\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

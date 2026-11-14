@@ -18,4 +18,10 @@ public interface SetTaskDensityOrBuilder extends
    * @return The densityDpi.
    */
   int getDensityDpi();
+
+  /**
+   * <code>bool recreate = 3;</code>
+   * @return The recreate.
+   */
+  boolean getRecreate();
 }

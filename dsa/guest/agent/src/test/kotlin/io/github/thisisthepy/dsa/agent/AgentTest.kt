@@ -364,11 +364,57 @@ class AgentTest {
             .build().toByteArray(),
     )
 
-    private fun density(taskId: Int, densityDpi: Int) = daemon.deliver(
+    private fun density(taskId: Int, densityDpi: Int, recreate: Boolean = false) = daemon.deliver(
         Envelope.newBuilder()
-            .setSetTaskDensity(SetTaskDensity.newBuilder().setTaskId(taskId).setDensityDpi(densityDpi))
+            .setSetTaskDensity(
+                SetTaskDensity.newBuilder().setTaskId(taskId).setDensityDpi(densityDpi).setRecreate(recreate),
+            )
             .build().toByteArray(),
     )
+
+    @Test
+    fun fr4_a_task_moved_to_another_scale_is_recreated_once_at_the_new_density_when_the_move_ends() {
+        // YouTube says it handles a change of density, and lays out only part of its screen
+        // again at the new one, so the end of the move has its activity recreated.
+        val before = appTask(1, packageName = "com.example.video", bounds = TaskBounds(0, 0, 400, 300), densityDpi = 130)
+            .copy(handlesDensityChange = true)
+        tasks.running = listOf(before)
+        started()
+
+        density(1, 262, recreate = true)
+        resize(1, 806, 605)
+        scheduler.runDue()
+        assertEquals(listOf(Triple(1, TaskBounds(0, 0, 806, 605), 262 as Int?)), actions.resized)
+        // Not before the task draws at the new density.
+        assertTrue(actions.recreated.isEmpty())
+
+        tasks.change(listOf(before.copy(bounds = TaskBounds(0, 0, 806, 605), densityDpi = 262)))
+        scheduler.advance(200)
+        assertEquals(listOf(1 to "com.example.video"), actions.recreated)
+
+        // Once for the move.
+        tasks.change(listOf(before.copy(bounds = TaskBounds(0, 0, 806, 605), densityDpi = 262, label = "Video")))
+        scheduler.advance(200)
+        assertEquals(1, actions.recreated.size)
+    }
+
+    @Test
+    fun fr4_an_activity_android_recreates_itself_or_a_density_without_a_move_end_is_not_recreated_again() {
+        // An activity that does not say it handles a change of density: Android recreates it.
+        val plain = appTask(1, bounds = TaskBounds(0, 0, 400, 300), densityDpi = 130)
+        // A density asked for without the end of a move.
+        val other = appTask(2, bounds = TaskBounds(500, 0, 900, 300), densityDpi = 130).copy(handlesDensityChange = true)
+        tasks.running = listOf(plain, other)
+        started()
+
+        density(1, 262, recreate = true)
+        density(2, 262)
+        scheduler.runDue()
+        tasks.change(listOf(plain.copy(densityDpi = 262), other.copy(densityDpi = 262)))
+        scheduler.advance(200)
+
+        assertTrue(actions.recreated.isEmpty())
+    }
 
     @Test
     fun fr4_resizing_a_window_gives_its_task_the_size_and_tells_the_host_at_once() {

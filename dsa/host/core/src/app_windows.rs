@@ -14,19 +14,22 @@ use crate::compositor::window_sizing::MIN_CLIENT_DP;
 use crate::tasks::FullScreenRequest;
 
 /// How an app follows its window to a monitor of another scale, as a user chooses it, the way
-/// Windows lets a user choose who performs the high DPI scaling of a desktop program. The
-/// default and [`DpiScaling::System`] never restart the app.
+/// Windows lets a user choose who performs the high DPI scaling of a desktop program.
+/// [`DpiScaling::System`] never recreates the app's activity; the default recreates it once
+/// per move, when the move ends.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum DpiScaling {
-    /// [`DpiScaling::App`] for an app whose activity says it handles a change of density
-    /// itself, [`DpiScaling::System`] for any other.
+    /// What [`DpiScaling::App`] does, for every app.
     #[default]
     Auto,
     /// The task takes the new monitor's density, and the app redraws at it: its text stays
-    /// sharp. An app that does not say it handles a change of density is given it too: Android
-    /// recreates its activity, which restores its saved state (scroll position, typed text),
-    /// so it may redraw briefly when it moves, as a Windows program does with "application".
+    /// sharp. While the window is dragged it keeps its density and its window is scaled; when
+    /// the move ends, it takes the new density and Android recreates its activity once, which
+    /// restores its saved state (scroll position, typed text). That holds even for an app that
+    /// says it handles a change of density itself, because some such apps lay out only part
+    /// of their screen again. The app redraws briefly when it moves, as a Windows program does
+    /// with "application".
     App,
     /// The task keeps its density, and the window manager scales the window's picture to the
     /// new monitor, so the app keeps its size on the screen. Scaled up, text can look a little
@@ -78,21 +81,19 @@ impl DpiScaling {
             .find(|scaling| scaling.name() == name)
     }
 
-    /// What a task's window does with this choice, for a task whose top activity does
-    /// (`handles_density_change`) or does not say it handles a change of density itself.
+    /// What a task's window does with this choice.
     ///
-    /// Android relaunches an activity that does not say it handles a change of density when
-    /// its density changes, and the default must never restart an app. So
-    /// [`DpiScaling::Auto`] gives another density only to an activity that says it handles
-    /// one. [`DpiScaling::App`] is the user's explicit choice to stay sharp at the cost of
-    /// that relaunch, so it gives the new density to any app. [`DpiScaling::SystemForced`]
-    /// works as [`DpiScaling::System`] does until the framework change it needs is made.
-    pub fn mode(self, handles_density_change: bool) -> ScalingMode {
+    /// [`DpiScaling::Auto`] and [`DpiScaling::App`] give the task the new monitor's density
+    /// once its move ends, and the guest recreates its activity then, whether or not the app
+    /// says it handles a change of density: an app that says so can still draw a broken
+    /// layout at the new density, and one that does not is recreated by Android anyway.
+    /// [`DpiScaling::SystemForced`] works as [`DpiScaling::System`] does until the framework
+    /// change it needs is made.
+    pub fn mode(self) -> ScalingMode {
         match self {
-            DpiScaling::App => ScalingMode::App,
-            DpiScaling::Auto if handles_density_change => ScalingMode::App,
+            DpiScaling::Auto | DpiScaling::App => ScalingMode::App,
             DpiScaling::SystemForced if DpiScaling::FORCED_AVAILABLE => ScalingMode::App,
-            DpiScaling::Auto | DpiScaling::System | DpiScaling::SystemForced => ScalingMode::System,
+            DpiScaling::System | DpiScaling::SystemForced => ScalingMode::System,
         }
     }
 
@@ -390,18 +391,15 @@ mod tests {
     }
 
     #[test]
-    fn fr4_an_explicit_app_choice_always_takes_the_density_and_forced_works_as_system_for_now() {
-        assert_eq!(DpiScaling::Auto.mode(true), ScalingMode::App);
-        assert_eq!(DpiScaling::Auto.mode(false), ScalingMode::System);
-        assert_eq!(DpiScaling::App.mode(true), ScalingMode::App);
-        // The user chose to stay sharp: Android recreates the activity and restores its state.
-        assert_eq!(DpiScaling::App.mode(false), ScalingMode::App);
-        assert_eq!(DpiScaling::System.mode(false), ScalingMode::System);
-        assert_eq!(DpiScaling::System.mode(true), ScalingMode::System);
+    fn fr4_the_default_and_app_take_the_density_system_keeps_it_and_forced_works_as_system_for_now()
+    {
+        // Both end a move at the new density, with the activity recreated once.
+        assert_eq!(DpiScaling::Auto.mode(), ScalingMode::App);
+        assert_eq!(DpiScaling::App.mode(), ScalingMode::App);
+        assert_eq!(DpiScaling::System.mode(), ScalingMode::System);
         // It needs a framework change that is not made yet.
         const { assert!(!DpiScaling::FORCED_AVAILABLE) };
-        assert_eq!(DpiScaling::SystemForced.mode(false), ScalingMode::System);
-        assert_eq!(DpiScaling::SystemForced.mode(true), ScalingMode::System);
+        assert_eq!(DpiScaling::SystemForced.mode(), ScalingMode::System);
     }
 
     #[test]
