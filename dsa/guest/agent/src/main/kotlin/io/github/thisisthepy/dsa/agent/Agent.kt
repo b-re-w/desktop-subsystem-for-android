@@ -278,6 +278,12 @@ class Agent(
         if (event.action == PointerAction.POINTER_ACTION_DOWN || event.action == PointerAction.POINTER_ACTION_SCROLL) {
             backStacks.interacted(event.taskId)
         }
+        if (event.action == PointerAction.POINTER_ACTION_DOWN) {
+            // The editor a press focuses is in this task's window; text input belongs to the
+            // scheduler's thread.
+            val taskId = event.taskId
+            scheduler.post { text.addressed(taskId) }
+        }
         val frames = frameTrace
         if (frames != null && event.action == PointerAction.POINTER_ACTION_UP) {
             // The reporter belongs to the scheduler's thread.
@@ -306,6 +312,8 @@ class Agent(
         focusedTask = reporter::focusedTask,
         send = { frame -> channel.send(frame) },
         log = log,
+        reportedTasks = { reporter.reported },
+        packageOf = reporter::reportedPackage,
     )
     private val lifecycle = Lifecycle(power, { frame -> channel.send(frame) }, log, { reporter.reported.isNotEmpty() })
     private val memoryReporter = memory?.let {
@@ -913,6 +921,7 @@ class Agent(
                 if (key.action == KeyAction.KEY_ACTION_DOWN && key.keyCode != 4) {
                     backStacks.interacted(key.taskId)
                 }
+                if (key.action == KeyAction.KEY_ACTION_DOWN) text.addressed(key.taskId)
                 keys.handle(envelope.keyEvent)
             } catch (e: Exception) {
                 log.warn("injecting key input failed", e)
