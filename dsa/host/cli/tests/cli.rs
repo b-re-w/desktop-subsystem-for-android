@@ -36,6 +36,28 @@ fn pr5_the_command_line_is_parsed() {
 }
 
 #[test]
+fn pr3_settings_set_render_gpu_takes_only_what_dsa_gpus_lists() {
+    use dsa_cli::render_gpu_choice;
+    // What `dsa gpus --json` printed on the laptop of the report that `bogusvalue` was kept.
+    let gpus = serde_json::json!({ "gpus": [
+        { "name": "Intel(R) UHD Graphics", "luid": "00000000:00010e3c", "primary_display": true },
+    ]});
+    let refused = render_gpu_choice("bogusvalue", &gpus).unwrap_err();
+    assert!(refused.contains("Intel(R) UHD Graphics"), "{refused}");
+    assert_eq!(render_gpu_choice("uhd", &gpus).unwrap(), "uhd");
+    // The automatic choice, and the other two keywords, whatever the list holds.
+    assert_eq!(render_gpu_choice("display", &gpus).unwrap(), "display");
+    assert_eq!(render_gpu_choice("Discrete", &gpus).unwrap(), "discrete");
+    assert_eq!(
+        render_gpu_choice("integrated", &gpus).unwrap(),
+        "integrated"
+    );
+    // A platform whose `dsa gpus` lists nothing keeps a name as given.
+    let none = serde_json::json!({ "gpus": [] });
+    assert_eq!(render_gpu_choice("RTX", &none).unwrap(), "RTX");
+}
+
+#[test]
 fn fr35_adb_shell_asks_for_root_like_an_app() {
     use dsa_cli::AppsAction;
     let invocation = parse(&args("apps root adb ask")).unwrap();

@@ -8,7 +8,7 @@ the CPU decoder (ASTC_CPU_DECODING OFF), which stays off by the owner's decision
 Upstream left ANGLE's Vulkan instances out of that ("let it do its own emulation"), but ANGLE
 has no ASTC decoder: it offers GL_KHR_texture_compression_astc_ldr only for the ASTC formats the
 Vulkan device samples. Every GLES app, which in the guest always runs on ANGLE, went without
-ASTC on such a GPU. Patch 0035 offers it to ANGLE too, offers it only where the GPU can run the
+ASTC on such a GPU. Patch 0036 offers it to ANGLE too, offers it only where the GPU can run the
 decoder (no CPU fallback), keeps the guest's format lists and ASTC decode modes off the images
 that stand in for the compressed ones, and logs once how ASTC reaches apps."""
 
@@ -18,7 +18,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PATCHES = HERE / "patches"
-PATCH = next(PATCHES.glob("0035-*.patch"))
+PATCH = next(PATCHES.glob("0036-*.patch"))
 OPERATIONS = "host/vulkan/VkCommonOperations.cpp"
 HEADER = "host/vulkan/VkCommonOperations.h"
 DECODER = "host/vulkan/VkDecoderGlobalState.cpp"
@@ -151,12 +151,12 @@ class AstcGpuDecodingPatchTests(unittest.TestCase):
         self.assertLess(text.index("dropFromChain(&decompInfo,"),
                         text.index("             pCreateInfo = &decompInfo;"))
 
-    def test_pr3_the_fetch_applies_it_after_0034(self):
+    def test_pr3_the_fetch_applies_it_after_0035(self):
         names = sorted(p.name for p in PATCHES.glob("00*.patch"))
         self.assertEqual(names.index(PATCH.name),
-                         names.index(next(n for n in names if n.startswith("0034-"))) + 1)
+                         names.index(next(n for n in names if n.startswith("0035-"))) + 1)
         for script in (HERE / "host/fetch.ps1", HERE / "host/fetch.sh"):
-            self.assertIn("0035", script.read_text(encoding="utf-8"))
+            self.assertIn("0036", script.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

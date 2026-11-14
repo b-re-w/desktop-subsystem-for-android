@@ -1,7 +1,7 @@
 diff --git a/host/vulkan/VkCommonOperations.cpp b/host/vulkan/VkCommonOperations.cpp
 --- a/host/vulkan/VkCommonOperations.cpp
 +++ b/host/vulkan/VkCommonOperations.cpp
-@@ -161,6 +161,77 @@
+@@ -162,6 +162,77 @@
  }
  
  }  // namespace
@@ -79,7 +79,7 @@ diff --git a/host/vulkan/VkCommonOperations.cpp b/host/vulkan/VkCommonOperations
  
  static StaticMap<VkDevice, uint32_t> sKnownStagingTypeIndices;
  
-@@ -1873,6 +1944,34 @@
+@@ -1874,6 +1945,34 @@
      mEnableYcbcrEmulation = features.enableYcbcrEmulation;
      mGuestVulkanOnly = features.guestVulkanOnly;
      mUseDedicatedAllocations = features.useDedicatedAllocations;
@@ -159,7 +159,7 @@ diff --git a/host/vulkan/VkDecoderGlobalState.cpp b/host/vulkan/VkDecoderGlobalS
                  needEmulatedAlpha = CompressedImageInfo::needEmulatedAlpha(pCreateInfo->format);
                  createInfo.image = imageInfo->cmpInfo.outputImage();
                  pCreateInfo = &createInfo;
-@@ -8249,6 +8254,24 @@
+@@ -8256,6 +8261,24 @@
          return !(usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) && !(type == VK_IMAGE_TYPE_1D);
      }
  
@@ -184,7 +184,7 @@ diff --git a/host/vulkan/VkDecoderGlobalState.cpp b/host/vulkan/VkDecoderGlobalS
      std::vector<const char*> filteredDeviceExtensionNames(VulkanDispatch* vk,
                                                            VkPhysicalDevice physicalDevice,
                                                            uint32_t count,
-@@ -8439,12 +8462,20 @@
+@@ -8446,12 +8469,20 @@
  
      bool enableEmulatedAstcLocked(VkPhysicalDevice physicalDevice, VulkanDispatch* vk)
          REQUIRES(mMutex) {
