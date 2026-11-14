@@ -1305,7 +1305,7 @@ pub struct Task {
     /// The orientation the task's top activity is locked to, if any.
     #[prost(enumeration = "TaskOrientation", tag = "20")]
     pub orientation: i32,
-    /// Whether the task's app asked to fill the screen.
+    /// Whether the task's app asked to fill the screen, in either way.
     #[prost(bool, tag = "21")]
     pub fullscreen: bool,
     /// Whether the task's app went into picture-in-picture.
@@ -1328,6 +1328,9 @@ pub struct Task {
     /// redraws at a new density rather than being relaunched. False when unknown.
     #[prost(bool, tag = "26")]
     pub handles_density_change: bool,
+    /// Which kind of full screen the task's app asks for, if any.
+    #[prost(enumeration = "FullScreenRequest", tag = "27")]
+    pub fullscreen_request: i32,
 }
 /// The task ended.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -2036,6 +2039,15 @@ pub struct Settings {
     /// out. A client cannot change it.
     #[prost(message, repeated, tag = "41")]
     pub imported_certificates: ::prost::alloc::vec::Vec<ImportedCertificate>,
+    /// Where the windows of every app show a clear full screen request, and where they show an
+    /// app hiding both its bars alone, unless the app has its own choice
+    /// (AppWindowSettings.fullscreen and immersive). SCREEN and WINDOW by default. DEFAULT in a
+    /// request means that default; an answer never carries it. A client sends back the values it
+    /// read. It applies at once, to the windows open already.
+    #[prost(enumeration = "FullScreenPlace", tag = "42")]
+    pub app_fullscreen: i32,
+    #[prost(enumeration = "FullScreenPlace", tag = "43")]
+    pub app_immersive: i32,
 }
 /// One root certificate the service found added to the computer's trust stores.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -2984,6 +2996,23 @@ pub struct AppWindowSettings {
     /// How the app follows its window to a monitor of another scale. No way restarts the app.
     #[prost(enumeration = "DpiScaling", tag = "5")]
     pub dpi_scaling: i32,
+    /// Where the app's windows show a clear full screen request (FullScreenRequest EXPLICIT),
+    /// and where they show the app hiding both its bars alone (BARS_HIDDEN). DEFAULT, the
+    /// default, follows the user's choice for every app (Settings.app_fullscreen and
+    /// app_immersive).
+    #[prost(enumeration = "FullScreenPlace", tag = "6")]
+    pub fullscreen: i32,
+    #[prost(enumeration = "FullScreenPlace", tag = "7")]
+    pub immersive: i32,
+}
+/// The user's full screen choices for every app, which an app's own choice overrides. Never
+/// DEFAULT in an answer from the service.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FullScreenDefaults {
+    #[prost(enumeration = "FullScreenPlace", tag = "1")]
+    pub fullscreen: i32,
+    #[prost(enumeration = "FullScreenPlace", tag = "2")]
+    pub immersive: i32,
 }
 /// Lists the caller's window settings for every app that has any. The service answers
 /// AppWindowSettingsList.
@@ -2998,11 +3027,14 @@ pub struct SetAppWindowSettings {
     #[prost(message, optional, tag = "1")]
     pub app: ::core::option::Option<AppWindowSettings>,
 }
-/// The caller's window settings for every app that has any, by package name.
+/// The caller's window settings for every app that has any, by package name, with the full
+/// screen choices every app without its own follows.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AppWindowSettingsList {
     #[prost(message, repeated, tag = "1")]
     pub apps: ::prost::alloc::vec::Vec<AppWindowSettings>,
+    #[prost(message, optional, tag = "2")]
+    pub defaults: ::core::option::Option<FullScreenDefaults>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Request {
@@ -4159,6 +4191,40 @@ impl ImeInputKind {
         }
     }
 }
+/// How a task's app asks to fill the screen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum FullScreenRequest {
+    /// It does not.
+    None = 0,
+    /// A clear request: the task left freeform for fullscreen, its theme sets
+    /// android:windowFullscreen, or it hides both system bars while it asks for landscape.
+    Explicit = 1,
+    /// It hides both system bars and asks for no landscape orientation (immersive mode).
+    BarsHidden = 2,
+}
+impl FullScreenRequest {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::None => "FULL_SCREEN_REQUEST_NONE",
+            Self::Explicit => "FULL_SCREEN_REQUEST_EXPLICIT",
+            Self::BarsHidden => "FULL_SCREEN_REQUEST_BARS_HIDDEN",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "FULL_SCREEN_REQUEST_NONE" => Some(Self::None),
+            "FULL_SCREEN_REQUEST_EXPLICIT" => Some(Self::Explicit),
+            "FULL_SCREEN_REQUEST_BARS_HIDDEN" => Some(Self::BarsHidden),
+            _ => None,
+        }
+    }
+}
 /// The orientation a task's top activity asks for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -4595,6 +4661,42 @@ impl ErrorCode {
             "ERROR_CODE_INSTALL_REFUSED" => Some(Self::InstallRefused),
             "ERROR_CODE_WIDGET_REFUSED" => Some(Self::WidgetRefused),
             "ERROR_CODE_DATA_WOULD_BE_LOST" => Some(Self::DataWouldBeLost),
+            _ => None,
+        }
+    }
+}
+/// Where a window shows an app that asks to fill the screen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum FullScreenPlace {
+    /// As the default says: for one app, the user's choice for every app; for every app, what
+    /// DSA does without a choice (SCREEN for a clear request, WINDOW for bars hidden alone).
+    Default = 0,
+    /// On the whole screen: the window fills its monitor, and its title bar shows while the
+    /// pointer is at the top edge.
+    Screen = 1,
+    /// Inside the window: it keeps its size and title bar, and the app fills it with no title
+    /// band of its own.
+    Window = 2,
+}
+impl FullScreenPlace {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Default => "FULL_SCREEN_PLACE_DEFAULT",
+            Self::Screen => "FULL_SCREEN_PLACE_SCREEN",
+            Self::Window => "FULL_SCREEN_PLACE_WINDOW",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "FULL_SCREEN_PLACE_DEFAULT" => Some(Self::Default),
+            "FULL_SCREEN_PLACE_SCREEN" => Some(Self::Screen),
+            "FULL_SCREEN_PLACE_WINDOW" => Some(Self::Window),
             _ => None,
         }
     }

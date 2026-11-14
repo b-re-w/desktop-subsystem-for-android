@@ -127,6 +127,7 @@ PROTOBUF_CONSTEXPR TaskUpdated::TaskUpdated(
   , /*decltype(_impl_.orientation_)*/0
   , /*decltype(_impl_.can_go_back_)*/false
   , /*decltype(_impl_.handles_density_change_)*/false
+  , /*decltype(_impl_.fullscreen_request_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TaskUpdatedDefaultTypeInternal {
   PROTOBUF_CONSTEXPR TaskUpdatedDefaultTypeInternal()
@@ -3642,6 +3643,61 @@ bool RejectReason_Parse(
       RejectReason_entries, 6, name, &int_value);
   if (success) {
     *value = static_cast<RejectReason>(int_value);
+  }
+  return success;
+}
+bool FullScreenRequest_IsValid(int value) {
+  switch (value) {
+    case 0:
+    case 1:
+    case 2:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> FullScreenRequest_strings[3] = {};
+
+static const char FullScreenRequest_names[] =
+  "FULL_SCREEN_REQUEST_BARS_HIDDEN"
+  "FULL_SCREEN_REQUEST_EXPLICIT"
+  "FULL_SCREEN_REQUEST_NONE";
+
+static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry FullScreenRequest_entries[] = {
+  { {FullScreenRequest_names + 0, 31}, 2 },
+  { {FullScreenRequest_names + 31, 28}, 1 },
+  { {FullScreenRequest_names + 59, 24}, 0 },
+};
+
+static const int FullScreenRequest_entries_by_number[] = {
+  2, // 0 -> FULL_SCREEN_REQUEST_NONE
+  1, // 1 -> FULL_SCREEN_REQUEST_EXPLICIT
+  0, // 2 -> FULL_SCREEN_REQUEST_BARS_HIDDEN
+};
+
+const std::string& FullScreenRequest_Name(
+    FullScreenRequest value) {
+  static const bool dummy =
+      ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
+          FullScreenRequest_entries,
+          FullScreenRequest_entries_by_number,
+          3, FullScreenRequest_strings);
+  (void) dummy;
+  int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
+      FullScreenRequest_entries,
+      FullScreenRequest_entries_by_number,
+      3, value);
+  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
+                     FullScreenRequest_strings[idx].get();
+}
+bool FullScreenRequest_Parse(
+    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, FullScreenRequest* value) {
+  int int_value;
+  bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
+      FullScreenRequest_entries, 3, name, &int_value);
+  if (success) {
+    *value = static_cast<FullScreenRequest>(int_value);
   }
   return success;
 }
@@ -7488,6 +7544,7 @@ TaskUpdated::TaskUpdated(const TaskUpdated& from)
     , decltype(_impl_.orientation_){}
     , decltype(_impl_.can_go_back_){}
     , decltype(_impl_.handles_density_change_){}
+    , decltype(_impl_.fullscreen_request_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -7511,8 +7568,8 @@ TaskUpdated::TaskUpdated(const TaskUpdated& from)
     _this->_impl_.bounds_ = new ::dsa::control::v1::Rect(*from._impl_.bounds_);
   }
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.handles_density_change_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.handles_density_change_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.fullscreen_request_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.fullscreen_request_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.TaskUpdated)
 }
 
@@ -7540,6 +7597,7 @@ inline void TaskUpdated::SharedCtor(
     , decltype(_impl_.orientation_){0}
     , decltype(_impl_.can_go_back_){false}
     , decltype(_impl_.handles_density_change_){false}
+    , decltype(_impl_.fullscreen_request_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.package_name_.InitDefault();
@@ -7587,8 +7645,8 @@ void TaskUpdated::Clear() {
   }
   _impl_.bounds_ = nullptr;
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.handles_density_change_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.handles_density_change_));
+      reinterpret_cast<char*>(&_impl_.fullscreen_request_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.fullscreen_request_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -7761,6 +7819,15 @@ const char* TaskUpdated::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
         } else
           goto handle_unusual;
         continue;
+      // .dsa.control.v1.FullScreenRequest fullscreen_request = 27;
+      case 27:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 216)) {
+          uint64_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+          _internal_set_fullscreen_request(static_cast<::dsa::control::v1::FullScreenRequest>(val));
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -7917,6 +7984,13 @@ uint8_t* TaskUpdated::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteBoolToArray(26, this->_internal_handles_density_change(), target);
   }
 
+  // .dsa.control.v1.FullScreenRequest fullscreen_request = 27;
+  if (this->_internal_fullscreen_request() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteEnumToArray(
+      27, this->_internal_fullscreen_request(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -8038,6 +8112,12 @@ size_t TaskUpdated::ByteSizeLong() const {
     total_size += 2 + 1;
   }
 
+  // .dsa.control.v1.FullScreenRequest fullscreen_request = 27;
+  if (this->_internal_fullscreen_request() != 0) {
+    total_size += 2 +
+      ::_pbi::WireFormatLite::EnumSize(this->_internal_fullscreen_request());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -8115,6 +8195,9 @@ void TaskUpdated::MergeFrom(const TaskUpdated& from) {
   if (from._internal_handles_density_change() != 0) {
     _this->_internal_set_handles_density_change(from._internal_handles_density_change());
   }
+  if (from._internal_fullscreen_request() != 0) {
+    _this->_internal_set_fullscreen_request(from._internal_fullscreen_request());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -8144,8 +8227,8 @@ void TaskUpdated::InternalSwap(TaskUpdated* other) {
       &other->_impl_.label_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TaskUpdated, _impl_.handles_density_change_)
-      + sizeof(TaskUpdated::_impl_.handles_density_change_)
+      PROTOBUF_FIELD_OFFSET(TaskUpdated, _impl_.fullscreen_request_)
+      + sizeof(TaskUpdated::_impl_.fullscreen_request_)
       - PROTOBUF_FIELD_OFFSET(TaskUpdated, _impl_.bounds_)>(
           reinterpret_cast<char*>(&_impl_.bounds_),
           reinterpret_cast<char*>(&other->_impl_.bounds_));

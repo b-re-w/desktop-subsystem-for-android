@@ -191,14 +191,28 @@ fun restartedByFontScale(tasks: List<TaskSnapshot>): List<String> =
 
 /**
  * Whether a task's app asked to fill the screen, in any of the ways an app asks: its task left
- * the freeform windowing mode for fullscreen ([fullscreenMode]), it hides both its status and
- * navigation bars ([requestedVisibleTypes], see [hidesBothSystemBars]), or its top activity's
- * theme sets android:windowFullscreen ([fullscreenTheme]). The theme is read from the app's
- * manifest before any of its code runs, so a task that asks this way is known to fill the
- * screen from the moment it is created, before its activity has a window.
+ * the freeform windowing mode for fullscreen ([fullscreenMode]), its top activity's theme sets
+ * android:windowFullscreen ([fullscreenTheme]), or it hides both its status and navigation
+ * bars ([requestedVisibleTypes], see [hidesBothSystemBars]) while it asks for landscape
+ * ([orientation]). The theme is read from the app's manifest before any of its code runs, so
+ * a task that asks this way is known to fill the screen from the moment it is created, before
+ * its activity has a window.
+ *
+ * Hiding both bars alone does not count. A phone app hides them to fill the screen it is in,
+ * which in a window is the window: YouTube's Shorts feed does on every visit, and turning its
+ * window into a monitor-filling one without a title bar (and without minimize) took away the
+ * window the user had. A video player's or a game's full screen button on a phone hides the
+ * bars and turns the phone on its side, so the two together are the request.
  */
-fun asksForFullScreen(fullscreenMode: Boolean, requestedVisibleTypes: Int?, fullscreenTheme: Boolean): Boolean =
-    fullscreenMode || fullscreenTheme || hidesBothSystemBars(requestedVisibleTypes)
+fun asksForFullScreen(
+    fullscreenMode: Boolean,
+    requestedVisibleTypes: Int?,
+    fullscreenTheme: Boolean,
+    orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
+): Boolean =
+    fullscreenMode ||
+        fullscreenTheme ||
+        (hidesBothSystemBars(requestedVisibleTypes) && orientation == TaskOrientation.LANDSCAPE)
 
 /**
  * The bounds the agent starts an app at, on a display of [displayWidth] by [displayHeight]

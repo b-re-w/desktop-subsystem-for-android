@@ -2,7 +2,6 @@ package io.github.thisisthepy.dsa.agent
 
 import io.github.thisisthepy.dsa.agent.channel.ChannelEndpoint
 import io.github.thisisthepy.dsa.agent.channel.ChannelLocator
-import io.github.thisisthepy.dsa.agent.requests.InsetGiven
 import io.github.thisisthepy.dsa.agent.requests.ResizeOutcome
 import io.github.thisisthepy.dsa.agent.input.InjectedKey
 import io.github.thisisthepy.dsa.agent.input.InjectedMotion
@@ -318,17 +317,6 @@ class FakeActions : TaskActions {
     var statusBarHeights = mapOf<Int, Int>()
 
     override fun statusBarHeight(densityDpi: Int): Int = statusBarHeights[densityDpi] ?: 0
-
-    /** Each navigation bar inset given: the task and its frame, null for a removal. */
-    val navigationBarInsets = mutableListOf<Pair<Int, TaskBounds?>>()
-
-    /** What the framework does with a navigation bar inset it is given. */
-    var navigationBarGiven = InsetGiven.FOLLOWS_TASK
-
-    override fun setNavigationBarInset(taskId: Int, frame: TaskBounds?): InsetGiven {
-        navigationBarInsets += taskId to frame
-        return navigationBarGiven
-    }
 }
 
 class FakeWindowing(var acceptAfter: Int = 0) : WindowingControl {

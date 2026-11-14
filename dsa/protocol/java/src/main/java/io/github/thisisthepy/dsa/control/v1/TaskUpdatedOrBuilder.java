@@ -189,8 +189,8 @@ public interface TaskUpdatedOrBuilder extends
 
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -287,4 +287,27 @@ public interface TaskUpdatedOrBuilder extends
    * @return The handlesDensityChange.
    */
   boolean getHandlesDensityChange();
+
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The enum numeric value on the wire for fullscreenRequest.
+   */
+  int getFullscreenRequestValue();
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The fullscreenRequest.
+   */
+  io.github.thisisthepy.dsa.control.v1.FullScreenRequest getFullscreenRequest();
 }

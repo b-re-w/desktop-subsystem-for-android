@@ -15,7 +15,14 @@ class FullScreenStartTest {
         assertTrue(asksForFullScreen(fullscreenMode = false, requestedVisibleTypes = null, fullscreenTheme = true))
         // The other ways still count.
         assertTrue(asksForFullScreen(fullscreenMode = true, requestedVisibleTypes = 503, fullscreenTheme = false))
-        assertTrue(asksForFullScreen(fullscreenMode = false, requestedVisibleTypes = 368, fullscreenTheme = false))
+        assertTrue(
+            asksForFullScreen(
+                fullscreenMode = false,
+                requestedVisibleTypes = 368,
+                fullscreenTheme = false,
+                orientation = TaskOrientation.LANDSCAPE,
+            ),
+        )
         assertFalse(asksForFullScreen(fullscreenMode = false, requestedVisibleTypes = 503, fullscreenTheme = false))
     }
 
