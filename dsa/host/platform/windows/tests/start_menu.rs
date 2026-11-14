@@ -150,10 +150,108 @@ fn fr7_a_renamed_app_has_its_shortcut_renamed() {
     setup.sync(&[app("com.example.clock", "Clock")], &ShellLinks);
     setup.sync(&[app("com.example.clock", "Alarm")], &ShellLinks);
     assert_eq!(files(&setup.menu.dir), vec!["Alarm.lnk".to_string()]);
-    assert_eq!(
-        shortcut(&setup, "Alarm.lnk").target,
-        setup.apps_dir.join("com.example.clock").join("Alarm.exe")
-    );
+    // The program keeps its file, so a taskbar pin made from the old shortcut still runs it.
+    let program = setup.apps_dir.join("com.example.clock").join("Clock.exe");
+    assert!(program.is_file());
+    assert_eq!(shortcut(&setup, "Alarm.lnk").target, program);
+    assert_eq!(shortcut(&setup, "Alarm.lnk").icon, (program, 0));
+}
+
+#[test]
+fn fr7_a_shortcut_whose_program_is_gone_is_pointed_at_the_apps_program_again() {
+    // An earlier release renamed the program with the app, and left the Start menu shortcut,
+    // the desktop shortcuts and the taskbar pin pointing at the old name.
+    use dsa_host_windows::desktop_shortcuts::Desktop;
+    use dsa_host_windows::start_menu::{menu_entries, repair_pins};
+    let _com = ComApartment::enter();
+    let setup = setup("repair");
+    let package = "com.android.vending";
+    let folder = setup.apps_dir.join(package);
+    std::fs::create_dir_all(&folder).unwrap();
+    std::fs::copy(TEMPLATE, folder.join("Google Play Store.exe")).unwrap();
+    let gone = folder.join("Play Store.exe");
+    let stale = Shortcut {
+        target: gone.clone(),
+        arguments: format!("{PACKAGE_ARGUMENT} {package}"),
+        icon: (gone.clone(), 0),
+        working_dir: folder.clone(),
+        description: "Play Store (Desktop Subsystem for Android)".into(),
+        app_user_model_id: app_user_model_id(package),
+    };
+    std::fs::create_dir_all(&setup.menu.dir).unwrap();
+    ShellLinks
+        .write(&setup.menu.dir.join("Play Store.lnk"), &stale)
+        .unwrap();
+    std::fs::write(
+        &setup.menu.note,
+        format!(r#"{{"shortcuts":{{"{package}":"Play Store.lnk"}}}}"#),
+    )
+    .unwrap();
+    let root = setup.menu.note.parent().unwrap().to_path_buf();
+    let pins = root.join("TaskBar");
+    std::fs::create_dir_all(&pins).unwrap();
+    ShellLinks
+        .write(&pins.join("Play Store.lnk"), &stale)
+        .unwrap();
+    // Someone else's pin is never touched, even when its program is gone too.
+    let foreign = Shortcut {
+        target: root.join("missing.exe"),
+        arguments: String::new(),
+        icon: (root.join("missing.exe"), 0),
+        working_dir: root.clone(),
+        description: String::new(),
+        app_user_model_id: "Example.Other".into(),
+    };
+    ShellLinks.write(&pins.join("Other.lnk"), &foreign).unwrap();
+    let desktop = Desktop {
+        dir: root.join("Desktop"),
+        note: root.join("desktop-shortcuts.json"),
+    };
+    std::fs::create_dir_all(&desktop.dir).unwrap();
+    let on_desktop = desktop.dir.join("Play Store.lnk");
+    ShellLinks.write(&on_desktop, &stale).unwrap();
+    let app_shortcut = desktop.dir.join("Search.lnk");
+    let search = Shortcut {
+        arguments: format!("{PACKAGE_ARGUMENT} {package} --shortcut search"),
+        icon: (folder.join("shortcuts").join("search.ico"), 0),
+        ..stale.clone()
+    };
+    ShellLinks.write(&app_shortcut, &search).unwrap();
+    std::fs::write(
+        &desktop.note,
+        serde_json::json!({ "apps": { package: {
+            "app": on_desktop,
+            "shortcuts": { "search": app_shortcut },
+        } } })
+        .to_string(),
+    )
+    .unwrap();
+
+    // DSA starts and Android lists the app.
+    let apps = [app(package, "Play Store")];
+    let problems = setup.sync(&apps, &ShellLinks);
+    assert!(problems.is_empty(), "{problems:?}");
+    let program = folder.join("Google Play Store.exe");
+    assert!(program.is_file(), "the program keeps the file it has");
+    assert!(!gone.exists());
+    assert_eq!(shortcut(&setup, "Play Store.lnk").target, program);
+
+    let entries = menu_entries(&setup.apps_dir, &apps);
+    assert!(repair_pins(std::slice::from_ref(&pins),&entries, &ShellLinks).is_empty());
+    let pin = ShellLinks.read(&pins.join("Play Store.lnk")).unwrap();
+    assert_eq!(pin.target, program);
+    assert_eq!(pin.icon, (program.clone(), 0));
+    assert_eq!(pin.working_dir, folder);
+    assert_eq!(pin.arguments, stale.arguments);
+    assert_eq!(pin.app_user_model_id, app_user_model_id(package));
+    assert_eq!(ShellLinks.read(&pins.join("Other.lnk")).unwrap(), foreign);
+
+    assert!(desktop.keep_in_step(&entries, &ShellLinks).is_empty());
+    assert_eq!(ShellLinks.read(&on_desktop).unwrap().target, program);
+    let search_now = ShellLinks.read(&app_shortcut).unwrap();
+    assert_eq!(search_now.target, program);
+    assert_eq!(search_now.arguments, search.arguments);
+    assert_eq!(search_now.icon, search.icon, "its own icon stays");
 }
 
 #[test]
