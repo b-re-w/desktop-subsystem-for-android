@@ -15,7 +15,7 @@ import io.github.thisisthepy.dsa.agent.tasks.SystemBarAppearances
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 import io.github.thisisthepy.dsa.agent.tasks.TaskKind
 import io.github.thisisthepy.dsa.agent.tasks.TaskOrientation
-import io.github.thisisthepy.dsa.agent.tasks.asksForFullScreen
+import io.github.thisisthepy.dsa.agent.tasks.fullScreenRequest
 import io.github.thisisthepy.dsa.agent.tasks.TaskSnapshot
 import io.github.thisisthepy.dsa.agent.tasks.TaskSource
 import io.github.thisisthepy.dsa.agent.tasks.TaskStack
@@ -120,7 +120,9 @@ class AndroidTaskSource(
             // windowing mode, a full screen theme, which is known before the activity has a
             // window, or hiding both its status and navigation bars while it asks for
             // landscape, in its manifest or at run time, as a player's full screen button does.
-            fullscreen = asksForFullScreen(
+            // Hiding both bars without landscape is told apart, so the host shows it as the
+            // user's setting for it says.
+            fullscreenRequest = fullScreenRequest(
                 fullscreenMode = fields.windowingMode(info) == WINDOWING_MODE_FULLSCREEN,
                 requestedVisibleTypes = fields.requestedVisibleTypes(info),
                 fullscreenTheme = themes.asks(top),

@@ -52,8 +52,8 @@ data class TaskSnapshot(
     val statusBarColor: Int = 0,
     /** The orientation the task's top activity is locked to, which the host's window keeps. */
     val orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
-    /** Whether the task's app asked to fill the screen: it left the freeform windowing mode. */
-    val fullscreen: Boolean = false,
+    /** Which kind of full screen the task's app asks for, if any ([fullScreenRequest]). */
+    val fullscreenRequest: FullScreenRequest = FullScreenRequest.NONE,
     /** Whether the task's app went into picture-in-picture. */
     val pictureInPicture: Boolean = false,
     /**
@@ -91,7 +91,29 @@ data class TaskSnapshot(
      * [transparentCaption] is set.
      */
     val captionInteractive: List<TaskBounds> = emptyList(),
-)
+) {
+    /** Whether the task's app asks to fill the screen, in either way. */
+    val fullscreen: Boolean get() = fullscreenRequest != FullScreenRequest.NONE
+}
+
+/**
+ * How a task's app asks to fill the screen. The host shows each kind as the user's setting
+ * for it says: on the whole screen or inside the window.
+ */
+enum class FullScreenRequest {
+    /** It does not. */
+    NONE,
+
+    /**
+     * A clear request: the task left freeform for the fullscreen windowing mode, its top
+     * activity's theme sets android:windowFullscreen, or it hides both system bars while it
+     * asks for landscape.
+     */
+    EXPLICIT,
+
+    /** It hides both system bars and asks for no landscape orientation (immersive mode). */
+    BARS_HIDDEN,
+}
 
 /**
  * Whether an app asked to fill the screen by hiding its bars (immersive mode): the window
@@ -210,9 +232,26 @@ fun asksForFullScreen(
     fullscreenTheme: Boolean,
     orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
 ): Boolean =
-    fullscreenMode ||
-        fullscreenTheme ||
-        (hidesBothSystemBars(requestedVisibleTypes) && orientation == TaskOrientation.LANDSCAPE)
+    fullScreenRequest(fullscreenMode, requestedVisibleTypes, fullscreenTheme, orientation) ==
+        FullScreenRequest.EXPLICIT
+
+/**
+ * Which kind of full screen a task's app asks for: [FullScreenRequest.EXPLICIT] in the ways
+ * [asksForFullScreen] counts, [FullScreenRequest.BARS_HIDDEN] when it hides both its bars
+ * without landscape, which the agent reports apart so the host can keep it inside its window
+ * (the default) or fill the screen with it, as the user chose.
+ */
+fun fullScreenRequest(
+    fullscreenMode: Boolean,
+    requestedVisibleTypes: Int?,
+    fullscreenTheme: Boolean,
+    orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
+): FullScreenRequest = when {
+    fullscreenMode || fullscreenTheme -> FullScreenRequest.EXPLICIT
+    !hidesBothSystemBars(requestedVisibleTypes) -> FullScreenRequest.NONE
+    orientation == TaskOrientation.LANDSCAPE -> FullScreenRequest.EXPLICIT
+    else -> FullScreenRequest.BARS_HIDDEN
+}
 
 /**
  * The bounds the agent starts an app at, on a display of [displayWidth] by [displayHeight]
