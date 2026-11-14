@@ -2,6 +2,7 @@
 
     uv run dsa/guest/framework/apply-patches.py --android android17 --top <tree>
     uv run dsa/guest/framework/apply-patches.py --android android17 --top <tree> --check
+    uv run dsa/guest/framework/apply-patches.py --android android17 --top <tree> --native
 
 Each patches/<project>/<android>/NNNN-*.patch applies with `git apply` in <tree>/<project>, in
 order. A patch that does not apply exactly stops it: a patch applied in part, or with fuzz to
@@ -41,15 +42,20 @@ def git_apply(project_dir, patch, check):
     return applied
 
 
-def apply_patches(android, top, check=False, patches=framework_lock.PATCHES):
+def apply_patches(android, top, check=False, patches=framework_lock.PATCHES, native=False):
     """Applies (or with `check` only tries) every patch for `android` under `top`, and returns
-    what it applied as (project, patch name, SHA-256)."""
+    what it applied as (project, patch name, SHA-256). With `native`, for the reduced tree the
+    native files are built in, it leaves out the patches that change Java sources only: that
+    tree has not their files, and the build makes no Java."""
     top = Path(top)
     found = framework_lock.patch_files(android, patches)
     if not found:
         raise PatchError(f"there are no patches for {android}")
     done = []
     for project, patch in found:
+        if native and framework_lock.java_only(patch):
+            print(f"{project}: {patch.name} changes Java sources only, for the services build", flush=True)
+            continue
         project_dir = top / project
         if not project_dir.is_dir():
             raise PatchError(f"{project} is not in {top}, so {patch.name} has nothing to apply to")
@@ -64,9 +70,11 @@ def main():
     parser.add_argument("--android", required=True)
     parser.add_argument("--top", type=Path, required=True)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--native", action="store_true",
+                        help="the reduced tree of the native build: leave out the patches to Java sources")
     args = parser.parse_args()
     try:
-        done = apply_patches(args.android, args.top, args.check)
+        done = apply_patches(args.android, args.top, args.check, native=args.native)
     except PatchError as e:
         raise SystemExit(str(e))
     if not args.check:

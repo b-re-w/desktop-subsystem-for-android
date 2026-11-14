@@ -1,0 +1,41 @@
+Subject: PackageAbiHelperImpl: install an arm64-v8a only multiArch app while ARM translation is on
+
+derivePackageAbi chooses the ABI of a multiArch app that targets Android 15 or later from the
+natively supported 64-bit ABIs only: Build.SUPPORTED_64_BIT_ABIS without each ABI a native
+bridge translates. With ARM translation on, the DSA guest's 64-bit ABIs are x86_64 and arm64-v8a
+(arm64-v8a through the bridge), so that list was x86_64 alone, and Google Play's arm64-v8a only
+multiArch apps were refused with INSTALL_FAILED_MULTI_ARCH_NOT_MATCH_ALL_NATIVE_ABIS although the
+translator runs them.
+
+getNativelySupported64BitAbis now returns Build.SUPPORTED_64_BIT_ABIS, in its order: x86_64
+first, then arm64-v8a while translation is on. An app with x86_64 code is installed as x86_64 as
+before. With translation off the list is x86_64 alone, so nothing changes. make-image.py made
+this change as a dex edit of the published services.jar until the image took the framework
+build's.
+
+Applies to frameworks/base at 94b4c163b7dfe5ce3607f7bb8456f9573f7de57d (Android 17).
+---
+diff --git a/services/core/java/com/android/server/pm/PackageAbiHelperImpl.java b/services/core/java/com/android/server/pm/PackageAbiHelperImpl.java
+--- a/services/core/java/com/android/server/pm/PackageAbiHelperImpl.java
++++ b/services/core/java/com/android/server/pm/PackageAbiHelperImpl.java
+@@ -335,13 +335,14 @@ final class PackageAbiHelperImpl implements PackageAbiHelper {
+         return sNativelySupported32BitAbis;
+     }
+
++    // DSA: every 64-bit ABI the guest lists, the ones a native bridge translates included, in
++    // Build.SUPPORTED_64_BIT_ABIS's order. derivePackageAbi chooses a multiArch app's ABI from
++    // this list, and refused an app with arm64-v8a code only while ARM translation was on,
++    // although the translator runs it as it runs every other arm64-v8a app. x86_64 comes first,
++    // so an app with x86_64 code is still installed as x86_64; with translation off the list is
++    // x86_64 alone, as before.
+     private static String[] getNativelySupported64BitAbis() {
+-        if (sNativelySupported64BitAbis != null) {
+-            return sNativelySupported64BitAbis;
+-        }
+-
+-        sNativelySupported64BitAbis = getNativelySupportedAbis(Build.SUPPORTED_64_BIT_ABIS);
+-        return sNativelySupported64BitAbis;
++        return Build.SUPPORTED_64_BIT_ABIS;
+     }
+
+     @Override

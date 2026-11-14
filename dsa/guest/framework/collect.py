@@ -12,7 +12,8 @@ and architecture, and check-image.py finds the same hashes in the image.
 Beside the framework's files (framework_lock.OUTPUTS) it holds DSA's KeyMint: the files the build installs
 (framework_lock.KEYMINT_OUTPUTS), and the VINTF fragments and the feature file the KeyMint APEX
 carries, which come from the tree as it was fetched (framework_lock.KEYMINT_SOURCES; hence
---top).
+--top). With --services, it also holds services.jar from the services build
+(framework_lock.JAVA_OUTPUTS), which make-image.py takes in place of the published build's.
 """
 
 import argparse
@@ -20,6 +21,7 @@ import hashlib
 import json
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -46,9 +48,20 @@ def sha256(path):
     return h.hexdigest()
 
 
-def collect(version, arch, product_out, out, sources=None, patches=None, top=None):
+def is_dex_jar(path):
+    """Whether `path` is a jar with dex code (classes.dex), as the services build makes it."""
+    try:
+        with zipfile.ZipFile(path) as z:
+            return "classes.dex" in z.namelist() and z.read("classes.dex")[:4] == b"dex\n"
+    except (zipfile.BadZipFile, OSError):
+        return False
+
+
+def collect(version, arch, product_out, out, sources=None, patches=None, top=None, services=None):
     """Copies the build's outputs from `product_out`, and the KeyMint's files the tree `top`
-    has, into `out` and writes framework.json; returns what it wrote there."""
+    has, into `out` and writes framework.json; returns what it wrote there. With `services`, the
+    folder the services build left services.jar in (under its target_files name), it takes that
+    too: a dex file is the same for every architecture."""
     if arch not in ELF_MACHINES:
         raise SystemExit(f"the architecture must be one of {', '.join(ELF_MACHINES)}, not {arch}")
     if top is None:
@@ -71,6 +84,16 @@ def collect(version, arch, product_out, out, sources=None, patches=None, top=Non
         source = top / source_path
         if not source.is_file():
             raise SystemExit(f"the tree has no {source_path} (looked in {top})")
+        target = out / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        files[name] = {"size": target.stat().st_size, "sha256": sha256(target)}
+    for name in framework_lock.JAVA_OUTPUTS if services is not None else []:
+        source = Path(services) / name
+        if not source.is_file():
+            raise SystemExit(f"the services build left no {name} (looked in {services})")
+        if not is_dex_jar(source):
+            raise SystemExit(f"{source} is not a jar with dex code")
         target = out / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
@@ -101,6 +124,8 @@ def main():
     parser.add_argument("--top", type=Path, required=True,
                         help="the tree: what was fetched and patched, and the KeyMint's VINTF fragments")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--services", type=Path,
+                        help="the folder the services build left services.jar in, when it passed")
     args = parser.parse_args()
     version = framework_lock.version_entry(framework_lock.load(), args.android)
     for name in (".dsa-sources.json", ".dsa-patches.json"):
@@ -109,7 +134,8 @@ def main():
                              "by fetch-source.py and apply-patches.py")
     sources = json.loads((args.top / ".dsa-sources.json").read_text())
     patches = json.loads((args.top / ".dsa-patches.json").read_text())
-    description = collect(version, args.arch, args.product_out, args.out, sources, patches, args.top)
+    description = collect(version, args.arch, args.product_out, args.out, sources, patches, args.top,
+                          args.services)
     print(json.dumps({k: v for k, v in description.items() if k not in ("sources", "patches")}, indent=2))
 
 

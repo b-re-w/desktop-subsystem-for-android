@@ -1,0 +1,30 @@
+Subject: WebView: start the WebView zygote with the first renderer, not at boot
+
+WebViewUpdateService started the WebView zygote on a background thread as soon as WebView's
+RELRO files were made (SystemImpl.ensureZygoteStarted, which only calls
+WebViewZygote.getProcess), so a boot with no app that shows web content still held the zygote,
+5 to 7 MiB of PSS, for the whole session.
+
+ensureZygoteStarted now does nothing. WebViewZygote.getProcess, which the activity manager calls
+to start each renderer, starts the zygote when there is none and keeps it from then on, as
+before. The first WebView of a boot waits a few hundred milliseconds once for the zygote's
+start. make-image.py made this change as a dex edit of the published services.jar until the
+image took the framework build's.
+
+Applies to frameworks/base at 94b4c163b7dfe5ce3607f7bb8456f9573f7de57d (Android 17).
+---
+diff --git a/services/core/java/com/android/server/webkit/SystemImpl.java b/services/core/java/com/android/server/webkit/SystemImpl.java
+--- a/services/core/java/com/android/server/webkit/SystemImpl.java
++++ b/services/core/java/com/android/server/webkit/SystemImpl.java
+@@ -252,7 +252,10 @@ public class SystemImpl implements SystemInterface {
+
+     @Override
+     public void ensureZygoteStarted() {
+-        WebViewZygote.getProcess();
++        // DSA: the WebView zygote starts the first time an app needs a WebView renderer, not
++        // as soon as WebView's RELRO files are made. Started here, it held 5 to 7 MiB for the
++        // whole session of a boot no app showed web content in. WebViewZygote.getProcess, which
++        // the activity manager calls to start each renderer, starts it when there is none.
+     }
+
+     @Override
