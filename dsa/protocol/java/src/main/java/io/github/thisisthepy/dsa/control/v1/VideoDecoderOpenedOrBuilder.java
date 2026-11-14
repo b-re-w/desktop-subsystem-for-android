@@ -24,4 +24,15 @@ public interface VideoDecoderOpenedOrBuilder extends
    */
   com.google.protobuf.ByteString
       getErrorBytes();
+
+  /**
+   * <pre>
+   * Whether this stream's pictures may come in the shared picture region. When it is false,
+   * every picture comes in its message.
+   * </pre>
+   *
+   * <code>bool shared_pictures = 3;</code>
+   * @return The sharedPictures.
+   */
+  boolean getSharedPictures();
 }

@@ -71,7 +71,67 @@ fn config() -> AndroidVmConfig {
         fine_grained_memory: false,
         network_adapter: None,
         direct_mapped: None,
+        picture_region: None,
     }
+}
+
+#[test]
+fn pr7_the_hcs_document_shares_the_picture_section_read_only_with_the_guest() {
+    use dsa_host_windows::picture_region::{picture_region, section_name, section_sddl};
+    let mut vm = config();
+    assert!(document(&vm)["VirtualMachine"]["Devices"]
+        .get("SharedMemory")
+        .is_none());
+    vm.picture_region = picture_region(Some(USER_SID), None);
+    let region = vm.picture_region.clone().expect("on by default");
+    assert_eq!(region.section_name, section_name(USER_SID));
+    assert!(region.section_name.starts_with(r"Global\"));
+    assert!(region.section_name.ends_with(USER_SID));
+    assert_eq!(region.length, 64 << 20);
+    let doc = document(&vm);
+    let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
+    assert_eq!(regions.as_array().map(Vec::len), Some(1));
+    assert_eq!(regions[0]["SectionName"], region.section_name);
+    assert_eq!(regions[0]["StartOffset"], 0);
+    assert_eq!(regions[0]["Length"], 64u64 << 20);
+    assert_eq!(regions[0]["AllowGuestWrite"], false);
+    assert_eq!(regions[0]["HiddenFromGuest"], false);
+    // SYSTEM, the VM workers and the user; nobody else.
+    assert_eq!(
+        section_sddl(USER_SID),
+        format!("D:P(A;;GA;;;SY)(A;;GA;;;S-1-5-83-0)(A;;GRGW;;;{USER_SID})")
+    );
+    // The user's setting: 0 is none, another size is rounded up to whole 2 MiB, and a VM with
+    // no user to name it after has none.
+    assert_eq!(picture_region(Some(USER_SID), Some(0)), None);
+    assert_eq!(
+        picture_region(Some(USER_SID), Some(33)).map(|r| r.length),
+        Some(34 << 20)
+    );
+    assert_eq!(picture_region(Some(USER_SID), Some(1)), None, "too small");
+    assert_eq!(picture_region(None, None), None);
+}
+
+#[test]
+fn pr7_the_guest_address_of_the_picture_section_is_read_from_the_vms_properties() {
+    use dsa_host_windows::picture_region::{guest_address_from_properties, properties_query};
+    let query: Value = serde_json::from_str(&properties_query()).unwrap();
+    assert_eq!(query["PropertyTypes"][0], "SharedMemoryRegion");
+    let name = r"Global\DSA-VideoPictures-S-1-5-21-1";
+    let properties = format!(
+        r#"{{"Id":"dsa","SharedMemoryRegionInfo":[{{"SectionName":"Global\\other","GuestPhysicalAddress":1}},{{"SectionName":"{}","GuestPhysicalAddress":4429185024}}]}}"#,
+        name.replace('\\', "\\\\")
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, name),
+        Some(0x1_0800_0000)
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, "Global\\missing"),
+        None
+    );
+    assert_eq!(guest_address_from_properties("not json", name), None);
+    assert_eq!(guest_address_from_properties("{}", name), None);
 }
 
 fn document(config: &AndroidVmConfig) -> Value {

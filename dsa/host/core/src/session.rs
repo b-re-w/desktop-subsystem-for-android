@@ -390,6 +390,14 @@ pub trait GuestLauncher: Send + 'static {
         None
     }
 
+    /// The regions of host memory the running guest sees as physical memory of its own, where
+    /// it is: each boot's control daemon is told them after its handshake, so its kernel can
+    /// map them (see `crate::video_slots` for the one that carries decoded video pictures).
+    /// None by default, and for a launcher whose guest has none.
+    fn shared_memory(&self) -> Vec<control::GuestSharedMemory> {
+        Vec::new()
+    }
+
     /// What the guest cannot run without and is missing now, as a sentence saying so and what
     /// to do; `None` when nothing is. The launcher tries to provide it each time it is asked.
     /// The session asks before it starts the guest, and about once a second while the guest
@@ -6206,6 +6214,11 @@ impl Worker {
                             // until its daemon is told them, before any app reaches the network.
                             let body = self.shared.host_certificates_body();
                             self.send_body(body);
+                            // The memory this VM shares with the host, which its kernel maps
+                            // only once the daemon has been told where it is.
+                            for region in self.launcher.shared_memory() {
+                                self.send_body(Body::GuestSharedMemory(region));
+                            }
                             return;
                         }
                         Err(Refusal::NotTheGuest(why)) => {
@@ -6888,6 +6901,8 @@ impl Worker {
             | Some(Body::VideoFlush(_))
             | Some(Body::VideoFlushed(_))
             | Some(Body::VideoError(_))
+            | Some(Body::VideoSlotReturned(_))
+            | Some(Body::GuestSharedMemory(_))
             | Some(Body::LocationStatus(_))
             | Some(Body::LocationFix(_))
             | Some(Body::SystemSettings(_))

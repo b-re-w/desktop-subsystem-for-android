@@ -4599,6 +4599,13 @@ DNS_PROPERTY_CONTEXT = f"{DNS_PROPERTY} u:object_r:dsa_dns_prop:s0 exact enum on
 # this, from the package manager's list, and dsa-memory.rc hands it to the kernel (memory.cil).
 HOST_MEMORY_PROPERTY = "vendor.dsa.host_memory.uids"
 HOST_MEMORY_PROPERTY_CONTEXT = f"{HOST_MEMORY_PROPERTY} u:object_r:dsa_host_memory_prop:s0 exact string"
+# dsa-channeld sets this to where the memory the host shares for decoded video pictures is in the
+# VM ("<address>,<length>"), and dsa-memory.rc hands it to the kernel's driver (memory.cil).
+VIDEO_PICTURES_PROPERTY = "vendor.dsa.video_pictures"
+VIDEO_PICTURES_PROPERTY_CONTEXT = f"{VIDEO_PICTURES_PROPERTY} u:object_r:dsa_video_pictures_prop:s0 exact string"
+# The driver's device, which only the codec HAL may open (codec2.cil): it holds the pictures of
+# every app's video. Its type is in memory.cil, which every image carries, so the label is too.
+VIDEO_PICTURES_DEVICE_CONTEXT = "/dev/dsa_video_pictures u:object_r:dsa_video_pictures_device:s0"
 DNS_REDIRECT_SERVICE = "service dsa_dns_redirect /vendor/bin/dsa-channeld --dns-redirect"
 DNS_REDIRECT_TRIGGER = f"on property:{DNS_PROPERTY}=*"
 # Root elevation's su client. It is a system file, where an app's PATH and the kernel's su
@@ -5224,6 +5231,8 @@ def update_vendor_file_contexts(fc_text, channeld=False, hwcomposer=False, power
         entries.append((r"/vendor/bin/hw/dsa-sensors", SENSORS_CONTEXT))
     if camera:
         entries.append((r"/vendor/bin/hw/dsa-camera", CAMERA_CONTEXT))
+    # The kernel's shared picture memory: the codec HAL alone may open it.
+    entries.append((r"/dev/dsa_video_pictures", VIDEO_PICTURES_DEVICE_CONTEXT))
     # Usually there already, as /(vendor|system/vendor)/overlay(/.*)?.
     entries.append(("overlay(/.*)?", VENDOR_OVERLAY_CONTEXT))
     for pattern, rule in entries:
@@ -5273,6 +5282,8 @@ def update_vendor_property_contexts(text):
         lines.append(DNS_PROPERTY_CONTEXT)
     if not any(line.split()[:1] == [HOST_MEMORY_PROPERTY] for line in lines):
         lines.append(HOST_MEMORY_PROPERTY_CONTEXT)
+    if not any(line.split()[:1] == [VIDEO_PICTURES_PROPERTY] for line in lines):
+        lines.append(VIDEO_PICTURES_PROPERTY_CONTEXT)
     for name, context in {**GAPPS_COMPILE_PROPERTY_CONTEXTS, **APP_MEMORY_PROPERTY_CONTEXTS}.items():
         if not any(line.split()[:1] == [name] for line in lines):
             lines.append(context)

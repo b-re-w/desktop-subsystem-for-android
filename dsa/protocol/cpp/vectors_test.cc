@@ -121,6 +121,20 @@ std::map<std::string, v1::Envelope> Cases() {
     open->set_width(1280);
     open->set_height(720);
   }
+  {
+    v1::VideoDecoderOpen* open = cases["video_decoder_open_shared"].mutable_video_decoder_open();
+    open->set_codec(v1::VIDEO_CODEC_H264);
+    open->set_width(1280);
+    open->set_height(720);
+    open->set_picture_region_id(42);
+  }
+  cases["video_slot_returned"].mutable_video_slot_returned()->set_slot(5);
+  {
+    v1::GuestSharedMemory* region = cases["guest_shared_memory"].mutable_guest_shared_memory();
+    region->set_name("video_pictures");
+    region->set_guest_physical_address(0x108000000ULL);
+    region->set_length(64ULL * 1024 * 1024);
+  }
   cases["video_flush"].mutable_video_flush();
   {
     v1::CameraDevice* camera = cases["camera_list"].mutable_camera_list()->add_cameras();
@@ -165,6 +179,16 @@ std::map<std::string, v1::Envelope> Cases() {
     frame->set_height(2);
     frame->set_stride(2);
     frame->set_nv12(std::string("\x10\x10\x10\x10\x80\x80", 6));
+  }
+  {
+    v1::VideoFrame* frame = cases["video_frame_in_slot"].mutable_video_frame();
+    frame->set_frame_index(3);
+    frame->set_timestamp_us(100000);
+    frame->set_width(2);
+    frame->set_height(2);
+    frame->set_stride(2);
+    frame->set_slot(1);
+    frame->set_slot_offset(65536);
   }
   {
     v1::VideoPacket* packet = cases["video_packet"].mutable_video_packet();

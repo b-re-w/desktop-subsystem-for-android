@@ -647,6 +647,41 @@ fn fr28_host_certificates_are_installed_before_the_agent_hears_of_them() {
 }
 
 #[test]
+fn pr7_where_the_shared_picture_memory_is_reaches_the_kernels_switch_and_no_client() {
+    use dsa_guest_channeld::shared_memory::{property_value, PROPERTY};
+    let (router, _host) = router();
+    let switched = Arc::new(Mutex::new(Vec::new()));
+    let seen = Arc::clone(&switched);
+    let router = router.on_shared_memory(move |region| seen.lock().unwrap().push(region.clone()));
+    let agent = Arc::new(Recorder::default());
+    router.subscribe(AGENT, agent.clone());
+    let region = dsa_protocol::control::GuestSharedMemory {
+        name: "video_pictures".into(),
+        guest_physical_address: 0x1_0800_0000,
+        length: 64 << 20,
+    };
+    router.from_host(&frame(Body::GuestSharedMemory(region.clone())));
+    assert_eq!(*switched.lock().unwrap(), vec![region.clone()]);
+    assert!(agent.frames().is_empty(), "no client maps physical memory");
+    // init hands the kernel's parameter the address and the length.
+    assert_eq!(PROPERTY, "vendor.dsa.video_pictures");
+    assert_eq!(
+        property_value(&region).as_deref(),
+        Some("0x108000000,67108864")
+    );
+    let other = dsa_protocol::control::GuestSharedMemory {
+        name: "something_else".into(),
+        ..region.clone()
+    };
+    assert_eq!(property_value(&other), None);
+    let empty = dsa_protocol::control::GuestSharedMemory {
+        length: 0,
+        ..region
+    };
+    assert_eq!(property_value(&empty), None);
+}
+
+#[test]
 fn fr29_the_request_for_androids_files_reaches_the_switch_and_no_client() {
     let (router, _host) = router();
     let switched = Arc::new(Mutex::new(Vec::new()));

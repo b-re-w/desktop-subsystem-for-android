@@ -78,3 +78,19 @@ on boot && property:ro.boot.dsa.memory_compaction=on
 # can name itself; every other process sees the VM's memory, so lmkd is unchanged.
 on property:vendor.dsa.host_memory.uids=*
     write /sys/module/dsa_host_memory/parameters/uids ${vendor.dsa.host_memory.uids}
+
+# The memory the host shares with the guest for decoded video pictures, so a picture reaches the
+# codec HAL without a copy through the video port. Where it is in the VM's physical memory is
+# known only once the VM runs: the host says it on the control channel, dsa-channeld sets
+# vendor.dsa.video_pictures to "<address>,<length>", and init hands that to DSA's kernel driver,
+# which takes the first value of a boot and lets the codec HAL map that range, read only,
+# through /dev/dsa_video_pictures. Only the daemon may set the property and only init may write
+# the parameter (memory.cil), so no app can point the driver at other memory.
+on property:vendor.dsa.video_pictures=*
+    write /sys/module/dsa_shared_memory/parameters/video_pictures ${vendor.dsa.video_pictures}
+
+# ueventd makes the driver's device root's alone, and the codec HAL runs as mediacodec. Every
+# user may read it before the HALs start; SELinux opens it to the codec HAL's domain and no
+# other (codec2.cil), and nobody may write it.
+on early-boot
+    chmod 0444 /dev/dsa_video_pictures

@@ -1890,6 +1890,12 @@ pub struct VideoDecoderOpen {
     pub width: u32,
     #[prost(uint32, tag = "3")]
     pub height: u32,
+    /// The id the guest read from the header of the shared picture region it maps (see
+    /// GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+    /// writes pictures to, the two see the same memory, and the host may send this stream's
+    /// pictures there (VideoFrame.slot) instead of in the messages.
+    #[prost(uint64, tag = "4")]
+    pub picture_region_id: u64,
 }
 /// Host to guest: the answer to VideoDecoderOpen. When `ok` is false, `error` says, in words
 /// a person can act on, why there is no decoder, and the host closes the connection.
@@ -1899,6 +1905,10 @@ pub struct VideoDecoderOpened {
     pub ok: bool,
     #[prost(string, tag = "2")]
     pub error: ::prost::alloc::string::String,
+    /// Whether this stream's pictures may come in the shared picture region. When it is false,
+    /// every picture comes in its message.
+    #[prost(bool, tag = "3")]
+    pub shared_pictures: bool,
 }
 /// Guest to host: one access unit of the stream, in decode order. `frame_index` is the
 /// guest's, and comes back on the picture it becomes.
@@ -1942,6 +1952,39 @@ pub struct VideoFrame {
     pub nv12: ::prost::alloc::vec::Vec<u8>,
     #[prost(bool, tag = "7")]
     pub end_of_stream: bool,
+    /// Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+    /// bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+    /// read until it sends VideoSlotReturned with this number; the host does not write it
+    /// before then. Every slot of a connection is the host's again when the connection ends.
+    #[prost(uint32, tag = "8")]
+    pub slot: u32,
+    #[prost(uint64, tag = "9")]
+    pub slot_offset: u64,
+}
+/// Guest to host: the guest has read the picture in `slot` (VideoFrame.slot), or dropped it,
+/// and the slot is the host's again. A number that is not one of this connection's slots
+/// held by the guest is ignored.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct VideoSlotReturned {
+    #[prost(uint32, tag = "1")]
+    pub slot: u32,
+}
+/// Host to the guest's control daemon, after the handshake: a region of host memory the VM
+/// sees as its own physical memory, which host and guest share without copying. The guest
+/// kernel maps it for the guest's users of it; the host writes it, and the guest only reads.
+/// `name` says what it is for ("video_pictures": decoded video pictures, see VideoFrame.slot).
+/// A host that has no such region sends none. The "video_pictures" region starts with a
+/// header the host writes: the eight bytes "DSAVPIC1", then the region's id and its length in
+/// bytes, each eight bytes little endian (the id is what VideoDecoderOpen.picture_region_id
+/// names). Its slots start 64 KiB in.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GuestSharedMemory {
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(uint64, tag = "2")]
+    pub guest_physical_address: u64,
+    #[prost(uint64, tag = "3")]
+    pub length: u64,
 }
 /// Guest to host: drop every packet and picture held, as for a seek. The host answers with
 /// VideoFlushed once nothing from before is left to send.
@@ -3379,7 +3422,7 @@ pub struct SpellingResult {
 pub struct Envelope {
     #[prost(
         oneof = "envelope::Body",
-        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 377, 19, 408, 409, 410, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 40, 46, 41, 407, 110, 140, 152, 153, 154, 402, 403, 404, 405, 406, 411, 412, 413, 414, 415, 42, 43, 44, 45, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 30, 50, 51, 52, 53, 54, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 80, 81, 82, 83, 100, 101, 102, 103, 104, 105, 106, 107, 120, 121, 122, 123, 124, 125, 126, 127, 130, 131, 132, 133, 134, 135, 136, 220, 221, 222, 223, 141, 200, 201, 202, 240, 241, 242, 260, 261, 262, 263, 264, 265, 266, 267, 155, 156, 340, 383, 341, 342, 343, 344, 290, 291, 350, 351, 352, 353, 354, 380, 381, 382, 620, 621, 622, 623, 624, 625, 626, 627, 628, 629, 630, 631, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 680, 681, 682, 683, 684, 690, 691, 710"
+        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 377, 19, 408, 409, 410, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 40, 46, 41, 407, 110, 140, 152, 153, 154, 402, 403, 404, 405, 406, 411, 412, 413, 414, 415, 42, 43, 44, 45, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 30, 50, 51, 52, 53, 54, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 80, 81, 82, 83, 100, 101, 102, 103, 104, 105, 106, 107, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 220, 221, 222, 223, 141, 200, 201, 202, 240, 241, 242, 260, 261, 262, 263, 264, 265, 266, 267, 155, 156, 340, 383, 341, 342, 343, 344, 290, 291, 350, 351, 352, 353, 354, 380, 381, 382, 620, 621, 622, 623, 624, 625, 626, 627, 628, 629, 630, 631, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 680, 681, 682, 683, 684, 690, 691, 710"
     )]
     pub body: ::core::option::Option<envelope::Body>,
 }
@@ -3609,6 +3652,10 @@ pub mod envelope {
         VideoFlushed(super::VideoFlushed),
         #[prost(message, tag = "127")]
         VideoError(super::VideoError),
+        #[prost(message, tag = "128")]
+        VideoSlotReturned(super::VideoSlotReturned),
+        #[prost(message, tag = "129")]
+        GuestSharedMemory(super::GuestSharedMemory),
         #[prost(message, tag = "130")]
         LogStream(super::LogStream),
         #[prost(message, tag = "131")]

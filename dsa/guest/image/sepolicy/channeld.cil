@@ -108,6 +108,13 @@
 (allow dsa_channeld dsa_host_memory_prop (property_service (set)))
 (allow dsa_channeld dsa_host_memory_prop (file (read open getattr map)))
 
+; The memory the host shares for decoded video pictures: the daemon sets where it is in
+; vendor.dsa.video_pictures (its type, dsa_video_pictures_prop, is in memory.cil) when the host
+; says, and init hands it to the kernel's driver. The daemon is the only domain that may set it,
+; so no app can point the driver at other memory.
+(allow dsa_channeld dsa_video_pictures_prop (property_service (set)))
+(allow dsa_channeld dsa_video_pictures_prop (file (read open getattr map)))
+
 ; The gradual trim skips a guest under memory pressure, which the daemon reads from the
 ; kernel's pressure stall information.
 (allow dsa_channeld proc_pressure_mem (file (read open getattr)))

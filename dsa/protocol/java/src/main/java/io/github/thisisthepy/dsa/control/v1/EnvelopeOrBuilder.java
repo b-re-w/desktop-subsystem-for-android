@@ -1229,6 +1229,28 @@ public interface EnvelopeOrBuilder extends
   io.github.thisisthepy.dsa.control.v1.VideoError getVideoError();
 
   /**
+   * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+   * @return Whether the videoSlotReturned field is set.
+   */
+  boolean hasVideoSlotReturned();
+  /**
+   * <code>.dsa.control.v1.VideoSlotReturned video_slot_returned = 128;</code>
+   * @return The videoSlotReturned.
+   */
+  io.github.thisisthepy.dsa.control.v1.VideoSlotReturned getVideoSlotReturned();
+
+  /**
+   * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+   * @return Whether the guestSharedMemory field is set.
+   */
+  boolean hasGuestSharedMemory();
+  /**
+   * <code>.dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;</code>
+   * @return The guestSharedMemory.
+   */
+  io.github.thisisthepy.dsa.control.v1.GuestSharedMemory getGuestSharedMemory();
+
+  /**
    * <code>.dsa.control.v1.LogStream log_stream = 130;</code>
    * @return Whether the logStream field is set.
    */

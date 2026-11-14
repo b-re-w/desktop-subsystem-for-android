@@ -98,6 +98,7 @@ fn unbootable(dir: &std::path::Path) -> AndroidVmConfig {
         fine_grained_memory: false,
         network_adapter: None,
         direct_mapped: None,
+        picture_region: None,
     }
 }
 

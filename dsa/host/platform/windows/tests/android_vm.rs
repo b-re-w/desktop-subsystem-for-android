@@ -45,6 +45,7 @@ fn missing_files() -> AndroidVmConfig {
         fine_grained_memory: false,
         network_adapter: None,
         direct_mapped: None,
+        picture_region: None,
     }
 }
 

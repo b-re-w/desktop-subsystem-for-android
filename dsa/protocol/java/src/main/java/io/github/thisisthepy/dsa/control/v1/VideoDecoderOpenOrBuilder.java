@@ -29,4 +29,17 @@ public interface VideoDecoderOpenOrBuilder extends
    * @return The height.
    */
   int getHeight();
+
+  /**
+   * <pre>
+   * The id the guest read from the header of the shared picture region it maps (see
+   * GuestSharedMemory), or 0 when it maps none. When it is the id of the region the host
+   * writes pictures to, the two see the same memory, and the host may send this stream's
+   * pictures there (VideoFrame.slot) instead of in the messages.
+   * </pre>
+   *
+   * <code>uint64 picture_region_id = 4;</code>
+   * @return The pictureRegionId.
+   */
+  long getPictureRegionId();
 }

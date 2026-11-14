@@ -372,6 +372,31 @@ mod daemon {
     #[cfg(not(target_os = "android"))]
     fn install_host_certificates(_certificates: &dsa_protocol::control::HostCertificates) {}
 
+    /// Has init hand the kernel where the memory the host shares for decoded video pictures is
+    /// (`dsa-memory.rc`): only init may write the driver's parameter.
+    #[cfg(target_os = "android")]
+    fn map_shared_memory(region: &dsa_protocol::control::GuestSharedMemory) {
+        use dsa_guest_channeld::shared_memory::{property_value, PROPERTY};
+        let Some(value) = property_value(region) else {
+            say!(
+                "the host shares memory named {:?}, which this guest does not use",
+                region.name
+            );
+            return;
+        };
+        match set_property(PROPERTY, &value) {
+            Ok(()) => say!(
+                "the host shares {} MiB for decoded video pictures at {:#x}",
+                region.length >> 20,
+                region.guest_physical_address
+            ),
+            Err(why) => say!("decoded video pictures come through the video port: {why}"),
+        }
+    }
+
+    #[cfg(not(target_os = "android"))]
+    fn map_shared_memory(_region: &dsa_protocol::control::GuestSharedMemory) {}
+
     /// Hands idle memory back to the host: every so often, decides whether the guest should
     /// reclaim now (see `reclaim`), and has init do it. Only init may write the
     /// kernel's memory controls; the daemon only asks.
@@ -1041,6 +1066,7 @@ mod daemon {
                 .on_file_sharing(switch_shares)
                 .on_android_files(switch_android_files)
                 .on_host_certificates(install_host_certificates)
+                .on_shared_memory(map_shared_memory)
                 .on_arm_translation(Arc::new(ArmTranslation::new(
                     arm_translation::DIR,
                     BootFacts::of_system(|| read_property("ro.product.cpu.abilist")),

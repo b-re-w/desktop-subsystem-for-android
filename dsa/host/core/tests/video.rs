@@ -35,6 +35,7 @@ fn picture(id: u64, value: u8) -> Picture {
         height: 2,
         stride: 2,
         nv12: vec![value; 6],
+        slot: None,
     }
 }
 
@@ -144,6 +145,7 @@ fn open(guest: &mut dyn Connection, codec: VideoCodec, width: u32, height: u32) 
             codec: codec as i32,
             width,
             height,
+            picture_region_id: 0,
         }),
     );
 }
