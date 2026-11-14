@@ -23,7 +23,8 @@
     <SelfContained>true</SelfContained>
     <ImplicitUsings>enable</ImplicitUsings>
     <NeutralLanguage>en</NeutralLanguage>
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- The fourteen interface languages, as the settings app lists them. -->
+    <SatelliteResourceLanguages>en;ko;ja;zh-CN;zh-TW;zh-Hans;zh-Hant;es;fr;de;pt-BR;ru;it;vi;id;tr</SatelliteResourceLanguages>
     <DebugType>embedded</DebugType>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
@@ -36,11 +37,11 @@
     <ProjectReference Include="..\DsaSettings.Core\DsaSettings.Core.csproj" />
   </ItemGroup>
 
-  <!-- The settings app's English string table: the window's texts live beside the rest of
-       DSA's. The window is English in every language, as App Installer's labels are, so the
-       translations are left out and no language mixes into it. -->
+  <!-- The settings app's string tables, English and every translation: the window's texts live
+       beside the rest of DSA's and show in the user's language, as the settings app's do. Each
+       keeps its file name, so the culture in it (Strings.ko.resx) makes it a satellite. -->
   <ItemGroup>
-    <EmbeddedResource Include="..\DsaSettings\Strings.resx" Link="Strings.resx" />
+    <EmbeddedResource Include="..\DsaSettings\Strings*.resx" Link="%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- The settings app's row list. The permissions and the details are lists of rows, and a
