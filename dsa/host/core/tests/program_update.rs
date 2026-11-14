@@ -13,6 +13,7 @@ use dsa_host_core::host_api::{ProgramPhase, ProgramProgress, UserAndroid, UserAn
 use dsa_host_core::host_api_conformance::{FakeAndroid, FakeAndroids};
 use dsa_host_core::input::{PointerAction, PointerEvent, PointerTool};
 use dsa_host_core::session::SessionState;
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::update::manifest;
 use dsa_host_core::update::program::{
     self, ProgramDecision, ProgramError, ProgramManifest, ReleaseChannel, SetupFile, Version,
@@ -1485,10 +1486,10 @@ fn fr15_each_desktop_is_told_once_that_an_update_waits_to_install() {
     updates.check().unwrap();
     let shown = shown_on_desktop(&desktop, "alice");
     assert_eq!(keys(&shown), ["dsa:update:program:ready:0.1.1"]);
-    let korean = in_user_language(shown[0].clone(), true);
+    let korean = in_user_language(shown[0].clone(), UiLanguage::Korean);
     assert_eq!(korean.title, "DSA 업데이트가 준비되었습니다");
     assert!(korean.text.contains("DSA 0.1.1"), "{}", korean.text);
-    let english = in_user_language(shown[0].clone(), false);
+    let english = in_user_language(shown[0].clone(), UiLanguage::English);
     assert_eq!(english.title, "DSA update ready");
     assert!(
         english
@@ -1525,11 +1526,11 @@ fn fr15_after_an_update_the_desktop_is_told_the_new_version_once() {
     let (_service, desktop) = desktops(&status);
     let shown = shown_on_desktop(&desktop, "alice");
     assert_eq!(keys(&shown), ["dsa:update:program:applied:0.1.1"]);
-    let english = in_user_language(shown[0].clone(), false);
+    let english = in_user_language(shown[0].clone(), UiLanguage::English);
     assert_eq!(english.title, "DSA updated");
     assert_eq!(english.text, "DSA 0.1.1 is installed.");
     assert_eq!(
-        in_user_language(shown[0].clone(), true).title,
+        in_user_language(shown[0].clone(), UiLanguage::Korean).title,
         "DSA를 업데이트했습니다"
     );
     assert!(shown_on_desktop(&desktop, "alice").is_empty());
@@ -1549,7 +1550,7 @@ fn fr15_a_failed_update_is_told_on_the_desktop_with_why_and_only_once() {
     let (_service, desktop) = desktops(&status);
     let shown = shown_on_desktop(&desktop, "alice");
     assert_eq!(keys(&shown), ["dsa:update:program:failed:0.1.1"]);
-    let english = in_user_language(shown[0].clone(), false);
+    let english = in_user_language(shown[0].clone(), UiLanguage::English);
     assert_eq!(english.title, "DSA update failed");
     assert!(
         english.text.contains("previous version is still in use")
@@ -1557,7 +1558,7 @@ fn fr15_a_failed_update_is_told_on_the_desktop_with_why_and_only_once() {
         "{}",
         english.text
     );
-    let korean = in_user_language(shown[0].clone(), true);
+    let korean = in_user_language(shown[0].clone(), UiLanguage::Korean);
     assert!(korean.text.contains("이유:"), "{}", korean.text);
     // A check that finds the same failed version says nothing new.
     assert!(matches!(

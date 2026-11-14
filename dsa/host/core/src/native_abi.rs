@@ -23,6 +23,7 @@ use dsa_protocol::host_api::types;
 
 use crate::apk_info::axml;
 use crate::apk_info::zip::Archive;
+use crate::ui_language::UiLanguage;
 
 /// The guest's own ABI.
 pub const X86_64: &str = "x86_64";
@@ -802,68 +803,17 @@ impl Notice {
         crate::apk::valid_package_name(package).then_some((notice, package))
     }
 
-    /// The title and text, in Korean when `korean`, else in English. `label` is the app's name.
-    pub fn text(self, label: &str, korean: bool) -> (String, String) {
-        match (self, korean) {
-            (Notice::Offer, false) => (
-                format!("{label} could not start"),
-                "It needs ARM code that its x86_64 version leaves out. Click to install it again \
-                 to run as ARM; its data stays."
-                    .into(),
-            ),
-            (Notice::Offer, true) => (
-                format!("{label}을(를) 시작하지 못했습니다"),
-                "x86_64판에 없는 ARM 코드가 필요합니다. 누르면 ARM으로 실행하도록 다시 \
-                 설치합니다. 데이터는 그대로 남습니다."
-                    .into(),
-            ),
-            (Notice::Done, false) => (
-                format!("{label} now runs as ARM"),
-                "Click to open it.".into(),
-            ),
-            (Notice::Done, true) => (
-                format!("{label}이(가) 이제 ARM으로 실행됩니다"),
-                "누르면 엽니다.".into(),
-            ),
-            (Notice::NeedsErase, false) => (
-                format!("{label} was not installed again"),
-                "Android cannot change how it runs and keep its data. To do it anyway, turn on \
-                 Run as ARM for it in DSA Settings, Apps; that erases its data."
-                    .into(),
-            ),
-            (Notice::NeedsErase, true) => (
-                format!("{label}을(를) 다시 설치하지 않았습니다"),
-                "Android가 데이터를 지킨 채 실행 방식을 바꿀 수 없습니다. 그래도 바꾸려면 DSA \
-                 설정의 앱 화면에서 \"ARM으로 실행\"을 켜십시오. 데이터가 지워집니다."
-                    .into(),
-            ),
-            (Notice::Failed, false) => (
-                format!("{label} was not installed again"),
-                "Android did not install it again to run as ARM. DSA Settings, Apps can try \
-                 again."
-                    .into(),
-            ),
-            (Notice::Failed, true) => (
-                format!("{label}을(를) 다시 설치하지 않았습니다"),
-                "Android가 ARM으로 실행하도록 다시 설치하지 않았습니다. DSA 설정의 앱 \
-                 화면에서 다시 해 볼 수 있습니다."
-                    .into(),
-            ),
-            (Notice::Needs64Bit, false) => (
-                format!("{label} cannot run in DSA"),
-                "This build of it runs as 32-bit code, and DSA's Android runs 64-bit code only. \
-                 Uninstall it and install its x86_64 build instead (or its arm64-v8a build, \
-                 with ARM translation on)."
-                    .into(),
-            ),
-            (Notice::Needs64Bit, true) => (
-                format!("{label}을(를) DSA에서 실행할 수 없습니다"),
-                "이 빌드는 32비트 코드로 실행되는데, DSA의 Android는 64비트 코드만 \
-                 실행합니다. 이 앱을 지우고 x86_64판을 대신 설치하십시오(ARM 번역이 켜져 \
-                 있으면 arm64-v8a판도 됩니다)."
-                    .into(),
-            ),
-        }
+    /// The title and text, in `lang`. `label` is the app's name.
+    pub fn text(self, label: &str, lang: UiLanguage) -> (String, String) {
+        let words = notice_words(lang);
+        let (title, text) = match self {
+            Notice::Offer => words.offer,
+            Notice::Done => words.done,
+            Notice::NeedsErase => words.needs_erase,
+            Notice::Failed => words.failed,
+            Notice::Needs64Bit => words.needs_64_bit,
+        };
+        (title.replace("{label}", label), text.to_string())
     }
 
     /// The notification of this notice about the installed app `app`, in English; a host that
@@ -874,7 +824,7 @@ impl Notice {
         } else {
             &app.label
         };
-        let (title, text) = self.text(label, false);
+        let (title, text) = self.text(label, UiLanguage::English);
         crate::notifications::Notification {
             key: self.key(&app.package_name),
             package_name: app.package_name.clone(),
@@ -898,22 +848,402 @@ impl Notice {
     }
 }
 
+/// The words of the notices about running an app as ARM in one language. Each notice is its
+/// title, in which `{label}` stands for the app's name, and its text.
+struct NoticeWords {
+    offer: (&'static str, &'static str),
+    done: (&'static str, &'static str),
+    needs_erase: (&'static str, &'static str),
+    failed: (&'static str, &'static str),
+    needs_64_bit: (&'static str, &'static str),
+}
+
+fn notice_words(lang: UiLanguage) -> NoticeWords {
+    match lang {
+        UiLanguage::English => NoticeWords {
+            offer: (
+                "{label} could not start",
+                "It needs ARM code that its x86_64 version leaves out. Click to install it again \
+                 to run as ARM; its data stays.",
+            ),
+            done: ("{label} now runs as ARM", "Click to open it."),
+            needs_erase: (
+                "{label} was not installed again",
+                "Android cannot change how it runs and keep its data. To do it anyway, turn on \
+                 Run as ARM for it in DSA Settings, Apps; that erases its data.",
+            ),
+            failed: (
+                "{label} was not installed again",
+                "Android did not install it again to run as ARM. DSA Settings, Apps can try \
+                 again.",
+            ),
+            needs_64_bit: (
+                "{label} cannot run in DSA",
+                "This build of it runs as 32-bit code, and DSA's Android runs 64-bit code only. \
+                 Uninstall it and install its x86_64 build instead (or its arm64-v8a build, \
+                 with ARM translation on).",
+            ),
+        },
+        UiLanguage::Korean => NoticeWords {
+            offer: (
+                "{label}을(를) 시작하지 못했습니다",
+                "x86_64판에 없는 ARM 코드가 필요합니다. 누르면 ARM으로 실행하도록 다시 \
+                 설치합니다. 데이터는 그대로 남습니다.",
+            ),
+            done: ("{label}이(가) 이제 ARM으로 실행됩니다", "누르면 엽니다."),
+            needs_erase: (
+                "{label}을(를) 다시 설치하지 않았습니다",
+                "Android가 데이터를 지킨 채 실행 방식을 바꿀 수 없습니다. 그래도 바꾸려면 DSA \
+                 설정의 앱 화면에서 \"ARM으로 실행\"을 켜십시오. 데이터가 지워집니다.",
+            ),
+            failed: (
+                "{label}을(를) 다시 설치하지 않았습니다",
+                "Android가 ARM으로 실행하도록 다시 설치하지 않았습니다. DSA 설정의 앱 \
+                 화면에서 다시 해 볼 수 있습니다.",
+            ),
+            needs_64_bit: (
+                "{label}을(를) DSA에서 실행할 수 없습니다",
+                "이 빌드는 32비트 코드로 실행되는데, DSA의 Android는 64비트 코드만 \
+                 실행합니다. 이 앱을 지우고 x86_64판을 대신 설치하십시오(ARM 번역이 켜져 \
+                 있으면 arm64-v8a판도 됩니다).",
+            ),
+        },
+        UiLanguage::Japanese => NoticeWords {
+            offer: (
+                "{label} を起動できませんでした",
+                "x86_64 版に含まれていない ARM コードが必要です。クリックすると、ARM で実行\
+                 するように再インストールします。データはそのまま残ります。",
+            ),
+            done: (
+                "{label} は ARM で実行されるようになりました",
+                "クリックすると開きます。",
+            ),
+            needs_erase: (
+                "{label} は再インストールされませんでした",
+                "Android は、データを保持したまま実行方法を変更できません。それでも変更するには、\
+                 DSA の設定の [アプリ] で [ARM で実行] をオンにしてください。データは消去されます。",
+            ),
+            failed: (
+                "{label} は再インストールされませんでした",
+                "Android は ARM で実行するための再インストールを行いませんでした。DSA の設定の \
+                 [アプリ] からもう一度お試しください。",
+            ),
+            needs_64_bit: (
+                "{label} は DSA で実行できません",
+                "このビルドは 32 ビット コードで実行されますが、DSA の Android は 64 ビット \
+                 コードしか実行しません。このアプリをアンインストールし、代わりに x86_64 \
+                 ビルド (ARM 変換がオンの場合は arm64-v8a ビルドでも可) をインストールして\
+                 ください。",
+            ),
+        },
+        UiLanguage::ChineseSimplified => NoticeWords {
+            offer: (
+                "{label} 无法启动",
+                "它需要 x86_64 版本中没有的 ARM 代码。点击即可重新安装，以 ARM 方式运行；\
+                 数据会保留。",
+            ),
+            done: ("{label} 现在以 ARM 方式运行", "点击即可打开。"),
+            needs_erase: (
+                "{label} 未重新安装",
+                "Android 无法在保留数据的同时更改其运行方式。如果仍要更改，请在 DSA 设置的\
+                 “应用”中为它打开“以 ARM 方式运行”；这会清除其数据。",
+            ),
+            failed: (
+                "{label} 未重新安装",
+                "Android 未能重新安装它以 ARM 方式运行。可以在 DSA 设置的“应用”中重试。",
+            ),
+            needs_64_bit: (
+                "{label} 无法在 DSA 中运行",
+                "此版本以 32 位代码运行，而 DSA 的 Android 仅运行 64 位代码。请卸载它，改为\
+                 安装其 x86_64 版本（如果已打开 ARM 转译，也可以安装 arm64-v8a 版本）。",
+            ),
+        },
+        UiLanguage::ChineseTraditional => NoticeWords {
+            offer: (
+                "{label} 無法啟動",
+                "它需要 x86_64 版本中沒有的 ARM 程式碼。按一下即可重新安裝，以 ARM 方式執行；\
+                 資料會保留。",
+            ),
+            done: ("{label} 現在以 ARM 方式執行", "按一下即可開啟。"),
+            needs_erase: (
+                "{label} 未重新安裝",
+                "Android 無法在保留資料的情況下變更其執行方式。若仍要變更，請在 DSA 設定的\
+                 「應用程式」中為它開啟「以 ARM 方式執行」；這會清除其資料。",
+            ),
+            failed: (
+                "{label} 未重新安裝",
+                "Android 未能重新安裝它以 ARM 方式執行。您可以在 DSA 設定的「應用程式」中再試\
+                 一次。",
+            ),
+            needs_64_bit: (
+                "{label} 無法在 DSA 中執行",
+                "此組建以 32 位元程式碼執行，而 DSA 的 Android 只執行 64 位元程式碼。請解除\
+                 安裝它，改為安裝其 x86_64 組建（若已開啟 ARM 轉譯，也可以安裝 arm64-v8a \
+                 組建）。",
+            ),
+        },
+        UiLanguage::Spanish => NoticeWords {
+            offer: (
+                "No se pudo iniciar {label}",
+                "Necesita código ARM que su versión x86_64 no incluye. Haga clic para volver a \
+                 instalarla y ejecutarla como ARM; sus datos se conservan.",
+            ),
+            done: (
+                "{label} ahora se ejecuta como ARM",
+                "Haga clic para abrirla.",
+            ),
+            needs_erase: (
+                "{label} no se volvió a instalar",
+                "Android no puede cambiar la forma en que se ejecuta y conservar sus datos. Para \
+                 hacerlo de todos modos, active Ejecutar como ARM para esta aplicación en \
+                 Configuración de DSA, Aplicaciones; eso borra sus datos.",
+            ),
+            failed: (
+                "{label} no se volvió a instalar",
+                "Android no la volvió a instalar para ejecutarla como ARM. Puede volver a \
+                 intentarlo en Configuración de DSA, Aplicaciones.",
+            ),
+            needs_64_bit: (
+                "{label} no se puede ejecutar en DSA",
+                "Esta compilación se ejecuta como código de 32 bits, y el Android de DSA solo \
+                 ejecuta código de 64 bits. Desinstálela e instale en su lugar la compilación \
+                 x86_64 (o la compilación arm64-v8a, con la traducción ARM activada).",
+            ),
+        },
+        UiLanguage::French => NoticeWords {
+            offer: (
+                "Impossible de démarrer {label}",
+                "L'application a besoin de code ARM que sa version x86_64 ne contient pas. \
+                 Cliquez pour la réinstaller afin de l'exécuter en ARM ; ses données sont \
+                 conservées.",
+            ),
+            done: (
+                "{label} s'exécute maintenant en ARM",
+                "Cliquez pour l'ouvrir.",
+            ),
+            needs_erase: (
+                "{label} n'a pas été réinstallée",
+                "Android ne peut pas changer son mode d'exécution tout en conservant ses \
+                 données. Pour le faire quand même, activez Exécuter en ARM pour cette \
+                 application dans Paramètres DSA, Applications ; cela efface ses données.",
+            ),
+            failed: (
+                "{label} n'a pas été réinstallée",
+                "Android ne l'a pas réinstallée pour l'exécuter en ARM. Vous pouvez réessayer \
+                 dans Paramètres DSA, Applications.",
+            ),
+            needs_64_bit: (
+                "{label} ne peut pas s'exécuter dans DSA",
+                "Cette version s'exécute en code 32 bits, et l'Android de DSA n'exécute que du \
+                 code 64 bits. Désinstallez-la et installez plutôt sa version x86_64 (ou sa \
+                 version arm64-v8a, avec la traduction ARM activée).",
+            ),
+        },
+        UiLanguage::German => NoticeWords {
+            offer: (
+                "{label} konnte nicht gestartet werden",
+                "Die App benötigt ARM-Code, der in ihrer x86_64-Version fehlt. Klicken Sie, um \
+                 sie für die Ausführung als ARM neu zu installieren; ihre Daten bleiben \
+                 erhalten.",
+            ),
+            done: (
+                "{label} wird jetzt als ARM ausgeführt",
+                "Klicken Sie, um die App zu öffnen.",
+            ),
+            needs_erase: (
+                "{label} wurde nicht neu installiert",
+                "Android kann die Ausführungsart nicht ändern und dabei die Daten behalten. Um \
+                 es trotzdem zu tun, aktivieren Sie in den DSA-Einstellungen unter Apps die \
+                 Option Als ARM ausführen; dabei werden die Daten gelöscht.",
+            ),
+            failed: (
+                "{label} wurde nicht neu installiert",
+                "Android hat die App nicht für die Ausführung als ARM neu installiert. In den \
+                 DSA-Einstellungen unter Apps können Sie es erneut versuchen.",
+            ),
+            needs_64_bit: (
+                "{label} kann in DSA nicht ausgeführt werden",
+                "Dieser Build läuft als 32-Bit-Code, und das Android von DSA führt nur \
+                 64-Bit-Code aus. Deinstallieren Sie die App und installieren Sie stattdessen \
+                 ihren x86_64-Build (oder bei aktivierter ARM-Übersetzung ihren \
+                 arm64-v8a-Build).",
+            ),
+        },
+        UiLanguage::PortugueseBrazil => NoticeWords {
+            offer: (
+                "Não foi possível iniciar {label}",
+                "O app precisa de código ARM que a versão x86_64 dele não inclui. Clique para \
+                 reinstalá-lo e executá-lo como ARM; os dados dele são mantidos.",
+            ),
+            done: ("{label} agora é executado como ARM", "Clique para abrir."),
+            needs_erase: (
+                "{label} não foi reinstalado",
+                "O Android não pode mudar a forma como o app é executado e manter os dados \
+                 dele. Para fazer isso mesmo assim, ative Executar como ARM para ele em \
+                 Configurações do DSA, Apps; isso apaga os dados dele.",
+            ),
+            failed: (
+                "{label} não foi reinstalado",
+                "O Android não reinstalou o app para executá-lo como ARM. Você pode tentar \
+                 novamente em Configurações do DSA, Apps.",
+            ),
+            needs_64_bit: (
+                "{label} não pode ser executado no DSA",
+                "Esta versão é executada como código de 32 bits, e o Android do DSA executa \
+                 somente código de 64 bits. Desinstale o app e instale a versão x86_64 dele no \
+                 lugar (ou a versão arm64-v8a, com a tradução ARM ativada).",
+            ),
+        },
+        UiLanguage::Russian => NoticeWords {
+            offer: (
+                "Не удалось запустить {label}",
+                "Приложению нужен код ARM, которого нет в его версии x86_64. Нажмите, чтобы \
+                 переустановить его для запуска как ARM; данные сохранятся.",
+            ),
+            done: (
+                "Приложение {label} теперь работает как ARM",
+                "Нажмите, чтобы открыть.",
+            ),
+            needs_erase: (
+                "Приложение {label} не переустановлено",
+                "Android не может изменить способ запуска приложения с сохранением его данных. \
+                 Чтобы сделать это всё равно, включите для него «Запускать как ARM» в разделе \
+                 «Приложения» параметров DSA; при этом его данные будут удалены.",
+            ),
+            failed: (
+                "Приложение {label} не переустановлено",
+                "Android не переустановил приложение для запуска как ARM. Попробовать снова \
+                 можно в разделе «Приложения» параметров DSA.",
+            ),
+            needs_64_bit: (
+                "Приложение {label} нельзя запустить в DSA",
+                "Эта сборка работает как 32-разрядный код, а Android в DSA выполняет только \
+                 64-разрядный код. Удалите приложение и установите вместо него сборку x86_64 \
+                 (или сборку arm64-v8a, если включена трансляция ARM).",
+            ),
+        },
+        UiLanguage::Italian => NoticeWords {
+            offer: (
+                "Impossibile avviare {label}",
+                "L'app richiede codice ARM che la sua versione x86_64 non include. Fai clic per \
+                 reinstallarla ed eseguirla come ARM; i suoi dati restano.",
+            ),
+            done: (
+                "L'app {label} ora viene eseguita come ARM",
+                "Fai clic per aprirla.",
+            ),
+            needs_erase: (
+                "L'app {label} non è stata reinstallata",
+                "Android non può cambiare il modo in cui viene eseguita mantenendone i dati. \
+                 Per farlo comunque, attiva Esegui come ARM per l'app in Impostazioni DSA, App; \
+                 i suoi dati verranno cancellati.",
+            ),
+            failed: (
+                "L'app {label} non è stata reinstallata",
+                "Android non l'ha reinstallata per eseguirla come ARM. Puoi riprovare da \
+                 Impostazioni DSA, App.",
+            ),
+            needs_64_bit: (
+                "Impossibile eseguire {label} in DSA",
+                "Questa build viene eseguita come codice a 32 bit, mentre l'Android di DSA \
+                 esegue solo codice a 64 bit. Disinstalla l'app e installa invece la sua build \
+                 x86_64 (o la build arm64-v8a, con la traduzione ARM attiva).",
+            ),
+        },
+        UiLanguage::Vietnamese => NoticeWords {
+            offer: (
+                "Không thể khởi động {label}",
+                "Ứng dụng cần mã ARM mà phiên bản x86_64 không có. Bấm để cài đặt lại ứng dụng \
+                 để chạy dưới dạng ARM; dữ liệu của ứng dụng vẫn được giữ.",
+            ),
+            done: ("{label} hiện chạy dưới dạng ARM", "Bấm để mở."),
+            needs_erase: (
+                "Chưa cài đặt lại {label}",
+                "Android không thể thay đổi cách ứng dụng chạy mà vẫn giữ dữ liệu. Nếu vẫn muốn \
+                 thay đổi, hãy bật Chạy dưới dạng ARM cho ứng dụng trong Cài đặt DSA, Ứng \
+                 dụng; thao tác này sẽ xóa dữ liệu của ứng dụng.",
+            ),
+            failed: (
+                "Chưa cài đặt lại {label}",
+                "Android chưa cài đặt lại ứng dụng để chạy dưới dạng ARM. Bạn có thể thử lại \
+                 trong Cài đặt DSA, Ứng dụng.",
+            ),
+            needs_64_bit: (
+                "Không thể chạy {label} trong DSA",
+                "Bản dựng này chạy dưới dạng mã 32 bit, còn Android của DSA chỉ chạy mã 64 bit. \
+                 Hãy gỡ cài đặt ứng dụng và cài đặt bản dựng x86_64 thay thế (hoặc bản dựng \
+                 arm64-v8a, khi đã bật dịch ARM).",
+            ),
+        },
+        UiLanguage::Indonesian => NoticeWords {
+            offer: (
+                "{label} tidak dapat dimulai",
+                "Aplikasi ini memerlukan kode ARM yang tidak ada di versi x86_64-nya. Klik untuk \
+                 menginstalnya ulang agar berjalan sebagai ARM; datanya tetap ada.",
+            ),
+            done: ("{label} kini berjalan sebagai ARM", "Klik untuk membukanya."),
+            needs_erase: (
+                "{label} tidak diinstal ulang",
+                "Android tidak dapat mengubah cara aplikasi ini berjalan sambil mempertahankan \
+                 datanya. Untuk tetap melakukannya, aktifkan Jalankan sebagai ARM untuk \
+                 aplikasi ini di Pengaturan DSA, Aplikasi; tindakan ini menghapus datanya.",
+            ),
+            failed: (
+                "{label} tidak diinstal ulang",
+                "Android tidak menginstalnya ulang agar berjalan sebagai ARM. Anda dapat \
+                 mencobanya lagi di Pengaturan DSA, Aplikasi.",
+            ),
+            needs_64_bit: (
+                "{label} tidak dapat berjalan di DSA",
+                "Build ini berjalan sebagai kode 32-bit, sedangkan Android di DSA hanya \
+                 menjalankan kode 64-bit. Copot pemasangannya dan instal build x86_64-nya \
+                 sebagai gantinya (atau build arm64-v8a-nya, dengan terjemahan ARM aktif).",
+            ),
+        },
+        UiLanguage::Turkish => NoticeWords {
+            offer: (
+                "{label} başlatılamadı",
+                "x86_64 sürümünde bulunmayan ARM kodu gerekiyor. ARM olarak çalışacak şekilde \
+                 yeniden yüklemek için tıklayın; verileri korunur.",
+            ),
+            done: ("{label} artık ARM olarak çalışıyor", "Açmak için tıklayın."),
+            needs_erase: (
+                "{label} yeniden yüklenmedi",
+                "Android, verilerini koruyarak uygulamanın çalışma biçimini değiştiremez. Yine \
+                 de değiştirmek için DSA Ayarları, Uygulamalar bölümünde bu uygulama için ARM \
+                 olarak çalıştır seçeneğini açın; bu işlem verilerini siler.",
+            ),
+            failed: (
+                "{label} yeniden yüklenmedi",
+                "Android, uygulamayı ARM olarak çalışacak şekilde yeniden yüklemedi. DSA \
+                 Ayarları, Uygulamalar bölümünden yeniden deneyebilirsiniz.",
+            ),
+            needs_64_bit: (
+                "{label} DSA'da çalıştırılamıyor",
+                "Bu derleme 32 bit kod olarak çalışıyor ve DSA'nın Android'i yalnızca 64 bit \
+                 kod çalıştırıyor. Uygulamayı kaldırın ve bunun yerine x86_64 derlemesini \
+                 (veya ARM çevirisi açıkken arm64-v8a derlemesini) yükleyin.",
+            ),
+        },
+    }
+}
+
 /// `notification` in the user's language. The host's own notifications about running an app
 /// as ARM come from the service in English, with a key that says which they are; a host shows
-/// them in Korean when `korean`. So do its alerts about updates
+/// them in `lang`. So do its alerts about updates
 /// ([`UpdateAlert`](crate::update::alerts::UpdateAlert)), which carry only why an update failed,
-/// in their text, and get their words here in either language. Every other notification is an
-/// app's own and stays as it came.
+/// in their text, and get their words here in any interface language. Every other
+/// notification is an app's own and stays as it came.
 pub fn in_user_language(
     mut notification: crate::notifications::Notification,
-    korean: bool,
+    lang: UiLanguage,
 ) -> crate::notifications::Notification {
     if let Some((notice, _)) = Notice::parse(&notification.key) {
-        let (title, text) = notice.text(&notification.app_label, korean);
+        let (title, text) = notice.text(&notification.app_label, lang);
         notification.title = title;
         notification.text = text;
     } else if let Some(alert) = crate::update::alerts::UpdateAlert::of_notification(&notification) {
-        let (title, text) = alert.text(korean);
+        let (title, text) = alert.text(lang);
         notification.title = title;
         notification.text = text;
     }
@@ -1133,13 +1463,54 @@ mod tests {
             let key = notice.key("com.example.game");
             assert!(key.starts_with(crate::notifications::HOST_KEY_PREFIX));
             assert_eq!(Notice::parse(&key), Some((notice, "com.example.game")));
-            let (english, _) = notice.text("Game", false);
-            let (korean, _) = notice.text("Game", true);
+            let (english, _) = notice.text("Game", UiLanguage::English);
+            let (korean, _) = notice.text("Game", UiLanguage::Korean);
             assert!(english.contains("Game") && korean.contains("Game"));
         }
         assert_eq!(Notice::parse("dsa:run-as-arm:offer:not a package"), None);
         assert_eq!(Notice::parse("dsa:run-as-arm:other:com.example.game"), None);
         assert_eq!(Notice::parse("0|com.example.game|1|null|10100"), None);
+    }
+
+    /// Every notice about running an app as ARM reads in every interface language: a title
+    /// that names the app and a text, none empty and none with an em dash or a placeholder
+    /// left in. A notification shown in a language with no translation reads in English.
+    #[test]
+    fn fr17_the_run_as_arm_notices_read_in_every_language() {
+        let notices = [
+            Notice::Offer,
+            Notice::Done,
+            Notice::NeedsErase,
+            Notice::Failed,
+            Notice::Needs64Bit,
+        ];
+        for lang in UiLanguage::ALL {
+            for notice in notices {
+                let (title, text) = notice.text("Game", lang);
+                assert!(title.contains("Game"), "{lang:?} {notice:?}: {title}");
+                assert!(!text.trim().is_empty(), "{lang:?} {notice:?}");
+                for words in [&title, &text] {
+                    assert!(!words.contains('\u{2014}'), "{lang:?}: {words}");
+                    assert!(
+                        crate::ui_language::placeholders(words).is_empty(),
+                        "{lang:?}: {words}"
+                    );
+                }
+            }
+        }
+        let app = crate::tasks::AppInfo {
+            package_name: "com.example.game".into(),
+            label: "Game".into(),
+            ..Default::default()
+        };
+        let english = Notice::Offer.notification(&app);
+        let shown = in_user_language(english.clone(), UiLanguage::from_tag_or_english("nl"));
+        assert_eq!((shown.title, shown.text), (english.title, english.text));
+        let shown = in_user_language(
+            Notice::Offer.notification(&app),
+            UiLanguage::from_tag_or_english("de-AT"),
+        );
+        assert_eq!(shown.title, "Game konnte nicht gestartet werden");
     }
 
     /// The native code of an APK of `files` (each with content, or empty), whose manifest asks
@@ -1318,12 +1689,12 @@ mod tests {
             unavailable: Some(RunAsArmUnavailable::ArmOnly),
         };
         assert!(needs_64_bit_build(&arm, on, "dlopen failed: libgame.so"));
-        let (title, text) = Notice::Needs64Bit.text("Chrome", false);
+        let (title, text) = Notice::Needs64Bit.text("Chrome", UiLanguage::English);
         assert!(
             title.contains("Chrome") && text.contains("x86_64 build"),
             "{text}"
         );
-        let (title, text) = Notice::Needs64Bit.text("Chrome", true);
+        let (title, text) = Notice::Needs64Bit.text("Chrome", UiLanguage::Korean);
         assert!(
             title.contains("Chrome") && text.contains("x86_64판"),
             "{text}"

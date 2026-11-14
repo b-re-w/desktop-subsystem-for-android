@@ -211,7 +211,12 @@ pub fn content(notification: &Notification) -> Content {
     } else {
         Interruption::Passive
     };
-    let category = if !buttons_of(&notification.key, false).is_empty() {
+    let category = if !buttons_of(
+        &notification.key,
+        dsa_host_core::ui_language::UiLanguage::English,
+    )
+    .is_empty()
+    {
         RESTART_CATEGORY.to_string()
     } else {
         buttons_category(&notification.buttons).unwrap_or_else(|| CATEGORY.to_string())
@@ -506,7 +511,12 @@ mod center {
                 let asked = UpdateAlert::new(Subject::Android, AlertKind::Restart, "0").key();
                 let mutable_array_class = class(c"NSMutableArray")?;
                 let buttons: *mut AnyObject = msg_send![mutable_array_class, array];
-                for button in buttons_of(&asked, korean) {
+                let lang = if korean {
+                    dsa_host_core::ui_language::UiLanguage::Korean
+                } else {
+                    dsa_host_core::ui_language::UiLanguage::English
+                };
+                for button in buttons_of(&asked, lang) {
                     let id = ns_string(button.action);
                     let title = ns_string(&button.label);
                     let action: *mut AnyObject = msg_send![

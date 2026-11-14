@@ -240,7 +240,10 @@ pub fn show(
                     ask_pins(&center);
                     match stream.next(Duration::from_secs(1)) {
                         Ok(Some(NotificationEvent::Posted(notification))) => {
-                            let notification = in_user_language(notification, korean());
+                            let notification = in_user_language(
+                                notification,
+                                crate::compositor::menu_bar::ui_language(),
+                            );
                             if let Err(why) = center.post(&notification) {
                                 log(&format!("a notification was not shown: {why}"));
                             } else if !is_update_key(&notification.key) {

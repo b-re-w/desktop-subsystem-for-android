@@ -314,7 +314,7 @@ impl AskedWords {
             label: request.name_in(language),
             detail: request.detail_in(language),
             command: request.command_text_in(language),
-            korean: language == dsa_host_core::root_requester::Language::Korean,
+            korean: language == dsa_host_core::ui_language::UiLanguage::Korean,
             seconds: 0,
         }
     }

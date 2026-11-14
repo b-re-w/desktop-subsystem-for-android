@@ -120,6 +120,15 @@ fn reads_korean() -> bool {
     reads_korean_in(|name| std::env::var(name).ok())
 }
 
+/// The interface language the session reads, as far as DSA tells it.
+fn reads_language() -> dsa_host_core::ui_language::UiLanguage {
+    if reads_korean() {
+        dsa_host_core::ui_language::UiLanguage::Korean
+    } else {
+        dsa_host_core::ui_language::UiLanguage::English
+    }
+}
+
 /// Opens DSA Settings (the settings app installed beside this program) on the Apps page at
 /// `package`, as the window menu's App info does. The settings app runs on its own; nothing
 /// waits for it.
@@ -655,7 +664,7 @@ fn show_notifications(requests: Sender<Request>, icons: PathBuf) {
         loop {
             match stream.next(Duration::from_secs(1)) {
                 Ok(Some(NotificationEvent::Posted(notification))) => {
-                    let notification = in_user_language(notification, reads_korean());
+                    let notification = in_user_language(notification, reads_language());
                     let notify = match shown.lock() {
                         Ok(shown) => shown.notify_in(&notification, reads_korean()),
                         Err(_) => continue,
@@ -761,7 +770,7 @@ fn start_accessibility(to_main: ToMain) -> Arc<Accessibility> {
 /// when `stall` says so, opening `packages` (the apps that had windows) again. Both on threads
 /// of their own, so the windows never wait for them.
 fn recover(stall: &Stall, packages: Vec<String>, icons: Option<PathBuf>) {
-    let notice = stall.notice().notification(reads_korean());
+    let notice = stall.notice().notification(reads_language());
     let icons = icons.unwrap_or_else(std::env::temp_dir);
     std::thread::spawn(move || {
         let shown = Notifier::connect(icons)

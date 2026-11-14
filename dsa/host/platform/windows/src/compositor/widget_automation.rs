@@ -1142,6 +1142,7 @@ mod tests {
             nodes: vec![root, time, open],
             removed: vec![],
             focused: None,
+            accessibility_focused: None,
         }
     }
 

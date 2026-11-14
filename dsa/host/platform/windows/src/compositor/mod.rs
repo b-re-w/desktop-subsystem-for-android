@@ -1324,11 +1324,9 @@ impl Compositor {
         let news = Arc::clone(&self.dsa_news);
         let logger = self.logger.clone();
         Box::new(move |stall: &Stall, packages: Vec<String>| {
-            news.lock().unwrap_or_else(|e| e.into_inner()).push_back(
-                stall
-                    .notice()
-                    .notification(notifications::user_reads_korean()),
-            );
+            news.lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .push_back(stall.notice().notification(notifications::user_language()));
             if !stall.restart {
                 return;
             }

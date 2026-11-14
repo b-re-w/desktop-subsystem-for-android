@@ -8,11 +8,12 @@
 //! below the first app uid (10000). Those are named in words and shown with a generic icon, so
 //! the person approving sees who is asking rather than `com.android.shell`.
 //!
-//! The words come in English and Korean, the languages the host's own words come in. The
-//! generic icons are drawn here, so every host shows the same ones without shipping image
-//! files.
+//! The words come in every language the host's own words come in
+//! ([`UiLanguage`]). The generic icons are drawn here, so every host shows the same ones
+//! without shipping image files.
 
 use crate::png::{self, Rgba};
+use crate::ui_language::UiLanguage;
 
 /// Android's shell app ID (`AID_SHELL`), which `adb shell` runs as.
 pub const SHELL_APP_ID: u32 = 2000;
@@ -34,36 +35,6 @@ pub const GENERIC_ICON_SIDE: u32 = 256;
 /// The app ID of `uid`: the same for an app in every Android user.
 pub fn app_id(uid: u32) -> u32 {
     uid % PER_USER_RANGE
-}
-
-/// The language the prompt's words are in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Language {
-    #[default]
-    English,
-    Korean,
-}
-
-impl Language {
-    /// The language of `tag`, a BCP 47 tag (`ko-KR`) or a POSIX locale name
-    /// (`ko_KR.UTF-8`): Korean for Korean, English for anything else, as the host has no
-    /// other words.
-    pub fn of(tag: &str) -> Language {
-        let primary = tag.split(['-', '_', '.', '@']).next().unwrap_or("");
-        if primary.eq_ignore_ascii_case("ko") || primary.eq_ignore_ascii_case("kor") {
-            Language::Korean
-        } else {
-            Language::English
-        }
-    }
-
-    /// The language's BCP 47 primary tag: `en` or `ko`.
-    pub fn tag(self) -> &'static str {
-        match self {
-            Language::English => "en",
-            Language::Korean => "ko",
-        }
-    }
 }
 
 /// Who asks for root.
@@ -91,28 +62,160 @@ impl Requester {
 }
 
 /// The name of `adb shell` in the prompt.
-pub fn developer_shell_name(language: Language) -> &'static str {
-    match language {
-        Language::English => "adb shell",
-        Language::Korean => "adb 셸",
-    }
+pub fn developer_shell_name(language: UiLanguage) -> &'static str {
+    requester_words(language).developer_shell
 }
 
 /// The name of Android's own service running as `uid`.
-pub fn system_name(uid: u32, language: Language) -> &'static str {
-    let (english, korean) = match app_id(uid) {
-        0 | SYSTEM_APP_ID => ("Android system", "Android 시스템"),
+pub fn system_name(uid: u32, language: UiLanguage) -> &'static str {
+    let words = requester_words(language);
+    match app_id(uid) {
+        0 | SYSTEM_APP_ID => words.system,
         // AID_RADIO
-        1001 => ("Android phone services", "Android 전화 서비스"),
+        1001 => words.phone,
         // AID_BLUETOOTH
-        1002 => ("Android Bluetooth", "Android 블루투스"),
+        1002 => words.bluetooth,
         // AID_NFC
-        1027 => ("Android NFC", "Android NFC"),
-        _ => ("Android system service", "Android 시스템 서비스"),
+        1027 => words.nfc,
+        _ => words.service,
+    }
+}
+
+/// The names of the requesters that are not apps, in one language.
+struct RequesterWords {
+    developer_shell: &'static str,
+    /// The system server and the other services of the system uid.
+    system: &'static str,
+    /// The phone services (`AID_RADIO`).
+    phone: &'static str,
+    bluetooth: &'static str,
+    nfc: &'static str,
+    /// Any other service below the first app uid.
+    service: &'static str,
+}
+
+fn requester_words(language: UiLanguage) -> RequesterWords {
+    let (developer_shell, system, phone, bluetooth, nfc, service) = match language {
+        UiLanguage::English => (
+            "adb shell",
+            "Android system",
+            "Android phone services",
+            "Android Bluetooth",
+            "Android NFC",
+            "Android system service",
+        ),
+        UiLanguage::Korean => (
+            "adb 셸",
+            "Android 시스템",
+            "Android 전화 서비스",
+            "Android 블루투스",
+            "Android NFC",
+            "Android 시스템 서비스",
+        ),
+        UiLanguage::Japanese => (
+            "adb シェル",
+            "Android システム",
+            "Android 電話サービス",
+            "Android Bluetooth",
+            "Android NFC",
+            "Android システム サービス",
+        ),
+        UiLanguage::ChineseSimplified => (
+            "adb shell",
+            "Android 系统",
+            "Android 电话服务",
+            "Android 蓝牙",
+            "Android NFC",
+            "Android 系统服务",
+        ),
+        UiLanguage::ChineseTraditional => (
+            "adb shell",
+            "Android 系統",
+            "Android 電話服務",
+            "Android 藍牙",
+            "Android NFC",
+            "Android 系統服務",
+        ),
+        UiLanguage::Spanish => (
+            "adb shell",
+            "Sistema Android",
+            "Servicios de telefonía de Android",
+            "Bluetooth de Android",
+            "NFC de Android",
+            "Servicio del sistema Android",
+        ),
+        UiLanguage::French => (
+            "adb shell",
+            "Système Android",
+            "Services téléphoniques Android",
+            "Bluetooth Android",
+            "NFC Android",
+            "Service système Android",
+        ),
+        UiLanguage::German => (
+            "adb shell",
+            "Android-System",
+            "Android-Telefondienste",
+            "Android-Bluetooth",
+            "Android-NFC",
+            "Android-Systemdienst",
+        ),
+        UiLanguage::PortugueseBrazil => (
+            "adb shell",
+            "Sistema Android",
+            "Serviços de telefonia do Android",
+            "Bluetooth do Android",
+            "NFC do Android",
+            "Serviço do sistema Android",
+        ),
+        UiLanguage::Russian => (
+            "adb shell",
+            "Система Android",
+            "Телефонные службы Android",
+            "Bluetooth Android",
+            "NFC Android",
+            "Системная служба Android",
+        ),
+        UiLanguage::Italian => (
+            "adb shell",
+            "Sistema Android",
+            "Servizi telefonici Android",
+            "Bluetooth Android",
+            "NFC Android",
+            "Servizio di sistema Android",
+        ),
+        UiLanguage::Vietnamese => (
+            "adb shell",
+            "Hệ thống Android",
+            "Dịch vụ điện thoại Android",
+            "Bluetooth Android",
+            "NFC Android",
+            "Dịch vụ hệ thống Android",
+        ),
+        UiLanguage::Indonesian => (
+            "adb shell",
+            "Sistem Android",
+            "Layanan telepon Android",
+            "Bluetooth Android",
+            "NFC Android",
+            "Layanan sistem Android",
+        ),
+        UiLanguage::Turkish => (
+            "adb kabuğu",
+            "Android sistemi",
+            "Android telefon hizmetleri",
+            "Android Bluetooth",
+            "Android NFC",
+            "Android sistem hizmeti",
+        ),
     };
-    match language {
-        Language::English => english,
-        Language::Korean => korean,
+    RequesterWords {
+        developer_shell,
+        system,
+        phone,
+        bluetooth,
+        nfc,
+        service,
     }
 }
 
@@ -245,24 +348,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fr35_the_prompt_language_follows_the_users_first_language() {
-        assert_eq!(Language::of("ko-KR"), Language::Korean);
-        assert_eq!(Language::of("ko_KR.UTF-8"), Language::Korean);
-        assert_eq!(Language::of("KO"), Language::Korean);
-        assert_eq!(Language::of("en-US"), Language::English);
-        assert_eq!(Language::of("ja-JP"), Language::English);
-        assert_eq!(Language::of(""), Language::English);
+    fn fr35_android_uids_are_named_in_words() {
+        assert_eq!(system_name(1000, UiLanguage::Korean), "Android 시스템");
+        assert_eq!(system_name(1000, UiLanguage::English), "Android system");
+        // The same service in a second Android user.
+        assert_eq!(system_name(101_000, UiLanguage::English), "Android system");
+        assert_eq!(
+            system_name(1013, UiLanguage::Korean),
+            "Android 시스템 서비스"
+        );
+        assert_eq!(developer_shell_name(UiLanguage::Korean), "adb 셸");
+        assert_eq!(developer_shell_name(UiLanguage::English), "adb shell");
     }
 
+    /// Every requester that is not an app has a name in every interface language, none empty,
+    /// none with an em dash, and each naming Android or adb as the English does.
     #[test]
-    fn fr35_android_uids_are_named_in_words() {
-        assert_eq!(system_name(1000, Language::Korean), "Android 시스템");
-        assert_eq!(system_name(1000, Language::English), "Android system");
-        // The same service in a second Android user.
-        assert_eq!(system_name(101_000, Language::English), "Android system");
-        assert_eq!(system_name(1013, Language::Korean), "Android 시스템 서비스");
-        assert_eq!(developer_shell_name(Language::Korean), "adb 셸");
-        assert_eq!(developer_shell_name(Language::English), "adb shell");
+    fn fr17_requesters_are_named_in_every_language() {
+        for lang in UiLanguage::ALL {
+            let shell = developer_shell_name(lang);
+            assert!(shell.starts_with("adb"), "{lang:?}: {shell}");
+            for uid in [0, 1000, 1001, 1002, 1027, 1013] {
+                let name = system_name(uid, lang);
+                assert!(name.contains("Android"), "{lang:?}: {name}");
+                assert!(!name.contains('\u{2014}'), "{lang:?}: {name}");
+            }
+            // The services stay told apart.
+            assert_ne!(system_name(1000, lang), system_name(1013, lang), "{lang:?}");
+        }
     }
 
     #[test]
