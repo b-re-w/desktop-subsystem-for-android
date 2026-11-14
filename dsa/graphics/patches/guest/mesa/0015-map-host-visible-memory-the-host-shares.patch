@@ -263,7 +263,7 @@ diff --git a/src/gfxstream/guest/android/include/gfxstream/guest/GfxStreamGrallo
 diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
 --- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
 +++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
-@@ -8,6 +8,8 @@
+@@ -9,6 +9,8 @@
  #include "dsa_shadow_blocks.h"
  #include "dsa_shadow_memory.h"
  
@@ -272,7 +272,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
  #include <algorithm>
  #include <atomic>
  #if DETECT_OS_ANDROID
-@@ -1850,8 +1852,16 @@
+@@ -1860,8 +1862,16 @@
      if (buffers.empty()) return;
      // The host answers once the device's work is done, so the ColorBuffers hold the drawing.
      if (enc->vkDeviceWaitIdle(device, true /* do lock */) == VK_SUCCESS) {
@@ -290,7 +290,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
          }
      }
      for (AHardwareBuffer* ahb : buffers) {
-@@ -1871,16 +1881,29 @@
+@@ -1881,16 +1891,29 @@
          auto it = info_VkImage.find(image);
          if (it != info_VkImage.end()) handle = it->second.cpuReadbackHandle;
      }
@@ -323,7 +323,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
      {
          std::lock_guard<std::recursive_mutex> lock(mLock);
          if (mCpuUploads.empty()) return;
-@@ -1890,14 +1913,150 @@
+@@ -1900,14 +1923,150 @@
              AHardwareBuffer_acquire(entry.second);
              buffers.push_back(entry.second);
          }
@@ -475,7 +475,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
  uint32_t ResourceTracker::getStreamFeatures() const { return ResourceTracker::streamFeatureBits; }
  
  bool ResourceTracker::supportsDeferredCommands() const {
-@@ -2569,6 +2728,21 @@
+@@ -2579,6 +2738,21 @@
  void ResourceTracker::on_vkDestroyDevice_pre(void* context, VkDevice device,
                                               const VkAllocationCallbacks*) {
      (void)context;
@@ -497,7 +497,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
      std::lock_guard<std::recursive_mutex> lock(mLock);
  
      auto it = info_VkDevice.find(device);
-@@ -2577,6 +2751,11 @@
+@@ -2587,6 +2761,11 @@
      for (auto itr = info_VkDeviceMemory.cbegin(); itr != info_VkDeviceMemory.cend();) {
          auto& memInfo = itr->second;
          if (memInfo.device == device) {
@@ -509,7 +509,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
              itr = info_VkDeviceMemory.erase(itr);
          } else {
              itr++;
-@@ -3425,6 +3604,10 @@
+@@ -3435,6 +3614,10 @@
          !usingDirectMapping())
          dedicated = true;
  
@@ -520,7 +520,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
      VkMemoryAllocateInfo hostAllocationInfo = vk_make_orphan_copy(*pAllocateInfo);
      vk_struct_chain_iterator structChainIter = vk_make_chain_iterator(&hostAllocationInfo);
  
-@@ -3543,6 +3726,21 @@
+@@ -3553,6 +3736,21 @@
      }
  
      if (!usingDirectMapping()) {
@@ -542,8 +542,8 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
          // Zero pages the kernel gives on first touch: a copy the app never maps takes no
          // memory (dsa_shadow_memory.h).
          uint8_t* shadow =
-@@ -4485,6 +4683,13 @@
-         if (info.shadowed) {
+@@ -4497,6 +4695,13 @@
+             if (info.shadowRegion) dsa::dirtyPages(logDirtyTracking).untrack(info.shadowRegion);
              dsa::freeShadowMemory(info.ptr, info.shadowSize);
              info_VkDeviceMemory.erase(it);
 +        } else if (info.sharedRegion) {
@@ -556,7 +556,7 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/
          }
          lock.unlock();
          VkEncoder* enc = (VkEncoder*)context;
-@@ -6597,7 +6802,7 @@
+@@ -6622,7 +6827,7 @@
                                                     const VkSubmitInfoType* pSubmits,
                                                     VkFence fence) {
      // Before the host sees the work, which may sample a buffer a CPU has written since.
@@ -611,20 +611,20 @@ diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h b/src/gfxstream/gu
      };
  
      struct VkDeviceMemory_Info {
-@@ -799,6 +819,12 @@
-         dsa::ShadowMapping shadowMapping;
-         // The size the copy was made with, which it is freed with.
-         uint64_t shadowSize = 0;
+@@ -803,6 +823,12 @@
+         // from the app's first map: its id, 0 when every block is compared instead.
+         bool shadowTracked = false;
+         uint64_t shadowRegion = 0;
 +        // ptr maps a grant of the graphics memory the host shares (dsa_graphics_memory.h):
-+        // the same pages the host's Vulkan memory is, so there is no copy, nothing to find
-+        // changed, send or read back. Its offset there and length, which it is let go with.
++        // the same pages the host's Vulkan memory is, so there is no copy, nothing to track,
++        // find changed, send or read back. Its offset there and length, which it is let go with.
 +        bool sharedRegion = false;
 +        uint64_t sharedOffset = 0;
 +        uint64_t sharedLength = 0;
  
          uint64_t blobId = 0;
          uint64_t allocationSize = 0;
-@@ -977,6 +1003,15 @@
+@@ -981,6 +1007,15 @@
      // the CPU wrote is copied up before each submit (dsa_cpu_upload.h).
      std::unordered_map<uint64_t, AHardwareBuffer*> mCpuUploads;
  #endif

@@ -1,4 +1,4 @@
-"""The graphics memory the host shares with the guest: host patch 0035, guest/mesa 0014, the
+"""The graphics memory the host shares with the guest: host patch 0037, guest/mesa 0015, the
 renderer backend and the hwcomposer.
 
 A guest's host-visible memory goes into a region the service attaches to the VM, which the
@@ -13,8 +13,8 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-HOST_PATCH = next((HERE / "patches").glob("0035-*.patch"))
-MESA_PATCH = next((HERE / "patches" / "guest" / "mesa").glob("0014-*.patch"))
+HOST_PATCH = next((HERE / "patches").glob("0037-*.patch"))
+MESA_PATCH = next((HERE / "patches" / "guest" / "mesa").glob("0015-*.patch"))
 HEADER = HERE / "include" / "dsa_graphics_memory.h"
 DEVICE = HERE / "include" / "dsa_graphics_memory_device.h"
 BACKEND = HERE / "host" / "dsa_gfx_backend.cpp"
@@ -39,7 +39,7 @@ def added(patch, path):
 class HostPatchTests(unittest.TestCase):
     def test_pr7_the_host_scripts_apply_the_patch(self):
         for script in (HERE / "host" / "fetch.sh", HERE / "host" / "fetch.ps1"):
-            self.assertIn("0035", read(script), script)
+            self.assertIn("0037", read(script), script)
 
     def test_pr7_host_visible_memory_is_imported_from_the_shared_region(self):
         code = added(HOST_PATCH, "host/vulkan/VkDecoderGlobalState.cpp")
@@ -121,6 +121,9 @@ class GuestPatchTests(unittest.TestCase):
         self.assertNotIn("shadowed = true", branch[:700])
         tracker = read(HERE / "patches" / "0003-copy-host-visible-memory-without-shared-memory.patch")
         self.assertIn("if (!info.shadowed || info.device != device || !info.shadowBlocks) continue;", tracker)
+        # Nor does the kernel track its pages: only a copy is tracked.
+        self.assertIn("bool sharedRegion = false;",
+                      added(MESA_PATCH, "src/gfxstream/guest/vulkan_enc/ResourceTracker.h"))
         encoder = added(MESA_PATCH, "src/gfxstream/guest/vulkan_enc/VkEncoder.cpp")
         self.assertIn("if (!hostPtr || sResourceTracker->isSharedMemory(memory)) {", encoder)
 
