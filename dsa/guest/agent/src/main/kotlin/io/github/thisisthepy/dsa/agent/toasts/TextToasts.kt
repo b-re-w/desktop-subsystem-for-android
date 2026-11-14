@@ -126,7 +126,15 @@ class TextToasts(
             end(showing)
             return
         }
-        val task = tasks().firstOrNull { it.taskId == showing.task.taskId && holdsToasts(it, ownPackage) }
+        val running = try {
+            tasks()
+        } catch (e: RuntimeException) {
+            // One failed read must not end the following: the toast is looked at again.
+            log.warn("could not read the tasks while a toast shows", e)
+            scheduler.postDelayed(FOLLOW_MILLIS) { follow(number, elapsed + FOLLOW_MILLIS) }
+            return
+        }
+        val task = running.firstOrNull { it.taskId == showing.task.taskId && holdsToasts(it, ownPackage) }
         if (task == null) {
             end(showing)
             return

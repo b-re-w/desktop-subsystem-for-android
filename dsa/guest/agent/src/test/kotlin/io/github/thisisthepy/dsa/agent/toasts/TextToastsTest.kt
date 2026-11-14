@@ -39,7 +39,15 @@ class TextToastsTest {
         }
     }
 
-    private val toasts = TextToasts(windows, { running }, scheduler, log, AGENT)
+    private var readsFail = false
+
+    private val toasts = TextToasts(
+        windows,
+        { if (readsFail) throw IllegalStateException("the task read failed") else running },
+        scheduler,
+        log,
+        AGENT,
+    )
 
     private val mail = "org.example.mail"
     private val music = "org.example.music"
@@ -181,6 +189,20 @@ class TextToastsTest {
         toasts.hide(mail, request.token)
         scheduler.advance(1_000)
         assertEquals(3, events.size)
+    }
+
+    @Test
+    fun fr40_a_failed_task_read_does_not_stop_a_toast_following_its_window() {
+        val task = appTask(1, packageName = mail, focused = true)
+        running = listOf(task)
+        toasts.show(toast(mail, "Saved"))
+        readsFail = true
+        scheduler.advance(TextToasts.FOLLOW_MILLIS)
+        readsFail = false
+        val resized = task.copy(bounds = TaskBounds(10, 20, 810, 620))
+        running = listOf(resized)
+        scheduler.advance(TextToasts.FOLLOW_MILLIS)
+        assertEquals("place Saved at ${resized.bounds}", events.last())
     }
 
     @Test
