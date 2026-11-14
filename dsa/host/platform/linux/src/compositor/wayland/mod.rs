@@ -186,8 +186,8 @@ pub struct State {
     pub(crate) menu: Option<menu::Menu>,
     /// The widget windows on the desktop.
     pub(crate) widgets: widgets::Widgets,
-    /// Whether the session reads Korean, for the window menu's words.
-    pub(crate) korean: bool,
+    /// The session's interface language, for the window menu's words.
+    pub(crate) language: dsa_host_core::ui_language::UiLanguage,
 }
 
 /// The connection to the desktop and everything shown on it.
@@ -249,9 +249,8 @@ impl Desktop {
                 None
             }
         };
-        let korean =
-            crate::compositor::window_menu::reads_korean_in(|name| std::env::var(name).ok());
-        let widgets = widgets::Widgets::new(layer_shell.is_some(), x11.is_some(), korean);
+        let language = crate::interface_language::ui_language();
+        let widgets = widgets::Widgets::new(layer_shell.is_some(), x11.is_some(), language);
         let mut state = State {
             qh: qh.clone(),
             connection: connection.clone(),
@@ -296,7 +295,7 @@ impl Desktop {
             text,
             menu: None,
             widgets,
-            korean,
+            language,
         };
         if let Some(seat) = seat {
             state.seat_ready(seat);

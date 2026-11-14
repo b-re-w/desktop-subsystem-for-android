@@ -37,10 +37,11 @@ use dsa_transport::Connector;
 use super::frames::{LatestFrames, Shown};
 use super::gfxstream::{self, FrameSink};
 use super::wayland::{Desktop, Event, Events, Wake};
-use super::window_menu::{app_page_arguments, menu_work, reads_korean_in};
+use super::window_menu::{app_page_arguments, menu_work};
 use crate::accessibility::objects::{widget_facts, window_facts, TitleCommand, WindowFacts};
 use crate::accessibility::watch::{ApiConnect, Shared as Accessibility};
 use crate::input::evdev::EvdevGamepads;
+use crate::interface_language::ui_language;
 use crate::renderer::client::RendererClient;
 use crate::shell::dbus::{Notifier, Signal};
 use crate::shell::desktop_entry::{self, Folders};
@@ -112,21 +113,6 @@ fn drain(read: &OwnedFd) {
     let mut buffer = [0u8; 64];
     // SAFETY: reads into a valid buffer from a non-blocking pipe.
     while unsafe { libc::read(read.as_raw_fd(), buffer.as_mut_ptr().cast(), buffer.len()) } > 0 {}
-}
-
-/// Whether the session reads Korean: the language gettext would choose its messages in, from
-/// `LC_ALL`, `LC_MESSAGES` or `LANG`, the first that is set.
-fn reads_korean() -> bool {
-    reads_korean_in(|name| std::env::var(name).ok())
-}
-
-/// The interface language the session reads, as far as DSA tells it.
-fn reads_language() -> dsa_host_core::ui_language::UiLanguage {
-    if reads_korean() {
-        dsa_host_core::ui_language::UiLanguage::Korean
-    } else {
-        dsa_host_core::ui_language::UiLanguage::English
-    }
 }
 
 /// Opens DSA Settings (the settings app installed beside this program) on the Apps page at
@@ -533,7 +519,7 @@ fn ask_pins(folders: Folders) -> Sender<PinShortcutRequest> {
                             .map_err(|why| log(&why))
                             .ok();
                     }
-                    let question = pin_shortcuts::question(&request, reads_korean());
+                    let question = pin_shortcuts::question(&request, ui_language());
                     let shown = notifier
                         .as_ref()
                         .ok_or_else(|| "the notification service cannot be reached".to_string())
@@ -664,9 +650,10 @@ fn show_notifications(requests: Sender<Request>, icons: PathBuf) {
         loop {
             match stream.next(Duration::from_secs(1)) {
                 Ok(Some(NotificationEvent::Posted(notification))) => {
-                    let notification = in_user_language(notification, reads_language());
+                    let language = ui_language();
+                    let notification = in_user_language(notification, language);
                     let notify = match shown.lock() {
-                        Ok(shown) => shown.notify_in(&notification, reads_korean()),
+                        Ok(shown) => shown.notify_in(&notification, language),
                         Err(_) => continue,
                     };
                     match notifier.notify(&notify, &notification.icon_png) {
@@ -770,7 +757,7 @@ fn start_accessibility(to_main: ToMain) -> Arc<Accessibility> {
 /// when `stall` says so, opening `packages` (the apps that had windows) again. Both on threads
 /// of their own, so the windows never wait for them.
 fn recover(stall: &Stall, packages: Vec<String>, icons: Option<PathBuf>) {
-    let notice = stall.notice().notification(reads_language());
+    let notice = stall.notice().notification(ui_language());
     let icons = icons.unwrap_or_else(std::env::temp_dir);
     std::thread::spawn(move || {
         let shown = Notifier::connect(icons)
@@ -1427,7 +1414,10 @@ mod tests {
 
     #[test]
     fn fr25_the_run_as_arm_notices_follow_the_sessions_language() {
+        use crate::interface_language::ui_language_in;
+        use dsa_host_core::ui_language::UiLanguage;
         let korean = |name: &str| (name == "LANG").then(|| "ko_KR.UTF-8".to_string());
+        let japanese = |name: &str| (name == "LANG").then(|| "ja_JP.UTF-8".to_string());
         let english = |name: &str| (name == "LANG").then(|| "en_US.UTF-8".to_string());
         // LC_ALL comes first, as gettext reads it.
         let both = |name: &str| match name {
@@ -1435,8 +1425,9 @@ mod tests {
             "LANG" => Some("ko_KR.UTF-8".to_string()),
             _ => None,
         };
-        assert!(reads_korean_in(korean));
-        assert!(!reads_korean_in(english));
-        assert!(!reads_korean_in(both));
+        assert_eq!(ui_language_in(korean), UiLanguage::Korean);
+        assert_eq!(ui_language_in(japanese), UiLanguage::Japanese);
+        assert_eq!(ui_language_in(english), UiLanguage::English);
+        assert_eq!(ui_language_in(both), UiLanguage::English);
     }
 }

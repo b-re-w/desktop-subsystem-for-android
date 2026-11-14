@@ -4,8 +4,9 @@
 //! The folder is `Screenshots` in the user's Pictures folder, as the XDG user directories name
 //! it (`xdg-user-dir PICTURES`, else `XDG_PICTURES_DIR` in `user-dirs.dirs`, else
 //! `~/Pictures`), which is where GNOME and KDE put their own screenshots. The file is named
-//! "Screenshot 2026-11-08 143022.png", the local date and time to the second ("스크린샷 ..."
-//! in Korean), as the Windows host names its own; a second one in the same second gets
+//! "Screenshot 2026-11-08 143022.png", the local date and time to the second, with the word
+//! in the session's interface language ("스크린샷 ..." in Korean), as the Windows host names
+//! its own; a second one in the same second gets
 //! " (2)" before the extension, so no file is ever written over.
 
 use std::path::{Path, PathBuf};

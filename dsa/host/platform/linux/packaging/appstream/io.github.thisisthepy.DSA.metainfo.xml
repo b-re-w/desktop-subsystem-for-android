@@ -5,6 +5,19 @@
   <id>io.github.thisisthepy.DSA</id>
   <name>Desktop Subsystem for Android</name>
   <summary>Runs Android apps in windows of their own on the desktop</summary>
+  <summary xml:lang="ko">Android 앱을 바탕 화면에서 저마다의 창으로 실행합니다</summary>
+  <summary xml:lang="ja">Android アプリをデスクトップ上でそれぞれのウィンドウで実行します</summary>
+  <summary xml:lang="zh_CN">在桌面上以独立窗口运行 Android 应用</summary>
+  <summary xml:lang="zh_TW">在桌面上以獨立視窗執行 Android 應用程式</summary>
+  <summary xml:lang="es">Ejecuta aplicaciones de Android en ventanas propias en el escritorio</summary>
+  <summary xml:lang="fr">Exécute les applications Android dans leurs propres fenêtres sur le bureau</summary>
+  <summary xml:lang="de">Führt Android-Apps in eigenen Fenstern auf dem Desktop aus</summary>
+  <summary xml:lang="pt_BR">Executa apps Android em janelas próprias na área de trabalho</summary>
+  <summary xml:lang="ru">Запускает приложения Android в отдельных окнах на рабочем столе</summary>
+  <summary xml:lang="it">Esegue le app Android in finestre proprie sul desktop</summary>
+  <summary xml:lang="vi">Chạy ứng dụng Android trong cửa sổ riêng trên màn hình nền</summary>
+  <summary xml:lang="id">Menjalankan aplikasi Android di jendelanya sendiri di desktop</summary>
+  <summary xml:lang="tr">Android uygulamalarını masaüstünde kendi pencerelerinde çalıştırır</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>Apache-2.0</project_license>
   <developer id="io.github.thisisthepy">
@@ -16,9 +29,137 @@
       shows each Android task as a desktop window, with the computer's sound, cameras,
       location, sensors, printers and folders lent to its apps.
     </p>
+    <p xml:lang="ko">
+      Desktop Subsystem for Android™(DSA)는 Android를 전용 경량 VM에서 실행하고, Android
+      작업 하나하나를 바탕 화면의 창으로 보여 줍니다. 앱은 컴퓨터의 소리, 카메라, 위치,
+      센서, 프린터와 폴더를 함께 씁니다.
+    </p>
+    <p xml:lang="ja">
+      Desktop Subsystem for Android™ (DSA) は、専用の軽量 VM で Android を実行し、Android の
+      タスクをそれぞれデスクトップのウィンドウとして表示します。アプリはコンピューターの
+      サウンド、カメラ、位置情報、センサー、プリンター、フォルダーを利用できます。
+    </p>
+    <p xml:lang="zh_CN">
+      Desktop Subsystem for Android™ (DSA) 在专用的轻量级虚拟机中运行 Android，并将每个
+      Android 任务显示为一个桌面窗口，应用可以使用电脑的声音、摄像头、位置、传感器、
+      打印机和文件夹。
+    </p>
+    <p xml:lang="zh_TW">
+      Desktop Subsystem for Android™ (DSA) 在專用的輕量虛擬機器中執行 Android，並將每個
+      Android 工作顯示為一個桌面視窗，應用程式可以使用電腦的音訊、相機、位置、感應器、
+      印表機和資料夾。
+    </p>
+    <p xml:lang="es">
+      Desktop Subsystem for Android™ (DSA) ejecuta Android en una máquina virtual ligera
+      dedicada y muestra cada tarea de Android como una ventana del escritorio, con el sonido,
+      las cámaras, la ubicación, los sensores, las impresoras y las carpetas del equipo a
+      disposición de sus aplicaciones.
+    </p>
+    <p xml:lang="fr">
+      Desktop Subsystem for Android™ (DSA) exécute Android dans une machine virtuelle légère
+      dédiée et affiche chaque tâche Android dans une fenêtre du bureau, en prêtant à ses
+      applications le son, les caméras, la position, les capteurs, les imprimantes et les
+      dossiers de l'ordinateur.
+    </p>
+    <p xml:lang="de">
+      Desktop Subsystem for Android™ (DSA) führt Android in einer eigenen schlanken VM aus und
+      zeigt jede Android-Aufgabe als Fenster auf dem Desktop. Ton, Kameras, Standort, Sensoren,
+      Drucker und Ordner des Computers stehen den Apps zur Verfügung.
+    </p>
+    <p xml:lang="pt_BR">
+      O Desktop Subsystem for Android™ (DSA) executa o Android em uma VM leve dedicada e mostra
+      cada tarefa do Android como uma janela da área de trabalho, emprestando aos apps o som,
+      as câmeras, a localização, os sensores, as impressoras e as pastas do computador.
+    </p>
+    <p xml:lang="ru">
+      Desktop Subsystem for Android™ (DSA) запускает Android в отдельной лёгкой виртуальной
+      машине и показывает каждую задачу Android как окно на рабочем столе. Приложениям
+      доступны звук, камеры, местоположение, датчики, принтеры и папки компьютера.
+    </p>
+    <p xml:lang="it">
+      Desktop Subsystem for Android™ (DSA) esegue Android in una VM leggera dedicata e mostra
+      ogni attività Android come una finestra del desktop, mettendo a disposizione delle app
+      l'audio, le fotocamere, la posizione, i sensori, le stampanti e le cartelle del computer.
+    </p>
+    <p xml:lang="vi">
+      Desktop Subsystem for Android™ (DSA) chạy Android trong một máy ảo nhẹ riêng và hiển thị
+      mỗi tác vụ Android thành một cửa sổ trên màn hình nền, cho các ứng dụng dùng âm thanh,
+      camera, vị trí, cảm biến, máy in và thư mục của máy tính.
+    </p>
+    <p xml:lang="id">
+      Desktop Subsystem for Android™ (DSA) menjalankan Android di VM ringan khusus dan
+      menampilkan setiap tugas Android sebagai jendela desktop, dengan suara, kamera, lokasi,
+      sensor, printer, dan folder komputer dipinjamkan ke aplikasinya.
+    </p>
+    <p xml:lang="tr">
+      Desktop Subsystem for Android™ (DSA), Android'i ayrı ve hafif bir sanal makinede
+      çalıştırır ve her Android görevini masaüstünde bir pencere olarak gösterir. Bilgisayarın
+      sesi, kameraları, konumu, sensörleri, yazıcıları ve klasörleri uygulamaların kullanımına
+      sunulur.
+    </p>
     <p>
       Installing the package adds DSA's signed package repository, so new versions arrive
       with the system's other updates. Removing the package removes the repository again.
+    </p>
+    <p xml:lang="ko">
+      패키지를 설치하면 DSA의 서명된 패키지 저장소가 추가되어, 새 버전이 시스템의 다른
+      업데이트와 함께 들어옵니다. 패키지를 제거하면 저장소도 다시 제거됩니다.
+    </p>
+    <p xml:lang="ja">
+      パッケージをインストールすると DSA の署名付きパッケージ リポジトリが追加され、新しい
+      バージョンがシステムの他の更新と一緒に届きます。パッケージを削除すると、リポジトリも
+      削除されます。
+    </p>
+    <p xml:lang="zh_CN">
+      安装此软件包会添加 DSA 的已签名软件源，新版本会随系统的其他更新一起到来。删除软件包时
+      也会删除该软件源。
+    </p>
+    <p xml:lang="zh_TW">
+      安裝此套件會新增 DSA 的已簽署套件庫，新版本會隨系統的其他更新一起送達。移除套件時也會
+      移除該套件庫。
+    </p>
+    <p xml:lang="es">
+      Al instalar el paquete se añade el repositorio de paquetes firmado de DSA, de modo que las
+      nuevas versiones llegan con las demás actualizaciones del sistema. Al quitar el paquete,
+      también se quita el repositorio.
+    </p>
+    <p xml:lang="fr">
+      L'installation du paquet ajoute le dépôt de paquets signé de DSA, pour que les nouvelles
+      versions arrivent avec les autres mises à jour du système. La suppression du paquet retire
+      aussi le dépôt.
+    </p>
+    <p xml:lang="de">
+      Bei der Installation des Pakets wird die signierte Paketquelle von DSA hinzugefügt, sodass
+      neue Versionen mit den übrigen Systemaktualisierungen kommen. Beim Entfernen des Pakets
+      wird die Paketquelle wieder entfernt.
+    </p>
+    <p xml:lang="pt_BR">
+      Instalar o pacote adiciona o repositório de pacotes assinado do DSA, para que as novas
+      versões cheguem com as outras atualizações do sistema. Remover o pacote também remove o
+      repositório.
+    </p>
+    <p xml:lang="ru">
+      При установке пакета добавляется подписанный репозиторий пакетов DSA, поэтому новые
+      версии приходят вместе с остальными обновлениями системы. При удалении пакета
+      репозиторий тоже удаляется.
+    </p>
+    <p xml:lang="it">
+      L'installazione del pacchetto aggiunge il repository di pacchetti firmato di DSA, così le
+      nuove versioni arrivano con gli altri aggiornamenti del sistema. La rimozione del
+      pacchetto rimuove anche il repository.
+    </p>
+    <p xml:lang="vi">
+      Khi cài đặt gói, kho gói đã ký của DSA sẽ được thêm vào để các phiên bản mới đến cùng các
+      bản cập nhật khác của hệ thống. Khi gỡ gói, kho này cũng được gỡ bỏ.
+    </p>
+    <p xml:lang="id">
+      Memasang paket ini menambahkan repositori paket DSA yang ditandatangani, sehingga versi
+      baru datang bersama pembaruan sistem lainnya. Menghapus paket juga menghapus
+      repositorinya.
+    </p>
+    <p xml:lang="tr">
+      Paketi yüklemek DSA'nın imzalı paket deposunu ekler, böylece yeni sürümler sistemin diğer
+      güncellemeleriyle birlikte gelir. Paketi kaldırmak depoyu da kaldırır.
     </p>
     <p>Android is a trademark of Google LLC.</p>
   </description>

@@ -11,15 +11,17 @@ use dsa_host_core::accessibility::{
     ActionRequest, Collection, CollectionItem, Node, NodeAction, NodeRange, NodeStates, TreeUpdate,
 };
 use dsa_host_core::tasks::Bounds;
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_linux::accessibility::atspi::{coord, role, role_name, state};
 use dsa_host_linux::accessibility::objects::{
-    back_name, button_name, interface, prefers_korean, window_facts, Access, Event, Object,
-    TitleAction, TitleButton, TitleCommand, WindowEvent, WindowFacts,
+    action_names, back_name, button_name, interface, window_facts, Access, Event, Object,
+    TitleAction, TitleButton, TitleCommand, WindowEvent, WindowFacts, NODE_ACTIONS,
 };
 use dsa_host_linux::accessibility::text::{self, Unit};
 use dsa_host_linux::accessibility::watch::{ApiConnect, Shared};
 use dsa_host_linux::compositor::title_bar::TitleBar;
 use dsa_host_linux::compositor::toplevel::Toplevel;
+use dsa_host_linux::interface_language::{posix_locale, ui_language_in};
 use dsa_transport::{Connection, Connector, TransportError};
 
 const TASK: i32 = 7;
@@ -128,7 +130,7 @@ fn facts_of(model: &Toplevel, back: bool) -> WindowFacts {
 }
 
 fn settings(scale: u32) -> Access {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     access.sync(TASK, facts_of(&model(scale), false));
     access.apply(TASK, settings_screen(1)).unwrap();
     access
@@ -344,7 +346,7 @@ fn fr18_a_settings_screen_reads_as_list_items_with_names_and_places() {
 
 #[test]
 fn fr18_text_selection_lists_and_sliders_reach_atspi_as_on_windows() {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     access.sync(TASK, facts_of(&model(1), false));
     // A field whose selection Android counts in UTF-16: "😀" is two units, one character.
     let field = Node {
@@ -473,7 +475,7 @@ fn settings_at_125_percent_kept_at_100() -> (Toplevel, Access) {
     let mut model = model(1);
     model.frame_scale = scale_between(density_for_dpi(120), density_for_dpi(96));
     model.shown = to_window_size(model.task, model.frame_scale);
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     access.sync(TASK, facts_of(&model, false));
     access.apply(TASK, settings_screen(1)).unwrap();
     (model, access)
@@ -589,7 +591,7 @@ fn fr18_actions_become_the_nodes_accessibility_actions() {
 
 #[test]
 fn fr18_fields_take_new_text_and_sliders_new_values() {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     access.sync(TASK, facts_of(&model(1), false));
     let field = Node {
         states: NodeStates {
@@ -749,7 +751,7 @@ fn fr18_changes_raise_children_name_state_and_bounds_events() {
 
 #[test]
 fn fr18_typing_raises_text_events_and_focus_follows_the_active_window() {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     let mut window = model(1);
     window.states.activated = true;
     let events = access.sync(TASK, facts_of(&window, false));
@@ -842,7 +844,7 @@ fn fr18_typing_raises_text_events_and_focus_follows_the_active_window() {
 
 #[test]
 fn fr18_title_bar_buttons_are_named_push_buttons_that_click() {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     let mut window = model(1);
     access.sync(TASK, facts_of(&window, false));
     let frame = Object::Window(TASK);
@@ -929,10 +931,16 @@ fn fr18_title_bar_buttons_are_named_push_buttons_that_click() {
 
 #[test]
 fn fr22_the_buttons_are_named_in_the_first_preferred_language() {
-    assert_eq!(back_name(true), "뒤로");
-    assert_eq!(back_name(false), "Back");
-    assert_eq!(button_name(TitleButton::Close, false, true), "닫기");
-    assert_eq!(button_name(TitleButton::Maximize, true, false), "Restore");
+    assert_eq!(back_name(UiLanguage::Korean), "뒤로");
+    assert_eq!(back_name(UiLanguage::English), "Back");
+    assert_eq!(
+        button_name(TitleButton::Close, false, UiLanguage::Korean),
+        "닫기"
+    );
+    assert_eq!(
+        button_name(TitleButton::Maximize, true, UiLanguage::English),
+        "Restore"
+    );
     let env = |pairs: &'static [(&'static str, &'static str)]| {
         move |name: &str| {
             pairs
@@ -941,25 +949,110 @@ fn fr22_the_buttons_are_named_in_the_first_preferred_language() {
                 .map(|(_, value)| value.to_string())
         }
     };
-    // LANGUAGE lists the languages by preference; its first decides.
-    assert!(prefers_korean(env(&[
-        ("LANGUAGE", "ko:en"),
-        ("LANG", "en_US.UTF-8")
-    ])));
-    assert!(!prefers_korean(env(&[
-        ("LANGUAGE", "en_US:ko"),
-        ("LANG", "ko_KR.UTF-8")
-    ])));
+    // LANGUAGE lists the languages by preference; the first DSA has words for decides.
+    assert_eq!(
+        ui_language_in(env(&[("LANGUAGE", "ko:en"), ("LANG", "en_US.UTF-8")])),
+        UiLanguage::Korean
+    );
+    assert_eq!(
+        ui_language_in(env(&[("LANGUAGE", "en_US:ko"), ("LANG", "ko_KR.UTF-8")])),
+        UiLanguage::English
+    );
+    assert_eq!(
+        ui_language_in(env(&[("LANGUAGE", "nl:ja"), ("LANG", "en_US.UTF-8")])),
+        UiLanguage::Japanese
+    );
     // Without it, the locale does.
-    assert!(prefers_korean(env(&[("LANG", "ko_KR.UTF-8")])));
-    assert!(!prefers_korean(env(&[("LANG", "en_US.UTF-8")])));
-    let mut korean = Access::new(true, Duration::from_secs(30));
+    assert_eq!(
+        ui_language_in(env(&[("LANG", "ko_KR.UTF-8")])),
+        UiLanguage::Korean
+    );
+    assert_eq!(
+        ui_language_in(env(&[("LANG", "en_US.UTF-8")])),
+        UiLanguage::English
+    );
+    let mut korean = Access::new(UiLanguage::Korean, Duration::from_secs(30));
     korean.sync(TASK, facts_of(&model(1), true));
     assert_eq!(korean.name(Object::Button(TASK, TitleButton::Back)), "뒤로");
     assert_eq!(
         korean.name(Object::Button(TASK, TitleButton::Minimize)),
         "최소화"
     );
+}
+
+#[test]
+fn fr17_the_buttons_and_actions_are_named_in_every_interface_language() {
+    let buttons = [
+        (TitleButton::Back, false),
+        (TitleButton::Minimize, false),
+        (TitleButton::Maximize, false),
+        (TitleButton::Maximize, true),
+        (TitleButton::Close, false),
+    ];
+    let english_actions = action_names(UiLanguage::English);
+    for language in UiLanguage::ALL {
+        let mut names = Vec::new();
+        for (button, maximized) in buttons {
+            let name = button_name(button, maximized, language);
+            assert!(!name.trim().is_empty(), "{language:?} {button:?}");
+            assert!(!name.contains('\u{2014}'), "{language:?} {button:?}");
+            if language != UiLanguage::English {
+                assert_ne!(
+                    name,
+                    button_name(button, maximized, UiLanguage::English),
+                    "{language:?} {button:?} is English"
+                );
+            }
+            names.push(name);
+        }
+        // Each button says what it does, so no two share a name.
+        let mut unique = names.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), names.len(), "{language:?}: {names:?}");
+        let actions = action_names(language);
+        for (index, name) in actions.iter().enumerate() {
+            assert!(!name.trim().is_empty(), "{language:?} action {index}");
+            assert!(!name.contains('\u{2014}'), "{language:?} action {index}");
+            if language != UiLanguage::English {
+                assert_ne!(*name, english_actions[index], "{language:?} action {index}");
+            }
+        }
+        assert_eq!(NODE_ACTIONS.len(), actions.len());
+        // A client reads the button's name and its click in the language, and matches the
+        // action by its English name.
+        let mut access = Access::new(language, Duration::from_secs(30));
+        assert_eq!(access.language(), language);
+        access.sync(TASK, facts_of(&model(1), true));
+        assert_eq!(
+            access.name(Object::Button(TASK, TitleButton::Close)),
+            button_name(TitleButton::Close, false, language)
+        );
+        let click = access.actions(Object::Button(TASK, TitleButton::Close));
+        assert_eq!(click.len(), 1);
+        assert_eq!(click[0].name, "click");
+        assert_eq!(click[0].localized, actions[0]);
+    }
+    // The action names clients match on stay English.
+    let matched: Vec<&str> = NODE_ACTIONS.iter().map(|(_, name)| *name).collect();
+    assert_eq!(
+        matched,
+        [
+            "click",
+            "select",
+            "long press",
+            "scroll forward",
+            "scroll backward",
+            "focus"
+        ]
+    );
+    assert_eq!(back_name(UiLanguage::Japanese), "戻る");
+    assert_eq!(
+        button_name(TitleButton::Close, false, UiLanguage::German),
+        "Schließen"
+    );
+    assert_eq!(posix_locale(UiLanguage::ChineseTraditional), "zh_TW");
+    assert_eq!(posix_locale(UiLanguage::English), "en_US");
 }
 
 #[test]
@@ -1030,7 +1123,7 @@ fn fr18_no_client_no_requests() {
         Arc::new(move || Box::new(Counting(Arc::clone(&dials))) as Box<dyn Connector>)
     };
     let shared = Shared::new(
-        Access::new(false, Duration::from_millis(300)),
+        Access::new(UiLanguage::English, Duration::from_millis(300)),
         Some(connect),
         Arc::new(|_: TitleCommand| {}),
         Arc::new(|_: &str| {}),
@@ -1065,7 +1158,7 @@ fn fr18_no_client_no_requests() {
     assert_eq!(dials.load(Ordering::SeqCst), settled, "the watch ended");
     // A window with no service to dial never watches.
     let none = Shared::new(
-        Access::new(false, Duration::from_millis(300)),
+        Access::new(UiLanguage::English, Duration::from_millis(300)),
         None,
         Arc::new(|_: TitleCommand| {}),
         Arc::new(|_: &str| {}),
@@ -1082,7 +1175,7 @@ fn fr18_a_listening_client_keeps_the_tree() {
         Arc::new(move || Box::new(Counting(Arc::clone(&dials))) as Box<dyn Connector>)
     };
     let shared = Shared::new(
-        Access::new(false, Duration::from_millis(200)),
+        Access::new(UiLanguage::English, Duration::from_millis(200)),
         Some(connect),
         Arc::new(|_: TitleCommand| {}),
         Arc::new(|_: &str| {}),

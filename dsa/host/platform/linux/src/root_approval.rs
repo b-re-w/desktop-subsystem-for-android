@@ -56,16 +56,9 @@ pub const CANCELLED_ERROR: &str = "org.freedesktop.PolicyKit1.Error.Cancelled";
 /// beside it, `adb shell` as the developer shell, Android's own services in words.
 pub fn details(request: &ApprovalRequest, icon_name: &str) -> Vec<(String, String)> {
     let language = request.language();
-    let command = match (request.purpose, language) {
-        (Purpose::Run, _) if !request.command.is_empty() => request.command_line(),
-        (Purpose::KeepRoot, UiLanguage::English) => {
-            "(any command, without asking each time)".to_string()
-        }
-        (Purpose::Run, UiLanguage::English) => "(an interactive root shell)".to_string(),
-        (Purpose::KeepRoot, UiLanguage::Korean) => "(묻지 않고 모든 명령)".to_string(),
-        (Purpose::Run, UiLanguage::Korean) => "(대화형 루트 셸)".to_string(),
-        // The other languages take the core's words for what is asked.
-        _ => format!("({})", request.command_text_in(language)),
+    let command = match request.purpose {
+        Purpose::Run if !request.command.is_empty() => request.command_line(),
+        purpose => no_command_text(purpose, language).to_string(),
     };
     vec![
         ("polkit.message".into(), request.message_in(language)),
@@ -75,6 +68,63 @@ pub fn details(request: &ApprovalRequest, icon_name: &str) -> Vec<(String, Strin
         ("detail".into(), request.detail_in(language)),
         ("command".into(), command),
     ]
+}
+
+/// What the `command` detail says in `language` when no command is named: keeping root
+/// means any command without asking each time, and running with no command is a root shell.
+pub fn no_command_text(purpose: Purpose, language: UiLanguage) -> &'static str {
+    let keep = purpose == Purpose::KeepRoot;
+    let (keep_root, shell) = match language {
+        UiLanguage::English => (
+            "(any command, without asking each time)",
+            "(an interactive root shell)",
+        ),
+        UiLanguage::Korean => ("(묻지 않고 모든 명령)", "(대화형 루트 셸)"),
+        UiLanguage::Japanese => ("(毎回確認せずに任意のコマンド)", "(対話型の root シェル)"),
+        UiLanguage::ChineseSimplified => ("(任意命令，无需每次询问)", "(交互式 root shell)"),
+        UiLanguage::ChineseTraditional => ("(任何指令，不必每次詢問)", "(互動式 root shell)"),
+        UiLanguage::Spanish => (
+            "(cualquier comando, sin preguntar cada vez)",
+            "(un shell de root interactivo)",
+        ),
+        UiLanguage::French => (
+            "(n'importe quelle commande, sans demander à chaque fois)",
+            "(un shell root interactif)",
+        ),
+        UiLanguage::German => (
+            "(beliebige Befehle, ohne jedes Mal zu fragen)",
+            "(eine interaktive Root-Shell)",
+        ),
+        UiLanguage::PortugueseBrazil => (
+            "(qualquer comando, sem perguntar toda vez)",
+            "(um shell root interativo)",
+        ),
+        UiLanguage::Russian => (
+            "(любые команды без запроса каждый раз)",
+            "(интерактивная оболочка root)",
+        ),
+        UiLanguage::Italian => (
+            "(qualsiasi comando, senza chiedere ogni volta)",
+            "(una shell root interattiva)",
+        ),
+        UiLanguage::Vietnamese => (
+            "(mọi lệnh, không cần hỏi mỗi lần)",
+            "(một shell root tương tác)",
+        ),
+        UiLanguage::Indonesian => (
+            "(perintah apa pun, tanpa bertanya setiap kali)",
+            "(shell root interaktif)",
+        ),
+        UiLanguage::Turkish => (
+            "(her komut, her seferinde sormadan)",
+            "(etkileşimli bir root kabuğu)",
+        ),
+    };
+    if keep {
+        keep_root
+    } else {
+        shell
+    }
 }
 
 /// The icon theme name the prompt shows for who asks: the app's own icon (the first app's that
@@ -624,6 +674,40 @@ mod tests {
     }
 
     #[test]
+    fn fr17_the_polkit_prompt_speaks_every_interface_language() {
+        let english_keep = no_command_text(Purpose::KeepRoot, UiLanguage::English);
+        let english_shell = no_command_text(Purpose::Run, UiLanguage::English);
+        for language in UiLanguage::ALL {
+            let keep = no_command_text(Purpose::KeepRoot, language);
+            let shell = no_command_text(Purpose::Run, language);
+            for words in [keep, shell] {
+                assert!(words.starts_with('(') && words.ends_with(')'), "{words}");
+                assert!(words.len() > 2, "{language:?}");
+                assert!(!words.contains('\u{2014}'), "{language:?}: {words}");
+            }
+            assert_ne!(keep, shell, "{language:?}");
+            if language != UiLanguage::English {
+                assert_ne!(keep, english_keep, "{language:?}");
+                assert_ne!(shell, english_shell, "{language:?}");
+            }
+            // Every detail is filled in the language the request asks in, and a named command
+            // stays as it is.
+            let asked = request().with_language(language.tag());
+            let details = details(&asked, ICON_NAME);
+            for (key, value) in &details {
+                assert!(!value.trim().is_empty(), "{language:?} {key}");
+                assert!(!value.contains('\u{2014}'), "{language:?} {key}: {value}");
+            }
+            assert_eq!(detail(&details, "command"), "id");
+            let kept = ApprovalRequest::keep_root(request().app).with_language(language.tag());
+            assert_eq!(detail(&details_of(&kept), "command"), keep);
+            let mut shell_request = request().with_language(language.tag());
+            shell_request.command.clear();
+            assert_eq!(detail(&details_of(&shell_request), "command"), shell);
+        }
+    }
+
+    #[test]
     fn fr35_a_timed_out_polkit_check_is_cancelled_by_its_id() {
         let prompt = PolkitPrompt::new(FakeAuthority::answering(authorized(true, false)), 1000);
         prompt.withdraw(&request());
@@ -663,6 +747,29 @@ mod tests {
             );
         }
         assert!(!policy.contains("auth_admin_keep"));
+    }
+
+    /// The policy's description and message, which an agent shows when the details do not
+    /// set the message, are in every interface language, under the locale names polkit
+    /// looks up.
+    #[test]
+    fn fr17_the_polkit_policy_speaks_every_interface_language() {
+        let policy = include_str!("../packaging/polkit/io.github.thisisthepy.DSA.policy");
+        assert!(!policy.contains('\u{2014}'));
+        for language in UiLanguage::ALL {
+            for key in crate::interface_language::locale_keys(language) {
+                for tag in ["description", "message"] {
+                    let open = format!("<{tag} xml:lang=\"{key}\">");
+                    let at = policy
+                        .find(&open)
+                        .unwrap_or_else(|| panic!("the policy has no {tag} in {key}"));
+                    let rest = &policy[at + open.len()..];
+                    let text = &rest[..rest.find(&format!("</{tag}>")).unwrap()];
+                    assert!(!text.trim().is_empty(), "{tag} in {key} is empty");
+                    assert!(text.contains("Android"), "{tag} in {key}: {text}");
+                }
+            }
+        }
     }
 
     /// Both packages install the policy file where polkit reads actions.
