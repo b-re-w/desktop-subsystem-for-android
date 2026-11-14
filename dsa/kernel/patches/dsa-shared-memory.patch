@@ -35,7 +35,7 @@ new file mode 100644
 index 00000000..97c7427d
 --- /dev/null
 +++ b/drivers/misc/dsa_shared_memory.c
-@@ -0,0 +1,218 @@
+@@ -0,0 +1,219 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * DSA shared memory: the region of host memory the Desktop Subsystem for
@@ -88,6 +88,7 @@ index 00000000..97c7427d
 +#include <linux/moduleparam.h>
 +#include <linux/mutex.h>
 +#include <linux/string.h>
++#include <linux/sysfs.h>
 +#include <linux/uaccess.h>
 +#include <linux/unaligned.h>
 +
