@@ -36,6 +36,9 @@ a project fetched in part) and fetched by .github/scripts/translator/fetch-sourc
                                                    but SERVICES_TREE_SKIPPED
     framework_lock.py install-source               reads `ninja -t query <install path>` and
                                                    prints the jar the install path copies
+    framework_lock.py soong-memory-limit <soong.go>
+                                                   changes soong_ui's source in the services
+                                                   tree so that GOMEMLIMIT reaches soong_build
 
 services.jar, with DSA's window manager, package manager and WebView service, is built in a tree
 of its own (SERVICES_JAR): the Java framework needs most of the platform.
@@ -115,6 +118,14 @@ JAVA_OUTPUTS = {SERVICES_JAR: "system/framework/services.jar"}
 # project here that the native lock does not name at all is taken whole.
 SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust",
                        "prebuilts/rust-toolchain/linux-x86"]
+# A project the services tree takes in the part the native lock takes another: Android 17's
+# Rust toolchains for musl hosts are laid out as the ones for glibc hosts are (a build file and
+# one folder per version, 6 GB for three versions), and the native lock does not name them.
+# Taking the build's version alone leaves the analysis every build file and the disk 4 GB more,
+# of the 17 GB the fetch leaves it on a standard runner.
+SERVICES_TREE_CONES_LIKE = {
+    "prebuilts/rust-toolchain/linux-musl-x86": "prebuilts/rust-toolchain/linux-x86",
+}
 # Projects the services tree leaves out although the manifest syncs them: prebuilt native
 # libraries and their ABI dumps (the build skips ABI checks) and emulator kernels and binaries,
 # which only native builds and other devices read. Nothing on the way from the Java sources to
@@ -125,6 +136,16 @@ SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust",
 # "/" leaves out every project below it.
 SERVICES_TREE_SKIPPED = ["prebuilts/abi-dumps/", "prebuilts/vndk/", "prebuilts/qemu-kernel",
                          "prebuilts/android-emulator"]
+# Where build/soong/ui/build/soong.go starts the environment soong_build runs with, and what
+# soong_memory_limit adds below it. The line is the same in Android 16 and 17.
+SOONG_UI_SOURCE = "build/soong/ui/build/soong.go"
+SOONG_INVOCATION_ENV = "\tinvocationEnv := make(map[string]string)\n"
+SOONG_MEMORY_LIMIT = (
+    "\t// DSA: soong_build starts with an empty environment, so its Go memory limit is handed on.\n"
+    '\tif limit := os.Getenv("GOMEMLIMIT"); limit != "" {\n'
+    '\t\tinvocationEnv["GOMEMLIMIT"] = limit\n'
+    "\t}\n"
+)
 # Projects in a manifest group repo leaves out of a default sync on Linux.
 UNSYNCED_GROUPS = {"notdefault", "platform-darwin", "darwin"}
 
@@ -297,8 +318,8 @@ def services_skipped(path):
 def services_lock(version, text):
     """The lock the services build fetches its tree by: `version` with every project its
     manifest (`text`, the one it pins by SHA-256) syncs by default but SERVICES_TREE_SKIPPED, each
-    at the manifest's commit, and the toolchain prebuilts (SERVICES_TREE_CONES) taken in part as
-    `version` takes them."""
+    at the manifest's commit, and the toolchain prebuilts (SERVICES_TREE_CONES, and
+    SERVICES_TREE_CONES_LIKE as the project each names) taken in part as `version` takes them."""
     data = text.encode() if isinstance(text, str) else text
     if hashlib.sha256(data).hexdigest() != version["manifest"]["sha256"]:
         raise LockError(f"the manifest is not the one {version['android']} pins (SHA-256 differs)")
@@ -307,10 +328,11 @@ def services_lock(version, text):
     for project in manifest_projects(data):
         if services_skipped(project["path"]):
             continue
-        if project["path"] in SERVICES_TREE_CONES and project["path"] in native:
-            if "cone" not in native[project["path"]]:
-                raise LockError(f"{version['android']} does not say which part of {project['path']} to take")
-            project["cone"] = list(native[project["path"]]["cone"])
+        like = SERVICES_TREE_CONES_LIKE.get(project["path"], project["path"])
+        if (project["path"] in SERVICES_TREE_CONES or like != project["path"]) and like in native:
+            if "cone" not in native[like]:
+                raise LockError(f"{version['android']} does not say which part of {like} to take")
+            project["cone"] = list(native[like]["cone"])
         projects.append(project)
     tree = {key: value for key, value in version.items() if key != "projects"}
     tree["projects"] = sorted(projects, key=lambda p: p["path"])
@@ -390,12 +412,42 @@ def install_source(query):
     return inputs[0]
 
 
+def soong_memory_limit(text):
+    """soong_ui's ui/build/soong.go (`text`), changed to hand GOMEMLIMIT on to soong_build.
+
+    soong_ui starts soong_build, the analysis of every Android.bp, through a ninja rule that
+    clears the environment (`env -i $env "$BUILDER"`), where $env holds only what soong.go puts
+    in invocationEnv. So a GOMEMLIMIT exported to the build never reaches the one process it is
+    meant for, and that process's heap grows to twice what is live before Go collects it. The
+    change copies the variable into invocationEnv. Only this one: the rule writes the map in
+    Go's map order, and a command that differed between two runs would make ninja analyse the
+    tree again.
+
+    Raises LockError when the file is not the one this was written against. A file already
+    changed comes back as it is."""
+    if SOONG_MEMORY_LIMIT in text:
+        return text
+    if text.count(SOONG_INVOCATION_ENV) != 1 or '\t"os"\n' not in text:
+        raise LockError("soong.go does not make soong_build's environment where it did "
+                        f"({SOONG_INVOCATION_ENV.strip()!r}, once, with os imported), so "
+                        "GOMEMLIMIT cannot be handed on to the analysis")
+    return text.replace(SOONG_INVOCATION_ENV, SOONG_INVOCATION_ENV + SOONG_MEMORY_LIMIT)
+
+
 def main(argv):
     if argv[1:] == ["install-source"]:
         try:
             print(install_source(sys.stdin.read()))
         except LockError as error:
             raise SystemExit(str(error))
+        return
+    if len(argv) == 3 and argv[1] == "soong-memory-limit":
+        path = Path(argv[2])
+        try:
+            path.write_text(soong_memory_limit(path.read_text()))
+        except LockError as error:
+            raise SystemExit(str(error))
+        print(f"{path}: soong_build takes GOMEMLIMIT from the build's environment")
         return
     lock = load()
     if argv[1:] == ["versions"]:
@@ -421,7 +473,8 @@ def main(argv):
     else:
         raise SystemExit("usage: framework_lock.py versions | version <android> | outputs | java-outputs | "
                          "check-manifest <android> <manifest.xml> | "
-                         "services-lock <android> <manifest.xml> <out.json> | install-source")
+                         "services-lock <android> <manifest.xml> <out.json> | install-source | "
+                         "soong-memory-limit <soong.go>")
 
 
 if __name__ == "__main__":
