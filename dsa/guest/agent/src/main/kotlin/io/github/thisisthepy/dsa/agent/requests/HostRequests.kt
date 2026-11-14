@@ -94,6 +94,12 @@ interface TaskActions {
     fun setCaptionInset(taskId: Int, frame: TaskBounds?, boundingRects: List<TaskBounds> = emptyList()): Boolean
 
     /**
+     * Puts the task in the freeform windowing mode at [freeformBounds], or, with null, in the
+     * fullscreen windowing mode. False when the framework lacks the call or refused.
+     */
+    fun setWindowingMode(taskId: Int, freeformBounds: TaskBounds?): Boolean = false
+
+    /**
      * The status bar's height, in pixels, that an app drawing at [densityDpi] reads from the
      * framework's resources. The image sets it to the host window's title bar at the monitor
      * scale that density belongs to. 0 when it cannot be read.
@@ -161,6 +167,12 @@ sealed interface RequestResult {
      */
     data class Caption(val taskId: Int, val height: Int, val startWidth: Int = 0, val endWidth: Int = 0) : RequestResult
 
+    /**
+     * Where the host's window for the task shows a clear full screen request of its app:
+     * inside the window ([inWindow]), or on the whole screen.
+     */
+    data class FullScreen(val taskId: Int, val inWindow: Boolean) : RequestResult
+
     /** A resize or density for a task the host was never told about. */
     data class SizeRefused(val taskId: Int, val reason: String) : RequestResult
 
@@ -213,6 +225,13 @@ class HostRequests(
                 envelope.setTaskCaption.startWidth,
                 envelope.setTaskCaption.endWidth,
             )
+            Envelope.BodyCase.SET_TASK_FULL_SCREEN -> envelope.setTaskFullScreen.let {
+                if (reported(it.taskId)) {
+                    RequestResult.FullScreen(it.taskId, it.inWindow)
+                } else {
+                    RequestResult.SizeRefused(it.taskId, "the host was never told about this task")
+                }
+            }
             Envelope.BodyCase.BODY_NOT_SET, null -> RequestResult.Malformed("the frame carries no message")
             else -> RequestResult.NotForTheAgent(envelope.bodyCase)
         }

@@ -54,6 +54,12 @@ data class TaskSnapshot(
     val orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
     /** Which kind of full screen the task's app asks for, if any ([fullScreenRequest]). */
     val fullscreenRequest: FullScreenRequest = FullScreenRequest.NONE,
+    /**
+     * Whether the task is in the fullscreen windowing mode: its app left freeform for it. The
+     * host is not told it; the agent keeps such a task in its window when the host says so
+     * ([FullScreenHolds]).
+     */
+    val leftFreeform: Boolean = false,
     /** Whether the task's app went into picture-in-picture. */
     val pictureInPicture: Boolean = false,
     /**

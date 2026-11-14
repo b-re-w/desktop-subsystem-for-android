@@ -81,6 +81,8 @@ import io.github.thisisthepy.dsa.agent.settings.SystemSettingsPort
 import io.github.thisisthepy.dsa.agent.settings.SystemSettingsSync
 import io.github.thisisthepy.dsa.agent.tasks.AppInfoSource
 import io.github.thisisthepy.dsa.agent.tasks.BackStacks
+import io.github.thisisthepy.dsa.agent.tasks.FullScreenHolds
+import io.github.thisisthepy.dsa.agent.tasks.WindowingChange
 import io.github.thisisthepy.dsa.agent.tasks.InstalledAppReporter
 import io.github.thisisthepy.dsa.agent.tasks.LauncherApps
 import io.github.thisisthepy.dsa.agent.tasks.PinRequest
@@ -422,6 +424,7 @@ class Agent(
     private val freeform = FreeformSetup(windowing, scheduler, log)
     private val arranger = TaskArranger(actions, windowing::displaySize, log)
     private val captions = CaptionInsets(actions, log)
+    private val fullScreenHolds = FullScreenHolds()
     private val installed = InstalledAppReporter(ownPackage) { frame -> channel.send(frame) }
     private val shortcutReporter = ShortcutReporter(ownPackage) { frame -> channel.send(frame) }
     private val pinRequests = PinRequests(
@@ -787,6 +790,17 @@ class Agent(
                     result.endWidth,
                 )
             }
+            is RequestResult.FullScreen -> {
+                log.info(
+                    if (result.inWindow) {
+                        "task ${result.taskId} keeps a full screen request inside its window"
+                    } else {
+                        "task ${result.taskId} fills the screen when it asks to"
+                    },
+                )
+                fullScreenHolds.hostSays(result.taskId, result.inWindow)
+                requestRefresh()
+            }
             is RequestResult.SizeRefused -> log.warn("did not resize task ${result.taskId}: ${result.reason}")
             is RequestResult.Malformed -> log.warn("dropped a frame: ${result.reason}")
             is RequestResult.NotForTheAgent -> Unit
@@ -1071,9 +1085,19 @@ class Agent(
         // knows which screens below the top the user saw.
         val now = backClock()
         backStacks.retain(read.map { it.taskId })
-        val running = read.map { task ->
+        val stacked = read.map { task ->
             val stack = task.stack ?: return@map task
             task.copy(canGoBack = backStacks.update(task.taskId, stack, now))
+        }
+        // A task whose app left freeform goes back to its window when the host says so, and is
+        // reported at its window's bounds from the start.
+        val (running, windowing) = fullScreenHolds.apply(stacked)
+        for (change in windowing) {
+            val done = when (change) {
+                is WindowingChange.ToFreeform -> actions.setWindowingMode(change.taskId, change.bounds)
+                is WindowingChange.ToFullscreen -> actions.setWindowingMode(change.taskId, null)
+            }
+            if (!done) log.warn("could not change the windowing mode of task ${change.taskId}: the framework refused or lacks the call")
         }
         for (task in running) trace.boundsRead(task.taskId, task.bounds.right - task.bounds.left, task.bounds.bottom - task.bounds.top)
         // A font scale the host asked for waits while an app that would be restarted for it

@@ -3153,6 +3153,9 @@ impl Session {
                 start_width,
                 end_width,
             }),
+            TaskRequest::SetFullScreen { task_id, in_window } => {
+                Body::SetTaskFullScreen(control::SetTaskFullScreen { task_id, in_window })
+            }
         };
         self.send(dsa_protocol::encode(&control::Envelope {
             body: Some(body),
@@ -6779,6 +6782,7 @@ impl Worker {
             | Some(Body::ResizeTask(_))
             | Some(Body::SetTaskDensity(_))
             | Some(Body::SetTaskCaption(_))
+            | Some(Body::SetTaskFullScreen(_))
             | Some(Body::PointerEvent(_))
             | Some(Body::KeyEvent(_))
             | Some(Body::ImeComposition(_))

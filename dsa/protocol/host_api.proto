@@ -223,6 +223,14 @@ message SetTaskCaption {
   uint32 end_width = 4;
 }
 
+// Where a task's window shows a clear full screen request of its app: asks the caller's
+// Android to keep a task that leaves freeform for fullscreen inside its window, at the bounds
+// it had (`in_window`), or to let it fill the screen.
+message SetTaskFullScreen {
+  int32 task_id = 1;
+  bool in_window = 2;
+}
+
 // Turns the connection into a stream of input for the caller's Android: after the answer
 // (Done), the client sends only PointerEvent, KeyEvent and text input frames, which the
 // service passes on as they come, without answering them. Input is never waited on, so a pointer that moves
@@ -2777,6 +2785,7 @@ message Request {
     OpenAppSettings open_app_settings = 39;
     UninstallApp uninstall_app = 38;
     SetTaskCaption set_task_caption = 45;
+    SetTaskFullScreen set_task_full_screen = 48;
     WatchLog watch_log = 70;
     CollectDiagnostics collect_diagnostics = 71;
     StopApp stop_app = 37;

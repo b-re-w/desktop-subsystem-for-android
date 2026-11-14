@@ -289,6 +289,18 @@ message SetTaskCaption {
   uint32 end_width = 4;
 }
 
+// Host to guest: where the task's window shows a clear request of its app to fill the screen,
+// as the user's setting for the app says. With `in_window`, a task whose app leaves the
+// freeform windowing mode for fullscreen is put back in freeform at the bounds it had, so it
+// keeps its window's size, and it is still reported as asking for full screen until another
+// activity is on top; without it, such a task fills the screen as it asked, and one put back
+// before goes to fullscreen again. The host sends it when the window opens and whenever the
+// setting changes.
+message SetTaskFullScreen {
+  int32 task_id = 1;
+  bool in_window = 2;
+}
+
 // Guest to host, from the agent: the name and launcher icon of an app the host shows a task
 // of. The host's window for the app carries them, in the taskbar and the task list. The
 // agent sends it before the first TaskUpdated of the app's package on each connection, and
@@ -3274,6 +3286,7 @@ message Envelope {
     CameraStillTaken camera_still_taken = 266;
     CameraError camera_error = 267;
     SetTaskCaption set_task_caption = 155;
+    SetTaskFullScreen set_task_full_screen = 156;
     SystemSettings system_settings = 340;
     DeviceName device_name = 383;
     GamepadConnected gamepad_connected = 341;
