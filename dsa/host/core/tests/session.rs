@@ -4936,6 +4936,7 @@ fn fr18_widget_tree_watch_names_the_widget() {
         action: NodeAction::Click,
         text: String::new(),
         request_id: 9,
+        ..ActionRequest::default()
     };
     session.widget_accessibility_action(12, &action).unwrap();
     match next_body(&mut agent) {
