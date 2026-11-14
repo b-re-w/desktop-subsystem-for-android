@@ -233,6 +233,21 @@ pub struct ReportTouchGestures {
     #[prost(string, tag = "2")]
     pub problem: ::prost::alloc::string::String,
 }
+/// Says what the caller's graphics renderer runs on: `state` is "native" (a native Vulkan
+/// driver), "dozen" (Dozen, Vulkan on Direct3D 12, on a GPU), "dozen-cpu" (Dozen on the
+/// software Direct3D 12 device, so the CPU draws everything) or "unavailable" (no Vulkan the
+/// renderer can use), and `detail` says which GPU and why, or what to install. The window
+/// manager sends it each time its renderer starts. While it is "unavailable" the service does
+/// not start the caller's Android, and answers StartSession with ERROR_CODE_UNAVAILABLE and
+/// `detail`, since Android would boot with nothing to draw on. The service keeps the latest
+/// for the caller until it stops, and reports it in Settings. The service answers Done.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ReportGraphics {
+    #[prost(string, tag = "1")]
+    pub state: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub detail: ::prost::alloc::string::String,
+}
 /// Freezes the caller's Android: its processes stop until a task window is shown again. Its
 /// notifications, alarms and widgets stop with them. Returns at once with the status.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -2084,6 +2099,22 @@ pub struct Settings {
     pub app_fullscreen: i32,
     #[prost(enumeration = "FullScreenPlace", tag = "43")]
     pub app_immersive: i32,
+    /// Which Vulkan implementation the caller's graphics renderer uses: "auto" (the default: a
+    /// native Vulkan driver, and Dozen, Vulkan on Direct3D 12, only when no native driver
+    /// works), "native" (never Dozen) or "dozen" (only Dozen, to test and compare). Any other
+    /// value is refused. The caller's window manager reads it when it starts. Hosts without a
+    /// choice of implementation keep it and do nothing with it.
+    #[prost(string, tag = "44")]
+    pub vulkan_driver: ::prost::alloc::string::String,
+    /// What the caller's window manager last said its graphics renderer runs on (see
+    /// ReportGraphics): "native", "dozen", "dozen-cpu", "unavailable", or empty while it has not
+    /// said. A client cannot change it.
+    #[prost(string, tag = "45")]
+    pub graphics_state: ::prost::alloc::string::String,
+    /// The window manager's words for it: the GPU and why, or what to install. A client cannot
+    /// change it.
+    #[prost(string, tag = "46")]
+    pub graphics_detail: ::prost::alloc::string::String,
 }
 /// One root certificate the service found added to the computer's trust stores.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -3078,7 +3109,7 @@ pub struct Request {
     pub id: u64,
     #[prost(
         oneof = "request::Body",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 48, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702, 710"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 48, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 351, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702, 710"
     )]
     pub body: ::core::option::Option<request::Body>,
 }
@@ -3230,6 +3261,8 @@ pub mod request {
         SetAppRoot(super::SetAppRoot),
         #[prost(message, tag = "350")]
         ReportTouchGestures(super::ReportTouchGestures),
+        #[prost(message, tag = "351")]
+        ReportGraphics(super::ReportGraphics),
         #[prost(message, tag = "620")]
         ServeLanguageServices(super::ServeLanguageServices),
         #[prost(message, tag = "470")]
