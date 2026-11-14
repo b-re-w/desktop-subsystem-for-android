@@ -92,8 +92,11 @@ class HostInputMethod : InputMethodService() {
             return
         }
         val kind = inputKind(info.inputType, info.imeOptions)
+        // The editor's app, which tells the agent the task it is in even while the window
+        // manager names no focused task.
+        val owner = info.packageName.orEmpty()
         if (selStart < 0 || selEnd < 0) {
-            report(EditorState(kind, "", 0, 0, 0, 0, 0))
+            report(EditorState(kind, "", 0, 0, 0, 0, 0, owner))
             return
         }
         val from = minOf(selStart, selEnd)
@@ -103,7 +106,7 @@ class HostInputMethod : InputMethodService() {
             selected.length <= EditorState.MAX_TEXT - 2 * EditorState.REACH
         if (selected == null || !fits) {
             // The selection is too long to describe with its text: the cursor at its end.
-            report(EditorState(kind, "", selEnd, selEnd, selEnd, 0, 0))
+            report(EditorState(kind, "", selEnd, selEnd, selEnd, 0, 0, owner))
             return
         }
         val before = ic.getTextBeforeCursor(EditorState.REACH, 0)?.toString().orEmpty().takeLast(from)
@@ -120,6 +123,7 @@ class HostInputMethod : InputMethodService() {
                 selectionEnd = selEnd,
                 compositionStart = if (composing) composeStart else 0,
                 compositionEnd = if (composing) composeEnd else 0,
+                packageName = owner,
             ),
         )
     }
