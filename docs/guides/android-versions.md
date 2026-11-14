@@ -1,5 +1,7 @@
 # Android versions
 
+**English** · [한국어](ko/android-versions.md) · [日本語](ja/android-versions.md) · [简体中文](zh-CN/android-versions.md) · [繁體中文](zh-TW/android-versions.md) · [Español](es/android-versions.md) · [Français](fr/android-versions.md) · [Deutsch](de/android-versions.md) · [Português (Brasil)](pt-BR/android-versions.md) · [Русский](ru/android-versions.md) · [Italiano](it/android-versions.md) · [Tiếng Việt](vi/android-versions.md) · [Bahasa Indonesia](id/android-versions.md) · [Türkçe](tr/android-versions.md)
+
 Desktop Subsystem for Android™ (DSA) supports the newest two Android major versions:
 today Android 16 and Android 17. By default it runs the newest one. Some apps run on only
 one of them, so you can choose.
