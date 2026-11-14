@@ -9,9 +9,11 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Rect
 import io.github.thisisthepy.dsa.agent.Log
+import io.github.thisisthepy.dsa.agent.tasks.DEFAULT_DISPLAY
 import io.github.thisisthepy.dsa.agent.tasks.RequestedOrientations
 import io.github.thisisthepy.dsa.agent.tasks.ScreenDp
 import io.github.thisisthepy.dsa.agent.tasks.SystemBarAppearances
+import io.github.thisisthepy.dsa.agent.tasks.TaskBars
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 import io.github.thisisthepy.dsa.agent.tasks.TaskKind
 import io.github.thisisthepy.dsa.agent.tasks.TaskOrientation
@@ -36,11 +38,11 @@ import io.github.thisisthepy.dsa.agent.tasks.handlesFontScaleChange
  * A task's bounds, focus and activity type are framework fields the SDK does not publish;
  * they are read by reflection, which platform apps may use.
  *
- * A task's status bar appearance is not read from its task description, which the framework
- * only updates when an activity's description changes and so goes stale while an app that
- * draws edge to edge switches screens and tabs. It comes from the window manager's live
- * reports to the status bar ([AndroidSystemBars], [SystemBarAppearances]), each of which is a
- * change like any other.
+ * A task's status bar appearance comes from the window manager's live reports to the status
+ * bar ([AndroidSystemBars]), each of which is a change like any other, and from its task
+ * description's appearance when that changes ([SystemBarAppearances]). A report speaks only of
+ * the focused window of its display; the description speaks of every task, focused or not, but
+ * not of every screen, so neither alone is enough.
  */
 class AndroidTaskSource(
     private val context: Context,
@@ -63,10 +65,14 @@ class AndroidTaskSource(
     // Held while the tasks are read, so two reads at once do not mix up which tasks are setups.
     override fun snapshot(): List<TaskSnapshot> = synchronized(setups) {
         @Suppress("DEPRECATION")
-        val tasks = activityManager.getRunningTasks(MAX_TASKS).map(::read)
+        val infos = activityManager.getRunningTasks(MAX_TASKS)
+        val tasks = infos.map(::read)
         setups.retain(tasks.map { it.taskId })
         orientations.retain(tasks.map { it.taskId })
-        appearances.apply(tasks)
+        val bars = infos.associate { info ->
+            info.taskId to TaskBars(fields.displayId(info), fields.describedAppearance(info))
+        }
+        appearances.apply(tasks, bars)
     }
 
     override fun listen(onChange: () -> Unit) {
@@ -219,6 +225,7 @@ private class TaskFields(private val log: Log) {
     // later; not in the SDK).
     private val requestedVisibleTypes = optional { taskInfo.getField("requestedVisibleTypes") }
     private val isFocused = field { taskInfo.getField("isFocused") }
+    private val displayIdField = optional { taskInfo.getField("displayId") }
     private val isVisible = optional { taskInfo.getField("isVisible") }
     private val minWidth = field { taskInfo.getField("minWidth") }
     private val minHeight = field { taskInfo.getField("minHeight") }
@@ -282,6 +289,23 @@ private class TaskFields(private val log: Log) {
         val appearance = read("caption bar appearance") { barsAppearance!!.invoke(description) as Int }
             ?: return false
         return appearance and APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND != 0
+    }
+
+    /**
+     * The appearance flags of the task's system bars its description carries (those of its
+     * top opaque activity, which Android updates whenever that activity's window asks for
+     * another appearance); null when the framework does not say.
+     */
+    fun describedAppearance(info: ActivityManager.RunningTaskInfo): Int? {
+        val description = info.taskDescription ?: return null
+        val method = barsAppearance ?: return null
+        return read("status bar appearance") { method.invoke(description) as Int }
+    }
+
+    /** The display the task is on (TaskInfo.displayId); the default display when unknown. */
+    fun displayId(info: ActivityManager.RunningTaskInfo): Int {
+        val field = displayIdField ?: return DEFAULT_DISPLAY
+        return read("display") { field.getInt(info) } ?: DEFAULT_DISPLAY
     }
 
     /** The status bar color the app set, as ARGB; 0 when it set none or it cannot be read. */
