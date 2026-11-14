@@ -98,6 +98,55 @@ class CaptionInsetsTest {
     }
 
     @Test
+    fun fr22_a_task_back_from_full_screen_gets_the_hosts_title_bar_band_again() {
+        actions.statusBarHeights = mapOf(262 to 58)
+        val at = TaskBounds(100, 40, 900, 1040)
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        insets.setHeight(7, 58, at)
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+
+        // The app hid its bars and asked for full screen: its window takes its title bar away.
+        insets.update(mapOf(7 to at))
+        insets.setHeight(7, 0, at)
+        assertEquals(7 to null, actions.captionInsets.last())
+
+        // Back in a window, the band comes back at once, as high as the title bar the host gave
+        // it at this density, not left at the 0 of its full screen until the host speaks again.
+        actions.captionInsets.clear()
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        assertEquals(listOf(7 to TaskBounds(-reach, 40, reach, 98)), actions.captionInsets)
+
+        // The host's word on its return changes nothing.
+        insets.setHeight(7, 58, at)
+        assertEquals(1, actions.captionInsets.size)
+    }
+
+    @Test
+    fun fr22_a_task_back_from_full_screen_at_another_density_gets_the_band_of_that_density() {
+        // 262 dpi is a 200% monitor's density, 164 dpi a 125% one's.
+        actions.statusBarHeights = mapOf(262 to 58, 164 to 38)
+        val at = TaskBounds(0, 0, 800, 600)
+        insets.update(mapOf(3 to at), awaiting = mapOf(3 to 262))
+        insets.setHeight(3, 58, at)
+        insets.update(mapOf(3 to at))
+        insets.setHeight(3, 0, at)
+
+        // Its density changed while it filled the screen: the band follows the density it has
+        // now, not the height the host gave at the old one.
+        actions.captionInsets.clear()
+        insets.update(mapOf(3 to at), awaiting = mapOf(3 to 164))
+        assertEquals(listOf(3 to TaskBounds(-reach, 0, reach, 38)), actions.captionInsets)
+
+        // Then the host says how high the title bar is now, which stands.
+        insets.setHeight(3, 37, at)
+        insets.update(mapOf(3 to at), awaiting = mapOf(3 to 164))
+        assertEquals(
+            listOf(3 to TaskBounds(-reach, 0, reach, 38), 3 to TaskBounds(-reach, 0, reach, 37)),
+            actions.captionInsets,
+        )
+    }
+
+    @Test
     fun fr22_an_inset_the_framework_refused_is_tried_again_and_logged_once() {
         actions.insetsTaken = false
         insets.setHeight(7, 31, TaskBounds(0, 0, 400, 300))
