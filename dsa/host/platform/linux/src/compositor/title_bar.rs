@@ -666,12 +666,21 @@ mod tests {
                 shown_tone(None, dark, false, shown),
                 Some(CaptionTone::LightGlyphs)
             );
-            // An app that asked for a tone keeps it over either.
+            // An app that asked for a tone keeps it where it can be read, and loses it over a
+            // header that is the glyphs' own lightness from end to end.
             assert_eq!(
-                shown_tone(Some(CaptionTone::LightGlyphs), light, false, shown),
+                shown_tone(Some(CaptionTone::LightGlyphs), dark, false, shown),
                 Some(CaptionTone::LightGlyphs)
             );
+            assert_eq!(
+                shown_tone(Some(CaptionTone::LightGlyphs), light, false, shown),
+                Some(CaptionTone::DarkGlyphs)
+            );
         }
+        assert!(
+            light.range.is_some_and(|(darkest, _)| darkest > 900),
+            "{light:?}"
+        );
         // A frame with no band, or rows that cannot be read, says nothing.
         assert_eq!(
             frame_band_sample(&frame([0xff; 4]), width, height, 0),

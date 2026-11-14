@@ -15,8 +15,9 @@
 //!   same point sometimes drag the window and sometimes press the app.
 //! - [`reported_tone`]: whether the buttons' glyphs are dark or light, from what the app told
 //!   the system about its status bar, as Android's own status bar takes its icons' tone, and
-//!   [`shown_tone`]: the tone actually drawn, which is the reported one whenever the app said
-//!   something, and otherwise comes from the pixels of the app's frame under the band
+//!   [`shown_tone`]: the tone actually drawn, which starts from the reported one whenever the
+//!   app said something, gives way where the app's frame leaves that tone unreadable all
+//!   across the band, and otherwise comes from the pixels of the app's frame under the band
 //!   ([`band_sample`]), so the glyphs stay readable over what the app really draws there.
 //! - [`paint_buttons`]: the buttons as an image, in the tone and state they are in.
 //! - [`paint_title_bar`]: the whole band as an image: the app's icon and name at the left
@@ -79,13 +80,17 @@ pub fn caption_tone(appearance: StatusBarAppearance, status_bar_color: u32) -> C
 }
 
 /// What a window read from the pixels of its app's frame under the title bar: the color to
-/// fill a band the app leaves empty ([`band_fill`]) and how light the band is
-/// ([`band_luminance`]). The default is a frame that could not be sampled.
+/// fill a band the app leaves empty ([`band_fill`]), how light the band is
+/// ([`band_luminance`]) and how far apart its darkest and lightest parts are
+/// ([`band_range`]). The default is a frame that could not be sampled.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct BandSample {
     pub fill: Option<u32>,
     /// The band's mean relative luminance, in thousandths (0 black, 1000 white).
     pub luminance: Option<u16>,
+    /// The relative luminance of the band's darkest and of its lightest sample, in
+    /// thousandths; `None` unless every sample is opaque.
+    pub range: Option<(u16, u16)>,
 }
 
 /// Samples of a frame's band (`band`, from inside it) and of the row under it (`below`), each
@@ -94,7 +99,27 @@ pub fn band_sample(band: &[u32], below: &[u32]) -> BandSample {
     BandSample {
         fill: band_fill(band, below),
         luminance: band_luminance(band),
+        range: band_range(band),
     }
+}
+
+/// The relative luminance of the darkest and of the lightest sample of `band` (0xAARRGGBB
+/// each), in thousandths. It says whether a glyph tone can be read anywhere across the band:
+/// light glyphs are lost only where even the darkest part is light, dark ones only where even
+/// the lightest part is dark. `None` when the band has no samples or one of them is not
+/// opaque, which leaves unknown what shows there.
+pub fn band_range(band: &[u32]) -> Option<(u16, u16)> {
+    if band.is_empty() || band.iter().any(|color| *color >> 24 < 0xF0) {
+        return None;
+    }
+    let thousandths = |color: &u32| {
+        (relative_luminance(*color) * 1000.0)
+            .round()
+            .clamp(0.0, 1000.0) as u16
+    };
+    let darkest = band.iter().map(thousandths).min()?;
+    let lightest = band.iter().map(thousandths).max()?;
+    Some((darkest, lightest))
 }
 
 /// How light the app's pixels under the title bar are: the mean relative luminance of the
@@ -134,10 +159,14 @@ pub const EQUAL_CONTRAST: u16 = 179;
 /// still nothing decides; the window then draws [`CaptionTone::default`].
 ///
 /// A band the window fills takes the tone of the fill, since the glyphs stand on the window's
-/// own color there. Otherwise the app's word decides, whatever its pixels look like, as
-/// Android's status bar icons follow the app's appearance and never the content under them:
-/// an average over a header with light and dark parts picks the wrong side as often as the
-/// right one, and the app knows which side its bar is meant to be. Only an app that expressed
+/// own color there. Otherwise the app's word is where the tone starts, as Android's status bar
+/// icons follow the app's appearance: an average over a header with light and dark parts
+/// picks the wrong side as often as the right one, and the app knows which side its bar is
+/// meant to be. Its word gives way only where the frame leaves that tone unreadable all across
+/// the band ([`readable_tone`]): a screen whose bar is light from end to end while the app
+/// never asked for dark icons (a second screen of the task with another bar color, or a bar
+/// the app colors itself where it used to set a status bar color) would otherwise show light
+/// glyphs on a light bar. An app that expressed
 /// nothing has its pixels read: below [`LIGHT_GLYPHS_BELOW`] the glyphs turn light, above
 /// [`DARK_GLYPHS_ABOVE`] dark, and between them the shown tone stays. A window whose tone is
 /// still undecided has none to keep: its first sample takes the side of [`EQUAL_CONTRAST`]
@@ -154,7 +183,7 @@ pub fn shown_tone(
         return Some(caption_tone(StatusBarAppearance::Unspecified, fill));
     }
     if let Some(reported) = reported {
-        return Some(reported);
+        return Some(readable_tone(reported, sample, shown));
     }
     let Some(luminance) = sample.luminance else {
         return shown;
@@ -166,6 +195,81 @@ pub fn shown_tone(
         None if luminance < EQUAL_CONTRAST => CaptionTone::LightGlyphs,
         None => CaptionTone::DarkGlyphs,
     })
+}
+
+/// Whether a window that reads its band from copies of some frames only (at most one every so
+/// often, each read back later) still owes a reading of the frame it shows, once frames stop
+/// coming: a copy waits to be read (`copy_waits`), or a frame came (`last_frame`) after the
+/// last copy was made (`last_copy`). Without it the band of the last frame of a burst is never
+/// read: a new screen that slides in and then stands still would keep the tone of the frames
+/// in the middle of its transition.
+pub fn band_reading_owed(
+    copy_waits: bool,
+    last_frame: Option<std::time::Instant>,
+    last_copy: Option<std::time::Instant>,
+) -> bool {
+    copy_waits
+        || match (last_frame, last_copy) {
+            (Some(frame), Some(copy)) => frame > copy,
+            (Some(_), None) => true,
+            (None, _) => false,
+        }
+}
+
+/// Light glyphs the app asked for are lost once even the darkest part of the band is lighter
+/// than this (thousandths): white has a contrast under 2 to 1 everywhere on it. They come
+/// back once a part of the band is darker than [`LIGHT_GLYPHS_BACK_BELOW`], where white
+/// reaches 2.3 to 1; between the two the tone shown stays, so a band near the bound never
+/// makes the glyphs flicker.
+pub const LIGHT_GLYPHS_LOST_ABOVE: u16 = 500;
+pub const LIGHT_GLYPHS_BACK_BELOW: u16 = 400;
+
+/// Dark glyphs the app asked for are lost once even the lightest part of the band is darker
+/// than this (thousandths): black has a contrast under 2 to 1 everywhere on it. They come
+/// back once a part of the band is lighter than [`DARK_GLYPHS_BACK_ABOVE`], where black
+/// reaches 2.6 to 1.
+pub const DARK_GLYPHS_LOST_BELOW: u16 = 50;
+pub const DARK_GLYPHS_BACK_ABOVE: u16 = 80;
+
+/// The tone drawn for an app that asked for `reported`, over a band read as `sample`, while
+/// `shown` shows: `reported`, unless it cannot be read anywhere across the band.
+///
+/// The app's word stands over any band with a part its tone can be read on, so a header with
+/// a picture, a gradient or a mid color keeps what the app asked for. It gives way only when
+/// every sample of the band is on the wrong side of the bounds above, which is a bar of the
+/// glyphs' own lightness from end to end; the other tone then has a contrast of at least 8
+/// to 1 there. A tone that differs from the reported one is one that gave way before (or the
+/// app's word just changed), and it returns to the reported one once the band has a part
+/// past the second bound. A band that could not be read whole leaves the app's word as it is.
+pub fn readable_tone(
+    reported: CaptionTone,
+    sample: BandSample,
+    shown: Option<CaptionTone>,
+) -> CaptionTone {
+    let Some((darkest, lightest)) = sample.range else {
+        return reported;
+    };
+    let gave_way = shown.is_some_and(|shown| shown != reported);
+    match reported {
+        CaptionTone::LightGlyphs => {
+            let lost = darkest > LIGHT_GLYPHS_LOST_ABOVE
+                || (gave_way && darkest >= LIGHT_GLYPHS_BACK_BELOW);
+            if lost {
+                CaptionTone::DarkGlyphs
+            } else {
+                CaptionTone::LightGlyphs
+            }
+        }
+        CaptionTone::DarkGlyphs => {
+            let lost = lightest < DARK_GLYPHS_LOST_BELOW
+                || (gave_way && lightest <= DARK_GLYPHS_BACK_ABOVE);
+            if lost {
+                CaptionTone::LightGlyphs
+            } else {
+                CaptionTone::DarkGlyphs
+            }
+        }
+    }
 }
 
 /// The luminance of an 0xAARRGGBB color, from 0 (black) to 1 (white), with the sRGB weights.
@@ -1177,24 +1281,179 @@ mod tests {
         }
     }
 
-    /// Every way a band can look that the window does not fill: light, dark, half and half
-    /// (a header with a light and a dark part, which an average gets wrong), not read yet.
+    /// The ways a band the window does not fill can look while either tone can be read
+    /// somewhere on it: half and half (a header with a light and a dark part, which an average
+    /// gets wrong), mostly light with a dark part, mostly dark with a light part, a mid grey,
+    /// not read yet.
     fn unfilled_bands() -> Vec<BandSample> {
         let half = [[0xFFFF_FFFF; 4], [0xFF10_1010; 4]].concat();
+        let mostly_light = [&[0xFFFF_FFFF; 7][..], &[0xFF30_3030; 1][..]].concat();
+        let mostly_dark = [&[0xFF10_1010; 7][..], &[0xFFF0_F0F0; 1][..]].concat();
         vec![
-            sampled(0xFFFF_FFFF, 0xFFFF_FFFF),
-            sampled(0xFF12_1212, 0xFF12_1212),
             band_sample(&half, &half),
+            band_sample(&mostly_light, &mostly_light),
+            band_sample(&mostly_dark, &mostly_dark),
+            sampled(0xFF80_8080, 0xFF80_8080),
             BandSample::default(),
         ]
     }
 
     #[test]
-    fn fr22_an_explicit_light_status_bar_gives_dark_glyphs_even_over_dark_pixels() {
+    fn fr22_light_glyphs_an_app_asked_for_turn_dark_over_a_bar_light_from_end_to_end() {
+        // A settings screen opened over a player's main screen, in the same task: its bar is a
+        // light grey from end to end, and the app never asks for dark status bar icons (the
+        // flag stays clear, which a phone reads as a dark bar). White glyphs cannot be read
+        // anywhere on it, so the glyphs turn dark whatever showed before.
+        let says_dark = reported_tone(StatusBarAppearance::Dark, 0);
+        assert_eq!(says_dark, Some(CaptionTone::LightGlyphs));
+        for bar in [0xFFE0_E0E0, 0xFFFF_FFFF, 0xFFF5_F5F5, 0xFFFF_EB3B] {
+            let sample = sampled(bar, bar);
+            assert_eq!(sample.fill, None, "the app draws the band");
+            for app_drawn in [false, true] {
+                for shown in [
+                    None,
+                    Some(CaptionTone::DarkGlyphs),
+                    Some(CaptionTone::LightGlyphs),
+                ] {
+                    assert_eq!(
+                        shown_tone(says_dark, sample, app_drawn, shown),
+                        Some(CaptionTone::DarkGlyphs),
+                        "{bar:08X} while {shown:?} show"
+                    );
+                }
+            }
+        }
+        // A status bar color the app set is where the tone starts as well: the frame shows
+        // the bar the app really drew, light here, where Android no longer draws that color.
+        let says_by_color = reported_tone(StatusBarAppearance::Unspecified, 0xFF20_2124);
+        assert_eq!(says_by_color, Some(CaptionTone::LightGlyphs));
+        assert_eq!(
+            shown_tone(
+                says_by_color,
+                sampled(0xFFE0_E0E0, 0xFFE0_E0E0),
+                false,
+                Some(CaptionTone::LightGlyphs)
+            ),
+            Some(CaptionTone::DarkGlyphs)
+        );
+    }
+
+    #[test]
+    fn fr22_dark_glyphs_an_app_asked_for_turn_light_over_a_bar_dark_from_end_to_end() {
+        // The other way: an app that keeps its light status bar flag over a screen whose bar
+        // is nearly black from end to end.
         let says_light = reported_tone(StatusBarAppearance::Light, 0);
         assert_eq!(says_light, Some(CaptionTone::DarkGlyphs));
-        let dark_header = sampled(0xFF12_1212, 0xFF12_1212);
-        assert_eq!(dark_header.fill, None, "the app draws the band");
+        for bar in [0xFF00_0000, 0xFF12_1212, 0xFF20_2124, 0xFF1F_1F1F] {
+            let sample = sampled(bar, bar);
+            for shown in [
+                None,
+                Some(CaptionTone::DarkGlyphs),
+                Some(CaptionTone::LightGlyphs),
+            ] {
+                assert_eq!(
+                    shown_tone(says_light, sample, false, shown),
+                    Some(CaptionTone::LightGlyphs),
+                    "{bar:08X} while {shown:?} show"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn fr22_a_tone_that_gave_way_returns_with_the_band_and_does_not_flicker() {
+        let says_dark = reported_tone(StatusBarAppearance::Dark, 0);
+        let bar = |luminance: u16| BandSample {
+            fill: None,
+            luminance: Some(luminance),
+            range: Some((luminance, luminance)),
+        };
+        // The app's light glyphs stand until the whole bar is past the first bound.
+        let mut shown = None;
+        for luminance in [100, 300, 450, 500] {
+            shown = shown_tone(says_dark, bar(luminance), false, shown);
+            assert_eq!(shown, Some(CaptionTone::LightGlyphs), "at {luminance}");
+        }
+        shown = shown_tone(says_dark, bar(745), false, shown);
+        assert_eq!(shown, Some(CaptionTone::DarkGlyphs), "the light grey bar");
+        // A bar that wavers between the bounds keeps the dark glyphs it has.
+        for luminance in [520, 480, 400, 499, 600] {
+            shown = shown_tone(says_dark, bar(luminance), false, shown);
+            assert_eq!(shown, Some(CaptionTone::DarkGlyphs), "at {luminance}");
+        }
+        // Back on the first screen, whose bar is dark: the app's light glyphs return.
+        shown = shown_tone(says_dark, bar(30), false, shown);
+        assert_eq!(shown, Some(CaptionTone::LightGlyphs));
+        // One dark part is enough for them to return: the app's word can be read there.
+        let with_dark_part = BandSample {
+            fill: None,
+            luminance: Some(700),
+            range: Some((60, 900)),
+        };
+        assert_eq!(
+            shown_tone(
+                says_dark,
+                with_dark_part,
+                false,
+                Some(CaptionTone::DarkGlyphs)
+            ),
+            Some(CaptionTone::LightGlyphs)
+        );
+        // And the same for dark glyphs the app asked for.
+        let says_light = reported_tone(StatusBarAppearance::Light, 0);
+        let mut shown = None;
+        for luminance in [900, 200, 60, 50] {
+            shown = shown_tone(says_light, bar(luminance), false, shown);
+            assert_eq!(shown, Some(CaptionTone::DarkGlyphs), "at {luminance}");
+        }
+        shown = shown_tone(says_light, bar(6), false, shown);
+        assert_eq!(shown, Some(CaptionTone::LightGlyphs));
+        for luminance in [40, 70, 80, 55] {
+            shown = shown_tone(says_light, bar(luminance), false, shown);
+            assert_eq!(shown, Some(CaptionTone::LightGlyphs), "at {luminance}");
+        }
+        shown = shown_tone(says_light, bar(81), false, shown);
+        assert_eq!(shown, Some(CaptionTone::DarkGlyphs));
+        // The range is of every sample, and only of a band that is opaque all across.
+        assert_eq!(band_range(&[0xFFFF_FFFF; 8]), Some((1000, 1000)));
+        let half = [[0xFFFF_FFFF; 4], [0xFF00_0000; 4]].concat();
+        assert_eq!(band_range(&half), Some((0, 1000)));
+        let one_empty = [&[0xFFFF_FFFF; 7][..], &[0x0000_0000; 1][..]].concat();
+        assert_eq!(band_range(&one_empty), None);
+        assert_eq!(band_range(&[]), None);
+        let grey = sampled(0xFFE0_E0E0, 0xFFE0_E0E0);
+        assert!(
+            grey.range.is_some_and(
+                |(darkest, lightest)| darkest == lightest && darkest > LIGHT_GLYPHS_LOST_ABOVE
+            ),
+            "{grey:?}"
+        );
+    }
+
+    #[test]
+    fn fr22_the_band_of_the_last_frame_of_a_burst_is_read_too() {
+        use std::time::{Duration, Instant};
+        let start = Instant::now();
+        let at = |millis: u64| Some(start + Duration::from_millis(millis));
+        // No frame yet: nothing to read.
+        assert!(!band_reading_owed(false, None, None));
+        // A frame that was copied and read: nothing owed, however long nothing comes.
+        assert!(!band_reading_owed(false, at(0), at(1)));
+        // Its copy still waits to be read.
+        assert!(band_reading_owed(true, at(0), at(1)));
+        // A screen slides in: the frame at 150 ms came too soon after the copy at 1 ms to be
+        // copied, and it is the last one. Its band is still owed.
+        assert!(band_reading_owed(false, at(150), at(1)));
+        // A frame came before any copy could be made.
+        assert!(band_reading_owed(false, at(0), None));
+        // Copied after the last frame, and read: settled.
+        assert!(!band_reading_owed(false, at(150), at(400)));
+    }
+
+    #[test]
+    fn fr22_an_explicit_light_status_bar_gives_dark_glyphs_over_a_band_with_dark_parts() {
+        let says_light = reported_tone(StatusBarAppearance::Light, 0);
+        assert_eq!(says_light, Some(CaptionTone::DarkGlyphs));
         for app_drawn in [false, true] {
             for band in unfilled_bands() {
                 for shown in [
@@ -1213,9 +1472,10 @@ mod tests {
     }
 
     #[test]
-    fn fr22_an_explicit_dark_status_bar_gives_light_glyphs_even_over_light_pixels() {
+    fn fr22_an_explicit_dark_status_bar_gives_light_glyphs_over_a_band_with_light_parts() {
         // The case of a dark header with light parts (a picture, a light tab): the app asked
-        // for light icons, and the average of its pixels must not turn the glyphs black.
+        // for light icons, and the average of its pixels must not turn the glyphs black
+        // while a part of the band is dark enough to read them on.
         let says_dark = reported_tone(StatusBarAppearance::Dark, 0);
         assert_eq!(says_dark, Some(CaptionTone::LightGlyphs));
         for app_drawn in [false, true] {
@@ -1235,10 +1495,11 @@ mod tests {
         }
         // An opaque status bar color the app set is its word as well.
         let says_by_color = reported_tone(StatusBarAppearance::Unspecified, 0xFF20_2124);
+        let mostly_light = [&[0xFFFF_FFFF; 7][..], &[0xFF30_3030; 1][..]].concat();
         assert_eq!(
             shown_tone(
                 says_by_color,
-                sampled(0xFFFF_FFFF, 0xFFFF_FFFF),
+                band_sample(&mostly_light, &mostly_light),
                 false,
                 Some(CaptionTone::DarkGlyphs)
             ),
@@ -1328,6 +1589,7 @@ mod tests {
         let sample = BandSample {
             fill: None,
             luminance: Some(luminance),
+            range: Some((luminance, luminance)),
         };
         shown_tone(None, sample, false, shown)
     }
@@ -1388,6 +1650,7 @@ mod tests {
         let middle = BandSample {
             fill: None,
             luminance: Some(150),
+            range: Some((150, 150)),
         };
         let shown = shown_tone(Some(CaptionTone::DarkGlyphs), middle, false, None);
         assert_eq!(shown, Some(CaptionTone::DarkGlyphs));

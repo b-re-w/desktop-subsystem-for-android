@@ -51,7 +51,7 @@ use std::ffi::c_void;
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use dsa_host_core::compositor::caption::{band_sample, BandSample};
+use dsa_host_core::compositor::caption::{band_reading_owed, band_sample, BandSample};
 use dsa_host_core::compositor::frame_buffers::{
     buffers_after_frame, content_region, frame_scale, sample_points, swapchain_buffers,
     swapchain_change, uniform_colour, wanted_swapchain_buffers, HiddenBuffers, HiddenFrame,
@@ -852,13 +852,15 @@ impl WindowPresenter {
 
     /// Samples the band and the row under it from the frame in `texture` (of `region`
     /// pixels), at most every [`BAND_PROBE_EVERY`]. The copy is read on a later frame, once
-    /// the GPU has made it, so showing a frame never waits for it. Returns the band's new
+    /// the GPU has made it, so showing a frame never waits for it. With `copy` false it only
+    /// reads the copy that waits, if one does, and makes no other. Returns the band's new
     /// sample when it changed.
     unsafe fn probe_band(
         &self,
         state: &mut State,
         texture: &ID3D11Texture2D,
         region: (u32, u32),
+        copy: bool,
     ) -> Option<BandSample> {
         let devices = Arc::clone(&state.devices);
         // The band is the window's; the frame is sampled in its own pixels.
@@ -900,9 +902,10 @@ impl WindowPresenter {
                 Err(_) => state.band_pending = false,
             }
         }
-        if state
-            .band_probed
-            .is_some_and(|at| at.elapsed() < BAND_PROBE_EVERY)
+        if !copy
+            || state
+                .band_probed
+                .is_some_and(|at| at.elapsed() < BAND_PROBE_EVERY)
         {
             return changed;
         }
@@ -1293,6 +1296,37 @@ impl WindowPresenter {
                 ),
             );
         }
+        let band_changed = self.settle_band(&mut state);
+        drop(state);
+        if let Some(sample) = band_changed {
+            if let Some(told) = self
+                .band_colour
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .as_ref()
+            {
+                told(sample);
+            }
+        }
+    }
+
+    /// Reads the band of the frame the window shows once frames stop coming. The band is
+    /// copied from some frames only and each copy is read when a later frame comes, so the
+    /// last frame of a burst (a new screen that slid in and stands still) would never be read
+    /// and the glyphs would keep the tone of a frame from the middle of the transition.
+    /// Returns the band's new sample when it changed.
+    fn settle_band(&self, state: &mut State) -> Option<BandSample> {
+        if !band_reading_owed(state.band_pending, state.last_frame_at, state.band_probed) {
+            return None;
+        }
+        // Another copy only when a frame came after the last one: a still window is read
+        // once and then left alone.
+        let copy = band_reading_owed(false, state.last_frame_at, state.band_probed);
+        let (texture, _, region) = state.newest.clone()?;
+        // SAFETY: plain COM calls on objects this presenter owns, and the immediate context
+        // under its lock. The texture is the newest frame's, which stays whole while no
+        // frame follows it; a frame that does follow is probed in its turn.
+        unsafe { self.probe_band(state, &texture, region, copy) }
     }
 
     /// A shown window that has had no frame for a while gives its swapchain's third buffer
@@ -1647,7 +1681,7 @@ impl WindowPresenter {
         self.trace_frame_colour(&mut state, &texture.texture, region);
         // SAFETY: plain COM calls on objects this presenter owns, and the immediate context
         // under its lock.
-        let band_changed = unsafe { self.probe_band(&mut state, &texture.texture, region) };
+        let band_changed = unsafe { self.probe_band(&mut state, &texture.texture, region, true) };
         // A screenshot waiting for this frame reads it while it is whole in its texture.
         if state.capture_wanted {
             state.capture_wanted = false;

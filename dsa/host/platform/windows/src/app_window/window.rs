@@ -156,21 +156,27 @@ const WM_APP_BAND_COLOUR: u32 = WM_APP + 5;
 
 /// A band sample as the parameters of [`WM_APP_BAND_COLOUR`]: the fill color in `wparam`, and
 /// in `lparam` bit 0 set when there is a fill, bit 1 set when the band's luminance was read,
-/// and the luminance itself from bit 16.
+/// bit 2 set when its darkest and lightest samples were, the luminance itself from bit 16,
+/// the darkest sample's from bit 32 and the lightest's from bit 48 (each at most 1000).
 fn pack_band_sample(sample: BandSample) -> (WPARAM, LPARAM) {
     let wparam = sample.fill.unwrap_or(0) as WPARAM;
     let mut lparam = LPARAM::from(sample.fill.is_some());
     if let Some(luminance) = sample.luminance {
-        lparam |= 2 | (luminance as LPARAM) << 16;
+        lparam |= 2 | (luminance.min(1000) as LPARAM) << 16;
+    }
+    if let Some((darkest, lightest)) = sample.range {
+        lparam |= 4 | (darkest.min(1000) as LPARAM) << 32 | (lightest.min(1000) as LPARAM) << 48;
     }
     (wparam, lparam)
 }
 
 /// The band sample [`pack_band_sample`] put in a message's parameters.
 fn unpack_band_sample(wparam: WPARAM, lparam: LPARAM) -> BandSample {
+    let field = |shift: u32| ((lparam >> shift) & 0xFFFF) as u16;
     BandSample {
         fill: (lparam & 1 != 0).then_some(wparam as u32),
-        luminance: (lparam & 2 != 0).then_some(((lparam >> 16) & 0xFFFF) as u16),
+        luminance: (lparam & 2 != 0).then_some(field(16)),
+        range: (lparam & 4 != 0).then_some((field(32), field(48))),
     }
 }
 
@@ -2590,14 +2596,23 @@ mod tests {
             BandSample {
                 fill: Some(0xFFFF_FFFF),
                 luminance: None,
+                range: None,
             },
             BandSample {
                 fill: None,
                 luminance: Some(0),
+                range: Some((0, 0)),
             },
             BandSample {
                 fill: Some(0xFF00_0000),
                 luminance: Some(1000),
+                range: Some((1000, 1000)),
+            },
+            // A light grey bar with a darker part: what turns an app's light glyphs dark.
+            BandSample {
+                fill: None,
+                luminance: Some(745),
+                range: Some((402, 913)),
             },
         ] {
             let (wparam, lparam) = pack_band_sample(sample);
