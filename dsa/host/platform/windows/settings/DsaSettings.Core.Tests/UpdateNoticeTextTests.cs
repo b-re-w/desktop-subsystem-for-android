@@ -101,9 +101,8 @@ public class UpdateNoticeTextTests
     }
 
     [Theory]
-    [InlineData("Strings.resx")]
-    [InlineData("Strings.ko.resx")]
-    public void Fr17_every_notice_sentence_exists_in_both_languages_with_its_values(string file)
+    [MemberData(nameof(StringTables.Files), MemberType = typeof(StringTables))]
+    public void Fr17_every_notice_sentence_exists_in_every_language_with_its_values(string file)
     {
         var strings = Strings(file);
         foreach (var (key, count) in UpdateNoticeText.AllKeys)

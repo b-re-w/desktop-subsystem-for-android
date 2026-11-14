@@ -23,7 +23,11 @@
     <SelfContained>true</SelfContained>
     <ImplicitUsings>enable</ImplicitUsings>
     <NeutralLanguage>en</NeutralLanguage>
-    <SatelliteResourceLanguages>en;ko</SatelliteResourceLanguages>
+    <!-- The fourteen interface languages. The app's own tables (Strings.resx and every
+         Strings.<tag>.resx beside it, taken in by the SDK's default items) are built into a
+         satellite for each; this list keeps the same languages of WPF's and WPF UI's own
+         resources, whose Chinese ones are named zh-Hans and zh-Hant. -->
+    <SatelliteResourceLanguages>en;ko;ja;zh-CN;zh-TW;zh-Hans;zh-Hant;es;fr;de;pt-BR;ru;it;vi;id;tr</SatelliteResourceLanguages>
     <DebugType>embedded</DebugType>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>

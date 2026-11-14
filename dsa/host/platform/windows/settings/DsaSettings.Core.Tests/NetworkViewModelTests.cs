@@ -241,9 +241,8 @@ public class NetworkViewModelTests
     }
 
     [Theory]
-    [InlineData("Strings.resx")]
-    [InlineData("Strings.ko.resx")]
-    public void Fr28_every_trusted_certificate_text_is_in_both_languages(string file)
+    [MemberData(nameof(StringTables.Files), MemberType = typeof(StringTables))]
+    public void Fr28_every_trusted_certificate_text_is_in_every_language(string file)
     {
         var names = Strings(file).Descendants("data")
             .Select(d => (string?)d.Attribute("name"))

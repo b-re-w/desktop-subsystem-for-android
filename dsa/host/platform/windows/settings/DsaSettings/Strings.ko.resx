@@ -2539,4 +2539,45 @@ DSA는 Widevine을 싣거나 다시 배포하지 않습니다.</value>
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>간단히</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0}은(는) 설치할 수 없는 분할 APK 묶음입니다: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0}은(는) 읽을 수 없는 분할 APK 묶음이라 설치할 수 없습니다.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0}은(는) Android App Bundle입니다. App Bundle은 앱 스토어에 올리는 배포 형식이라 그대로는 설치할 수 없습니다.
+여기서 APK를 만들려면 다른 키로 서명해야 하고, 그러면 앱이 원래 받던 곳에서 더는 업데이트를 받지 못합니다.
+앱을 APK나 .xapk, .apks, .apkm 묶음으로 받으세요.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0}은(는) 암호화된 묶음이라 APK를 읽을 수 없습니다. 오래된 .apkm 파일 중에 이런 것이 있으며, 만든 앱에서만 열립니다.
+앱을 APK나 새 묶음으로 받으세요.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0}에는 기본 APK와 다른 인증서로 서명된 분할 APK가 있어, 묶음이 만들어진 뒤에 바뀌었습니다.
+Android가 설치를 거부합니다.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0}은(는) DSA에서 실행할 수 없습니다: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0}은(는) DSA에서 실행할 수 없습니다. 네이티브 코드가 DSA의 Android가 실행하는 64비트 코드가 아닙니다.
+앱의 x86_64 또는 arm64-v8a 빌드를 받으세요.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0}은(는) 올바른 APK 파일이 아닙니다.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa가 코드 {0}(으)로 종료되었습니다.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>{0} 아이콘</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>APK 파일 및 분할 APK 묶음</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>모든 파일</value>
+  </data>
 </root>

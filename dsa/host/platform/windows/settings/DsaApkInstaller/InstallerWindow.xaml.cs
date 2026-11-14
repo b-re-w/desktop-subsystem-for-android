@@ -47,16 +47,18 @@ public partial class InstallerWindow : FluentWindow
         Dsa.Settings.TitleBarActivation.Attach(this, AppIconTileColours);
         Icon =BitmapFrame.Create(new Uri("pack://application:,,,/Assets/apk-installer.ico"));
         Resources["SensitiveText"] = App.Text.Get("ApkWindow_Sensitive");
-        Title = ApkInstallerTitle.For(CultureInfo.CurrentUICulture);
+        // The window's name in the user's language, from the same text the settings app names
+        // it with.
+        Title = App.Text.Get("ApkWindow_Caption");
         TitleBar.Title = Title;
         TrademarkText.Text = App.Text.Get("AboutTrademark.Text");
         ReadingText.Text = App.Text.Get("ApkWindow_Reading");
         // The bar is named for what it shows, so a screen reader says "Reading the file".
         System.Windows.Automation.AutomationProperties.SetName(ReadingProgress, ReadingText.Text);
-        PackageLabel.Text = ApkInstallViewModel.PackageLabel;
-        PublisherLabel.Text = ApkInstallViewModel.PublisherLabel;
-        VersionLabel.Text = ApkInstallViewModel.VersionLabel;
-        SourceLabel.Text = ApkInstallViewModel.SourceLabel;
+        PackageLabel.Text = _vm.PackageLabel;
+        PublisherLabel.Text = _vm.PublisherLabel;
+        VersionLabel.Text = _vm.VersionLabel;
+        SourceLabel.Text = _vm.SourceLabel;
         LaunchWhenReady.Content = App.Text.Get("ApkWindow_LaunchWhenReady");
         LaunchWhenReady.IsChecked = _vm.LaunchWhenReady;
         LaunchWhenReady.Checked += (_, _) => _vm.LaunchWhenReady = true;
@@ -165,7 +167,7 @@ public partial class InstallerWindow : FluentWindow
             AppIcon.Source = InstallerIcon;
         }
         // The icon is the app's own once the file gives one, and a screen reader says whose.
-        System.Windows.Automation.AutomationProperties.SetName(AppIcon, _iconShown ? $"{_vm.Title} icon" : Title);
+        System.Windows.Automation.AutomationProperties.SetName(AppIcon, _iconShown ? _vm.IconName : Title);
 
         var showDetails = page is ApkInstallPage.Details or ApkInstallPage.Progress;
         SummaryPanel.Visibility = Visible(showDetails);
@@ -203,7 +205,10 @@ public partial class InstallerWindow : FluentWindow
         ProgressDetail.Text = _vm.ProgressDetail;
         Progress.IsIndeterminate = _vm.ProgressPercent is null;
         Progress.Value = _vm.ProgressPercent ?? 0;
-        ProgressPercent.Text = _vm.ProgressPercent is { } percent ? percent + "%" : "";
+        // In the user's number format: 30%, 30 % or %30.
+        ProgressPercent.Text = _vm.ProgressPercent is { } percent
+            ? (percent / 100.0).ToString("P0", CultureInfo.CurrentCulture)
+            : "";
         // The bar is named for the step it measures: "Installing Foo", "Starting Android".
         System.Windows.Automation.AutomationProperties.SetName(Progress,
             _vm.ProgressTitle.Length > 0 ? _vm.ProgressTitle : ReadingText.Text);

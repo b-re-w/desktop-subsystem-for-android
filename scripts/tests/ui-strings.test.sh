@@ -71,8 +71,6 @@ def wxl(path):
     return {s.get("Id"): s.get("Value") for s in root.iter() if s.tag.endswith("String")}
 
 english, korean = wxl(f"{windows}/installer/dsa.en-us.wxl"), wxl(f"{windows}/installer/dsa.ko-kr.wxl")
-if set(english) != set(korean):
-    fail(f"fr3_installer_has_korean_strings: dsa.ko-kr.wxl ids {sorted(korean)} differ from {sorted(english)}")
 for name, value in korean.items():
     if not re.search(r"[가-힣]", value or ""):
         fail(f"fr3_installer_has_korean_strings: {name} in dsa.ko-kr.wxl is not Korean")
@@ -80,8 +78,23 @@ wxs = open(f"{windows}/installer/dsa.wxs", encoding="utf-8").read()
 for name in english:
     if f"!(loc.{name})" not in wxs:
         fail(f"fr3_installer_has_korean_strings: dsa.wxs does not use !(loc.{name})")
-if "dsa.ko-kr.wxl" not in open(f"{windows}/installer/build.ps1", encoding="utf-8").read():
-    fail("fr3_installer_has_korean_strings: build.ps1 does not pass dsa.ko-kr.wxl")
+# Every interface language has the package's words, with the same ids as English, and the build
+# passes each file.
+build = open(f"{windows}/installer/build.ps1", encoding="utf-8").read()
+for culture in ["ko-kr", "ja-jp", "zh-cn", "zh-tw", "es-es", "fr-fr", "de-de", "pt-br", "ru-ru", "it-it", "vi-vn", "id-id", "tr-tr"]:
+    path = f"{windows}/installer/dsa.{culture}.wxl"
+    try:
+        words = wxl(path)
+    except FileNotFoundError:
+        fail(f"fr17_installer_has_every_language: {path} is missing")
+        continue
+    if set(words) != set(english):
+        fail(f"fr17_installer_has_every_language: dsa.{culture}.wxl ids {sorted(words)} differ from {sorted(english)}")
+    for name, value in words.items():
+        if not (value or "").strip() or chr(0x2014) in value:
+            fail(f"fr17_installer_has_every_language: {name} in dsa.{culture}.wxl is empty or has an em dash")
+    if f"dsa.{culture}.wxl" not in build:
+        fail(f"fr17_installer_has_every_language: build.ps1 does not pass dsa.{culture}.wxl")
 
 # The shell words: each one dsa.wxs points at is in the string table with Korean.
 lib = open(f"{windows}/resources/src/lib.rs", encoding="utf-8").read()

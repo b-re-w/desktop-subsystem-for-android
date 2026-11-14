@@ -34,4 +34,10 @@
     <Compile Include="..\DsaApkInstaller\ScreenReader.cs" Link="Linked\ApkInstallerScreenReader.cs" />
     <Compile Include="..\..\installer\setup-ui\ScreenReader.cs" Link="Linked\SetupScreenReader.cs" />
   </ItemGroup>
+
+  <!-- The setup window's words, read in every language. They use only the interface language
+       resolver of DsaSettings.Core, which setup compiles in the same way. -->
+  <ItemGroup>
+    <Compile Include="..\..\installer\setup-ui\Text.cs" Link="Linked\SetupText.cs" />
+  </ItemGroup>
 </Project>
