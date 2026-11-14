@@ -76,7 +76,7 @@ class UsedAppsCompile(
         if (on == screenOn) return
         screenOn = on
         if (!on) screenOffAt = clock()
-        wait()
+        waitForQuiet()
     }
 
     /** Takes the host's power: the compile waits for AC power and the battery saver off. */
@@ -84,10 +84,10 @@ class UsedAppsCompile(
         val allows = (acOnline || !batteryPresent) && !powerSaver
         if (allows == powerAllows) return
         powerAllows = allows
-        wait()
+        waitForQuiet()
     }
 
-    private fun wait() {
+    private fun waitForQuiet() {
         val ticket = ++generation
         if (screenOn || !powerAllows) return
         val left = (QUIET_MILLIS - (clock() - screenOffAt)).coerceAtLeast(0)
