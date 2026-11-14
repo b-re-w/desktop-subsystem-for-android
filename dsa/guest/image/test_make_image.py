@@ -1488,9 +1488,10 @@ class ImageLayoutTests(unittest.TestCase):
                 self.assertIn("(allow surfaceflinger platform_app (fd (use)))", policy)
                 self.assertIn("(allow surfaceflinger platform_app (fifo_file (write getattr)))", policy)
 
-    def test_fr22_the_navigation_mode_is_gestural_like_the_bands_height(self):
-        # Three-button mode draws a contrast scrim behind an edge-to-edge app's band: the
-        # white bar that stayed under YouTube's Shorts player on the owner's PC.
+    def test_fr22_the_navigation_mode_is_gestural(self):
+        # Three-button mode draws a contrast scrim behind any navigation bar inset an
+        # edge-to-edge app has: the white bar that stayed under YouTube's Shorts player on the
+        # owner's PC while tasks had one.
         self.assertEqual(make_image.FRAMEWORK_OVERLAY_INTEGERS["config_navBarInteractionMode"], 2)
         self.assertIn("integer/config_navBarInteractionMode", make_image.framework_overlaid())
 
@@ -3937,9 +3938,10 @@ class TouchLatencyTests(unittest.TestCase):
             self.assertIn("vendor/overlay/DsaSettingsOverlay.apk 0 0 644 capabilities=0x0", fs_config)
             self.assertEqual(fs_config.count("vendor/overlay 0 0 755"), 1)
 
-    def test_fr22_settings_lists_take_the_room_below_their_last_row_from_the_navigation_bar_inset_alone(self):
-        # Every task has a 24 dp navigation bar inset, which SettingsLib's EdgeToEdgeUtils pads
-        # Settings' pages by, so the overlay gives Settings' lists no bottom margin of its own.
+    def test_fr22_settings_lists_get_no_bottom_margin_of_their_own(self):
+        # A task has no navigation bar inset, and SettingsLib's EdgeToEdgeUtils pads Settings'
+        # pages by that alone, so they end on the window's bottom edge like every app's: the
+        # overlay gives Settings' lists no bottom margin of its own.
         ns = "{http://schemas.android.com/apk/res/android}"
         self.assertFalse(hasattr(make_image, "LIST_BOTTOM_MARGIN_DP"))
         with tempfile.TemporaryDirectory() as tmp:
@@ -4657,9 +4659,9 @@ CARD_TOP = "res/drawable-v36/settingslib_round_background_top.xml"
 
 
 class ListBottomRoomTests(unittest.TestCase):
-    """The lists in Settings, Files and the permission screens keep the room a phone's
-    navigation bar leaves below their last row from the 24 dp navigation bar inset every task
-    has, and from no margin of their own on top of it."""
+    """The lists in Settings, Files and the permission screens get no bottom margin of their
+    own: a task has no navigation bar inset, so they end on the window's bottom edge, as every
+    app's do."""
 
     @staticmethod
     def apk(files):
@@ -4678,8 +4680,7 @@ class ListBottomRoomTests(unittest.TestCase):
                 return {name: archive.read(name) for name in archive.namelist()}
 
     def test_fr22_the_lists_have_no_bottom_margin_of_their_own(self):
-        # The margin stood in for the navigation bar inset the guest did not give; with it, the
-        # lists would end 48 dp above the window's bottom edge.
+        # A margin of their own would be a band under these lists that no other app has.
         for name in ("LIST_BOTTOM_MARGIN_DP", "SETTINGS_CODE_LIST_MARGIN", "SETTINGS_HOME_PADDING_DIMEN",
                      "SETTINGS_LIST_DIMENSIONS", "PERMISSION_CONTROLLER_DIMENSIONS", "DOCUMENTSUI_CODE"):
             self.assertFalse(hasattr(make_image, name), name)
@@ -4707,10 +4708,10 @@ class ListBottomRoomTests(unittest.TestCase):
         self.assertIs(make_image.edit_permission_controller_apk(controller, "PermissionController.apk"), controller)
         self.assertNotIn("res/layout/preference_recyclerview.xml", make_image.permission_controller_edits())
 
-    def test_fr22_settings_home_list_on_android_17_is_padded_by_the_navigation_bar_inset_alone(self):
+    def test_fr22_settings_home_list_on_android_17_gets_no_freeform_padding(self):
         # Android 17 adds dashboard_padding_bottom (16 dp) to the home list's bottom when the
         # window shows a caption bar, which a DSA task does: the method says it does not, so
-        # the list ends 24 dp above the window's bottom edge, as Settings' other lists do.
+        # the list ends on the window's bottom edge, as Settings' other lists do.
         dex = top_level_settings_dex()
         edited, changed = make_image.edit_dex(dex, make_image.SETTINGS_CODE_FREEFORM_PADDING)
         self.assertEqual(changed, [FREEFORM_WINDOW])
@@ -5019,7 +5020,7 @@ def status_bar_configs(heights, names=None):
     return [(density, 0, {name: dp for name in names}) for density, dp in sorted(heights.items())]
 
 
-def navigation_bar_configs(dp=24, smallest_widths=None):
+def navigation_bar_configs(dp=0, smallest_widths=None):
     """The configurations of navigation bar heights: each of make_image.NAVIGATION_BAR_DIMENS
     at `dp` for each of `smallest_widths` (the framework's by default)."""
     widths = make_image.NAVIGATION_BAR_SMALLEST_WIDTHS if smallest_widths is None else smallest_widths
@@ -5033,7 +5034,7 @@ def status_bar_table(heights, names=None):
 
 def framework_overlay_table(heights=None, navigation=None):
     """The framework overlay's compiled dimens: the status bar heights (the title bar's by
-    default) and the navigation bar heights (24 dp at the framework's widths by default)."""
+    default) and the navigation bar heights (0 at the framework's widths by default)."""
     heights = make_image.status_bar_heights() if heights is None else heights
     navigation = navigation_bar_configs() if navigation is None else navigation
     return dimens_table(status_bar_configs(heights) + navigation)
@@ -5270,7 +5271,7 @@ class SystemScreenDesignTests(unittest.TestCase):
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("cannot be read", problems[0])
 
-    def test_fr22_check_image_rejects_a_framework_overlay_whose_navigation_bar_is_not_24_dp(self):
+    def test_fr22_check_image_rejects_a_framework_overlay_whose_navigation_bar_is_not_0(self):
         names, read = self.image()
         files = {name: read(name) for name in names}
         path = make_image.FRAMEWORK_OVERLAY_APK
@@ -5280,8 +5281,10 @@ class SystemScreenDesignTests(unittest.TestCase):
             # Android's own values: 48 dp, and 56 dp from a smallest width of 900 dp.
             ([(0, 0, {name: 48 for name in make_image.NAVIGATION_BAR_DIMENS}),
               (0, 900, {name: 56 for name in make_image.NAVIGATION_BAR_DIMENS})],
-             "navigation_bar_height is 56 (unit 1) at sw900dp, not 24 dp"),
-            # 24 dp without a value for the guest display's width, where Android's 56 dp stands.
+             "navigation_bar_height is 56 (unit 1) at sw900dp, not 0 dp"),
+            # A gesture navigation phone's 24 dp, which leaves an empty band in a window.
+            (navigation_bar_configs(dp=24), "navigation_bar_height is 24 (unit 1) at any width, not 0 dp"),
+            # 0 without a value for the guest display's width, where Android's 56 dp stands.
             (navigation_bar_configs(smallest_widths=[0]),
              "navigation_bar_frame_height has no value for a smallest width of 900 dp"),
         ]:
@@ -5289,7 +5292,7 @@ class SystemScreenDesignTests(unittest.TestCase):
                                          {make_image.SYSTEM_OVERLAY_RECORD: record})
             problems = make_image.system_overlay_problems(list(files), files.__getitem__)
             self.assertEqual(len(problems), 1, problems)
-            self.assertIn("keeps another space at its bottom than its navigation bar inset", problems[0])
+            self.assertIn("leaves an empty band along the window's bottom edge", problems[0])
             self.assertIn(wanted, problems[0])
 
     def test_fr34_check_image_rejects_an_overlay_that_does_not_say_what_it_was_built_against(self):
@@ -8053,7 +8056,6 @@ class HostCertificatesImageTests(KeyMintKeyImageTests):
 INSETS_POLICY = "Lcom/android/server/wm/InsetsPolicy;->enforceInsetsPolicyForTarget"
 CAPTION_BAR = "Landroid/view/WindowInsets$Type;->captionBar"
 SYSTEM_BARS = "Landroid/view/WindowInsets$Type;->systemBars"
-ALL_TYPES = "Landroid/view/WindowInsets$Type;->all"
 IS_FLOATING = "Landroid/app/WindowConfiguration;->isFloating"
 
 
@@ -8109,19 +8111,19 @@ class CaptionIsStatusBarTests(unittest.TestCase):
     """The host window's title bar is Android's status bar: an app that pads by its status bar
     inset, or by the framework's status bar height, keeps its content below the title bar."""
 
-    def test_fr22_a_freeform_window_receives_its_status_bar_and_navigation_bar_insets(self):
+    def test_fr22_a_freeform_window_receives_its_status_bar_inset(self):
         # Android keeps only the caption bar (and the IME) of a floating window's insets, so
         # the status bar source the agent gives a task never reached its app, and an app that
-        # pads by its status bar inset drew its toolbar under the title bar. The navigation
-        # bar and tappable element sources along the task's bottom edge were dropped the same
-        # way; all() keeps every one of them (systemBars() has no tappable element).
+        # pads by its status bar inset drew its toolbar under the title bar. systemBars() is
+        # enough: a task has no source along its bottom edge, so nothing wider (all(), for a
+        # tappable element) is kept.
         self.assertEqual(dex_calls(services_dex(), INSETS_POLICY)[-2:], [CAPTION_BAR, "Landroid/view/WindowInsets$Type;->ime"])
-        self.assertEqual(make_image.SERVICES_INSETS_CODE[INSETS_POLICY][1]["new"], ALL_TYPES)
+        self.assertEqual(make_image.SERVICES_INSETS_CODE[INSETS_POLICY][1]["new"], SYSTEM_BARS)
         edited, changed = make_image.edit_dex(services_dex(), make_image.SERVICES_CODE)
         self.assertEqual(changed, [INSETS_POLICY])
         calls = dex_calls(edited, INSETS_POLICY)
         self.assertEqual(calls[calls.index(IS_FLOATING) + 1:],
-                         [ALL_TYPES, "Landroid/view/WindowInsets$Type;->ime"])
+                         [SYSTEM_BARS, "Landroid/view/WindowInsets$Type;->ime"])
         self.assertNotIn(CAPTION_BAR, calls)
         # The test of the types a window provides itself, before isFloating, is untouched.
         self.assertEqual(calls[0], SYSTEM_BARS)
@@ -8138,7 +8140,7 @@ class CaptionIsStatusBarTests(unittest.TestCase):
         self.assertEqual(changed, [INSETS_POLICY])
         calls = dex_calls(edited, INSETS_POLICY)
         self.assertEqual(calls[0], CAPTION_BAR)
-        self.assertEqual(calls[calls.index(IS_FLOATING) + 1], ALL_TYPES)
+        self.assertEqual(calls[calls.index(IS_FLOATING) + 1], SYSTEM_BARS)
 
     def test_fr22_an_insets_policy_built_from_other_sources_stops_the_image(self):
         with self.assertRaisesRegex(ValueError, "built from other sources"):
@@ -8255,10 +8257,12 @@ class CaptionIsStatusBarTests(unittest.TestCase):
         problems = make_image.status_bar_overlay_problems(status_bar_table(phone))
         self.assertIn("status_bar_height is 24 (unit 1) at 262 dpi, not the title bar's 58 px there", problems)
 
-    def test_fr22_the_navigation_bar_heights_are_24_dp_at_every_density(self):
-        # The device reported navigation_bar_height 56 dp (Android's from a smallest width of
-        # 900 dp) while the task's inset was 0; both are a gesture navigation phone's 24 dp now.
-        self.assertEqual(make_image.NAVIGATION_BAR_HEIGHT_DP, 24)
+    def test_fr22_a_windowed_task_gets_no_bottom_inset(self):
+        # The framework's navigation bar heights are 0, as the task's navigation bar inset is,
+        # so an app that pads by them leaves no band along the window's bottom edge either.
+        # Android's own are 48 dp, and 56 dp from a smallest width of 900 dp, which the guest's
+        # display has; a gesture navigation phone's 24 dp left an empty band in a window.
+        self.assertEqual(make_image.NAVIGATION_BAR_HEIGHT_DP, 0)
         self.assertIn("navigation_bar_height", make_image.NAVIGATION_BAR_DIMENS)
         self.assertIn("navigation_bar_frame_height", make_image.NAVIGATION_BAR_DIMENS)
         files = make_image.navigation_bar_overlay_files()
@@ -8266,13 +8270,10 @@ class CaptionIsStatusBarTests(unittest.TestCase):
         for name in make_image.NAVIGATION_BAR_DIMENS:
             self.assertIn(f"dimen/{name}", make_image.framework_overlaid())
             for path, text in files.items():
-                self.assertIn(f'<dimen name="{name}">24dp</dimen>', text, path)
-        # A dp value with no density of its own: every density reads 24 dp, in the pixels the
-        # agent's inset has there (130 dpi at 100%, 196 at 150%, 262 at 200%).
+                self.assertIn(f'<dimen name="{name}">0dp</dimen>', text, path)
         status = make_image.status_bar_overlay_files()
         for name in make_image.NAVIGATION_BAR_DIMENS:
             self.assertFalse(any(name in text for text in status.values()), name)
-        self.assertEqual([int(24 * d / 160 + 0.5) for d in (130, 196, 262)], [20, 29, 39])
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             make_image.framework_overlay_sources(root / "src")
@@ -8280,10 +8281,12 @@ class CaptionIsStatusBarTests(unittest.TestCase):
                 self.assertEqual((root / "src" / path).read_text(), text)
         self.assertEqual(make_image.navigation_bar_overlay_problems(framework_overlay_table()), [])
 
-    def test_fr22_check_image_rejects_navigation_bar_heights_that_are_not_24_dp(self):
+    def test_fr22_check_image_rejects_navigation_bar_heights_that_are_not_0(self):
         self.assertEqual(make_image.navigation_bar_overlay_problems(dimens_table(navigation_bar_configs())), [])
+        problems = make_image.navigation_bar_overlay_problems(dimens_table(navigation_bar_configs(dp=24)))
+        self.assertIn("navigation_bar_height is 24 (unit 1) at any width, not 0 dp", problems)
         problems = make_image.navigation_bar_overlay_problems(dimens_table(navigation_bar_configs(dp=48)))
-        self.assertIn("navigation_bar_height is 48 (unit 1) at any width, not 24 dp", problems)
+        self.assertIn("navigation_bar_height is 48 (unit 1) at any width, not 0 dp", problems)
         problems = make_image.navigation_bar_overlay_problems(dimens_table(navigation_bar_configs(smallest_widths=[900])))
         self.assertIn("navigation_bar_height has no value for any width", problems)
         problems = make_image.navigation_bar_overlay_problems(status_bar_table(make_image.status_bar_heights()))
@@ -8291,9 +8294,9 @@ class CaptionIsStatusBarTests(unittest.TestCase):
 
     def test_fr22_the_navigation_bar_background_is_transparent(self):
         # An app that does not draw behind the navigation bar gets Android's background for it
-        # there: black where its theme names no colour, and a scrim over a transparent one. As
-        # AOSP's gesture navigation overlay sets them, neither is drawn, and the band shows the
-        # app's own window background.
+        # there: black where its theme names no colour, and a scrim over a transparent one. A
+        # task has no navigation bar inset, and should one reach an app anyway, neither is
+        # drawn, as AOSP's gesture navigation overlay sets them: no strip along the bottom.
         self.assertIs(make_image.FRAMEWORK_OVERLAY_BOOLEANS["config_navBarDefaultTransparent"], True)
         self.assertIs(make_image.FRAMEWORK_OVERLAY_BOOLEANS["config_navBarNeedsScrim"], False)
         with tempfile.TemporaryDirectory() as tmp:
