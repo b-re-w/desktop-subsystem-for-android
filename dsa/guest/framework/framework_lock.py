@@ -120,7 +120,7 @@ SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust",
 # which only native builds and other devices read. Nothing on the way from the Java sources to
 # services.jar's dex reads them, and the build allows missing dependencies, so the modules they
 # define may go missing. The product's configuration checks only that each VNDK version it names
-# has a folder, so the workflow makes those folders empty. Together they are
+# has a build file, so the workflow puts an empty one in each. Together they are
 # several gigabytes of the tree, which only just fits a standard runner's disk. A path ending in
 # "/" leaves out every project below it.
 SERVICES_TREE_SKIPPED = ["prebuilts/abi-dumps/", "prebuilts/vndk/", "prebuilts/qemu-kernel",
