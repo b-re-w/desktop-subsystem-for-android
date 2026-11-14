@@ -1856,7 +1856,7 @@ Windows의 Hyper-V VM 대신 USB로 연결한 폰의 AVF(Android Virtualization 
 - **카드**: SettingsLib의 그룹 배경은 바깥 모서리를 `settingslib_preference_corner_radius`(20 dp)로, 안쪽 모서리를 4 dp로 둥글게 하고, `MarginItemDecoration`이 행 아래에 2 dp(`settingslib_expressive_space_extrasmall1`)를 둔다. 그 2 dp 값은 다른 여백에도 쓰이므로 바꾸지 않았다.
 - **색**: SettingsLib과 Material 3 앱의 색은 프레임워크의 `system_*_light`, `system_*_dark` 값으로 간다. DSA 게스트에는 SystemUI의 테마 서비스가 없으므로 이 기본값이 모든 앱의 색이다. 오버레이가 바꾸는 이름은 모두 16과 17의 `colors.xml`에 있다.
 - **겹쳐 쓸 수 있는 것**: DocumentsUI, PermissionController, IntentResolver는 `<overlayable>`을 선언한다. DocumentsUI는 `force_material3`과 몇 가지 색과 글꼴 이름만, PermissionController는 대화상자 스타일과 설정 값만, IntentResolver는 몇 가지 크기와 색만 연다. PermissionController의 목록 배경(SettingsLib의 `settingslib_round_background*`)은 열려 있지 않다. Settings와 PackageInstaller는 선언하지 않는다. 공유 시트의 제목은 프레임워크의 `TextAppearance.DeviceDefault.WindowTitle`이고 시트의 모서리는 `config_bottomDialogCornerRadius`(16 dp)다.
-- **토스트**: Android 11부터 R 이상을 대상으로 하는 앱의 글자 토스트는 `NotificationManagerService`가 `StatusBarManagerService.showToast`로 SystemUI에 그리게 한다. DSA 게스트에는 SystemUI가 없으므로 이 토스트는 어디에도 그려지지 않는다(소스로 확인, 기기에서 확인하지 않음). 앱이 스스로 그리는 토스트(Q 이하 대상, `transient_notification`)만 오버레이가 바꿀 수 있다.
+- **토스트**: Android 11부터 R 이상을 대상으로 하는 앱의 글자 토스트는 `NotificationManagerService`가 `StatusBarManagerService.showToast`로 SystemUI에 그리게 한다. DSA 게스트에는 SystemUI가 없으므로 이 토스트는 어디에도 그려지지 않는다(소스로 확인, 기기에서 확인하지 않음). 앱이 스스로 그리는 토스트(Q 이하 대상, `transient_notification`)만 오버레이가 바꿀 수 있다. (2026-11-15 고침: 소유자 PC에서 그려지지 않음을 확인했다. 까닭은 받는 쪽이 없어서가 아니라, 상태 표시줄로 등록된 에이전트가 `showToast`를 받고도 그리지 않아서다. FR-40부터 에이전트가 같은 `transient_notification` 레이아웃으로 그리므로 이 오버레이가 글자 토스트에도 적용된다. R48.)
 - **글꼴**: 이미지의 `sans-serif`는 `external/roboto-fonts`의 Roboto(가변 글꼴, 3.005)이고, 저장소의 NOTICE는 Apache-2.0이다. 17의 저장소에는 `MODULE_LICENSE_OFL`도 있다. 굵기 700은 `textStyle="bold"`로 쓸 수 있다.
 
 ### 결정
@@ -1870,7 +1870,7 @@ Windows의 Hyper-V VM 대신 USB로 연결한 폰의 AVF(Android Virtualization 
 - 첫 화면은 창 크기가 바뀌어도 레이아웃을 다시 만들지 않으므로, 600 dp를 넘나들게 크기를 바꾼 창은 화면을 다시 열 때까지 처음의 상태를 지킨다.
 - DocumentsUI의 레이아웃은 겹쳐 쓸 수 없으므로 파일 선택기에는 큰 제목 영역이 없다. 색과 Material 3의 둥근 모양만 바뀐다. 큰 제목을 넣으려면 DocumentsUI의 레이아웃 코드를 고쳐야 한다.
 - PermissionController는 앱 바의 테마 오버레이를 `<overlayable>`에 열지 않아, 권한 화면은 SettingsLib대로 큰 제목을 접은 채 연다. 높은 창에서 펼쳐 열려면 그 앱의 레이아웃이나 코드를 고쳐야 한다.
-- 소유자에게 따로 보고할 것: SystemUI가 없는 게스트에서는 앱의 글자 토스트가 보이지 않는다. 호스트 알림 등으로 보여 주는 것은 새 요구사항이다.
+- 소유자에게 따로 보고할 것: SystemUI가 없는 게스트에서는 앱의 글자 토스트가 보이지 않는다. 호스트 알림 등으로 보여 주는 것은 새 요구사항이다. (2026-11-15: 소유자가 호스트 알림이 아니라 그 앱의 창 안에 그리기로 정했다. FR-40, R48.)
 
 ### 확인하지 못한 것
 - 이미지를 만들거나 부팅하지 않았다. aapt2가 오버레이를 받아들이는지, idmap2가 각 오버레이를 받아들이는지(`adb shell cmd overlay list`), 오버레이 레이아웃의 `app:` 속성이 실제로 Settings의 속성으로 읽히는지, 컴파일된 레이아웃을 고친 Settings와 PermissionController가 그대로 뜨는지는 develop의 이미지 테스트가 처음 확인한다.
@@ -3425,3 +3425,57 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 - Compatibility Pack의 Dozen 판과 x64 지원, 그리고 그 팩이 설치된 PC에서 지금의 DSA가 Dozen을 고르는지.
 - `vulkan_dzn.dll`의 크기와 렌더러 메모리(NFR-1)에 더하는 양.
 - WSA가 Haswell에서 무엇으로 그렸는지.
+
+## R48. 글자 토스트가 보이지 않은 까닭과 앱 창 안에 그리는 길: 상태 표시줄로 오는 `showToast` (FR-40)
+
+**기준.** 2026-11-15 소유자 PC(Android 17 이미지)에서 안드로이드 설정의 "빌드 번호"를 누르면 `dumpsys notification`의 Toast Queue에 `TextToastRecord{... com.android.settings/1000 isSystemToast=true ... duration=0}`이 들어갔다가 사라지고, `TYPE_TOAST` 창은 한 번도 생기지 않았다. 소유자가 같은 날 정했다: 호스트 알림이 아니라 그 앱의 창 안에, 앱이 청한 모양으로 그린다(FR-40). 이 조사는 소스만 읽었다. 기기는 만지지 않았고, 에이전트는 빌드하거나 실행하지 않았다. 프레임워크 소스는 `framework-lock.json`이 고정한 `frameworks/base` 두 커밋(Android 16 `45034f06`, Android 17 `94b4c163`)을 android.googlesource.com에서 읽었다. 그 페이지는 줄 번호를 주지 않으므로 아래는 파일과 메서드로 적는다.
+
+### 본 것
+
+- **앱 쪽**(`core/java/android/widget/Toast.java`, 17): `show()`는 호환성 변경 `CHANGE_TEXT_TOASTS_IN_THE_SYSTEM`(147798919, `@EnabledAfter(targetSdkVersion = Q)`)이 켜져 있고 사용자 지정 뷰가 없으면 `service.enqueueTextToast(pkg, mToken, mText, mDuration, isUiContext, displayId, callback)`을 부른다. 위치 값은 넘기지 않는다. `setGravity`와 `setMargin`은 글자 토스트에서 "값이 쓰이지 않는다"는 오류만 남기고, 문서는 안드로이드 11 이상 대상 앱에서 아무 일도 하지 않는다고 적는다. 기본 위치는 `Toast` 생성자가 `config_toastDefaultGravity`와 `toast_y_offset`에서 읽는다. 변경이 꺼진 앱(Q 이하 대상)은 `ToastPresenter.getTextToastView(context, text)`로 뷰를 스스로 만든다.
+- **알림 관리자 쪽**(`services/core/java/com/android/server/notification/toast/TextToastRecord.java`, 17): `show()`는 `mStatusBar.showToast(uid, pkg, token, text, windowToken, getDuration(), mCallback, displayId)`를 부르고 참을 돌려준다. `mStatusBar`(`StatusBarManagerInternal`)가 없을 때만 거짓이다. `hide()`는 `mStatusBar.hideToast(pkg, token)`이다. 다른 길은 없다.
+- **상태 표시줄 서비스**(`services/core/java/com/android/server/statusbar/StatusBarManagerService.java`, 17): `showToast`와 `hideToast`는 `runWithStatusBarIfPresent(bar -> bar.showToast(...))`로 등록된 `IStatusBar` 하나(`mBar`)에 그대로 넘긴다. `registerStatusBar`와 `registerStatusBarForAllDisplays`는 `STATUS_BAR_SERVICE` 권한을 확인하고 `mBar = bar`로 둔 뒤 죽음 알림을 걸고 `notifyBarAttachChanged()`를 부른다. 그것이 하는 일은 전역 동작 메뉴가 쓸 수 있는지 알리기(`onGlobalActionsAvailableChanged(mBar != null)`)와 UDFPS, 생체 인식 콜백을 다시 거는 것뿐이다. 이 파일에서 `mBar != null`을 상태 표시줄이나 내비게이션 바가 보인다는 뜻으로 쓰는 곳은 없고, 등록이 창 관리자를 부르지도 않는다.
+- **DSA 에이전트는 이미 그 상태 표시줄이다.** FR-22의 제목 표시줄 색 때문에 `AndroidSystemBars`가 `registerStatusBarForAllDisplays`로 등록되어 있고, 그 바인더는 `onSystemBarAttributesChanged`만 읽고 나머지 호출은 받은 것으로 치고 버렸다. 그래서 `showToast`는 에이전트까지 왔다가 버려졌고, 알림 관리자는 보였다고 여겨 제 시간이 지나면 기록을 큐에서 뺐다. 이것이 소유자 PC에서 본 그대로다. 시스템 화면 디자인 조사의 "토스트" 항목이 "SystemUI가 없어 어디에도 그려지지 않는다"고 적은 것은 결과는 맞고 까닭이 덜 정확했다: 받는 쪽이 없는 것이 아니라 받는 쪽(에이전트)이 그리지 않았다.
+- **`IStatusBar.aidl`**(16과 17이 같다): `oneway interface IStatusBar`, `showToast(int uid, String packageName, IBinder token, CharSequence text, IBinder windowToken, int duration, @nullable ITransientNotificationCallback callback, int displayId)`, `hideToast(String packageName, IBinder token)`.
+- **`ToastPresenter`**(`core/java/android/widget/ToastPresenter.java`, 16과 17이 같다): 생성자 `(Context, IAccessibilityManager, INotificationManager, String packageName)`, `show(View, IBinder token, IBinder windowToken, int duration, int gravity, int xOffset, int yOffset, float horizontalMargin, float verticalMargin, ITransientNotificationCallback)`, `hide(ITransientNotificationCallback)`, 정적 `getTextToastView(Context, CharSequence)`와 `getTextToastViewWithIcon(Context, CharSequence, Drawable)`. `createLayoutParams`는 `TYPE_TOAST`, `WRAP_CONTENT`, `FLAG_KEEP_SCREEN_ON | FLAG_NOT_FOCUSABLE | FLAG_NOT_TOUCHABLE`, `Animation_Toast`를 준다. `adjustLayoutParams`는 창의 `packageName`을 생성자에 준 컨텍스트의 패키지(`mContextPackageName`)로, `hideTimeoutMilliseconds`를 긴 토스트 7000, 짧은 토스트 4000으로 둔다. `show`는 뷰를 붙이고 접근성 이벤트(`TYPE_NOTIFICATION_STATE_CHANGED`, 클래스 `android.widget.Toast`, 패키지는 생성자의 `packageName`)를 보낸 뒤 `callback.onToastShown()`을 부른다. `hide`는 `removeViewImmediate`, `mNotificationManager.finishToken(mPackageName, mToken)`, `callback.onToastHidden()` 순서다. 컨텍스트는 약한 참조로 잡는다.
+- **SystemUI가 하는 일**(`packages/SystemUI/src/com/android/systemui/toast/ToastUI.java`, `SystemUIToast.java`, 17): 디스플레이 컨텍스트로 `ToastPresenter`를 만들고, 레이아웃 매개변수를 신뢰된 오버레이로 표시한 뒤(터치가 지나가게) `show`를 부른다. 새 토스트가 오면 떠 있던 것을 먼저 숨기고, `hideToast`는 패키지와 토큰이 지금 것과 같을 때만 따른다. 뷰는 SystemUI 자신의 `text_toast` 레이아웃이다. 앱이 안드로이드 12 미만을 대상으로 하면 두 줄 제한을 풀고 아이콘을 숨긴다. 아니면 `getBadgedIcon`의 아이콘을 보이는데, 시스템 앱(`FLAG_SYSTEM | FLAG_UPDATED_SYSTEM_APP`)은 실행 인텐트가 있을 때만이다(`showApplicationIcon`).
+- **접근성 이벤트의 패키지 이름**(`services/accessibility/java/com/android/server/accessibility/AccessibilitySecurityPolicy.java`, 17, `resolveValidReportedPackageLocked`): 보낸 쪽이 시스템 uid도 아니고 그 패키지의 주인도 아니면 `ACT_AS_PACKAGE_FOR_ACCESSIBILITY` 권한이 있을 때만 그 이름을 그대로 둔다. 없으면 보낸 쪽 uid의 첫 패키지로 바꾼다. 에이전트의 FR-18 안내는 이벤트의 패키지로 태스크를 고르므로(`AccessibilityExport.announce`), 권한 없이는 토스트 안내가 에이전트의 이름으로 와서 그 앱의 태스크를 찾지 못한다.
+- **hwcomposer**(`dsa/guest/hwcomposer/src/task_layout.h`): 층은 창 종류가 아니라 자리로 태스크에 나뉜다. 태스크의 경계가 층의 프레임을 통째로 담아야 하고, 경계에 걸친 층은 어느 창에도 가지 않는다. 토스트 창은 디스플레이 수준의 창이라 모든 태스크 위에 있고, 한 태스크의 경계 안에 통째로 있으면 그 태스크의 맨 위 층이 된다. hwcomposer와 호스트 합성기는 고칠 것이 없다. 입력은 호스트가 태스크 좌표로 보내고 에이전트가 디스플레이에 주입하므로, 터치할 수 없는 토스트 창은 입력 경로에도 없다.
+
+### 고른 길
+
+`services.jar`를 고치지 않는다. 에이전트의 상태 표시줄 바인더가 `showToast`와 `hideToast`의 트랜잭션 번호를 스텁에서 찾아(이미 `onSystemBarAttributesChanged`에 쓰는 방법) 인자를 읽고, 프레임워크의 `ToastPresenter`로 그린다. 새로 등록하는 것이 없으므로 새로 켜지는 동작도 없다.
+
+- 뷰: `ToastPresenter.getTextToastView`(아이콘을 보일 앱이면 `getTextToastViewWithIcon`)를 그 앱의 패키지 컨텍스트로 부른다. 앱이 스스로 그리는 토스트와 같은 코드이므로 FR-34의 오버레이(`transient_notification`, `toast_frame`)가 그대로 적용된다. 테마는 태스크 맨 위 액티비티의 것, 밀도는 태스크의 것이다. 제한된 컨텍스트(`CONTEXT_RESTRICTED`)라 앱의 글꼴이나 코드를 에이전트 프로세스에 올리지 않는다. 스플래시 화면이 같은 방식으로 앱의 테마를 읽는다.
+- 창의 주인: `ToastPresenter`의 컨텍스트는 에이전트의 것이어야 한다. 창 관리자는 토스트 창에 `OP_TOAST_WINDOW`를 창의 uid와 패키지 짝으로 시작하므로, 창의 `packageName`이 붙이는 프로세스의 것이 아니면 창을 숨긴다. SystemUI도 자기 컨텍스트를 쓴다.
+- 자리: 모든 태스크가 한 디스플레이의 프리폼 창이고 토스트 창은 디스플레이를 기준으로 놓이므로, 에이전트가 뷰를 미리 재어(`AT_MOST` 태스크 크기) 프레임워크의 기본 위치를 태스크의 경계에 적용한 자리(`toastFrame`, `Gravity.apply`와 같은 계산)를 구하고, `TOP | LEFT`와 그 좌표, 잰 크기를 그대로 창에 준다. 인셋에 맞추지 않게 해서(`setFitInsetsTypes(0)`) 좌표가 디스플레이의 모서리에서 시작한다. 크기를 고정하는 까닭은 `WRAP_CONTENT` 창을 `ViewRootImpl`이 재는 방법이 에이전트의 측정과 달라질 수 있어서다.
+- 따라가기: 토스트가 떠 있는 동안 100 ms마다 태스크를 읽어, 경계가 바뀌면 다시 재어 `updateViewLayout`으로 옮기고, 태스크가 끝나면 숨긴다.
+- 시간과 큐는 알림 관리자의 것이다. 에이전트는 시간을 재지 않는다.
+
+### 버린 길
+
+- **`services.jar` 패치**(알림 관리자가 다른 곳에 그리게): 필요가 없고, Android 17의 서비스 소스 빌드가 지금 깨져 있어 실을 수 없다.
+- **앱이 스스로 그리게 하는 호환성 변경 끄기**(`CHANGE_TEXT_TOASTS_IN_THE_SYSTEM`을 모든 앱에서 끔): 앱이 그리는 토스트 창은 앱의 것이라 에이전트가 자리를 정할 수 없고, 디스플레이의 아래 가운데에 놓여 그 자리의 다른 태스크 창에 들어가거나 경계에 걸쳐 사라진다. 릴리스 빌드에서 디버그할 수 없는 앱의 변경을 덮어쓸 수 있는지도 확인하지 못했다.
+- **프레임워크 설정이나 오버레이**: `TextToastRecord.show()`에는 상태 표시줄 말고 다른 갈래가 없다. 바꿀 설정이 없다.
+- **상태 표시줄을 하나 더 등록**: 상태 표시줄 서비스는 하나(`mBar`)만 잡으므로 두 번째 등록은 첫 번째를 밀어내 FR-22의 보고가 끊긴다. 같은 바인더에서 받는다.
+- **호스트 알림**: 소유자가 받지 않았다. 앱의 화면에 뜨는 것을 다른 곳에 띄우는 일이기 때문이다.
+- **창 관리자의 gravity만으로 놓기**(디스플레이 기준 오프셋으로 환산): 토스트의 크기를 모르면 창이 작을 때 경계 안에 넣을 수 없다.
+
+### 대가와 남은 것
+
+- 창이 최소화된 앱의 토스트는 그 창 안에 그려지므로, 사용자가 다른 창을 보고 있으면 보지 못한다. FR-40이 그렇게 정했다.
+- 토스트가 떠 있는 동안(보통 2초에서 3.5초) 100 ms마다 태스크 목록을 한 번 읽는다.
+- 앱이 스스로 그리는 토스트(사용자 지정 뷰, 안드로이드 10 이하 대상)는 여전히 디스플레이를 기준으로 놓인다. 그 창은 앱의 것이라 이 길로는 옮길 수 없다. 디스플레이의 아래 가운데가 어느 태스크의 경계 안이냐에 따라 다른 앱의 창에 보이거나 보이지 않을 수 있다. FR-40이 다루지 않는 토스트라 소유자에게 따로 보고한다.
+
+### 확인하지 못한 것
+
+- 기기에서 아무것도 돌리지 않았다. 에이전트는 이 PC에서 컴파일하지도 않았다(Kotlin은 CI가 빌드한다).
+- `NotificationManagerService`의 큐와 시간(`showNextToastLocked`, `cancelToastLocked`, `finishToken`, 접근성 시간 제한을 더하는 곳)과 창 관리자의 토스트 규칙(`WindowManagerService.addWindow`의 `TYPE_TOAST` 토큰 검사, uid마다 토스트 창 하나, `OP_TOAST_WINDOW`, 창 숨김 시간)은 고정한 커밋에서 다시 읽지 못했다. 파일이 커서 페이지가 잘린다. 위의 설명은 AOSP의 알려진 동작이고, 소유자 PC의 관찰(기록이 큐에 들어갔다가 제 시간에 빠짐)과 맞는다.
+- `ACT_AS_PACKAGE_FOR_ACCESSIBILITY`가 플랫폼 서명으로 주어지는 권한인지(`core/res/AndroidManifest.xml`)는 페이지가 잘려 읽지 못했다. SystemUI가 같은 목적으로 가진 권한이다. 주어지지 않으면 토스트는 그대로 보이고, 스크린 리더 안내만 듣는 태스크 중 첫 태스크로 간다.
+- `Animation_Toast`의 들어오는 움직임이 층의 프레임을 태스크 경계 밖으로 내는지. 그렇다면 그 몇 프레임 동안 토스트가 창에 없다가 나타난다.
+
+### 기기에서 확인하는 법
+
+- `adb logcat -s DsaAgent`: 토스트마다 `the toast of <패키지> is shown in task <번호>`가 나온다. 열린 앱 창이 없으면 `no app window is open for the toast of <패키지>; it is not drawn`이다. `this framework's status bar takes no text toasts`나 `could not read a text toast`가 나오면 바인더 쪽이, `this framework could not draw the toast`가 나오면 `ToastPresenter` 쪽이 맞지 않는 것이다.
+- 토스트가 떠 있는 동안 `adb shell dumpsys window windows`에서 제목이 `Toast`인 창을 찾는다: `ty=TOAST`, 패키지는 에이전트(`io.github.thisisthepy.dsa.agent`), 프레임이 그 태스크의 경계 안에 있다. `adb shell dumpsys notification`의 Toast Queue에는 `TextToastRecord`가 그 시간 동안 있다가 빠진다.
+- `adb shell dumpsys SurfaceFlinger --list`에 `Toast` 층이 있는지 본다.
