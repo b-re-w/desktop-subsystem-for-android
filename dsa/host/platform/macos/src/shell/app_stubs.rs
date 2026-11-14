@@ -174,6 +174,24 @@ fn shortcuts_plist(shortcuts: &[StubShortcut]) -> String {
     text
 }
 
+/// The languages a window host's bundle declares (`CFBundleLocalizations`): DSA's fourteen,
+/// as macOS names them. The host's own menus pick their words themselves; with these listed,
+/// the entries AppKit adds to them (Enter Full Screen, the window tiling commands) are in the
+/// user's language too, rather than in English for every user.
+pub const LOCALIZATIONS: [&str; 14] = [
+    "en", "ko", "ja", "zh-Hans", "zh-Hant", "es", "fr", "de", "pt-BR", "ru", "it", "vi", "id", "tr",
+];
+
+/// [`LOCALIZATIONS`] as the lines of an `Info.plist`.
+fn localizations_plist() -> String {
+    let mut text = String::from("\t<key>CFBundleLocalizations</key>\n\t<array>\n");
+    for language in LOCALIZATIONS {
+        text.push_str(&format!("\t\t<string>{language}</string>\n"));
+    }
+    text.push_str("\t</array>\n");
+    text
+}
+
 /// The stub's `Info.plist`.
 pub fn info_plist(app: &AppEntry, has_icon: bool) -> String {
     let icon = if has_icon {
@@ -199,7 +217,7 @@ pub fn info_plist(app: &AppEntry, has_icon: bool) -> String {
 	<string>{identifier}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
-	<key>CFBundleName</key>
+{localizations}	<key>CFBundleName</key>
 	<string>{label}</string>
 	<key>CFBundleDisplayName</key>
 	<string>{label}</string>
@@ -221,6 +239,7 @@ pub fn info_plist(app: &AppEntry, has_icon: bool) -> String {
         identifier = xml_escape(&bundle_identifier(&app.package)),
         label = xml_escape(&app.label),
         version = xml_escape(version),
+        localizations = localizations_plist(),
         package = xml_escape(&app.package),
         shortcuts = shortcuts_plist(&app.shortcuts),
     )
@@ -775,6 +794,28 @@ mod tests {
         assert!(plist.contains("<key>DSAPackage</key>\n\t<string>com.example</string>"));
         assert!(!info_plist(&app("p", "l"), false).contains("CFBundleIconFile"));
         assert!(!plist.contains(SHORTCUTS_KEY), "no shortcuts, no list");
+    }
+
+    #[test]
+    fn fr17_a_window_hosts_bundle_declares_every_interface_language() {
+        let plist = info_plist(&app("com.example", "Notes"), false);
+        let start = plist
+            .find("<key>CFBundleLocalizations</key>")
+            .expect("the bundle declares its languages");
+        let array = &plist[start..plist[start..].find("</array>").unwrap() + start];
+        let declared: Vec<&str> = array
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("<string>"))
+            .filter_map(|line| line.strip_suffix("</string>"))
+            .collect();
+        assert_eq!(declared, LOCALIZATIONS);
+        // Each is a language DSA has words in, and every one of DSA's languages is there.
+        use dsa_host_core::ui_language::UiLanguage;
+        let languages: std::collections::BTreeSet<UiLanguage> = declared
+            .iter()
+            .map(|tag| UiLanguage::from_tag(tag).expect(tag))
+            .collect();
+        assert_eq!(languages.len(), UiLanguage::ALL.len());
     }
 
     #[test]

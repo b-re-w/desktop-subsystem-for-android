@@ -220,9 +220,7 @@ impl Platform for MacPlatform {
     }
 
     fn recover(&mut self, stall: &Stall, packages: Vec<String>) {
-        let notice = stall
-            .notice()
-            .notification(crate::compositor::menu_bar::ui_language());
+        let notice = stall.notice().notification(crate::ui_language::current());
         if self.news.send(notice).is_err() {
             log("the notifications have ended; the user is not told that Android restarts");
         }

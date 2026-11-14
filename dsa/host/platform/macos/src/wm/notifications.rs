@@ -29,7 +29,6 @@ use dsa_host_unix::socket::UnixLocalConnector;
 use super::hosts::BUILD;
 use super::launch::AppLauncher;
 use super::log;
-use crate::compositor::menu_bar::korean;
 use crate::shell::notifications::{NotificationCenter, Response, UPDATES_URL};
 use crate::shell::pin_shortcuts::Pending;
 
@@ -168,7 +167,11 @@ pub fn show(
         .name("dsa-wm-notifications".into())
         .spawn(move || {
             let (actions, acted) = channel();
-            let center = match NotificationCenter::new(actions, icons, korean()) {
+            // The buttons of DSA's questions are named once, in the language the user reads
+            // as the window manager starts; each question's words follow the language as it is
+            // when it is asked.
+            let lang = crate::ui_language::current();
+            let center = match NotificationCenter::new(actions, icons, lang) {
                 Ok(center) => center,
                 Err(why) => {
                     log(&format!("notifications are not shown: {why}"));
@@ -197,7 +200,7 @@ pub fn show(
                     }
                 }
                 while let Ok(request) = pin_requests.try_recv() {
-                    match center.ask_pin(&request, korean()) {
+                    match center.ask_pin(&request, crate::ui_language::current()) {
                         Ok(()) => pins
                             .lock()
                             .unwrap_or_else(|e| e.into_inner())
@@ -240,10 +243,8 @@ pub fn show(
                     ask_pins(&center);
                     match stream.next(Duration::from_secs(1)) {
                         Ok(Some(NotificationEvent::Posted(notification))) => {
-                            let notification = in_user_language(
-                                notification,
-                                crate::compositor::menu_bar::ui_language(),
-                            );
+                            let notification =
+                                in_user_language(notification, crate::ui_language::current());
                             if let Err(why) = center.post(&notification) {
                                 log(&format!("a notification was not shown: {why}"));
                             } else if !is_update_key(&notification.key) {

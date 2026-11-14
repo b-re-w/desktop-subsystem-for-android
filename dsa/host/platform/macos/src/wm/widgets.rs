@@ -39,8 +39,8 @@ use super::widget_panels::{
     argb_of, button, desk_point, dpi_of_backing, force_click, key, look, menu_items, panel_frame,
     widget_level, MenuItem, COLLECTION_BEHAVIOR, DESKTOP_ICON_LEVEL_KEY, STYLE,
 };
-use crate::compositor::menu_bar::ui_language;
 use crate::objc::{class, ns_string, on_main, CGPoint, CGRect, CGSize};
+use crate::ui_language::current as ui_language;
 
 #[link(name = "CoreGraphics", kind = "framework")]
 extern "C" {

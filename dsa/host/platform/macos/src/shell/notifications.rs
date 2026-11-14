@@ -468,13 +468,13 @@ mod center {
     impl NotificationCenter {
         /// Connects to the Notification Center and asks the user, the first time, to allow
         /// DSA's notifications. What the user does with them goes to `actions`. `icons` is a
-        /// folder for the icons attached to notifications. The buttons of DSA's question are
-        /// labelled in Korean when `korean`. Fails when this process is not an application
-        /// bundle, which the Notification Center serves only.
+        /// folder for the icons attached to notifications. The buttons of DSA's questions are
+        /// labelled in `lang`. Fails when this process is not an application bundle, which
+        /// the Notification Center serves only.
         pub fn new(
             actions: Sender<Response>,
             icons: PathBuf,
-            korean: bool,
+            lang: dsa_host_core::ui_language::UiLanguage,
         ) -> Result<NotificationCenter, String> {
             unsafe {
                 let bundle_class = class(c"NSBundle")?;
@@ -511,11 +511,6 @@ mod center {
                 let asked = UpdateAlert::new(Subject::Android, AlertKind::Restart, "0").key();
                 let mutable_array_class = class(c"NSMutableArray")?;
                 let buttons: *mut AnyObject = msg_send![mutable_array_class, array];
-                let lang = if korean {
-                    dsa_host_core::ui_language::UiLanguage::Korean
-                } else {
-                    dsa_host_core::ui_language::UiLanguage::English
-                };
                 for button in buttons_of(&asked, lang) {
                     let id = ns_string(button.action);
                     let title = ns_string(&button.label);
@@ -539,7 +534,7 @@ mod center {
                 ];
                 // An app's request to pin a shortcut: [Add to desktop] and [Cancel], which
                 // also run in the background.
-                let (add_label, cancel_label) = pin_shortcuts::buttons(korean);
+                let (add_label, cancel_label) = pin_shortcuts::buttons(lang);
                 let pin_buttons: *mut AnyObject = msg_send![mutable_array_class, array];
                 for (id, title) in [
                     (pin_shortcuts::ADD, add_label),
@@ -708,9 +703,13 @@ mod center {
         }
 
         /// Asks the user about an app's request to pin a shortcut: a banner with
-        /// [Add to desktop] and [Cancel], in Korean when `korean`.
-        pub fn ask_pin(&self, request: &PinShortcutRequest, korean: bool) -> Result<(), String> {
-            let (title, body) = pin_shortcuts::texts(request, korean);
+        /// [Add to desktop] and [Cancel], in `lang`.
+        pub fn ask_pin(
+            &self,
+            request: &PinShortcutRequest,
+            lang: dsa_host_core::ui_language::UiLanguage,
+        ) -> Result<(), String> {
+            let (title, body) = pin_shortcuts::texts(request, lang);
             let identifier = pin_shortcuts::identifier(request.request_id);
             unsafe {
                 let content_class = class(c"UNMutableNotificationContent")?;
