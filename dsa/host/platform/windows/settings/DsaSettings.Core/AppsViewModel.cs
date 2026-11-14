@@ -160,9 +160,11 @@ public static class FullScreenPlaces
 /// <summary>A full screen choice the Apps page offers: what the list shows, and the choice.</summary>
 public sealed record FullScreenChoice(string Label, FullScreenPlace Place);
 
-/// <summary>Every app's window settings as dsa app-window reports them, and whether this build
-/// of Android scales an app the System (forced) way yet.</summary>
-public sealed record WindowSettingsList(IReadOnlyDictionary<string, AppWindowSetting> Apps, bool SystemForcedAvailable);
+/// <summary>Every app's window settings as dsa app-window reports them, whether this build of
+/// Android scales an app the System (forced) way yet, and the apps whose automatic choice is
+/// System: DSA's built-in list of apps that break when their density changes while they run.</summary>
+public sealed record WindowSettingsList(IReadOnlyDictionary<string, AppWindowSetting> Apps, bool SystemForcedAvailable,
+    IReadOnlySet<string>? SystemScaledByDefault = null);
 
 /// <summary>A scaling choice the Apps page offers: what the list shows, the choice, and
 /// whether it does what it says yet.</summary>
@@ -375,7 +377,19 @@ public sealed class AppsService
         // A dsa that does not say counts as one whose Android cannot do it yet.
         var forced = json.TryGetProperty("system_forced_available", out var available)
             && available.ValueKind == JsonValueKind.True;
-        return new WindowSettingsList(ReadWindowSettings(json), forced);
+        // A dsa that does not name the list has none: every app's automatic choice is App.
+        var systemScaled = new HashSet<string>();
+        if (json.TryGetProperty("system_scaled_by_default", out var listed) && listed.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var package in listed.EnumerateArray())
+            {
+                if (package.ValueKind == JsonValueKind.String && package.GetString() is { Length: > 0 } name)
+                {
+                    systemScaled.Add(name);
+                }
+            }
+        }
+        return new WindowSettingsList(ReadWindowSettings(json), forced, systemScaled);
     }
 
     private static IReadOnlyDictionary<string, AppWindowSetting> ReadWindowSettings(JsonElement json)
@@ -501,7 +515,8 @@ public sealed record AppRow(
     int RootIndex = -1,
     bool CanChangeRoot = false,
     string? RootTip = null,
-    string? RootGroupNote = null)
+    string? RootGroupNote = null,
+    IReadOnlyList<DpiScalingChoice>? DpiScalingChoices = null)
 {
     public bool NoIcon => Icon is null;
 
@@ -525,6 +540,7 @@ public sealed class AppsViewModel : ObservableObject
     private IReadOnlyList<InstalledAppInfo>? _apps;
     private IReadOnlyDictionary<string, AppWindowSetting> _windows = new Dictionary<string, AppWindowSetting>();
     private bool _systemForcedAvailable;
+    private IReadOnlySet<string> _systemScaledByDefault = new HashSet<string>();
     private string _search = "";
     private string? _highlighted;
     private string? _error;
@@ -685,6 +701,27 @@ public sealed class AppsViewModel : ObservableObject
             : new DpiScalingChoice(_text.Get($"Apps_DpiScaling_{scaling}"), scaling, true))
         .ToList();
 
+    /// <summary>The scaling choices the page offers for <paramref name="package"/>: those of
+    /// <see cref="DpiScalingChoices"/>, with the automatic one named System for an app on DSA's
+    /// built-in list of apps that break when their density changes while they run.</summary>
+    public IReadOnlyList<DpiScalingChoice> DpiScalingChoicesOf(string package)
+    {
+        var choices = DpiScalingChoices;
+        if (!SystemScaledByDefault(package))
+        {
+            return choices;
+        }
+        return choices
+            .Select(choice => choice.Scaling == DpiScaling.Auto
+                ? choice with { Label = _text.Get("Apps_DpiScaling_AutoSystem") }
+                : choice)
+            .ToList();
+    }
+
+    /// <summary>Whether DSA scales <paramref name="package"/> the System way unless the user
+    /// chose otherwise, because the app breaks when its density changes while it runs.</summary>
+    public bool SystemScaledByDefault(string package) => _systemScaledByDefault.Contains(package);
+
     /// <summary>Whether this build of Android scales an app the System (forced) way yet.</summary>
     public bool SystemForcedAvailable => _systemForcedAvailable;
 
@@ -752,7 +789,8 @@ public sealed class AppsViewModel : ObservableObject
             RootLevels.Parse(app.Root) is { } level ? (int)level : -1,
             RootLevels.Parse(app.Root) is not null,
             RootTipOf(app.Root),
-            RootGroupNoteOf(app));
+            RootGroupNoteOf(app),
+            DpiScalingChoicesOf(app.Package));
     }
 
     /// <summary>The root levels the page offers, in the order of <see cref="RootLevel"/>.</summary>
@@ -838,11 +876,13 @@ public sealed class AppsViewModel : ObservableObject
             var list = await _service.WindowSettingsAsync().ConfigureAwait(true);
             _windows = list.Apps;
             _systemForcedAvailable = list.SystemForcedAvailable;
+            _systemScaledByDefault = list.SystemScaledByDefault ?? new HashSet<string>();
         }
         catch (DsaException e) when (e.Problem == Problem.Refused)
         {
             _windows = new Dictionary<string, AppWindowSetting>();
             _systemForcedAvailable = false;
+            _systemScaledByDefault = new HashSet<string>();
         }
         return null;
     }, reload: false);
