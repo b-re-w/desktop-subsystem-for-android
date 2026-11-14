@@ -489,12 +489,204 @@ class PointerInputTest {
     }
 
     @Test
-    fun fr5_each_task_keeps_its_own_gesture() {
+    fun fr5_a_press_in_another_window_calls_off_the_one_whose_release_was_lost() {
         input.handle(event(PointerAction.POINTER_ACTION_DOWN, 1f, 1f, buttons = MotionEvent.BUTTON_PRIMARY, taskId = 7))
         input.handle(event(PointerAction.POINTER_ACTION_DOWN, 1f, 1f, buttons = MotionEvent.BUTTON_PRIMARY, taskId = 8))
+        // The release of the first press, should it come now, is too late to end anything.
+        input.handle(event(PointerAction.POINTER_ACTION_UP, 1f, 1f, taskId = 7))
+        input.handle(event(PointerAction.POINTER_ACTION_UP, 1f, 1f, taskId = 8))
 
+        assertNothingRefused()
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_CANCEL,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_BUTTON_RELEASE,
+                MotionEvent.ACTION_UP,
+            ),
+            actions(),
+        )
+        val cancel = injector.injected[2]
+        assertEquals(PointerInput.FLAG_CANCELED, cancel.flags)
+        assertEquals(101f, cancel.pointers.single().x)
         val downs = injector.injected.filter { it.action == MotionEvent.ACTION_DOWN }
         assertEquals(listOf(101f, 601f), downs.map { it.pointers.single().x })
+    }
+
+    private fun assertNothingRefused() = assertEquals(emptyList<String>(), injector.rejected.map { it.second })
+
+    private fun click(x: Float, y: Float, taskId: Int) {
+        input.handle(event(PointerAction.POINTER_ACTION_DOWN, x, y, buttons = MotionEvent.BUTTON_PRIMARY, taskId = taskId))
+        input.handle(event(PointerAction.POINTER_ACTION_UP, x, y, taskId = taskId))
+    }
+
+    @Test
+    fun fr5_moving_the_mouse_into_another_window_keeps_clicks_working() {
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 5f, 5f, taskId = 7))
+        // The host's HOVER_EXIT for the first window comes after the second window's first move.
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 20f, 30f, taskId = 8))
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_EXIT, 6f, 5f, taskId = 7))
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 21f, 30f, taskId = 8))
+        click(21f, 30f, taskId = 8)
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 22f, 30f, taskId = 8))
+        click(22f, 30f, taskId = 8)
+
+        assertNothingRefused()
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                // The hover over the first window ends where it was, before the second begins.
+                MotionEvent.ACTION_HOVER_EXIT,
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                // The late HOVER_EXIT ends nothing.
+                MotionEvent.ACTION_HOVER_MOVE,
+                MotionEvent.ACTION_HOVER_EXIT,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_BUTTON_RELEASE,
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                MotionEvent.ACTION_HOVER_EXIT,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_BUTTON_RELEASE,
+                MotionEvent.ACTION_UP,
+            ),
+            actions(),
+        )
+        assertEquals(105f to 55f, injector.injected[2].pointers.single().let { it.x to it.y })
+        assertEquals(620f to 80f, injector.injected[3].pointers.single().let { it.x to it.y })
+        val downs = injector.injected.filter { it.action == MotionEvent.ACTION_DOWN }
+        assertEquals(listOf(621f, 622f), downs.map { it.pointers.single().x })
+    }
+
+    @Test
+    fun fr5_a_click_after_a_lost_hover_exit_still_lands() {
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 5f, 5f, taskId = 7))
+        // The host's HOVER_EXIT for the first window is lost, and the second window is clicked
+        // before the mouse moves in it.
+        click(40f, 40f, taskId = 8)
+        click(41f, 40f, taskId = 8)
+
+        assertNothingRefused()
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                MotionEvent.ACTION_HOVER_EXIT,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_BUTTON_RELEASE,
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_BUTTON_RELEASE,
+                MotionEvent.ACTION_UP,
+            ),
+            actions(),
+        )
+        assertEquals(105f, injector.injected[2].pointers.single().x)
+        assertEquals(640f to 90f, injector.injected[3].pointers.single().let { it.x to it.y })
+    }
+
+    private fun seed(action: Int) {
+        assertTrue(
+            injector.inject(
+                InjectedMotion(
+                    action = action,
+                    source = InputDevice.SOURCE_MOUSE,
+                    deviceId = PointerInput.MOUSE_DEVICE,
+                    downTime = injector.now(),
+                    buttonState = 0,
+                    actionButton = 0,
+                    pointers = listOf(InjectedPointer(0, MotionEvent.TOOL_TYPE_MOUSE, 1f, 1f, 0f)),
+                ),
+            ),
+        )
+        injector.injected.clear()
+    }
+
+    @Test
+    fun fr5_a_hover_the_framework_still_holds_is_ended_and_the_hover_begins_again() {
+        // The framework holds a hover of the mouse that the agent never sent, as after the
+        // agent restarts.
+        seed(MotionEvent.ACTION_HOVER_ENTER)
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 5f, 5f))
+
+        assertEquals(
+            listOf(MotionEvent.ACTION_HOVER_EXIT, MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE),
+            actions(),
+        )
+        // A click there still lands.
+        click(5f, 5f, taskId = 7)
+        assertEquals(MotionEvent.ACTION_UP, injector.injected.last().action)
+
+        // Said once, however often it happens.
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_EXIT, 5f, 5f))
+        seed(MotionEvent.ACTION_HOVER_ENTER)
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 5f, 5f))
+        assertEquals(MotionEvent.ACTION_HOVER_MOVE, injector.injected.last().action)
+        assertEquals(1, log.lines.count { "mouse hover" in it })
+    }
+
+    @Test
+    fun fr5_a_press_the_framework_still_holds_is_called_off_and_the_click_lands() {
+        seed(MotionEvent.ACTION_DOWN)
+        click(5f, 5f, taskId = 7)
+
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_CANCEL,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_BUTTON_RELEASE,
+                MotionEvent.ACTION_UP,
+            ),
+            actions(),
+        )
+        assertEquals(1, log.lines.count { "mouse press" in it })
+    }
+
+    @Test
+    fun fr5_moving_the_pen_into_another_window_ends_its_hover_in_the_first() {
+        val pen = PointerTool.POINTER_TOOL_PEN
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 5f, 5f, tool = pen, taskId = 7))
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 20f, 30f, tool = pen, taskId = 8))
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_EXIT, 6f, 5f, tool = pen, taskId = 7))
+        input.handle(event(PointerAction.POINTER_ACTION_DOWN, 20f, 30f, tool = pen, pressure = 0.5f, taskId = 8))
+        input.handle(event(PointerAction.POINTER_ACTION_UP, 20f, 30f, tool = pen, pressure = 0.5f, taskId = 8))
+        // A finger is another device: it does not end the pen's hover, and the pen's hover
+        // does not stop the touch.
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 20f, 30f, tool = pen, taskId = 8))
+        input.handle(touch(PointerAction.POINTER_ACTION_DOWN, 1, 10f, 10f))
+        input.handle(touch(PointerAction.POINTER_ACTION_UP, 1, 10f, 10f))
+
+        assertNothingRefused()
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                MotionEvent.ACTION_HOVER_EXIT,
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                MotionEvent.ACTION_HOVER_EXIT,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_UP,
+            ),
+            actions(),
+        )
+        assertEquals(105f to 55f, injector.injected[2].pointers.single().let { it.x to it.y })
+        assertEquals(InputDevice.SOURCE_TOUCHSCREEN, injector.injected.last().source)
     }
 
     @Test
@@ -523,7 +715,40 @@ class PointerInputTest {
         input.handle(event(PointerAction.POINTER_ACTION_DOWN, 1f, 1f, buttons = MotionEvent.BUTTON_PRIMARY))
         input.retainTasks(setOf(8))
         input.handle(event(PointerAction.POINTER_ACTION_UP, 1f, 1f))
+        // The framework does not hold the mouse down where the task was: a click elsewhere lands.
+        click(1f, 1f, taskId = 8)
 
-        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_BUTTON_PRESS), actions())
+        assertNothingRefused()
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_CANCEL,
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_BUTTON_PRESS,
+                MotionEvent.ACTION_BUTTON_RELEASE,
+                MotionEvent.ACTION_UP,
+            ),
+            actions(),
+        )
+    }
+
+    @Test
+    fun fr5_a_task_that_ends_under_the_hovering_mouse_ends_the_hover() {
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 1f, 1f))
+        input.retainTasks(setOf(8))
+        input.handle(event(PointerAction.POINTER_ACTION_HOVER_MOVE, 1f, 1f, taskId = 8))
+
+        assertNothingRefused()
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+                MotionEvent.ACTION_HOVER_EXIT,
+                MotionEvent.ACTION_HOVER_ENTER,
+                MotionEvent.ACTION_HOVER_MOVE,
+            ),
+            actions(),
+        )
     }
 }

@@ -55,6 +55,8 @@ data class InjectedMotion(
     /** For ACTION_SCROLL: AXIS_VSCROLL (positive up) and AXIS_HSCROLL (positive right). */
     val vscroll: Float = 0f,
     val hscroll: Float = 0f,
+    /** MotionEvent.FLAG_*: FLAG_CANCELED on an ACTION_CANCEL, which the framework requires. */
+    val flags: Int = 0,
 )
 
 /** What puts a motion or key event into the guest's input, as a real device's would be. */
@@ -99,6 +101,17 @@ interface InputInjector {
  * - Scrolling and flinging with a finger are moves of a touch, never ACTION_SCROLL, so an
  *   app sees the drag and its speed as it would from a touchscreen.
  * - A pen's tilt is AXIS_TILT and AXIS_ORIENTATION, as the framework reads a tablet's.
+ * - Every task window is on the one guest display, and the mouse and the pen are one device
+ *   each, so each hovers or presses in one window at a time. The framework checks each
+ *   device's events: it refuses a HOVER_ENTER while the device still hovers and an
+ *   ACTION_DOWN while it still hovers or is down. So before the mouse or the pen hovers over
+ *   or presses in a window, its hover over another window ends (HOVER_EXIT where it last
+ *   was) and a press still open in another window is called off (ACTION_CANCEL). The host's
+ *   HOVER_EXIT for a window can be lost or come after the next window's first move; a late
+ *   one is ignored.
+ * - If the framework still refuses a HOVER_ENTER or an ACTION_DOWN, the hover and the press
+ *   it may hold for the device are ended and the event is sent once more, so the pointer
+ *   never stays stuck. Each kind of recovery is said once.
  *
  * Positions are relative to the task, and the task's place is where the agent last told
  * the host it is, which is where the host draws it. An event for a task the host was not
@@ -117,15 +130,22 @@ class PointerInput(
      */
     private val onNavigationKey: (taskId: Int, keyCode: Int, down: Boolean) -> Unit = { _, _, _ -> },
 ) {
+    /** The one mouse the guest sees, whichever task window it is over. */
     private class Mouse {
+        /** The task the mouse hovers over or presses in; null when it is in none. */
+        var taskId: Int? = null
         var buttons = 0
         var downTime = 0L
         var down = false
         var hovering = false
 
-        /** The back and forward buttons held, as BUTTON_BACK and BUTTON_FORWARD bits. */
-        var navigation = 0
+        /** Where the mouse last was on the display, for the event that ends its hover or press. */
+        var x = 0f
+        var y = 0f
     }
+
+    /** The pen hovering over a task window: the task, and the pen as it last hovered. */
+    private class PenHover(val taskId: Int, val source: Int, val buttons: Int, val pointer: InjectedPointer)
 
     /** A finger or a pen that is down: the task it is on, and the pointer the framework sees. */
     private class Contact(val taskId: Int, val pointer: InjectedPointer)
@@ -144,13 +164,19 @@ class PointerInput(
         }
     }
 
-    private val mice = HashMap<Int, Mouse>()
+    private val mouse = Mouse()
+
+    /** The mouse's back and forward buttons held over each task, as BUTTON_BACK and BUTTON_FORWARD bits. */
+    private val navigationHeld = HashMap<Int, Int>()
 
     /** The touch of the display going on now, whichever task windows its fingers are on. */
     private var touch: Touch? = null
-    private val penHovering = HashMap<Int, Boolean>()
+    private var penHover: PenHover? = null
     private val unknownTasks = HashSet<Int>()
     private var failing = false
+
+    /** The kinds of recovery already said, so each is said once. */
+    private val recoveries = HashSet<String>()
 
     /** Acts on one pointer event from the host. */
     fun handle(event: PointerEvent) {
@@ -179,7 +205,16 @@ class PointerInput(
 
     /** Forgets the gestures of every task not in [taskIds], as tasks end. */
     fun retainTasks(taskIds: Set<Int>) {
-        mice.keys.retainAll(taskIds)
+        // The mouse over a task that ended leaves it: its press is called off and its hover
+        // ends, so the framework does not hold the mouse down or hovering where nothing is.
+        mouse.taskId?.let { taskId ->
+            if (taskId !in taskIds) {
+                cancelMousePress()
+                endMouseHover()
+                mouse.taskId = null
+            }
+        }
+        navigationHeld.keys.retainAll(taskIds)
         touch?.let { gesture ->
             // A finger on a task that ended has nowhere to lift: the touch is called off, so
             // the next one begins cleanly.
@@ -188,55 +223,96 @@ class PointerInput(
                 touch = null
             }
         }
-        penHovering.keys.retainAll(taskIds)
+        penHover?.let { hover -> if (hover.taskId !in taskIds) endPenHover() }
         unknownTasks.removeAll(taskIds)
     }
 
+    /** A motion of the mouse at ([x], [y]) on the display. */
+    private fun mouseMotion(
+        action: Int,
+        buttons: Int,
+        x: Float,
+        y: Float,
+        pressure: Float = 0f,
+        actionButton: Int = 0,
+        vscroll: Float = 0f,
+        hscroll: Float = 0f,
+    ) = InjectedMotion(
+        action = action,
+        source = InputDevice.SOURCE_MOUSE,
+        deviceId = MOUSE_DEVICE,
+        downTime = if (mouse.down) mouse.downTime else injector.now(),
+        buttonState = buttons,
+        actionButton = actionButton,
+        pointers = listOf(InjectedPointer(0, MotionEvent.TOOL_TYPE_MOUSE, x, y, pressure)),
+        vscroll = vscroll,
+        hscroll = hscroll,
+        flags = if (action == MotionEvent.ACTION_CANCEL) FLAG_CANCELED else 0,
+    )
+
+    /** Ends the mouse's hover, where it last was, whichever window that was in. */
+    private fun endMouseHover() {
+        if (!mouse.hovering) return
+        mouse.hovering = false
+        inject(mouseMotion(MotionEvent.ACTION_HOVER_EXIT, 0, mouse.x, mouse.y))
+    }
+
+    /** Calls off a press of the mouse still open, where the mouse last was. */
+    private fun cancelMousePress() {
+        if (!mouse.down) return
+        inject(mouseMotion(MotionEvent.ACTION_CANCEL, 0, mouse.x, mouse.y))
+        mouse.down = false
+        mouse.buttons = 0
+    }
+
     private fun mouse(event: PointerEvent, x: Float, y: Float) {
-        val mouse = mice.getOrPut(event.taskId) { Mouse() }
+        val taskId = event.taskId
         val pressure = event.pressure.coerceIn(0f, 1f)
+        fun motion(action: Int, buttons: Int, actionButton: Int = 0, vscroll: Float = 0f, hscroll: Float = 0f) =
+            mouseMotion(action, buttons, x, y, pressure, actionButton, vscroll, hscroll)
         fun send(action: Int, buttons: Int, actionButton: Int = 0, vscroll: Float = 0f, hscroll: Float = 0f) {
-            inject(
-                InjectedMotion(
-                    action = action,
-                    source = InputDevice.SOURCE_MOUSE,
-                    deviceId = MOUSE_DEVICE,
-                    downTime = if (mouse.down) mouse.downTime else injector.now(),
-                    buttonState = buttons,
-                    actionButton = actionButton,
-                    pointers = listOf(InjectedPointer(0, MotionEvent.TOOL_TYPE_MOUSE, x, y, pressure)),
-                    vscroll = vscroll,
-                    hscroll = hscroll,
-                ),
-            )
-        }
-        fun stopHovering() {
-            if (mouse.hovering) {
-                mouse.hovering = false
-                send(MotionEvent.ACTION_HOVER_EXIT, 0)
-            }
+            inject(motion(action, buttons, actionButton, vscroll, hscroll))
         }
         val wanted = event.buttons and MOUSE_BUTTONS
+        val held = navigationHeld[taskId] ?: 0
         val navigation = when (event.action) {
             PointerAction.POINTER_ACTION_UP, PointerAction.POINTER_ACTION_CANCEL -> 0
-            PointerAction.POINTER_ACTION_SCROLL -> mouse.navigation
+            PointerAction.POINTER_ACTION_SCROLL -> held
             else -> event.buttons and NAVIGATION_BUTTONS
         }
         for ((button, keyCode) in NAVIGATION_KEYS) {
-            val before = mouse.navigation and button != 0
+            val before = held and button != 0
             val now = navigation and button != 0
-            if (before != now) onNavigationKey(event.taskId, keyCode, now)
+            if (before != now) onNavigationKey(taskId, keyCode, now)
         }
-        mouse.navigation = navigation
+        if (navigation == 0) navigationHeld.remove(taskId) else navigationHeld[taskId] = navigation
+        // Whether the mouse's hover or press is in this event's window.
+        val here = mouse.taskId == taskId
         fun begin() {
-            stopHovering()
+            // The mouse presses in one window at a time: a press still open in another window
+            // lost its release, and a hover anywhere ends before the press.
+            cancelMousePress()
+            endMouseHover()
+            mouse.taskId = taskId
+            mouse.x = x
+            mouse.y = y
             mouse.down = true
             mouse.downTime = injector.now()
             mouse.buttons = wanted
-            send(MotionEvent.ACTION_DOWN, wanted)
+            injectRecovering(
+                motion(MotionEvent.ACTION_DOWN, wanted),
+                "the framework would not start a mouse press; ending the hover and the press it may still " +
+                    "hold for the mouse and pressing again",
+                listOf(
+                    mouseMotion(MotionEvent.ACTION_HOVER_EXIT, 0, x, y),
+                    mouseMotion(MotionEvent.ACTION_CANCEL, 0, x, y),
+                ),
+            )
             pressButtons(0, wanted) { button, state -> send(MotionEvent.ACTION_BUTTON_PRESS, state, button) }
         }
         fun end() {
+            mouse.x = x
+            mouse.y = y
             releaseButtons(mouse.buttons, 0) { button, state -> send(MotionEvent.ACTION_BUTTON_RELEASE, state, button) }
             send(MotionEvent.ACTION_UP, 0)
             mouse.down = false
@@ -244,26 +320,47 @@ class PointerInput(
         }
         when (event.action) {
             PointerAction.POINTER_ACTION_HOVER_MOVE -> {
-                if (mouse.down) return
+                if (mouse.down) {
+                    if (here) return
+                    // A press in another window whose release was lost: the mouse is here now.
+                    cancelMousePress()
+                }
+                // The host's HOVER_EXIT for the window the mouse left may be lost or late.
+                if (!here) endMouseHover()
+                mouse.taskId = taskId
+                mouse.x = x
+                mouse.y = y
                 if (!mouse.hovering) {
                     mouse.hovering = true
-                    send(MotionEvent.ACTION_HOVER_ENTER, 0)
+                    injectRecovering(
+                        motion(MotionEvent.ACTION_HOVER_ENTER, 0),
+                        "the framework would not start a mouse hover; ending the hover it may still hold for " +
+                            "the mouse and hovering again",
+                        listOf(mouseMotion(MotionEvent.ACTION_HOVER_EXIT, 0, x, y)),
+                    )
                 }
                 send(MotionEvent.ACTION_HOVER_MOVE, 0)
             }
-            PointerAction.POINTER_ACTION_HOVER_EXIT -> if (!mouse.down) stopHovering()
+            // A HOVER_EXIT for a window the mouse has already left is late, and ends nothing.
+            PointerAction.POINTER_ACTION_HOVER_EXIT -> if (here && !mouse.down && mouse.hovering) {
+                mouse.x = x
+                mouse.y = y
+                endMouseHover()
+            }
             PointerAction.POINTER_ACTION_DOWN -> {
                 // Back or forward alone is a key, and presses nothing under the pointer.
-                if (mouse.down || wanted == 0) return
+                if (wanted == 0 || (mouse.down && here)) return
                 begin()
             }
             PointerAction.POINTER_ACTION_MOVE -> {
                 // The host's press began with back or forward: the pointer's own press starts
                 // with the first other button, and ends when the last of them is let go.
-                if (!mouse.down) {
+                if (!mouse.down || !here) {
                     if (wanted != 0) begin()
                     return
                 }
+                mouse.x = x
+                mouse.y = y
                 if (wanted == 0) {
                     end()
                     return
@@ -278,17 +375,19 @@ class PointerInput(
                 releaseButtons(before, wanted) { button, state -> send(MotionEvent.ACTION_BUTTON_RELEASE, state, button) }
             }
             PointerAction.POINTER_ACTION_UP -> {
-                if (!mouse.down) return
+                if (!mouse.down || !here) return
                 end()
             }
             PointerAction.POINTER_ACTION_CANCEL -> {
-                if (!mouse.down) return
+                if (!mouse.down || !here) return
                 send(MotionEvent.ACTION_CANCEL, 0)
                 mouse.down = false
                 mouse.buttons = 0
             }
-            PointerAction.POINTER_ACTION_SCROLL ->
-                send(MotionEvent.ACTION_SCROLL, mouse.buttons, vscroll = event.scrollY, hscroll = event.scrollX)
+            PointerAction.POINTER_ACTION_SCROLL -> {
+                val buttons = if (mouse.down && here) mouse.buttons else 0
+                send(MotionEvent.ACTION_SCROLL, buttons, vscroll = event.scrollY, hscroll = event.scrollX)
+            }
             else -> log.warn("dropped pointer input with an action the agent does not know (${event.actionValue})")
         }
     }
@@ -315,16 +414,34 @@ class PointerInput(
         }
     }
 
+    private fun touchMotion(gesture: Touch, action: Int, buttons: Int) = InjectedMotion(
+        action = action,
+        source = gesture.source,
+        deviceId = gesture.deviceId,
+        downTime = gesture.downTime,
+        buttonState = buttons,
+        actionButton = 0,
+        pointers = gesture.ordered(),
+        flags = if (action == MotionEvent.ACTION_CANCEL) FLAG_CANCELED else 0,
+    )
+
     private fun sendTouch(gesture: Touch, action: Int, buttons: Int) {
+        inject(touchMotion(gesture, action, buttons))
+    }
+
+    /** Ends the pen's hover, where it last hovered, whichever window that was over. */
+    private fun endPenHover() {
+        val hover = penHover ?: return
+        penHover = null
         inject(
             InjectedMotion(
-                action = action,
-                source = gesture.source,
-                deviceId = gesture.deviceId,
-                downTime = gesture.downTime,
-                buttonState = buttons,
+                action = MotionEvent.ACTION_HOVER_EXIT,
+                source = hover.source,
+                deviceId = PEN_DEVICE,
+                downTime = injector.now(),
+                buttonState = hover.buttons,
                 actionButton = 0,
-                pointers = gesture.ordered(),
+                pointers = listOf(hover.pointer),
             ),
         )
     }
@@ -337,19 +454,16 @@ class PointerInput(
         val (tilt, orientation) =
             if (source == InputDevice.SOURCE_STYLUS) penTilt(event.tiltX, event.tiltY) else 0f to 0f
         fun pointer(id: Int, pressure: Float) = InjectedPointer(id, toolType, x, y, pressure, tilt, orientation)
-        fun hover(action: Int) {
-            inject(
-                InjectedMotion(
-                    action = action,
-                    source = source,
-                    deviceId = deviceId,
-                    downTime = injector.now(),
-                    buttonState = buttons,
-                    actionButton = 0,
-                    pointers = listOf(pointer(0, 0f)),
-                ),
-            )
-        }
+        fun hoverMotion(action: Int) = InjectedMotion(
+            action = action,
+            source = source,
+            deviceId = deviceId,
+            downTime = injector.now(),
+            buttonState = buttons,
+            actionButton = 0,
+            pointers = listOf(pointer(0, 0f)),
+        )
+        val pen = deviceId == PEN_DEVICE
         // The touch this event belongs to, and the contact it moves or lifts at its new place;
         // null when the pointer is not down.
         val held = gesture?.takeIf { it.source == source }?.let { current ->
@@ -360,11 +474,27 @@ class PointerInput(
         when (event.action) {
             PointerAction.POINTER_ACTION_DOWN -> {
                 if (gesture == null) {
-                    if (penHovering.remove(taskId) == true) hover(MotionEvent.ACTION_HOVER_EXIT)
+                    // The pen touches down from its hover, wherever it hovered; a finger is
+                    // another device, and leaves the pen's hover alone.
+                    if (pen) endPenHover()
                     val started = Touch(source, deviceId, injector.now())
                     started.pointers[event.pointerId] = Contact(taskId, pointer(0, pressure))
                     touch = started
-                    sendTouch(started, MotionEvent.ACTION_DOWN, buttons)
+                    val clear = listOfNotNull(
+                        if (pen) hoverMotion(MotionEvent.ACTION_HOVER_EXIT) else null,
+                        touchMotion(started, MotionEvent.ACTION_CANCEL, buttons),
+                    )
+                    injectRecovering(
+                        touchMotion(started, MotionEvent.ACTION_DOWN, buttons),
+                        if (pen) {
+                            "the framework would not start a pen touch; ending the hover and the touch it may " +
+                                "still hold for the pen and touching again"
+                        } else {
+                            "the framework would not start a touch; calling off the touch it may still hold " +
+                                "and touching again"
+                        },
+                        clear,
+                    )
                 } else {
                     // One touch comes from one device; a pen while fingers are down waits.
                     if (gesture.source != source || event.pointerId in gesture.pointers) return
@@ -396,15 +526,25 @@ class PointerInput(
                 touch = null
             }
             PointerAction.POINTER_ACTION_HOVER_MOVE -> {
-                if (gesture != null || source != InputDevice.SOURCE_STYLUS) return
-                if (penHovering[taskId] != true) {
-                    penHovering[taskId] = true
-                    hover(MotionEvent.ACTION_HOVER_ENTER)
+                if (gesture != null || !pen) return
+                // The pen hovers over one window at a time; the host's HOVER_EXIT for the
+                // window it left may be lost or late.
+                if (penHover?.taskId != taskId) endPenHover()
+                if (penHover == null) {
+                    injectRecovering(
+                        hoverMotion(MotionEvent.ACTION_HOVER_ENTER),
+                        "the framework would not start a pen hover; ending the hover it may still hold for " +
+                            "the pen and hovering again",
+                        listOf(hoverMotion(MotionEvent.ACTION_HOVER_EXIT)),
+                    )
                 }
-                hover(MotionEvent.ACTION_HOVER_MOVE)
+                penHover = PenHover(taskId, source, buttons, pointer(0, 0f))
+                inject(hoverMotion(MotionEvent.ACTION_HOVER_MOVE))
             }
-            PointerAction.POINTER_ACTION_HOVER_EXIT -> {
-                if (penHovering.remove(taskId) == true) hover(MotionEvent.ACTION_HOVER_EXIT)
+            // A HOVER_EXIT for a window the pen has already left is late, and ends nothing.
+            PointerAction.POINTER_ACTION_HOVER_EXIT -> if (pen && penHover?.taskId == taskId) {
+                penHover = PenHover(taskId, source, buttons, pointer(0, 0f))
+                endPenHover()
             }
             // A finger scrolls by moving; only a mouse's wheel is a scroll.
             PointerAction.POINTER_ACTION_SCROLL -> Unit
@@ -419,13 +559,14 @@ class PointerInput(
         return action or (index shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
     }
 
-    private fun inject(motion: InjectedMotion) {
+    /** Sends [motion]; false when the framework refused it. */
+    private fun inject(motion: InjectedMotion): Boolean {
         val injected = try {
             injector.inject(motion)
         } catch (e: RuntimeException) {
             if (!failing) log.warn("the framework refused pointer input", e)
             failing = true
-            return
+            return false
         }
         if (!injected) {
             if (!failing) log.warn("the framework refused pointer input")
@@ -433,6 +574,26 @@ class PointerInput(
         } else {
             failing = false
         }
+        return injected
+    }
+
+    /**
+     * Sends [motion], which starts a hover or a press. When the framework refuses it, the
+     * events in [clear] end what it may still hold for the device, and [motion] goes once
+     * more, so the device never stays stuck. [what] says so, once for each kind.
+     */
+    private fun injectRecovering(motion: InjectedMotion, what: String, clear: List<InjectedMotion>) {
+        if (inject(motion)) return
+        if (recoveries.add(what)) log.warn(what)
+        // Each of these is refused when the framework holds nothing for it, which is fine.
+        for (ending in clear) {
+            try {
+                injector.inject(ending)
+            } catch (e: RuntimeException) {
+                // Nothing to end, or nothing the framework takes now; the retry says which.
+            }
+        }
+        inject(motion)
     }
 
     companion object {
@@ -441,6 +602,9 @@ class PointerInput(
         const val MOUSE_DEVICE = 0x44534101
         const val TOUCH_DEVICE = 0x44534102
         const val PEN_DEVICE = 0x44534103
+
+        /** MotionEvent.FLAG_CANCELED, which marks an ACTION_CANCEL as one. */
+        const val FLAG_CANCELED = 0x20
 
         /** The most pointers one MotionEvent carries (the framework's MAX_POINTERS). */
         const val MAX_POINTERS = 16
