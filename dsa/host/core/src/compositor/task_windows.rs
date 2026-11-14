@@ -1446,6 +1446,28 @@ mod tests {
     }
 
     #[test]
+    fn fr6_a_focused_editor_in_a_freeform_task_reaches_the_host_ime() {
+        // The guest may name no task focused while an app's editor has its input method (the
+        // window manager of Android 17 with every task freeform did): the editor still goes to
+        // the task's window, which composes in it.
+        let mut windows = TaskWindows::new();
+        let editor = crate::ime::ImeEditor {
+            kind: crate::ime::InputKind::Search,
+            ..crate::ime::ImeEditor::default()
+        };
+        let described = TaskEvent::ImeEditor {
+            task_id: 1,
+            editor: editor.clone(),
+        };
+        assert!(windows.apply(&described).is_empty(), "no window yet");
+        windows.apply(&updated(1, "Spotify"));
+        assert_eq!(
+            windows.apply(&described),
+            vec![WindowChange::ImeEditor { task_id: 1, editor }]
+        );
+    }
+
+    #[test]
     fn fr3_two_apps_get_two_windows() {
         let mut windows = TaskWindows::new();
         assert_eq!(

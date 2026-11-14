@@ -494,13 +494,18 @@ so the manager selects it on its own too.
   replaces the last, and an empty one removes it. A commit (`ImeCommit`) replaces the
   composition, which ends (`input/TextInput.kt`).
 - Before text goes to a task that does not hold the input focus, the agent focuses it, as
-  for a key.
+  for a key, unless that task's editor has the input method already.
 - Where no editor takes text (a game, or a view that reads keys itself), committed text is
   injected as the virtual keyboard's keys for each character, so typing still works there.
   A composition there has nowhere to go and is dropped.
-- The input method asks every editor it is bound to for cursor updates, and the agent tells
-  the host where the cursor is in the focused task (`ImeCursor`), once for each place it
-  moves to.
+- The editor (`ImeEditor`) and its cursor (`ImeCursor`) go to the host for the task the
+  editor is in, once for each state and each place the cursor moves to. That task is the one
+  of the editor's app (from its `EditorInfo`), not only the task the window manager names
+  focused: Android 17 named no focused task at all while every task was freeform and an app's
+  search field had the input method, and an editor told to no task left the host's window
+  with nothing to compose in. Among several tasks of one app it is the focused one, else the
+  one the host last sent input to. A task whose editor takes text without the focus is given
+  it, once.
 
 ## Web links
 
