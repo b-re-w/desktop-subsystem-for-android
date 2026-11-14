@@ -850,12 +850,46 @@ fn fr3_dsa_launch_asks_the_users_android_to_start_the_app() {
     let output = dsa(&endpoint, "launch com.example.clock");
     assert!(output.status.success(), "{}", stderr(&output));
     assert_eq!(stdout(&output), "Launching com.example.clock");
+    // The monitor the window opens on may go first, so the app starts at its density.
+    let asked: Vec<TaskRequest> = androids
+        .of(&user)
+        .unwrap()
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|request| !matches!(request, TaskRequest::PlaceLaunches(_)))
+        .cloned()
+        .collect();
     assert_eq!(
-        *androids.of(&user).unwrap().requests.lock().unwrap(),
+        asked,
         vec![TaskRequest::Launch {
             package_name: "com.example.clock".into()
         }]
     );
+}
+
+#[test]
+fn fr4_dsa_launch_names_the_monitor_the_window_opens_on_before_it_starts_the_app() {
+    use dsa_host_core::tasks::TaskRequest;
+    let ((listener, _, user), endpoint) = local_pair();
+    let androids = Arc::new(FakeAndroids::default());
+    let _service = RunningService::start(listener, androids.clone());
+    assert!(dsa(&endpoint, "start").status.success());
+
+    assert!(dsa(&endpoint, "launch com.example.clock").status.success());
+    let requests = androids.of(&user).unwrap().requests.lock().unwrap().clone();
+    let launch = requests
+        .iter()
+        .position(|request| matches!(request, TaskRequest::Launch { .. }))
+        .expect("the launch");
+    // Where a session has a pointer and a monitor, the placement comes right before the launch.
+    if cfg!(windows) && launch > 0 {
+        assert!(matches!(
+            requests[launch - 1],
+            TaskRequest::PlaceLaunches(placement) if placement.density_dpi >= 130
+        ));
+    }
 }
 
 #[test]

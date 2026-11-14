@@ -56,23 +56,25 @@ use dsa_host_core::compositor::window_mode::{
     caption_revealed, picture_in_picture_place, ModeState, WindowMode,
 };
 use dsa_host_core::compositor::window_sizing::{
-    maximized_outer, maximized_position, min_client_size, rescaled_rect, size_is_held,
-    to_task_position, to_task_size, to_window_position, SizeProposal,
+    launch_placement as placement_on, maximized_outer, maximized_position, min_client_size,
+    rescaled_rect, size_is_held, to_task_position, to_task_size, to_window_position, SizeProposal,
 };
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::ime::ImeCursor;
 use dsa_host_core::input::InputEvent;
+use dsa_host_core::tasks::LaunchPlacement;
 use windows_sys::Win32::Foundation::{
     GetLastError, ERROR_CLASS_ALREADY_EXISTS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM,
 };
 use windows_sys::Win32::Graphics::Gdi::ScreenToClient;
 use windows_sys::Win32::Graphics::Gdi::{
-    BeginPaint, EndPaint, GetMonitorInfoW, MonitorFromRect, MonitorFromWindow, MONITORINFO,
-    MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
+    BeginPaint, EndPaint, GetMonitorInfoW, MonitorFromPoint, MonitorFromRect, MonitorFromWindow,
+    MONITORINFO, MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
 };
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::HiDpi::{
-    GetDpiForWindow, SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
+    GetDpiForMonitor, GetDpiForWindow, SetProcessDpiAwarenessContext, SetThreadDpiAwarenessContext,
+    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, MDT_EFFECTIVE_DPI,
 };
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_F11;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -1509,6 +1511,100 @@ unsafe fn window_work_area(hwnd: HWND) -> Option<RECT> {
     (GetMonitorInfoW(monitor, &mut info) != 0).then_some(info.rcWork)
 }
 
+/// The monitor a new task window opens on: its work area, its whole area, and its DPI.
+#[derive(Clone, Copy)]
+struct OpeningMonitor {
+    work: RECT,
+    monitor: RECT,
+    dpi: u32,
+}
+
+/// The monitor a new task window opens on: the one the pointer is on. A program started from
+/// the Start menu, the taskbar or a desktop shortcut opens where the user clicked, and an app
+/// that one app opens from another opens where the user clicked in it. The window manager
+/// reads it before it has Android start a task ([`launch_placement`]), and the window opens
+/// there ([`opening_position`]), so the task starts at that monitor's density and size and the
+/// window takes it 1:1.
+fn opening_monitor() -> Option<OpeningMonitor> {
+    // SAFETY: plain calls; the out pointers are locals. The thread asks as a per-monitor
+    // aware one, so rectangles and DPI are the monitor's own pixels, and goes back.
+    unsafe {
+        let previous = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        let mut pointer = POINT { x: 0, y: 0 };
+        let found = if GetCursorPos(&mut pointer) != 0 {
+            let monitor = MonitorFromPoint(pointer, MONITOR_DEFAULTTONEAREST);
+            let mut info: MONITORINFO = std::mem::zeroed();
+            info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+            let (mut x, mut y) = (0u32, 0u32);
+            let dpi = if GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &mut x, &mut y) == 0 {
+                x.max(96)
+            } else {
+                96
+            };
+            (!monitor.is_null() && GetMonitorInfoW(monitor, &mut info) != 0).then_some(
+                OpeningMonitor {
+                    work: info.rcWork,
+                    monitor: info.rcMonitor,
+                    dpi,
+                },
+            )
+        } else {
+            None
+        };
+        SetThreadDpiAwarenessContext(previous);
+        found
+    }
+}
+
+/// The monitor the window of the next task opens on, as Android needs it to start that task at
+/// the monitor's density and size: `None` when the pointer's monitor cannot be read, and
+/// Android then starts the task at its own.
+pub fn launch_placement() -> Option<LaunchPlacement> {
+    let opening = opening_monitor()?;
+    let length = |rect: &RECT| {
+        (
+            (rect.right - rect.left).max(0) as u32,
+            (rect.bottom - rect.top).max(0) as u32,
+        )
+    };
+    // SAFETY: a plain call on the task window's style.
+    let frame = unsafe { outer_size((0, 0), opening.dpi, false) };
+    Some(placement_on(
+        opening.dpi,
+        length(&opening.work),
+        (frame.0.max(0) as u32, frame.1.max(0) as u32),
+        length(&opening.monitor),
+    ))
+}
+
+/// Where a new task window with a client area of `client` pixels goes, its outer rectangle:
+/// on the monitor the pointer is on ([`opening_monitor`]), at the monitor's DPI, so the window
+/// is on that monitor from the moment it exists and its task's density is already that
+/// monitor's. Each window the program has open moves the next one down and to the right, as
+/// Windows cascades new windows, so two windows never open exactly on top of each other.
+/// `None` when the monitor cannot be read; the desktop places the window then.
+unsafe fn opening_position(client: (u32, u32), open: usize) -> Option<(i32, i32, i32, i32)> {
+    let opening = opening_monitor()?;
+    let work = opening.work;
+    let area = (
+        (work.right - work.left).max(1) as u32,
+        (work.bottom - work.top).max(1) as u32,
+    );
+    let (frame_width, frame_height) = outer_size((0, 0), opening.dpi, false);
+    let room = (
+        area.0.saturating_sub(frame_width.max(0) as u32).max(1),
+        area.1.saturating_sub(frame_height.max(0) as u32).max(1),
+    );
+    let (width, height) = outer_size(fit_within(client, room), opening.dpi, false);
+    let step = (32 * opening.dpi / 96) as i32 * (open % 8) as i32;
+    let x = maximized_position(work.left, work.right - work.left, width, 0) + step;
+    let y = maximized_position(work.top, work.bottom - work.top, height, 0) + step;
+    // A cascaded window stays on its monitor.
+    let x = x.min(work.right - width).max(work.left);
+    let y = y.min(work.bottom - height).max(work.top);
+    Some((x, y, width, height))
+}
+
 /// Sizes and places `hwnd` for itself, not as the user: a fixed-size window takes it too.
 unsafe fn place_self(hwnd: HWND, after: HWND, rect: (i32, i32, i32, i32), flags: u32) {
     let data = window_data(hwnd);
@@ -2028,15 +2124,23 @@ impl Ui {
             thumb_bar: super::thumb_bar::ThumbBar::new(),
         }));
         let class = wide(TASK_CLASS);
+        // On the monitor the window manager had Android start the task for, so the window
+        // opens at the task's density there, 1:1, and is never moved to another scale first.
+        let (x, y, width, height) = opening_position(size, self.open.len()).unwrap_or((
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+        ));
         let hwnd = CreateWindowExW(
             TASK_EX_STYLE,
             class.as_ptr(),
             wide(title).as_ptr(),
             TASK_STYLE,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
+            x,
+            y,
+            width,
+            height,
             std::ptr::null_mut(),
             std::ptr::null_mut(),
             GetModuleHandleW(std::ptr::null()),

@@ -278,6 +278,33 @@ message SetTaskDensity {
   bool recreate = 3;
 }
 
+// Host to guest: the monitor the window of the next task opens on, so that the task starts at
+// that monitor's density and its size there from its first frame, and its app is never
+// relaunched for a new density right after it opens. The host sends it before each request
+// that starts a task (LaunchApp, LaunchShortcut, OpenAppSettings) and whenever the monitor new
+// windows open on changes; the latest one counts.
+//
+// The agent gives every task it starts on the host's behalf from then on, a notification's tap
+// and a file the host opens included, `density_dpi`, and the size Android picks for the task
+// in density-independent pixels at that density, kept within `width` by `height`. An activity
+// that asks for the whole screen gets `monitor_width` by `monitor_height`. It does so in one
+// change as soon as the framework has created the task, before the app's activity exists when
+// the app's process has to start. A task an app starts by itself in a new task gets the density
+// of the task that had focus, whose window it opens from, at the size Android picks.
+//
+// A `density_dpi` of 0 sends no monitor: tasks start at Android's own density and size.
+message LaunchPlacement {
+  // The density apps draw at on the monitor (130 at a scale of 100%).
+  uint32 density_dpi = 1;
+  // The largest client area a window has on the monitor: its work area less the window's
+  // frame, in pixels, which are the guest's display pixels.
+  uint32 width = 2;
+  uint32 height = 3;
+  // The whole monitor, in pixels, for an app that fills it.
+  uint32 monitor_width = 4;
+  uint32 monitor_height = 5;
+}
+
 // Host to guest: the task's window draws its title bar over the top `height` pixels of the
 // task (guest display pixels, which are the window's). The agent gives the task a top system
 // bar inset of that height (status bars, system bars and caption bar), so the app keeps its
@@ -3353,5 +3380,6 @@ message Envelope {
     HostCertificates host_certificates = 684;
     DnsQuery dns_query = 690;
     DnsAnswer dns_answer = 691;
+    LaunchPlacement launch_placement = 710;
   }
 }

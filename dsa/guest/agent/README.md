@@ -320,6 +320,19 @@ that say they handle a density lay out only part of their screen again at the ne
 activity that does not say so is recreated by Android when its density changes, so the agent
 asks for nothing more. A task not seen at the density within two seconds is left as it is.
 
+**A new task starts on its window's monitor.** `LaunchPlacement` names the monitor the window
+of the next task opens on: its density, the largest client area a window has there, and the
+whole monitor. The host sends it before every request that starts a task. As soon as the
+agent sees a task it did not see before, it gives the task that density and the size Android
+chose for it in dp, at that density and within the room on the monitor (the whole monitor for
+an activity that asks to fill the screen), in the same one transaction. For an app whose
+process has to start, that happens before its activity exists, so its first frame is drawn at
+the monitor's density and Android never relaunches it for a new density right after it opens.
+A task that appears more than 10 seconds after the host named a monitor (an app started
+another app in a new task) gets the density of the task that had focus, whose window it opens
+from. Until the task is seen at its density it is reported at it, with the bounds it is going
+to, so the host opens its window at that size 1:1.
+
 **While the user drags.** A `ResizeTask` with `live` set is a step of a drag that has not
 ended. A new size changes the task's screen size in dp, and with it the orientation, the
 screen layout and the smallest width, so the window manager relaunches the app's

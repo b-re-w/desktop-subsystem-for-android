@@ -3771,6 +3771,20 @@ fn bundle_device(client: Option<&mut HostApiClient>) -> Device {
     )
 }
 
+/// Tells Android which monitor the app's window opens on (the one under the pointer, as the
+/// window opens there), so the app starts at that monitor's density and size and is not
+/// relaunched right after it opens. A monitor that cannot be read, or an older service that
+/// does not take it, leaves Android to its own density: the launch goes ahead either way.
+#[cfg(windows)]
+fn place_launch(client: &mut HostApiClient) {
+    if let Some(placement) = dsa_host_windows::app_window::window::launch_placement() {
+        let _ = client.place_launches(&placement);
+    }
+}
+
+#[cfg(not(windows))]
+fn place_launch(_client: &mut HostApiClient) {}
+
 #[cfg(windows)]
 fn host_density() -> u32 {
     dsa_host_windows::monitors::system_density()
@@ -5212,6 +5226,7 @@ pub fn run_with_starter(
         Command::Update => return update(invocation, client, connector),
         Command::Launch => {
             let package = invocation.package.as_deref().unwrap_or_default();
+            place_launch(&mut client);
             if invocation.wait_first_frame {
                 return launch_and_wait_first_frame(invocation, client, package);
             }
