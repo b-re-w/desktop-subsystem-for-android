@@ -21,7 +21,11 @@
 //! `%LOCALAPPDATA%\DSA`) and only ever changes or removes those: a shortcut it did not make is
 //! never touched. The one exception is a taskbar pin, Windows' copy of an app's shortcut,
 //! which keeps the app's AppUserModelID: when it runs another program in the app's folder (one
-//! an earlier release renamed with the app, now gone), it is pointed at the app's program again.
+//! of the app's older names), it is pointed at the app's program.
+//!
+//! An app's program is named after the app, so a renamed app gets a program of its new name.
+//! Its Start menu shortcut, desktop shortcuts and taskbar pins are pointed at the new program
+//! in the same step, before the program of the old name is removed ([`follow_program`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -190,35 +194,62 @@ impl StartMenu {
             }
         }
         for entry in entries {
-            let ours: BTreeSet<String> = note
-                .shortcuts
-                .iter()
-                .filter(|(package, _)| **package != entry.package)
-                .map(|(_, file)| file.to_lowercase())
-                .collect();
-            let current = note.shortcuts.get(&entry.package).cloned();
-            let Some(file) = self.file_name(entry, current.as_deref(), &ours) else {
-                problems.push(format!(
-                    "{}'s shortcut is not made: other programs' shortcuts have its name",
-                    entry.package
-                ));
-                continue;
-            };
-            let path = self.dir.join(&file);
-            let shortcut = entry.shortcut();
-            if shortcuts.read(&path).ok().as_ref() != Some(&shortcut) {
-                if let Err(why) = shortcuts.write(&path, &shortcut) {
-                    problems.push(format!(
-                        "could not make {}'s shortcut: {why}",
-                        entry.package
-                    ));
-                    continue;
-                }
+            if let Err(why) = self.put(&mut note, entry, shortcuts) {
+                problems.push(why);
             }
-            if let Some(old) = current.filter(|old| !old.eq_ignore_ascii_case(&file)) {
-                let _ = remove(&self.dir.join(old));
-            }
-            note.shortcuts.insert(entry.package.clone(), file);
+        }
+        if let Err(why) = self.save(&note) {
+            problems.push(why);
+        }
+        problems
+    }
+
+    /// Makes `entry`'s shortcut, named after the app and running its program, in place of the
+    /// one `note` records for it, and records it.
+    fn put(
+        &self,
+        note: &mut Note,
+        entry: &MenuEntry,
+        shortcuts: &dyn Shortcuts,
+    ) -> Result<(), String> {
+        let ours: BTreeSet<String> = note
+            .shortcuts
+            .iter()
+            .filter(|(package, _)| **package != entry.package)
+            .map(|(_, file)| file.to_lowercase())
+            .collect();
+        let current = note.shortcuts.get(&entry.package).cloned();
+        let Some(file) = self.file_name(entry, current.as_deref(), &ours) else {
+            return Err(format!(
+                "{}'s shortcut is not made: other programs' shortcuts have its name",
+                entry.package
+            ));
+        };
+        let path = self.dir.join(&file);
+        let shortcut = entry.shortcut();
+        if shortcuts.read(&path).ok().as_ref() != Some(&shortcut) {
+            shortcuts
+                .write(&path, &shortcut)
+                .map_err(|why| format!("could not make {}'s shortcut: {why}", entry.package))?;
+        }
+        if let Some(old) = current.filter(|old| !old.eq_ignore_ascii_case(&file)) {
+            let _ = remove(&self.dir.join(old));
+        }
+        note.shortcuts.insert(entry.package.clone(), file);
+        Ok(())
+    }
+
+    /// Brings the app's shortcut in step with `entry`, its program renamed with the app, when
+    /// one was made for it; the shortcuts of the other apps stay as they are. Returns what went
+    /// wrong, one sentence each.
+    pub fn follow(&self, entry: &MenuEntry, shortcuts: &dyn Shortcuts) -> Vec<String> {
+        let mut note = self.load();
+        if !note.shortcuts.contains_key(&entry.package) {
+            return Vec::new();
+        }
+        let mut problems = Vec::new();
+        if let Err(why) = self.put(&mut note, entry, shortcuts) {
+            problems.push(why);
         }
         if let Err(why) = self.save(&note) {
             problems.push(why);
@@ -429,6 +460,10 @@ pub struct StartMenuSetup {
     /// Where each app's program goes.
     pub apps_dir: PathBuf,
     pub menu: StartMenu,
+    /// The desktop the apps' desktop shortcuts are on; `None` when it cannot be told.
+    pub desktop: Option<crate::desktop_shortcuts::Desktop>,
+    /// The folders of Windows' taskbar pins ([`crate::paths::taskbar_pins`]).
+    pub pins: Vec<PathBuf>,
 }
 
 impl StartMenuSetup {
@@ -442,7 +477,22 @@ impl StartMenuSetup {
                 dir: default_programs_dir()?,
                 note: default_note()?,
             },
+            desktop: crate::desktop_shortcuts::Desktop::default_for_user(),
+            pins: crate::paths::taskbar_pins(),
         })
+    }
+
+    /// Points every shortcut to `entry`'s app at its program, renamed with the app: its Start
+    /// menu shortcut, its desktop shortcuts and app shortcuts, and its taskbar pins. Returns
+    /// what went wrong, one sentence each; the rest is done anyway.
+    pub fn follow(&self, entry: &MenuEntry, shortcuts: &dyn Shortcuts) -> Vec<String> {
+        follow_program(
+            Some(&self.menu),
+            self.desktop.as_ref(),
+            &self.pins,
+            entry,
+            shortcuts,
+        )
     }
 
     /// Makes each app's window program and its shortcut, and removes the shortcuts of the apps
@@ -461,7 +511,13 @@ impl StartMenuSetup {
             if !is_valid_package(&app.package_name) {
                 continue;
             }
-            match crate::app_exe::ensure_installed(&self.template, &self.apps_dir, app) {
+            let follow = |entry: &MenuEntry| self.follow(entry, shortcuts);
+            match crate::app_exe::ensure_installed_following(
+                &self.template,
+                &self.apps_dir,
+                app,
+                &follow,
+            ) {
                 Ok((program, note)) => {
                     waiting |= note.is_some();
                     problems.extend(note);
@@ -557,6 +613,47 @@ pub fn retargeted(link: &Shortcut, entry: &MenuEntry) -> Option<Shortcut> {
         working_dir: folder.to_path_buf(),
         ..link.clone()
     })
+}
+
+/// Points every shortcut to `entry`'s app at its program `entry.program`, which was just made
+/// under the app's new name: the app's Start menu shortcut in `menu`, its desktop shortcuts
+/// and app shortcuts on `desktop`, and its taskbar pins in `pins`. Only shortcuts DSA made, and
+/// pins carrying the app's AppUserModelID, are changed. Returns what went wrong, one sentence
+/// each; the rest is done anyway.
+pub fn follow_program(
+    menu: Option<&StartMenu>,
+    desktop: Option<&crate::desktop_shortcuts::Desktop>,
+    pins: &[PathBuf],
+    entry: &MenuEntry,
+    shortcuts: &dyn Shortcuts,
+) -> Vec<String> {
+    let mut problems = Vec::new();
+    if let Some(menu) = menu {
+        problems.extend(menu.follow(entry, shortcuts));
+    }
+    let entries = std::slice::from_ref(entry);
+    problems.extend(repair_pins(pins, entries, shortcuts));
+    if let Some(desktop) = desktop {
+        problems.extend(desktop.keep_in_step(entries, shortcuts));
+    }
+    problems
+}
+
+/// [`follow_program`] in the user's own Start menu, desktop and taskbar, which the window
+/// program follows an app's rename with when no [`StartMenuSetup`] is at hand.
+pub fn follow_for_user(entry: &MenuEntry) -> Vec<String> {
+    let _com = ComApartment::enter();
+    let menu = default_programs_dir()
+        .zip(default_note())
+        .map(|(dir, note)| StartMenu { dir, note });
+    let desktop = crate::desktop_shortcuts::Desktop::default_for_user();
+    follow_program(
+        menu.as_ref(),
+        desktop.as_ref(),
+        &crate::paths::taskbar_pins(),
+        entry,
+        &ShellLinks,
+    )
 }
 
 /// How deep below a pin folder pins are looked for: `ImplicitAppShortcuts` keeps each one in a
@@ -663,7 +760,6 @@ pub fn keep(
         None => crate::jump_list::Committed::new(),
     };
     let texts = crate::jump_list::Texts::for_user();
-    let desktop = crate::desktop_shortcuts::Desktop::default_for_user();
     loop {
         let received = if waiting {
             installed.recv_timeout(RETRY_WHILE_IN_USE)
@@ -717,14 +813,16 @@ pub fn keep(
                 note(logger.as_deref(), &format!("Installed apps: {problem}"));
             }
         }
-        // Shortcuts made before a program kept its name may point at one that is gone: the
-        // desktop's and the taskbar pins Windows copied from the Start menu's.
+        // A rename points every shortcut at the app's new program as it is made. Shortcuts an
+        // earlier release left pointing at a program that is gone, and any a rename could not
+        // reach, are pointed at it here: the desktop's, and the taskbar pins Windows copied
+        // from the Start menu's.
         let entries = menu_entries(&setup.apps_dir, &apps);
-        for problem in repair_pins(&crate::paths::taskbar_pins(), &entries, &ShellLinks) {
+        for problem in repair_pins(&setup.pins, &entries, &ShellLinks) {
             note(logger.as_deref(), &format!("Taskbar: {problem}"));
         }
         let now: BTreeSet<String> = apps.iter().map(|app| app.package_name.clone()).collect();
-        if let Some(desktop) = &desktop {
+        if let Some(desktop) = &setup.desktop {
             for problem in desktop
                 .keep_in_step(&entries, &ShellLinks)
                 .into_iter()

@@ -323,7 +323,7 @@ pub fn start_menu_programs() -> Option<PathBuf> {
 /// The folders where Windows keeps the copies of shortcuts it makes when the user pins an app
 /// to the taskbar: `%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar`,
 /// and `ImplicitAppShortcuts` beside it. Nothing is made there; a copy of an app's shortcut is
-/// only pointed at the app's program again when it points at one that is gone.
+/// only pointed at the app's program when it runs one of the app's older names.
 pub fn taskbar_pins() -> Vec<PathBuf> {
     let Some(dir) = std::env::var_os("APPDATA") else {
         return Vec::new();

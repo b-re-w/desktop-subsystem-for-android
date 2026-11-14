@@ -13,13 +13,14 @@
 //! that is running cannot be replaced; it stays as it is until the app's windows close, and is
 //! made again then.
 //!
-//! The file keeps the name it was first given, even when the app is renamed later: the new
-//! name goes into the version information (which Task Manager and the taskbar show) and the
-//! Start menu shortcut, but not into the file's name. Every shortcut to the app runs the
-//! program by its path, and Windows' own copies of them (a taskbar pin is a copy of the Start
-//! menu shortcut) cannot all be followed, so a program that moved would leave them pointing at
-//! nothing. Only a program named after its package, because the app's name was not known yet,
-//! takes the app's name once it is.
+//! The file's name follows the app's: Task Manager's Details tab shows programs by file name,
+//! so a renamed app gets a program of its new name. Every shortcut to the app runs the program
+//! by its path, so the rename is one step: the program of the new name is made, every
+//! shortcut DSA made to the app (its Start menu shortcut, its desktop shortcuts and app
+//! shortcuts) and every taskbar pin carrying the app's AppUserModelID is pointed at it, and
+//! only then is the program of the old name removed. Nothing is left pointing at a file that
+//! is gone. A program of the old name that still runs (an open window of the app) cannot be
+//! removed; it stays until its windows close, while every shortcut runs the new one already.
 //!
 //! The app's name comes from the list of installed apps, which names an app as a launcher
 //! does (by its launcher activity, which may differ from the application's own label, as the
@@ -59,6 +60,8 @@ use windows_sys::Win32::System::LibraryLoader::{
     BeginUpdateResourceW, EndUpdateResourceW, FindResourceExW, LoadLibraryExW, UpdateResourceW,
     LOAD_LIBRARY_AS_DATAFILE,
 };
+
+use crate::start_menu::MenuEntry;
 
 /// The installed app window host, beside the window manager.
 pub const TEMPLATE_NAME: &str = "dsa-app-window.exe";
@@ -107,46 +110,58 @@ pub fn program_name(package: &str, label: &str) -> String {
     name
 }
 
-/// Where the program of `package` named `label` is, in its own folder in `apps_dir`: the
-/// program already there, which keeps its name when the app is renamed, else where it goes,
-/// named after `label`.
+/// Where the program of `package` named `label` is, in its own folder in `apps_dir`: named
+/// after `label`. When there is no program of that name but there is one of the name its note
+/// records (the list of installed apps named the app otherwise, as the Play Store's launcher
+/// label differs from its application label), that one.
 pub fn program_path(apps_dir: &Path, package: &str, label: &str) -> PathBuf {
     let folder = apps_dir.join(package);
     let named = folder.join(format!("{}.exe", program_name(package, label)));
     if named.is_file() {
         return named;
     }
-    existing_program(&folder, package).unwrap_or(named)
+    read_note(&folder)
+        .map(|made| folder.join(format!("{}.exe", program_name(package, &made.label))))
+        .filter(|recorded| recorded.is_file())
+        .unwrap_or(named)
 }
 
-/// The program already in `folder` that keeps its name: the newest `.exe` there, except one
-/// named after the package alone, which only stood in while the app's name was not known.
-fn existing_program(folder: &Path, package: &str) -> Option<PathBuf> {
-    let stand_in = format!("{package}.exe");
-    fs::read_dir(folder)
-        .ok()?
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| {
-            path.extension()
-                .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
-                && path.is_file()
-                && !path
-                    .file_name()
-                    .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(&stand_in))
-        })
-        .max_by_key(|path| fs::metadata(path).and_then(|meta| meta.modified()).ok())
+/// What the note in the app's folder `folder` says its program was made from.
+fn read_note(folder: &Path) -> Option<Made> {
+    let text = fs::read_to_string(folder.join(NOTE_NAME)).ok()?;
+    serde_json::from_str::<Made>(&text).ok()
 }
 
 /// The app's name as the program at `program` was last made with, from the note beside it.
 /// `None` when there is no note.
 pub fn program_label(program: &Path) -> Option<String> {
-    let note = program.parent()?.join(NOTE_NAME);
-    let text = fs::read_to_string(note).ok()?;
-    serde_json::from_str::<Made>(&text)
-        .ok()
+    read_note(program.parent()?)
         .map(|made| made.label)
         .filter(|label| !label.trim().is_empty())
+}
+
+/// Whether two paths name the same file, as Windows compares names: without regard to case.
+fn same_file(a: &Path, b: &Path) -> bool {
+    a.as_os_str().eq_ignore_ascii_case(b.as_os_str())
+}
+
+/// The other programs in the folder of `keep`, the app's program: the ones of the app's older
+/// names, which a shortcut may still run.
+fn older_programs(keep: &Path) -> Vec<PathBuf> {
+    let Some(entries) = keep.parent().and_then(|dir| fs::read_dir(dir).ok()) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            !same_file(path, keep)
+                && path.is_file()
+                && path
+                    .extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+        })
+        .collect()
 }
 
 /// Removes what is left of the app's older programs: the ones under another name in its
@@ -166,10 +181,55 @@ fn remove_old(apps_dir: &Path, package: &str, keep: &Path) {
     for entry in entries.flatten() {
         let path = entry.path();
         let name = entry.file_name().to_string_lossy().to_ascii_lowercase();
-        if path != keep && (name.ends_with(".exe") || name.ends_with(".exe.new")) {
+        if !same_file(&path, keep) && (name.ends_with(".exe") || name.ends_with(".exe.new")) {
             let _ = fs::remove_file(&path);
         }
     }
+}
+
+/// Points every shortcut to the app at its program `entry.program`, wherever DSA's shortcuts
+/// and the taskbar's pins of the app are. Returns what went wrong, one sentence each.
+pub type Follow<'a> = &'a dyn Fn(&MenuEntry) -> Vec<String>;
+
+/// Leaves `program`, named `label`, as the only program of `package`: when programs of the
+/// app's older names are beside it, every shortcut to the app is first pointed at `program`
+/// (`follow`), and only then are they removed, with what is left of the earlier layout.
+/// Returns why something is left, so it is tried again: a shortcut that could not be pointed
+/// at the new program (the old one stays, so the shortcut still runs something), or an old
+/// program that still runs.
+fn settle(
+    apps_dir: &Path,
+    package: &str,
+    program: &Path,
+    label: &str,
+    follow: Follow<'_>,
+) -> Option<String> {
+    if !older_programs(program).is_empty() {
+        let problems = follow(&MenuEntry {
+            package: package.to_string(),
+            label: label.to_string(),
+            program: program.to_path_buf(),
+        });
+        if !problems.is_empty() {
+            return Some(format!(
+                "{package}'s program of its old name stays until every shortcut to it runs {}: {}",
+                program.display(),
+                problems.join("; ")
+            ));
+        }
+    }
+    remove_old(apps_dir, package, program);
+    let left = older_programs(program);
+    if left.is_empty() {
+        return None;
+    }
+    let names: Vec<String> = left.iter().map(|path| path.display().to_string()).collect();
+    Some(format!(
+        "{package}'s program of its old name ({}) is in use, so it is removed once its \
+         windows close; every shortcut runs {} already",
+        names.join(", "),
+        program.display()
+    ))
 }
 
 /// Where each app's window program goes: `%LOCALAPPDATA%\DSA\apps`.
@@ -230,6 +290,12 @@ enum Plan {
     Make(Made),
 }
 
+/// Whether the program made as `current` has the name the list of installed apps gave the app,
+/// which the window's description never changes.
+fn named_by_the_list(current: &Made) -> bool {
+    current.source == FROM_INSTALLED || !current.updated.is_empty()
+}
+
 /// What becomes of the program made as `current` (`None` when there is none) when it is asked
 /// for as `wanted`.
 fn plan(current: Option<&Made>, mut wanted: Made) -> Plan {
@@ -244,7 +310,7 @@ fn plan(current: Option<&Made>, mut wanted: Made) -> Plan {
         // The list's name wins: it is the name a launcher shows, and the one the Start menu
         // shortcut has. The window's description names the app by its application label,
         // which may differ, and would rename the program at every window and every list.
-        if current.source == FROM_INSTALLED || !current.updated.is_empty() {
+        if named_by_the_list(current) {
             wanted.label = current.label.clone();
         }
     }
@@ -303,14 +369,33 @@ fn label_of(package: &str, app: Option<&AppInfo>) -> String {
 /// app's name and icon (as the guest describes the app before its window opens) and named
 /// after the app, and returns its path. An existing copy that is up to date is used as it is;
 /// an outdated one of the same name that is running is used too, and the reason is returned
-/// with it.
+/// with it. When the app was renamed, every shortcut to it in the user's Start menu, on their
+/// desktop and on their taskbar is pointed at the program of the new name before the old one
+/// is removed.
 pub fn ensure(
     template: &Path,
     apps_dir: &Path,
     package: &str,
     app: Option<&AppInfo>,
 ) -> Result<(PathBuf, Option<String>), String> {
-    make(template, apps_dir, package, app, FROM_WINDOW)
+    ensure_following(
+        template,
+        apps_dir,
+        package,
+        app,
+        &crate::start_menu::follow_for_user,
+    )
+}
+
+/// [`ensure`], with the shortcuts to a renamed app pointed at its new program by `follow`.
+pub fn ensure_following(
+    template: &Path,
+    apps_dir: &Path,
+    package: &str,
+    app: Option<&AppInfo>,
+    follow: Follow<'_>,
+) -> Result<(PathBuf, Option<String>), String> {
+    make(template, apps_dir, package, app, FROM_WINDOW, follow)
 }
 
 /// [`ensure`] for an app as the guest's list of installed apps describes it, for its Start
@@ -321,12 +406,24 @@ pub fn ensure_installed(
     apps_dir: &Path,
     app: &AppInfo,
 ) -> Result<(PathBuf, Option<String>), String> {
+    ensure_installed_following(template, apps_dir, app, &crate::start_menu::follow_for_user)
+}
+
+/// [`ensure_installed`], with the shortcuts to a renamed app pointed at its new program by
+/// `follow`.
+pub fn ensure_installed_following(
+    template: &Path,
+    apps_dir: &Path,
+    app: &AppInfo,
+    follow: Follow<'_>,
+) -> Result<(PathBuf, Option<String>), String> {
     make(
         template,
         apps_dir,
         &app.package_name,
         Some(app),
         FROM_INSTALLED,
+        follow,
     )
 }
 
@@ -336,16 +433,23 @@ fn make(
     package: &str,
     app: Option<&AppInfo>,
     source: &str,
+    follow: Follow<'_>,
 ) -> Result<(PathBuf, Option<String>), String> {
     if !is_valid_package(package) {
         return Err(format!("{package:?} is not an Android package name"));
     }
-    let label = label_of(package, app);
-    let target = program_path(apps_dir, package, &label);
-    let Some(folder) = target.parent().map(Path::to_path_buf) else {
-        return Err(format!("{} has no folder", target.display()));
-    };
+    let folder = apps_dir.join(package);
     let note = folder.join(NOTE_NAME);
+    let current = read_note(&folder);
+    // The window's description never renames a program the list named, so the program it
+    // asks for is the one of the list's name.
+    let label = match current.as_ref() {
+        Some(current) if source == FROM_WINDOW && named_by_the_list(current) => {
+            current.label.clone()
+        }
+        _ => label_of(package, app),
+    };
+    let target = folder.join(format!("{}.exe", program_name(package, &label)));
     let icon = app
         .map(|app| app.icon_png.as_slice())
         .filter(|png| png_icon(png).is_some());
@@ -364,22 +468,22 @@ fn make(
             .map(|png| hex(&Sha256::digest(png)))
             .unwrap_or_default(),
         source: source.to_string(),
-        updated: match app {
-            Some(app) if source == FROM_INSTALLED => installed_version(app),
+        updated: match (app, current.as_ref()) {
+            (Some(app), _) if source == FROM_INSTALLED => installed_version(app),
+            // The window's description says nothing of the installed version, so a program it
+            // makes again keeps the one the list gave, and with it the list's name.
+            (_, Some(current)) => current.updated.clone(),
             _ => String::new(),
         },
     };
     let existed = target.exists();
-    let current = fs::read_to_string(&note)
-        .ok()
-        .and_then(|text| serde_json::from_str::<Made>(&text).ok());
     let made = match plan(current.as_ref().filter(|_| existed), made) {
         Plan::Keep(kept) => {
             if current.as_ref() != Some(&kept) {
                 let _ = fs::write(&note, serde_json::to_string(&kept).unwrap_or_default());
             }
-            remove_old(apps_dir, package, &target);
-            return Ok((target, None));
+            let left = settle(apps_dir, package, &target, &kept.label, follow);
+            return Ok((target, left));
         }
         Plan::Make(made) => made,
     };
@@ -403,11 +507,13 @@ fn make(
         Ok(()) => {
             let text = serde_json::to_string(&made).unwrap_or_default();
             let _ = fs::write(&note, text);
-            remove_old(apps_dir, package, &target);
             if existed && current.is_none_or(|current| current.icon != made.icon) {
                 tell_explorer_the_icon_changed(&target);
             }
-            Ok((target, None))
+            // The program of the new name is in place: the shortcuts follow it, then the
+            // program of the old name goes.
+            let left = settle(apps_dir, package, &target, &made.label, follow);
+            Ok((target, left))
         }
         Err(e) if target.exists() => {
             let _ = fs::remove_file(&fresh);

@@ -49,7 +49,7 @@ pub fn creates_desktop_shortcut(args: &[String]) -> bool {
 /// Puts a shortcut to the app whose window program is `program` (this one, named after the
 /// app) on the user's desktop, as the app's jump list asks; returns its path.
 pub fn place_program_on_desktop(package: &str, program: &Path) -> Result<PathBuf, String> {
-    // The program keeps its first name when the app is renamed; its note has the app's name.
+    // The note has the app's name as it is; the file's name drops what Windows refuses.
     let label = crate::app_exe::program_label(program)
         .or_else(|| {
             program
