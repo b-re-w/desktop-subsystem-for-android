@@ -217,6 +217,7 @@ public  final class Envelope extends
     HOST_CERTIFICATES(684),
     DNS_QUERY(690),
     DNS_ANSWER(691),
+    LAUNCH_PLACEMENT(710),
     BODY_NOT_SET(0);
     private final int value;
     private BodyCase(int value) {
@@ -429,6 +430,7 @@ public  final class Envelope extends
         case 684: return HOST_CERTIFICATES;
         case 690: return DNS_QUERY;
         case 691: return DNS_ANSWER;
+        case 710: return LAUNCH_PLACEMENT;
         case 0: return BODY_NOT_SET;
         default: return null;
       }
@@ -10300,6 +10302,56 @@ public  final class Envelope extends
     }
   }
 
+  public static final int LAUNCH_PLACEMENT_FIELD_NUMBER = 710;
+  /**
+   * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+   */
+  @java.lang.Override
+  public boolean hasLaunchPlacement() {
+    return bodyCase_ == 710;
+  }
+  /**
+   * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.LaunchPlacement getLaunchPlacement() {
+    if (bodyCase_ == 710) {
+       return (io.github.thisisthepy.dsa.control.v1.LaunchPlacement) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.LaunchPlacement.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+   */
+  private void setLaunchPlacement(io.github.thisisthepy.dsa.control.v1.LaunchPlacement value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 710;
+  }
+  /**
+   * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+   */
+  private void mergeLaunchPlacement(io.github.thisisthepy.dsa.control.v1.LaunchPlacement value) {
+    value.getClass();
+  if (bodyCase_ == 710 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.LaunchPlacement.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.LaunchPlacement.newBuilder((io.github.thisisthepy.dsa.control.v1.LaunchPlacement) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 710;
+  }
+  /**
+   * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+   */
+  private void clearLaunchPlacement() {
+    if (bodyCase_ == 710) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.Envelope parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -19867,6 +19919,54 @@ public  final class Envelope extends
       return this;
     }
 
+    /**
+     * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+     */
+    @java.lang.Override
+    public boolean hasLaunchPlacement() {
+      return instance.hasLaunchPlacement();
+    }
+    /**
+     * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.LaunchPlacement getLaunchPlacement() {
+      return instance.getLaunchPlacement();
+    }
+    /**
+     * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+     */
+    public Builder setLaunchPlacement(io.github.thisisthepy.dsa.control.v1.LaunchPlacement value) {
+      copyOnWrite();
+      instance.setLaunchPlacement(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+     */
+    public Builder setLaunchPlacement(
+        io.github.thisisthepy.dsa.control.v1.LaunchPlacement.Builder builderForValue) {
+      copyOnWrite();
+      instance.setLaunchPlacement(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+     */
+    public Builder mergeLaunchPlacement(io.github.thisisthepy.dsa.control.v1.LaunchPlacement value) {
+      copyOnWrite();
+      instance.mergeLaunchPlacement(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+     */
+    public Builder clearLaunchPlacement() {
+      copyOnWrite();
+      instance.clearLaunchPlacement();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.Envelope)
   }
   @java.lang.Override
@@ -20082,9 +20182,10 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.HostCertificates.class,
             io.github.thisisthepy.dsa.control.v1.DnsQuery.class,
             io.github.thisisthepy.dsa.control.v1.DnsAnswer.class,
+            io.github.thisisthepy.dsa.control.v1.LaunchPlacement.class,
           };
           java.lang.String info =
-              "\u0000\u00c5\u0001\u0000\u0001\u02b3\u00c5\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u00c6\u0001\u0000\u0001\u02c6\u00c6\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
               "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
               "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000" +
@@ -20111,7 +20212,7 @@ public  final class Envelope extends
               "\u0283<\u0000\u0284<\u0000\u0285<\u0000\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289" +
               "<\u0000\u028a<\u0000\u028b<\u0000\u028c<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000" +
               "\u0290<\u0000\u0291<\u0000\u0292<\u0000\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab" +
-              "<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3<\u0000";
+              "<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3<\u0000\u02c6<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

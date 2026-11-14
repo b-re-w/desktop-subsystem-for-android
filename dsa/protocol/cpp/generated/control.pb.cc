@@ -236,6 +236,23 @@ struct SetTaskDensityDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SetTaskDensityDefaultTypeInternal _SetTaskDensity_default_instance_;
+PROTOBUF_CONSTEXPR LaunchPlacement::LaunchPlacement(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.density_dpi_)*/0u
+  , /*decltype(_impl_.width_)*/0u
+  , /*decltype(_impl_.height_)*/0u
+  , /*decltype(_impl_.monitor_width_)*/0u
+  , /*decltype(_impl_.monitor_height_)*/0u
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct LaunchPlacementDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR LaunchPlacementDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~LaunchPlacementDefaultTypeInternal() {}
+  union {
+    LaunchPlacement _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LaunchPlacementDefaultTypeInternal _LaunchPlacement_default_instance_;
 PROTOBUF_CONSTEXPR SetTaskCaption::SetTaskCaption(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.task_id_)*/0
@@ -9759,6 +9776,291 @@ void SetTaskDensity::InternalSwap(SetTaskDensity* other) {
 
 std::string SetTaskDensity::GetTypeName() const {
   return "dsa.control.v1.SetTaskDensity";
+}
+
+
+// ===================================================================
+
+class LaunchPlacement::_Internal {
+ public:
+};
+
+LaunchPlacement::LaunchPlacement(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.LaunchPlacement)
+}
+LaunchPlacement::LaunchPlacement(const LaunchPlacement& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  LaunchPlacement* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.density_dpi_){}
+    , decltype(_impl_.width_){}
+    , decltype(_impl_.height_){}
+    , decltype(_impl_.monitor_width_){}
+    , decltype(_impl_.monitor_height_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  ::memcpy(&_impl_.density_dpi_, &from._impl_.density_dpi_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.monitor_height_) -
+    reinterpret_cast<char*>(&_impl_.density_dpi_)) + sizeof(_impl_.monitor_height_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.LaunchPlacement)
+}
+
+inline void LaunchPlacement::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.density_dpi_){0u}
+    , decltype(_impl_.width_){0u}
+    , decltype(_impl_.height_){0u}
+    , decltype(_impl_.monitor_width_){0u}
+    , decltype(_impl_.monitor_height_){0u}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+LaunchPlacement::~LaunchPlacement() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.LaunchPlacement)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void LaunchPlacement::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void LaunchPlacement::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void LaunchPlacement::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.LaunchPlacement)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::memset(&_impl_.density_dpi_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.monitor_height_) -
+      reinterpret_cast<char*>(&_impl_.density_dpi_)) + sizeof(_impl_.monitor_height_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* LaunchPlacement::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // uint32 density_dpi = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.density_dpi_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 width = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.width_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 height = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.height_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 monitor_width = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _impl_.monitor_width_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 monitor_height = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _impl_.monitor_height_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* LaunchPlacement::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.LaunchPlacement)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // uint32 density_dpi = 1;
+  if (this->_internal_density_dpi() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(1, this->_internal_density_dpi(), target);
+  }
+
+  // uint32 width = 2;
+  if (this->_internal_width() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(2, this->_internal_width(), target);
+  }
+
+  // uint32 height = 3;
+  if (this->_internal_height() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(3, this->_internal_height(), target);
+  }
+
+  // uint32 monitor_width = 4;
+  if (this->_internal_monitor_width() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(4, this->_internal_monitor_width(), target);
+  }
+
+  // uint32 monitor_height = 5;
+  if (this->_internal_monitor_height() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(5, this->_internal_monitor_height(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.LaunchPlacement)
+  return target;
+}
+
+size_t LaunchPlacement::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.LaunchPlacement)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // uint32 density_dpi = 1;
+  if (this->_internal_density_dpi() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_density_dpi());
+  }
+
+  // uint32 width = 2;
+  if (this->_internal_width() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_width());
+  }
+
+  // uint32 height = 3;
+  if (this->_internal_height() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_height());
+  }
+
+  // uint32 monitor_width = 4;
+  if (this->_internal_monitor_width() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_monitor_width());
+  }
+
+  // uint32 monitor_height = 5;
+  if (this->_internal_monitor_height() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_monitor_height());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void LaunchPlacement::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const LaunchPlacement*>(
+      &from));
+}
+
+void LaunchPlacement::MergeFrom(const LaunchPlacement& from) {
+  LaunchPlacement* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.LaunchPlacement)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_density_dpi() != 0) {
+    _this->_internal_set_density_dpi(from._internal_density_dpi());
+  }
+  if (from._internal_width() != 0) {
+    _this->_internal_set_width(from._internal_width());
+  }
+  if (from._internal_height() != 0) {
+    _this->_internal_set_height(from._internal_height());
+  }
+  if (from._internal_monitor_width() != 0) {
+    _this->_internal_set_monitor_width(from._internal_monitor_width());
+  }
+  if (from._internal_monitor_height() != 0) {
+    _this->_internal_set_monitor_height(from._internal_monitor_height());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void LaunchPlacement::CopyFrom(const LaunchPlacement& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.LaunchPlacement)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool LaunchPlacement::IsInitialized() const {
+  return true;
+}
+
+void LaunchPlacement::InternalSwap(LaunchPlacement* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(LaunchPlacement, _impl_.monitor_height_)
+      + sizeof(LaunchPlacement::_impl_.monitor_height_)
+      - PROTOBUF_FIELD_OFFSET(LaunchPlacement, _impl_.density_dpi_)>(
+          reinterpret_cast<char*>(&_impl_.density_dpi_),
+          reinterpret_cast<char*>(&other->_impl_.density_dpi_));
+}
+
+std::string LaunchPlacement::GetTypeName() const {
+  return "dsa.control.v1.LaunchPlacement";
 }
 
 
@@ -67410,6 +67712,7 @@ class Envelope::_Internal {
   static const ::dsa::control::v1::HostCertificates& host_certificates(const Envelope* msg);
   static const ::dsa::control::v1::DnsQuery& dns_query(const Envelope* msg);
   static const ::dsa::control::v1::DnsAnswer& dns_answer(const Envelope* msg);
+  static const ::dsa::control::v1::LaunchPlacement& launch_placement(const Envelope* msg);
 };
 
 const ::dsa::control::v1::Hello&
@@ -68199,6 +68502,10 @@ Envelope::_Internal::dns_query(const Envelope* msg) {
 const ::dsa::control::v1::DnsAnswer&
 Envelope::_Internal::dns_answer(const Envelope* msg) {
   return *msg->_impl_.body_.dns_answer_;
+}
+const ::dsa::control::v1::LaunchPlacement&
+Envelope::_Internal::launch_placement(const Envelope* msg) {
+  return *msg->_impl_.body_.launch_placement_;
 }
 void Envelope::set_allocated_hello(::dsa::control::v1::Hello* hello) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -71155,6 +71462,21 @@ void Envelope::set_allocated_dns_answer(::dsa::control::v1::DnsAnswer* dns_answe
   }
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.dns_answer)
 }
+void Envelope::set_allocated_launch_placement(::dsa::control::v1::LaunchPlacement* launch_placement) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_body();
+  if (launch_placement) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(launch_placement);
+    if (message_arena != submessage_arena) {
+      launch_placement = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, launch_placement, submessage_arena);
+    }
+    set_has_launch_placement();
+    _impl_.body_.launch_placement_ = launch_placement;
+  }
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.launch_placement)
+}
 Envelope::Envelope(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
@@ -72155,6 +72477,11 @@ Envelope::Envelope(const Envelope& from)
     case kDnsAnswer: {
       _this->_internal_mutable_dns_answer()->::dsa::control::v1::DnsAnswer::MergeFrom(
           from._internal_dns_answer());
+      break;
+    }
+    case kLaunchPlacement: {
+      _this->_internal_mutable_launch_placement()->::dsa::control::v1::LaunchPlacement::MergeFrom(
+          from._internal_launch_placement());
       break;
     }
     case BODY_NOT_SET: {
@@ -73378,6 +73705,12 @@ void Envelope::clear_body() {
     case kDnsAnswer: {
       if (GetArenaForAllocation() == nullptr) {
         delete _impl_.body_.dns_answer_;
+      }
+      break;
+    }
+    case kLaunchPlacement: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.body_.launch_placement_;
       }
       break;
     }
@@ -74981,6 +75314,14 @@ const char* Envelope::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
         } else
           goto handle_unusual;
         continue;
+      // .dsa.control.v1.LaunchPlacement launch_placement = 710;
+      case 710:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+          ptr = ctx->ParseMessage(_internal_mutable_launch_placement(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -76389,6 +76730,13 @@ uint8_t* Envelope::_InternalSerialize(
         _Internal::dns_answer(this).GetCachedSize(), target, stream);
   }
 
+  // .dsa.control.v1.LaunchPlacement launch_placement = 710;
+  if (_internal_has_launch_placement()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(710, _Internal::launch_placement(this),
+        _Internal::launch_placement(this).GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -77785,6 +78133,13 @@ size_t Envelope::ByteSizeLong() const {
           *_impl_.body_.dns_answer_);
       break;
     }
+    // .dsa.control.v1.LaunchPlacement launch_placement = 710;
+    case kLaunchPlacement: {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.body_.launch_placement_);
+      break;
+    }
     case BODY_NOT_SET: {
       break;
     }
@@ -78796,6 +79151,11 @@ void Envelope::MergeFrom(const Envelope& from) {
           from._internal_dns_answer());
       break;
     }
+    case kLaunchPlacement: {
+      _this->_internal_mutable_launch_placement()->::dsa::control::v1::LaunchPlacement::MergeFrom(
+          from._internal_launch_placement());
+      break;
+    }
     case BODY_NOT_SET: {
       break;
     }
@@ -78886,6 +79246,10 @@ Arena::CreateMaybeMessage< ::dsa::control::v1::ResizeTask >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::SetTaskDensity*
 Arena::CreateMaybeMessage< ::dsa::control::v1::SetTaskDensity >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::SetTaskDensity >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::LaunchPlacement*
+Arena::CreateMaybeMessage< ::dsa::control::v1::LaunchPlacement >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::LaunchPlacement >(arena);
 }
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::SetTaskCaption*
 Arena::CreateMaybeMessage< ::dsa::control::v1::SetTaskCaption >(Arena* arena) {
