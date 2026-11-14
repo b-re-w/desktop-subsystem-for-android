@@ -2515,4 +2515,28 @@ DSA는 Widevine을 싣거나 다시 배포하지 않습니다.</value>
   <data name="A11y_Help" xml:space="preserve">
     <value>도움말</value>
   </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>{0}을(를) 설치하시겠습니까?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>패키지 이름:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>게시자:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>버전:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>출처:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>기능({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>자세히</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>간단히</value>
+  </data>
 </root>
