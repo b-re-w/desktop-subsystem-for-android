@@ -296,27 +296,9 @@ pub fn is_restart(uri: &str) -> bool {
     verb_and_key(uri).is_some_and(|(verb, key)| verb == "restart" && is_update_key(&key))
 }
 
-/// Whether the user reads Windows in Korean.
-pub fn user_reads_korean() -> bool {
-    #[cfg(windows)]
-    {
-        // SAFETY: reads the user's display language.
-        let language = unsafe { windows_sys::Win32::Globalization::GetUserDefaultUILanguage() };
-        crate::compositor::widget_menu::is_korean(language)
-    }
-    #[cfg(not(windows))]
-    {
-        false
-    }
-}
-
-/// The interface language the user reads Windows in, as far as DSA tells it.
+/// The interface language the user reads Windows in, as DSA shows its own words.
 pub fn user_language() -> UiLanguage {
-    if user_reads_korean() {
-        UiLanguage::Korean
-    } else {
-        UiLanguage::English
-    }
+    crate::ui_language::user_language()
 }
 
 /// The toast's XML for `notification`, with its icon at `icon` when it has one. A

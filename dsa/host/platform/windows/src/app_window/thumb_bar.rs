@@ -19,6 +19,7 @@
 use std::cell::{Cell, RefCell};
 
 use dsa_host_core::compositor::window_hosts::{MediaButton, MediaButtons};
+use dsa_host_core::ui_language::UiLanguage;
 
 use crate::compositor::fluent::{glyph, Argb};
 
@@ -41,30 +42,32 @@ pub struct Texts {
 
 impl Texts {
     pub fn english() -> Texts {
-        Texts {
-            previous: "Previous",
-            play: "Play",
-            pause: "Pause",
-            next: "Next",
-        }
+        Texts::of(UiLanguage::English)
     }
 
-    pub fn korean() -> Texts {
+    /// The words in `language`, as Windows' own media players name these buttons.
+    pub fn of(language: UiLanguage) -> Texts {
+        let [previous, play, pause, next] = match language {
+            UiLanguage::English => ["Previous", "Play", "Pause", "Next"],
+            UiLanguage::Korean => ["이전", "재생", "일시 정지", "다음"],
+            UiLanguage::Japanese => ["前へ", "再生", "一時停止", "次へ"],
+            UiLanguage::ChineseSimplified => ["上一个", "播放", "暂停", "下一个"],
+            UiLanguage::ChineseTraditional => ["上一個", "播放", "暫停", "下一個"],
+            UiLanguage::Spanish => ["Anterior", "Reproducir", "Pausar", "Siguiente"],
+            UiLanguage::French => ["Précédent", "Lecture", "Pause", "Suivant"],
+            UiLanguage::German => ["Zurück", "Wiedergabe", "Pause", "Weiter"],
+            UiLanguage::PortugueseBrazil => ["Anterior", "Reproduzir", "Pausar", "Próximo"],
+            UiLanguage::Russian => ["Назад", "Воспроизвести", "Пауза", "Далее"],
+            UiLanguage::Italian => ["Precedente", "Riproduci", "Pausa", "Successivo"],
+            UiLanguage::Vietnamese => ["Trước", "Phát", "Tạm dừng", "Tiếp"],
+            UiLanguage::Indonesian => ["Sebelumnya", "Putar", "Jeda", "Berikutnya"],
+            UiLanguage::Turkish => ["Önceki", "Oynat", "Duraklat", "Sonraki"],
+        };
         Texts {
-            previous: "이전",
-            play: "재생",
-            pause: "일시 정지",
-            next: "다음",
-        }
-    }
-
-    /// The words for the language `lang_id` (a Windows language ID): Korean for Korean,
-    /// English for every other language.
-    pub fn for_language(lang_id: u16) -> Texts {
-        if lang_id & 0x3ff == 0x12 {
-            Texts::korean()
-        } else {
-            Texts::english()
+            previous,
+            play,
+            pause,
+            next,
         }
     }
 }
@@ -357,7 +360,6 @@ impl ThumbBar {
             THBF_DISABLED, THBF_ENABLED, THBF_HIDDEN, THB_FLAGS, THB_ICON, THB_TOOLTIP, THUMBBUTTON,
         };
         use windows::Win32::UI::WindowsAndMessaging::HICON;
-        use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
         use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
         let dpi = GetDpiForWindow(hwnd as windows_sys::Win32::Foundation::HWND);
         let side = icon_side(if dpi == 0 { 96 } else { dpi });
@@ -371,7 +373,7 @@ impl ThumbBar {
             // The taskbar copied the icons it was given, so the old ones can go now.
             self.icons.replace(Some(Icons::draw(side, color)));
         }
-        let texts = Texts::for_language(GetUserDefaultUILanguage());
+        let texts = Texts::of(crate::ui_language::user_language());
         let icons = self.icons.borrow();
         let laid = buttons(media, &texts);
         let made = laid.map(|button| {
@@ -456,10 +458,25 @@ mod tests {
 
     #[test]
     fn fr24_the_preview_buttons_speak_korean_and_english() {
-        assert_eq!(Texts::for_language(0x0412), Texts::korean());
-        assert_eq!(Texts::for_language(0x0409), Texts::english());
-        let shown = buttons(Some(&PLAYING), &Texts::korean());
+        use crate::ui_language::{assert_translation, from_langid};
+        let korean = Texts::of(UiLanguage::Korean);
+        assert_eq!(Texts::of(from_langid(0x0412)), korean);
+        assert_eq!(Texts::of(from_langid(0x0409)), Texts::english());
+        let shown = buttons(Some(&PLAYING), &korean);
         assert_eq!(shown[1].tip, "일시 정지");
+        let english = Texts::english();
+        for language in UiLanguage::ALL {
+            let texts = Texts::of(language);
+            for (what, en, tip) in [
+                ("Previous", english.previous, texts.previous),
+                ("Play", english.play, texts.play),
+                ("Pause", english.pause, texts.pause),
+                ("Next", english.next, texts.next),
+            ] {
+                assert_translation(language, what, en, tip);
+                assert!(tip.encode_utf16().count() <= MAX_TIP);
+            }
+        }
         let tip = tip_units("이전");
         assert_eq!(&tip[..3], &[0xC774, 0xC804, 0]);
         let long = tip_units(&"x".repeat(400));

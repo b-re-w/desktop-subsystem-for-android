@@ -13,13 +13,12 @@
 //! the service says the widget is gone, so the settings app and every other watcher learn of
 //! it the same way.
 //!
-//! The menu speaks the user's display language when DSA has it (Korean), else English.
-
+//! The menu speaks the user's display language when DSA has it, else English
+//! ([`crate::ui_language`]).
 //!
 //! What it offers is the platform-neutral menu every host shares
 //! (`dsa_host_core::widget_windows::menu`); what is here is its Windows 11 look.
 
-use dsa_host_core::ui_language::UiLanguage;
 pub use dsa_host_core::widget_windows::menu::{
     choice_of, is_current, keyboard_items, menu_name, menu_text, size_choices, size_label,
     MenuChoice, MenuText, SizeChoice, SizeName, FIRST_SIZE, MOVE, REMOVE, RESIZE, SETTINGS, SIZE,
@@ -85,22 +84,10 @@ pub fn entries(
     out
 }
 
-/// Whether a Windows language ID is Korean (its primary language is 0x12).
-pub fn is_korean(lang_id: u16) -> bool {
-    lang_id & 0x3ff == 0x12
-}
-
 /// The menu's words in the user's display language.
 #[cfg(windows)]
 pub fn display_text() -> MenuText {
-    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
-    // SAFETY: reads the user's display language.
-    let korean = is_korean(unsafe { GetUserDefaultUILanguage() });
-    menu_text(if korean {
-        UiLanguage::Korean
-    } else {
-        UiLanguage::English
-    })
+    menu_text(crate::ui_language::user_language())
 }
 
 /// Shows the menu of a widget window where `anchor` says and returns what the user chose.
@@ -131,6 +118,7 @@ pub fn show(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dsa_host_core::ui_language::UiLanguage;
 
     fn clock() -> WidgetProvider {
         WidgetProvider {
@@ -207,8 +195,15 @@ mod tests {
 
     #[test]
     fn fr12_the_widget_menu_speaks_korean_and_english() {
-        assert!(is_korean(0x0412));
-        assert!(!is_korean(0x0409));
+        use crate::ui_language::from_langid;
+        assert_eq!(
+            menu_text(from_langid(0x0412)),
+            menu_text(UiLanguage::Korean)
+        );
+        assert_eq!(
+            menu_text(from_langid(0x0409)),
+            menu_text(UiLanguage::English)
+        );
         let large = SizeChoice {
             name: SizeName::Large,
             width_dp: 270,

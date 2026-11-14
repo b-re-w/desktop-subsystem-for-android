@@ -1,5 +1,6 @@
 //! The graphics renderer in a process of its own: `dsa-gfx.exe`, which Task Manager shows as
-//! "Graphics renderer for Android" ("Android용 그래픽 렌더러" on a Korean desktop).
+//! "Graphics renderer for Android" ("Android용 그래픽 렌더러" on a Korean desktop, and in the
+//! display language in each of DSA's interface languages).
 //!
 //! The window manager (`dsa-wm.exe`) used to load gfxstream itself, so a crash in the
 //! renderer or in the GPU driver under it ended the window manager and every app window with

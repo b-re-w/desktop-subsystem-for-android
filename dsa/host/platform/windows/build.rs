@@ -13,16 +13,22 @@ const FILES_ICON: &str = "resources/icons/files.ico";
 
 fn main() {
     embed("dsa-hostd", names::SERVICE, None, ICON);
+    // The window manager and the renderer are named in every interface language.
     embed(
         "dsa-wm",
         names::WINDOW_MANAGER,
-        Some(names::WINDOW_MANAGER_KO),
+        Some(&names::WINDOW_MANAGER_NAMES),
         ICON,
     );
-    embed("dsa-gfx", names::RENDERER, Some(names::RENDERER_KO), ICON);
+    embed(
+        "dsa-gfx",
+        names::RENDERER,
+        Some(&names::RENDERER_NAMES),
+        ICON,
+    );
     // Each app's copy of the window host gets the app's name and icon instead. The installed
-    // one also carries the words Explorer and the Start menu show for DSA, in English and
-    // Korean, which the installer points at as indirect strings, and the icon of Android's
+    // one also carries the words Explorer and the Start menu show for DSA, in every interface
+    // language, which the installer points at as indirect strings, and the icon of Android's
     // entry in Explorer's navigation pane as its second icon.
     println!("cargo:rerun-if-changed={FILES_ICON}");
     let mut extra = shell_string_tables();

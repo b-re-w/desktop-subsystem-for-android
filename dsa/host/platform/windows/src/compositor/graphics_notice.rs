@@ -17,6 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use dsa_host_core::compositor::frame_stall::NOTICE_PREFIX;
 use dsa_host_core::graphics_state::GraphicsState;
 use dsa_host_core::notifications::Notification;
+use dsa_host_core::ui_language::UiLanguage;
 
 use crate::vulkan_driver::{PACK_WEB_LINK, PACK_WINGET_ID};
 
@@ -29,49 +30,226 @@ pub fn cpu_key() -> String {
     format!("{NOTICE_PREFIX}vulkan:cpu")
 }
 
-/// The title and text of the notice for `state`, in Korean when `korean`; `None` for a state
-/// the user need not hear of.
-pub fn notice_text(state: &GraphicsState, korean: bool) -> Option<(String, String)> {
-    match (state, korean) {
-        (GraphicsState::Unavailable(_), false) => Some((
-            "Android needs Vulkan to draw".into(),
-            format!(
-                "No GPU of this PC has a Vulkan driver DSA can use, so Android is not \
-                 started. Install Microsoft's \"OpenCL, OpenGL, and Vulkan Compatibility \
-                 Pack\" from the Microsoft Store ({PACK_WEB_LINK}) or with \"winget install \
-                 {PACK_WINGET_ID}\", then sign out and in again. \"dsa gpus\" shows what DSA \
-                 finds."
-            ),
-        )),
-        (GraphicsState::Unavailable(_), true) => Some((
-            "Android를 그리려면 Vulkan이 필요합니다".into(),
-            format!(
-                "이 PC의 GPU에는 DSA가 쓸 수 있는 Vulkan 드라이버가 없어 Android를 시작하지 \
-                 않습니다. Microsoft Store({PACK_WEB_LINK})나 \"winget install \
-                 {PACK_WINGET_ID}\"로 Microsoft의 \"OpenCL, OpenGL, and Vulkan \
-                 Compatibility Pack\"을 설치한 뒤 로그아웃했다가 다시 로그인하십시오. \
-                 \"dsa gpus\"로 DSA가 찾은 것을 볼 수 있습니다."
-            ),
-        )),
-        (GraphicsState::LayeredOnCpu(_), false) => Some((
-            "Android draws on the CPU".into(),
+/// The title and text of the notice that no GPU has a Vulkan driver DSA can use, in
+/// `language`. `{link}` is the Compatibility Pack's Store link and `{winget}` its winget ID.
+pub fn unavailable_words(language: UiLanguage) -> (&'static str, &'static str) {
+    match language {
+        UiLanguage::English => (
+            "Android needs Vulkan to draw",
+            "No GPU of this PC has a Vulkan driver DSA can use, so Android is not started. \
+             Install Microsoft's \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" from the \
+             Microsoft Store ({link}) or with \"winget install {winget}\", then sign out and in \
+             again. \"dsa gpus\" shows what DSA finds.",
+        ),
+        UiLanguage::Korean => (
+            "Android를 그리려면 Vulkan이 필요합니다",
+            "이 PC의 GPU에는 DSA가 쓸 수 있는 Vulkan 드라이버가 없어 Android를 시작하지 \
+             않습니다. Microsoft Store({link})나 \"winget install {winget}\"로 Microsoft의 \
+             \"OpenCL, OpenGL, and Vulkan Compatibility Pack\"을 설치한 뒤 로그아웃했다가 \
+             다시 로그인하십시오. \"dsa gpus\"로 DSA가 찾은 것을 볼 수 있습니다.",
+        ),
+        UiLanguage::Japanese => (
+            "Android の描画には Vulkan が必要です",
+            "この PC の GPU には DSA が使用できる Vulkan ドライバーがないため、Android は\
+             起動されません。Microsoft Store ({link}) または \"winget install {winget}\" で \
+             Microsoft の \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" をインストール\
+             してから、サインアウトしてもう一度サインインしてください。\"dsa gpus\" で DSA \
+             が検出したものを確認できます。",
+        ),
+        UiLanguage::ChineseSimplified => (
+            "Android 需要 Vulkan 才能绘制",
+            "此电脑的 GPU 没有 DSA 可用的 Vulkan 驱动程序，因此不会启动 Android。请从 \
+             Microsoft Store ({link}) 或使用 \"winget install {winget}\" 安装 Microsoft 的 \
+             \"OpenCL, OpenGL, and Vulkan Compatibility Pack\"，然后注销并重新登录。\
+             \"dsa gpus\" 会显示 DSA 找到的内容。",
+        ),
+        UiLanguage::ChineseTraditional => (
+            "Android 需要 Vulkan 才能繪製",
+            "這部電腦的 GPU 沒有 DSA 可用的 Vulkan 驅動程式，因此不會啟動 Android。請從 \
+             Microsoft Store ({link}) 或使用 \"winget install {winget}\" 安裝 Microsoft 的 \
+             \"OpenCL, OpenGL, and Vulkan Compatibility Pack\"，然後登出再重新登入。\
+             \"dsa gpus\" 會顯示 DSA 找到的內容。",
+        ),
+        UiLanguage::Spanish => (
+            "Android necesita Vulkan para dibujar",
+            "Ninguna GPU de este equipo tiene un controlador Vulkan que DSA pueda usar, así que \
+             Android no se inicia. Instale \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" de \
+             Microsoft desde Microsoft Store ({link}) o con \"winget install {winget}\" y, a \
+             continuación, cierre la sesión y vuelva a iniciarla. \"dsa gpus\" muestra lo que \
+             encuentra DSA.",
+        ),
+        UiLanguage::French => (
+            "Android a besoin de Vulkan pour l'affichage",
+            "Aucun GPU de ce PC ne dispose d'un pilote Vulkan utilisable par DSA, Android n'est \
+             donc pas démarré. Installez le \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" de \
+             Microsoft depuis le Microsoft Store ({link}) ou avec \"winget install {winget}\", \
+             puis déconnectez-vous et reconnectez-vous. \"dsa gpus\" affiche ce que DSA trouve.",
+        ),
+        UiLanguage::German => (
+            "Android benötigt Vulkan zum Zeichnen",
+            "Keine GPU dieses PCs hat einen Vulkan-Treiber, den DSA verwenden kann, daher wird \
+             Android nicht gestartet. Installieren Sie das \"OpenCL, OpenGL, and Vulkan \
+             Compatibility Pack\" von Microsoft aus dem Microsoft Store ({link}) oder mit \
+             \"winget install {winget}\", und melden Sie sich dann ab und wieder an. \
+             \"dsa gpus\" zeigt, was DSA findet.",
+        ),
+        UiLanguage::PortugueseBrazil => (
+            "O Android precisa do Vulkan para desenhar",
+            "Nenhuma GPU deste PC tem um driver Vulkan que o DSA possa usar, então o Android não \
+             é iniciado. Instale o \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" da \
+             Microsoft pela Microsoft Store ({link}) ou com \"winget install {winget}\" e depois \
+             saia e entre novamente. \"dsa gpus\" mostra o que o DSA encontra.",
+        ),
+        UiLanguage::Russian => (
+            "Для отрисовки Android нужен Vulkan",
+            "Ни у одного GPU этого компьютера нет драйвера Vulkan, который может использовать \
+             DSA, поэтому Android не запускается. Установите \"OpenCL, OpenGL, and Vulkan \
+             Compatibility Pack\" от Microsoft из Microsoft Store ({link}) или командой \
+             \"winget install {winget}\", затем выйдите из системы и войдите снова. Команда \
+             \"dsa gpus\" показывает, что находит DSA.",
+        ),
+        UiLanguage::Italian => (
+            "Android richiede Vulkan per disegnare",
+            "Nessuna GPU di questo PC ha un driver Vulkan utilizzabile da DSA, quindi Android \
+             non viene avviato. Installa \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" di \
+             Microsoft da Microsoft Store ({link}) o con \"winget install {winget}\", quindi \
+             esci e accedi di nuovo. \"dsa gpus\" mostra cosa trova DSA.",
+        ),
+        UiLanguage::Vietnamese => (
+            "Android cần Vulkan để hiển thị",
+            "Không GPU nào của PC này có trình điều khiển Vulkan mà DSA dùng được, nên Android \
+             không được khởi động. Hãy cài đặt \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" \
+             của Microsoft từ Microsoft Store ({link}) hoặc bằng \"winget install {winget}\", \
+             rồi đăng xuất và đăng nhập lại. \"dsa gpus\" cho biết DSA tìm thấy gì.",
+        ),
+        UiLanguage::Indonesian => (
+            "Android memerlukan Vulkan untuk menggambar",
+            "Tidak ada GPU di PC ini yang memiliki driver Vulkan yang dapat digunakan DSA, jadi \
+             Android tidak dimulai. Instal \"OpenCL, OpenGL, and Vulkan Compatibility Pack\" \
+             dari Microsoft melalui Microsoft Store ({link}) atau dengan \
+             \"winget install {winget}\", lalu keluar dan masuk kembali. \"dsa gpus\" \
+             menampilkan apa yang ditemukan DSA.",
+        ),
+        UiLanguage::Turkish => (
+            "Android'in çizim yapması için Vulkan gerekiyor",
+            "Bu bilgisayarın hiçbir GPU'sunda DSA'nın kullanabileceği bir Vulkan sürücüsü yok, \
+             bu nedenle Android başlatılmıyor. Microsoft'un \"OpenCL, OpenGL, and Vulkan \
+             Compatibility Pack\" paketini Microsoft Store'dan ({link}) veya \
+             \"winget install {winget}\" ile yükleyin, ardından oturumu kapatıp yeniden açın. \
+             \"dsa gpus\", DSA'nın bulduklarını gösterir.",
+        ),
+    }
+}
+
+/// The title and text of the notice that Android is drawn through Dozen on Windows' software
+/// renderer, in `language`.
+pub fn cpu_words(language: UiLanguage) -> (&'static str, &'static str) {
+    match language {
+        UiLanguage::English => (
+            "Android draws on the CPU",
             "This PC's GPU has no Direct3D 12 driver, so DSA renders Android through Dozen on \
-             Windows' software renderer. Apps work, but games and animations will be slow."
-                .into(),
-        )),
-        (GraphicsState::LayeredOnCpu(_), true) => Some((
-            "Android를 CPU로 그립니다".into(),
+             Windows' software renderer. Apps work, but games and animations will be slow.",
+        ),
+        UiLanguage::Korean => (
+            "Android를 CPU로 그립니다",
             "이 PC의 GPU에는 Direct3D 12 드라이버가 없어 DSA가 Windows의 소프트웨어 렌더러 위의 \
-             Dozen으로 Android를 그립니다. 앱은 동작하지만 게임과 애니메이션은 느립니다."
-                .into(),
-        )),
+             Dozen으로 Android를 그립니다. 앱은 동작하지만 게임과 애니메이션은 느립니다.",
+        ),
+        UiLanguage::Japanese => (
+            "Android は CPU で描画しています",
+            "この PC の GPU には Direct3D 12 ドライバーがないため、DSA は Windows のソフトウェア \
+             レンダラー上の Dozen で Android を描画します。アプリは動作しますが、ゲームや\
+             アニメーションは遅くなります。",
+        ),
+        UiLanguage::ChineseSimplified => (
+            "Android 正在使用 CPU 绘制",
+            "此电脑的 GPU 没有 Direct3D 12 驱动程序，因此 DSA 通过 Windows 软件渲染器上的 Dozen \
+             渲染 Android。应用可以运行，但游戏和动画会很慢。",
+        ),
+        UiLanguage::ChineseTraditional => (
+            "Android 正在使用 CPU 繪製",
+            "這部電腦的 GPU 沒有 Direct3D 12 驅動程式，因此 DSA 透過 Windows 軟體轉譯器上的 \
+             Dozen 轉譯 Android。應用程式可以運作，但遊戲和動畫會很慢。",
+        ),
+        UiLanguage::Spanish => (
+            "Android dibuja con la CPU",
+            "La GPU de este equipo no tiene un controlador de Direct3D 12, así que DSA representa \
+             Android mediante Dozen sobre el representador de software de Windows. Las \
+             aplicaciones funcionan, pero los juegos y las animaciones serán lentos.",
+        ),
+        UiLanguage::French => (
+            "Android est affiché par le processeur",
+            "Le GPU de ce PC n'a pas de pilote Direct3D 12 : DSA affiche donc Android via Dozen \
+             sur le moteur de rendu logiciel de Windows. Les applications fonctionnent, mais les \
+             jeux et les animations seront lents.",
+        ),
+        UiLanguage::German => (
+            "Android wird von der CPU gezeichnet",
+            "Die GPU dieses PCs hat keinen Direct3D 12-Treiber, daher rendert DSA Android über \
+             Dozen mit dem Softwarerenderer von Windows. Apps funktionieren, aber Spiele und \
+             Animationen sind langsam.",
+        ),
+        UiLanguage::PortugueseBrazil => (
+            "O Android desenha com a CPU",
+            "A GPU deste PC não tem um driver Direct3D 12, então o DSA renderiza o Android pelo \
+             Dozen no renderizador de software do Windows. Os apps funcionam, mas jogos e \
+             animações ficarão lentos.",
+        ),
+        UiLanguage::Russian => (
+            "Android отрисовывается процессором",
+            "У GPU этого компьютера нет драйвера Direct3D 12, поэтому DSA отрисовывает Android \
+             через Dozen на программном отрисовщике Windows. Приложения работают, но игры и \
+             анимации будут медленными.",
+        ),
+        UiLanguage::Italian => (
+            "Android disegna con la CPU",
+            "La GPU di questo PC non ha un driver Direct3D 12, quindi DSA esegue il rendering di \
+             Android tramite Dozen sul renderer software di Windows. Le app funzionano, ma giochi \
+             e animazioni saranno lenti.",
+        ),
+        UiLanguage::Vietnamese => (
+            "Android đang hiển thị bằng CPU",
+            "GPU của PC này không có trình điều khiển Direct3D 12, nên DSA kết xuất Android qua \
+             Dozen trên trình kết xuất phần mềm của Windows. Ứng dụng vẫn hoạt động, nhưng trò \
+             chơi và hoạt ảnh sẽ chậm.",
+        ),
+        UiLanguage::Indonesian => (
+            "Android menggambar dengan CPU",
+            "GPU PC ini tidak memiliki driver Direct3D 12, jadi DSA merender Android melalui \
+             Dozen pada perender perangkat lunak Windows. Aplikasi tetap berfungsi, tetapi game \
+             dan animasi akan lambat.",
+        ),
+        UiLanguage::Turkish => (
+            "Android, CPU ile çiziliyor",
+            "Bu bilgisayarın GPU'sunda Direct3D 12 sürücüsü yok, bu nedenle DSA, Android'i \
+             Windows'un yazılım işleyicisi üzerinde Dozen ile işliyor. Uygulamalar çalışır ancak \
+             oyunlar ve animasyonlar yavaş olur.",
+        ),
+    }
+}
+
+/// The title and text of the notice for `state`, in `language`; `None` for a state the user
+/// need not hear of.
+pub fn notice_text(state: &GraphicsState, language: UiLanguage) -> Option<(String, String)> {
+    match state {
+        GraphicsState::Unavailable(_) => {
+            let (title, text) = unavailable_words(language);
+            let text = text
+                .replace("{link}", PACK_WEB_LINK)
+                .replace("{winget}", PACK_WINGET_ID);
+            Some((title.into(), text))
+        }
+        GraphicsState::LayeredOnCpu(_) => {
+            let (title, text) = cpu_words(language);
+            Some((title.into(), text.into()))
+        }
         _ => None,
     }
 }
 
-/// The notice for `state` as one of DSA's own notifications.
-pub fn notification(state: &GraphicsState, korean: bool) -> Option<Notification> {
-    let (title, text) = notice_text(state, korean)?;
+/// The notice for `state` as one of DSA's own notifications, in `language`.
+pub fn notification(state: &GraphicsState, language: UiLanguage) -> Option<Notification> {
+    let (title, text) = notice_text(state, language)?;
     let key = match state {
         GraphicsState::Unavailable(_) => unavailable_key(),
         _ => cpu_key(),
@@ -153,6 +331,7 @@ impl GraphicsNotices {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ui_language::assert_translation;
     use dsa_host_core::compositor::frame_stall::is_recovery_key;
 
     fn scratch(name: &str) -> PathBuf {
@@ -164,9 +343,9 @@ mod tests {
 
     #[test]
     fn pr3_no_vulkan_is_said_with_the_store_link_and_the_winget_id() {
-        for korean in [false, true] {
+        for language in UiLanguage::ALL {
             let state = GraphicsState::Unavailable("why".into());
-            let notice = notification(&state, korean).unwrap();
+            let notice = notification(&state, language).unwrap();
             assert!(notice.text.contains(PACK_WEB_LINK), "{}", notice.text);
             assert!(notice.text.contains(PACK_WINGET_ID), "{}", notice.text);
             assert!(notice.text.contains("dsa gpus"), "{}", notice.text);
@@ -175,11 +354,40 @@ mod tests {
                 "a click asks nothing of Android"
             );
         }
-        assert!(notification(&GraphicsState::Native("x".into()), false).is_none());
-        assert!(notification(&GraphicsState::Layered("x".into()), true).is_none());
-        let cpu = notification(&GraphicsState::LayeredOnCpu("x".into()), false).unwrap();
+        let native = GraphicsState::Native("x".into());
+        assert!(notification(&native, UiLanguage::English).is_none());
+        let layered = GraphicsState::Layered("x".into());
+        assert!(notification(&layered, UiLanguage::Korean).is_none());
+        let cpu = GraphicsState::LayeredOnCpu("x".into());
+        let cpu = notification(&cpu, UiLanguage::English).unwrap();
         assert!(cpu.text.contains("slow"), "{}", cpu.text);
         assert_ne!(cpu.key, unavailable_key());
+    }
+
+    #[test]
+    fn fr17_the_graphics_notices_speak_every_language() {
+        let (english_title, english_text) = unavailable_words(UiLanguage::English);
+        let (cpu_title, cpu_text) = cpu_words(UiLanguage::English);
+        for language in UiLanguage::ALL {
+            let (title, text) = unavailable_words(language);
+            assert_translation(language, "the Vulkan title", english_title, title);
+            assert_translation(language, "the Vulkan text", english_text, text);
+            let (title, text) = cpu_words(language);
+            assert_translation(language, "the CPU title", cpu_title, title);
+            assert_translation(language, "the CPU text", cpu_text, text);
+            for (words, what) in [
+                (unavailable_words(language), "Vulkan"),
+                (cpu_words(language), "CPU"),
+            ] {
+                assert!(words.0.contains("Android"), "{what} title in {language:?}");
+                assert!(words.1.contains("DSA"), "{what} text in {language:?}");
+            }
+            if language != UiLanguage::English {
+                assert_ne!(title, cpu_title, "{language:?} has no translation");
+            }
+            let cpu = notification(&GraphicsState::LayeredOnCpu("x".into()), language).unwrap();
+            assert!(cpu.text.contains("Dozen"), "{}", cpu.text);
+        }
     }
 
     #[test]

@@ -591,7 +591,7 @@ fn underline(label: &str, key: Option<char>, bounds: Rect, em: i32) -> Option<Re
     let key = key?;
     let (at, letter) = label
         .char_indices()
-        .find(|(_, c)| c.eq_ignore_ascii_case(&key))?;
+        .find(|(_, c)| super::same_key(key, *c))?;
     let before = text::measure(&label[..at], &TEXT_FACES, em);
     let width = text::measure(&letter.to_string(), &TEXT_FACES, em);
     if before + width > bounds.w {

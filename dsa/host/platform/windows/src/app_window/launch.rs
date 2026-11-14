@@ -244,8 +244,10 @@ const STARTING_CLASS: &str = "DsaStartingApp";
 /// The program's own icon: the app's, in an app's copy of the window host.
 const ICON_ID: usize = 1;
 
-/// What the waiting window says.
-pub const STARTING_TEXT: &str = "Starting Android\u{2026}";
+/// What the waiting window says, in the user's display language.
+pub fn starting_text() -> &'static str {
+    super::messages::starting(crate::ui_language::user_language())
+}
 
 /// A small window under the app's name and icon, shown while the app is being opened, so the
 /// taskbar shows the app at once. It closes when dropped.
@@ -371,7 +373,7 @@ unsafe extern "system" fn starting_window_proc(
                 };
                 GetClientRect(hwnd, &mut rect);
                 SelectObject(dc, GetStockObject(DEFAULT_GUI_FONT));
-                let mut text: Vec<u16> = STARTING_TEXT.encode_utf16().collect();
+                let mut text: Vec<u16> = starting_text().encode_utf16().collect();
                 DrawTextW(
                     dc,
                     text.as_mut_ptr(),
