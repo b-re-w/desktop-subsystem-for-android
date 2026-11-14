@@ -77,8 +77,9 @@ pub struct Window {
     pub(crate) last_gpu: Option<(u32, crate::compositor::frames::GpuFrame)>,
     /// The tone the caption glyphs are drawn in now: `tone` when the app asked for one, else
     /// what the pixels under the band call for, and the fill's tone over a band the window
-    /// fills ([`shown_tone`]).
-    shown_tone: CaptionTone,
+    /// fills ([`shown_tone`]). `None` while neither a sample nor the app has decided it, when
+    /// the glyphs are drawn in the default tone.
+    shown_tone: Option<CaptionTone>,
     /// The band's fill and lightness over GPU frames, as sampled last, and when it was sampled.
     pub(crate) gpu_band: BandSample,
     pub(crate) band_probed: Option<Instant>,
@@ -192,7 +193,7 @@ impl State {
                 viewport: None,
                 caption_layer: None,
                 last_gpu: None,
-                shown_tone: CaptionTone::default(),
+                shown_tone: None,
                 gpu_band: BandSample::default(),
                 band_probed: None,
                 armed: None,
@@ -573,11 +574,12 @@ impl Window {
         let layout = self.model.caption_layout();
         let dpi = self.model.dpi();
         self.shown_tone = shown_tone(self.tone, sample, self.title_bar.app_drawn, self.shown_tone);
+        let tone = self.shown_tone.unwrap_or_default();
         let fill = sample.fill;
         let key = BandKey {
             layout,
             dpi,
-            tone: self.shown_tone,
+            tone,
             state: CaptionState {
                 maximized: self.model.states.maximized,
                 active: self.model.states.activated,
@@ -597,7 +599,7 @@ impl Window {
             let pixels = self.title_bar.paint(
                 &layout,
                 dpi,
-                self.shown_tone,
+                tone,
                 &key.state,
                 BandArt { icon, title, fill },
             );

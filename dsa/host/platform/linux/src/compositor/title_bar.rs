@@ -653,19 +653,23 @@ mod tests {
         let dark = frame_band_sample(&frame([0x24, 0x21, 0x20, 0xff]), width, height, band);
         assert!(light.luminance.is_some_and(|l| l > 900), "{light:?}");
         assert!(dark.luminance.is_some_and(|l| l < 50), "{dark:?}");
-        for shown in [CaptionTone::DarkGlyphs, CaptionTone::LightGlyphs] {
+        for shown in [
+            None,
+            Some(CaptionTone::DarkGlyphs),
+            Some(CaptionTone::LightGlyphs),
+        ] {
             assert_eq!(
                 shown_tone(None, light, false, shown),
-                CaptionTone::DarkGlyphs
+                Some(CaptionTone::DarkGlyphs)
             );
             assert_eq!(
                 shown_tone(None, dark, false, shown),
-                CaptionTone::LightGlyphs
+                Some(CaptionTone::LightGlyphs)
             );
             // An app that asked for a tone keeps it over either.
             assert_eq!(
                 shown_tone(Some(CaptionTone::LightGlyphs), light, false, shown),
-                CaptionTone::LightGlyphs
+                Some(CaptionTone::LightGlyphs)
             );
         }
         // A frame with no band, or rows that cannot be read, says nothing.
