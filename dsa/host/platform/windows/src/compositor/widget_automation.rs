@@ -151,6 +151,9 @@ impl WidgetView {
             action,
             text,
             request_id: self.next_request,
+            selection: (0, 0),
+            progress: 0.0,
+            position: (0, 0),
         };
         match &self.actions {
             Some(actions) if actions.send(request).is_ok() => Ok(()),
@@ -1054,6 +1057,8 @@ fn watch(
                         );
                     }
                 }
+                // Announcements go to tasks; a widget's watch never carries one.
+                Ok(Some(GuestAccessibility::Announcement(_))) => {}
                 Err(why) => {
                     note(
                         logger.as_deref(),

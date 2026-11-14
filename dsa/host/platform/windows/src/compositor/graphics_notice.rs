@@ -86,6 +86,7 @@ pub fn notification(state: &GraphicsState, korean: bool) -> Option<Notification>
         importance: 4,
         high_priority: false,
         clearable: true,
+        buttons: Vec::new(),
         when_millis: SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|since| since.as_millis() as i64)
