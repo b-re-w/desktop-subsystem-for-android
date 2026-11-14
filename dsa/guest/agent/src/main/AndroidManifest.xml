@@ -51,6 +51,13 @@
       which the host's caption buttons follow: the guest has no SystemUI to be it.
     -->
     <uses-permission android:name="android.permission.STATUS_BAR_SERVICE" />
+    <!--
+      Drawing the apps' text toasts, which the notification manager sends to the status bar:
+      the toast's accessibility event names the app that showed it, not the agent that drew
+      it, so a screen reader hears it in that app's window. The accessibility manager lets
+      only a holder of this permission name another app's package.
+    -->
+    <uses-permission android:name="android.permission.ACT_AS_PACKAGE_FOR_ACCESSIBILITY" />
     <!-- Reading the label and launcher activity of any app. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <!--
