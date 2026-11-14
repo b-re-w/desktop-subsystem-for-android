@@ -3533,3 +3533,52 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 - 소유자 PC에서 여백이 어느 화면, 어느 창 높이, 어느 뷰 아래에 있는지. `uiautomator dump`의 `content`, `content_frame`, `recycler_view` 경계와 `dumpsys activity top`의 그 창 인셋 소스(`type=navigationBars`, `type=ime`의 `visible`과 프레임)를 보면 인셋인지 레이아웃인지 갈린다.
 - 두 창 배치(창 너비 720 dp 이상에서의 액티비티 임베딩)와 Compose로 그리는 화면(SPA)은 기기에서 보지 못했다. 소스에서는 둘 다 아래 여백을 더하지 않는다.
 - 큰 제목을 펼쳐 여는 높은 창에서, 목록이 아니라 아래에 단추를 고정해 둔 화면(중첩 스크롤이 없는 화면)은 그 단추가 창 밖 123 dp 안에 놓일 수 있다. SettingsLib은 이 테마에서 제목을 끌어 접지 못하게 하므로(`CollapsingCoordinatorLayout`의 `canDrag`) 접을 방법이 없다. 그런 화면이 실제로 있는지는 기기에서 본다.
+
+## R51. 높이가 고정된 앱 바가 위쪽 인셋에 눌리는 까닭, 그리고 밝은 띠 위의 밝은 글리프 (FR-22)
+
+**기준.** 2026-11-15 소유자 PC(Android 17 이미지, 200% 모니터, 게스트 262 dpi)의 MX Player 3.4.3(`com.mxtech.videoplayer.ad`, targetSdk 36), 창 1439x1166 px, 구성 `sw712dp w879dp h712dp land`. 소유자가 준 `dumpsys` 출력과 코드만 읽었다. 기기와 바탕 화면은 건드리지 않았고 APK는 열어 보지 않았다. 프레임워크 소스는 `android-16.0.0_r1`과 `android-17.0.0_r1` 태그의 `DesktopModeWindowDecoration.java`, `DecorView.java`, `InsetsSource.java`를, AndroidX는 `androidx-main`의 `appcompat/widget/Toolbar.java`를 `.scratch/caption-compat`에 받아 읽었다.
+
+### A. 설정 화면의 앱 바가 눌린다
+
+본 것.
+
+- 창은 `statusBars`와 `captionBar` 소스를 같은 프레임(높이 58 px, 플래그 없음)으로 받는다. 에이전트가 주는 그대로다(`AndroidTaskActions.setCaptionInset`, `addInsetsSource`의 flags 0). 프레임워크 리소스 `status_bar_height`도 262 dpi에서 35.4198 dp, 곧 58 px다(`make-image.py`의 `status_bar_overlay_files`, `test_fr22_the_status_bar_height_is_the_title_bars_at_each_density`). 인셋과 리소스가 어긋나지 않는다.
+- 첫 화면: `Toolbar 0,0-1439,150`, 자식은 y=58부터. 인셋 58 px에 바 92 px(56 dp)가 더해졌다. 높이가 내용에 맞춰 늘어나는 바다.
+- 설정 화면(`ActivityPreferences`): `Toolbar 0,0-1439,105`, 뒤로 단추 `0,87-92,134`, 제목 `131,64-191,99`. 바 전체가 105 px(64 dp, sw600dp의 `actionBarSize`)이고 그 안에서 위 58 px이 패딩이다.
+
+원인. 이 숫자는 높이가 `?attr/actionBarSize`로 고정되고 `minHeight`도 같은 값인 AndroidX `Toolbar`에 위쪽 패딩 58 px이 더해졌을 때 그대로 나온다.
+
+- 단추의 높이 47 px: `Toolbar.onMeasure`는 내비게이션 단추를 부모의 높이 한도에서 패딩을 뺀 만큼으로 잰다(`Toolbar.java:1834`, `measureChildConstrained`). 105 - 58 = 47.
+- 단추의 위치 87 px: 단추의 세로 정렬은 기본이 `Gravity.TOP`이고(`:276`), `getChildTop`은 그때 `getPaddingTop() - (childHeight - alignmentHeight) / 2`를 돌려준다(`:2218`, `:2221`). `alignmentHeight`는 `min(minHeight, 높이)` = 105(`:1968`). 58 - (47 - 105) / 2 = 87. 관찰한 값과 같다. 단추는 87..134에 놓이고 바는 105에서 끝나므로 아래 29 px이 잘린다.
+- 제목 `64..99`는 남은 47 px의 가운데다.
+
+곧 앱이 높이를 고정한 바에 위쪽 인셋을 패딩으로 준 것이다(`fitsSystemWindows`이거나 앱의 인셋 코드, 어느 쪽인지는 APK를 봐야 안다). DSA가 준 값 때문에 생긴 모순이 아니다. 같은 레이아웃은 폰에서도 같은 꼴로 눌린다. 56 dp 바에 24 dp 상태 표시줄이면 32 dp가 남고 단추는 36..68 dp에 놓여 12 dp가 잘린다. 카메라 구멍이 있는 폰의 상태 표시줄은 24 dp보다 높아 더 눌린다. DSA의 35.4 dp는 그 범위 안이지만 24 dp보다 크므로 더 눈에 띈다. `mIsInMultiWindowMode`와 sw600dp 구성은 바를 64 dp로 키울 뿐 원인이 아니다.
+
+Android 데스크톱 창이 하는 일. `DesktopModeWindowDecoration.updateRelayoutParams`는 제목 표시줄을 직접 그리겠다고 하지 않은 앱의 캡션 소스에 `FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR`를 붙인다(Android 16 `:1041`-`:1047`은 플래그 `ENABLE_CAPTION_COMPAT_INSET_FORCE_CONSUMPTION_ALWAYS` 아래, Android 17 `:1180`-`:1185`는 늘). 주석은 "including non-immersive apps that just don't handle caption insets properly"다. `DecorView.updateColorViews`는 그 플래그가 있고 앱이 `APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND`를 켜지 않았으면 캡션 바 인셋을 소비해 내용 루트의 위 여백으로 만든다(Android 16 `:1240`-`:1263`, Android 17 `:1173`-`:1194`). 앱은 캡션 아래에서 시작하고 위쪽 인셋 0을 받는다. 상태 표시줄 소스는 프리폼 창에 주지 않는다(R30). 띠는 셸이 불투명하게 칠한다.
+
+선택지. 어느 것도 구현하지 않았다. 2와 3은 SPEC FR-22가 약속한 것을 바꾸므로 소유자의 결정이다.
+
+1. 그대로 둔다. 인셋을 스스로 다루는 앱(YouTube, MX의 첫 화면)은 앱 바 색이 띠까지 이어진다. 높이를 고정하고 패딩을 주는 화면은 폰에서처럼 눌린다. 비용 없음.
+2. 모든 앱에 Android 데스크톱의 방식: 캡션 바 소스에 `FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR`를 주고 상태 표시줄 소스를 주지 않는다. 눌리는 화면이 모두 고쳐진다. 대신 모든 앱이 띠 아래에서 시작하고, 띠에는 앱 바가 아니라 창 배경이 보인다. 호스트가 띠 아래의 색으로 띠를 채워야 통합된 모양이 남는데(지금의 채우기는 띠가 비거나 검을 때만 한다), 위쪽이 그림이나 그라데이션인 앱은 띠가 한 색 막대로 끊긴다. FR-22의 "앱 화면이 그 아래까지 이어진다"를 버리는 일이다.
+3. 앱별 호환 스위치(앱의 창 설정, 기본은 꺼짐): 켠 앱의 태스크에만 2의 인셋을 준다. 기본 모양은 그대로고, 눌리는 앱만 사용자가 고친다. 비용: 새 설정과 새 요구 사항, 에이전트가 태스크마다 소스의 꼴을 바꾸는 코드, 호스트의 띠 채우기를 "띠가 창 배경색일 때"까지 넓히는 일. Android 자신도 앱별 호환 정책(`shouldExcludeCaptionFromAppBounds`)을 둔다.
+4. 상태 표시줄 인셋을 폰의 24 dp로 줄이고 나머지를 소비시킨다. 고치지 못한다. 고정 높이 바는 패딩이 얼마든 `alignmentHeight` 때문에 단추가 패딩의 절반만큼 내려가 잘린다(24 dp면 12 dp). 띠의 위쪽에는 창 배경이 보여 모양도 깨진다.
+
+추천은 3이다. 대부분의 앱은 Android 15부터의 edge-to-edge 강제 때문에 상태 표시줄 인셋을 이미 다루고, 통합된 띠는 그런 앱에서만 얻는다. 2는 드문 앱을 위해 모든 앱의 모양을 내준다.
+
+### B. 밝은 띠 위에 밝은 글리프가 그려진다
+
+원인. 표본을 늦게 뜨거나 한 번만 떠서가 아니다. 띠의 표본은 프레임이 올 때마다(최대 200 ms에 한 번) 다시 뜬다. 앱이 `APPEARANCE_LIGHT_STATUS_BARS`를 켜지 않으면 에이전트는 그 태스크를 어두운 상태 표시줄로 알리고(`SystemBarAppearances`, 폰에서 플래그가 꺼져 있으면 밝은 아이콘이다, PR #748), 호스트의 `shown_tone`은 앱이 말한 것이 있으면 픽셀을 보지 않고 그대로 따랐다(PR #723). 179 기준은 앱이 아무 말도 하지 않은 창에만 쓰였다. 설정 화면은 플래그를 켜지 않은 채 밝은 회색 바(#E0E0E0쯤, 상대 휘도 0.745)를 띠 뒤까지 그리므로 흰 글리프가 그 위에 놓였다(대비 1.3 대 1). 폰에서도 이 화면의 상태 표시줄 아이콘은 흰색일 것이다.
+
+고친 것(`dsa/host/core/src/compositor/caption.rs`).
+
+- 표본에 띠의 가장 어두운 곳과 가장 밝은 곳의 휘도(`BandSample.range`)를 더했다. 앱이 말한 색조는 시작 값이고, 띠 전체에서 읽을 수 없을 때만 물러난다(`readable_tone`). 밝은 글리프는 띠의 가장 어두운 곳조차 휘도 0.5를 넘으면(흰색의 대비가 어디서나 2 대 1 아래) 어두워지고, 띠의 어딘가가 0.4 아래로 내려가면 돌아온다. 어두운 글리프는 가장 밝은 곳조차 0.05 아래면 밝아지고 0.08을 넘으면 돌아온다. 그 사이에서는 그려진 색조를 지키므로 깜빡이지 않는다.
+- 밝고 어두운 곳이 섞인 띠(FLO의 앨범 그림 위 어두운 그라데이션, 사진 머리글)는 어느 한 곳에서는 앱의 색조가 읽히므로 앱의 말이 그대로 선다. PR #723이 고친 경우는 그대로다.
+- Windows 호스트는 프레임이 멎은 뒤 마지막 프레임의 띠를 한 번 더 읽는다(`WindowPresenter::settle_band`, `band_reading_owed`). 표본은 200 ms에 한 번만 복사하고 다음 프레임이 올 때 읽으므로, 화면 전환의 마지막 프레임은 읽히지 않고 전환 도중의 색이 남을 수 있었다.
+
+SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운 글리프를, 어두운 상태 표시줄을 쓰는 앱의 창은 밝은 글리프를"은 그대로 지켜진다. 앱의 바가 실제로 그 밝기일 때는 결과가 같고, 바가 끝에서 끝까지 반대 밝기일 때만 달라진다.
+
+### 확인하지 못한 것
+
+- MX Player의 레이아웃 자체. `toolbar_activity_layout`의 `layout_height`와 `fitsSystemWindows`는 APK를 풀어야 보인다. 같은 화면을 Android 16 폰이나 에뮬레이터에서 열어 눌리는지 보면 앱의 문제인지 바로 갈린다.
+- 실기에서의 B. 테스트는 가짜 표본으로 한 것이다. 설정 화면에서 글리프가 어두워지는지, 첫 화면으로 돌아가면 다시 밝아지는지, FLO 플레이어 화면이 흰 글리프를 지키는지 PC에서 본다.
+- 리눅스 호스트의 GPU 경로가 마지막 프레임의 띠를 읽는지는 보지 않았다.
