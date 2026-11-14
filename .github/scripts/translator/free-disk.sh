@@ -4,9 +4,14 @@
 # runner's image carries SDKs and toolchains the build never uses (the build brings its own
 # Clang, JDK and Go), so they go. It prints the free space before and after, adds swap for the
 # compiler's peaks, and writes DSA_TRANSLATOR_WORK (a folder on the disk with the most room,
-# named after the build: free-disk.sh [name], dsa-translator by default) to $GITHUB_ENV.
+# named after the build: free-disk.sh [name] [--deep], dsa-translator by default) to $GITHUB_ENV.
+#
+# --deep also takes the runner's own swap file and the rest of its toolchains (the host LLVMs,
+# browsers, JVM languages and package managers), for a build in the whole tree (services.jar),
+# whose tree, analysis swap and output only just fit the runner's disk.
 set -euo pipefail
 name="${1:-dsa-translator}"
+deep="${2:-}"
 
 echo "::group::Disk before"
 df -h / /mnt 2>/dev/null || df -h /
@@ -19,6 +24,22 @@ sudo rm -rf \
   /usr/lib/google-cloud-sdk /usr/share/miniconda /usr/local/julia* /usr/lib/jvm \
   /opt/pipx /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/az_* \
   || true
+if [[ "$deep" == --deep ]]; then
+  # The AOSP build brings its own Clang, JDK, Go and Python tools; these are not on its path.
+  sudo rm -rf \
+    /usr/lib/llvm-* /usr/lib/firefox /usr/lib/mono /usr/share/kotlinc /usr/local/share/vcpkg \
+    /usr/share/gradle* /usr/share/apache-maven* /usr/share/sbt /usr/local/lib/lein \
+    /opt/mssql-tools /home/linuxbrew /usr/local/share/edge_driver /usr/local/share/gecko_driver \
+    /usr/local/share/chromedriver-linux64 /usr/local/n /usr/share/php* \
+    || true
+  # The image's own swap file: the build adds its own, sized for it.
+  for swap in /swapfile /mnt/swapfile; do
+    if [[ -f "$swap" ]]; then
+      sudo swapoff "$swap" 2>/dev/null || true
+      sudo rm -f "$swap"
+    fi
+  done
+fi
 if command -v docker >/dev/null; then
   sudo docker system prune -af >/dev/null 2>&1 || true
 fi
