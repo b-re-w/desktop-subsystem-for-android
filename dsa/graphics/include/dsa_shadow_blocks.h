@@ -9,9 +9,12 @@
 // Sending all of it for every submit makes every frame wait for tens of megabytes to cross a
 // Hyper-V socket, so only the blocks that changed are sent.
 //
-// Nothing tells the driver when an app writes through a mapped pointer, so each block's hash
-// is kept and compared at each flush. Hashing is an order of magnitude faster than sending,
-// and keeps 8 bytes per 4 KiB block rather than a second copy of the memory.
+// Each block's hash is kept, 8 bytes per 4 KiB block rather than a second copy of the memory,
+// and a block goes only when its hash changed, so a block written with what it held already
+// is not sent. Which blocks are compared at a flush depends on what the kernel tracks
+// (dsa_dirty_pages.h): only the blocks it saw written (changedIn), or every block (changed)
+// where it tracks nothing. Comparing every block reads all of the app's mapped memory at
+// every submit, which for a game that maps hundreds of megabytes is most of its render time.
 //
 // A new allocation counts as all zero, which is what the driver's copy starts as, so blocks
 // the app never wrote are never sent. The host's memory is undefined there until written.
@@ -79,19 +82,22 @@ class ShadowBlocks {
     std::vector<Range> changed(const uint8_t* memory) {
         std::vector<Range> ranges;
         for (size_t block = 0; block < hashes_.size(); block++) {
-            const uint64_t offset = block * kShadowBlockSize;
-            const uint64_t length = blockSize(offset);
-            const uint64_t hash = shadowBlockHash(memory + offset, length);
-            if (hash == hashes_[block]) {
-                continue;
-            }
-            hashes_[block] = hash;
-            if (!ranges.empty() && ranges.back().offset + ranges.back().size == offset) {
-                ranges.back().size += length;
-            } else {
-                ranges.push_back(Range{offset, length});
-            }
+            compare(memory, block, &ranges);
         }
+        return ranges;
+    }
+
+    // As changed(), when the kernel says which bytes of `memory` were written since the last
+    // call (`written`, in order, as offsets from its start): only the blocks they touch are
+    // compared, since every other block holds what it held at the last call. Nothing written
+    // compares and sends nothing. `compared`, when given, grows by the bytes hashed.
+    std::vector<Range> changedIn(const uint8_t* memory, const std::vector<Range>& written,
+                                 uint64_t* compared = nullptr) {
+        std::vector<Range> ranges;
+        forEachBlock(written, [&](size_t block) {
+            const uint64_t length = compare(memory, block, &ranges);
+            if (compared) *compared += length;
+        });
         return ranges;
     }
 
@@ -139,9 +145,54 @@ class ShadowBlocks {
         }
     }
 
+    // As refresh(), for the bytes the kernel saw written since the last call alone: every
+    // other block holds what its hash says already.
+    void refreshIn(const uint8_t* memory, const std::vector<Range>& written) {
+        forEachBlock(written, [&](size_t block) {
+            const uint64_t offset = block * kShadowBlockSize;
+            hashes_[block] = shadowBlockHash(memory + offset, blockSize(offset));
+        });
+    }
+
     uint64_t size() const { return size_; }
 
    private:
+    // Compares one block with its hash, takes the new hash, and adds the block to `ranges`
+    // when it changed, joined to the range before it where they meet. Returns its length.
+    uint64_t compare(const uint8_t* memory, size_t block, std::vector<Range>* ranges) {
+        const uint64_t offset = block * kShadowBlockSize;
+        const uint64_t length = blockSize(offset);
+        const uint64_t hash = shadowBlockHash(memory + offset, length);
+        if (hash == hashes_[block]) {
+            return length;
+        }
+        hashes_[block] = hash;
+        if (!ranges->empty() && ranges->back().offset + ranges->back().size == offset) {
+            ranges->back().size += length;
+        } else {
+            ranges->push_back(Range{offset, length});
+        }
+        return length;
+    }
+
+    // Calls `visit` once for each block the ranges touch, in order, within the memory. Ranges
+    // that share a block (two runs of pages smaller than a block) visit it once.
+    template <typename Visit>
+    void forEachBlock(const std::vector<Range>& written, Visit visit) {
+        size_t next = 0;
+        for (const Range& range : written) {
+            if (range.size == 0 || range.offset >= size_) continue;
+            const uint64_t end =
+                range.size > size_ - range.offset ? size_ : range.offset + range.size;
+            size_t block = static_cast<size_t>(range.offset / kShadowBlockSize);
+            if (block < next) block = next;
+            for (; block < hashes_.size() && block * kShadowBlockSize < end; block++) {
+                visit(block);
+            }
+            if (block > next) next = block;
+        }
+    }
+
     static size_t blockCount(uint64_t size) {
         return static_cast<size_t>((size + kShadowBlockSize - 1) / kShadowBlockSize);
     }
