@@ -107,8 +107,13 @@ jobs:
   # the published build's manifest syncs by default (framework_lock.py services-lock), with the
   # build's own product and release configuration. A dex file is the same for every
   # architecture, so one build serves the images of both; the framework jobs below take it into
-  # their artifacts. Soong's analysis of the whole tree needs more memory than the runner has,
-  # hence the large swap.
+  # their artifacts. It fits a standard runner's disk (145 GB) only as follows: the runner's
+  # unused toolchains go (free-disk.sh --deep), the tree leaves out what only native builds and
+  # other devices read (framework_lock.py SERVICES_TREE_SKIPPED), and the build makes services'
+  # dex jar alone, not its install path, which would also build its JNI, native and Rust
+  # dependencies. Soong's analysis of the whole tree needs more memory than the runner has, so a
+  # large swap file is added for it, and build-services.sh gives it back to the disk when the
+  # analysis is done.
   services:
     name: Build services.jar (ubuntu-24.04, ${{ matrix.android }})
     needs: versions
@@ -124,7 +129,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Make room on the runner
-        run: .github/scripts/translator/free-disk.sh dsa-services
+        run: .github/scripts/translator/free-disk.sh dsa-services --deep
 
       - name: Add swap for the analysis of the whole tree
         run: |
@@ -133,7 +138,10 @@ jobs:
           sudo chmod 600 "$swap_dir/dsa-swap-services"
           sudo mkswap "$swap_dir/dsa-swap-services" >/dev/null
           sudo swapon "$swap_dir/dsa-swap-services"
+          # build-services.sh turns it off and deletes it once the analysis is done.
+          echo "DSA_ANALYSIS_SWAP=$swap_dir/dsa-swap-services" >> "$GITHUB_ENV"
           free -h
+          df -h / /mnt
 
       - name: Install the build tools
         run: |
@@ -157,10 +165,17 @@ jobs:
             --android "$ANDROID_BRANCH" --top "$DSA_TRANSLATOR_WORK/aosp" --jobs 16
           echo "fetched in $(( (SECONDS - start) / 60 )) minutes"
           du -sh "$DSA_TRANSLATOR_WORK/aosp"
+          echo "::group::The largest folders of the tree"
+          du -x -h -d 3 "$DSA_TRANSLATOR_WORK/aosp" 2>/dev/null | sort -rh | head -60 || true
+          echo "::endgroup::"
           df -h / /mnt
 
+      # build-services.sh stops itself after DSA_BUILD_MINUTES, before the step's limit, so that
+      # a build out of time says so; it also says when it ran out of disk or memory.
       - name: Build services.jar
         timeout-minutes: 300
+        env:
+          DSA_BUILD_MINUTES: 285
         run: |
           start=$SECONDS
           .github/scripts/framework/build-services.sh "$DSA_TRANSLATOR_WORK/aosp" "$ANDROID_BRANCH" "$DSA_TRANSLATOR_WORK/services"

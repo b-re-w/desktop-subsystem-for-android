@@ -33,6 +33,9 @@ a project fetched in part) and fetched by .github/scripts/translator/fetch-sourc
     framework_lock.py services-lock <android> <manifest.xml> <out.json>
                                                    writes the lock of the services build's tree:
                                                    every project the manifest syncs by default
+                                                   but SERVICES_TREE_SKIPPED
+    framework_lock.py install-source               reads `ninja -t query <install path>` and
+                                                   prints the jar the install path copies
 
 services.jar, with DSA's window manager, package manager and WebView service, is built in a tree
 of its own (SERVICES_JAR): the Java framework needs most of the platform.
@@ -112,6 +115,15 @@ JAVA_OUTPUTS = {SERVICES_JAR: "system/framework/services.jar"}
 # project here that the native lock does not name at all is taken whole.
 SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust",
                        "prebuilts/rust-toolchain/linux-x86"]
+# Projects the services tree leaves out although the manifest syncs them: prebuilt native
+# libraries and their ABI dumps (the build skips ABI checks) and emulator kernels and binaries,
+# which only native builds and other devices read. Nothing on the way from the Java sources to
+# services.jar's dex reads them, the product's configuration names none of them, and the build
+# allows missing dependencies, so the modules they define may go missing. Together they are
+# several gigabytes of the tree, which only just fits a standard runner's disk. A path ending in
+# "/" leaves out every project below it.
+SERVICES_TREE_SKIPPED = ["prebuilts/abi-dumps/", "prebuilts/vndk/", "prebuilts/qemu-kernel",
+                         "prebuilts/android-emulator"]
 # Projects in a manifest group repo leaves out of a default sync on Linux.
 UNSYNCED_GROUPS = {"notdefault", "platform-darwin", "darwin"}
 
@@ -275,16 +287,25 @@ def manifest_projects(text):
     return projects
 
 
+def services_skipped(path):
+    """Whether the services tree leaves out the project at `path` (SERVICES_TREE_SKIPPED)."""
+    return any(path.startswith(skip) if skip.endswith("/") else path == skip
+               for skip in SERVICES_TREE_SKIPPED)
+
+
 def services_lock(version, text):
     """The lock the services build fetches its tree by: `version` with every project its
-    manifest (`text`, the one it pins by SHA-256) syncs by default, each at the manifest's commit,
-    and the toolchain prebuilts (SERVICES_TREE_CONES) taken in part as `version` takes them."""
+    manifest (`text`, the one it pins by SHA-256) syncs by default but SERVICES_TREE_SKIPPED, each
+    at the manifest's commit, and the toolchain prebuilts (SERVICES_TREE_CONES) taken in part as
+    `version` takes them."""
     data = text.encode() if isinstance(text, str) else text
     if hashlib.sha256(data).hexdigest() != version["manifest"]["sha256"]:
         raise LockError(f"the manifest is not the one {version['android']} pins (SHA-256 differs)")
     native = {p["path"]: p for p in version["projects"]}
     projects = []
     for project in manifest_projects(data):
+        if services_skipped(project["path"]):
+            continue
         if project["path"] in SERVICES_TREE_CONES and project["path"] in native:
             if "cone" not in native[project["path"]]:
                 raise LockError(f"{version['android']} does not say which part of {project['path']} to take")
@@ -293,8 +314,8 @@ def services_lock(version, text):
     tree = {key: value for key, value in version.items() if key != "projects"}
     tree["projects"] = sorted(projects, key=lambda p: p["path"])
     return {
-        "comment": f"Every project build {version['build_id']}'s manifest syncs by default, for the "
-                   "services build (framework_lock.py services-lock).",
+        "comment": f"Every project build {version['build_id']}'s manifest syncs by default but the "
+                   "ones only native builds read, for the services build (framework_lock.py services-lock).",
         "kind": KIND,
         "versions": [tree],
     }
@@ -342,7 +363,39 @@ def manifest_problems(version, text):
     return problems
 
 
+def install_source(query):
+    """The file an install path is a copy of, from what `ninja -t query <install path>` prints:
+    the one explicit input of its rule, which must copy a jar. The services build builds that
+    file, the module's own dex jar, so that installing it does not also build what the module
+    requires."""
+    rule, inputs, section = None, [], None
+    for line in query.splitlines():
+        if line.startswith("  ") and not line.startswith("    "):
+            key, _, value = line.strip().partition(":")
+            section = key
+            if key == "input":
+                rule = value.strip()
+        elif section == "input" and line.startswith("    "):
+            path = line.strip()
+            if not path.startswith("|"):
+                inputs.append(path)
+    if rule is None:
+        raise LockError("ninja names no rule that makes the install path")
+    if not re.search(r"cp|copy|install", rule, re.IGNORECASE):
+        raise LockError(f"the install path is made by {rule}, which is not a copy, so the module's "
+                        "own output cannot stand in for it")
+    if len(inputs) != 1 or not inputs[0].endswith(".jar"):
+        raise LockError(f"the install path is a copy of {', '.join(inputs) or 'nothing'}, not of one jar")
+    return inputs[0]
+
+
 def main(argv):
+    if argv[1:] == ["install-source"]:
+        try:
+            print(install_source(sys.stdin.read()))
+        except LockError as error:
+            raise SystemExit(str(error))
+        return
     lock = load()
     if argv[1:] == ["versions"]:
         print(json.dumps([v["android"] for v in lock["versions"]]))
@@ -367,7 +420,7 @@ def main(argv):
     else:
         raise SystemExit("usage: framework_lock.py versions | version <android> | outputs | java-outputs | "
                          "check-manifest <android> <manifest.xml> | "
-                         "services-lock <android> <manifest.xml> <out.json>")
+                         "services-lock <android> <manifest.xml> <out.json> | install-source")
 
 
 if __name__ == "__main__":

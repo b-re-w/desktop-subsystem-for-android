@@ -790,7 +790,10 @@ class ServicesTests(unittest.TestCase):
         ).encode()
 
     def test_fr22_the_services_tree_is_every_project_the_manifest_syncs_by_default(self):
-        manifest = self._manifest()
+        manifest = self._manifest().replace(
+            b"</manifest>",
+            f'<project path="prebuilts/vndk/v34" name="platform/prebuilts/vndk/v34" revision="{COMMIT}"/>'
+            "</manifest>".encode())
         version = {
             "android": "android17", "android_major": 17, "build_id": "1", "release": "cp2a",
             "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()},
@@ -842,6 +845,93 @@ class ServicesTests(unittest.TestCase):
         self.assertIn("--native", (REPO / ".github/scripts/framework/build.sh").read_text())
         self.assertEqual(framework_lock.JAVA_OUTPUTS,
                          {"SYSTEM/framework/services.jar": "system/framework/services.jar"})
+
+    def test_fr22_the_services_tree_leaves_out_what_only_native_builds_read(self):
+        # Run 43616908714 ran out of disk: the whole tree was 80 GB of the runner's 145.
+        manifest = (
+            "<manifest>"
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/abi-dumps/platform" name="platform/prebuilts/abi-dumps/platform" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/vndk/v33" name="platform/prebuilts/vndk/v33" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/qemu-kernel" name="platform/prebuilts/qemu-kernel" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/android-emulator" name="platform/prebuilts/android-emulator" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/sdk" name="platform/prebuilts/sdk" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/vndkfoo" name="platform/prebuilts/vndkfoo" revision="{COMMIT}"/>'
+            "</manifest>"
+        ).encode()
+        version = {
+            "android": "android16", "android_major": 16, "build_id": "1", "release": "bp4a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()}, "projects": [],
+        }
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        # The Java build's own prebuilts stay; a path is left out only below a skipped folder.
+        self.assertEqual([p["path"] for p in entry["projects"]],
+                         ["frameworks/base", "prebuilts/sdk", "prebuilts/vndkfoo"])
+        for path in framework_lock.REQUIRED:
+            self.assertFalse(framework_lock.services_skipped(path), path)
+
+    def test_fr22_the_services_build_makes_the_dex_jar_not_the_install_path(self):
+        # Installing services.jar also built its JNI, native and Rust dependencies (12163 steps,
+        # rustc out of disk in run 43616908714). The build makes the file the install copies.
+        dex = "out/soong/.intermediates/frameworks/base/services/services/android_common/dex/services.jar"
+        query = (
+            "out/target/product/vsoc_x86_64_only/system/framework/services.jar:\n"
+            "  input: g.android.Cp\n"
+            f"    {dex}\n"
+            "    | out/host/linux-x86/bin/cp_helper\n"
+            "    || out/target/product/vsoc_x86_64_only/system/lib64/libandroid_servers.so\n"
+            "  validations:\n"
+            "    out/soong/.intermediates/check.txt\n"
+            "  outputs:\n"
+            "    out/target/product/vsoc_x86_64_only/system/framework/services.jar.installed\n")
+        self.assertEqual(framework_lock.install_source(query), dex)
+        with self.assertRaisesRegex(framework_lock.LockError, "not a copy"):
+            framework_lock.install_source(query.replace("g.android.Cp", "g.java.dexpreopt"))
+        with self.assertRaisesRegex(framework_lock.LockError, "not of one jar"):
+            framework_lock.install_source(query.replace(f"    {dex}\n", f"    {dex}\n    a.jar\n"))
+        with self.assertRaisesRegex(framework_lock.LockError, "no rule"):
+            framework_lock.install_source("services.jar:\n  outputs:\n")
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('build "the analysis of the tree" nothing', script)
+        self.assertIn('-t query "$product_out/$installed"', script)
+        self.assertIn("framework_lock.py\" install-source", script)
+        self.assertIn('build "the services.jar build" "${jars[@]}"', script)
+        self.assertIn('cp "${jars[$i]}" "$out/${names[$i]}"', script)
+        self.assertNotIn('m -j"$(nproc)" "${targets[@]}"', script)
+        # The analysis swap goes back to the disk before the Java build.
+        self.assertLess(script.index('build "the analysis of the tree"'), script.index('sudo swapoff "$DSA_ANALYSIS_SWAP"'))
+        self.assertLess(script.index('sudo rm -f "$DSA_ANALYSIS_SWAP"'), script.index('build "the services.jar build"'))
+
+    def test_fr22_a_services_build_failure_says_whether_disk_memory_or_time(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        for cause in ("ran out of time", "ran out of disk", "ran out of memory"):
+            self.assertIn(f"$what {cause}", script)
+        self.assertIn('timeout --signal=TERM --kill-after=120 "$left"', script)
+        self.assertIn('minutes="${DSA_BUILD_MINUTES:-280}"', script)
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        step = job[job.index("- name: Build services.jar"):job.index("- name: Keep services.jar")]
+        step_limit = int(re.search(r"timeout-minutes: (\d+)", step).group(1))
+        budget = int(re.search(r"DSA_BUILD_MINUTES: (\d+)", step).group(1))
+        job_limit = int(re.search(r"timeout-minutes: (\d+)", job).group(1))
+        # The script stops itself before the step's limit, and the step before the job's (360
+        # minutes on a standard runner), leaving room for the fetch.
+        self.assertLess(budget + 10, step_limit)
+        self.assertLessEqual(step_limit + 45, job_limit)
+        self.assertLessEqual(job_limit, 360)
+
+    def test_fr22_the_services_job_fits_a_standard_runner(self):
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        self.assertIn("runs-on: ubuntu-24.04\n", job)
+        self.assertIn(".github/scripts/translator/free-disk.sh dsa-services --deep", job)
+        self.assertIn('echo "DSA_ANALYSIS_SWAP=$swap_dir/dsa-swap-services" >> "$GITHUB_ENV"', job)
+        self.assertEqual(job.count("df -h / /mnt"), 3)
+        free_disk = (REPO / ".github/scripts/translator/free-disk.sh").read_text()
+        self.assertIn('if [[ "$deep" == --deep ]]; then', free_disk)
+        self.assertIn("/usr/lib/llvm-*", free_disk)
+        # The other builds keep the plain cleanup.
+        self.assertNotIn("--deep", workflow[workflow.index("  framework:\n"):])
 
     def test_fr22_the_framework_artifact_carries_services_jar_from_the_services_build(self):
         workflow = (REPO / ".github/workflows/framework.yml").read_text()
