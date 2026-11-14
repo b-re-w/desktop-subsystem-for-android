@@ -901,7 +901,10 @@ mod tests {
                 let (title, text) = alert.text(lang);
                 assert!(!title.trim().is_empty(), "{lang:?} {:?}", alert.kind);
                 assert!(!text.trim().is_empty(), "{lang:?} {:?}", alert.kind);
-                assert!(!title.contains('\u{2014}') && !text.contains('\u{2014}'));
+                assert!(
+                    !title.contains(char::from_u32(0x2014).unwrap())
+                        && !text.contains(char::from_u32(0x2014).unwrap())
+                );
                 assert!(!text.contains("{v}"), "{lang:?}: {text}");
                 assert!(text.contains("16.0.3-1234"), "{lang:?}: {text}");
                 let named = match alert.subject {
@@ -920,7 +923,10 @@ mod tests {
             assert_eq!((buttons[0].action, buttons[1].action), (RESTART_NOW, LATER));
             for button in &buttons {
                 assert!(!button.label.trim().is_empty(), "{lang:?}");
-                assert!(!button.label.contains('\u{2014}'), "{lang:?}");
+                assert!(
+                    !button.label.contains(char::from_u32(0x2014).unwrap()),
+                    "{lang:?}"
+                );
             }
             assert_ne!(buttons[0].label, buttons[1].label, "{lang:?}");
         }

@@ -995,7 +995,10 @@ fn fr17_the_buttons_and_actions_are_named_in_every_interface_language() {
         for (button, maximized) in buttons {
             let name = button_name(button, maximized, language);
             assert!(!name.trim().is_empty(), "{language:?} {button:?}");
-            assert!(!name.contains('\u{2014}'), "{language:?} {button:?}");
+            assert!(
+                !name.contains(char::from_u32(0x2014).unwrap()),
+                "{language:?} {button:?}"
+            );
             if language != UiLanguage::English {
                 assert_ne!(
                     name,
@@ -1013,7 +1016,10 @@ fn fr17_the_buttons_and_actions_are_named_in_every_interface_language() {
         let actions = action_names(language);
         for (index, name) in actions.iter().enumerate() {
             assert!(!name.trim().is_empty(), "{language:?} action {index}");
-            assert!(!name.contains('\u{2014}'), "{language:?} action {index}");
+            assert!(
+                !name.contains(char::from_u32(0x2014).unwrap()),
+                "{language:?} action {index}"
+            );
             if language != UiLanguage::English {
                 assert_ne!(*name, english_actions[index], "{language:?} action {index}");
             }

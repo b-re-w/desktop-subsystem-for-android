@@ -42,7 +42,7 @@ class InterfaceLanguagesTest {
             for ((key, text) in texts) {
                 assertTrue("$folder/$key is empty", text.isNotBlank())
                 assertEquals("$folder/$key has other placeholders", placeholders(english.getValue(key)), placeholders(text))
-                assertFalse("$folder/$key has an em dash", text.contains('—'))
+                assertFalse("$folder/$key has an em dash", text.contains(0x2014.toChar()))
                 assertFalse("$folder/$key leaves an apostrophe unescaped", Regex("(?<!\\\\)'").containsMatchIn(
                     File("src/main/res/$folder/strings.xml").readText()))
             }

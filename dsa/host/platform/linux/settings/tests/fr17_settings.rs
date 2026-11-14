@@ -807,7 +807,7 @@ fn fr17_every_string_is_translated_into_every_interface_language() {
                         "the {language} of {text:?} has other placeholders: {translated:?}"
                     );
                     assert!(
-                        !translated.contains('\u{2014}'),
+                        !translated.contains(char::from_u32(0x2014).unwrap()),
                         "the {language} of {text:?} has an em dash: {translated:?}"
                     );
                 }
@@ -1059,7 +1059,10 @@ fn fr17_the_desktop_entry_appstream_and_icons_are_there() {
                 .unwrap_or_else(|| panic!("the desktop entry has no {field}[{key}]"));
             let value = &line[field.len() + key.len() + 3..];
             assert!(!value.trim().is_empty(), "{field}[{key}] is empty");
-            assert!(!value.contains('\u{2014}'), "{field}[{key}] has an em dash");
+            assert!(
+                !value.contains(char::from_u32(0x2014).unwrap()),
+                "{field}[{key}] has an em dash"
+            );
         }
         let name = desktop
             .lines()
@@ -1079,7 +1082,7 @@ fn fr17_the_desktop_entry_appstream_and_icons_are_there() {
         }
     }
     assert!(
-        !metainfo.contains('\u{2014}'),
+        !metainfo.contains(char::from_u32(0x2014).unwrap()),
         "the AppStream entry has an em dash"
     );
     assert!(metainfo.contains(&format!("<id>{id}</id>")));

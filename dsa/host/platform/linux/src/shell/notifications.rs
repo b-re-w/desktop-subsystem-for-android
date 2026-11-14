@@ -478,7 +478,10 @@ mod tests {
         for language in UiLanguage::ALL {
             let open = open_label(language);
             assert!(!open.trim().is_empty(), "{language:?}");
-            assert!(!open.contains('\u{2014}'), "{language:?}");
+            assert!(
+                !open.contains(char::from_u32(0x2014).unwrap()),
+                "{language:?}"
+            );
             if language != UiLanguage::English {
                 assert_ne!(open, "Open", "{language:?}");
             }

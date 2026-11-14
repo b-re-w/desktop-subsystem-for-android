@@ -761,7 +761,10 @@ mod tests {
         for language in UiLanguage::ALL {
             for words in [app_settings_name(language), uninstall_name(language)] {
                 assert!(!words.trim().is_empty(), "{language:?}");
-                assert!(!words.contains('\u{2014}'), "{language:?}");
+                assert!(
+                    !words.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?}"
+                );
                 if language != UiLanguage::English {
                     assert_ne!(words, app_settings_name(UiLanguage::English));
                     assert_ne!(words, uninstall_name(UiLanguage::English));

@@ -100,10 +100,22 @@ for culture in ["ko-kr", "ja-jp", "zh-cn", "zh-tw", "es-es", "fr-fr", "de-de", "
 lib = open(f"{windows}/resources/src/lib.rs", encoding="utf-8").read()
 ids = dict(re.findall(r"pub const (\w+): u16 = (\d+);", lib.split("pub mod shell", 1)[1].split("pub const STRINGS", 1)[0]))
 string = r'"((?:[^"\\]|\\.)*)"'
-table = re.findall(r'\(\s*(\w+),\s*' + string + r',\s*' + string + r',?\s*\)', lib)
-korean_by_id = {ids[name]: ko for name, _, ko in table if name in ids}
+# Each entry is (ID, [English, Korean, ... one per interface language]).
+table = re.findall(r'\(\s*(\w+),\s*\[((?:\s*' + string + r',?)+)\s*\],?\s*\)', lib)
+korean_by_id = {}
+# A word that reads the same in every language is written once for all of them.
+for name, word in re.findall(r'\(\s*(\w+),\s*\[' + string + r';\s*super::languages::COUNT\]\s*\)', lib):
+    if name in ids:
+        korean_by_id[ids[name]] = word
+for name, words, *_ in table:
+    texts = re.findall(string, words)
+    if name not in ids:
+        continue
+    if len(texts) != 14 or not all(t.strip() for t in texts):
+        fail(f"fr17_shell_words_have_every_language: string {ids[name]} has {len(texts)} languages, or an empty one")
+    korean_by_id[ids[name]] = texts[1] if len(texts) > 1 else ""
 for id_ in ids.values():
-    if id_ not in korean_by_id:
+    if id_ not in korean_by_id or (id_ != ids.get("NAVIGATION_NAME") and not re.search(r"[가-힣]", korean_by_id[id_])):
         fail(f"fr3_shell_words_have_korean: string {id_} has no Korean")
 # A string is named "@file,-id"; "file,-id" without the @ is an icon (DefaultIcon), not a string.
 used = set(re.findall(r"@\[INSTALLFOLDER\]dsa-app-window\.exe,-(\d+)", wxs)) | set(re.findall(r'(?:Description|Display)ResourceId="(\d+)"', wxs))

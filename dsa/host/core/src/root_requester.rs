@@ -371,7 +371,10 @@ mod tests {
             for uid in [0, 1000, 1001, 1002, 1027, 1013] {
                 let name = system_name(uid, lang);
                 assert!(name.contains("Android"), "{lang:?}: {name}");
-                assert!(!name.contains('\u{2014}'), "{lang:?}: {name}");
+                assert!(
+                    !name.contains(char::from_u32(0x2014).unwrap()),
+                    "{lang:?}: {name}"
+                );
             }
             // The services stay told apart.
             assert_ne!(system_name(1000, lang), system_name(1013, lang), "{lang:?}");

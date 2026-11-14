@@ -64,9 +64,7 @@ fn bound(code: &str, constructor: &str) -> Vec<String> {
         .filter(|line| line.contains(constructor))
         .filter_map(|line| {
             let after = line.split("let ").nth(1)?;
-            let name = after
-                .split(|c: char| c == ' ' || c == ':' || c == '=')
-                .next()?;
+            let name = after.split([' ', ':', '=']).next()?;
             Some(name.trim().to_string())
         })
         .collect()
@@ -290,7 +288,7 @@ fn fr18_new_strings_exist_in_every_interface_language() {
                 .get(text)
                 .unwrap_or_else(|| panic!("po/{language}.po has no translation of {text:?}"));
             assert!(!translated.trim().is_empty(), "{text:?} is empty in {language}");
-            assert!(!translated.contains('\u{2014}'), "{text:?} has an em dash in {language}");
+            assert!(!translated.contains(char::from_u32(0x2014).unwrap()), "{text:?} has an em dash in {language}");
             for i in 0..4 {
                 let hole = format!("{{{i}}}");
                 assert_eq!(

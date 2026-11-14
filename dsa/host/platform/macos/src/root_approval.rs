@@ -496,7 +496,10 @@ mod tests {
                     text.contains("`id`"),
                     "{lang:?} leaves out the command: {text}"
                 );
-                assert!(!text.contains('\u{2014}'), "{lang:?}: {text}");
+                assert!(
+                    !text.contains(char::from_u32(0x2014).unwrap()),
+                    "{lang:?}: {text}"
+                );
             }
             assert!(app.contains("com.example.backup"), "{lang:?}: {app}");
             // The developer shell's line under the sentence names its package and uid.

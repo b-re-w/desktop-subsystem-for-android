@@ -583,7 +583,10 @@ mod tests {
             let text = menu_text(lang);
             for word in all_words(&text) {
                 assert!(!word.trim().is_empty(), "{lang:?}");
-                assert!(!word.contains('\u{2014}'), "{lang:?}: {word}");
+                assert!(
+                    !word.contains(char::from_u32(0x2014).unwrap()),
+                    "{lang:?}: {word}"
+                );
             }
             assert_ne!(text.size, text.resize, "{lang:?}");
             let label = size_label(

@@ -1861,7 +1861,7 @@ mod tests {
             shared_keep,
             shared_shell,
         ];
-        let dash = '\u{2014}';
+        let dash = char::from_u32(0x2014).unwrap();
         for language in UiLanguage::ALL {
             for asked in &requests {
                 let message = asked.message_in(language);

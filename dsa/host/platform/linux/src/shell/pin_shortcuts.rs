@@ -265,7 +265,10 @@ mod tests {
             let text = question_text(language);
             for words in [text.summary, text.body, text.add, text.cancel] {
                 assert!(!words.trim().is_empty(), "{language:?}");
-                assert!(!words.contains('\u{2014}'), "{language:?}: {words}");
+                assert!(
+                    !words.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?}: {words}"
+                );
             }
             assert_eq!(placeholders(text.summary), placeholders(english.summary));
             assert_eq!(placeholders(text.body), placeholders(english.body));

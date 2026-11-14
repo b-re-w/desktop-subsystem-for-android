@@ -955,7 +955,10 @@ mod tests {
             for (language, text) in words.iter().enumerate() {
                 let tag = languages::TAGS[language];
                 assert!(!text.trim().is_empty(), "{id} is empty in {tag}");
-                assert!(!text.contains('\u{2014}'), "{id} has an em dash in {tag}");
+                assert!(
+                    !text.contains(char::from_u32(0x2014).unwrap()),
+                    "{id} has an em dash in {tag}"
+                );
                 // Android and the product name are never translated or transliterated.
                 if words[0].contains("Android") {
                     assert!(text.contains("Android"), "{id} in {tag}: {text}");
@@ -978,7 +981,7 @@ mod tests {
             for (language, name) in names.iter().enumerate() {
                 let tag = languages::TAGS[language];
                 assert!(!name.trim().is_empty(), "{tag}");
-                assert!(!name.contains('\u{2014}'), "{tag}");
+                assert!(!name.contains(char::from_u32(0x2014).unwrap()), "{tag}");
                 assert!(
                     name.contains("Android") || name.contains("DSA"),
                     "{tag}: {name}"

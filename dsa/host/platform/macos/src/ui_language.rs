@@ -48,7 +48,7 @@ pub fn current() -> UiLanguage {
 /// Whether `text` holds an em dash (U+2014), which DSA's words never use, in any language.
 #[cfg(test)]
 pub(crate) fn has_em_dash(text: &str) -> bool {
-    text.contains('\u{2014}')
+    text.contains(char::from_u32(0x2014).unwrap())
 }
 
 #[cfg(test)]

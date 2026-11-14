@@ -152,7 +152,7 @@ pub fn translation_problem(
     if text.trim().is_empty() {
         return Some(format!("{what} is empty in {tag}"));
     }
-    if text.contains('\u{2014}') {
+    if text.contains(char::from_u32(0x2014).unwrap()) {
         return Some(format!("{what} has an em dash in {tag}: {text}"));
     }
     if placeholders(text) != placeholders(english) {

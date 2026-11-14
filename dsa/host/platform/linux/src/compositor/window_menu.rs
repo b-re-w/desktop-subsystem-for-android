@@ -956,7 +956,10 @@ mod tests {
             for item in every {
                 let words = label(&text, item).unwrap();
                 assert!(!words.trim().is_empty(), "{language:?} {item:?}");
-                assert!(!words.contains('\u{2014}'), "{language:?} {item:?}");
+                assert!(
+                    !words.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?} {item:?}"
+                );
                 assert!(!words.contains('{'), "{language:?} {item:?}");
             }
             assert!(!text.screenshot_file.trim().is_empty(), "{language:?}");

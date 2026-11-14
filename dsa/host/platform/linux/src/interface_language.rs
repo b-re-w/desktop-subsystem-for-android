@@ -241,7 +241,10 @@ mod tests {
             ),
         ];
         for (file, entry) in entries {
-            assert!(!entry.contains('\u{2014}'), "{file} has an em dash");
+            assert!(
+                !entry.contains(char::from_u32(0x2014).unwrap()),
+                "{file} has an em dash"
+            );
             for key in ["Name", "Comment"] {
                 let english = entry
                     .lines()
@@ -284,7 +287,7 @@ mod tests {
         let appstream =
             include_str!("../packaging/appstream/io.github.thisisthepy.DSA.metainfo.xml");
         for text in [mime, appstream] {
-            assert!(!text.contains('\u{2014}'));
+            assert!(!text.contains(char::from_u32(0x2014).unwrap()));
         }
         for language in UiLanguage::ALL {
             for key in locale_keys(language) {

@@ -1490,7 +1490,10 @@ mod tests {
                 assert!(title.contains("Game"), "{lang:?} {notice:?}: {title}");
                 assert!(!text.trim().is_empty(), "{lang:?} {notice:?}");
                 for words in [&title, &text] {
-                    assert!(!words.contains('\u{2014}'), "{lang:?}: {words}");
+                    assert!(
+                        !words.contains(char::from_u32(0x2014).unwrap()),
+                        "{lang:?}: {words}"
+                    );
                     assert!(
                         crate::ui_language::placeholders(words).is_empty(),
                         "{lang:?}: {words}"

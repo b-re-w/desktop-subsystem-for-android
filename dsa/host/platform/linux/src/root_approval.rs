@@ -683,7 +683,10 @@ mod tests {
             for words in [keep, shell] {
                 assert!(words.starts_with('(') && words.ends_with(')'), "{words}");
                 assert!(words.len() > 2, "{language:?}");
-                assert!(!words.contains('\u{2014}'), "{language:?}: {words}");
+                assert!(
+                    !words.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?}: {words}"
+                );
             }
             assert_ne!(keep, shell, "{language:?}");
             if language != UiLanguage::English {
@@ -696,7 +699,10 @@ mod tests {
             let details = details(&asked, ICON_NAME);
             for (key, value) in &details {
                 assert!(!value.trim().is_empty(), "{language:?} {key}");
-                assert!(!value.contains('\u{2014}'), "{language:?} {key}: {value}");
+                assert!(
+                    !value.contains(char::from_u32(0x2014).unwrap()),
+                    "{language:?} {key}: {value}"
+                );
             }
             assert_eq!(detail(&details, "command"), "id");
             let kept = ApprovalRequest::keep_root(request().app).with_language(language.tag());
@@ -755,7 +761,7 @@ mod tests {
     #[test]
     fn fr17_the_polkit_policy_speaks_every_interface_language() {
         let policy = include_str!("../packaging/polkit/io.github.thisisthepy.DSA.policy");
-        assert!(!policy.contains('\u{2014}'));
+        assert!(!policy.contains(char::from_u32(0x2014).unwrap()));
         for language in UiLanguage::ALL {
             for key in crate::interface_language::locale_keys(language) {
                 for tag in ["description", "message"] {
