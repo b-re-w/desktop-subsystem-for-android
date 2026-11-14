@@ -204,6 +204,14 @@ class FakePinRequest(
 }
 
 class FakeActions : TaskActions {
+    /** Each change of windowing mode asked for: the task, and its freeform bounds (null for fullscreen). */
+    val windowing = mutableListOf<Pair<Int, TaskBounds?>>()
+
+    override fun setWindowingMode(taskId: Int, freeformBounds: TaskBounds?): Boolean {
+        windowing += taskId to freeformBounds
+        return true
+    }
+
     val launched = mutableListOf<String>()
     val closed = mutableListOf<Int>()
     val moved = mutableListOf<Pair<Int, TaskBounds>>()
