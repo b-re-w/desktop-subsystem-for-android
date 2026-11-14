@@ -72,7 +72,7 @@ class AndroidInputInjector(context: Context) : InputInjector {
             motion.deviceId,
             0,
             motion.source,
-            0,
+            motion.flags,
         )
         return try {
             if (motion.actionButton != 0) setActionButton?.invoke(event, motion.actionButton)
