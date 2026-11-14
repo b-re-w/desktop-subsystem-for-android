@@ -9,7 +9,9 @@
 //!    deny only, so it is refused);
 //! 2. starts the app's window program (`%LOCALAPPDATA%\DSA\apps\<package>\<Label>.exe`, whose
 //!    version information names the app and whose icon is the app's) in the user's session, as
-//!    the user, with [`APPROVAL_ARGUMENT`] and the pipe's name;
+//!    the user, with [`APPROVAL_ARGUMENT`] and the pipe's name. The developer shell
+//!    (`adb shell`), Android's own services and apps that share a user ID ask under a program
+//!    of their own instead ([`prompt_program`]), named in the user's language;
 //! 3. that program asks Windows to run itself elevated (`ShellExecuteEx` with `runas`), which
 //!    brings up the UAC prompt with the program's name and icon. An administrator clicks Yes; a
 //!    standard user has to type an administrator's password. Cancelling ends the program with
@@ -32,7 +34,9 @@
 
 use std::time::{Duration, Instant};
 
-use dsa_host_core::root_approval::PromptAnswer;
+use dsa_host_core::root_approval::{ApprovalRequest, PromptAnswer, PromptIcon};
+use dsa_host_core::root_requester::{GenericIcon, Requester};
+use dsa_host_core::tasks::AppInfo;
 use dsa_transport::local::LocalListener;
 use dsa_transport::TransportError;
 
@@ -49,6 +53,109 @@ pub const LABEL_ARGUMENT: &str = "--root-label";
 /// The argument with the command su runs, in words, hex-encoded UTF-8, for the program's own
 /// dialog.
 pub const COMMAND_ARGUMENT: &str = "--root-command";
+
+/// The argument with the line under the name (the package, or the uid of a requester that is
+/// not an app), hex-encoded UTF-8, for the program's own dialog.
+pub const DETAIL_ARGUMENT: &str = "--root-detail";
+
+/// The argument with the language of the program's own dialog: `en` or `ko`.
+pub const LANGUAGE_ARGUMENT: &str = "--root-language";
+
+/// The folder, among the apps' own, of the program the developer shell (`adb shell`) asks
+/// under. It is not an Android package's, so no app's program is ever replaced by it.
+pub const SHELL_PROGRAM_KEY: &str = "io.github.thisisthepy.dsa.root.shell";
+
+/// The folder of the program Android's own services ask under.
+pub const SYSTEM_PROGRAM_KEY: &str = "io.github.thisisthepy.dsa.root.system";
+
+/// The folder of the program apps that share one user ID ask under, named after all of them.
+pub const SHARED_PROGRAM_KEY: &str = "io.github.thisisthepy.dsa.root.shared";
+
+/// What the UAC prompt is shown under for `request`: the folder of the program it runs, and
+/// the app that program is made for, whose name is the program's name in the prompt and
+/// whose icon is its icon.
+///
+/// An app asks under its own window program, named by its label with its launcher icon, as
+/// the taskbar shows it. The developer shell and Android's own services ask under a program
+/// of their own, named in the user's language with a generic icon; apps that share a user ID
+/// under one named after all of them, with the first icon among them. UAC shows a program's
+/// name and icon only, so the package is in the program's folder, which "Show more details"
+/// shows.
+pub fn prompt_program(request: &ApprovalRequest) -> (String, AppInfo) {
+    let language = request.language();
+    let generic = |key: &str, icon: GenericIcon| {
+        (
+            key.to_string(),
+            AppInfo {
+                package_name: key.to_string(),
+                label: request.name_in(language),
+                icon_png: icon.png(),
+                ..Default::default()
+            },
+        )
+    };
+    match request.requester() {
+        Requester::DeveloperShell => generic(SHELL_PROGRAM_KEY, GenericIcon::Shell),
+        Requester::System => generic(SYSTEM_PROGRAM_KEY, GenericIcon::System),
+        Requester::SharedApps => {
+            let icon_png = match request.prompt_icon() {
+                PromptIcon::App(png) => png.to_vec(),
+                _ => Vec::new(),
+            };
+            (
+                SHARED_PROGRAM_KEY.to_string(),
+                AppInfo {
+                    package_name: SHARED_PROGRAM_KEY.to_string(),
+                    label: request.name_in(language),
+                    icon_png,
+                    ..Default::default()
+                },
+            )
+        }
+        Requester::App => (request.app.package_name.clone(), request.app.clone()),
+    }
+}
+
+/// The words of the program's own dialog, which it shows when UAC is off.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfirmText {
+    pub caption: String,
+    pub text: String,
+}
+
+/// The program's own dialog for `label` (and the `detail` line under it) wanting to run
+/// `command`, in Korean when `korean`.
+pub fn confirm_text(label: &str, detail: &str, command: &str, korean: bool) -> ConfirmText {
+    let label = match (label.trim().is_empty(), korean) {
+        (false, _) => label.trim(),
+        (true, false) => "An Android app",
+        (true, true) => "Android 앱",
+    };
+    let who = if detail.trim().is_empty() {
+        label.to_string()
+    } else {
+        format!("{label}\n{}", detail.trim())
+    };
+    if korean {
+        ConfirmText {
+            caption: format!("{label}: 관리자 승인"),
+            text: format!(
+                "{who}\n\nAndroid에서 다음을 루트 권한으로 실행하려고 합니다.\n\n{command}\n\n\
+                 이 컴퓨터는 사용자 계정 컨트롤이 꺼져 있어서 Desktop Subsystem for Android가 \
+                 직접 묻습니다. 허용할까요?"
+            ),
+        }
+    } else {
+        ConfirmText {
+            caption: format!("{label}: administrator approval"),
+            text: format!(
+                "{who}\n\nwants to run this as root in Android:\n\n{command}\n\nUser Account \
+                 Control is off on this computer, so Desktop Subsystem for Android asks you \
+                 itself. Allow it?"
+            ),
+        }
+    }
+}
 
 /// What the start of every approval pipe's name is.
 pub const PIPE_PREFIX: &str = "dsa-root-approval-";
@@ -120,25 +227,56 @@ pub fn is_pipe_name(name: &str) -> bool {
     })
 }
 
+/// What the program's own dialog shows, when UAC is off: who asks by name, the line under it,
+/// the command, and whether it is in Korean.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct AskedWords {
+    pub label: String,
+    pub detail: String,
+    pub command: String,
+    pub korean: bool,
+}
+
+impl AskedWords {
+    /// The words for `request`, in the user's language.
+    pub fn of(request: &ApprovalRequest) -> AskedWords {
+        let language = request.language();
+        AskedWords {
+            label: request.name_in(language),
+            detail: request.detail_in(language),
+            command: request.command_text_in(language),
+            korean: language == dsa_host_core::root_requester::Language::Korean,
+        }
+    }
+}
+
 /// The arguments that start an app's window program to ask for approval on `pipe`.
-pub fn approval_arguments(pipe: &str, label: &str, command: &str) -> String {
+pub fn approval_arguments(pipe: &str, words: &AskedWords) -> String {
     format!(
-        "{APPROVAL_ARGUMENT} {pipe} {LABEL_ARGUMENT} {} {COMMAND_ARGUMENT} {}",
-        hex(label.as_bytes()),
-        hex(command.as_bytes())
+        "{APPROVAL_ARGUMENT} {pipe} {LABEL_ARGUMENT} {} {DETAIL_ARGUMENT} {} \
+         {COMMAND_ARGUMENT} {} {LANGUAGE_ARGUMENT} {}",
+        argument_hex(&words.label),
+        argument_hex(&words.detail),
+        argument_hex(&words.command),
+        if words.korean { "ko" } else { "en" },
     )
 }
 
-/// What a window program started for approval was asked: the pipe, the app's name and the
-/// command. `None` when the arguments ask for no approval.
+/// `text` hex-encoded for the command line; `-` for nothing, so every flag keeps a value.
+fn argument_hex(text: &str) -> String {
+    if text.is_empty() {
+        "-".to_string()
+    } else {
+        hex(text.as_bytes())
+    }
+}
+
+/// What a window program started for approval was asked: the pipe, and the words of its own
+/// dialog. `None` when the arguments ask for no approval.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HelperMode {
     /// Not elevated: bring up the prompt.
-    Ask {
-        pipe: String,
-        label: String,
-        command: String,
-    },
+    Ask { pipe: String, words: AskedWords },
     /// Elevated: deliver the approval.
     Deliver { pipe: String },
     /// An approval was asked for, but not with a valid pipe.
@@ -169,8 +307,12 @@ pub fn helper_mode(args: &[String]) -> Option<HelperMode> {
         return Some(match value(APPROVAL_ARGUMENT) {
             Some(pipe) if is_pipe_name(&pipe) => HelperMode::Ask {
                 pipe,
-                label: text(LABEL_ARGUMENT),
-                command: text(COMMAND_ARGUMENT),
+                words: AskedWords {
+                    label: text(LABEL_ARGUMENT),
+                    detail: text(DETAIL_ARGUMENT),
+                    command: text(COMMAND_ARGUMENT),
+                    korean: value(LANGUAGE_ARGUMENT).as_deref() == Some("ko"),
+                },
             },
             _ => HelperMode::Invalid,
         });
@@ -259,8 +401,9 @@ mod os {
     };
 
     use super::{
-        approval_arguments, exit, helper_mode, pipe_name, wait_for_answer, HelperMode,
-        PromptProcess, APPROVAL_PIPE_SDDL, APPROVED_ARGUMENT, RECEIVED,
+        approval_arguments, confirm_text, exit, helper_mode, pipe_name, prompt_program,
+        wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_PIPE_SDDL,
+        APPROVED_ARGUMENT, RECEIVED,
     };
     use crate::pipe::{wide, NamedPipeConnector, NamedPipeListener, OwnedHandle};
 
@@ -279,8 +422,10 @@ mod os {
             }
         }
 
-        /// The app's own window program, made when it is missing; the installed window host
-        /// when it cannot be, which still brings up the prompt, under DSA's own name and icon.
+        /// The program the prompt is shown under ([`prompt_program`]): the app's own window
+        /// program, or the program of the developer shell, Android's services or a shared user
+        /// ID, made when it is missing; the installed window host when it cannot be, which
+        /// still brings up the prompt, under DSA's own name and icon.
         fn program(&self, request: &ApprovalRequest) -> Result<PathBuf, String> {
             let service = std::env::current_exe().ok();
             let template = crate::app_window::launch::window_manager_path(service.as_deref())
@@ -296,7 +441,8 @@ mod os {
                         crate::app_exe::TEMPLATE_NAME
                     )
                 })?;
-            let package = &request.app.package_name;
+            let (package, app) = prompt_program(request);
+            let package = &package;
             let apps_dir = crate::host_config::local_app_data(&self.sid)
                 .map(|dir| crate::paths::UserRoot::in_local_app_data(&dir).apps());
             let apps_dir = match apps_dir {
@@ -306,14 +452,18 @@ mod os {
                     return Ok(template);
                 }
             };
-            let existing = crate::app_exe::program_path(&apps_dir, package, request.app_name());
+            let label = match app.label.trim() {
+                "" => package.as_str(),
+                label => label,
+            };
+            let existing = crate::app_exe::program_path(&apps_dir, package, label);
             // The app's program lives in the user's own folder, so it is checked and made
             // with the user's own rights.
             let made = crate::safe_fs::as_user(&self.sid, || -> Result<PathBuf, String> {
                 if existing.is_file() {
                     return Ok(existing);
                 }
-                crate::app_exe::ensure(&template, &apps_dir, package, Some(&request.app))
+                crate::app_exe::ensure(&template, &apps_dir, package, Some(&app))
                     .map(|(program, _)| program)
             });
             match made {
@@ -346,7 +496,7 @@ mod os {
                 Ok(program) => program,
                 Err(why) => return PromptAnswer::Unavailable(why),
             };
-            let arguments = approval_arguments(&pipe, request.app_name(), &request.command_text());
+            let arguments = approval_arguments(&pipe, &AskedWords::of(request));
             let process =
                 match crate::window_manager::start_as_user(&self.sid, &program, &arguments) {
                     Ok(process) => process,
@@ -385,16 +535,12 @@ mod os {
         Some(match helper_mode(args)? {
             HelperMode::Invalid => exit::BAD_ARGUMENTS,
             HelperMode::Deliver { pipe } => deliver(&pipe),
-            HelperMode::Ask {
-                pipe,
-                label,
-                command,
-            } => {
+            HelperMode::Ask { pipe, words } => {
                 if uac_enabled() {
                     elevate(program, &pipe)
                 } else if !crate::pipe::current_process_is_administrator() {
                     exit::NOT_ADMINISTRATOR
-                } else if confirm(&label, &command) {
+                } else if confirm(&words) {
                     // With UAC off an administrator's programs run with its rights already.
                     deliver(&pipe)
                 } else {
@@ -498,24 +644,17 @@ mod os {
         code
     }
 
-    /// Asks in the program's own dialog, with the app's icon, when UAC is off. True on Yes.
-    fn confirm(label: &str, command: &str) -> bool {
+    /// Asks in the program's own dialog, with its icon (the app's, or the generic one of a
+    /// requester that is not an app), when UAC is off. True on Yes.
+    fn confirm(words: &AskedWords) -> bool {
         use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
         use windows_sys::Win32::UI::WindowsAndMessaging::{
             MessageBoxIndirectW, IDYES, MB_DEFBUTTON2, MB_SETFOREGROUND, MB_TOPMOST, MB_USERICON,
             MB_YESNO, MSGBOXPARAMSW,
         };
-        let label = if label.trim().is_empty() {
-            "An Android app"
-        } else {
-            label.trim()
-        };
-        let caption = wide(&format!("{label}: administrator approval"));
-        let text = wide(&format!(
-            "{label} wants to run this as root in Android:\n\n{command}\n\nUser Account \
-             Control is off on this computer, so Desktop Subsystem for Android asks you \
-             itself. Allow it?"
-        ));
+        let shown = confirm_text(&words.label, &words.detail, &words.command, words.korean);
+        let caption = wide(&shown.caption);
+        let text = wide(&shown.text);
         // SAFETY: plain data, zero is its documented initial state.
         let mut params: MSGBOXPARAMSW = unsafe { std::mem::zeroed() };
         params.cbSize = std::mem::size_of::<MSGBOXPARAMSW>() as u32;

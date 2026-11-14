@@ -25,6 +25,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use dsa_host_core::root_approval::{ApprovalPrompt, ApprovalRequest, PromptAnswer, Purpose};
+use dsa_host_core::root_requester::{Language, Requester};
 
 use crate::shell::desktop_entry;
 
@@ -49,20 +50,53 @@ pub const CANCELLED_ERROR: &str = "org.freedesktop.PolicyKit1.Error.Cancelled";
 /// The details the check carries. `polkit.message` and `polkit.icon_name` set the agent's
 /// message and icon (polkit lets only a root caller set them, and the service is root); the
 /// rest name the request for the agent and for rules that read them.
+///
+/// The message names who asks in the user's language: an app by its label with its package
+/// beside it, `adb shell` as the developer shell, Android's own services in words.
 pub fn details(request: &ApprovalRequest, icon_name: &str) -> Vec<(String, String)> {
-    let command = match request.purpose {
-        Purpose::KeepRoot => "(any command, without asking each time)".to_string(),
-        Purpose::Run if request.command.is_empty() => "(an interactive root shell)".to_string(),
-        Purpose::Run => request.command_line(),
+    let language = request.language();
+    let command = match (request.purpose, language) {
+        (Purpose::Run, _) if !request.command.is_empty() => request.command_line(),
+        (Purpose::KeepRoot, Language::English) => {
+            "(any command, without asking each time)".to_string()
+        }
+        (Purpose::Run, Language::English) => "(an interactive root shell)".to_string(),
+        (Purpose::KeepRoot, Language::Korean) => "(묻지 않고 모든 명령)".to_string(),
+        (Purpose::Run, Language::Korean) => "(대화형 루트 셸)".to_string(),
     };
     vec![
-        ("polkit.message".into(), request.message()),
+        ("polkit.message".into(), request.message_in(language)),
         ("polkit.icon_name".into(), icon_name.into()),
-        ("app".into(), request.app_name().to_string()),
+        ("app".into(), request.name_in(language)),
         ("package".into(), request.package().to_string()),
+        ("detail".into(), request.detail_in(language)),
         ("command".into(), command),
     ]
 }
+
+/// The icon theme name the prompt shows for who asks: the app's own icon (the first app's that
+/// has one, for apps sharing a user ID), a terminal for the developer shell, the system
+/// settings icon for Android's own services, and DSA's when none of those is there. The
+/// generic names are the freedesktop icon naming specification's, which every icon theme has.
+pub fn prompt_icon_name(request: &ApprovalRequest, theme: Option<&Path>) -> String {
+    match request.requester() {
+        Requester::DeveloperShell => SHELL_ICON_NAME.to_string(),
+        Requester::System => SYSTEM_ICON_NAME.to_string(),
+        Requester::SharedApps => request
+            .shared_apps
+            .iter()
+            .map(|app| icon_name_for(&app.package_name, theme))
+            .find(|name| name != ICON_NAME)
+            .unwrap_or_else(|| ICON_NAME.to_string()),
+        Requester::App => icon_name_for(request.package(), theme),
+    }
+}
+
+/// The icon the prompt shows for the developer shell: a terminal.
+pub const SHELL_ICON_NAME: &str = "utilities-terminal";
+
+/// The icon the prompt shows for Android's own services: the system settings.
+pub const SYSTEM_ICON_NAME: &str = "preferences-system";
 
 /// The icon theme name the prompt shows for `package`: the app's own, when the user's
 /// compositor has put it in the user's icon theme folder `theme`
@@ -213,7 +247,7 @@ impl<A: Authority> ApprovalPrompt for PolkitPrompt<A> {
                 self.uid
             ));
         };
-        let icon = icon_name_for(request.package(), self.theme.as_deref());
+        let icon = prompt_icon_name(request, self.theme.as_deref());
         answer_of(self.authority.check(
             &session,
             &details(request, &icon),
@@ -432,7 +466,54 @@ mod tests {
             command: vec!["id".into()],
             interactive: false,
             purpose: Purpose::Run,
+            language: String::new(),
         }
+    }
+
+    #[test]
+    fn fr35_the_polkit_prompt_names_an_app_by_its_label_in_the_users_language() {
+        let mut korean = request();
+        korean.app.label = "백업".into();
+        let korean = korean.with_language("ko-KR");
+        let details = details(&korean, ICON_NAME);
+        assert_eq!(
+            detail(&details, "polkit.message"),
+            "Android 앱 백업(com.example.backup)에서 다음 명령을 루트 권한으로 실행하려고 \
+             합니다: `id`"
+        );
+        assert_eq!(detail(&details, "app"), "백업");
+        assert_eq!(detail(&details, "detail"), "com.example.backup");
+    }
+
+    #[test]
+    fn fr35_the_polkit_prompt_names_the_adb_shell_as_the_developer_shell() {
+        let mut shell = request();
+        shell.app.package_name = "com.android.shell".into();
+        shell.app.label = "Shell".into();
+        shell.uid = 2000;
+        let shell = shell.with_language("ko_KR.UTF-8");
+        let prompt = PolkitPrompt::new(FakeAuthority::answering(authorized(true, false)), 1000);
+        assert_eq!(prompt.ask(&shell, WAIT), PromptAnswer::Approved);
+        let checks = prompt.authority.checks.lock().unwrap();
+        let details = &checks[0].1;
+        assert_eq!(detail(details, "app"), "개발자 셸 (adb)");
+        assert_eq!(
+            detail(details, "polkit.message"),
+            "개발자 셸 (adb)에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`"
+        );
+        // A terminal, not DSA's icon and not a package's.
+        assert_eq!(detail(details, "polkit.icon_name"), SHELL_ICON_NAME);
+        drop(checks);
+
+        let mut system = request();
+        system.app.package_name = "android".into();
+        system.uid = 1000;
+        assert_eq!(prompt_icon_name(&system, None), SYSTEM_ICON_NAME);
+        assert_eq!(detail(&details_of(&system), "app"), "Android system");
+    }
+
+    fn details_of(request: &ApprovalRequest) -> Vec<(String, String)> {
+        details(request, ICON_NAME)
     }
 
     const WAIT: Duration = dsa_host_core::root_approval::PROMPT_TIMEOUT;
