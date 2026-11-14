@@ -3256,6 +3256,47 @@ hwcomposer와 호스트 합성기는 틀리지 않았으므로 거기서 옮기�
 
 첫 실행(2026-11-14, 실행 43637660922)에서 android17의 services 작업이 `Build services.jar` 단계 약 50분째에 "The hosted runner lost communication with the server"로 끝났다. 로그가 남지 않아 분석 중이었는지 자바 빌드 중이었는지는 모른다. 빌드가 프로세서 4개를 모두 쓰고 스왑하는 동안 러너 에이전트가 응답하지 못한 것으로 보고 다음을 더했다. ninja 작업 2개(`DSA_SERVICES_JOBS`), 높은 메모리 작업 1개(`NINJA_HIGHMEM_NUM_JOBS=1`), Soong 분석의 `GOMEMLIMIT=10GiB`, 가장 낮은 프로세서와 디스크 우선순위, 빌드의 OOM 점수 1000과 러너 프로세스의 -1000, zswap(메모리의 20 %), `vm.watermark_scale_factor=200`, `--skip-soong-tests`. 스왑은 키우지 않았다. 두 스왑 파일을 둔 채 받기 뒤 디스크에 17 GB만 남는다(실행 43633250360). 이 설정으로 시간 안에 끝나는지는 다음 Framework build가 보인다.
 
+### android17의 분석이 표준 러너에서 끝나지 않은 원인 (2026-11-15)
+
+위 설정으로 돌린 실행 43644988414에서도 android17은 끝나지 않았다. 같은 실행의 두 작업 로그(android17 작업 132600961496, android16 작업 132600961513)와 고정한 `build/soong`(android17 `6722dd88`, android16 `f389fa2a`), `build/blueprint`(`7f2058de`, `c39c8a4c`) 소스를 읽었다. 이 PC에서는 아무것도 빌드하지 않았다.
+
+| | android16 (통과) | android17 (실패) |
+|---|---|---|
+| 프로젝트 수, 트리 크기 | 1002개, 73 GB | 1075개, 82 GB |
+| 받기 뒤 남은 디스크 | 26 GB | 17 GB |
+| `soong_build` 빌드 | 약 1분 | 약 1분 |
+| Android.bp 분석 | 9분(22:07:55에서 22:16:43) | 22:11:00부터 58분 동안 출력 없음. 23:09:00에 "The runner has received a shutdown signal", `soong bootstrap failed with: signal: killed` |
+| 분석이 쓴 디스크 | 8 GB(26에서 18 GB) | 알 수 없음 |
+| 분석 뒤 스왑 | 263 MiB | 알 수 없음 |
+| 배너 | `SOONG_ONLY=true` | `SOONG_ONLY=true`, `SOONG_INCREMENTAL_ANALYSIS=true` |
+| 전체 | 64분에 `services.jar` 22.8 MB | 없음 |
+
+찾은 것은 둘이다.
+
+1. **Android 17은 Soong의 증분 분석을 기본으로 켠다.** `ui/build/dumpvars.go`가 릴리스 플래그 `RELEASE_SOONG_INCREMENTAL_ANALYSIS`가 `true`이고 환경 변수 `SOONG_INCREMENTAL_ANALYSIS`가 없으면 `incrementalBuildActions`를 켠다. 로그의 배너가 `SOONG_INCREMENTAL_ANALYSIS=true`이고, 죽을 때 찍힌 `soong_build` 명령에 `--incremental-build-actions`가 있다. Android 16의 Soong에는 그 플래그를 읽는 코드가 없고 명령줄 옵션으로만 켜진다. 켜지면 분석은 ninja 파일을 쓰는 것에 더해 모듈마다 입력 해시를 계산하고, 프로바이더를 모두 직렬화해 `out/soong` 아래의 키-값 저장소(pogreb: `providers.db`, `module_actions.db`, `singleton_actions.db`, `references.db`)에 쓰고, 모듈의 ninja 문장을 한 벌 더 `ninja.db`에 쓴다(`blueprint/incremental.go`, `context.go`의 `writeIncrementalModules`와 `cacheModuleBuildActions`). 같은 트리를 다시 분석할 때 바뀌지 않은 모듈을 건너뛰려는 것인데, 이 작업은 새 트리를 한 번 분석하고 버린다. 그러니 얻는 것 없이 메모리와 디스크만 든다. 디스크만 보아도 Android 16의 분석이 8 GB를 썼는데 Android 17은 ninja 문장을 두 벌 쓰고 남은 디스크가 17 GB였다.
+2. **`GOMEMLIMIT`은 분석에 닿은 적이 없다.** soong_ui는 `soong_build`를 ninja 규칙 `env -i $env "$BUILDER" ...`로 띄운다(`blueprint/bootstrap/bootstrap.go`). `$env`에는 `soong.go`의 `invocationEnv`에 든 것만 들어가고, 디버거를 붙일 때의 `GODEBUG`뿐이다. 실패한 로그의 명령도 `env -i  "$BUILDER"`로 사이가 비어 있다. 그래서 두 버전 모두 `soong_build`는 Go 기본값(GOGC 100)으로 돌았고, 힙은 살아 있는 양의 두 배까지 자란 뒤에야 수거되었다. 위의 첫 대응에서 넣은 `GOMEMLIMIT=10GiB`는 soong_ui에서 멈췄다.
+
+58분 동안 메모리와 디스크 수치가 하나도 찍히지 않았으므로, 러너를 잃은 직접 원인이 스왑 폭주인지 디스크인지는 로그로 가를 수 없다. 다만 두 버전의 분석에서 확인되는 차이는 프로젝트 7 % 증가와 증분 분석 하나이고, 7 %로는 9분이 58분 이상이 되지 않는다.
+
+바꾼 것(`.github/scripts/framework/build-services.sh`, `dsa/guest/framework/framework_lock.py`):
+
+- `SOONG_INCREMENTAL_ANALYSIS=false`를 내보낸다. `ui/build/config.go`가 이 값을 읽어 릴리스 플래그보다 앞세운다. Android 16의 Soong은 이 변수를 읽지 않으므로 Android 16의 빌드는 그대로다. 증분 분석을 끈 경로는 Kati를 쓰는 빌드가 늘 타는 경로다(`soong_build`는 증분 분석을 soong-only일 때만 켠다).
+- `framework_lock.py soong-memory-limit`이 트리의 `build/soong/ui/build/soong.go`에서 `invocationEnv`를 만드는 줄 아래에 `GOMEMLIMIT`을 넘기는 세 줄을 넣는다. soong_ui는 빌드를 시작할 때 이 소스에서 빌드되므로 첫 실행부터 적용된다. 그 줄은 두 버전에서 같고, 줄이 없거나 둘이면 빌드를 멈춘다. 변수는 하나만 넘긴다. 규칙이 맵을 Go의 맵 순서로 쓰므로, 둘이면 분석과 빌드 사이에 명령이 달라져 ninja가 트리를 다시 분석할 수 있다. 한도를 넘게 살아 있으면 Go는 시간의 절반까지만 수거에 쓰고 힙이 한도를 넘게 두므로, 한도는 분석을 늦출 뿐 멈추지 않는다.
+- 빌드 내내 1분마다 한 줄(`[room ...]`)을 찍는다: 쓸 수 있는 메모리, 스왑 사용량과 zswap이 쥔 양, 쓰기를 기다리는 페이지, 메모리와 디스크 압력(PSI 10초 평균), 남은 디스크, 부하, 가장 큰 프로세스 셋의 RSS와 스왑. 빌드의 낮은 우선순위 밖에서 돈다.
+- 분석만 `DSA_ANALYSIS_MINUTES`(45분)로 묶었다. Android 16은 9분이 걸리고, 러너를 잃은 두 실행은 50분과 58분째였다. 넘으면 스크립트가 러너가 응답하는 동안 스스로 멈추고 무엇이 모자랐는지 말한다.
+- 분석이 끝나면 `out/soong/bootstrap.ninja`에서 `soong_build`가 `GOMEMLIMIT`과 함께, `--incremental-build-actions` 없이 떴는지 보고, 아니면 경고한다.
+- Android 17의 musl 호스트용 Rust 툴체인(`prebuilts/rust-toolchain/linux-musl-x86`, 세 버전 6.0 GB)을 glibc용과 같은 꼴로 빌드의 버전 하나만 받는다(`SERVICES_TREE_CONES_LIKE`). 루트의 `Android.bp`는 남으므로 분석이 읽는 빌드 파일은 그대로이고, 디스크가 약 4 GB 더 남는다. Android 16의 매니페스트에는 이 프로젝트가 없어 그 트리는 통과한 실행과 같다.
+
+맞을 것으로 보는 근거: Android 16의 분석은 한도 없이도 9분에 끝났고 끝난 뒤 스왑이 263 MiB였으니, 힙이 두 배까지 자라고도 15.6 GiB 안에 있었다. 증분 분석을 끈 Android 17의 분석은 같은 경로에 프로젝트만 7 % 많고, 이제 힙이 10 GiB에서 수거된다. 디스크는 17 GB에 4 GB가 더해지고 ninja 문장을 한 벌만 쓴다.
+
+하지 않은 것과 이유:
+
+- `cts`(2.7 GB)와 다른 테스트 트리를 빼는 것. 분석할 모듈이 줄지만 얼마나 줄어 메모리가 얼마나 남는지 잰 값이 없고, 빠진 모듈이 분석을 오류로 멈추는지 CI 밖에서 확인할 길이 없으며, 통과하는 Android 16의 트리도 바뀐다. `[room]` 줄이 분석의 최고 메모리를 보여 주면 그 수치로 정한다.
+- `SOONG_PARTIAL_ANALYSIS=<모듈>`(Android 17에만 있다. 이름을 준 모듈 밖의 모듈 그룹을 `passive`로 둔다). 필요한 것만 분석하는 바로 그 기능이지만 이 리비전에서 `nothing` 목표와 설치 경로 조회가 그대로 되는지 읽기만으로는 알 수 없다. 위의 것으로 모자랄 때 다음으로 시험할 것이다.
+- Soong 없이 javac와 d8로 직접 빌드하는 길. 위의 원인이 맞으면 필요하지 않다.
+
+확인하지 못한 것: 이 변경은 CI에서 돌지 않았다. Android 17의 분석이 실제로 45분 안에 끝나는지, 증분 분석을 끈 뒤의 최고 메모리와 ninja 파일 크기, musl 툴체인을 한 버전만 둔 트리를 Soong이 그대로 분석하는지, 분석 뒤 자바 빌드가 Android 17에서 남은 디스크로 끝나는지는 다음 Framework build의 `[room]` 줄과 결과가 보인다.
+
 ## R47. Vulkan 드라이버가 없는 GPU에서 호스트 Vulkan으로 Dozen(Vulkan on D3D12)을 쓰는 길 (PR-3, NFR-7, FR-27)
 
 **질문.** 이슈 #610(Intel Iris Pro 5200, Haswell, MacBook Pro 2015의 Boot Camp)처럼 Windows Vulkan 드라이버가 없는 GPU에서는 호스트 렌더러(gfxstream)가 시작하지 못한다. 소유자는 두 번째 안드로이드 그래픽 경로를 거절했고 CPU ASTC 디코딩도 원하지 않는다. Mesa의 Dozen(`dzn`, Vulkan을 D3D12 위에 구현한 드라이버)을 호스트 Vulkan 구현으로만 바꿔 끼우면 경로는 하나로 남는다. 이것이 서는가, 어떤 GPU를 살리는가, 어떻게 싣는가.
