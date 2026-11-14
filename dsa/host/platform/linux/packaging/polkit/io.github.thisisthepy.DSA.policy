@@ -16,7 +16,41 @@
 
   <action id="io.github.thisisthepy.DSA.root-elevation">
     <description>Run an Android app's command as root</description>
+    <description xml:lang="ko">Android 앱의 명령을 루트 권한으로 실행</description>
+    <description xml:lang="ja">Android アプリのコマンドを root として実行</description>
+    <description xml:lang="zh_CN">以 root 身份运行 Android 应用的命令</description>
+    <description xml:lang="zh_SG">以 root 身份运行 Android 应用的命令</description>
+    <description xml:lang="zh_TW">以 root 身分執行 Android 應用程式的指令</description>
+    <description xml:lang="zh_HK">以 root 身分執行 Android 應用程式的指令</description>
+    <description xml:lang="zh_MO">以 root 身分執行 Android 應用程式的指令</description>
+    <description xml:lang="es">Ejecutar como root un comando de una aplicación de Android</description>
+    <description xml:lang="fr">Exécuter en tant que root une commande d'une application Android</description>
+    <description xml:lang="de">Einen Befehl einer Android-App als Root ausführen</description>
+    <description xml:lang="pt_BR">Executar como root um comando de um app Android</description>
+    <description xml:lang="pt">Executar como root um comando de um app Android</description>
+    <description xml:lang="ru">Выполнить команду приложения Android с правами root</description>
+    <description xml:lang="it">Eseguire come root un comando di un'app Android</description>
+    <description xml:lang="vi">Chạy lệnh của ứng dụng Android với quyền root</description>
+    <description xml:lang="id">Jalankan perintah aplikasi Android sebagai root</description>
+    <description xml:lang="tr">Bir Android uygulamasının komutunu root olarak çalıştır</description>
     <message>An Android app is asking to run a command as root. Authentication is required to allow it.</message>
+    <message xml:lang="ko">Android 앱이 명령을 루트 권한으로 실행하려고 합니다. 허용하려면 인증이 필요합니다.</message>
+    <message xml:lang="ja">Android アプリがコマンドを root として実行しようとしています。許可するには認証が必要です。</message>
+    <message xml:lang="zh_CN">一个 Android 应用请求以 root 身份运行命令。需要进行身份验证才能允许。</message>
+    <message xml:lang="zh_SG">一个 Android 应用请求以 root 身份运行命令。需要进行身份验证才能允许。</message>
+    <message xml:lang="zh_TW">有 Android 應用程式要求以 root 身分執行指令。必須通過驗證才能允許。</message>
+    <message xml:lang="zh_HK">有 Android 應用程式要求以 root 身分執行指令。必須通過驗證才能允許。</message>
+    <message xml:lang="zh_MO">有 Android 應用程式要求以 root 身分執行指令。必須通過驗證才能允許。</message>
+    <message xml:lang="es">Una aplicación de Android solicita ejecutar un comando como root. Se requiere autenticación para permitirlo.</message>
+    <message xml:lang="fr">Une application Android demande à exécuter une commande en tant que root. Une authentification est nécessaire pour l'autoriser.</message>
+    <message xml:lang="de">Eine Android-App möchte einen Befehl als Root ausführen. Zum Erlauben ist eine Authentifizierung erforderlich.</message>
+    <message xml:lang="pt_BR">Um app Android está pedindo para executar um comando como root. É necessária autenticação para permitir.</message>
+    <message xml:lang="pt">Um app Android está pedindo para executar um comando como root. É necessária autenticação para permitir.</message>
+    <message xml:lang="ru">Приложение Android запрашивает выполнение команды с правами root. Чтобы разрешить это, требуется аутентификация.</message>
+    <message xml:lang="it">Un'app Android chiede di eseguire un comando come root. Per consentirlo è necessaria l'autenticazione.</message>
+    <message xml:lang="vi">Một ứng dụng Android đang yêu cầu chạy lệnh với quyền root. Cần xác thực để cho phép.</message>
+    <message xml:lang="id">Sebuah aplikasi Android meminta untuk menjalankan perintah sebagai root. Autentikasi diperlukan untuk mengizinkannya.</message>
+    <message xml:lang="tr">Bir Android uygulaması bir komutu root olarak çalıştırmak istiyor. İzin vermek için kimlik doğrulaması gerekiyor.</message>
     <defaults>
       <allow_any>auth_admin</allow_any>
       <allow_inactive>auth_admin</allow_inactive>

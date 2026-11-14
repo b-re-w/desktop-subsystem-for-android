@@ -269,22 +269,50 @@ fn fr18_shield_info_is_not_tooltip_only() {
     assert!(needs[..needs.find("\n}\n").unwrap()].contains("Property::Description("));
 }
 
+/// The translations the app installs, as `po/LINGUAS` lists them.
+const CATALOGS: [&str; 13] = [
+    "ko", "ja", "zh_CN", "zh_TW", "es", "fr", "de", "pt_BR", "ru", "it", "vi", "id", "tr",
+];
+
 #[test]
-fn fr18_new_strings_exist_in_korean_and_english() {
-    let ko = korean();
-    for text in [
-        "{0}, {1}",
-        "{0}, {1}, {2}: {3}",
-        "{0} records dropped",
-        "Lowest priority shown",
-        "Copied",
-        "This setting applies to every user of this computer, so changing it asks for an administrator's permission.",
-    ] {
-        let korean = ko.get(text).unwrap_or_else(|| panic!("po/ko.po has no Korean for {text:?}"));
-        assert!(!korean.is_empty(), "{text:?} is empty in Korean");
-        for i in 0..4 {
-            let hole = format!("{{{i}}}");
-            assert_eq!(text.contains(&hole), korean.contains(&hole), "{text:?} and {korean:?} differ in {hole}");
+fn fr18_new_strings_exist_in_every_interface_language() {
+    for language in CATALOGS {
+        let catalogue = catalogue(&crate_dir().join(format!("po/{language}.po")));
+        for text in [
+            "{0}, {1}",
+            "{0}, {1}, {2}: {3}",
+            "{0} records dropped",
+            "Lowest priority shown",
+            "Copied",
+            "This setting applies to every user of this computer, so changing it asks for an administrator's permission.",
+        ] {
+            let translated = catalogue
+                .get(text)
+                .unwrap_or_else(|| panic!("po/{language}.po has no translation of {text:?}"));
+            assert!(!translated.trim().is_empty(), "{text:?} is empty in {language}");
+            assert!(!translated.contains('\u{2014}'), "{text:?} has an em dash in {language}");
+            for i in 0..4 {
+                let hole = format!("{{{i}}}");
+                assert_eq!(
+                    text.contains(&hole),
+                    translated.contains(&hole),
+                    "{language}: {text:?} and {translated:?} differ in {hole}"
+                );
+            }
+        }
+        // A log line read out keeps its four parts, whatever their order in the language.
+        let spoken = fill(
+            &catalogue["{0}, {1}, {2}: {3}"],
+            &["TIME", "LEVEL", "TAG", "MESSAGE"],
+        );
+        for part in ["TIME", "LEVEL", "TAG", "MESSAGE"] {
+            assert!(spoken.contains(part), "{language}: {spoken}");
         }
     }
+    // Korean keeps its words.
+    let ko = korean();
+    assert_eq!(
+        fill(&ko["{0} records dropped"], &["3"]),
+        "기록 3개가 빠졌습니다"
+    );
 }

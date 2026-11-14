@@ -9,6 +9,22 @@
   <mime-type type="application/x-split-apk-bundle">
     <comment>Split APK bundle</comment>
     <comment xml:lang="ko">분할 APK 묶음</comment>
+    <comment xml:lang="ja">分割 APK バンドル</comment>
+    <comment xml:lang="zh_CN">拆分 APK 包</comment>
+    <comment xml:lang="zh_SG">拆分 APK 包</comment>
+    <comment xml:lang="zh_TW">分割 APK 套件組合</comment>
+    <comment xml:lang="zh_HK">分割 APK 套件組合</comment>
+    <comment xml:lang="zh_MO">分割 APK 套件組合</comment>
+    <comment xml:lang="es">Paquete de APK divididos</comment>
+    <comment xml:lang="fr">Lot d'APK fractionnés</comment>
+    <comment xml:lang="de">Geteiltes APK-Paket</comment>
+    <comment xml:lang="pt_BR">Pacote de APKs divididos</comment>
+    <comment xml:lang="pt">Pacote de APKs divididos</comment>
+    <comment xml:lang="ru">Набор разделённых APK</comment>
+    <comment xml:lang="it">Pacchetto di APK suddivisi</comment>
+    <comment xml:lang="vi">Gói APK tách</comment>
+    <comment xml:lang="id">Bundel APK terpisah</comment>
+    <comment xml:lang="tr">Bölünmüş APK paketi</comment>
     <sub-class-of type="application/zip"/>
     <generic-icon name="package-x-generic"/>
     <glob pattern="*.xapk"/>

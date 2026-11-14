@@ -157,8 +157,12 @@ pub struct Widgets {
 
 impl Widgets {
     /// The widget windows of a desktop with a layer shell or not, and an X server or not, in
-    /// `korean` or English.
-    pub fn new(layer_shell: bool, x11: bool, korean: bool) -> Widgets {
+    /// `language`.
+    pub fn new(
+        layer_shell: bool,
+        x11: bool,
+        language: dsa_host_core::ui_language::UiLanguage,
+    ) -> Widgets {
         let decode: dsa_host_core::widget_windows::desk::Decode = Box::new(|png: &[u8]| {
             dsa_host_core::png::decode(png)
                 .map(|image| Image::from_rgba(image.width, image.height, &image.pixels))
@@ -167,11 +171,7 @@ impl Widgets {
             desk: Desk::new(
                 crate::compositor::widget_windows::look(false, 0),
                 96,
-                if korean {
-                    dsa_host_core::ui_language::UiLanguage::Korean
-                } else {
-                    dsa_host_core::ui_language::UiLanguage::English
-                },
+                language,
                 decode,
             ),
             shell: widget_shell(layer_shell, x11),

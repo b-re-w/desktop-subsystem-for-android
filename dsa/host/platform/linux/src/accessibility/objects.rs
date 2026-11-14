@@ -33,7 +33,8 @@ use super::atspi::{self, coord, role, state, StateSet};
 use super::text;
 use crate::compositor::title_bar::TitleBar;
 use crate::compositor::toplevel::Toplevel;
-use crate::compositor::window_menu::{menu_text, reads_korean_in};
+use crate::compositor::window_menu::menu_text;
+use dsa_host_core::ui_language::UiLanguage;
 
 /// The AT-SPI interfaces the objects implement.
 pub mod interface {
@@ -201,59 +202,163 @@ pub struct Action {
 }
 
 /// The node actions a client can call, in the order they are offered: the first is the
-/// default action, which a screen reader calls when the user activates the object.
-const NODE_ACTIONS: [(NodeAction, &str, &str, &str); 6] = [
-    (NodeAction::Click, "click", "Click", "클릭"),
-    (NodeAction::Select, "select", "Select", "선택"),
-    (
-        NodeAction::LongClick,
-        "long press",
-        "Long press",
-        "길게 누르기",
-    ),
-    (
-        NodeAction::ScrollForward,
-        "scroll forward",
-        "Scroll forward",
-        "앞으로 스크롤",
-    ),
-    (
-        NodeAction::ScrollBackward,
-        "scroll backward",
-        "Scroll backward",
-        "뒤로 스크롤",
-    ),
-    (NodeAction::Focus, "focus", "Focus", "포커스"),
+/// default action, which a screen reader calls when the user activates the object. The
+/// second value is the name clients match on, which stays English.
+pub const NODE_ACTIONS: [(NodeAction, &str); 6] = [
+    (NodeAction::Click, "click"),
+    (NodeAction::Select, "select"),
+    (NodeAction::LongClick, "long press"),
+    (NodeAction::ScrollForward, "scroll forward"),
+    (NodeAction::ScrollBackward, "scroll backward"),
+    (NodeAction::Focus, "focus"),
 ];
 
+/// The names a screen reader speaks for [`NODE_ACTIONS`] in `language`, in the same order:
+/// Click, Select, Long press, Scroll forward, Scroll backward and Focus.
+pub fn action_names(language: UiLanguage) -> [&'static str; 6] {
+    match language {
+        UiLanguage::English => [
+            "Click",
+            "Select",
+            "Long press",
+            "Scroll forward",
+            "Scroll backward",
+            "Focus",
+        ],
+        UiLanguage::Korean => [
+            "클릭",
+            "선택",
+            "길게 누르기",
+            "앞으로 스크롤",
+            "뒤로 스크롤",
+            "포커스",
+        ],
+        UiLanguage::Japanese => [
+            "クリック",
+            "選択",
+            "長押し",
+            "前方へスクロール",
+            "後方へスクロール",
+            "フォーカス",
+        ],
+        UiLanguage::ChineseSimplified => ["点击", "选择", "长按", "向前滚动", "向后滚动", "聚焦"],
+        UiLanguage::ChineseTraditional => ["點擊", "選取", "長按", "向前捲動", "向後捲動", "聚焦"],
+        UiLanguage::Spanish => [
+            "Hacer clic",
+            "Seleccionar",
+            "Mantener pulsado",
+            "Desplazar hacia delante",
+            "Desplazar hacia atrás",
+            "Enfocar",
+        ],
+        UiLanguage::French => [
+            "Cliquer",
+            "Sélectionner",
+            "Appui prolongé",
+            "Faire défiler vers l'avant",
+            "Faire défiler vers l'arrière",
+            "Mettre le focus",
+        ],
+        UiLanguage::German => [
+            "Klicken",
+            "Auswählen",
+            "Lange drücken",
+            "Vorwärts scrollen",
+            "Rückwärts scrollen",
+            "Fokussieren",
+        ],
+        UiLanguage::PortugueseBrazil => [
+            "Clicar",
+            "Selecionar",
+            "Tocar e manter pressionado",
+            "Rolar para frente",
+            "Rolar para trás",
+            "Focar",
+        ],
+        UiLanguage::Russian => [
+            "Нажать",
+            "Выбрать",
+            "Долгое нажатие",
+            "Прокрутить вперёд",
+            "Прокрутить назад",
+            "Перевести фокус",
+        ],
+        UiLanguage::Italian => [
+            "Fai clic",
+            "Seleziona",
+            "Pressione prolungata",
+            "Scorri avanti",
+            "Scorri indietro",
+            "Imposta lo stato attivo",
+        ],
+        UiLanguage::Vietnamese => [
+            "Nhấp",
+            "Chọn",
+            "Nhấn giữ",
+            "Cuộn tới",
+            "Cuộn lui",
+            "Đặt tiêu điểm",
+        ],
+        UiLanguage::Indonesian => [
+            "Klik",
+            "Pilih",
+            "Tekan lama",
+            "Gulir maju",
+            "Gulir mundur",
+            "Fokuskan",
+        ],
+        UiLanguage::Turkish => [
+            "Tıkla",
+            "Seç",
+            "Uzun bas",
+            "İleri kaydır",
+            "Geri kaydır",
+            "Odakla",
+        ],
+    }
+}
+
 /// The actions a node offers: what it says it supports, the default first.
-pub fn node_actions(node: &Node, korean: bool) -> Vec<Action> {
+pub fn node_actions(node: &Node, language: UiLanguage) -> Vec<Action> {
+    let names = action_names(language);
     NODE_ACTIONS
         .iter()
-        .filter(|(action, ..)| node.supports(*action))
-        .map(|&(action, name, english, korean_name)| Action {
+        .zip(names)
+        .filter(|((action, _), _)| node.supports(*action))
+        .map(|(&(action, name), localized)| Action {
             name,
-            localized: if korean { korean_name } else { english },
+            localized,
             work: Work::Node(action),
         })
         .collect()
 }
 
-/// The back button's name in the user's language.
-pub fn back_name(korean: bool) -> &'static str {
-    if korean {
-        "뒤로"
-    } else {
-        "Back"
+/// The back button's name in `language`.
+pub fn back_name(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "Back",
+        UiLanguage::Korean => "뒤로",
+        UiLanguage::Japanese => "戻る",
+        UiLanguage::ChineseSimplified => "返回",
+        UiLanguage::ChineseTraditional => "返回",
+        UiLanguage::Spanish => "Atrás",
+        UiLanguage::French => "Retour",
+        UiLanguage::German => "Zurück",
+        UiLanguage::PortugueseBrazil => "Voltar",
+        UiLanguage::Russian => "Назад",
+        UiLanguage::Italian => "Indietro",
+        UiLanguage::Vietnamese => "Quay lại",
+        UiLanguage::Indonesian => "Kembali",
+        UiLanguage::Turkish => "Geri",
     }
 }
 
-/// A title bar button's name in the user's language: the window menu's words for the caption
+/// A title bar button's name in `language`: the window menu's words for the caption
 /// buttons, and Restore for the maximize button of a maximized window.
-pub fn button_name(button: TitleButton, maximized: bool, korean: bool) -> &'static str {
-    let words = menu_text(korean);
+pub fn button_name(button: TitleButton, maximized: bool, language: UiLanguage) -> &'static str {
+    let words = menu_text(language);
     match button {
-        TitleButton::Back => back_name(korean),
+        TitleButton::Back => back_name(language),
         TitleButton::Minimize => words.minimize,
         TitleButton::Maximize if maximized => words.restore,
         TitleButton::Maximize => words.maximize,
@@ -269,21 +374,6 @@ pub fn button_action(button: TitleButton, maximized: bool) -> TitleAction {
         TitleButton::Maximize if maximized => TitleAction::Restore,
         TitleButton::Maximize => TitleAction::Maximize,
         TitleButton::Close => TitleAction::Close,
-    }
-}
-
-/// Whether the user's first preferred language is Korean: the first entry of `LANGUAGE`, the
-/// list of languages gettext reads messages in by preference, else the locale gettext would
-/// choose (`LC_ALL`, `LC_MESSAGES`, `LANG`), as `var` reads them.
-pub fn prefers_korean(var: impl Fn(&str) -> Option<String>) -> bool {
-    let first = var("LANGUAGE").and_then(|list| {
-        list.split(':')
-            .find(|language| !language.is_empty())
-            .map(str::to_string)
-    });
-    match first {
-        Some(language) => language.starts_with("ko"),
-        None => reads_korean_in(var),
     }
 }
 
@@ -351,14 +441,8 @@ pub fn window_facts(model: &Toplevel, title_bar: &TitleBar) -> WindowFacts {
 /// with no title bar, whose nodes are the widget's in pixels of its image, which the window
 /// shows 1:1 from its top left.
 pub fn widget_facts(window: &dsa_host_core::widget_windows::desk::DeskWindow) -> WindowFacts {
-    use dsa_host_core::ui_language::UiLanguage;
     use dsa_host_core::widget_windows::menu::{menu_name, menu_text};
-    let korean = prefers_korean(|name| std::env::var(name).ok());
-    let lang = if korean {
-        UiLanguage::Korean
-    } else {
-        UiLanguage::English
-    };
+    let lang = crate::interface_language::ui_language();
     let (_, _, width, height) = window.widget_rect();
     let size = (width.max(1) as u32, height.max(1) as u32);
     WindowFacts {
@@ -611,23 +695,24 @@ fn child_events<T: Copy + PartialEq>(
 /// Every window's objects, as the AT-SPI provider of the compositor answers for them.
 pub struct Access {
     windows: BTreeMap<i32, WindowAccess>,
-    korean: bool,
+    language: UiLanguage,
     grace: Duration,
 }
 
 impl Access {
-    /// No windows yet. Names are Korean when `korean`; a window stops asking the guest for its
-    /// tree `grace` after a client last asked for it while none listens.
-    pub fn new(korean: bool, grace: Duration) -> Access {
+    /// No windows yet. Names are in `language`; a window stops asking the guest for its tree
+    /// `grace` after a client last asked for it while none listens.
+    pub fn new(language: UiLanguage, grace: Duration) -> Access {
         Access {
             windows: BTreeMap::new(),
-            korean,
+            language,
             grace,
         }
     }
 
-    pub fn korean(&self) -> bool {
-        self.korean
+    /// The language the names are in.
+    pub fn language(&self) -> UiLanguage {
+        self.language
     }
 
     pub fn window(&self, task_id: i32) -> Option<&WindowAccess> {
@@ -768,7 +853,7 @@ impl Access {
                     .windows
                     .get(&task_id)
                     .is_some_and(|window| window.facts.maximized);
-                button_name(button, maximized, self.korean).to_string()
+                button_name(button, maximized, self.language).to_string()
             }
             Object::Node { id, .. } => self
                 .node(object)
@@ -930,7 +1015,7 @@ impl Access {
             Object::Node { .. } => {
                 interfaces.push(interface::COMPONENT);
                 if let Some((_, node)) = self.node(object) {
-                    if !node_actions(node, false).is_empty() {
+                    if !node_actions(node, UiLanguage::English).is_empty() {
                         interfaces.push(interface::ACTION);
                     }
                     if node.range.is_some() {
@@ -1054,13 +1139,13 @@ impl Access {
                     .is_some_and(|window| window.facts.maximized);
                 vec![Action {
                     name: "click",
-                    localized: if self.korean { "클릭" } else { "Click" },
+                    localized: action_names(self.language)[0],
                     work: Work::Title(button_action(button, maximized)),
                 }]
             }
             Object::Node { .. } => self
                 .node(object)
-                .map(|(_, node)| node_actions(node, self.korean))
+                .map(|(_, node)| node_actions(node, self.language))
                 .unwrap_or_default(),
             _ => Vec::new(),
         }
@@ -1259,7 +1344,7 @@ impl Access {
         if before.maximized != after.maximized && new.contains(&TitleButton::Maximize) {
             events.push(Event::Name {
                 object: Object::Button(task_id, TitleButton::Maximize),
-                name: button_name(TitleButton::Maximize, after.maximized, self.korean).into(),
+                name: button_name(TitleButton::Maximize, after.maximized, self.language).into(),
             });
         }
         if before.shown != after.shown || before.scale != after.scale {
