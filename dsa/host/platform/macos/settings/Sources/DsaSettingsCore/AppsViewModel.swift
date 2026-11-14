@@ -107,6 +107,30 @@ public enum DpiScaling: String, CaseIterable, Equatable, Sendable {
     }
 }
 
+/// Where a window shows an app that asks to fill the screen.
+public enum FullScreenPlace: String, CaseIterable, Equatable, Sendable {
+    /// For one app, as the choice for every app says; for every app, DSA's own default.
+    case standard = "default"
+    /// On the whole screen: the window fills its monitor, and its title bar shows at the top.
+    case screen
+    /// Inside the window: it keeps its size and its title bar.
+    case window
+
+    /// The choice `dsa` names; anything else, or nothing, is `missing`.
+    public static func read(_ code: String?, missing: FullScreenPlace = .standard) -> FullScreenPlace {
+        code.flatMap(FullScreenPlace.init(rawValue:)) ?? missing
+    }
+
+    /// The key of its name in the string catalog.
+    var textKey: String {
+        switch self {
+        case .standard: return "Apps_FullScreen_Default"
+        case .screen: return "Apps_FullScreen_Screen"
+        case .window: return "Apps_FullScreen_Window"
+        }
+    }
+}
+
 /// A scaling choice the Apps page offers: what the list shows, the choice, and whether it does
 /// what it says yet.
 public struct DpiScalingChoice: Equatable, Hashable, Sendable {
@@ -124,6 +148,9 @@ public struct AppWindowSetting: Equatable, Sendable {
     public var startWidth: Int?
     public var startHeight: Int?
     public var dpiScaling: DpiScaling = .auto
+    /// Where the app shows a clear full screen request, and its bars hidden alone.
+    public var fullScreen: FullScreenPlace = .standard
+    public var immersive: FullScreenPlace = .standard
 
     public static func standard(_ package: String) -> AppWindowSetting {
         AppWindowSetting(package: package, fixedSize: false, startWidth: nil, startHeight: nil)
@@ -186,6 +213,57 @@ public final class AppsService {
         try await service.runJson(["apps", "list"])["apps"].items.map(AppsService.readApp).filter { !$0.package.isEmpty }
     }
 
+    /// The places the choice for every app offers: it is the default itself.
+    public static let defaultFullScreenPlaces: [FullScreenPlace] = [.screen, .window]
+
+    /// The names of `defaultFullScreenPlaces`.
+    public var defaultFullScreenChoices: [String] {
+        AppsViewModel.defaultFullScreenPlaces.map { text.get($0.textKey) }
+    }
+
+    /// Shows every app's clear full screen request (`immersive` false), or its bars hidden
+    /// alone, at `index` of `defaultFullScreenPlaces`, unless the app has its own choice.
+    public func setFullScreenDefault(immersive: Bool, _ index: Int) async {
+        let all = AppsViewModel.defaultFullScreenPlaces
+        guard all.indices.contains(index), index != (immersive ? immersiveDefaultIndex : fullScreenDefaultIndex) else {
+            return
+        }
+        await run(reload: false) {
+            try await service.setFullScreenDefault(immersive: immersive, all[index])
+            if immersive {
+                immersiveDefaultIndex = index
+            } else {
+                fullScreenDefaultIndex = index
+            }
+            return nil
+        }
+    }
+
+    /// Where an app's full screen can show: as the default for every app, on the whole screen,
+    /// or inside its window.
+    public var fullScreenChoices: [String] {
+        FullScreenPlace.allCases.map { text.get($0.textKey) }
+    }
+
+    /// Shows the app's clear full screen request (`immersive` false), or its bars hidden alone,
+    /// the way at `index` of `fullScreenChoices`. The windows open already follow it.
+    public func setFullScreen(_ package: String, immersive: Bool, _ index: Int) async {
+        let all = FullScreenPlace.allCases
+        guard all.indices.contains(index) else {
+            return
+        }
+        var wanted = windowOf(package)
+        if (immersive ? wanted.immersive : wanted.fullScreen) == all[index] {
+            return
+        }
+        if immersive {
+            wanted.immersive = all[index]
+        } else {
+            wanted.fullScreen = all[index]
+        }
+        await setWindow(wanted)
+    }
+
     /// Opens the app in a window of its own.
     public func open(_ package: String) async throws { _ = try await service.runText(["launch", package]) }
 
@@ -217,7 +295,9 @@ public final class AppsService {
             }
             settings[package] = AppWindowSetting(package: package, fixedSize: app.bool("fixed_size"),
                                                  startWidth: width, startHeight: height,
-                                                 dpiScaling: DpiScaling.read(app["dpi_scaling"].string))
+                                                 dpiScaling: DpiScaling.read(app["dpi_scaling"].string),
+                                                 fullScreen: FullScreenPlace.read(app["fullscreen"].string),
+                                                 immersive: FullScreenPlace.read(app["immersive"].string))
         }
         return settings
     }
@@ -235,6 +315,21 @@ public final class AppsService {
         return (AppsService.readWindowSettings(json), json.bool("system_forced_available"))
     }
 
+    /// Where every app without its own choice shows a clear full screen request and its bars
+    /// hidden alone, as `dsa app-window` reports them; DSA's defaults from a dsa that does not.
+    public func fullScreenDefaults() async throws -> (fullScreen: FullScreenPlace, immersive: FullScreenPlace) {
+        let json = try await service.runJson(["app-window"])
+        let defaults = json["defaults"]
+        return (FullScreenPlace.read(defaults["fullscreen"].string, missing: .screen),
+                FullScreenPlace.read(defaults["immersive"].string, missing: .window))
+    }
+
+    /// Sets where every app without its own choice shows a clear full screen request
+    /// (`immersive` false) or its bars hidden alone.
+    public func setFullScreenDefault(immersive: Bool, _ place: FullScreenPlace) async throws {
+        _ = try await service.runJson(["settings", "set", immersive ? "app-immersive" : "app-fullscreen", place.rawValue])
+    }
+
     /// Replaces the window settings of one app, and returns them as the service now has them.
     public func setWindowSetting(_ setting: AppWindowSetting) async throws -> AppWindowSetting {
         let json = try await service.runJson([
@@ -242,6 +337,8 @@ public final class AppsService {
             "--fixed-size", setting.fixedSize ? "on" : "off",
             "--start-size", setting.startSizeArgument,
             "--dpi-scaling", setting.dpiScaling.rawValue,
+            "--fullscreen", setting.fullScreen.rawValue,
+            "--immersive", setting.immersive.rawValue,
         ])
         return AppsService.readWindowSettings(json)[setting.package] ?? .standard(setting.package)
     }
@@ -312,6 +409,9 @@ public struct AppRow: Equatable, Identifiable, Sendable {
     /// (forced) and not available yet, why it works like System, in the user's language.
     public var dpiScalingIndex = 0
     public var dpiScalingTip: String?
+    /// Where the app's full screen choices are among `fullScreenChoices`.
+    public var fullScreenIndex = 0
+    public var immersiveIndex = 0
     /// Whether the app runs its ARM code through the translator, whether that can be changed,
     /// and if not, why, in the user's language.
     public var runAsArm = false
@@ -346,6 +446,10 @@ public final class AppsViewModel: ObservableObject {
     @Published public private(set) var windows: [String: AppWindowSetting] = [:]
     /// Whether this build of Android scales an app the System (forced) way yet.
     @Published public private(set) var systemForcedAvailable = false
+    /// Where every app without its own choice shows a clear full screen request and its bars
+    /// hidden alone, as indexes of `defaultFullScreenPlaces`.
+    @Published public private(set) var fullScreenDefaultIndex = 0
+    @Published public private(set) var immersiveDefaultIndex = 1
     /// What the user typed to find an app: matched against its name and package.
     @Published public var search = ""
     @Published public private(set) var error: String?
@@ -493,6 +597,8 @@ public final class AppsViewModel: ObservableObject {
             resizable: !window.fixedSize, startSizeIndex: startSizeIndex(window),
             dpiScalingIndex: DpiScaling.allCases.firstIndex(of: window.dpiScaling) ?? 0,
             dpiScalingTip: dpiScalingTip(window),
+            fullScreenIndex: FullScreenPlace.allCases.firstIndex(of: window.fullScreen) ?? 0,
+            immersiveIndex: FullScreenPlace.allCases.firstIndex(of: window.immersive) ?? 0,
             runAsArm: app.runAsArm.on, canRunAsArm: app.runAsArm.available,
             runAsArmTip: runAsArmTip(app.runAsArm),
             rootIndex: RootLevel.read(app.root)?.index ?? -1, canChangeRoot: RootLevel.read(app.root) != nil,
@@ -579,6 +685,9 @@ public final class AppsViewModel: ObservableObject {
                 let list = try await service.windowSettingsList()
                 windows = list.apps
                 systemForcedAvailable = list.systemForcedAvailable
+                let defaults = try await service.fullScreenDefaults()
+                fullScreenDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.fullScreen) ?? 0
+                immersiveDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.immersive) ?? 1
             } catch let failed as DsaError where failed.problem == .refused {
                 windows = [:]
                 systemForcedAvailable = false
@@ -636,6 +745,57 @@ public final class AppsViewModel: ObservableObject {
             return
         }
         wanted.dpiScaling = all[index]
+        await setWindow(wanted)
+    }
+
+    /// The places the choice for every app offers: it is the default itself.
+    public static let defaultFullScreenPlaces: [FullScreenPlace] = [.screen, .window]
+
+    /// The names of `defaultFullScreenPlaces`.
+    public var defaultFullScreenChoices: [String] {
+        AppsViewModel.defaultFullScreenPlaces.map { text.get($0.textKey) }
+    }
+
+    /// Shows every app's clear full screen request (`immersive` false), or its bars hidden
+    /// alone, at `index` of `defaultFullScreenPlaces`, unless the app has its own choice.
+    public func setFullScreenDefault(immersive: Bool, _ index: Int) async {
+        let all = AppsViewModel.defaultFullScreenPlaces
+        guard all.indices.contains(index), index != (immersive ? immersiveDefaultIndex : fullScreenDefaultIndex) else {
+            return
+        }
+        await run(reload: false) {
+            try await service.setFullScreenDefault(immersive: immersive, all[index])
+            if immersive {
+                immersiveDefaultIndex = index
+            } else {
+                fullScreenDefaultIndex = index
+            }
+            return nil
+        }
+    }
+
+    /// Where an app's full screen can show: as the default for every app, on the whole screen,
+    /// or inside its window.
+    public var fullScreenChoices: [String] {
+        FullScreenPlace.allCases.map { text.get($0.textKey) }
+    }
+
+    /// Shows the app's clear full screen request (`immersive` false), or its bars hidden alone,
+    /// the way at `index` of `fullScreenChoices`. The windows open already follow it.
+    public func setFullScreen(_ package: String, immersive: Bool, _ index: Int) async {
+        let all = FullScreenPlace.allCases
+        guard all.indices.contains(index) else {
+            return
+        }
+        var wanted = windowOf(package)
+        if (immersive ? wanted.immersive : wanted.fullScreen) == all[index] {
+            return
+        }
+        if immersive {
+            wanted.immersive = all[index]
+        } else {
+            wanted.fullScreen = all[index]
+        }
         await setWindow(wanted)
     }
 

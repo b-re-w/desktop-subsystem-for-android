@@ -779,7 +779,8 @@ impl CaptionTone {
 pub enum WindowMode {
     /// An ordinary window with a title bar, which the user moves and resizes.
     Normal = 0,
-    /// The app asked to fill the screen: the window covers its whole monitor, with no title bar.
+    /// The window covers its whole monitor, as the app asked and the user's setting says, or as
+    /// the user's F11 chose. Its title bar shows only while the pointer is at the top edge.
     Fullscreen = 1,
     /// The app went into picture-in-picture: a small window that stays above the others.
     PictureInPicture = 2,

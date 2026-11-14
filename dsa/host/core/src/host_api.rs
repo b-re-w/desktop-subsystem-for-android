@@ -73,7 +73,9 @@ use crate::adb_discovery::AutoConnectState;
 use crate::addon_disk::{Addon, AddonDisk};
 use crate::apk::{self, InstallOutcome, InstallPart, InstalledPackage};
 use crate::app_audio::{self as app_audio, AppAudioStream, AppAudioWatch, VolumeChange};
-use crate::app_windows::{self, AppWindowSettings};
+use crate::app_windows::{
+    self, AppWindowSettings, AppWindows, FullScreenDefaults, FullScreenPlace,
+};
 use crate::apps::{self, UninstallOutcome};
 use crate::arm_translation::{self, GuestArmTranslation, Package, Source, Translator};
 use crate::background::{
@@ -107,8 +109,9 @@ use crate::settings::{Settings, SettingsStore};
 use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
-    AppInfo, AppSettingsPage, AppShortcut, Bounds, PinShortcutRequest, StatusBarAppearance, Task,
-    TaskEvent, TaskOrientation, TaskRequest, TaskRequestError, TaskWatch,
+    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, PinShortcutRequest,
+    StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest, TaskRequestError,
+    TaskWatch,
 };
 use crate::touch_gestures::TouchGesturesState;
 use crate::update::alerts::{self as update_alerts, UpdateAlert};
@@ -1448,6 +1451,12 @@ fn to_wire(state: SessionState) -> types::SessionState {
 }
 
 fn task_to_wire(task: Task) -> types::Task {
+    let fullscreen = task.asks_for_full_screen();
+    let fullscreen_request = match task.fullscreen_request {
+        FullScreenRequest::None => types::FullScreenRequest::None,
+        FullScreenRequest::Explicit => types::FullScreenRequest::Explicit,
+        FullScreenRequest::BarsHidden => types::FullScreenRequest::BarsHidden,
+    } as i32;
     types::Task {
         task_id: task.task_id,
         bounds: Some(types::Rect {
@@ -1475,7 +1484,8 @@ fn task_to_wire(task: Task) -> types::Task {
             TaskOrientation::Portrait => types::TaskOrientation::Portrait,
             TaskOrientation::Landscape => types::TaskOrientation::Landscape,
         } as i32,
-        fullscreen: task.fullscreen,
+        fullscreen,
+        fullscreen_request,
         picture_in_picture: task.picture_in_picture,
         transparent_caption: task.transparent_caption,
         caption_interactive: task
@@ -1505,6 +1515,11 @@ fn task_from_wire(task: types::Task) -> Task {
         types::TaskOrientation::Landscape => TaskOrientation::Landscape,
     };
     let bounds = task.bounds.unwrap_or_default();
+    let fullscreen_request = match task.fullscreen_request() {
+        types::FullScreenRequest::Explicit => FullScreenRequest::Explicit,
+        types::FullScreenRequest::BarsHidden => FullScreenRequest::BarsHidden,
+        types::FullScreenRequest::None => FullScreenRequest::None,
+    };
     Task {
         task_id: task.task_id,
         bounds: Bounds {
@@ -1524,7 +1539,7 @@ fn task_from_wire(task: types::Task) -> Task {
         status_bar,
         status_bar_color: task.status_bar_color,
         orientation,
-        fullscreen: task.fullscreen,
+        fullscreen_request,
         picture_in_picture: task.picture_in_picture,
         transparent_caption: task.transparent_caption,
         caption_interactive: task
@@ -6401,8 +6416,15 @@ impl HostApiService {
             );
             apps = replaced;
         }
+        // Every app without its own choice follows the user's, so a window manager reads both
+        // in one answer.
+        let defaults = store
+            .get(&peer.user)
+            .map(|settings| settings.app_full_screen)
+            .unwrap_or_default();
         response::Body::AppWindowSettings(types::AppWindowSettingsList {
             apps: apps.iter().map(AppWindowSettings::to_wire).collect(),
+            defaults: Some(defaults.to_wire()),
         })
     }
 
@@ -6690,6 +6712,7 @@ impl HostApiService {
             touch_gestures_off: wanted.touch_gestures_off,
             image_auto_restart: wanted.image_auto_restart,
             host_certificates: wanted.host_certificates,
+            app_full_screen: app_full_screen_from_wire(wanted.app_fullscreen, wanted.app_immersive),
             adb_port: match u16::try_from(wanted.adb_port) {
                 Ok(port) => port,
                 Err(_) => {
@@ -6771,7 +6794,8 @@ impl HostApiService {
                      {}, links in Android {}, program updates {} ({} channel), image updates \
                      {}, input trace {}, resize trace {}, developer mode {} (adb port {}, \
                      auto-connect {}), file sharing {} ({}), advanced networking {}, touch \
-                     gestures off in task windows {}, image auto-restart {}, host certificates {}",
+                     gestures off in task windows {}, image auto-restart {}, host certificates {}, \
+                     app full screen on the {} (bars hidden alone: on the {})",
                     peer.user,
                     settings.render_gpu,
                     on_off(settings.freeze),
@@ -6792,7 +6816,9 @@ impl HostApiService {
                     on_off(settings.advanced_networking),
                     on_off(settings.touch_gestures_off),
                     on_off(settings.image_auto_restart),
-                    on_off(settings.host_certificates)
+                    on_off(settings.host_certificates),
+                    settings.app_full_screen.fullscreen.name(),
+                    settings.app_full_screen.immersive.name()
                 );
                 if settings.root_elevation != machine.root_elevation {
                     // The switch is the computer's, so every user's Android follows it. The
@@ -6830,6 +6856,16 @@ impl HostApiService {
             Err(why) => error(ErrorCode::InvalidSetting, why),
         }
     }
+}
+
+/// The full screen choices for every app a local API message carries; a part left to the
+/// default is DSA's default for it.
+fn app_full_screen_from_wire(fullscreen: i32, immersive: i32) -> FullScreenDefaults {
+    FullScreenDefaults {
+        fullscreen: FullScreenPlace::from_wire(fullscreen),
+        immersive: FullScreenPlace::from_wire(immersive),
+    }
+    .resolved()
 }
 
 fn on_off(value: bool) -> &'static str {
@@ -6876,6 +6912,8 @@ fn settings_to_wire(settings: &Settings, facts: &ServiceFacts) -> types::Setting
         touch_gestures_off: settings.touch_gestures_off,
         image_auto_restart: settings.image_auto_restart,
         host_certificates: settings.host_certificates,
+        app_fullscreen: settings.app_full_screen.resolved().fullscreen.to_wire(),
+        app_immersive: settings.app_full_screen.resolved().immersive.to_wire(),
         imported_certificates: Vec::new(),
         touch_gestures_state: String::new(),
         touch_gestures_problem: String::new(),
@@ -6917,6 +6955,10 @@ fn settings_from_wire(settings: types::Settings) -> SettingsReport {
             touch_gestures_off: settings.touch_gestures_off,
             image_auto_restart: settings.image_auto_restart,
             host_certificates: settings.host_certificates,
+            app_full_screen: app_full_screen_from_wire(
+                settings.app_fullscreen,
+                settings.app_immersive,
+            ),
         },
         facts: ServiceFacts {
             version: settings.version,
@@ -8007,8 +8049,22 @@ impl HostApiClient {
 
     /// The caller's window settings for every app that has any.
     pub fn app_window_settings(&mut self) -> Result<Vec<AppWindowSettings>, ClientError> {
+        Ok(self.app_windows()?.apps)
+    }
+
+    /// The caller's window settings for every app that has any, with the full screen choices
+    /// every app without its own follows: what a window manager reads.
+    pub fn app_windows(&mut self) -> Result<AppWindows, ClientError> {
         let body = request::Body::ListAppWindowSettings(types::ListAppWindowSettings {});
-        app_windows_report(self.exchange(body, self.timeout)?)
+        match self.exchange(body, self.timeout)? {
+            response::Body::AppWindowSettings(list) => Ok(AppWindows {
+                apps: list.apps.iter().map(AppWindowSettings::from_wire).collect(),
+                defaults: FullScreenDefaults::from_wire(list.defaults.as_ref()),
+            }),
+            _ => Err(ClientError::Malformed(
+                "expected the window settings of apps".into(),
+            )),
+        }
     }
 
     /// Replaces the caller's window settings for one app, and returns every app's as they are

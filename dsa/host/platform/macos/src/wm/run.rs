@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use dsa_host_core::app_windows::AppWindowSettings;
+use dsa_host_core::app_windows::AppWindows;
 use dsa_host_core::compositor::frame_stall::{restart_in_background, Stall};
 use dsa_host_core::compositor::window_hosts::{to_wire, HostId, ToHost};
 use dsa_host_core::compositor::GraphicsStreamKind;
@@ -297,10 +297,11 @@ fn watch_tasks(host_api: PathBuf, events: Sender<ManagerEvent>) {
         });
 }
 
-/// The user's window settings for each app, as the service has them.
-fn app_windows(host_api: &Path) -> Result<Vec<AppWindowSettings>, String> {
+/// The user's window settings for each app, with the full screen choices every app without
+/// its own follows, as the service has them.
+fn app_windows(host_api: &Path) -> Result<AppWindows, String> {
     let mut client = connect(host_api)?;
-    client.app_window_settings().map_err(|e| e.to_string())
+    client.app_windows().map_err(|e| e.to_string())
 }
 
 /// Reads the user's window settings for each app now and then.

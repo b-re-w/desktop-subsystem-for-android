@@ -1002,6 +1002,28 @@ inline const std::string& RejectReason_Name(T enum_t_value) {
 }
 bool RejectReason_Parse(
     ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, RejectReason* value);
+enum FullScreenRequest : int {
+  FULL_SCREEN_REQUEST_NONE = 0,
+  FULL_SCREEN_REQUEST_EXPLICIT = 1,
+  FULL_SCREEN_REQUEST_BARS_HIDDEN = 2,
+  FullScreenRequest_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::min(),
+  FullScreenRequest_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::max()
+};
+bool FullScreenRequest_IsValid(int value);
+constexpr FullScreenRequest FullScreenRequest_MIN = FULL_SCREEN_REQUEST_NONE;
+constexpr FullScreenRequest FullScreenRequest_MAX = FULL_SCREEN_REQUEST_BARS_HIDDEN;
+constexpr int FullScreenRequest_ARRAYSIZE = FullScreenRequest_MAX + 1;
+
+const std::string& FullScreenRequest_Name(FullScreenRequest value);
+template<typename T>
+inline const std::string& FullScreenRequest_Name(T enum_t_value) {
+  static_assert(::std::is_same<T, FullScreenRequest>::value ||
+    ::std::is_integral<T>::value,
+    "Incorrect type passed to function FullScreenRequest_Name.");
+  return FullScreenRequest_Name(static_cast<FullScreenRequest>(enum_t_value));
+}
+bool FullScreenRequest_Parse(
+    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, FullScreenRequest* value);
 enum TaskOrientation : int {
   TASK_ORIENTATION_UNSPECIFIED = 0,
   TASK_ORIENTATION_PORTRAIT = 1,
@@ -2922,6 +2944,7 @@ class TaskUpdated final :
     kOrientationFieldNumber = 20,
     kCanGoBackFieldNumber = 25,
     kHandlesDensityChangeFieldNumber = 26,
+    kFullscreenRequestFieldNumber = 27,
   };
   // repeated .dsa.control.v1.Rect caption_interactive = 24;
   int caption_interactive_size() const;
@@ -3122,6 +3145,15 @@ class TaskUpdated final :
   void _internal_set_handles_density_change(bool value);
   public:
 
+  // .dsa.control.v1.FullScreenRequest fullscreen_request = 27;
+  void clear_fullscreen_request();
+  ::dsa::control::v1::FullScreenRequest fullscreen_request() const;
+  void set_fullscreen_request(::dsa::control::v1::FullScreenRequest value);
+  private:
+  ::dsa::control::v1::FullScreenRequest _internal_fullscreen_request() const;
+  void _internal_set_fullscreen_request(::dsa::control::v1::FullScreenRequest value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.TaskUpdated)
  private:
   class _Internal;
@@ -3149,6 +3181,7 @@ class TaskUpdated final :
     int orientation_;
     bool can_go_back_;
     bool handles_density_change_;
+    int fullscreen_request_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -43781,6 +43814,26 @@ inline void TaskUpdated::set_handles_density_change(bool value) {
   // @@protoc_insertion_point(field_set:dsa.control.v1.TaskUpdated.handles_density_change)
 }
 
+// .dsa.control.v1.FullScreenRequest fullscreen_request = 27;
+inline void TaskUpdated::clear_fullscreen_request() {
+  _impl_.fullscreen_request_ = 0;
+}
+inline ::dsa::control::v1::FullScreenRequest TaskUpdated::_internal_fullscreen_request() const {
+  return static_cast< ::dsa::control::v1::FullScreenRequest >(_impl_.fullscreen_request_);
+}
+inline ::dsa::control::v1::FullScreenRequest TaskUpdated::fullscreen_request() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.TaskUpdated.fullscreen_request)
+  return _internal_fullscreen_request();
+}
+inline void TaskUpdated::_internal_set_fullscreen_request(::dsa::control::v1::FullScreenRequest value) {
+  
+  _impl_.fullscreen_request_ = value;
+}
+inline void TaskUpdated::set_fullscreen_request(::dsa::control::v1::FullScreenRequest value) {
+  _internal_set_fullscreen_request(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.TaskUpdated.fullscreen_request)
+}
+
 // -------------------------------------------------------------------
 
 // TaskRemoved
@@ -82765,6 +82818,7 @@ PROTOBUF_NAMESPACE_OPEN
 template <> struct is_proto_enum< ::dsa::control::v1::ProtocolVersion> : ::std::true_type {};
 template <> struct is_proto_enum< ::dsa::control::v1::Role> : ::std::true_type {};
 template <> struct is_proto_enum< ::dsa::control::v1::RejectReason> : ::std::true_type {};
+template <> struct is_proto_enum< ::dsa::control::v1::FullScreenRequest> : ::std::true_type {};
 template <> struct is_proto_enum< ::dsa::control::v1::TaskOrientation> : ::std::true_type {};
 template <> struct is_proto_enum< ::dsa::control::v1::StatusBarAppearance> : ::std::true_type {};
 template <> struct is_proto_enum< ::dsa::control::v1::ReinstallStatus> : ::std::true_type {};

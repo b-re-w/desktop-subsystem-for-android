@@ -1,11 +1,16 @@
 //! How a task window is shown: as an ordinary window, filling its monitor, or as a small
 //! picture-in-picture window above the others.
 //!
-//! The app decides first: a task whose app asked to fill the screen gets a window that fills
-//! its monitor, and a task in picture-in-picture a small window that stays on top. The user's
-//! F11 then turns full screen on or off over what the app asked for, until the app asks for
-//! something else. [`ModeState`] holds one window's side of this; the window host carries out
-//! the mode it returns. It names no window system.
+//! The app decides first: a task whose app asks to fill the screen gets a window that fills
+//! its monitor when the user's setting for that kind of request says the whole screen, or keeps
+//! its window when it says inside the window ([`crate::app_windows::full_screen_place`]), and a
+//! task in picture-in-picture a small window that stays on top. The user's F11 then turns full
+//! screen on or off over that, until the app asks for something else. [`ModeState`] holds one
+//! window's side of this; the window host carries out the mode it returns. It names no window
+//! system.
+//!
+//! A window that fills its monitor has no title bar, but it shows one while the pointer is at
+//! the monitor's top edge ([`caption_revealed`]), so minimize and close are always in reach.
 //!
 //! A window that changes mode still changes size only together with a frame of the new size:
 //! the size of the monitor (or of the small window) is proposed like any other, the guest is
@@ -17,14 +22,15 @@ pub enum WindowMode {
     /// An ordinary window with a title bar.
     #[default]
     Normal,
-    /// Covers its whole monitor, with no title bar.
+    /// Covers its whole monitor; its title bar shows only while the pointer is at the top.
     Fullscreen,
     /// A small window that stays above the others.
     PictureInPicture,
 }
 
 impl WindowMode {
-    /// The mode a task's app asks for.
+    /// The mode a task's window takes: `fullscreen` when the app asks to fill the screen and
+    /// the user's setting puts that on the whole screen.
     pub fn of(fullscreen: bool, picture_in_picture: bool) -> WindowMode {
         if picture_in_picture {
             WindowMode::PictureInPicture
@@ -73,6 +79,27 @@ impl ModeState {
     pub fn toggle_fullscreen(&mut self) -> WindowMode {
         self.user_fullscreen = Some(self.effective() != WindowMode::Fullscreen);
         self.effective()
+    }
+}
+
+/// How far below a full screen window's top edge the pointer brings its title bar out, in
+/// pixels at `dpi`: the top two rows at 100%, so a pointer pushed against the top of the
+/// monitor always reaches it.
+pub fn reveal_edge(dpi: u32) -> i32 {
+    (2 * dpi.max(96) / 96) as i32
+}
+
+/// Whether a window that fills its monitor shows its title bar, with the pointer at `pointer_y`
+/// (client pixels from its top; `None` while the pointer is not over the window), the bar's
+/// band `band` pixels high and the window at `dpi`. It comes out when the pointer reaches the
+/// top edge, and stays while the pointer is over the band, so its buttons can be pressed; it
+/// hides once the pointer goes below the band or leaves the window. `shown` is whether it
+/// shows now.
+pub fn caption_revealed(shown: bool, pointer_y: Option<i32>, band: u32, dpi: u32) -> bool {
+    match pointer_y {
+        None => false,
+        Some(y) if y < reveal_edge(dpi) => true,
+        Some(y) => shown && y < band as i32,
     }
 }
 
@@ -129,6 +156,45 @@ mod tests {
             mode.app_asks(WindowMode::Fullscreen),
             WindowMode::Fullscreen
         );
+    }
+
+    #[test]
+    fn fr30_f11_toggles_whole_screen_full_screen_whatever_the_setting() {
+        // An app whose full screen the setting keeps inside its window: its window is an
+        // ordinary one, and F11 still fills the monitor and comes back.
+        let mut mode = ModeState::new();
+        assert_eq!(
+            mode.app_asks(WindowMode::of(false, false)),
+            WindowMode::Normal
+        );
+        assert_eq!(mode.toggle_fullscreen(), WindowMode::Fullscreen);
+        assert_eq!(mode.toggle_fullscreen(), WindowMode::Normal);
+        // One the setting puts on the whole screen leaves it with F11.
+        assert_eq!(
+            mode.app_asks(WindowMode::of(true, false)),
+            WindowMode::Fullscreen
+        );
+        assert_eq!(mode.toggle_fullscreen(), WindowMode::Normal);
+        assert_eq!(mode.toggle_fullscreen(), WindowMode::Fullscreen);
+    }
+
+    #[test]
+    fn fr30_the_caption_appears_at_the_top_edge_in_full_screen() {
+        let band = 32;
+        // Hidden while the pointer is in the app.
+        assert!(!caption_revealed(false, Some(400), band, 96));
+        assert!(!caption_revealed(false, Some(10), band, 96));
+        // The top edge brings it out, at every scale.
+        assert!(caption_revealed(false, Some(0), band, 96));
+        assert!(caption_revealed(false, Some(1), band, 96));
+        assert!(!caption_revealed(false, Some(2), band, 96));
+        assert!(caption_revealed(false, Some(3), band * 2, 192));
+        // It stays while the pointer is over the band, so minimize and close can be pressed.
+        assert!(caption_revealed(true, Some(20), band, 96));
+        assert!(caption_revealed(true, Some(31), band, 96));
+        // It hides below the band and when the pointer leaves the window.
+        assert!(!caption_revealed(true, Some(32), band, 96));
+        assert!(!caption_revealed(true, None, band, 96));
     }
 
     #[test]

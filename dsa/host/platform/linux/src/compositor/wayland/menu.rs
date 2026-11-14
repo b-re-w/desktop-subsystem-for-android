@@ -464,6 +464,11 @@ impl State {
             self.screenshot(task_id, serial);
         }
         self.close_menu();
+        // Full screen goes on and off as F11 does, whichever window shows the task.
+        if work(item) == WindowWork::FullScreen {
+            self.toggle_fullscreen(task_id);
+            return;
+        }
         if let Some(origin) = x11_origin {
             self.x11_menu_work(task_id, work(item), origin);
             return;
@@ -485,7 +490,7 @@ impl State {
             WindowWork::DesktopMenu => {
                 self.desktop_window_menu_at(task_id, serial, desktop_menu_point(place));
             }
-            WindowWork::Screenshot | WindowWork::Nothing => {}
+            WindowWork::Screenshot | WindowWork::Nothing | WindowWork::FullScreen => {}
             WindowWork::Android(action) => {
                 self.report(FromHost::MenuChosen { task_id, action });
             }
@@ -519,7 +524,7 @@ impl State {
                 self.report(FromHost::MenuChosen { task_id, action });
                 Ok(())
             }
-            WindowWork::Screenshot | WindowWork::Nothing => Ok(()),
+            WindowWork::Screenshot | WindowWork::Nothing | WindowWork::FullScreen => Ok(()),
         };
         if let Err(why) = failed {
             log(&format!(

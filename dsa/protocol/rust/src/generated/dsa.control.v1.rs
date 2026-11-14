@@ -110,8 +110,8 @@ pub struct TaskUpdated {
     /// opens as a window taller than it is wide.
     #[prost(enumeration = "TaskOrientation", tag = "20")]
     pub orientation: i32,
-    /// Whether the task's app asked to fill the screen (the task left the freeform windowing
-    /// mode for fullscreen). The host makes the task's window fill its monitor.
+    /// Whether the task's app asked to fill the screen, in either of the ways
+    /// `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
     #[prost(bool, tag = "21")]
     pub fullscreen: bool,
     /// Whether the task's app went into picture-in-picture. The host makes the task's window a
@@ -145,6 +145,11 @@ pub struct TaskUpdated {
     /// the window instead. False when the agent cannot read it.
     #[prost(bool, tag = "26")]
     pub handles_density_change: bool,
+    /// Which kind of full screen the task's app asks for, if any. The host shows the task's
+    /// window on its whole monitor or keeps it inside its window, as the user's setting for that
+    /// kind of request says.
+    #[prost(enumeration = "FullScreenRequest", tag = "27")]
+    pub fullscreen_request: i32,
 }
 /// Guest to host, from the agent: the task ended; the host closes its window.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -3837,6 +3842,43 @@ impl RejectReason {
             "REJECT_REASON_UNEXPECTED_ROLE" => Some(Self::UnexpectedRole),
             "REJECT_REASON_MALFORMED_HELLO" => Some(Self::MalformedHello),
             "REJECT_REASON_AUTHENTICATION_FAILED" => Some(Self::AuthenticationFailed),
+            _ => None,
+        }
+    }
+}
+/// How a task's app asks to fill the screen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum FullScreenRequest {
+    /// It does not.
+    None = 0,
+    /// A clear request: the task left the freeform windowing mode for fullscreen, its top
+    /// activity's theme sets android:windowFullscreen, or it hides both its status and
+    /// navigation bars while it asks for a landscape orientation, as a video player's full
+    /// screen button does.
+    Explicit = 1,
+    /// It hides both its status and navigation bars and asks for no landscape orientation
+    /// (immersive mode, as a feed of short videos does).
+    BarsHidden = 2,
+}
+impl FullScreenRequest {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::None => "FULL_SCREEN_REQUEST_NONE",
+            Self::Explicit => "FULL_SCREEN_REQUEST_EXPLICIT",
+            Self::BarsHidden => "FULL_SCREEN_REQUEST_BARS_HIDDEN",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "FULL_SCREEN_REQUEST_NONE" => Some(Self::None),
+            "FULL_SCREEN_REQUEST_EXPLICIT" => Some(Self::Explicit),
+            "FULL_SCREEN_REQUEST_BARS_HIDDEN" => Some(Self::BarsHidden),
             _ => None,
         }
     }

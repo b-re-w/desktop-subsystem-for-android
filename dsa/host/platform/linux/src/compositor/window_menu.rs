@@ -5,8 +5,8 @@
 //! on the title bar, and from Alt+Space, where the desktop's window menu would open and as the
 //! system menu opens on Windows. It carries the window's own items in the order of the Windows
 //! system menu (Restore, Move, Size, Minimize, Maximize, Close), then, after a separator, the
-//! items an Android desktop window offers in its window menu: New window (only for an app that
-//! supports several windows), Screenshot, Aspect ratio, Open by default and App info, as the
+//! items an Android desktop window offers in its window menu: Full screen (on and off, as F11
+//! does), New window (only for an app that supports several windows), Screenshot, Aspect ratio, Open by default and App info, as the
 //! Windows host puts them in the system menu. Last, after another separator, More window
 //! options opens the desktop's own window menu (`xdg_toplevel.show_window_menu`, or
 //! `_GTK_SHOW_WINDOW_MENU` for an X11 window), for what only the desktop offers: always on top,
@@ -42,6 +42,8 @@ pub enum MenuItem {
     Close,
     /// The line between groups of items.
     Separator,
+    /// Fills the monitor, or leaves full screen, as F11 does.
+    FullScreen,
     NewWindow,
     Screenshot,
     AspectRatio,
@@ -70,7 +72,7 @@ pub fn items(maximized: bool, resizable: bool, new_window: bool) -> Vec<MenuItem
     if !maximized {
         items.push(MenuItem::Maximize);
     }
-    items.extend([MenuItem::Close, MenuItem::Separator]);
+    items.extend([MenuItem::Close, MenuItem::Separator, MenuItem::FullScreen]);
     if new_window {
         items.push(MenuItem::NewWindow);
     }
@@ -114,6 +116,8 @@ pub enum WindowWork {
     MoveSize(MoveSize),
     /// The desktop's own window menu.
     DesktopMenu,
+    /// Full screen on or off, as F11.
+    FullScreen,
     Screenshot,
     /// An Android item, for the window rules.
     Android(MenuAction),
@@ -130,6 +134,7 @@ pub fn work(item: MenuItem) -> WindowWork {
         MenuItem::Maximize => WindowWork::Maximize,
         MenuItem::Close => WindowWork::Close,
         MenuItem::Screenshot => WindowWork::Screenshot,
+        MenuItem::FullScreen => WindowWork::FullScreen,
         MenuItem::MoreOptions => WindowWork::DesktopMenu,
         MenuItem::Separator => WindowWork::Nothing,
         other => action(other).map_or(WindowWork::Nothing, WindowWork::Android),
@@ -290,6 +295,7 @@ pub struct MenuText {
     pub move_window: &'static str,
     pub size: &'static str,
     pub close: &'static str,
+    pub full_screen: &'static str,
     pub new_window: &'static str,
     pub screenshot: &'static str,
     pub aspect_ratio: &'static str,
@@ -310,6 +316,7 @@ pub fn menu_text(korean: bool) -> MenuText {
             move_window: "이동",
             size: "크기 조정",
             close: "닫기",
+            full_screen: "전체 화면",
             new_window: "새 창",
             screenshot: "스크린샷",
             aspect_ratio: "화면 비율",
@@ -326,6 +333,7 @@ pub fn menu_text(korean: bool) -> MenuText {
             move_window: "Move",
             size: "Size",
             close: "Close",
+            full_screen: "Full screen",
             new_window: "New window",
             screenshot: "Screenshot",
             aspect_ratio: "Aspect ratio",
@@ -347,6 +355,7 @@ pub fn label(text: &MenuText, item: MenuItem) -> Option<&'static str> {
         MenuItem::Move => text.move_window,
         MenuItem::Size => text.size,
         MenuItem::Close => text.close,
+        MenuItem::FullScreen => text.full_screen,
         MenuItem::NewWindow => text.new_window,
         MenuItem::Screenshot => text.screenshot,
         MenuItem::AspectRatio => text.aspect_ratio,
@@ -574,6 +583,7 @@ mod tests {
                 Maximize,
                 Close,
                 Separator,
+                FullScreen,
                 NewWindow,
                 Screenshot,
                 AspectRatio,
@@ -593,6 +603,7 @@ mod tests {
                 Minimize,
                 Close,
                 Separator,
+                FullScreen,
                 Screenshot,
                 AspectRatio,
                 OpenByDefault,
@@ -618,6 +629,7 @@ mod tests {
             Move,
             Size,
             MoreOptions,
+            FullScreen,
         ] {
             assert_eq!(action(item), None, "{item:?}");
         }
@@ -634,6 +646,8 @@ mod tests {
         assert_eq!(work(Maximize), WindowWork::Maximize);
         assert_eq!(work(Close), WindowWork::Close);
         assert_eq!(work(Screenshot), WindowWork::Screenshot);
+        // Full screen works as F11 does, whatever the app's full screen setting.
+        assert_eq!(work(FullScreen), WindowWork::FullScreen);
         assert_eq!(work(Separator), WindowWork::Nothing);
         assert_eq!(work(AppInfo), WindowWork::Android(MenuAction::AppInfo));
         // On X11 the menu's choice comes with no button held, so the window manager is asked
@@ -738,7 +752,7 @@ mod tests {
                 .into_iter()
                 .filter_map(|item| label(&text, item))
                 .collect();
-            assert_eq!(labels.len(), 11);
+            assert_eq!(labels.len(), 12);
             assert!(labels.iter().all(|label| !label.is_empty()));
         }
         assert_eq!(menu_text(false).new_window, "New window");

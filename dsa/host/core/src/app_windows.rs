@@ -1,5 +1,6 @@
 //! A user's window settings for each app: whether the app's windows may be resized, the size
-//! they open at, and how the app follows its window to a monitor of another scale.
+//! they open at, how the app follows its window to a monitor of another scale, and where its
+//! full screen shows.
 //!
 //! The settings app's Apps page and `dsa app-window` change them through the local API; the
 //! service keeps them beside the user's other settings, and the user's window manager reads
@@ -10,6 +11,7 @@ use dsa_protocol::host_api::types;
 use serde::{Deserialize, Serialize};
 
 use crate::compositor::window_sizing::MIN_CLIENT_DP;
+use crate::tasks::FullScreenRequest;
 
 /// How an app follows its window to a monitor of another scale, as a user chooses it, the way
 /// Windows lets a user choose who performs the high DPI scaling of a desktop program. The
@@ -114,6 +116,155 @@ impl DpiScaling {
     }
 }
 
+/// Where a window shows an app that asks to fill the screen, as a user chooses it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FullScreenPlace {
+    /// As the default says: for one app, the user's choice for every app
+    /// ([`FullScreenDefaults`]); for every app, what DSA does without a choice.
+    #[default]
+    Default,
+    /// On the whole screen: the window fills its monitor, and its title bar shows while the
+    /// pointer is at the top edge, so minimize and close stay in reach.
+    Screen,
+    /// Inside the window: it keeps its size and its title bar, and the app fills it with no
+    /// title band of its own.
+    Window,
+}
+
+impl FullScreenPlace {
+    /// Every choice, in the order the settings apps list them.
+    pub const ALL: [FullScreenPlace; 3] = [
+        FullScreenPlace::Default,
+        FullScreenPlace::Screen,
+        FullScreenPlace::Window,
+    ];
+
+    /// The name `dsa app-window --fullscreen` and `dsa settings set app-fullscreen` take and
+    /// print.
+    pub fn name(self) -> &'static str {
+        match self {
+            FullScreenPlace::Default => "default",
+            FullScreenPlace::Screen => "screen",
+            FullScreenPlace::Window => "window",
+        }
+    }
+
+    /// The choice `name` names, as [`FullScreenPlace::name`] gives it.
+    pub fn from_name(name: &str) -> Option<FullScreenPlace> {
+        FullScreenPlace::ALL
+            .into_iter()
+            .find(|place| place.name() == name)
+    }
+
+    /// This choice, or `default` when it leaves the choice to the default.
+    pub fn or(self, default: FullScreenPlace) -> FullScreenPlace {
+        match self {
+            FullScreenPlace::Default => default,
+            chosen => chosen,
+        }
+    }
+
+    pub fn from_wire(value: i32) -> FullScreenPlace {
+        match types::FullScreenPlace::try_from(value) {
+            Ok(types::FullScreenPlace::Screen) => FullScreenPlace::Screen,
+            Ok(types::FullScreenPlace::Window) => FullScreenPlace::Window,
+            Ok(types::FullScreenPlace::Default) | Err(_) => FullScreenPlace::Default,
+        }
+    }
+
+    pub fn to_wire(self) -> i32 {
+        match self {
+            FullScreenPlace::Default => types::FullScreenPlace::Default,
+            FullScreenPlace::Screen => types::FullScreenPlace::Screen,
+            FullScreenPlace::Window => types::FullScreenPlace::Window,
+        }
+        .into()
+    }
+}
+
+/// The user's full screen choices for every app, one for each kind of request, which an
+/// app's own choice overrides.
+///
+/// A clear request (a video player's full screen button, a game that starts full screen)
+/// fills the whole screen unless the user chose otherwise. An app that only hides its bars
+/// (a feed of short videos) stays inside its window: the user opened it as a window, and the
+/// app did not ask to leave it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FullScreenDefaults {
+    /// Where a clear full screen request is shown.
+    pub fullscreen: FullScreenPlace,
+    /// Where an app that hides both its bars alone is shown.
+    pub immersive: FullScreenPlace,
+}
+
+impl Default for FullScreenDefaults {
+    fn default() -> FullScreenDefaults {
+        FullScreenDefaults {
+            fullscreen: FullScreenPlace::Screen,
+            immersive: FullScreenPlace::Window,
+        }
+    }
+}
+
+impl FullScreenDefaults {
+    /// These choices with each part left to the default ([`FullScreenPlace::Default`]) as
+    /// DSA's own default for it, so neither part is ever `Default`.
+    pub fn resolved(self) -> FullScreenDefaults {
+        let builtin = FullScreenDefaults::default();
+        FullScreenDefaults {
+            fullscreen: self.fullscreen.or(builtin.fullscreen),
+            immersive: self.immersive.or(builtin.immersive),
+        }
+    }
+
+    /// The choices a local API message carries.
+    pub fn from_wire(defaults: Option<&types::FullScreenDefaults>) -> FullScreenDefaults {
+        let Some(defaults) = defaults else {
+            return FullScreenDefaults::default();
+        };
+        FullScreenDefaults {
+            fullscreen: FullScreenPlace::from_wire(defaults.fullscreen),
+            immersive: FullScreenPlace::from_wire(defaults.immersive),
+        }
+        .resolved()
+    }
+
+    /// The local API message that carries these choices.
+    pub fn to_wire(self) -> types::FullScreenDefaults {
+        let resolved = self.resolved();
+        types::FullScreenDefaults {
+            fullscreen: resolved.fullscreen.to_wire(),
+            immersive: resolved.immersive.to_wire(),
+        }
+    }
+}
+
+/// Where a window shows a task whose app asks for `request`: the app's own choice for that
+/// kind of request (`app`), else the user's choice for every app (`defaults`). `None` while
+/// the app asks for no full screen. Never [`FullScreenPlace::Default`].
+pub fn full_screen_place(
+    request: FullScreenRequest,
+    app: Option<&AppWindowSettings>,
+    defaults: FullScreenDefaults,
+) -> Option<FullScreenPlace> {
+    let defaults = defaults.resolved();
+    let (own, default) = match request {
+        FullScreenRequest::None => return None,
+        FullScreenRequest::Explicit => (app.map(|app| app.fullscreen), defaults.fullscreen),
+        FullScreenRequest::BarsHidden => (app.map(|app| app.immersive), defaults.immersive),
+    };
+    Some(own.unwrap_or_default().or(default))
+}
+
+/// The user's window settings for every app that has any, with the full screen choices every
+/// app follows unless it has its own: what a window manager reads.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AppWindows {
+    pub apps: Vec<AppWindowSettings>,
+    pub defaults: FullScreenDefaults,
+}
+
 /// The largest start size accepted, in density-independent pixels in each direction: more
 /// than any monitor shows at 100%.
 pub const MAX_START_DP: u32 = 8192;
@@ -135,12 +286,22 @@ pub struct AppWindowSettings {
     /// How the app follows its window to a monitor of another scale.
     #[serde(default)]
     pub dpi_scaling: DpiScaling,
+    /// Where the app's windows show a clear full screen request.
+    #[serde(default)]
+    pub fullscreen: FullScreenPlace,
+    /// Where the app's windows show the app hiding both its bars alone.
+    #[serde(default)]
+    pub immersive: FullScreenPlace,
 }
 
 impl AppWindowSettings {
     /// Whether these are the defaults, which need no entry.
     pub fn is_default(&self) -> bool {
-        !self.fixed_size && self.start_size_dp.is_none() && self.dpi_scaling == DpiScaling::Auto
+        !self.fixed_size
+            && self.start_size_dp.is_none()
+            && self.dpi_scaling == DpiScaling::Auto
+            && self.fullscreen == FullScreenPlace::Default
+            && self.immersive == FullScreenPlace::Default
     }
 
     /// Checks the settings, as a client sent them: the package must be an Android package
@@ -172,6 +333,8 @@ impl AppWindowSettings {
             start_size_dp: (app.start_width_dp > 0 || app.start_height_dp > 0)
                 .then_some((app.start_width_dp, app.start_height_dp)),
             dpi_scaling: DpiScaling::from_wire(app.dpi_scaling),
+            fullscreen: FullScreenPlace::from_wire(app.fullscreen),
+            immersive: FullScreenPlace::from_wire(app.immersive),
         }
     }
 
@@ -184,6 +347,8 @@ impl AppWindowSettings {
             start_width_dp,
             start_height_dp,
             dpi_scaling: self.dpi_scaling.to_wire(),
+            fullscreen: self.fullscreen.to_wire(),
+            immersive: self.immersive.to_wire(),
         }
     }
 }
@@ -266,6 +431,105 @@ mod tests {
             serde_json::to_value(DpiScaling::SystemForced).unwrap(),
             "system-forced"
         );
+    }
+
+    #[test]
+    fn fr30_each_kind_of_full_screen_request_follows_its_setting() {
+        use FullScreenPlace::{Screen, Window};
+        let builtin = FullScreenDefaults::default();
+        // A clear request fills the screen, and bars hidden alone stays in the window.
+        assert_eq!(
+            full_screen_place(FullScreenRequest::Explicit, None, builtin),
+            Some(Screen)
+        );
+        assert_eq!(
+            full_screen_place(FullScreenRequest::BarsHidden, None, builtin),
+            Some(Window)
+        );
+        assert_eq!(
+            full_screen_place(FullScreenRequest::None, None, builtin),
+            None
+        );
+        // Each part of the setting moves its own kind only.
+        let swapped = FullScreenDefaults {
+            fullscreen: Window,
+            immersive: Screen,
+        };
+        assert_eq!(
+            full_screen_place(FullScreenRequest::Explicit, None, swapped),
+            Some(Window)
+        );
+        assert_eq!(
+            full_screen_place(FullScreenRequest::BarsHidden, None, swapped),
+            Some(Screen)
+        );
+        // A part left to the default is DSA's own default, never "default".
+        let unset = FullScreenDefaults {
+            fullscreen: FullScreenPlace::Default,
+            immersive: FullScreenPlace::Default,
+        };
+        assert_eq!(unset.resolved(), builtin);
+        assert_eq!(
+            FullScreenDefaults::from_wire(Some(&unset.to_wire())),
+            builtin
+        );
+        assert_eq!(FullScreenDefaults::from_wire(None), builtin);
+        assert_eq!(
+            FullScreenDefaults::from_wire(Some(&swapped.to_wire())),
+            swapped
+        );
+    }
+
+    #[test]
+    fn fr30_an_apps_full_screen_choice_wins_over_the_default() {
+        use FullScreenPlace::{Screen, Window};
+        let video = AppWindowSettings {
+            fullscreen: Window,
+            immersive: Screen,
+            ..notes(false, None)
+        };
+        let builtin = FullScreenDefaults::default();
+        assert_eq!(
+            full_screen_place(FullScreenRequest::Explicit, Some(&video), builtin),
+            Some(Window)
+        );
+        assert_eq!(
+            full_screen_place(FullScreenRequest::BarsHidden, Some(&video), builtin),
+            Some(Screen)
+        );
+        // An app that follows the default for one part follows the default there.
+        let half = AppWindowSettings {
+            immersive: FullScreenPlace::Default,
+            ..video.clone()
+        };
+        assert_eq!(
+            full_screen_place(FullScreenRequest::BarsHidden, Some(&half), builtin),
+            Some(Window)
+        );
+        // The choices are kept like the other window settings, and only the defaults need no
+        // entry.
+        for place in FullScreenPlace::ALL {
+            assert_eq!(FullScreenPlace::from_name(place.name()), Some(place));
+            let app = AppWindowSettings {
+                fullscreen: place,
+                immersive: place,
+                ..notes(false, None)
+            };
+            assert_eq!(AppWindowSettings::from_wire(&app.to_wire()), app);
+            let stored = serde_json::to_string(&app).unwrap();
+            assert_eq!(
+                serde_json::from_str::<AppWindowSettings>(&stored).unwrap(),
+                app
+            );
+            assert_eq!(app.is_default(), place == FullScreenPlace::Default);
+        }
+        assert_eq!(FullScreenPlace::from_name("monitor"), None);
+        // Settings stored before the choice existed follow the default.
+        let old: AppWindowSettings =
+            serde_json::from_str(r#"{"package_name":"com.example.notes","fixed_size":true}"#)
+                .unwrap();
+        assert_eq!(old.fullscreen, FullScreenPlace::Default);
+        assert_eq!(old.immersive, FullScreenPlace::Default);
     }
 
     #[test]

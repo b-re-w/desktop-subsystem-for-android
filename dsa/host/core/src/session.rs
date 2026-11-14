@@ -161,8 +161,8 @@ use crate::root_elevation::{AppLevel, Level};
 use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
-    AppInfo, AppSettingsPage, AppShortcut, Bounds, PinShortcutRequest, StatusBarAppearance, Task,
-    TaskEvent, TaskOrientation, TaskRequest, TaskTable, TaskWatch,
+    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, PinShortcutRequest,
+    StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest, TaskTable, TaskWatch,
 };
 use crate::widgets::{
     self, Placement, Widget, WidgetEvent, WidgetFrame, WidgetProvider, WidgetSize,
@@ -6384,6 +6384,11 @@ impl Worker {
                     control::TaskOrientation::Landscape => TaskOrientation::Landscape,
                     control::TaskOrientation::Unspecified => TaskOrientation::Unspecified,
                 };
+                let fullscreen_request = match update.fullscreen_request() {
+                    control::FullScreenRequest::Explicit => FullScreenRequest::Explicit,
+                    control::FullScreenRequest::BarsHidden => FullScreenRequest::BarsHidden,
+                    control::FullScreenRequest::None => FullScreenRequest::None,
+                };
                 let status_bar = match update.status_bar_appearance() {
                     control::StatusBarAppearance::Light => StatusBarAppearance::Light,
                     control::StatusBarAppearance::Dark => StatusBarAppearance::Dark,
@@ -6408,7 +6413,7 @@ impl Worker {
                     status_bar,
                     status_bar_color: update.status_bar_color,
                     orientation,
-                    fullscreen: update.fullscreen,
+                    fullscreen_request,
                     picture_in_picture: update.picture_in_picture,
                     transparent_caption: update.transparent_caption,
                     caption_interactive: update

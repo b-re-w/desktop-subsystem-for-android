@@ -21,7 +21,7 @@
 use std::collections::BTreeSet;
 use std::time::Instant;
 
-use dsa_host_core::app_windows::AppWindowSettings;
+use dsa_host_core::app_windows::AppWindows;
 use dsa_host_core::compositor::frame_stall::{FrameStall, Stall};
 use dsa_host_core::compositor::gpu_reset::{GpuResetWindows, Report};
 use dsa_host_core::compositor::shown_windows::ShownWindows;
@@ -64,7 +64,7 @@ pub enum ManagerEvent {
     /// A window host's connection ended.
     Gone { host: HostId },
     /// The user's window settings for each app, as the service has them now.
-    AppWindows(Vec<AppWindowSettings>),
+    AppWindows(AppWindows),
     /// The renderer found its GPU device lost, or made it again: a GPU reset.
     GpuReset,
 }
@@ -250,7 +250,8 @@ impl<P: Platform> Manager<P> {
                 }
             }
             ManagerEvent::AppWindows(apps) => {
-                let changes = self.windows.set_app_windows(&apps);
+                let mut changes = self.windows.set_app_windows(&apps.apps);
+                changes.extend(self.windows.set_full_screen_defaults(apps.defaults));
                 self.change(changes, now);
             }
         }

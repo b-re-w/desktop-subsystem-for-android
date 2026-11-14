@@ -310,7 +310,7 @@ const APP_WINDOWS_POLL: Duration = Duration::from_secs(2);
 /// when they start and whenever they change. It ends early when `deliver` returns false.
 pub fn follow_app_windows(
     mut connector: Box<dyn Connector>,
-    mut deliver: impl FnMut(Vec<dsa_host_core::app_windows::AppWindowSettings>) -> bool,
+    mut deliver: impl FnMut(dsa_host_core::app_windows::AppWindows) -> bool,
     stop: Arc<AtomicBool>,
     logger: Option<Arc<CompositorLogger>>,
 ) {
@@ -322,7 +322,7 @@ pub fn follow_app_windows(
             client = HostApiClient::connect(&mut *connector, BUILD, ANSWER).ok();
         }
         if let Some(connected) = client.as_mut() {
-            match connected.app_window_settings() {
+            match connected.app_windows() {
                 Ok(apps) => {
                     last_error.clear();
                     if last.as_ref() != Some(&apps) {

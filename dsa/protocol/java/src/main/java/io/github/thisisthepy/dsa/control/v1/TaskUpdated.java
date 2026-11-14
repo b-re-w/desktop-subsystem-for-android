@@ -660,8 +660,8 @@ public  final class TaskUpdated extends
   private boolean fullscreen_;
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -673,8 +673,8 @@ public  final class TaskUpdated extends
   }
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -686,8 +686,8 @@ public  final class TaskUpdated extends
   }
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -1065,6 +1065,78 @@ public  final class TaskUpdated extends
   private void clearHandlesDensityChange() {
     
     handlesDensityChange_ = false;
+  }
+
+  public static final int FULLSCREEN_REQUEST_FIELD_NUMBER = 27;
+  private int fullscreenRequest_;
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The enum numeric value on the wire for fullscreenRequest.
+   */
+  @java.lang.Override
+  public int getFullscreenRequestValue() {
+    return fullscreenRequest_;
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The fullscreenRequest.
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.FullScreenRequest getFullscreenRequest() {
+    io.github.thisisthepy.dsa.control.v1.FullScreenRequest result = io.github.thisisthepy.dsa.control.v1.FullScreenRequest.forNumber(fullscreenRequest_);
+    return result == null ? io.github.thisisthepy.dsa.control.v1.FullScreenRequest.UNRECOGNIZED : result;
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @param value The enum numeric value on the wire for fullscreenRequest to set.
+   */
+  private void setFullscreenRequestValue(int value) {
+      fullscreenRequest_ = value;
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @param value The fullscreenRequest to set.
+   */
+  private void setFullscreenRequest(io.github.thisisthepy.dsa.control.v1.FullScreenRequest value) {
+    fullscreenRequest_ = value.getNumber();
+    
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   */
+  private void clearFullscreenRequest() {
+    
+    fullscreenRequest_ = 0;
   }
 
   public static io.github.thisisthepy.dsa.control.v1.TaskUpdated parseFrom(
@@ -1837,8 +1909,8 @@ public  final class TaskUpdated extends
 
     /**
      * <pre>
-     * Whether the task's app asked to fill the screen (the task left the freeform windowing
-     * mode for fullscreen). The host makes the task's window fill its monitor.
+     * Whether the task's app asked to fill the screen, in either of the ways
+     * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
      * </pre>
      *
      * <code>bool fullscreen = 21;</code>
@@ -1850,8 +1922,8 @@ public  final class TaskUpdated extends
     }
     /**
      * <pre>
-     * Whether the task's app asked to fill the screen (the task left the freeform windowing
-     * mode for fullscreen). The host makes the task's window fill its monitor.
+     * Whether the task's app asked to fill the screen, in either of the ways
+     * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
      * </pre>
      *
      * <code>bool fullscreen = 21;</code>
@@ -1865,8 +1937,8 @@ public  final class TaskUpdated extends
     }
     /**
      * <pre>
-     * Whether the task's app asked to fill the screen (the task left the freeform windowing
-     * mode for fullscreen). The host makes the task's window fill its monitor.
+     * Whether the task's app asked to fill the screen, in either of the ways
+     * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
      * </pre>
      *
      * <code>bool fullscreen = 21;</code>
@@ -2272,6 +2344,82 @@ public  final class TaskUpdated extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @return The enum numeric value on the wire for fullscreenRequest.
+     */
+    @java.lang.Override
+    public int getFullscreenRequestValue() {
+      return instance.getFullscreenRequestValue();
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @param value The fullscreenRequest to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFullscreenRequestValue(int value) {
+      copyOnWrite();
+      instance.setFullscreenRequestValue(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @return The fullscreenRequest.
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.FullScreenRequest getFullscreenRequest() {
+      return instance.getFullscreenRequest();
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @param value The enum numeric value on the wire for fullscreenRequest to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFullscreenRequest(io.github.thisisthepy.dsa.control.v1.FullScreenRequest value) {
+      copyOnWrite();
+      instance.setFullscreenRequest(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFullscreenRequest() {
+      copyOnWrite();
+      instance.clearFullscreenRequest();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.TaskUpdated)
   }
   @java.lang.Override
@@ -2308,12 +2456,13 @@ public  final class TaskUpdated extends
             io.github.thisisthepy.dsa.control.v1.Rect.class,
             "canGoBack_",
             "handlesDensityChange_",
+            "fullscreenRequest_",
           };
           java.lang.String info =
-              "\u0000\u0013\u0000\u0000\u0001\u001a\u0013\u0000\u0001\u0000\u0001\u0004\u0002\t" +
+              "\u0000\u0014\u0000\u0000\u0001\u001b\u0014\u0000\u0001\u0000\u0001\u0004\u0002\t" +
               "\u0003\u0208\u0004\u0208\u0005\u0007\u0006\u000b\u0007\u000b\b\u000b\t\u000b\n\u000b" +
               "\u000b\f\f\u0006\u0014\f\u0015\u0007\u0016\u0007\u0017\u0007\u0018\u001b\u0019\u0007" +
-              "\u001a\u0007";
+              "\u001a\u0007\u001b\f";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

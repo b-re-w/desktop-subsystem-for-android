@@ -31,7 +31,9 @@
 //!                              "advanced_networking": false,
 //!                              "touch_gestures_off": true,
 //!                              "image_auto_restart": true,
-//!                              "host_certificates": true}
+//!                              "host_certificates": true,
+//!                              "app_full_screen": {"fullscreen": "screen",
+//!                                                    "immersive": "window"}}
 //! <dir>/users/<user>.app-windows.json
 //!                             the user's window settings for each app
 //! <dir>/users/<user>.arm-translation.json
@@ -59,7 +61,7 @@ use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 
-use crate::app_windows::AppWindowSettings;
+use crate::app_windows::{AppWindowSettings, FullScreenDefaults};
 use crate::arm_translation::{Package, Translator};
 use crate::file_share;
 use crate::gapps::GappsPackage;
@@ -141,6 +143,10 @@ pub struct Settings {
     /// machine's, shared by every user; off by default. It takes effect from the next start
     /// of Android.
     pub root_elevation: bool,
+    /// Where the windows of every app without its own choice show a clear full screen
+    /// request and an app hiding both its bars alone: the whole screen and inside the window
+    /// by default. The user's own; it applies at once.
+    pub app_full_screen: FullScreenDefaults,
 }
 
 impl Default for Settings {
@@ -168,6 +174,7 @@ impl Default for Settings {
             image_auto_restart: true,
             host_certificates: true,
             root_elevation: false,
+            app_full_screen: FullScreenDefaults::default(),
         }
     }
 }
@@ -270,6 +277,8 @@ pub struct UserSettings {
     pub image_auto_restart: bool,
     #[serde(default = "yes")]
     pub host_certificates: bool,
+    #[serde(default)]
+    pub app_full_screen: FullScreenDefaults,
 }
 
 impl Default for UserSettings {
@@ -291,6 +300,7 @@ impl Default for UserSettings {
             touch_gestures_off: true,
             image_auto_restart: true,
             host_certificates: true,
+            app_full_screen: FullScreenDefaults::default(),
         }
     }
 }
@@ -320,6 +330,7 @@ impl UserSettings {
             touch_gestures_off: settings.touch_gestures_off,
             image_auto_restart: settings.image_auto_restart,
             host_certificates: settings.host_certificates,
+            app_full_screen: settings.app_full_screen.resolved(),
         }
     }
 }
@@ -638,6 +649,7 @@ fn combine(mine: UserSettings, machine: MachineSettings) -> Settings {
         touch_gestures_off: mine.touch_gestures_off,
         image_auto_restart: mine.image_auto_restart,
         host_certificates: mine.host_certificates,
+        app_full_screen: mine.app_full_screen.resolved(),
     }
 }
 
@@ -1086,6 +1098,7 @@ mod tests {
                     image_auto_restart: true,
                     host_certificates: true,
                     root_elevation: false,
+                    app_full_screen: crate::app_windows::FullScreenDefaults::default(),
                 },
             )
             .unwrap();
@@ -1436,6 +1449,55 @@ mod tests {
             again.get("uid:1001").unwrap().touch_gestures_off,
             "the user's own"
         );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fr30_the_full_screen_defaults_are_kept_per_user() {
+        use crate::app_windows::FullScreenPlace;
+        let dir = scratch("app-full-screen");
+        let store = FileSettings::new(&dir);
+        assert_eq!(
+            store.get("uid:1000").unwrap().app_full_screen,
+            FullScreenDefaults::default()
+        );
+        let chosen = FullScreenDefaults {
+            fullscreen: FullScreenPlace::Window,
+            immersive: FullScreenPlace::Screen,
+        };
+        let saved = store
+            .set(
+                "uid:1000",
+                &Settings {
+                    app_full_screen: chosen,
+                    ..Settings::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(saved.app_full_screen, chosen);
+        let again = FileSettings::new(&dir);
+        assert_eq!(again.get("uid:1000").unwrap().app_full_screen, chosen);
+        assert_eq!(
+            again.get("uid:1001").unwrap().app_full_screen,
+            FullScreenDefaults::default(),
+            "the user's own"
+        );
+        // A part left to the default is kept as DSA's default for it.
+        let unset = store
+            .set(
+                "uid:1000",
+                &Settings {
+                    app_full_screen: FullScreenDefaults {
+                        fullscreen: FullScreenPlace::Default,
+                        immersive: FullScreenPlace::Default,
+                    },
+                    ..Settings::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(unset.app_full_screen, FullScreenDefaults::default());
+        let old: UserSettings = serde_json::from_str(r#"{"clipboard": false}"#).unwrap();
+        assert_eq!(old.app_full_screen, FullScreenDefaults::default());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

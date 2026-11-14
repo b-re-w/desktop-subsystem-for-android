@@ -1242,7 +1242,7 @@ message Task {
   fixed32 status_bar_color = 12;
   // The orientation the task's top activity is locked to, if any.
   TaskOrientation orientation = 20;
-  // Whether the task's app asked to fill the screen.
+  // Whether the task's app asked to fill the screen, in either way.
   bool fullscreen = 21;
   // Whether the task's app went into picture-in-picture.
   bool picture_in_picture = 22;
@@ -1259,6 +1259,19 @@ message Task {
   // Whether the task's top activity says it handles a change of density itself, so it
   // redraws at a new density rather than being relaunched. False when unknown.
   bool handles_density_change = 26;
+  // Which kind of full screen the task's app asks for, if any.
+  FullScreenRequest fullscreen_request = 27;
+}
+
+// How a task's app asks to fill the screen.
+enum FullScreenRequest {
+  // It does not.
+  FULL_SCREEN_REQUEST_NONE = 0;
+  // A clear request: the task left freeform for fullscreen, its theme sets
+  // android:windowFullscreen, or it hides both system bars while it asks for landscape.
+  FULL_SCREEN_REQUEST_EXPLICIT = 1;
+  // It hides both system bars and asks for no landscape orientation (immersive mode).
+  FULL_SCREEN_REQUEST_BARS_HIDDEN = 2;
 }
 
 // The orientation a task's top activity asks for.
@@ -1856,6 +1869,13 @@ message Settings {
   // caller, whether or not host_certificates is on. Those the operating system ships are left
   // out. A client cannot change it.
   repeated ImportedCertificate imported_certificates = 41;
+  // Where the windows of every app show a clear full screen request, and where they show an
+  // app hiding both its bars alone, unless the app has its own choice
+  // (AppWindowSettings.fullscreen and immersive). SCREEN and WINDOW by default. DEFAULT in a
+  // request means that default; an answer never carries it. A client sends back the values it
+  // read. It applies at once, to the windows open already.
+  FullScreenPlace app_fullscreen = 42;
+  FullScreenPlace app_immersive = 43;
   // A run mode setting (run_mode, a RunMode enum, stop_after_secs and keep_for_notifications)
   // was here and is gone: an idle Android stays in Doze. Its numbers and names are never
   // used again, so an older peer that still sends them is read without them. The enum name
@@ -2652,6 +2672,32 @@ message AppWindowSettings {
   uint32 start_height_dp = 4;
   // How the app follows its window to a monitor of another scale. No way restarts the app.
   DpiScaling dpi_scaling = 5;
+  // Where the app's windows show a clear full screen request (FullScreenRequest EXPLICIT),
+  // and where they show the app hiding both its bars alone (BARS_HIDDEN). DEFAULT, the
+  // default, follows the user's choice for every app (Settings.app_fullscreen and
+  // app_immersive).
+  FullScreenPlace fullscreen = 6;
+  FullScreenPlace immersive = 7;
+}
+
+// Where a window shows an app that asks to fill the screen.
+enum FullScreenPlace {
+  // As the default says: for one app, the user's choice for every app; for every app, what
+  // DSA does without a choice (SCREEN for a clear request, WINDOW for bars hidden alone).
+  FULL_SCREEN_PLACE_DEFAULT = 0;
+  // On the whole screen: the window fills its monitor, and its title bar shows while the
+  // pointer is at the top edge.
+  FULL_SCREEN_PLACE_SCREEN = 1;
+  // Inside the window: it keeps its size and title bar, and the app fills it with no title
+  // band of its own.
+  FULL_SCREEN_PLACE_WINDOW = 2;
+}
+
+// The user's full screen choices for every app, which an app's own choice overrides. Never
+// DEFAULT in an answer from the service.
+message FullScreenDefaults {
+  FullScreenPlace fullscreen = 1;
+  FullScreenPlace immersive = 2;
 }
 
 // How an app follows its window to a monitor of another scale, as Windows' "high DPI scaling
@@ -2683,9 +2729,11 @@ message SetAppWindowSettings {
   AppWindowSettings app = 1;
 }
 
-// The caller's window settings for every app that has any, by package name.
+// The caller's window settings for every app that has any, by package name, with the full
+// screen choices every app without its own follows.
 message AppWindowSettingsList {
   repeated AppWindowSettings apps = 1;
+  FullScreenDefaults defaults = 2;
 }
 
 message Request {

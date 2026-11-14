@@ -69,9 +69,14 @@
 //! new density to any app without a restart, which needs a framework change that is not made
 //! yet, so it works as `system` until then. `auto`, the default, is `app` for an app that says
 //! it handles a change of density and `system` for any other; neither restarts the app.
+//! `--fullscreen screen|window|default` says where the app's clear full screen request shows (a
+//! video player's full screen button): on the whole screen, inside its window, or as the
+//! `app-fullscreen` setting for every app says. `--immersive` says the same for the app hiding
+//! both its bars alone (`app-immersive`).
 //! `reset` puts the app back to the defaults. With `--json` it prints `apps`, each with `package`, `fixed_size`, `start_size`
-//! (null for none, else `[width, height]`) and `dpi_scaling`, and `system_forced_available`,
-//! whether `system-forced` does what it says yet.
+//! (null for none, else `[width, height]`), `dpi_scaling`, `fullscreen` and `immersive`,
+//! `system_forced_available`, whether `system-forced` does what it says yet, and `defaults`,
+//! the `fullscreen` and `immersive` choices every app without its own follows.
 //!
 //! It acts on the Android of the user who runs it: the service learns that user from the
 //! operating system, so there is no option to name another one.
@@ -268,6 +273,9 @@
 //! Windows 11's three- and four-finger touch gestures off while a DSA app window is in front,
 //! so apps get every finger, and puts the user's own value back when another window comes to
 //! the front; `dsa settings` says whether the window manager can do it on this computer.
+//! `app-fullscreen` (`screen` by default) and `app-immersive` (`window` by default) say where
+//! every app's full screen shows, `screen` or `window`: a clear request, and an app hiding both
+//! its bars alone. An app's own choice (`dsa app-window --fullscreen`) wins over them.
 //! `image-auto-restart` (on by default) restarts the user's running Android by itself into an
 //! Android image the service downloaded: at once while no app window is open, and otherwise
 //! after the desktop asks ([Restart now] or [Later], which waits until every window is closed);
@@ -414,7 +422,9 @@ use std::time::{Duration, Instant};
 use dsa_host_core::apk::{InstallKind, InstallOutcome, InstalledPackage};
 use dsa_host_core::apk_bundle::{Bundle, Device, InstallFile, Refusal, Selection};
 use dsa_host_core::apk_info::{signing, ApkInfo, Icon, Layer, Vector};
-use dsa_host_core::app_windows::{AppWindowSettings, DpiScaling};
+use dsa_host_core::app_windows::{
+    AppWindowSettings, DpiScaling, FullScreenDefaults, FullScreenPlace,
+};
 use dsa_host_core::arm_translation::{self, google};
 use dsa_host_core::background::{BackgroundApp, BackgroundCommand, MediaSession, Playback};
 use dsa_host_core::files::{FileAction, FileTransfer};
@@ -568,12 +578,15 @@ pub enum AppWindowAction {
     Show(String),
     /// Change one app's: whether its windows keep their size, the size they open at
     /// (`Some(None)` for the size Android gives the task), and how it follows its window to a
-    /// monitor of another scale.
+    /// monitor of another scale, and where it shows a clear full screen request and its bars
+    /// hidden alone.
     Set {
         package: String,
         fixed_size: Option<bool>,
         start_size: Option<Option<(u32, u32)>>,
         dpi_scaling: Option<DpiScaling>,
+        fullscreen: Option<FullScreenPlace>,
+        immersive: Option<FullScreenPlace>,
     },
     /// Put one app's back to the defaults.
     Reset(String),
@@ -603,6 +616,13 @@ pub fn parse_dpi_scaling(value: &str) -> Result<DpiScaling, String> {
     DpiScaling::from_name(&value.trim().to_ascii_lowercase()).ok_or_else(|| {
         format!("--dpi-scaling is app, system, system-forced or auto, not {value:?}")
     })
+}
+
+/// Where an app's full screen shows, as `dsa app-window --fullscreen` and `--immersive`
+/// take it (`flag`): `screen`, `window` or `default`.
+pub fn parse_full_screen_place(flag: &str, value: &str) -> Result<FullScreenPlace, String> {
+    FullScreenPlace::from_name(&value.trim().to_ascii_lowercase())
+        .ok_or_else(|| format!("{flag} is screen, window or default, not {value:?}"))
 }
 
 /// What `dsa apps` does.
@@ -683,6 +703,10 @@ pub enum Change {
     SharedFolders(Vec<String>),
     AdvancedNetworking(bool),
     TouchGesturesOff(bool),
+    /// Where every app's clear full screen request shows.
+    AppFullScreen(FullScreenPlace),
+    /// Where every app that hides both its bars alone shows.
+    AppImmersive(FullScreenPlace),
     ImageAutoRestart(bool),
     HostCertificates(bool),
     RootElevation(bool),
@@ -718,6 +742,8 @@ impl Change {
             "shared-folders" => parse_shared_folders(value).map(Change::SharedFolders),
             "advanced-networking" => switch().map(Change::AdvancedNetworking),
             "touch-gestures-off" => switch().map(Change::TouchGesturesOff),
+            "app-fullscreen" => parse_full_screen_place(name, value).map(Change::AppFullScreen),
+            "app-immersive" => parse_full_screen_place(name, value).map(Change::AppImmersive),
             "image-auto-restart" => switch().map(Change::ImageAutoRestart),
             "host-certificates" => switch().map(Change::HostCertificates),
             "adb-port" => match value.parse::<u16>() {
@@ -731,7 +757,8 @@ impl Change {
                  clipboard, links-in-android, program-updates, prerelease-updates, \
                  image-updates, input-trace, resize-trace, root-elevation, memory-limit, developer-mode, adb-port, adb-auto-connect, \
                  arm-translation, stop-without-asking, file-sharing, shared-folders, \
-                 advanced-networking, touch-gestures-off, image-auto-restart, host-certificates and \
+                 advanced-networking, touch-gestures-off, app-fullscreen, app-immersive, \
+                 image-auto-restart, host-certificates and \
                  device.<field>"
             )),
         }
@@ -990,20 +1017,35 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                 }
                 _ => return Err("dsa app-window reset follows the app's package".into()),
             },
-            flag @ ("--fixed-size" | "--start-size" | "--dpi-scaling")
+            flag @ ("--fixed-size" | "--start-size" | "--dpi-scaling" | "--fullscreen"
+            | "--immersive")
                 if command == Some(Command::AppWindow) =>
             {
                 let value = args.next().ok_or_else(|| format!("{flag} needs a value"))?;
-                let (package, mut fixed_size, mut start_size, mut dpi_scaling) = match app_window
-                    .take()
-                {
-                    Some(AppWindowAction::Show(package)) => (package, None, None, None),
+                let (
+                    package,
+                    mut fixed_size,
+                    mut start_size,
+                    mut dpi_scaling,
+                    mut fullscreen,
+                    mut immersive,
+                ) = match app_window.take() {
+                    Some(AppWindowAction::Show(package)) => (package, None, None, None, None, None),
                     Some(AppWindowAction::Set {
                         package,
                         fixed_size,
                         start_size,
                         dpi_scaling,
-                    }) => (package, fixed_size, start_size, dpi_scaling),
+                        fullscreen,
+                        immersive,
+                    }) => (
+                        package,
+                        fixed_size,
+                        start_size,
+                        dpi_scaling,
+                        fullscreen,
+                        immersive,
+                    ),
                     _ => return Err(format!("dsa app-window {flag} follows the app's package")),
                 };
                 match flag {
@@ -1015,13 +1057,17 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                         });
                     }
                     "--start-size" => start_size = Some(parse_start_size(value)?),
-                    _ => dpi_scaling = Some(parse_dpi_scaling(value)?),
+                    "--dpi-scaling" => dpi_scaling = Some(parse_dpi_scaling(value)?),
+                    "--fullscreen" => fullscreen = Some(parse_full_screen_place(flag, value)?),
+                    _ => immersive = Some(parse_full_screen_place(flag, value)?),
                 }
                 app_window = Some(AppWindowAction::Set {
                     package,
                     fixed_size,
                     start_size,
                     dpi_scaling,
+                    fullscreen,
+                    immersive,
                 });
             }
             "apps" if command.is_none() => command = Some(Command::Apps),
@@ -2214,6 +2260,8 @@ fn app_window_json(app: &AppWindowSettings) -> Value {
         "fixed_size": app.fixed_size,
         "start_size": app.start_size_dp.map(|(width, height)| json!([width, height])),
         "dpi_scaling": app.dpi_scaling.name(),
+        "fullscreen": app.fullscreen.name(),
+        "immersive": app.immersive.name(),
     })
 }
 
@@ -2233,6 +2281,15 @@ fn describe_dpi_scaling(scaling: DpiScaling) -> String {
     }
 }
 
+/// How `dsa app-window` and `dsa settings` say where a full screen shows.
+fn describe_full_screen_place(place: FullScreenPlace) -> &'static str {
+    match place {
+        FullScreenPlace::Default => "as the default for every app",
+        FullScreenPlace::Screen => "on the whole screen",
+        FullScreenPlace::Window => "inside its window",
+    }
+}
+
 fn describe_app_window(app: &AppWindowSettings) -> String {
     let size = match app.start_size_dp {
         Some((width, height)) => format!("opens at {width} x {height} dp"),
@@ -2243,11 +2300,25 @@ fn describe_app_window(app: &AppWindowSettings) -> String {
     } else {
         "resizable"
     };
-    format!(
+    let mut line = format!(
         "{}: {resizable}, {size}, {}",
         app.package_name,
         describe_dpi_scaling(app.dpi_scaling)
-    )
+    );
+    // An app that follows the default for every app says nothing more.
+    if app.fullscreen != FullScreenPlace::Default {
+        line.push_str(&format!(
+            ", full screen {}",
+            describe_full_screen_place(app.fullscreen)
+        ));
+    }
+    if app.immersive != FullScreenPlace::Default {
+        line.push_str(&format!(
+            ", bars hidden {}",
+            describe_full_screen_place(app.immersive)
+        ));
+    }
+    line
 }
 
 fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<String, String> {
@@ -2255,7 +2326,9 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
         .app_window
         .clone()
         .unwrap_or(AppWindowAction::List);
-    let apps = client.app_window_settings().map_err(|e| e.to_string())?;
+    let windows = client.app_windows().map_err(|e| e.to_string())?;
+    let every_app: FullScreenDefaults = windows.defaults;
+    let apps = windows.apps;
     let defaults = |package: &str| AppWindowSettings {
         package_name: package.to_string(),
         ..AppWindowSettings::default()
@@ -2277,6 +2350,8 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
             fixed_size,
             start_size,
             dpi_scaling,
+            fullscreen,
+            immersive,
         } => {
             let current = apps
                 .into_iter()
@@ -2286,6 +2361,8 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
                 fixed_size: fixed_size.unwrap_or(current.fixed_size),
                 start_size_dp: start_size.unwrap_or(current.start_size_dp),
                 dpi_scaling: dpi_scaling.unwrap_or(current.dpi_scaling),
+                fullscreen: fullscreen.unwrap_or(current.fullscreen),
+                immersive: immersive.unwrap_or(current.immersive),
                 ..current
             };
             let now = client
@@ -2301,6 +2378,10 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
         json!({
             "apps": shown.iter().map(app_window_json).collect::<Vec<_>>(),
             "system_forced_available": DpiScaling::FORCED_AVAILABLE,
+            "defaults": {
+                "fullscreen": every_app.fullscreen.name(),
+                "immersive": every_app.immersive.name(),
+            },
         })
         .to_string()
     } else if shown.is_empty() {
@@ -2459,6 +2540,8 @@ pub fn settings_json(report: &SettingsReport) -> Value {
         "shared_folders": report.settings.shared_folders,
         "advanced_networking": report.settings.advanced_networking,
         "touch_gestures_off": report.settings.touch_gestures_off,
+        "app_fullscreen": report.settings.app_full_screen.fullscreen.name(),
+        "app_immersive": report.settings.app_full_screen.immersive.name(),
         "image_auto_restart": report.settings.image_auto_restart,
         "host_certificates": report.settings.host_certificates,
         "imported_certificates": report.imported_certificates.iter().map(|certificate| json!({
@@ -3117,6 +3200,11 @@ pub fn describe_settings(report: &SettingsReport) -> String {
             "Restart into a downloaded Android image by itself: {} (image-auto-restart)",
             on_off(settings.image_auto_restart)
         ),
+        format!(
+            "An app's full screen: {} (app-fullscreen); bars hidden alone: {} (app-immersive)",
+            describe_full_screen_place(settings.app_full_screen.fullscreen),
+            describe_full_screen_place(settings.app_full_screen.immersive)
+        ),
     ];
     // Only Windows 11 has such gestures. Hidden where the window manager found none, as the
     // settings app hides it.
@@ -3407,6 +3495,8 @@ fn settings(invocation: &Invocation, client: &mut HostApiClient) -> Result<Strin
             Change::SharedFolders(folders) => wanted.shared_folders = folders.clone(),
             Change::AdvancedNetworking(on) => wanted.advanced_networking = *on,
             Change::TouchGesturesOff(on) => wanted.touch_gestures_off = *on,
+            Change::AppFullScreen(place) => wanted.app_full_screen.fullscreen = *place,
+            Change::AppImmersive(place) => wanted.app_full_screen.immersive = *place,
             Change::ImageAutoRestart(on) => wanted.image_auto_restart = *on,
             Change::HostCertificates(on) => wanted.host_certificates = *on,
             Change::RootElevation(on) => wanted.root_elevation = *on,

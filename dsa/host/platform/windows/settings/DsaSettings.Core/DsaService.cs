@@ -153,7 +153,9 @@ public sealed partial class DsaService
         Bool(json, "root_elevation"),
         Bool(json, "image_auto_restart", missing: true),
         Bool(json, "host_certificates", missing: true),
-        ReadImportedCertificates(json));
+        ReadImportedCertificates(json),
+        FullScreenPlaces.Parse(OptionalString(json, "app_fullscreen"), FullScreenPlace.Screen),
+        FullScreenPlaces.Parse(OptionalString(json, "app_immersive"), FullScreenPlace.Window));
 
     /// <summary>The root certificates a user or an administrator added to this computer, as the
     /// settings list them. An older service lists none.</summary>
@@ -257,6 +259,14 @@ public sealed partial class DsaService
     /// <summary>Whether Windows' three- and four-finger touch gestures are off while a DSA app
     /// window is in front.</summary>
     public Task<SettingsInfo> SetTouchGesturesOffAsync(bool on) => SetAsync("touch-gestures-off", on ? "on" : "off");
+
+    /// <summary>Where every app without its own choice shows a clear full screen request.</summary>
+    public Task<SettingsInfo> SetAppFullScreenAsync(FullScreenPlace place) =>
+        SetAsync("app-fullscreen", FullScreenPlaces.Code(place));
+
+    /// <summary>Where every app without its own choice shows its bars hidden alone.</summary>
+    public Task<SettingsInfo> SetAppImmersiveAsync(FullScreenPlace place) =>
+        SetAsync("app-immersive", FullScreenPlaces.Code(place));
 
     /// <summary>Whether Android restarts by itself into an Android image the service
     /// downloaded.</summary>

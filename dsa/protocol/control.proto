@@ -140,8 +140,8 @@ message TaskUpdated {
   // The orientation the task's top activity is locked to, if any. A task locked to portrait
   // opens as a window taller than it is wide.
   TaskOrientation orientation = 20;
-  // Whether the task's app asked to fill the screen (the task left the freeform windowing
-  // mode for fullscreen). The host makes the task's window fill its monitor.
+  // Whether the task's app asked to fill the screen, in either of the ways
+  // `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
   bool fullscreen = 21;
   // Whether the task's app went into picture-in-picture. The host makes the task's window a
   // small window that stays above the others.
@@ -169,6 +169,24 @@ message TaskUpdated {
   // the density of another monitor; for any other app it keeps the task's density and scales
   // the window instead. False when the agent cannot read it.
   bool handles_density_change = 26;
+  // Which kind of full screen the task's app asks for, if any. The host shows the task's
+  // window on its whole monitor or keeps it inside its window, as the user's setting for that
+  // kind of request says.
+  FullScreenRequest fullscreen_request = 27;
+}
+
+// How a task's app asks to fill the screen.
+enum FullScreenRequest {
+  // It does not.
+  FULL_SCREEN_REQUEST_NONE = 0;
+  // A clear request: the task left the freeform windowing mode for fullscreen, its top
+  // activity's theme sets android:windowFullscreen, or it hides both its status and
+  // navigation bars while it asks for a landscape orientation, as a video player's full
+  // screen button does.
+  FULL_SCREEN_REQUEST_EXPLICIT = 1;
+  // It hides both its status and navigation bars and asks for no landscape orientation
+  // (immersive mode, as a feed of short videos does).
+  FULL_SCREEN_REQUEST_BARS_HIDDEN = 2;
 }
 
 // The orientation a task's top activity asks for.
