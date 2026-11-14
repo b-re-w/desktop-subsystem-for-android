@@ -571,7 +571,10 @@ fn fr18_a_screen_reader_starts_the_fast_watch_and_its_end_stops_it() {
     // While it runs, reads and actions need nothing more.
     assert_eq!(demand.asked(start, false, false), None);
     assert_eq!(demand.acted(start, false), None);
-    assert_eq!(demand.poll(start + Duration::from_secs(60), true, true), None);
+    assert_eq!(
+        demand.poll(start + Duration::from_secs(60), true, true),
+        None
+    );
     // The screen reader goes: the watch stops at once, whoever else listens.
     assert_eq!(
         demand.poll(start + Duration::from_secs(61), true, false),
@@ -655,5 +658,8 @@ fn fr18_selection_and_accessibility_focus_cross_both_wires() {
         }],
         ..control::AccessibilityTree::default()
     };
-    assert_eq!(TreeUpdate::from_control(none).unwrap().nodes[0].selection, None);
+    assert_eq!(
+        TreeUpdate::from_control(none).unwrap().nodes[0].selection,
+        None
+    );
 }

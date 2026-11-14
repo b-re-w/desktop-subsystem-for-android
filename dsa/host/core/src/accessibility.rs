@@ -254,7 +254,9 @@ impl Node {
         } else if !self.pane_title.is_empty() {
             &self.pane_title
         } else {
-            self.window.as_ref().map_or("", |window| window.title.as_str())
+            self.window
+                .as_ref()
+                .map_or("", |window| window.title.as_str())
         }
     }
 

@@ -349,8 +349,7 @@ impl Shared {
     /// watches nothing at all.
     fn perform(&self, mut request: ActionRequest) -> windows::core::Result<()> {
         let mut state = self.lock();
-        if state.tree.epoch() != Some(request.epoch) || state.tree.node(request.node_id).is_none()
-        {
+        if state.tree.epoch() != Some(request.epoch) || state.tree.node(request.node_id).is_none() {
             return Err(not_available());
         }
         // A client that piles actions up on a window nobody watches is not let to grow it.
@@ -1334,9 +1333,9 @@ impl AccessibilityWindow {
         }
         let shared = self.shared(hwnd);
         let reading = self.watch.is_some();
-        if let Some((demand, why)) =
-            self.demand
-                .asked(Instant::now(), assistive(&shared), reading)
+        if let Some((demand, why)) = self
+            .demand
+            .asked(Instant::now(), assistive(&shared), reading)
         {
             self.start_watch(&shared, demand, why);
         }
@@ -2261,8 +2260,14 @@ mod tests {
     fn fr18_a_uia_client_that_is_not_a_screen_reader_does_not_start_the_watch() {
         let (android, connect, _service) = service();
         let (input, _) = mpsc::channel();
-        let mut window =
-            AccessibilityWindow::new(9, (400, 300), input, WindowTasks::new(), Some(connect), None);
+        let mut window = AccessibilityWindow::new(
+            9,
+            (400, 300),
+            input,
+            WindowTasks::new(),
+            Some(connect),
+            None,
+        );
         let shared = window.shared(0);
         // A client that is no screen reader reads the window: the tree is read once.
         let started = window
@@ -2314,8 +2319,14 @@ mod tests {
     fn fr18_a_screen_reader_starts_the_fast_watch() {
         let (android, connect, _service) = service();
         let (input, _) = mpsc::channel();
-        let mut window =
-            AccessibilityWindow::new(9, (400, 300), input, WindowTasks::new(), Some(connect), None);
+        let mut window = AccessibilityWindow::new(
+            9,
+            (400, 300),
+            input,
+            WindowTasks::new(),
+            Some(connect),
+            None,
+        );
         let shared = window.shared(0);
         // A client subscribed to focus changes: an assistive technology.
         shared.focus_listeners.store(1, Ordering::Relaxed);
@@ -2325,7 +2336,11 @@ mod tests {
             started,
             Some((Demand::Continuous, DemandReason::AssistiveTechnology))
         );
-        window.start_watch(&shared, Demand::Continuous, DemandReason::AssistiveTechnology);
+        window.start_watch(
+            &shared,
+            Demand::Continuous,
+            DemandReason::AssistiveTechnology,
+        );
         // It listens: the watch tells Android to send the focus at once.
         shared.fast.store(true, Ordering::Relaxed);
         let listening = Arc::clone(&android.accessibility_listening);
@@ -2334,9 +2349,7 @@ mod tests {
         });
         // It goes: the watch ends.
         shared.focus_listeners.store(0, Ordering::Relaxed);
-        let stop = window
-            .demand
-            .poll(Instant::now(), true, assistive(&shared));
+        let stop = window.demand.poll(Instant::now(), true, assistive(&shared));
         if assistive(&shared) {
             // This machine runs a screen reader of its own; the watch rightly stays.
             assert_eq!(stop, None);

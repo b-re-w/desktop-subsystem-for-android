@@ -552,9 +552,7 @@ fn root_approval_check(api: &mut HostApiClient, adb: &Adb, dir: &Path) -> Result
     let records = std::fs::read_to_string(&requests).map_err(|e| e.to_string())?;
     let adb_record: serde_json::Value =
         serde_json::from_str(records.lines().nth(3).unwrap_or("")).map_err(|e| e.to_string())?;
-    if adb_record["package"] != "com.android.shell"
-        || adb_record["app_name"] != "adb shell"
-    {
+    if adb_record["package"] != "com.android.shell" || adb_record["app_name"] != "adb shell" {
         return Err(format!(
             "the approval prompt did not identify adb shell: {adb_record}"
         ));

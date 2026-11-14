@@ -228,7 +228,11 @@ fn fr18_a_heading_has_a_level_and_other_nodes_have_none() {
 fn fr18_a_link_is_a_hyperlink() {
     let link = Node {
         link: true,
-        ..node("android.text.style.URLSpan", NodeStates::default(), &[NodeAction::Click])
+        ..node(
+            "android.text.style.URLSpan",
+            NodeStates::default(),
+            &[NodeAction::Click],
+        )
     };
     assert_eq!(link.role(), Role::Link);
     assert_eq!(control_type_of(link.role()), control_type::HYPERLINK);
@@ -282,10 +286,22 @@ fn fr18_text_ranges_move_by_unit_and_stop_at_the_ends() {
     assert_eq!(move_range(&text, (0, 4), TextUnit::Word, 5), ((8, 13), 2));
     assert_eq!(move_range(&text, (8, 13), TextUnit::Word, -1), ((4, 8), -1));
     // A cursor moves as a cursor, and may reach the end.
-    assert_eq!(move_range(&text, (3, 3), TextUnit::Character, 1), ((4, 4), 1));
-    assert_eq!(move_range(&text, (12, 12), TextUnit::Character, 1), ((13, 13), 1));
-    assert_eq!(move_range(&text, (13, 13), TextUnit::Character, 1), ((13, 13), 0));
-    assert_eq!(move_range(&text, (13, 13), TextUnit::Character, -1), ((12, 12), -1));
+    assert_eq!(
+        move_range(&text, (3, 3), TextUnit::Character, 1),
+        ((4, 4), 1)
+    );
+    assert_eq!(
+        move_range(&text, (12, 12), TextUnit::Character, 1),
+        ((13, 13), 1)
+    );
+    assert_eq!(
+        move_range(&text, (13, 13), TextUnit::Character, 1),
+        ((13, 13), 0)
+    );
+    assert_eq!(
+        move_range(&text, (13, 13), TextUnit::Character, -1),
+        ((12, 12), -1)
+    );
     // An endpoint moves by units to either end.
     assert_eq!(move_endpoint(&text, 0, TextUnit::Word, 2), (8, 2));
     assert_eq!(move_endpoint(&text, 8, TextUnit::Word, 3), (13, 1));

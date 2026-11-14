@@ -5973,10 +5973,7 @@ impl Worker {
                 }));
                 if listening {
                     self.send_body(Body::AccessibilityListening(
-                        control::AccessibilityListening {
-                            task_id,
-                            listening,
-                        },
+                        control::AccessibilityListening { task_id, listening },
                     ));
                 }
             }

@@ -100,9 +100,7 @@ impl Pattern {
     }
 
     pub fn from_id(id: i32) -> Option<Pattern> {
-        PATTERNS
-        .into_iter()
-        .find(|pattern| pattern.id() == id)
+        PATTERNS.into_iter().find(|pattern| pattern.id() == id)
     }
 }
 

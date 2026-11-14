@@ -1443,9 +1443,7 @@ macro_rules! host_api_conformance {
         }
         #[test]
         fn fr18_a_screen_reader_listening_reaches_the_callers_android() {
-            $crate::host_api_conformance::accessibility_listening_reaches_the_caller(
-                &mut || $make,
-            );
+            $crate::host_api_conformance::accessibility_listening_reaches_the_caller(&mut || $make);
         }
         #[test]
         fn fr18_actions_reach_the_callers_android_and_closing_ends_the_watch() {

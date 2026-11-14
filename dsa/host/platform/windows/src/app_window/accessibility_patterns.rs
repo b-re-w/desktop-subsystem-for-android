@@ -226,7 +226,11 @@ fn empty_doubles() -> windows::core::Result<*mut SAFEARRAY> {
     Ok(array)
 }
 
-fn elements(shared: &Arc<Shared>, epoch: u32, ids: &[u32]) -> windows::core::Result<*mut SAFEARRAY> {
+fn elements(
+    shared: &Arc<Shared>,
+    epoch: u32,
+    ids: &[u32],
+) -> windows::core::Result<*mut SAFEARRAY> {
     let items: Vec<IUnknown> = ids
         .iter()
         .filter_map(|id| node_of(shared, epoch, *id).cast().ok())
@@ -249,12 +253,7 @@ pub(super) struct TextRange {
     span: Mutex<(usize, usize)>,
 }
 
-fn range_of(
-    shared: &Arc<Shared>,
-    epoch: u32,
-    id: u32,
-    span: (usize, usize),
-) -> ITextRangeProvider {
+fn range_of(shared: &Arc<Shared>, epoch: u32, id: u32, span: (usize, usize)) -> ITextRangeProvider {
     TextRange {
         shared: Arc::clone(shared),
         epoch,
@@ -330,8 +329,13 @@ impl ITextProvider_Impl for NodeProvider_Impl {
         let (start, end) = self
             .with_node(|_, node| node.selection)?
             .map_or((0, 0), |(start, end)| (start as usize, end as usize));
-        let range: IUnknown =
-            range_of(&self.shared, self.epoch, self.id, (start.min(len), end.min(len))).cast()?;
+        let range: IUnknown = range_of(
+            &self.shared,
+            self.epoch,
+            self.id,
+            (start.min(len), end.min(len)),
+        )
+        .cast()?;
         unknown_array(&[range])
     }
 
@@ -432,7 +436,9 @@ impl ITextRangeProvider_Impl for TextRange_Impl {
         }
         let mut places = 0..=haystack.len() - needle.len();
         let found = if backward.as_bool() {
-            places.rev().find(|at| haystack[*at..*at + needle.len()] == needle[..])
+            places
+                .rev()
+                .find(|at| haystack[*at..*at + needle.len()] == needle[..])
         } else {
             places.find(|at| haystack[*at..*at + needle.len()] == needle[..])
         };
@@ -564,7 +570,9 @@ type TextUnit_ = windows::Win32::UI::Accessibility::TextUnit;
 
 impl IRangeValueProvider_Impl for NodeProvider_Impl {
     fn SetValue(&self, value: f64) -> windows::core::Result<()> {
-        let range = self.with_node(|_, node| node.range)?.ok_or_else(invalid_operation)?;
+        let range = self
+            .with_node(|_, node| node.range)?
+            .ok_or_else(invalid_operation)?;
         let value = value.clamp(f64::from(range.min), f64::from(range.max));
         self.act_with(ActionRequest {
             action: NodeAction::SetProgress,
@@ -673,13 +681,20 @@ impl IGridItemProvider_Impl for NodeProvider_Impl {
 
 impl NodeProvider {
     /// The heading items of the list or grid `grid` on the screen, matching `wanted`.
-    fn headers(&self, grid: u32, wanted: impl Fn(&dsa_host_core::accessibility::CollectionItem) -> bool) -> windows::core::Result<*mut SAFEARRAY> {
+    fn headers(
+        &self,
+        grid: u32,
+        wanted: impl Fn(&dsa_host_core::accessibility::CollectionItem) -> bool,
+    ) -> windows::core::Result<*mut SAFEARRAY> {
         let ids = {
             let state = self.shared.lock();
             let node = state.tree.node(grid).ok_or_else(not_available)?;
             items_of(&state.tree, node)
                 .iter()
-                .filter(|item| item.collection_item.is_some_and(|c| c.heading && wanted(&c)))
+                .filter(|item| {
+                    item.collection_item
+                        .is_some_and(|c| c.heading && wanted(&c))
+                })
                 .map(|item| item.id)
                 .collect::<Vec<_>>()
         };
@@ -704,7 +719,10 @@ impl ITableProvider_Impl for NodeProvider_Impl {
 impl ITableItemProvider_Impl for NodeProvider_Impl {
     fn GetRowHeaderItems(&self) -> windows::core::Result<*mut SAFEARRAY> {
         let (grid, place) = self.with_node(|tree, node| {
-            (container_of(tree, node.id).map(|grid| grid.id), node.collection_item)
+            (
+                container_of(tree, node.id).map(|grid| grid.id),
+                node.collection_item,
+            )
         })?;
         match (grid, place) {
             (Some(grid), Some(place)) => self.headers(grid, |item| item.row == place.row),
@@ -714,7 +732,10 @@ impl ITableItemProvider_Impl for NodeProvider_Impl {
 
     fn GetColumnHeaderItems(&self) -> windows::core::Result<*mut SAFEARRAY> {
         let (grid, place) = self.with_node(|tree, node| {
-            (container_of(tree, node.id).map(|grid| grid.id), node.collection_item)
+            (
+                container_of(tree, node.id).map(|grid| grid.id),
+                node.collection_item,
+            )
         })?;
         match (grid, place) {
             (Some(grid), Some(place)) => self.headers(grid, |item| item.column == place.column),
@@ -726,7 +747,10 @@ impl ITableItemProvider_Impl for NodeProvider_Impl {
 impl IScrollItemProvider_Impl for NodeProvider_Impl {
     fn ScrollIntoView(&self) -> windows::core::Result<()> {
         let (show, item) = self.with_node(|_, node| {
-            (node.supports(NodeAction::ShowOnScreen), node.collection_item)
+            (
+                node.supports(NodeAction::ShowOnScreen),
+                node.collection_item,
+            )
         })?;
         if show {
             return self.act(NodeAction::ShowOnScreen, String::new());
