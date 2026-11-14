@@ -571,6 +571,55 @@ class ImageLayoutTests(unittest.TestCase):
         self.assertIn("connect", rule)
         self.assertIn("(allow system_server gpu_device (chr_file (open read write ioctl getattr map)))", patched)
 
+    def test_nfr2_pr3_the_driver_may_scan_its_own_pagemap_and_nothing_else(self):
+        # The Vulkan driver lists the pages an app wrote with PAGEMAP_SCAN on /proc/self/pagemap;
+        # the platform allows only FIOCLEX and FIONCLEX on a domain's own /proc files.
+        policy = make_image.GRAPHICS_MEMORY_POLICY.read_text()
+        rules = [line for line in policy.splitlines() if line and not line.startswith(";")]
+        self.assertEqual(rules, ["(allowx appdomain self (ioctl file (0x6610)))",
+                                 "(allowx system_server self (ioctl file (0x6610)))"])
+        # 0x6610 is _IOWR('f', 16, struct pm_scan_arg) as SELinux numbers an ioctl.
+        self.assertEqual((ord("f") << 8) | 16, 0x6610)
+
+    def test_nfr2_each_domain_may_stat_its_own_userfaultfd_only(self):
+        plat = (
+            '(typetransition untrusted_app_34 untrusted_app_34 anon_inode "[userfaultfd]" '
+            "untrusted_app_34_userfaultfd)\n"
+            '(typetransition system_server system_server anon_inode "[userfaultfd]" '
+            "system_server_userfaultfd)\n"
+            # Not a domain's own: no rule for it.
+            '(typetransition zygote appdomain anon_inode "[userfaultfd]" zygote_userfaultfd)\n'
+        )
+        text = make_image.userfaultfd_getattr_rules(plat)
+        self.assertIn("(allow untrusted_app_34 untrusted_app_34_userfaultfd (anon_inode (getattr)))", text)
+        self.assertIn("(allow system_server system_server_userfaultfd (anon_inode (getattr)))", text)
+        self.assertNotIn("zygote_userfaultfd", text)
+        self.assertEqual(make_image.userfaultfd_getattr_rules("(type init)\n"), "")
+
+    def test_nfr2_the_image_carries_the_dirty_tracking_policy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "target-files.zip"
+            plat_cil = (
+                "(typeattribute appdomain)\n(type system_server)\n"
+                '(typetransition untrusted_app untrusted_app anon_inode "[userfaultfd]" '
+                "untrusted_app_userfaultfd)\n"
+            )
+            with zipfile.ZipFile(source, "w") as archive:
+                archive.writestr("SYSTEM/etc/selinux/plat_sepolicy.cil", plat_cil)
+                archive.writestr("SYSTEM/etc/selinux/mapping/35.0.cil", "")
+                archive.writestr("VENDOR/etc/selinux/plat_sepolicy_vers.txt", "35.0\n")
+                archive.writestr("SYSTEM/etc/selinux/plat_sepolicy_and_mapping.sha256", "old-hash\n")
+                archive.writestr("SYSTEM/build.prop", "ro.debuggable=1\n")
+            modified = root / "modified.zip"
+            make_image.modify(source, modified)
+            with zipfile.ZipFile(modified) as archive:
+                new_cil = archive.read("SYSTEM/etc/selinux/plat_sepolicy.cil").decode()
+            self.assertIn("(allowx appdomain self (ioctl file (0x6610)))", new_cil)
+            self.assertIn("(allowx system_server self (ioctl file (0x6610)))", new_cil)
+            self.assertIn("(allow untrusted_app untrusted_app_userfaultfd (anon_inode (getattr)))",
+                          new_cil)
+
     def test_pr3_check_image_rejects_a_system_server_without_vsock(self):
         check_script = Path(__file__).with_name("check-image.py")
         with tempfile.TemporaryDirectory() as tmp:

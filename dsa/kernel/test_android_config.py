@@ -432,6 +432,23 @@ class AndroidKernelConfigTests(unittest.TestCase):
             self.assertIn(option, config)
         self.assertIn("CONFIG_HYPERV_NET=y", ARM64_CONFIG.read_text().splitlines())
 
+    def test_nfr2_pr3_the_graphics_driver_can_ask_which_pages_an_app_wrote(self):
+        # The guest Vulkan driver finds what an app wrote into its copies of host-visible
+        # memory with userfaultfd's asynchronous write protection and PAGEMAP_SCAN. Without
+        # them it hashes all of the app's mapped memory at every submit.
+        lines = fragment_lines(CONFIG)
+        for option in ["CONFIG_USERFAULTFD=y", "CONFIG_HAVE_ARCH_USERFAULTFD_WP=y",
+                       "CONFIG_PTE_MARKER_UFFD_WP=y", "CONFIG_PROC_PAGE_MONITOR=y"]:
+            self.assertIn(option, lines)
+        # Soft-dirty bits exist on x86_64 only; a line for them in the common fragment would
+        # fail the arm64 build's check that every line took effect.
+        self.assertNotIn("CONFIG_MEM_SOFT_DIRTY=y", lines)
+        self.assertNotIn("CONFIG_MEM_SOFT_DIRTY=y", fragment_lines(ARM64_CONFIG))
+        # PAGEMAP_SCAN came with Linux 6.7, and the kernel is newer.
+        tag = Path(__file__).with_name("wsl-kernel.tag").read_text().strip()
+        version = re.search(r"(\d+)\.(\d+)", tag)
+        self.assertGreaterEqual((int(version.group(1)), int(version.group(2))), (6, 7), tag)
+
     def test_pr3_vgem_is_built_into_the_guest_kernel(self):
         config = CONFIG.read_text()
         self.assertIn("CONFIG_DRM=y", config)
