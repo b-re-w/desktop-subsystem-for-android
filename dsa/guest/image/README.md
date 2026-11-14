@@ -116,27 +116,27 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
 - The host window's title bar is Android's status bar. The agent gives each task status bar
   and caption bar insets as high as the title bar, but stock Android hands a freeform window
   only its caption bar and IME insets, so an app that pads its toolbar by its status bar inset
-  drew it under the title bar. Along each task's bottom edge the agent gives navigation bar and
-  tappable element insets 24 dp high at the task's density, as a gesture navigation phone's
-  navigation bar gives, so phone apps keep their bottom bars and the ends of their lists clear
-  of the window's bottom edge. `services.jar`'s dex is edited (`SERVICES_CODE`): the window
-  manager's `InsetsPolicy` keeps every inset type of a floating window (`all()`), not only its
-  caption bar; `systemBars()` would leave out the tappable element. The jar's stored dex files
-  stay aligned, and the jar is compiled again with the
+  drew it under the title bar. Along a task's bottom edge the agent gives nothing: the host
+  has no navigation bar, and the 24 dp a gesture navigation phone's navigation bar insets an
+  app by would stay an empty band in a window, where the phone shows its gesture handle. An
+  app's bottom bar sits on the window's bottom edge, as the app lays it out without a
+  navigation bar. `services.jar`'s dex is edited (`SERVICES_CODE`): the window manager's
+  `InsetsPolicy` keeps the system bars of a floating window (`systemBars()`), not only its
+  caption bar. The jar's stored dex files stay aligned, and the jar is compiled again with the
   published build's filter, class loader context, app image and profile (`services/art-profile`
   and `art-profile-extra` at the build's own frameworks/base commit, pinned in `inputs.json`).
   The framework overlay below also sets Android's status bar height resources
   (`status_bar_height`, `status_bar_height_default` and the rest) to the title bar's height at
   each scale's density, for the apps that read those instead of their insets, and the
   navigation bar height resources (`navigation_bar_height`, `navigation_bar_frame_height` and
-  their landscape values) to 24 dp, also where Android gives them 56 dp from a smallest width
-  of 900 dp. The band is transparent: as AOSP's gesture navigation overlay does, the overlay
-  sets `config_navBarDefaultTransparent` on and `config_navBarNeedsScrim` off, so an app that
-  does not draw behind the navigation bar shows its own window background there, not a black
-  or grey strip. An app that sets a navigation bar colour of its own gets that colour there,
-  as on a phone. `check-image.py` fails an image without the edit, with `services.jar`'s dex
-  unaligned, with status bar heights that are not the title bar's, or with navigation bar
-  heights that are not 24 dp.
+  their landscape values) to 0, as the task's navigation bar inset is, also where Android
+  gives them 56 dp from a smallest width of 900 dp, so an app that pads by them keeps no band
+  along the window's bottom edge either. The navigation mode is gestural, and as AOSP's
+  gesture navigation overlay does, the overlay sets `config_navBarDefaultTransparent` on and
+  `config_navBarNeedsScrim` off, so should a navigation bar inset reach an app anyway, no
+  black or grey strip or contrast scrim shows there. `check-image.py` fails an image without
+  the edit, with `services.jar`'s dex unaligned, with status bar heights that are not the
+  title bar's, or with navigation bar heights that are not 0.
 - A static overlay (`/vendor/overlay/DsaFrameworkOverlay.apk`) sets the framework's tap
   timeout to 0. A view inside anything that scrolls, which includes every list row, waits that
   long before it shows that it is pressed, in case the touch becomes a scroll, so a mouse
@@ -185,13 +185,14 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
     its views when its window is resized, so a window resized across 600 dp keeps its title
     area until the page opens again. Files has no title of its own to enlarge: its layouts
     are not overlayable, so it gets the colours and its rounded Material 3 look only.
-- Settings, Files and the permission screens keep the room a phone's navigation bar leaves
-  below the last row of a list from the task's 24 dp navigation bar inset alone: SettingsLib's
-  `EdgeToEdgeUtils` and Files' `BaseActivity` pad their content by it. Nothing adds a margin
-  of its own to it. Android 17's Settings home page adds `dashboard_padding_bottom` (16 dp) when
-  its window shows a caption bar (`TopLevelSettings.isRunningInFreeformWindow`), padding that
-  stands in for the navigation bar inset Android's own desktop windows lack. A DSA task shows a
-  caption bar inset and has the navigation bar inset too, so that method says no
+- Settings, Files and the permission screens take the space below the last row of a list
+  from the navigation bar inset alone (SettingsLib's `EdgeToEdgeUtils` and Files'
+  `BaseActivity` pad their content by it). A task has none, so their lists end on the
+  window's bottom edge, as every app's do, and nothing adds a margin of its own: it would be a
+  band no other app has. Android 17's Settings home page adds `dashboard_padding_bottom`
+  (16 dp) when its window shows a caption bar (`TopLevelSettings.isRunningInFreeformWindow`),
+  padding that stands in for the navigation bar inset Android's own desktop windows lack. A
+  DSA task shows a caption bar inset, so that method says no
   (`SETTINGS_CODE_FREEFORM_PADDING`), and the home list ends where Settings' other lists end.
   PermissionController lives in the permission APEX, which `make-image.py` unpacks with
   otatools' `deapexer`, edits (its cards' corners) and packs with `apexer` before signing, as

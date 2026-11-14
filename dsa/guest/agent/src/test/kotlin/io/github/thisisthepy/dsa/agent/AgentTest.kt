@@ -5,7 +5,6 @@ import io.github.thisisthepy.dsa.agent.tasks.ScreenDp
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 import io.github.thisisthepy.dsa.agent.tasks.TaskKind
 import io.github.thisisthepy.dsa.agent.tasks.TaskSource
-import io.github.thisisthepy.dsa.agent.windowing.CaptionInsets
 import io.github.thisisthepy.dsa.agent.windowing.WINDOWING_MODE_FREEFORM
 import io.github.thisisthepy.dsa.control.v1.CloseTask
 import io.github.thisisthepy.dsa.control.v1.Envelope
@@ -1057,20 +1056,19 @@ class AgentTest {
     }
 
     @Test
-    fun fr22_a_windowed_task_gets_a_24_dp_bottom_inset_when_the_host_is_told_of_it() {
-        tasks.running = listOf(
-            appTask(1, densityDpi = 262),
-            appTask(2, bounds = TaskBounds(500, 20, 900, 620)).copy(fullscreen = true),
-            appTask(3, bounds = TaskBounds(1000, 20, 1400, 620)).copy(pictureInPicture = true),
-        )
+    fun fr22_a_windowed_task_gets_no_bottom_inset() {
+        actions.statusBarHeights = mapOf(262 to 39)
+        tasks.running = listOf(appTask(1, densityDpi = 262))
         started()
 
-        // Only the task in a window, before its window has said anything of its title bar:
-        // 24 dp at 262 dpi, along the bottom edge the host was first told of. The band follows
-        // the task's bottom edge from there by itself.
-        val given = actions.navigationBarInsets.single()
-        assertEquals(1, given.first)
-        val bottom = taskUpdates().first { it.taskId == 1 }.bounds.bottom
-        assertEquals(TaskBounds(-CaptionInsets.REACH, bottom - 39, CaptionInsets.REACH, bottom), given.second)
+        // The only band the task is given is its title bar, along its top edge: nothing along
+        // its bottom edge stands in for a navigation bar the host does not have.
+        val at = taskUpdates().first { it.taskId == 1 }.bounds
+        val given = actions.captionInsets.filter { it.first == 1 }.mapNotNull { it.second }
+        assertTrue(given.isNotEmpty())
+        for (frame in given) {
+            assertEquals(at.top, frame.top)
+            assertTrue("$frame reaches the task's bottom edge at ${at.bottom}", frame.bottom < at.bottom)
+        }
     }
 }

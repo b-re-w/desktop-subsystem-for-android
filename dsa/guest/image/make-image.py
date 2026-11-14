@@ -18,8 +18,8 @@ It takes the pinned target_files, otatools and dexpreopt_tools (fetch.sh downloa
    (dexpreopt_tools.zip), against the guest's boot image, so they do not run interpreted, and
    compiles again, with its own filter, any app the published build shipped compiled whose
    dex no longer matches its odex (PREBUILT_OAT_RECORD), and services.jar, whose window
-   manager it edits so a freeform window gets its status bar and navigation bar insets
-   (SERVICES_INSETS_CODE), whose package manager it edits so an app with arm64-v8a code
+   manager it edits so a freeform window gets its status bar inset (SERVICES_INSETS_CODE),
+   whose package manager it edits so an app with arm64-v8a code
    only installs while ARM translation is on (SERVICES_ABI_CODE), and whose WebView service it
    edits so the WebView zygote starts with the first renderer (SERVICES_WEBVIEW_ZYGOTE_CODE);
 6. builds the images, and lays them out on the template of a user's Android disk.
@@ -291,11 +291,11 @@ SETTINGS_CODE_WITHOUT_BLUETOOTH = {
 # dashboard_padding_bottom (16 dp) when isRunningInFreeformWindow, which asks whether the
 # window shows a caption bar. That padding stands in for the navigation bar inset Android's
 # own desktop windows lack. A DSA window shows the agent's caption bar inset, so the method
-# said yes, but the task also has the navigation bar inset a gesture navigation phone gives,
-# which SettingsLib's EdgeToEdgeUtils already pads the page by: the list would end 40 dp above
-# the window's bottom edge, where every other Settings list ends 24 dp above it. The method
-# says no, so the inset alone keeps the end of the list clear, as on a phone. Android 16's
-# home page has no such method, and nothing changes there.
+# said yes, and the home list alone would end 16 dp above the window's bottom edge, a band
+# under it that no other app and no other Settings list has: a DSA task has no navigation
+# bar inset, and its lists reach the window's bottom edge as an app lays them out without a
+# navigation bar. The method says no, so the home list ends where Settings' other lists end.
+# Android 16's home page has no such method, and nothing changes there.
 SETTINGS_CODE_FREEFORM_PADDING = {
     "Lcom/android/settings/homepage/TopLevelSettings;->isRunningInFreeformWindow": ("return false", None),
 }
@@ -310,9 +310,10 @@ PERMISSION_APEXES = ["SYSTEM/apex/com.android.permission.apex", "SYSTEM/apex/com
 # as high as that band. An app that draws edge to edge then lays out below the band as it lays
 # out below a phone's status bar, and draws its own status bar background under the caption;
 # an app that does not gets the status bar background Android draws for it there. Along the
-# task's bottom edge the agent gives navigation bar and tappable element sources 24 dp high,
-# the inset a gesture navigation phone's navigation bar gives, so phone apps keep their bottom
-# bars and the ends of their lists clear of the window's bottom edge.
+# task's bottom edge the agent gives nothing: the host has no navigation bar, and a band as
+# high as a gesture navigation phone's stays empty in a window, where the phone shows its
+# gesture handle. An app's bottom bar sits on the window's bottom edge, as the app lays it
+# out without a navigation bar.
 #
 # Android hands a window in a floating windowing mode (freeform, as every DSA task is, or
 # picture-in-picture) only its caption bar and IME insets: InsetsPolicy's
@@ -320,16 +321,11 @@ PERMISSION_APEXES = ["SYSTEM/apex/com.android.permission.apex", "SYSTEM/apex/com
 # the rest. The status bar source the agent gives the task never reached its app, so an app
 # that pads its toolbar by its status bar inset, as most edge-to-edge apps do (FLO's player
 # screen, for one), got 0 and drew its toolbar under the caption, its buttons under the
-# window's close button, and the navigation bar band would have been dropped the same way. The
-# call that names the kept types names all() instead, so the app receives every source the
-# agent gives its task, with the insets a phone gives it: status bars, navigation bars and the
-# caption bar (systemBars() would do for those), and the tappable element, which no narrower
-# type names beside them. The guest has no navigation bar, no status bar and no system UI of
-# its own, and its display no cutout, so the only other source is the IME's, which a floating
-# window now keeps whether or not it is the IME's target, as Android 15 and earlier kept it. The
-# host's keyboard shows no view in the guest, so that source is never visible and insets no
-# window; a keyboard app the user installs insets the windows behind it too. Only the first call
-# after isFloating changes: Android 16 and 17 have no other caption bar call before it, and a
+# window's close button. The call that names the kept types names systemBars() instead
+# (status bars, navigation bars and the caption bar), so the app receives the status bar
+# source too, and with it the inset a phone gives it. The guest has no navigation bar and no
+# system UI of its own, so the only system bar sources are the ones the agent gives tasks,
+# none of them along a task's bottom edge. Only the first call after isFloating changes: Android 16 and 17 have no other caption bar call before it, and a
 # later Android that tests a source's type against captionBar() before it keeps that test.
 #
 # services.jar is compiled ahead of time (services.odex, .vdex and .art beside it), for its
@@ -340,7 +336,7 @@ SERVICES_INSETS_CODE = {
     "Lcom/android/server/wm/InsetsPolicy;->enforceInsetsPolicyForTarget": ("replace call", {
         "after": "Landroid/app/WindowConfiguration;->isFloating",
         "old": "Landroid/view/WindowInsets$Type;->captionBar",
-        "new": "Landroid/view/WindowInsets$Type;->all",
+        "new": "Landroid/view/WindowInsets$Type;->systemBars",
     }),
 }
 
@@ -1995,7 +1991,7 @@ def system_overlay_problems(names, read):
                     found = ["its resource table cannot be read"]
                 if found:
                     problems.append(f"{path}: {'; '.join(found)}, so an app that pads by the navigation bar's "
-                                    "height keeps another space at its bottom than its navigation bar inset")
+                                    "height leaves an empty band along the window's bottom edge")
     return problems
 
 
@@ -2608,7 +2604,8 @@ def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_att
 
 def edit_settings_apk(data, name):
     """Settings.apk without the preferences, and the code, that need the Bluetooth service,
-    with its home list padded by the navigation bar inset alone (SETTINGS_CODE_FREEFORM_PADDING),
+    with its home list ending on the window's bottom edge as its other lists do
+    (SETTINGS_CODE_FREEFORM_PADDING),
     and with its pages' large titles opening expanded or folded as the Settings overlay's theme
     says (SETTINGS_TITLE_EXPANDED)."""
     return edit_apk(data, name, code={**SETTINGS_CODE_WITHOUT_BLUETOOTH, **SETTINGS_CODE_FREEFORM_PADDING},
@@ -2753,8 +2750,8 @@ def zip_misaligned(data, alignment=4):
 
 
 def edit_services_jar(data, name):
-    """services.jar with InsetsPolicy giving a freeform window its status bar and navigation
-    bar insets (SERVICES_INSETS_CODE), the package manager taking every 64-bit ABI the guest lists for
+    """services.jar with InsetsPolicy giving a freeform window its status bar inset
+    (SERVICES_INSETS_CODE), the package manager taking every 64-bit ABI the guest lists for
     a multiArch app (SERVICES_ABI_CODE) and the WebView zygote starting with the first renderer
     rather than at boot (SERVICES_WEBVIEW_ZYGOTE_CODE), its stored dex files aligned again.
     Returns the jar as it was when it already has the edits."""
@@ -2769,8 +2766,8 @@ def edit_permission_controller_apk(data, name):
 
 
 def permission_controller_edits():
-    """The compiled XML edits PermissionController.apk gets: its cards. Its lists keep the
-    room below their last row from the navigation bar inset, as Settings' do."""
+    """The compiled XML edits PermissionController.apk gets: its cards. Its lists get no
+    bottom margin, as Settings' get none."""
     return dict(PERMISSION_CONTROLLER_CARDS)
 
 
@@ -4556,12 +4553,12 @@ PINNER_OVERLAY_INTEGERS = {
     "config_pinnerWebviewPinBytes": 0,
     "config_pinnerMaxPinnedMemoryPercentage": 0,
 }
-# The navigation bar band along each task's bottom edge is the gesture navigation one
-# (NAVIGATION_BAR_DIMENS: 24 dp), so the navigation mode is gestural too (2, as AOSP's gesture
-# navigation overlay sets it). Left at three-button (0), the framework drew its contrast scrim
-# behind the band of an edge-to-edge app: a translucent white bar under YouTube's dark Shorts
-# player and under the Play Store's and FLO's bottom bars. A gesture phone draws no scrim, so
-# the band shows the app's own colour.
+# The navigation mode is gestural (2, as AOSP's gesture navigation overlay sets it). Apps lay
+# out for a gesture navigation phone, the mode that leaves the least below their bottom bars.
+# Left at three-button (0), the framework drew its contrast scrim behind any navigation bar
+# inset an edge-to-edge app has (a translucent white bar under YouTube's dark Shorts player and
+# under the Play Store's and FLO's bottom bars, while tasks had one), and an IME window drew a
+# button bar of its own below a keyboard app. A gesture phone draws neither.
 NAVIGATION_MODE_GESTURAL = 2
 FRAMEWORK_OVERLAY_INTEGERS = {"config_tapTimeoutMillis": 0, "config_customizedMaxCachedProcesses": 8,
                               "config_navBarInteractionMode": NAVIGATION_MODE_GESTURAL,
@@ -4584,17 +4581,15 @@ FRAMEWORK_OVERLAY_INTEGERS = {"config_tapTimeoutMillis": 0, "config_customizedMa
 # name it, and the Google apps overlay (GAPPS_FRAMEWORK_OVERLAY) names Google's geocoder instead
 # on a boot with the Google apps image.
 #
-# The navigation bar band along each task's bottom edge (see NAVIGATION_BAR_DIMENS) is
-# transparent, as on a gesture navigation phone, so an app's own background reaches the
-# window's bottom edge. An app that does not draw behind the navigation bar gets the
-# background Android draws for it there (DecorView's navigation bar colour view), in the
-# navigation bar colour its theme or code sets. With none set, Android paints it black
-# (navigation_bar_compatible) unless config_navBarDefaultTransparent says the default is
-# transparent, and over a transparent colour it draws a translucent scrim for contrast unless
-# config_navBarNeedsScrim says the bar needs none. AOSP's gesture navigation overlay sets both
-# the way they are here, so the band shows the app's window background, not a black or grey
-# strip. An app that sets a navigation bar colour of its own gets that colour there, as on a
-# gesture navigation phone; one targeting Android 15 or later always draws behind the bar.
+# Nothing is drawn along a task's bottom edge: a task has no navigation bar inset (see
+# NAVIGATION_BAR_DIMENS), and should one reach an app anyway, from a later framework, its
+# band is transparent, as on a gesture navigation phone. An app that does not draw behind the navigation bar gets the background Android
+# draws for it there (DecorView's navigation bar colour view), in the navigation bar colour
+# its theme or code sets. With none set, Android paints it black (navigation_bar_compatible)
+# unless config_navBarDefaultTransparent says the default is transparent, and over a
+# transparent colour it draws a translucent scrim for contrast unless config_navBarNeedsScrim
+# says the bar needs none. AOSP's gesture navigation overlay sets both the way they are here,
+# so no black or grey strip can show along a window's bottom edge.
 FRAMEWORK_OVERLAY_BOOLEANS = {
     "config_appCompatUserAppAspectRatioSettingsIsEnabled": True,
     "config_checkWallpaperAtBoot": False,
@@ -4679,17 +4674,20 @@ def status_bar_overlay_files():
     return files
 
 
-# The host has no Android navigation bar, but the agent gives every task a navigation bar inset
-# 24 dp high along its bottom edge, as AOSP's gesture navigation overlay gives a phone
-# (navigation_bar_height 24dp), because phone apps lay out their bottom bars and the ends of
-# their lists for one. Apps that take the navigation bar's height from the framework's
-# resources rather than from their insets read these, so they are 24 dp too. Android sets
-# them to 48 dp, and to 56 dp from a smallest width of 900 dp, which the guest's display has:
-# the device reported 56 dp while the inset was 0. The overlay gives each a value in both of
-# those configurations, so neither of Android's is used. navigation_bar_frame_height (and its
-# landscape value) is what Android's window manager lays the navigation bar window out at, and
-# apps read it as the bar's height as well.
-NAVIGATION_BAR_HEIGHT_DP = 24
+# The host has no Android navigation bar, and the agent gives a task no navigation bar inset:
+# an app's bottom bar and the end of its lists sit on the window's bottom edge, as the app
+# lays them out without a navigation bar. A band below them, such as the 24 dp a gesture
+# navigation phone's navigation bar insets an app by, stays empty in a window, where the
+# phone shows its gesture handle. Apps that take the navigation bar's height from the
+# framework's resources rather than from their insets read these, so they are 0 as well, and
+# such an app keeps no band either. Android sets them to 48 dp, and to 56 dp from a smallest
+# width of 900 dp, which the guest's display has: an app that read them padded its bottom by
+# 56 dp while its inset was 0. The overlay gives each a value in both of those
+# configurations, so neither of Android's is used. navigation_bar_frame_height (and its
+# landscape value) is what Android's window manager lays a navigation bar window out at, an
+# IME window's own navigation bar too, and apps read it as the bar's height as well.
+# navigation_bar_gesture_height takes its value from it.
+NAVIGATION_BAR_HEIGHT_DP = 0
 NAVIGATION_BAR_DIMENS = ["navigation_bar_height", "navigation_bar_height_landscape",
                          "navigation_bar_frame_height", "navigation_bar_frame_height_landscape"]
 # The smallest widths framework-res gives navigation_bar_height a value of its own at (0: any).
@@ -4723,9 +4721,10 @@ SETTINGS_OVERLAY_PACKAGE = "io.github.thisisthepy.dsa.overlay.settings"
 SETTINGS_OVERLAY_TARGET = "com.android.settings"
 SETTINGS_BACK_ICON = "settingslib_expressive_icon_back"
 SETTINGS_BACK_INSET_DP = 8
-# Settings' lists keep the room a phone's navigation bar leaves below their last row from the
-# navigation bar inset alone (SettingsLib's EdgeToEdgeUtils pads the content view by it), and
-# every task has that inset, 24 dp, so the overlay leaves their layouts as they are.
+# Settings' lists take the space below their last row from the navigation bar inset alone
+# (SettingsLib's EdgeToEdgeUtils pads the content view by it). A task has none, so they end on
+# the window's bottom edge like every app's, and the overlay leaves their layouts as they are:
+# a margin of Settings' own would be a band no other app has.
 #
 # The overlay names what it replaces in a resource map (android:resourcesMap) instead of by
 # matching names. Only then does the framework rewrite the overlay layouts' references to
@@ -4788,8 +4787,8 @@ SYSTEM_OVERLAYS = [
      "target_apk": FRAMEWORK_RES,
      "without": "a press on a list row shows only after the 100 ms tap timeout, the framework's "
                 "dialogs, toasts and colours keep Android's own look, apps that pad by the status or "
-                "navigation bar heights do not line up with the window, and a strip shows along the "
-                "bottom of apps that do not draw behind the navigation bar"},
+                "navigation bar heights do not line up with the window, and a band shows along the "
+                "bottom of apps that pad by the navigation bar's height"},
     {"apk": "DsaSettingsOverlay.apk", "package": SETTINGS_OVERLAY_PACKAGE, "target": SETTINGS_OVERLAY_TARGET,
      "target_apk": "/priv-app/Settings/Settings.apk",
      "without": "Settings' back button shows its hover and ripple 8 dp left of its circle, and Settings "
