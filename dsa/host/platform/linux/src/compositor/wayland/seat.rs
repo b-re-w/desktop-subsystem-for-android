@@ -201,6 +201,8 @@ impl State {
             return;
         };
         let (x, y) = window.model.point_to_pixels(self.seat_state.position);
+        // A full screen window shows its title bar while the pointer is at the top edge.
+        let revealed = window.model.pointer_at(Some(y));
         let mut hit = WindowHit::Caption(CaptionHit::Client);
         if window.model.has_caption() && !self.seat_state.pointer_in_app {
             let border = window.model.caption_layout().resize_border;
@@ -217,7 +219,7 @@ impl State {
             WindowHit::Caption(CaptionHit::Button(button)) => Some(button),
             _ => None,
         };
-        let mut changed = window.hover(hovered);
+        let mut changed = window.hover(hovered) | revealed;
         changed |= window.title_bar.hover_back(hit == WindowHit::Back);
         let shape = match (window.armed, hit) {
             // Move or Size from the window menu waits for a press: the cursor says which.
@@ -371,6 +373,10 @@ impl State {
                     window.caption.pressed = None;
                     if self.seat_state.pressed_button.take() == Some(button) {
                         match button {
+                            // In full screen the middle button leaves it, as F11 does.
+                            CaptionButton::Maximize if window.model.is_full_screen() => {
+                                self.toggle_fullscreen(task_id)
+                            }
                             CaptionButton::Minimize => window.toplevel.set_minimized(),
                             CaptionButton::Maximize if window.model.states.maximized => {
                                 window.toplevel.unset_maximized()
@@ -937,7 +943,9 @@ impl Dispatch<WlPointer, ()> for State {
                     if let Some(window) = state.windows.get_mut(&task_id) {
                         let caption = window.hover(None);
                         let back = window.title_bar.hover_back(false);
-                        if caption || back {
+                        // A full screen window's title bar goes with the pointer.
+                        let hidden = window.model.pointer_at(None);
+                        if caption || back || hidden {
                             state.redraw(task_id);
                         }
                     }

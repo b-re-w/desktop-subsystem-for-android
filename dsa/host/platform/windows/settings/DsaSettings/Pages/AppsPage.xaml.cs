@@ -108,6 +108,27 @@ public partial class AppsPage : Page
         }
     }
 
+    private async void OnFullScreen(object sender, SelectionChangedEventArgs e)
+    {
+        // As with the start size, only a choice the user makes counts, not the list filling in.
+        var chosen = e.RemovedItems.Count > 0 || sender is ComboBox { IsDropDownOpen: true }
+            || sender is ComboBox { IsKeyboardFocusWithin: true };
+        if (sender is ComboBox { Tag: string package, SelectedIndex: >= 0 } box && chosen)
+        {
+            await ViewModel.SetFullScreenAsync(package, box.SelectedIndex);
+        }
+    }
+
+    private async void OnImmersive(object sender, SelectionChangedEventArgs e)
+    {
+        var chosen = e.RemovedItems.Count > 0 || sender is ComboBox { IsDropDownOpen: true }
+            || sender is ComboBox { IsKeyboardFocusWithin: true };
+        if (sender is ComboBox { Tag: string package, SelectedIndex: >= 0 } box && chosen)
+        {
+            await ViewModel.SetImmersiveAsync(package, box.SelectedIndex);
+        }
+    }
+
     private async void OnRoot(object sender, SelectionChangedEventArgs e)
     {
         // As with the start size, only a choice the user makes counts, not the list filling in.

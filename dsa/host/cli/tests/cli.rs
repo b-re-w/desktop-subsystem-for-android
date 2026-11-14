@@ -3285,6 +3285,8 @@ fn fr30_dsa_app_window_is_parsed() {
             fixed_size: Some(true),
             start_size: Some(Some((400, 700))),
             dpi_scaling: None,
+            fullscreen: None,
+            immersive: None,
         })
     );
     assert_eq!(
@@ -3296,6 +3298,8 @@ fn fr30_dsa_app_window_is_parsed() {
             fixed_size: None,
             start_size: Some(None),
             dpi_scaling: None,
+            fullscreen: None,
+            immersive: None,
         })
     );
     assert_eq!(
@@ -3374,6 +3378,8 @@ fn fr4_dsa_app_window_dpi_scaling_is_parsed() {
                 fixed_size: None,
                 start_size: None,
                 dpi_scaling: Some(scaling),
+                fullscreen: None,
+                immersive: None,
             })
         );
     }
@@ -3389,6 +3395,8 @@ fn fr4_dsa_app_window_dpi_scaling_is_parsed() {
             fixed_size: Some(false),
             start_size: Some(None),
             dpi_scaling: Some(DpiScaling::System),
+            fullscreen: None,
+            immersive: None,
         })
     );
     assert!(parse(&args("app-window com.example.notes --dpi-scaling enhanced")).is_err());
@@ -3436,6 +3444,64 @@ fn fr4_dsa_app_window_sets_and_keeps_an_apps_dpi_scaling() {
         "app-window com.example.notes --dpi-scaling auto --fixed-size off --json",
     ));
     assert_eq!(auto["apps"][0]["dpi_scaling"], "auto");
+    let none = json_of(&dsa(&endpoint, "app-window --json"));
+    assert_eq!(none["apps"], serde_json::json!([]));
+}
+
+#[test]
+fn fr30_an_apps_full_screen_choice_wins_over_the_default() {
+    use dsa_cli::AppWindowAction;
+    use dsa_host_core::app_windows::FullScreenPlace;
+    assert_eq!(
+        parse(&args(
+            "app-window com.example.video --fullscreen window --immersive SCREEN"
+        ))
+        .unwrap()
+        .app_window,
+        Some(AppWindowAction::Set {
+            package: "com.example.video".into(),
+            fixed_size: None,
+            start_size: None,
+            dpi_scaling: None,
+            fullscreen: Some(FullScreenPlace::Window),
+            immersive: Some(FullScreenPlace::Screen),
+        })
+    );
+    assert!(parse(&args("app-window com.example.video --fullscreen monitor")).is_err());
+    assert!(parse(&args("app-window --immersive window")).is_err());
+    let ((listener, _, _), endpoint) = local_pair();
+    let _service = settings_service(listener);
+    // Without a choice, a clear request fills the screen and bars hidden alone stays inside.
+    let none = json_of(&dsa(&endpoint, "app-window --json"));
+    assert_eq!(none["defaults"]["fullscreen"], "screen");
+    assert_eq!(none["defaults"]["immersive"], "window");
+    let set = json_of(&dsa(
+        &endpoint,
+        "app-window com.example.video --fullscreen window --json",
+    ));
+    assert_eq!(set["apps"][0]["fullscreen"], "window");
+    assert_eq!(set["apps"][0]["immersive"], "default");
+    let output = dsa(&endpoint, "app-window com.example.video");
+    assert!(
+        stdout(&output).contains("full screen inside its window"),
+        "{}",
+        stdout(&output)
+    );
+    // The default for every app is a setting of its own.
+    let changed = json_of(&dsa(&endpoint, "settings set app-immersive screen --json"));
+    assert_eq!(changed["app_immersive"], "screen");
+    assert_eq!(changed["app_fullscreen"], "screen");
+    let listed = json_of(&dsa(&endpoint, "app-window --json"));
+    assert_eq!(listed["defaults"]["immersive"], "screen");
+    assert_eq!(listed["apps"][0]["fullscreen"], "window");
+    let refused = dsa(&endpoint, "settings set app-fullscreen monitor");
+    assert!(!refused.status.success());
+    // Following the default again is the defaults: the entry goes.
+    let back = json_of(&dsa(
+        &endpoint,
+        "app-window com.example.video --fullscreen default --json",
+    ));
+    assert_eq!(back["apps"][0]["fullscreen"], "default");
     let none = json_of(&dsa(&endpoint, "app-window --json"));
     assert_eq!(none["apps"], serde_json::json!([]));
 }

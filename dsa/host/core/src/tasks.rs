@@ -62,8 +62,8 @@ pub struct Task {
     pub status_bar_color: u32,
     /// The orientation the task's top activity is locked to, if any.
     pub orientation: TaskOrientation,
-    /// Whether the task's app asked to fill the screen.
-    pub fullscreen: bool,
+    /// Which kind of full screen the task's app asks for, if any.
+    pub fullscreen_request: FullScreenRequest,
     /// Whether the task's app went into picture-in-picture.
     pub picture_in_picture: bool,
     /// Whether the task's app draws its own title bar: it asked for a transparent caption bar
@@ -90,6 +90,22 @@ pub enum TaskOrientation {
     Landscape,
 }
 
+/// How a task's app asks to fill the screen. The user's settings say where each kind is
+/// shown ([`crate::app_windows::full_screen_place`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum FullScreenRequest {
+    /// It does not.
+    #[default]
+    None,
+    /// A clear request: the task left the freeform windowing mode for fullscreen, its theme
+    /// sets `android:windowFullscreen`, or it hides both system bars while it asks for a
+    /// landscape orientation, as a video player's full screen button does.
+    Explicit,
+    /// It hides both system bars and asks for no landscape orientation (immersive mode, as a
+    /// feed of short videos does).
+    BarsHidden,
+}
+
 /// What an app told the system about its status bar's icons.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum StatusBarAppearance {
@@ -111,6 +127,11 @@ impl Task {
     /// The smallest size the guest gives the task, when the agent said.
     pub fn min_size(&self) -> Option<(u32, u32)> {
         (self.min_width > 0 || self.min_height > 0).then_some((self.min_width, self.min_height))
+    }
+
+    /// Whether the task's app asks to fill the screen, in either way.
+    pub fn asks_for_full_screen(&self) -> bool {
+        self.fullscreen_request != FullScreenRequest::None
     }
 }
 

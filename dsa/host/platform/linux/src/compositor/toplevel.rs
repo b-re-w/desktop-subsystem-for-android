@@ -8,7 +8,7 @@
 //! turns into pixels.
 
 use dsa_host_core::compositor::caption::{scaled, CaptionBand, CaptionLayout};
-use dsa_host_core::compositor::window_mode::{ModeState, WindowMode};
+use dsa_host_core::compositor::window_mode::{caption_revealed, ModeState, WindowMode};
 use dsa_host_core::compositor::window_sizing::{to_task_length, window_size_of, BASE_DPI};
 use dsa_host_core::input::WindowGeometry;
 
@@ -67,6 +67,8 @@ pub struct Toplevel {
     proposed: Option<(u32, u32)>,
     /// The title bar height last told to the guest.
     caption_told: Option<CaptionBand>,
+    /// Whether a full screen window shows its title bar now: the pointer came to the top edge.
+    revealed: bool,
 }
 
 impl Toplevel {
@@ -86,6 +88,7 @@ impl Toplevel {
             states: States::default(),
             proposed: None,
             caption_told: None,
+            revealed: false,
         }
     }
 
@@ -121,10 +124,41 @@ impl Toplevel {
         }
     }
 
-    /// Whether the window draws its title bar: an ordinary window does; a full screen or
-    /// picture-in-picture one shows only the app.
+    /// Whether the window draws its title bar: an ordinary window does; a picture-in-picture
+    /// one shows only the app, and a full screen one only while the pointer is at the top edge
+    /// ([`Self::pointer_at`]), so its minimize and close stay in reach.
     pub fn has_caption(&self) -> bool {
-        self.mode.effective() == WindowMode::Normal
+        match self.mode.effective() {
+            WindowMode::Normal => true,
+            WindowMode::Fullscreen => self.revealed,
+            WindowMode::PictureInPicture => false,
+        }
+    }
+
+    /// The window changed mode: a full screen title bar starts hidden again.
+    pub fn mode_changed(&mut self) {
+        self.revealed = false;
+    }
+
+    /// Whether the window fills its monitor now.
+    pub fn is_full_screen(&self) -> bool {
+        self.mode.effective() == WindowMode::Fullscreen
+    }
+
+    /// The pointer is at `y` pixels from the window's top, or left it (`None`). Returns
+    /// whether a full screen window's title bar came out or went away, so the window draws
+    /// again.
+    pub fn pointer_at(&mut self, y: Option<f64>) -> bool {
+        let now = self.is_full_screen()
+            && caption_revealed(
+                self.revealed,
+                y.map(|y| y.floor() as i32),
+                scaled(CAPTION_AT_100, self.dpi()),
+                self.dpi(),
+            );
+        let changed = self.revealed != now;
+        self.revealed = now;
+        changed
     }
 
     /// The title bar's height in pixels; 0 when the window has none.
@@ -159,7 +193,13 @@ impl Toplevel {
     /// ends, which an app drawing its own title bar keeps clear. A window with no title bar
     /// has an empty band.
     pub fn caption_change(&mut self) -> Option<CaptionBand> {
-        let height = self.caption_height();
+        // A full screen window's title bar shows over the app only for a moment, so the app
+        // is given no band for it.
+        let height = if self.mode.effective() == WindowMode::Normal {
+            self.caption_height()
+        } else {
+            0
+        };
         let band = if height == 0 {
             CaptionBand::default()
         } else {
@@ -366,6 +406,30 @@ mod tests {
         window.mode.toggle_fullscreen();
         assert_eq!(window.caption_height(), 0);
         assert_eq!(window.caption_change(), Some(CaptionBand::default()));
+    }
+
+    #[test]
+    fn fr30_the_caption_appears_at_the_top_edge_in_full_screen() {
+        let mut window = window();
+        // An ordinary window's title bar does not come and go.
+        assert!(!window.pointer_at(Some(0.0)));
+        assert!(window.has_caption());
+        window.mode.toggle_fullscreen();
+        window.mode_changed();
+        assert!(!window.has_caption());
+        assert_eq!(window.caption_change(), Some(CaptionBand::default()));
+        // The top edge brings it out, with its buttons, and the app is given no band for it.
+        assert!(!window.pointer_at(Some(300.0)));
+        assert!(window.pointer_at(Some(0.0)));
+        assert!(window.has_caption());
+        assert_eq!(window.caption_height(), 32);
+        assert_eq!(window.caption_change(), None);
+        // It stays while the pointer is over the band and goes below it or out of the window.
+        assert!(!window.pointer_at(Some(20.0)));
+        assert!(window.pointer_at(Some(40.0)));
+        assert!(!window.has_caption());
+        window.pointer_at(Some(0.0));
+        assert!(window.pointer_at(None));
     }
 
     #[test]

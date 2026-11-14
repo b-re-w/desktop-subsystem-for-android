@@ -121,6 +121,45 @@ public static class DpiScalings
     };
 }
 
+/// <summary>Where a window shows an app that asks to fill the screen.</summary>
+public enum FullScreenPlace
+{
+    /// <summary>For one app, as the choice for every app says; for every app, DSA's own default
+    /// (the whole screen for a clear request, the window for bars hidden alone).</summary>
+    Default,
+    /// <summary>On the whole screen: the window fills its monitor, and its title bar shows at
+    /// the top edge.</summary>
+    Screen,
+    /// <summary>Inside the window: it keeps its size and its title bar.</summary>
+    Window,
+}
+
+/// <summary>The words dsa takes and reports for each <see cref="FullScreenPlace"/>.</summary>
+public static class FullScreenPlaces
+{
+    public static readonly IReadOnlyList<FullScreenPlace> All =
+        new[] { FullScreenPlace.Default, FullScreenPlace.Screen, FullScreenPlace.Window };
+
+    public static string Code(FullScreenPlace place) => place switch
+    {
+        FullScreenPlace.Screen => "screen",
+        FullScreenPlace.Window => "window",
+        _ => "default",
+    };
+
+    /// <summary>The choice dsa names; anything else, or nothing, is <paramref name="missing"/>.</summary>
+    public static FullScreenPlace Parse(string? code, FullScreenPlace missing = FullScreenPlace.Default) => code switch
+    {
+        "screen" => FullScreenPlace.Screen,
+        "window" => FullScreenPlace.Window,
+        "default" => FullScreenPlace.Default,
+        _ => missing,
+    };
+}
+
+/// <summary>A full screen choice the Apps page offers: what the list shows, and the choice.</summary>
+public sealed record FullScreenChoice(string Label, FullScreenPlace Place);
+
 /// <summary>Every app's window settings as dsa app-window reports them, and whether this build
 /// of Android scales an app the System (forced) way yet.</summary>
 public sealed record WindowSettingsList(IReadOnlyDictionary<string, AppWindowSetting> Apps, bool SystemForcedAvailable);
@@ -133,7 +172,9 @@ public sealed record DpiScalingChoice(string Label, DpiScaling Scaling, bool Ava
 /// its windows keep their size, the size they open at in density-independent pixels (null for
 /// the size Android gives the task), and how its windows follow a monitor of another scale.</summary>
 public sealed record AppWindowSetting(string Package, bool FixedSize, int? StartWidth, int? StartHeight,
-    DpiScaling DpiScaling = DpiScaling.Auto)
+    DpiScaling DpiScaling = DpiScaling.Auto,
+    FullScreenPlace FullScreen = FullScreenPlace.Default,
+    FullScreenPlace Immersive = FullScreenPlace.Default)
 {
     public static AppWindowSetting Default(string package) => new(package, false, null, null);
 
@@ -358,7 +399,10 @@ public sealed class AppsService
                 var scaling = app.TryGetProperty("dpi_scaling", out var code) && code.ValueKind == JsonValueKind.String
                     ? DpiScalings.Parse(code.GetString())
                     : DpiScaling.Auto;
-                settings[package] = new AppWindowSetting(package, Bool(app, "fixed_size"), width, height, scaling);
+                var fullScreen = FullScreenPlaces.Parse(String(app, "fullscreen"));
+                var immersive = FullScreenPlaces.Parse(String(app, "immersive"));
+                settings[package] = new AppWindowSetting(package, Bool(app, "fixed_size"), width, height, scaling,
+                    fullScreen, immersive);
             }
         }
         return settings;
@@ -372,7 +416,9 @@ public sealed class AppsService
             "app-window", setting.Package,
             "--fixed-size", setting.FixedSize ? "on" : "off",
             "--start-size", setting.StartSizeArgument,
-            "--dpi-scaling", DpiScalings.Code(setting.DpiScaling)).ConfigureAwait(true);
+            "--dpi-scaling", DpiScalings.Code(setting.DpiScaling),
+            "--fullscreen", FullScreenPlaces.Code(setting.FullScreen),
+            "--immersive", FullScreenPlaces.Code(setting.Immersive)).ConfigureAwait(true);
         return ReadWindowSettings(json).TryGetValue(setting.Package, out var now)
             ? now
             : AppWindowSetting.Default(setting.Package);
@@ -446,6 +492,8 @@ public sealed record AppRow(
     int StartSizeIndex = 0,
     int DpiScalingIndex = 0,
     string? DpiScalingTip = null,
+    int FullScreenIndex = 0,
+    int ImmersiveIndex = 0,
     bool RunAsArm = false,
     bool CanRunAsArm = false,
     string? RunAsArmTip = null,
@@ -695,6 +743,8 @@ public sealed class AppsViewModel : ObservableObject
             StartSizeIndexOf(WindowOf(app.Package)),
             (int)WindowOf(app.Package).DpiScaling,
             DpiScalingTipOf(WindowOf(app.Package)),
+            (int)WindowOf(app.Package).FullScreen,
+            (int)WindowOf(app.Package).Immersive,
             arm.On,
             arm.Available,
             RunAsArmTipOf(arm),
@@ -852,6 +902,43 @@ public sealed class AppsViewModel : ObservableObject
             return Task.CompletedTask;
         }
         return SetWindowAsync(current with { DpiScaling = scaling });
+    }
+
+    /// <summary>Where an app's clear full screen request can show, in the order of
+    /// <see cref="FullScreenPlace"/>: as the choice for every app, on the whole screen, or inside
+    /// its window.</summary>
+    public IReadOnlyList<FullScreenChoice> FullScreenChoices => FullScreenPlaces.All
+        .Select(place => new FullScreenChoice(_text.Get($"Apps_FullScreen_{place}"), place))
+        .ToList();
+
+    /// <summary>Shows the app's clear full screen request the way at <paramref name="index"/> of
+    /// <see cref="FullScreenChoices"/>. The windows open already follow it at once.</summary>
+    public Task SetFullScreenAsync(string package, int index)
+    {
+        if (index < 0 || index >= FullScreenPlaces.All.Count)
+        {
+            return Task.CompletedTask;
+        }
+        var place = FullScreenPlaces.All[index];
+        var current = WindowOf(package);
+        return current.FullScreen == place
+            ? Task.CompletedTask
+            : SetWindowAsync(current with { FullScreen = place });
+    }
+
+    /// <summary>Shows the app hiding both its bars alone the way at <paramref name="index"/> of
+    /// <see cref="FullScreenChoices"/>.</summary>
+    public Task SetImmersiveAsync(string package, int index)
+    {
+        if (index < 0 || index >= FullScreenPlaces.All.Count)
+        {
+            return Task.CompletedTask;
+        }
+        var place = FullScreenPlaces.All[index];
+        var current = WindowOf(package);
+        return current.Immersive == place
+            ? Task.CompletedTask
+            : SetWindowAsync(current with { Immersive = place });
     }
 
     /// <summary>The name an app goes by on the page.</summary>

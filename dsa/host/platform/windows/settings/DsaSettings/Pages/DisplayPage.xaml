@@ -44,6 +44,38 @@
 
                 <ui:InfoBar Title="{l:Text RenderGpuAppliesBar.Title}" Message="{l:Text RenderGpuAppliesBar.Message}" Severity="Informational" IsClosable="False" IsOpen="True" />
 
+                <!-- Where an app's full screen shows, for every app without its own choice. -->
+                <ui:CardControl Icon="{ui:SymbolIcon FullScreenMaximize24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="{l:Text AppFullScreenCard.Header}" Style="{StaticResource CardTitle}" />
+                            <TextBlock Text="{l:Text AppFullScreenCard.Description}" Style="{StaticResource CardDescription}" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ComboBox x:Name="AppFullScreenBox" MinWidth="200"
+                              ItemsSource="{Binding AppFullScreenChoices, Mode=OneWay}"
+                              DisplayMemberPath="Label"
+                              SelectedIndex="{Binding AppFullScreenIndex, Mode=OneWay}"
+                              IsEnabled="{Binding CanChange, Mode=OneWay}"
+                              SelectionChanged="OnAppFullScreen"
+                              AutomationProperties.Name="{l:Text AppFullScreenCard.Header}" />
+                </ui:CardControl>
+                <ui:CardControl Icon="{ui:SymbolIcon FullScreenMaximize24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="{l:Text AppImmersiveCard.Header}" Style="{StaticResource CardTitle}" />
+                            <TextBlock Text="{l:Text AppImmersiveCard.Description}" Style="{StaticResource CardDescription}" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ComboBox x:Name="AppImmersiveBox" MinWidth="200"
+                              ItemsSource="{Binding AppFullScreenChoices, Mode=OneWay}"
+                              DisplayMemberPath="Label"
+                              SelectedIndex="{Binding AppImmersiveIndex, Mode=OneWay}"
+                              IsEnabled="{Binding CanChange, Mode=OneWay}"
+                              SelectionChanged="OnAppImmersive"
+                              AutomationProperties.Name="{l:Text AppImmersiveCard.Header}" />
+                </ui:CardControl>
+
                 <ui:CardControl Icon="{ui:SymbolIcon TapDouble24}"
                                 Visibility="{Binding ShowTouchGestures, Converter={StaticResource Visible}}">
                     <ui:CardControl.Header>

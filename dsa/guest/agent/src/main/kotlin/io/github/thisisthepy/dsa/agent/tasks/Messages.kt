@@ -49,6 +49,13 @@ object Messages {
             },
         )
         update.setFullscreen(task.fullscreen)
+        update.setFullscreenRequest(
+            when (task.fullscreenRequest) {
+                FullScreenRequest.EXPLICIT -> io.github.thisisthepy.dsa.control.v1.FullScreenRequest.FULL_SCREEN_REQUEST_EXPLICIT
+                FullScreenRequest.BARS_HIDDEN -> io.github.thisisthepy.dsa.control.v1.FullScreenRequest.FULL_SCREEN_REQUEST_BARS_HIDDEN
+                FullScreenRequest.NONE -> io.github.thisisthepy.dsa.control.v1.FullScreenRequest.FULL_SCREEN_REQUEST_NONE
+            },
+        )
         update.setPictureInPicture(task.pictureInPicture)
         update.setTransparentCaption(task.transparentCaption)
         if (task.transparentCaption) {

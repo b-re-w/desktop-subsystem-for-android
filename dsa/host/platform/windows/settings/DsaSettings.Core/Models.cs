@@ -93,7 +93,9 @@ public sealed record SettingsInfo(
     bool RootElevation = false,
     bool ImageAutoRestart = true,
     bool HostCertificates = true,
-    IReadOnlyList<ImportedCertificate>? ImportedCertificates = null)
+    IReadOnlyList<ImportedCertificate>? ImportedCertificates = null,
+    FullScreenPlace AppFullScreen = FullScreenPlace.Screen,
+    FullScreenPlace AppImmersive = FullScreenPlace.Window)
 {
     /// <summary>The Windows folders that can be shared with Android, in the order the service
     /// keeps them.</summary>

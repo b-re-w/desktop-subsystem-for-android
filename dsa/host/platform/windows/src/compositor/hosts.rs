@@ -121,7 +121,7 @@ pub enum ManagerEvent {
     /// ended with it.
     Gone { host: HostId, exit: Option<u32> },
     /// The user's window settings for each app, as the service has them now.
-    AppWindows(Vec<dsa_host_core::app_windows::AppWindowSettings>),
+    AppWindows(dsa_host_core::app_windows::AppWindows),
     /// The app's media session changed, or ended (`None`): the media buttons in the taskbar
     /// preview of its windows follow it.
     Media {
@@ -949,7 +949,8 @@ impl Manager {
                 }
             }
             ManagerEvent::AppWindows(apps) => {
-                let changes = self.windows.set_app_windows(&apps);
+                let mut changes = self.windows.set_app_windows(&apps.apps);
+                changes.extend(self.windows.set_full_screen_defaults(apps.defaults));
                 self.change(changes, now);
             }
             ManagerEvent::Media { package, media } => {

@@ -2109,6 +2109,193 @@
         }
       }
     },
+    "AppsFullScreen.Name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full screen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 화면"
+          }
+        }
+      }
+    },
+    "AppsFullScreen.ToolTip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동영상 앱의 전체 화면 단추처럼 이 앱이 분명하게 전체 화면을 요청할 때 어디에 보일지 정합니다. F11은 언제나 전체 화면을 켜고 끕니다."
+          }
+        }
+      }
+    },
+    "AppsImmersive.Name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bars hidden"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "막대 숨김"
+          }
+        }
+      }
+    },
+    "AppsImmersive.ToolTip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "짧은 동영상 피드처럼 이 앱이 전체 화면 요청 없이 막대만 숨길 때 어디에 보일지 정합니다."
+          }
+        }
+      }
+    },
+    "Apps_FullScreen_Default": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow the default"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본값 따르기"
+          }
+        }
+      }
+    },
+    "Apps_FullScreen_Screen": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On the whole screen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 전체로"
+          }
+        }
+      }
+    },
+    "Apps_FullScreen_Window": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inside the window"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "창 안에서"
+          }
+        }
+      }
+    },
+    "AppFullScreenCard.Header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App full screen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱의 전체 화면"
+          }
+        }
+      }
+    },
+    "AppFullScreenCard.Description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where an app's full screen request shows, such as a video's full screen button. On the whole screen, the title bar appears at the top edge. An app's own choice wins."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동영상의 전체 화면 단추처럼 앱이 전체 화면을 요청할 때 어디에 보일지 정합니다. 화면 전체로 보이면 화면 위쪽 끝에서 제목 표시줄이 나타납니다. 앱마다 고른 값이 우선합니다."
+          }
+        }
+      }
+    },
+    "AppImmersiveCard.Header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps that hide their bars"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "막대를 숨기는 앱"
+          }
+        }
+      }
+    },
+    "AppImmersiveCard.Description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where an app shows when it only hides its bars, as a feed of short videos does."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "짧은 동영상 피드처럼 앱이 막대만 숨길 때 어디에 보일지 정합니다."
+          }
+        }
+      }
+    },
     "Apps_DpiScaling_Auto": {
       "extractionState": "manual",
       "localizations": {

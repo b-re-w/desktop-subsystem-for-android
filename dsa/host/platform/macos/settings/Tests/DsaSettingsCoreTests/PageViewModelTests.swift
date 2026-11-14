@@ -98,7 +98,7 @@ final class PageViewModelTests: XCTestCase {
         let cli = FakeCli()
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
         cli.answer("app-window --json", #"{"apps":[]}"#)
-        cli.answer("app-window org.example.notes --fixed-size off --start-size 412x915 --dpi-scaling auto --json",
+        cli.answer("app-window org.example.notes --fixed-size off --start-size 412x915 --dpi-scaling auto --fullscreen default --immersive default --json",
                    #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":[412,915]}]}"#)
         let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
         await apps.refresh()
@@ -114,7 +114,7 @@ final class PageViewModelTests: XCTestCase {
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
         cli.answer("app-window --json",
                    #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"dpi_scaling":"system"}],"system_forced_available":false}"#)
-        cli.answer("app-window org.example.notes --fixed-size off --start-size auto --dpi-scaling app --json",
+        cli.answer("app-window org.example.notes --fixed-size off --start-size auto --dpi-scaling app --fullscreen default --immersive default --json",
                    #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"dpi_scaling":"app"}]}"#)
         let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
         await apps.refresh()
@@ -150,6 +150,32 @@ final class PageViewModelTests: XCTestCase {
         // It stays the app's stored choice, and the row says why it works like System.
         XCTAssertEqual(apps.rows.first.map { apps.dpiScalingChoices[$0.dpiScalingIndex].scaling }, .systemForced)
         XCTAssertEqual(apps.rows.first?.dpiScalingTip, "Apps_DpiScaling_SystemForcedTip")
+    }
+
+    func test_fr30_an_apps_full_screen_choice_wins_over_the_default() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"fullscreen":"window"}],"defaults":{"fullscreen":"screen","immersive":"window"}}"#)
+        cli.answer("app-window org.example.notes --fixed-size off --start-size auto --dpi-scaling auto --fullscreen window --immersive screen --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"fullscreen":"window","immersive":"screen"}]}"#)
+        cli.answer("settings set app-immersive screen --json", #"{"app_fullscreen":"screen","app_immersive":"screen"}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first?.fullScreenIndex, FullScreenPlace.allCases.firstIndex(of: .window))
+        XCTAssertEqual(apps.rows.first?.immersiveIndex, 0)
+        XCTAssertEqual(apps.fullScreenDefaultIndex, 0)
+        XCTAssertEqual(apps.immersiveDefaultIndex, 1)
+        await apps.setFullScreen("org.example.notes", immersive: true, FullScreenPlace.allCases.firstIndex(of: .screen) ?? -1)
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first?.immersiveIndex, FullScreenPlace.allCases.firstIndex(of: .screen))
+        // The choice for every app is a setting of its own.
+        await apps.setFullScreenDefault(immersive: true, 0)
+        XCTAssertTrue(cli.called("settings set app-immersive screen --json"))
+        XCTAssertEqual(apps.immersiveDefaultIndex, 0)
+        XCTAssertEqual(FullScreenPlace.allCases.map(\.rawValue), ["default", "screen", "window"])
     }
 
     func test_fr4_dpi_scaling_words_are_the_ones_dsa_takes() {

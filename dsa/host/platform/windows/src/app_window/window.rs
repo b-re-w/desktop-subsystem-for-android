@@ -30,7 +30,10 @@
 //! A window also follows how its app asks to be shown ([`ModeState`]): an app that fills the
 //! screen gets a window that covers its monitor with no title bar, and one in
 //! picture-in-picture a small window in the corner of the work area that stays above the
-//! others. F11 turns full screen on and off. Each change of mode proposes the new size like any
+//! others. F11 and the window menu's Full screen turn full screen on and off. A window that fills
+//! its monitor shows its title bar while the pointer is at the monitor's top edge
+//! ([`caption_revealed`]), so minimize and close stay in reach; its middle button leaves full
+//! screen. Each change of mode proposes the new size like any
 //! other, so the window takes it together with a frame of that size. A window the user's
 //! settings for the app make fixed in size cannot be resized or maximized by the user; it
 //! still takes the sizes Android gives it.
@@ -49,7 +52,9 @@ use std::thread::{self, JoinHandle};
 use dsa_host_core::compositor::caption::BandSample;
 use dsa_host_core::compositor::task_windows::fit_within;
 use dsa_host_core::compositor::window_hosts::{FromHost, ToHost};
-use dsa_host_core::compositor::window_mode::{picture_in_picture_place, ModeState, WindowMode};
+use dsa_host_core::compositor::window_mode::{
+    caption_revealed, picture_in_picture_place, ModeState, WindowMode,
+};
 use dsa_host_core::compositor::window_sizing::{
     maximized_outer, maximized_position, min_client_size, rescaled_rect, size_is_held,
     to_task_position, to_task_size, to_window_position, SizeProposal,
@@ -60,6 +65,7 @@ use dsa_host_core::input::InputEvent;
 use windows_sys::Win32::Foundation::{
     GetLastError, ERROR_CLASS_ALREADY_EXISTS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM,
 };
+use windows_sys::Win32::Graphics::Gdi::ScreenToClient;
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, EndPaint, GetMonitorInfoW, MonitorFromRect, MonitorFromWindow, MONITORINFO,
     MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
@@ -88,6 +94,10 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     HTLEFT, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, SC_MAXIMIZE, SC_SIZE, SWP_FRAMECHANGED,
     SWP_NOOWNERZORDER, SW_RESTORE, WINDOWPLACEMENT, WM_COMMAND, WM_KEYDOWN, WM_KEYUP, WM_NCHITTEST,
     WM_SYSCOMMAND, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_POPUP,
+};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    GetCursorPos, HTCAPTION, HTNOWHERE, SC_RESTORE, WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCMOUSELEAVE,
+    WM_NCMOUSEMOVE, WS_SYSMENU,
 };
 
 use crate::compositor::log::{input_trace, input_trace_on};
@@ -316,6 +326,9 @@ struct WindowData {
     mode: Cell<ModeState>,
     /// The mode the window is shown in now.
     shown_mode: Cell<WindowMode>,
+    /// Whether a window that fills its monitor shows its title bar now: the pointer came to
+    /// the top edge.
+    revealed: Cell<bool>,
     /// Whether the user may resize the window, as the user's settings for the app say.
     resizable: Cell<bool>,
     /// Where an ordinary window was before it filled its monitor or went into
@@ -638,30 +651,41 @@ unsafe extern "system" fn task_window_proc(
         if let Some(result) = mode_message(hwnd, data, message, wparam, lparam) {
             return result;
         }
-        // The title bar first: what lies in it is the window's, never the app's. A window that
-        // fills its monitor has none.
         let presenter = data.presenter.borrow().clone();
-        if data.shown_mode.get() != WindowMode::Fullscreen {
-            // The window menu: a click on the icon, a right click on the title bar, Alt+Space.
-            let hit = |x: i32, y: i32| {
-                let at = ((y as u16 as LPARAM) << 16) | (x as u16 as LPARAM);
-                SendMessageW(hwnd, WM_NCHITTEST, 0, at) as u32
-            };
-            if let Some(what) = window_menu::menu_message(message, wparam, lparam, &hit) {
-                match what {
-                    MenuMessage::Open(opening) => open_window_menu(hwnd, data, opening),
-                    // Posted, as Windows posts it for a double click on a window's icon.
-                    MenuMessage::Close => {
-                        PostMessageW(hwnd, WM_SYSCOMMAND, SC_CLOSE as WPARAM, 0);
-                    }
-                    MenuMessage::Swallow => {}
+        // A window that fills its monitor shows its title bar while the pointer is at the top
+        // edge, and takes it away once the pointer goes below it or out of the window.
+        if !titled(data) {
+            follow_reveal(hwnd, data, message, lparam, presenter.as_deref());
+        }
+        // The window menu: a click on the icon, a right click on the title bar, Alt+Space. A
+        // window that fills its monitor keeps it, for Alt+Space and its revealed title bar.
+        let hit = |x: i32, y: i32| {
+            let at = ((y as u16 as LPARAM) << 16) | (x as u16 as LPARAM);
+            SendMessageW(hwnd, WM_NCHITTEST, 0, at) as u32
+        };
+        if let Some(what) = window_menu::menu_message(message, wparam, lparam, &hit) {
+            match what {
+                MenuMessage::Open(opening) => open_window_menu(hwnd, data, opening),
+                // Posted, as Windows posts it for a double click on a window's icon.
+                MenuMessage::Close => {
+                    PostMessageW(hwnd, WM_SYSCOMMAND, SC_CLOSE as WPARAM, 0);
                 }
-                return 0;
+                MenuMessage::Swallow => {}
             }
+            return 0;
+        }
+        // The title bar first: what lies in it is the window's, never the app's. A window that
+        // fills its monitor has one only while it is revealed, and lays out no frame for it.
+        let revealed = !titled(data) && data.revealed.get() && message != WM_NCCALCSIZE;
+        if titled(data) || revealed {
             if let Some(result) =
                 data.caption
                     .handle(hwnd, message, wparam, lparam, presenter.as_deref())
             {
+                // Its band neither drags nor resizes a window that fills its monitor.
+                if revealed && message == WM_NCHITTEST {
+                    return full_screen_hit(result);
+                }
                 return result;
             }
         }
@@ -1100,6 +1124,10 @@ unsafe fn open_window_menu(hwnd: HWND, data: &WindowData, opening: window_menu::
 /// manager carries out the rest.
 unsafe fn menu_chosen(hwnd: HWND, data: &WindowData, item: SystemMenuItem) {
     use windows_sys::Win32::UI::WindowsAndMessaging::{AllowSetForegroundWindow, ASFW_ANY};
+    if item == SystemMenuItem::FullScreen {
+        toggle_full_screen(hwnd, data);
+        return;
+    }
     if item == SystemMenuItem::Screenshot {
         match data.presenter.borrow().clone() {
             Some(presenter) => super::screenshot::take(
@@ -1375,7 +1403,79 @@ unsafe fn maximized_border(hwnd: HWND) -> (i32, i32) {
     (left, top)
 }
 
-/// Whether the window has its title bar: not while it fills its monitor.
+/// Follows the pointer over a window that fills its monitor: the title bar comes out when the
+/// pointer reaches the top edge, and goes once the pointer is below its band or out of the
+/// window. While it shows, the band's points are the title bar's (`WM_NCHITTEST`), so the
+/// window hears the pointer over it as non-client moves, and a move in the client area below
+/// is the pointer leaving it.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn follow_reveal(
+    hwnd: HWND,
+    data: &WindowData,
+    message: u32,
+    lparam: LPARAM,
+    presenter: Option<&WindowPresenter>,
+) {
+    let pointer_y = match message {
+        WM_MOUSEMOVE => Some(((lparam >> 16) & 0xffff) as i16 as i32),
+        WM_NCMOUSEMOVE | WM_NCMOUSELEAVE => {
+            let mut point: POINT = std::mem::zeroed();
+            GetCursorPos(&mut point);
+            let mut client: RECT = std::mem::zeroed();
+            GetClientRect(hwnd, &mut client);
+            ScreenToClient(hwnd, &mut point);
+            let inside = point.x >= client.left
+                && point.x < client.right
+                && point.y >= client.top
+                && point.y < client.bottom;
+            inside.then_some(point.y)
+        }
+        _ => return,
+    };
+    let dpi = GetDpiForWindow(hwnd).max(96);
+    let band = data.caption.layout(hwnd).height;
+    let now = caption_revealed(data.revealed.get(), pointer_y, band, dpi);
+    if data.revealed.replace(now) == now {
+        return;
+    }
+    if now {
+        data.caption.paint(hwnd, presenter);
+    } else {
+        data.caption.hide(presenter);
+    }
+    sync_back_button(hwnd, data);
+}
+
+/// What a point of a full screen window's revealed band is: the band's buttons and its icon as
+/// in any window, and nothing elsewhere, where an ordinary window would drag or resize.
+fn full_screen_hit(code: LRESULT) -> LRESULT {
+    let code = code as u32;
+    if code == HTCAPTION || (HTLEFT..=HTBOTTOMRIGHT).contains(&code) {
+        HTNOWHERE as LRESULT
+    } else {
+        code as LRESULT
+    }
+}
+
+/// Turns full screen on or off over what the app asked for, as F11 and the window menu's Full
+/// screen do, whatever the user's setting for the app's full screen.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn toggle_full_screen(hwnd: HWND, data: &WindowData) {
+    let mut mode = data.mode.get();
+    let shown = mode.toggle_fullscreen();
+    data.mode.set(mode);
+    apply_mode(hwnd, data, shown);
+    sync_back_button(hwnd, data);
+}
+
+/// Whether the window has its title bar for good: not while it fills its monitor, where it
+/// shows one only while the pointer is at the top edge.
 fn titled(data: &WindowData) -> bool {
     data.shown_mode.get() != WindowMode::Fullscreen
 }
@@ -1435,12 +1535,17 @@ unsafe fn mode_message(
             // Held down, the key repeats; only the press counts.
             let repeat = (lparam >> 30) & 1 != 0;
             if !repeat {
-                let mut mode = data.mode.get();
-                let shown = mode.toggle_fullscreen();
-                data.mode.set(mode);
-                apply_mode(hwnd, data, shown);
-                sync_back_button(hwnd, data);
+                toggle_full_screen(hwnd, data);
             }
+            Some(0)
+        }
+        // The middle button of a full screen window's revealed title bar, and Restore or
+        // Maximize from its menu, leave full screen.
+        WM_SYSCOMMAND
+            if data.shown_mode.get() == WindowMode::Fullscreen
+                && matches!((wparam & 0xfff0) as u32, SC_MAXIMIZE | SC_RESTORE) =>
+        {
+            toggle_full_screen(hwnd, data);
             Some(0)
         }
         WM_KEYUP | WM_SYSKEYUP if wparam as u16 == VK_F11 => Some(0),
@@ -1487,6 +1592,9 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
         }
     }
     data.shown_mode.set(mode);
+    // A window that fills its monitor starts with its title bar hidden.
+    data.revealed.set(false);
+    data.caption.set_full_screen(mode == WindowMode::Fullscreen);
     let keep = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
     match previous {
         WindowMode::Fullscreen => {
@@ -1518,14 +1626,13 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
                 return;
             };
             let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
-            let style = (style & !TASK_STYLE) | WS_POPUP;
+            // It keeps its system menu, for Alt+Space and its revealed title bar's icon.
+            let style = (style & !TASK_STYLE) | WS_POPUP | WS_SYSMENU;
             SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
             // No title bar, so no top inset: the app draws to the monitor's top edge. The band
             // is forgotten with it, so the title bar's return reports it again.
             data.caption.report_none(&*data.report);
-            if let Some(presenter) = data.presenter.borrow().as_deref() {
-                presenter.hide_caption();
-            }
+            data.caption.hide(data.presenter.borrow().as_deref());
             place_self(
                 hwnd,
                 HWND_TOP,
@@ -1911,6 +2018,7 @@ impl Ui {
             following: Cell::new(false),
             mode: Cell::new(ModeState::new()),
             shown_mode: Cell::new(WindowMode::Normal),
+            revealed: Cell::new(false),
             resizable: Cell::new(true),
             restore: Cell::new(None),
             self_sizing: Cell::new(false),

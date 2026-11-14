@@ -10,8 +10,77 @@ use gtk::glib;
 
 use super::common::*;
 use crate::i18n::{tr, trf};
-use crate::model::{App, AppWindow, DpiScaling};
+use crate::model::{App, AppWindow, DpiScaling, FullScreenPlace};
 use crate::view;
+
+/// Where every app without its own choice shows its full screen: a clear request on the whole
+/// screen by default, and its bars hidden alone inside its window. Each app's own choice, in
+/// its row below, wins over them.
+fn app_full_screen(ctx: &Shared, page: &Rc<Page>) -> adw::PreferencesGroup {
+    let all = group(
+        &tr("App full screen"),
+        Some(&tr(
+            "On the whole screen, the title bar appears when the pointer reaches the top edge.",
+        )),
+    );
+    let labels: Vec<String> = view::DEFAULT_FULL_SCREEN_PLACES
+        .into_iter()
+        .map(view::full_screen_label)
+        .collect();
+    let combo = |title: &str, subtitle: &str, immersive: bool| {
+        let (ctx, page) = (ctx.clone(), page.clone());
+        Combo::new(title, subtitle, move |index| {
+            let Some(place) = view::DEFAULT_FULL_SCREEN_PLACES
+                .get(index as usize)
+                .copied()
+            else {
+                return;
+            };
+            let page = page.clone();
+            request(
+                &ctx,
+                move |c| {
+                    if immersive {
+                        c.set_app_immersive(place)
+                    } else {
+                        c.set_app_fullscreen(place)
+                    }
+                },
+                move |r| page.show_failure(&tr("The setting was not changed"), r.as_ref().err()),
+            );
+        })
+    };
+    let fullscreen = combo(
+        &tr("Full screen request"),
+        &tr("Where an app's full screen request shows, such as a video's full screen button."),
+        false,
+    );
+    let immersive = combo(
+        &tr("Bars hidden"),
+        &tr("Where an app shows when it only hides its bars, as a feed of short videos does."),
+        true,
+    );
+    all.add(&fullscreen.row);
+    all.add(&immersive.row);
+    let (fullscreen, immersive) = (Rc::new(fullscreen), Rc::new(immersive));
+    request(
+        ctx,
+        |c| c.settings(),
+        move |r| {
+            if let Ok(settings) = r {
+                fullscreen.set(
+                    &labels,
+                    view::default_full_screen_index(settings.app_fullscreen) as u32,
+                );
+                immersive.set(
+                    &labels,
+                    view::default_full_screen_index(settings.app_immersive) as u32,
+                );
+            }
+        },
+    );
+    all
+}
 
 /// A callback set once its page is built, called to draw or reload that page again.
 type Hook = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
@@ -46,6 +115,8 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
             );
         });
     }
+
+    page.add(&app_full_screen(ctx, &page));
 
     let installed = group(&tr("Installed apps"), None);
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
@@ -365,6 +436,81 @@ fn app_row(
     let dpi_labels: Vec<String> = dpi_choices.into_iter().map(|(label, _)| label).collect();
     dpi.set(&dpi_labels, view::dpi_scaling_index(window.as_ref()) as u32);
     row.add_row(&dpi.row);
+
+    // Where the app's full screen shows: a clear request, and its bars hidden alone.
+    let (full_index, immersive_index) = view::full_screen_indexes(window.as_ref());
+    let places = Rc::new(RefCell::new((
+        FullScreenPlace::ALL[full_index],
+        FullScreenPlace::ALL[immersive_index],
+    )));
+    let save_places = {
+        let (ctx, page, package, places) = (
+            ctx.clone(),
+            page.clone(),
+            app.package.clone(),
+            places.clone(),
+        );
+        let label = app.label.clone();
+        Rc::new(move || {
+            let (fullscreen, immersive) = *places.borrow();
+            let (page, package, ctx2) = (page.clone(), package.clone(), ctx.clone());
+            let label = label.clone();
+            request(
+                &ctx,
+                move |c| c.set_app_full_screen(&package, fullscreen, immersive),
+                move |r| {
+                    page.show_failure(
+                        &tr("The apps could not be read or changed"),
+                        r.as_ref().err(),
+                    );
+                    if r.is_ok() {
+                        ctx2.toast(&trf(
+                            "{0}'s windows follow the new settings now.",
+                            &[&label],
+                        ));
+                    }
+                },
+            );
+        })
+    };
+    let place_labels: Vec<String> = view::full_screen_choices()
+        .into_iter()
+        .map(|(label, _)| label)
+        .collect();
+    let full = {
+        let (places, save) = (places.clone(), save_places.clone());
+        Combo::new(
+            &tr("Full screen"),
+            &tr("Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."),
+            move |index| {
+                if let Some(place) = FullScreenPlace::ALL.get(index as usize) {
+                    if places.borrow().0 != *place {
+                        places.borrow_mut().0 = *place;
+                        save();
+                    }
+                }
+            },
+        )
+    };
+    full.set(&place_labels, full_index as u32);
+    row.add_row(&full.row);
+    let immersive = {
+        let (places, save) = (places.clone(), save_places.clone());
+        Combo::new(
+            &tr("Bars hidden"),
+            &tr("Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."),
+            move |index| {
+                if let Some(place) = FullScreenPlace::ALL.get(index as usize) {
+                    if places.borrow().1 != *place {
+                        places.borrow_mut().1 = *place;
+                        save();
+                    }
+                }
+            },
+        )
+    };
+    immersive.set(&place_labels, immersive_index as u32);
+    row.add_row(&immersive.row);
 
     // Whether the app runs its ARM code through the translator.
     let arm = view::run_as_arm_view(app);

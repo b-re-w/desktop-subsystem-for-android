@@ -1692,6 +1692,45 @@ Automatic and System never restart the app.</value>
     <value>System (forced) gives the app the new scale without restarting it, even if it does not say it handles one.
 Not available yet: it needs an Android framework change this build lacks, so for now it works like System.</value>
   </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>Full screen</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen.</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>Bars hidden</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does.</value>
+  </data>
+  <data name="Apps_FullScreen_Default" xml:space="preserve">
+    <value>Follow the default</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>On the whole screen</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>Inside the window</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>App full screen</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>Where an app's full screen request shows, such as a video's full screen button. On the whole screen, the title bar appears at the top edge. An app's own choice on the Apps page wins.</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>Apps that hide their bars</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>Where an app shows when it only hides its bars, as a feed of short videos does.</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>On the whole screen</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>Inside the window</value>
+  </data>
   <data name="NavNetwork.Content" xml:space="preserve">
     <value>Network</value>
   </data>
