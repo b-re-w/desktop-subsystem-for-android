@@ -135,6 +135,13 @@ std::map<std::string, v1::Envelope> Cases() {
     region->set_guest_physical_address(0x108000000ULL);
     region->set_length(64ULL * 1024 * 1024);
   }
+  {
+    v1::GuestSharedMemory* region =
+        cases["guest_shared_memory_graphics"].mutable_guest_shared_memory();
+    region->set_name("graphics_memory");
+    region->set_guest_physical_address(0x110200000ULL);
+    region->set_length(256ULL * 1024 * 1024);
+  }
   cases["video_flush"].mutable_video_flush();
   {
     v1::CameraDevice* camera = cases["camera_list"].mutable_camera_list()->add_cameras();

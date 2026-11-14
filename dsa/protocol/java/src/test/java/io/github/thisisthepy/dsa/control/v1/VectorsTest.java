@@ -131,6 +131,12 @@ public final class VectorsTest {
                         .setGuestPhysicalAddress(0x108000000L)
                         .setLength(64L * 1024 * 1024))
                 .build());
+        cases.put("guest_shared_memory_graphics", Envelope.newBuilder()
+                .setGuestSharedMemory(GuestSharedMemory.newBuilder()
+                        .setName("graphics_memory")
+                        .setGuestPhysicalAddress(0x110200000L)
+                        .setLength(256L * 1024 * 1024))
+                .build());
         cases.put("video_flush", Envelope.newBuilder()
                 .setVideoFlush(VideoFlush.newBuilder())
                 .build());

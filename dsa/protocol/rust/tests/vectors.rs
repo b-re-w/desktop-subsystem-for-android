@@ -242,6 +242,14 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 length: 64 * 1024 * 1024,
             })),
         ),
+        (
+            "guest_shared_memory_graphics",
+            wrap(Body::GuestSharedMemory(GuestSharedMemory {
+                name: "graphics_memory".into(),
+                guest_physical_address: 0x1_1020_0000,
+                length: 256 * 1024 * 1024,
+            })),
+        ),
         ("video_flush", wrap(Body::VideoFlush(VideoFlush {}))),
         (
             "camera_list",
