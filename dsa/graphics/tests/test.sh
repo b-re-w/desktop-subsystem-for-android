@@ -20,6 +20,12 @@ mkdir -p "$out"
     "$here/shadow_blocks_test.cpp" -o "$out/shadow_blocks_test"
 "$out/shadow_blocks_test"
 
+# Which pages of its copies the app wrote, as the kernel tracks them (guest/mesa 0014), against
+# a fake kernel and, where it allows, the kernel the tests run on.
+"$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -I"$here/../include" \
+    "$here/dirty_pages_test.cpp" -o "$out/dirty_pages_test"
+"$out/dirty_pages_test"
+
 "$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -I"$here/../include" \
     "$here/shadow_record_test.cpp" -o "$out/shadow_record_test"
 "$out/shadow_record_test"
@@ -85,6 +91,12 @@ mkdir -p "$out"
 "$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -I"$here/../include" \
     "$here/color_buffer_tiling_test.cpp" -o "$out/color_buffer_tiling_test"
 "$out/color_buffer_tiling_test"
+
+# The graphics memory the host shares with the guest: the renderer's grants and the guest
+# kernel's side of them, over a fake region (patch 0037, guest/mesa 0015).
+"$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -pthread -I"$here/../include" \
+    "$here/graphics_memory_test.cpp" -o "$out/graphics_memory_test"
+"$out/graphics_memory_test"
 
 # The upstream headers are not ours to warn about.
 upstream=(

@@ -49,18 +49,23 @@ impl VideoDecoder for SlotDecoder {
         let value = packet.data[0];
         if let (true, Some(slots)) = (self.direct, &self.slots) {
             if let Some(slot) = slots.take(PICTURE_BYTES) {
-                assert!(slots.write(&slot, |bytes| {
+                let written = slots.write(&slot, |bytes| {
                     bytes.fill(value);
                     true
-                }));
-                return Ok(vec![Picture {
-                    id: packet.id,
-                    width: WIDTH,
-                    height: HEIGHT,
-                    stride: WIDTH,
-                    nv12: Vec::new(),
-                    slot: Some(slot),
-                }]);
+                });
+                if written {
+                    return Ok(vec![Picture {
+                        id: packet.id,
+                        width: WIDTH,
+                        height: HEIGHT,
+                        stride: WIDTH,
+                        nv12: Vec::new(),
+                        slot: Some(slot),
+                    }]);
+                }
+                // A slot that cannot be written goes back, and the picture is read into
+                // memory, as the Windows decoder does.
+                slots.give_back(slot.number);
             }
         }
         Ok(vec![Picture {
@@ -456,6 +461,163 @@ fn pr7_a_picture_read_straight_into_a_slot_is_the_picture_read_into_memory() {
         let mut short = vec![0u8; read.nv12.len() - 1];
         assert!(!picture_into(&mut short, data, format, pitch, 4, area));
     }
+}
+
+/// A region that only reserves its size, as the Windows section does: it records every commit,
+/// refuses those `refuse` says to, and says whether a range was committed before it was written.
+struct ReservedRegion {
+    memory: MemoryRegion,
+    commits: Mutex<Vec<(usize, usize)>>,
+    refuse: Box<dyn Fn(usize) -> bool + Send + Sync>,
+}
+
+impl ReservedRegion {
+    fn new(refuse: impl Fn(usize) -> bool + Send + Sync + 'static) -> Arc<ReservedRegion> {
+        Arc::new(ReservedRegion {
+            memory: MemoryRegion::new(REGION_BYTES, REGION_ID),
+            commits: Mutex::new(Vec::new()),
+            refuse: Box::new(refuse),
+        })
+    }
+
+    fn commits(&self) -> Vec<(usize, usize)> {
+        self.commits.lock().unwrap().clone()
+    }
+
+    /// Whether every byte of `len` from `offset` lies in a range committed so far.
+    fn is_committed(&self, offset: usize, len: usize) -> bool {
+        let commits = self.commits();
+        (offset..offset + len)
+            .step_by(4096)
+            .chain([offset + len - 1])
+            .all(|byte| commits.iter().any(|&(at, n)| (at..at + n).contains(&byte)))
+    }
+}
+
+impl SharedRegion for ReservedRegion {
+    fn as_ptr(&self) -> *mut u8 {
+        self.memory.as_ptr()
+    }
+
+    fn len(&self) -> usize {
+        self.memory.len()
+    }
+
+    fn discard(&self, offset: usize, len: usize) {
+        assert!(
+            self.is_committed(offset, len),
+            "discards only committed pages"
+        );
+        self.memory.discard(offset, len);
+    }
+
+    fn commit(&self, offset: usize, len: usize) -> Result<(), String> {
+        if (self.refuse)(offset) {
+            return Err("the paging file is too small for this operation to complete".into());
+        }
+        self.commits.lock().unwrap().push((offset, len));
+        Ok(())
+    }
+}
+
+#[test]
+fn pr7_a_slot_is_committed_before_its_first_write_and_only_once() {
+    let region = ReservedRegion::new(|_| false);
+    let slots = PictureSlots::open(region.clone()).expect("a region with a header");
+    // The header is all the host reads before a picture.
+    assert_eq!(region.commits(), vec![(0, SLOTS_START)]);
+    let stream = slots.stream();
+    let slot = stream.take(SLOT_ALIGNMENT + 100).expect("room");
+    assert_eq!(region.commits().len(), 1, "taking a slot commits nothing");
+    assert!(stream.write(&slot, |bytes| {
+        assert!(
+            region.is_committed(slot.offset as usize, 2 * SLOT_ALIGNMENT),
+            "the slot's pages are committed before it is written"
+        );
+        bytes.fill(3);
+        true
+    }));
+    assert_eq!(
+        region.commits()[1..],
+        [(slot.offset as usize, 2 * SLOT_ALIGNMENT)]
+    );
+    // Written again, or written again after it came back: no second commit.
+    assert!(stream.write(&slot, |_| true));
+    assert!(stream.give_back(slot.number));
+    let again = stream.take(100).expect("room");
+    assert_eq!(again.offset, slot.offset);
+    assert!(stream.write(&again, |_| true));
+    assert_eq!(region.commits().len(), 2, "{:?}", region.commits());
+    // A larger slot at the same place commits only the granules it adds.
+    assert!(stream.give_back(again.number));
+    let larger = stream.take(3 * SLOT_ALIGNMENT).expect("room");
+    assert_eq!(larger.offset, slot.offset);
+    assert!(stream.write(&larger, |_| true));
+    assert_eq!(
+        region.commits()[2..],
+        [(slot.offset as usize + 2 * SLOT_ALIGNMENT, SLOT_ALIGNMENT)]
+    );
+    // When the last stream ends, the committed pages are discarded and nothing is committed
+    // again for the next one.
+    drop(stream);
+    assert_eq!(
+        region.memory.discarded(),
+        vec![(SLOTS_START, 3 * SLOT_ALIGNMENT)]
+    );
+    let next = slots.stream();
+    let slot = next.take(100).expect("room");
+    assert!(next.write(&slot, |_| true));
+    assert_eq!(region.commits().len(), 3);
+    assert_eq!(slots.commit_refused(), None);
+}
+
+#[test]
+fn pr7_a_slot_whose_commit_is_refused_takes_the_copy_path() {
+    // The header was committed when the region was made; nothing after it can be.
+    let region = ReservedRegion::new(|offset| offset >= SLOTS_START);
+    let slots = PictureSlots::open(region.clone()).expect("the header is committed");
+    // A decoder writing a slot itself is told the slot was not written.
+    let own = slots.stream();
+    let slot = own.take(PICTURE_BYTES).expect("room");
+    assert!(!own.write(&slot, |_| panic!("an uncommitted slot is never written")));
+    assert!(own.give_back(slot.number));
+    let first = slots.commit_refused().expect("the reason is kept");
+    assert!(first.contains("paging file"), "{first}");
+    drop(own);
+    // Through the video port, both kinds of decoder send the picture in its message.
+    for direct in [false, true] {
+        let mut stream = open(
+            SharedDecoders {
+                slots: Some(Arc::clone(&slots)),
+                direct,
+            },
+            REGION_ID,
+        );
+        assert!(stream.shared, "the region is still offered");
+        for value in [0x21, 0x22] {
+            send(stream.guest.as_mut(), packet(u64::from(value), value));
+            let picture = frame(next(stream.guest.as_mut()));
+            assert_eq!(picture.slot, 0, "direct {direct}");
+            assert_eq!(picture.nv12, vec![value; PICTURE_BYTES]);
+        }
+        stream.guest.close();
+        assert_eq!(stream.host.join().unwrap(), VideoEnd::Closed);
+    }
+    assert_eq!(slots.held(), 0);
+    assert_eq!(region.commits(), vec![(0, SLOTS_START)]);
+    assert!(region.memory.discarded().is_empty(), "nothing was written");
+    assert_eq!(
+        slots.commit_refused(),
+        Some(first),
+        "the first reason stays"
+    );
+}
+
+#[test]
+fn pr7_a_region_whose_header_cannot_be_committed_carries_no_pictures() {
+    let region = ReservedRegion::new(|_| true);
+    let why = PictureSlots::open(region).err().expect("refused");
+    assert!(why.contains("header could not be committed"), "{why}");
 }
 
 #[test]

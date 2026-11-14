@@ -9,7 +9,8 @@ package io.github.thisisthepy.dsa.control.v1;
  * tree (`full`) replaces whatever the host had and starts a new epoch; node IDs of earlier
  * epochs mean nothing in it. A change carries the epoch it applies to, each node that is new
  * or changed (whole), and the IDs of the nodes that are gone. The agent sends a few of these
- * a second at most, however fast the task's content changes.
+ * a second at most, however fast the task's content changes, except while a screen reader
+ * listens (AccessibilityListening), when a focus change goes at once.
  * </pre>
  *
  * Protobuf type {@code dsa.control.v1.AccessibilityTree}
@@ -404,45 +405,42 @@ public  final class AccessibilityTree extends
     focusedId_ = 0;
   }
 
-  public static final int WIDGET_ID_FIELD_NUMBER = 8;
-  private int widgetId_;
+  public static final int ACCESSIBILITY_FOCUSED_ID_FIELD_NUMBER = 8;
+  private int accessibilityFocusedId_;
   /**
    * <pre>
-   * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
-   * are in pixels of the widget's image: (0, 0) is its top left.
+   * The node with the accessibility focus, or 0 for none.
    * </pre>
    *
-   * <code>int32 widget_id = 8;</code>
-   * @return The widgetId.
+   * <code>uint32 accessibility_focused_id = 8;</code>
+   * @return The accessibilityFocusedId.
    */
   @java.lang.Override
-  public int getWidgetId() {
-    return widgetId_;
+  public int getAccessibilityFocusedId() {
+    return accessibilityFocusedId_;
   }
   /**
    * <pre>
-   * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
-   * are in pixels of the widget's image: (0, 0) is its top left.
+   * The node with the accessibility focus, or 0 for none.
    * </pre>
    *
-   * <code>int32 widget_id = 8;</code>
-   * @param value The widgetId to set.
+   * <code>uint32 accessibility_focused_id = 8;</code>
+   * @param value The accessibilityFocusedId to set.
    */
-  private void setWidgetId(int value) {
+  private void setAccessibilityFocusedId(int value) {
     
-    widgetId_ = value;
+    accessibilityFocusedId_ = value;
   }
   /**
    * <pre>
-   * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
-   * are in pixels of the widget's image: (0, 0) is its top left.
+   * The node with the accessibility focus, or 0 for none.
    * </pre>
    *
-   * <code>int32 widget_id = 8;</code>
+   * <code>uint32 accessibility_focused_id = 8;</code>
    */
-  private void clearWidgetId() {
+  private void clearAccessibilityFocusedId() {
     
-    widgetId_ = 0;
+    accessibilityFocusedId_ = 0;
   }
 
   public static io.github.thisisthepy.dsa.control.v1.AccessibilityTree parseFrom(
@@ -532,7 +530,8 @@ public  final class AccessibilityTree extends
    * tree (`full`) replaces whatever the host had and starts a new epoch; node IDs of earlier
    * epochs mean nothing in it. A change carries the epoch it applies to, each node that is new
    * or changed (whole), and the IDs of the nodes that are gone. The agent sends a few of these
-   * a second at most, however fast the task's content changes.
+   * a second at most, however fast the task's content changes, except while a screen reader
+   * listens (AccessibilityListening), when a focus change goes at once.
    * </pre>
    *
    * Protobuf type {@code dsa.control.v1.AccessibilityTree}
@@ -942,44 +941,41 @@ public  final class AccessibilityTree extends
 
     /**
      * <pre>
-     * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
-     * are in pixels of the widget's image: (0, 0) is its top left.
+     * The node with the accessibility focus, or 0 for none.
      * </pre>
      *
-     * <code>int32 widget_id = 8;</code>
-     * @return The widgetId.
+     * <code>uint32 accessibility_focused_id = 8;</code>
+     * @return The accessibilityFocusedId.
      */
     @java.lang.Override
-    public int getWidgetId() {
-      return instance.getWidgetId();
+    public int getAccessibilityFocusedId() {
+      return instance.getAccessibilityFocusedId();
     }
     /**
      * <pre>
-     * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
-     * are in pixels of the widget's image: (0, 0) is its top left.
+     * The node with the accessibility focus, or 0 for none.
      * </pre>
      *
-     * <code>int32 widget_id = 8;</code>
-     * @param value The widgetId to set.
+     * <code>uint32 accessibility_focused_id = 8;</code>
+     * @param value The accessibilityFocusedId to set.
      * @return This builder for chaining.
      */
-    public Builder setWidgetId(int value) {
+    public Builder setAccessibilityFocusedId(int value) {
       copyOnWrite();
-      instance.setWidgetId(value);
+      instance.setAccessibilityFocusedId(value);
       return this;
     }
     /**
      * <pre>
-     * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
-     * are in pixels of the widget's image: (0, 0) is its top left.
+     * The node with the accessibility focus, or 0 for none.
      * </pre>
      *
-     * <code>int32 widget_id = 8;</code>
+     * <code>uint32 accessibility_focused_id = 8;</code>
      * @return This builder for chaining.
      */
-    public Builder clearWidgetId() {
+    public Builder clearAccessibilityFocusedId() {
       copyOnWrite();
-      instance.clearWidgetId();
+      instance.clearAccessibilityFocusedId();
       return this;
     }
 
@@ -1007,11 +1003,11 @@ public  final class AccessibilityTree extends
             io.github.thisisthepy.dsa.control.v1.AccessibilityNode.class,
             "removedIds_",
             "focusedId_",
-            "widgetId_",
+            "accessibilityFocusedId_",
           };
           java.lang.String info =
               "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0003\u0000\u0001\u0004\u0002\u000b\u0003\u0007" +
-              "\u0004+\u0005\u001b\u0006+\u0007\u000b\b\u0004";
+              "\u0004+\u0005\u001b\u0006+\u0007\u000b\b\u000b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

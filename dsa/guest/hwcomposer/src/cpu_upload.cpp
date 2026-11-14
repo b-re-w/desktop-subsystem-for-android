@@ -158,13 +158,20 @@ bool CpuUploads::upload(HostRenderer& host, uint32_t colorBuffer, const BufferRe
     bool send = false;
     bool ok = result == 0 && address;
     uint64_t print = 0;
+    uint8_t* packed = nullptr;
     if (ok) {
         const uint8_t* bytes = static_cast<const uint8_t*>(address);
         print = dsa::fingerprint(bytes, mapped, sources, planes, layout);
         ok = print != 0;
         if (ok && mTracker.needsUpload(buffer.id, print, fresh)) {
-            mStaging.resize(layout.packedSize());
-            send = ok = dsa::packPlanes(bytes, mapped, sources, planes, layout, mStaging.data());
+            // Into the graphics memory the host shares where it offers some: the host reads
+            // the planes there, and they do not cross the stream.
+            packed = host.stagingFor(layout.packedSize());
+            if (!packed) {
+                mStaging.resize(layout.packedSize());
+                packed = mStaging.data();
+            }
+            send = ok = dsa::packPlanes(bytes, mapped, sources, planes, layout, packed);
         }
         calls.unlock(ahb, nullptr);
     }
@@ -181,11 +188,13 @@ bool CpuUploads::upload(HostRenderer& host, uint32_t colorBuffer, const BufferRe
     if (!send) {
         return true;
     }
-    const bool uploaded = host.uploadColorBuffer(colorBuffer, layout, mStaging.data());
+    const bool uploaded = host.uploadColorBuffer(colorBuffer, layout, packed);
     // The host has the planes, so the copy is dead until the next picture: its pages past the
     // first part go back once the guest reclaims page cache, not when the hwcomposer ends
     // (a 2880x2880 picture is 32 MiB). The next picture writes them again without a fault.
-    dsa::releaseSparePages(mStaging.data(), mStaging.size());
+    if (packed == mStaging.data()) {
+        dsa::releaseSparePages(mStaging.data(), mStaging.size());
+    }
     if (!uploaded) {
         uint32_t failures = 0;
         if (mFailures.shouldLog(&failures)) {

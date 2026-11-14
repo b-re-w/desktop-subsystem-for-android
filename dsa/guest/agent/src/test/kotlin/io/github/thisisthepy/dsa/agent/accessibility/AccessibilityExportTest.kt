@@ -13,6 +13,7 @@ import io.github.thisisthepy.dsa.agent.RecordingLog
 import io.github.thisisthepy.dsa.agent.appTask
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 import io.github.thisisthepy.dsa.control.v1.AccessibilityAction
+import io.github.thisisthepy.dsa.control.v1.AccessibilityListening
 import io.github.thisisthepy.dsa.control.v1.AccessibilityTree
 import io.github.thisisthepy.dsa.control.v1.AccessibilityWatch
 import io.github.thisisthepy.dsa.control.v1.Envelope
@@ -42,6 +43,25 @@ class FakeNode(
         performed += action to text
         return action in info.actions
     }
+
+    val arguments = mutableListOf<ActionArguments>()
+    val custom = mutableListOf<Int>()
+    val followed = mutableListOf<Int>()
+
+    override fun perform(action: NodeAction, arguments: ActionArguments): Boolean {
+        this.arguments += arguments
+        return perform(action, arguments.text)
+    }
+
+    override fun performCustom(id: Int): Boolean {
+        custom += id
+        return true
+    }
+
+    override fun followLink(index: Int): Boolean {
+        followed += index
+        return true
+    }
 }
 
 /** The guest's accessibility service in a test: on or off, and the windows of each task. */
@@ -62,16 +82,29 @@ class FakeAccessibility : AccessibilitySource {
         calls += "reconnect"
     }
 
+    var onEvent: ((AccessibilityChange) -> Unit)? = null
+    val listening = mutableListOf<Boolean>()
+
     override fun enable(onChange: () -> Unit) {
         on = true
         calls += "enable"
         this.onChange = onChange
     }
 
+    override fun enableEvents(onEvent: (AccessibilityChange) -> Unit) {
+        enable { onEvent(AccessibilityChange.ANY) }
+        this.onEvent = onEvent
+    }
+
+    override fun setListening(listening: Boolean) {
+        this.listening += listening
+    }
+
     override fun disable() {
         on = false
         calls += "disable"
         onChange = null
+        onEvent = null
     }
 
     override fun roots(taskId: Int): List<NodeHandle>? {
@@ -126,6 +159,267 @@ class AccessibilityExportTest {
         deliver(Envelope.newBuilder().setAccessibilityWatch(AccessibilityWatch.newBuilder().setTaskId(taskId).setOn(on)).build())
 
     private fun trees(): List<AccessibilityTree> = daemon.sentMessages().filter { it.hasAccessibilityTree() }.map { it.accessibilityTree }
+
+    private fun listen(taskId: Int, on: Boolean) =
+        deliver(Envelope.newBuilder().setAccessibilityListening(AccessibilityListening.newBuilder().setTaskId(taskId).setListening(on)).build())
+
+    /** An event of the service, as it reaches the agent's scheduler. */
+    private fun event(change: AccessibilityChange) {
+        service.onEvent!!.invoke(change)
+        scheduler.runDue()
+    }
+
+    private fun focus(node: FakeNode) = event(AccessibilityChange(AccessibilityChange.Kind.FOCUS, 3, node))
+
+    @Test
+    fun fr18_without_a_screen_reader_the_waits_stay_as_they_were() {
+        assertEquals(100L, AccessibilityExport.BATCH_MILLIS)
+        assertEquals(250L, AccessibilityExport.MIN_INTERVAL_MILLIS)
+        started()
+        watch(3, true)
+        scheduler.advance(10)
+        // The service keeps its usual events and batching: it was never told otherwise.
+        assertTrue(service.listening.isEmpty())
+        // A focus event without a screen reader waits for the batch like any change.
+        row.info = row.info.copy(focused = true)
+        focus(row)
+        scheduler.advance(AccessibilityExport.BATCH_MILLIS - 10)
+        assertEquals(1, trees().size)
+        scheduler.advance(AccessibilityExport.MIN_INTERVAL_MILLIS)
+        assertEquals(2, trees().size)
+    }
+
+    @Test
+    fun fr18_with_a_screen_reader_focus_reaches_the_host_at_once() {
+        started()
+        watch(3, true)
+        scheduler.advance(10)
+        listen(3, true)
+        assertEquals(listOf(true), service.listening)
+        val first = trees().single()
+        val rowId = first.nodesList.single { it.className == "android.widget.LinearLayout" }.id
+        val reads = list.reads
+        // The focus moves to the row: its change goes out with no wait at all, read from the
+        // event alone.
+        row.info = row.info.copy(focused = true)
+        focus(row)
+        val delta = trees().last()
+        assertEquals(2, trees().size)
+        assertFalse(delta.full)
+        assertEquals(rowId, delta.focusedId)
+        assertTrue(delta.nodesList.single { it.id == rowId }.focused)
+        assertEquals("nothing else is read", reads, list.reads)
+        // The screen reader goes: the service goes back to its usual events.
+        listen(3, false)
+        assertEquals(listOf(true, false), service.listening)
+    }
+
+    @Test
+    fun fr18_a_held_arrow_moves_the_focus_at_least_twenty_times_a_second() {
+        started()
+        val rows = (0 until 30).map { FakeNode("row$it", NodeInfo(className = "android.widget.TextView", text = "row $it", focusable = true)) }
+        service.windows[3] = listOf(FakeNode("root", NodeInfo(className = "android.widget.FrameLayout"), rows))
+        watch(3, true)
+        scheduler.advance(10)
+        listen(3, true)
+        val before = trees().size
+        // A key held down repeats every 33 ms: each step focuses the next row.
+        for (step in 0 until 30) {
+            rows.getOrNull(step - 1)?.let { it.info = it.info.copy(focused = false) }
+            rows[step].info = rows[step].info.copy(focused = true)
+            focus(rows[step])
+            scheduler.advance(33)
+        }
+        val moves = trees().drop(before).map { it.focusedId }.distinct()
+        // 30 moves in a second: every one reached the host.
+        assertEquals(30, moves.size)
+    }
+
+    @Test
+    fun fr18_with_a_screen_reader_a_change_reads_only_the_node_it_names() {
+        started()
+        watch(3, true)
+        scheduler.advance(10)
+        listen(3, true)
+        val titleId = trees().single().nodesList.single { it.text == "Network & internet" }.id
+        val listReads = list.reads
+        val rowReads = row.reads
+        title.info = title.info.copy(text = "Wi-Fi")
+        event(AccessibilityChange(AccessibilityChange.Kind.CONTENT, 3, title))
+        scheduler.advance(AccessibilityExport.FAST_MIN_INTERVAL_MILLIS + AccessibilityExport.FAST_BATCH_MILLIS)
+        val delta = trees().last()
+        assertEquals(2, trees().size)
+        assertEquals(listOf(titleId), delta.nodesList.map { it.id })
+        assertEquals(0, delta.removedIdsCount)
+        assertEquals(listReads, list.reads)
+        assertEquals(rowReads, row.reads)
+        // An event from a task nobody watches is not read at all.
+        event(AccessibilityChange(AccessibilityChange.Kind.CONTENT, 9, title))
+        scheduler.advance(1_000)
+        assertEquals(2, trees().size)
+    }
+
+    @Test
+    fun fr18_a_busy_apps_first_tree_is_sent_as_far_as_it_was_read() {
+        var extra = 0L
+        val slowRow = object : NodeHandle {
+            override val key: Any = "slow-row"
+
+            override fun info(): NodeInfo {
+                extra += 300
+                return row.info
+            }
+
+            override fun children(): List<NodeHandle> = emptyList()
+
+            override fun perform(action: NodeAction, text: String) = false
+        }
+        val root = FakeNode("root", NodeInfo(className = "android.widget.FrameLayout"))
+        val busy = object : AccessibilitySource {
+            override fun enable(onChange: () -> Unit) = Unit
+
+            override fun disable() = Unit
+
+            override fun roots(taskId: Int): List<NodeHandle>? = listOf(
+                object : NodeHandle by root {
+                    override fun children(): List<NodeHandle> = listOf(slowRow)
+                },
+            )
+        }
+        locator.up = daemon
+        tasks.running = listOf(appTask(3, bounds = TaskBounds(30, 20, 430, 620)))
+        val agent = Agent(
+            AGENT, tasks, FakeActions(), locator, FakeWindowing(), FakeInjector(), scheduler, log,
+            accessibility = busy,
+            clock = { scheduler.now + extra },
+        )
+        agent.start()
+        scheduler.runDue()
+        watch(3, true)
+        scheduler.advance(10)
+        // The root was read before the app showed it was busy: the screen reader has it.
+        val tree = trees().single()
+        assertTrue(tree.full)
+        assertEquals(listOf("android.widget.FrameLayout"), tree.nodesList.map { it.className })
+    }
+
+    @Test
+    fun fr18_an_action_on_a_tree_read_once_finds_its_node_when_the_task_is_watched_again() {
+        started()
+        watch(3, true)
+        scheduler.advance(10)
+        val first = trees().single()
+        val rowId = first.nodesList.single { it.className == "android.widget.LinearLayout" }.id
+        // The host read the tree once for a client and stopped; the client then acts on it.
+        watch(3, false)
+        watch(3, true)
+        scheduler.advance(10)
+        val again = trees().last()
+        assertTrue(again.full)
+        assertEquals(first.epoch, again.epoch)
+        assertEquals(rowId, again.nodesList.single { it.className == "android.widget.LinearLayout" }.id)
+        deliver(
+            Envelope.newBuilder().setAccessibilityAction(
+                AccessibilityAction.newBuilder().setTaskId(3).setEpoch(first.epoch).setNodeId(rowId)
+                    .setAction(NodeAction.NODE_ACTION_CLICK).setRequestId(5),
+            ).build(),
+        )
+        assertEquals(listOf(NodeAction.NODE_ACTION_CLICK to ""), row.performed)
+    }
+
+    @Test
+    fun fr18_links_and_an_apps_own_actions_are_nodes_a_client_can_press() {
+        started()
+        title.info = title.info.copy(
+            links = listOf(TextLink("Learn more", "https://example.com")),
+            customActions = listOf(CustomAction(0x7f0a0001, "Archive")),
+        )
+        watch(3, true)
+        scheduler.advance(10)
+        val tree = trees().single()
+        val link = tree.nodesList.single { it.text == "Learn more" }
+        assertTrue(link.link)
+        assertEquals("https://example.com", link.url)
+        val archive = tree.nodesList.single { it.text == "Archive" }
+        val titleNode = tree.nodesList.single { it.text == "Network & internet" }
+        assertEquals(listOf(link.id, archive.id), titleNode.childIdsList)
+        fun press(id: Int, request: Int) = deliver(
+            Envelope.newBuilder().setAccessibilityAction(
+                AccessibilityAction.newBuilder().setTaskId(3).setEpoch(tree.epoch).setNodeId(id)
+                    .setAction(NodeAction.NODE_ACTION_CLICK).setRequestId(request),
+            ).build(),
+        )
+        press(link.id, 1)
+        press(archive.id, 2)
+        assertEquals(listOf(0), title.followed)
+        assertEquals(listOf(0x7f0a0001), title.custom)
+    }
+
+    @Test
+    fun fr18_selection_actions_carry_their_arguments() {
+        started()
+        val field = FakeNode(
+            "field",
+            NodeInfo(className = "android.widget.EditText", text = "hello", editable = true, selectionStart = 2, selectionEnd = 4, actions = listOf(NodeAction.NODE_ACTION_SET_SELECTION)),
+        )
+        service.windows[3] = listOf(field)
+        watch(3, true)
+        scheduler.advance(10)
+        val node = trees().single().nodesList.single()
+        assertTrue(node.hasTextSelection)
+        assertEquals(2, node.textSelectionStart)
+        assertEquals(4, node.textSelectionEnd)
+        deliver(
+            Envelope.newBuilder().setAccessibilityAction(
+                AccessibilityAction.newBuilder().setTaskId(3).setEpoch(trees().single().epoch).setNodeId(node.id)
+                    .setAction(NodeAction.NODE_ACTION_SET_SELECTION).setSelectionStart(1).setSelectionEnd(3).setRequestId(1),
+            ).build(),
+        )
+        assertEquals(ActionArguments(selectionStart = 1, selectionEnd = 3), field.arguments.single())
+    }
+
+    @Test
+    fun fr18_announcements_and_toasts_reach_the_host_only_while_a_screen_reader_listens() {
+        started()
+        watch(3, true)
+        scheduler.advance(10)
+        fun announcements() = daemon.sentMessages().filter { it.hasAccessibilityAnnouncement() }.map { it.accessibilityAnnouncement }
+        event(AccessibilityChange(AccessibilityChange.Kind.TOAST, text = "Saved"))
+        assertTrue(announcements().isEmpty())
+        listen(3, true)
+        event(AccessibilityChange(AccessibilityChange.Kind.TOAST, text = "Saved"))
+        event(AccessibilityChange(AccessibilityChange.Kind.ANNOUNCEMENT, 3, text = "Page 2"))
+        val said = announcements()
+        assertEquals(listOf("Saved", "Page 2"), said.map { it.text })
+        assertEquals(listOf(true, false), said.map { it.toast })
+        assertEquals(listOf(3, 3), said.map { it.taskId })
+    }
+
+    @Test
+    fun fr18_accessibility_focus_and_collections_are_exported() {
+        val node = AccessibilityExport.toNode(
+            1, emptyList(),
+            NodeInfo(
+                accessibilityFocused = true,
+                collectionItem = CollectionItemInfo(row = 4, rowSpan = 1, column = 0, columnSpan = 1),
+                liveRegion = 1,
+                paneTitle = "Wi-Fi",
+                heading = true,
+                headingLevel = 2,
+                window = WindowInfo("Delete?", modal = true, popup = false),
+            ),
+            TaskBounds(0, 0, 0, 0),
+        )
+        assertTrue(node.accessibilityFocused)
+        assertEquals(4, node.collectionItem.row)
+        assertEquals(1, node.liveRegion)
+        assertEquals("Wi-Fi", node.paneTitle)
+        assertEquals(2, node.headingLevel)
+        assertTrue(node.window.modal)
+        assertEquals("Delete?", node.window.title)
+        // A node that is not editable says no selection.
+        assertFalse(AccessibilityExport.toNode(1, emptyList(), NodeInfo(selectionStart = 1, selectionEnd = 1), TaskBounds(0, 0, 0, 0)).hasTextSelection)
+    }
 
     @Test
     fun fr18_the_service_reads_nothing_until_the_host_watches_a_task() {

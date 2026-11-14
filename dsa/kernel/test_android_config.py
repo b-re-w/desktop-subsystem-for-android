@@ -85,6 +85,54 @@ class AndroidKernelConfigTests(unittest.TestCase):
         self.assertIn('+#define DSA_HEADER_MAGIC "DSAVPIC1"', patch)
         self.assertIn("+#define DSA_SHARED_MEMORY_SIZE _IOR('D', 0x50, __u64)", patch)
 
+    def test_pr7_each_app_maps_only_the_graphics_memory_it_has_the_key_of(self):
+        # The renderer hands out the graphics region in grants; the driver lets a file map a
+        # grant only once it has shown the grant's key, and one file at a time.
+        patch = (PATCHES / "dsa-shared-memory.patch").read_text()
+        self.assertIn("+++ b/drivers/misc/dsa_graphics_memory.c", patch)
+        self.assertIn("+obj-$(CONFIG_DSA_SHARED_MEMORY)\t+= dsa_graphics_memory.o", patch)
+        self.assertIn("+module_param_cb(graphics_memory, &dsa_graphics_memory_ops, NULL, 0644);", patch)
+        self.assertIn('+\t.name = "dsa_graphics_memory",', patch)
+        # The layout dsa/graphics/include/dsa_graphics_memory.h gives the renderer.
+        header = (Path(__file__).parent.parent / "graphics" / "include" / "dsa_graphics_memory.h").read_text()
+        self.assertIn("kGrantsMagic[8] = {'D', 'S', 'A', 'G', 'R', 'N', 'T', '1'}", header)
+        self.assertIn('+#define DSA_GRANTS_MAGIC "DSAGRNT1"', patch)
+        for name, value in [("kGraphicsGranule", "64 * 1024"), ("kGrantsHeaderBytes", "64"),
+                            ("kGrantEntryBytes", "32"), ("kGrantsRegionIdAt", "8"),
+                            ("kGrantsDataLengthAt", "16"), ("kGrantsGranuleAt", "24"),
+                            ("kGrantKeyAt", "0"), ("kGrantLengthAt", "8"), ("kGrantSeqAt", "16"),
+                            ("kSlotBound", "1"), ("kSlotReleased", "2")]:
+            self.assertIn(f"inline constexpr uint64_t {name} = {value};", header)
+        for line in ["+#define DSA_GRAPHICS_GRANULE 0x10000ULL", "+#define DSA_GRANTS_HEADER_BYTES 64",
+                     "+#define DSA_GRANT_ENTRY_BYTES 32", "+#define DSA_GRANTS_REGION_ID_AT 8",
+                     "+#define DSA_GRANTS_DATA_LENGTH_AT 16", "+#define DSA_GRANTS_GRANULE_AT 24",
+                     "+#define DSA_GRANT_KEY_AT 0", "+#define DSA_GRANT_LENGTH_AT 8",
+                     "+#define DSA_GRANT_SEQ_AT 16", "+#define DSA_SLOT_BOUND 1", "+#define DSA_SLOT_RELEASED 2"]:
+            self.assertIn(line, patch)
+        body = patch[patch.index("+++ b/drivers/misc/dsa_graphics_memory.c"):]
+        # Bind says "bound", fences, and reads the key again: the renderer's revoke mirrors it.
+        bind = body[body.index("+static long dsa_gfx_bind("):body.index("+static long dsa_gfx_release_grant(")]
+        bound = bind.index("| DSA_SLOT_BOUND);")
+        self.assertLess(bound, bind.index("+\tsmp_mb();", bound))
+        self.assertLess(bind.index("+\tsmp_mb();", bound),
+                        bind.index("dsa_gfx_load(entry + DSA_GRANT_KEY_AT) != grant.key", bound))
+        self.assertIn("find_next_bit(dsa_gfx_bound, index + count, index)", bind)
+        # Letting go takes every mapping away before the slot says "released".
+        let_go = body[body.index("+static void dsa_gfx_let_go("):body.index("+static long dsa_gfx_bind(")]
+        self.assertLess(let_go.index("unmap_mapping_range("), let_go.index("DSA_SLOT_RELEASED"))
+        # Pages come in on a fault that checks the binding, never mapped ahead of it, and a
+        # child does not inherit them.
+        self.assertIn("+\t\tret = vmf_insert_pfn(", body)
+        self.assertNotIn("remap_pfn_range", body)
+        self.assertIn("VM_DONTCOPY", body)
+        self.assertIn("+\tif (!(vma->vm_flags & VM_SHARED))", body)
+        # Never the guest's RAM; the release slots are never granted.
+        self.assertIn("IORESOURCE_SYSTEM_RAM", body)
+        self.assertIn("grant.offset < dsa_gfx_ack_bytes", body)
+        for ioctl in ["_IOR('D', 0x51, struct dsa_graphics_memory_info)",
+                      "_IOW('D', 0x52, struct dsa_graphics_memory_grant)", "_IOW('D', 0x53, __u64)"]:
+            self.assertIn(ioctl, body)
+
     def test_pr7_the_shared_memory_patch_hunks_count_their_lines(self):
         patch = (PATCHES / "dsa-shared-memory.patch").read_text()
         for header, body in re.findall(r"^(@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@.*)\n((?:[ +-].*\n?)*)",
@@ -431,6 +479,23 @@ class AndroidKernelConfigTests(unittest.TestCase):
                        "CONFIG_WLAN=y", "CONFIG_VIRT_WIFI=y"]:
             self.assertIn(option, config)
         self.assertIn("CONFIG_HYPERV_NET=y", ARM64_CONFIG.read_text().splitlines())
+
+    def test_nfr2_pr3_the_graphics_driver_can_ask_which_pages_an_app_wrote(self):
+        # The guest Vulkan driver finds what an app wrote into its copies of host-visible
+        # memory with userfaultfd's asynchronous write protection and PAGEMAP_SCAN. Without
+        # them it hashes all of the app's mapped memory at every submit.
+        lines = fragment_lines(CONFIG)
+        for option in ["CONFIG_USERFAULTFD=y", "CONFIG_HAVE_ARCH_USERFAULTFD_WP=y",
+                       "CONFIG_PTE_MARKER_UFFD_WP=y", "CONFIG_PROC_PAGE_MONITOR=y"]:
+            self.assertIn(option, lines)
+        # Soft-dirty bits exist on x86_64 only; a line for them in the common fragment would
+        # fail the arm64 build's check that every line took effect.
+        self.assertNotIn("CONFIG_MEM_SOFT_DIRTY=y", lines)
+        self.assertNotIn("CONFIG_MEM_SOFT_DIRTY=y", fragment_lines(ARM64_CONFIG))
+        # PAGEMAP_SCAN came with Linux 6.7, and the kernel is newer.
+        tag = Path(__file__).with_name("wsl-kernel.tag").read_text().strip()
+        version = re.search(r"(\d+)\.(\d+)", tag)
+        self.assertGreaterEqual((int(version.group(1)), int(version.group(2))), (6, 7), tag)
 
     def test_pr3_vgem_is_built_into_the_guest_kernel(self):
         config = CONFIG.read_text()

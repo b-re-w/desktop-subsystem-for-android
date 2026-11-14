@@ -949,6 +949,33 @@ struct AccessibilityHub {
     /// The trees whose first update since their newest watch began the service's log has
     /// named, so a watch that never gets one shows by the missing line.
     announced: HashSet<AccessibilityTarget>,
+    /// The watches of each task whose client says a screen reader listens. The guest sends
+    /// a task's focus at once while it has at least one.
+    listening: HashMap<i32, HashSet<u64>>,
+}
+
+impl AccessibilityHub {
+    /// Whether a screen reader listens for task `task_id`'s events through any watch.
+    fn is_listening(&self, task_id: i32) -> bool {
+        self.listening
+            .get(&task_id)
+            .is_some_and(|watches| !watches.is_empty())
+    }
+
+    /// Notes whether watch `id` of the task listens; true when that changes the task's.
+    fn set_listening(&mut self, task_id: i32, id: u64, listening: bool) -> bool {
+        let before = self.is_listening(task_id);
+        let watches = self.listening.entry(task_id).or_default();
+        if listening {
+            watches.insert(id);
+        } else {
+            watches.remove(&id);
+        }
+        if watches.is_empty() {
+            self.listening.remove(&task_id);
+        }
+        before != self.is_listening(task_id)
+    }
 }
 
 /// The guest's tasks and who is watching them, under one lock, so a new watcher's starting
@@ -1275,10 +1302,21 @@ impl Shared {
         }
     }
 
-    /// The tasks and widgets whose accessibility tree is watched.
-    fn watched_trees(&self) -> Vec<AccessibilityTarget> {
+    /// The tasks and widgets whose accessibility tree is watched, each with whether a screen
+    /// reader listens for its events (never for a widget: listening is said per task).
+    fn watched_trees(&self) -> Vec<(AccessibilityTarget, bool)> {
         let hub = self.accessibility.lock().unwrap_or_else(|e| e.into_inner());
-        let mut targets: Vec<AccessibilityTarget> = hub.watchers.keys().copied().collect();
+        let mut targets: Vec<(AccessibilityTarget, bool)> = hub
+            .watchers
+            .keys()
+            .map(|target| {
+                let listening = match target {
+                    AccessibilityTarget::Task(task_id) => hub.is_listening(*task_id),
+                    AccessibilityTarget::Widget(_) => false,
+                };
+                (*target, listening)
+            })
+            .collect();
         targets.sort();
         targets
     }
@@ -2982,10 +3020,38 @@ impl Session {
             &self.commands,
             Body::AccessibilityWatch(target.to_control_watch(true)),
         );
+        // Whether a screen reader listens is said per task: a widget's tree is read whole each
+        // time, so there is nothing faster to ask for.
+        let listen_task = match target {
+            AccessibilityTarget::Task(task_id) => Some(task_id),
+            AccessibilityTarget::Widget(_) => None,
+        };
+        // A new watch of a task a screen reader listens for: the agent forgets that with
+        // the `on` it was just sent, so it hears it again.
+        let listening = listen_task.filter(|task_id| {
+            let hub = self
+                .shared
+                .accessibility
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            hub.is_listening(*task_id)
+        });
+        if let Some(task_id) = listening {
+            send_quietly(
+                &self.shared,
+                &self.commands,
+                Body::AccessibilityListening(control::AccessibilityListening {
+                    task_id,
+                    listening: true,
+                }),
+            );
+        }
         let shared = Arc::clone(&self.shared);
         let commands = self.commands.clone();
+        let listen_shared = Arc::clone(&self.shared);
+        let listen_commands = self.commands.clone();
         AccessibilityWatch::new(updates, move || {
-            let last = {
+            let (last, quiet) = {
                 let mut hub = shared
                     .accessibility
                     .lock()
@@ -2996,7 +3062,8 @@ impl Session {
                 if last {
                     hub.watchers.remove(&target);
                 }
-                last
+                let quiet = listen_task.filter(|task_id| hub.set_listening(*task_id, id, false));
+                (last, quiet)
             };
             if last {
                 eprintln!(
@@ -3006,6 +3073,54 @@ impl Session {
                     &shared,
                     &commands,
                     Body::AccessibilityWatch(target.to_control_watch(false)),
+                );
+            } else if let Some(task_id) = quiet {
+                eprintln!(
+                    "accessibility: no screen reader listens for task {task_id} any more; \
+                     Android keeps its usual waits"
+                );
+                send_quietly(
+                    &shared,
+                    &commands,
+                    Body::AccessibilityListening(control::AccessibilityListening {
+                        task_id,
+                        listening: false,
+                    }),
+                );
+            }
+        })
+        .with_listening(move |listening| {
+            let Some(task_id) = listen_task else {
+                return;
+            };
+            let changed = {
+                let mut hub = listen_shared
+                    .accessibility
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                hub.set_listening(task_id, id, listening)
+            };
+            if changed {
+                eprintln!(
+                    "accessibility: a screen reader {} for task {task_id}; Android {}",
+                    if listening {
+                        "listens"
+                    } else {
+                        "no longer listens"
+                    },
+                    if listening {
+                        "sends its focus at once"
+                    } else {
+                        "keeps its usual waits"
+                    }
+                );
+                send_quietly(
+                    &listen_shared,
+                    &listen_commands,
+                    Body::AccessibilityListening(control::AccessibilityListening {
+                        task_id,
+                        listening,
+                    }),
                 );
             }
         })
@@ -5926,9 +6041,15 @@ impl Worker {
             if let Some(body) = self.shared.android_files_body() {
                 self.send_body(body);
             }
-            // A new agent reads no task's or widget's accessibility tree until it is asked.
-            for target in self.shared.watched_trees() {
+            // A new agent reads no task's or widget's accessibility tree until it is asked,
+            // and keeps its usual waits until it hears a screen reader listens.
+            for (target, listening) in self.shared.watched_trees() {
                 self.send_body(Body::AccessibilityWatch(target.to_control_watch(true)));
+                if let (AccessibilityTarget::Task(task_id), true) = (target, listening) {
+                    self.send_body(Body::AccessibilityListening(
+                        control::AccessibilityListening { task_id, listening },
+                    ));
+                }
             }
             // A new agent takes the clipboards to be shared, and has none of the host's text.
             self.clipboard_last = None;
@@ -6807,6 +6928,16 @@ impl Worker {
                     GuestAccessibility::ActionResult(ActionResult::from_control(result)),
                 );
             }
+            Some(Body::AccessibilityAnnouncement(announcement)) => {
+                // An announcement comes from an app, so it is always about a task.
+                let target = AccessibilityTarget::Task(announcement.task_id);
+                self.shared.publish_accessibility(
+                    target,
+                    GuestAccessibility::Announcement(
+                        crate::accessibility::Announcement::from_control(announcement),
+                    ),
+                );
+            }
             Some(Body::PrintJob(job)) => {
                 let step = self.prints().start(job);
                 self.print_step(step);
@@ -6940,6 +7071,7 @@ impl Worker {
             | Some(Body::ResizeWidget(_))
             | Some(Body::WidgetPointer(_))
             | Some(Body::AccessibilityWatch(_))
+            | Some(Body::AccessibilityListening(_))
             | Some(Body::AccessibilityAction(_))
             | Some(Body::LogStream(_))
             | Some(Body::LogDump(_))

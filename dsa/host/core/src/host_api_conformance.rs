@@ -154,6 +154,8 @@ pub struct FakeAndroid {
     /// order.
     pub accessibility_watches: Arc<Mutex<Vec<(i32, bool)>>>,
     accessibility_watchers: Mutex<Vec<(i32, Sender<GuestAccessibility>)>>,
+    /// Each time a watch's client said whether a screen reader listens, in order.
+    pub accessibility_listening: Arc<Mutex<Vec<(i32, bool)>>>,
     /// The accessibility actions it was asked for, in order.
     pub accessibility_actions: Mutex<Vec<(i32, ActionRequest)>>,
     /// The ARM translation image a DSA from before the add-on disk left on its disk, if any.
@@ -293,6 +295,7 @@ impl FakeAndroid {
             widget_reconfigure_answer: Mutex::new(None),
             accessibility_watches: Arc::new(Mutex::new(Vec::new())),
             accessibility_watchers: Mutex::new(Vec::new()),
+            accessibility_listening: Arc::new(Mutex::new(Vec::new())),
             accessibility_actions: Mutex::new(Vec::new()),
             arm_image: Mutex::new(None),
             gapps_image: Mutex::new(None),
@@ -553,9 +556,13 @@ impl UserAndroid for FakeAndroid {
             .unwrap()
             .push((task_id, true));
         let watches = Arc::clone(&self.accessibility_watches);
-        Some(AccessibilityWatch::new(rx, move || {
-            watches.lock().unwrap().push((task_id, false));
-        }))
+        let listening = Arc::clone(&self.accessibility_listening);
+        Some(
+            AccessibilityWatch::new(rx, move || {
+                watches.lock().unwrap().push((task_id, false));
+            })
+            .with_listening(move |on| listening.lock().unwrap().push((task_id, on))),
+        )
     }
     fn accessibility_action(
         &self,
@@ -1435,6 +1442,10 @@ macro_rules! host_api_conformance {
         #[test]
         fn fr18_a_watched_tree_and_action_results_reach_the_client() {
             $crate::host_api_conformance::accessibility_reaches_the_client(&mut || $make);
+        }
+        #[test]
+        fn fr18_a_screen_reader_listening_reaches_the_callers_android() {
+            $crate::host_api_conformance::accessibility_listening_reaches_the_caller(&mut || $make);
         }
         #[test]
         fn fr18_actions_reach_the_callers_android_and_closing_ends_the_watch() {
@@ -3106,6 +3117,7 @@ fn small_tree(epoch: u32) -> TreeUpdate {
         ],
         removed: vec![],
         focused: Some(2),
+        accessibility_focused: None,
     }
 }
 
@@ -3148,6 +3160,45 @@ pub fn accessibility_reaches_the_client(make: MakeLocal<'_>) {
         stream.next(WAIT).unwrap(),
         Some(GuestAccessibility::ActionResult(result))
     );
+    // An app's toast reaches the window's screen reader as well.
+    let toast = crate::accessibility::Announcement {
+        text: "Saved".into(),
+        assertive: false,
+        toast: true,
+    };
+    android.publish_accessibility(7, GuestAccessibility::Announcement(toast.clone()));
+    assert_eq!(
+        stream.next(WAIT).unwrap(),
+        Some(GuestAccessibility::Announcement(toast))
+    );
+}
+
+pub fn accessibility_listening_reaches_the_caller(make: MakeLocal<'_>) {
+    let (listener, mut connector, user) = make();
+    let androids = Arc::new(FakeAndroids::default());
+    let _service = RunningService::start(listener, androids.clone());
+    let mut stream = connect(&mut *connector)
+        .watch_accessibility(7)
+        .expect("watching the tree");
+    let android = androids.of(&user).expect("the caller's Android");
+    wait_for_watches(&android, &[(7, true)]);
+    stream.set_listening(true).unwrap();
+    stream.set_listening(false).unwrap();
+    let deadline = Instant::now() + WAIT;
+    while android.accessibility_listening.lock().unwrap().len() < 2 {
+        assert!(Instant::now() < deadline, "the listening never arrived");
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(
+        *android.accessibility_listening.lock().unwrap(),
+        vec![(7, true), (7, false)]
+    );
+    // Saying it keeps the watch: the connection is not closed for it.
+    android.publish_accessibility(7, GuestAccessibility::Tree(small_tree(1)));
+    assert_eq!(
+        stream.next(WAIT).unwrap(),
+        Some(GuestAccessibility::Tree(small_tree(1)))
+    );
 }
 
 pub fn accessibility_actions_reach_the_caller(make: MakeLocal<'_>) {
@@ -3164,6 +3215,7 @@ pub fn accessibility_actions_reach_the_caller(make: MakeLocal<'_>) {
         action: NodeAction::Click,
         text: String::new(),
         request_id: 4,
+        ..ActionRequest::default()
     };
     stream.perform(&action).unwrap();
     let deadline = Instant::now() + WAIT;
@@ -3185,6 +3237,7 @@ pub fn accessibility_actions_reach_the_caller(make: MakeLocal<'_>) {
             action: NodeAction::Click,
             text: String::new(),
             request_id: 0,
+            ..ActionRequest::default()
         }
     };
     stream.perform(&refused).unwrap();

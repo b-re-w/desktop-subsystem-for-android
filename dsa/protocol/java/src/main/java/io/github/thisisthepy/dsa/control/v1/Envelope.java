@@ -95,7 +95,6 @@ public  final class Envelope extends
     NOTIFICATION_REMOVED(71),
     NOTIFICATION_CLICKED(72),
     NOTIFICATION_DISMISSED(73),
-    NOTIFICATION_BUTTON_CLICKED(730),
     BACKGROUND_APP(74),
     BACKGROUND_APP_GONE(75),
     BACKGROUND_APP_ACTION(76),
@@ -116,6 +115,8 @@ public  final class Envelope extends
     ACCESSIBILITY_TREE(81),
     ACCESSIBILITY_ACTION(82),
     ACCESSIBILITY_ACTION_RESULT(83),
+    ACCESSIBILITY_LISTENING(84),
+    ACCESSIBILITY_ANNOUNCEMENT(85),
     AUDIO_OUTPUT_OPEN(100),
     AUDIO_OUTPUT_READY(101),
     AUDIO_PCM(102),
@@ -311,7 +312,6 @@ public  final class Envelope extends
         case 71: return NOTIFICATION_REMOVED;
         case 72: return NOTIFICATION_CLICKED;
         case 73: return NOTIFICATION_DISMISSED;
-        case 730: return NOTIFICATION_BUTTON_CLICKED;
         case 74: return BACKGROUND_APP;
         case 75: return BACKGROUND_APP_GONE;
         case 76: return BACKGROUND_APP_ACTION;
@@ -332,6 +332,8 @@ public  final class Envelope extends
         case 81: return ACCESSIBILITY_TREE;
         case 82: return ACCESSIBILITY_ACTION;
         case 83: return ACCESSIBILITY_ACTION_RESULT;
+        case 84: return ACCESSIBILITY_LISTENING;
+        case 85: return ACCESSIBILITY_ANNOUNCEMENT;
         case 100: return AUDIO_OUTPUT_OPEN;
         case 101: return AUDIO_OUTPUT_READY;
         case 102: return AUDIO_PCM;
@@ -4208,56 +4210,6 @@ public  final class Envelope extends
     }
   }
 
-  public static final int NOTIFICATION_BUTTON_CLICKED_FIELD_NUMBER = 730;
-  /**
-   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-   */
-  @java.lang.Override
-  public boolean hasNotificationButtonClicked() {
-    return bodyCase_ == 730;
-  }
-  /**
-   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-   */
-  @java.lang.Override
-  public io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked getNotificationButtonClicked() {
-    if (bodyCase_ == 730) {
-       return (io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked) body_;
-    }
-    return io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.getDefaultInstance();
-  }
-  /**
-   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-   */
-  private void setNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
-    value.getClass();
-  body_ = value;
-    bodyCase_ = 730;
-  }
-  /**
-   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-   */
-  private void mergeNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
-    value.getClass();
-  if (bodyCase_ == 730 &&
-        body_ != io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.getDefaultInstance()) {
-      body_ = io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.newBuilder((io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked) body_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      body_ = value;
-    }
-    bodyCase_ = 730;
-  }
-  /**
-   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-   */
-  private void clearNotificationButtonClicked() {
-    if (bodyCase_ == 730) {
-      bodyCase_ = 0;
-      body_ = null;
-    }
-  }
-
   public static final int BACKGROUND_APP_FIELD_NUMBER = 74;
   /**
    * <code>.dsa.control.v1.BackgroundApp background_app = 74;</code>
@@ -5253,6 +5205,106 @@ public  final class Envelope extends
    */
   private void clearAccessibilityActionResult() {
     if (bodyCase_ == 83) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
+  public static final int ACCESSIBILITY_LISTENING_FIELD_NUMBER = 84;
+  /**
+   * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+   */
+  @java.lang.Override
+  public boolean hasAccessibilityListening() {
+    return bodyCase_ == 84;
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.AccessibilityListening getAccessibilityListening() {
+    if (bodyCase_ == 84) {
+       return (io.github.thisisthepy.dsa.control.v1.AccessibilityListening) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.AccessibilityListening.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+   */
+  private void setAccessibilityListening(io.github.thisisthepy.dsa.control.v1.AccessibilityListening value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 84;
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+   */
+  private void mergeAccessibilityListening(io.github.thisisthepy.dsa.control.v1.AccessibilityListening value) {
+    value.getClass();
+  if (bodyCase_ == 84 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.AccessibilityListening.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.AccessibilityListening.newBuilder((io.github.thisisthepy.dsa.control.v1.AccessibilityListening) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 84;
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+   */
+  private void clearAccessibilityListening() {
+    if (bodyCase_ == 84) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
+  public static final int ACCESSIBILITY_ANNOUNCEMENT_FIELD_NUMBER = 85;
+  /**
+   * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+   */
+  @java.lang.Override
+  public boolean hasAccessibilityAnnouncement() {
+    return bodyCase_ == 85;
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement getAccessibilityAnnouncement() {
+    if (bodyCase_ == 85) {
+       return (io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+   */
+  private void setAccessibilityAnnouncement(io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 85;
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+   */
+  private void mergeAccessibilityAnnouncement(io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement value) {
+    value.getClass();
+  if (bodyCase_ == 85 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement.newBuilder((io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 85;
+  }
+  /**
+   * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+   */
+  private void clearAccessibilityAnnouncement() {
+    if (bodyCase_ == 85) {
       bodyCase_ = 0;
       body_ = null;
     }
@@ -14220,54 +14272,6 @@ public  final class Envelope extends
     }
 
     /**
-     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-     */
-    @java.lang.Override
-    public boolean hasNotificationButtonClicked() {
-      return instance.hasNotificationButtonClicked();
-    }
-    /**
-     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-     */
-    @java.lang.Override
-    public io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked getNotificationButtonClicked() {
-      return instance.getNotificationButtonClicked();
-    }
-    /**
-     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-     */
-    public Builder setNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
-      copyOnWrite();
-      instance.setNotificationButtonClicked(value);
-      return this;
-    }
-    /**
-     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-     */
-    public Builder setNotificationButtonClicked(
-        io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.Builder builderForValue) {
-      copyOnWrite();
-      instance.setNotificationButtonClicked(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-     */
-    public Builder mergeNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
-      copyOnWrite();
-      instance.mergeNotificationButtonClicked(value);
-      return this;
-    }
-    /**
-     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
-     */
-    public Builder clearNotificationButtonClicked() {
-      copyOnWrite();
-      instance.clearNotificationButtonClicked();
-      return this;
-    }
-
-    /**
      * <code>.dsa.control.v1.BackgroundApp background_app = 74;</code>
      */
     @java.lang.Override
@@ -15224,6 +15228,102 @@ public  final class Envelope extends
     public Builder clearAccessibilityActionResult() {
       copyOnWrite();
       instance.clearAccessibilityActionResult();
+      return this;
+    }
+
+    /**
+     * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+     */
+    @java.lang.Override
+    public boolean hasAccessibilityListening() {
+      return instance.hasAccessibilityListening();
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.AccessibilityListening getAccessibilityListening() {
+      return instance.getAccessibilityListening();
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+     */
+    public Builder setAccessibilityListening(io.github.thisisthepy.dsa.control.v1.AccessibilityListening value) {
+      copyOnWrite();
+      instance.setAccessibilityListening(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+     */
+    public Builder setAccessibilityListening(
+        io.github.thisisthepy.dsa.control.v1.AccessibilityListening.Builder builderForValue) {
+      copyOnWrite();
+      instance.setAccessibilityListening(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+     */
+    public Builder mergeAccessibilityListening(io.github.thisisthepy.dsa.control.v1.AccessibilityListening value) {
+      copyOnWrite();
+      instance.mergeAccessibilityListening(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+     */
+    public Builder clearAccessibilityListening() {
+      copyOnWrite();
+      instance.clearAccessibilityListening();
+      return this;
+    }
+
+    /**
+     * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+     */
+    @java.lang.Override
+    public boolean hasAccessibilityAnnouncement() {
+      return instance.hasAccessibilityAnnouncement();
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement getAccessibilityAnnouncement() {
+      return instance.getAccessibilityAnnouncement();
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+     */
+    public Builder setAccessibilityAnnouncement(io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement value) {
+      copyOnWrite();
+      instance.setAccessibilityAnnouncement(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+     */
+    public Builder setAccessibilityAnnouncement(
+        io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement.Builder builderForValue) {
+      copyOnWrite();
+      instance.setAccessibilityAnnouncement(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+     */
+    public Builder mergeAccessibilityAnnouncement(io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement value) {
+      copyOnWrite();
+      instance.mergeAccessibilityAnnouncement(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+     */
+    public Builder clearAccessibilityAnnouncement() {
+      copyOnWrite();
+      instance.clearAccessibilityAnnouncement();
       return this;
     }
 
@@ -20350,6 +20450,8 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.AccessibilityTree.class,
             io.github.thisisthepy.dsa.control.v1.AccessibilityAction.class,
             io.github.thisisthepy.dsa.control.v1.AccessibilityActionResult.class,
+            io.github.thisisthepy.dsa.control.v1.AccessibilityListening.class,
+            io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement.class,
             io.github.thisisthepy.dsa.control.v1.ListWidgetProviders.class,
             io.github.thisisthepy.dsa.control.v1.WidgetProviders.class,
             io.github.thisisthepy.dsa.control.v1.AddWidget.class,
@@ -20485,10 +20587,9 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.DnsQuery.class,
             io.github.thisisthepy.dsa.control.v1.DnsAnswer.class,
             io.github.thisisthepy.dsa.control.v1.LaunchPlacement.class,
-            io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.class,
           };
           java.lang.String info =
-              "\u0000\u00c9\u0001\u0000\u0001\u02da\u00c9\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u00ca\u0001\u0000\u0001\u02c6\u00ca\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
               "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
               "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000" +
@@ -20496,27 +20597,27 @@ public  final class Envelope extends
               "<\u0000(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000-<\u0000.<\u00002<\u00003<\u00004" +
               "<\u00005<\u00006<\u0000<<\u0000=<\u0000><\u0000?<\u0000@<\u0000A<\u0000B<\u0000C" +
               "<\u0000D<\u0000E<\u0000F<\u0000G<\u0000H<\u0000I<\u0000J<\u0000K<\u0000L<\u0000M" +
-              "<\u0000N<\u0000O<\u0000P<\u0000Q<\u0000R<\u0000S<\u0000Z<\u0000[<\u0000\\<\u0000" +
-              "]<\u0000^<\u0000_<\u0000`<\u0000a<\u0000b<\u0000c<\u0000d<\u0000e<\u0000f<\u0000" +
-              "g<\u0000h<\u0000i<\u0000j<\u0000k<\u0000n<\u0000x<\u0000y<\u0000z<\u0000{<\u0000" +
-              "|<\u0000}<\u0000~<\u0000<\u0000\u0080<\u0000\u0081<\u0000\u0082<\u0000\u0083<\u0000" +
-              "\u0084<\u0000\u0085<\u0000\u0086<\u0000\u0087<\u0000\u0088<\u0000\u008c<\u0000\u008d" +
-              "<\u0000\u0098<\u0000\u0099<\u0000\u009a<\u0000\u009b<\u0000\u009c<\u0000\u00c8<\u0000" +
-              "\u00c9<\u0000\u00ca<\u0000\u00dc<\u0000\u00dd<\u0000\u00de<\u0000\u00df<\u0000\u00f0" +
-              "<\u0000\u00f1<\u0000\u00f2<\u0000\u0104<\u0000\u0105<\u0000\u0106<\u0000\u0107<\u0000" +
-              "\u0108<\u0000\u0109<\u0000\u010a<\u0000\u010b<\u0000\u0122<\u0000\u0123<\u0000\u0154" +
-              "<\u0000\u0155<\u0000\u0156<\u0000\u0157<\u0000\u0158<\u0000\u015e<\u0000\u015f<\u0000" +
-              "\u0160<\u0000\u0161<\u0000\u0162<\u0000\u0179<\u0000\u017c<\u0000\u017d<\u0000\u017e" +
-              "<\u0000\u017f<\u0000\u0192<\u0000\u0193<\u0000\u0194<\u0000\u0195<\u0000\u0196<\u0000" +
-              "\u0197<\u0000\u0198<\u0000\u0199<\u0000\u019a<\u0000\u019b<\u0000\u019c<\u0000\u019d" +
-              "<\u0000\u019e<\u0000\u019f<\u0000\u01d6<\u0000\u01d7<\u0000\u01d8<\u0000\u01d9<\u0000" +
-              "\u026c<\u0000\u026d<\u0000\u026e<\u0000\u026f<\u0000\u0270<\u0000\u0271<\u0000\u0272" +
-              "<\u0000\u0273<\u0000\u0274<\u0000\u0275<\u0000\u0276<\u0000\u0277<\u0000\u0280<\u0000" +
-              "\u0281<\u0000\u0282<\u0000\u0283<\u0000\u0284<\u0000\u0285<\u0000\u0286<\u0000\u0287" +
-              "<\u0000\u0288<\u0000\u0289<\u0000\u028a<\u0000\u028b<\u0000\u028c<\u0000\u028d<\u0000" +
-              "\u028e<\u0000\u028f<\u0000\u0290<\u0000\u0291<\u0000\u0292<\u0000\u02a8<\u0000\u02a9" +
-              "<\u0000\u02aa<\u0000\u02ab<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3<\u0000\u02c6<\u0000" +
-              "\u02da<\u0000";
+              "<\u0000N<\u0000O<\u0000P<\u0000Q<\u0000R<\u0000S<\u0000T<\u0000U<\u0000Z<\u0000[" +
+              "<\u0000\\<\u0000]<\u0000^<\u0000_<\u0000`<\u0000a<\u0000b<\u0000c<\u0000d<\u0000" +
+              "e<\u0000f<\u0000g<\u0000h<\u0000i<\u0000j<\u0000k<\u0000n<\u0000x<\u0000y<\u0000" +
+              "z<\u0000{<\u0000|<\u0000}<\u0000~<\u0000<\u0000\u0080<\u0000\u0081<\u0000\u0082" +
+              "<\u0000\u0083<\u0000\u0084<\u0000\u0085<\u0000\u0086<\u0000\u0087<\u0000\u0088<\u0000" +
+              "\u008c<\u0000\u008d<\u0000\u0098<\u0000\u0099<\u0000\u009a<\u0000\u009b<\u0000\u009c" +
+              "<\u0000\u00c8<\u0000\u00c9<\u0000\u00ca<\u0000\u00dc<\u0000\u00dd<\u0000\u00de<\u0000" +
+              "\u00df<\u0000\u00f0<\u0000\u00f1<\u0000\u00f2<\u0000\u0104<\u0000\u0105<\u0000\u0106" +
+              "<\u0000\u0107<\u0000\u0108<\u0000\u0109<\u0000\u010a<\u0000\u010b<\u0000\u0122<\u0000" +
+              "\u0123<\u0000\u0154<\u0000\u0155<\u0000\u0156<\u0000\u0157<\u0000\u0158<\u0000\u015e" +
+              "<\u0000\u015f<\u0000\u0160<\u0000\u0161<\u0000\u0162<\u0000\u0179<\u0000\u017c<\u0000" +
+              "\u017d<\u0000\u017e<\u0000\u017f<\u0000\u0192<\u0000\u0193<\u0000\u0194<\u0000\u0195" +
+              "<\u0000\u0196<\u0000\u0197<\u0000\u0198<\u0000\u0199<\u0000\u019a<\u0000\u019b<\u0000" +
+              "\u019c<\u0000\u019d<\u0000\u019e<\u0000\u019f<\u0000\u01d6<\u0000\u01d7<\u0000\u01d8" +
+              "<\u0000\u01d9<\u0000\u026c<\u0000\u026d<\u0000\u026e<\u0000\u026f<\u0000\u0270<\u0000" +
+              "\u0271<\u0000\u0272<\u0000\u0273<\u0000\u0274<\u0000\u0275<\u0000\u0276<\u0000\u0277" +
+              "<\u0000\u0280<\u0000\u0281<\u0000\u0282<\u0000\u0283<\u0000\u0284<\u0000\u0285<\u0000" +
+              "\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289<\u0000\u028a<\u0000\u028b<\u0000\u028c" +
+              "<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000\u0290<\u0000\u0291<\u0000\u0292<\u0000" +
+              "\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3" +
+              "<\u0000\u02c6<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

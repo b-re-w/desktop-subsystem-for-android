@@ -9,17 +9,18 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use dsa_protocol::control::{
-    envelope::Body, AccessibilityAction, AccessibilityActionResult, AccessibilityNode,
-    AccessibilityTree, AccessibilityWatch, AgentConnected, ApkChunk, AppInfo, AuthChallenge,
-    AuthProof, CancelInstall, ClipboardSharing, ClipboardText, ClockAnswer, ClockProbe, CloseTask,
-    DeviceIdle, Envelope, FileAction, FileChunk, FileProgress, GuestBoot, GuestMemory,
-    GuestNotification, Hello, HelloAccepted, HelloRejected, ImeCommit, ImeComposition, ImeCursor,
-    ImeEditor, ImeInputKind, ImeSetComposingRegion, ImeSetSelection, InstallApk, InstallPart,
-    InstallProgress, InstallResult, InstallStatus, KeyAction, KeyEvent, LaunchApp, LinkHandling,
-    NodeAction, NodeRange, NotificationClicked, NotificationDismissed, NotificationRemoved,
-    OpenFile, OpenLink, PackageState, PointerAction, PointerEvent, PointerTool, PowerHint,
-    PowerHintKind, PowerState, ProcessMemory, QueryPackage, Rect, RejectReason, RequestGuestMemory,
-    ResizeTask, Role, ScreenState, SetTaskDensity, TaskFrames, TaskRemoved, TaskUpdated,
+    envelope::Body, AccessibilityAction, AccessibilityActionResult, AccessibilityAnnouncement,
+    AccessibilityListening, AccessibilityNode, AccessibilityTree, AccessibilityWatch,
+    AgentConnected, ApkChunk, AppInfo, AuthChallenge, AuthProof, CancelInstall, ClipboardSharing,
+    ClipboardText, ClockAnswer, ClockProbe, CloseTask, DeviceIdle, Envelope, FileAction, FileChunk,
+    FileProgress, GuestBoot, GuestMemory, GuestNotification, Hello, HelloAccepted, HelloRejected,
+    ImeCommit, ImeComposition, ImeCursor, ImeEditor, ImeInputKind, ImeSetComposingRegion,
+    ImeSetSelection, InstallApk, InstallPart, InstallProgress, InstallResult, InstallStatus,
+    KeyAction, KeyEvent, LaunchApp, LinkHandling, NodeAction, NodeRange, NotificationClicked,
+    NotificationDismissed, NotificationRemoved, OpenFile, OpenLink, PackageState, PointerAction,
+    PointerEvent, PointerTool, PowerHint, PowerHintKind, PowerState, ProcessMemory, QueryPackage,
+    Rect, RejectReason, RequestGuestMemory, ResizeTask, Role, ScreenState, SetTaskDensity,
+    TaskFrames, TaskRemoved, TaskUpdated,
 };
 use dsa_protocol::control::{
     AddWidget, ListWidgetProviders, ReconfigureWidget, RemoveWidget, ResizeWidget, WidgetAdded,
@@ -241,6 +242,14 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 name: "video_pictures".into(),
                 guest_physical_address: 0x1_0800_0000,
                 length: 64 * 1024 * 1024,
+            })),
+        ),
+        (
+            "guest_shared_memory_graphics",
+            wrap(Body::GuestSharedMemory(GuestSharedMemory {
+                name: "graphics_memory".into(),
+                guest_physical_address: 0x1_1020_0000,
+                length: 256 * 1024 * 1024,
             })),
         ),
         ("video_flush", wrap(Body::VideoFlush(VideoFlush {}))),
@@ -1078,6 +1087,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 ],
                 removed_ids: vec![],
                 focused_id: 3,
+                accessibility_focused_id: 0,
                 widget_id: 0,
             })),
         ),
@@ -1123,10 +1133,63 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                         NodeAction::Select as i32,
                     ],
                     state_description: String::new(),
+                    ..AccessibilityNode::default()
                 }],
                 removed_ids: vec![3],
                 focused_id: 0,
+                accessibility_focused_id: 0,
                 widget_id: 0,
+            })),
+        ),
+        (
+            "accessibility_tree_text",
+            wrap(Body::AccessibilityTree(AccessibilityTree {
+                task_id: 42,
+                epoch: 1,
+                root_ids: vec![1],
+                nodes: vec![AccessibilityNode {
+                    id: 2,
+                    class_name: "android.widget.EditText".into(),
+                    text: "hi".into(),
+                    editable: true,
+                    accessibility_focused: true,
+                    text_selection_start: 1,
+                    text_selection_end: 2,
+                    has_text_selection: true,
+                    ..AccessibilityNode::default()
+                }],
+                focused_id: 2,
+                accessibility_focused_id: 2,
+                ..AccessibilityTree::default()
+            })),
+        ),
+        (
+            "accessibility_announcement",
+            wrap(Body::AccessibilityAnnouncement(AccessibilityAnnouncement {
+                task_id: 42,
+                text: "Saved".into(),
+                assertive: false,
+                toast: true,
+            })),
+        ),
+        (
+            "accessibility_listening",
+            wrap(Body::AccessibilityListening(AccessibilityListening {
+                task_id: 42,
+                listening: true,
+            })),
+        ),
+        (
+            "accessibility_set_selection",
+            wrap(Body::AccessibilityAction(AccessibilityAction {
+                task_id: 42,
+                epoch: 1,
+                node_id: 2,
+                action: NodeAction::SetSelection as i32,
+                request_id: 8,
+                selection_start: 3,
+                selection_end: 5,
+                ..AccessibilityAction::default()
             })),
         ),
         (
@@ -1138,7 +1201,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 action: NodeAction::SetText as i32,
                 text: "hello".into(),
                 request_id: 7,
-                widget_id: 0,
+                ..AccessibilityAction::default()
             })),
         ),
         (

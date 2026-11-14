@@ -67,8 +67,8 @@ use dsa_transport::{Connection, Connector, TransportError};
 pub use dsa_protocol::host_api::types::AppRootStatus;
 
 use crate::accessibility::{
-    AccessibilityTarget, AccessibilityWatch, ActionRequest, ActionResult, GuestAccessibility,
-    TreeUpdate,
+    AccessibilityTarget, AccessibilityWatch, ActionRequest, ActionResult, Announcement,
+    GuestAccessibility, TreeUpdate,
 };
 use crate::adb_discovery::AutoConnectState;
 use crate::addon_disk::{Addon, AddonDisk};
@@ -2844,9 +2844,10 @@ impl HostApiService {
     /// Answers a WatchAccessibility request, then sends the task's tree and the answers to the
     /// client's actions as they come from the caller's Android, and passes each action the
     /// client sends to it, until the client goes away. Closing the connection ends the watch,
-    /// so Android stops reading the task's tree once no client watches it. A client that sends
-    /// anything but an action is disconnected. A desktop widget's tree (`target` a widget) is
-    /// watched the same way.
+    /// so Android stops reading the task's tree once no client watches it. A client may also
+    /// say whether a screen reader listens (AccessibilityListening); one that sends anything
+    /// else is disconnected. A desktop widget's tree (`target` a widget) is watched the same
+    /// way.
     fn watch_accessibility(
         &self,
         mut connection: Box<dyn Connection>,
@@ -2901,6 +2902,9 @@ impl HostApiService {
                     Ok(GuestAccessibility::ActionResult(result)) => {
                         Body::AccessibilityActionResult(result.to_host_api())
                     }
+                    Ok(GuestAccessibility::Announcement(announcement)) => {
+                        Body::AccessibilityAnnouncement(announcement.to_host_api())
+                    }
                     Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Disconnected) => {
                         connection.close();
@@ -2920,6 +2924,12 @@ impl HostApiService {
                 Ok(Envelope {
                     body: Some(Body::AccessibilityAction(action)),
                 }) => ActionRequest::from_host_api(action),
+                Ok(Envelope {
+                    body: Some(Body::AccessibilityListening(listening)),
+                }) => {
+                    watch.set_listening(listening.listening);
+                    continue;
+                }
                 _ => Err("something other than an action arrived".to_string()),
             };
             match action {
@@ -9282,6 +9292,11 @@ impl AccessibilityStream {
             }) => Ok(Some(GuestAccessibility::ActionResult(
                 ActionResult::from_host_api(result),
             ))),
+            Ok(Envelope {
+                body: Some(Body::AccessibilityAnnouncement(announcement)),
+            }) => Ok(Some(GuestAccessibility::Announcement(
+                Announcement::from_host_api(announcement),
+            ))),
             Ok(_) => Err(ClientError::Malformed(
                 "expected an accessibility tree".into(),
             )),
@@ -9294,6 +9309,16 @@ impl AccessibilityStream {
         send(
             &mut *self.connection,
             Body::AccessibilityAction(action.to_host_api()),
+        )
+        .map_err(ClientError::Transport)
+    }
+
+    /// Says whether a screen reader (or another client that follows the focus) listens for
+    /// the window's events: while one does, Android sends the task's focus at once.
+    pub fn set_listening(&mut self, listening: bool) -> Result<(), ClientError> {
+        send(
+            &mut *self.connection,
+            Body::AccessibilityListening(types::AccessibilityListening { listening }),
         )
         .map_err(ClientError::Transport)
     }

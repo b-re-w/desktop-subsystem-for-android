@@ -570,12 +570,35 @@ contents through the agent (`accessibility/AccessibilityExport.kt`).
   or changed, and the IDs of those that are gone. A change waits 100 ms for the rest of its
   burst, and two trees of a task are never less than 250 ms apart, so at most four go out a
   second, and a host client still hears of a change well within a second.
+- **Faster while a screen reader listens.** The host says so per task
+  (`AccessibilityListening`), and only while a screen reader or another client that follows
+  the focus is active. Then a focus, selection, text selection or accessibility focus event
+  sends its node at once, read from the event alone, as a change of that node and of the one
+  that lost the focus, however busy the app was. Other changes wait 25 ms and go at most every
+  50 ms, and the agent reads only the node an event names and what is below it, or the whole
+  task when the node is new. The service then takes every event at once
+  (`notificationTimeout` 0) and the kinds only a screen reader needs. Without a screen reader
+  none of this runs: the service keeps its usual events and 100 ms batching, and the waits
+  above stay as they are.
+- **Announcements and toasts.** While a screen reader listens, an app's announcement
+  (`TYPE_ANNOUNCEMENT`) and a toast go to the host as `AccessibilityAnnouncement`, a toast to
+  the task of the app that showed it.
+- **More than the view.** Each node also carries its accessibility focus, an editable node's
+  selection, a heading's level when a web page says it, its list or grid position
+  (`CollectionInfo`, `CollectionItemInfo`), its live region and pane title, and a window's root
+  its window (title, dialog or pop-up). The links in a node's text (`ClickableSpan`, `URLSpan`)
+  and the app's own actions on it are added below it as nodes a client can press.
+- **Busy apps.** A read the app cuts short is sent as far as it got: a task's first tree as
+  read, a later read as the changes of the nodes it reached, leaving the rest as it was.
+- **IDs outlive a short watch.** A watch that ends keeps the task's IDs for a minute, so an
+  action a host sends on a tree it read once still finds its node when it watches again.
 - **Bounded.** A tree holds at most 2000 nodes and about 400 KB, nearest the top first,
   because one frame reaches the daemon in a binder call of at most 1 MiB. Text is cut at 2000
   characters, and a password's characters never leave the guest, only how many there are.
 - **Actions.** `AccessibilityAction` names a node by its ID and epoch and asks for a click,
-  long click, new text, a scroll forward or backward, the input focus, the accessibility focus
-  or a selection. The agent performs it as the node's accessibility action, which does not
+  long click, new text, a scroll forward or backward, the input focus, the accessibility focus,
+  a selection, a text selection, expand or collapse, a slider's value, showing it on the
+  screen, or scrolling a list to a row and column. The agent performs it as the node's accessibility action, which does not
   move the pointer, and answers with `AccessibilityActionResult`. An action for an earlier
   epoch is refused: its ID may name another node now.
 

@@ -131,6 +131,12 @@ public final class VectorsTest {
                         .setGuestPhysicalAddress(0x108000000L)
                         .setLength(64L * 1024 * 1024))
                 .build());
+        cases.put("guest_shared_memory_graphics", Envelope.newBuilder()
+                .setGuestSharedMemory(GuestSharedMemory.newBuilder()
+                        .setName("graphics_memory")
+                        .setGuestPhysicalAddress(0x110200000L)
+                        .setLength(256L * 1024 * 1024))
+                .build());
         cases.put("video_flush", Envelope.newBuilder()
                 .setVideoFlush(VideoFlush.newBuilder())
                 .build());
@@ -572,6 +578,40 @@ public final class VectorsTest {
                 .build());
         cases.put("accessibility_watch_off", Envelope.newBuilder()
                 .setAccessibilityWatch(AccessibilityWatch.newBuilder().setTaskId(42))
+                .build());
+        cases.put("accessibility_announcement", Envelope.newBuilder()
+                .setAccessibilityAnnouncement(AccessibilityAnnouncement.newBuilder()
+                        .setTaskId(42).setText("Saved").setToast(true))
+                .build());
+        cases.put("accessibility_listening", Envelope.newBuilder()
+                .setAccessibilityListening(AccessibilityListening.newBuilder().setTaskId(42).setListening(true))
+                .build());
+        cases.put("accessibility_set_selection", Envelope.newBuilder()
+                .setAccessibilityAction(AccessibilityAction.newBuilder()
+                        .setTaskId(42)
+                        .setEpoch(1)
+                        .setNodeId(2)
+                        .setAction(NodeAction.NODE_ACTION_SET_SELECTION)
+                        .setRequestId(8)
+                        .setSelectionStart(3)
+                        .setSelectionEnd(5))
+                .build());
+        cases.put("accessibility_tree_text", Envelope.newBuilder()
+                .setAccessibilityTree(AccessibilityTree.newBuilder()
+                        .setTaskId(42)
+                        .setEpoch(1)
+                        .addRootIds(1)
+                        .addNodes(AccessibilityNode.newBuilder()
+                                .setId(2)
+                                .setClassName("android.widget.EditText")
+                                .setText("hi")
+                                .setEditable(true)
+                                .setAccessibilityFocused(true)
+                                .setTextSelectionStart(1)
+                                .setTextSelectionEnd(2)
+                                .setHasTextSelection(true))
+                        .setFocusedId(2)
+                        .setAccessibilityFocusedId(2))
                 .build());
         cases.put("accessibility_tree_full", Envelope.newBuilder()
                 .setAccessibilityTree(AccessibilityTree.newBuilder()

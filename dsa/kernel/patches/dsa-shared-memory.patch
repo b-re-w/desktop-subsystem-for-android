@@ -8,16 +8,16 @@ index b9c11f67..104771e6 100644
  source "drivers/misc/rp1/Kconfig"
 +
 +config DSA_SHARED_MEMORY
-+	bool "DSA: host memory shared with the guest for video pictures"
++	bool "DSA: host memory shared with the guest"
 +	depends on MMU
 +	default n
 +	help
-+	  The Desktop Subsystem for Android host decodes the guest's video
-+	  on its own GPU and writes each picture into memory it shares with
-+	  the guest, instead of sending it through a socket. This driver
-+	  lets the guest's codec HAL map that memory, read only, through
-+	  /dev/dsa_video_pictures, once init has written where it is to
-+	  /sys/module/dsa_shared_memory/parameters/video_pictures.
++	  The Desktop Subsystem for Android host shares memory with the
++	  guest for decoded video pictures and for graphics memory, instead
++	  of sending their bytes through a socket. This driver lets the codec
++	  HAL map the pictures, read only, through /dev/dsa_video_pictures,
++	  and each app map its own graphics allocations through
++	  /dev/dsa_graphics_memory, once init has written where they are.
 +
 +	  Unless you are building the DSA guest kernel, say N.
  endmenu
@@ -25,11 +25,12 @@ diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
 index b32a2597..529bf143 100644
 --- a/drivers/misc/Makefile
 +++ b/drivers/misc/Makefile
-@@ -75,3 +75,4 @@ obj-$(CONFIG_MCHP_LAN966X_PCI)	+= lan966x-pci.o
+@@ -75,3 +75,5 @@ obj-$(CONFIG_MCHP_LAN966X_PCI)	+= lan966x-pci.o
  obj-y				+= keba/
  obj-y				+= amd-sbi/
  obj-$(CONFIG_MISC_RP1)		+= rp1/
 +obj-$(CONFIG_DSA_SHARED_MEMORY)	+= dsa_shared_memory.o
++obj-$(CONFIG_DSA_SHARED_MEMORY)	+= dsa_graphics_memory.o
 diff --git a/drivers/misc/dsa_shared_memory.c b/drivers/misc/dsa_shared_memory.c
 new file mode 100644
 index 00000000..97c7427d
@@ -254,4 +255,503 @@ index 00000000..97c7427d
 +device_initcall(dsa_shared_memory_init);
 +
 +MODULE_DESCRIPTION("DSA: host memory shared with the guest for video pictures");
++MODULE_LICENSE("GPL");
+diff --git a/drivers/misc/dsa_graphics_memory.c b/drivers/misc/dsa_graphics_memory.c
+new file mode 100644
+index 00000000..5d1a0c3e
+--- /dev/null
++++ b/drivers/misc/dsa_graphics_memory.c
+@@ -0,0 +1,493 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * DSA graphics memory: the region of host memory the Desktop Subsystem for
++ * Android host shares with its guest for Vulkan host-visible memory and for
++ * the staging copies of gralloc buffers, as a device each app maps its own
++ * allocations of.
++ *
++ * Without it the guest's Vulkan driver keeps a copy of host-visible memory,
++ * looks for what changed in it before every submit and sends that through a
++ * socket. With it the host's renderer imports part of this region into
++ * Vulkan for each allocation, and the app writes the same pages the GPU reads.
++ *
++ * There are two regions, both outside the guest's RAM (on Windows, HCS shared
++ * memory regions backed by named sections):
++ *
++ * - the data region, which the guest may write. Its first ack_bytes hold one
++ *   release slot (a __u64) for each 64 KiB granule, and are never granted.
++ * - the grants table, which the guest may only read: a 64 byte header (the
++ *   eight bytes "DSAGRNT1", then the region's id, the data region's length,
++ *   the granule, ack_bytes, as __u64s), then one 32 byte entry for each
++ *   granule (key, length, sequence number, owner). Entry i describes the grant
++ *   that starts at granule i; a grant is live while its key is not 0.
++ *
++ * Where they are becomes known only once the VM runs, so init writes
++ *
++ *   /sys/module/dsa_graphics_memory/parameters/graphics_memory
++ *
++ * with "<grants address>,<grants length>,<data address>,<data length>" (the
++ * addresses in hex, 0x first; the lengths in bytes). The addresses are as the
++ * host reports them: either byte addresses or page numbers, whichever puts the
++ * table's header at the grants address. The first value that names the
++ * regions holds for the rest of the boot.
++ *
++ * The renderer writes an entry with a random key when a guest process
++ * allocates, and sends the key on that process's own stream only. The process
++ * shows it with DSA_GRAPHICS_MEMORY_BIND; from then on its file, and only its
++ * file, may map the grant (one file holds a grant at a time). Pages come in on
++ * a fault, which checks the binding again, so nothing stays mapped once the
++ * binding goes. DSA_GRAPHICS_MEMORY_RELEASE, or the file's last close, lets
++ * the grant go: every mapping of its pages is taken away, then the release
++ * slot says so, and only then does the renderer hand those pages out again.
++ *
++ * Binding and the renderer revoking a grant meet without a lock: the driver
++ * writes "bound" in the slot, then reads the key again and backs out when it
++ * is gone; the renderer zeroes the key, then reads the slot. A full barrier
++ * between the write and the read on each side means one of them sees the
++ * other.
++ *
++ * The mappings have no struct pages (VM_PFNMAP): the region costs the guest no
++ * memory of its own. Until the regions are known the device refuses to open,
++ * which tells the driver to keep its copies as before.
++ *
++ * Only init may write the parameter (the image's SELinux policy). Every
++ * process that may use the GPU may open the device; the keys keep each app to
++ * its own memory.
++ *
++ * Unless you are building the DSA guest kernel, say N.
++ */
++
++#include <linux/bitmap.h>
++#include <linux/fs.h>
++#include <linux/io.h>
++#include <linux/ioport.h>
++#include <linux/kernel.h>
++#include <linux/miscdevice.h>
++#include <linux/mm.h>
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/mutex.h>
++#include <linux/slab.h>
++#include <linux/string.h>
++#include <linux/sysfs.h>
++#include <linux/uaccess.h>
++#include <linux/xarray.h>
++
++#define DSA_GRAPHICS_GRANULE 0x10000ULL
++#define DSA_GRANTS_MAGIC "DSAGRNT1"
++#define DSA_GRANTS_HEADER_BYTES 64
++#define DSA_GRANT_ENTRY_BYTES 32
++#define DSA_GRANTS_REGION_ID_AT 8
++#define DSA_GRANTS_DATA_LENGTH_AT 16
++#define DSA_GRANTS_GRANULE_AT 24
++#define DSA_GRANT_KEY_AT 0
++#define DSA_GRANT_LENGTH_AT 8
++#define DSA_GRANT_SEQ_AT 16
++#define DSA_SLOT_BOUND 1
++#define DSA_SLOT_RELEASED 2
++
++struct dsa_graphics_memory_info {
++	__u64 length;
++	__u64 granule;
++	__u64 region_id;
++	__u64 ack_bytes;
++};
++
++struct dsa_graphics_memory_grant {
++	__u64 offset;
++	__u64 length;
++	__u64 key;
++};
++
++#define DSA_GRAPHICS_MEMORY_INFO _IOR('D', 0x51, struct dsa_graphics_memory_info)
++#define DSA_GRAPHICS_MEMORY_BIND _IOW('D', 0x52, struct dsa_graphics_memory_grant)
++#define DSA_GRAPHICS_MEMORY_RELEASE _IOW('D', 0x53, __u64)
++
++/* One grant a file holds. Stored at each of its granules in the file's xarray. */
++struct dsa_gfx_binding {
++	u64 start;
++	u64 count;
++	u64 seq;
++};
++
++struct dsa_gfx_file {
++	struct xarray grants;
++};
++
++/* Guards the bindings of every file, the bound bitmap and the regions' state. */
++static DEFINE_MUTEX(dsa_gfx_lock);
++static phys_addr_t dsa_gfx_data_base;
++static u64 dsa_gfx_ack_bytes;
++static u8 *dsa_gfx_grants;
++static u64 *dsa_gfx_slots;
++static unsigned long *dsa_gfx_bound;
++static struct address_space *dsa_gfx_mapping;
++/* Set last, once the rest is: a reader that sees a length sees the regions. */
++static u64 dsa_gfx_length;
++
++static u64 dsa_gfx_region_length(void)
++{
++	return smp_load_acquire(&dsa_gfx_length);
++}
++
++static u64 dsa_gfx_load(const u8 *at)
++{
++	return READ_ONCE(*(const u64 *)at);
++}
++
++static const u8 *dsa_gfx_entry(u64 index)
++{
++	return dsa_gfx_grants + DSA_GRANTS_HEADER_BYTES + index * DSA_GRANT_ENTRY_BYTES;
++}
++
++static bool dsa_gfx_outside_ram(phys_addr_t base, u64 length)
++{
++	return base && PAGE_ALIGNED(base) && PAGE_ALIGNED(length) && base + length > base &&
++	       region_intersects(base, length, IORESOURCE_SYSTEM_RAM, IORES_DESC_NONE) ==
++		       REGION_DISJOINT;
++}
++
++/* Whether the grants table's header lies at `base`, for a data region of `data_length`. */
++static bool dsa_gfx_has_header(phys_addr_t base, u64 length, u64 data_length)
++{
++	void *header;
++	bool found;
++
++	if (!dsa_gfx_outside_ram(base, length) || length < DSA_GRANTS_HEADER_BYTES)
++		return false;
++	header = memremap(base, PAGE_SIZE, MEMREMAP_WB);
++	if (!header)
++		return false;
++	found = !memcmp(header, DSA_GRANTS_MAGIC, 8) &&
++		dsa_gfx_load(header + DSA_GRANTS_DATA_LENGTH_AT) == data_length &&
++		dsa_gfx_load(header + DSA_GRANTS_GRANULE_AT) == DSA_GRAPHICS_GRANULE;
++	memunmap(header);
++	return found;
++}
++
++static int dsa_gfx_take(phys_addr_t grants, u64 grants_length, phys_addr_t data,
++			u64 data_length)
++{
++	u64 granules = data_length / DSA_GRAPHICS_GRANULE;
++	u64 ack_bytes = ALIGN(granules * 8, DSA_GRAPHICS_GRANULE);
++
++	if (!granules || data_length % DSA_GRAPHICS_GRANULE || ack_bytes >= data_length ||
++	    grants_length < DSA_GRANTS_HEADER_BYTES + granules * DSA_GRANT_ENTRY_BYTES ||
++	    !dsa_gfx_outside_ram(data, data_length))
++		return -EINVAL;
++	if (!dsa_gfx_has_header(grants, grants_length, data_length))
++		return -ENODEV;
++	dsa_gfx_bound = bitmap_zalloc(granules, GFP_KERNEL);
++	if (!dsa_gfx_bound)
++		return -ENOMEM;
++	dsa_gfx_grants = memremap(grants, grants_length, MEMREMAP_WB);
++	/*
++	 * The whole data region, mapped write-back: the release slots are written
++	 * through it, and it gives the range its memory type, which the faults
++	 * below insert the app's pages with.
++	 */
++	dsa_gfx_slots = memremap(data, data_length, MEMREMAP_WB);
++	if (!dsa_gfx_grants || !dsa_gfx_slots) {
++		if (dsa_gfx_grants)
++			memunmap(dsa_gfx_grants);
++		if (dsa_gfx_slots)
++			memunmap(dsa_gfx_slots);
++		dsa_gfx_grants = NULL;
++		dsa_gfx_slots = NULL;
++		bitmap_free(dsa_gfx_bound);
++		dsa_gfx_bound = NULL;
++		return -ENOMEM;
++	}
++	if (!request_mem_region(grants, grants_length, "dsa_graphics_grants") ||
++	    !request_mem_region(data, data_length, "dsa_graphics_memory"))
++		pr_warn("dsa_graphics_memory: the regions are held by another driver; using them anyway\n");
++	dsa_gfx_data_base = data;
++	dsa_gfx_ack_bytes = ack_bytes;
++	smp_store_release(&dsa_gfx_length, data_length);
++	pr_info("dsa_graphics_memory: %llu MiB of host memory for graphics at %pa\n",
++		data_length >> 20, &data);
++	return 0;
++}
++
++static int dsa_set_graphics_memory(const char *val, const struct kernel_param *kp)
++{
++	unsigned long long grants, grants_length, data, data_length;
++	int err;
++
++	if (sscanf(val, "%llx,%llu,%llx,%llu", &grants, &grants_length, &data,
++		   &data_length) != 4 || !grants_length || !data_length)
++		return -EINVAL;
++	mutex_lock(&dsa_gfx_lock);
++	if (dsa_gfx_region_length()) {
++		/* The regions do not move within a boot. */
++		err = data_length == dsa_gfx_region_length() ? 0 : -EBUSY;
++		goto out;
++	}
++	err = dsa_gfx_take(grants, grants_length, data, data_length);
++	if (err == -ENODEV && grants < (1ULL << (63 - PAGE_SHIFT)) &&
++	    data < (1ULL << (63 - PAGE_SHIFT)))
++		err = dsa_gfx_take((phys_addr_t)grants << PAGE_SHIFT, grants_length,
++				   (phys_addr_t)data << PAGE_SHIFT, data_length);
++	if (err)
++		pr_warn("dsa_graphics_memory: no regions at %#llx and %#llx: %d\n", grants, data,
++			err);
++out:
++	mutex_unlock(&dsa_gfx_lock);
++	return err;
++}
++
++static int dsa_get_graphics_memory(char *buffer, const struct kernel_param *kp)
++{
++	u64 length = dsa_gfx_region_length();
++
++	if (!length)
++		return sysfs_emit(buffer, "none\n");
++	return sysfs_emit(buffer, "%#llx,%llu\n", (unsigned long long)dsa_gfx_data_base,
++			  (unsigned long long)length);
++}
++
++static const struct kernel_param_ops dsa_graphics_memory_ops = {
++	.set = dsa_set_graphics_memory,
++	.get = dsa_get_graphics_memory,
++};
++
++module_param_cb(graphics_memory, &dsa_graphics_memory_ops, NULL, 0644);
++MODULE_PARM_DESC(graphics_memory,
++		 "Where the host's graphics memory is: <grants>,<length>,<data>,<length>");
++
++/* Whether `file` holds a grant covering `size` bytes at `offset`. Under dsa_gfx_lock. */
++static bool dsa_gfx_holds(struct dsa_gfx_file *file, u64 offset, u64 size)
++{
++	struct dsa_gfx_binding *binding;
++	u64 end;
++
++	binding = xa_load(&file->grants, offset / DSA_GRAPHICS_GRANULE);
++	if (!binding)
++		return false;
++	end = (binding->start + binding->count) * DSA_GRAPHICS_GRANULE;
++	return size <= end - offset;
++}
++
++/*
++ * Lets `binding` go: no fault can map its pages after this, every mapping of
++ * them goes, and the release slot then tells the renderer. Under dsa_gfx_lock.
++ */
++static void dsa_gfx_let_go(struct dsa_gfx_file *file, struct dsa_gfx_binding *binding)
++{
++	u64 i;
++
++	for (i = 0; i < binding->count; i++)
++		xa_erase(&file->grants, binding->start + i);
++	if (dsa_gfx_mapping)
++		unmap_mapping_range(dsa_gfx_mapping, binding->start * DSA_GRAPHICS_GRANULE,
++				    binding->count * DSA_GRAPHICS_GRANULE, 1);
++	bitmap_clear(dsa_gfx_bound, binding->start, binding->count);
++	smp_mb();
++	WRITE_ONCE(dsa_gfx_slots[binding->start], (binding->seq << 2) | DSA_SLOT_RELEASED);
++	kfree(binding);
++}
++
++static long dsa_gfx_bind(struct dsa_gfx_file *file, void __user *arg)
++{
++	struct dsa_graphics_memory_grant grant;
++	struct dsa_gfx_binding *binding;
++	u64 length = dsa_gfx_region_length();
++	u64 index, count, seq, i;
++	const u8 *entry;
++	long err = 0;
++
++	if (copy_from_user(&grant, arg, sizeof(grant)))
++		return -EFAULT;
++	if (!grant.key || !grant.length || grant.offset % DSA_GRAPHICS_GRANULE ||
++	    grant.length % DSA_GRAPHICS_GRANULE || grant.offset < dsa_gfx_ack_bytes ||
++	    grant.offset >= length || grant.length > length - grant.offset)
++		return -EINVAL;
++	index = grant.offset / DSA_GRAPHICS_GRANULE;
++	count = grant.length / DSA_GRAPHICS_GRANULE;
++	entry = dsa_gfx_entry(index);
++	binding = kmalloc(sizeof(*binding), GFP_KERNEL);
++	if (!binding)
++		return -ENOMEM;
++
++	mutex_lock(&dsa_gfx_lock);
++	if (dsa_gfx_load(entry + DSA_GRANT_KEY_AT) != grant.key) {
++		err = -EACCES;
++		goto out;
++	}
++	smp_rmb();
++	seq = dsa_gfx_load(entry + DSA_GRANT_SEQ_AT);
++	if (dsa_gfx_load(entry + DSA_GRANT_LENGTH_AT) != grant.length) {
++		err = -EACCES;
++		goto out;
++	}
++	if (find_next_bit(dsa_gfx_bound, index + count, index) < index + count) {
++		err = -EBUSY;
++		goto out;
++	}
++	WRITE_ONCE(dsa_gfx_slots[index], (seq << 2) | DSA_SLOT_BOUND);
++	/* Between saying "bound" and reading the key again; the renderer's revoke mirrors it. */
++	smp_mb();
++	if (dsa_gfx_load(entry + DSA_GRANT_KEY_AT) != grant.key) {
++		WRITE_ONCE(dsa_gfx_slots[index], (seq << 2) | DSA_SLOT_RELEASED);
++		err = -EACCES;
++		goto out;
++	}
++	binding->start = index;
++	binding->count = count;
++	binding->seq = seq;
++	for (i = 0; i < count; i++) {
++		err = xa_err(xa_store(&file->grants, index + i, binding, GFP_KERNEL));
++		if (err)
++			break;
++	}
++	if (err) {
++		while (i--)
++			xa_erase(&file->grants, index + i);
++		WRITE_ONCE(dsa_gfx_slots[index], (seq << 2) | DSA_SLOT_RELEASED);
++		goto out;
++	}
++	bitmap_set(dsa_gfx_bound, index, count);
++	binding = NULL;
++out:
++	mutex_unlock(&dsa_gfx_lock);
++	kfree(binding);
++	return err;
++}
++
++static long dsa_gfx_release_grant(struct dsa_gfx_file *file, u64 __user *arg)
++{
++	struct dsa_gfx_binding *binding;
++	u64 offset;
++	long err = -EINVAL;
++
++	if (get_user(offset, arg))
++		return -EFAULT;
++	if (offset % DSA_GRAPHICS_GRANULE)
++		return -EINVAL;
++	mutex_lock(&dsa_gfx_lock);
++	binding = xa_load(&file->grants, offset / DSA_GRAPHICS_GRANULE);
++	if (binding && binding->start == offset / DSA_GRAPHICS_GRANULE) {
++		dsa_gfx_let_go(file, binding);
++		err = 0;
++	}
++	mutex_unlock(&dsa_gfx_lock);
++	return err;
++}
++
++static long dsa_gfx_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
++{
++	struct dsa_gfx_file *file = filp->private_data;
++	struct dsa_graphics_memory_info info;
++
++	switch (cmd) {
++	case DSA_GRAPHICS_MEMORY_INFO:
++		info.length = dsa_gfx_region_length();
++		info.granule = DSA_GRAPHICS_GRANULE;
++		info.region_id = dsa_gfx_load(dsa_gfx_grants + DSA_GRANTS_REGION_ID_AT);
++		info.ack_bytes = dsa_gfx_ack_bytes;
++		return copy_to_user((void __user *)arg, &info, sizeof(info)) ? -EFAULT : 0;
++	case DSA_GRAPHICS_MEMORY_BIND:
++		return dsa_gfx_bind(file, (void __user *)arg);
++	case DSA_GRAPHICS_MEMORY_RELEASE:
++		return dsa_gfx_release_grant(file, (u64 __user *)arg);
++	default:
++		return -ENOTTY;
++	}
++}
++
++static vm_fault_t dsa_gfx_fault(struct vm_fault *vmf)
++{
++	struct dsa_gfx_file *file = vmf->vma->vm_file->private_data;
++	u64 offset = (u64)vmf->pgoff << PAGE_SHIFT;
++	vm_fault_t ret = VM_FAULT_SIGBUS;
++
++	mutex_lock(&dsa_gfx_lock);
++	if (dsa_gfx_holds(file, offset, PAGE_SIZE))
++		ret = vmf_insert_pfn(vmf->vma, vmf->address, PHYS_PFN(dsa_gfx_data_base + offset));
++	mutex_unlock(&dsa_gfx_lock);
++	return ret;
++}
++
++static const struct vm_operations_struct dsa_gfx_vm_ops = {
++	.fault = dsa_gfx_fault,
++};
++
++static int dsa_gfx_mmap(struct file *filp, struct vm_area_struct *vma)
++{
++	struct dsa_gfx_file *file = filp->private_data;
++	u64 offset = (u64)vma->vm_pgoff << PAGE_SHIFT;
++	u64 size = vma->vm_end - vma->vm_start;
++	bool held;
++
++	if (!(vma->vm_flags & VM_SHARED))
++		return -EINVAL;
++	mutex_lock(&dsa_gfx_lock);
++	held = dsa_gfx_holds(file, offset, size);
++	mutex_unlock(&dsa_gfx_lock);
++	if (!held)
++		return -EACCES;
++	/* A child does not inherit the mapping: the grant is its parent's. */
++	vm_flags_set(vma, VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP | VM_DONTCOPY);
++	vma->vm_ops = &dsa_gfx_vm_ops;
++	return 0;
++}
++
++static int dsa_gfx_open(struct inode *inode, struct file *filp)
++{
++	struct dsa_gfx_file *file;
++
++	if (!dsa_gfx_region_length())
++		return -ENODEV;
++	file = kzalloc(sizeof(*file), GFP_KERNEL);
++	if (!file)
++		return -ENOMEM;
++	xa_init(&file->grants);
++	mutex_lock(&dsa_gfx_lock);
++	dsa_gfx_mapping = filp->f_mapping;
++	mutex_unlock(&dsa_gfx_lock);
++	filp->private_data = file;
++	return 0;
++}
++
++static int dsa_gfx_release(struct inode *inode, struct file *filp)
++{
++	struct dsa_gfx_file *file = filp->private_data;
++	struct dsa_gfx_binding *binding;
++	unsigned long index;
++
++	mutex_lock(&dsa_gfx_lock);
++	xa_for_each(&file->grants, index, binding) {
++		if (binding->start == index)
++			dsa_gfx_let_go(file, binding);
++	}
++	mutex_unlock(&dsa_gfx_lock);
++	xa_destroy(&file->grants);
++	kfree(file);
++	return 0;
++}
++
++static const struct file_operations dsa_gfx_fops = {
++	.owner = THIS_MODULE,
++	.open = dsa_gfx_open,
++	.release = dsa_gfx_release,
++	.mmap = dsa_gfx_mmap,
++	.unlocked_ioctl = dsa_gfx_ioctl,
++	.compat_ioctl = compat_ptr_ioctl,
++};
++
++static struct miscdevice dsa_gfx_device = {
++	.minor = MISC_DYNAMIC_MINOR,
++	.name = "dsa_graphics_memory",
++	.fops = &dsa_gfx_fops,
++	/* SELinux decides who opens it; the keys decide what each file maps. */
++	.mode = 0666,
++};
++
++static int __init dsa_graphics_memory_init(void)
++{
++	return misc_register(&dsa_gfx_device);
++}
++device_initcall(dsa_graphics_memory_init);
++
++MODULE_DESCRIPTION("DSA: host memory shared with the guest for graphics");
 +MODULE_LICENSE("GPL");

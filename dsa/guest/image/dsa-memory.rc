@@ -89,8 +89,20 @@ on property:vendor.dsa.host_memory.uids=*
 on property:vendor.dsa.video_pictures=*
     write /sys/module/dsa_shared_memory/parameters/video_pictures ${vendor.dsa.video_pictures}
 
-# ueventd makes the driver's device root's alone, and the codec HAL runs as mediacodec. Every
-# user may read it before the HALs start; SELinux opens it to the codec HAL's domain and no
-# other (codec2.cil), and nobody may write it.
+# The graphics memory the host shares: a grants table and the memory apps' Vulkan drivers map
+# their host-visible memory from, so it does not cross the graphics stream. dsa-channeld sets
+# vendor.dsa.graphics_memory to "<grants address>,<length>,<data address>,<length>" once the host
+# has said where both are, and init hands that to DSA's kernel driver, which takes the first value
+# of a boot. Only the daemon may set the property and only init may write the parameter
+# (memory.cil).
+on property:vendor.dsa.graphics_memory=*
+    write /sys/module/dsa_graphics_memory/parameters/graphics_memory ${vendor.dsa.graphics_memory}
+
+# ueventd makes the drivers' devices root's alone. The codec HAL runs as mediacodec: every user
+# may read the pictures' device before the HALs start, SELinux opens it to the codec HAL's domain
+# and no other (codec2.cil), and nobody may write it. Every process that draws with the GPU maps
+# its own graphics memory: SELinux opens the graphics device as it opens the GPU's, and the
+# driver lets each file map only the grants whose keys the host's renderer gave that process.
 on early-boot
     chmod 0444 /dev/dsa_video_pictures
+    chmod 0666 /dev/dsa_graphics_memory

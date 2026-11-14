@@ -523,6 +523,7 @@ class Agent(
         clock,
         accessibilityReader,
         widgetNodes,
+        reporter::reportedPackage,
     )
     /** Where the apps on the display keep system gestures out, as last heard. */
     private var exclusion: List<TaskBounds> = emptyList()

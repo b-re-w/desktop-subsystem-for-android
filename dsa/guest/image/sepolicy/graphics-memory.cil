@@ -1,0 +1,16 @@
+; Desktop Subsystem for Android (DSA)
+; The guest Vulkan driver keeps a copy of each host-visible allocation an app maps and sends the
+; host what the app wrote before each submit. It asks the kernel which pages those are: it write
+; protects its copies with a userfaultfd of its own process (asynchronous mode, which needs no
+; thread to answer faults), and at each submit lists the written pages and protects them again
+; with the PAGEMAP_SCAN ioctl (0x6610, 'f' 16) on the process's own /proc/self/pagemap. Without
+; them it hashes all of the app's mapped memory at every submit.
+;
+; The platform lets apps and system_server make a userfaultfd of their own (ART's garbage
+; collector uses one), so creating one and its ioctls need no rule here. It lets a domain use
+; only FIOCLEX and FIONCLEX on its own /proc files, though, so PAGEMAP_SCAN was refused. These
+; rules allow that one ioctl, on the domain's own files only (self), for the domains that load
+; the driver and may use a userfaultfd. The kernel lets a process scan another's pagemap only
+; where it could trace it, and the driver only ever opens its own.
+(allowx appdomain self (ioctl file (0x6610)))
+(allowx system_server self (ioctl file (0x6610)))

@@ -7,6 +7,8 @@
 #include <string>
 
 #include "ExtendedRenderControl.h"
+#include "dsa_graphics_memory.h"
+#include "dsa_graphics_memory_device.h"
 #include "dsa_shared_color_buffer.h"
 #include "gfxstream/guest/ChecksumCalculator.h"
 #include "host_stream.h"
@@ -31,8 +33,21 @@ struct HostRenderer::Connection {
     std::unique_ptr<HostStream> stream;
     gfxstream::guest::ChecksumCalculator checksum;
     std::unique_ptr<ExtendedRCEncoderContext> encoder;
+    // The staging grant of the graphics memory the host shares, mapped, and whether the host
+    // offers one (-1 until asked).
+    dsa::SharedStaging staging;
+    int sharesMemory = -1;
 
     bool ok() const { return !processPipe->failed() && !stream->failed(); }
+
+    ~Connection() {
+        // Let go of in the guest; the host revokes it when the process pipe closes.
+        if (staging.ptr) {
+            if (auto* shared = dsa::GraphicsMemoryDevice::get()) {
+                shared->unmap(staging.ptr, staging.offset, staging.length);
+            }
+        }
+    }
 };
 
 void HostRenderer::ConnectionDeleter::operator()(Connection* connection) const { delete connection; }
@@ -107,11 +122,75 @@ bool HostRenderer::uploadColorBuffer(uint32_t colorBuffer, const dsa::UploadLayo
         return false;
     }
     ExtendedRCEncoderContext* rc = mConnection->encoder.get();
+    const dsa::SharedStaging& staging = mConnection->staging;
     // The host answers once the ColorBuffer holds the planes.
-    const int result = rc->rcUpdateColorBuffer(rc, colorBuffer, 0, 0, layout.callWidth,
-                                               layout.callHeight, layout.glFormat, layout.glType,
-                                               const_cast<uint8_t*>(packed));
+    int result = 0;
+    if (packed && packed == staging.ptr && staging.holds(layout.packedSize())) {
+        // Packed into the staging grant: the host reads them where they are.
+        rc->bindDmaDirectly(staging.ptr, staging.dmaAddress());
+        result = rc->rcUpdateColorBufferDMA(rc, colorBuffer, 0, 0, layout.callWidth,
+                                            layout.callHeight, layout.glFormat, layout.glType,
+                                            staging.ptr,
+                                            static_cast<uint32_t>(layout.packedSize()));
+        rc->bindDmaDirectly(nullptr, 0);
+    } else {
+        result = rc->rcUpdateColorBuffer(rc, colorBuffer, 0, 0, layout.callWidth,
+                                         layout.callHeight, layout.glFormat, layout.glType,
+                                         const_cast<uint8_t*>(packed));
+    }
     return result == 0 && connected();
+}
+
+uint8_t* HostRenderer::stagingFor(size_t bytes) {
+    if (!connected() || bytes == 0) {
+        return nullptr;
+    }
+    Connection& connection = *mConnection;
+    if (connection.staging.holds(bytes)) {
+        return connection.staging.ptr;
+    }
+    if (connection.sharesMemory < 0) {
+        const bool offered = connection.encoder->queryHostExtensions().find(
+                                 dsa::kGraphicsMemoryExtension) != std::string::npos;
+        const char* why = nullptr;
+        const bool mapped = dsa::GraphicsMemoryDevice::get(&why) != nullptr;
+        connection.sharesMemory = offered && mapped ? 1 : 0;
+        if (connection.sharesMemory) {
+            HWC_LOGI("CPU uploads go through the graphics memory the host shares");
+        } else {
+            HWC_LOGI("CPU uploads go through the stream: %s",
+                     offered ? why : "the host renderer shares no graphics memory");
+        }
+    }
+    if (!connection.sharesMemory) {
+        return nullptr;
+    }
+    auto* shared = dsa::GraphicsMemoryDevice::get();
+    // A smaller grant goes first; the next one is the next MiB up, so pictures of one size
+    // ask once.
+    if (connection.staging.ptr) {
+        shared->unmap(connection.staging.ptr, connection.staging.offset,
+                      connection.staging.length);
+        connection.staging = dsa::SharedStaging{};
+    }
+    const uint64_t size = (static_cast<uint64_t>(bytes) + (1u << 20) - 1) & ~uint64_t((1u << 20) - 1);
+    const dsa::StagingRequest request{dsa::kStagingRequest, 0, size};
+    dsa::StagingReply reply{};
+    if (connection.processPipe->writeFully(&request, sizeof(request)) != 0 ||
+        !connection.processPipe->readFully(&reply, sizeof(reply)) || reply.result != 0) {
+        return nullptr;
+    }
+    uint8_t* mapped = shared->map(reply.offset, reply.length, reply.key);
+    if (!mapped) {
+        // Let the host have it back: a request of 0 bytes.
+        const dsa::StagingRequest none{dsa::kStagingRequest, 0, 0};
+        if (connection.processPipe->writeFully(&none, sizeof(none)) == 0) {
+            connection.processPipe->readFully(&reply, sizeof(reply));
+        }
+        return nullptr;
+    }
+    connection.staging = dsa::SharedStaging{mapped, reply.offset, reply.length};
+    return mapped;
 }
 
 bool HostRenderer::connected() const { return mConnection && mConnection->ok(); }

@@ -2819,6 +2819,51 @@ pub struct WatchAccessibility {
     #[prost(int32, tag = "2")]
     pub widget_id: i32,
 }
+/// A list's or a grid's size.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct NodeCollection {
+    #[prost(int32, tag = "1")]
+    pub rows: i32,
+    #[prost(int32, tag = "2")]
+    pub columns: i32,
+    #[prost(bool, tag = "3")]
+    pub hierarchical: bool,
+}
+/// Where an item is in its list or grid.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct NodeCollectionItem {
+    #[prost(int32, tag = "1")]
+    pub row: i32,
+    #[prost(int32, tag = "2")]
+    pub row_span: i32,
+    #[prost(int32, tag = "3")]
+    pub column: i32,
+    #[prost(int32, tag = "4")]
+    pub column_span: i32,
+    #[prost(bool, tag = "5")]
+    pub heading: bool,
+}
+/// The Android window a top-level node is the root of.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct NodeWindow {
+    #[prost(string, tag = "1")]
+    pub title: ::prost::alloc::string::String,
+    #[prost(bool, tag = "2")]
+    pub modal: bool,
+    #[prost(bool, tag = "3")]
+    pub popup: bool,
+}
+/// Service to client, on a connection that watches a task's tree: something a screen reader
+/// should say, an app's announcement or a toast.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AccessibilityAnnouncement {
+    #[prost(string, tag = "1")]
+    pub text: ::prost::alloc::string::String,
+    #[prost(bool, tag = "2")]
+    pub assertive: bool,
+    #[prost(bool, tag = "3")]
+    pub toast: bool,
+}
 /// The range a slider or a progress bar has, and where it stands in it.
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct NodeRange {
@@ -2881,6 +2926,32 @@ pub struct AccessibilityNode {
     pub actions: ::prost::alloc::vec::Vec<i32>,
     #[prost(string, tag = "23")]
     pub state_description: ::prost::alloc::string::String,
+    #[prost(bool, tag = "24")]
+    pub accessibility_focused: bool,
+    /// An editable node's selection in UTF-16 code units of its text, while has_text_selection.
+    #[prost(int32, tag = "25")]
+    pub text_selection_start: i32,
+    #[prost(int32, tag = "26")]
+    pub text_selection_end: i32,
+    #[prost(bool, tag = "27")]
+    pub has_text_selection: bool,
+    #[prost(uint32, tag = "28")]
+    pub heading_level: u32,
+    #[prost(bool, tag = "29")]
+    pub link: bool,
+    #[prost(string, tag = "30")]
+    pub url: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "31")]
+    pub collection: ::core::option::Option<NodeCollection>,
+    #[prost(message, optional, tag = "32")]
+    pub collection_item: ::core::option::Option<NodeCollectionItem>,
+    /// 0 not announced, 1 politely, 2 at once.
+    #[prost(int32, tag = "33")]
+    pub live_region: i32,
+    #[prost(string, tag = "34")]
+    pub pane_title: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "35")]
+    pub window: ::core::option::Option<NodeWindow>,
 }
 /// A task's accessibility tree, or what changed in it, on a connection that watches it
 /// (WatchAccessibility). A full tree replaces what came before and starts a new epoch; a change
@@ -2903,11 +2974,14 @@ pub struct AccessibilityTree {
     /// The node with the input focus, or 0 for none.
     #[prost(uint32, tag = "7")]
     pub focused_id: u32,
+    /// The node with the accessibility focus, or 0 for none.
+    #[prost(uint32, tag = "8")]
+    pub accessibility_focused_id: u32,
 }
 /// Client to service, on a connection that watches a task's tree: do something to one of its
 /// nodes. Not answered as a request: an AccessibilityActionResult with the same request_id
 /// follows.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AccessibilityAction {
     #[prost(uint32, tag = "1")]
     pub epoch: u32,
@@ -2919,6 +2993,26 @@ pub struct AccessibilityAction {
     pub text: ::prost::alloc::string::String,
     #[prost(uint32, tag = "5")]
     pub request_id: u32,
+    /// The selection, for NODE_ACTION_SET_SELECTION.
+    #[prost(int32, tag = "6")]
+    pub selection_start: i32,
+    #[prost(int32, tag = "7")]
+    pub selection_end: i32,
+    #[prost(float, tag = "8")]
+    pub progress: f32,
+    #[prost(int32, tag = "9")]
+    pub row: i32,
+    #[prost(int32, tag = "10")]
+    pub column: i32,
+}
+/// Client to service, on a connection that watches a task's tree: whether a screen reader (or
+/// another assistive technology that follows focus) listens for the window's events. While any
+/// watch of the task says so, Android sends focus changes at once and other changes sooner;
+/// otherwise it keeps its usual waits. A watch starts as not listening.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AccessibilityListening {
+    #[prost(bool, tag = "1")]
+    pub listening: bool,
 }
 /// What came of an AccessibilityAction.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -3408,7 +3502,7 @@ pub mod response {
 pub struct Envelope {
     #[prost(
         oneof = "envelope::Body",
-        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 333, 334, 335, 12, 13, 11, 15, 16, 14, 17, 18, 19, 20, 50, 51, 120, 121, 122, 200, 201, 202, 21, 300, 301, 620, 470, 471, 640, 641, 660"
+        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 333, 334, 335, 12, 13, 11, 15, 16, 14, 17, 18, 19, 22, 23, 20, 50, 51, 120, 121, 122, 200, 201, 202, 21, 300, 301, 620, 470, 471, 640, 641, 660"
     )]
     pub body: ::core::option::Option<envelope::Body>,
 }
@@ -3460,6 +3554,10 @@ pub mod envelope {
         AccessibilityAction(super::AccessibilityAction),
         #[prost(message, tag = "19")]
         AccessibilityActionResult(super::AccessibilityActionResult),
+        #[prost(message, tag = "22")]
+        AccessibilityListening(super::AccessibilityListening),
+        #[prost(message, tag = "23")]
+        AccessibilityAnnouncement(super::AccessibilityAnnouncement),
         #[prost(message, tag = "20")]
         WidgetEvent(super::WidgetEvent),
         #[prost(message, tag = "50")]
@@ -4650,6 +4748,16 @@ pub enum NodeAction {
     Focus = 6,
     AccessibilityFocus = 7,
     Select = 8,
+    /// Select characters of an editable node's text (AccessibilityAction.selection_start to
+    /// selection_end), or put the cursor there.
+    SetSelection = 9,
+    Expand = 10,
+    Collapse = 11,
+    /// Set a slider's value to AccessibilityAction.progress.
+    SetProgress = 12,
+    ShowOnScreen = 13,
+    /// Scroll a list or a grid to AccessibilityAction.row and column.
+    ScrollToPosition = 14,
 }
 impl NodeAction {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -4667,6 +4775,12 @@ impl NodeAction {
             Self::Focus => "NODE_ACTION_FOCUS",
             Self::AccessibilityFocus => "NODE_ACTION_ACCESSIBILITY_FOCUS",
             Self::Select => "NODE_ACTION_SELECT",
+            Self::SetSelection => "NODE_ACTION_SET_SELECTION",
+            Self::Expand => "NODE_ACTION_EXPAND",
+            Self::Collapse => "NODE_ACTION_COLLAPSE",
+            Self::SetProgress => "NODE_ACTION_SET_PROGRESS",
+            Self::ShowOnScreen => "NODE_ACTION_SHOW_ON_SCREEN",
+            Self::ScrollToPosition => "NODE_ACTION_SCROLL_TO_POSITION",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -4681,6 +4795,12 @@ impl NodeAction {
             "NODE_ACTION_FOCUS" => Some(Self::Focus),
             "NODE_ACTION_ACCESSIBILITY_FOCUS" => Some(Self::AccessibilityFocus),
             "NODE_ACTION_SELECT" => Some(Self::Select),
+            "NODE_ACTION_SET_SELECTION" => Some(Self::SetSelection),
+            "NODE_ACTION_EXPAND" => Some(Self::Expand),
+            "NODE_ACTION_COLLAPSE" => Some(Self::Collapse),
+            "NODE_ACTION_SET_PROGRESS" => Some(Self::SetProgress),
+            "NODE_ACTION_SHOW_ON_SCREEN" => Some(Self::ShowOnScreen),
+            "NODE_ACTION_SCROLL_TO_POSITION" => Some(Self::ScrollToPosition),
             _ => None,
         }
     }

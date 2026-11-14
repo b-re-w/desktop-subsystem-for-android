@@ -149,6 +149,12 @@ impl Shared {
         self.screen_reader.load(Ordering::Relaxed) || self.listeners.load(Ordering::Relaxed)
     }
 
+    /// Whether the desktop's screen reader is on: then Android sends each watched task's
+    /// focus at once, and its other changes sooner.
+    pub fn screen_reader(&self) -> bool {
+        self.screen_reader.load(Ordering::Relaxed)
+    }
+
     /// The window of `task_id` opened, or what it shows changed.
     pub fn sync(&self, task_id: i32, facts: WindowFacts) {
         let events = self.lock().sync(task_id, facts);
@@ -335,9 +341,18 @@ fn watch(
             }
         };
         failures = 0;
+        // A new watch starts as not listening; the service hears when a screen reader is on.
+        let mut told = false;
         loop {
             if shared.should_stop(task_id, id) {
                 return;
+            }
+            let fast = shared.screen_reader();
+            if fast != told {
+                if stream.set_listening(fast).is_err() {
+                    break;
+                }
+                told = fast;
             }
             let mut broken = false;
             loop {
@@ -371,6 +386,13 @@ fn watch(
                             break;
                         }
                     }
+                }
+                Ok(Some(GuestAccessibility::Announcement(announcement))) => {
+                    shared.emit(&[Event::Announcement {
+                        object: Object::Window(task_id),
+                        text: announcement.text,
+                        assertive: announcement.assertive,
+                    }]);
                 }
                 Ok(Some(GuestAccessibility::ActionResult(result))) => {
                     if let Err(why) = result.outcome {

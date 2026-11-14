@@ -73,7 +73,12 @@ longer crosses the video port's socket. `patches/dsa-shared-memory.patch` adds t
 `/sys/module/dsa_shared_memory/parameters/video_pictures` (the host says it on the control
 channel, after the VM has started), the codec HAL maps it, read only and without struct pages,
 through `/dev/dsa_video_pictures`. The driver takes only a range outside the guest's RAM that holds
-the region's header, and only once a boot.
+the region's header, and only once a boot. The same patch adds `drivers/misc/dsa_graphics_memory.c`
+for the graphics memory the host shares (a grants table the guest only reads, and the memory apps'
+Vulkan drivers map their host-visible memory from): once init writes where both are to
+`/sys/module/dsa_graphics_memory/parameters/graphics_memory`, each process may map, through
+`/dev/dsa_graphics_memory`, only the grants whose keys the host's renderer gave it, and the driver
+takes every mapping of a grant away before it tells the renderer the grant is free.
 
 Android mounts each APEX package as a read-only ext4 image, about 75 of them with Google Play.
 Upstream ext4 gives every mount a workqueue for converting unwritten extents, and with it a

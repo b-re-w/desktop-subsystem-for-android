@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dsa_host_core::accessibility::{
-    ActionRequest, Node, NodeAction, NodeRange, NodeStates, TreeUpdate,
+    ActionRequest, Collection, CollectionItem, Node, NodeAction, NodeRange, NodeStates, TreeUpdate,
 };
 use dsa_host_core::tasks::Bounds;
 use dsa_host_linux::accessibility::atspi::{coord, role, role_name, state};
@@ -97,6 +97,7 @@ fn settings_screen(epoch: u32) -> TreeUpdate {
         ],
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -109,6 +110,7 @@ fn change(epoch: u32, nodes: Vec<Node>) -> TreeUpdate {
         nodes,
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -341,6 +343,93 @@ fn fr18_a_settings_screen_reads_as_list_items_with_names_and_places() {
 }
 
 #[test]
+fn fr18_text_selection_lists_and_sliders_reach_atspi_as_on_windows() {
+    let mut access = Access::new(false, Duration::from_secs(30));
+    access.sync(TASK, facts_of(&model(1), false));
+    // A field whose selection Android counts in UTF-16: "😀" is two units, one character.
+    let field = Node {
+        states: NodeStates {
+            enabled: true,
+            editable: true,
+            ..NodeStates::default()
+        },
+        actions: vec![NodeAction::SetText, NodeAction::SetSelection],
+        selection: Some((2, 4)),
+        ..node(2, &[], "android.widget.EditText", "😀abc")
+    };
+    let item = |id: u32, row: i32| Node {
+        collection_item: Some(CollectionItem {
+            row,
+            row_span: 1,
+            column: 0,
+            column_span: 1,
+            heading: false,
+        }),
+        ..node(id, &[], "android.widget.TextView", "row")
+    };
+    let list = Node {
+        collection: Some(Collection {
+            rows: 40,
+            columns: 0,
+            hierarchical: false,
+        }),
+        ..node(3, &[4, 5], "androidx.recyclerview.widget.RecyclerView", "")
+    };
+    let slider = Node {
+        range: Some(NodeRange {
+            min: 0.0,
+            max: 100.0,
+            current: 40.0,
+        }),
+        actions: vec![NodeAction::SetProgress],
+        ..node(6, &[], "android.widget.SeekBar", "")
+    };
+    access
+        .apply(
+            TASK,
+            TreeUpdate {
+                task_id: TASK,
+                epoch: 1,
+                full: true,
+                roots: vec![1],
+                nodes: vec![
+                    node(1, &[2, 3, 6], "android.widget.LinearLayout", ""),
+                    field,
+                    list,
+                    item(4, 7),
+                    item(5, 8),
+                    slider,
+                ],
+                ..TreeUpdate::default()
+            },
+        )
+        .unwrap();
+    let (actions, requests) = mpsc::channel();
+    access.attach_actions(TASK, actions);
+    // The selection in characters, and a new one sent back in UTF-16.
+    assert_eq!(access.selection(at(1, 2)), Some((1, 3)));
+    access.select_text(at(1, 2), 1, 1).unwrap();
+    let selected = requests.try_recv().unwrap();
+    assert_eq!(selected.action, NodeAction::SetSelection);
+    assert_eq!(selected.selection, (2, 2));
+    // The list is a table of 40 rows, an item a cell that says where it is.
+    assert!(access.interfaces(at(1, 3)).contains(&interface::TABLE));
+    assert!(access.interfaces(at(1, 4)).contains(&interface::TABLE_CELL));
+    assert_eq!(access.table(at(1, 3)), Some((40, 1)));
+    assert_eq!(access.table_cell_at(at(1, 3), 8, 0), Some(at(1, 5)));
+    let (row, column, _, _, table) = access.table_cell(at(1, 4)).unwrap();
+    assert_eq!((row, column, table), (7, 0, Some(at(1, 3))));
+    let attributes = access.attributes(at(1, 4));
+    assert!(attributes.contains(&("posinset".to_string(), "8".to_string())));
+    assert!(attributes.contains(&("setsize".to_string(), "40".to_string())));
+    // A slider that takes a value gets it at once.
+    access.set_value(at(1, 6), 75.0).unwrap();
+    let value = requests.try_recv().unwrap();
+    assert_eq!(value.action, NodeAction::SetProgress);
+    assert_eq!(value.progress, 75.0);
+}
+
+#[test]
 fn fr18_places_are_in_the_windows_logical_pixels() {
     let access = settings(2);
     let frame = Object::Window(TASK);
@@ -467,6 +556,7 @@ fn fr18_actions_become_the_nodes_accessibility_actions() {
             action: NodeAction::Click,
             text: String::new(),
             request_id: 1,
+            ..ActionRequest::default()
         })
     );
     // The list scrolls forward and backward.
@@ -537,6 +627,7 @@ fn fr18_fields_take_new_text_and_sliders_new_values() {
                 ],
                 removed: vec![],
                 focused: Some(2),
+                accessibility_focused: None,
             },
         )
         .unwrap();
@@ -705,6 +796,7 @@ fn fr18_typing_raises_text_events_and_focus_follows_the_active_window() {
         nodes: vec![field("wi")],
         removed: vec![],
         focused: Some(1),
+        accessibility_focused: None,
     };
     let events = access.apply(TASK, first.clone()).unwrap();
     assert!(events.contains(&Event::State {

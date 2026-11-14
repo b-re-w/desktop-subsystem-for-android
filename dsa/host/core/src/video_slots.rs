@@ -23,9 +23,17 @@
 //! when the id is the one it reads from its own mapping, so both are known to see the same
 //! memory. Slots start at [`SLOTS_START`].
 //!
+//! A region may only reserve its size, with the header's pages committed by whoever made it.
+//! Each slot's pages are then committed ([`SharedRegion::commit`]) before the host first writes
+//! the slot, and only once: the slots remember which [`SLOT_ALIGNMENT`] granules are committed,
+//! so the commit grows to the furthest any slot reached and no further. The guest reads a slot
+//! only after the host wrote it and named it in a message, so it never reaches a page that is
+//! not committed. When a commit is refused, that picture goes in its message instead, and the
+//! reason is logged once for the region.
+//!
 //! The memory is given back when no stream uses it: once the last stream of a region ends,
 //! the slots it touched are discarded ([`SharedRegion::discard`]), so a region costs physical
-//! memory only while video plays.
+//! memory only while video plays. Discarding keeps the pages committed.
 //!
 //! Nothing here names a host operating system API. The platform supplies the region.
 //!
@@ -76,6 +84,15 @@ pub trait SharedRegion: Send + Sync {
     /// back. Their contents need not survive.
     fn discard(&self, offset: usize, len: usize) {
         let _ = (offset, len);
+    }
+    /// Makes `len` bytes from `offset` ready to be written. A region that only reserves its
+    /// size (on Windows, a section made `SEC_RESERVE`) commits their pages here, since writing
+    /// a page that is only reserved faults. An error says why they could not be (the system's
+    /// commit limit, say); nothing is written there then. Memory that is always there needs
+    /// nothing, which is the default.
+    fn commit(&self, offset: usize, len: usize) -> Result<(), String> {
+        let _ = (offset, len);
+        Ok(())
     }
 }
 
@@ -147,6 +164,47 @@ struct State {
     streams: usize,
     /// The furthest byte any slot reached since the region was last discarded.
     touched_end: usize,
+    /// Which [`SLOT_ALIGNMENT`] granules of the region are committed, by index from the
+    /// region's start. Discarding a slot keeps its granules committed.
+    committed: Vec<bool>,
+    /// Why a commit was first refused, once one was: the reason is logged that once.
+    commit_refused: Option<String>,
+}
+
+impl State {
+    /// Commits the granules of `span` bytes from `offset` that are not committed yet, a run of
+    /// them at a time, and marks them. Stops at the first run the region refuses.
+    fn commit(&mut self, region: &dyn SharedRegion, offset: usize, span: usize) -> bool {
+        let first = offset / SLOT_ALIGNMENT;
+        let end = (offset + span).div_ceil(SLOT_ALIGNMENT);
+        if self.committed.len() < end {
+            self.committed.resize(end, false);
+        }
+        let mut at = first;
+        while at < end {
+            if self.committed[at] {
+                at += 1;
+                continue;
+            }
+            let run_end = (at..end).find(|&i| self.committed[i]).unwrap_or(end);
+            let bytes = (run_end - at) * SLOT_ALIGNMENT;
+            match region.commit(at * SLOT_ALIGNMENT, bytes) {
+                Ok(()) => self.committed[at..run_end].fill(true),
+                Err(why) => {
+                    if self.commit_refused.is_none() {
+                        eprintln!(
+                            "video: a picture goes to the guest in its message: the shared \
+                             picture memory for its slot could not be committed ({why})"
+                        );
+                        self.commit_refused = Some(why);
+                    }
+                    return false;
+                }
+            }
+            at = run_end;
+        }
+        true
+    }
 }
 
 /// The slots of one region, shared by every stream that sends its pictures there.
@@ -166,6 +224,11 @@ impl PictureSlots {
                 "the shared picture region of {len} bytes is smaller than {MIN_REGION_BYTES}"
             ));
         }
+        // The maker of the region committed the header's pages already, so this costs nothing;
+        // it makes the read below certain to reach committed memory.
+        region.commit(0, SLOTS_START).map_err(|why| {
+            format!("the shared picture region's header could not be committed ({why})")
+        })?;
         // SAFETY: the view is `len` bytes long and outlives this read.
         let header = unsafe { std::slice::from_raw_parts(region.as_ptr(), 24) };
         let (id, said) = read_header(header).ok_or_else(|| {
@@ -182,6 +245,7 @@ impl PictureSlots {
             id,
             state: Mutex::new(State {
                 next_number: 1,
+                committed: vec![true; SLOTS_START / SLOT_ALIGNMENT],
                 ..State::default()
             }),
         }))
@@ -216,6 +280,11 @@ impl PictureSlots {
     /// How many slots are held now, by every stream.
     pub fn held(&self) -> usize {
         self.state().held.len()
+    }
+
+    /// Why the region first refused to commit a slot's pages, if it ever did.
+    pub fn commit_refused(&self) -> Option<String> {
+        self.state().commit_refused.clone()
     }
 }
 
@@ -290,18 +359,26 @@ impl StreamSlots {
     }
 
     /// Lets `fill` write the slot's bytes, while this stream holds it and has not lent it.
-    /// Returns what `fill` returned, or false when the slot is not this stream's to write.
+    /// Returns what `fill` returned, or false when the slot is not this stream's to write or
+    /// its pages could not be committed (the picture then goes in its message). The slot's
+    /// pages are committed first, the first time any slot covers them.
     pub fn write(&self, slot: &Slot, fill: impl FnOnce(&mut [u8]) -> bool) -> bool {
         let offset = slot.offset as usize;
         {
-            let state = self.slots.state();
-            match state.held.get(&offset) {
+            let mut state = self.slots.state();
+            let span = match state.held.get(&offset) {
                 Some(held)
                     if held.stream == self.stream
                         && held.number == slot.number
                         && !held.lent
-                        && slot.len <= held.span => {}
+                        && slot.len <= held.span =>
+                {
+                    held.span
+                }
                 _ => return false,
+            };
+            if !state.commit(self.slots.region.as_ref(), offset, span) {
+                return false;
             }
         }
         // SAFETY: the slot's bytes lie inside the view (`take` placed them there), and no one
@@ -354,16 +431,36 @@ impl Drop for StreamSlots {
             state.streams = state.streams.saturating_sub(1);
             if state.streams == 0 && state.touched_end > SLOTS_START {
                 let end = std::mem::take(&mut state.touched_end);
-                Some(end - SLOTS_START)
+                committed_runs(&state.committed, SLOTS_START, end)
             } else {
-                None
+                Vec::new()
             }
         };
-        // The last stream is gone: what the pictures touched goes back to the host.
-        if let Some(len) = discard {
-            self.slots.region.discard(SLOTS_START, len);
+        // The last stream is gone: what the pictures touched goes back to the host. Only
+        // committed pages were written, and only they are given back; their commit stays.
+        for (offset, len) in discard {
+            self.slots.region.discard(offset, len);
         }
     }
+}
+
+/// The committed runs of granules between the bytes `start` and `end`, as `(offset, len)`.
+fn committed_runs(committed: &[bool], start: usize, end: usize) -> Vec<(usize, usize)> {
+    let mut runs = Vec::new();
+    let mut run: Option<usize> = None;
+    let last = end.div_ceil(SLOT_ALIGNMENT);
+    for index in start / SLOT_ALIGNMENT..=last {
+        let on = index < last && committed.get(index).copied().unwrap_or(false);
+        match (on, run) {
+            (true, None) => run = Some(index),
+            (false, Some(first)) => {
+                runs.push((first * SLOT_ALIGNMENT, (index - first) * SLOT_ALIGNMENT));
+                run = None;
+            }
+            _ => {}
+        }
+    }
+    runs
 }
 
 /// A region in this process's own memory, for tests and for hosts that share none: it is

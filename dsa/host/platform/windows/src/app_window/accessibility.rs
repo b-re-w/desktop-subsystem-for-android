@@ -2,13 +2,31 @@
 //! Accessibility Insights and every other UI Automation client read them.
 //!
 //! A client that reads a window sends it `WM_GETOBJECT`. The window answers with a fragment
-//! root ([`RootProvider`]) whose children are the task's nodes ([`NodeProvider`]), and that
-//! first request starts a thread that watches the task's tree through the service's local
-//! API ([`HostApiClient::watch_accessibility`]): the service asks the agent in Android to read
-//! the task's nodes, and their tree and its changes come back here. Until a client asks,
-//! nothing runs and Android reads nothing. Once no client has asked for [`PRESENCE_GRACE`]
-//! and none listens for events (`UiaClientsAreListening`), the thread ends and Android stops
-//! reading the task ([`ClientPresence`]).
+//! root ([`RootProvider`]) whose children are the task's nodes ([`NodeProvider`]). How the
+//! task's tree is then had depends on the client ([`ClientDemand`]):
+//!
+//! - While a screen reader is on (`SPI_GETSCREENREADER`) or a client subscribed to focus
+//!   changes, the request starts a thread that watches the task's tree through the service's
+//!   local API ([`HostApiClient::watch_accessibility`]): the service asks the agent in Android
+//!   to read the task's nodes, and their tree and its changes come back here. The watch tells
+//!   Android whether that client listens for events, so focus comes at once. It ends once no
+//!   such client is left, or once no client has asked for [`PRESENCE_GRACE`] and none
+//!   listens.
+//! - Any other client (a feature of the desktop or another app looking at every window) gets
+//!   the tree read once when it reads the window, at most every [`SNAPSHOT_INTERVAL`], and
+//!   once for each action it asks for; the watch then ends by itself. Reading every node is a
+//!   call answered on the app's UI thread, so a continuous watch for such clients made apps
+//!   stutter on a desktop with no screen reader at all.
+//!
+//! Until a client asks, nothing runs and Android reads nothing. The window's log says why
+//! each watch started and ended.
+//!
+//! Editable nodes have the Text pattern ([`patterns`]): ranges by character, word and line
+//! over the node's text, its selection, and Select, which moves the cursor in Android. Lists
+//! and grids have Grid and Table, their items GridItem, TableItem and ScrollItem, sliders
+//! RangeValue, expandable nodes ExpandCollapse. Each Android window's root says whether it is
+//! a dialog or a pop-up, and an app's announcements and toasts are raised as notifications.
+//! Before the first tree, the root's child is an item that says the app is loading.
 //!
 //! Each node gets the control type of its role, its name, its bounds on the screen (the
 //! window's client area plus where the window shows the node: its place in the task at the
@@ -47,21 +65,25 @@
 //! tree holds can end the window host.
 //!
 //! [`PRESENCE_GRACE`]: dsa_host_core::accessibility::PRESENCE_GRACE
+//! [`SNAPSHOT_INTERVAL`]: dsa_host_core::accessibility::SNAPSHOT_INTERVAL
 
 // UI Automation's constants keep their Windows names, which are matched on below.
 #![allow(non_upper_case_globals)]
 
+#[path = "accessibility_patterns.rs"]
+mod patterns;
+
 use std::collections::HashSet;
 use std::mem::ManuallyDrop;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use dsa_host_core::accessibility::{
-    from_screen, to_screen, ActionRequest, Changes, ClientPresence, GuestAccessibility, Node,
-    NodeAction, PresenceChange, Tree, TreeError,
+    from_screen, to_screen, ActionRequest, Announcement, Changes, ClientDemand, Demand,
+    DemandReason, GuestAccessibility, Node, NodeAction, PresenceChange, Tree, TreeError,
 };
 use dsa_host_core::compositor::caption::{CaptionButton, CaptionLayout};
 use dsa_host_core::compositor::window_sizing::{frame_placement, FramePlacement};
@@ -82,7 +104,8 @@ use super::caption::back_keys;
 use crate::compositor::log::{note, CompositorLogger};
 use crate::compositor::widget_menu::is_korean;
 use crate::ui_automation::{
-    control_type_of, is_content_element, is_control_element, patterns_of, scroll_action, Pattern,
+    control_type, control_type_of, heading_level, is_content_element, is_control_element,
+    patterns_of, row_at_percent, scroll_action, Pattern,
 };
 
 /// A rectangle in the window's client pixels: left, top, width, height.
@@ -297,11 +320,25 @@ fn caption_command(kind: CaptionKind, cells: &CaptionCells) -> Option<(u32, isiz
     }
 }
 
+/// The loading item's runtime ID, as unlike a node's as the back button's.
+const LOADING_RUNTIME_ID: [i32; 2] = [UiaAppendRuntimeId as i32, 0x4c4f_4144];
+
+/// What the loading item says in the user's display language.
+fn loading_name(korean: bool) -> &'static str {
+    if korean {
+        "불러오는 중"
+    } else {
+        "Loading"
+    }
+}
+
 /// One child of the window's fragment root.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RootChild {
     /// A button of the title bar.
     Caption(CaptionKind),
+    /// What the window shows before the app's first tree has come.
+    Loading,
     /// A top-level node of the task.
     Node(u32),
 }
@@ -309,10 +346,17 @@ enum RootChild {
 /// The root's children in order: the title bar's buttons first, left to right (they are at
 /// the window's top), then the task's top-level nodes.
 fn root_children(captions: &[CaptionKind], roots: &[u32]) -> Vec<RootChild> {
+    root_children_of(captions, roots, false)
+}
+
+/// The root's children as [`root_children`] has them, with the loading item after the title
+/// bar's buttons while the app's first tree has not come (`loading`).
+fn root_children_of(captions: &[CaptionKind], roots: &[u32], loading: bool) -> Vec<RootChild> {
     captions
         .iter()
         .copied()
         .map(RootChild::Caption)
+        .chain(loading.then_some(RootChild::Loading))
         .chain(roots.iter().copied().map(RootChild::Node))
         .collect()
 }
@@ -405,6 +449,16 @@ const RETRY: Duration = Duration::from_secs(1);
 /// How long the watch thread waits for news before it looks at its actions again.
 const POLL: Duration = Duration::from_millis(20);
 
+/// How long a watch for one read keeps going after it sent an action, so the screen the
+/// action opens reaches the client too.
+const ACTION_LINGER: Duration = Duration::from_secs(3);
+
+/// How long a watch for one read waits for Android's tree before it gives up.
+const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The most actions that wait for a watch at once.
+const MAX_QUEUED_ACTIONS: usize = 32;
+
 /// The most property change events one batch of changes raises; past it the window says its
 /// whole tree changed instead, which costs a client one read.
 const MAX_PROPERTY_EVENTS: usize = 64;
@@ -459,8 +513,16 @@ struct State {
     /// Whether the window holds the size the desktop gave it (maximised, snapped, full
     /// screen), and so shows a frame of another size in its middle.
     held: bool,
-    /// Where actions go while the watch runs.
-    actions: Option<Sender<ActionRequest>>,
+    /// Actions waiting for the watch to send them to Android.
+    queued: Vec<ActionRequest>,
+    /// Whether a watch thread runs, continuous or for one read.
+    watching: bool,
+    /// A client read the tree, or asked for an action, while no watch ran: the window reads
+    /// the tree once for it ([`AccessibilityWindow::serve`]).
+    wants_read: bool,
+    wants_action: bool,
+    /// What the app asked a screen reader to say, waiting for the UI thread to raise it.
+    announcements: Vec<Announcement>,
     next_request: u32,
     /// Changes waiting for the UI thread to raise their events, each with the tree's names
     /// from before it.
@@ -478,11 +540,27 @@ pub struct Shared {
     hwnd: isize,
     task_id: i32,
     state: Mutex<State>,
+    /// How many clients subscribed to focus changes on the window ([`RootProvider`]'s
+    /// AdviseEventAdded): a client that follows the focus is an assistive technology.
+    focus_listeners: AtomicI32,
+    /// Whether the watch should tell Android a screen reader listens, set by the UI thread.
+    fast: AtomicBool,
 }
 
 impl Shared {
     fn lock(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// A client read the tree. With no watch running, the window is asked to read it once.
+    fn read_wanted(&self) {
+        let mut state = self.lock();
+        if state.watching || state.wants_read {
+            return;
+        }
+        state.wants_read = true;
+        drop(state);
+        post_events(self.hwnd);
     }
 
     fn hwnd(&self) -> HWND {
@@ -522,31 +600,30 @@ impl Shared {
         )
     }
 
-    /// Asks Android to do `action` on node `id` of `epoch`. An error when nothing watches
-    /// the tree, or the node is gone.
-    fn perform(
-        &self,
-        epoch: u32,
-        id: u32,
-        action: NodeAction,
-        text: String,
-    ) -> windows::core::Result<()> {
+    /// Asks Android to do `request`'s action on its node. The watch sends it; with no watch
+    /// running the window starts one for it. An error when the node is gone, or the window
+    /// watches nothing at all.
+    fn perform(&self, mut request: ActionRequest) -> windows::core::Result<()> {
         let mut state = self.lock();
-        if state.tree.epoch() != Some(epoch) || state.tree.node(id).is_none() {
+        if state.tree.epoch() != Some(request.epoch) || state.tree.node(request.node_id).is_none() {
+            return Err(not_available());
+        }
+        // A client that piles actions up on a window nobody watches is not let to grow it.
+        if state.queued.len() >= MAX_QUEUED_ACTIONS {
             return Err(not_available());
         }
         state.next_request = state.next_request.wrapping_add(1);
-        let request = ActionRequest {
-            epoch,
-            node_id: id,
-            action,
-            text,
-            request_id: state.next_request,
-        };
-        match &state.actions {
-            Some(actions) if actions.send(request).is_ok() => Ok(()),
-            _ => Err(not_available()),
+        request.request_id = state.next_request;
+        state.queued.push(request);
+        let start = !state.watching && !state.wants_action;
+        if start {
+            state.wants_action = true;
         }
+        drop(state);
+        if start {
+            post_events(self.hwnd);
+        }
+        Ok(())
     }
 
     /// Sends the task Back, as a click on the back arrow does. An error while the arrow is
@@ -652,6 +729,17 @@ pub(crate) fn variant_str(value: &str) -> VARIANT {
     variant
 }
 
+pub(crate) fn variant_r8(value: f64) -> VARIANT {
+    let mut variant = VARIANT::default();
+    // SAFETY: as above.
+    unsafe {
+        let inner = &mut *variant.Anonymous.Anonymous;
+        inner.vt = windows::Win32::System::Variant::VT_R8;
+        inner.Anonymous.dblVal = value;
+    }
+    variant
+}
+
 pub(crate) fn variant_empty() -> VARIANT {
     let mut variant = VARIANT::default();
     // SAFETY: as above.
@@ -690,21 +778,33 @@ pub(crate) fn safe_array(values: &[i32]) -> windows::core::Result<*mut SAFEARRAY
 #[implement(
     IRawElementProviderSimple,
     IRawElementProviderFragment,
-    IRawElementProviderFragmentRoot
+    IRawElementProviderFragmentRoot,
+    IRawElementProviderAdviseEvents
 )]
 struct RootProvider {
     shared: Arc<Shared>,
 }
 
-/// One node of the task.
+/// One node of the task. The patterns past Scroll are in [`patterns`].
 #[implement(
     IRawElementProviderSimple,
+    IRawElementProviderSimple2,
     IRawElementProviderFragment,
     IInvokeProvider,
     IValueProvider,
     IToggleProvider,
     ISelectionItemProvider,
-    IScrollProvider
+    IScrollProvider,
+    ITextProvider,
+    IRangeValueProvider,
+    IExpandCollapseProvider,
+    IGridProvider,
+    IGridItemProvider,
+    ITableProvider,
+    ITableItemProvider,
+    IScrollItemProvider,
+    ILegacyIAccessibleProvider,
+    IItemContainerProvider
 )]
 struct NodeProvider {
     shared: Arc<Shared>,
@@ -739,6 +839,7 @@ fn child_of(
 ) -> windows::core::Result<IRawElementProviderFragment> {
     match (child, epoch) {
         (Some(RootChild::Caption(kind)), _) => Ok(caption_of(shared, kind)),
+        (Some(RootChild::Loading), _) => Ok(patterns::loading_of(shared)),
         (Some(RootChild::Node(id)), Some(epoch)) => Ok(node_of(shared, epoch, id)),
         _ => none(),
     }
@@ -795,6 +896,8 @@ impl IRawElementProviderFragment_Impl for RootProvider_Impl {
         &self,
         direction: NavigateDirection,
     ) -> windows::core::Result<IRawElementProviderFragment> {
+        // A walk of the tree starts here: a client that is no screen reader gets it read.
+        self.shared.read_wanted();
         let (epoch, child) = {
             let state = self.shared.lock();
             let epoch = state.tree.epoch();
@@ -803,7 +906,7 @@ impl IRawElementProviderFragment_Impl for RootProvider_Impl {
             } else {
                 &[]
             };
-            let children = root_children(&state.caption.kinds(), roots);
+            let children = root_children_of(&state.caption.kinds(), roots, epoch.is_none());
             let child = match direction {
                 NavigateDirection_FirstChild => children.first().copied(),
                 NavigateDirection_LastChild => children.last().copied(),
@@ -843,6 +946,7 @@ impl IRawElementProviderFragmentRoot_Impl for RootProvider_Impl {
         x: f64,
         y: f64,
     ) -> windows::core::Result<IRawElementProviderFragment> {
+        self.shared.read_wanted();
         let (origin, client) = self.shared.client();
         let state = self.shared.lock();
         // The title bar is drawn over the app's top, so a button is what a point in its cell
@@ -867,11 +971,39 @@ impl IRawElementProviderFragmentRoot_Impl for RootProvider_Impl {
     }
 
     fn GetFocus(&self) -> windows::core::Result<IRawElementProviderFragment> {
+        self.shared.read_wanted();
         let state = self.shared.lock();
-        match (state.tree.epoch(), state.tree.focused()) {
+        match (state.tree.epoch(), state.tree.client_focus()) {
             (Some(epoch), Some(id)) => Ok(node_of(&self.shared, epoch, id)),
             _ => none(),
         }
+    }
+}
+
+impl IRawElementProviderAdviseEvents_Impl for RootProvider_Impl {
+    fn AdviseEventAdded(
+        &self,
+        event: UIA_EVENT_ID,
+        _: *const SAFEARRAY,
+    ) -> windows::core::Result<()> {
+        if event == UIA_AutomationFocusChangedEventId {
+            self.shared.focus_listeners.fetch_add(1, Ordering::Relaxed);
+        }
+        Ok(())
+    }
+
+    fn AdviseEventRemoved(
+        &self,
+        event: UIA_EVENT_ID,
+        _: *const SAFEARRAY,
+    ) -> windows::core::Result<()> {
+        if event == UIA_AutomationFocusChangedEventId {
+            // A removal UI Automation reports twice never leaves the count below none.
+            if self.shared.focus_listeners.fetch_sub(1, Ordering::Relaxed) <= 0 {
+                self.shared.focus_listeners.store(0, Ordering::Relaxed);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -887,11 +1019,22 @@ impl NodeProvider {
     }
 
     fn act(&self, action: NodeAction, text: String) -> windows::core::Result<()> {
-        let supported = self.with_node(|_, node| node.supports(action))?;
+        self.act_with(ActionRequest {
+            action,
+            text,
+            ..ActionRequest::default()
+        })
+    }
+
+    /// Asks Android for `request`'s action on this node, which must support it.
+    fn act_with(&self, mut request: ActionRequest) -> windows::core::Result<()> {
+        let supported = self.with_node(|_, node| node.supports(request.action))?;
         if !supported {
             return Err(invalid_operation());
         }
-        self.shared.perform(self.epoch, self.id, action, text)
+        request.epoch = self.epoch;
+        request.node_id = self.id;
+        self.shared.perform(request)
     }
 }
 
@@ -915,7 +1058,37 @@ impl IRawElementProviderSimple_Impl for NodeProvider_Impl {
         self.with_node(|tree, node| {
             let name = tree.name(node.id);
             match property {
-                UIA_ControlTypePropertyId => variant_i4(control_type_of(node.role())),
+                UIA_ControlTypePropertyId => variant_i4(match &node.window {
+                    Some(window) if window.modal => control_type::WINDOW,
+                    Some(window) if window.popup => control_type::PANE,
+                    _ => control_type_of(node.role()),
+                }),
+                UIA_IsDialogPropertyId => {
+                    variant_bool(node.window.as_ref().is_some_and(|window| window.modal))
+                }
+                UIA_HeadingLevelPropertyId => variant_i4(heading_level(node)),
+                UIA_LiveSettingPropertyId => variant_i4(match node.live_region {
+                    dsa_host_core::accessibility::LiveRegion::Off => Off.0,
+                    dsa_host_core::accessibility::LiveRegion::Polite => Polite.0,
+                    dsa_host_core::accessibility::LiveRegion::Assertive => Assertive.0,
+                }),
+                UIA_PositionInSetPropertyId | UIA_SizeOfSetPropertyId => {
+                    match patterns::place_in_set(tree, node) {
+                        Some((place, _)) if property == UIA_PositionInSetPropertyId => {
+                            variant_i4(place)
+                        }
+                        Some((_, size)) => variant_i4(size),
+                        None => variant_empty(),
+                    }
+                }
+                UIA_ExpandCollapseExpandCollapseStatePropertyId
+                    if node.supports(NodeAction::Expand) || node.supports(NodeAction::Collapse) =>
+                {
+                    variant_i4(patterns::expand_state(node).0)
+                }
+                UIA_RangeValueValuePropertyId if node.range.is_some() => {
+                    variant_r8(f64::from(node.range.map_or(0.0, |range| range.current)))
+                }
                 UIA_NamePropertyId => variant_str(&name),
                 UIA_AutomationIdPropertyId if !node.view_id.is_empty() => {
                     variant_str(&node.view_id)
@@ -927,7 +1100,9 @@ impl IRawElementProviderSimple_Impl for NodeProvider_Impl {
                     variant_str(&node.state_description)
                 }
                 UIA_IsEnabledPropertyId => variant_bool(node.states.enabled),
-                UIA_HasKeyboardFocusPropertyId => variant_bool(node.states.focused),
+                UIA_HasKeyboardFocusPropertyId => {
+                    variant_bool(tree.client_focus() == Some(node.id))
+                }
                 UIA_IsKeyboardFocusablePropertyId => variant_bool(node.states.focusable),
                 UIA_IsPasswordPropertyId => variant_bool(node.states.password),
                 UIA_IsControlElementPropertyId => variant_bool(is_control_element(node, &name)),
@@ -973,7 +1148,7 @@ impl IRawElementProviderFragment_Impl for NodeProvider_Impl {
             ) {
                 Some(RootChild::Caption(kind)) => Some(Target::Caption(kind)),
                 Some(RootChild::Node(id)) => Some(Target::Node(id)),
-                None => None,
+                Some(RootChild::Loading) | None => None,
             },
         };
         let target = self.with_node(|tree, node| match direction {
@@ -1020,6 +1195,8 @@ impl IRawElementProviderFragment_Impl for NodeProvider_Impl {
 
     fn SetFocus(&self) -> windows::core::Result<()> {
         let focus = self.with_node(|_, node| {
+            // A node that takes no input focus takes the accessibility focus, which moves
+            // Android's own screen reader cursor and the host's client focus alike.
             if node.supports(NodeAction::Focus) {
                 NodeAction::Focus
             } else {
@@ -1133,7 +1310,7 @@ impl IRawElementProviderFragment_Impl for CaptionProvider_Impl {
             } else {
                 &[]
             };
-            let children = root_children(&captions, roots);
+            let children = root_children_of(&captions, roots, epoch.is_none());
             (
                 epoch,
                 root_sibling(&children, RootChild::Caption(self.kind), forward),
@@ -1229,7 +1406,7 @@ impl ISelectionItemProvider_Impl for NodeProvider_Impl {
     }
 
     fn AddToSelection(&self) -> windows::core::Result<()> {
-        self.Select()
+        ISelectionItemProvider_Impl::Select(self)
     }
 
     fn RemoveFromSelection(&self) -> windows::core::Result<()> {
@@ -1262,8 +1439,32 @@ impl IScrollProvider_Impl for NodeProvider_Impl {
         }
     }
 
-    fn SetScrollPercent(&self, _: f64, _: f64) -> windows::core::Result<()> {
-        Err(invalid_operation())
+    fn SetScrollPercent(&self, horizontal: f64, vertical: f64) -> windows::core::Result<()> {
+        // A list that says how many items it has scrolls to the one at the percent, made or
+        // not: the way a client reaches items a virtualized list keeps off the screen.
+        let (rows, columns) = self.with_node(|_, node| {
+            node.collection
+                .map_or((0, 0), |collection| (collection.rows, collection.columns))
+        })?;
+        let wanted = |percent: f64| percent != UIA_ScrollPatternNoScroll;
+        if rows <= 0 && columns <= 0 {
+            return Err(invalid_operation());
+        }
+        let row = if wanted(vertical) {
+            row_at_percent(rows, vertical)
+        } else {
+            0
+        };
+        let column = if wanted(horizontal) {
+            row_at_percent(columns, horizontal)
+        } else {
+            0
+        };
+        self.act_with(ActionRequest {
+            action: NodeAction::ScrollToPosition,
+            position: (row, column),
+            ..ActionRequest::default()
+        })
     }
 
     fn HorizontalScrollPercent(&self) -> windows::core::Result<f64> {
@@ -1271,7 +1472,8 @@ impl IScrollProvider_Impl for NodeProvider_Impl {
     }
 
     fn VerticalScrollPercent(&self) -> windows::core::Result<f64> {
-        Ok(UIA_ScrollPatternNoScroll)
+        self.with_node(|tree, node| patterns::list_scroll(tree, node).map(|(percent, _)| percent))
+            .map(|percent| percent.unwrap_or(UIA_ScrollPatternNoScroll))
     }
 
     fn HorizontalViewSize(&self) -> windows::core::Result<f64> {
@@ -1279,7 +1481,8 @@ impl IScrollProvider_Impl for NodeProvider_Impl {
     }
 
     fn VerticalViewSize(&self) -> windows::core::Result<f64> {
-        Ok(100.0)
+        self.with_node(|tree, node| patterns::list_scroll(tree, node).map(|(_, view)| view))
+            .map(|view| view.unwrap_or(100.0))
     }
 
     fn HorizontallyScrollable(&self) -> windows::core::Result<BOOL> {
@@ -1294,7 +1497,27 @@ impl IScrollProvider_Impl for NodeProvider_Impl {
 /// The watch thread of a window, while it runs.
 struct Watch {
     stop: Arc<AtomicBool>,
+    /// Whether the watch is for one read and ends by itself; cleared when an assistive
+    /// technology comes while it runs, which keeps it.
+    once: Arc<AtomicBool>,
     thread: JoinHandle<()>,
+}
+
+/// Whether an assistive technology uses the window: Windows says a screen reader is on, or a
+/// client subscribed to the window's focus changes.
+fn assistive(shared: &Shared) -> bool {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SystemParametersInfoW, SPI_GETSCREENREADER};
+    let mut on: i32 = 0;
+    // SAFETY: SPI_GETSCREENREADER writes one BOOL to the pointer it is given.
+    let read = unsafe {
+        SystemParametersInfoW(
+            SPI_GETSCREENREADER,
+            0,
+            &mut on as *mut i32 as *mut core::ffi::c_void,
+            0,
+        )
+    };
+    (read != 0 && on != 0) || shared.focus_listeners.load(Ordering::Relaxed) > 0
 }
 
 /// A task window's UI Automation tree, kept by the window on its UI thread.
@@ -1302,7 +1525,7 @@ pub struct AccessibilityWindow {
     task_id: i32,
     shared: Option<Arc<Shared>>,
     root: Option<IRawElementProviderSimple>,
-    presence: ClientPresence,
+    demand: ClientDemand,
     watch: Option<Watch>,
     connect: Option<ApiConnect>,
     logger: Option<Arc<CompositorLogger>>,
@@ -1340,7 +1563,7 @@ impl AccessibilityWindow {
             task_id,
             shared: None,
             root: None,
-            presence: ClientPresence::default(),
+            demand: ClientDemand::default(),
             watch: None,
             connect,
             logger,
@@ -1411,13 +1634,19 @@ impl AccessibilityWindow {
                 task_size,
                 scale: self.scale,
                 held: self.held,
-                actions: None,
+                queued: Vec::new(),
+                watching: false,
+                wants_read: false,
+                wants_action: false,
+                announcements: Vec::new(),
                 next_request: 0,
                 pending: Vec::new(),
                 caption: self.caption,
                 caption_changes: Vec::new(),
                 input: self.input.clone(),
             }),
+            focus_listeners: AtomicI32::new(0),
+            fast: AtomicBool::new(false),
         });
         self.shared = Some(Arc::clone(&shared));
         shared
@@ -1439,8 +1668,12 @@ impl AccessibilityWindow {
             return None;
         }
         let shared = self.shared(hwnd);
-        if self.presence.asked(Instant::now()) == Some(PresenceChange::Start) {
-            self.start_watch(&shared);
+        let reading = self.watch.is_some();
+        if let Some((demand, why)) = self
+            .demand
+            .asked(Instant::now(), assistive(&shared), reading)
+        {
+            self.start_watch(&shared, demand, why);
         }
         let root: IRawElementProviderSimple = match &self.root {
             Some(root) => root.clone(),
@@ -1461,25 +1694,40 @@ impl AccessibilityWindow {
         )
     }
 
-    fn start_watch(&mut self, shared: &Arc<Shared>) {
+    /// Starts the watch `demand` asks for, saying `why` in the log. A watch for one read that
+    /// runs already becomes continuous when an assistive technology came.
+    fn start_watch(&mut self, shared: &Arc<Shared>, demand: Demand, why: DemandReason) {
+        let window = self.task_id;
+        let task_id = self.tasks.task_of(window);
+        if let Some(watch) = &self.watch {
+            if demand == Demand::Continuous && watch.once.swap(false, Ordering::Relaxed) {
+                note(
+                    self.logger.as_deref(),
+                    &format!("task {task_id}: {why}; watching its accessibility tree from now on"),
+                );
+            }
+            return;
+        }
         let Some(connect) = self.connect.clone() else {
             return;
         };
-        if self.watch.is_some() {
-            return;
-        }
-        let (tx, actions) = mpsc::channel();
-        shared.lock().actions = Some(tx);
+        shared.lock().watching = true;
         let stop = Arc::new(AtomicBool::new(false));
-        let window = self.task_id;
-        let task_id = self.tasks.task_of(window);
+        let once = Arc::new(AtomicBool::new(demand == Demand::Snapshot));
         let tasks = self.tasks.clone();
         let thread_shared = Arc::clone(shared);
         let thread_stop = Arc::clone(&stop);
+        let thread_once = Arc::clone(&once);
         let logger = self.logger.clone();
         note(
             self.logger.as_deref(),
-            &format!("task {task_id}: a UI Automation client reads the window; watching its accessibility tree"),
+            &format!(
+                "task {task_id}: {why}; {}",
+                match demand {
+                    Demand::Continuous => "watching its accessibility tree",
+                    Demand::Snapshot => "reading its accessibility tree once",
+                }
+            ),
         );
         let spawned = thread::Builder::new()
             .name("dsa-app-window-accessibility".into())
@@ -1489,59 +1737,128 @@ impl AccessibilityWindow {
                     tasks,
                     connect,
                     thread_shared,
-                    actions,
                     thread_stop,
+                    thread_once,
                     logger,
                 )
             });
         match spawned {
-            Ok(thread) => self.watch = Some(Watch { stop, thread }),
-            Err(why) => {
+            Ok(thread) => self.watch = Some(Watch { stop, once, thread }),
+            Err(error) => {
                 note(
                     self.logger.as_deref(),
-                    &format!("could not watch the accessibility tree: {why}"),
+                    &format!("could not watch the accessibility tree: {error}"),
                 );
-                shared.lock().actions = None;
-                self.presence.end();
+                shared.lock().watching = false;
+                self.demand.end();
             }
         }
     }
 
-    fn stop_watch(&mut self) {
+    /// Ends the watch. A continuous watch forgets the tree, since nothing keeps it current
+    /// any more; one that read the tree once leaves it for the next read to replace.
+    fn stop_watch(&mut self, why: Option<DemandReason>) {
+        let mut once = false;
         if let Some(watch) = self.watch.take() {
             watch.stop.store(true, Ordering::Relaxed);
+            once = watch.once.load(Ordering::Relaxed);
             let _ = watch.thread.join();
-            note(
-                self.logger.as_deref(),
-                &format!("task {}: no UI Automation client reads the window; stopped watching its accessibility tree", self.task_id),
-            );
+            if let Some(why) = why {
+                note(
+                    self.logger.as_deref(),
+                    &format!(
+                        "task {}: {why}; stopped watching its accessibility tree",
+                        self.task_id
+                    ),
+                );
+            }
         }
         if let Some(shared) = &self.shared {
             let mut state = shared.lock();
-            state.actions = None;
-            let names = names_of(&state.tree);
-            let changes = state.tree.clear();
-            state.pending.push((changes, names));
+            state.watching = false;
+            shared.fast.store(false, Ordering::Relaxed);
+            if !once {
+                state.queued.clear();
+                let names = names_of(&state.tree);
+                let changes = state.tree.clear();
+                state.pending.push((changes, names));
+            }
         }
     }
 
-    /// Checks, every so often on the UI thread, whether clients have gone.
+    /// Reads the tree once for a client that is no assistive technology, which read the
+    /// window or asked for an action while no watch ran. Called on the UI thread when the
+    /// window hears of it.
+    pub fn serve(&mut self, hwnd: isize) {
+        let Some(shared) = self.shared.clone() else {
+            return;
+        };
+        let (read, action) = {
+            let mut state = shared.lock();
+            (
+                std::mem::take(&mut state.wants_read),
+                std::mem::take(&mut state.wants_action),
+            )
+        };
+        let now = Instant::now();
+        let reading = self.watch.is_some();
+        let wanted = if action {
+            self.demand.acted(now, reading)
+        } else if read {
+            self.demand.asked(now, assistive(&shared), reading)
+        } else {
+            None
+        };
+        if let Some((demand, why)) = wanted {
+            self.start_watch(&shared, demand, why);
+            post_events(hwnd);
+        }
+    }
+
+    /// Checks, every so often on the UI thread, whether clients have gone, and whether the
+    /// watch should tell Android a screen reader listens.
     pub fn tick(&mut self, hwnd: isize) {
         // SAFETY: a plain query.
         let listening = unsafe { UiaClientsAreListening() }.as_bool();
-        if self.presence.poll(Instant::now(), listening) == Some(PresenceChange::Stop) {
-            self.stop_watch();
+        let assistive = self.shared.as_deref().is_some_and(assistive);
+        if let Some((PresenceChange::Stop, why)) =
+            self.demand.poll(Instant::now(), listening, assistive)
+        {
+            self.stop_watch(Some(why));
             post_events(hwnd);
         }
-        // A watch that ended by itself (the service went away for good) lets a later
-        // request start a new one.
+        if let Some(shared) = &self.shared {
+            shared.fast.store(
+                self.demand.continuous() && assistive && listening,
+                Ordering::Relaxed,
+            );
+        }
+        // A watch that ended by itself (one read done, or the service went away for good)
+        // lets a later request start a new one.
         if self
             .watch
             .as_ref()
             .is_some_and(|watch| watch.thread.is_finished())
         {
-            self.stop_watch();
-            self.presence.end();
+            let once = self
+                .watch
+                .as_ref()
+                .is_some_and(|watch| watch.once.load(Ordering::Relaxed));
+            self.stop_watch(None);
+            if !once {
+                self.demand.end();
+            }
+            // Actions that came as the read ended start the next one.
+            let waiting = self
+                .shared
+                .as_ref()
+                .is_some_and(|shared| !shared.lock().queued.is_empty());
+            if waiting {
+                if let Some(shared) = &self.shared {
+                    shared.lock().wants_action = true;
+                }
+                self.serve(hwnd);
+            }
         }
         self.opened(hwnd);
     }
@@ -1614,15 +1931,16 @@ impl EventTarget {
     /// Raises the UI Automation events of the changes the watch received.
     pub fn raise(&self, hwnd: isize) {
         let shared = Arc::clone(&self.shared);
-        let (pending, caption_changes, epoch) = {
+        let (pending, caption_changes, announcements, epoch) = {
             let mut state = shared.lock();
             (
                 std::mem::take(&mut state.pending),
                 std::mem::take(&mut state.caption_changes),
+                std::mem::take(&mut state.announcements),
                 state.tree.epoch(),
             )
         };
-        if pending.is_empty() && caption_changes.is_empty() {
+        if pending.is_empty() && caption_changes.is_empty() && announcements.is_empty() {
             return;
         }
         // SAFETY: a plain query.
@@ -1633,6 +1951,9 @@ impl EventTarget {
         let korean = display_korean();
         for (kind, change) in caption_changes {
             raise_caption(&shared, &root, kind, change, korean);
+        }
+        for announcement in &announcements {
+            patterns::raise_announcement(&root, announcement);
         }
         let foreground = {
             use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
@@ -1648,8 +1969,8 @@ impl EventTarget {
 impl AccessibilityWindow {
     /// The window is closing: stops the watch and lets clients go.
     pub fn close(&mut self, hwnd: isize) {
-        self.stop_watch();
-        self.presence.end();
+        self.stop_watch(None);
+        self.demand.end();
         // SAFETY: the documented way for a window that answered WM_GETOBJECT to say it is
         // going, and to let go of its providers.
         unsafe {
@@ -1807,6 +2128,8 @@ fn raise(
                 free_variant(new);
             }
         }
+        // Text, live regions, and windows that opened.
+        patterns::raise_node_events(shared, epoch, changes);
         if let (Some(focus), true) = (changes.focus, foreground) {
             if let Some(provider) = simple(focus) {
                 let _ = UiaRaiseAutomationEvent(&provider, UIA_AutomationFocusChangedEventId);
@@ -1900,16 +2223,28 @@ fn free_variant(mut variant: VARIANT) {
 /// The watch thread: watches the tree of the task window `window` shows (as `tasks` says)
 /// through the service until told to stop, and starts over when the connection ends, a tree
 /// cannot be taken, or another task takes the window over after a GPU reset, whose tree is
-/// then the one watched and acted on.
+/// then the one watched and acted on. It sends the actions clients queued, and tells the
+/// service whether a screen reader listens (`shared.fast`).
+///
+/// While `once` holds, the watch is for one read: it ends once a tree has come and no action
+/// it sent is younger than [`ACTION_LINGER`], or after [`SNAPSHOT_TIMEOUT`] without a tree.
 fn watch(
     window: i32,
     tasks: WindowTasks,
     connect: ApiConnect,
     shared: Arc<Shared>,
-    actions: Receiver<ActionRequest>,
     stop: Arc<AtomicBool>,
+    once: Arc<AtomicBool>,
     logger: Option<Arc<CompositorLogger>>,
 ) {
+    let started = Instant::now();
+    let mut got_tree = false;
+    let mut last_action: Option<Instant> = None;
+    let done = |got_tree: bool, last_action: Option<Instant>| {
+        once.load(Ordering::Relaxed)
+            && ((got_tree && last_action.is_none_or(|at| at.elapsed() >= ACTION_LINGER))
+                || (!got_tree && started.elapsed() >= SNAPSHOT_TIMEOUT))
+    };
     let post = |shared: &Shared| {
         use windows_sys::Win32::UI::WindowsAndMessaging::PostMessageW;
         // SAFETY: posting to the window; a stale handle only fails.
@@ -1932,6 +2267,9 @@ fn watch(
     };
     let mut failures = 0u32;
     while !stop.load(Ordering::Relaxed) {
+        if done(got_tree, last_action) {
+            return;
+        }
         let task_id = tasks.task_of(window);
         let mut connector = connect();
         let stream = HostApiClient::connect(&mut *connector, BUILD, CONNECT)
@@ -1951,6 +2289,8 @@ fn watch(
             }
         };
         failures = 0;
+        // A new watch starts as not listening.
+        let mut told_fast = false;
         loop {
             if stop.load(Ordering::Relaxed) {
                 return;
@@ -1966,24 +2306,40 @@ fn watch(
                          accessibility tree"
                     ),
                 );
-                while actions.try_recv().is_ok() {}
+                shared.lock().queued.clear();
                 reset(&shared);
                 break;
             }
-            loop {
-                match actions.try_recv() {
-                    Ok(action) => {
-                        if stream.perform(&action).is_err() {
-                            break;
-                        }
-                    }
-                    Err(TryRecvError::Empty) => break,
-                    Err(TryRecvError::Disconnected) => return,
+            if done(got_tree, last_action) {
+                return;
+            }
+            let fast = shared.fast.load(Ordering::Relaxed);
+            if fast != told_fast {
+                if stream.set_listening(fast).is_err() {
+                    break;
                 }
+                told_fast = fast;
+            }
+            let queued = std::mem::take(&mut shared.lock().queued);
+            let mut broken = false;
+            for action in &queued {
+                if stream.perform(action).is_err() {
+                    broken = true;
+                    break;
+                }
+                last_action = Some(Instant::now());
+            }
+            if broken {
+                break;
             }
             match stream.next(POLL) {
                 Ok(None) => {}
+                Ok(Some(GuestAccessibility::Announcement(announcement))) => {
+                    shared.lock().announcements.push(announcement);
+                    post(&shared);
+                }
                 Ok(Some(GuestAccessibility::Tree(update))) => {
+                    got_tree = true;
                     let mut state = shared.lock();
                     let names = names_of(&state.tree);
                     match state.tree.apply(update) {
@@ -2044,7 +2400,7 @@ fn sleep_unless_stopped(stop: &AtomicBool, wait: Duration) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui_automation::control_type;
+    use std::sync::mpsc;
 
     #[test]
     fn fr18_the_mapping_uses_ui_automations_numbers() {
@@ -2059,6 +2415,22 @@ mod tests {
         assert_eq!(Pattern::Toggle.id(), UIA_TogglePatternId.0);
         assert_eq!(Pattern::SelectionItem.id(), UIA_SelectionItemPatternId.0);
         assert_eq!(Pattern::Scroll.id(), UIA_ScrollPatternId.0);
+        assert_eq!(Pattern::Text.id(), UIA_TextPatternId.0);
+        assert_eq!(Pattern::RangeValue.id(), UIA_RangeValuePatternId.0);
+        assert_eq!(Pattern::ExpandCollapse.id(), UIA_ExpandCollapsePatternId.0);
+        assert_eq!(Pattern::Grid.id(), UIA_GridPatternId.0);
+        assert_eq!(Pattern::GridItem.id(), UIA_GridItemPatternId.0);
+        assert_eq!(Pattern::Table.id(), UIA_TablePatternId.0);
+        assert_eq!(Pattern::TableItem.id(), UIA_TableItemPatternId.0);
+        assert_eq!(Pattern::ScrollItem.id(), UIA_ScrollItemPatternId.0);
+        assert_eq!(
+            Pattern::LegacyIAccessible.id(),
+            UIA_LegacyIAccessiblePatternId.0
+        );
+        assert_eq!(control_type::WINDOW, UIA_WindowControlTypeId.0);
+        assert_eq!(control_type::HYPERLINK, UIA_HyperlinkControlTypeId.0);
+        assert_eq!(HeadingLevel_None.0, 80050);
+        assert_eq!(HeadingLevel2.0, 80052);
         assert_eq!(ScrollAmount_LargeIncrement.0, 3);
         assert_eq!(ScrollAmount_SmallDecrement.0, 1);
     }
@@ -2544,11 +2916,11 @@ mod tests {
         let (input, _) = mpsc::channel();
         let mut window = AccessibilityWindow::new(9, (400, 300), input, tasks.clone(), None, None);
         let shared = window.shared(0);
-        let (actions_tx, actions) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
         let thread = {
             let (tasks, shared, stop) = (tasks.clone(), Arc::clone(&shared), Arc::clone(&stop));
-            thread::spawn(move || watch(9, tasks, connect, shared, actions, stop, None))
+            let once = Arc::new(AtomicBool::new(false));
+            thread::spawn(move || watch(9, tasks, connect, shared, stop, once, None))
         };
         let watches = Arc::clone(&android.accessibility_watches);
         wait_until("task 9's tree to be watched", || {
@@ -2568,15 +2940,13 @@ mod tests {
         });
 
         // An action on the window's tree reaches task 14, not the task that ended.
-        actions_tx
-            .send(ActionRequest {
-                epoch: 1,
-                node_id: 3,
-                action: NodeAction::Click,
-                text: String::new(),
-                request_id: 77,
-            })
-            .unwrap();
+        shared.lock().queued.push(ActionRequest {
+            epoch: 1,
+            node_id: 3,
+            action: NodeAction::Click,
+            request_id: 77,
+            ..ActionRequest::default()
+        });
         wait_until("the action to reach Android", || {
             !android.accessibility_actions.lock().unwrap().is_empty()
         });
@@ -2591,5 +2961,234 @@ mod tests {
 
         stop.store(true, Ordering::Relaxed);
         thread.join().unwrap();
+    }
+
+    /// The in-memory local API with one user's running Android, and a way to dial it.
+    fn service() -> (
+        Arc<dsa_host_core::host_api_conformance::FakeAndroid>,
+        ApiConnect,
+        dsa_host_core::host_api_conformance::RunningService,
+    ) {
+        use dsa_host_core::host_api::{UserAndroid, UserAndroids};
+        use dsa_host_core::host_api_conformance::{FakeAndroids, RunningService};
+        let (listener, connector) = dsa_transport::local::pair();
+        let androids = Arc::new(FakeAndroids::default());
+        let android = {
+            let _ = androids.android("test-user");
+            androids.of("test-user").expect("the user's Android")
+        };
+        android.start();
+        let service = RunningService::start(Box::new(listener), androids.clone());
+        let connect: ApiConnect =
+            Arc::new(move || Box::new(AsUser(connector.clone())) as Box<dyn Connector>);
+        (android, connect, service)
+    }
+
+    #[test]
+    fn fr18_a_uia_client_that_is_not_a_screen_reader_does_not_start_the_watch() {
+        let (android, connect, _service) = service();
+        let (input, _) = mpsc::channel();
+        let mut window = AccessibilityWindow::new(
+            9,
+            (400, 300),
+            input,
+            WindowTasks::new(),
+            Some(connect),
+            None,
+        );
+        let shared = window.shared(0);
+        // A client that is no screen reader reads the window: the tree is read once.
+        let started = window
+            .demand
+            .asked(Instant::now(), false, window.watch.is_some());
+        assert_eq!(started, Some((Demand::Snapshot, DemandReason::Read)));
+        window.start_watch(&shared, Demand::Snapshot, DemandReason::Read);
+        let watches = Arc::clone(&android.accessibility_watches);
+        wait_until("task 9's tree to be read", || {
+            watches.lock().unwrap().contains(&(9, true))
+        });
+        // The tree comes; the watch ends by itself and Android stops reading the task.
+        android.publish_accessibility(
+            9,
+            GuestAccessibility::Tree(dsa_host_core::accessibility::TreeUpdate {
+                task_id: 9,
+                epoch: 1,
+                full: true,
+                roots: vec![1],
+                nodes: vec![Node {
+                    id: 1,
+                    class_name: "android.widget.FrameLayout".into(),
+                    ..Node::default()
+                }],
+                ..Default::default()
+            }),
+        );
+        wait_until("the read to end", || {
+            watches.lock().unwrap().contains(&(9, false))
+        });
+        wait_until("the watch thread to finish", || {
+            window
+                .watch
+                .as_ref()
+                .is_some_and(|watch| watch.thread.is_finished())
+        });
+        window.tick(0);
+        assert!(window.watch.is_none());
+        assert!(!window.demand.continuous());
+        // The tree it read stays for the client.
+        assert_eq!(shared.lock().tree.roots(), &[1]);
+        // Another read soon after reads nothing more.
+        assert_eq!(window.demand.asked(Instant::now(), false, false), None);
+        // It never said a screen reader listens.
+        assert!(android.accessibility_listening.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn fr18_a_screen_reader_starts_the_fast_watch() {
+        let (android, connect, _service) = service();
+        let (input, _) = mpsc::channel();
+        let mut window = AccessibilityWindow::new(
+            9,
+            (400, 300),
+            input,
+            WindowTasks::new(),
+            Some(connect),
+            None,
+        );
+        let shared = window.shared(0);
+        // A client subscribed to focus changes: an assistive technology.
+        shared.focus_listeners.store(1, Ordering::Relaxed);
+        assert!(assistive(&shared));
+        let started = window.demand.asked(Instant::now(), true, false);
+        assert_eq!(
+            started,
+            Some((Demand::Continuous, DemandReason::AssistiveTechnology))
+        );
+        window.start_watch(
+            &shared,
+            Demand::Continuous,
+            DemandReason::AssistiveTechnology,
+        );
+        // It listens: the watch tells Android to send the focus at once.
+        shared.fast.store(true, Ordering::Relaxed);
+        let listening = Arc::clone(&android.accessibility_listening);
+        wait_until("Android to hear a screen reader listens", || {
+            listening.lock().unwrap().contains(&(9, true))
+        });
+        // It goes: the watch ends.
+        shared.focus_listeners.store(0, Ordering::Relaxed);
+        let stop = window.demand.poll(Instant::now(), true, assistive(&shared));
+        if assistive(&shared) {
+            // This machine runs a screen reader of its own; the watch rightly stays.
+            assert_eq!(stop, None);
+        } else {
+            assert_eq!(
+                stop,
+                Some((PresenceChange::Stop, DemandReason::AssistiveTechnologyGone))
+            );
+        }
+        window.stop_watch(None);
+        let watches = Arc::clone(&android.accessibility_watches);
+        wait_until("the watch to end", || {
+            watches.lock().unwrap().contains(&(9, false))
+        });
+    }
+
+    #[test]
+    fn fr18_a_client_finds_and_realizes_the_items_a_virtualized_list_keeps_off_the_screen() {
+        use dsa_host_core::accessibility::{Collection, CollectionItem, TreeUpdate};
+        let (input, _) = mpsc::channel();
+        let mut window =
+            AccessibilityWindow::new(9, (400, 300), input, WindowTasks::new(), None, None);
+        let shared = window.shared(0);
+        // A list of 40 rows of which rows 0 to 2 are on the screen.
+        let item = |id: u32, row: i32| Node {
+            id,
+            class_name: "android.widget.TextView".into(),
+            text: format!("row {row}"),
+            collection_item: Some(CollectionItem {
+                row,
+                row_span: 1,
+                column: 0,
+                column_span: 1,
+                heading: false,
+            }),
+            ..Node::default()
+        };
+        let list = Node {
+            id: 1,
+            children: vec![2, 3, 4],
+            class_name: "androidx.recyclerview.widget.RecyclerView".into(),
+            collection: Some(Collection {
+                rows: 40,
+                columns: 1,
+                hierarchical: false,
+            }),
+            actions: vec![NodeAction::ScrollToPosition],
+            ..Node::default()
+        };
+        shared
+            .lock()
+            .tree
+            .apply(TreeUpdate {
+                task_id: 9,
+                epoch: 1,
+                full: true,
+                roots: vec![1],
+                nodes: vec![list, item(2, 0), item(3, 1), item(4, 2)],
+                ..TreeUpdate::default()
+            })
+            .unwrap();
+        let container: IItemContainerProvider = node_of(&shared, 1, 1).cast().unwrap();
+        let nothing = VARIANT::default();
+        // SAFETY: calls into this window's own providers.
+        unsafe {
+            let first = container
+                .FindItemByProperty(None, UIA_PROPERTY_ID(0), &nothing)
+                .unwrap();
+            assert_eq!(
+                patterns::runtime_for_test(&first),
+                Some(vec![UiaAppendRuntimeId as i32, 1, 2])
+            );
+            let third = node_of(&shared, 1, 4)
+                .cast::<IRawElementProviderSimple>()
+                .unwrap();
+            // After the last row on the screen comes row 3, which Android has not made.
+            let fourth = container
+                .FindItemByProperty(&third, UIA_PROPERTY_ID(0), &nothing)
+                .unwrap();
+            let virtualized: IVirtualizedItemProvider = fourth.cast().unwrap();
+            virtualized.Realize().unwrap();
+            // A name finds a row on the screen.
+            let name = variant_str("row 1");
+            let found = container
+                .FindItemByProperty(None, UIA_NamePropertyId, &name)
+                .unwrap();
+            assert_eq!(
+                patterns::runtime_for_test(&found),
+                Some(vec![UiaAppendRuntimeId as i32, 1, 3])
+            );
+        }
+        // Realizing scrolled the list to row 3.
+        let queued = shared.lock().queued.clone();
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].action, NodeAction::ScrollToPosition);
+        assert_eq!(queued[0].node_id, 1);
+        assert_eq!(queued[0].position, (3, 0));
+    }
+
+    #[test]
+    fn fr18_before_the_first_tree_the_window_says_it_is_loading() {
+        assert_eq!(
+            root_children_of(&[CaptionKind::Back], &[], true),
+            vec![RootChild::Caption(CaptionKind::Back), RootChild::Loading]
+        );
+        assert_eq!(root_children_of(&[], &[4], false), vec![RootChild::Node(4)]);
+        assert_eq!(loading_name(true), "불러오는 중");
+        assert_eq!(loading_name(false), "Loading");
+        for kind in CaptionKind::ALL {
+            assert_ne!(LOADING_RUNTIME_ID, kind.runtime_id());
+        }
+        assert_ne!(LOADING_RUNTIME_ID.len(), runtime_id(0, 0).len());
     }
 }

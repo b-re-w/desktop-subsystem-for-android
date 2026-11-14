@@ -4606,6 +4606,13 @@ VIDEO_PICTURES_PROPERTY_CONTEXT = f"{VIDEO_PICTURES_PROPERTY} u:object_r:dsa_vid
 # The driver's device, which only the codec HAL may open (codec2.cil): it holds the pictures of
 # every app's video. Its type is in memory.cil, which every image carries, so the label is too.
 VIDEO_PICTURES_DEVICE_CONTEXT = "/dev/dsa_video_pictures u:object_r:dsa_video_pictures_device:s0"
+# dsa-channeld sets this to where the two regions of the graphics memory the host shares are in
+# the VM, and dsa-memory.rc hands it to the kernel's driver (memory.cil).
+GRAPHICS_MEMORY_PROPERTY = "vendor.dsa.graphics_memory"
+GRAPHICS_MEMORY_PROPERTY_CONTEXT = f"{GRAPHICS_MEMORY_PROPERTY} u:object_r:dsa_graphics_memory_prop:s0 exact string"
+# The driver's device, labelled as the GPU is: every process that draws with the GPU maps its own
+# host-visible memory from it, and the driver keeps each to the grants the host gave it.
+GRAPHICS_MEMORY_DEVICE_CONTEXT = "/dev/dsa_graphics_memory u:object_r:gpu_device:s0"
 DNS_REDIRECT_SERVICE = "service dsa_dns_redirect /vendor/bin/dsa-channeld --dns-redirect"
 DNS_REDIRECT_TRIGGER = f"on property:{DNS_PROPERTY}=*"
 # Root elevation's su client. It is a system file, where an app's PATH and the kernel's su
@@ -5233,6 +5240,8 @@ def update_vendor_file_contexts(fc_text, channeld=False, hwcomposer=False, power
         entries.append((r"/vendor/bin/hw/dsa-camera", CAMERA_CONTEXT))
     # The kernel's shared picture memory: the codec HAL alone may open it.
     entries.append((r"/dev/dsa_video_pictures", VIDEO_PICTURES_DEVICE_CONTEXT))
+    # The kernel's shared graphics memory: every GPU user may open it.
+    entries.append((r"/dev/dsa_graphics_memory", GRAPHICS_MEMORY_DEVICE_CONTEXT))
     # Usually there already, as /(vendor|system/vendor)/overlay(/.*)?.
     entries.append(("overlay(/.*)?", VENDOR_OVERLAY_CONTEXT))
     for pattern, rule in entries:
@@ -5284,6 +5293,8 @@ def update_vendor_property_contexts(text):
         lines.append(HOST_MEMORY_PROPERTY_CONTEXT)
     if not any(line.split()[:1] == [VIDEO_PICTURES_PROPERTY] for line in lines):
         lines.append(VIDEO_PICTURES_PROPERTY_CONTEXT)
+    if not any(line.split()[:1] == [GRAPHICS_MEMORY_PROPERTY] for line in lines):
+        lines.append(GRAPHICS_MEMORY_PROPERTY_CONTEXT)
     for name, context in {**GAPPS_COMPILE_PROPERTY_CONTEXTS, **APP_MEMORY_PROPERTY_CONTEXTS}.items():
         if not any(line.split()[:1] == [name] for line in lines):
             lines.append(context)
@@ -5411,6 +5422,7 @@ SENSORS_POLICY = HERE / "sepolicy/sensors.cil"
 CAMERA_POLICY = HERE / "sepolicy/camera.cil"
 AGENT_POLICY = HERE / "sepolicy/agent.cil"
 MEMORY_POLICY = HERE / "sepolicy/memory.cil"
+GRAPHICS_MEMORY_POLICY = HERE / "sepolicy/graphics-memory.cil"
 AUDIO_POLICY = HERE / "sepolicy/audio.cil"
 ADB_POLICY = HERE / "sepolicy/adb.cil"
 KERNEL_POLICY = HERE / "sepolicy/kernel.cil"
@@ -5761,6 +5773,22 @@ def narrow_vsock_neverallows(text):
     return re.sub(r"\n{3,}", "\n\n", narrowed)
 
 
+def userfaultfd_getattr_rules(plat_sepolicy_text):
+    """Lets each domain the platform gives a userfaultfd of its own (every app domain,
+    system_server, zygote) stat it, as it may already create, read and ask it ioctls. The
+    platform's rules leave getattr out, so each app's log showed a denial on
+    anon_inode:[userfaultfd] (ART's, and the Vulkan driver's write protection makes another).
+    Only the domain's own type: the platform forbids every other domain its userfaultfds."""
+    rules = []
+    for source, target, created in re.findall(
+            r'\(typetransition\s+(\S+)\s+(\S+)\s+anon_inode\s+"?\[userfaultfd\]"?\s+([^\s()]+)\s*\)',
+            plat_sepolicy_text):
+        rule = f"(allow {source} {created} (anon_inode (getattr)))"
+        if source == target and rule not in rules:
+            rules.append(rule)
+    return "\n" + "\n".join(rules) + "\n" if rules else ""
+
+
 def with_versioned_app_domains(rules_text, plat_sepolicy_text):
     """Gives each rule of `rules_text` that names platform_app the same rule for every
     platform_app_<sdk> domain the platform policy declares. Android 17 runs a platform app that
@@ -6037,6 +6065,9 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
             plat_patched = patch_plat_sepolicy(plat_orig, fragment_text)
             # The memory controls the vendor scripts write, and the reclaim property.
             plat_patched += "\n" + MEMORY_POLICY.read_text()
+            # The Vulkan driver asking the kernel which pages of its copies an app wrote.
+            plat_patched += "\n" + GRAPHICS_MEMORY_POLICY.read_text()
+            plat_patched += userfaultfd_getattr_rules(plat_orig)
             # adbd listening on vsock, and the property that starts it.
             plat_patched += "\n" + ADB_POLICY.read_text()
             # The kernel thread whose devtmpfs nodes nothing uses.
