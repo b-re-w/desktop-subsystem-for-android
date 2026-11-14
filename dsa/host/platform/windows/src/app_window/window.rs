@@ -1081,6 +1081,13 @@ unsafe extern "system" fn task_window_proc(
             if let Some(target) = target {
                 target.raise(hwnd as isize);
             }
+            // A client that is no screen reader read the tree or acted on it: the window
+            // reads the task's tree once for it.
+            if let Some(data) = window_data(hwnd) {
+                if let Ok(mut tree) = data.accessibility.try_borrow_mut() {
+                    tree.serve(hwnd as isize);
+                }
+            }
             0
         }
         WM_NCDESTROY => {
