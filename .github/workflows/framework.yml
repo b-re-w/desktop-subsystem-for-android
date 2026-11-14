@@ -1,5 +1,6 @@
 # Builds SurfaceFlinger, libhwui and libEGL with DSA's GPU device loss recovery,
-# libandroid_runtime, which gives Google Play the computer's memory, and DSA's KeyMint, whose root key of key blobs comes from the DSA host (the patches in
+# libandroid_runtime, which gives Google Play the computer's memory, and DSA's KeyMint, whose root key of key blobs comes from the DSA host, and
+# services.jar, whose window manager gives a dialog no caption bar inset (the patches in
 # dsa/guest/framework/patches), for each Android version in dsa/guest/framework/framework-lock.json
 # and each guest architecture, and keeps them as the artifacts the image release lays over the
 # published build (make-image.py --framework).
@@ -101,9 +102,101 @@ jobs:
             .github/scripts/framework/check-patches.sh "$android" "$RUNNER_TEMP/patch-check-$android"
           done
 
+  # services.jar, with DSA's window manager, package manager and WebView service changes. The
+  # Java framework reaches across most of the platform, so it is built in a tree of every project
+  # the published build's manifest syncs by default (framework_lock.py services-lock), with the
+  # build's own product and release configuration. A dex file is the same for every
+  # architecture, so one build serves the images of both; the framework jobs below take it into
+  # their artifacts. Soong's analysis of the whole tree needs more memory than the runner has,
+  # hence the large swap.
+  services:
+    name: Build services.jar (ubuntu-24.04, ${{ matrix.android }})
+    needs: versions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        android: ${{ fromJSON(needs.versions.outputs.android) }}
+    env:
+      ANDROID_BRANCH: ${{ matrix.android }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make room on the runner
+        run: .github/scripts/translator/free-disk.sh dsa-services
+
+      - name: Add swap for the analysis of the whole tree
+        run: |
+          swap_dir="$(dirname "$(swapon --show=NAME --noheadings | grep dsa-swap | head -1)")"
+          sudo fallocate -l 24G "$swap_dir/dsa-swap-services"
+          sudo chmod 600 "$swap_dir/dsa-swap-services"
+          sudo mkswap "$swap_dir/dsa-swap-services" >/dev/null
+          sudo swapon "$swap_dir/dsa-swap-services"
+          free -h
+
+      - name: Install the build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends jq
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Read the pins
+        id: pins
+        run: echo "version=$(uv run dsa/guest/framework/framework_lock.py version "$ANDROID_BRANCH")" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the whole pinned tree
+        run: |
+          start=$SECONDS
+          url="$(jq -r --arg a "$ANDROID_BRANCH" '.versions[] | select(.android == $a) | .manifest.url' dsa/guest/framework/framework-lock.json)"
+          curl -fsSL --retry 8 --retry-all-errors -o "$RUNNER_TEMP/manifest.xml" "$url"
+          uv run dsa/guest/framework/framework_lock.py services-lock "$ANDROID_BRANCH" "$RUNNER_TEMP/manifest.xml" "$RUNNER_TEMP/services-lock.json"
+          uv run .github/scripts/translator/fetch-source.py --lock "$RUNNER_TEMP/services-lock.json" \
+            --android "$ANDROID_BRANCH" --top "$DSA_TRANSLATOR_WORK/aosp" --jobs 16
+          echo "fetched in $(( (SECONDS - start) / 60 )) minutes"
+          du -sh "$DSA_TRANSLATOR_WORK/aosp"
+          df -h / /mnt
+
+      - name: Build services.jar
+        timeout-minutes: 300
+        run: |
+          start=$SECONDS
+          .github/scripts/framework/build-services.sh "$DSA_TRANSLATOR_WORK/aosp" "$ANDROID_BRANCH" "$DSA_TRANSLATOR_WORK/services"
+          echo "built in $(( (SECONDS - start) / 60 )) minutes"
+          df -h / /mnt
+
+      - name: Keep services.jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: framework-services-${{ matrix.android }}-${{ steps.pins.outputs.version }}
+          path: ${{ env.DSA_TRANSLATOR_WORK }}/services/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Keep the build's logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: framework-services-logs-${{ matrix.android }}
+          path: |
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/error.log
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/soong.log
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/verbose.log*
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/out/soong_ui.log*
+            ${{ env.DSA_TRANSLATOR_WORK }}/aosp/.dsa-patches.json
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 30
+
   framework:
     name: Build the framework (ubuntu-24.04, ${{ matrix.android }}, ${{ matrix.arch }})
-    needs: versions
+    # After the services build, whose services.jar goes into this job's artifact. Should that
+    # build fail, the artifact has no services.jar, and make-image.py edits the published
+    # build's as before; the dialogs of that image keep the caption bar inset.
+    needs: [versions, services]
+    if: ${{ !cancelled() && needs.versions.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 355
     permissions:
@@ -213,13 +306,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: .github/scripts/framework/ccache-artifact.sh prune "framework-ccache-${{ matrix.android }}-${{ matrix.arch }}" "${{ steps.keep-ccache.outputs.artifact-id }}"
 
+      - name: Download services.jar
+        id: services
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: framework-services-${{ matrix.android }}-${{ steps.pins.outputs.version }}
+          path: ${{ env.DSA_TRANSLATOR_WORK }}/services
+
       - name: Collect the files the image takes
         id: collect
+        env:
+          HAVE_SERVICES: ${{ steps.services.outcome == 'success' }}
         run: |
           out="$DSA_TRANSLATOR_WORK/framework"
+          services=()
+          if [[ "$HAVE_SERVICES" == true ]]; then
+            services=(--services "$DSA_TRANSLATOR_WORK/services")
+          else
+            echo "::warning::the services build made no services.jar, so the image edits the published build's and its dialogs keep the caption bar inset"
+          fi
           uv run dsa/guest/framework/collect.py --android "$ANDROID_BRANCH" --arch "${{ matrix.arch }}" \
             --product-out "$DSA_TRANSLATOR_WORK/aosp/out/target/product/dsa_framework" \
-            --top "$DSA_TRANSLATOR_WORK/aosp" --out "$out"
+            --top "$DSA_TRANSLATOR_WORK/aosp" --out "$out" "${services[@]}"
           find "$out" -type f -exec ls -l {} +
           echo "out=$out" >> "$GITHUB_OUTPUT"
 

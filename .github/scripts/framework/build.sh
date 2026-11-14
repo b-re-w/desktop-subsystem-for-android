@@ -30,7 +30,9 @@ esac
 release="$(jq -r --arg a "$android" '.versions[] | select(.android == $a) | .release' "$lock")"
 [[ -n "$release" && "$release" != null ]] || { echo "the lock has no $android" >&2; exit 1; }
 
-uv run "$repo/dsa/guest/framework/apply-patches.py" --android "$android" --top "$top"
+# The patches to Java sources are for services.jar, which build-services.sh builds in a tree of
+# its own.
+uv run "$repo/dsa/guest/framework/apply-patches.py" --android "$android" --top "$top" --native
 
 rm -rf "$device"
 mkdir -p "$device"

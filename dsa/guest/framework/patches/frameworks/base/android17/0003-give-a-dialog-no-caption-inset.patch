@@ -1,0 +1,69 @@
+Subject: InsetsPolicy: give a dialog no caption bar inset, and a freeform window its status bar
+
+The DSA agent gives each freeform task a caption bar and a status bar inset source, both as high
+as the host window's title bar. InsetsSource.calculateArbitraryInsets gives a caption bar
+source's full height to every window of the task, wherever the window is, so a dialog (Dialog,
+AlertDialog, the date and time pickers, a context menu) got the band's height as its top inset
+although it sits below the band. DecorView then moved the dialog's content down by that much
+inside its surface, while touch stayed where the window is: the dialog was drawn 58 px below the
+place that takes its taps.
+
+enforceInsetsPolicyForTarget now removes the caption bar source from a window that is not as
+large as its parent, or that the window manager lays out below the band (it fits the caption bar
+or the status bar). The task's full-size edge-to-edge window keeps it. Android 16 had the same
+rule behind its relativeInsets flag, which its published builds turn on; Android 17 dropped it.
+
+A window in a floating windowing mode keeps the system bar sources (status bars, navigation bars
+and the caption bar) and the IME, not only the caption bar and the IME, so an app that pads its
+toolbar by its status bar inset keeps it below the title bar. make-image.py made this second
+change as a dex edit of the published services.jar until the image took the framework build's.
+
+Applies to frameworks/base at 94b4c163b7dfe5ce3607f7bb8456f9573f7de57d (Android 17).
+---
+diff --git a/services/core/java/com/android/server/wm/InsetsPolicy.java b/services/core/java/com/android/server/wm/InsetsPolicy.java
+--- a/services/core/java/com/android/server/wm/InsetsPolicy.java
++++ b/services/core/java/com/android/server/wm/InsetsPolicy.java
+@@ -417,6 +417,28 @@ class InsetsPolicy {
+             }
+         }
+
++        // DSA: a caption bar source reaches only the windows that cover the task's caption band.
++        // InsetsSource.calculateArbitraryInsets gives a caption bar source's full height to every
++        // window, wherever the window is (b/254128050), so a dialog in a freeform task got the
++        // band's height as its top inset although it sits below the band, and DecorView moved
++        // its content down by that much inside its surface while touch stayed where the window
++        // is. A window that is not as large as its parent (a dialog, a context menu) or that the
++        // window manager lays out below the band (it fits the caption bar or the status bar,
++        // whose source the agent gives the same frame) does not get the source; the task's
++        // full-size edge-to-edge window keeps it. Android 16 still had this rule behind its
++        // relativeInsets flag, which its published builds turn on, and Android 17 dropped it.
++        if (!attrs.isFullscreen() || (attrs.getFitInsetsTypes()
++                & (Type.captionBar() | Type.statusBars())) != 0) {
++            for (int i = state.sourceSize() - 1; i >= 0; i--) {
++                if (state.sourceAt(i).getType() == Type.captionBar()) {
++                    if (state == originalState) {
++                        state = new InsetsState(originalState);
++                    }
++                    state.removeSourceAt(i);
++                }
++            }
++        }
++
+         final SparseArray<InsetsSourceProvider> providers = mStateController.getSourceProviders();
+         final int windowType = attrs.type;
+         for (int i = providers.size() - 1; i >= 0; i--) {
+@@ -435,7 +457,13 @@ class InsetsPolicy {
+         if (WindowConfiguration.isFloating(windowingMode)
+                 || (windowingMode == WINDOWING_MODE_MULTI_WINDOW && target.isAlwaysOnTop())) {
+             // Keep frames, caption, and IME.
+-            int types = WindowInsets.Type.captionBar();
++            // DSA: and the status bar. The agent gives each task a status bar source as high as
++            // the host window's title bar, and an app that pads its toolbar by its status bar
++            // inset, as most edge-to-edge apps do, keeps it below the title bar only if the
++            // source reaches it. systemBars() is the status bars, the navigation bars and the
++            // caption bar; the guest has no system UI of its own, so the only system bar sources
++            // are the ones the agent gives tasks, none of them along a task's bottom edge.
++            int types = WindowInsets.Type.systemBars();
+             if (windowingMode != WINDOWING_MODE_PINNED
+                     && mDisplayContent.getImeInputTarget() instanceof WindowState imeTarget
+                     && (target == imeTarget
