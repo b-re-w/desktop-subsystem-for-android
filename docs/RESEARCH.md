@@ -3113,6 +3113,46 @@ HCS에는 바로 이 목적의 장치가 문서에 있다.
 
 확인하지 못한 것: 위 "프로토타입 1"의 모든 항목(DSA의 VM에서 영역이 보이는지, 주소의 단위, 게스트 `memcpy` 대역폭), 해제한 페이지가 vmmem에서 돌아오는지(프로토타입 2), 커널 드라이버의 빌드(CI만), 4K60 58 fps(실기).
 
+### 구현 2: 그래픽 경로 (2026-11-15, PR-7)
+
+소유자가 2026-11-15에 같은 공유 메모리를 그래픽 경로로 넓히기로 정했다. 같은 날 소유자 PC에서 Dragon Ball Legends의 약관 화면 뒤 `UnityGfxDeviceWorker` 스레드가 CPU 70-90%를 썼고, simpleperf로 보면 66.9%가 `vulkan.ranchu.so`의 `dsa::shadowBlockHash`(호스트 가시 사본의 바뀐 곳 찾기), 12.3%가 `memmove_avx2`였다. 아래는 위 2와 3의 설계를 그래픽 경로에 적용한 것이다. 사본 경로의 해시를 커널의 쓰기 추적으로 바꾸는 일은 소유자가 따로 떼어 먼저 넣었다(PR #792, guest/mesa 0014). 영역의 할당은 사본이 없으므로 추적도 하지 않고, 쓰기 추적은 영역 밖 할당의 사본 경로가 쓴다. 이 PC에서 빌드하거나 돌리지 않았다. 패치가 기존 패치 위에 붙는지는 `git apply --check`로, Rust는 `scripts/compile-check.ps1`로만 확인했다.
+
+1. 영역 둘. 서비스는 VM을 만들기 전에 섹션 둘을 만든다. `Global\DSA-GraphicsMemory-<SID>`(데이터 영역, 기본 256 MiB, `graphics_shared_memory_mb`, 0이면 없음, `AllowGuestWrite: true`)와 `Global\DSA-GraphicsGrants-<SID>`(허가 표, 2 MiB 단위, `AllowGuestWrite: false`)다. 섹션 DACL은 동영상 영역과 같다. 허가 표의 머리는 `DSAGRNT1`, 영역 id, 데이터 길이, 단위(64 KiB), 확인 칸 크기, 세대, 다음 순번이다(`dsa_host_core::graphics_memory`, `graphics_region.rs`). 렌더러가 아직 쥔 섹션을 다음 부팅에 다시 쓰면 서비스가 허가 표를 지우고 데이터 영역을 0으로 채운 뒤 버린다. HCS가 영역을 받지 않으면 그래픽 영역부터 빼고 다시 만들고, 그래도 안 되면 동영상 영역도 뺀다. 속성 질의로 두 주소를 얻으면 `GuestSharedMemory` 둘(`graphics_grants`, `graphics_memory`)을 보낸다. 프로토콜 정의는 그대로이고 이름만 늘었다.
+2. 허가와 놓기. 허가 표의 항목 i는 데이터 영역의 i번째 64 KiB에서 시작하는 허가다(열쇠, 길이, 순번, 주인). 데이터 영역의 처음 64 KiB(256 MiB일 때)는 확인 칸(64 KiB마다 u64 하나)이고 허가하지 않는다. 렌더러는 첫 맞춤으로 떼어 주고, 열쇠(64비트, 시스템 난수)를 마지막에 쓴다. 게스트 커널은 열쇠와 길이가 맞을 때만 파일에 허가를 묶고(`DSA_GRAPHICS_MEMORY_BIND`), 한 허가는 한 파일만 쥔다. 묶을 때 확인 칸에 "묶음"을 쓰고 전체 장벽 뒤에 열쇠를 다시 읽어, 사라졌으면 물러난다. 렌더러는 회수할 때 열쇠를 지우고 전체 장벽 뒤에 확인 칸을 읽는다(데커의 방식). 그래서 둘 중 하나는 반드시 상대를 본다. 커널은 놓을 때(앱의 해제, 파일 닫힘) 그 범위의 매핑을 모두 걷고(`unmap_mapping_range`) 확인 칸에 "놓음"을 쓴다. 렌더러는 "놓음"을 본 범위만 0으로 채우고 버린 뒤(`DiscardVirtualMemory`) 다시 떼어 준다. 이 일은 렌더러의 정리 스레드(1초마다)나 다음 할당에서 한다. 디코더의 잠금을 쥔 채 큰 범위를 지우지 않기 위해서다. 페이지는 매핑할 때가 아니라 폴트에서 묶음을 다시 확인하고 넣는다(`vmf_insert_pfn`). 그래서 놓은 뒤에는 어떤 매핑도 남지 않는다. 렌더러가 다시 시작하면 표에 남은 허가를 모두 회수하고, 게스트가 쥔 것은 놓을 때까지 기다린다. 순번은 표에 있어 다시 쓰지 않는다. 할당기와 게스트 쪽은 `dsa/graphics/include/dsa_graphics_memory.h`, 시험은 `tests/graphics_memory_test.cpp`(가짜 영역)다.
+3. 호스트 패치 0037. 게스트가 장치마다 한 번 메모리 없이 `vkGetMemoryHostAddressInfoGOOGLE`을 부르면 렌더러는 그 장치가 영역을 매핑한다고 적고 영역 id와 길이로 답한다. 그 뒤 그 장치의 호스트 가시 `vkAllocateMemory`는 허가를 떼어 `VK_EXT_external_memory_host`로 들인다. 할당마다 `vkGetMemoryHostPointerPropertiesEXT`로 그 형식을 받는지 묻고, 받지 않거나, 영역이 찼거나, 이미지 전용 할당이거나(이미지는 들인 호스트 메모리에 묶을 수 없다), `minImportedHostPointerAlignment`가 64 KiB의 약수가 아니면 그 할당만 복사 경로로 간다. 까닭마다 렌더러 로그에 한 번 쓴다. 버퍼 전용 할당은 힌트이므로 떼고 들인다. 그 장치의 버퍼는 `VkExternalMemoryBufferCreateInfo(HOST_ALLOCATION)`를 단다. 메모리의 허가는 같은 장치의 같은 메모리를 물을 때만 답한다. 플러시는 영역 메모리의 바이트를 복사하지 않고, 다시 읽기는 크기 0을 보낸다. `rcUpdateColorBufferDMA`와 `rcReadColorBufferDMA`의 DMA 주소에 꼬리표(`0xD5A`로 시작)가 있으면 영역 안 위치로 읽고, 그 범위가 부른 프로세스(`RenderThreadInfo::m_puid`)의 살아 있는 허가 안에 있을 때만 읽고 쓴다. 렌더러는 GL 확장 문자열에 `ANDROID_EMU_dsa_shared_graphics_memory`를 단다. Win32 핸들 가져오기(D3D12 힙)는 두지 않았다. 소유자 PC의 두 드라이버가 호스트 포인터를 받고(위 2의 2), 받지 않는 드라이버는 할당마다 복사 경로로 가기 때문이다.
+4. 게스트 mesa 패치 0015(쓰기 추적의 0014 다음). 할당 전에 장치마다 한 번 위의 물음을 보내고, 커널의 영역 id, 길이와 맞을 때만 영역을 쓴다. 호스트가 영역에 둔 할당은 커널로 매핑한 페이지를 앱에 준다. 그 할당은 사본, 해시, 제출 때의 플러시, 기다릴 때의 다시 읽기에 들지 않고, 앱이 부른 `vkFlushMappedMemoryRanges`도 바이트를 싣지 않는다. 해제할 때는 매핑을 풀고 커널에 놓는다고 한 뒤 호스트에 알린다. gralloc 버퍼의 CPU 업로드와 다시 읽기는 장치마다 받은 준비 허가(1 MiB 단위로 키운다)에 평면을 바로 채우거나 받아, DMA 호출로 보낸다. hwcomposer는 Vulkan 장치가 없으므로 프로세스 파이프로 준비 허가를 청한다(`DSG1`, `dsa_gfx_backend.cpp`). 호스트가 확장을 알리지 않거나 장치가 없거나 허가가 작으면 예전처럼 스트림으로 보낸다.
+5. 게스트 커널. 같은 패치(`dsa-shared-memory.patch`)에 `drivers/misc/dsa_graphics_memory.c`를 더했다. init이 `/sys/module/dsa_graphics_memory/parameters/graphics_memory`에 `0x<표 주소>,<길이>,0x<데이터 주소>,<길이>`를 쓰면 표의 머리가 있는 쪽(바이트 주소나 페이지 번호)을 고른다. 두 범위는 게스트 RAM 밖이어야 한다. 데이터 영역 전체를 `memremap(..., MEMREMAP_WB)`해 두어 확인 칸을 쓰고 메모리 형식(write-back)을 정한다. struct page는 없다. 장치 `/dev/dsa_graphics_memory`는 `gpu_device`로 레이블해 GPU를 쓰는 모든 도메인이 연다. 무엇을 매핑하는지는 열쇠가 정한다. 자식 프로세스는 매핑을 물려받지 않는다(`VM_DONTCOPY`).
+6. 메모리(NFR-1, NFR-2). 처음에는 섹션을 `SEC_COMMIT`로 두었다. HCS가 `SEC_RESERVE` 섹션을 받는지 몰랐기 때문이다. 아래 "측정: 섹션의 이름과 커밋"에서 HCS가 받는 것을 확인했으므로 두 섹션은 이제 크기를 예약만 하고, 허가가 쓰는 조각만 커밋한다. 물리 페이지는 게스트나 GPU가 쓸 때 생긴다. 앱이 해제하거나 끝나면 그 범위는 1초 안에 0으로 채워지고 버려진다. 사본 경로와 달리 게스트 RAM에 사본이 없다. 위 4의 3(VM 작업자가 버린 페이지를 놓는지)과 위험 2는 그대로 미지수이고 PR-7의 수동 기준이 잰다.
+
+| 기대(재지 않았다) | 근거 |
+|---|---|
+| 영역 할당의 제출 한 번에 스트림으로 가는 바이트 0, 해시 0 | 사본과 `ShadowBlocks`가 없다 |
+| 256 MiB 업로드 처리량이 앱의 `memcpy` 속도(수 GB/s)에 가깝다 | 같은 물리 페이지이고 SLAT 매핑이라면(프로토타입 1) |
+| 할당마다 왕복 하나 더(허가 묻기) | 할당은 프레임마다가 아니다 |
+
+확인하지 못한 것(PC와 CI에서 잴 것):
+
+- 커널, mesa, 렌더러의 빌드와 C++ 시험(`tests/test.sh`의 `graphics_memory_test`)은 CI에서만 돈다.
+- 소유자 PC에서: `dsa-hostd` 로그의 "host-visible graphics memory goes through N MiB of shared memory", 렌더러 로그의 "graphics memory: N MiB shared with the guest"와 복사 경로의 까닭, `logcat`의 "host-visible memory is mapped from N MiB the host shares", Intel Arc와 RTX 4050에서 `vkGetMemoryHostPointerPropertiesEXT`가 섹션 뷰에 돌려주는 형식, 256 MiB 업로드 처리량(영역을 켜고 끈 때), Dragon Ball Legends의 `UnityGfxDeviceWorker` CPU, 앱을 닫은 뒤 렌더러 작업 집합과 `Dozing`의 `vmmem`.
+- `gpu_device`에 SELinux ioctl 허용 목록(`allowxperm`)이 걸린 도메인이 있으면 그 도메인은 묶기(`0x4452`)가 막혀 복사 경로로 간다. 확인할 것: 앱의 `logcat`에 "the kernel would not map a grant".
+- ARM64 Windows는 HCS가 이 영역을 붙이는지 알려진 것이 없다(위험 7). 붙이지 않으면 복사 경로다.
+
+### 측정: 섹션의 이름과 커밋 (2026-11-15, PR-7)
+
+질문. HCS 문서에 섹션을 어떤 이름으로 적어야 VM이 시작하는가. `SEC_RESERVE` 섹션을 HCS가 받는가, 받으면 커밋은 언제 얼마나 잡히고 언제 돌아오는가.
+
+방법. 소유자 PC(Windows 11 build 26300)에서 DSA가 설치한 커널로 부팅하는 시험용 VM을 HCS로 만들고, 섹션 하나를 `Devices.SharedMemory.Regions`에 붙였다. 각 단계 뒤 3초에 `GetPerformanceInfo`의 CommitTotal을 읽었다. 이 PC의 잡음은 약 +-300 MiB다.
+
+결과.
+
+1. 이름. `SectionName`을 Win32 이름 `Global\X`로 적으면 `HcsStartComputeSystem`이 0x800700A1("the specified path is invalid")로 실패한다. 오류는 Microsoft Dynamic Memory Controller가 낸다. 같은 객체를 커널 경로 `\BaseNamedObjects\X`로 적으면 시작한다. 속성 질의는 `SharedMemoryRegionInfo`에 그 이름과 `GuestPhysicalAddress` 131072를 돌려준다. 이 값은 페이지 번호이고(512 MiB), 게스트 RAM 바로 뒤다.
+2. `SEC_COMMIT` 1 GiB 섹션은 만들 때 시스템 커밋이 약 +1000 MiB 는다.
+3. `SEC_RESERVE` 1 GiB 섹션은 만들 때 약 +20-40 MiB로 잡음 안이다. HCS가 받고 VM이 시작한다. VM 작업자가 매핑해도 커밋은 늘지 않는다.
+4. 그 섹션의 뷰에서 `VirtualAlloc(view, 256 MiB, MEM_COMMIT)`은 약 +250 MiB를 더한다. `DiscardVirtualMemory`는 커밋을 줄이지 않는다. 섹션 뷰에 `VirtualFree(MEM_DECOMMIT)`는 ERROR_INVALID_PARAMETER로 실패한다. 커밋은 섹션이 닫힐 때만 돌아온다.
+5. 재지 않은 것: 호스트가 커밋하지 않은 페이지에 게스트가 닿을 때 게스트가 무엇을 보는가.
+
+결정. 문서와 주소 찾기는 모든 섹션을 `\BaseNamedObjects\` 이름으로 적는다(`hcs_section_name`). 그래픽 섹션 둘은 `SEC_RESERVE`로 만든다. 5가 미지수이므로 게스트는 커밋되지 않은 페이지에 닿을 수 없어야 한다. 서비스는 섹션을 만들 때 허가 표 전체와 데이터 영역의 확인 칸을 커밋한다. 렌더러는 허가의 열쇠를 표에 쓰기 전에 그 64 KiB 조각들을 자기 뷰에서 커밋한다. 커밋한 조각은 비트맵에 적어 한 번만 커밋한다. 커밋이 실패하면(커밋 한도) 그 할당은 까닭을 한 번 남기고 복사 경로로 간다. 놓인 조각은 지금처럼 0으로 채우고 버린다. 물리 페이지는 돌아오고 커밋은 남는다. 그래서 커밋은 VM이 멈출 때까지 허가가 쓴 최고 수위만큼이다. 섹션 뷰의 길이는 `VirtualQuery`의 첫 범위가 아니라 같은 할당의 범위를 모두 더해 얻는다. 예약만 한 섹션은 커밋한 앞부분에서 첫 범위가 끝나기 때문이다. 동영상 영역(기본 64 MiB)은 처음에 `SEC_COMMIT`로 두었다. SPEC PR-7이 그 섹션이 크기 전체를 커밋한다고 적고 있었기 때문이다. 소유자가 2026-11-15에 그 줄을 바꾸기로 정해 동영상 섹션도 `SEC_RESERVE`로 만든다. 서비스는 만들 때 영역 머리의 64 KiB만 커밋한다. 창 관리자와 게스트 커널이 그림보다 먼저 읽는 것은 머리뿐이다(커널은 머리가 있는 첫 페이지만 `memremap`으로 읽고, 코덱 HAL은 머리와 메시지가 가리킨 슬롯만 읽는다). 이전 부팅의 섹션은 커밋된 페이지만 0으로 채우고 버린다. 창 관리자는 슬롯에 처음 쓰기 전에 자기 뷰에서 그 64 KiB 조각들을 커밋하고, 커밋한 조각을 적어 두어 한 번만 커밋한다. 커밋이 실패하면 그 그림은 메시지에 실려 가고 까닭은 영역마다 한 번 남는다. 마지막 디코더가 닫히면 커밋된 조각만 버린다.
+
 ## R43. 직접 매핑 모드에서 vmmem의 메모리가 오히려 700-850 MiB 는 까닭과 고친 것 (NFR-1, NFR-2)
 
 **질문.** 소유자 PC(0.2.4-dev.15, Windows 11)에서 R39의 직접 매핑 모드(시스템 디스크와 추가 기능 디스크를 Hyper-V `VirtualPMem`으로 붙이고 erofs를 `dax=always`로 마운트)를 켜자 게스트 페이지 캐시(유휴 153 -> 93 MiB)와 VM private(90-250 MiB)는 줄었는데, vmmem의 작업 집합(`dsa memory`의 "resident")은 700-850 MiB 늘었다(유휴 5분 568 -> 1303 MiB, Play를 띄운 1분 867 -> 1719 MiB). Hyper-V는 영구 메모리의 파일을 어떻게 매핑하는가, 그 페이지는 무엇으로 세는가, 누가 돌려줄 수 있는가.

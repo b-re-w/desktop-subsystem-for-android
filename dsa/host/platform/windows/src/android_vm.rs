@@ -87,6 +87,9 @@ pub struct AndroidVmLauncher {
     /// The section the running VM shares with the window manager for decoded video pictures,
     /// held while the VM runs (see `crate::picture_region`).
     picture_section: Option<crate::picture_region::PictureSection>,
+    /// The sections the running VM shares with the renderer for graphics memory, held while
+    /// the VM runs (see `crate::graphics_region`).
+    graphics_sections: Option<crate::graphics_region::GraphicsSections>,
     /// Where that memory is in the running VM, as HCS said once it started, for the guest's
     /// control daemon.
     shared_memory: Vec<dsa_protocol::control::GuestSharedMemory>,
@@ -308,7 +311,84 @@ impl AndroidVmLauncher {
             direct_mapped: None,
             user_root: None,
             picture_section: None,
+            graphics_sections: None,
             shared_memory: Vec::new(),
+        }
+    }
+
+    /// Makes the sections the VM `config` describes shares for graphics memory, with the grants
+    /// table's header. Sections that cannot be made are left out of this boot, which then sends
+    /// every host-visible byte through the graphics stream; the reason is logged.
+    fn make_graphics_sections(&mut self, config: &mut AndroidVmConfig) {
+        self.graphics_sections = None;
+        let Some(region) = config.graphics_region.clone() else {
+            return;
+        };
+        let Some(user) = config.socket_sids.first() else {
+            config.graphics_region = None;
+            return;
+        };
+        let sddl = crate::picture_region::section_sddl(user);
+        match crate::graphics_region::GraphicsSections::create(&region, &sddl) {
+            Ok(sections) => self.graphics_sections = Some(sections),
+            Err(why) => {
+                eprintln!(
+                    "{}: host-visible graphics memory goes through the graphics stream this boot: \
+                     the memory shared for it could not be made ({why})",
+                    self.id
+                );
+                config.graphics_region = None;
+            }
+        }
+    }
+
+    /// Asks the running VM where the graphics sections are, for the guest's control daemon,
+    /// which hears of both or of neither.
+    fn find_graphics_region(&mut self, system: &ComputeSystem, config: &AndroidVmConfig) {
+        let Some(region) = &config.graphics_region else {
+            return;
+        };
+        use crate::picture_region::{guest_address_from_properties, properties_query};
+        let found = system
+            .properties(&properties_query(), CALL_TIMEOUT)
+            .map(|document| {
+                (
+                    guest_address_from_properties(&document, &region.data_section),
+                    guest_address_from_properties(&document, &region.grants_section),
+                    document,
+                )
+            });
+        match found {
+            Ok((Some(data), Some(grants), _)) => {
+                eprintln!(
+                    "{}: host-visible graphics memory goes through {} MiB of shared memory, which \
+                     HCS places at {data:#x} in the VM (its grants at {grants:#x})",
+                    self.id,
+                    region.data_length >> 20
+                );
+                self.shared_memory
+                    .push(dsa_protocol::control::GuestSharedMemory {
+                        name: dsa_host_core::graphics_memory::GRANTS_NAME.into(),
+                        guest_physical_address: grants,
+                        length: region.grants_length,
+                    });
+                self.shared_memory
+                    .push(dsa_protocol::control::GuestSharedMemory {
+                        name: dsa_host_core::graphics_memory::DATA_NAME.into(),
+                        guest_physical_address: data,
+                        length: region.data_length,
+                    });
+            }
+            Ok((_, _, document)) => eprintln!(
+                "{}: host-visible graphics memory goes through the graphics stream this boot: HCS \
+                 did not say where the shared memory is ({document})",
+                self.id
+            ),
+            Err(why) => eprintln!(
+                "{}: host-visible graphics memory goes through the graphics stream this boot: HCS \
+                 did not say where the shared memory is ({why})",
+                self.id
+            ),
         }
     }
 
@@ -561,6 +641,8 @@ impl AndroidVmLauncher {
             .map_err(|e| format!("the Android VM started but its ID could not be read: {e}"))?;
         *self.vm_id.lock().unwrap_or_else(|e| e.into_inner()) = Some(vm_id);
         self.find_picture_region(&system, config);
+        // After the pictures', which starts the list afresh.
+        self.find_graphics_region(&system, config);
         self.system = Some(Arc::new(system));
         self.memory_base = Some(u64::from(config.memory_mb));
         Ok(())
@@ -668,9 +750,26 @@ impl GuestLauncher for AndroidVmLauncher {
             config.network_adapter = networking.attach(&self.id);
         }
         self.make_picture_section(&mut config);
+        self.make_graphics_sections(&mut config);
         let mut started = self.create_and_start(&config, &boot);
-        // A Windows build whose HCS does not take the shared memory region refuses the whole
-        // VM: Android then starts without it, and its pictures go through the video port.
+        // A Windows build whose HCS does not take the shared memory regions refuses the whole
+        // VM: Android then starts without the graphics regions first, then without any, and
+        // what they would carry goes through the sockets.
+        let refused = started
+            .as_ref()
+            .err()
+            .filter(|_| config.graphics_region.is_some())
+            .cloned();
+        if let Some(why) = refused {
+            eprintln!(
+                "{}: Android did not start with memory shared for graphics ({why}); it starts \
+                 without it",
+                self.id
+            );
+            config.graphics_region = None;
+            self.graphics_sections = None;
+            started = self.create_and_start(&config, &boot);
+        }
         let refused = started
             .as_ref()
             .err()
@@ -729,6 +828,7 @@ impl GuestLauncher for AndroidVmLauncher {
         // its view go too.
         self.shared_memory.clear();
         self.picture_section = None;
+        self.graphics_sections = None;
         // The VM is gone, so its end of the console pipe closes and the rest is read.
         self.end_console(CONSOLE_DRAIN);
         // Its network goes with it.

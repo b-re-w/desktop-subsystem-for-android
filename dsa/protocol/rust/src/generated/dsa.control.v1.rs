@@ -1976,7 +1976,10 @@ pub struct VideoSlotReturned {
 /// A host that has no such region sends none. The "video_pictures" region starts with a
 /// header the host writes: the eight bytes "DSAVPIC1", then the region's id and its length in
 /// bytes, each eight bytes little endian (the id is what VideoDecoderOpen.picture_region_id
-/// names). Its slots start 64 KiB in.
+/// names). Its slots start 64 KiB in. The graphics memory comes as two regions, "graphics_grants"
+/// (which the guest only reads: the renderer's table of which part of the other each guest process
+/// may map) and "graphics_memory" (which the guest writes: apps' host-visible memory and staging
+/// copies); the guest hands the kernel both at once.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GuestSharedMemory {
     #[prost(string, tag = "1")]
