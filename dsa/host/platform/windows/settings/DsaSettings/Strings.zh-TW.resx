@@ -2541,4 +2541,45 @@ DSA 不會隨附或轉發 Widevine。</value>
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>較少</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} 是無法安裝的分割 APK 套件組合：{1}。</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} 是無法讀取的分割 APK 套件組合，因此無法安裝。</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} 是 Android App Bundle。App Bundle 是供應用程式商店使用的發佈格式，無法直接安裝。
+若要從中產生 APK，必須以其他金鑰簽署，之後應用程式將無法再從原本的來源取得更新。
+請以 APK，或 .xapk、.apks、.apkm 套件組合的形式取得應用程式。</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} 是加密的套件組合，因此無法讀取其 APK。部分較舊的 .apkm 檔案就是如此，只有建立它們的應用程式能開啟。
+請以 APK 或較新的套件組合形式取得應用程式。</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} 中有分割 APK 的簽署憑證與其基本 APK 不同，表示此套件組合在建立後遭到變更。
+Android 會拒絕安裝。</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} 無法在 DSA 中執行：{1}。</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} 無法在 DSA 中執行：其原生程式碼都不是 DSA 的 Android 能執行的程式碼，而它只執行 64 位元程式碼。
+請取得應用程式的 x86_64 或 arm64-v8a 版本。</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} 不是有效的 APK 檔案。</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa 已結束，代碼為 {0}。</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>{0} 圖示</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>APK 檔案和分割 APK 套件組合</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>所有檔案</value>
+  </data>
 </root>

@@ -2541,4 +2541,45 @@ Yüksek çözünürlük için bu bilgisayarın kendi tarayıcısını veya uygul
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>Daha az</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0}, yüklenemeyen bir bölünmüş APK paketi: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0}, okunamayan bir bölünmüş APK paketi olduğu için yüklenemiyor.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0}, bir Android App Bundle. App Bundle'lar uygulama mağazaları için bir yayımlama biçimidir ve olduğu gibi yüklenemez.
+Bundan APK oluşturmak, onları başka bir anahtarla imzalamak demektir ve uygulama artık geldiği yerden güncelleme alamaz.
+Uygulamayı APK ya da .xapk, .apks veya .apkm paketi olarak alın.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0}, şifreli bir paket olduğu için APK'leri okunamıyor. Bazı eski .apkm dosyaları böyledir, onları yalnızca oluşturan uygulama açar.
+Uygulamayı APK veya daha yeni bir paket olarak edinin.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0}, temel APK'den farklı bir sertifikayla imzalanmış bölünmüş bir APK içeriyor, yani paket oluşturulduktan sonra değiştirilmiş.
+Android bunu reddederdi.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0}, DSA'da çalışamaz: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0}, DSA'da çalışamaz: yerel kodu, yalnızca 64 bit kod çalıştıran DSA'nın Android'iyle uyumlu değil.
+Uygulamanın x86_64 veya arm64-v8a derlemesini alın.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0}, geçerli bir APK dosyası değil.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa, {0} koduyla sonlandı.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>{0} simgesi</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>APK dosyaları ve bölünmüş APK paketleri</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Tüm dosyalar</value>
+  </data>
 </root>

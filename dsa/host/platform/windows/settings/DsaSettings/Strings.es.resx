@@ -2541,4 +2541,45 @@ Para alta definición, use el navegador o una aplicación de este equipo.</value
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>Menos</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} es un paquete de APK divididos que no se puede instalar: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} es un paquete de APK divididos que no se puede leer, así que no se puede instalar.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} es un Android App Bundle, un formato de publicación para tiendas de aplicaciones que no se puede instalar tal cual.
+Generar APK a partir de él exige firmarlos con otra clave, y la aplicación ya no recibiría actualizaciones de su origen.
+Obtenga la aplicación como APK o como paquete .xapk, .apks o .apkm.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} es un paquete cifrado y sus APK no se pueden leer. Ocurre con algunos .apkm antiguos, que solo abre la aplicación que los creó.
+Obtenga la aplicación como APK o como un paquete más reciente.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} contiene un APK dividido firmado con un certificado distinto al de su APK base: el paquete se modificó tras crearse.
+Android lo rechazaría.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} no se puede ejecutar en DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} no se puede ejecutar en DSA: su código nativo no es compatible con el Android de DSA, que solo ejecuta código de 64 bits.
+Obtenga la compilación x86_64 o arm64-v8a de la aplicación.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} no es un archivo APK válido.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa terminó con el código {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Icono de {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>Archivos APK y paquetes de APK divididos</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Todos los archivos</value>
+  </data>
 </root>

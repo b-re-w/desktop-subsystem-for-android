@@ -1629,7 +1629,7 @@ L'operazione non può essere annullata.</value>
     <value>{0} non è stata disinstallata: {1} ({2}).</value>
   </data>
   <data name="NavBackground.Content" xml:space="preserve">
-    <value>In esecuzione in background</value>
+    <value>In background</value>
   </data>
   <data name="BackgroundTitle.Text" xml:space="preserve">
     <value>In esecuzione in background</value>
@@ -2540,5 +2540,46 @@ Per l'alta definizione, usa il browser o l'app di questo computer.</value>
   </data>
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>Meno</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} è un bundle di APK suddivisi che non può essere installato: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} è un bundle di APK suddivisi illeggibile, quindi non può essere installato.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} è un Android App Bundle, un formato di pubblicazione per gli app store che non può essere installato così com'è.
+Ricavarne degli APK significa firmarli con un'altra chiave, e l'app non riceverebbe più aggiornamenti dalla sua origine.
+Ottieni l'app come APK, o come bundle .xapk, .apks o .apkm.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} è un bundle crittografato e i suoi APK non sono leggibili. Lo sono alcuni vecchi .apkm, apribili solo dall'app che li ha creati.
+Ottieni l'app come APK, o come bundle più recente.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} contiene un APK suddiviso firmato con un certificato diverso dall'APK di base: il bundle è stato modificato dopo la creazione.
+Android lo rifiuterebbe.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>Impossibile eseguire {0} in DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>Impossibile eseguire {0} in DSA: il suo codice nativo non è compatibile con l'Android di DSA, che esegue solo codice a 64 bit.
+Ottieni la build x86_64 o arm64-v8a dell'app.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} non è un file APK valido.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa è terminato con il codice {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Icona di {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>File APK e bundle di APK suddivisi</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Tutti i file</value>
   </data>
 </root>

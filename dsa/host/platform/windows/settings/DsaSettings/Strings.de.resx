@@ -2541,4 +2541,45 @@ Für hohe Auflösung verwenden Sie den Browser oder eine App dieses Computers.</
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>Weniger</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} ist ein Split-APK-Bundle, das nicht installiert werden kann: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} ist ein Split-APK-Bundle, das nicht gelesen und daher nicht installiert werden kann.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} ist ein Android App Bundle, ein Veröffentlichungsformat für App-Stores, das sich nicht direkt installieren lässt.
+APKs daraus müssen mit einem anderen Schlüssel signiert werden, dann erhält die App keine Updates mehr von ihrer Quelle.
+Laden Sie die App als APK oder als Bundle .xapk, .apks oder .apkm herunter.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} ist ein verschlüsseltes Bundle, die APKs sind nicht lesbar. Manche älteren .apkm-Dateien sind so, nur die erstellende App öffnet sie.
+Laden Sie die App als APK oder als neueres Bundle herunter.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} enthält eine mit einem anderen Zertifikat als die Basis-APK signierte Split-APK, das Bundle wurde also nachträglich geändert.
+Android würde es ablehnen.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} kann in DSA nicht ausgeführt werden: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} kann in DSA nicht ausgeführt werden: Sein nativer Code läuft nicht im Android von DSA, das nur 64-Bit-Code ausführt.
+Laden Sie den x86_64- oder arm64-v8a-Build der App herunter.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} ist keine gültige APK-Datei.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa wurde mit Code {0} beendet.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Symbol von {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>APK-Dateien und Split-APK-Bundles</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Alle Dateien</value>
+  </data>
 </root>

@@ -2541,4 +2541,45 @@ Untuk definisi tinggi, gunakan browser atau aplikasi komputer ini sendiri.</valu
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>Lebih sedikit</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} adalah bundel split APK yang tidak dapat diinstal: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} adalah bundel split APK yang tidak dapat dibaca, jadi tidak dapat diinstal.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} adalah Android App Bundle. App Bundle adalah format publikasi untuk toko aplikasi dan tidak dapat diinstal begitu saja.
+Membuat APK darinya berarti menandatanganinya dengan kunci lain, dan aplikasi tidak lagi mendapat pembaruan dari sumbernya.
+Dapatkan aplikasi sebagai APK, atau bundel .xapk, .apks, atau .apkm.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} adalah bundel terenkripsi, APK-nya tidak dapat dibaca. Sebagian .apkm lama seperti ini, hanya bisa dibuka aplikasi pembuatnya.
+Dapatkan aplikasi sebagai APK, atau sebagai bundel yang lebih baru.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} berisi split APK yang ditandatangani dengan sertifikat berbeda dari APK dasarnya, jadi bundel diubah setelah dibuat.
+Android akan menolaknya.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} tidak dapat berjalan di DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} tidak dapat berjalan di DSA: kode native-nya tidak didukung Android di DSA, yang hanya menjalankan kode 64-bit.
+Dapatkan build x86_64 atau arm64-v8a dari aplikasi tersebut.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} bukan file APK yang valid.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa berakhir dengan kode {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Ikon {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>File APK dan bundel split APK</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Semua file</value>
+  </data>
 </root>

@@ -2541,4 +2541,45 @@ DSA は Widevine を同梱も再配布もしません。</value>
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>簡易表示</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} は分割 APK のバンドルですが、インストールできません: {1}。</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} は分割 APK のバンドルですが、読み取れないためインストールできません。</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} は Android App Bundle です。App Bundle はアプリ ストア向けの公開形式のため、そのままではインストールできません。
+APK を作成するには別のキーで署名する必要があり、そうするとアプリは入手元から更新を受け取れなくなります。
+アプリを APK、または .xapk、.apks、.apkm のバンドルとして入手してください。</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} は暗号化されたバンドルのため、APK を読み取れません。古い .apkm ファイルの一部がこれに当たり、作成したアプリでしか開けません。
+アプリを APK か、新しいバンドルとして入手してください。</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} には、ベース APK とは別の証明書で署名された分割 APK が含まれています。つまり、バンドルは作成後に変更されています。
+Android はこれを拒否します。</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} は DSA で実行できません: {1}。</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} は DSA で実行できません。ネイティブ コードが、64 ビットのコードしか実行しない DSA の Android で動作するものではありません。
+アプリの x86_64 または arm64-v8a ビルドを入手してください。</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} は有効な APK ファイルではありません。</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa がコード {0} で終了しました。</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>{0} のアイコン</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>APK ファイルと分割 APK のバンドル</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>すべてのファイル</value>
+  </data>
 </root>

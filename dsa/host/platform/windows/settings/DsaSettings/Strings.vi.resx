@@ -2541,4 +2541,45 @@ DSA không phân phối hay chuyển giao Widevine.</value>
   <data name="ApkWindow_Less" xml:space="preserve">
     <value>Ít hơn</value>
   </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} là gói APK phân tách không thể cài đặt: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} là gói APK phân tách không đọc được, nên không thể cài đặt.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} là Android App Bundle. App Bundle là định dạng phát hành cho cửa hàng ứng dụng và không thể cài đặt trực tiếp.
+Muốn tạo APK từ nó thì phải ký bằng khóa khác, và khi đó ứng dụng sẽ không còn nhận được bản cập nhật từ nguồn gốc của nó.
+Hãy lấy ứng dụng dưới dạng APK, hoặc gói .xapk, .apks hay .apkm.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} là gói đã mã hóa, nên không đọc được các APK của nó. Một số tệp .apkm cũ là như vậy, và chỉ ứng dụng tạo ra chúng mới mở được.
+Hãy lấy ứng dụng dưới dạng APK, hoặc gói mới hơn.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} chứa một APK phân tách được ký bằng chứng chỉ khác với APK gốc, nghĩa là gói đã bị thay đổi sau khi được tạo.
+Android sẽ từ chối nó.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} không thể chạy trong DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} không thể chạy trong DSA: mã native của nó không chạy được trên Android của DSA, vốn chỉ chạy mã 64 bit.
+Hãy lấy bản dựng x86_64 hoặc arm64-v8a của ứng dụng.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} không phải là tệp APK hợp lệ.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa đã kết thúc với mã {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Biểu tượng {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>Tệp APK và gói APK phân tách</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Tất cả tệp</value>
+  </data>
 </root>
