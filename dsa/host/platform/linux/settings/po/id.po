@@ -1,0 +1,1816 @@
+# Indonesian translation of DSA Settings for Linux.
+# This file is distributed under the same licence as Desktop Subsystem for Android.
+msgid ""
+msgstr ""
+"Project-Id-Version: dsa-settings\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "The dsa command could not be started. Reinstall DSA."
+msgstr "Perintah dsa tidak dapat dijalankan. Instal ulang DSA."
+
+msgid "The DSA service is not running."
+msgstr "Layanan DSA tidak berjalan."
+
+msgid "The DSA service could not do this."
+msgstr "Layanan DSA tidak dapat melakukan ini."
+
+msgid "The answer of the dsa command could not be read. Reinstall DSA."
+msgstr "Jawaban dari perintah dsa tidak dapat dibaca. Instal ulang DSA."
+
+msgid "The setting was not changed, because an administrator's permission was not given."
+msgstr "Pengaturan tidak diubah karena izin administrator tidak diberikan."
+
+msgid "Unknown"
+msgstr "Tidak diketahui"
+
+msgid "Stopped"
+msgstr "Berhenti"
+
+msgid "Starting"
+msgstr "Memulai"
+
+msgid "Running"
+msgstr "Berjalan"
+
+msgid "Dozing (idle)"
+msgstr "Doze (diam)"
+
+msgid "Frozen"
+msgstr "Dibekukan"
+
+msgid "Stopping"
+msgstr "Menghentikan"
+
+msgid "Not ready"
+msgstr "Belum siap"
+
+msgid "Virtual machine (crosvm)"
+msgstr "Mesin virtual (crosvm)"
+
+msgid "Window manager"
+msgstr "Pengelola jendela"
+
+msgid "Graphics renderer"
+msgstr "Perender grafis"
+
+msgid "App window"
+msgstr "Jendela aplikasi"
+
+msgid "Process {0}, {1} private"
+msgstr "Proses {0}, {1} privat"
+
+msgid "Apps and system"
+msgstr "Aplikasi dan sistem"
+
+msgid "{0} in memory, {1} compressed"
+msgstr "{0} di memori, {1} terkompresi"
+
+msgid "Google Play services"
+msgstr "Layanan Google Play"
+
+msgid "The Google apps you installed, {0} processes: {1}"
+msgstr "Aplikasi Google yang Anda instal, {0} proses: {1}"
+
+msgid "unknown"
+msgstr "tidak diketahui"
+
+msgid "Cache"
+msgstr "Cache"
+
+msgid "File contents kept in memory. Android drops them when it needs the memory."
+msgstr "Isi berkas yang disimpan di memori. Android membuangnya saat memerlukan memori."
+
+msgid "Kernel caches"
+msgstr "Cache kernel"
+
+msgid "Kernel caches the kernel can free on demand."
+msgstr "Cache kernel yang dapat dibebaskan kernel saat diperlukan."
+
+msgid "Shared memory"
+msgstr "Memori bersama"
+
+msgid "Compressed memory"
+msgstr "Memori terkompresi"
+
+msgid "Holds {0} of pages, compressed"
+msgstr "Menyimpan {0} halaman dalam bentuk terkompresi"
+
+msgid "Free"
+msgstr "Bebas"
+
+msgid "Kernel objects"
+msgstr "Objek kernel"
+
+msgid "Memory the kernel keeps for its own data and cannot reclaim"
+msgstr "Memori yang disimpan kernel untuk datanya sendiri dan tidak dapat diambil kembali"
+
+msgid "Thread stacks"
+msgstr "Stack thread"
+
+msgid "Page tables"
+msgstr "Tabel halaman"
+
+msgid "Kernel mappings (vmalloc)"
+msgstr "Pemetaan kernel (vmalloc)"
+
+msgid "Per-CPU data"
+msgstr "Data per CPU"
+
+msgid "Drivers"
+msgstr "Driver"
+
+msgid "What no counter names, such as GPU and DMA buffers"
+msgstr "Yang tidak tercatat oleh penghitung mana pun, seperti buffer GPU dan DMA"
+
+msgid "Reserved at boot"
+msgstr "Dicadangkan saat boot"
+
+msgid "Kernel code, page structures and buffers, of {0} given; contiguous area {1}"
+msgstr "Kode kernel, struktur halaman, dan buffer, dari {0} yang diberikan; area berurutan {1}"
+
+msgid "Process {0}"
+msgstr "Proses {0}"
+
+msgid "Process {0}, Google Play services"
+msgstr "Proses {0}, layanan Google Play"
+
+msgid "Automatic"
+msgstr "Otomatis"
+
+msgid "The GPU of the primary monitor (recommended)"
+msgstr "GPU monitor utama (disarankan)"
+
+msgid "Integrated GPU"
+msgstr "GPU terintegrasi"
+
+msgid "Discrete GPU (for example, for games)"
+msgstr "GPU diskret (misalnya, untuk game)"
+
+msgid "Always the newest (now Android {0})"
+msgstr "Selalu yang terbaru (saat ini Android {0})"
+
+msgid "Android {0}"
+msgstr "Android {0}"
+
+msgid "{0} of {1} apps"
+msgstr "{0} dari {1} aplikasi"
+
+msgid "{0} apps"
+msgstr "{0} aplikasi"
+
+msgid "Version {0}"
+msgstr "Versi {0}"
+
+msgid "Part of Android"
+msgstr "Bagian dari Android"
+
+msgid "Opens at the size Android chooses"
+msgstr "Terbuka dengan ukuran yang dipilih Android"
+
+msgid "Phone, portrait ({0} × {1})"
+msgstr "Ponsel, potret ({0} × {1})"
+
+msgid "Phone, landscape ({0} × {1})"
+msgstr "Ponsel, lanskap ({0} × {1})"
+
+msgid "Tablet, portrait ({0} × {1})"
+msgstr "Tablet, potret ({0} × {1})"
+
+msgid "Tablet, landscape ({0} × {1})"
+msgstr "Tablet, lanskap ({0} × {1})"
+
+msgid "it is no longer installed"
+msgstr "aplikasi sudah tidak terinstal"
+
+msgid "it is part of Android"
+msgstr "aplikasi ini bagian dari Android"
+
+msgid "Android does not allow it, because the app is a device administrator or a policy keeps it"
+msgstr "Android tidak mengizinkannya karena aplikasi ini adalah administrator perangkat atau dipertahankan oleh kebijakan"
+
+msgid "Android could not uninstall it"
+msgstr "Android tidak dapat mencopotnya"
+
+msgid "it is an Android App Bundle, made to be uploaded to an app store. Get the app as an APK, or as an .xapk, .apks or .apkm bundle."
+msgstr "berkas ini Android App Bundle, untuk diunggah ke toko aplikasi. Dapatkan aplikasinya sebagai APK, atau bundel .xapk, .apks, atau .apkm."
+
+msgid "the bundle is encrypted, so its APKs cannot be read. Get the app as an APK, or as a newer bundle."
+msgstr "bundel ini terenkripsi, sehingga APK-nya tidak dapat dibaca. Dapatkan aplikasinya sebagai APK, atau bundel yang lebih baru."
+
+msgid "a split APK of the bundle is signed with another key than its base APK, so Android would refuse it."
+msgstr "sebuah split APK di bundel ini ditandatangani dengan kunci yang berbeda dari APK dasarnya, sehingga Android akan menolaknya."
+
+msgid "the bundle is not one app that Android can install."
+msgstr "bundel ini bukan satu aplikasi yang dapat diinstal Android."
+
+msgid "the app has no 64-bit code that DSA's Android runs: x86_64, or arm64-v8a through ARM translation. Get one of those builds."
+msgstr "aplikasi tidak memiliki kode 64-bit untuk Android DSA: x86_64, atau arm64-v8a lewat terjemahan ARM. Dapatkan salah satu build itu."
+
+msgid "the app has only ARM code (arm64-v8a), and ARM translation is off. Turn it on under ARM apps, restart Android and install it again."
+msgstr "aplikasi hanya berisi kode ARM (arm64-v8a) dan terjemahan ARM nonaktif. Aktifkan di Aplikasi ARM, mulai ulang Android, lalu instal lagi."
+
+msgid "the app does not run on this Android: it needs another processor type, a newer Android version or a feature this device does not have."
+msgstr "aplikasi tidak berjalan di Android ini: perlu jenis prosesor lain, versi Android lebih baru, atau fitur yang tidak ada di perangkat ini."
+
+msgid "the app is installed already, signed with another key. Uninstall it in Android first."
+msgstr "aplikasi sudah terinstal dengan tanda tangan kunci lain. Copot dulu di Android."
+
+msgid "the file is not a signed APK that Android can read."
+msgstr "berkas ini bukan APK bertanda tangan yang dapat dibaca Android."
+
+msgid "Android has no room for the app."
+msgstr "Android tidak memiliki ruang untuk aplikasi ini."
+
+msgid "a newer version of the app is installed. Uninstall it in Android first."
+msgstr "versi aplikasi yang lebih baru sudah terinstal. Copot dulu di Android."
+
+msgid "a policy of this Android does not allow the app."
+msgstr "kebijakan Android ini tidak mengizinkan aplikasi tersebut."
+
+msgid "Android did not install the app."
+msgstr "Android tidak menginstal aplikasi."
+
+msgid "Not supported: no ARM translation package is installed."
+msgstr "Tidak didukung: tidak ada paket terjemahan ARM yang terinstal."
+
+msgid "Not supported: {0} {1} is installed but turned off."
+msgstr "Tidak didukung: {0} {1} terinstal tetapi nonaktif."
+
+msgid "Not supported: {0} {1} is turned off."
+msgstr "Tidak didukung: {0} {1} nonaktif."
+
+msgid "Supported by {0} {1} ({2}), the translator that comes with this Android."
+msgstr "Didukung oleh {0} {1} ({2}), penerjemah yang disertakan dengan Android ini."
+
+msgid "{0} {1} ({2}) comes with this Android. It is used unless you install another translator.\nGoing back to it removes the package that replaced it, from the next start of Android."
+msgstr "{0} {1} ({2}) disertakan dengan Android ini. Penerjemah ini digunakan kecuali Anda menginstal penerjemah lain.\nKembali ke penerjemah ini menghapus paket penggantinya, mulai saat Android dimulai berikutnya."
+
+msgid "Use the default translator"
+msgstr "Gunakan penerjemah bawaan"
+
+msgid "Use"
+msgstr "Gunakan"
+
+msgid "licence not given"
+msgstr "lisensi tidak disebutkan"
+
+msgid "Supported by {0} {1} ({2})."
+msgstr "Didukung oleh {0} {1} ({2})."
+
+msgid "Android installs apps for: {0}"
+msgstr "Android menginstal aplikasi untuk: {0}"
+
+msgid "Android is not running, so what it supports now is not known."
+msgstr "Android tidak berjalan, sehingga dukungannya saat ini tidak diketahui."
+
+msgid "Connected through this computer (NAT). Android apps see it as Wi-Fi, with no data charges."
+msgstr "Terhubung melalui komputer ini (NAT). Aplikasi Android melihatnya sebagai Wi-Fi, tanpa biaya data."
+
+msgid "Connected to this computer's network as a device of its own (advanced networking)."
+msgstr "Terhubung ke jaringan komputer ini sebagai perangkat tersendiri (jaringan lanjutan)."
+
+msgid "Android is not running, so it has no network yet."
+msgstr "Android tidak berjalan, sehingga belum memiliki jaringan."
+
+msgid "The DSA service does not report the network. Update DSA to see it."
+msgstr "Layanan DSA tidak melaporkan jaringan. Perbarui DSA untuk melihatnya."
+
+msgid "None"
+msgstr "Tidak ada"
+
+msgid "Manufacturer"
+msgstr "Produsen"
+
+msgid "Brand"
+msgstr "Merek"
+
+msgid "Model"
+msgstr "Model"
+
+msgid "Device"
+msgstr "Perangkat"
+
+msgid "Product name"
+msgstr "Nama produk"
+
+msgid "Form factor"
+msgstr "Faktor bentuk"
+
+msgid "Release"
+msgstr "Rilis"
+
+msgid "Build ID"
+msgstr "ID build"
+
+msgid "Incremental version"
+msgstr "Versi inkremental"
+
+msgid "Build type"
+msgstr "Jenis build"
+
+msgid "Tags"
+msgstr "Tag"
+
+msgid "Whole fingerprint"
+msgstr "Sidik jari lengkap"
+
+msgid "Verbose"
+msgstr "Verbose"
+
+msgid "Debug"
+msgstr "Debug"
+
+msgid "Info"
+msgstr "Info"
+
+msgid "Warning"
+msgstr "Peringatan"
+
+msgid "Error"
+msgstr "Kesalahan"
+
+msgid "Fatal"
+msgstr "Fatal"
+
+msgid "Paused. {0} new lines are waiting."
+msgstr "Dijeda. {0} baris baru sedang menunggu."
+
+msgid "General"
+msgstr "Umum"
+
+msgid "Memory"
+msgstr "Memori"
+
+msgid "Apps"
+msgstr "Aplikasi"
+
+msgid "Running in the background"
+msgstr "Berjalan di latar belakang"
+
+msgid "Widgets"
+msgstr "Widget"
+
+msgid "Display and GPU"
+msgstr "Tampilan dan GPU"
+
+msgid "Android version"
+msgstr "Versi Android"
+
+msgid "Updates"
+msgstr "Pembaruan"
+
+msgid "Device identity"
+msgstr "Identitas perangkat"
+
+msgid "Network"
+msgstr "Jaringan"
+
+msgid "Advanced"
+msgstr "Lanjutan"
+
+msgid "Android log"
+msgstr "Log Android"
+
+msgid "About"
+msgstr "Tentang"
+
+msgid "The Android apps on this computer. Open them, change them in App info, or uninstall the ones you installed.\nAndroid starts when you open this page."
+msgstr "Aplikasi Android di komputer ini. Buka, ubah di Info aplikasi, atau copot aplikasi yang Anda instal.\nAndroid dimulai saat Anda membuka halaman ini."
+
+msgid "Manage apps"
+msgstr "Kelola aplikasi"
+
+msgid "Open the list of apps in Android's own settings"
+msgstr "Buka daftar aplikasi di pengaturan Android sendiri"
+
+msgid "The apps could not be read or changed"
+msgstr "Aplikasi tidak dapat dibaca atau diubah"
+
+msgid "Installed apps"
+msgstr "Aplikasi terinstal"
+
+msgid "Search apps"
+msgstr "Cari aplikasi"
+
+msgid "Refresh"
+msgstr "Segarkan"
+
+msgid "No app is installed in Android yet. Open an APK file to install one."
+msgstr "Belum ada aplikasi yang terinstal di Android. Buka berkas APK untuk menginstalnya."
+
+msgid "No app matches your search."
+msgstr "Tidak ada aplikasi yang cocok dengan pencarian Anda."
+
+msgid "Open"
+msgstr "Buka"
+
+msgid "Package"
+msgstr "Paket"
+
+msgid "Installed"
+msgstr "Terinstal"
+
+msgid "App info"
+msgstr "Info aplikasi"
+
+msgid "Permissions, storage and notifications, in Android's settings"
+msgstr "Izin, penyimpanan, dan notifikasi, di pengaturan Android"
+
+msgid "Desktop shortcut"
+msgstr "Pintasan desktop"
+
+msgid "A shortcut on the desktop that opens the app"
+msgstr "Pintasan di desktop yang membuka aplikasi"
+
+msgid "Create desktop shortcut"
+msgstr "Buat pintasan desktop"
+
+msgid "The desktop shortcut could not be made"
+msgstr "Pintasan desktop tidak dapat dibuat"
+
+msgid "{0} is on the desktop."
+msgstr "{0} ada di desktop."
+
+msgid "{0}'s windows follow the new settings from the next one that opens."
+msgstr "Jendela {0} mengikuti pengaturan baru mulai dari jendela berikutnya yang terbuka."
+
+msgid "Resizable"
+msgstr "Dapat diubah ukurannya"
+
+msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
+msgstr "Apakah jendela aplikasi ini dapat diubah ukurannya dan dimaksimalkan. Jika nonaktif, setiap jendela tetap pada ukuran saat dibuka."
+
+msgid "Window size when it opens"
+msgstr "Ukuran jendela saat dibuka"
+
+msgid "The size this app's windows open at"
+msgstr "Ukuran jendela aplikasi ini saat dibuka"
+
+msgid "Uninstall"
+msgstr "Copot"
+
+msgid "This app is part of Android and cannot be uninstalled."
+msgstr "Aplikasi ini bagian dari Android dan tidak dapat dicopot."
+
+msgid "Uninstall {0}?"
+msgstr "Copot {0}?"
+
+msgid "{0} and its data will be removed from Android. This cannot be undone."
+msgstr "{0} dan datanya akan dihapus dari Android. Tindakan ini tidak dapat dibatalkan."
+
+msgid "{0} is uninstalled."
+msgstr "{0} telah dicopot."
+
+msgid "Not uninstalled"
+msgstr "Tidak dicopot"
+
+msgid "{0} was not uninstalled: {1} ({2})"
+msgstr "{0} tidak dicopot: {1} ({2})"
+
+msgid "These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used."
+msgstr "Aplikasi Android ini tetap berjalan setelah jendelanya ditutup, untuk memutar musik, mengunduh berkas, menjaga VPN aktif, atau hal lain.\nMasing-masing juga memiliki indikator di bilah atas.\nMenghentikan aplikasi mengakhiri pekerjaannya dan membebaskan memori yang dipakainya."
+
+msgid "Stopping apps"
+msgstr "Menghentikan aplikasi"
+
+msgid "Ask before stopping an app from its indicator"
+msgstr "Tanya sebelum menghentikan aplikasi dari indikatornya"
+
+msgid "Turn this back on if you chose not to be asked again."
+msgstr "Aktifkan lagi ini jika Anda telah memilih untuk tidak ditanya lagi."
+
+msgid "The setting was not changed"
+msgstr "Pengaturan tidak diubah"
+
+msgid "The apps that run in the background could not be read or changed"
+msgstr "Aplikasi yang berjalan di latar belakang tidak dapat dibaca atau diubah"
+
+msgid "No app runs in the background."
+msgstr "Tidak ada aplikasi yang berjalan di latar belakang."
+
+msgid "Playing {0}"
+msgstr "Memutar {0}"
+
+msgid "Paused: {0}"
+msgstr "Dijeda: {0}"
+
+msgid "Stop"
+msgstr "Hentikan"
+
+msgid "{0} was stopped."
+msgstr "{0} telah dihentikan."
+
+msgid "On your desktop"
+msgstr "Di desktop Anda"
+
+msgid "Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page."
+msgstr "Tempatkan widget yang ditawarkan aplikasi Android Anda di desktop. Setiap widget mendapat jendelanya sendiri, di bawah jendela lain.\nTekan lama widget untuk mengeditnya: seret untuk memindahkannya, dan seret pegangannya untuk mengubah ukurannya.\nKlik kanan widget untuk pengaturan, ukuran, dan Hapus. Android dimulai saat Anda membuka halaman ini."
+
+msgid "Widgets your apps offer"
+msgstr "Widget yang ditawarkan aplikasi Anda"
+
+msgid "Widgets could not be read or changed"
+msgstr "Widget tidak dapat dibaca atau diubah"
+
+msgid "No widget is on your desktop yet."
+msgstr "Belum ada widget di desktop Anda."
+
+msgid "No app in Android offers a widget."
+msgstr "Tidak ada aplikasi di Android yang menawarkan widget."
+
+msgid "At {0}, {1}, {2} × {3}"
+msgstr "Di {0}, {1}, {2} × {3}"
+
+msgid "Remove"
+msgstr "Hapus"
+
+msgid "{0} was removed from your desktop."
+msgstr "{0} telah dihapus dari desktop Anda."
+
+msgid "asks you to set it up"
+msgstr "meminta Anda menyiapkannya"
+
+msgid "Add to desktop"
+msgstr "Tambahkan ke desktop"
+
+msgid "{0} is on your desktop."
+msgstr "{0} ada di desktop Anda."
+
+msgid "Cancel"
+msgstr "Batal"
+
+msgid "The folder could not be opened"
+msgstr "Folder tidak dapat dibuka"
+
+msgid "{0} does not exist yet, or you may not open it."
+msgstr "{0} belum ada, atau Anda tidak diizinkan membukanya."
+
+msgid "Android sends its log only while this page is open, and nothing is written to disk.\nSave diagnostics gathers what a problem report needs into one zip file."
+msgstr "Android mengirim lognya hanya selama halaman ini terbuka, dan tidak ada yang ditulis ke disk.\nSimpan diagnostik mengumpulkan semua yang diperlukan laporan masalah ke dalam satu berkas zip."
+
+msgid "Filter by tag or text"
+msgstr "Saring menurut tag atau teks"
+
+msgid "Pause"
+msgstr "Jeda"
+
+msgid "Save diagnostics"
+msgstr "Simpan diagnostik"
+
+msgid "The log cannot be read"
+msgstr "Log tidak dapat dibaca"
+
+msgid "Gathering the diagnostics. This takes a minute or more."
+msgstr "Mengumpulkan diagnostik. Ini memerlukan satu menit atau lebih."
+
+msgid "Saved the diagnostics to {0}."
+msgstr "Diagnostik disimpan ke {0}."
+
+msgid "DSA Settings"
+msgstr "Pengaturan DSA"
+
+msgid "Not installed"
+msgstr "Tidak diinstal"
+
+msgid "Only APK files and split APK bundles can be installed: {0}"
+msgstr "Hanya berkas APK dan bundel split APK yang dapat diinstal: {0}"
+
+msgid "Installing {0} in Android…"
+msgstr "Menginstal {0} di Android…"
+
+msgid "{0} is installed ({1}). Open it from the app grid."
+msgstr "{0} telah diinstal ({1}). Buka dari kisi aplikasi."
+
+msgid "{0} was not installed: {1} ({2})"
+msgstr "{0} tidak diinstal: {1} ({2})"
+
+msgid "{0} did not reach Android. {1}"
+msgstr "{0} tidak sampai ke Android. {1}"
+
+msgid "State"
+msgstr "Keadaan"
+
+msgid "Desktop Subsystem for Android™ runs Android in its own lightweight virtual machine and shows each app in its own window."
+msgstr "Desktop Subsystem for Android™ menjalankan Android di mesin virtual ringan tersendiri dan menampilkan tiap aplikasi di jendelanya sendiri."
+
+msgid "Android"
+msgstr "Android"
+
+msgid "Start"
+msgstr "Mulai"
+
+msgid "Android is not ready"
+msgstr "Android belum siap"
+
+msgid "Last stopped"
+msgstr "Terakhir berhenti"
+
+msgid "Update"
+msgstr "Perbarui"
+
+msgid "More"
+msgstr "Lainnya"
+
+msgid "Freeze Android now"
+msgstr "Bekukan Android sekarang"
+
+msgid "Stops every process in Android until you open one of its windows again. Notifications, alarms and widgets stop with it."
+msgstr "Menghentikan setiap proses di Android sampai Anda membuka salah satu jendelanya lagi. Notifikasi, alarm, dan widget ikut berhenti."
+
+msgid "Freeze"
+msgstr "Bekukan"
+
+msgid "Open my log folder"
+msgstr "Buka folder log saya"
+
+msgid "The logs of the window manager and the app windows, for reporting a problem."
+msgstr "Log pengelola jendela dan jendela aplikasi, untuk melaporkan masalah."
+
+msgid "Open the service's log folder (administrators)"
+msgstr "Buka folder log layanan (administrator)"
+
+msgid "The logs of the DSA service and of Android itself."
+msgstr "Log layanan DSA dan Android itu sendiri."
+
+msgid "Ask the DSA service for the state again."
+msgstr "Tanyakan lagi keadaannya ke layanan DSA."
+
+msgid "Something went wrong"
+msgstr "Terjadi kesalahan"
+
+msgid "On this computer"
+msgstr "Di komputer ini"
+
+msgid "In use on this computer"
+msgstr "Digunakan di komputer ini"
+
+msgid "The RAM the virtual machine, the window manager and the app windows hold now."
+msgstr "RAM yang saat ini dipakai mesin virtual, pengelola jendela, dan jendela aplikasi."
+
+msgid "Android's VM now"
+msgstr "VM Android saat ini"
+
+msgid "The memory the VM holds on this computer, and how much of it Android uses"
+msgstr "Memori yang dipakai VM di komputer ini, dan berapa banyak yang digunakan Android"
+
+msgid "Inside Android"
+msgstr "Di dalam Android"
+
+msgid "Available to Android"
+msgstr "Tersedia untuk Android"
+
+msgid "Android's kernel"
+msgstr "Kernel Android"
+
+msgid "Largest processes"
+msgstr "Proses terbesar"
+
+msgid "Memory limit"
+msgstr "Batas memori"
+
+msgid "The most memory Android may grow to. Android takes only what it needs and returns the rest at once.\nAutomatic sets no fixed limit: up to this computer's memory less what Linux keeps.\nTakes effect the next time Android starts."
+msgstr "Memori terbanyak yang dapat dipakai Android. Android hanya mengambil yang diperlukan dan langsung mengembalikan sisanya.\nOtomatis tidak menetapkan batas tetap: hingga memori komputer ini dikurangi bagian yang disimpan Linux.\nBerlaku saat Android dimulai berikutnya."
+
+msgid "The memory could not be measured"
+msgstr "Memori tidak dapat diukur"
+
+msgid "{0}: used by Android {1}, free, not yet returned {2}"
+msgstr "{0}: dipakai Android {1}, bebas tetapi belum dikembalikan {2}"
+
+msgid "Android is not running, so it takes no memory on this computer."
+msgstr "Android tidak berjalan, sehingga tidak memakai memori di komputer ini."
+
+msgid "No report yet. Android reports how it uses its memory a few minutes after it starts."
+msgstr "Belum ada laporan. Android melaporkan penggunaan memorinya beberapa menit setelah dimulai."
+
+msgid "Reported {0} seconds ago"
+msgstr "Dilaporkan {0} detik yang lalu"
+
+msgid "{0} available of {1}"
+msgstr "{0} tersedia dari {1}"
+
+msgid "Render GPU"
+msgstr "GPU render"
+
+msgid "The GPU that draws Android apps.\nThe default, the primary monitor's GPU, keeps frames on one GPU and lets a laptop's discrete GPU sleep."
+msgstr "GPU yang menggambar aplikasi Android.\nBawaannya, GPU monitor utama, menjaga frame di satu GPU dan membiarkan GPU diskret laptop beristirahat."
+
+msgid "A new render GPU takes effect when the window manager starts again: at the next sign-in, or when you restart it below."
+msgstr "GPU render baru berlaku saat pengelola jendela dimulai lagi: saat masuk berikutnya, atau saat Anda memulainya ulang di bawah."
+
+msgid "GPU of the primary monitor"
+msgstr "GPU monitor utama"
+
+msgid "What the default choice renders on now."
+msgstr "GPU yang dipakai pilihan bawaan saat ini."
+
+msgid "Restart the window manager"
+msgstr "Mulai ulang pengelola jendela"
+
+msgid "Open Android app windows close and come back."
+msgstr "Jendela aplikasi Android yang terbuka ditutup lalu muncul kembali."
+
+msgid "Restart"
+msgstr "Mulai ulang"
+
+msgid "Restart the window manager?"
+msgstr "Mulai ulang pengelola jendela?"
+
+msgid "The windows of Android apps close for a moment. Android and its apps keep running."
+msgstr "Jendela aplikasi Android tertutup sebentar. Android dan aplikasinya tetap berjalan."
+
+msgid "The window manager could not be restarted"
+msgstr "Pengelola jendela tidak dapat dimulai ulang"
+
+msgid "Chosen by the window manager when it starts"
+msgstr "Dipilih oleh pengelola jendela saat dimulai"
+
+msgid "Running now"
+msgstr "Berjalan sekarang"
+
+msgid "Build"
+msgstr "Build"
+
+msgid "Security patch level"
+msgstr "Tingkat patch keamanan"
+
+msgid "Changing the Android version"
+msgstr "Mengubah versi Android"
+
+msgid "Every user of this computer runs the same Android version, so changing it needs an administrator.\nThe chosen version keeps getting security updates.\nWhen its support ends, DSA moves to the next version and keeps your apps."
+msgstr "Setiap pengguna komputer ini menjalankan versi Android yang sama, sehingga mengubahnya memerlukan administrator.\nVersi yang dipilih terus mendapat pembaruan keamanan.\nSaat dukungannya berakhir, DSA pindah ke versi berikutnya dan mempertahankan aplikasi Anda."
+
+msgid "Version to use"
+msgstr "Versi yang digunakan"
+
+msgid "DSA supports the latest two Android versions. Some apps run on only one of them."
+msgstr "DSA mendukung dua versi Android terbaru. Beberapa aplikasi hanya berjalan di salah satunya."
+
+msgid "Change"
+msgstr "Ubah"
+
+msgid "Android {0} is chosen. It is downloaded now and used the next time Android starts."
+msgstr "Android {0} dipilih. Versi ini diunduh sekarang dan digunakan saat Android dimulai berikutnya."
+
+msgid "Supported versions: Android {0}"
+msgstr "Versi yang didukung: Android {0}"
+
+msgid "Move to a newer Android?"
+msgstr "Pindah ke Android yang lebih baru?"
+
+msgid "Android {0} is downloaded and used the next time Android starts.\n\nYour apps and their data move along. Moving back later erases the data."
+msgstr "Android {0} diunduh dan digunakan saat Android dimulai berikutnya.\n\nAplikasi Anda dan datanya ikut pindah. Kembali nanti akan menghapus data."
+
+msgid "Erase Android data to move to an older version?"
+msgstr "Hapus data Android untuk pindah ke versi yang lebih lama?"
+
+msgid "Android {0} is older than the Android {1} that runs now. Android cannot read data a newer version wrote.\n\nMoving erases the Android data of every user of this computer:\n• every app they installed\n• the accounts they signed in to\n• the data of every app\n\nEach user's Android then starts as it was first installed. DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Android {0} lebih lama daripada Android {1} yang berjalan sekarang. Android tidak dapat membaca data yang ditulis versi yang lebih baru.\n\nPindah akan menghapus data Android setiap pengguna komputer ini:\n• setiap aplikasi yang mereka instal\n• akun yang mereka gunakan untuk masuk\n• data setiap aplikasi\n\nAndroid setiap pengguna lalu dimulai seperti saat pertama kali diinstal. Pengaturan DSA tetap ada.\n\nTindakan ini tidak dapat dibatalkan."
+
+msgid "Erase data and change"
+msgstr "Hapus data dan ubah"
+
+msgid "New versions of DSA come through the system's package manager and software center, with the other updates.\nInstalling DSA added its signed package repository."
+msgstr "Versi baru DSA datang melalui pengelola paket dan pusat perangkat lunak sistem, bersama pembaruan lainnya.\nMenginstal DSA telah menambahkan repositori paketnya yang bertanda tangan."
+
+msgid "Open software updates"
+msgstr "Buka pembaruan perangkat lunak"
+
+msgid "Shows the updates the system has for DSA and the other installed programs."
+msgstr "Menampilkan pembaruan yang tersedia di sistem untuk DSA dan program terinstal lainnya."
+
+msgid "No software center was found"
+msgstr "Pusat perangkat lunak tidak ditemukan"
+
+msgid "Update DSA with the system's package manager, such as apt or dnf."
+msgstr "Perbarui DSA dengan pengelola paket sistem, seperti apt atau dnf."
+
+msgid "Android image"
+msgstr "Image Android"
+
+msgid "This setting applies to every user of this computer, so changing it asks for an administrator's permission."
+msgstr "Pengaturan ini berlaku untuk setiap pengguna komputer ini, sehingga mengubahnya meminta izin administrator."
+
+msgid "The newest supported version (now Android {0})"
+msgstr "Versi terbaru yang didukung (saat ini Android {0})"
+
+msgid "Android {0} and its security updates"
+msgstr "Android {0} dan pembaruan keamanannya"
+
+msgid "No Android update is waiting. DSA checks every day, and restarts Android into an update once no app window is open."
+msgstr "Belum ada pembaruan Android. DSA memeriksa setiap hari dan memulai ulang Android ke pembaruan saat tidak ada jendela aplikasi terbuka."
+
+msgid "Android {0} is downloaded. Restart Android to use it now."
+msgstr "Android {0} telah diunduh. Mulai ulang Android untuk menggunakannya sekarang."
+
+msgid "Restart now"
+msgstr "Mulai ulang sekarang"
+
+msgid "Restart Android now?"
+msgstr "Mulai ulang Android sekarang?"
+
+msgid "Android restarts into Android {0}.\n\nIts app windows close. Open the apps again once it has started."
+msgstr "Android dimulai ulang ke Android {0}.\n\nJendela aplikasinya akan ditutup. Buka lagi aplikasi setelah Android selesai dimulai."
+
+msgid "Restart Android into updates by itself"
+msgstr "Mulai ulang Android ke pembaruan secara otomatis"
+
+msgid "On by default. With no app window open, Android restarts into a downloaded update at once.\nWith windows open, DSA asks first or waits until you close them.\nOff, an update is used the next time you start Android."
+msgstr "Aktif secara bawaan. Jika tidak ada jendela aplikasi yang terbuka, Android langsung dimulai ulang ke pembaruan yang diunduh.\nJika ada jendela yang terbuka, DSA bertanya dulu atau menunggu sampai Anda menutupnya.\nJika nonaktif, pembaruan digunakan saat Anda memulai Android berikutnya."
+
+msgid "Version it follows"
+msgstr "Versi yang diikuti"
+
+msgid "Android update"
+msgstr "Pembaruan Android"
+
+msgid "Check now"
+msgstr "Periksa sekarang"
+
+msgid "Device specifications"
+msgstr "Spesifikasi perangkat"
+
+msgid "What Android reports"
+msgstr "Yang dilaporkan Android"
+
+msgid "Not reported"
+msgstr "Tidak dilaporkan"
+
+msgid "Get pre-release versions"
+msgstr "Dapatkan versi pra-rilis"
+
+msgid "Also install versions that are still being finished. Every release before 1.0 is a pre-release.\nThe package manager then reads DSA's pre-release repository.\nTurning this off never moves DSA back: it waits for a stable release newer than the one installed."
+msgstr "Instal juga versi yang masih disempurnakan. Setiap rilis sebelum 1.0 adalah pra-rilis.\nPengelola paket lalu membaca repositori pra-rilis DSA.\nMematikan ini tidak pernah memundurkan DSA: DSA menunggu rilis stabil yang lebih baru dari yang terinstal."
+
+msgid "This installation does not follow a release channel."
+msgstr "Instalasi ini tidak mengikuti kanal rilis."
+
+msgid "Update the Android image automatically"
+msgstr "Perbarui image Android secara otomatis"
+
+msgid "Download signed security updates and new versions of Android.\nThey apply when Android restarts, as the Android update settings above say."
+msgstr "Unduh pembaruan keamanan dan versi baru Android yang bertanda tangan.\nPembaruan berlaku saat Android dimulai ulang, sesuai pengaturan pembaruan Android di atas."
+
+msgid "This installation does not offer image updates."
+msgstr "Instalasi ini tidak menawarkan pembaruan image."
+
+msgid "Desktop Subsystem for Android™"
+msgstr "Desktop Subsystem for Android™"
+
+msgid "Thisisthepy"
+msgstr "Thisisthepy"
+
+msgid "DSA Settings version"
+msgstr "Versi Pengaturan DSA"
+
+msgid "DSA service version"
+msgstr "Versi layanan DSA"
+
+msgid "Android image version"
+msgstr "Versi image Android"
+
+msgid "The Android image the next start boots. Image updates change it."
+msgstr "Image Android yang di-boot saat dimulai berikutnya. Pembaruan image mengubahnya."
+
+msgid "Licences"
+msgstr "Lisensi"
+
+msgid "DSA is licensed under the Apache License 2.0. Open the licences of every component it ships."
+msgstr "DSA dilisensikan di bawah Apache License 2.0. Buka lisensi setiap komponen yang disertakannya."
+
+msgid "Source code"
+msgstr "Kode sumber"
+
+msgid "Desktop Subsystem for Android is an independent open source project.\nIt is not affiliated with, endorsed by or sponsored by Microsoft or Google."
+msgstr "Desktop Subsystem for Android adalah proyek sumber terbuka yang independen.\nDSA tidak berafiliasi dengan, tidak didukung oleh, dan tidak disponsori oleh Microsoft maupun Google."
+
+msgid "Android is a trademark of Google LLC."
+msgstr "Android adalah merek dagang Google LLC."
+
+msgid "The names and build fingerprint Android reports to apps. Leave a box empty to keep the value shown.\nChanges apply from the next start of Android."
+msgstr "Nama dan sidik jari build yang dilaporkan Android ke aplikasi. Kosongkan kotak untuk mempertahankan nilai yang ditampilkan.\nPerubahan berlaku mulai Android dimulai berikutnya."
+
+msgid "Apps may notice"
+msgstr "Aplikasi mungkin menyadarinya"
+
+msgid "Changing the model or the fingerprint can change how apps behave.\nSome check the device before they run, and payment and integrity checks may fail."
+msgstr "Mengubah model atau sidik jari dapat mengubah perilaku aplikasi.\nBeberapa aplikasi memeriksa perangkat sebelum berjalan, dan pemeriksaan pembayaran serta integritas mungkin gagal."
+
+msgid "Build fingerprint"
+msgstr "Sidik jari build"
+
+msgid "Fingerprint from the next start"
+msgstr "Sidik jari saat dimulai berikutnya"
+
+msgid "Restart Android now"
+msgstr "Mulai ulang Android sekarang"
+
+msgid "Reset to defaults"
+msgstr "Setel ulang ke bawaan"
+
+msgid "Save"
+msgstr "Simpan"
+
+msgid "Saved. Android uses it from its next start."
+msgstr "Tersimpan. Android menggunakannya mulai dimulai berikutnya."
+
+msgid "Saved. Restart Android to use it now."
+msgstr "Tersimpan. Mulai ulang Android untuk menggunakannya sekarang."
+
+msgid "Reset the device identity?"
+msgstr "Setel ulang identitas perangkat?"
+
+msgid "Every value goes back to its default: this computer's, or DSA's own where the computer does not say.\n\nIt applies from the next start of Android."
+msgstr "Setiap nilai kembali ke bawaannya: nilai dari komputer ini, atau nilai DSA sendiri jika komputer tidak menyebutkannya.\n\nBerlaku mulai Android dimulai berikutnya."
+
+msgid "Back to the defaults. Android uses them from its next start."
+msgstr "Kembali ke bawaan. Android menggunakannya mulai dimulai berikutnya."
+
+msgid "Back to the defaults. Restart Android to use them now."
+msgstr "Kembali ke bawaan. Mulai ulang Android untuk menggunakannya sekarang."
+
+msgid "Android started again with this identity."
+msgstr "Android dimulai lagi dengan identitas ini."
+
+msgid "Android's network"
+msgstr "Jaringan Android"
+
+msgid "Connection"
+msgstr "Koneksi"
+
+msgid "Address"
+msgstr "Alamat"
+
+msgid "DNS"
+msgstr "DNS"
+
+msgid "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps."
+msgstr "Dijawab oleh resolver komputer ini, sehingga berkas hosts, VPN, dan filter DNS-nya berlaku untuk aplikasi Android."
+
+msgid "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}"
+msgstr "Resolver komputer ini tidak menjawab, sehingga Android bertanya ke server DNS jaringan: {0}"
+
+msgid "Gateway"
+msgstr "Gateway"
+
+msgid "Advanced networking is not in use"
+msgstr "Jaringan lanjutan tidak digunakan"
+
+msgid "Restart Android to apply"
+msgstr "Mulai ulang Android untuk menerapkan"
+
+msgid "The change applies the next time Android starts. Stop Android on the General page, then open an app."
+msgstr "Perubahan berlaku saat Android dimulai berikutnya. Hentikan Android di halaman Umum, lalu buka aplikasi."
+
+msgid "Advanced networking"
+msgstr "Jaringan lanjutan"
+
+msgid "Off by default. When on, Android joins this computer's network as a device of its own.\nOther devices on the network and Android apps can then reach each other directly.\nPrograms on this computer can always reach a server in Android at the address above."
+msgstr "Nonaktif secara bawaan. Jika aktif, Android bergabung ke jaringan komputer ini sebagai perangkat tersendiri.\nPerangkat lain di jaringan dan aplikasi Android lalu dapat saling terhubung secara langsung.\nProgram di komputer ini selalu dapat menjangkau server di Android melalui alamat di atas."
+
+msgid "Trusted certificates"
+msgstr "Sertifikat tepercaya"
+
+msgid "Root certificates you or an administrator added to this computer, such as a company's or a security program's.\nThe system's own certificates are not listed: Android has its own."
+msgstr "Sertifikat root yang Anda atau administrator tambahkan ke komputer ini, seperti milik perusahaan atau program keamanan.\nSertifikat milik sistem sendiri tidak dicantumkan: Android memiliki sertifikatnya sendiri."
+
+msgid "Trust certificates added to this computer"
+msgstr "Percayai sertifikat yang ditambahkan ke komputer ini"
+
+msgid "On by default. Android apps trust the certificates listed below as they trust Android's own.\nSites and servers this computer trusts then open in Android too. The change applies at once."
+msgstr "Aktif secara bawaan. Aplikasi Android memercayai sertifikat di bawah seperti memercayai sertifikat Android sendiri.\nSitus dan server yang dipercayai komputer ini lalu juga terbuka di Android. Perubahan langsung berlaku."
+
+msgid "This computer's trusted root certificates"
+msgstr "Sertifikat root tepercaya komputer ini"
+
+msgid "This computer's group policy"
+msgstr "Kebijakan grup komputer ini"
+
+msgid "This computer's enterprise certificates"
+msgstr "Sertifikat perusahaan komputer ini"
+
+msgid "Your trusted root certificates"
+msgstr "Sertifikat root tepercaya Anda"
+
+msgid "Your group policy"
+msgstr "Kebijakan grup Anda"
+
+msgid "This computer's administrator trust settings"
+msgstr "Pengaturan kepercayaan administrator komputer ini"
+
+msgid "Added to the system's certificate store"
+msgstr "Ditambahkan ke penyimpanan sertifikat sistem"
+
+msgid "SHA-256 {0}"
+msgstr "SHA-256 {0}"
+
+msgid "A certificate without a name"
+msgstr "Sertifikat tanpa nama"
+
+msgid "Issued by {0}"
+msgstr "Diterbitkan oleh {0}"
+
+msgid "No added root certificates were found on this computer."
+msgstr "Tidak ditemukan sertifikat root tambahan di komputer ini."
+
+msgid "Files"
+msgstr "Berkas"
+
+msgid "Send files to Android apps"
+msgstr "Kirim berkas ke aplikasi Android"
+
+msgid "To send a file to an Android app, drag it from the file manager onto the app's window. An APK you drop is installed."
+msgstr "Untuk mengirim berkas ke aplikasi Android, seret berkas dari pengelola berkas ke jendela aplikasi. APK yang Anda jatuhkan akan diinstal."
+
+msgid "Share folders with Android"
+msgstr "Bagikan folder dengan Android"
+
+msgid "On by default. The folders chosen below show in Android's shared storage, for Android apps to open and save files.\nApps need Android's storage permission, and can do only what your own account may do."
+msgstr "Aktif secara bawaan. Folder yang dipilih di bawah tampil di penyimpanan bersama Android, tempat aplikasi membuka dan menyimpan berkas.\nAplikasi memerlukan izin penyimpanan Android, dan hanya dapat melakukan apa yang boleh dilakukan akun Anda."
+
+msgid "Shared folders"
+msgstr "Folder yang dibagikan"
+
+msgid "A folder you clear is taken away from Android at once."
+msgstr "Folder yang Anda hapus centangnya langsung dilepas dari Android."
+
+msgid "Android files"
+msgstr "Berkas Android"
+
+msgid "Opens Android's shared storage in the file manager: the files Android apps saved, such as photos.\nAndroid starts if it is not running. DSA Files in the app grid does the same."
+msgstr "Membuka penyimpanan bersama Android di pengelola berkas: berkas yang disimpan aplikasi Android, seperti foto.\nAndroid dimulai jika belum berjalan. DSA Files di kisi aplikasi melakukan hal yang sama."
+
+msgid "Open web links in Android apps"
+msgstr "Buka tautan web di aplikasi Android"
+
+msgid "Off by default: a web link you tap in an Android app opens in your default browser on this computer.\nOn, it opens in an Android app, as on a phone.\nA link an installed app has verified as its own opens in that app either way."
+msgstr "Nonaktif secara bawaan: tautan web yang Anda ketuk di aplikasi Android terbuka di browser bawaan komputer ini.\nJika aktif, tautan terbuka di aplikasi Android, seperti di ponsel.\nTautan yang telah diverifikasi aplikasi terinstal sebagai miliknya tetap terbuka di aplikasi itu."
+
+msgid "ARM apps"
+msgstr "Aplikasi ARM"
+
+msgid "Run apps built only for ARM"
+msgstr "Jalankan aplikasi yang hanya dibuat untuk ARM"
+
+msgid "Many Android apps have code only for ARM processors. They run here only through an ARM translator.\nAndroid uses its own open source translator, unless you install another (dsa arm-translation install) or Google's.\nOff, Android uses no translator at all. Changes apply from the next start of Android.\nOnly 64-bit ARM apps (arm64-v8a) can run."
+msgstr "Banyak aplikasi Android hanya memiliki kode untuk prosesor ARM. Aplikasi ini hanya berjalan di sini melalui penerjemah ARM.\nAndroid memakai penerjemah sumber terbukanya, kecuali Anda menginstal yang lain (dsa arm-translation install) atau milik Google.\nJika nonaktif, Android sama sekali tidak memakai penerjemah. Perubahan berlaku mulai Android dimulai berikutnya.\nHanya aplikasi ARM 64-bit (arm64-v8a) yang dapat berjalan."
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Android started before this change. Stop and start Android for ARM apps to follow it."
+msgstr "Android dimulai sebelum perubahan ini. Hentikan lalu mulai Android agar aplikasi ARM mengikutinya."
+
+msgid "Remove the ARM translation package"
+msgstr "Hapus paket terjemahan ARM"
+
+msgid "Deletes the package from your add-on disk. ARM apps you installed stay, but do not run after Android restarts."
+msgstr "Menghapus paket dari disk add-on Anda. Aplikasi ARM yang Anda instal tetap ada, tetapi tidak berjalan setelah Android dimulai ulang."
+
+msgid "Developer"
+msgstr "Pengembang"
+
+msgid "Developer mode"
+msgstr "Mode pengembang"
+
+msgid "Off by default. When on, adb on this computer connects to Android without asking in Android.\nThe port is reachable only from this computer. Turn it off when you are done."
+msgstr "Nonaktif secara bawaan. Jika aktif, adb di komputer ini terhubung ke Android tanpa meminta izin di Android.\nPort hanya dapat dijangkau dari komputer ini. Matikan setelah Anda selesai."
+
+msgid "Connect adb automatically"
+msgstr "Hubungkan adb secara otomatis"
+
+msgid "On by default. While developer mode is on, Android shows in adb devices and Android Studio without adb connect.\nAfter adb disconnect, it stays off until the adb server restarts."
+msgstr "Aktif secara bawaan. Selama mode pengembang aktif, Android muncul di adb devices dan Android Studio tanpa adb connect.\nSetelah adb disconnect, koneksi tetap terputus sampai server adb dimulai ulang."
+
+msgid "Automatic connection"
+msgstr "Koneksi otomatis"
+
+msgid "Not connecting: developer mode or automatic connection is off."
+msgstr "Tidak menghubungkan: mode pengembang atau koneksi otomatis nonaktif."
+
+msgid "Waiting for adb: Android connects when adb starts on this computer."
+msgstr "Menunggu adb: Android terhubung saat adb dimulai di komputer ini."
+
+msgid "Waiting for Android: it connects once Android is running."
+msgstr "Menunggu Android: koneksi dibuat begitu Android berjalan."
+
+msgid "Connected: adb lists Android."
+msgstr "Terhubung: adb mencantumkan Android."
+
+msgid "Disconnected with adb disconnect. Android connects again when the adb server restarts."
+msgstr "Diputus dengan adb disconnect. Android terhubung lagi saat server adb dimulai ulang."
+
+msgid "Connect adb"
+msgstr "Hubungkan adb"
+
+msgid "While developer mode is on and Android is running, run this command:"
+msgstr "Selama mode pengembang aktif dan Android berjalan, jalankan perintah ini:"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Share the clipboard with Android"
+msgstr "Bagikan papan klip dengan Android"
+
+msgid "On by default: text copied on this computer can be pasted in Android apps, and the other way round.\nImages stay where they were copied."
+msgstr "Aktif secara bawaan: teks yang disalin di komputer ini dapat ditempel di aplikasi Android, dan sebaliknya.\nGambar tetap berada di tempat gambar itu disalin."
+
+msgid "Freeze Android when idle"
+msgstr "Bekukan Android saat diam"
+
+msgid "Off by default: an idle Android dozes and still receives notifications.\nFrozen, it uses no CPU but receives nothing until you open an app."
+msgstr "Nonaktif secara bawaan: Android yang diam masuk Doze dan tetap menerima notifikasi.\nSaat dibekukan, Android tidak memakai CPU, tetapi tidak menerima apa pun sampai Anda membuka aplikasi."
+
+msgid "Diagnostics"
+msgstr "Diagnostik"
+
+msgid "The traces make the DSA logs below grow, so turn them on only to report a problem.\nThey apply to every user of this computer, so changing them asks for an administrator's permission."
+msgstr "Jejak membuat log DSA di bawah membesar, jadi aktifkan hanya untuk melaporkan masalah.\nJejak berlaku untuk setiap pengguna komputer ini, sehingga mengubahnya meminta izin administrator."
+
+msgid "Input trace"
+msgstr "Jejak input"
+
+msgid "Every DSA process records when each touch, click and key reaches it, to measure the delay to the picture.\nOff by default."
+msgstr "Setiap proses DSA mencatat kapan setiap sentuhan, klik, dan tombol sampai kepadanya, untuk mengukur jeda hingga gambar.\nNonaktif secara bawaan."
+
+msgid "Resize trace"
+msgstr "Jejak ubah ukuran"
+
+msgid "Every DSA process records each stage of each window resize, to find where it is slow or flickers.\nOff by default."
+msgstr "Setiap proses DSA mencatat setiap tahap dari setiap pengubahan ukuran jendela, untuk menemukan bagian yang lambat atau berkedip.\nNonaktif secara bawaan."
+
+msgid "Logs"
+msgstr "Log"
+
+msgid "The logs of your window manager and app windows."
+msgstr "Log pengelola jendela dan jendela aplikasi Anda."
+
+msgid "Command line"
+msgstr "Baris perintah"
+
+msgid "The dsa command"
+msgstr "Perintah dsa"
+
+msgid "dsa status"
+msgstr "dsa status"
+
+msgid "dsa settings"
+msgstr "dsa settings"
+
+msgid "dsa memory"
+msgstr "dsa memory"
+
+msgid "Everything on these pages is also available from a terminal."
+msgstr "Semua yang ada di halaman ini juga tersedia dari terminal."
+
+msgid "Reset"
+msgstr "Setel ulang"
+
+msgid "Reset Android's data"
+msgstr "Setel ulang data Android"
+
+msgid "Erases every app you installed, your accounts and every app's data. Android starts as it was first installed.\nThe Android image and these settings stay."
+msgstr "Menghapus setiap aplikasi yang Anda instal, akun Anda, dan data setiap aplikasi. Android dimulai seperti saat pertama diinstal.\nImage Android dan pengaturan ini tetap ada."
+
+msgid "Reset Android's data?"
+msgstr "Setel ulang data Android?"
+
+msgid "This erases from Android:\n• every app you installed\n• the accounts you signed in to\n• the data of every app\n\nAndroid stops now. Its next start is as it was first installed.\n\nThe Android image and DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Ini menghapus dari Android:\n• setiap aplikasi yang Anda instal\n• akun yang Anda gunakan untuk masuk\n• data setiap aplikasi\n\nAndroid berhenti sekarang. Saat dimulai berikutnya, Android seperti saat pertama diinstal.\n\nImage Android dan pengaturan DSA tetap ada.\n\nTindakan ini tidak dapat dibatalkan."
+
+msgid "Android's data was reset"
+msgstr "Data Android telah disetel ulang"
+
+msgid "The next app you open starts Android as it was first installed."
+msgstr "Aplikasi berikutnya yang Anda buka memulai Android seperti saat pertama diinstal."
+
+msgid "Documents"
+msgstr "Dokumen"
+
+msgid "Downloads"
+msgstr "Unduhan"
+
+msgid "Pictures"
+msgstr "Gambar"
+
+msgid "Music"
+msgstr "Musik"
+
+msgid "Videos"
+msgstr "Video"
+
+msgid "Desktop"
+msgstr "Desktop"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Copy"
+msgstr "Salin"
+
+msgid "Google Play"
+msgstr "Google Play"
+
+msgid "Google Play services and the Play Store are not part of DSA.\nWhen you ask, DSA downloads LiteGapps Core, a public package of Google's apps, and installs it in your Android.\nWithout it, the rest of DSA works as before."
+msgstr "Layanan Google Play dan Play Store bukan bagian dari DSA.\nJika Anda meminta, DSA mengunduh LiteGapps Core, paket publik aplikasi Google, dan menginstalnya di Android Anda.\nTanpanya, bagian DSA lainnya tetap bekerja seperti sebelumnya."
+
+msgid "LiteGapps {0} {1} for Android {2} ({3})"
+msgstr "LiteGapps {0} {1} untuk Android {2} ({3})"
+
+msgid "Installed: {0}. Restart Android to start using it."
+msgstr "Terinstal: {0}. Mulai ulang Android untuk mulai menggunakannya."
+
+msgid "Removed. The Google apps stay in Android until it restarts."
+msgstr "Dihapus. Aplikasi Google tetap ada di Android sampai Android dimulai ulang."
+
+msgid "Installed: {0}."
+msgstr "Terinstal: {0}."
+
+msgid "{0} was installed by an older DSA and is no longer used, so Android starts without Google's apps. Install Google Play again."
+msgstr "{0} diinstal oleh DSA versi lama dan tidak digunakan lagi, sehingga Android dimulai tanpa aplikasi Google. Instal lagi Google Play."
+
+msgid "Not installed."
+msgstr "Tidak terinstal."
+
+msgid "Downloaded from the LiteGapps project: {0}"
+msgstr "Diunduh dari proyek LiteGapps: {0}"
+
+msgid "Downloading and installing Google Play. This can take several minutes."
+msgstr "Mengunduh dan menginstal Google Play. Ini dapat memakan waktu beberapa menit."
+
+msgid "Enter this number on Google's registration page."
+msgstr "Masukkan nomor ini di halaman pendaftaran Google."
+
+msgid "It shows here once Google Play is installed and Android has started."
+msgstr "Nomor ini muncul di sini setelah Google Play terinstal dan Android dimulai."
+
+msgid "Android started before this change. Stop and start Android for Google Play to follow it."
+msgstr "Android dimulai sebelum perubahan ini. Hentikan lalu mulai Android agar Google Play mengikutinya."
+
+msgid "Install Google Play"
+msgstr "Instal Google Play"
+
+msgid "Downloads LiteGapps Core for your Android version (about 120 to 260 MB) from the LiteGapps project, checks it and installs it.\nAndroid starts if it is not running. Google Play is there from the next start of Android."
+msgstr "Mengunduh LiteGapps Core untuk versi Android Anda (sekitar 120 hingga 260 MB) dari proyek LiteGapps, memeriksanya, lalu menginstalnya.\nAndroid dimulai jika belum berjalan. Google Play tersedia mulai Android dimulai berikutnya."
+
+msgid "Install"
+msgstr "Instal"
+
+msgid "Remove Google Play"
+msgstr "Hapus Google Play"
+
+msgid "Deletes Google's apps from your add-on disk. They are gone from the next start of Android."
+msgstr "Menghapus aplikasi Google dari disk add-on Anda. Aplikasi itu hilang mulai Android dimulai berikutnya."
+
+msgid "Google's terms"
+msgstr "Ketentuan Google"
+
+msgid "Google's ARM translator"
+msgstr "Penerjemah ARM Google"
+
+msgid "Installs the ARM translator from the Android emulator image Google offers for this Android version.\nDownloads about 2 GB from Google, under Google's Android SDK License, and keeps only the translator.\nNothing is downloaded until you agree. DSA does not include or pass on Google's translator.\nA package built from another translator, such as Digitalis, does the same job."
+msgstr "Menginstal penerjemah ARM dari image emulator Android yang ditawarkan Google untuk versi Android ini.\nMengunduh sekitar 2 GB dari Google, di bawah Android SDK License milik Google, dan hanya menyimpan penerjemahnya.\nTidak ada yang diunduh sebelum Anda setuju. DSA tidak menyertakan atau meneruskan penerjemah Google.\nPaket yang dibuat dari penerjemah lain, seperti Digitalis, melakukan tugas yang sama."
+
+msgid "Get"
+msgstr "Dapatkan"
+
+msgid "Android SDK License"
+msgstr "Android SDK License"
+
+msgid "Google's terms for the emulator image the translator comes from."
+msgstr "Ketentuan Google untuk image emulator yang menjadi sumber penerjemah."
+
+msgid "Get Google's ARM translator?"
+msgstr "Dapatkan penerjemah ARM Google?"
+
+msgid "Accept and download"
+msgstr "Setujui dan unduh"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its ARM translator.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nThe translator is Google's software. DSA does not ship or pass it on.\n\nThe translator works from the next start of Android."
+msgstr "DSA mengunduh image emulator Android milik Google untuk versi Android ini dan hanya mengambil penerjemah ARM-nya.\n\n• Sumber: repositori SDK Google ({0})\n• Ukuran: sekitar 2 GB, dihapus setelahnya\n• Lisensi: Android SDK License ({1}). Dengan mengunduh, Anda menerima ketentuannya.\n\nPenerjemah ini adalah perangkat lunak Google. DSA tidak menyertakan atau meneruskannya.\n\nPenerjemah bekerja mulai Android dimulai berikutnya."
+
+msgid "Downloading about 2 GB from Google and taking out the translator. It takes minutes."
+msgstr "Mengunduh sekitar 2 GB dari Google dan mengambil penerjemahnya. Ini memakan waktu beberapa menit."
+
+msgid "Google's apps belong to Google and follow Google's terms.\nDSA does not distribute them: it downloads the public LiteGapps package when you ask."
+msgstr "Aplikasi Google adalah milik Google dan tunduk pada ketentuan Google.\nDSA tidak mendistribusikannya: DSA mengunduh paket publik LiteGapps saat Anda meminta."
+
+msgid "Register this device with Google"
+msgstr "Daftarkan perangkat ini ke Google"
+
+msgid "Google has not certified this Android, so Google may refuse to sign you in until you register it.\nOpen Google's registration page, sign in with your Google account and enter the Android ID below."
+msgstr "Google belum menyertifikasi Android ini, sehingga Google mungkin menolak proses masuk Anda sampai Anda mendaftarkannya.\nBuka halaman pendaftaran Google, masuk dengan akun Google Anda, lalu masukkan Android ID di bawah."
+
+msgid "Android ID"
+msgstr "Android ID"
+
+msgid "Google Play was not installed"
+msgstr "Google Play tidak diinstal"
+
+msgid "Google Play was not removed"
+msgstr "Google Play tidak dihapus"
+
+msgid "Where Google Play stands could not be read"
+msgstr "Status Google Play tidak dapat dibaca"
+
+msgid "The page could not be opened"
+msgstr "Halaman tidak dapat dibuka"
+
+msgid "Runs the app's ARM code through the translator. Off runs its x86_64 code."
+msgstr "Menjalankan kode ARM aplikasi melalui penerjemah. Jika nonaktif, kode x86_64-nya yang dijalankan."
+
+msgid "Apps that are part of Android run as Android installed them."
+msgstr "Aplikasi yang merupakan bagian dari Android berjalan seperti saat diinstal oleh Android."
+
+msgid "No APK of this app on the device holds its ARM code."
+msgstr "Tidak ada APK aplikasi ini di perangkat yang berisi kode ARM-nya."
+
+msgid "ARM translation is not on. Turn it on under ARM apps and restart Android."
+msgstr "Terjemahan ARM nonaktif. Aktifkan di Aplikasi ARM dan mulai ulang Android."
+
+msgid "This app has only ARM code, so it always runs as ARM."
+msgstr "Aplikasi ini hanya memiliki kode ARM, sehingga selalu berjalan sebagai ARM."
+
+msgid "This version of DSA cannot say whether the app can run as ARM."
+msgstr "Versi DSA ini tidak dapat mengetahui apakah aplikasi dapat berjalan sebagai ARM."
+
+msgid "{0} runs as ARM now."
+msgstr "{0} sekarang berjalan sebagai ARM."
+
+msgid "{0} runs its x86_64 code now."
+msgstr "{0} sekarang menjalankan kode x86_64-nya."
+
+msgid "its APKs on the device hold no code for that"
+msgstr "APK-nya di perangkat tidak berisi kode untuk itu"
+
+msgid "ARM translation is not on"
+msgstr "Terjemahan ARM nonaktif"
+
+msgid "Android refused"
+msgstr "Android menolak"
+
+msgid "{0} was not installed again: {1} ({2})"
+msgstr "{0} tidak diinstal ulang: {1} ({2})"
+
+msgid "Run as ARM"
+msgstr "Jalankan sebagai ARM"
+
+msgid "Erase {0}'s data?"
+msgstr "Hapus data {0}?"
+
+msgid "Android cannot change how {0} runs and keep its data.\n\nInstalling it again erases its data: sign-ins, settings and files it keeps for itself."
+msgstr "Android tidak dapat mengubah cara {0} berjalan sambil mempertahankan datanya.\n\nMenginstalnya ulang akan menghapus datanya: info masuk, pengaturan, dan berkas yang disimpannya sendiri."
+
+msgid "Erase and install again"
+msgstr "Hapus dan instal ulang"
+
+msgid "Not installed again"
+msgstr "Tidak diinstal ulang"
+
+msgid "Default: from this computer"
+msgstr "Bawaan: dari komputer ini"
+
+msgid "Default: DSA's value"
+msgstr "Bawaan: nilai DSA"
+
+msgid "This computer does not say; Android keeps its own."
+msgstr "Komputer ini tidak menyebutkannya; Android mempertahankan nilainya sendiri."
+
+msgid "From this computer"
+msgstr "Dari komputer ini"
+
+msgid "These follow this computer and are read again each time Android starts.\nAndroid's Settings shows the device name and the chip.\nThe model name shows only here, as Android's Settings has no place for it."
+msgstr "Nilai ini mengikuti komputer ini dan dibaca ulang setiap kali Android dimulai.\nPengaturan Android menampilkan nama perangkat dan chip.\nNama model hanya tampil di sini, karena Pengaturan Android tidak memiliki tempat untuknya."
+
+msgid "Model name"
+msgstr "Nama model"
+
+msgid "Device name"
+msgstr "Nama perangkat"
+
+msgid "Chip manufacturer"
+msgstr "Produsen chip"
+
+msgid "Chip model"
+msgstr "Model chip"
+
+msgid "Root access"
+msgstr "Akses root"
+
+msgid "Not allowed"
+msgstr "Tidak diizinkan"
+
+msgid "Ask each time"
+msgstr "Tanya setiap kali"
+
+msgid "Remember (no asking)"
+msgstr "Ingat (tanpa bertanya)"
+
+msgid "Not available"
+msgstr "Tidak tersedia"
+
+msgid "Not changed"
+msgstr "Tidak diubah"
+
+msgid "Not allowed hides su from the app.\nAsk each time asks an administrator for each request, then not again for 15 minutes.\nRemember approves without asking. Choosing it needs an administrator's approval."
+msgstr "Tidak diizinkan menyembunyikan su dari aplikasi.\nTanya setiap kali meminta persetujuan administrator untuk setiap permintaan, lalu tidak bertanya lagi selama 15 menit.\nIngat menyetujui tanpa bertanya. Memilihnya memerlukan persetujuan administrator."
+
+msgid "Shares its user ID with {0}, so Android cannot tell them apart.\nTheir root access is one setting: a change here applies to all of them.\nIf any of them is set to Not allowed, none of them can use su."
+msgstr "Berbagi ID pengguna dengan {0}, sehingga Android tidak dapat membedakannya.\nAkses root mereka adalah satu pengaturan: perubahan di sini berlaku untuk semuanya.\nJika salah satunya diatur ke Tidak diizinkan, tidak satu pun dapat menggunakan su."
+
+msgid "Root access is off for this computer. An administrator turns it on under Advanced."
+msgstr "Akses root nonaktif untuk komputer ini. Administrator dapat mengaktifkannya di Lanjutan."
+
+msgid "This version of DSA cannot say how far the app may use root."
+msgstr "Versi DSA ini tidak dapat mengetahui sejauh mana aplikasi boleh menggunakan root."
+
+msgid "The root level of {0} was not changed: {1}"
+msgstr "Tingkat root {0} tidak diubah: {1}"
+
+msgid "{0} cannot use root any more. su disappears for it from the next start of Android."
+msgstr "{0} tidak dapat menggunakan root lagi. su tersembunyi darinya mulai Android dimulai berikutnya."
+
+msgid "{0} now uses su without asking. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} kini memakai su tanpa bertanya. Jika su sebelumnya tersembunyi, su terlihat saat Android dimulai berikutnya."
+
+msgid "{0} now asks an administrator each time it uses su. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} kini meminta izin administrator setiap kali memakai su. Jika su sebelumnya tersembunyi, su terlihat saat Android dimulai berikutnya."
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command: {0}"
+msgstr "Setiap permintaan dicatat di log layanan beserta aplikasi, waktu, persetujuan, dan perintahnya: {0}"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command."
+msgstr "Setiap permintaan dicatat di log layanan beserta aplikasi, waktu, persetujuan, dan perintahnya."
+
+msgid "Root access is off for this computer, so no app can use su.\nAn administrator turns it on under Advanced. Then you choose each app's level here."
+msgstr "Akses root nonaktif untuk komputer ini, sehingga tidak ada aplikasi yang dapat menggunakan su.\nAdministrator dapat mengaktifkannya di Lanjutan. Setelah itu, Anda memilih tingkat setiap aplikasi di sini."
+
+msgid "This applies to every user of this computer, so changing it asks for an administrator's permission.\nChoose each app's level under Apps."
+msgstr "Ini berlaku untuk setiap pengguna komputer ini, sehingga mengubahnya meminta izin administrator.\nPilih tingkat setiap aplikasi di Aplikasi."
+
+msgid "Let Android apps ask for root"
+msgstr "Izinkan aplikasi Android meminta akses root"
+
+msgid "Off by default. An app you allow under Apps can run commands as root once an administrator approves, as with sudo.\nThe Android image, its build properties and SELinux stay as they are."
+msgstr "Nonaktif secara bawaan. Aplikasi yang diizinkan di Aplikasi dapat menjalankan perintah root setelah administrator setuju, seperti sudo.\nImage Android, properti build-nya, dan SELinux tetap seperti apa adanya."
+
+msgid "Root access changes from the next start of Android. Stop Android on the General page, then open an app."
+msgstr "Perubahan akses root berlaku mulai Android dimulai berikutnya. Hentikan Android di halaman Umum, lalu buka aplikasi."
+
+msgid "Where requests are recorded"
+msgstr "Tempat permintaan dicatat"
+
+msgid "Follow the default"
+msgstr "Ikuti bawaan"
+
+msgid "On the whole screen"
+msgstr "Di seluruh layar"
+
+msgid "Inside the window"
+msgstr "Di dalam jendela"
+
+msgid "Full screen"
+msgstr "Layar penuh"
+
+msgid "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+msgstr "Tempat aplikasi ini tampil saat jelas meminta layar penuh, misalnya tombol layar penuh pemutar video. F11 selalu mengalihkan layar penuh."
+
+msgid "Bars hidden"
+msgstr "Bilah disembunyikan"
+
+msgid "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+msgstr "Tempat aplikasi ini tampil saat menyembunyikan bilahnya tanpa meminta layar penuh, seperti feed video pendek."
+
+msgid "{0}'s windows follow the new settings now."
+msgstr "Jendela {0} sekarang mengikuti pengaturan baru."
+
+msgid "App full screen"
+msgstr "Layar penuh aplikasi"
+
+msgid "On the whole screen, the title bar appears when the pointer reaches the top edge."
+msgstr "Di seluruh layar, bilah judul muncul saat penunjuk mencapai tepi atas."
+
+msgid "Full screen request"
+msgstr "Permintaan layar penuh"
+
+msgid "Where an app's full screen request shows, such as a video's full screen button."
+msgstr "Tempat permintaan layar penuh dari aplikasi tampil, seperti tombol layar penuh pada video."
+
+msgid "Where an app shows when it only hides its bars, as a feed of short videos does."
+msgstr "Tempat aplikasi tampil saat hanya menyembunyikan bilahnya, seperti feed video pendek."
+
+msgid "Scaling on another monitor"
+msgstr "Penskalaan di monitor lain"
+
+msgid "App"
+msgstr "Aplikasi"
+
+msgid "System"
+msgstr "Sistem"
+
+msgid "System (forced)"
+msgstr "Sistem (paksa)"
+
+msgid "System (forced), not available yet"
+msgstr "Sistem (paksa), belum tersedia"
+
+msgid "System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System."
+msgstr "Sistem (paksa) memberi aplikasi skala baru tanpa dimulai ulang, meskipun aplikasi tidak menyatakan dapat menanganinya.\nOpsi ini belum tersedia: build ini belum memiliki perubahan Android yang diperlukan. Sebelum itu, opsi ini bekerja seperti Sistem."
+
+msgid "System (recommended for this app)"
+msgstr "Sistem (disarankan untuk aplikasi ini)"
+
+msgid "App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, and text stays sharp.\nIt is recreated once with its state kept, so it redraws briefly.\nSystem: DSA scales the window to the same physical size, and never recreates the app. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube, and App for every other app."
+msgstr "Aplikasi: DSA menskalakan jendela saat diseret. Setelah dilepas, aplikasi menggambar ulang pada skala baru dan teks tetap tajam.\nAplikasi dibuat ulang sekali dengan keadaannya dipertahankan, sehingga digambar ulang sebentar.\nSistem: DSA menskalakan jendela ke ukuran fisik yang sama dan tidak pernah membuat ulang aplikasi. Teks bisa tampak sedikit buram.\nOtomatis memilih Sistem untuk aplikasi yang rusak jika skalanya berubah saat berjalan, seperti YouTube, dan Aplikasi untuk lainnya."
+
+msgid "Getting the update ready"
+msgstr "Menyiapkan pembaruan"
+
+msgid "Downloading DSA {0}"
+msgstr "Mengunduh DSA {0}"
+
+msgid "Stopping Android to install DSA {0}"
+msgstr "Menghentikan Android untuk menginstal DSA {0}"
+
+msgid "Installing DSA {0}"
+msgstr "Menginstal DSA {0}"
+
+msgid "DSA is restarting to finish the update"
+msgstr "DSA dimulai ulang untuk menyelesaikan pembaruan"
+
+msgid "Do not close DSA or start Android apps until the update is done."
+msgstr "Jangan tutup DSA atau memulai aplikasi Android sampai pembaruan selesai."
+
+msgid "Updated to {0}"
+msgstr "Diperbarui ke {0}"
+
+msgid "DSA has not come back after the update to {0}. If it does not start soon, restart the computer."
+msgstr "DSA belum kembali setelah pembaruan ke {0}. Jika DSA tidak segera dimulai, mulai ulang komputer."
+
+msgid "Updating to {0} failed. The version before it is still installed."
+msgstr "Pembaruan ke {0} gagal. Versi sebelumnya masih terinstal."
+
+msgid "Updating DSA"
+msgstr "Memperbarui DSA"
+
+msgid "Update of DSA"
+msgstr "Pembaruan DSA"
+
+msgid "Backup"
+msgstr "Cadangan"
+
+msgid "DSA keeps an encrypted backup of your Android apps' data in a folder of your home folder.\nThe apps and their data can come back after Android's data is reset, or on another computer.\nThe key that opens it is kept in your keyring."
+msgstr "DSA menyimpan cadangan terenkripsi data aplikasi Android Anda di sebuah folder dalam folder rumah Anda.\nAplikasi dan datanya dapat dipulihkan setelah data Android disetel ulang, atau di komputer lain.\nKunci untuk membukanya disimpan di ring kunci Anda."
+
+msgid "Folder"
+msgstr "Folder"
+
+msgid "Backups are unavailable"
+msgstr "Cadangan tidak tersedia"
+
+msgid "Last backup"
+msgstr "Pencadangan terakhir"
+
+msgid "In the backup"
+msgstr "Isi cadangan"
+
+msgid "Last restore"
+msgstr "Pemulihan terakhir"
+
+msgid "Last problem"
+msgstr "Masalah terakhir"
+
+msgid "Back up now"
+msgstr "Cadangkan sekarang"
+
+msgid "Has Android back up the data of every app into the folder now. Android starts if it is not running."
+msgstr "Meminta Android mencadangkan data setiap aplikasi ke folder sekarang. Android dimulai jika belum berjalan."
+
+msgid "Back up"
+msgstr "Cadangkan"
+
+msgid "Restore"
+msgstr "Pulihkan"
+
+msgid "Installs the apps of the backup that Android does not have, then replaces every app's data with the backup's."
+msgstr "Menginstal aplikasi dari cadangan yang belum ada di Android, lalu mengganti data setiap aplikasi dengan data dari cadangan."
+
+msgid "Show recovery key"
+msgstr "Tampilkan kunci pemulihan"
+
+msgid "The key that opens the backup anywhere else. Write it down and keep it safe."
+msgstr "Kunci yang membuka cadangan di tempat lain. Catat dan simpan dengan aman."
+
+msgid "Show"
+msgstr "Tampilkan"
+
+msgid "Use a recovery key"
+msgstr "Gunakan kunci pemulihan"
+
+msgid "Opens a backup folder brought from another computer, or kept from before this computer's keyring was reset."
+msgstr "Membuka folder cadangan yang dibawa dari komputer lain, atau yang tersimpan sejak sebelum ring kunci komputer ini disetel ulang."
+
+msgid "Enter"
+msgstr "Masukkan"
+
+msgid "The backup was not restored"
+msgstr "Cadangan tidak dipulihkan"
+
+msgid "The apps were not backed up"
+msgstr "Aplikasi tidak dicadangkan"
+
+msgid "Restore from the backup?"
+msgstr "Pulihkan dari cadangan?"
+
+msgid "The recovery key could not be shown"
+msgstr "Kunci pemulihan tidak dapat ditampilkan"
+
+msgid "The recovery key is kept. The backup folder is read with it."
+msgstr "Kunci pemulihan disimpan. Folder cadangan dibaca dengan kunci ini."
+
+msgid "The recovery key was not used"
+msgstr "Kunci pemulihan tidak digunakan"
+
+msgid "Where the backup stands could not be read"
+msgstr "Status cadangan tidak dapat dibaca"
+
+msgid "Recovery key"
+msgstr "Kunci pemulihan"
+
+msgid "Enter the recovery key of the backup folder, as it was written down.\n\nSpaces, dashes and capitals do not matter.\n\nA key that does not open the folder is refused, and the key kept now stays."
+msgstr "Masukkan kunci pemulihan folder cadangan, persis seperti yang dicatat.\n\nSpasi, tanda hubung, dan huruf kapital tidak berpengaruh.\n\nKunci yang tidak dapat membuka folder akan ditolak, dan kunci yang disimpan sekarang tetap dipakai."
+
+msgid "Never"
+msgstr "Belum pernah"
+
+msgid "No apps yet"
+msgstr "Belum ada aplikasi"
+
+msgid "{0} apps, {1}"
+msgstr "{0} aplikasi, {1}"
+
+msgid "Backing up every app. Android starts if it is not running. This can take a while."
+msgstr "Mencadangkan setiap aplikasi. Android dimulai jika belum berjalan. Ini dapat memakan waktu."
+
+msgid "Restoring apps and their data from the backup. Android starts if it is not running. This can take a while."
+msgstr "Memulihkan aplikasi dan datanya dari cadangan. Android dimulai jika belum berjalan. Ini dapat memakan waktu."
+
+msgid "Apps restored: {0}. Apps installed first: {1}."
+msgstr "Aplikasi dipulihkan: {0}. Aplikasi yang diinstal terlebih dahulu: {1}."
+
+msgid "Apps restored: {0}. Apps installed first: {1}. Apps that could not be restored: {2}."
+msgstr "Aplikasi dipulihkan: {0}. Aplikasi yang diinstal terlebih dahulu: {1}. Aplikasi yang tidak dapat dipulihkan: {2}."
+
+msgid "Apps backed up: {0}."
+msgstr "Aplikasi dicadangkan: {0}."
+
+msgid "Apps backed up: {0}. Apps that could not be backed up: {1}."
+msgstr "Aplikasi dicadangkan: {0}. Aplikasi yang tidak dapat dicadangkan: {1}."
+
+msgid "Apps in the backup that Android does not have are installed.\n\nThe data of every app in the backup is replaced with the backup's. What those apps saved since the backup is lost.\n\nAndroid starts if it is not running."
+msgstr "Aplikasi dalam cadangan yang belum ada di Android akan diinstal.\n\nData setiap aplikasi dalam cadangan diganti dengan data cadangan. Apa yang disimpan aplikasi itu sejak pencadangan akan hilang.\n\nAndroid dimulai jika belum berjalan."
+
+msgid "Write this key down and keep it somewhere safe, away from this computer.\n\nAnyone with it can read the backup.\n\nWithout it, the backup cannot be opened on another computer or after this computer's keyring is lost."
+msgstr "Catat kunci ini dan simpan di tempat yang aman, jauh dari komputer ini.\n\nSiapa pun yang memilikinya dapat membaca cadangan.\n\nTanpa kunci ini, cadangan tidak dapat dibuka di komputer lain atau setelah ring kunci komputer ini hilang."
+
+msgid "Enter the recovery key."
+msgstr "Masukkan kunci pemulihan."
+
+msgid "The key was not used: {0}"
+msgstr "Kunci tidak digunakan: {0}"
+
+msgid "Keeps an encrypted second copy of your Android apps' user data on this computer.\nIt can be restored after a data reset or on another computer. Off until you turn it on."
+msgstr "Menyimpan salinan kedua terenkripsi dari data pengguna aplikasi Android Anda di komputer ini.\nSalinan ini dapat dipulihkan setelah data disetel ulang atau di komputer lain. Nonaktif sampai Anda mengaktifkannya."
+
+msgid "Earlier backups of {0} apps ({1}) are still kept in your DSA Backup folder."
+msgstr "Cadangan sebelumnya dari {0} aplikasi ({1}) masih tersimpan di folder DSA Backup Anda."
+
+msgid "The backups of {0} apps ({1}) are still kept on this computer.\n\nDelete them and their key as well, or keep them for a later restore?"
+msgstr "Cadangan dari {0} aplikasi ({1}) masih tersimpan di komputer ini.\n\nHapus cadangan beserta kuncinya juga, atau simpan untuk dipulihkan nanti?"
+
+msgid "Backup is on. Android backs up its apps' data to this computer from now on."
+msgstr "Pencadangan aktif. Mulai sekarang Android mencadangkan data aplikasinya ke komputer ini."
+
+msgid "Backup is off, and the backups and their key were deleted."
+msgstr "Pencadangan nonaktif, dan cadangan beserta kuncinya telah dihapus."
+
+msgid "Backup is off. The backups made so far are kept."
+msgstr "Pencadangan nonaktif. Cadangan yang dibuat sejauh ini tetap disimpan."
+
+msgid "Android's keys get their protection the first time Android starts."
+msgstr "Kunci Android mendapat perlindungannya saat Android pertama kali dimulai."
+
+msgid "Sealed by this computer's TPM.\nA copy of Android's disk cannot open the apps' keys or Android's encrypted storage anywhere else."
+msgstr "Disegel oleh TPM komputer ini.\nSalinan disk Android tidak dapat membuka kunci aplikasi atau penyimpanan terenkripsi Android di tempat lain."
+
+msgid "Kept by your keyring only, because this computer has no TPM 2.0 that can be used.\nOnce one works, DSA seals the keys with it."
+msgstr "Hanya disimpan oleh ring kunci Anda, karena komputer ini tidak memiliki TPM 2.0 yang dapat digunakan.\nBegitu ada yang berfungsi, DSA menyegel kunci dengannya."
+
+msgid "Protected by {0}."
+msgstr "Dilindungi oleh {0}."
+
+msgid "Why not the TPM: {0}"
+msgstr "Alasan tidak memakai TPM: {0}"
+
+msgid "Back up apps' data to this computer"
+msgstr "Cadangkan data aplikasi ke komputer ini"
+
+msgid "Protection of Android's keys"
+msgstr "Perlindungan kunci Android"
+
+msgid "Android's keys"
+msgstr "Kunci Android"
+
+msgid "Why not the TPM"
+msgstr "Alasan tidak memakai TPM"
+
+msgid "Android's keys could not be opened"
+msgstr "Kunci Android tidak dapat dibuka"
+
+msgid "Backup was not turned on"
+msgstr "Pencadangan tidak diaktifkan"
+
+msgid "Backup was not turned off"
+msgstr "Pencadangan tidak dinonaktifkan"
+
+msgid "Turn off backup?"
+msgstr "Nonaktifkan pencadangan?"
+
+msgid "Keep them"
+msgstr "Simpan"
+
+msgid "Delete backups"
+msgstr "Hapus cadangan"
+
+msgid "Protected content"
+msgstr "Konten yang dilindungi"
+
+msgid "Widevine lets streaming apps play protected video.\nDSA does not include or pass on Widevine. When you ask, your computer takes it unchanged from Google's emulator image."
+msgstr "Widevine memungkinkan aplikasi streaming memutar video yang dilindungi.\nDSA tidak menyertakan atau meneruskan Widevine. Jika Anda meminta, komputer Anda mengambilnya tanpa diubah dari image emulator Google."
+
+msgid "Android started before this change. Stop and start Android for Widevine to follow it."
+msgstr "Android dimulai sebelum perubahan ini. Hentikan lalu mulai Android agar Widevine mengikutinya."
+
+msgid "Standard definition only"
+msgstr "Hanya definisi standar"
+
+msgid "Widevine here is security level L3, so streaming services send standard definition (SD) at most.\nTo watch in high definition, use this computer's own browser or app."
+msgstr "Widevine di sini memiliki tingkat keamanan L3, sehingga layanan streaming paling tinggi mengirim definisi standar (SD).\nUntuk menonton dalam definisi tinggi, gunakan browser atau aplikasi milik komputer ini."
+
+msgid "Get Widevine"
+msgstr "Dapatkan Widevine"
+
+msgid "Downloads about 2 GB from Google, under Google's Android SDK License, and keeps only Widevine.\nNothing is downloaded until you agree. Widevine is there from the next start of Android."
+msgstr "Mengunduh sekitar 2 GB dari Google, di bawah Android SDK License milik Google, dan hanya menyimpan Widevine.\nTidak ada yang diunduh sebelum Anda setuju. Widevine tersedia mulai Android dimulai berikutnya."
+
+msgid "Remove Widevine"
+msgstr "Hapus Widevine"
+
+msgid "Removes the module and the device certificates it kept, from the next start of Android."
+msgstr "Menghapus modul dan sertifikat perangkat yang disimpannya, mulai Android dimulai berikutnya."
+
+msgid "Widevine is Google's software and follows Google's terms. DSA does not distribute it."
+msgstr "Widevine adalah perangkat lunak Google dan tunduk pada ketentuan Google. DSA tidak mendistribusikannya."
+
+msgid "Get Widevine from Google?"
+msgstr "Dapatkan Widevine dari Google?"
+
+msgid "Widevine was not installed"
+msgstr "Widevine tidak diinstal"
+
+msgid "Widevine was not removed"
+msgstr "Widevine tidak dihapus"
+
+msgid "Where Widevine stands could not be read"
+msgstr "Status Widevine tidak dapat dibaca"
+
+msgid "Google's image {0} for Android {1} ({2})"
+msgstr "Image Google {0} untuk Android {1} ({2})"
+
+msgid "Removed. Widevine stays in Android until it restarts."
+msgstr "Dihapus. Widevine tetap ada di Android sampai Android dimulai ulang."
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its Widevine module, unchanged.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nWidevine is Google's software. DSA does not ship or pass it on.\n\nWidevine here is security level L3, so streaming services send standard definition (SD) at most.\n\nWidevine works from the next start of Android."
+msgstr "DSA mengunduh image emulator Android milik Google untuk versi Android ini dan hanya mengambil modul Widevine-nya, tanpa diubah.\n\n• Sumber: repositori SDK Google ({0})\n• Ukuran: sekitar 2 GB, dihapus setelahnya\n• Lisensi: Android SDK License ({1}). Dengan mengunduh, Anda menerima ketentuannya.\n\nWidevine adalah perangkat lunak Google. DSA tidak menyertakan atau meneruskannya.\n\nWidevine di sini memiliki tingkat keamanan L3, sehingga layanan streaming paling tinggi mengirim definisi standar (SD).\n\nWidevine bekerja mulai Android dimulai berikutnya."
+
+msgid "Downloading about 2 GB from Google and taking out Widevine. It takes minutes."
+msgstr "Mengunduh sekitar 2 GB dari Google dan mengambil Widevine. Ini memakan waktu beberapa menit."
+
+msgid "{0}, {1}"
+msgstr "{0}, {1}"
+
+msgid "{0}, {1}, {2}: {3}"
+msgstr "{0}, {1}, {2}: {3}"
+
+msgid "{0} records dropped"
+msgstr "{0} catatan dibuang"
+
+msgid "Lowest priority shown"
+msgstr "Prioritas terendah yang ditampilkan"
+
+msgid "Copied"
+msgstr "Disalin"
