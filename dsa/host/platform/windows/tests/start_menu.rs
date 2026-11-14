@@ -17,6 +17,7 @@ use dsa_host_windows::app_window::{
     this_process_app_user_model_id, use_app_user_model_id, PACKAGE_ARGUMENT,
 };
 use dsa_host_windows::compositor::{Compositor, CompositorConfig};
+use dsa_host_windows::desktop_shortcuts::Desktop;
 use dsa_host_windows::start_menu::{
     app_user_model_id, ComApartment, ShellLinks, Shortcut, Shortcuts, StartMenu, StartMenuSetup,
 };
@@ -44,6 +45,11 @@ fn setup(name: &str) -> StartMenuSetup {
             dir: dir.join("Programs"),
             note: dir.join("start-menu.json"),
         },
+        desktop: Some(Desktop {
+            dir: dir.join("Desktop"),
+            note: dir.join("desktop-shortcuts.json"),
+        }),
+        pins: vec![dir.join("TaskBar"), dir.join("ImplicitAppShortcuts")],
     }
 }
 
@@ -147,29 +153,67 @@ fn fr7_a_removed_app_loses_its_shortcut() {
 fn fr7_a_renamed_app_has_its_shortcut_renamed() {
     let _com = ComApartment::enter();
     let setup = setup("renamed");
-    setup.sync(&[app("com.example.clock", "Clock")], &ShellLinks);
-    setup.sync(&[app("com.example.clock", "Alarm")], &ShellLinks);
+    let problems = setup.sync(&[app("com.example.clock", "Clock")], &ShellLinks);
+    assert!(problems.is_empty(), "{problems:?}");
+    let folder = setup.apps_dir.join("com.example.clock");
+    let clock = folder.join("Clock.exe");
+    // The user pinned the app to the taskbar (Windows copies the Start menu shortcut) and put
+    // it on the desktop.
+    let pinned = shortcut(&setup, "Clock.lnk");
+    let pin = setup.pins[0].join("Clock.lnk");
+    let implicit = setup.pins[1].join("abc123").join("Clock.lnk");
+    std::fs::create_dir_all(implicit.parent().unwrap()).unwrap();
+    ShellLinks.write(&pin, &pinned).unwrap();
+    ShellLinks.write(&implicit, &pinned).unwrap();
+    let desktop = setup.desktop.as_ref().unwrap();
+    let entry = dsa_host_windows::start_menu::MenuEntry {
+        package: "com.example.clock".into(),
+        label: "Clock".into(),
+        program: clock.clone(),
+    };
+    desktop.place_app(&entry, &ShellLinks).unwrap();
+    assert_eq!(files(&desktop.dir), vec!["Clock.lnk".to_string()]);
+
+    let problems = setup.sync(&[app("com.example.clock", "Alarm")], &ShellLinks);
+    assert!(problems.is_empty(), "{problems:?}");
     assert_eq!(files(&setup.menu.dir), vec!["Alarm.lnk".to_string()]);
-    // The program keeps its file, so a taskbar pin made from the old shortcut still runs it.
-    let program = setup.apps_dir.join("com.example.clock").join("Clock.exe");
+    // The program's file follows the app's name, and the one of the old name is gone.
+    let program = folder.join("Alarm.exe");
     assert!(program.is_file());
+    assert!(!clock.exists());
     assert_eq!(shortcut(&setup, "Alarm.lnk").target, program);
-    assert_eq!(shortcut(&setup, "Alarm.lnk").icon, (program, 0));
+    assert_eq!(shortcut(&setup, "Alarm.lnk").icon, (program.clone(), 0));
+    // Every shortcut followed it in the same step.
+    for pin in [&pin, &implicit] {
+        let now = ShellLinks.read(pin).unwrap();
+        assert_eq!(now.target, program, "{}", pin.display());
+        assert_eq!(now.icon, (program.clone(), 0));
+        assert_eq!(now.app_user_model_id, pinned.app_user_model_id);
+        assert_eq!(now.arguments, pinned.arguments);
+    }
+    assert_eq!(files(&desktop.dir), vec!["Alarm.lnk".to_string()]);
+    assert_eq!(
+        ShellLinks
+            .read(&desktop.dir.join("Alarm.lnk"))
+            .unwrap()
+            .target,
+        program
+    );
 }
 
 #[test]
 fn fr7_a_shortcut_whose_program_is_gone_is_pointed_at_the_apps_program_again() {
-    // An earlier release renamed the program with the app, and left the Start menu shortcut,
-    // the desktop shortcuts and the taskbar pin pointing at the old name.
-    use dsa_host_windows::desktop_shortcuts::Desktop;
+    // An earlier release left the Start menu shortcut, the desktop shortcuts and the taskbar
+    // pin pointing at a program of an older name, and a program of another name beside it.
     use dsa_host_windows::start_menu::{menu_entries, repair_pins};
     let _com = ComApartment::enter();
     let setup = setup("repair");
     let package = "com.android.vending";
     let folder = setup.apps_dir.join(package);
     std::fs::create_dir_all(&folder).unwrap();
-    std::fs::copy(TEMPLATE, folder.join("Google Play Store.exe")).unwrap();
-    let gone = folder.join("Play Store.exe");
+    let other = folder.join("Google Play Store.exe");
+    std::fs::copy(TEMPLATE, &other).unwrap();
+    let gone = folder.join("Store.exe");
     let stale = Shortcut {
         target: gone.clone(),
         arguments: format!("{PACKAGE_ARGUMENT} {package}"),
@@ -203,10 +247,7 @@ fn fr7_a_shortcut_whose_program_is_gone_is_pointed_at_the_apps_program_again() {
         app_user_model_id: "Example.Other".into(),
     };
     ShellLinks.write(&pins.join("Other.lnk"), &foreign).unwrap();
-    let desktop = Desktop {
-        dir: root.join("Desktop"),
-        note: root.join("desktop-shortcuts.json"),
-    };
+    let desktop = setup.desktop.as_ref().unwrap();
     std::fs::create_dir_all(&desktop.dir).unwrap();
     let on_desktop = desktop.dir.join("Play Store.lnk");
     ShellLinks.write(&on_desktop, &stale).unwrap();
@@ -227,17 +268,17 @@ fn fr7_a_shortcut_whose_program_is_gone_is_pointed_at_the_apps_program_again() {
     )
     .unwrap();
 
-    // DSA starts and Android lists the app.
+    // DSA starts and Android lists the app: its program takes the listed name, and every
+    // shortcut to the app follows it before the program of the other name goes.
     let apps = [app(package, "Play Store")];
     let problems = setup.sync(&apps, &ShellLinks);
     assert!(problems.is_empty(), "{problems:?}");
-    let program = folder.join("Google Play Store.exe");
-    assert!(program.is_file(), "the program keeps the file it has");
+    let program = folder.join("Play Store.exe");
+    assert!(program.is_file(), "the program is named after the app");
+    assert!(!other.exists());
     assert!(!gone.exists());
     assert_eq!(shortcut(&setup, "Play Store.lnk").target, program);
 
-    let entries = menu_entries(&setup.apps_dir, &apps);
-    assert!(repair_pins(std::slice::from_ref(&pins),&entries, &ShellLinks).is_empty());
     let pin = ShellLinks.read(&pins.join("Play Store.lnk")).unwrap();
     assert_eq!(pin.target, program);
     assert_eq!(pin.icon, (program.clone(), 0));
@@ -246,12 +287,22 @@ fn fr7_a_shortcut_whose_program_is_gone_is_pointed_at_the_apps_program_again() {
     assert_eq!(pin.app_user_model_id, app_user_model_id(package));
     assert_eq!(ShellLinks.read(&pins.join("Other.lnk")).unwrap(), foreign);
 
-    assert!(desktop.keep_in_step(&entries, &ShellLinks).is_empty());
     assert_eq!(ShellLinks.read(&on_desktop).unwrap().target, program);
     let search_now = ShellLinks.read(&app_shortcut).unwrap();
     assert_eq!(search_now.target, program);
     assert_eq!(search_now.arguments, search.arguments);
     assert_eq!(search_now.icon, search.icon, "its own icon stays");
+
+    // A pin left pointing at a program that is gone, with no other program beside the app's,
+    // is pointed at it when the list of installed apps comes.
+    let late = pins.join("Late.lnk");
+    ShellLinks.write(&late, &stale).unwrap();
+    let entries = menu_entries(&setup.apps_dir, &apps);
+    assert!(repair_pins(std::slice::from_ref(&pins), &entries, &ShellLinks).is_empty());
+    assert_eq!(ShellLinks.read(&late).unwrap().target, program);
+    ShellLinks.write(&app_shortcut, &search).unwrap();
+    assert!(desktop.keep_in_step(&entries, &ShellLinks).is_empty());
+    assert_eq!(ShellLinks.read(&app_shortcut).unwrap().target, program);
 }
 
 #[test]
