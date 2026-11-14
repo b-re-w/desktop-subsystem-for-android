@@ -196,7 +196,7 @@ unsafe fn add_back_button(
 ) -> Result<(Retained<AnyObject>, Retained<AnyObject>), String> {
     let target: Option<Retained<AnyObject>> = msg_send![back_target_class()?, new];
     let target = target.ok_or("no target for the back button could be made")?;
-    let label = ns_string(back_label(super::menu_bar::korean()));
+    let label = ns_string(back_label(crate::ui_language::current()));
     let image: *mut AnyObject = msg_send![
         class(c"NSImage")?,
         imageWithSystemSymbolName: &*ns_string("chevron.backward"),

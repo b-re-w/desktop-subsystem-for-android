@@ -13,17 +13,37 @@ public extension TextSource {
     }
 }
 
-/// The texts of the app's String Catalog, as the bundle compiled them for the user's
-/// language.
+/// The texts of the app's String Catalog, as the bundle compiled them, in the language
+/// `InterfaceLanguage` picks from the user's preferred languages.
 public final class BundleText: TextSource {
     private let bundle: Bundle
+    /// The table of the language picked, and English's, for a text the table lacks.
+    private let table: Bundle?
+    private let english: Bundle?
 
-    public init(bundle: Bundle = .main) {
+    /// The catalog's code of the language the texts are in.
+    public let language: String
+
+    public init(bundle: Bundle = .main, preferred: [String] = Locale.preferredLanguages) {
         self.bundle = bundle
+        language = InterfaceLanguage.resolve(preferred)
+        func lproj(_ code: String) -> Bundle? {
+            bundle.path(forResource: code, ofType: "lproj").flatMap(Bundle.init(path:))
+        }
+        table = lproj(language)
+        english = lproj("en")
     }
 
     public func get(_ key: String) -> String {
-        bundle.localizedString(forKey: key, value: key, table: "Localizable")
+        // A sentinel that no text is, so a missing text is told from one that equals its key.
+        let missing = "\u{0}"
+        for source in [table, english].compactMap({ $0 }) {
+            let text = source.localizedString(forKey: key, value: missing, table: "Localizable")
+            if text != missing {
+                return text
+            }
+        }
+        return bundle.localizedString(forKey: key, value: key, table: "Localizable")
     }
 }
 

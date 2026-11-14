@@ -383,4 +383,55 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn fr17_the_widget_menu_is_named_in_every_language() {
+        let provider = WidgetProvider {
+            provider: "com.example.clock/.ClockWidget".into(),
+            default_width_dp: 180,
+            default_height_dp: 110,
+            resize_mode: 3,
+            reconfigurable: true,
+            ..WidgetProvider::default()
+        };
+        let placement = Placement {
+            x: 0,
+            y: 0,
+            width_dp: 180,
+            height_dp: 110,
+            resized: false,
+        };
+        fn titles(items: &[MenuItem], into: &mut Vec<String>) {
+            for item in items {
+                match item {
+                    MenuItem::Item { title, .. } => into.push(title.clone()),
+                    MenuItem::Submenu { title, items } => {
+                        into.push(title.clone());
+                        titles(items, into);
+                    }
+                    MenuItem::Separator => {}
+                }
+            }
+        }
+        let english = menu_items(&entries(
+            &menu_text(UiLanguage::English),
+            &provider,
+            &placement,
+        ));
+        for lang in UiLanguage::ALL {
+            let items = menu_items(&entries(&menu_text(lang), &provider, &placement));
+            // The same menu, in the same order, in every language.
+            assert_eq!(items.len(), english.len(), "{lang:?}");
+            let mut words = Vec::new();
+            titles(&items, &mut words);
+            assert!(!words.is_empty(), "{lang:?}");
+            for word in words {
+                assert!(!word.trim().is_empty(), "{lang:?} has an empty entry");
+                assert!(!crate::ui_language::has_em_dash(&word), "{lang:?}: {word}");
+            }
+            if lang != UiLanguage::English {
+                assert_ne!(items[0], english[0], "{lang:?} is not translated");
+            }
+        }
+    }
 }
