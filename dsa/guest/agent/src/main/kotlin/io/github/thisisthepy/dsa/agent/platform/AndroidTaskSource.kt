@@ -60,7 +60,9 @@ class AndroidTaskSource(
     private val orientations = RequestedOrientations()
 
     private val appearances = SystemBarAppearances()
-    private val systemBars = AndroidSystemBars(log)
+
+    // The status bar is also sent the apps' text toasts, which are drawn in the tasks' windows.
+    private val systemBars = AndroidSystemBars(log, AndroidToasts(context, log, ::snapshot))
 
     // Held while the tasks are read, so two reads at once do not mix up which tasks are setups.
     override fun snapshot(): List<TaskSnapshot> = synchronized(setups) {
