@@ -816,8 +816,9 @@ impl TaskWindows {
     /// A move the user is dragging asks for no density: the window shows its task scaled to
     /// the monitor and hears the scale, and the end of the drag asks for the density
     /// ([`Self::window_dragging`]). A move outside a drag asks for it at once, with the task's
-    /// activity recreated. A task whose user chose the system way is never asked for another
-    /// density: its window stays scaled.
+    /// activity recreated. The first report is no move: a task the guest could not start at
+    /// that monitor's density is asked for it without being recreated. A task whose user chose
+    /// the system way is never asked for another density: its window stays scaled.
     pub fn window_dpi(&mut self, task_id: i32, dpi: u32) -> (Vec<WindowChange>, Vec<TaskRequest>) {
         if !self.has_window(task_id) {
             return (Vec::new(), Vec::new());
