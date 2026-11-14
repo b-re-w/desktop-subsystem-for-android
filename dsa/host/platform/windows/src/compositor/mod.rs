@@ -41,6 +41,7 @@ pub mod fluent_menu;
 pub mod frames;
 pub mod gamepads;
 pub mod geocode;
+pub mod graphics_notice;
 pub mod hosts;
 pub mod language;
 pub mod links;
@@ -399,6 +400,13 @@ impl Compositor {
     pub fn without_graphics_streams(mut self) -> Compositor {
         self.bind_command = None;
         self.bind_process_pipe = None;
+        self
+    }
+
+    /// Shows `news` as DSA's own toasts, so another part of the window manager (the
+    /// renderer's client, with what the renderer runs on) raises them on the same thread.
+    pub fn with_dsa_news(mut self, news: notifications::DsaNews) -> Compositor {
+        self.dsa_news = news;
         self
     }
 

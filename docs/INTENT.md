@@ -70,6 +70,18 @@ ashmem처럼 최신 커널에서 빠지는 기능에 기대지 않는다. 커널
   - 그렇게 해도 남는 차이는 그리기 호출이 아주 많아 CPU에 묶이는 게임의 렌더 스레드뿐으로 본다. 제로 카피가 들어간 뒤 같은 게임으로 렌더 스레드 CPU와 프레임 시간을 재서 확인하고, 그 차이가 크게 남을 때만 dxg 경로를 다시 검토한다.
 - **HWUI의 Skia 명령 원격은 선택적 개선이다.** 픽셀이 아니라 Skia 그리기 명령을 넘겨 호스트 Skia가 모니터 배율에 맞춰 그리게 한다. Chromium의 out-of-process raster가 같은 구조다. 일반 View와 Compose 앱의 선명도를 올리지만, 게임, 동영상, Flutter, WebView는 버퍼로 나오므로 대체가 아니라 덧붙이는 경로다. Skia 직렬화 형식은 버전 간 호환을 보장하지 않으므로, 쓰려면 호스트 Skia를 안드로이드 이미지와 같은 커밋으로 빌드한다.
 - 치르는 것: 원격 방식은 API 호출마다 직렬화 비용이 들고, GPU 메모리를 CPU에 매핑해 쓰는 앱은 Hyper-V가 호스트 GPU 메모리를 게스트에 직접 매핑해 주지 않아 복사와 동기화가 필요하다. 일반 앱에서는 차이가 작고 3D 게임에서 커진다. 동영상 디코딩은 Vulkan과 별개라 따로 경로를 만든다(D5).
+- **Windows Vulkan 드라이버가 없는 GPU에서는 호스트 Vulkan으로 Dozen을 쓴다.** 2026-11-15 소유자가 결정한 내용이다(RESEARCH R47, 이슈 #610). Dozen은 Mesa의 Vulkan on Direct3D 12 드라이버(MIT)다. 바뀌는 것은 호스트 렌더러가 쓰는 Vulkan 구현뿐이고, 게스트, ANGLE, gfxstream 원격 경로는 그대로다. 안드로이드 쪽 그래픽 경로는 하나로 남는다.
+  - 언제: 렌더러는 쓸 수 있는 네이티브 Vulkan 장치가 하나도 없을 때나, 사용자가 설정으로 고를 때만 Dozen을 쓴다. 같은 GPU에 네이티브 장치와 Dozen 장치가 함께 보이면 네이티브를 쓴다. Dozen은 Khronos 적합 구현이 아니므로, 네이티브가 있는 기기에서 쓰지 않는 것이 앱마다의 렌더링 오류 위험을 줄인다.
+  - 싣는 방법: DSA는 Dozen도 `dxil.dll`도 싣지 않는다. Dozen은 `dxil.dll`(Microsoft의 DXIL 검증기, 소스가 일부 닫힌 바이너리) 없이는 시작하지 않는데, 이것을 실으면 NFR-7("모든 구성 요소는 소스가 공개")에 예외가 생긴다. 그래서 Microsoft가 Store로 배포하고 갱신하는 "OpenCL, OpenGL, and Vulkan Compatibility Pack"(패키지 `Microsoft.D3DMappingLayers`)이 설치되어 있으면 그 안의 Dozen과 `dxil.dll`을 쓰고, 없으면 사용자에게 그 팩을 설치하는 방법을 알린다. Dozen의 판은 DSA가 정하지 못하고, Vulkan 드라이버가 없는 기기의 사용자가 팩을 따로 설치해야 한다. 그 대신 NFR-7은 그대로다.
+  - 고르는 범위: 렌더러 프로세스에만 Vulkan 로더의 환경을 준다. 사용자의 시스템 Vulkan 구성(레지스트리의 드라이버 목록)은 바꾸지 않는다.
+  - Dozen에 없는 것: 테셀레이션, ETC2와 ASTC, YCbCr 변환, Shader Model 6.6 아래의 descriptor indexing, `ID3D12Device13`이 없을 때의 `VK_EXT_external_memory_host`. 그래서 그 위에서 OpenGL ES는 3.1까지이고, 압축 텍스처는 gfxstream이 GPU 계산 셰이더로 푼다. 테셀레이션이나 OpenGL ES 3.2를 요구하는 앱은 Dozen에서 돌지 않는다.
+  - D3D12 하드웨어 장치도 없는 GPU: Intel은 Haswell(4세대 Core)의 DirectX 12를 드라이버 15.40.44.5107부터 보안 문제로 껐다. 그런 기기에서는 Dozen이 Windows의 소프트웨어 D3D12(WARP) 위에서 돈다. 곧 CPU로 그린다. DSA는 동작하지만, 사용자에게 렌더링이 CPU에서 돌아 게임이 느리다고 한 번 알린다. GPU 가속을 약속하지 않는다.
+  - 검토한 대안: 두 번째 안드로이드 그래픽 경로(게스트의 OpenGL ES를 호스트 D3D11이나 GL로 보내기). 소유자가 2026-11-15에 거절했다. 경로가 둘이 되면 모든 그래픽 수정과 시험이 두 벌이 된다.
+  - 검토한 대안: Vulkan on D3D11 계층. Haswell의 D3D11에서 GPU로 그릴 수는 있지만, 완성된 오픈 소스 구현이 없고 Vulkan의 기능(계산 셰이더의 저장 이미지, 바인딩 모델)을 D3D11 위에 맞추는 일이 새 드라이버 하나를 만드는 일이다.
+  - 검토한 대안: wgpu를 호스트 그래픽 계층으로 쓰기. wgpu는 Vulkan을 받는 구현이 아니라 그 위의 API라서, gfxstream이 넘기는 게스트의 Vulkan 호출을 실행하지 못한다. 결국 두 번째 경로가 된다.
+  - 검토한 대안: SwiftShader나 lavapipe(CPU Vulkan). WARP 위의 Dozen과 같은 CPU 렌더링이면서, D3D11 공유 텍스처를 들이지 못해 DSA의 태스크 창 경로가 서지 않는다.
+  - 검토한 대안: CPU ASTC 디코딩. 소유자가 원하지 않는다. GPU가 있는 기기에서도 CPU를 쓰고, 큰 텍스처에서 끊긴다. ASTC는 어디서나 gfxstream의 GPU 계산 셰이더로 푼다.
+  - 검토한 대안: `dxil.dll`을 DSA가 직접 싣기(R47의 선택지 1). 설치만으로 Dozen이 돌지만 NFR-7에 예외가 생긴다. 소유자가 예외를 허락하면 다시 본다.
 
 ### D5. 경계는 HAL에 둔다. ART와 프레임워크는 게스트에 남긴다
 
@@ -401,6 +413,12 @@ VM을 만드는 일은 대부분 높은 권한이 필요하다. 그래서 그 �
 | 태스크마다 가상 디스플레이 두기 | 가상 디스플레이 관리 오버헤드가 크고, D3의 단일 freeform 디스플레이와 에이전트 메타데이터로 레이어를 묶는 편이 단순하다 | D3, D19 |
 | 렌더링 GPU를 gfxstream의 기본 순위(외장 우선)에 맡기기 | 화면이 내장 GPU에 연결된 노트북에서 프레임마다 GPU를 건너고 외장 GPU를 깨운다 | D20 |
 | 렌더링 GPU를 창마다 그 모니터의 GPU로 | GPU마다 렌더러가 필요하고, 창이 모니터를 옮길 때 게스트 리소스를 GPU 사이로 옮겨야 한다 | D20 |
+| Vulkan 드라이버 없는 GPU를 위한 두 번째 안드로이드 그래픽 경로(OpenGL ES를 호스트 D3D11이나 GL로) | 모든 그래픽 수정과 시험이 두 벌이 된다. 소유자가 2026-11-15에 거절했다 | D4 |
+| 호스트 Vulkan을 D3D11 위에 구현하기 | 완성된 오픈 소스 구현이 없고, 새 드라이버 하나를 만드는 일이다 | D4 |
+| wgpu를 호스트 그래픽 계층으로 | 게스트의 Vulkan 호출을 실행하지 못해 결국 두 번째 경로가 된다 | D4 |
+| SwiftShader나 lavapipe(CPU Vulkan) | WARP 위의 Dozen과 같은 CPU 렌더링이면서 D3D11 공유 텍스처를 들이지 못한다 | D4 |
+| CPU ASTC 디코딩 | GPU가 있는 기기에서도 CPU를 쓰고 큰 텍스처에서 끊긴다. 소유자가 원하지 않는다 | D4 |
+| `dxil.dll`을 DSA가 직접 싣기 | 소스가 일부 닫힌 바이너리라 NFR-7에 예외가 생긴다 | D4 |
 
 ## 5. 알려진 비용
 

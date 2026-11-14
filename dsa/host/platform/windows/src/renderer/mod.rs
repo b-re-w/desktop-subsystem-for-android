@@ -21,9 +21,13 @@
 //! This file turns the render GPU request and the renderer's report into the messages and
 //! back, which every build tests.
 
-use dsa_protocol::renderer::types::{FramePath, GpuMatch, GpuRule, Start, Started};
+use dsa_host_core::graphics_state::GraphicsState;
+use dsa_protocol::renderer::types::{
+    FramePath, GpuMatch, GpuRule, Start, Started, VulkanDriverKind, VulkanDriverRule,
+};
 
 use crate::render_gpu::{GpuRequest, Luid, RendererGpu};
+use crate::vulkan_driver::{DriverOutcome, VulkanDriverSetting};
 
 #[cfg(windows)]
 pub mod client;
@@ -54,6 +58,52 @@ pub fn start_for(request: &GpuRequest, ports: (u32, u32)) -> Start {
         command_socket: String::new(),
         process_pipe_socket: String::new(),
         frames_on_gpu: true,
+        vulkan_driver: VulkanDriverRule::Auto as i32,
+    }
+}
+
+/// [`start_for`], with the user's Vulkan driver setting.
+pub fn start_with(request: &GpuRequest, vulkan: VulkanDriverSetting, ports: (u32, u32)) -> Start {
+    Start {
+        vulkan_driver: match vulkan {
+            VulkanDriverSetting::Auto => VulkanDriverRule::Auto,
+            VulkanDriverSetting::Native => VulkanDriverRule::Native,
+            VulkanDriverSetting::Dozen => VulkanDriverRule::Dozen,
+        } as i32,
+        ..start_for(request, ports)
+    }
+}
+
+/// The Vulkan driver setting `start` asks for; a value this build does not know is `auto`.
+pub fn vulkan_driver_of(start: &Start) -> VulkanDriverSetting {
+    match VulkanDriverRule::try_from(start.vulkan_driver) {
+        Ok(VulkanDriverRule::Native) => VulkanDriverSetting::Native,
+        Ok(VulkanDriverRule::Dozen) => VulkanDriverSetting::Dozen,
+        _ => VulkanDriverSetting::Auto,
+    }
+}
+
+/// The Vulkan fields of `Started` for what the renderer runs on.
+pub fn report_vulkan_driver(started: &mut Started, outcome: DriverOutcome, reason: &str) {
+    started.vulkan_driver = match outcome {
+        DriverOutcome::Native => VulkanDriverKind::Native,
+        DriverOutcome::Dozen => VulkanDriverKind::Dozen,
+        DriverOutcome::DozenOnCpu => VulkanDriverKind::DozenCpu,
+        DriverOutcome::None => VulkanDriverKind::None,
+    } as i32;
+    started.vulkan_driver_reason = reason.to_string();
+}
+
+/// What the renderer said it runs on, as the service is told of it. A renderer that does not
+/// say leaves it unknown, which never keeps Android from starting.
+pub fn graphics_state_of(started: &Started) -> GraphicsState {
+    let reason = started.vulkan_driver_reason.clone();
+    match VulkanDriverKind::try_from(started.vulkan_driver) {
+        Ok(VulkanDriverKind::Native) => GraphicsState::Native(reason),
+        Ok(VulkanDriverKind::Dozen) => GraphicsState::Layered(reason),
+        Ok(VulkanDriverKind::DozenCpu) => GraphicsState::LayeredOnCpu(reason),
+        Ok(VulkanDriverKind::None) => GraphicsState::Unavailable(reason),
+        _ => GraphicsState::Unknown,
     }
 }
 
@@ -147,6 +197,41 @@ mod tests {
         start.gpu_rule = GpuRule::Luid as i32;
         start.gpu_luid = vec![1, 2, 3];
         assert_eq!(request_of(&start), GpuRequest::Ranking);
+    }
+
+    #[test]
+    fn pr3_the_vulkan_driver_setting_and_outcome_cross_the_processes() {
+        for setting in [
+            VulkanDriverSetting::Auto,
+            VulkanDriverSetting::Native,
+            VulkanDriverSetting::Dozen,
+        ] {
+            let start = start_with(&GpuRequest::Ranking, setting, (5566, 5567));
+            assert_eq!(vulkan_driver_of(&start), setting);
+            assert_eq!(start.command_port, 5566);
+        }
+        // An older window manager asks for nothing: auto.
+        assert_eq!(
+            vulkan_driver_of(&start_for(&GpuRequest::Ranking, (1, 2))),
+            VulkanDriverSetting::Auto
+        );
+        let mut started = Started::default();
+        assert_eq!(graphics_state_of(&started), GraphicsState::Unknown);
+        for (outcome, state) in [
+            (DriverOutcome::Native, GraphicsState::Native("why".into())),
+            (DriverOutcome::Dozen, GraphicsState::Layered("why".into())),
+            (
+                DriverOutcome::DozenOnCpu,
+                GraphicsState::LayeredOnCpu("why".into()),
+            ),
+            (
+                DriverOutcome::None,
+                GraphicsState::Unavailable("why".into()),
+            ),
+        ] {
+            report_vulkan_driver(&mut started, outcome, "why");
+            assert_eq!(graphics_state_of(&started), state);
+        }
     }
 
     #[test]

@@ -1427,6 +1427,12 @@ macro_rules! host_api_conformance {
             $crate::host_api_conformance::touch_gestures_report_reaches_the_settings(&mut || $make);
         }
         #[test]
+        fn pr3_the_vulkan_driver_setting_and_the_graphics_report_reach_the_caller() {
+            $crate::host_api_conformance::graphics_report_reaches_the_settings_and_gates_the_start(
+                &mut || $make,
+            );
+        }
+        #[test]
         fn fr20_adb_auto_connect_is_on_by_default_reaches_the_callers_android_and_reports_its_state(
         ) {
             $crate::host_api_conformance::adb_auto_connect_reaches_the_caller(&mut || $make);
@@ -3380,6 +3386,68 @@ pub fn touch_gestures_report_reaches_the_settings(make: MakeLocal<'_>) {
         client.settings().unwrap().touch_gestures,
         TouchGesturesState::Unsupported
     );
+}
+
+pub fn graphics_report_reaches_the_settings_and_gates_the_start(make: MakeLocal<'_>) {
+    use crate::graphics_state::GraphicsState;
+    let (listener, mut connector, user) = make();
+    let store = Arc::new(MemorySettings::default());
+    let androids = Arc::new(FakeAndroids::default());
+    let service =
+        HostApiService::new(androids.clone(), "test service").with_settings(store.clone(), facts());
+    let _service = RunningService::start_service(listener, service);
+    let mut client = connect(&mut *connector);
+    let fresh = client.settings().unwrap();
+    assert_eq!(fresh.settings.vulkan_driver, "auto", "auto by default");
+    assert_eq!(fresh.graphics, GraphicsState::Unknown);
+
+    // The setting is the user's, normalised, and anything else is refused.
+    let dozen = client
+        .set_settings(&Settings {
+            vulkan_driver: "Dozen".into(),
+            ..Settings::default()
+        })
+        .expect("choosing dozen");
+    assert_eq!(dozen.settings.vulkan_driver, "dozen");
+    assert_eq!(store.get(&user).unwrap().vulkan_driver, "dozen");
+    match client.set_settings(&Settings {
+        vulkan_driver: "swiftshader".into(),
+        ..Settings::default()
+    }) {
+        Err(ClientError::Service { code, detail }) => {
+            assert_eq!(code, ErrorCode::InvalidSetting);
+            assert!(detail.contains("Vulkan driver"), "{detail}");
+        }
+        other => panic!("an unknown Vulkan driver was taken: {other:?}"),
+    }
+    assert_eq!(store.get(&user).unwrap().vulkan_driver, "dozen");
+
+    // A renderer with nothing to draw on keeps Android stopped, with what to install.
+    let missing = GraphicsState::Unavailable("install the Compatibility Pack".into());
+    client
+        .report_graphics(&missing)
+        .expect("the window manager's report");
+    assert_eq!(client.settings().unwrap().graphics, missing);
+    match client.start() {
+        Err(ClientError::Service { code, detail }) => {
+            assert_eq!(code, ErrorCode::Unavailable);
+            assert!(
+                detail.contains("install the Compatibility Pack"),
+                "{detail}"
+            );
+        }
+        other => panic!("Android started with nothing to draw on: {other:?}"),
+    }
+    assert_ne!(
+        androids.of(&user).map(|android| android.state()),
+        Some(SessionState::Active)
+    );
+
+    // Once the renderer runs, even on the CPU, Android starts.
+    let cpu = GraphicsState::LayeredOnCpu("Microsoft Basic Render Driver".into());
+    client.report_graphics(&cpu).unwrap();
+    assert_eq!(client.settings().unwrap().graphics, cpu);
+    assert_eq!(client.start().unwrap().state, SessionState::Active);
 }
 
 pub fn adb_auto_connect_reaches_the_caller(make: MakeLocal<'_>) {

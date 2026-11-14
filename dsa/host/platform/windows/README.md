@@ -505,6 +505,49 @@ rendering on Intel(R) Arc(TM) Graphics (LUID 00000000:00019bec), the GPU asked f
 When nothing matches, the second line says that the renderer ranked the GPUs itself, and
 why.
 
+### Choosing the Vulkan driver
+
+The renderer runs on a GPU's own Vulkan driver. A GPU without one (Intel Haswell and
+Broadwell, older Snapdragons, GPU partitions of virtual machines, a PC without a GPU) can
+render through Dozen, Mesa's Vulkan on Direct3D 12, from Microsoft's "OpenCL, OpenGL, and
+Vulkan Compatibility Pack" (`winget install Microsoft.OpenCLGLVulkanCompatibilityPack`, or
+the Microsoft Store). DSA ships neither Dozen nor the DXIL validator (`dxil.dll`) it needs,
+because the validator is not open source; the pack carries both and Microsoft updates it.
+
+`dsa settings set vulkan-driver <value>`, or "Vulkan driver" in DSA Settings (Display & GPU),
+chooses:
+
+- `auto` (the default): a native driver when any GPU has one, and Dozen only when none does.
+  Where the Vulkan loader lists the pack's Dozen beside a native driver of the same GPU, the
+  native one is used and Dozen is hidden from the renderer.
+- `native`: never Dozen.
+- `dozen`: only the pack's Dozen, to test it and compare it with the native driver.
+
+Like the render GPU, it takes effect when `dsa-wm` starts again. The choice reaches only the
+renderer's process, through the Vulkan loader's environment variables (`VK_DRIVER_FILES`,
+`VK_LOADER_DRIVERS_DISABLE`); the computer's Vulkan setup is never changed. When the
+renderer's own environment already names the drivers (`VK_DRIVER_FILES`, as the tests do),
+those are taken as they are. On Dozen without `VK_EXT_external_memory_host` the renderer turns
+gfxstream's `VulkanAllocateHostMemory` off; tessellation, YCbCr conversion and descriptor
+indexing follow what the device reports, so the guest does not see them on Dozen.
+
+The log says which and why, once for each renderer that starts:
+
+```text
+Vulkan: Vulkan driver setting auto: rendering on Microsoft Direct3D12 (Intel(R) HD Graphics 5500) (LUID 00000000:0000d3a1) through Dozen (Vulkan on Direct3D 12): no GPU has a native Vulkan driver
+```
+
+`dsa gpus` lists the Vulkan devices, whether each is a native driver or Dozen, whether the
+pack is installed, and what each setting would render on.
+
+Two cases are told to the user as DSA's own notifications. With no Vulkan to render on (no
+native driver, and the pack is not installed), the notice says how to install the pack, and
+the window manager tells the service, which then does not start Android: it would boot with
+nothing to draw on. `dsa start` answers with the same reason. Where no GPU has a Direct3D 12
+driver either (Intel disabled Direct3D 12 on Haswell), Dozen runs on WARP, Windows' software
+Direct3D 12 device, so the CPU draws everything: apps work and games are slow. That is said
+once, and again only after the renderer ran on a GPU in between.
+
 `dsa launch <package>` starts an app in a window of its own, and `dsa tasks` lists the
 tasks that have one.
 

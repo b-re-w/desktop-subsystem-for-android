@@ -17,8 +17,19 @@ on:
       - ".github/workflows/test-graphics.yml"
       - "scripts/tests/graphics-workflow.test.sh"
   workflow_dispatch:
+    inputs:
+      dozen_on_warp:
+        description: "Also run the Windows renderer on Dozen (Vulkan on Direct3D 12) over WARP"
+        type: boolean
+        required: false
+        default: false
   # Checks (checks.yml) runs it as one of its jobs, with every other test, in one run.
   workflow_call:
+    inputs:
+      dozen_on_warp:
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   # A run in progress always finishes, and only the newest waiting run stays: GitHub keeps
@@ -545,6 +556,96 @@ jobs:
             throw "licenses/gfxstream.txt was not found in the MSI"
           }
           Write-Host "Verified gfxstream_backend.dll at $($dll.FullName) and licence at $($lic.FullName)"
+
+  # The Windows renderer on Dozen (Mesa's Vulkan on Direct3D 12) over WARP, Windows' software
+  # Direct3D 12 device: what a PC whose GPU has no Vulkan driver, and no Direct3D 12 driver
+  # either (Intel Haswell), renders on. The runner has no GPU, so WARP is the only Direct3D 12
+  # device there, as on such a PC. Dozen comes from a Mesa build, and the DXIL validator it
+  # needs (dxil.dll) from the runner's Windows SDK; neither is shipped, they only run here.
+  # It covers: the renderer's own self test, the renderer process test (a task's frames
+  # reaching a window's texture through dsa-gfx.exe), and `dsa gpus`, which lists the devices
+  # through the Vulkan loader as the renderer does and says Dozen runs on the CPU.
+  # Started by hand only: `gh workflow run test-graphics.yml --ref develop -f dozen_on_warp=true`.
+  host-renderer-dozen:
+    name: Run the host graphics renderer on Dozen over WARP (windows, x64)
+    if: inputs.dozen_on_warp == true
+    needs: host-renderer
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      DZN_ICD: ${{ github.workspace }}\.scratch\dzn\dzn_icd.json
+      GFXSTREAM_BACKEND_PATH: ${{ github.workspace }}\.scratch\build-host\dist\bin\gfxstream_backend.dll
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Keep the Rust build between runs
+        uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: dsa -> target
+          key: renderer-windows-x64
+          save-if: false
+
+      - name: Take the renderer the x64 job built
+        uses: actions/download-artifact@v4
+        with:
+          name: host-gfxstream-windows
+          path: .scratch/build-host/dist
+
+      - name: Download Dozen (Mesa dzn) and set up the DXIL validator
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/mmozeiko/build-mesa/releases/download/26.2.5/mesa-dzn-x64-26.2.5.7z" -OutFile ".scratch/mesa-dzn.7z"
+          New-Item -ItemType Directory -Force .scratch/dzn | Out-Null
+          & "C:\Program Files\7-Zip\7z.exe" x .scratch/mesa-dzn.7z "-o.scratch/dzn" -y
+          if ($LASTEXITCODE -ne 0) { throw "unpacking Dozen failed" }
+          $dll = (Get-ChildItem -Recurse .scratch/dzn -Filter vulkan_dzn.dll | Select-Object -First 1).FullName
+          if (-not $dll) { throw "the Mesa archive has no vulkan_dzn.dll" }
+          # Dozen does not start without the validator. The Windows SDK on the runner carries one.
+          $dxil = Get-ChildItem -Recurse "C:\Program Files (x86)\Windows Kits\10\Redist\D3D\x64", "C:\Program Files (x86)\Windows Kits\10\bin" -Filter dxil.dll -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $dxil) { throw "no x64 dxil.dll in the runner's Windows SDK" }
+          Copy-Item $dxil.FullName -Destination (Split-Path $dll) -Force
+          Copy-Item $dxil.FullName -Destination "C:\Windows\System32\dxil.dll" -Force
+          [ordered]@{
+              ICD = [ordered]@{ api_version = "1.2.0"; library_path = $dll }
+              file_format_version = "1.0.1"
+          } | ConvertTo-Json | Set-Content -Path $env:DZN_ICD -Encoding utf8
+          Write-Host "Dozen at $dll, dxil.dll from $($dxil.FullName)"
+
+      - name: List the Vulkan devices as DSA sees them
+        shell: pwsh
+        working-directory: dsa
+        env:
+          VK_ICD_FILENAMES: ${{ env.DZN_ICD }}
+          VK_DRIVER_FILES: ${{ env.DZN_ICD }}
+        run: |
+          $json = cargo run -q -p dsa-cli --bin dsa -- gpus --json | Out-String
+          Write-Host $json
+          $vulkan = ($json | ConvertFrom-Json).vulkan
+          $warp = $vulkan.devices | Where-Object { $_.kind -eq 'dozen' -and $_.cpu }
+          if (-not $warp) { throw "the Vulkan loader lists no Dozen device on WARP" }
+          if ($vulkan.auto.outcome -ne 'dozen-cpu') { throw "auto renders on '$($vulkan.auto.outcome)', not Dozen on the CPU: $($vulkan.auto.reason)" }
+
+      - name: Run the host renderer smoke test on Dozen over WARP
+        shell: pwsh
+        env:
+          VK_ICD_FILENAMES: ${{ env.DZN_ICD }}
+          VK_DRIVER_FILES: ${{ env.DZN_ICD }}
+          VK_LOADER_DEBUG: error,warn
+        run: |
+          uv run dsa/graphics/host/test_host_renderer.py
+
+      - name: Check a task's frames reach its window through the renderer process on Dozen over WARP
+        shell: pwsh
+        working-directory: dsa
+        env:
+          VK_ICD_FILENAMES: ${{ env.DZN_ICD }}
+          VK_DRIVER_FILES: ${{ env.DZN_ICD }}
+        run: |
+          cargo test -p dsa-host-windows --test renderer_process -- --nocapture
 
   # The same renderer on macOS, on Vulkan through MoltenVK over Metal.
   host-renderer-macos:

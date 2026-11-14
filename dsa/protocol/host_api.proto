@@ -284,6 +284,19 @@ message ReportTouchGestures {
   string problem = 2;
 }
 
+// Says what the caller's graphics renderer runs on: `state` is "native" (a native Vulkan
+// driver), "dozen" (Dozen, Vulkan on Direct3D 12, on a GPU), "dozen-cpu" (Dozen on the
+// software Direct3D 12 device, so the CPU draws everything) or "unavailable" (no Vulkan the
+// renderer can use), and `detail` says which GPU and why, or what to install. The window
+// manager sends it each time its renderer starts. While it is "unavailable" the service does
+// not start the caller's Android, and answers StartSession with ERROR_CODE_UNAVAILABLE and
+// `detail`, since Android would boot with nothing to draw on. The service keeps the latest
+// for the caller until it stops, and reports it in Settings. The service answers Done.
+message ReportGraphics {
+  string state = 1;
+  string detail = 2;
+}
+
 // Freezes the caller's Android: its processes stop until a task window is shown again. Its
 // notifications, alarms and widgets stop with them. Returns at once with the status.
 message FreezeSession {}
@@ -1935,6 +1948,19 @@ message Settings {
   // read. It applies at once, to the windows open already.
   FullScreenPlace app_fullscreen = 42;
   FullScreenPlace app_immersive = 43;
+  // Which Vulkan implementation the caller's graphics renderer uses: "auto" (the default: a
+  // native Vulkan driver, and Dozen, Vulkan on Direct3D 12, only when no native driver
+  // works), "native" (never Dozen) or "dozen" (only Dozen, to test and compare). Any other
+  // value is refused. The caller's window manager reads it when it starts. Hosts without a
+  // choice of implementation keep it and do nothing with it.
+  string vulkan_driver = 44;
+  // What the caller's window manager last said its graphics renderer runs on (see
+  // ReportGraphics): "native", "dozen", "dozen-cpu", "unavailable", or empty while it has not
+  // said. A client cannot change it.
+  string graphics_state = 45;
+  // The window manager's words for it: the GPU and why, or what to install. A client cannot
+  // change it.
+  string graphics_detail = 46;
   // A run mode setting (run_mode, a RunMode enum, stop_after_secs and keep_for_notifications)
   // was here and is gone: an idle Android stays in Doze. Its numbers and names are never
   // used again, so an older peer that still sends them is read without them. The enum name
@@ -2947,6 +2973,7 @@ message Request {
     SetRunAsArm set_run_as_arm = 340;
     SetAppRoot set_app_root = 341;
     ReportTouchGestures report_touch_gestures = 350;
+    ReportGraphics report_graphics = 351;
     ServeLanguageServices serve_language_services = 620;
     WatchGeocoding watch_geocoding = 470;
     ReportGeocode report_geocode = 471;

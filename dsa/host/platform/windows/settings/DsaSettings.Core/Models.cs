@@ -95,7 +95,10 @@ public sealed record SettingsInfo(
     bool HostCertificates = true,
     IReadOnlyList<ImportedCertificate>? ImportedCertificates = null,
     FullScreenPlace AppFullScreen = FullScreenPlace.Screen,
-    FullScreenPlace AppImmersive = FullScreenPlace.Window)
+    FullScreenPlace AppImmersive = FullScreenPlace.Window,
+    string VulkanDriver = "auto",
+    GraphicsState Graphics = GraphicsState.Unknown,
+    string? GraphicsDetail = null)
 {
     /// <summary>The Windows folders that can be shared with Android, in the order the service
     /// keeps them.</summary>
@@ -151,6 +154,22 @@ public enum TouchGesturesState
     Available,
     /// <summary>Windows refused; <see cref="SettingsInfo.TouchGesturesProblem"/> says why.</summary>
     Failed,
+}
+
+/// <summary>What the graphics renderer runs on, as the window manager last told the
+/// service.</summary>
+public enum GraphicsState
+{
+    /// <summary>The window manager has not said yet, or the service is older.</summary>
+    Unknown,
+    /// <summary>A native Vulkan driver of a GPU.</summary>
+    Native,
+    /// <summary>Dozen (Vulkan on Direct3D 12) on a GPU.</summary>
+    Dozen,
+    /// <summary>Dozen on Windows' software Direct3D 12 device: the CPU draws.</summary>
+    DozenCpu,
+    /// <summary>No Vulkan to draw on, so Android is not started.</summary>
+    Unavailable,
 }
 
 /// <summary>How Android reaches the network.</summary>

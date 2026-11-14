@@ -43,6 +43,31 @@
                     <TextBlock Text="{Binding DisplayGpuName, Mode=OneWay}" Style="{StaticResource CardValue}" />
                 </ui:CardControl>
 
+                <!-- Which Vulkan the renderer uses: a native driver, or Dozen from Microsoft's
+                     Compatibility Pack where no GPU has one. -->
+                <ui:CardControl Icon="{ui:SymbolIcon Cube24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="{l:Text VulkanDriverCard.Header}" Style="{StaticResource CardTitle}" />
+                            <TextBlock Text="{l:Text VulkanDriverCard.Description}" Style="{StaticResource CardDescription}" />
+                            <TextBlock Text="{Binding GraphicsStatusText, Mode=OneWay}" Style="{StaticResource CardDescription}"
+                                       Margin="0,4,0,0" TextWrapping="Wrap" />
+                            <ui:HyperlinkButton Content="{l:Text CompatibilityPackLink.Content}" Click="OnOpenCompatibilityPack"
+                                                Padding="0" Margin="0,4,0,0" HorizontalAlignment="Left"
+                                                Visibility="{Binding OffersCompatibilityPack, Converter={StaticResource Visible}}" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ComboBox x:Name="VulkanDriverBox" MinWidth="280"
+                              ItemsSource="{Binding VulkanDriverChoices, Mode=OneWay}"
+                              DisplayMemberPath="Label"
+                              SelectedIndex="{Binding VulkanDriverIndex, Mode=OneWay}"
+                              IsEnabled="{Binding CanChange, Mode=OneWay}"
+                              SelectionChanged="OnVulkanDriverChosen"
+                              AutomationProperties.Name="{l:Text VulkanDriverCard.Header}" />
+                </ui:CardControl>
+                <ui:InfoBar Title="{l:Text CpuRenderingBar.Title}" Message="{l:Text CpuRenderingBar.Message}" Severity="Warning"
+                            IsClosable="False" IsOpen="{Binding DrawsOnCpu, Mode=OneWay}" />
+
                 <ui:InfoBar Title="{l:Text RenderGpuAppliesBar.Title}" Message="{l:Text RenderGpuAppliesBar.Message}" Severity="Informational" IsClosable="False" IsOpen="True" />
 
                 <!-- Where an app's full screen shows, for every app without its own choice. -->

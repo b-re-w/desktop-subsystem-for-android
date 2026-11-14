@@ -15,6 +15,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -41,6 +42,10 @@ static dsa_color_buffer_post_fn s_color_buffer_post_cb = nullptr;
 static void* s_color_buffer_post_ctx = nullptr;
 
 static void dummy_fence_cb(void*, struct stream_renderer_fence*) {}
+
+/* The embedder's renderer features (dsa_gfx_set_renderer_features). */
+static std::mutex s_features_mutex;
+static std::string s_extra_features;
 
 /* Where the renderer's warnings, errors and fatal errors go: the embedder's log. Without a
  * callback they go to standard error, which a process without a console loses. */
@@ -215,12 +220,24 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_init(uint32_t width, uint32_t height) {
     // decoder copies them only when neither GlDirectMem nor VirtioGpuNext is on, and the
     // guest decides from the same features.
     static const char kFeatures[] = "VirtioGpuNext:disabled";
+    // The embedder's own, for the Vulkan implementation it chose, after the backend's. The
+    // string stays alive for the renderer's whole life: gfxstream reads it during the init.
+    static std::string s_all_features;
+    {
+        std::lock_guard<std::mutex> lock(s_features_mutex);
+        s_all_features = kFeatures;
+        if (!s_extra_features.empty()) {
+            s_all_features += ",";
+            s_all_features += s_extra_features;
+        }
+    }
 
     struct stream_renderer_param params[] = {
         {STREAM_RENDERER_PARAM_USER_DATA, reinterpret_cast<uint64_t>(&s_cookie)},
         {STREAM_RENDERER_PARAM_FENCE_CALLBACK, reinterpret_cast<uint64_t>(dummy_fence_cb)},
         {STREAM_RENDERER_PARAM_RENDERER_FLAGS, flags},
-        {STREAM_RENDERER_PARAM_RENDERER_FEATURES, reinterpret_cast<uint64_t>(kFeatures)},
+        {STREAM_RENDERER_PARAM_RENDERER_FEATURES,
+         reinterpret_cast<uint64_t>(s_all_features.c_str())},
         {STREAM_RENDERER_PARAM_WIN0_WIDTH, width},
         {STREAM_RENDERER_PARAM_WIN0_HEIGHT, height},
         {STREAM_RENDERER_PARAM_DEBUG_CALLBACK, reinterpret_cast<uint64_t>(forward_renderer_debug)},
@@ -233,6 +250,19 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_init(uint32_t width, uint32_t height) {
         dsa_gfx_memory_install();
     }
     return ret;
+}
+
+extern "C" DSA_GFX_EXPORT int dsa_gfx_set_renderer_features(const char* features) {
+    if (s_initialized.load(std::memory_order_acquire)) {
+        return -1;
+    }
+    const std::string text = features ? features : "";
+    if (text.size() > 4096) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(s_features_mutex);
+    s_extra_features = text;
+    return 0;
 }
 
 extern "C" DSA_GFX_EXPORT void dsa_gfx_set_log_callback(dsa_gfx_log_fn cb, void* context) {
