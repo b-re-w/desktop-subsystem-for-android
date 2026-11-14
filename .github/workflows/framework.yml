@@ -166,10 +166,17 @@ jobs:
           echo "fetched in $(( (SECONDS - start) / 60 )) minutes"
           # The tree leaves the VNDK snapshots out (SERVICES_TREE_SKIPPED), but the board
           # configuration stops with "VNDK version 31 not found" unless each version the product
-          # names (PRODUCT_EXTRA_VNDK_VERSIONS) has its folder. An empty folder satisfies that
-          # check; the build allows the modules the snapshot would define to be missing.
+          # names (PRODUCT_EXTRA_VNDK_VERSIONS) has a build file one folder down
+          # (board_config.mk: $(wildcard prebuilts/vndk/v<n>/*/Android.bp)). An empty
+          # Android.bp, which defines no module, satisfies that check; the build allows the
+          # modules the snapshot would define to be missing.
           { grep -o 'path="prebuilts/vndk/[^"]*"' "$RUNNER_TEMP/manifest.xml" || true; } | cut -d'"' -f2 | sort -u |
-            while read -r vndk; do mkdir -p "$DSA_TRANSLATOR_WORK/aosp/$vndk"; echo "empty $vndk"; done
+            while read -r vndk; do
+              mkdir -p "$DSA_TRANSLATOR_WORK/aosp/$vndk/x86_64"
+              echo "// Left out of the services.jar tree; this file only passes the VNDK check." \
+                > "$DSA_TRANSLATOR_WORK/aosp/$vndk/x86_64/Android.bp"
+              echo "stub $vndk"
+            done
           du -sh "$DSA_TRANSLATOR_WORK/aosp"
           echo "::group::The largest folders of the tree"
           du -x -h -d 3 "$DSA_TRANSLATOR_WORK/aosp" 2>/dev/null | sort -rh | head -60 || true
