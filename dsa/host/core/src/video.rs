@@ -372,7 +372,7 @@ fn send_pictures(
         };
         let expected = Picture::nv12_len(picture.width, picture.height, picture.stride);
         let has = match picture.slot {
-            Some(slot) => Some(slot.len).filter(|_| slots.is_some()),
+            Some(slot) => slots.is_some().then_some(slot.len),
             None => Some(picture.nv12.len()),
         };
         if expected.is_none() || expected != has {
@@ -819,6 +819,7 @@ pub fn serve_connection_idle(
             Body::VideoDecoderOpened(VideoDecoderOpened {
                 ok: false,
                 error: why.clone(),
+                shared_pictures: false,
             }),
         );
         connection.close();
