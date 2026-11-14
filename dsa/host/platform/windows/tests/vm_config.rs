@@ -77,7 +77,9 @@ fn config() -> AndroidVmConfig {
 
 #[test]
 fn pr7_the_hcs_document_shares_the_picture_section_read_only_with_the_guest() {
-    use dsa_host_windows::picture_region::{picture_region, section_name, section_sddl};
+    use dsa_host_windows::picture_region::{
+        hcs_section_name, picture_region, section_name, section_sddl,
+    };
     let mut vm = config();
     assert!(document(&vm)["VirtualMachine"]["Devices"]
         .get("SharedMemory")
@@ -91,7 +93,15 @@ fn pr7_the_hcs_document_shares_the_picture_section_read_only_with_the_guest() {
     let doc = document(&vm);
     let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
     assert_eq!(regions.as_array().map(Vec::len), Some(1));
-    assert_eq!(regions[0]["SectionName"], region.section_name);
+    // HCS opens the section by its kernel object path; the Win32 `Global\` name fails to start.
+    assert_eq!(
+        regions[0]["SectionName"],
+        hcs_section_name(&region.section_name)
+    );
+    assert_eq!(
+        regions[0]["SectionName"],
+        format!(r"\BaseNamedObjects\DSA-VideoPictures-{USER_SID}")
+    );
     assert_eq!(regions[0]["StartOffset"], 0);
     assert_eq!(regions[0]["Length"], 64u64 << 20);
     assert_eq!(regions[0]["AllowGuestWrite"], false);
@@ -130,6 +140,9 @@ fn pr7_the_guest_address_of_the_picture_section_is_read_from_the_vms_properties(
         guest_address_from_properties(&properties, "Global\\missing"),
         None
     );
+    // HCS reports the section under the kernel path the document named it by.
+    let reported = r#"{"SharedMemoryRegionInfo":[{"SectionName":"\\BaseNamedObjects\\DSA-VideoPictures-S-1-5-21-1","GuestPhysicalAddress":131072}]}"#;
+    assert_eq!(guest_address_from_properties(reported, name), Some(131072));
     assert_eq!(guest_address_from_properties("not json", name), None);
     assert_eq!(guest_address_from_properties("{}", name), None);
 }

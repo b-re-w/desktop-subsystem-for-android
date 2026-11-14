@@ -38,6 +38,20 @@ pub fn section_name(user_sid: &str) -> String {
     format!(r"Global\DSA-VideoPictures-{user_sid}")
 }
 
+/// The name the VM's document gives the section `name`. HCS opens the section by its kernel
+/// object path: a document naming `Global\X`, the Win32 name the service creates it under, is
+/// refused when the VM starts ("the specified path is invalid", 0x800700A1, from the Dynamic
+/// Memory Controller), while `\BaseNamedObjects\X`, the same object, starts. Seen on Windows 11
+/// build 26300.
+pub fn hcs_section_name(name: &str) -> String {
+    match name.get(..7) {
+        Some(prefix) if prefix.eq_ignore_ascii_case(r"Global\") => {
+            format!(r"\BaseNamedObjects\{}", &name[7..])
+        }
+        _ => name.to_string(),
+    }
+}
+
 /// The region a VM's document names: the section and its size.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PictureRegion {
@@ -70,7 +84,7 @@ impl PictureRegion {
     pub fn to_hcs(&self) -> Value {
         json!({
             "Regions": [{
-                "SectionName": self.section_name,
+                "SectionName": hcs_section_name(&self.section_name),
                 "StartOffset": 0,
                 "Length": self.length,
                 "AllowGuestWrite": false,
@@ -108,7 +122,9 @@ pub fn guest_address_from_properties(properties: &str, section_name: &str) -> Op
                 .map(|(_, v)| v)
         };
         let name = field("SectionName")?.as_str()?;
-        if !name.eq_ignore_ascii_case(section_name) {
+        if !name.eq_ignore_ascii_case(section_name)
+            && !name.eq_ignore_ascii_case(&hcs_section_name(section_name))
+        {
             return None;
         }
         match field("GuestPhysicalAddress")? {
