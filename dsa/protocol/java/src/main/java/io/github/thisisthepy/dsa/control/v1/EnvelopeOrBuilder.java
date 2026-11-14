@@ -1053,6 +1053,28 @@ public interface EnvelopeOrBuilder extends
   io.github.thisisthepy.dsa.control.v1.AccessibilityActionResult getAccessibilityActionResult();
 
   /**
+   * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+   * @return Whether the accessibilityListening field is set.
+   */
+  boolean hasAccessibilityListening();
+  /**
+   * <code>.dsa.control.v1.AccessibilityListening accessibility_listening = 84;</code>
+   * @return The accessibilityListening.
+   */
+  io.github.thisisthepy.dsa.control.v1.AccessibilityListening getAccessibilityListening();
+
+  /**
+   * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+   * @return Whether the accessibilityAnnouncement field is set.
+   */
+  boolean hasAccessibilityAnnouncement();
+  /**
+   * <code>.dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;</code>
+   * @return The accessibilityAnnouncement.
+   */
+  io.github.thisisthepy.dsa.control.v1.AccessibilityAnnouncement getAccessibilityAnnouncement();
+
+  /**
    * <code>.dsa.control.v1.AudioOutputOpen audio_output_open = 100;</code>
    * @return Whether the audioOutputOpen field is set.
    */

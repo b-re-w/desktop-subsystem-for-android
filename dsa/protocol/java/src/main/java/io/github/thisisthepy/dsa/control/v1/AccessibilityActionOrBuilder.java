@@ -70,4 +70,46 @@ public interface AccessibilityActionOrBuilder extends
    * @return The requestId.
    */
   int getRequestId();
+
+  /**
+   * <pre>
+   * The selection, for NODE_ACTION_SET_SELECTION, in characters (UTF-16 code units).
+   * </pre>
+   *
+   * <code>int32 selection_start = 7;</code>
+   * @return The selectionStart.
+   */
+  int getSelectionStart();
+
+  /**
+   * <code>int32 selection_end = 8;</code>
+   * @return The selectionEnd.
+   */
+  int getSelectionEnd();
+
+  /**
+   * <pre>
+   * The new value, for NODE_ACTION_SET_PROGRESS.
+   * </pre>
+   *
+   * <code>float progress = 9;</code>
+   * @return The progress.
+   */
+  float getProgress();
+
+  /**
+   * <pre>
+   * The place, for NODE_ACTION_SCROLL_TO_POSITION.
+   * </pre>
+   *
+   * <code>int32 row = 10;</code>
+   * @return The row.
+   */
+  int getRow();
+
+  /**
+   * <code>int32 column = 11;</code>
+   * @return The column.
+   */
+  int getColumn();
 }

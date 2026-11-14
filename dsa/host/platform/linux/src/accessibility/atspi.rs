@@ -11,6 +11,7 @@ use dsa_host_core::accessibility::{Node, NodeAction, Role};
 pub mod role {
     pub const CHECK_BOX: u32 = 7;
     pub const COMBO_BOX: u32 = 11;
+    pub const DIALOG: u32 = 16;
     pub const FRAME: u32 = 23;
     pub const IMAGE: u32 = 27;
     pub const LABEL: u32 = 29;
@@ -22,12 +23,14 @@ pub mod role {
     pub const PAGE_TAB_LIST: u32 = 38;
     pub const PANEL: u32 = 39;
     pub const PASSWORD_TEXT: u32 = 40;
+    pub const POPUP_MENU: u32 = 41;
     pub const PROGRESS_BAR: u32 = 42;
     pub const PUSH_BUTTON: u32 = 43;
     pub const RADIO_BUTTON: u32 = 44;
     pub const SCROLL_PANE: u32 = 49;
     pub const SLIDER: u32 = 51;
     pub const TABLE: u32 = 55;
+    pub const TABLE_CELL: u32 = 56;
     pub const TOGGLE_BUTTON: u32 = 62;
     pub const TOOL_BAR: u32 = 63;
     pub const APPLICATION: u32 = 75;
@@ -42,11 +45,15 @@ pub mod role {
 pub mod state {
     pub const ACTIVE: u32 = 1;
     pub const CHECKED: u32 = 4;
+    pub const COLLAPSED: u32 = 5;
     pub const DEFUNCT: u32 = 6;
     pub const EDITABLE: u32 = 7;
     pub const ENABLED: u32 = 8;
+    pub const EXPANDABLE: u32 = 9;
+    pub const EXPANDED: u32 = 10;
     pub const FOCUSABLE: u32 = 11;
     pub const FOCUSED: u32 = 12;
+    pub const MODAL: u32 = 16;
     pub const PRESSED: u32 = 20;
     pub const RESIZABLE: u32 = 21;
     pub const SELECTABLE: u32 = 22;
@@ -105,6 +112,14 @@ impl StateSet {
 /// (the newer switch role is not read by older screen readers); a password field is a
 /// password text, so the screen reader does not speak what is typed.
 pub fn role_of(node: &Node) -> u32 {
+    // The root of a dialog or a pop-up window is that window.
+    match &node.window {
+        Some(window) if window.modal => return role::DIALOG,
+        Some(window) if window.popup && node.class_name.contains("Menu") => {
+            return role::POPUP_MENU
+        }
+        _ => {}
+    }
     let role = node.role();
     if role == Role::Edit && node.states.password {
         return role::PASSWORD_TEXT;
@@ -141,6 +156,9 @@ pub fn role_name(role: u32) -> &'static str {
     match role {
         role::CHECK_BOX => "check box",
         role::COMBO_BOX => "combo box",
+        role::DIALOG => "dialog",
+        role::POPUP_MENU => "popup menu",
+        role::TABLE_CELL => "table cell",
         role::FRAME => "frame",
         role::IMAGE => "image",
         role::LABEL => "label",
@@ -197,7 +215,45 @@ pub fn states_of(node: &Node, focused: bool, showing: bool) -> StateSet {
     if s.editable && !node.supports(NodeAction::SetText) {
         set.insert(state::READ_ONLY);
     }
+    // One that can collapse is expanded; one that can expand is collapsed.
+    let expands = node.supports(NodeAction::Expand);
+    let collapses = node.supports(NodeAction::Collapse);
+    if expands || collapses {
+        set.insert(state::EXPANDABLE);
+        set.insert(if collapses {
+            state::EXPANDED
+        } else {
+            state::COLLAPSED
+        });
+    }
+    if node.window.as_ref().is_some_and(|window| window.modal) {
+        set.insert(state::MODAL);
+    }
     set
+}
+
+/// The attributes a screen reader reads of a node besides its role: a heading's level (2
+/// when the app says none), a link's address, and how a live region's changes are said.
+pub fn node_attributes(node: &Node) -> Vec<(String, String)> {
+    use dsa_host_core::accessibility::LiveRegion;
+    let mut attributes = Vec::new();
+    if node.states.heading {
+        let level = if node.heading_level == 0 {
+            2
+        } else {
+            node.heading_level.min(9)
+        };
+        attributes.push(("level".to_string(), level.to_string()));
+    }
+    if node.link && !node.url.is_empty() {
+        attributes.push(("href".to_string(), node.url.clone()));
+    }
+    match node.live_region {
+        LiveRegion::Off => {}
+        LiveRegion::Polite => attributes.push(("live".to_string(), "polite".to_string())),
+        LiveRegion::Assertive => attributes.push(("live".to_string(), "assertive".to_string())),
+    }
+    attributes
 }
 
 #[cfg(test)]
@@ -213,5 +269,61 @@ mod tests {
         assert_eq!(set.words(), [1 << 8, 1 << (41 - 32)]);
         assert!(set.contains(state::CHECKABLE));
         assert!(!set.contains(state::FOCUSED));
+    }
+
+    #[test]
+    fn fr18_dialogs_headings_links_and_expandable_nodes_say_what_they_are() {
+        use dsa_host_core::accessibility::{LiveRegion, NodeWindow};
+        let dialog = Node {
+            class_name: "android.widget.FrameLayout".into(),
+            window: Some(NodeWindow {
+                title: "Delete?".into(),
+                modal: true,
+                popup: false,
+            }),
+            ..Node::default()
+        };
+        assert_eq!(role_of(&dialog), role::DIALOG);
+        assert!(states_of(&dialog, false, true).contains(state::MODAL));
+        let menu = Node {
+            class_name: "android.widget.MenuPopupWindow$MenuDropDownListView".into(),
+            window: Some(NodeWindow {
+                title: String::new(),
+                modal: false,
+                popup: true,
+            }),
+            ..Node::default()
+        };
+        assert_eq!(role_of(&menu), role::POPUP_MENU);
+        let mut heading = Node::default();
+        heading.states.heading = true;
+        assert_eq!(
+            node_attributes(&heading),
+            vec![("level".to_string(), "2".to_string())]
+        );
+        heading.heading_level = 3;
+        assert_eq!(node_attributes(&heading)[0].1, "3");
+        let link = Node {
+            link: true,
+            url: "https://example.com".into(),
+            live_region: LiveRegion::Polite,
+            ..Node::default()
+        };
+        assert_eq!(role_of(&link), role::LINK);
+        assert_eq!(
+            node_attributes(&link),
+            vec![
+                ("href".to_string(), "https://example.com".to_string()),
+                ("live".to_string(), "polite".to_string())
+            ]
+        );
+        let group = Node {
+            actions: vec![NodeAction::Collapse],
+            ..Node::default()
+        };
+        let states = states_of(&group, false, true);
+        assert!(states.contains(state::EXPANDABLE));
+        assert!(states.contains(state::EXPANDED));
+        assert!(!states.contains(state::COLLAPSED));
     }
 }

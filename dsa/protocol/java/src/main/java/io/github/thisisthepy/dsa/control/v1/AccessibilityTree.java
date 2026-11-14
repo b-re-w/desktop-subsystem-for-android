@@ -9,7 +9,8 @@ package io.github.thisisthepy.dsa.control.v1;
  * tree (`full`) replaces whatever the host had and starts a new epoch; node IDs of earlier
  * epochs mean nothing in it. A change carries the epoch it applies to, each node that is new
  * or changed (whole), and the IDs of the nodes that are gone. The agent sends a few of these
- * a second at most, however fast the task's content changes.
+ * a second at most, however fast the task's content changes, except while a screen reader
+ * listens (AccessibilityListening), when a focus change goes at once.
  * </pre>
  *
  * Protobuf type {@code dsa.control.v1.AccessibilityTree}
@@ -404,6 +405,44 @@ public  final class AccessibilityTree extends
     focusedId_ = 0;
   }
 
+  public static final int ACCESSIBILITY_FOCUSED_ID_FIELD_NUMBER = 8;
+  private int accessibilityFocusedId_;
+  /**
+   * <pre>
+   * The node with the accessibility focus, or 0 for none.
+   * </pre>
+   *
+   * <code>uint32 accessibility_focused_id = 8;</code>
+   * @return The accessibilityFocusedId.
+   */
+  @java.lang.Override
+  public int getAccessibilityFocusedId() {
+    return accessibilityFocusedId_;
+  }
+  /**
+   * <pre>
+   * The node with the accessibility focus, or 0 for none.
+   * </pre>
+   *
+   * <code>uint32 accessibility_focused_id = 8;</code>
+   * @param value The accessibilityFocusedId to set.
+   */
+  private void setAccessibilityFocusedId(int value) {
+    
+    accessibilityFocusedId_ = value;
+  }
+  /**
+   * <pre>
+   * The node with the accessibility focus, or 0 for none.
+   * </pre>
+   *
+   * <code>uint32 accessibility_focused_id = 8;</code>
+   */
+  private void clearAccessibilityFocusedId() {
+    
+    accessibilityFocusedId_ = 0;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.AccessibilityTree parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -491,7 +530,8 @@ public  final class AccessibilityTree extends
    * tree (`full`) replaces whatever the host had and starts a new epoch; node IDs of earlier
    * epochs mean nothing in it. A change carries the epoch it applies to, each node that is new
    * or changed (whole), and the IDs of the nodes that are gone. The agent sends a few of these
-   * a second at most, however fast the task's content changes.
+   * a second at most, however fast the task's content changes, except while a screen reader
+   * listens (AccessibilityListening), when a focus change goes at once.
    * </pre>
    *
    * Protobuf type {@code dsa.control.v1.AccessibilityTree}
@@ -899,6 +939,46 @@ public  final class AccessibilityTree extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The node with the accessibility focus, or 0 for none.
+     * </pre>
+     *
+     * <code>uint32 accessibility_focused_id = 8;</code>
+     * @return The accessibilityFocusedId.
+     */
+    @java.lang.Override
+    public int getAccessibilityFocusedId() {
+      return instance.getAccessibilityFocusedId();
+    }
+    /**
+     * <pre>
+     * The node with the accessibility focus, or 0 for none.
+     * </pre>
+     *
+     * <code>uint32 accessibility_focused_id = 8;</code>
+     * @param value The accessibilityFocusedId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessibilityFocusedId(int value) {
+      copyOnWrite();
+      instance.setAccessibilityFocusedId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The node with the accessibility focus, or 0 for none.
+     * </pre>
+     *
+     * <code>uint32 accessibility_focused_id = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAccessibilityFocusedId() {
+      copyOnWrite();
+      instance.clearAccessibilityFocusedId();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.AccessibilityTree)
   }
   @java.lang.Override
@@ -923,10 +1003,11 @@ public  final class AccessibilityTree extends
             io.github.thisisthepy.dsa.control.v1.AccessibilityNode.class,
             "removedIds_",
             "focusedId_",
+            "accessibilityFocusedId_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0003\u0000\u0001\u0004\u0002\u000b" +
-              "\u0003\u0007\u0004+\u0005\u001b\u0006+\u0007\u000b";
+              "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0003\u0000\u0001\u0004\u0002\u000b\u0003\u0007" +
+              "\u0004+\u0005\u001b\u0006+\u0007\u000b\b\u000b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

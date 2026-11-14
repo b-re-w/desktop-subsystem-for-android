@@ -555,6 +555,47 @@ std::map<std::string, v1::Envelope> Cases() {
   }
   cases["accessibility_watch_off"].mutable_accessibility_watch()->set_task_id(42);
   {
+    v1::AccessibilityAnnouncement* announcement =
+        cases["accessibility_announcement"].mutable_accessibility_announcement();
+    announcement->set_task_id(42);
+    announcement->set_text("Saved");
+    announcement->set_toast(true);
+  }
+  {
+    v1::AccessibilityListening* listening =
+        cases["accessibility_listening"].mutable_accessibility_listening();
+    listening->set_task_id(42);
+    listening->set_listening(true);
+  }
+  {
+    v1::AccessibilityAction* action =
+        cases["accessibility_set_selection"].mutable_accessibility_action();
+    action->set_task_id(42);
+    action->set_epoch(1);
+    action->set_node_id(2);
+    action->set_action(v1::NODE_ACTION_SET_SELECTION);
+    action->set_request_id(8);
+    action->set_selection_start(3);
+    action->set_selection_end(5);
+  }
+  {
+    v1::AccessibilityTree* tree = cases["accessibility_tree_text"].mutable_accessibility_tree();
+    tree->set_task_id(42);
+    tree->set_epoch(1);
+    tree->add_root_ids(1);
+    v1::AccessibilityNode* field = tree->add_nodes();
+    field->set_id(2);
+    field->set_class_name("android.widget.EditText");
+    field->set_text("hi");
+    field->set_editable(true);
+    field->set_accessibility_focused(true);
+    field->set_text_selection_start(1);
+    field->set_text_selection_end(2);
+    field->set_has_text_selection(true);
+    tree->set_focused_id(2);
+    tree->set_accessibility_focused_id(2);
+  }
+  {
     v1::AccessibilityTree* tree = cases["accessibility_tree_full"].mutable_accessibility_tree();
     tree->set_task_id(42);
     tree->set_epoch(1);

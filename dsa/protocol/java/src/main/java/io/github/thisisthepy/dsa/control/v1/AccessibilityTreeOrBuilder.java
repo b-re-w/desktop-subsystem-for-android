@@ -94,4 +94,14 @@ public interface AccessibilityTreeOrBuilder extends
    * @return The focusedId.
    */
   int getFocusedId();
+
+  /**
+   * <pre>
+   * The node with the accessibility focus, or 0 for none.
+   * </pre>
+   *
+   * <code>uint32 accessibility_focused_id = 8;</code>
+   * @return The accessibilityFocusedId.
+   */
+  int getAccessibilityFocusedId();
 }
