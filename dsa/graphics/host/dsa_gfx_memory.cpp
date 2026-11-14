@@ -22,8 +22,9 @@
  * seen, and a free of one of them is ignored.
  *
  * And the trim: a thread that, once a second, lets go of what nothing uses any more without
- * waiting for the guest's next call (the Vulkan objects of destroyed color buffers, whose GPU
- * work has finished, and the staging buffer once no copy used it for a while). */
+ * waiting for the guest's next call (the color buffers the guest closed whose close delay has
+ * passed, the Vulkan objects of destroyed color buffers, whose GPU work has finished, and the
+ * staging buffer once no copy used it for a while). */
 
 #include "dsa_gfx_backend.h"
 #include "dsa_gfx_memory.h"
@@ -40,6 +41,7 @@
 #include <vector>
 
 #include "FrameBuffer.h"
+#include "host-common/logging.h"
 #include "vulkan/VkCommonOperations.h"
 #include "vulkan/VulkanDispatch.h"
 
@@ -223,6 +225,17 @@ void trim_run() {
     std::unique_lock<std::mutex> lock(s_trim_mutex);
     while (!s_trim_wake.wait_for(lock, kTrimInterval, [] { return s_trim_stop; })) {
         lock.unlock();
+        if (FrameBuffer* fb = FrameBuffer::getFB()) {
+            /* The color buffers the guest closed last wait for their close delay on a list that
+             * was looked at only when the next buffer closed: a video's whole queue, closed in
+             * one second, stayed for as long as nothing else closed. They go here, first, so
+             * their Vulkan objects are retired before the free below. */
+            const int closed = fb->closeDelayedColorBuffers();
+            if (closed > 0) {
+                INFO("Destroyed %d color buffers the guest closed and nothing opened again.",
+                     closed);
+            }
+        }
         if (VkEmulation* emu = emulation()) {
             /* A destroyed color buffer's image and memory are freed once the GPU is done with
              * them; without this they waited for the next color buffer to be made or

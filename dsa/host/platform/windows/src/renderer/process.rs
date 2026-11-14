@@ -391,6 +391,12 @@ pub fn run(args: &[String]) -> ! {
             Body::MemoryRequest(asked) => {
                 if asked.give_back {
                     give_back();
+                } else {
+                    // Windows are shown, so the working set stays, but what the heap keeps
+                    // committed after a freed allocation goes: the window manager asks at its
+                    // spare give-backs (a few seconds after a video's decoder closed, and every
+                    // five minutes), and a video's uploads left their buffers' worth there.
+                    crate::compositor::committed::compact_heaps();
                 }
                 let report = memory(&adapter).to_report(asked.request);
                 link.send(Body::MemoryReport(report));

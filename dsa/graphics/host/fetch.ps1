@@ -87,7 +87,9 @@ git -C $GfxstreamDir clean -fdx
 # Without 0032 a YUV ColorBuffer is optimal, and so is the guest's image of it: such a driver may
 # keep the copied planes compressed, and the guest's image still shows blocks of light purple and
 # yellow-green in a video's flat areas. Without 0033 a guest's synchronization2 barrier keeps the
-# foreign queue family, and the ColorBuffer it takes or gives back is not recorded.
+# foreign queue family, and the ColorBuffer it takes or gives back is not recorded. Without 0034
+# the ColorBuffers a guest closed last (a whole video's, closed within one second) stay until
+# another ColorBuffer is closed, which with one still app open never comes.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -119,7 +121,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0030-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0031-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0032-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0033-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0033-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0034-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName
