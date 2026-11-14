@@ -336,6 +336,9 @@ extern GuestMemoryPressureDefaultTypeInternal _GuestMemoryPressure_default_insta
 class GuestNotification;
 struct GuestNotificationDefaultTypeInternal;
 extern GuestNotificationDefaultTypeInternal _GuestNotification_default_instance_;
+class GuestSharedMemory;
+struct GuestSharedMemoryDefaultTypeInternal;
+extern GuestSharedMemoryDefaultTypeInternal _GuestSharedMemory_default_instance_;
 class GuestSleepReady;
 struct GuestSleepReadyDefaultTypeInternal;
 extern GuestSleepReadyDefaultTypeInternal _GuestSleepReady_default_instance_;
@@ -684,6 +687,9 @@ extern VideoFrameDefaultTypeInternal _VideoFrame_default_instance_;
 class VideoPacket;
 struct VideoPacketDefaultTypeInternal;
 extern VideoPacketDefaultTypeInternal _VideoPacket_default_instance_;
+class VideoSlotReturned;
+struct VideoSlotReturnedDefaultTypeInternal;
+extern VideoSlotReturnedDefaultTypeInternal _VideoSlotReturned_default_instance_;
 class WidgetAdded;
 struct WidgetAddedDefaultTypeInternal;
 extern WidgetAddedDefaultTypeInternal _WidgetAdded_default_instance_;
@@ -809,6 +815,7 @@ template<> ::dsa::control::v1::GuestBoot* Arena::CreateMaybeMessage<::dsa::contr
 template<> ::dsa::control::v1::GuestMemory* Arena::CreateMaybeMessage<::dsa::control::v1::GuestMemory>(Arena*);
 template<> ::dsa::control::v1::GuestMemoryPressure* Arena::CreateMaybeMessage<::dsa::control::v1::GuestMemoryPressure>(Arena*);
 template<> ::dsa::control::v1::GuestNotification* Arena::CreateMaybeMessage<::dsa::control::v1::GuestNotification>(Arena*);
+template<> ::dsa::control::v1::GuestSharedMemory* Arena::CreateMaybeMessage<::dsa::control::v1::GuestSharedMemory>(Arena*);
 template<> ::dsa::control::v1::GuestSleepReady* Arena::CreateMaybeMessage<::dsa::control::v1::GuestSleepReady>(Arena*);
 template<> ::dsa::control::v1::Hello* Arena::CreateMaybeMessage<::dsa::control::v1::Hello>(Arena*);
 template<> ::dsa::control::v1::HelloAccepted* Arena::CreateMaybeMessage<::dsa::control::v1::HelloAccepted>(Arena*);
@@ -925,6 +932,7 @@ template<> ::dsa::control::v1::VideoFlush* Arena::CreateMaybeMessage<::dsa::cont
 template<> ::dsa::control::v1::VideoFlushed* Arena::CreateMaybeMessage<::dsa::control::v1::VideoFlushed>(Arena*);
 template<> ::dsa::control::v1::VideoFrame* Arena::CreateMaybeMessage<::dsa::control::v1::VideoFrame>(Arena*);
 template<> ::dsa::control::v1::VideoPacket* Arena::CreateMaybeMessage<::dsa::control::v1::VideoPacket>(Arena*);
+template<> ::dsa::control::v1::VideoSlotReturned* Arena::CreateMaybeMessage<::dsa::control::v1::VideoSlotReturned>(Arena*);
 template<> ::dsa::control::v1::WidgetAdded* Arena::CreateMaybeMessage<::dsa::control::v1::WidgetAdded>(Arena*);
 template<> ::dsa::control::v1::WidgetFrame* Arena::CreateMaybeMessage<::dsa::control::v1::WidgetFrame>(Arena*);
 template<> ::dsa::control::v1::WidgetList* Arena::CreateMaybeMessage<::dsa::control::v1::WidgetList>(Arena*);
@@ -21295,6 +21303,7 @@ class VideoDecoderOpen final :
   enum : int {
     kCodecFieldNumber = 1,
     kWidthFieldNumber = 2,
+    kPictureRegionIdFieldNumber = 4,
     kHeightFieldNumber = 3,
   };
   // .dsa.control.v1.VideoCodec codec = 1;
@@ -21313,6 +21322,15 @@ class VideoDecoderOpen final :
   private:
   uint32_t _internal_width() const;
   void _internal_set_width(uint32_t value);
+  public:
+
+  // uint64 picture_region_id = 4;
+  void clear_picture_region_id();
+  uint64_t picture_region_id() const;
+  void set_picture_region_id(uint64_t value);
+  private:
+  uint64_t _internal_picture_region_id() const;
+  void _internal_set_picture_region_id(uint64_t value);
   public:
 
   // uint32 height = 3;
@@ -21334,6 +21352,7 @@ class VideoDecoderOpen final :
   struct Impl_ {
     int codec_;
     uint32_t width_;
+    uint64_t picture_region_id_;
     uint32_t height_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -21447,6 +21466,7 @@ class VideoDecoderOpened final :
   enum : int {
     kErrorFieldNumber = 2,
     kOkFieldNumber = 1,
+    kSharedPicturesFieldNumber = 3,
   };
   // string error = 2;
   void clear_error();
@@ -21471,6 +21491,15 @@ class VideoDecoderOpened final :
   void _internal_set_ok(bool value);
   public:
 
+  // bool shared_pictures = 3;
+  void clear_shared_pictures();
+  bool shared_pictures() const;
+  void set_shared_pictures(bool value);
+  private:
+  bool _internal_shared_pictures() const;
+  void _internal_set_shared_pictures(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.VideoDecoderOpened)
  private:
   class _Internal;
@@ -21481,6 +21510,7 @@ class VideoDecoderOpened final :
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr error_;
     bool ok_;
+    bool shared_pictures_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -21777,6 +21807,8 @@ class VideoFrame final :
     kHeightFieldNumber = 4,
     kStrideFieldNumber = 5,
     kEndOfStreamFieldNumber = 7,
+    kSlotOffsetFieldNumber = 9,
+    kSlotFieldNumber = 8,
   };
   // bytes nv12 = 6;
   void clear_nv12();
@@ -21846,6 +21878,24 @@ class VideoFrame final :
   void _internal_set_end_of_stream(bool value);
   public:
 
+  // uint64 slot_offset = 9;
+  void clear_slot_offset();
+  uint64_t slot_offset() const;
+  void set_slot_offset(uint64_t value);
+  private:
+  uint64_t _internal_slot_offset() const;
+  void _internal_set_slot_offset(uint64_t value);
+  public:
+
+  // uint32 slot = 8;
+  void clear_slot();
+  uint32_t slot() const;
+  void set_slot(uint32_t value);
+  private:
+  uint32_t _internal_slot() const;
+  void _internal_set_slot(uint32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.VideoFrame)
  private:
   class _Internal;
@@ -21861,6 +21911,295 @@ class VideoFrame final :
     uint32_t height_;
     uint32_t stride_;
     bool end_of_stream_;
+    uint64_t slot_offset_;
+    uint32_t slot_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
+class VideoSlotReturned final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.VideoSlotReturned) */ {
+ public:
+  inline VideoSlotReturned() : VideoSlotReturned(nullptr) {}
+  ~VideoSlotReturned() override;
+  explicit PROTOBUF_CONSTEXPR VideoSlotReturned(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  VideoSlotReturned(const VideoSlotReturned& from);
+  VideoSlotReturned(VideoSlotReturned&& from) noexcept
+    : VideoSlotReturned() {
+    *this = ::std::move(from);
+  }
+
+  inline VideoSlotReturned& operator=(const VideoSlotReturned& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline VideoSlotReturned& operator=(VideoSlotReturned&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const VideoSlotReturned& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const VideoSlotReturned* internal_default_instance() {
+    return reinterpret_cast<const VideoSlotReturned*>(
+               &_VideoSlotReturned_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    120;
+
+  friend void swap(VideoSlotReturned& a, VideoSlotReturned& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(VideoSlotReturned* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(VideoSlotReturned* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  VideoSlotReturned* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<VideoSlotReturned>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const VideoSlotReturned& from);
+  void MergeFrom(const VideoSlotReturned& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(VideoSlotReturned* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.VideoSlotReturned";
+  }
+  protected:
+  explicit VideoSlotReturned(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kSlotFieldNumber = 1,
+  };
+  // uint32 slot = 1;
+  void clear_slot();
+  uint32_t slot() const;
+  void set_slot(uint32_t value);
+  private:
+  uint32_t _internal_slot() const;
+  void _internal_set_slot(uint32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.VideoSlotReturned)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    uint32_t slot_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
+class GuestSharedMemory final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.GuestSharedMemory) */ {
+ public:
+  inline GuestSharedMemory() : GuestSharedMemory(nullptr) {}
+  ~GuestSharedMemory() override;
+  explicit PROTOBUF_CONSTEXPR GuestSharedMemory(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  GuestSharedMemory(const GuestSharedMemory& from);
+  GuestSharedMemory(GuestSharedMemory&& from) noexcept
+    : GuestSharedMemory() {
+    *this = ::std::move(from);
+  }
+
+  inline GuestSharedMemory& operator=(const GuestSharedMemory& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GuestSharedMemory& operator=(GuestSharedMemory&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const GuestSharedMemory& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const GuestSharedMemory* internal_default_instance() {
+    return reinterpret_cast<const GuestSharedMemory*>(
+               &_GuestSharedMemory_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    121;
+
+  friend void swap(GuestSharedMemory& a, GuestSharedMemory& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(GuestSharedMemory* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GuestSharedMemory* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GuestSharedMemory* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<GuestSharedMemory>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const GuestSharedMemory& from);
+  void MergeFrom(const GuestSharedMemory& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(GuestSharedMemory* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.GuestSharedMemory";
+  }
+  protected:
+  explicit GuestSharedMemory(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kNameFieldNumber = 1,
+    kGuestPhysicalAddressFieldNumber = 2,
+    kLengthFieldNumber = 3,
+  };
+  // string name = 1;
+  void clear_name();
+  const std::string& name() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_name(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_name();
+  PROTOBUF_NODISCARD std::string* release_name();
+  void set_allocated_name(std::string* name);
+  private:
+  const std::string& _internal_name() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_name(const std::string& value);
+  std::string* _internal_mutable_name();
+  public:
+
+  // uint64 guest_physical_address = 2;
+  void clear_guest_physical_address();
+  uint64_t guest_physical_address() const;
+  void set_guest_physical_address(uint64_t value);
+  private:
+  uint64_t _internal_guest_physical_address() const;
+  void _internal_set_guest_physical_address(uint64_t value);
+  public:
+
+  // uint64 length = 3;
+  void clear_length();
+  uint64_t length() const;
+  void set_length(uint64_t value);
+  private:
+  uint64_t _internal_length() const;
+  void _internal_set_length(uint64_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.GuestSharedMemory)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr name_;
+    uint64_t guest_physical_address_;
+    uint64_t length_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -21907,7 +22246,7 @@ class VideoFlush final :
                &_VideoFlush_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    120;
+    122;
 
   friend void swap(VideoFlush& a, VideoFlush& b) {
     a.Swap(&b);
@@ -22024,7 +22363,7 @@ class VideoFlushed final :
                &_VideoFlushed_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    121;
+    123;
 
   friend void swap(VideoFlushed& a, VideoFlushed& b) {
     a.Swap(&b);
@@ -22141,7 +22480,7 @@ class VideoError final :
                &_VideoError_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    122;
+    124;
 
   friend void swap(VideoError& a, VideoError& b) {
     a.Swap(&b);
@@ -22276,7 +22615,7 @@ class SensorDescription final :
                &_SensorDescription_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    123;
+    125;
 
   friend void swap(SensorDescription& a, SensorDescription& b) {
     a.Swap(&b);
@@ -22471,7 +22810,7 @@ class SensorList final :
                &_SensorList_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    124;
+    126;
 
   friend void swap(SensorList& a, SensorList& b) {
     a.Swap(&b);
@@ -22610,7 +22949,7 @@ class SensorActivate final :
                &_SensorActivate_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    125;
+    127;
 
   friend void swap(SensorActivate& a, SensorActivate& b) {
     a.Swap(&b);
@@ -22762,7 +23101,7 @@ class SensorReading final :
                &_SensorReading_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    126;
+    128;
 
   friend void swap(SensorReading& a, SensorReading& b) {
     a.Swap(&b);
@@ -22927,7 +23266,7 @@ class SensorReadings final :
                &_SensorReadings_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    127;
+    129;
 
   friend void swap(SensorReadings& a, SensorReadings& b) {
     a.Swap(&b);
@@ -23066,7 +23405,7 @@ class ClockAnswer final :
                &_ClockAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    128;
+    130;
 
   friend void swap(ClockAnswer& a, ClockAnswer& b) {
     a.Swap(&b);
@@ -23207,7 +23546,7 @@ class ListWidgetProviders final :
                &_ListWidgetProviders_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    129;
+    131;
 
   friend void swap(ListWidgetProviders& a, ListWidgetProviders& b) {
     a.Swap(&b);
@@ -23337,7 +23676,7 @@ class WidgetProvider final :
                &_WidgetProvider_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    130;
+    132;
 
   friend void swap(WidgetProvider& a, WidgetProvider& b) {
     a.Swap(&b);
@@ -23635,7 +23974,7 @@ class WidgetProviders final :
                &_WidgetProviders_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    131;
+    133;
 
   friend void swap(WidgetProviders& a, WidgetProviders& b) {
     a.Swap(&b);
@@ -23796,7 +24135,7 @@ class AddWidget final :
                &_AddWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    132;
+    134;
 
   friend void swap(AddWidget& a, AddWidget& b) {
     a.Swap(&b);
@@ -23942,7 +24281,7 @@ class WidgetAdded final :
                &_WidgetAdded_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    133;
+    135;
 
   friend void swap(WidgetAdded& a, WidgetAdded& b) {
     a.Swap(&b);
@@ -24099,7 +24438,7 @@ class WidgetUpdated final :
                &_WidgetUpdated_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    134;
+    136;
 
   friend void swap(WidgetUpdated& a, WidgetUpdated& b) {
     a.Swap(&b);
@@ -24249,7 +24588,7 @@ class WidgetList final :
                &_WidgetList_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    135;
+    137;
 
   friend void swap(WidgetList& a, WidgetList& b) {
     a.Swap(&b);
@@ -24393,7 +24732,7 @@ class RemoveWidget final :
                &_RemoveWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    136;
+    138;
 
   friend void swap(RemoveWidget& a, RemoveWidget& b) {
     a.Swap(&b);
@@ -24523,7 +24862,7 @@ class ReconfigureWidget final :
                &_ReconfigureWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    137;
+    139;
 
   friend void swap(ReconfigureWidget& a, ReconfigureWidget& b) {
     a.Swap(&b);
@@ -24664,7 +25003,7 @@ class WidgetReconfigured final :
                &_WidgetReconfigured_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    138;
+    140;
 
   friend void swap(WidgetReconfigured& a, WidgetReconfigured& b) {
     a.Swap(&b);
@@ -24832,7 +25171,7 @@ class ResizeWidget final :
                &_ResizeWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    139;
+    141;
 
   friend void swap(ResizeWidget& a, ResizeWidget& b) {
     a.Swap(&b);
@@ -25017,7 +25356,7 @@ class WidgetFrame final :
                &_WidgetFrame_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    140;
+    142;
 
   friend void swap(WidgetFrame& a, WidgetFrame& b) {
     a.Swap(&b);
@@ -25185,7 +25524,7 @@ class WidgetPointer final :
                &_WidgetPointer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    141;
+    143;
 
   friend void swap(WidgetPointer& a, WidgetPointer& b) {
     a.Swap(&b);
@@ -25359,7 +25698,7 @@ class AccessibilityWatch final :
                &_AccessibilityWatch_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    142;
+    144;
 
   friend void swap(AccessibilityWatch& a, AccessibilityWatch& b) {
     a.Swap(&b);
@@ -25500,7 +25839,7 @@ class NodeRange final :
                &_NodeRange_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    143;
+    145;
 
   friend void swap(NodeRange& a, NodeRange& b) {
     a.Swap(&b);
@@ -25652,7 +25991,7 @@ class AccessibilityNode final :
                &_AccessibilityNode_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    144;
+    146;
 
   friend void swap(AccessibilityNode& a, AccessibilityNode& b) {
     a.Swap(&b);
@@ -26095,7 +26434,7 @@ class AccessibilityTree final :
                &_AccessibilityTree_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    145;
+    147;
 
   friend void swap(AccessibilityTree& a, AccessibilityTree& b) {
     a.Swap(&b);
@@ -26328,7 +26667,7 @@ class AccessibilityAction final :
                &_AccessibilityAction_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    146;
+    148;
 
   friend void swap(AccessibilityAction& a, AccessibilityAction& b) {
     a.Swap(&b);
@@ -26518,7 +26857,7 @@ class AccessibilityActionResult final :
                &_AccessibilityActionResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    147;
+    149;
 
   friend void swap(AccessibilityActionResult& a, AccessibilityActionResult& b) {
     a.Swap(&b);
@@ -26686,7 +27025,7 @@ class AudioOutputOpen final :
                &_AudioOutputOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    148;
+    150;
 
   friend void swap(AudioOutputOpen& a, AudioOutputOpen& b) {
     a.Swap(&b);
@@ -26865,7 +27204,7 @@ class AudioOutputReady final :
                &_AudioOutputReady_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    149;
+    151;
 
   friend void swap(AudioOutputReady& a, AudioOutputReady& b) {
     a.Swap(&b);
@@ -27006,7 +27345,7 @@ class AudioPcm final :
                &_AudioPcm_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    150;
+    152;
 
   friend void swap(AudioPcm& a, AudioPcm& b) {
     a.Swap(&b);
@@ -27152,7 +27491,7 @@ class AudioInputOpen final :
                &_AudioInputOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    151;
+    153;
 
   friend void swap(AudioInputOpen& a, AudioInputOpen& b) {
     a.Swap(&b);
@@ -27331,7 +27670,7 @@ class AudioInputOpened final :
                &_AudioInputOpened_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    152;
+    154;
 
   friend void swap(AudioInputOpened& a, AudioInputOpened& b) {
     a.Swap(&b);
@@ -27477,7 +27816,7 @@ class AudioOutputControl final :
                &_AudioOutputControl_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    153;
+    155;
 
   friend void swap(AudioOutputControl& a, AudioOutputControl& b) {
     a.Swap(&b);
@@ -27607,7 +27946,7 @@ class AppAudioStream final :
                &_AppAudioStream_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    154;
+    156;
 
   friend void swap(AppAudioStream& a, AppAudioStream& b) {
     a.Swap(&b);
@@ -27796,7 +28135,7 @@ class AppAudio final :
                &_AppAudio_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    155;
+    157;
 
   friend void swap(AppAudio& a, AppAudio& b) {
     a.Swap(&b);
@@ -27935,7 +28274,7 @@ class SetAppVolume final :
                &_SetAppVolume_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    156;
+    158;
 
   friend void swap(SetAppVolume& a, SetAppVolume& b) {
     a.Swap(&b);
@@ -28092,7 +28431,7 @@ class LogStream final :
                &_LogStream_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    157;
+    159;
 
   friend void swap(LogStream& a, LogStream& b) {
     a.Swap(&b);
@@ -28255,7 +28594,7 @@ class LogDump final :
                &_LogDump_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    158;
+    160;
 
   friend void swap(LogDump& a, LogDump& b) {
     a.Swap(&b);
@@ -28407,7 +28746,7 @@ class LogRecord final :
                &_LogRecord_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    159;
+    161;
 
   friend void swap(LogRecord& a, LogRecord& b) {
     a.Swap(&b);
@@ -28635,7 +28974,7 @@ class LogRecords final :
                &_LogRecords_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    160;
+    162;
 
   friend void swap(LogRecords& a, LogRecords& b) {
     a.Swap(&b);
@@ -28812,7 +29151,7 @@ class CollectDiagnostics final :
                &_CollectDiagnostics_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    161;
+    163;
 
   friend void swap(CollectDiagnostics& a, CollectDiagnostics& b) {
     a.Swap(&b);
@@ -28942,7 +29281,7 @@ class DiagnosticsFile final :
                &_DiagnosticsFile_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    162;
+    164;
 
   friend void swap(DiagnosticsFile& a, DiagnosticsFile& b) {
     a.Swap(&b);
@@ -29115,7 +29454,7 @@ class DiagnosticsDone final :
                &_DiagnosticsDone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    163;
+    165;
 
   friend void swap(DiagnosticsDone& a, DiagnosticsDone& b) {
     a.Swap(&b);
@@ -29261,7 +29600,7 @@ class PrintJob final :
                &_PrintJob_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    164;
+    166;
 
   friend void swap(PrintJob& a, PrintJob& b) {
     a.Swap(&b);
@@ -29527,7 +29866,7 @@ class PrintJobChunk final :
                &_PrintJobChunk_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    165;
+    167;
 
   friend void swap(PrintJobChunk& a, PrintJobChunk& b) {
     a.Swap(&b);
@@ -29684,7 +30023,7 @@ class PrintJobCancel final :
                &_PrintJobCancel_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    166;
+    168;
 
   friend void swap(PrintJobCancel& a, PrintJobCancel& b) {
     a.Swap(&b);
@@ -29814,7 +30153,7 @@ class PrintJobResult final :
                &_PrintJobResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    167;
+    169;
 
   friend void swap(PrintJobResult& a, PrintJobResult& b) {
     a.Swap(&b);
@@ -29971,7 +30310,7 @@ class CameraMode final :
                &_CameraMode_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    168;
+    170;
 
   friend void swap(CameraMode& a, CameraMode& b) {
     a.Swap(&b);
@@ -30134,7 +30473,7 @@ class CameraDevice final :
                &_CameraDevice_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    169;
+    171;
 
   friend void swap(CameraDevice& a, CameraDevice& b) {
     a.Swap(&b);
@@ -30327,7 +30666,7 @@ class CameraList final :
                &_CameraList_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    170;
+    172;
 
   friend void swap(CameraList& a, CameraList& b) {
     a.Swap(&b);
@@ -30466,7 +30805,7 @@ class CameraOpen final :
                &_CameraOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    171;
+    173;
 
   friend void swap(CameraOpen& a, CameraOpen& b) {
     a.Swap(&b);
@@ -30634,7 +30973,7 @@ class CameraOpened final :
                &_CameraOpened_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    172;
+    174;
 
   friend void swap(CameraOpened& a, CameraOpened& b) {
     a.Swap(&b);
@@ -30813,7 +31152,7 @@ class CameraFrame final :
                &_CameraFrame_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    173;
+    175;
 
   friend void swap(CameraFrame& a, CameraFrame& b) {
     a.Swap(&b);
@@ -31003,7 +31342,7 @@ class CameraStop final :
                &_CameraStop_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    174;
+    176;
 
   friend void swap(CameraStop& a, CameraStop& b) {
     a.Swap(&b);
@@ -31120,7 +31459,7 @@ class CameraStill final :
                &_CameraStill_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    175;
+    177;
 
   friend void swap(CameraStill& a, CameraStill& b) {
     a.Swap(&b);
@@ -31283,7 +31622,7 @@ class CameraStillTaken final :
                &_CameraStillTaken_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    176;
+    178;
 
   friend void swap(CameraStillTaken& a, CameraStillTaken& b) {
     a.Swap(&b);
@@ -31445,7 +31784,7 @@ class CameraError final :
                &_CameraError_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    177;
+    179;
 
   friend void swap(CameraError& a, CameraError& b) {
     a.Swap(&b);
@@ -31580,7 +31919,7 @@ class SystemSettings final :
                &_SystemSettings_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    178;
+    180;
 
   friend void swap(SystemSettings& a, SystemSettings& b) {
     a.Swap(&b);
@@ -31812,7 +32151,7 @@ class DeviceName final :
                &_DeviceName_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    179;
+    181;
 
   friend void swap(DeviceName& a, DeviceName& b) {
     a.Swap(&b);
@@ -31947,7 +32286,7 @@ class GamepadConnected final :
                &_GamepadConnected_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    180;
+    182;
 
   friend void swap(GamepadConnected& a, GamepadConnected& b) {
     a.Swap(&b);
@@ -32126,7 +32465,7 @@ class GamepadDisconnected final :
                &_GamepadDisconnected_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    181;
+    183;
 
   friend void swap(GamepadDisconnected& a, GamepadDisconnected& b) {
     a.Swap(&b);
@@ -32256,7 +32595,7 @@ class GamepadState final :
                &_GamepadState_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    182;
+    184;
 
   friend void swap(GamepadState& a, GamepadState& b) {
     a.Swap(&b);
@@ -32463,7 +32802,7 @@ class GamepadRumble final :
                &_GamepadRumble_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    183;
+    185;
 
   friend void swap(GamepadRumble& a, GamepadRumble& b) {
     a.Swap(&b);
@@ -32626,7 +32965,7 @@ class BackupUpload final :
                &_BackupUpload_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    184;
+    186;
 
   friend void swap(BackupUpload& a, BackupUpload& b) {
     a.Swap(&b);
@@ -32783,7 +33122,7 @@ class BackupCommit final :
                &_BackupCommit_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    185;
+    187;
 
   friend void swap(BackupCommit& a, BackupCommit& b) {
     a.Swap(&b);
@@ -33015,7 +33354,7 @@ class BackupDiscard final :
                &_BackupDiscard_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    186;
+    188;
 
   friend void swap(BackupDiscard& a, BackupDiscard& b) {
     a.Swap(&b);
@@ -33145,7 +33484,7 @@ class BackupClear final :
                &_BackupClear_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    187;
+    189;
 
   friend void swap(BackupClear& a, BackupClear& b) {
     a.Swap(&b);
@@ -33291,7 +33630,7 @@ class BackupAnswer final :
                &_BackupAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    188;
+    190;
 
   friend void swap(BackupAnswer& a, BackupAnswer& b) {
     a.Swap(&b);
@@ -33459,7 +33798,7 @@ class BackupQuery final :
                &_BackupQuery_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    189;
+    191;
 
   friend void swap(BackupQuery& a, BackupQuery& b) {
     a.Swap(&b);
@@ -33589,7 +33928,7 @@ class BackupPackage final :
                &_BackupPackage_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    190;
+    192;
 
   friend void swap(BackupPackage& a, BackupPackage& b) {
     a.Swap(&b);
@@ -33805,7 +34144,7 @@ class BackupContents final :
                &_BackupContents_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    191;
+    193;
 
   friend void swap(BackupContents& a, BackupContents& b) {
     a.Swap(&b);
@@ -34009,7 +34348,7 @@ class BackupFetch final :
                &_BackupFetch_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    192;
+    194;
 
   friend void swap(BackupFetch& a, BackupFetch& b) {
     a.Swap(&b);
@@ -34204,7 +34543,7 @@ class BackupFetchData final :
                &_BackupFetchData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    193;
+    195;
 
   friend void swap(BackupFetchData& a, BackupFetchData& b) {
     a.Swap(&b);
@@ -34410,7 +34749,7 @@ class BackupRun final :
                &_BackupRun_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    194;
+    196;
 
   friend void swap(BackupRun& a, BackupRun& b) {
     a.Swap(&b);
@@ -34540,7 +34879,7 @@ class BackupRestore final :
                &_BackupRestore_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    195;
+    197;
 
   friend void swap(BackupRestore& a, BackupRestore& b) {
     a.Swap(&b);
@@ -34707,7 +35046,7 @@ class BackupRunResult final :
                &_BackupRunResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    196;
+    198;
 
   friend void swap(BackupRunResult& a, BackupRunResult& b) {
     a.Swap(&b);
@@ -34886,7 +35225,7 @@ class BackupSetting final :
                &_BackupSetting_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    197;
+    199;
 
   friend void swap(BackupSetting& a, BackupSetting& b) {
     a.Swap(&b);
@@ -35016,7 +35355,7 @@ class HostCertificates final :
                &_HostCertificates_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    198;
+    200;
 
   friend void swap(HostCertificates& a, HostCertificates& b) {
     a.Swap(&b);
@@ -35172,7 +35511,7 @@ class PasskeyRequest final :
                &_PasskeyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    199;
+    201;
 
   friend void swap(PasskeyRequest& a, PasskeyRequest& b) {
     a.Swap(&b);
@@ -35419,7 +35758,7 @@ class PasskeyResponse final :
                &_PasskeyResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    200;
+    202;
 
   friend void swap(PasskeyResponse& a, PasskeyResponse& b) {
     a.Swap(&b);
@@ -35592,7 +35931,7 @@ class KeyMintRootKeyRequest final :
                &_KeyMintRootKeyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    201;
+    203;
 
   friend void swap(KeyMintRootKeyRequest& a, KeyMintRootKeyRequest& b) {
     a.Swap(&b);
@@ -35709,7 +36048,7 @@ class KeyMintRootKey final :
                &_KeyMintRootKey_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    202;
+    204;
 
   friend void swap(KeyMintRootKey& a, KeyMintRootKey& b) {
     a.Swap(&b);
@@ -35860,7 +36199,7 @@ class DnsQuery final :
                &_DnsQuery_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    203;
+    205;
 
   friend void swap(DnsQuery& a, DnsQuery& b) {
     a.Swap(&b);
@@ -36017,7 +36356,7 @@ class DnsAnswer final :
                &_DnsAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    204;
+    206;
 
   friend void swap(DnsAnswer& a, DnsAnswer& b) {
     a.Swap(&b);
@@ -36163,7 +36502,7 @@ class ListSpeechVoices final :
                &_ListSpeechVoices_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    205;
+    207;
 
   friend void swap(ListSpeechVoices& a, ListSpeechVoices& b) {
     a.Swap(&b);
@@ -36280,7 +36619,7 @@ class SpeechVoice final :
                &_SpeechVoice_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    206;
+    208;
 
   friend void swap(SpeechVoice& a, SpeechVoice& b) {
     a.Swap(&b);
@@ -36469,7 +36808,7 @@ class SpeechVoices final :
                &_SpeechVoices_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    207;
+    209;
 
   friend void swap(SpeechVoices& a, SpeechVoices& b) {
     a.Swap(&b);
@@ -36635,7 +36974,7 @@ class SpeakText final :
                &_SpeakText_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    208;
+    210;
 
   friend void swap(SpeakText& a, SpeakText& b) {
     a.Swap(&b);
@@ -36835,7 +37174,7 @@ class SpeechAudio final :
                &_SpeechAudio_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    209;
+    211;
 
   friend void swap(SpeechAudio& a, SpeechAudio& b) {
     a.Swap(&b);
@@ -37003,7 +37342,7 @@ class SpeechDone final :
                &_SpeechDone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    210;
+    212;
 
   friend void swap(SpeechDone& a, SpeechDone& b) {
     a.Swap(&b);
@@ -37160,7 +37499,7 @@ class StopSpeaking final :
                &_StopSpeaking_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    211;
+    213;
 
   friend void swap(StopSpeaking& a, StopSpeaking& b) {
     a.Swap(&b);
@@ -37290,7 +37629,7 @@ class StartRecognition final :
                &_StartRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    212;
+    214;
 
   friend void swap(StartRecognition& a, StartRecognition& b) {
     a.Swap(&b);
@@ -37469,7 +37808,7 @@ class StopRecognition final :
                &_StopRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    213;
+    215;
 
   friend void swap(StopRecognition& a, StopRecognition& b) {
     a.Swap(&b);
@@ -37599,7 +37938,7 @@ class CancelRecognition final :
                &_CancelRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    214;
+    216;
 
   friend void swap(CancelRecognition& a, CancelRecognition& b) {
     a.Swap(&b);
@@ -37729,7 +38068,7 @@ class RecognitionEvent final :
                &_RecognitionEvent_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    215;
+    217;
 
   friend void swap(RecognitionEvent& a, RecognitionEvent& b) {
     a.Swap(&b);
@@ -37947,7 +38286,7 @@ class CheckSpelling final :
                &_CheckSpelling_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    216;
+    218;
 
   friend void swap(CheckSpelling& a, CheckSpelling& b) {
     a.Swap(&b);
@@ -38130,7 +38469,7 @@ class SpellingMistake final :
                &_SpellingMistake_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    217;
+    219;
 
   friend void swap(SpellingMistake& a, SpellingMistake& b) {
     a.Swap(&b);
@@ -38308,7 +38647,7 @@ class SpellingText final :
                &_SpellingText_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    218;
+    220;
 
   friend void swap(SpellingText& a, SpellingText& b) {
     a.Swap(&b);
@@ -38447,7 +38786,7 @@ class SpellingResult final :
                &_SpellingResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    219;
+    221;
 
   friend void swap(SpellingResult& a, SpellingResult& b) {
     a.Swap(&b);
@@ -38715,6 +39054,8 @@ class Envelope final :
     kVideoFlush = 125,
     kVideoFlushed = 126,
     kVideoError = 127,
+    kVideoSlotReturned = 128,
+    kGuestSharedMemory = 129,
     kLogStream = 130,
     kLogDump = 131,
     kLogRecords = 132,
@@ -38810,7 +39151,7 @@ class Envelope final :
                &_Envelope_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    220;
+    222;
 
   friend void swap(Envelope& a, Envelope& b) {
     a.Swap(&b);
@@ -38985,6 +39326,8 @@ class Envelope final :
     kVideoFlushFieldNumber = 125,
     kVideoFlushedFieldNumber = 126,
     kVideoErrorFieldNumber = 127,
+    kVideoSlotReturnedFieldNumber = 128,
+    kGuestSharedMemoryFieldNumber = 129,
     kLogStreamFieldNumber = 130,
     kLogDumpFieldNumber = 131,
     kLogRecordsFieldNumber = 132,
@@ -41071,6 +41414,42 @@ class Envelope final :
       ::dsa::control::v1::VideoError* video_error);
   ::dsa::control::v1::VideoError* unsafe_arena_release_video_error();
 
+  // .dsa.control.v1.VideoSlotReturned video_slot_returned = 128;
+  bool has_video_slot_returned() const;
+  private:
+  bool _internal_has_video_slot_returned() const;
+  public:
+  void clear_video_slot_returned();
+  const ::dsa::control::v1::VideoSlotReturned& video_slot_returned() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::VideoSlotReturned* release_video_slot_returned();
+  ::dsa::control::v1::VideoSlotReturned* mutable_video_slot_returned();
+  void set_allocated_video_slot_returned(::dsa::control::v1::VideoSlotReturned* video_slot_returned);
+  private:
+  const ::dsa::control::v1::VideoSlotReturned& _internal_video_slot_returned() const;
+  ::dsa::control::v1::VideoSlotReturned* _internal_mutable_video_slot_returned();
+  public:
+  void unsafe_arena_set_allocated_video_slot_returned(
+      ::dsa::control::v1::VideoSlotReturned* video_slot_returned);
+  ::dsa::control::v1::VideoSlotReturned* unsafe_arena_release_video_slot_returned();
+
+  // .dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;
+  bool has_guest_shared_memory() const;
+  private:
+  bool _internal_has_guest_shared_memory() const;
+  public:
+  void clear_guest_shared_memory();
+  const ::dsa::control::v1::GuestSharedMemory& guest_shared_memory() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::GuestSharedMemory* release_guest_shared_memory();
+  ::dsa::control::v1::GuestSharedMemory* mutable_guest_shared_memory();
+  void set_allocated_guest_shared_memory(::dsa::control::v1::GuestSharedMemory* guest_shared_memory);
+  private:
+  const ::dsa::control::v1::GuestSharedMemory& _internal_guest_shared_memory() const;
+  ::dsa::control::v1::GuestSharedMemory* _internal_mutable_guest_shared_memory();
+  public:
+  void unsafe_arena_set_allocated_guest_shared_memory(
+      ::dsa::control::v1::GuestSharedMemory* guest_shared_memory);
+  ::dsa::control::v1::GuestSharedMemory* unsafe_arena_release_guest_shared_memory();
+
   // .dsa.control.v1.LogStream log_stream = 130;
   bool has_log_stream() const;
   private:
@@ -42753,6 +43132,8 @@ class Envelope final :
   void set_has_video_flush();
   void set_has_video_flushed();
   void set_has_video_error();
+  void set_has_video_slot_returned();
+  void set_has_guest_shared_memory();
   void set_has_log_stream();
   void set_has_log_dump();
   void set_has_log_records();
@@ -42962,6 +43343,8 @@ class Envelope final :
       ::dsa::control::v1::VideoFlush* video_flush_;
       ::dsa::control::v1::VideoFlushed* video_flushed_;
       ::dsa::control::v1::VideoError* video_error_;
+      ::dsa::control::v1::VideoSlotReturned* video_slot_returned_;
+      ::dsa::control::v1::GuestSharedMemory* guest_shared_memory_;
       ::dsa::control::v1::LogStream* log_stream_;
       ::dsa::control::v1::LogDump* log_dump_;
       ::dsa::control::v1::LogRecords* log_records_;
@@ -56574,6 +56957,26 @@ inline void VideoDecoderOpen::set_height(uint32_t value) {
   // @@protoc_insertion_point(field_set:dsa.control.v1.VideoDecoderOpen.height)
 }
 
+// uint64 picture_region_id = 4;
+inline void VideoDecoderOpen::clear_picture_region_id() {
+  _impl_.picture_region_id_ = uint64_t{0u};
+}
+inline uint64_t VideoDecoderOpen::_internal_picture_region_id() const {
+  return _impl_.picture_region_id_;
+}
+inline uint64_t VideoDecoderOpen::picture_region_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.VideoDecoderOpen.picture_region_id)
+  return _internal_picture_region_id();
+}
+inline void VideoDecoderOpen::_internal_set_picture_region_id(uint64_t value) {
+  
+  _impl_.picture_region_id_ = value;
+}
+inline void VideoDecoderOpen::set_picture_region_id(uint64_t value) {
+  _internal_set_picture_region_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.VideoDecoderOpen.picture_region_id)
+}
+
 // -------------------------------------------------------------------
 
 // VideoDecoderOpened
@@ -56646,6 +57049,26 @@ inline void VideoDecoderOpened::set_allocated_error(std::string* error) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.VideoDecoderOpened.error)
+}
+
+// bool shared_pictures = 3;
+inline void VideoDecoderOpened::clear_shared_pictures() {
+  _impl_.shared_pictures_ = false;
+}
+inline bool VideoDecoderOpened::_internal_shared_pictures() const {
+  return _impl_.shared_pictures_;
+}
+inline bool VideoDecoderOpened::shared_pictures() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.VideoDecoderOpened.shared_pictures)
+  return _internal_shared_pictures();
+}
+inline void VideoDecoderOpened::_internal_set_shared_pictures(bool value) {
+  
+  _impl_.shared_pictures_ = value;
+}
+inline void VideoDecoderOpened::set_shared_pictures(bool value) {
+  _internal_set_shared_pictures(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.VideoDecoderOpened.shared_pictures)
 }
 
 // -------------------------------------------------------------------
@@ -56954,6 +57377,164 @@ inline void VideoFrame::_internal_set_end_of_stream(bool value) {
 inline void VideoFrame::set_end_of_stream(bool value) {
   _internal_set_end_of_stream(value);
   // @@protoc_insertion_point(field_set:dsa.control.v1.VideoFrame.end_of_stream)
+}
+
+// uint32 slot = 8;
+inline void VideoFrame::clear_slot() {
+  _impl_.slot_ = 0u;
+}
+inline uint32_t VideoFrame::_internal_slot() const {
+  return _impl_.slot_;
+}
+inline uint32_t VideoFrame::slot() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.VideoFrame.slot)
+  return _internal_slot();
+}
+inline void VideoFrame::_internal_set_slot(uint32_t value) {
+  
+  _impl_.slot_ = value;
+}
+inline void VideoFrame::set_slot(uint32_t value) {
+  _internal_set_slot(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.VideoFrame.slot)
+}
+
+// uint64 slot_offset = 9;
+inline void VideoFrame::clear_slot_offset() {
+  _impl_.slot_offset_ = uint64_t{0u};
+}
+inline uint64_t VideoFrame::_internal_slot_offset() const {
+  return _impl_.slot_offset_;
+}
+inline uint64_t VideoFrame::slot_offset() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.VideoFrame.slot_offset)
+  return _internal_slot_offset();
+}
+inline void VideoFrame::_internal_set_slot_offset(uint64_t value) {
+  
+  _impl_.slot_offset_ = value;
+}
+inline void VideoFrame::set_slot_offset(uint64_t value) {
+  _internal_set_slot_offset(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.VideoFrame.slot_offset)
+}
+
+// -------------------------------------------------------------------
+
+// VideoSlotReturned
+
+// uint32 slot = 1;
+inline void VideoSlotReturned::clear_slot() {
+  _impl_.slot_ = 0u;
+}
+inline uint32_t VideoSlotReturned::_internal_slot() const {
+  return _impl_.slot_;
+}
+inline uint32_t VideoSlotReturned::slot() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.VideoSlotReturned.slot)
+  return _internal_slot();
+}
+inline void VideoSlotReturned::_internal_set_slot(uint32_t value) {
+  
+  _impl_.slot_ = value;
+}
+inline void VideoSlotReturned::set_slot(uint32_t value) {
+  _internal_set_slot(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.VideoSlotReturned.slot)
+}
+
+// -------------------------------------------------------------------
+
+// GuestSharedMemory
+
+// string name = 1;
+inline void GuestSharedMemory::clear_name() {
+  _impl_.name_.ClearToEmpty();
+}
+inline const std::string& GuestSharedMemory::name() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.GuestSharedMemory.name)
+  return _internal_name();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void GuestSharedMemory::set_name(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.GuestSharedMemory.name)
+}
+inline std::string* GuestSharedMemory::mutable_name() {
+  std::string* _s = _internal_mutable_name();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.GuestSharedMemory.name)
+  return _s;
+}
+inline const std::string& GuestSharedMemory::_internal_name() const {
+  return _impl_.name_.Get();
+}
+inline void GuestSharedMemory::_internal_set_name(const std::string& value) {
+  
+  _impl_.name_.Set(value, GetArenaForAllocation());
+}
+inline std::string* GuestSharedMemory::_internal_mutable_name() {
+  
+  return _impl_.name_.Mutable(GetArenaForAllocation());
+}
+inline std::string* GuestSharedMemory::release_name() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.GuestSharedMemory.name)
+  return _impl_.name_.Release();
+}
+inline void GuestSharedMemory::set_allocated_name(std::string* name) {
+  if (name != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.name_.SetAllocated(name, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.name_.IsDefault()) {
+    _impl_.name_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.GuestSharedMemory.name)
+}
+
+// uint64 guest_physical_address = 2;
+inline void GuestSharedMemory::clear_guest_physical_address() {
+  _impl_.guest_physical_address_ = uint64_t{0u};
+}
+inline uint64_t GuestSharedMemory::_internal_guest_physical_address() const {
+  return _impl_.guest_physical_address_;
+}
+inline uint64_t GuestSharedMemory::guest_physical_address() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.GuestSharedMemory.guest_physical_address)
+  return _internal_guest_physical_address();
+}
+inline void GuestSharedMemory::_internal_set_guest_physical_address(uint64_t value) {
+  
+  _impl_.guest_physical_address_ = value;
+}
+inline void GuestSharedMemory::set_guest_physical_address(uint64_t value) {
+  _internal_set_guest_physical_address(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.GuestSharedMemory.guest_physical_address)
+}
+
+// uint64 length = 3;
+inline void GuestSharedMemory::clear_length() {
+  _impl_.length_ = uint64_t{0u};
+}
+inline uint64_t GuestSharedMemory::_internal_length() const {
+  return _impl_.length_;
+}
+inline uint64_t GuestSharedMemory::length() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.GuestSharedMemory.length)
+  return _internal_length();
+}
+inline void GuestSharedMemory::_internal_set_length(uint64_t value) {
+  
+  _impl_.length_ = value;
+}
+inline void GuestSharedMemory::set_length(uint64_t value) {
+  _internal_set_length(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.GuestSharedMemory.length)
 }
 
 // -------------------------------------------------------------------
@@ -76614,6 +77195,154 @@ inline ::dsa::control::v1::VideoError* Envelope::mutable_video_error() {
   return _msg;
 }
 
+// .dsa.control.v1.VideoSlotReturned video_slot_returned = 128;
+inline bool Envelope::_internal_has_video_slot_returned() const {
+  return body_case() == kVideoSlotReturned;
+}
+inline bool Envelope::has_video_slot_returned() const {
+  return _internal_has_video_slot_returned();
+}
+inline void Envelope::set_has_video_slot_returned() {
+  _impl_._oneof_case_[0] = kVideoSlotReturned;
+}
+inline void Envelope::clear_video_slot_returned() {
+  if (_internal_has_video_slot_returned()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.body_.video_slot_returned_;
+    }
+    clear_has_body();
+  }
+}
+inline ::dsa::control::v1::VideoSlotReturned* Envelope::release_video_slot_returned() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.Envelope.video_slot_returned)
+  if (_internal_has_video_slot_returned()) {
+    clear_has_body();
+    ::dsa::control::v1::VideoSlotReturned* temp = _impl_.body_.video_slot_returned_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.body_.video_slot_returned_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::dsa::control::v1::VideoSlotReturned& Envelope::_internal_video_slot_returned() const {
+  return _internal_has_video_slot_returned()
+      ? *_impl_.body_.video_slot_returned_
+      : reinterpret_cast< ::dsa::control::v1::VideoSlotReturned&>(::dsa::control::v1::_VideoSlotReturned_default_instance_);
+}
+inline const ::dsa::control::v1::VideoSlotReturned& Envelope::video_slot_returned() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.Envelope.video_slot_returned)
+  return _internal_video_slot_returned();
+}
+inline ::dsa::control::v1::VideoSlotReturned* Envelope::unsafe_arena_release_video_slot_returned() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:dsa.control.v1.Envelope.video_slot_returned)
+  if (_internal_has_video_slot_returned()) {
+    clear_has_body();
+    ::dsa::control::v1::VideoSlotReturned* temp = _impl_.body_.video_slot_returned_;
+    _impl_.body_.video_slot_returned_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void Envelope::unsafe_arena_set_allocated_video_slot_returned(::dsa::control::v1::VideoSlotReturned* video_slot_returned) {
+  clear_body();
+  if (video_slot_returned) {
+    set_has_video_slot_returned();
+    _impl_.body_.video_slot_returned_ = video_slot_returned;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.Envelope.video_slot_returned)
+}
+inline ::dsa::control::v1::VideoSlotReturned* Envelope::_internal_mutable_video_slot_returned() {
+  if (!_internal_has_video_slot_returned()) {
+    clear_body();
+    set_has_video_slot_returned();
+    _impl_.body_.video_slot_returned_ = CreateMaybeMessage< ::dsa::control::v1::VideoSlotReturned >(GetArenaForAllocation());
+  }
+  return _impl_.body_.video_slot_returned_;
+}
+inline ::dsa::control::v1::VideoSlotReturned* Envelope::mutable_video_slot_returned() {
+  ::dsa::control::v1::VideoSlotReturned* _msg = _internal_mutable_video_slot_returned();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.Envelope.video_slot_returned)
+  return _msg;
+}
+
+// .dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;
+inline bool Envelope::_internal_has_guest_shared_memory() const {
+  return body_case() == kGuestSharedMemory;
+}
+inline bool Envelope::has_guest_shared_memory() const {
+  return _internal_has_guest_shared_memory();
+}
+inline void Envelope::set_has_guest_shared_memory() {
+  _impl_._oneof_case_[0] = kGuestSharedMemory;
+}
+inline void Envelope::clear_guest_shared_memory() {
+  if (_internal_has_guest_shared_memory()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.body_.guest_shared_memory_;
+    }
+    clear_has_body();
+  }
+}
+inline ::dsa::control::v1::GuestSharedMemory* Envelope::release_guest_shared_memory() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.Envelope.guest_shared_memory)
+  if (_internal_has_guest_shared_memory()) {
+    clear_has_body();
+    ::dsa::control::v1::GuestSharedMemory* temp = _impl_.body_.guest_shared_memory_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.body_.guest_shared_memory_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::dsa::control::v1::GuestSharedMemory& Envelope::_internal_guest_shared_memory() const {
+  return _internal_has_guest_shared_memory()
+      ? *_impl_.body_.guest_shared_memory_
+      : reinterpret_cast< ::dsa::control::v1::GuestSharedMemory&>(::dsa::control::v1::_GuestSharedMemory_default_instance_);
+}
+inline const ::dsa::control::v1::GuestSharedMemory& Envelope::guest_shared_memory() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.Envelope.guest_shared_memory)
+  return _internal_guest_shared_memory();
+}
+inline ::dsa::control::v1::GuestSharedMemory* Envelope::unsafe_arena_release_guest_shared_memory() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:dsa.control.v1.Envelope.guest_shared_memory)
+  if (_internal_has_guest_shared_memory()) {
+    clear_has_body();
+    ::dsa::control::v1::GuestSharedMemory* temp = _impl_.body_.guest_shared_memory_;
+    _impl_.body_.guest_shared_memory_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void Envelope::unsafe_arena_set_allocated_guest_shared_memory(::dsa::control::v1::GuestSharedMemory* guest_shared_memory) {
+  clear_body();
+  if (guest_shared_memory) {
+    set_has_guest_shared_memory();
+    _impl_.body_.guest_shared_memory_ = guest_shared_memory;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.Envelope.guest_shared_memory)
+}
+inline ::dsa::control::v1::GuestSharedMemory* Envelope::_internal_mutable_guest_shared_memory() {
+  if (!_internal_has_guest_shared_memory()) {
+    clear_body();
+    set_has_guest_shared_memory();
+    _impl_.body_.guest_shared_memory_ = CreateMaybeMessage< ::dsa::control::v1::GuestSharedMemory >(GetArenaForAllocation());
+  }
+  return _impl_.body_.guest_shared_memory_;
+}
+inline ::dsa::control::v1::GuestSharedMemory* Envelope::mutable_guest_shared_memory() {
+  ::dsa::control::v1::GuestSharedMemory* _msg = _internal_mutable_guest_shared_memory();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.Envelope.guest_shared_memory)
+  return _msg;
+}
+
 // .dsa.control.v1.LogStream log_stream = 130;
 inline bool Envelope::_internal_has_log_stream() const {
   return body_case() == kLogStream;
@@ -83064,6 +83793,10 @@ inline Envelope::BodyCase Envelope::body_case() const {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

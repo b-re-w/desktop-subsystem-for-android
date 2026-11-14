@@ -1838,6 +1838,7 @@ PROTOBUF_CONSTEXPR VideoDecoderOpen::VideoDecoderOpen(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.codec_)*/0
   , /*decltype(_impl_.width_)*/0u
+  , /*decltype(_impl_.picture_region_id_)*/uint64_t{0u}
   , /*decltype(_impl_.height_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct VideoDecoderOpenDefaultTypeInternal {
@@ -1853,6 +1854,7 @@ PROTOBUF_CONSTEXPR VideoDecoderOpened::VideoDecoderOpened(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.error_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.ok_)*/false
+  , /*decltype(_impl_.shared_pictures_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct VideoDecoderOpenedDefaultTypeInternal {
   PROTOBUF_CONSTEXPR VideoDecoderOpenedDefaultTypeInternal()
@@ -1889,6 +1891,8 @@ PROTOBUF_CONSTEXPR VideoFrame::VideoFrame(
   , /*decltype(_impl_.height_)*/0u
   , /*decltype(_impl_.stride_)*/0u
   , /*decltype(_impl_.end_of_stream_)*/false
+  , /*decltype(_impl_.slot_offset_)*/uint64_t{0u}
+  , /*decltype(_impl_.slot_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct VideoFrameDefaultTypeInternal {
   PROTOBUF_CONSTEXPR VideoFrameDefaultTypeInternal()
@@ -1899,6 +1903,34 @@ struct VideoFrameDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 VideoFrameDefaultTypeInternal _VideoFrame_default_instance_;
+PROTOBUF_CONSTEXPR VideoSlotReturned::VideoSlotReturned(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.slot_)*/0u
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct VideoSlotReturnedDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR VideoSlotReturnedDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~VideoSlotReturnedDefaultTypeInternal() {}
+  union {
+    VideoSlotReturned _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 VideoSlotReturnedDefaultTypeInternal _VideoSlotReturned_default_instance_;
+PROTOBUF_CONSTEXPR GuestSharedMemory::GuestSharedMemory(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.guest_physical_address_)*/uint64_t{0u}
+  , /*decltype(_impl_.length_)*/uint64_t{0u}
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct GuestSharedMemoryDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR GuestSharedMemoryDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~GuestSharedMemoryDefaultTypeInternal() {}
+  union {
+    GuestSharedMemory _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GuestSharedMemoryDefaultTypeInternal _GuestSharedMemory_default_instance_;
 PROTOBUF_CONSTEXPR VideoFlush::VideoFlush(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._cached_size_)*/{}} {}
@@ -38622,6 +38654,7 @@ VideoDecoderOpen::VideoDecoderOpen(const VideoDecoderOpen& from)
   new (&_impl_) Impl_{
       decltype(_impl_.codec_){}
     , decltype(_impl_.width_){}
+    , decltype(_impl_.picture_region_id_){}
     , decltype(_impl_.height_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -38639,6 +38672,7 @@ inline void VideoDecoderOpen::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.codec_){0}
     , decltype(_impl_.width_){0u}
+    , decltype(_impl_.picture_region_id_){uint64_t{0u}}
     , decltype(_impl_.height_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -38704,6 +38738,14 @@ const char* VideoDecoderOpen::_InternalParse(const char* ptr, ::_pbi::ParseConte
         } else
           goto handle_unusual;
         continue;
+      // uint64 picture_region_id = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _impl_.picture_region_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -38752,6 +38794,12 @@ uint8_t* VideoDecoderOpen::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(3, this->_internal_height(), target);
   }
 
+  // uint64 picture_region_id = 4;
+  if (this->_internal_picture_region_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(4, this->_internal_picture_region_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -38777,6 +38825,11 @@ size_t VideoDecoderOpen::ByteSizeLong() const {
   // uint32 width = 2;
   if (this->_internal_width() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_width());
+  }
+
+  // uint64 picture_region_id = 4;
+  if (this->_internal_picture_region_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_picture_region_id());
   }
 
   // uint32 height = 3;
@@ -38810,6 +38863,9 @@ void VideoDecoderOpen::MergeFrom(const VideoDecoderOpen& from) {
   }
   if (from._internal_width() != 0) {
     _this->_internal_set_width(from._internal_width());
+  }
+  if (from._internal_picture_region_id() != 0) {
+    _this->_internal_set_picture_region_id(from._internal_picture_region_id());
   }
   if (from._internal_height() != 0) {
     _this->_internal_set_height(from._internal_height());
@@ -38862,6 +38918,7 @@ VideoDecoderOpened::VideoDecoderOpened(const VideoDecoderOpened& from)
   new (&_impl_) Impl_{
       decltype(_impl_.error_){}
     , decltype(_impl_.ok_){}
+    , decltype(_impl_.shared_pictures_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -38873,7 +38930,9 @@ VideoDecoderOpened::VideoDecoderOpened(const VideoDecoderOpened& from)
     _this->_impl_.error_.Set(from._internal_error(), 
       _this->GetArenaForAllocation());
   }
-  _this->_impl_.ok_ = from._impl_.ok_;
+  ::memcpy(&_impl_.ok_, &from._impl_.ok_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.shared_pictures_) -
+    reinterpret_cast<char*>(&_impl_.ok_)) + sizeof(_impl_.shared_pictures_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.VideoDecoderOpened)
 }
 
@@ -38884,6 +38943,7 @@ inline void VideoDecoderOpened::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.error_){}
     , decltype(_impl_.ok_){false}
+    , decltype(_impl_.shared_pictures_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.error_.InitDefault();
@@ -38917,7 +38977,9 @@ void VideoDecoderOpened::Clear() {
   (void) cached_has_bits;
 
   _impl_.error_.ClearToEmpty();
-  _impl_.ok_ = false;
+  ::memset(&_impl_.ok_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.shared_pictures_) -
+      reinterpret_cast<char*>(&_impl_.ok_)) + sizeof(_impl_.shared_pictures_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -38942,6 +39004,14 @@ const char* VideoDecoderOpened::_InternalParse(const char* ptr, ::_pbi::ParseCon
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
           CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool shared_pictures = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.shared_pictures_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
@@ -38990,6 +39060,12 @@ uint8_t* VideoDecoderOpened::_InternalSerialize(
         2, this->_internal_error(), target);
   }
 
+  // bool shared_pictures = 3;
+  if (this->_internal_shared_pictures() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_shared_pictures(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -39015,6 +39091,11 @@ size_t VideoDecoderOpened::ByteSizeLong() const {
 
   // bool ok = 1;
   if (this->_internal_ok() != 0) {
+    total_size += 1 + 1;
+  }
+
+  // bool shared_pictures = 3;
+  if (this->_internal_shared_pictures() != 0) {
     total_size += 1 + 1;
   }
 
@@ -39045,6 +39126,9 @@ void VideoDecoderOpened::MergeFrom(const VideoDecoderOpened& from) {
   if (from._internal_ok() != 0) {
     _this->_internal_set_ok(from._internal_ok());
   }
+  if (from._internal_shared_pictures() != 0) {
+    _this->_internal_set_shared_pictures(from._internal_shared_pictures());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -39068,7 +39152,12 @@ void VideoDecoderOpened::InternalSwap(VideoDecoderOpened* other) {
       &_impl_.error_, lhs_arena,
       &other->_impl_.error_, rhs_arena
   );
-  swap(_impl_.ok_, other->_impl_.ok_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(VideoDecoderOpened, _impl_.shared_pictures_)
+      + sizeof(VideoDecoderOpened::_impl_.shared_pictures_)
+      - PROTOBUF_FIELD_OFFSET(VideoDecoderOpened, _impl_.ok_)>(
+          reinterpret_cast<char*>(&_impl_.ok_),
+          reinterpret_cast<char*>(&other->_impl_.ok_));
 }
 
 std::string VideoDecoderOpened::GetTypeName() const {
@@ -39407,6 +39496,8 @@ VideoFrame::VideoFrame(const VideoFrame& from)
     , decltype(_impl_.height_){}
     , decltype(_impl_.stride_){}
     , decltype(_impl_.end_of_stream_){}
+    , decltype(_impl_.slot_offset_){}
+    , decltype(_impl_.slot_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -39419,8 +39510,8 @@ VideoFrame::VideoFrame(const VideoFrame& from)
       _this->GetArenaForAllocation());
   }
   ::memcpy(&_impl_.frame_index_, &from._impl_.frame_index_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.end_of_stream_) -
-    reinterpret_cast<char*>(&_impl_.frame_index_)) + sizeof(_impl_.end_of_stream_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.slot_) -
+    reinterpret_cast<char*>(&_impl_.frame_index_)) + sizeof(_impl_.slot_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.VideoFrame)
 }
 
@@ -39436,6 +39527,8 @@ inline void VideoFrame::SharedCtor(
     , decltype(_impl_.height_){0u}
     , decltype(_impl_.stride_){0u}
     , decltype(_impl_.end_of_stream_){false}
+    , decltype(_impl_.slot_offset_){uint64_t{0u}}
+    , decltype(_impl_.slot_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.nv12_.InitDefault();
@@ -39470,8 +39563,8 @@ void VideoFrame::Clear() {
 
   _impl_.nv12_.ClearToEmpty();
   ::memset(&_impl_.frame_index_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.end_of_stream_) -
-      reinterpret_cast<char*>(&_impl_.frame_index_)) + sizeof(_impl_.end_of_stream_));
+      reinterpret_cast<char*>(&_impl_.slot_) -
+      reinterpret_cast<char*>(&_impl_.frame_index_)) + sizeof(_impl_.slot_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -39534,6 +39627,22 @@ const char* VideoFrame::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
           _impl_.end_of_stream_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 slot = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 64)) {
+          _impl_.slot_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 slot_offset = 9;
+      case 9:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 72)) {
+          _impl_.slot_offset_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -39609,6 +39718,18 @@ uint8_t* VideoFrame::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteBoolToArray(7, this->_internal_end_of_stream(), target);
   }
 
+  // uint32 slot = 8;
+  if (this->_internal_slot() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(8, this->_internal_slot(), target);
+  }
+
+  // uint64 slot_offset = 9;
+  if (this->_internal_slot_offset() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(9, this->_internal_slot_offset(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -39662,6 +39783,16 @@ size_t VideoFrame::ByteSizeLong() const {
     total_size += 1 + 1;
   }
 
+  // uint64 slot_offset = 9;
+  if (this->_internal_slot_offset() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_slot_offset());
+  }
+
+  // uint32 slot = 8;
+  if (this->_internal_slot() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_slot());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -39704,6 +39835,12 @@ void VideoFrame::MergeFrom(const VideoFrame& from) {
   if (from._internal_end_of_stream() != 0) {
     _this->_internal_set_end_of_stream(from._internal_end_of_stream());
   }
+  if (from._internal_slot_offset() != 0) {
+    _this->_internal_set_slot_offset(from._internal_slot_offset());
+  }
+  if (from._internal_slot() != 0) {
+    _this->_internal_set_slot(from._internal_slot());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -39728,8 +39865,8 @@ void VideoFrame::InternalSwap(VideoFrame* other) {
       &other->_impl_.nv12_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(VideoFrame, _impl_.end_of_stream_)
-      + sizeof(VideoFrame::_impl_.end_of_stream_)
+      PROTOBUF_FIELD_OFFSET(VideoFrame, _impl_.slot_)
+      + sizeof(VideoFrame::_impl_.slot_)
       - PROTOBUF_FIELD_OFFSET(VideoFrame, _impl_.frame_index_)>(
           reinterpret_cast<char*>(&_impl_.frame_index_),
           reinterpret_cast<char*>(&other->_impl_.frame_index_));
@@ -39737,6 +39874,451 @@ void VideoFrame::InternalSwap(VideoFrame* other) {
 
 std::string VideoFrame::GetTypeName() const {
   return "dsa.control.v1.VideoFrame";
+}
+
+
+// ===================================================================
+
+class VideoSlotReturned::_Internal {
+ public:
+};
+
+VideoSlotReturned::VideoSlotReturned(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.VideoSlotReturned)
+}
+VideoSlotReturned::VideoSlotReturned(const VideoSlotReturned& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  VideoSlotReturned* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.slot_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  _this->_impl_.slot_ = from._impl_.slot_;
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.VideoSlotReturned)
+}
+
+inline void VideoSlotReturned::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.slot_){0u}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+VideoSlotReturned::~VideoSlotReturned() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.VideoSlotReturned)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void VideoSlotReturned::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void VideoSlotReturned::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void VideoSlotReturned::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.VideoSlotReturned)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.slot_ = 0u;
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* VideoSlotReturned::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // uint32 slot = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.slot_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* VideoSlotReturned::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.VideoSlotReturned)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // uint32 slot = 1;
+  if (this->_internal_slot() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(1, this->_internal_slot(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.VideoSlotReturned)
+  return target;
+}
+
+size_t VideoSlotReturned::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.VideoSlotReturned)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // uint32 slot = 1;
+  if (this->_internal_slot() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_slot());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void VideoSlotReturned::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const VideoSlotReturned*>(
+      &from));
+}
+
+void VideoSlotReturned::MergeFrom(const VideoSlotReturned& from) {
+  VideoSlotReturned* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.VideoSlotReturned)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_slot() != 0) {
+    _this->_internal_set_slot(from._internal_slot());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void VideoSlotReturned::CopyFrom(const VideoSlotReturned& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.VideoSlotReturned)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool VideoSlotReturned::IsInitialized() const {
+  return true;
+}
+
+void VideoSlotReturned::InternalSwap(VideoSlotReturned* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_.slot_, other->_impl_.slot_);
+}
+
+std::string VideoSlotReturned::GetTypeName() const {
+  return "dsa.control.v1.VideoSlotReturned";
+}
+
+
+// ===================================================================
+
+class GuestSharedMemory::_Internal {
+ public:
+};
+
+GuestSharedMemory::GuestSharedMemory(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.GuestSharedMemory)
+}
+GuestSharedMemory::GuestSharedMemory(const GuestSharedMemory& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  GuestSharedMemory* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.name_){}
+    , decltype(_impl_.guest_physical_address_){}
+    , decltype(_impl_.length_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  _impl_.name_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.name_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_name().empty()) {
+    _this->_impl_.name_.Set(from._internal_name(), 
+      _this->GetArenaForAllocation());
+  }
+  ::memcpy(&_impl_.guest_physical_address_, &from._impl_.guest_physical_address_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.length_) -
+    reinterpret_cast<char*>(&_impl_.guest_physical_address_)) + sizeof(_impl_.length_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.GuestSharedMemory)
+}
+
+inline void GuestSharedMemory::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.name_){}
+    , decltype(_impl_.guest_physical_address_){uint64_t{0u}}
+    , decltype(_impl_.length_){uint64_t{0u}}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.name_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.name_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+GuestSharedMemory::~GuestSharedMemory() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.GuestSharedMemory)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void GuestSharedMemory::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.name_.Destroy();
+}
+
+void GuestSharedMemory::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void GuestSharedMemory::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.GuestSharedMemory)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.name_.ClearToEmpty();
+  ::memset(&_impl_.guest_physical_address_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.length_) -
+      reinterpret_cast<char*>(&_impl_.guest_physical_address_)) + sizeof(_impl_.length_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* GuestSharedMemory::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string name = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_name();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 guest_physical_address = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.guest_physical_address_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 length = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.length_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* GuestSharedMemory::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.GuestSharedMemory)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string name = 1;
+  if (!this->_internal_name().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_name().data(), static_cast<int>(this->_internal_name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.GuestSharedMemory.name");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_name(), target);
+  }
+
+  // uint64 guest_physical_address = 2;
+  if (this->_internal_guest_physical_address() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_guest_physical_address(), target);
+  }
+
+  // uint64 length = 3;
+  if (this->_internal_length() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(3, this->_internal_length(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.GuestSharedMemory)
+  return target;
+}
+
+size_t GuestSharedMemory::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.GuestSharedMemory)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string name = 1;
+  if (!this->_internal_name().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_name());
+  }
+
+  // uint64 guest_physical_address = 2;
+  if (this->_internal_guest_physical_address() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_guest_physical_address());
+  }
+
+  // uint64 length = 3;
+  if (this->_internal_length() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_length());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void GuestSharedMemory::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const GuestSharedMemory*>(
+      &from));
+}
+
+void GuestSharedMemory::MergeFrom(const GuestSharedMemory& from) {
+  GuestSharedMemory* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.GuestSharedMemory)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_name().empty()) {
+    _this->_internal_set_name(from._internal_name());
+  }
+  if (from._internal_guest_physical_address() != 0) {
+    _this->_internal_set_guest_physical_address(from._internal_guest_physical_address());
+  }
+  if (from._internal_length() != 0) {
+    _this->_internal_set_length(from._internal_length());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void GuestSharedMemory::CopyFrom(const GuestSharedMemory& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.GuestSharedMemory)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool GuestSharedMemory::IsInitialized() const {
+  return true;
+}
+
+void GuestSharedMemory::InternalSwap(GuestSharedMemory* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.name_, lhs_arena,
+      &other->_impl_.name_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(GuestSharedMemory, _impl_.length_)
+      + sizeof(GuestSharedMemory::_impl_.length_)
+      - PROTOBUF_FIELD_OFFSET(GuestSharedMemory, _impl_.guest_physical_address_)>(
+          reinterpret_cast<char*>(&_impl_.guest_physical_address_),
+          reinterpret_cast<char*>(&other->_impl_.guest_physical_address_));
+}
+
+std::string GuestSharedMemory::GetTypeName() const {
+  return "dsa.control.v1.GuestSharedMemory";
 }
 
 
@@ -67626,6 +68208,8 @@ class Envelope::_Internal {
   static const ::dsa::control::v1::VideoFlush& video_flush(const Envelope* msg);
   static const ::dsa::control::v1::VideoFlushed& video_flushed(const Envelope* msg);
   static const ::dsa::control::v1::VideoError& video_error(const Envelope* msg);
+  static const ::dsa::control::v1::VideoSlotReturned& video_slot_returned(const Envelope* msg);
+  static const ::dsa::control::v1::GuestSharedMemory& guest_shared_memory(const Envelope* msg);
   static const ::dsa::control::v1::LogStream& log_stream(const Envelope* msg);
   static const ::dsa::control::v1::LogDump& log_dump(const Envelope* msg);
   static const ::dsa::control::v1::LogRecords& log_records(const Envelope* msg);
@@ -68158,6 +68742,14 @@ Envelope::_Internal::video_flushed(const Envelope* msg) {
 const ::dsa::control::v1::VideoError&
 Envelope::_Internal::video_error(const Envelope* msg) {
   return *msg->_impl_.body_.video_error_;
+}
+const ::dsa::control::v1::VideoSlotReturned&
+Envelope::_Internal::video_slot_returned(const Envelope* msg) {
+  return *msg->_impl_.body_.video_slot_returned_;
+}
+const ::dsa::control::v1::GuestSharedMemory&
+Envelope::_Internal::guest_shared_memory(const Envelope* msg) {
+  return *msg->_impl_.body_.guest_shared_memory_;
 }
 const ::dsa::control::v1::LogStream&
 Envelope::_Internal::log_stream(const Envelope* msg) {
@@ -70172,6 +70764,36 @@ void Envelope::set_allocated_video_error(::dsa::control::v1::VideoError* video_e
   }
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.video_error)
 }
+void Envelope::set_allocated_video_slot_returned(::dsa::control::v1::VideoSlotReturned* video_slot_returned) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_body();
+  if (video_slot_returned) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(video_slot_returned);
+    if (message_arena != submessage_arena) {
+      video_slot_returned = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, video_slot_returned, submessage_arena);
+    }
+    set_has_video_slot_returned();
+    _impl_.body_.video_slot_returned_ = video_slot_returned;
+  }
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.video_slot_returned)
+}
+void Envelope::set_allocated_guest_shared_memory(::dsa::control::v1::GuestSharedMemory* guest_shared_memory) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_body();
+  if (guest_shared_memory) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(guest_shared_memory);
+    if (message_arena != submessage_arena) {
+      guest_shared_memory = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, guest_shared_memory, submessage_arena);
+    }
+    set_has_guest_shared_memory();
+    _impl_.body_.guest_shared_memory_ = guest_shared_memory;
+  }
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.guest_shared_memory)
+}
 void Envelope::set_allocated_log_stream(::dsa::control::v1::LogStream* log_stream) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   clear_body();
@@ -72049,6 +72671,16 @@ Envelope::Envelope(const Envelope& from)
           from._internal_video_error());
       break;
     }
+    case kVideoSlotReturned: {
+      _this->_internal_mutable_video_slot_returned()->::dsa::control::v1::VideoSlotReturned::MergeFrom(
+          from._internal_video_slot_returned());
+      break;
+    }
+    case kGuestSharedMemory: {
+      _this->_internal_mutable_guest_shared_memory()->::dsa::control::v1::GuestSharedMemory::MergeFrom(
+          from._internal_guest_shared_memory());
+      break;
+    }
     case kLogStream: {
       _this->_internal_mutable_log_stream()->::dsa::control::v1::LogStream::MergeFrom(
           from._internal_log_stream());
@@ -73189,6 +73821,18 @@ void Envelope::clear_body() {
     case kVideoError: {
       if (GetArenaForAllocation() == nullptr) {
         delete _impl_.body_.video_error_;
+      }
+      break;
+    }
+    case kVideoSlotReturned: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.body_.video_slot_returned_;
+      }
+      break;
+    }
+    case kGuestSharedMemory: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.body_.guest_shared_memory_;
       }
       break;
     }
@@ -74470,6 +75114,22 @@ const char* Envelope::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
       case 127:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 250)) {
           ptr = ctx->ParseMessage(_internal_mutable_video_error(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .dsa.control.v1.VideoSlotReturned video_slot_returned = 128;
+      case 128:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 2)) {
+          ptr = ctx->ParseMessage(_internal_mutable_video_slot_returned(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;
+      case 129:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          ptr = ctx->ParseMessage(_internal_mutable_guest_shared_memory(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -75993,6 +76653,20 @@ uint8_t* Envelope::_InternalSerialize(
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(127, _Internal::video_error(this),
         _Internal::video_error(this).GetCachedSize(), target, stream);
+  }
+
+  // .dsa.control.v1.VideoSlotReturned video_slot_returned = 128;
+  if (_internal_has_video_slot_returned()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(128, _Internal::video_slot_returned(this),
+        _Internal::video_slot_returned(this).GetCachedSize(), target, stream);
+  }
+
+  // .dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;
+  if (_internal_has_guest_shared_memory()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(129, _Internal::guest_shared_memory(this),
+        _Internal::guest_shared_memory(this).GetCachedSize(), target, stream);
   }
 
   // .dsa.control.v1.LogStream log_stream = 130;
@@ -77531,6 +78205,20 @@ size_t Envelope::ByteSizeLong() const {
           *_impl_.body_.video_error_);
       break;
     }
+    // .dsa.control.v1.VideoSlotReturned video_slot_returned = 128;
+    case kVideoSlotReturned: {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.body_.video_slot_returned_);
+      break;
+    }
+    // .dsa.control.v1.GuestSharedMemory guest_shared_memory = 129;
+    case kGuestSharedMemory: {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.body_.guest_shared_memory_);
+      break;
+    }
     // .dsa.control.v1.LogStream log_stream = 130;
     case kLogStream: {
       total_size += 2 +
@@ -78721,6 +79409,16 @@ void Envelope::MergeFrom(const Envelope& from) {
           from._internal_video_error());
       break;
     }
+    case kVideoSlotReturned: {
+      _this->_internal_mutable_video_slot_returned()->::dsa::control::v1::VideoSlotReturned::MergeFrom(
+          from._internal_video_slot_returned());
+      break;
+    }
+    case kGuestSharedMemory: {
+      _this->_internal_mutable_guest_shared_memory()->::dsa::control::v1::GuestSharedMemory::MergeFrom(
+          from._internal_guest_shared_memory());
+      break;
+    }
     case kLogStream: {
       _this->_internal_mutable_log_stream()->::dsa::control::v1::LogStream::MergeFrom(
           from._internal_log_stream());
@@ -79670,6 +80368,14 @@ Arena::CreateMaybeMessage< ::dsa::control::v1::VideoPacket >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::VideoFrame*
 Arena::CreateMaybeMessage< ::dsa::control::v1::VideoFrame >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::VideoFrame >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::VideoSlotReturned*
+Arena::CreateMaybeMessage< ::dsa::control::v1::VideoSlotReturned >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::VideoSlotReturned >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::GuestSharedMemory*
+Arena::CreateMaybeMessage< ::dsa::control::v1::GuestSharedMemory >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::GuestSharedMemory >(arena);
 }
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::VideoFlush*
 Arena::CreateMaybeMessage< ::dsa::control::v1::VideoFlush >(Arena* arena) {

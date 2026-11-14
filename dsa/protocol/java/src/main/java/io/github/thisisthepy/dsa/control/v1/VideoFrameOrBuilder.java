@@ -48,4 +48,23 @@ public interface VideoFrameOrBuilder extends
    * @return The endOfStream.
    */
   boolean getEndOfStream();
+
+  /**
+   * <pre>
+   * Not 0: the picture is not in `nv12` but in the shared picture region, `slot_offset`
+   * bytes from the region's start, laid out as `nv12` would be. The slot is the guest's to
+   * read until it sends VideoSlotReturned with this number; the host does not write it
+   * before then. Every slot of a connection is the host's again when the connection ends.
+   * </pre>
+   *
+   * <code>uint32 slot = 8;</code>
+   * @return The slot.
+   */
+  int getSlot();
+
+  /**
+   * <code>uint64 slot_offset = 9;</code>
+   * @return The slotOffset.
+   */
+  long getSlotOffset();
 }
