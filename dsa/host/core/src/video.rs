@@ -189,6 +189,19 @@ pub trait VideoDecoder: Send {
     fn use_slots(&mut self, slots: Arc<StreamSlots>) {
         let _ = slots;
     }
+    /// No packet has come for a while ([`IDLE_AFTER`]): the video is paused, or its app
+    /// stopped without releasing the codec. The decoder lets go of what its next picture can
+    /// make again (buffers sized for the stream's pictures, the spare memory its device keeps)
+    /// and says what that was, for the log; `None` when it let go of nothing. The stream goes
+    /// on as before when the next packet comes.
+    fn idle(&mut self) -> Option<String> {
+        None
+    }
+    /// The stream has ended and the decoder is about to be dropped: it lets go of everything it
+    /// holds now, in the order its platform needs, and says what that was, for the log.
+    fn release(&mut self) -> Option<String> {
+        None
+    }
 }
 
 /// The host's video decoders.
@@ -211,6 +224,51 @@ pub trait VideoDecoders: Send + Sync {
     fn picture_slots(&self) -> Result<Arc<PictureSlots>, String> {
         Err("this host shares no memory with the guest".into())
     }
+    /// One stream's decoder has been released and dropped, whether or not others still run.
+    /// A platform whose decoders share a device gives back what that one decoder left there
+    /// (the driver's spare memory, the heap's free blocks): waiting for the last decoder kept a
+    /// 4K stream's memory for as long as any other video, however small, was open.
+    fn decoder_closed(&self) {}
+}
+
+/// How long a stream goes without a packet before its decoder is told it is idle
+/// ([`VideoDecoder::idle`]). Long enough that a stream that is only slow (a live stream
+/// buffering) keeps its buffers, short enough that a paused video or an app that stopped
+/// without releasing its codec gives its memory back before anyone looks.
+pub const IDLE_AFTER: Duration = Duration::from_secs(10);
+
+/// The log line for a stream that ended: its format and largest picture, how many pictures it
+/// gave, why it ended, and what was let go with its decoder (`freed`, as the decoder said).
+pub fn stream_end_line(
+    codec: Codec,
+    largest: Option<(u32, u32)>,
+    pictures: u64,
+    end: &VideoEnd,
+    freed: Option<&str>,
+) -> String {
+    let size = largest
+        .map(|(w, h)| format!(" {w}x{h}"))
+        .unwrap_or_default();
+    let why = match end {
+        VideoEnd::Closed => "the guest closed it".to_string(),
+        VideoEnd::Failed(why) => why.clone(),
+    };
+    // What waited to go to the guest is freed with the connection.
+    let in_flight = largest
+        .and_then(|(w, h)| Picture::nv12_len(w, h, w))
+        .map(|bytes| {
+            format!(
+                ", up to {PICTURES_IN_FLIGHT} pictures in flight ({:.1} MiB)",
+                (bytes * PICTURES_IN_FLIGHT) as f64 / (1024.0 * 1024.0)
+            )
+        })
+        .unwrap_or_default();
+    let freed = freed.map(|f| format!(", {f}")).unwrap_or_default();
+    format!(
+        "video: the {}{size} stream ended after {pictures} pictures ({why}); let go of its \
+         decoder{in_flight}{freed}",
+        codec.name()
+    )
 }
 
 /// Why a connection ended.
@@ -393,9 +451,22 @@ pub struct StreamStats {
     slot_wait: Duration,
     size: Option<(u32, u32)>,
     surface: Option<String>,
+    /// Over the whole stream, kept across reports: the pictures handed on, and the largest.
+    total_handed_on: u64,
+    largest: Option<(u32, u32)>,
 }
 
 impl StreamStats {
+    /// The pictures handed on to the guest since the stream began.
+    pub fn total_handed_on(&self) -> u64 {
+        self.total_handed_on
+    }
+
+    /// The largest picture the stream gave, by area.
+    pub fn largest(&self) -> Option<(u32, u32)> {
+        self.largest
+    }
+
     fn begin(&mut self, now: Instant) {
         if self.started.is_none() {
             self.started = Some(now);
@@ -426,7 +497,7 @@ impl StreamStats {
         self.begin(now);
         self.handed_on += 1;
         self.waited += waited;
-        self.size = Some(size);
+        self.went_out(size);
     }
 
     /// A picture of `size` went to the guest in a slot of the shared region: only its slot's
@@ -434,7 +505,20 @@ impl StreamStats {
     pub fn in_slot(&mut self, now: Instant, size: (u32, u32)) {
         self.begin(now);
         self.in_slots += 1;
+        self.went_out(size);
+    }
+
+    /// Over the whole stream: one more picture, of `size`.
+    fn went_out(&mut self, size: (u32, u32)) {
+        self.total_handed_on += 1;
         self.size = Some(size);
+        let area = |(w, h): (u32, u32)| u64::from(w) * u64::from(h);
+        if self
+            .largest
+            .is_none_or(|largest| area(size) > area(largest))
+        {
+            self.largest = Some(size);
+        }
     }
 
     /// Before a packet, the host waited `took` for the guest to give slots back.
@@ -536,6 +620,8 @@ impl StreamStats {
             started: Some(now),
             size: self.size,
             surface: self.surface.take(),
+            total_handed_on: self.total_handed_on,
+            largest: self.largest,
             ..StreamStats::default()
         };
         Some(line)
@@ -679,10 +765,24 @@ pub fn serve_connection(
 /// As [`serve_connection`], with `log` taking the stream's numbers every [`STATS_INTERVAL`]
 /// while it plays (see [`StreamStats`]).
 pub fn serve_connection_logged(
+    connection: Box<dyn Connection>,
+    decoders: &dyn VideoDecoders,
+    build: &str,
+    log: &dyn Fn(&str),
+) -> VideoEnd {
+    serve_connection_idle(connection, decoders, build, log, IDLE_AFTER)
+}
+
+/// As [`serve_connection_logged`], with the decoder told it is idle once no packet has come
+/// for `idle_after` ([`IDLE_AFTER`] in the host). When the stream ends its decoder is released
+/// ([`VideoDecoder::release`]) and dropped, the platform hears it
+/// ([`VideoDecoders::decoder_closed`]), and one line says what was let go.
+pub fn serve_connection_idle(
     mut connection: Box<dyn Connection>,
     decoders: &dyn VideoDecoders,
     build: &str,
     log: &dyn Fn(&str),
+    idle_after: Duration,
 ) -> VideoEnd {
     let local = local_hello(Role::Host, build);
     let accepted = host_accept_open(connection.as_mut(), &local, Role::GuestVideo, OPEN_TIMEOUT);
@@ -783,11 +883,28 @@ pub fn serve_connection_logged(
         &mut outgoing,
         slots.as_deref(),
         log,
+        idle_after,
     );
     outgoing.finish(connection.as_mut());
-    // The decoder goes before the stream's slots, which then all come back.
+    // Everything the stream held goes now: the pictures that waited with the connection, then
+    // the decoder's own buffers, then the stream's slots, which all come back (the decoder
+    // holds them too), then what its platform kept for it.
+    drop(outgoing);
+    let freed = decoder.release();
     drop(decoder);
     drop(slots);
+    decoders.decoder_closed();
+    let (largest, pictures) = {
+        let stats = stats.lock().unwrap_or_else(|e| e.into_inner());
+        (stats.largest(), stats.total_handed_on())
+    };
+    log(&stream_end_line(
+        codec,
+        largest,
+        pictures,
+        &end,
+        freed.as_deref(),
+    ));
     end
 }
 
@@ -856,19 +973,37 @@ fn run_stream(
     outgoing: &mut Outgoing,
     slots: Option<&StreamSlots>,
     log: &dyn Fn(&str),
+    idle_after: Duration,
 ) -> VideoEnd {
     let mut pending = Pending::default();
     let mut gate = KeyframeGate::new(codec);
     // Messages that came while the stream waited for slots, to be taken in order.
     let mut backlog: VecDeque<Vec<u8>> = VecDeque::new();
+    // The decoder was told the stream is idle, and nothing has come since.
+    let mut idle = false;
     loop {
-        let frame = match backlog.pop_front() {
-            Some(frame) => frame,
-            None => match connection.recv(None) {
-                Ok(frame) => frame,
-                Err(TransportError::Closed) => return VideoEnd::Closed,
-                Err(error) => return VideoEnd::Failed(format!("the connection failed: {error}")),
-            },
+        let received = match backlog.pop_front() {
+            Some(frame) => Ok(frame),
+            None => connection.recv((!idle).then_some(idle_after)),
+        };
+        let frame = match received {
+            Ok(frame) => {
+                idle = false;
+                frame
+            }
+            Err(TransportError::Timeout) if !idle => {
+                idle = true;
+                if let Some(freed) = decoder.idle() {
+                    log(&format!(
+                        "video: the {} stream has had no packet for {idle_after:?}; let go of \
+                         {freed}",
+                        codec.name(),
+                    ));
+                }
+                continue;
+            }
+            Err(TransportError::Closed) => return VideoEnd::Closed,
+            Err(error) => return VideoEnd::Failed(format!("the connection failed: {error}")),
         };
         if let Some(error) = outgoing.failure() {
             return VideoEnd::Failed(format!("a message to the guest did not go out: {error}"));

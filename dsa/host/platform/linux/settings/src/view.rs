@@ -544,10 +544,23 @@ pub fn start_size_index(window: Option<&AppWindow>) -> Option<usize> {
 /// [`DpiScaling::ALL`]. System (forced) is stored and can be chosen, but while Android cannot
 /// do it (`system_forced_available` is false), its label says it is not available yet.
 pub fn dpi_scaling_choices(system_forced_available: bool) -> Vec<(String, DpiScaling)> {
+    dpi_scaling_choices_for(false, system_forced_available)
+}
+
+/// [`dpi_scaling_choices`] for one app: when DSA scales it the System way unless the user
+/// chose otherwise (`system_scaled_by_default`, from DSA's built-in list of apps that break
+/// when their density changes while they run), the automatic choice says so.
+pub fn dpi_scaling_choices_for(
+    system_scaled_by_default: bool,
+    system_forced_available: bool,
+) -> Vec<(String, DpiScaling)> {
     DpiScaling::ALL
         .into_iter()
         .map(|scaling| {
             let label = match scaling {
+                DpiScaling::Auto if system_scaled_by_default => {
+                    tr("System (recommended for this app)")
+                }
                 DpiScaling::Auto => tr("Automatic"),
                 DpiScaling::App => tr("App"),
                 DpiScaling::System => tr("System"),
@@ -575,7 +588,7 @@ pub fn dpi_scaling_subtitle(window: Option<&AppWindow>, system_forced_available:
     if scaling == DpiScaling::SystemForced && !system_forced_available {
         tr("System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System.")
     } else {
-        tr("App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, and text stays sharp.\nIt is recreated once with its state kept, so it redraws briefly.\nSystem: DSA scales the window to the same physical size, and never recreates the app. Text can look a little blurry.\nAutomatic picks App for every app.")
+        tr("App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, and text stays sharp.\nIt is recreated once with its state kept, so it redraws briefly.\nSystem: DSA scales the window to the same physical size, and never recreates the app. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube, and App for every other app.")
     }
 }
 

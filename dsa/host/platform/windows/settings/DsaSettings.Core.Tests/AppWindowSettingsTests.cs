@@ -153,6 +153,64 @@ public class AppWindowSettingsTests
     }
 
     [Fact]
+    public async Task Fr4_youtube_scales_the_system_way_by_default()
+    {
+        var list = List.Replace("com.example.reader", "com.google.android.youtube");
+        var vm = Make(new FakeCli()
+            .Answer("apps list --json", list)
+            .Answer("app-window --json",
+                "{\"apps\":[],\"system_forced_available\":false," +
+                "\"system_scaled_by_default\":[\"com.google.android.youtube\"]}"));
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.False(vm.HasError, vm.Error);
+        // YouTube, with no choice of the user's, shows its automatic choice as System for it.
+        var youtube = vm.Rows.Single(r => r.Package == "com.google.android.youtube");
+        Assert.True(vm.SystemScaledByDefault(youtube.Package));
+        var choices = youtube.DpiScalingChoices!;
+        Assert.Equal(DpiScaling.Auto, choices[youtube.DpiScalingIndex].Scaling);
+        Assert.Equal("Apps_DpiScaling_AutoSystem", choices[youtube.DpiScalingIndex].Label);
+        // Any other app's automatic choice keeps its plain name.
+        var notes = vm.Rows.Single(r => r.Package == "com.example.notes");
+        Assert.False(vm.SystemScaledByDefault(notes.Package));
+        Assert.Equal("Apps_DpiScaling_Auto", notes.DpiScalingChoices![notes.DpiScalingIndex].Label);
+        // The other choices read the same for both.
+        Assert.Equal(notes.DpiScalingChoices!.Skip(1), choices.Skip(1));
+    }
+
+    [Fact]
+    public async Task Fr4_the_users_choice_wins_over_the_built_in_list()
+    {
+        var list = List.Replace("com.example.reader", "com.google.android.youtube");
+        var cli = new FakeCli()
+            .Answer("apps list --json", list)
+            .Answer("app-window --json",
+                "{\"apps\":[],\"system_scaled_by_default\":[\"com.google.android.youtube\"]}")
+            .Answer("app-window com.google.android.youtube --fixed-size off --start-size auto --dpi-scaling app --fullscreen default --immersive default --json",
+                "{\"apps\":[{\"package\":\"com.google.android.youtube\",\"fixed_size\":false,\"start_size\":null,\"dpi_scaling\":\"app\"}]," +
+                "\"system_scaled_by_default\":[\"com.google.android.youtube\"]}");
+        var vm = Make(cli);
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        var app = vm.DpiScalingChoices.ToList().FindIndex(c => c.Scaling == DpiScaling.App);
+        await vm.SetDpiScalingAsync("com.google.android.youtube", app);
+        Assert.False(vm.HasError, vm.Error);
+        var youtube = vm.Rows.Single(r => r.Package == "com.google.android.youtube");
+        Assert.Equal(DpiScaling.App, youtube.DpiScalingChoices![youtube.DpiScalingIndex].Scaling);
+    }
+
+    [Fact]
+    public async Task Fr4_a_dsa_that_names_no_built_in_list_scales_every_app_its_own_way()
+    {
+        var vm = Make(new FakeCli()
+            .Answer("apps list --json", List)
+            .Answer("app-window --json", "{\"apps\":[]}"));
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.All(vm.Rows, row => Assert.Equal("Apps_DpiScaling_Auto", row.DpiScalingChoices![0].Label));
+    }
+
+    [Fact]
     public void Fr4_dpi_scaling_is_passed_to_dsa_as_it_takes_it()
     {
         Assert.Equal(new[] { "auto", "app", "system", "system-forced" }, DpiScalings.All.Select(DpiScalings.Code));

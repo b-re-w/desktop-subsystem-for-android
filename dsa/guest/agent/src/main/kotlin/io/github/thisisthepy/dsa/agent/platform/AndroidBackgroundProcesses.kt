@@ -2,6 +2,8 @@ package io.github.thisisthepy.dsa.agent.platform
 
 import android.app.ActivityManager
 import android.content.Context
+import android.media.AudioManager
+import android.media.AudioPlaybackConfiguration
 import android.os.ParcelFileDescriptor
 import android.os.ServiceManager
 import io.github.thisisthepy.dsa.agent.memory.AppProcess
@@ -10,6 +12,7 @@ import io.github.thisisthepy.dsa.agent.memory.ProcessPss
 import io.github.thisisthepy.dsa.agent.memory.ProcessRecord
 import io.github.thisisthepy.dsa.agent.memory.ProcessRecords
 import java.lang.reflect.Field
+import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -33,6 +36,8 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class AndroidBackgroundProcesses(context: Context) : BackgroundProcesses {
     private val activities = context.getSystemService(ActivityManager::class.java)
+    private val audio: AudioManager? = context.getSystemService(AudioManager::class.java)
+    private val packageManager = context.packageManager
 
     override fun running(): List<AppProcess> =
         activities.runningAppProcesses.orEmpty().map { info ->
@@ -66,6 +71,26 @@ class AndroidBackgroundProcesses(context: Context) : BackgroundProcesses {
             .filter { it.foreground }
             .map { it.service.packageName }
             .toSet()
+
+    /**
+     * The audio playing now: the active players' configurations, each with its app's uid and
+     * whether it is started. Both are system APIs the SDK hides, read by reflection; the
+     * configurations carry the uid only for a caller holding MODIFY_AUDIO_ROUTING, which the
+     * agent holds as a privileged app. Null when they cannot be read.
+     */
+    override fun playingPackages(): Set<String>? {
+        val configurations = audio?.activePlaybackConfigurations ?: return null
+        val uidOf = CLIENT_UID ?: return null
+        val stateOf = PLAYER_STATE ?: return null
+        val packages = HashSet<String>()
+        for (configuration in configurations) {
+            val uid = runCatching { uidOf.invoke(configuration) as Int }.getOrNull() ?: return null
+            val state = runCatching { stateOf.invoke(configuration) as Int }.getOrNull() ?: return null
+            if (state != PLAYER_STATE_STARTED || uid < 0) continue
+            packageManager.getPackagesForUid(uid)?.let { packages += it }
+        }
+        return packages
+    }
 
     override fun endBackground(packageName: String) {
         activities.killBackgroundProcesses(packageName)
@@ -119,6 +144,16 @@ class AndroidBackgroundProcesses(context: Context) : BackgroundProcesses {
 
         val FLAGS: Field? = field("flags")
         val PROCESS_STATE: Field? = field("processState")
+
+        // AudioPlaybackConfiguration.getClientUid, getPlayerState and PLAYER_STATE_STARTED,
+        // system APIs the SDK hides.
+        const val PLAYER_STATE_STARTED = 2
+        val CLIENT_UID: Method? = method("getClientUid")
+        val PLAYER_STATE: Method? = method("getPlayerState")
+
+        fun method(name: String): Method? = runCatching {
+            AudioPlaybackConfiguration::class.java.getMethod(name)
+        }.getOrNull()
 
         fun field(name: String): Field? = runCatching {
             ActivityManager.RunningAppProcessInfo::class.java.getField(name)

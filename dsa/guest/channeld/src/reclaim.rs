@@ -105,6 +105,11 @@ pub struct MemInfo {
     pub shmem_kb: u64,
     pub slab_reclaimable_kb: u64,
     pub anon_pages_kb: u64,
+    /// The kernel's slab it cannot drop, for the log of what a reclaim returned.
+    pub slab_unreclaimable_kb: u64,
+    /// Swap (zram) in all and free, for the same.
+    pub swap_total_kb: u64,
+    pub swap_free_kb: u64,
 }
 
 impl MemInfo {
@@ -127,6 +132,9 @@ impl MemInfo {
                 "Shmem" => info.shmem_kb = value,
                 "SReclaimable" => info.slab_reclaimable_kb = value,
                 "AnonPages" => info.anon_pages_kb = value,
+                "SUnreclaim" => info.slab_unreclaimable_kb = value,
+                "SwapTotal" => info.swap_total_kb = value,
+                "SwapFree" => info.swap_free_kb = value,
                 _ => {}
             }
         }
@@ -152,6 +160,73 @@ impl MemInfo {
     pub fn used_kb(&self) -> u64 {
         self.mem_total_kb.saturating_sub(self.mem_free_kb)
     }
+}
+
+/// What the guest's memory looked like around a reclaim: `/proc/meminfo`, zram's `mm_stat`
+/// (what it holds and what that takes) and the free memory the host has taken back
+/// (`page_reporting.reported_kb`), when they can be read.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ReclaimReading {
+    pub memory: MemInfo,
+    /// zram's data before compression and the memory it takes, in KiB.
+    pub zram: Option<(u64, u64)>,
+    pub reported_kb: Option<u64>,
+}
+
+/// How long the daemon waits for init to finish a reclaim before it says what it returned.
+/// init runs each step in turn and sets the property back to `0` when done; a reclaim takes
+/// well under a second, a large one a few.
+pub const OUTCOME_WAIT_LIMIT: Duration = Duration::from_secs(15);
+
+/// The log line for what a reclaim (`what`) returned, step by step, from the readings before
+/// and after it, `took` apart. Each step shows in its own number: dropping the caches in the
+/// page cache and the reclaimable kernel caches, moving app memory to zram in the app memory
+/// and the swap in use, zram's compression and compaction in what zram takes, and the report
+/// of every free page in what the host has back. The kernel's unreclaimable slab is shown too,
+/// though no step can drop it: it is the kernel's own objects in use, and what is left of it
+/// after a heavy session says how much the kernel itself kept.
+pub fn reclaim_outcome_line(
+    what: &str,
+    before: &ReclaimReading,
+    after: &ReclaimReading,
+    took: Duration,
+) -> String {
+    fn mib(kb: u64) -> u64 {
+        kb / 1024
+    }
+    fn change(before: u64, after: u64) -> String {
+        format!("{} -> {} MiB", mib(before), mib(after))
+    }
+    let (b, a) = (&before.memory, &after.memory);
+    let page_cache = |m: &MemInfo| m.cached_kb.saturating_sub(m.shmem_kb) + m.buffers_kb;
+    let swapped = |m: &MemInfo| m.swap_total_kb.saturating_sub(m.swap_free_kb);
+    let mut line = format!(
+        "{what} returned in {} ms: free {}; page cache {}; reclaimable kernel caches {}; \
+         unreclaimable kernel caches {}; app memory {}; swapped {}",
+        took.as_millis(),
+        change(b.mem_free_kb, a.mem_free_kb),
+        change(page_cache(b), page_cache(a)),
+        change(b.slab_reclaimable_kb, a.slab_reclaimable_kb),
+        change(b.slab_unreclaimable_kb, a.slab_unreclaimable_kb),
+        change(b.anon_pages_kb, a.anon_pages_kb),
+        change(swapped(b), swapped(a)),
+    );
+    if let (Some((b_orig, b_used)), Some((a_orig, a_used))) = (before.zram, after.zram) {
+        line.push_str(&format!(
+            "; zram {} MiB in {} -> {} MiB in {}",
+            mib(b_orig),
+            mib(b_used),
+            mib(a_orig),
+            mib(a_used)
+        ));
+    }
+    if let (Some(b_reported), Some(a_reported)) = (before.reported_kb, after.reported_kb) {
+        line.push_str(&format!(
+            "; taken back by the host {}",
+            change(b_reported, a_reported)
+        ));
+    }
+    line
 }
 
 /// Whether `/proc/pressure/memory` shows the guest short of memory: tasks stalled on it for
@@ -271,6 +346,14 @@ pub struct ReclaimPolicy {
     /// target to 800 MiB with only the Play Store shown, and the cache was kept. Refaults still
     /// hold the trim back meanwhile, so the starting app is not made to read its files twice.
     pub launch_settle: Duration,
+    /// How many looks in a row the refaults may hold a due trim back while tasks are in use.
+    /// After that the trim runs anyway, down to the target, which the refaults have raised by
+    /// then. An app that streams (a video, music) reads back what it wrote to its cache on
+    /// every look, so the refaults never stopped and the trim never ran: on the owner's PC
+    /// (0.2.4-dev) the page cache stood at 849 MiB with two windows shown, whose allowance is
+    /// 640 MiB, while a 4K video played. Six looks is half a minute, longer than any app that
+    /// only opened a file reads it back.
+    pub refault_hold_looks: u32,
 }
 
 impl Default for ReclaimPolicy {
@@ -293,6 +376,7 @@ impl Default for ReclaimPolicy {
             task_cache_kb: 192 * 1024,
             minimized_task_cache_kb: 64 * 1024,
             launch_settle: Duration::from_secs(60),
+            refault_hold_looks: 6,
         }
     }
 }
@@ -352,6 +436,9 @@ pub struct Reclaimer {
     launch_until: Option<Duration>,
     /// Whether the last [`Reclaimer::tasks_seen`] fell inside that launch.
     launching: bool,
+    /// Looks in a row in which refaults held a due trim back
+    /// ([`ReclaimPolicy::refault_hold_looks`]).
+    held_looks: u32,
 }
 
 /// Where Android is in its boot, as the working set sees it.
@@ -425,6 +512,7 @@ impl Reclaimer {
             shown_tasks: None,
             launch_until: None,
             launching: false,
+            held_looks: 0,
         }
     }
 
@@ -791,6 +879,24 @@ impl Reclaimer {
             && self
                 .last_reclaim
                 .is_none_or(|last| now.saturating_sub(last) >= self.policy.host_short_gap);
+        let trim_due = settled
+            && (tasks > 0 || self.idle_reclaimed)
+            && !pressure
+            && self
+                .last_trim
+                .is_none_or(|last| now.saturating_sub(last) >= self.policy.trim_gap)
+            && memory.droppable_kb() >= self.target_kb + self.policy.min_trim_kb;
+        // Refaults hold the trim back for an app's sake, for a few looks at most; with none in
+        // use there is no working set to protect, and the target is the floor.
+        let held = trim_due
+            && self.refaulting
+            && tasks > 0
+            && self.held_looks < self.policy.refault_hold_looks;
+        if held {
+            self.held_looks += 1;
+        } else if !(trim_due && self.refaulting && tasks > 0) {
+            self.held_looks = 0;
+        }
         let reason = if (idle_due || idle_grew) && idle_worth_it {
             self.idle_reclaimed = true;
             Some(Reason::Idle)
@@ -799,17 +905,8 @@ impl Reclaimer {
             Some(Reason::HostShort)
         } else if settled && gap_passed && worth_it && mostly_cache {
             Some(Reason::MostlyCache)
-        } else if settled
-            && (tasks > 0 || self.idle_reclaimed)
-            && !pressure
-            // Refaults hold the trim back for an app's sake; with none in use there is no
-            // working set to protect, and the target is the floor.
-            && !(self.refaulting && tasks > 0)
-            && self
-                .last_trim
-                .is_none_or(|last| now.saturating_sub(last) >= self.policy.trim_gap)
-            && memory.droppable_kb() >= self.target_kb + self.policy.min_trim_kb
-        {
+        } else if trim_due && !held {
+            self.held_looks = 0;
             // Whether or not tasks are open or the host is short: cache beyond the working
             // set is the host's. Idle stretches get their full reclaim above; between those,
             // and with apps open, the trim keeps the cache at the target.

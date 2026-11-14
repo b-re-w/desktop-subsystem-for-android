@@ -44,7 +44,10 @@ that recover from a GPU device loss, and libandroid_runtime, which gives Google 
 computer's memory, in place of the build's own (FRAMEWORK_FILES), and
 image.json describes them under "framework". When the framework build has DSA's KeyMint
 (KEYMINT_FILES), whose root key of key blobs comes from the host, the vendor partition carries it
-in place of the KeyMint APEX, which the image then does not select.
+in place of the KeyMint APEX, which the image then does not select. When it has services.jar
+(FRAMEWORK_JAVA_FILES), built from source with the window manager that gives a dialog no caption
+bar inset, the system partition carries that jar in place of the build's own, which is then not
+dex edited: the patches it is built with make the same changes.
 """
 
 import argparse
@@ -325,6 +328,14 @@ PERMISSION_APEXES = ["SYSTEM/apex/com.android.permission.apex", "SYSTEM/apex/com
 # services.jar is compiled ahead of time (services.odex, .vdex and .art beside it), for its
 # dex: the edited jar is compiled again with the published build's filter, class loader
 # context and profile (SERVICES_PROFILE), as compile_apps compiles an edited app.
+#
+# These edits, and SERVICES_ABI_CODE's and SERVICES_WEBVIEW_ZYGOTE_CODE's below, are made to the
+# published build's jar only. With --framework from a build that has services.jar
+# (FRAMEWORK_JAVA_FILES), the image takes that jar instead: frameworks/base's patches in
+# dsa/guest/framework make the same changes in the source, and one a dex edit cannot make (no
+# caption bar source for a window that does not cover the task's caption band, so a dialog is
+# drawn where it takes its taps). check-image.py checks either jar for the changes these edits
+# describe.
 SERVICES_JAR = "SYSTEM/framework/services.jar"
 SERVICES_INSETS_CODE = {
     "Lcom/android/server/wm/InsetsPolicy;->enforceInsetsPolicyForTarget": ("replace call", {
@@ -2707,19 +2718,22 @@ def boot_receivers_left(data):
 ZIP_ALIGNMENT_EXTRA = 0xD935  # zipalign's alignment extra field: a 16-bit alignment, then padding
 
 
-def aligned_zip(data, alignment=4):
+def aligned_zip(data, alignment=4, store_dex=False):
     """The zip `data` with the data of each stored member starting at a multiple of
     `alignment` bytes, as zipalign leaves it. ART maps a jar's stored dex files straight from
     the file only when they are aligned, and otherwise copies them into memory: 20 MiB of
-    system_server's for services.jar. Members keep their order, names, dates and compression."""
+    system_server's for services.jar. Members keep their order, names, dates and compression,
+    except that with `store_dex` the dex files (classes*.dex) are stored uncompressed."""
     out = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(data)) as source, zipfile.ZipFile(out, "w") as aligned:
         for info in source.infolist():
             member = zipfile.ZipInfo(info.filename, info.date_time)
             member.compress_type = info.compress_type
+            if store_dex and re.fullmatch(r"classes\d*\.dex", info.filename):
+                member.compress_type = zipfile.ZIP_STORED
             member.external_attr = info.external_attr
             member.create_system = info.create_system
-            if info.compress_type == zipfile.ZIP_STORED:
+            if member.compress_type == zipfile.ZIP_STORED:
                 # The local header is 30 bytes, then the name and the extra field.
                 start = out.tell() + 30 + len(info.filename.encode("utf-8")) + 6
                 padding = -start % alignment
@@ -2750,6 +2764,15 @@ def edit_services_jar(data, name):
     Returns the jar as it was when it already has the edits."""
     edited = edit_apk(data, name, code=SERVICES_CODE)
     return data if edited is data else aligned_zip(edited)
+
+
+def image_services_jar(data):
+    """The framework build's services.jar as the image carries it: its dex files stored and
+    aligned, as the published build stores them, so system_server maps them from the file. The
+    services build makes no odex, and a build without dexpreopt compresses a jar's dex files;
+    make-image.py compiles the jar itself (EDITED_JARS). The jar needs no dex edit: the patches it
+    is built with make the changes SERVICES_CODE makes to the published build's."""
+    return aligned_zip(data, store_dex=True)
 
 
 def edit_permission_controller_apk(data, name):
@@ -3752,6 +3775,13 @@ import framework_lock  # noqa: E402
 
 FRAMEWORK_MANIFEST = "framework.json"
 FRAMEWORK_FILES = list(framework_lock.OUTPUTS)
+# services.jar from the same Framework build, built from the published build's source with DSA's
+# patches: its window manager gives a dialog in a freeform task no caption bar inset, so the
+# dialog is drawn where it takes its taps, and it makes the changes SERVICES_CODE makes to the
+# published build's jar. The image takes it in place of the published build's, which it then does
+# not edit, and compiles it as it compiles an edited jar. A framework build whose services build
+# failed, or from before it, has no services.jar, and the image edits the published build's.
+FRAMEWORK_JAVA_FILES = list(framework_lock.JAVA_OUTPUTS)
 GPU_RESET_PROPERTY = "debug.dsa.gpu.resets"
 GPU_RESET_RULE = "(allow surfaceflinger debug_prop (property_service (set)))"
 
@@ -3929,16 +3959,30 @@ def framework_problems(description, build_id, android_major, arch, read):
         if name in FRAMEWORK_FILES + KEYMINT_ELF_FILES and elf_machine(data[:64]) != machine:
             problems.append(f"the framework's {name} is built for ELF machine {elf_machine(data[:64])}, "
                             f"not {arch} ({machine})")
+        if name in FRAMEWORK_JAVA_FILES and not dex_jar(data):
+            problems.append(f"the framework's {name} is not a jar with dex code")
     return problems
+
+
+def dex_jar(data):
+    """Whether `data` is a jar whose classes.dex is a dex file."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            return "classes.dex" in z.namelist() and z.read("classes.dex")[:4] == b"dex\n"
+    except zipfile.BadZipFile:
+        return False
 
 
 def framework_names(files):
     """The files a framework build must have, given the names its framework.json lists: the
-    framework's (FRAMEWORK_FILES), and the KeyMint's when it has any of them (a build from before the KeyMint
-    has none)."""
+    framework's (FRAMEWORK_FILES), the KeyMint's when it has any of them (a build from before the KeyMint
+    has none), and services.jar when it has it (FRAMEWORK_JAVA_FILES)."""
+    names = list(FRAMEWORK_FILES)
     if any(name in KEYMINT_FILES for name in files):
-        return FRAMEWORK_FILES + KEYMINT_FILES
-    return list(FRAMEWORK_FILES)
+        names += KEYMINT_FILES
+    if any(name in FRAMEWORK_JAVA_FILES for name in files):
+        names += FRAMEWORK_JAVA_FILES
+    return names
 
 
 def checked_framework(folder, build_id, android_major, arch):
@@ -3954,18 +3998,27 @@ def checked_framework(folder, build_id, android_major, arch):
     problems = framework_problems(description, build_id, android_major, arch, read)
     if problems:
         raise SystemExit("; ".join(problems))
-    return {name: read(name) for name in framework_names(description["files"])}, description
+    payloads = {name: read(name) for name in framework_names(description["files"])}
+    for name in FRAMEWORK_JAVA_FILES:
+        if name in payloads:
+            payloads[name] = image_services_jar(payloads[name])
+    return payloads, description
 
 
-def framework_entry(description):
-    """What image.json says of the framework an image carries."""
+def framework_entry(description, payloads=None):
+    """What image.json says of the framework an image carries: each file's SHA-256 as the image
+    has it, which for services.jar is the jar as image_services_jar stores it (from `payloads`,
+    what checked_framework returned)."""
+    files = {name: description["files"][name]["sha256"] for name in framework_names(description["files"])}
+    for name in FRAMEWORK_JAVA_FILES:
+        if name in files and payloads is not None and name in payloads:
+            files[name] = hashlib.sha256(payloads[name]).hexdigest()
     return {
         "version": description.get("version", ""),
         "build_id": description["build_id"],
         "release": description.get("release", ""),
         "arch": description["arch"],
-        "files": {name: description["files"][name]["sha256"]
-                  for name in framework_names(description["files"])},
+        "files": files,
     }
 
 
@@ -4003,6 +4056,14 @@ def check_framework(manifest, names, read):
                             "image does not recover from a GPU device loss")
         if elf_machine(data[:64]) != machine:
             problems.append(f"{name} is built for ELF machine {elf_machine(data[:64])}, not {arch}")
+    for name in FRAMEWORK_JAVA_FILES:
+        if name not in files:
+            continue
+        if name not in names:
+            problems.append(f"{name} is missing from the image")
+        elif hashlib.sha256(read(name)).hexdigest() != files[name]:
+            problems.append(f"{name} is not the framework build's file that image.json names, so a "
+                            "dialog in a window is drawn below the place that takes its taps")
     policy = "SYSTEM/etc/selinux/plat_sepolicy.cil"
     if policy in names and GPU_RESET_RULE not in read(policy).decode(errors="replace"):
         problems.append(f"SurfaceFlinger may not set {GPU_RESET_PROPERTY}, so the apps never hear of a "
@@ -7481,7 +7542,7 @@ def main():
     if args.arm_translation:
         manifest["arm_translation"] = default_arm_translation(args.arm_translation, args.arch, out)
     if framework_description is not None:
-        manifest["framework"] = framework_entry(framework_description)
+        manifest["framework"] = framework_entry(framework_description, framework_payloads)
     (out / "image.json").write_text(json.dumps(manifest, indent=2) + "\n")
     shutil.copy(signed, out / "signed-target_files.zip")
     shutil.rmtree(work)

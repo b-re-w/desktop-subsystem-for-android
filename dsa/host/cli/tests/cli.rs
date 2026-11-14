@@ -3483,6 +3483,52 @@ fn fr4_dsa_app_window_sets_and_keeps_an_apps_dpi_scaling() {
 }
 
 #[test]
+fn fr4_dsa_app_window_shows_youtube_scales_the_system_way_by_default() {
+    let ((listener, _, _), endpoint) = local_pair();
+    let _service = settings_service(listener);
+    // The settings apps learn the built-in list from here.
+    let none = json_of(&dsa(&endpoint, "app-window --json"));
+    assert_eq!(
+        none["system_scaled_by_default"],
+        serde_json::json!(["com.google.android.youtube"])
+    );
+    // YouTube with no choice of the user's is shown scaled by DSA, and why.
+    let youtube = json_of(&dsa(
+        &endpoint,
+        "app-window com.google.android.youtube --json",
+    ));
+    assert_eq!(youtube["apps"][0]["dpi_scaling"], "auto");
+    assert_eq!(youtube["apps"][0]["default_dpi_scaling"], "system");
+    let output = dsa(&endpoint, "app-window com.google.android.youtube");
+    assert_eq!(
+        stdout(&output).trim(),
+        "com.google.android.youtube: resizable, opens at the size Android gives it, is scaled \
+         by DSA on another monitor (the default for this app, which breaks when its density \
+         changes while it runs)"
+    );
+    // Any other app's default is the app way.
+    let notes = json_of(&dsa(&endpoint, "app-window com.example.notes --json"));
+    assert_eq!(notes["apps"][0]["default_dpi_scaling"], "app");
+}
+
+#[test]
+fn fr4_the_users_choice_wins_over_the_built_in_list() {
+    let ((listener, _, _), endpoint) = local_pair();
+    let _service = settings_service(listener);
+    let set = json_of(&dsa(
+        &endpoint,
+        "app-window com.google.android.youtube --dpi-scaling app --json",
+    ));
+    assert_eq!(set["apps"][0]["dpi_scaling"], "app");
+    let output = dsa(&endpoint, "app-window com.google.android.youtube");
+    assert_eq!(
+        stdout(&output).trim(),
+        "com.google.android.youtube: resizable, opens at the size Android gives it, redraws at \
+         another monitor's scale once a move ends"
+    );
+}
+
+#[test]
 fn fr30_an_apps_full_screen_choice_wins_over_the_default() {
     use dsa_cli::AppWindowAction;
     use dsa_host_core::app_windows::FullScreenPlace;

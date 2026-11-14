@@ -10,6 +10,7 @@ import io.github.thisisthepy.dsa.control.v1.CloseTask
 import io.github.thisisthepy.dsa.control.v1.Envelope
 import io.github.thisisthepy.dsa.control.v1.ImeCommit
 import io.github.thisisthepy.dsa.control.v1.ImeComposition
+import io.github.thisisthepy.dsa.control.v1.ImeInputKind
 import io.github.thisisthepy.dsa.control.v1.KeyAction
 import io.github.thisisthepy.dsa.control.v1.KeyEvent
 import io.github.thisisthepy.dsa.control.v1.LaunchApp
@@ -1183,6 +1184,41 @@ class AgentTest {
         val cursor = daemon.sentMessages().last().imeCursor
         assertEquals(4, cursor.taskId)
         assertEquals(listOf(30, 40, 32, 70), cursor.cursor.let { listOf(it.left, it.top, it.right, it.bottom) })
+    }
+
+    @Test
+    fun fr6_a_focused_editor_in_a_freeform_task_reaches_the_host_ime() {
+        // The window manager names no focused task, as Android 17 did with every task freeform,
+        // while the app's search field has the agent's input method.
+        tasks.running = listOf(appTask(3), appTask(4, packageName = "com.spotify.music"))
+        val agent = started()
+        val bounds = daemon.sentMessages().last { it.hasTaskUpdated() && it.taskUpdated.taskId == 4 }.taskUpdated.bounds
+        val focusedBefore = actions.focused.size
+
+        agent.editorChanged(
+            io.github.thisisthepy.dsa.agent.input.EditorState(
+                ImeInputKind.IME_INPUT_KIND_SEARCH, "", 0, 0, 0, 0, 0, "com.spotify.music",
+            ),
+        )
+        agent.cursorMoved(bounds.left + 30f, bounds.top + 40f, bounds.left + 31f, bounds.top + 70f)
+        scheduler.runDue()
+
+        val described = daemon.sentMessages().last { it.hasImeEditor() }.imeEditor
+        assertEquals(4, described.taskId)
+        assertEquals(ImeInputKind.IME_INPUT_KIND_SEARCH, described.kind)
+        val cursor = daemon.sentMessages().last { it.hasImeCursor() }.imeCursor
+        assertEquals(4, cursor.taskId)
+        assertEquals(listOf(30, 40, 31, 70), cursor.cursor.let { listOf(it.left, it.top, it.right, it.bottom) })
+        // The task is given the focus its editor has, and a composition then asks for no more.
+        assertEquals(listOf(4), actions.focused.drop(focusedBefore))
+        daemon.deliver(
+            Envelope.newBuilder().setImeComposition(
+                ImeComposition.newBuilder().setTaskId(4).setText("한").setCursor(1),
+            ).build().toByteArray(),
+        )
+        scheduler.runDue()
+        assertEquals(listOf("compose 한 1"), editor.calls)
+        assertEquals(listOf(4), actions.focused.drop(focusedBefore))
     }
 
     @Test

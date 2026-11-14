@@ -49,6 +49,12 @@ interface BackgroundProcesses {
     fun foregroundServicePackages(): Set<String>
 
     /**
+     * The packages whose audio is playing now (an active player of theirs is started); null when
+     * that cannot be read, and then no process that is still running a service is ended.
+     */
+    fun playingPackages(): Set<String>? = null
+
+    /**
      * Has the activity manager end the background processes of [packageName], as
      * `ActivityManager.killBackgroundProcesses` does: those of its own and those that loaded
      * its code, whose score is at least the service level. Persistent processes are never among
@@ -139,6 +145,20 @@ object ProcessRecords {
  * Each process ended is logged with its memory: `ended cached <name> (pid N, cached T s, no
  * task window): PSS P MiB, R MiB resident and S MiB swapped out to zram`.
  *
+ * An app process that is never cached because it keeps a started service running (an app that
+ * targets an Android older than 8, whose background services the system does not stop; one
+ * started by a broadcast at boot or by another app's audio session) stayed for good: the rule
+ * above looks only at cached processes, and the window rule ([ClosedApps]) only at apps whose
+ * window closed. So an app process (an app's own uid, not the system's) that holds no activity,
+ * whose packages have no task, run no foreground service, play no audio, show no notification
+ * and have no widget placed, and that has run only services (or receivers) for
+ * [serviceIdleMillis], is ended the same way, as long as everything the end reaches scores at
+ * the service level or below. An audio effect app ([AUDIO_EFFECT_PACKAGES]) is kept while any
+ * app plays audio, since it holds the effects of the sessions that play. A service the system
+ * restarts comes back, and waits twice as long each time, up to [MAX_SERVICE_IDLE_MILLIS].
+ * Each is logged as `ended background <name> (pid N, only services for T s, no task window,
+ * no foreground service, no playback): ...`.
+ *
  * Not thread safe: every method runs on the agent's scheduler thread.
  */
 class CachedProcesses(
@@ -150,6 +170,9 @@ class CachedProcesses(
     private val ownPackage: String,
     private val intervalMillis: Long = INTERVAL_MILLIS,
     private val idleMillis: Long = IDLE_MILLIS,
+    /** The packages the user sees: a notification shown, or a widget placed on the desktop. */
+    private val shownPackages: () -> Set<String> = { emptySet() },
+    private val serviceIdleMillis: Long = SERVICE_IDLE_MILLIS,
 ) {
     private class Cached(val name: String, val since: Long)
 
@@ -160,6 +183,11 @@ class CachedProcesses(
 
     /** Since when each cached process (by pid) has been cached, as far as this has seen. */
     private val cached = HashMap<Int, Cached>()
+
+    /** Since when each app process (by pid) has run only services or receivers, no activity. */
+    private val serving = HashMap<Int, Cached>()
+
+    private var playbackUnknown = false
 
     /** When each process name was last ended, and how many times in a row it came back soon. */
     private val ended = HashMap<String, Ended>()
@@ -201,8 +229,11 @@ class CachedProcesses(
             return
         }
         follow(running, now)
-        val idle = running.filter { endable(it) && cachedFor(it, now) >= idleFor(it.name, now) }
-            .filter { (blocked[it.pid] ?: Long.MIN_VALUE) <= now }
+        val idleCached = running.filter { endable(it) && cachedFor(it, now) >= idleFor(it.name, now) }
+        val idleServing = running.filter {
+            serviceEndable(it) && servingFor(it, now) >= idleFor(it.name, now, serviceIdleMillis, MAX_SERVICE_IDLE_MILLIS)
+        }
+        val idle = (idleCached + idleServing).filter { (blocked[it.pid] ?: Long.MIN_VALUE) <= now }
         if (idle.isEmpty()) return
         val foreground = try {
             processes.foregroundServicePackages()
@@ -210,7 +241,18 @@ class CachedProcesses(
             warnOnce("could not read which apps run a foreground service", e)
             return
         }
-        val ready = idle.filter { process -> process.packages.none { it in foreground } }
+        // Only a process still running a service needs these: a cached one plays nothing, and
+        // its notifications and widgets live in the system, not in it.
+        val playing = if (idleServing.isEmpty()) emptySet() else playing()
+        val shown = if (idleServing.isEmpty()) emptySet() else try {
+            shownPackages()
+        } catch (e: Exception) {
+            null
+        }
+        val inUse = { process: AppProcess -> servingInUse(process, playing, shown) }
+        val ready = idle.filter { process ->
+            process.packages.none { it in foreground } && (process !in idleServing || !inUse(process))
+        }
         // An app with a foreground service keeps all its processes; it is looked at again later.
         for (process in idle - ready.toSet()) blocked[process.pid] = now + BLOCKED_RETRY_MILLIS
         if (ready.isEmpty()) return
@@ -228,8 +270,11 @@ class CachedProcesses(
         // Every process this policy may end now, idle long enough or not: ending one of them
         // a little early along with another is no harm, ending anything else is.
         val endableNow = running.filter { process ->
-            endable(process) && process.packages.none { it in foreground } &&
-                records.firstOrNull { it.pid == process.pid }?.let { it.setAdj != null && it.setAdj >= CACHED_ADJ } == true
+            val score = records.firstOrNull { it.pid == process.pid }?.setAdj
+            process.packages.none { it in foreground } && score != null && (
+                (endable(process) && score >= CACHED_ADJ) ||
+                    (serviceEndable(process) && !inUse(process) && score >= SERVICE_ADJ)
+                )
         }.associateBy { it.pid }
         val gone = HashSet<Int>()
         for (process in ready.sortedBy { it.pid }) {
@@ -271,6 +316,7 @@ class CachedProcesses(
                 noteEnded(target.name, now)
                 log.info(line(target, memory[pid], now))
                 cached.remove(pid)
+                serving.remove(pid)
             }
         }
     }
@@ -279,17 +325,70 @@ class CachedProcesses(
     private fun follow(running: List<AppProcess>, now: Long) {
         val present = running.associateBy { it.pid }
         cached.keys.retainAll(present.keys)
+        serving.keys.retainAll(present.keys)
         blocked.keys.retainAll(present.keys)
         for (process in running) {
             if (process.state >= STATE_CACHED_ACTIVITY) {
                 val seen = cached[process.pid]
                 if (seen == null || seen.name != process.name) cached[process.pid] = Cached(process.name, now)
+                serving.remove(process.pid)
+            } else if (process.state >= STATE_SERVICE) {
+                // A process that becomes cached from here starts the cached count from then;
+                // one that only serves keeps its own count while it does.
+                cached.remove(process.pid)
+                val seen = serving[process.pid]
+                if (seen == null || seen.name != process.name) serving[process.pid] = Cached(process.name, now)
             } else {
                 cached.remove(process.pid)
+                serving.remove(process.pid)
                 blocked.remove(process.pid)
             }
         }
     }
+
+    /**
+     * Whether the policy may end [process] for running only services with no window: an app's
+     * own process (not the system's uid), not persistent, with no activity, no task and not one
+     * the policy always keeps. Whether its app is in use (audio, a notification, a widget) is
+     * [servingInUse].
+     */
+    private fun serviceEndable(process: AppProcess): Boolean =
+        process.state >= STATE_SERVICE && process.state < STATE_CACHED_ACTIVITY &&
+            appId(process.uid) >= FIRST_APPLICATION_UID &&
+            !process.persistent &&
+            !process.hasActivities &&
+            process.packages.isNotEmpty() &&
+            process.name !in KEPT_PROCESSES &&
+            process.packages.none { it == ownPackage || it in withTasks }
+
+    /**
+     * Whether a process that runs only services is still in use: its app plays audio, shows a
+     * notification or has a widget placed, or it is an audio effect app while anything plays.
+     * Unknown ([playing] or [shown] null) counts as in use.
+     */
+    private fun servingInUse(process: AppProcess, playing: Set<String>?, shown: Set<String>?): Boolean {
+        if (playing == null || shown == null) return true
+        if (process.packages.any { it in playing || it in shown }) return true
+        return playing.isNotEmpty() && process.packages.any { it in AUDIO_EFFECT_PACKAGES }
+    }
+
+    private fun playing(): Set<String>? {
+        val playing = try {
+            processes.playingPackages()
+        } catch (e: Exception) {
+            null
+        }
+        if (playing == null && !playbackUnknown) {
+            playbackUnknown = true
+            log.warn("could not read which apps play audio; apps that only run services stay")
+        } else if (playing != null) {
+            playbackUnknown = false
+        }
+        return playing
+    }
+
+    private fun servingFor(process: AppProcess, now: Long): Long =
+        serving[process.pid]?.let { now - it.since } ?: 0L
 
     /** Whether the policy may end [process] at all, however long it has been cached. */
     private fun endable(process: AppProcess): Boolean =
@@ -305,10 +404,15 @@ class CachedProcesses(
         cached[process.pid]?.let { now - it.since } ?: 0L
 
     /** How long [name] must stay cached before it is ended: longer when it keeps coming back. */
-    private fun idleFor(name: String, now: Long): Long {
-        val last = ended[name] ?: return idleMillis
-        if (now - last.at >= CHURN_WINDOW_MILLIS) return idleMillis
-        return (idleMillis shl last.streak.coerceAtMost(MAX_STREAK)).coerceAtMost(MAX_IDLE_MILLIS.coerceAtLeast(idleMillis))
+    private fun idleFor(
+        name: String,
+        now: Long,
+        base: Long = idleMillis,
+        max: Long = MAX_IDLE_MILLIS,
+    ): Long {
+        val last = ended[name] ?: return base
+        if (now - last.at >= CHURN_WINDOW_MILLIS) return base
+        return (base shl last.streak.coerceAtMost(MAX_STREAK)).coerceAtMost(max.coerceAtLeast(base))
     }
 
     private fun noteEnded(name: String, now: Long) {
@@ -334,8 +438,14 @@ class CachedProcesses(
         }
 
     private fun line(process: AppProcess, memory: ProcessPss?, now: Long): String {
-        val seconds = cachedFor(process, now) / 1000
-        val head = "ended cached ${process.name} (pid ${process.pid}, cached $seconds s, no task window)"
+        val head = if (process.pid in serving) {
+            val seconds = servingFor(process, now) / 1000
+            "ended background ${process.name} (pid ${process.pid}, only services for $seconds s, no task window, " +
+                "no foreground service, no playback)"
+        } else {
+            val seconds = cachedFor(process, now) / 1000
+            "ended cached ${process.name} (pid ${process.pid}, cached $seconds s, no task window)"
+        }
         if (memory == null) return "$head: memory unknown"
         val pss = memory.pssKb / 1024
         val swapped = memory.swappedOutKb / 1024
@@ -373,8 +483,41 @@ class CachedProcesses(
         /** Boot starts and caches many processes at once; the first look waits until it settles. */
         const val FIRST_DELAY_MILLIS = 2 * 60_000L
 
+        /**
+         * How long an app process runs only services, with no window and nothing the user
+         * sees or hears, before it is ended: long past a download or a sync a service does
+         * after its window closed, short enough that its memory is back within minutes.
+         */
+        const val SERVICE_IDLE_MILLIS = 5 * 60_000L
+
+        /** The longest a service process the system keeps restarting waits before it is ended again. */
+        const val MAX_SERVICE_IDLE_MILLIS = 60 * 60_000L
+
+        /**
+         * ActivityManager.PROCESS_STATE_SERVICE: from here to the cached states a process runs
+         * a started service or a receiver, or was the last activity, and nothing more
+         * important.
+         */
+        const val STATE_SERVICE = 10
+
         /** ActivityManager.PROCESS_STATE_CACHED_ACTIVITY: from here on a process is cached. */
         const val STATE_CACHED_ACTIVITY = 16
+
+        /**
+         * The activity manager's score of a process running a started service (SERVICE_ADJ):
+         * the lowest a process that only serves is ended at, which is also the lowest the
+         * activity manager's own end of background processes reaches.
+         */
+        const val SERVICE_ADJ = 500
+
+        /** Process.FIRST_APPLICATION_UID: below it are the system's own uids. */
+        const val FIRST_APPLICATION_UID = 10_000
+
+        /**
+         * Apps that hold the audio effects of the sessions other apps play (equalizer, bass
+         * boost): started by a playing app's session, kept while anything plays.
+         */
+        val AUDIO_EFFECT_PACKAGES = setOf("com.android.musicfx")
 
         /** The activity manager's lowest score of a cached process (CACHED_APP_MIN_ADJ). */
         const val CACHED_ADJ = 900

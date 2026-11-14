@@ -152,6 +152,40 @@ final class PageViewModelTests: XCTestCase {
         XCTAssertEqual(apps.rows.first?.dpiScalingTip, "Apps_DpiScaling_SystemForcedTip")
     }
 
+    func test_fr4_youtube_scales_the_system_way_by_default() async {
+        let youtube = app.replacingOccurrences(of: "org.example.notes", with: "com.google.android.youtube")
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(youtube),\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[],"system_scaled_by_default":["com.google.android.youtube"]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        // YouTube, with no choice of the user's, shows its automatic choice as System for it.
+        let row = apps.rows.first { $0.package == "com.google.android.youtube" }
+        XCTAssertEqual(row.map { $0.dpiScalingChoices[$0.dpiScalingIndex].scaling }, .auto)
+        XCTAssertEqual(row.map { $0.dpiScalingChoices[$0.dpiScalingIndex].label }, "Apps_DpiScaling_AutoSystem")
+        // Any other app's automatic choice keeps its plain name, and the rest read the same.
+        let notes = apps.rows.first { $0.package == "org.example.notes" }
+        XCTAssertEqual(notes?.dpiScalingChoices.first?.label, "Apps_DpiScaling_Auto")
+        XCTAssertEqual(notes.map { Array($0.dpiScalingChoices.dropFirst()) },
+                       row.map { Array($0.dpiScalingChoices.dropFirst()) })
+    }
+
+    func test_fr4_the_users_choice_wins_over_the_built_in_list() async {
+        let youtube = app.replacingOccurrences(of: "org.example.notes", with: "com.google.android.youtube")
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(youtube)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[{"package":"com.google.android.youtube","dpi_scaling":"app"}],"system_scaled_by_default":["com.google.android.youtube"]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first.map { $0.dpiScalingChoices[$0.dpiScalingIndex].scaling }, .app)
+    }
+
     func test_fr30_an_apps_full_screen_choice_wins_over_the_default() async {
         let cli = FakeCli()
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)

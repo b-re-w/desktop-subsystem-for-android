@@ -2098,13 +2098,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Who adjusts this app when its window moves to a monitor of another scale.\n• App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, so text stays sharp; it redraws briefly, keeping its state.\n• System: DSA scales the window to the same size, and never recreates the app. Text can look a little blurry.\n• Automatic: App, for every app."
+            "value": "Who adjusts this app when its window moves to a monitor of another scale.\n• App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, so text stays sharp; it redraws briefly, keeping its state.\n• System: DSA scales the window to the same size, and never recreates the app. Text can look a little blurry.\n• Automatic: System for apps that break when their scale changes while they run, such as YouTube; App for every other app."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 앱의 창이 배율이 다른 모니터로 갈 때 누가 크기를 맞출지 정합니다.\n• 앱: 창을 끄는 동안에는 DSA가 창을 늘이거나 줄입니다. 손을 떼면 앱이 새 배율로 다시 그려 글자가 선명합니다. 상태를 지킨 채 잠깐 다시 그려집니다.\n• 시스템: DSA가 창을 같은 크기로 늘이거나 줄이고, 앱을 다시 만들지 않습니다. 글자가 조금 흐려질 수 있습니다.\n• 자동: 모든 앱에 앱을 씁니다."
+            "value": "이 앱의 창이 배율이 다른 모니터로 갈 때 누가 크기를 맞출지 정합니다.\n• 앱: 창을 끄는 동안에는 DSA가 창을 늘이거나 줄입니다. 손을 떼면 앱이 새 배율로 다시 그려 글자가 선명합니다. 상태를 지킨 채 잠깐 다시 그려집니다.\n• 시스템: DSA가 창을 같은 크기로 늘이거나 줄이고, 앱을 다시 만들지 않습니다. 글자가 조금 흐려질 수 있습니다.\n• 자동: YouTube처럼 실행 중에 배율이 바뀌면 깨지는 앱에는 시스템을, 그 밖의 앱에는 앱을 씁니다."
           }
         }
       }
@@ -2309,6 +2309,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "크기 조정: 자동"
+          }
+        }
+      }
+    },
+    "Apps_DpiScaling_AutoSystem": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaling: system (recommended for this app)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "크기 조정: 시스템 (이 앱에 맞춤)"
           }
         }
       }

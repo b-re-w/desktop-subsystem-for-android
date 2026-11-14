@@ -428,13 +428,14 @@ impl TaskWindows {
         )
     }
 
-    /// How `task`'s window follows a monitor of another scale: as the user chose for its app.
+    /// How `task`'s window follows a monitor of another scale: as the user chose for its app,
+    /// else as DSA's built-in list says for it.
     fn scaling_of(&self, task: &Task) -> ScalingMode {
         self.app_windows
             .get(&task.package_name)
             .map(|app| app.dpi_scaling)
             .unwrap_or_default()
-            .mode()
+            .mode_for(&task.package_name)
     }
 
     /// A new record of how `task`'s window follows its task.
@@ -1445,6 +1446,28 @@ mod tests {
     }
 
     #[test]
+    fn fr6_a_focused_editor_in_a_freeform_task_reaches_the_host_ime() {
+        // The guest may name no task focused while an app's editor has its input method (the
+        // window manager of Android 17 with every task freeform did): the editor still goes to
+        // the task's window, which composes in it.
+        let mut windows = TaskWindows::new();
+        let editor = crate::ime::ImeEditor {
+            kind: crate::ime::InputKind::Search,
+            ..crate::ime::ImeEditor::default()
+        };
+        let described = TaskEvent::ImeEditor {
+            task_id: 1,
+            editor: editor.clone(),
+        };
+        assert!(windows.apply(&described).is_empty(), "no window yet");
+        windows.apply(&updated(1, "Spotify"));
+        assert_eq!(
+            windows.apply(&described),
+            vec![WindowChange::ImeEditor { task_id: 1, editor }]
+        );
+    }
+
+    #[test]
     fn fr3_two_apps_get_two_windows() {
         let mut windows = TaskWindows::new();
         assert_eq!(
@@ -1983,6 +2006,63 @@ mod tests {
         let (_, requests) = windows.window_dpi(1, 192);
         assert!(!asks_for_density(&requests));
         assert_eq!(windows.scale(1), (131, 65));
+    }
+
+    /// A YouTube window on a 100% monitor whose task draws at 130 dpi, with `settings` as the
+    /// user's window settings for every app.
+    fn youtube_at_100(settings: &[AppWindowSettings]) -> TaskWindows {
+        let mut windows = TaskWindows::new();
+        windows.set_app_windows(settings);
+        let mut youtube = task(1, "YouTube", 400, 300);
+        youtube.package_name = "com.google.android.youtube".into();
+        youtube.density_dpi = 130;
+        youtube.max_width = 1920;
+        youtube.max_height = 1920;
+        youtube.handles_density_change = true;
+        windows.apply(&TaskEvent::Updated(youtube));
+        let (_, requests) = windows.window_dpi(1, 96);
+        assert!(requests.is_empty(), "it starts at its monitor's density");
+        windows
+    }
+
+    #[test]
+    fn fr4_youtube_scales_the_system_way_by_default() {
+        // With no choice of the user's, or with auto chosen, a move to a monitor of another
+        // scale gives YouTube no new density: it is scaled, and never recreated.
+        let auto = AppWindowSettings {
+            package_name: "com.google.android.youtube".into(),
+            fixed_size: true,
+            dpi_scaling: DpiScaling::Auto,
+            ..AppWindowSettings::default()
+        };
+        for settings in [vec![], vec![auto]] {
+            let mut windows = youtube_at_100(&settings);
+            let now = Instant::now();
+            assert_eq!(windows.window_dragging(1, true, now), vec![]);
+            let (_, requests) = windows.window_dpi(1, 192);
+            assert!(!asks_for_density(&requests));
+            assert!(!asks_for_density(&windows.window_dragging(1, false, now)));
+            // 262 dpi there over the task's 130.
+            assert_eq!(windows.scale(1), (131, 65));
+            // A move the desktop makes alone ends at once, and asks for nothing either.
+            let (_, requests) = windows.window_dpi(1, 120);
+            assert!(!asks_for_density(&requests));
+        }
+    }
+
+    #[test]
+    fn fr4_the_users_choice_wins_over_the_built_in_list() {
+        // The user chose the app way for YouTube: the move ends at the new density.
+        let mut windows = youtube_at_100(&[AppWindowSettings {
+            package_name: "com.google.android.youtube".into(),
+            dpi_scaling: DpiScaling::App,
+            ..AppWindowSettings::default()
+        }]);
+        let now = Instant::now();
+        assert_eq!(windows.window_dragging(1, true, now), vec![]);
+        let (_, requests) = windows.window_dpi(1, 192);
+        assert!(!asks_for_density(&requests), "not while it is dragged");
+        assert!(asks_for_density(&windows.window_dragging(1, false, now)));
     }
 
     #[test]

@@ -96,7 +96,10 @@ class TextInputTest {
         focusedTask = { focusedTasks.firstOrNull() },
         send = { sent += it },
         log = log,
+        reportedTasks = { reported.sorted() },
+        packageOf = { taskId -> packages[taskId] },
     )
+    private val packages = mutableMapOf(7 to "org.example.notes", 8 to "com.spotify.music")
 
     private fun compose(text: String, cursor: Int = text.length, taskId: Int = 7) = input.handle(
         ImeComposition.newBuilder().setTaskId(taskId).setText(text).setCursor(cursor).build(),
@@ -275,5 +278,80 @@ class TextInputTest {
         focusedTasks.clear()
         input.cursorMoved(1f, 2f, 3f, 4f)
         assertTrue(sent.isEmpty())
+    }
+
+    /** A search field's editor, as the input method describes it, in the app [packageName]. */
+    private fun searchField(packageName: String, text: String = "") =
+        EditorState(ImeInputKind.IME_INPUT_KIND_SEARCH, text, 0, text.length, text.length, 0, 0, packageName)
+
+    @Test
+    fun fr6_a_focused_editor_in_a_freeform_task_reaches_the_host_ime() {
+        // As on Android 17 with every task freeform: the window manager names no focused task
+        // on any display, while Spotify's search field has the input method.
+        focusedTasks.clear()
+        input.editorChanged(searchField("com.spotify.music"))
+        input.cursorMoved(140f, 90f, 141f, 120f)
+
+        val messages = sent.map(::decode)
+        val editor = messages.single { it.hasImeEditor() }.imeEditor
+        assertEquals(8, editor.taskId)
+        assertEquals(ImeInputKind.IME_INPUT_KIND_SEARCH, editor.kind)
+        val cursor = messages.single { it.hasImeCursor() }.imeCursor
+        assertEquals(8, cursor.taskId)
+        assertEquals(listOf(40, 40, 41, 70), cursor.cursor.let { listOf(it.left, it.top, it.right, it.bottom) })
+        // The task is given the focus its editor has, once, however often the editor changes.
+        input.editorChanged(searchField("com.spotify.music", "a"))
+        assertEquals(listOf(8), focusRequests)
+    }
+
+    @Test
+    fun fr6_korean_composes_inline_while_the_guest_names_no_focused_task() {
+        focusedTasks.clear()
+        input.editorChanged(searchField("com.spotify.music"))
+        focusRequests.clear()
+
+        compose("ㅎ", taskId = 8)
+        compose("하", taskId = 8)
+        compose("한", taskId = 8)
+        commit("한", taskId = 8)
+
+        assertEquals("한", editor.text.toString())
+        assertEquals(listOf("compose ㅎ 1", "compose 하 1", "compose 한 1", "commit 한"), editor.calls)
+        // Its editor has the input method already: no keystroke moves the task to the front.
+        assertTrue(focusRequests.isEmpty())
+    }
+
+    @Test
+    fun fr6_the_editor_goes_to_the_task_the_host_typed_in_among_an_apps_tasks() {
+        focusedTasks.clear()
+        reported += 9
+        packages[9] = "com.spotify.music"
+        input.addressed(9)
+
+        input.editorChanged(searchField("com.spotify.music"))
+
+        assertEquals(9, sent.map(::decode).single { it.hasImeEditor() }.imeEditor.taskId)
+    }
+
+    @Test
+    fun fr6_the_editor_of_an_app_with_no_task_goes_to_the_task_the_host_typed_in() {
+        focusedTasks.clear()
+        input.addressed(8)
+
+        input.editorChanged(searchField("com.example.dialog"))
+        // The editor ends: the host hears it for the task that had it.
+        input.editorChanged(EditorState.NONE)
+
+        val editors = sent.map(::decode).filter { it.hasImeEditor() }.map { it.imeEditor }
+        assertEquals(listOf(8, 8), editors.map { it.taskId })
+        assertEquals(ImeInputKind.IME_INPUT_KIND_NONE, editors.last().kind)
+    }
+
+    @Test
+    fun fr6_an_editor_in_the_focused_task_asks_for_no_focus() {
+        input.editorChanged(searchField("org.example.notes"))
+
+        assertEquals(7, sent.map(::decode).single { it.hasImeEditor() }.imeEditor.taskId)
+        assertTrue(focusRequests.isEmpty())
     }
 }

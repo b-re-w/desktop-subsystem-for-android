@@ -7190,6 +7190,85 @@ class FrameworkImageTests(unittest.TestCase):
             self.assertEqual(make_image.check_framework({"arch": "x86_64"}, [], None), [])
 
 
+class ServicesJarImageTests(unittest.TestCase):
+    """services.jar from the Framework build, built from source with the window manager that
+    gives a dialog no caption bar inset, in place of the published build's dex edited one."""
+
+    DEX = b"dex\n035\0" + bytes(range(256)) * 4
+
+    def _jar(self, dex=DEX, compression=zipfile.ZIP_DEFLATED):
+        data = io.BytesIO()
+        with zipfile.ZipFile(data, "w") as jar:
+            jar.writestr(zipfile.ZipInfo("META-INF/MANIFEST.MF"), b"Manifest-Version: 1.0\n")
+            info = zipfile.ZipInfo("classes.dex")
+            info.compress_type = compression
+            jar.writestr(info, dex)
+        return data.getvalue()
+
+    def _framework(self, root, build_id="16373615", arch="x86_64", machine=62, jar=None):
+        folder = FrameworkImageTests()._framework(root, build_id, arch, machine)
+        description = json.loads((folder / "framework.json").read_text())
+        data = self._jar() if jar is None else jar
+        (folder / make_image.SERVICES_JAR).parent.mkdir(parents=True, exist_ok=True)
+        (folder / make_image.SERVICES_JAR).write_bytes(data)
+        description["files"][make_image.SERVICES_JAR] = {"size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+        (folder / "framework.json").write_text(json.dumps(description))
+        return folder
+
+    def _source(self, root, names=None):
+        source = FrameworkImageTests()._source(root, names)
+        with zipfile.ZipFile(source, "a") as archive:
+            archive.writestr(make_image.SERVICES_JAR, self._jar(b"dex\n035\0published"))
+        return source
+
+    def test_fr22_a_dialog_gets_no_caption_inset_from_the_framework_services_jar(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payloads, description = make_image.checked_framework(self._framework(root), "16373615", 17, "x86_64")
+            self.assertIn(make_image.SERVICES_JAR, payloads)
+            jar = payloads[make_image.SERVICES_JAR]
+            # Its dex is the build's, stored and aligned as the published build stores it, so
+            # system_server maps it from the file.
+            with zipfile.ZipFile(io.BytesIO(jar)) as z:
+                self.assertEqual(z.read("classes.dex"), self.DEX)
+                self.assertEqual(z.getinfo("classes.dex").compress_type, zipfile.ZIP_STORED)
+            self.assertEqual(make_image.zip_misaligned(jar), [])
+            modified = root / "modified.zip"
+            make_image.modify(self._source(root), modified, framework=payloads)
+            with zipfile.ZipFile(modified) as archive:
+                # The build's jar, not the published one, and not dex edited.
+                self.assertEqual(archive.read(make_image.SERVICES_JAR), jar)
+                manifest = {"arch": "x86_64", "source": {"build_id": "16373615"},
+                            "framework": make_image.framework_entry(description, payloads)}
+                self.assertEqual(manifest["framework"]["files"][make_image.SERVICES_JAR],
+                                 hashlib.sha256(jar).hexdigest())
+                self.assertEqual(make_image.check_framework(manifest, archive.namelist(), archive.read), [])
+            # An image that kept the published jar is found.
+            with zipfile.ZipFile(self._source(root)) as archive:
+                problems = make_image.check_framework(manifest, archive.namelist(), archive.read)
+            self.assertTrue(any("services.jar is not the framework build's file" in p
+                                and "drawn below the place that takes its taps" in p for p in problems), problems)
+
+    def test_fr22_a_framework_without_services_jar_leaves_the_published_one_to_the_dex_edits(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payloads, description = make_image.checked_framework(
+                FrameworkImageTests()._framework(root), "16373615", 17, "x86_64")
+            self.assertNotIn(make_image.SERVICES_JAR, payloads)
+            self.assertNotIn(make_image.SERVICES_JAR, make_image.framework_entry(description, payloads)["files"])
+            self.assertNotIn(make_image.SERVICES_JAR, make_image.framework_names(description["files"]))
+
+    def test_fr22_a_framework_services_jar_without_dex_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaisesRegex(SystemExit, "services.jar is not a jar with dex code"):
+                make_image.checked_framework(self._framework(root, jar=b"not a jar"), "16373615", 17, "x86_64")
+
+    def test_fr22_the_framework_services_jar_is_compiled_like_an_edited_one(self):
+        self.assertIn(make_image.SERVICES_JAR, make_image.EDITED_JARS)
+        self.assertEqual(make_image.FRAMEWORK_JAVA_FILES, [make_image.SERVICES_JAR])
+
+
 class KeyMintImageTests(unittest.TestCase):
     """DSA's KeyMint from the Framework build, whose root key of key blobs comes from the host, in
     place of the KeyMint APEX, whose root key is a fixed all-zero key."""
