@@ -3384,3 +3384,57 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 - Compatibility Pack의 Dozen 판과 x64 지원, 그리고 그 팩이 설치된 PC에서 지금의 DSA가 Dozen을 고르는지.
 - `vulkan_dzn.dll`의 크기와 렌더러 메모리(NFR-1)에 더하는 양.
 - WSA가 Haswell에서 무엇으로 그렸는지.
+
+## R48. 설정의 "안전 및 긴급 상황" 화면에서 설정 앱이 끝난 까닭: 이미지에 없는 앱의 제공자를 부른다 (FR-1)
+
+**기준.** 2026-11-15 소유자 PC(Android 17 `16373615`)에서 설정의 하위 화면을 열자 설정 앱이 끝났다. logcat: `IllegalArgumentException: Unknown authority com.android.emergency.gesture`, `ContentResolver.call` ← `EmergencyNumberUtils.getEmergencyGestureEnabled` ← `EmergencyGestureEntrypointPreferenceController.getSummary` ← `updateState` ← `DashboardFragment.updatePreferenceStates` ← `onResume`. 기기는 만지지 않았다.
+
+### 확인한 자료
+- 두 빌드의 매니페스트가 고정한 커밋의 소스: `packages/apps/Settings`(16은 `f6ec09af`, 17은 `213829fb`), `frameworks/base/packages/SettingsLib`(`45034f06`, `94b4c163`), `packages/apps/EmergencyInfo`의 `AndroidManifest.xml`(`ab6c39cf`, `1e17ffd9`). `.scratch/settings-subpages/fetch.sh`로 받았다.
+- 두 빌드의 실제 `Settings.apk`(R20에서 받은 것): 리소스 표의 이름과, make-image.py의 dex 읽기 함수로 푼 메서드.
+
+### 찾은 것
+- 제공자 `com.android.emergency.gesture`는 EmergencyInfo(`com.android.emergency`)의 `EmergencyGestureContentProvider`다(`AndroidManifest.xml:181-184`). 이미지는 전화가 없어 이 앱을 뺀다(`UNNEEDED_APPS`).
+- 화면은 `res/xml/emergency_settings.xml`(안전 및 긴급 상황, `EmergencyDashboardFragment`)이고, 항목은 `gesture_emergency_summary`(29-35행)다. 컨트롤러 `EmergencyGestureEntrypointPreferenceController`의 `getAvailabilityStatus`(81-92행)는 `R.bool.config_show_emergency_gesture_settings`가 거짓이면 `UNSUPPORTED_ON_DEVICE`를 돌려준다. 기본값은 참이다(`res/values/config.xml`, 17은 610행, 16은 583행). `getSummary`(95-100행)가 `EmergencyNumberUtils.getEmergencyGestureEnabled`(SettingsLib `EmergencyNumberUtils.java:149-153`)를 부르고, 그 안의 `ContentResolver.call`은 제공자가 없으면 예외를 던진다. 16과 17의 코드와 줄 번호가 같다.
+- `DashboardFragment.updatePreferenceStates`(453-479행)는 `isAvailable()`이 거짓인 컨트롤러를 건너뛴다. 그래서 값을 거짓으로 두면 항목이 화면에서 빠지고 `getSummary`도 돌지 않는다. 컨트롤러의 생성자는 제공자를 부르지 않는다.
+- 그 항목 뒤의 화면(`EmergencyGestureSettings`, `emergency_gesture_settings.xml`)은 값이 거짓이어도 열리면 끝난다. `EmergencyGesturePreferenceController.displayPreference`(66행)가 사용 가능 여부를 보지 않고 `isChecked`(71행)를 부르고, `EmergencyGestureNumberOverridePreferenceController.onStart`(90행)가 그 제공자에 관찰자를 등록한다(없는 제공자에 등록하면 Android 8 이상을 대상으로 하는 앱에는 `SecurityException`). 이 화면에 가는 길은 위 항목뿐이고(매니페스트에 액티비티가 없고, `emergency_gesture_settings_package`는 비어 있고, 항목이 없으면 검색 색인도 꺼진다) 항목이 숨으면 사용자는 닿지 못한다.
+- `EmergencyNumberUtils`를 쓰는 곳은 Settings의 `emergency/` 패키지뿐이다. 제스처, 전원 메뉴, 보안 화면, 슬라이스는 부르지 않는다.
+- 같은 종류의 다른 문제(감사): `ContentResolver.call`, `acquire*ContentProviderClient`, `insert/update/delete`를 Settings와 SettingsLib 전체에서 찾았다. 빠진 앱의 제공자를 부르는 곳은 위 하나다. 그 밖에 하나를 찾았다. 디스플레이 화면의 "밝기 수준"을 누르면 `ACTION_SHOW_BRIGHTNESS_DIALOG`를 `com.android.systemui`로 지정해 확인 없이 시작한다(17 `BrightnessLevelPreferenceController.java:150-170`과 `BrightnessLevelPreference.kt:204-219`, 16 같은 파일의 152-161행, 옛 `BrightnessPreference.java:34`). SystemUI는 이미지에 없으므로 `ActivityNotFoundException`으로 설정 앱이 끝난다. 실제 dex에서 16은 `Context.startActivityForResult`, 17은 `Context.startActivityAsUser`를 부른다.
+- 안전하다고 본 것: `MoreSettingsPreferenceController`와 `EmergencyInfoPreferenceController`(`queryIntentActivities`로 확인), `EmergencyBroadcastPreferenceController`(예외를 잡는다), 잠금 화면 사용자화 제공자(`query`뿐이고 null과 예외를 처리), 배경 화면과 화면 보호기와 TTS와 맞춤법 검사기(목록이 비면 항목을 숨긴다), 전화 관련 컨트롤러(`CarrierConfigCache`와 구독 목록의 null 처리), 블루투스 화면의 `AlwaysDiscoverable`(백그라운드 스레드의 Future 안).
+
+### 고친 것
+- Settings 오버레이가 `bool/config_show_emergency_gesture_settings`를 거짓으로 둔다(`SETTINGS_OVERLAY_BOOLEANS`). 두 빌드의 `Settings.apk` 리소스 표에 이 이름이 있다. 없는 빌드에서는 오버레이를 만들지 않고 멈춘다.
+- 항목 뒤의 코드도 막는다(`SETTINGS_CODE_WITHOUT_REMOVED_APPS`, dex 편집). `getEmergencyGestureEnabled`와 `getEmergencyGestureSoundEnabled`는 바로 거짓을 돌려주고, `onStart`의 `registerContentObserver` 호출은 건너뛴다. 전화가 없는 게스트에서 긴급 제스처는 꺼져 있는 것이 맞는 답이다.
+- 밝기 수준: 세 메서드의 대화 상자 시작 호출을 건너뛴다. 줄은 남아 밝기를 보이고, 눌러도 아무것도 시작하지 않는다. 모니터 밝기는 호스트의 것이다.
+- `check-image.py`는 오버레이의 값이 거짓이 아니거나 없는 이미지, 위 코드가 남은 이미지를 거부한다. 두 빌드의 실제 `Settings.apk`에 편집을 적용해 여섯 메서드가 모두 바뀌고 두 번째 적용에서는 바뀌는 것이 없음을 보았다.
+
+### 확인하지 못한 것
+- 기기. 이미지를 만들거나 실행하지 않았다. 고친 메서드를 ART가 받아들이는지는 이미지 빌드의 dex2oat(`--abort-on-hard-verifier-error`)가 처음 본다.
+- 감사는 소스로만 했고 모든 화면을 컨트롤러마다 따라가지는 않았다. 따라가지 않은 곳: 네트워크의 SIM과 인터넷 화면, 앱, 알림, 배터리, 저장소, 위치, 계정, 보안의 생체 인식 컨트롤러, NFC와 UWB와 Thread 컨트롤러, 진동, 날짜와 시간, 초기화 옵션, 블루투스 밖의 개발자 옵션. Android 16은 긴급, 밝기, 제공자 호출 목록만 17과 맞춰 보았다.
+- 안전 및 긴급 상황 화면에 남는 "무선 긴급 경보" 줄(`app_and_notif_cell_broadcast_settings`)은 셀 브로드캐스트 모듈의 설정을 이름으로 연다. 그 모듈이 이미지에 있는지, 눌렀을 때 열리는지는 기기에서 본다.
+- 최상위 "안전 및 긴급 상황" 줄 자체를 숨기려면 `config_show_emergency_settings`를 거짓으로 두면 된다. 화면에 남는 것이 있어 이번에는 바꾸지 않았다. 숨길지는 소유자가 정한다.
+
+## R49. 설정 하위 화면의 아래 여백: 소스와 APK에서는 여백을 만드는 곳을 찾지 못했다 (FR-22)
+
+**기준.** 2026-11-15 소유자가 PC(Android 17)에서 설정의 하위 화면(`SubSettings`, SettingsLib의 접히는 툴바 레이아웃) 아래에 빈 여백이 남는다고 알렸다. 첫 화면은 #760(아래 인셋 0)과 #767(Android의 프리폼 패딩 16 dp 유지) 뒤로 바르다. 기기는 만지지 않았다. 소스, 실제 APK, CI가 남긴 갈무리만 읽었다.
+
+### 확인한 자료와 방법
+- R48과 같은 고정 커밋의 Settings와 SettingsLib 소스(16과 17).
+- 두 빌드의 실제 `Settings.apk`: 하위 화면이 쓰는 컴파일된 레이아웃의 속성, 그리고 모든 dex에서 `WindowInsets.Type`과 `WindowInsetsCompat.Type`의 유형을 읽는 메서드 전부(`.scratch/settings-subpages/probe.py`). 소스에 없는 androidx와 Material 코드도 여기서 본다.
+- Image test가 Android 16에서 남긴 디스플레이 화면의 `uiautomator dump`와 화면(`.scratch/fr34-fold/captures`, 2026-11-09, 아래 인셋이 없던 때).
+
+### 찾은 것
+- 하위 화면이 아래에 두는 것은 하나다. `SettingsBaseActivity.onCreate`(17은 119행, 16은 125행)가 부르는 `Utils.setupEdgeToEdge`(17 `Utils.java:1535-1551`, 16은 1538행부터)가 `android.R.id.content`를 `getInsets(systemBars() | ime() | displayCutout())`의 `bottom`만큼 채운다. 태스크에는 내비게이션 바 소스가 없고(#760), 게스트의 입력기는 창을 띄우지 않으며(`HostInputMethod`), 컷아웃도 없으므로 이 값은 0이다.
+- 첫 화면과 다른 점은 둘이다. 첫 화면(`SettingsHomepageActivity.setupEdgeToEdge`, 17은 390-411행)은 `ime()`를 보지 않는다. 그리고 `TopLevelSettings.setPaddingHorizontal`(263-274행)의 16 dp는 첫 화면의 목록에만 있다. 하위 화면에는 프리폼이나 캡션 바를 보고 여백을 더하는 코드가 없다. 실제 dex에서 `captionBar`를 읽는 Settings 코드는 `Utils.setupEdgeToEdge`(위쪽에만 쓴다)와 `TopLevelSettings.isRunningInFreeformWindow`뿐이다.
+- 레이아웃에도 없다. `settingslib_expressive_collapsing_toolbar_content_layout.xml`(60-64행)의 `content_frame`은 `match_parent`에 스크롤 동작만 있고, `settings_main_prefs.xml`의 버튼 막대와 `settingslib_expressive_floating_toolbar_layout.xml`은 `gone`이며, 컴파일된 `preference_recyclerview.xml`은 `paddingBottom` 0 dp에 `clipToPadding` 거짓이다. 16과 17이 같다.
+- 갈무리도 같다. 548 x 974 창의 디스플레이 화면에서 `content`는 `[0,0][548,974]`, `content_frame`과 `recycler_view`는 `[0,211][548,974]`로, 목록이 창 아래 끝에 닿는다.
+- DSA가 바꾼 것 하나가 하위 화면의 아래쪽에 닿는다. 높이 600 dp 이상인 창에서는 큰 제목을 펼쳐 연다(FR-34). 그때 `content_frame`은 창 높이에서 접힌 툴바만 뺀 높이라 아래 123 dp(179 dp - 56 dp)가 창 밖에 있고, 스크롤하면 제목이 먼저 접힌다. 목록이 창 높이와 비슷한 화면은 접힌 뒤 목록 아래에 그만큼까지 빈 곳이 남는다. 이것은 띠가 아니라 짧은 목록 뒤의 빈 화면이고 Android의 큰 제목 동작 그대로다. 소유자가 본 것이 이것인지는 모른다.
+
+### 결정
+- 원인을 찾지 못했으므로 이미지를 바꾸지 않았다. 아래 인셋이 0인 창에서 하위 화면이 여백을 만드는 길이 소스와 APK에 없어서, 무엇을 고쳐도 근거 없는 편집이 된다.
+- Image test에 검사를 더했다. 디스플레이 화면의 목록(`recycler_view`)이 창 아래 끝에 닿지 않으면 실패하고, 떨어진 픽셀 수를 적는다(`dsa/host/platform/linux/tests/system_screens.rs`). 기기에서 여백이 생기면 이 검사와 갈무리가 원인을 좁힌다.
+
+### 확인하지 못한 것
+- 소유자 PC에서 여백이 어느 화면, 어느 창 높이, 어느 뷰 아래에 있는지. `uiautomator dump`의 `content`, `content_frame`, `recycler_view` 경계와 `dumpsys activity top`의 그 창 인셋 소스(`type=navigationBars`, `type=ime`의 `visible`과 프레임)를 보면 인셋인지 레이아웃인지 갈린다.
+- 두 창 배치(창 너비 720 dp 이상에서의 액티비티 임베딩)와 Compose로 그리는 화면(SPA)은 기기에서 보지 못했다. 소스에서는 둘 다 아래 여백을 더하지 않는다.
+- 큰 제목을 펼쳐 여는 높은 창에서, 목록이 아니라 아래에 단추를 고정해 둔 화면(중첩 스크롤이 없는 화면)은 그 단추가 창 밖 123 dp 안에 놓일 수 있다. SettingsLib은 이 테마에서 제목을 끌어 접지 못하게 하므로(`CollapsingCoordinatorLayout`의 `canDrag`) 접을 방법이 없다. 그런 화면이 실제로 있는지는 기기에서 본다.
