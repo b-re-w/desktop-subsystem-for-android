@@ -48,7 +48,10 @@ SCSI disk does outside the mode: each one is a disk image the host maps read onl
 Memory the guest frees goes back to the host at once. Upstream free page reporting waits two
 seconds before each pass, and again after each pass that used up its budget, so a large
 free reached the host slice by slice over many seconds; `patches/page-reporting-no-delay.patch`
-starts every pass at once. The host chooses the smallest piece reported
+makes the delay a parameter (`page_reporting.delay_ms`), 0 by default, so every pass starts at
+once. The host sets a short delay on the command line (1 s): memory a video frees and allocates
+again many times a second then stays with the guest instead of going to the host and being
+faulted back in, while memory that stays free still goes back within seconds. The host chooses the smallest piece reported
 (`page_reporting.page_reporting_order` on the command line): 4 KiB where it backs memory in
 4 KiB pages, so a freed page need not wait for compaction to gather a whole block. A host
 that faults memory in larger pieces (Hyper-V's 64 KiB fault clusters, a Linux host's huge

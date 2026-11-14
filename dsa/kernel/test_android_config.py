@@ -438,7 +438,19 @@ class AndroidKernelConfigTests(unittest.TestCase):
         patch = (PATCHES / "page-reporting-no-delay.patch").read_text()
         self.assertIn("+++ b/mm/page_reporting.c", patch)
         self.assertIn("-#define PAGE_REPORTING_DELAY	(2 * HZ)", patch)
-        self.assertIn("+#define PAGE_REPORTING_DELAY	0", patch)
+        self.assertIn("+#define PAGE_REPORTING_DELAY	msecs_to_jiffies(page_reporting_delay_ms)", patch)
+        # 0 unless the command line says otherwise.
+        self.assertIn("+static unsigned int page_reporting_delay_ms __read_mostly;", patch)
+
+    def test_nfr1_the_host_can_set_a_short_reporting_delay_against_churn(self):
+        # A video frees and allocates its pictures many times a second; reported at once,
+        # each was taken back by the host and faulted in again. The delay is a parameter the
+        # host sets on the command line (page_reporting.delay_ms), writable at run time.
+        patch = (PATCHES / "page-reporting-no-delay.patch").read_text()
+        self.assertIn("+module_param_named(delay_ms, page_reporting_delay_ms, uint, 0644);", patch)
+        # The patch that follows names the same line as its context, so the series applies.
+        stats = (PATCHES / "page-reporting-stats.patch").read_text()
+        self.assertIn(" #define PAGE_REPORTING_DELAY	msecs_to_jiffies(page_reporting_delay_ms)", stats)
 
     def test_nfr2_every_free_page_can_be_reported_to_the_host_again(self):
         # A host that faults guest memory in clusters takes reported free neighbours back in

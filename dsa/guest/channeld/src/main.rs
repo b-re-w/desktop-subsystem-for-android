@@ -378,9 +378,10 @@ mod daemon {
     #[cfg(target_os = "android")]
     fn reclaim_idle_memory(router: Arc<Router>) {
         use dsa_guest_channeld::reclaim::{
-            file_refaults_kb, memory_pressure, package_running, MemInfo, ReadFailures, Reason,
-            ReclaimPolicy, Reclaimer, CHECK_INTERVAL, EXIT_POLL, EXIT_WAIT_LIMIT, RECLAIM_PROPERTY,
-            RECLAIM_STEP_PROPERTY, TRIM_PROPERTY, TRIM_SIZE_PROPERTY,
+            file_refaults_kb, memory_pressure, package_running, reclaim_outcome_line, MemInfo,
+            ReadFailures, Reason, ReclaimPolicy, Reclaimer, CHECK_INTERVAL, EXIT_POLL,
+            EXIT_WAIT_LIMIT, OUTCOME_WAIT_LIMIT, RECLAIM_PROPERTY, RECLAIM_STEP_PROPERTY,
+            TRIM_PROPERTY, TRIM_SIZE_PROPERTY,
         };
         // The command lines of the guest's processes, for whether a closed app's are gone.
         fn command_lines(failures: &mut ReadFailures) -> Vec<String> {
@@ -536,10 +537,53 @@ mod daemon {
                     memory.anon_pages_kb / 1024,
                     memory.used_kb() / 1024
                 );
+                let before = reading(memory);
+                let asked = std::time::Instant::now();
                 if let Err(why) = set_property(property, "1") {
                     say!("could not ask init to reclaim: {why}");
+                    continue;
                 }
+                // init sets the property back to 0 once every step has run; then what each
+                // step returned shows in the numbers.
+                while read_property(property) == "1" && asked.elapsed() < OUTCOME_WAIT_LIMIT {
+                    thread::sleep(EXIT_POLL);
+                }
+                let Ok(text) = std::fs::read_to_string("/proc/meminfo") else {
+                    continue;
+                };
+                let after = reading(MemInfo::parse(&text));
+                let what = if reason == Reason::Gradual {
+                    "the working set trim".to_string()
+                } else {
+                    format!("the reclaim ({reason:?})")
+                };
+                say!(
+                    "{}",
+                    reclaim_outcome_line(&what, &before, &after, asked.elapsed())
+                );
             }
+        }
+    }
+
+    /// The readings around a reclaim: `memory`, with zram's and free page reporting's own
+    /// numbers when they can be read.
+    #[cfg(target_os = "android")]
+    fn reading(
+        memory: dsa_guest_channeld::reclaim::MemInfo,
+    ) -> dsa_guest_channeld::reclaim::ReclaimReading {
+        use dsa_guest_channeld::writeback::{ZramStat, ZRAM};
+        let zram = std::fs::read_to_string(format!("{ZRAM}/mm_stat"))
+            .ok()
+            .and_then(|text| ZramStat::parse(&text))
+            .map(|stat| (stat.orig_kb, stat.mem_used_kb));
+        let reported_kb =
+            std::fs::read_to_string("/sys/module/page_reporting/parameters/reported_kb")
+                .ok()
+                .and_then(|text| text.trim().parse().ok());
+        dsa_guest_channeld::reclaim::ReclaimReading {
+            memory,
+            zram,
+            reported_kb,
         }
     }
 
