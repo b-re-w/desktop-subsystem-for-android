@@ -4666,6 +4666,45 @@ fn fr18_the_guest_reads_a_tree_only_while_a_host_client_watches_it() {
     assert_eq!(session.state(), SessionState::Active);
 }
 
+fn accessibility_listening(task_id: i32, listening: bool) -> Body {
+    Body::AccessibilityListening(dsa_protocol::control::AccessibilityListening {
+        task_id,
+        listening,
+    })
+}
+
+#[test]
+fn fr18_the_agent_hears_when_a_screen_reader_listens_for_a_task() {
+    let (session, mut agent, _launcher) = active_session();
+    let first = session.watch_accessibility(7);
+    assert_eq!(next_body(&mut agent), accessibility_watch(7, true));
+    // Without a screen reader the agent is told nothing more: it keeps its usual waits.
+    nothing_for_the_guest(&mut agent);
+    first.set_listening(true);
+    assert_eq!(next_body(&mut agent), accessibility_listening(7, true));
+    // A second watch that listens too changes nothing for the task.
+    let second = session.watch_accessibility(7);
+    assert_eq!(next_body(&mut agent), accessibility_watch(7, true));
+    assert_eq!(next_body(&mut agent), accessibility_listening(7, true));
+    second.set_listening(true);
+    nothing_for_the_guest(&mut agent);
+    first.set_listening(false);
+    nothing_for_the_guest(&mut agent);
+    // The last watch that listens goes: the agent goes back to its usual waits.
+    drop(second);
+    assert_eq!(next_body(&mut agent), accessibility_listening(7, false));
+    // A new agent hears it again for a task a screen reader listens for.
+    first.set_listening(true);
+    assert_eq!(next_body(&mut agent), accessibility_listening(7, true));
+    report_boot(&mut agent, true, false);
+    thread::sleep(Duration::from_millis(50));
+    report_boot(&mut agent, true, true);
+    assert_eq!(next_body(&mut agent), accessibility_watch(7, true));
+    assert_eq!(next_body(&mut agent), accessibility_listening(7, true));
+    drop(first);
+    assert_eq!(next_body(&mut agent), accessibility_watch(7, false));
+}
+
 #[test]
 fn fr18_a_new_agent_is_asked_again_for_every_watched_tree() {
     let (session, mut agent, _launcher) = active_session();
@@ -4689,6 +4728,7 @@ fn fr18_actions_go_to_the_guest_and_their_results_come_back() {
         action: NodeAction::Click,
         text: String::new(),
         request_id: 5,
+        ..ActionRequest::default()
     };
     session.accessibility_action(7, &action).unwrap();
     assert_eq!(

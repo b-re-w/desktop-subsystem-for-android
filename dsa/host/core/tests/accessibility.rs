@@ -4,9 +4,9 @@
 use std::time::{Duration, Instant};
 
 use dsa_host_core::accessibility::{
-    from_screen, role_of, to_screen, ActionRequest, ActionResult, ClientPresence, Node, NodeAction,
-    NodeRange, NodeStates, PresenceChange, Role, Tree, TreeError, TreeUpdate, MAX_NODES,
-    MAX_TEXT_CHARS,
+    from_screen, role_of, to_screen, ActionRequest, ActionResult, ClientDemand, ClientPresence,
+    Demand, DemandReason, Node, NodeAction, NodeRange, NodeStates, PresenceChange, Role, Tree,
+    TreeError, TreeUpdate, MAX_NODES, MAX_TEXT_CHARS, SNAPSHOT_INTERVAL,
 };
 use dsa_host_core::compositor::window_sizing::{density_for_dpi, scale_between, to_window_size};
 use dsa_host_core::input::WindowGeometry;
@@ -75,6 +75,7 @@ fn settings_screen(epoch: u32) -> TreeUpdate {
         ],
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -87,6 +88,7 @@ fn change(epoch: u32, nodes: Vec<Node>, removed: Vec<u32>, roots: Vec<u32>) -> T
         nodes,
         removed,
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -202,6 +204,7 @@ fn fr18_a_tree_over_the_node_cap_is_dropped() {
         nodes,
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     };
     let mut tree = Tree::new();
     assert!(matches!(tree.apply(update), Err(TreeError::Malformed(_))));
@@ -259,6 +262,7 @@ fn fr18_the_tree_crosses_the_local_api_unchanged() {
         action: NodeAction::SetText,
         text: "hello".into(),
         request_id: 9,
+        ..ActionRequest::default()
     };
     assert_eq!(
         ActionRequest::from_host_api(request.to_host_api()).unwrap(),
@@ -471,6 +475,7 @@ fn fr18_on_a_monitor_above_and_left_of_the_main_one_a_hit_test_lands_on_the_node
         removed: vec![],
         roots: vec![1],
         focused: None,
+        accessibility_focused: None,
     })
     .unwrap();
     // The button is shown at 820 by 1640 window pixels into the client area.
@@ -520,4 +525,135 @@ fn fr18_the_guest_is_asked_while_a_client_asks_and_stops_after_the_grace() {
     presence.asked(start + Duration::from_secs(300));
     assert_eq!(presence.end(), Some(PresenceChange::Stop));
     assert_eq!(presence.end(), None);
+}
+
+#[test]
+fn fr18_a_client_that_is_not_a_screen_reader_does_not_start_the_watch() {
+    let start = Instant::now();
+    let mut demand = ClientDemand::new(Duration::from_secs(30), SNAPSHOT_INTERVAL);
+    // A client that only reads gets the tree read once, not a watch.
+    assert_eq!(
+        demand.asked(start, false, false),
+        Some((Demand::Snapshot, DemandReason::Read))
+    );
+    assert!(!demand.continuous());
+    // Not again while that read runs, nor within the interval after it.
+    assert_eq!(demand.asked(start, false, true), None);
+    assert_eq!(
+        demand.asked(start + Duration::from_secs(1), false, false),
+        None
+    );
+    assert_eq!(
+        demand.asked(start + SNAPSHOT_INTERVAL, false, false),
+        Some((Demand::Snapshot, DemandReason::Read))
+    );
+    // An action always reaches Android, however soon after a read.
+    assert_eq!(
+        demand.acted(start + SNAPSHOT_INTERVAL, false),
+        Some((Demand::Snapshot, DemandReason::Action))
+    );
+    // Nothing runs that a poll would have to stop.
+    assert_eq!(
+        demand.poll(start + Duration::from_secs(100), true, false),
+        None
+    );
+}
+
+#[test]
+fn fr18_a_screen_reader_starts_the_fast_watch_and_its_end_stops_it() {
+    let start = Instant::now();
+    let mut demand = ClientDemand::new(Duration::from_secs(30), SNAPSHOT_INTERVAL);
+    assert_eq!(
+        demand.asked(start, true, false),
+        Some((Demand::Continuous, DemandReason::AssistiveTechnology))
+    );
+    assert!(demand.continuous());
+    // While it runs, reads and actions need nothing more.
+    assert_eq!(demand.asked(start, false, false), None);
+    assert_eq!(demand.acted(start, false), None);
+    assert_eq!(demand.poll(start + Duration::from_secs(60), true, true), None);
+    // The screen reader goes: the watch stops at once, whoever else listens.
+    assert_eq!(
+        demand.poll(start + Duration::from_secs(61), true, false),
+        Some((PresenceChange::Stop, DemandReason::AssistiveTechnologyGone))
+    );
+    assert!(!demand.continuous());
+}
+
+#[test]
+fn fr18_the_client_focus_is_the_focus_that_moved_last() {
+    let mut tree = Tree::new();
+    let mut screen = settings_screen(1);
+    screen.focused = Some(3);
+    assert_eq!(tree.apply(screen).unwrap().focus, Some(3));
+    assert_eq!(tree.client_focus(), Some(3));
+    // The accessibility focus moves to the second row while the input focus stays.
+    let mut moved = change(1, vec![], vec![], vec![1]);
+    moved.focused = Some(3);
+    moved.accessibility_focused = Some(5);
+    assert_eq!(tree.apply(moved).unwrap().focus, Some(5));
+    assert_eq!(tree.client_focus(), Some(5));
+    assert_eq!(tree.focused(), Some(3));
+    assert_eq!(tree.accessibility_focused(), Some(5));
+    // Nothing moves: no focus event.
+    let mut same = change(1, vec![], vec![], vec![1]);
+    same.focused = Some(3);
+    same.accessibility_focused = Some(5);
+    assert_eq!(tree.apply(same).unwrap().focus, None);
+    // The input focus moves: it is the one the user went to.
+    let mut back = change(1, vec![], vec![], vec![1]);
+    back.focused = Some(4);
+    back.accessibility_focused = Some(5);
+    assert_eq!(tree.apply(back).unwrap().focus, Some(4));
+    // The accessibility focus is cleared: the input focus is what is left.
+    let mut cleared = change(1, vec![], vec![], vec![1]);
+    cleared.focused = Some(4);
+    assert_eq!(tree.apply(cleared).unwrap().focus, None);
+    assert_eq!(tree.client_focus(), Some(4));
+    // An accessibility focus on a node that is not there is refused.
+    let mut lost = change(1, vec![], vec![], vec![1]);
+    lost.accessibility_focused = Some(77);
+    assert!(matches!(tree.apply(lost), Err(TreeError::Malformed(_))));
+}
+
+#[test]
+fn fr18_selection_and_accessibility_focus_cross_both_wires() {
+    let mut update = settings_screen(3);
+    update.nodes[3].states.editable = true;
+    update.nodes[3].states.accessibility_focused = true;
+    update.nodes[3].selection = Some((5, 2));
+    update.accessibility_focused = Some(4);
+    let back = TreeUpdate::from_host_api(update.to_host_api()).unwrap();
+    assert_eq!(back, update);
+    let request = ActionRequest {
+        epoch: 3,
+        node_id: 4,
+        action: NodeAction::SetSelection,
+        text: String::new(),
+        request_id: 10,
+        selection: (2, 7),
+        ..ActionRequest::default()
+    };
+    assert_eq!(
+        ActionRequest::from_host_api(request.to_host_api()).unwrap(),
+        request
+    );
+    let control = request.to_control(7);
+    assert_eq!(control.action, control::NodeAction::SetSelection as i32);
+    assert_eq!((control.selection_start, control.selection_end), (2, 7));
+    // A node that says it has no selection has none, whatever its numbers.
+    let none = control::AccessibilityTree {
+        task_id: 7,
+        epoch: 1,
+        full: true,
+        root_ids: vec![1],
+        nodes: vec![control::AccessibilityNode {
+            id: 1,
+            text_selection_start: 3,
+            text_selection_end: 3,
+            ..control::AccessibilityNode::default()
+        }],
+        ..control::AccessibilityTree::default()
+    };
+    assert_eq!(TreeUpdate::from_control(none).unwrap().nodes[0].selection, None);
 }
