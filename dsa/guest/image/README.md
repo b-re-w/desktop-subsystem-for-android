@@ -94,6 +94,14 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
   Settings down when Connected devices or Accessibility opened. Each edit keeps the method's
   size, and the dex checksum and signature are written again. `check-image.py` fails an image
   that still has either.
+- Settings does not call into the apps the image leaves out. Its Safety & emergency page
+  asked EmergencyInfo's content provider for the emergency SOS gesture, and with no such
+  provider Settings ended each time the page opened. The Settings overlay turns that entry
+  off (`config_show_emergency_gesture_settings`, in `SETTINGS_OVERLAY_BOOLEANS`), and the
+  code behind it is edited as well (`SETTINGS_CODE_WITHOUT_REMOVED_APPS`): the gesture reads
+  as off without asking the provider. Display's "Brightness level" row started SystemUI's
+  brightness dialog by name; the row stays, and a click on it starts nothing.
+  `check-image.py` fails an image that still shows the entry or still has that code.
 - The system apps users open (`COMPILED_APPS`: Settings, Files, the package installer, the
   share sheet, WebView, the agent and a few more) are compiled to the guest's machine code (x86_64 or arm64) when
   the image is made. The build compiles them only into system_other, which the guest does not

@@ -7,7 +7,8 @@ could start without developer mode, listen on TCP or ask for an authorisation, w
 app is not signed with one of the keys in the key folder, when a system screen overlay is
 missing or was built against another framework-res or another build of the app it overlays,
 when Settings' pages would open with their large title folded, when the trace script is missing, when the agent is missing or not signed with the platform key, when
-Settings still has the preferences or code that crash it without Bluetooth, when the window
+Settings still has the preferences or code that crash it without Bluetooth, or still shows the
+emergency gesture or calls into an app the image leaves out, when the window
 manager would not give a freeform window its status bar inset, when the
 package manager would refuse a multiArch app with arm64-v8a code only while ARM translation is
 on, or services.jar stores its dex unaligned, when the framework overlay's status bar heights
@@ -205,6 +206,12 @@ with zipfile.ZipFile(image / "signed-target_files.zip") as z:
                 if left:
                     problems.append(f"{name}:{dex} still has the code in {', '.join(sorted(set(left)))} "
                                     "that crashes Settings without the Bluetooth adapter")
+                # Settings asks the emergency information app for the emergency gesture and
+                # SystemUI for the brightness slider; the image has neither app.
+                _, left = make_image.edit_dex(content, make_image.SETTINGS_CODE_WITHOUT_REMOVED_APPS)
+                if left:
+                    problems.append(f"{name}:{dex} still has the code in {', '.join(sorted(set(left)))} "
+                                    "that calls into an app the image leaves out, which ends Settings")
     # Settings' pages take whether their large title opens expanded from the theme, which the
     # Settings overlay sets by the window's height.
     for name in names:
