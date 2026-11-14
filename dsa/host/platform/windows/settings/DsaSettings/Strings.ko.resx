@@ -319,6 +319,48 @@ Android {2}은(는) 아직 시작을 마치지 못했습니다({3}). Android를 
   <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
     <value>바꾼 렌더링 GPU는 창 관리자가 다시 시작할 때 적용됩니다. 다음에 로그인할 때 적용되며, 아래에서 바로 다시 시작할 수도 있습니다.</value>
   </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Vulkan 드라이버</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Android 앱은 Vulkan으로 그립니다. Vulkan 드라이버가 없는 GPU는 Microsoft의 OpenCL, OpenGL, and Vulkan Compatibility Pack에 든 Dozen(Vulkan on Direct3D 12)을 쓸 수 있습니다. 창 관리자가 다시 시작할 때 적용됩니다.</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>자동: GPU의 드라이버, 없을 때만 Dozen(권장)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>GPU 자체의 Vulkan 드라이버만</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>Dozen만(시험과 비교용)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>창 관리자가 무엇으로 렌더링하는지 아직 알리지 않았습니다.</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>지금 GPU의 Vulkan 드라이버로 렌더링합니다.</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>지금 Dozen(Vulkan on Direct3D 12)으로 렌더링합니다.</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>지금 CPU 위의 Dozen으로 렌더링합니다. 이 GPU에는 Direct3D 12 드라이버가 없습니다.</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>렌더링할 Vulkan이 없어 Android를 시작하지 않습니다. Microsoft Store나 winget install Microsoft.OpenCLGLVulkanCompatibilityPack으로 Compatibility Pack을 설치한 뒤 로그아웃했다가 다시 로그인하십시오.</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>Microsoft Store에서 Compatibility Pack 받기</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android를 CPU로 그립니다</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>이 PC의 GPU에는 Direct3D 12 드라이버가 없어, 앱은 동작하지만 게임과 애니메이션은 느립니다.</value>
+  </data>
   <data name="TouchGesturesCard.Header" xml:space="preserve">
     <value>DSA 앱 창에서 Windows 터치 제스처 끄기</value>
   </data>

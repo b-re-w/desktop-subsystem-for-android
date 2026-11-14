@@ -155,7 +155,25 @@ public sealed partial class DsaService
         Bool(json, "host_certificates", missing: true),
         ReadImportedCertificates(json),
         FullScreenPlaces.Parse(OptionalString(json, "app_fullscreen"), FullScreenPlace.Screen),
-        FullScreenPlaces.Parse(OptionalString(json, "app_immersive"), FullScreenPlace.Window));
+        FullScreenPlaces.Parse(OptionalString(json, "app_immersive"), FullScreenPlace.Window),
+        OptionalString(json, "vulkan_driver") is { Length: > 0 } vulkan ? vulkan : "auto",
+        ReadGraphicsState(OptionalString(json, "graphics_state")),
+        OptionalString(json, "graphics_detail") is { Length: > 0 } detail ? detail : null);
+
+    /// <summary>The graphics state a name stands for. An empty or unknown name, as an older
+    /// service gives, is unknown.</summary>
+    public static GraphicsState ReadGraphicsState(string? name) => name switch
+    {
+        "native" => GraphicsState.Native,
+        "dozen" => GraphicsState.Dozen,
+        "dozen-cpu" => GraphicsState.DozenCpu,
+        "unavailable" => GraphicsState.Unavailable,
+        _ => GraphicsState.Unknown,
+    };
+
+    /// <summary>Which Vulkan implementation the renderer uses: <c>auto</c>, <c>native</c> or
+    /// <c>dozen</c>. It applies when the window manager starts again.</summary>
+    public Task<SettingsInfo> SetVulkanDriverAsync(string value) => SetAsync("vulkan-driver", value);
 
     /// <summary>The root certificates a user or an administrator added to this computer, as the
     /// settings list them. An older service lists none.</summary>
