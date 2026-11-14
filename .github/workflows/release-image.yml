@@ -644,10 +644,11 @@ jobs:
             # A development build makes only the newest Android's x86_64 image, so it takes the
             # files of the newest Framework build run on develop whose job for those passed,
             # while that run's other jobs are still building or after they failed. The name
-            # is the job's in framework.yml.
+            # is that of framework.yml's framework job, the one that keeps the artifact once
+            # services.jar has joined the native files.
             android="android$(jq '.supported_majors | max' dsa/android-versions.json)"
             name="framework-$android-x86_64-$(python3 dsa/guest/framework/framework_lock.py version "$android")"
-            job="Build the framework (ubuntu-24.04, $android, x86_64)"
+            job="Pack the framework files (ubuntu-24.04, $android, x86_64)"
             echo "looking for $name from a passing \"$job\""
             for run in $(gh run list --repo "${{ github.repository }}" --workflow framework.yml --branch develop \
                            --limit 30 --json databaseId --jq '.[].databaseId'); do

@@ -931,14 +931,70 @@ class ServicesTests(unittest.TestCase):
         self.assertIn('if [[ "$deep" == --deep ]]; then', free_disk)
         self.assertIn("/usr/lib/llvm-*", free_disk)
         # The other builds keep the plain cleanup.
+        self.assertIn("run: .github/scripts/translator/free-disk.sh dsa-framework\n",
+                      workflow[workflow.index("  native:\n"):workflow.index("  services:\n")])
         self.assertNotIn("--deep", workflow[workflow.index("  framework:\n"):])
+
+    def test_fr22_the_services_build_leaves_the_runner_room(self):
+        # android17's services job lost its runner 50 minutes into the build (run 43637660922).
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('jobs="${DSA_SERVICES_JOBS:-2}"', script)
+        self.assertIn('--make-mode --skip-soong-tests -j"$jobs"', script)
+        self.assertNotIn('-j"$(nproc)"', script)
+        self.assertIn("export NINJA_HIGHMEM_NUM_JOBS=1", script)
+        self.assertIn("export GOMEMLIMIT=", script)
+        self.assertIn("choom -n 1000 -- nice -n 19 ionice -c 2 -n 7", script)
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        self.assertIn("DSA_SERVICES_JOBS: 2", job)
+        guard = job[job.index("- name: Keep the runner responsive under memory pressure"):
+                    job.index("- name: Install the build tools")]
+        self.assertIn("/sys/module/zswap/parameters", guard)
+        self.assertIn('echo -1000 | sudo tee "/proc/$pid/oom_score_adj"', guard)
+        # Before the fetch and the build, which it protects the runner from.
+        self.assertLess(job.index("Keep the runner responsive"), job.index("- name: Build services.jar"))
 
     def test_fr22_the_framework_artifact_carries_services_jar_from_the_services_build(self):
         workflow = (REPO / ".github/workflows/framework.yml").read_text()
         self.assertIn("build-services.sh", workflow)
         self.assertIn("framework_lock.py services-lock", workflow)
-        self.assertIn("needs: [versions, services]", workflow)
-        self.assertIn('--services "$DSA_TRANSLATOR_WORK/services"', workflow)
+        native = workflow[workflow.index("  native:\n"):workflow.index("  services:\n")]
+        pack = workflow[workflow.index("  framework:\n"):]
+        # The native builds start with the services builds, not after them.
+        self.assertIn("    needs: versions\n", native)
+        self.assertNotIn("--services", native)
+        self.assertIn("name: framework-native-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}",
+                      native)
+        # Only the job after both keeps the artifact the image release takes.
+        self.assertNotIn("name: framework-${{ matrix.android }}", native)
+        self.assertIn("needs: [versions, native, services]", pack)
+        self.assertIn("if: ${{ !cancelled() && needs.versions.result == 'success' }}", pack)
+        self.assertIn('--add-services "$RUNNER_TEMP/services" --out "$out"', pack)
+        self.assertLess(pack.index("- name: Check the native build kept its files"),
+                        pack.index("- name: Keep the framework files"))
+
+    def test_fr22_services_jar_added_later_makes_the_same_folder(self):
+        version = framework_lock.version_entry(framework_lock.load(), "android17")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            collect_tests = CollectTests()
+            services = root / "services"
+            jar = services / framework_lock.SERVICES_JAR
+            jar.parent.mkdir(parents=True)
+            with zipfile.ZipFile(jar, "w", zipfile.ZIP_DEFLATED) as z:
+                z.writestr("classes.dex", b"dex\n035\0" + bytes(100))
+            product, top = collect_tests._product(root, 62), collect_tests._tree(root)
+            sources, patches = {"projects": 1}, {"patches": 2}
+            collect.collect(version, "x86_64", product, root / "once", sources, patches, top, services)
+            collect.collect(version, "x86_64", product, root / "later", sources, patches, top)
+            description = collect.add_services(root / "later", services)
+            self.assertIn(framework_lock.SERVICES_JAR, description["files"])
+            for name in [collect.MANIFEST, *framework_lock.OUTPUTS, framework_lock.SERVICES_JAR]:
+                self.assertEqual((root / "later" / name).read_bytes(), (root / "once" / name).read_bytes(), name)
+            with self.assertRaisesRegex(SystemExit, "already holds"):
+                collect.add_services(root / "later", services)
+            with self.assertRaisesRegex(SystemExit, "has no framework.json"):
+                collect.add_services(root / "empty", services)
 
     def test_fr22_collect_takes_services_jar_from_the_services_build(self):
         version = framework_lock.version_entry(framework_lock.load(), "android17")
@@ -1067,9 +1123,13 @@ class WorkflowTests(unittest.TestCase):
         # The newest supported Android's x86_64 files, from the job framework.yml names so.
         self.assertIn('android="android$(jq \'.supported_majors | max\' dsa/android-versions.json)"', dev)
         self.assertIn('name="framework-$android-x86_64-', dev)
-        self.assertIn('job="Build the framework (ubuntu-24.04, $android, x86_64)"', dev)
-        self.assertIn("name: Build the framework (ubuntu-24.04, ${{ matrix.android }}, ${{ matrix.arch }})",
-                      self.framework)
+        # The job that keeps the artifact once services.jar has joined the native files.
+        self.assertIn('job="Pack the framework files (ubuntu-24.04, $android, x86_64)"', dev)
+        pack = self.framework[self.framework.index("  framework:\n"):]
+        self.assertIn("name: Pack the framework files (ubuntu-24.04, ${{ matrix.android }}, ${{ matrix.arch }})",
+                      pack)
+        self.assertIn("name: framework-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}",
+                      pack)
         # Its job's conclusion, not the run's: the run may still be going or have failed.
         self.assertIn('[[ "$conclusion" == success ]] || continue', dev)
         self.assertNotIn("--status success", dev)
