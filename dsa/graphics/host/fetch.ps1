@@ -89,7 +89,10 @@ git -C $GfxstreamDir clean -fdx
 # yellow-green in a video's flat areas. Without 0033 a guest's synchronization2 barrier keeps the
 # foreign queue family, and the ColorBuffer it takes or gives back is not recorded. Without 0034
 # the ColorBuffers a guest closed last (a whole video's, closed within one second) stay until
-# another ColorBuffer is closed, which with one still app open never comes.
+# another ColorBuffer is closed, which with one still app open never comes. Without 0035 a GLES
+# app (through ANGLE) is offered no ASTC on a GPU that lacks it (NVIDIA and AMD desktop GPUs,
+# Intel Arc), even though the renderer decodes ASTC on the GPU for Vulkan apps there, and the
+# log does not say whether ASTC is native, decoded on the GPU or unavailable.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -122,7 +125,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0031-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0032-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0033-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0034-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0034-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0035-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName
