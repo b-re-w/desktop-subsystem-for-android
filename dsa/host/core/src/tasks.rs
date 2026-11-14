@@ -377,6 +377,10 @@ pub enum TaskRequest {
         start_width: u32,
         end_width: u32,
     },
+    /// Where the task's window shows a clear full screen request of its app: with
+    /// `in_window`, a task that leaves freeform for fullscreen is put back in freeform at the
+    /// bounds it had, so its window keeps its size; without it, the task fills the screen.
+    SetFullScreen { task_id: i32, in_window: bool },
     /// Whether any task window is shown: open and not minimized. Once none has been shown for
     /// a while the guest's screen goes off and the guest goes into Doze; it wakes as soon as
     /// a window is shown again.
@@ -433,6 +437,14 @@ impl TaskRequest {
             TaskRequest::SetCaption {
                 task_id, height, ..
             } => format!("give task {task_id} a title bar inset of {height} pixels"),
+            TaskRequest::SetFullScreen {
+                task_id,
+                in_window: true,
+            } => format!("keep task {task_id} inside its window when it asks for full screen"),
+            TaskRequest::SetFullScreen {
+                task_id,
+                in_window: false,
+            } => format!("let task {task_id} fill the screen when it asks for full screen"),
             TaskRequest::WindowsShown { shown: true } => "wake for a shown window".into(),
             TaskRequest::WindowsShown { shown: false } => {
                 "let the screen go off with no window shown".into()
@@ -484,6 +496,10 @@ pub fn coalesce(requests: Vec<TaskRequest>) -> Vec<TaskRequest> {
                 (
                     TaskRequest::SetCaption { task_id: a, .. },
                     TaskRequest::SetCaption { task_id: b, .. },
+                ) => a == b,
+                (
+                    TaskRequest::SetFullScreen { task_id: a, .. },
+                    TaskRequest::SetFullScreen { task_id: b, .. },
                 ) => a == b,
                 (TaskRequest::WindowsShown { .. }, TaskRequest::WindowsShown { .. }) => true,
                 (TaskRequest::TasksShown { .. }, TaskRequest::TasksShown { .. }) => true,

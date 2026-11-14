@@ -5234,6 +5234,13 @@ impl HostApiService {
                     end_width: caption.end_width,
                 },
             ),
+            Some(request::Body::SetTaskFullScreen(full)) => self.request(
+                peer,
+                TaskRequest::SetFullScreen {
+                    task_id: full.task_id,
+                    in_window: full.in_window,
+                },
+            ),
             Some(request::Body::SetWindowsShown(shown)) => {
                 self.request(peer, TaskRequest::WindowsShown { shown: shown.shown })
             }
@@ -5305,6 +5312,7 @@ impl HostApiService {
                         | request::Body::ResizeTask(_)
                         | request::Body::SetTaskDensity(_)
                         | request::Body::SetTaskCaption(_)
+                        | request::Body::SetTaskFullScreen(_)
                         | request::Body::SetWindowsShown(_)
                         | request::Body::SetTasksShown(_)
                         | request::Body::FreezeSession(_)
@@ -7841,6 +7849,19 @@ impl HostApiClient {
         }))
     }
 
+    /// Asks the caller's Android to keep a task that leaves freeform for fullscreen inside its
+    /// window (`in_window`), or to let it fill the screen.
+    pub fn set_task_full_screen(
+        &mut self,
+        task_id: i32,
+        in_window: bool,
+    ) -> Result<(), ClientError> {
+        self.done(request::Body::SetTaskFullScreen(types::SetTaskFullScreen {
+            task_id,
+            in_window,
+        }))
+    }
+
     /// Carries out `request` against the caller's Android.
     pub fn request(&mut self, request: &TaskRequest) -> Result<(), ClientError> {
         match request {
@@ -7866,6 +7887,9 @@ impl HostApiClient {
                 start_width,
                 end_width,
             } => self.set_task_caption(*task_id, *height, *start_width, *end_width),
+            TaskRequest::SetFullScreen { task_id, in_window } => {
+                self.set_task_full_screen(*task_id, *in_window)
+            }
             TaskRequest::WindowsShown { shown } => self.set_windows_shown(*shown),
             TaskRequest::TasksShown { task_ids } => self.set_tasks_shown(task_ids),
             TaskRequest::StopApp { package_name } => self.stop_app(package_name),
