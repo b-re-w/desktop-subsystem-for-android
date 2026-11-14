@@ -311,4 +311,148 @@ public interface AccessibilityNodeOrBuilder extends
    */
   com.google.protobuf.ByteString
       getStateDescriptionBytes();
+
+  /**
+   * <pre>
+   * Whether the node has the accessibility focus, which a screen reader's cursor follows.
+   * </pre>
+   *
+   * <code>bool accessibility_focused = 24;</code>
+   * @return The accessibilityFocused.
+   */
+  boolean getAccessibilityFocused();
+
+  /**
+   * <pre>
+   * Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+   * of its text; equal for a cursor. Set only while has_text_selection is.
+   * </pre>
+   *
+   * <code>int32 text_selection_start = 25;</code>
+   * @return The textSelectionStart.
+   */
+  int getTextSelectionStart();
+
+  /**
+   * <code>int32 text_selection_end = 26;</code>
+   * @return The textSelectionEnd.
+   */
+  int getTextSelectionEnd();
+
+  /**
+   * <code>bool has_text_selection = 27;</code>
+   * @return The hasTextSelection.
+   */
+  boolean getHasTextSelection();
+
+  /**
+   * <pre>
+   * A heading's level, 1 to 9, or 0 when the app does not say.
+   * </pre>
+   *
+   * <code>uint32 heading_level = 28;</code>
+   * @return The headingLevel.
+   */
+  int getHeadingLevel();
+
+  /**
+   * <pre>
+   * A link, with where it goes when the app says.
+   * </pre>
+   *
+   * <code>bool link = 29;</code>
+   * @return The link.
+   */
+  boolean getLink();
+
+  /**
+   * <code>string url = 30;</code>
+   * @return The url.
+   */
+  java.lang.String getUrl();
+  /**
+   * <code>string url = 30;</code>
+   * @return The bytes for url.
+   */
+  com.google.protobuf.ByteString
+      getUrlBytes();
+
+  /**
+   * <pre>
+   * Set for a list or a grid, and for an item of one.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+   * @return Whether the collection field is set.
+   */
+  boolean hasCollection();
+  /**
+   * <pre>
+   * Set for a list or a grid, and for an item of one.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+   * @return The collection.
+   */
+  io.github.thisisthepy.dsa.control.v1.NodeCollection getCollection();
+
+  /**
+   * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+   * @return Whether the collectionItem field is set.
+   */
+  boolean hasCollectionItem();
+  /**
+   * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+   * @return The collectionItem.
+   */
+  io.github.thisisthepy.dsa.control.v1.NodeCollectionItem getCollectionItem();
+
+  /**
+   * <pre>
+   * How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+   * </pre>
+   *
+   * <code>int32 live_region = 33;</code>
+   * @return The liveRegion.
+   */
+  int getLiveRegion();
+
+  /**
+   * <pre>
+   * The title of the pane the node is, when the app names one (a screen of an activity).
+   * </pre>
+   *
+   * <code>string pane_title = 34;</code>
+   * @return The paneTitle.
+   */
+  java.lang.String getPaneTitle();
+  /**
+   * <pre>
+   * The title of the pane the node is, when the app names one (a screen of an activity).
+   * </pre>
+   *
+   * <code>string pane_title = 34;</code>
+   * @return The bytes for paneTitle.
+   */
+  com.google.protobuf.ByteString
+      getPaneTitleBytes();
+
+  /**
+   * <pre>
+   * Set for a top-level node: the window it is the root of.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+   * @return Whether the window field is set.
+   */
+  boolean hasWindow();
+  /**
+   * <pre>
+   * Set for a top-level node: the window it is the root of.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+   * @return The window.
+   */
+  io.github.thisisthepy.dsa.control.v1.NodeWindow getWindow();
 }

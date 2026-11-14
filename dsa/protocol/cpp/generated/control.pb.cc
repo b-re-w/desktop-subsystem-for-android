@@ -2275,6 +2275,67 @@ struct AccessibilityWatchDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AccessibilityWatchDefaultTypeInternal _AccessibilityWatch_default_instance_;
+PROTOBUF_CONSTEXPR AccessibilityListening::AccessibilityListening(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.task_id_)*/0
+  , /*decltype(_impl_.listening_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct AccessibilityListeningDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR AccessibilityListeningDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~AccessibilityListeningDefaultTypeInternal() {}
+  union {
+    AccessibilityListening _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AccessibilityListeningDefaultTypeInternal _AccessibilityListening_default_instance_;
+PROTOBUF_CONSTEXPR NodeCollection::NodeCollection(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.rows_)*/0
+  , /*decltype(_impl_.columns_)*/0
+  , /*decltype(_impl_.hierarchical_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct NodeCollectionDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR NodeCollectionDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~NodeCollectionDefaultTypeInternal() {}
+  union {
+    NodeCollection _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NodeCollectionDefaultTypeInternal _NodeCollection_default_instance_;
+PROTOBUF_CONSTEXPR NodeCollectionItem::NodeCollectionItem(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.row_)*/0
+  , /*decltype(_impl_.row_span_)*/0
+  , /*decltype(_impl_.column_)*/0
+  , /*decltype(_impl_.column_span_)*/0
+  , /*decltype(_impl_.heading_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct NodeCollectionItemDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR NodeCollectionItemDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~NodeCollectionItemDefaultTypeInternal() {}
+  union {
+    NodeCollectionItem _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NodeCollectionItemDefaultTypeInternal _NodeCollectionItem_default_instance_;
+PROTOBUF_CONSTEXPR NodeWindow::NodeWindow(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.title_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.modal_)*/false
+  , /*decltype(_impl_.popup_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct NodeWindowDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR NodeWindowDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~NodeWindowDefaultTypeInternal() {}
+  union {
+    NodeWindow _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NodeWindowDefaultTypeInternal _NodeWindow_default_instance_;
 PROTOBUF_CONSTEXPR NodeRange::NodeRange(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.min_)*/0
@@ -2302,8 +2363,13 @@ PROTOBUF_CONSTEXPR AccessibilityNode::AccessibilityNode(
   , /*decltype(_impl_.hint_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.view_id_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.state_description_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.url_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.pane_title_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.bounds_)*/nullptr
   , /*decltype(_impl_.range_)*/nullptr
+  , /*decltype(_impl_.collection_)*/nullptr
+  , /*decltype(_impl_.collection_item_)*/nullptr
+  , /*decltype(_impl_.window_)*/nullptr
   , /*decltype(_impl_.id_)*/0u
   , /*decltype(_impl_.checkable_)*/false
   , /*decltype(_impl_.checked_)*/false
@@ -2317,6 +2383,13 @@ PROTOBUF_CONSTEXPR AccessibilityNode::AccessibilityNode(
   , /*decltype(_impl_.editable_)*/false
   , /*decltype(_impl_.password_)*/false
   , /*decltype(_impl_.heading_)*/false
+  , /*decltype(_impl_.text_selection_start_)*/0
+  , /*decltype(_impl_.text_selection_end_)*/0
+  , /*decltype(_impl_.accessibility_focused_)*/false
+  , /*decltype(_impl_.has_text_selection_)*/false
+  , /*decltype(_impl_.link_)*/false
+  , /*decltype(_impl_.heading_level_)*/0u
+  , /*decltype(_impl_.live_region_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AccessibilityNodeDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AccessibilityNodeDefaultTypeInternal()
@@ -2327,6 +2400,22 @@ struct AccessibilityNodeDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AccessibilityNodeDefaultTypeInternal _AccessibilityNode_default_instance_;
+PROTOBUF_CONSTEXPR AccessibilityAnnouncement::AccessibilityAnnouncement(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.text_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.task_id_)*/0
+  , /*decltype(_impl_.assertive_)*/false
+  , /*decltype(_impl_.toast_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct AccessibilityAnnouncementDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR AccessibilityAnnouncementDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~AccessibilityAnnouncementDefaultTypeInternal() {}
+  union {
+    AccessibilityAnnouncement _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AccessibilityAnnouncementDefaultTypeInternal _AccessibilityAnnouncement_default_instance_;
 PROTOBUF_CONSTEXPR AccessibilityTree::AccessibilityTree(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.root_ids_)*/{}
@@ -2338,6 +2427,7 @@ PROTOBUF_CONSTEXPR AccessibilityTree::AccessibilityTree(
   , /*decltype(_impl_.epoch_)*/0u
   , /*decltype(_impl_.full_)*/false
   , /*decltype(_impl_.focused_id_)*/0u
+  , /*decltype(_impl_.accessibility_focused_id_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AccessibilityTreeDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AccessibilityTreeDefaultTypeInternal()
@@ -2356,6 +2446,11 @@ PROTOBUF_CONSTEXPR AccessibilityAction::AccessibilityAction(
   , /*decltype(_impl_.node_id_)*/0u
   , /*decltype(_impl_.action_)*/0
   , /*decltype(_impl_.request_id_)*/0u
+  , /*decltype(_impl_.selection_start_)*/0
+  , /*decltype(_impl_.selection_end_)*/0
+  , /*decltype(_impl_.progress_)*/0
+  , /*decltype(_impl_.row_)*/0
+  , /*decltype(_impl_.column_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AccessibilityActionDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AccessibilityActionDefaultTypeInternal()
@@ -5162,47 +5257,71 @@ bool NodeAction_IsValid(int value) {
     case 6:
     case 7:
     case 8:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
       return true;
     default:
       return false;
   }
 }
 
-static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> NodeAction_strings[9] = {};
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> NodeAction_strings[15] = {};
 
 static const char NodeAction_names[] =
   "NODE_ACTION_ACCESSIBILITY_FOCUS"
   "NODE_ACTION_CLICK"
+  "NODE_ACTION_COLLAPSE"
+  "NODE_ACTION_EXPAND"
   "NODE_ACTION_FOCUS"
   "NODE_ACTION_LONG_CLICK"
   "NODE_ACTION_SCROLL_BACKWARD"
   "NODE_ACTION_SCROLL_FORWARD"
+  "NODE_ACTION_SCROLL_TO_POSITION"
   "NODE_ACTION_SELECT"
+  "NODE_ACTION_SET_PROGRESS"
+  "NODE_ACTION_SET_SELECTION"
   "NODE_ACTION_SET_TEXT"
+  "NODE_ACTION_SHOW_ON_SCREEN"
   "NODE_ACTION_UNSPECIFIED";
 
 static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry NodeAction_entries[] = {
   { {NodeAction_names + 0, 31}, 7 },
   { {NodeAction_names + 31, 17}, 1 },
-  { {NodeAction_names + 48, 17}, 6 },
-  { {NodeAction_names + 65, 22}, 2 },
-  { {NodeAction_names + 87, 27}, 5 },
-  { {NodeAction_names + 114, 26}, 4 },
-  { {NodeAction_names + 140, 18}, 8 },
-  { {NodeAction_names + 158, 20}, 3 },
-  { {NodeAction_names + 178, 23}, 0 },
+  { {NodeAction_names + 48, 20}, 11 },
+  { {NodeAction_names + 68, 18}, 10 },
+  { {NodeAction_names + 86, 17}, 6 },
+  { {NodeAction_names + 103, 22}, 2 },
+  { {NodeAction_names + 125, 27}, 5 },
+  { {NodeAction_names + 152, 26}, 4 },
+  { {NodeAction_names + 178, 30}, 14 },
+  { {NodeAction_names + 208, 18}, 8 },
+  { {NodeAction_names + 226, 24}, 12 },
+  { {NodeAction_names + 250, 25}, 9 },
+  { {NodeAction_names + 275, 20}, 3 },
+  { {NodeAction_names + 295, 26}, 13 },
+  { {NodeAction_names + 321, 23}, 0 },
 };
 
 static const int NodeAction_entries_by_number[] = {
-  8, // 0 -> NODE_ACTION_UNSPECIFIED
+  14, // 0 -> NODE_ACTION_UNSPECIFIED
   1, // 1 -> NODE_ACTION_CLICK
-  3, // 2 -> NODE_ACTION_LONG_CLICK
-  7, // 3 -> NODE_ACTION_SET_TEXT
-  5, // 4 -> NODE_ACTION_SCROLL_FORWARD
-  4, // 5 -> NODE_ACTION_SCROLL_BACKWARD
-  2, // 6 -> NODE_ACTION_FOCUS
+  5, // 2 -> NODE_ACTION_LONG_CLICK
+  12, // 3 -> NODE_ACTION_SET_TEXT
+  7, // 4 -> NODE_ACTION_SCROLL_FORWARD
+  6, // 5 -> NODE_ACTION_SCROLL_BACKWARD
+  4, // 6 -> NODE_ACTION_FOCUS
   0, // 7 -> NODE_ACTION_ACCESSIBILITY_FOCUS
-  6, // 8 -> NODE_ACTION_SELECT
+  9, // 8 -> NODE_ACTION_SELECT
+  11, // 9 -> NODE_ACTION_SET_SELECTION
+  3, // 10 -> NODE_ACTION_EXPAND
+  2, // 11 -> NODE_ACTION_COLLAPSE
+  10, // 12 -> NODE_ACTION_SET_PROGRESS
+  13, // 13 -> NODE_ACTION_SHOW_ON_SCREEN
+  8, // 14 -> NODE_ACTION_SCROLL_TO_POSITION
 };
 
 const std::string& NodeAction_Name(
@@ -5211,12 +5330,12 @@ const std::string& NodeAction_Name(
       ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
           NodeAction_entries,
           NodeAction_entries_by_number,
-          9, NodeAction_strings);
+          15, NodeAction_strings);
   (void) dummy;
   int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
       NodeAction_entries,
       NodeAction_entries_by_number,
-      9, value);
+      15, value);
   return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
                      NodeAction_strings[idx].get();
 }
@@ -5224,7 +5343,7 @@ bool NodeAction_Parse(
     ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, NodeAction* value) {
   int int_value;
   bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
-      NodeAction_entries, 9, name, &int_value);
+      NodeAction_entries, 15, name, &int_value);
   if (success) {
     *value = static_cast<NodeAction>(int_value);
   }
@@ -46064,6 +46183,1006 @@ std::string AccessibilityWatch::GetTypeName() const {
 
 // ===================================================================
 
+class AccessibilityListening::_Internal {
+ public:
+};
+
+AccessibilityListening::AccessibilityListening(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.AccessibilityListening)
+}
+AccessibilityListening::AccessibilityListening(const AccessibilityListening& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  AccessibilityListening* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.task_id_){}
+    , decltype(_impl_.listening_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.listening_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.listening_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityListening)
+}
+
+inline void AccessibilityListening::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.task_id_){0}
+    , decltype(_impl_.listening_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+AccessibilityListening::~AccessibilityListening() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.AccessibilityListening)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void AccessibilityListening::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void AccessibilityListening::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void AccessibilityListening::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.AccessibilityListening)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.listening_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.listening_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* AccessibilityListening::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // int32 task_id = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.task_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool listening = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.listening_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* AccessibilityListening::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.AccessibilityListening)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 task_id = 1;
+  if (this->_internal_task_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_task_id(), target);
+  }
+
+  // bool listening = 2;
+  if (this->_internal_listening() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_listening(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.AccessibilityListening)
+  return target;
+}
+
+size_t AccessibilityListening::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.AccessibilityListening)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // int32 task_id = 1;
+  if (this->_internal_task_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_task_id());
+  }
+
+  // bool listening = 2;
+  if (this->_internal_listening() != 0) {
+    total_size += 1 + 1;
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void AccessibilityListening::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const AccessibilityListening*>(
+      &from));
+}
+
+void AccessibilityListening::MergeFrom(const AccessibilityListening& from) {
+  AccessibilityListening* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.AccessibilityListening)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_task_id() != 0) {
+    _this->_internal_set_task_id(from._internal_task_id());
+  }
+  if (from._internal_listening() != 0) {
+    _this->_internal_set_listening(from._internal_listening());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void AccessibilityListening::CopyFrom(const AccessibilityListening& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.AccessibilityListening)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool AccessibilityListening::IsInitialized() const {
+  return true;
+}
+
+void AccessibilityListening::InternalSwap(AccessibilityListening* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(AccessibilityListening, _impl_.listening_)
+      + sizeof(AccessibilityListening::_impl_.listening_)
+      - PROTOBUF_FIELD_OFFSET(AccessibilityListening, _impl_.task_id_)>(
+          reinterpret_cast<char*>(&_impl_.task_id_),
+          reinterpret_cast<char*>(&other->_impl_.task_id_));
+}
+
+std::string AccessibilityListening::GetTypeName() const {
+  return "dsa.control.v1.AccessibilityListening";
+}
+
+
+// ===================================================================
+
+class NodeCollection::_Internal {
+ public:
+};
+
+NodeCollection::NodeCollection(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.NodeCollection)
+}
+NodeCollection::NodeCollection(const NodeCollection& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  NodeCollection* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.rows_){}
+    , decltype(_impl_.columns_){}
+    , decltype(_impl_.hierarchical_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  ::memcpy(&_impl_.rows_, &from._impl_.rows_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.hierarchical_) -
+    reinterpret_cast<char*>(&_impl_.rows_)) + sizeof(_impl_.hierarchical_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.NodeCollection)
+}
+
+inline void NodeCollection::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.rows_){0}
+    , decltype(_impl_.columns_){0}
+    , decltype(_impl_.hierarchical_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+NodeCollection::~NodeCollection() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.NodeCollection)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void NodeCollection::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void NodeCollection::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void NodeCollection::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.NodeCollection)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::memset(&_impl_.rows_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.hierarchical_) -
+      reinterpret_cast<char*>(&_impl_.rows_)) + sizeof(_impl_.hierarchical_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* NodeCollection::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // int32 rows = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.rows_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 columns = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.columns_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool hierarchical = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.hierarchical_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* NodeCollection::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.NodeCollection)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rows = 1;
+  if (this->_internal_rows() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_rows(), target);
+  }
+
+  // int32 columns = 2;
+  if (this->_internal_columns() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_columns(), target);
+  }
+
+  // bool hierarchical = 3;
+  if (this->_internal_hierarchical() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_hierarchical(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.NodeCollection)
+  return target;
+}
+
+size_t NodeCollection::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.NodeCollection)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // int32 rows = 1;
+  if (this->_internal_rows() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_rows());
+  }
+
+  // int32 columns = 2;
+  if (this->_internal_columns() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_columns());
+  }
+
+  // bool hierarchical = 3;
+  if (this->_internal_hierarchical() != 0) {
+    total_size += 1 + 1;
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void NodeCollection::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const NodeCollection*>(
+      &from));
+}
+
+void NodeCollection::MergeFrom(const NodeCollection& from) {
+  NodeCollection* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.NodeCollection)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_rows() != 0) {
+    _this->_internal_set_rows(from._internal_rows());
+  }
+  if (from._internal_columns() != 0) {
+    _this->_internal_set_columns(from._internal_columns());
+  }
+  if (from._internal_hierarchical() != 0) {
+    _this->_internal_set_hierarchical(from._internal_hierarchical());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void NodeCollection::CopyFrom(const NodeCollection& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.NodeCollection)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool NodeCollection::IsInitialized() const {
+  return true;
+}
+
+void NodeCollection::InternalSwap(NodeCollection* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(NodeCollection, _impl_.hierarchical_)
+      + sizeof(NodeCollection::_impl_.hierarchical_)
+      - PROTOBUF_FIELD_OFFSET(NodeCollection, _impl_.rows_)>(
+          reinterpret_cast<char*>(&_impl_.rows_),
+          reinterpret_cast<char*>(&other->_impl_.rows_));
+}
+
+std::string NodeCollection::GetTypeName() const {
+  return "dsa.control.v1.NodeCollection";
+}
+
+
+// ===================================================================
+
+class NodeCollectionItem::_Internal {
+ public:
+};
+
+NodeCollectionItem::NodeCollectionItem(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.NodeCollectionItem)
+}
+NodeCollectionItem::NodeCollectionItem(const NodeCollectionItem& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  NodeCollectionItem* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.row_){}
+    , decltype(_impl_.row_span_){}
+    , decltype(_impl_.column_){}
+    , decltype(_impl_.column_span_){}
+    , decltype(_impl_.heading_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  ::memcpy(&_impl_.row_, &from._impl_.row_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.heading_) -
+    reinterpret_cast<char*>(&_impl_.row_)) + sizeof(_impl_.heading_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.NodeCollectionItem)
+}
+
+inline void NodeCollectionItem::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.row_){0}
+    , decltype(_impl_.row_span_){0}
+    , decltype(_impl_.column_){0}
+    , decltype(_impl_.column_span_){0}
+    , decltype(_impl_.heading_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+NodeCollectionItem::~NodeCollectionItem() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.NodeCollectionItem)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void NodeCollectionItem::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void NodeCollectionItem::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void NodeCollectionItem::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.NodeCollectionItem)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::memset(&_impl_.row_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.heading_) -
+      reinterpret_cast<char*>(&_impl_.row_)) + sizeof(_impl_.heading_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* NodeCollectionItem::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // int32 row = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.row_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 row_span = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.row_span_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 column = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.column_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 column_span = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _impl_.column_span_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool heading = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _impl_.heading_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* NodeCollectionItem::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.NodeCollectionItem)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 row = 1;
+  if (this->_internal_row() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_row(), target);
+  }
+
+  // int32 row_span = 2;
+  if (this->_internal_row_span() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_row_span(), target);
+  }
+
+  // int32 column = 3;
+  if (this->_internal_column() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(3, this->_internal_column(), target);
+  }
+
+  // int32 column_span = 4;
+  if (this->_internal_column_span() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(4, this->_internal_column_span(), target);
+  }
+
+  // bool heading = 5;
+  if (this->_internal_heading() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(5, this->_internal_heading(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.NodeCollectionItem)
+  return target;
+}
+
+size_t NodeCollectionItem::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.NodeCollectionItem)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // int32 row = 1;
+  if (this->_internal_row() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_row());
+  }
+
+  // int32 row_span = 2;
+  if (this->_internal_row_span() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_row_span());
+  }
+
+  // int32 column = 3;
+  if (this->_internal_column() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_column());
+  }
+
+  // int32 column_span = 4;
+  if (this->_internal_column_span() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_column_span());
+  }
+
+  // bool heading = 5;
+  if (this->_internal_heading() != 0) {
+    total_size += 1 + 1;
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void NodeCollectionItem::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const NodeCollectionItem*>(
+      &from));
+}
+
+void NodeCollectionItem::MergeFrom(const NodeCollectionItem& from) {
+  NodeCollectionItem* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.NodeCollectionItem)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_row() != 0) {
+    _this->_internal_set_row(from._internal_row());
+  }
+  if (from._internal_row_span() != 0) {
+    _this->_internal_set_row_span(from._internal_row_span());
+  }
+  if (from._internal_column() != 0) {
+    _this->_internal_set_column(from._internal_column());
+  }
+  if (from._internal_column_span() != 0) {
+    _this->_internal_set_column_span(from._internal_column_span());
+  }
+  if (from._internal_heading() != 0) {
+    _this->_internal_set_heading(from._internal_heading());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void NodeCollectionItem::CopyFrom(const NodeCollectionItem& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.NodeCollectionItem)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool NodeCollectionItem::IsInitialized() const {
+  return true;
+}
+
+void NodeCollectionItem::InternalSwap(NodeCollectionItem* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(NodeCollectionItem, _impl_.heading_)
+      + sizeof(NodeCollectionItem::_impl_.heading_)
+      - PROTOBUF_FIELD_OFFSET(NodeCollectionItem, _impl_.row_)>(
+          reinterpret_cast<char*>(&_impl_.row_),
+          reinterpret_cast<char*>(&other->_impl_.row_));
+}
+
+std::string NodeCollectionItem::GetTypeName() const {
+  return "dsa.control.v1.NodeCollectionItem";
+}
+
+
+// ===================================================================
+
+class NodeWindow::_Internal {
+ public:
+};
+
+NodeWindow::NodeWindow(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.NodeWindow)
+}
+NodeWindow::NodeWindow(const NodeWindow& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  NodeWindow* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.title_){}
+    , decltype(_impl_.modal_){}
+    , decltype(_impl_.popup_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  _impl_.title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_title().empty()) {
+    _this->_impl_.title_.Set(from._internal_title(), 
+      _this->GetArenaForAllocation());
+  }
+  ::memcpy(&_impl_.modal_, &from._impl_.modal_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.popup_) -
+    reinterpret_cast<char*>(&_impl_.modal_)) + sizeof(_impl_.popup_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.NodeWindow)
+}
+
+inline void NodeWindow::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.title_){}
+    , decltype(_impl_.modal_){false}
+    , decltype(_impl_.popup_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+NodeWindow::~NodeWindow() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.NodeWindow)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void NodeWindow::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.title_.Destroy();
+}
+
+void NodeWindow::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void NodeWindow::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.NodeWindow)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.title_.ClearToEmpty();
+  ::memset(&_impl_.modal_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.popup_) -
+      reinterpret_cast<char*>(&_impl_.modal_)) + sizeof(_impl_.popup_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* NodeWindow::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string title = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_title();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool modal = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.modal_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool popup = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.popup_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* NodeWindow::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.NodeWindow)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string title = 1;
+  if (!this->_internal_title().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_title().data(), static_cast<int>(this->_internal_title().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.NodeWindow.title");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_title(), target);
+  }
+
+  // bool modal = 2;
+  if (this->_internal_modal() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_modal(), target);
+  }
+
+  // bool popup = 3;
+  if (this->_internal_popup() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_popup(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.NodeWindow)
+  return target;
+}
+
+size_t NodeWindow::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.NodeWindow)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string title = 1;
+  if (!this->_internal_title().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_title());
+  }
+
+  // bool modal = 2;
+  if (this->_internal_modal() != 0) {
+    total_size += 1 + 1;
+  }
+
+  // bool popup = 3;
+  if (this->_internal_popup() != 0) {
+    total_size += 1 + 1;
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void NodeWindow::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const NodeWindow*>(
+      &from));
+}
+
+void NodeWindow::MergeFrom(const NodeWindow& from) {
+  NodeWindow* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.NodeWindow)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_title().empty()) {
+    _this->_internal_set_title(from._internal_title());
+  }
+  if (from._internal_modal() != 0) {
+    _this->_internal_set_modal(from._internal_modal());
+  }
+  if (from._internal_popup() != 0) {
+    _this->_internal_set_popup(from._internal_popup());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void NodeWindow::CopyFrom(const NodeWindow& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.NodeWindow)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool NodeWindow::IsInitialized() const {
+  return true;
+}
+
+void NodeWindow::InternalSwap(NodeWindow* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.title_, lhs_arena,
+      &other->_impl_.title_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(NodeWindow, _impl_.popup_)
+      + sizeof(NodeWindow::_impl_.popup_)
+      - PROTOBUF_FIELD_OFFSET(NodeWindow, _impl_.modal_)>(
+          reinterpret_cast<char*>(&_impl_.modal_),
+          reinterpret_cast<char*>(&other->_impl_.modal_));
+}
+
+std::string NodeWindow::GetTypeName() const {
+  return "dsa.control.v1.NodeWindow";
+}
+
+
+// ===================================================================
+
 class NodeRange::_Internal {
  public:
 };
@@ -46341,6 +47460,9 @@ class AccessibilityNode::_Internal {
  public:
   static const ::dsa::control::v1::Rect& bounds(const AccessibilityNode* msg);
   static const ::dsa::control::v1::NodeRange& range(const AccessibilityNode* msg);
+  static const ::dsa::control::v1::NodeCollection& collection(const AccessibilityNode* msg);
+  static const ::dsa::control::v1::NodeCollectionItem& collection_item(const AccessibilityNode* msg);
+  static const ::dsa::control::v1::NodeWindow& window(const AccessibilityNode* msg);
 };
 
 const ::dsa::control::v1::Rect&
@@ -46350,6 +47472,18 @@ AccessibilityNode::_Internal::bounds(const AccessibilityNode* msg) {
 const ::dsa::control::v1::NodeRange&
 AccessibilityNode::_Internal::range(const AccessibilityNode* msg) {
   return *msg->_impl_.range_;
+}
+const ::dsa::control::v1::NodeCollection&
+AccessibilityNode::_Internal::collection(const AccessibilityNode* msg) {
+  return *msg->_impl_.collection_;
+}
+const ::dsa::control::v1::NodeCollectionItem&
+AccessibilityNode::_Internal::collection_item(const AccessibilityNode* msg) {
+  return *msg->_impl_.collection_item_;
+}
+const ::dsa::control::v1::NodeWindow&
+AccessibilityNode::_Internal::window(const AccessibilityNode* msg) {
+  return *msg->_impl_.window_;
 }
 AccessibilityNode::AccessibilityNode(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -46371,8 +47505,13 @@ AccessibilityNode::AccessibilityNode(const AccessibilityNode& from)
     , decltype(_impl_.hint_){}
     , decltype(_impl_.view_id_){}
     , decltype(_impl_.state_description_){}
+    , decltype(_impl_.url_){}
+    , decltype(_impl_.pane_title_){}
     , decltype(_impl_.bounds_){nullptr}
     , decltype(_impl_.range_){nullptr}
+    , decltype(_impl_.collection_){nullptr}
+    , decltype(_impl_.collection_item_){nullptr}
+    , decltype(_impl_.window_){nullptr}
     , decltype(_impl_.id_){}
     , decltype(_impl_.checkable_){}
     , decltype(_impl_.checked_){}
@@ -46386,6 +47525,13 @@ AccessibilityNode::AccessibilityNode(const AccessibilityNode& from)
     , decltype(_impl_.editable_){}
     , decltype(_impl_.password_){}
     , decltype(_impl_.heading_){}
+    , decltype(_impl_.text_selection_start_){}
+    , decltype(_impl_.text_selection_end_){}
+    , decltype(_impl_.accessibility_focused_){}
+    , decltype(_impl_.has_text_selection_){}
+    , decltype(_impl_.link_){}
+    , decltype(_impl_.heading_level_){}
+    , decltype(_impl_.live_region_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -46437,15 +47583,40 @@ AccessibilityNode::AccessibilityNode(const AccessibilityNode& from)
     _this->_impl_.state_description_.Set(from._internal_state_description(), 
       _this->GetArenaForAllocation());
   }
+  _impl_.url_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.url_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_url().empty()) {
+    _this->_impl_.url_.Set(from._internal_url(), 
+      _this->GetArenaForAllocation());
+  }
+  _impl_.pane_title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.pane_title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_pane_title().empty()) {
+    _this->_impl_.pane_title_.Set(from._internal_pane_title(), 
+      _this->GetArenaForAllocation());
+  }
   if (from._internal_has_bounds()) {
     _this->_impl_.bounds_ = new ::dsa::control::v1::Rect(*from._impl_.bounds_);
   }
   if (from._internal_has_range()) {
     _this->_impl_.range_ = new ::dsa::control::v1::NodeRange(*from._impl_.range_);
   }
+  if (from._internal_has_collection()) {
+    _this->_impl_.collection_ = new ::dsa::control::v1::NodeCollection(*from._impl_.collection_);
+  }
+  if (from._internal_has_collection_item()) {
+    _this->_impl_.collection_item_ = new ::dsa::control::v1::NodeCollectionItem(*from._impl_.collection_item_);
+  }
+  if (from._internal_has_window()) {
+    _this->_impl_.window_ = new ::dsa::control::v1::NodeWindow(*from._impl_.window_);
+  }
   ::memcpy(&_impl_.id_, &from._impl_.id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.heading_) -
-    reinterpret_cast<char*>(&_impl_.id_)) + sizeof(_impl_.heading_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.live_region_) -
+    reinterpret_cast<char*>(&_impl_.id_)) + sizeof(_impl_.live_region_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityNode)
 }
 
@@ -46464,8 +47635,13 @@ inline void AccessibilityNode::SharedCtor(
     , decltype(_impl_.hint_){}
     , decltype(_impl_.view_id_){}
     , decltype(_impl_.state_description_){}
+    , decltype(_impl_.url_){}
+    , decltype(_impl_.pane_title_){}
     , decltype(_impl_.bounds_){nullptr}
     , decltype(_impl_.range_){nullptr}
+    , decltype(_impl_.collection_){nullptr}
+    , decltype(_impl_.collection_item_){nullptr}
+    , decltype(_impl_.window_){nullptr}
     , decltype(_impl_.id_){0u}
     , decltype(_impl_.checkable_){false}
     , decltype(_impl_.checked_){false}
@@ -46479,6 +47655,13 @@ inline void AccessibilityNode::SharedCtor(
     , decltype(_impl_.editable_){false}
     , decltype(_impl_.password_){false}
     , decltype(_impl_.heading_){false}
+    , decltype(_impl_.text_selection_start_){0}
+    , decltype(_impl_.text_selection_end_){0}
+    , decltype(_impl_.accessibility_focused_){false}
+    , decltype(_impl_.has_text_selection_){false}
+    , decltype(_impl_.link_){false}
+    , decltype(_impl_.heading_level_){0u}
+    , decltype(_impl_.live_region_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.class_name_.InitDefault();
@@ -46505,6 +47688,14 @@ inline void AccessibilityNode::SharedCtor(
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.state_description_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.url_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.url_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.pane_title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.pane_title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 AccessibilityNode::~AccessibilityNode() {
@@ -46526,8 +47717,13 @@ inline void AccessibilityNode::SharedDtor() {
   _impl_.hint_.Destroy();
   _impl_.view_id_.Destroy();
   _impl_.state_description_.Destroy();
+  _impl_.url_.Destroy();
+  _impl_.pane_title_.Destroy();
   if (this != internal_default_instance()) delete _impl_.bounds_;
   if (this != internal_default_instance()) delete _impl_.range_;
+  if (this != internal_default_instance()) delete _impl_.collection_;
+  if (this != internal_default_instance()) delete _impl_.collection_item_;
+  if (this != internal_default_instance()) delete _impl_.window_;
 }
 
 void AccessibilityNode::SetCachedSize(int size) const {
@@ -46548,6 +47744,8 @@ void AccessibilityNode::Clear() {
   _impl_.hint_.ClearToEmpty();
   _impl_.view_id_.ClearToEmpty();
   _impl_.state_description_.ClearToEmpty();
+  _impl_.url_.ClearToEmpty();
+  _impl_.pane_title_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.bounds_ != nullptr) {
     delete _impl_.bounds_;
   }
@@ -46556,9 +47754,21 @@ void AccessibilityNode::Clear() {
     delete _impl_.range_;
   }
   _impl_.range_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && _impl_.collection_ != nullptr) {
+    delete _impl_.collection_;
+  }
+  _impl_.collection_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && _impl_.collection_item_ != nullptr) {
+    delete _impl_.collection_item_;
+  }
+  _impl_.collection_item_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && _impl_.window_ != nullptr) {
+    delete _impl_.window_;
+  }
+  _impl_.window_ = nullptr;
   ::memset(&_impl_.id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.heading_) -
-      reinterpret_cast<char*>(&_impl_.id_)) + sizeof(_impl_.heading_));
+      reinterpret_cast<char*>(&_impl_.live_region_) -
+      reinterpret_cast<char*>(&_impl_.id_)) + sizeof(_impl_.live_region_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -46771,6 +47981,106 @@ const char* AccessibilityNode::_InternalParse(const char* ptr, ::_pbi::ParseCont
         } else
           goto handle_unusual;
         continue;
+      // bool accessibility_focused = 24;
+      case 24:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 192)) {
+          _impl_.accessibility_focused_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 text_selection_start = 25;
+      case 25:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 200)) {
+          _impl_.text_selection_start_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 text_selection_end = 26;
+      case 26:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 208)) {
+          _impl_.text_selection_end_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool has_text_selection = 27;
+      case 27:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 216)) {
+          _impl_.has_text_selection_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 heading_level = 28;
+      case 28:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 224)) {
+          _impl_.heading_level_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool link = 29;
+      case 29:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 232)) {
+          _impl_.link_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // string url = 30;
+      case 30:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 242)) {
+          auto str = _internal_mutable_url();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // .dsa.control.v1.NodeCollection collection = 31;
+      case 31:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 250)) {
+          ptr = ctx->ParseMessage(_internal_mutable_collection(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .dsa.control.v1.NodeCollectionItem collection_item = 32;
+      case 32:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 2)) {
+          ptr = ctx->ParseMessage(_internal_mutable_collection_item(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 live_region = 33;
+      case 33:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.live_region_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // string pane_title = 34;
+      case 34:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          auto str = _internal_mutable_pane_title();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // .dsa.control.v1.NodeWindow window = 35;
+      case 35:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          ptr = ctx->ParseMessage(_internal_mutable_window(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -46970,6 +48280,89 @@ uint8_t* AccessibilityNode::_InternalSerialize(
         23, this->_internal_state_description(), target);
   }
 
+  // bool accessibility_focused = 24;
+  if (this->_internal_accessibility_focused() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(24, this->_internal_accessibility_focused(), target);
+  }
+
+  // int32 text_selection_start = 25;
+  if (this->_internal_text_selection_start() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(25, this->_internal_text_selection_start(), target);
+  }
+
+  // int32 text_selection_end = 26;
+  if (this->_internal_text_selection_end() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(26, this->_internal_text_selection_end(), target);
+  }
+
+  // bool has_text_selection = 27;
+  if (this->_internal_has_text_selection() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(27, this->_internal_has_text_selection(), target);
+  }
+
+  // uint32 heading_level = 28;
+  if (this->_internal_heading_level() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(28, this->_internal_heading_level(), target);
+  }
+
+  // bool link = 29;
+  if (this->_internal_link() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(29, this->_internal_link(), target);
+  }
+
+  // string url = 30;
+  if (!this->_internal_url().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_url().data(), static_cast<int>(this->_internal_url().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.AccessibilityNode.url");
+    target = stream->WriteStringMaybeAliased(
+        30, this->_internal_url(), target);
+  }
+
+  // .dsa.control.v1.NodeCollection collection = 31;
+  if (this->_internal_has_collection()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(31, _Internal::collection(this),
+        _Internal::collection(this).GetCachedSize(), target, stream);
+  }
+
+  // .dsa.control.v1.NodeCollectionItem collection_item = 32;
+  if (this->_internal_has_collection_item()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(32, _Internal::collection_item(this),
+        _Internal::collection_item(this).GetCachedSize(), target, stream);
+  }
+
+  // int32 live_region = 33;
+  if (this->_internal_live_region() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(33, this->_internal_live_region(), target);
+  }
+
+  // string pane_title = 34;
+  if (!this->_internal_pane_title().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_pane_title().data(), static_cast<int>(this->_internal_pane_title().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.AccessibilityNode.pane_title");
+    target = stream->WriteStringMaybeAliased(
+        34, this->_internal_pane_title(), target);
+  }
+
+  // .dsa.control.v1.NodeWindow window = 35;
+  if (this->_internal_has_window()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(35, _Internal::window(this),
+        _Internal::window(this).GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -47059,6 +48452,20 @@ size_t AccessibilityNode::ByteSizeLong() const {
         this->_internal_state_description());
   }
 
+  // string url = 30;
+  if (!this->_internal_url().empty()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_url());
+  }
+
+  // string pane_title = 34;
+  if (!this->_internal_pane_title().empty()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_pane_title());
+  }
+
   // .dsa.control.v1.Rect bounds = 8;
   if (this->_internal_has_bounds()) {
     total_size += 1 +
@@ -47071,6 +48478,27 @@ size_t AccessibilityNode::ByteSizeLong() const {
     total_size += 2 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.range_);
+  }
+
+  // .dsa.control.v1.NodeCollection collection = 31;
+  if (this->_internal_has_collection()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.collection_);
+  }
+
+  // .dsa.control.v1.NodeCollectionItem collection_item = 32;
+  if (this->_internal_has_collection_item()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.collection_item_);
+  }
+
+  // .dsa.control.v1.NodeWindow window = 35;
+  if (this->_internal_has_window()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.window_);
   }
 
   // uint32 id = 1;
@@ -47138,6 +48566,49 @@ size_t AccessibilityNode::ByteSizeLong() const {
     total_size += 2 + 1;
   }
 
+  // int32 text_selection_start = 25;
+  if (this->_internal_text_selection_start() != 0) {
+    total_size += 2 +
+      ::_pbi::WireFormatLite::Int32Size(
+        this->_internal_text_selection_start());
+  }
+
+  // int32 text_selection_end = 26;
+  if (this->_internal_text_selection_end() != 0) {
+    total_size += 2 +
+      ::_pbi::WireFormatLite::Int32Size(
+        this->_internal_text_selection_end());
+  }
+
+  // bool accessibility_focused = 24;
+  if (this->_internal_accessibility_focused() != 0) {
+    total_size += 2 + 1;
+  }
+
+  // bool has_text_selection = 27;
+  if (this->_internal_has_text_selection() != 0) {
+    total_size += 2 + 1;
+  }
+
+  // bool link = 29;
+  if (this->_internal_link() != 0) {
+    total_size += 2 + 1;
+  }
+
+  // uint32 heading_level = 28;
+  if (this->_internal_heading_level() != 0) {
+    total_size += 2 +
+      ::_pbi::WireFormatLite::UInt32Size(
+        this->_internal_heading_level());
+  }
+
+  // int32 live_region = 33;
+  if (this->_internal_live_region() != 0) {
+    total_size += 2 +
+      ::_pbi::WireFormatLite::Int32Size(
+        this->_internal_live_region());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -47179,6 +48650,12 @@ void AccessibilityNode::MergeFrom(const AccessibilityNode& from) {
   if (!from._internal_state_description().empty()) {
     _this->_internal_set_state_description(from._internal_state_description());
   }
+  if (!from._internal_url().empty()) {
+    _this->_internal_set_url(from._internal_url());
+  }
+  if (!from._internal_pane_title().empty()) {
+    _this->_internal_set_pane_title(from._internal_pane_title());
+  }
   if (from._internal_has_bounds()) {
     _this->_internal_mutable_bounds()->::dsa::control::v1::Rect::MergeFrom(
         from._internal_bounds());
@@ -47186,6 +48663,18 @@ void AccessibilityNode::MergeFrom(const AccessibilityNode& from) {
   if (from._internal_has_range()) {
     _this->_internal_mutable_range()->::dsa::control::v1::NodeRange::MergeFrom(
         from._internal_range());
+  }
+  if (from._internal_has_collection()) {
+    _this->_internal_mutable_collection()->::dsa::control::v1::NodeCollection::MergeFrom(
+        from._internal_collection());
+  }
+  if (from._internal_has_collection_item()) {
+    _this->_internal_mutable_collection_item()->::dsa::control::v1::NodeCollectionItem::MergeFrom(
+        from._internal_collection_item());
+  }
+  if (from._internal_has_window()) {
+    _this->_internal_mutable_window()->::dsa::control::v1::NodeWindow::MergeFrom(
+        from._internal_window());
   }
   if (from._internal_id() != 0) {
     _this->_internal_set_id(from._internal_id());
@@ -47225,6 +48714,27 @@ void AccessibilityNode::MergeFrom(const AccessibilityNode& from) {
   }
   if (from._internal_heading() != 0) {
     _this->_internal_set_heading(from._internal_heading());
+  }
+  if (from._internal_text_selection_start() != 0) {
+    _this->_internal_set_text_selection_start(from._internal_text_selection_start());
+  }
+  if (from._internal_text_selection_end() != 0) {
+    _this->_internal_set_text_selection_end(from._internal_text_selection_end());
+  }
+  if (from._internal_accessibility_focused() != 0) {
+    _this->_internal_set_accessibility_focused(from._internal_accessibility_focused());
+  }
+  if (from._internal_has_text_selection() != 0) {
+    _this->_internal_set_has_text_selection(from._internal_has_text_selection());
+  }
+  if (from._internal_link() != 0) {
+    _this->_internal_set_link(from._internal_link());
+  }
+  if (from._internal_heading_level() != 0) {
+    _this->_internal_set_heading_level(from._internal_heading_level());
+  }
+  if (from._internal_live_region() != 0) {
+    _this->_internal_set_live_region(from._internal_live_region());
   }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
@@ -47271,9 +48781,17 @@ void AccessibilityNode::InternalSwap(AccessibilityNode* other) {
       &_impl_.state_description_, lhs_arena,
       &other->_impl_.state_description_, rhs_arena
   );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.url_, lhs_arena,
+      &other->_impl_.url_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.pane_title_, lhs_arena,
+      &other->_impl_.pane_title_, rhs_arena
+  );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AccessibilityNode, _impl_.heading_)
-      + sizeof(AccessibilityNode::_impl_.heading_)
+      PROTOBUF_FIELD_OFFSET(AccessibilityNode, _impl_.live_region_)
+      + sizeof(AccessibilityNode::_impl_.live_region_)
       - PROTOBUF_FIELD_OFFSET(AccessibilityNode, _impl_.bounds_)>(
           reinterpret_cast<char*>(&_impl_.bounds_),
           reinterpret_cast<char*>(&other->_impl_.bounds_));
@@ -47281,6 +48799,295 @@ void AccessibilityNode::InternalSwap(AccessibilityNode* other) {
 
 std::string AccessibilityNode::GetTypeName() const {
   return "dsa.control.v1.AccessibilityNode";
+}
+
+
+// ===================================================================
+
+class AccessibilityAnnouncement::_Internal {
+ public:
+};
+
+AccessibilityAnnouncement::AccessibilityAnnouncement(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.AccessibilityAnnouncement)
+}
+AccessibilityAnnouncement::AccessibilityAnnouncement(const AccessibilityAnnouncement& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  AccessibilityAnnouncement* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.text_){}
+    , decltype(_impl_.task_id_){}
+    , decltype(_impl_.assertive_){}
+    , decltype(_impl_.toast_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  _impl_.text_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.text_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_text().empty()) {
+    _this->_impl_.text_.Set(from._internal_text(), 
+      _this->GetArenaForAllocation());
+  }
+  ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.toast_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.toast_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityAnnouncement)
+}
+
+inline void AccessibilityAnnouncement::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.text_){}
+    , decltype(_impl_.task_id_){0}
+    , decltype(_impl_.assertive_){false}
+    , decltype(_impl_.toast_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.text_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.text_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+AccessibilityAnnouncement::~AccessibilityAnnouncement() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.AccessibilityAnnouncement)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void AccessibilityAnnouncement::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.text_.Destroy();
+}
+
+void AccessibilityAnnouncement::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void AccessibilityAnnouncement::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.AccessibilityAnnouncement)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.text_.ClearToEmpty();
+  ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.toast_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.toast_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* AccessibilityAnnouncement::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // int32 task_id = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.task_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // string text = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          auto str = _internal_mutable_text();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool assertive = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.assertive_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool toast = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _impl_.toast_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* AccessibilityAnnouncement::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.AccessibilityAnnouncement)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 task_id = 1;
+  if (this->_internal_task_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_task_id(), target);
+  }
+
+  // string text = 2;
+  if (!this->_internal_text().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_text().data(), static_cast<int>(this->_internal_text().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.AccessibilityAnnouncement.text");
+    target = stream->WriteStringMaybeAliased(
+        2, this->_internal_text(), target);
+  }
+
+  // bool assertive = 3;
+  if (this->_internal_assertive() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_assertive(), target);
+  }
+
+  // bool toast = 4;
+  if (this->_internal_toast() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(4, this->_internal_toast(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.AccessibilityAnnouncement)
+  return target;
+}
+
+size_t AccessibilityAnnouncement::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.AccessibilityAnnouncement)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string text = 2;
+  if (!this->_internal_text().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_text());
+  }
+
+  // int32 task_id = 1;
+  if (this->_internal_task_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_task_id());
+  }
+
+  // bool assertive = 3;
+  if (this->_internal_assertive() != 0) {
+    total_size += 1 + 1;
+  }
+
+  // bool toast = 4;
+  if (this->_internal_toast() != 0) {
+    total_size += 1 + 1;
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void AccessibilityAnnouncement::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const AccessibilityAnnouncement*>(
+      &from));
+}
+
+void AccessibilityAnnouncement::MergeFrom(const AccessibilityAnnouncement& from) {
+  AccessibilityAnnouncement* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.AccessibilityAnnouncement)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_text().empty()) {
+    _this->_internal_set_text(from._internal_text());
+  }
+  if (from._internal_task_id() != 0) {
+    _this->_internal_set_task_id(from._internal_task_id());
+  }
+  if (from._internal_assertive() != 0) {
+    _this->_internal_set_assertive(from._internal_assertive());
+  }
+  if (from._internal_toast() != 0) {
+    _this->_internal_set_toast(from._internal_toast());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void AccessibilityAnnouncement::CopyFrom(const AccessibilityAnnouncement& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.AccessibilityAnnouncement)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool AccessibilityAnnouncement::IsInitialized() const {
+  return true;
+}
+
+void AccessibilityAnnouncement::InternalSwap(AccessibilityAnnouncement* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.text_, lhs_arena,
+      &other->_impl_.text_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(AccessibilityAnnouncement, _impl_.toast_)
+      + sizeof(AccessibilityAnnouncement::_impl_.toast_)
+      - PROTOBUF_FIELD_OFFSET(AccessibilityAnnouncement, _impl_.task_id_)>(
+          reinterpret_cast<char*>(&_impl_.task_id_),
+          reinterpret_cast<char*>(&other->_impl_.task_id_));
+}
+
+std::string AccessibilityAnnouncement::GetTypeName() const {
+  return "dsa.control.v1.AccessibilityAnnouncement";
 }
 
 
@@ -47309,12 +49116,13 @@ AccessibilityTree::AccessibilityTree(const AccessibilityTree& from)
     , decltype(_impl_.epoch_){}
     , decltype(_impl_.full_){}
     , decltype(_impl_.focused_id_){}
+    , decltype(_impl_.accessibility_focused_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.focused_id_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.focused_id_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.accessibility_focused_id_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.accessibility_focused_id_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityTree)
 }
 
@@ -47332,6 +49140,7 @@ inline void AccessibilityTree::SharedCtor(
     , decltype(_impl_.epoch_){0u}
     , decltype(_impl_.full_){false}
     , decltype(_impl_.focused_id_){0u}
+    , decltype(_impl_.accessibility_focused_id_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -47366,8 +49175,8 @@ void AccessibilityTree::Clear() {
   _impl_.nodes_.Clear();
   _impl_.removed_ids_.Clear();
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.focused_id_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.focused_id_));
+      reinterpret_cast<char*>(&_impl_.accessibility_focused_id_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.accessibility_focused_id_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -47440,6 +49249,14 @@ const char* AccessibilityTree::_InternalParse(const char* ptr, ::_pbi::ParseCont
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
           _impl_.focused_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 accessibility_focused_id = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 64)) {
+          _impl_.accessibility_focused_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -47523,6 +49340,12 @@ uint8_t* AccessibilityTree::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(7, this->_internal_focused_id(), target);
   }
 
+  // uint32 accessibility_focused_id = 8;
+  if (this->_internal_accessibility_focused_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(8, this->_internal_accessibility_focused_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -47594,6 +49417,11 @@ size_t AccessibilityTree::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_focused_id());
   }
 
+  // uint32 accessibility_focused_id = 8;
+  if (this->_internal_accessibility_focused_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_accessibility_focused_id());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -47630,6 +49458,9 @@ void AccessibilityTree::MergeFrom(const AccessibilityTree& from) {
   if (from._internal_focused_id() != 0) {
     _this->_internal_set_focused_id(from._internal_focused_id());
   }
+  if (from._internal_accessibility_focused_id() != 0) {
+    _this->_internal_set_accessibility_focused_id(from._internal_accessibility_focused_id());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -47651,8 +49482,8 @@ void AccessibilityTree::InternalSwap(AccessibilityTree* other) {
   _impl_.nodes_.InternalSwap(&other->_impl_.nodes_);
   _impl_.removed_ids_.InternalSwap(&other->_impl_.removed_ids_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AccessibilityTree, _impl_.focused_id_)
-      + sizeof(AccessibilityTree::_impl_.focused_id_)
+      PROTOBUF_FIELD_OFFSET(AccessibilityTree, _impl_.accessibility_focused_id_)
+      + sizeof(AccessibilityTree::_impl_.accessibility_focused_id_)
       - PROTOBUF_FIELD_OFFSET(AccessibilityTree, _impl_.task_id_)>(
           reinterpret_cast<char*>(&_impl_.task_id_),
           reinterpret_cast<char*>(&other->_impl_.task_id_));
@@ -47685,6 +49516,11 @@ AccessibilityAction::AccessibilityAction(const AccessibilityAction& from)
     , decltype(_impl_.node_id_){}
     , decltype(_impl_.action_){}
     , decltype(_impl_.request_id_){}
+    , decltype(_impl_.selection_start_){}
+    , decltype(_impl_.selection_end_){}
+    , decltype(_impl_.progress_){}
+    , decltype(_impl_.row_){}
+    , decltype(_impl_.column_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -47697,8 +49533,8 @@ AccessibilityAction::AccessibilityAction(const AccessibilityAction& from)
       _this->GetArenaForAllocation());
   }
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.request_id_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.request_id_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.column_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.column_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityAction)
 }
 
@@ -47713,6 +49549,11 @@ inline void AccessibilityAction::SharedCtor(
     , decltype(_impl_.node_id_){0u}
     , decltype(_impl_.action_){0}
     , decltype(_impl_.request_id_){0u}
+    , decltype(_impl_.selection_start_){0}
+    , decltype(_impl_.selection_end_){0}
+    , decltype(_impl_.progress_){0}
+    , decltype(_impl_.row_){0}
+    , decltype(_impl_.column_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.text_.InitDefault();
@@ -47747,8 +49588,8 @@ void AccessibilityAction::Clear() {
 
   _impl_.text_.ClearToEmpty();
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.request_id_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.request_id_));
+      reinterpret_cast<char*>(&_impl_.column_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.column_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -47805,6 +49646,46 @@ const char* AccessibilityAction::_InternalParse(const char* ptr, ::_pbi::ParseCo
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
           _impl_.request_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 selection_start = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
+          _impl_.selection_start_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 selection_end = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 64)) {
+          _impl_.selection_end_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // float progress = 9;
+      case 9:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 77)) {
+          _impl_.progress_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 row = 10;
+      case 10:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 80)) {
+          _impl_.row_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 column = 11;
+      case 11:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 88)) {
+          _impl_.column_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -47879,6 +49760,40 @@ uint8_t* AccessibilityAction::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(6, this->_internal_request_id(), target);
   }
 
+  // int32 selection_start = 7;
+  if (this->_internal_selection_start() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(7, this->_internal_selection_start(), target);
+  }
+
+  // int32 selection_end = 8;
+  if (this->_internal_selection_end() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(8, this->_internal_selection_end(), target);
+  }
+
+  // float progress = 9;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_progress = this->_internal_progress();
+  uint32_t raw_progress;
+  memcpy(&raw_progress, &tmp_progress, sizeof(tmp_progress));
+  if (raw_progress != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(9, this->_internal_progress(), target);
+  }
+
+  // int32 row = 10;
+  if (this->_internal_row() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(10, this->_internal_row(), target);
+  }
+
+  // int32 column = 11;
+  if (this->_internal_column() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(11, this->_internal_column(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -47928,6 +49843,35 @@ size_t AccessibilityAction::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_request_id());
   }
 
+  // int32 selection_start = 7;
+  if (this->_internal_selection_start() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_selection_start());
+  }
+
+  // int32 selection_end = 8;
+  if (this->_internal_selection_end() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_selection_end());
+  }
+
+  // float progress = 9;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_progress = this->_internal_progress();
+  uint32_t raw_progress;
+  memcpy(&raw_progress, &tmp_progress, sizeof(tmp_progress));
+  if (raw_progress != 0) {
+    total_size += 1 + 4;
+  }
+
+  // int32 row = 10;
+  if (this->_internal_row() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_row());
+  }
+
+  // int32 column = 11;
+  if (this->_internal_column() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_column());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -47967,6 +49911,25 @@ void AccessibilityAction::MergeFrom(const AccessibilityAction& from) {
   if (from._internal_request_id() != 0) {
     _this->_internal_set_request_id(from._internal_request_id());
   }
+  if (from._internal_selection_start() != 0) {
+    _this->_internal_set_selection_start(from._internal_selection_start());
+  }
+  if (from._internal_selection_end() != 0) {
+    _this->_internal_set_selection_end(from._internal_selection_end());
+  }
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_progress = from._internal_progress();
+  uint32_t raw_progress;
+  memcpy(&raw_progress, &tmp_progress, sizeof(tmp_progress));
+  if (raw_progress != 0) {
+    _this->_internal_set_progress(from._internal_progress());
+  }
+  if (from._internal_row() != 0) {
+    _this->_internal_set_row(from._internal_row());
+  }
+  if (from._internal_column() != 0) {
+    _this->_internal_set_column(from._internal_column());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -47991,8 +49954,8 @@ void AccessibilityAction::InternalSwap(AccessibilityAction* other) {
       &other->_impl_.text_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AccessibilityAction, _impl_.request_id_)
-      + sizeof(AccessibilityAction::_impl_.request_id_)
+      PROTOBUF_FIELD_OFFSET(AccessibilityAction, _impl_.column_)
+      + sizeof(AccessibilityAction::_impl_.column_)
       - PROTOBUF_FIELD_OFFSET(AccessibilityAction, _impl_.task_id_)>(
           reinterpret_cast<char*>(&_impl_.task_id_),
           reinterpret_cast<char*>(&other->_impl_.task_id_));
@@ -68192,6 +70155,8 @@ class Envelope::_Internal {
   static const ::dsa::control::v1::AccessibilityTree& accessibility_tree(const Envelope* msg);
   static const ::dsa::control::v1::AccessibilityAction& accessibility_action(const Envelope* msg);
   static const ::dsa::control::v1::AccessibilityActionResult& accessibility_action_result(const Envelope* msg);
+  static const ::dsa::control::v1::AccessibilityListening& accessibility_listening(const Envelope* msg);
+  static const ::dsa::control::v1::AccessibilityAnnouncement& accessibility_announcement(const Envelope* msg);
   static const ::dsa::control::v1::AudioOutputOpen& audio_output_open(const Envelope* msg);
   static const ::dsa::control::v1::AudioOutputReady& audio_output_ready(const Envelope* msg);
   static const ::dsa::control::v1::AudioPcm& audio_pcm(const Envelope* msg);
@@ -68678,6 +70643,14 @@ Envelope::_Internal::accessibility_action(const Envelope* msg) {
 const ::dsa::control::v1::AccessibilityActionResult&
 Envelope::_Internal::accessibility_action_result(const Envelope* msg) {
   return *msg->_impl_.body_.accessibility_action_result_;
+}
+const ::dsa::control::v1::AccessibilityListening&
+Envelope::_Internal::accessibility_listening(const Envelope* msg) {
+  return *msg->_impl_.body_.accessibility_listening_;
+}
+const ::dsa::control::v1::AccessibilityAnnouncement&
+Envelope::_Internal::accessibility_announcement(const Envelope* msg) {
+  return *msg->_impl_.body_.accessibility_announcement_;
 }
 const ::dsa::control::v1::AudioOutputOpen&
 Envelope::_Internal::audio_output_open(const Envelope* msg) {
@@ -70523,6 +72496,36 @@ void Envelope::set_allocated_accessibility_action_result(::dsa::control::v1::Acc
     _impl_.body_.accessibility_action_result_ = accessibility_action_result;
   }
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.accessibility_action_result)
+}
+void Envelope::set_allocated_accessibility_listening(::dsa::control::v1::AccessibilityListening* accessibility_listening) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_body();
+  if (accessibility_listening) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(accessibility_listening);
+    if (message_arena != submessage_arena) {
+      accessibility_listening = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, accessibility_listening, submessage_arena);
+    }
+    set_has_accessibility_listening();
+    _impl_.body_.accessibility_listening_ = accessibility_listening;
+  }
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.accessibility_listening)
+}
+void Envelope::set_allocated_accessibility_announcement(::dsa::control::v1::AccessibilityAnnouncement* accessibility_announcement) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_body();
+  if (accessibility_announcement) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(accessibility_announcement);
+    if (message_arena != submessage_arena) {
+      accessibility_announcement = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, accessibility_announcement, submessage_arena);
+    }
+    set_has_accessibility_announcement();
+    _impl_.body_.accessibility_announcement_ = accessibility_announcement;
+  }
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.accessibility_announcement)
 }
 void Envelope::set_allocated_audio_output_open(::dsa::control::v1::AudioOutputOpen* audio_output_open) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -72591,6 +74594,16 @@ Envelope::Envelope(const Envelope& from)
           from._internal_accessibility_action_result());
       break;
     }
+    case kAccessibilityListening: {
+      _this->_internal_mutable_accessibility_listening()->::dsa::control::v1::AccessibilityListening::MergeFrom(
+          from._internal_accessibility_listening());
+      break;
+    }
+    case kAccessibilityAnnouncement: {
+      _this->_internal_mutable_accessibility_announcement()->::dsa::control::v1::AccessibilityAnnouncement::MergeFrom(
+          from._internal_accessibility_announcement());
+      break;
+    }
     case kAudioOutputOpen: {
       _this->_internal_mutable_audio_output_open()->::dsa::control::v1::AudioOutputOpen::MergeFrom(
           from._internal_audio_output_open());
@@ -73725,6 +75738,18 @@ void Envelope::clear_body() {
     case kAccessibilityActionResult: {
       if (GetArenaForAllocation() == nullptr) {
         delete _impl_.body_.accessibility_action_result_;
+      }
+      break;
+    }
+    case kAccessibilityListening: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.body_.accessibility_listening_;
+      }
+      break;
+    }
+    case kAccessibilityAnnouncement: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.body_.accessibility_announcement_;
       }
       break;
     }
@@ -74898,6 +76923,22 @@ const char* Envelope::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
       case 83:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 154)) {
           ptr = ctx->ParseMessage(_internal_mutable_accessibility_action_result(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .dsa.control.v1.AccessibilityListening accessibility_listening = 84;
+      case 84:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 162)) {
+          ptr = ctx->ParseMessage(_internal_mutable_accessibility_listening(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;
+      case 85:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 170)) {
+          ptr = ctx->ParseMessage(_internal_mutable_accessibility_announcement(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -76464,6 +78505,20 @@ uint8_t* Envelope::_InternalSerialize(
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(83, _Internal::accessibility_action_result(this),
         _Internal::accessibility_action_result(this).GetCachedSize(), target, stream);
+  }
+
+  // .dsa.control.v1.AccessibilityListening accessibility_listening = 84;
+  if (_internal_has_accessibility_listening()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(84, _Internal::accessibility_listening(this),
+        _Internal::accessibility_listening(this).GetCachedSize(), target, stream);
+  }
+
+  // .dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;
+  if (_internal_has_accessibility_announcement()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(85, _Internal::accessibility_announcement(this),
+        _Internal::accessibility_announcement(this).GetCachedSize(), target, stream);
   }
 
   // .dsa.control.v1.ListWidgetProviders list_widget_providers = 90;
@@ -78093,6 +80148,20 @@ size_t Envelope::ByteSizeLong() const {
           *_impl_.body_.accessibility_action_result_);
       break;
     }
+    // .dsa.control.v1.AccessibilityListening accessibility_listening = 84;
+    case kAccessibilityListening: {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.body_.accessibility_listening_);
+      break;
+    }
+    // .dsa.control.v1.AccessibilityAnnouncement accessibility_announcement = 85;
+    case kAccessibilityAnnouncement: {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.body_.accessibility_announcement_);
+      break;
+    }
     // .dsa.control.v1.AudioOutputOpen audio_output_open = 100;
     case kAudioOutputOpen: {
       total_size += 2 +
@@ -79329,6 +81398,16 @@ void Envelope::MergeFrom(const Envelope& from) {
           from._internal_accessibility_action_result());
       break;
     }
+    case kAccessibilityListening: {
+      _this->_internal_mutable_accessibility_listening()->::dsa::control::v1::AccessibilityListening::MergeFrom(
+          from._internal_accessibility_listening());
+      break;
+    }
+    case kAccessibilityAnnouncement: {
+      _this->_internal_mutable_accessibility_announcement()->::dsa::control::v1::AccessibilityAnnouncement::MergeFrom(
+          from._internal_accessibility_announcement());
+      break;
+    }
     case kAudioOutputOpen: {
       _this->_internal_mutable_audio_output_open()->::dsa::control::v1::AudioOutputOpen::MergeFrom(
           from._internal_audio_output_open());
@@ -80469,6 +82548,22 @@ template<> PROTOBUF_NOINLINE ::dsa::control::v1::AccessibilityWatch*
 Arena::CreateMaybeMessage< ::dsa::control::v1::AccessibilityWatch >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::AccessibilityWatch >(arena);
 }
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::AccessibilityListening*
+Arena::CreateMaybeMessage< ::dsa::control::v1::AccessibilityListening >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::AccessibilityListening >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::NodeCollection*
+Arena::CreateMaybeMessage< ::dsa::control::v1::NodeCollection >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::NodeCollection >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::NodeCollectionItem*
+Arena::CreateMaybeMessage< ::dsa::control::v1::NodeCollectionItem >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::NodeCollectionItem >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::NodeWindow*
+Arena::CreateMaybeMessage< ::dsa::control::v1::NodeWindow >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::NodeWindow >(arena);
+}
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::NodeRange*
 Arena::CreateMaybeMessage< ::dsa::control::v1::NodeRange >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::NodeRange >(arena);
@@ -80476,6 +82571,10 @@ Arena::CreateMaybeMessage< ::dsa::control::v1::NodeRange >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::AccessibilityNode*
 Arena::CreateMaybeMessage< ::dsa::control::v1::AccessibilityNode >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::AccessibilityNode >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::AccessibilityAnnouncement*
+Arena::CreateMaybeMessage< ::dsa::control::v1::AccessibilityAnnouncement >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::AccessibilityAnnouncement >(arena);
 }
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::AccessibilityTree*
 Arena::CreateMaybeMessage< ::dsa::control::v1::AccessibilityTree >(Arena* arena) {

@@ -73,6 +73,52 @@ public enum NodeAction
    * <code>NODE_ACTION_SELECT = 8;</code>
    */
   NODE_ACTION_SELECT(8),
+  /**
+   * <pre>
+   * Select the characters of an editable node's text from AccessibilityAction.selection_start
+   * to selection_end, or put the cursor there when the two are equal.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SET_SELECTION = 9;</code>
+   */
+  NODE_ACTION_SET_SELECTION(9),
+  /**
+   * <pre>
+   * Expand or collapse it, as a group of a tree or a drop-down.
+   * </pre>
+   *
+   * <code>NODE_ACTION_EXPAND = 10;</code>
+   */
+  NODE_ACTION_EXPAND(10),
+  /**
+   * <code>NODE_ACTION_COLLAPSE = 11;</code>
+   */
+  NODE_ACTION_COLLAPSE(11),
+  /**
+   * <pre>
+   * Set a slider's value to AccessibilityAction.progress.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SET_PROGRESS = 12;</code>
+   */
+  NODE_ACTION_SET_PROGRESS(12),
+  /**
+   * <pre>
+   * Scroll its container so it is on the screen.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SHOW_ON_SCREEN = 13;</code>
+   */
+  NODE_ACTION_SHOW_ON_SCREEN(13),
+  /**
+   * <pre>
+   * Scroll a list or a grid to AccessibilityAction.row and column, which need not be on the
+   * screen: how a client reaches an item a virtualized list has not made yet.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SCROLL_TO_POSITION = 14;</code>
+   */
+  NODE_ACTION_SCROLL_TO_POSITION(14),
   UNRECOGNIZED(-1),
   ;
 
@@ -136,6 +182,52 @@ public enum NodeAction
    * <code>NODE_ACTION_SELECT = 8;</code>
    */
   public static final int NODE_ACTION_SELECT_VALUE = 8;
+  /**
+   * <pre>
+   * Select the characters of an editable node's text from AccessibilityAction.selection_start
+   * to selection_end, or put the cursor there when the two are equal.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SET_SELECTION = 9;</code>
+   */
+  public static final int NODE_ACTION_SET_SELECTION_VALUE = 9;
+  /**
+   * <pre>
+   * Expand or collapse it, as a group of a tree or a drop-down.
+   * </pre>
+   *
+   * <code>NODE_ACTION_EXPAND = 10;</code>
+   */
+  public static final int NODE_ACTION_EXPAND_VALUE = 10;
+  /**
+   * <code>NODE_ACTION_COLLAPSE = 11;</code>
+   */
+  public static final int NODE_ACTION_COLLAPSE_VALUE = 11;
+  /**
+   * <pre>
+   * Set a slider's value to AccessibilityAction.progress.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SET_PROGRESS = 12;</code>
+   */
+  public static final int NODE_ACTION_SET_PROGRESS_VALUE = 12;
+  /**
+   * <pre>
+   * Scroll its container so it is on the screen.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SHOW_ON_SCREEN = 13;</code>
+   */
+  public static final int NODE_ACTION_SHOW_ON_SCREEN_VALUE = 13;
+  /**
+   * <pre>
+   * Scroll a list or a grid to AccessibilityAction.row and column, which need not be on the
+   * screen: how a client reaches an item a virtualized list has not made yet.
+   * </pre>
+   *
+   * <code>NODE_ACTION_SCROLL_TO_POSITION = 14;</code>
+   */
+  public static final int NODE_ACTION_SCROLL_TO_POSITION_VALUE = 14;
 
 
   @java.lang.Override
@@ -168,6 +260,12 @@ public enum NodeAction
       case 6: return NODE_ACTION_FOCUS;
       case 7: return NODE_ACTION_ACCESSIBILITY_FOCUS;
       case 8: return NODE_ACTION_SELECT;
+      case 9: return NODE_ACTION_SET_SELECTION;
+      case 10: return NODE_ACTION_EXPAND;
+      case 11: return NODE_ACTION_COLLAPSE;
+      case 12: return NODE_ACTION_SET_PROGRESS;
+      case 13: return NODE_ACTION_SHOW_ON_SCREEN;
+      case 14: return NODE_ACTION_SCROLL_TO_POSITION;
       default: return null;
     }
   }
