@@ -32,7 +32,7 @@ use dsa_host_core::compositor::frame_buffers::texture_fits;
 use dsa_host_core::compositor::frame_stall::{FrameStall, Stall};
 use dsa_host_core::compositor::gpu_reset::{GpuResetWindows, Report};
 use dsa_host_core::compositor::program_exit::{describe_exit, ended_by_crash, CrashRestarts};
-use dsa_host_core::compositor::shown_windows::ShownWindows;
+use dsa_host_core::compositor::shown_windows::{CoverWatch, ShownWindows};
 use dsa_host_core::compositor::task_windows::{TaskWindows, WindowChange};
 use dsa_host_core::compositor::window_hosts::{
     accept_window_host, answer_attached, report_from_wire, to_wire, FromHost, HostAction, HostId,
@@ -68,6 +68,9 @@ const PRESENT_WAIT: Duration = Duration::from_millis(500);
 
 /// How often the manager looks for window hosts that are late.
 const TICK: Duration = Duration::from_millis(500);
+
+/// How often the manager looks at which task windows are covered by other windows.
+const COVERS_CHECK: Duration = Duration::from_secs(1);
 
 /// The name of the pipe the window hosts of session `session` dial.
 pub fn pipe_name(session: u32) -> String {
@@ -824,6 +827,10 @@ struct Manager {
     host_packages: HashMap<HostId, String>,
     remotes: HashMap<i32, Arc<RemoteWindow>>,
     shown: ShownWindows,
+    /// The task windows covered by other windows or on another virtual desktop, and since when.
+    covers: CoverWatch,
+    /// When the task windows were last looked at for that.
+    covers_checked: Instant,
     /// The task windows that are the active window.
     focused: std::collections::BTreeSet<i32>,
     /// Whether a task window was the active window, as `fronts` was last told.
@@ -848,6 +855,8 @@ pub fn manage(setup: ManagerSetup) {
         host_packages: HashMap::new(),
         remotes: HashMap::new(),
         shown: ShownWindows::new(),
+        covers: CoverWatch::default(),
+        covers_checked: Instant::now(),
         focused: std::collections::BTreeSet::new(),
         front: false,
         setup,
@@ -1319,6 +1328,29 @@ impl Manager {
             ));
         }
         self.carry_out(actions);
+        self.follow_covers(Instant::now());
+    }
+
+    /// Once a second, looks at which task windows the user cannot see although they are open
+    /// and not minimized (covered by other windows, or on another virtual desktop), and tells
+    /// the guest when which tasks the user can see changed: it trims and keeps less memory for
+    /// the apps of the others. A covered window still counts as shown for the guest's sleep.
+    fn follow_covers(&mut self, now: Instant) {
+        if now.duration_since(self.covers_checked) < COVERS_CHECK {
+            return;
+        }
+        self.covers_checked = now;
+        // The window marks name windows; the guest is told of tasks.
+        let hidden: std::collections::BTreeSet<i32> = super::occlusion::hidden_task_windows()
+            .into_iter()
+            .filter_map(|window| self.resets.task_of(window))
+            .collect();
+        let covered = self.covers.seen(&hidden, now);
+        self.shown.covered(covered);
+        let windows = self.windows.windows();
+        if let Some(request) = self.shown.update_tasks(&windows) {
+            self.request(vec![request]);
+        }
     }
 
     fn drop_remote(&mut self, task_id: i32) {

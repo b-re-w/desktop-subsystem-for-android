@@ -182,6 +182,8 @@ struct State {
     /// The tasks whose window the host last said it shows (open and not minimized), or `None`
     /// until it says.
     shown_tasks: Option<std::collections::BTreeSet<i32>>,
+    /// The host's last `TasksShown`, for a client that subscribes after it.
+    tasks_shown_frame: Option<Vec<u8>>,
     /// The host said it is short of memory.
     host_memory_low: bool,
     next_id: u64,
@@ -566,6 +568,12 @@ impl Router {
                 }
             }
         }
+        // After the tasks, so the client knows the tasks it names.
+        if let Some(frame) = &state.tasks_shown_frame {
+            if listener.deliver(frame) == Delivery::Gone {
+                return id;
+            }
+        }
         state.listeners.push(Subscription { id, peer, listener });
         id
     }
@@ -718,9 +726,11 @@ impl Router {
             }
         }
         if let Some(Body::TasksShown(shown)) = &body {
-            // For the daemon alone: the reclaim keeps less cache for a minimized task.
-            self.lock().shown_tasks = Some(shown.task_ids.iter().copied().collect());
-            return;
+            // The reclaim keeps less cache for a task the user cannot see, and the agent trims
+            // its app; a client that subscribes later is told the last word too.
+            let mut state = self.lock();
+            state.shown_tasks = Some(shown.task_ids.iter().copied().collect());
+            state.tasks_shown_frame = Some(frame.to_vec());
         }
         let mut state = self.lock();
         match body {

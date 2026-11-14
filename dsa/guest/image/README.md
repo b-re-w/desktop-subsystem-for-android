@@ -27,6 +27,7 @@ default is x86_64. The arm64 guest runs no 32-bit ARM code, because the target h
 | `dsa-trace.rc` | Turns on main thread timing in every app when the input trace is on |
 | `dsa-arm-translation.rc`, `arm-translation-on.prop`, `arm-translation-off.prop` | Use an ARM translation package (the one the user installed, or the image's default one), only on a boot the host marks (`../arm-translation/README.md`) |
 | `dsa-gapps.rc`, `gapps-on.prop`, `gapps-off.prop` | Lay the Google apps the user installed (`dsa gapps install`) over the app and configuration folders of `/product` and `/system_ext`, only on a boot the host marks |
+| `dsa-app-memory.rc`, `app-trim.sh`, `app-compile.sh` | Run, as the shell, the agent's memory trim and compaction of an app the user cannot see, and its speed compile of an app the user opens, while the guest is idle (`sepolicy/app-memory.cil`) |
 | `sepolicy/` | Policy added to the image: vsock for graphics, the control daemon's domain and binder service, the memory controls (`memory.cil`), the audio module's socket to the host (`audio.cil`), and what the agent needs to force Doze and set the battery (`agent.cil`) |
 
 ```
@@ -69,7 +70,8 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
   boot): once no app has been open for ten minutes, at most every ten minutes, the daemon has
   init write zram's pages unused for half an hour, incompressible ones first, at most 32 MiB a
   run and 512 MiB a day. ART keeps less free heap
-  (`MEMORY_PROPS` in `make-image.py`). Only the daemon
+  (`MEMORY_PROPS` in `make-image.py`), and the zygote does not preload the classes of the
+  features a desktop guest has no device for (`PRELOAD_DROPPED_PREFIXES`). Only the daemon
   may set the property, and only init's vendor scripts may write those kernel settings.
 - The oemlock, UWB, Bluetooth and Thread HAL APEXes are removed. Their devices
   (Cuttlefish's virtio consoles, radios) do not exist on Hyper-V, they abort in a loop, and
