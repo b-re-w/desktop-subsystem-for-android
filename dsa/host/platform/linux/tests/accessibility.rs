@@ -97,6 +97,7 @@ fn settings_screen(epoch: u32) -> TreeUpdate {
         ],
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -109,6 +110,7 @@ fn change(epoch: u32, nodes: Vec<Node>) -> TreeUpdate {
         nodes,
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -467,6 +469,7 @@ fn fr18_actions_become_the_nodes_accessibility_actions() {
             action: NodeAction::Click,
             text: String::new(),
             request_id: 1,
+            ..ActionRequest::default()
         })
     );
     // The list scrolls forward and backward.
@@ -537,6 +540,7 @@ fn fr18_fields_take_new_text_and_sliders_new_values() {
                 ],
                 removed: vec![],
                 focused: Some(2),
+                accessibility_focused: None,
             },
         )
         .unwrap();
@@ -705,6 +709,7 @@ fn fr18_typing_raises_text_events_and_focus_follows_the_active_window() {
         nodes: vec![field("wi")],
         removed: vec![],
         focused: Some(1),
+        accessibility_focused: None,
     };
     let events = access.apply(TASK, first.clone()).unwrap();
     assert!(events.contains(&Event::State {

@@ -921,6 +921,20 @@ impl Bus {
             i32,
             Value<'static>,
         ) = match event {
+            // AT-SPI's politeness: 1 polite, 2 assertive.
+            Event::Announcement {
+                object,
+                text,
+                assertive,
+            } => (
+                *object,
+                EVENT_OBJECT,
+                "Announcement",
+                String::new(),
+                if *assertive { 2 } else { 1 },
+                0,
+                Value::from(text.clone()),
+            ),
             Event::ChildAdded {
                 parent,
                 index,

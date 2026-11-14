@@ -493,6 +493,12 @@ pub enum WindowEvent {
 /// An AT-SPI event, for the clients that listen.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
+    /// `object:announcement`: an app's announcement or toast, for the screen reader to say.
+    Announcement {
+        object: Object,
+        text: String,
+        assertive: bool,
+    },
     /// `object:children-changed:add`.
     ChildAdded {
         parent: Object,
@@ -1021,6 +1027,7 @@ impl Access {
             action,
             text,
             request_id: window.next_request,
+            ..ActionRequest::default()
         };
         match &window.actions {
             Some(actions) if actions.send(request).is_ok() => Ok(()),
