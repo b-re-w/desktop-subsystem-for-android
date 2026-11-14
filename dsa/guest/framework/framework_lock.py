@@ -107,7 +107,11 @@ SERVICES_JAR = "SYSTEM/framework/services.jar"
 JAVA_OUTPUTS = {SERVICES_JAR: "system/framework/services.jar"}
 # The projects the services tree takes in part, as the native tree takes them: each holds every
 # toolchain version the platform ever used, and the build reads only the ones the lock names.
-SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust"]
+# Android 17 keeps its Rust toolchains in prebuilts/rust-toolchain/linux-x86 and leaves only
+# Soong's build files in prebuilts/rust, so the native lock names a cone for the first only; a
+# project here that the native lock does not name at all is taken whole.
+SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust",
+                       "prebuilts/rust-toolchain/linux-x86"]
 # Projects in a manifest group repo leaves out of a default sync on Linux.
 UNSYNCED_GROUPS = {"notdefault", "platform-darwin", "darwin"}
 
@@ -281,8 +285,8 @@ def services_lock(version, text):
     native = {p["path"]: p for p in version["projects"]}
     projects = []
     for project in manifest_projects(data):
-        if project["path"] in SERVICES_TREE_CONES:
-            if project["path"] not in native or "cone" not in native[project["path"]]:
+        if project["path"] in SERVICES_TREE_CONES and project["path"] in native:
+            if "cone" not in native[project["path"]]:
                 raise LockError(f"{version['android']} does not say which part of {project['path']} to take")
             project["cone"] = list(native[project["path"]]["cone"])
         projects.append(project)
