@@ -23,6 +23,27 @@ struct AppsPage: View {
                     Task { await vm.manage() }
                 }
             }
+            // Where every app without its own choice shows its full screen.
+            Section {
+                Picker(T("AppFullScreenCard.Header"), selection: Binding(
+                    get: { vm.fullScreenDefaultIndex },
+                    set: { index in Task { await vm.setFullScreenDefault(immersive: false, index) } })) {
+                    ForEach(Array(vm.defaultFullScreenChoices.enumerated()), id: \.offset) { item in
+                        Text(item.element).tag(item.offset)
+                    }
+                }
+                .help(T("AppFullScreenCard.Description"))
+                .disabled(vm.isBusy)
+                Picker(T("AppImmersiveCard.Header"), selection: Binding(
+                    get: { vm.immersiveDefaultIndex },
+                    set: { index in Task { await vm.setFullScreenDefault(immersive: true, index) } })) {
+                    ForEach(Array(vm.defaultFullScreenChoices.enumerated()), id: \.offset) { item in
+                        Text(item.element).tag(item.offset)
+                    }
+                }
+                .help(T("AppImmersiveCard.Description"))
+                .disabled(vm.isBusy)
+            }
             Section {
                 HStack {
                     TextField(T("AppsSearch.PlaceholderText"), text: $vm.search)
@@ -106,6 +127,31 @@ struct AppRowView: View {
                 .help(row.dpiScalingTip ?? T("AppsDpiScaling.ToolTip"))
                 .accessibilityLabel(T("AppsDpiScaling.Name"))
                 .frame(maxWidth: 300)
+                .disabled(vm.isBusy)
+                // Where the app's full screen shows: a clear request, and its bars hidden alone.
+                Picker(T("AppsFullScreen.Name"), selection: Binding(
+                    get: { row.fullScreenIndex },
+                    set: { index in Task { await vm.setFullScreen(row.package, immersive: false, index) } })) {
+                    ForEach(Array(vm.fullScreenChoices.enumerated()), id: \.offset) { item in
+                        Text(item.element).tag(item.offset)
+                    }
+                }
+                .labelsHidden()
+                .help(T("AppsFullScreen.ToolTip"))
+                .accessibilityLabel(T("AppsFullScreen.Name"))
+                .frame(maxWidth: 220)
+                .disabled(vm.isBusy)
+                Picker(T("AppsImmersive.Name"), selection: Binding(
+                    get: { row.immersiveIndex },
+                    set: { index in Task { await vm.setFullScreen(row.package, immersive: true, index) } })) {
+                    ForEach(Array(vm.fullScreenChoices.enumerated()), id: \.offset) { item in
+                        Text(item.element).tag(item.offset)
+                    }
+                }
+                .labelsHidden()
+                .help(T("AppsImmersive.ToolTip"))
+                .accessibilityLabel(T("AppsImmersive.Name"))
+                .frame(maxWidth: 220)
                 .disabled(vm.isBusy)
                 Spacer()
                 Button(T("AppsOpenButton.Content")) { Task { await vm.open(row.package) } }

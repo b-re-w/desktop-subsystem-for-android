@@ -309,6 +309,10 @@ pub struct Settings {
     /// Whether Android trusts the root certificates a user or an administrator added to this
     /// computer. On by default; it applies at once.
     pub host_certificates: bool,
+    /// Where every app without its own choice shows a clear full screen request, and an app
+    /// hiding both its bars alone: the whole screen and inside the window by default.
+    pub app_fullscreen: FullScreenPlace,
+    pub app_immersive: FullScreenPlace,
     /// The root certificates the service found added to this computer, whether or not
     /// [`Settings::host_certificates`] is on. Those the system ships are left out.
     pub imported_certificates: Vec<ImportedCertificate>,
@@ -422,6 +426,14 @@ impl Settings {
             update_channel_available: flag(json, "update_channel_available", false),
             root_elevation: flag(json, "root_elevation", false),
             host_certificates: flag(json, "host_certificates", true),
+            app_fullscreen: FullScreenPlace::read_or(
+                json["app_fullscreen"].as_str().unwrap_or_default(),
+                FullScreenPlace::Screen,
+            ),
+            app_immersive: FullScreenPlace::read_or(
+                json["app_immersive"].as_str().unwrap_or_default(),
+                FullScreenPlace::Window,
+            ),
             imported_certificates: items(json, "imported_certificates")
                 .iter()
                 .filter(|c| c.is_object())
@@ -742,6 +754,45 @@ impl DpiScaling {
     }
 }
 
+/// Where a window shows an app that asks to fill the screen.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum FullScreenPlace {
+    /// For one app, as the choice for every app says; for every app, DSA's own default.
+    #[default]
+    Default,
+    /// On the whole screen: the window fills its monitor, and its title bar shows at the top
+    /// edge.
+    Screen,
+    /// Inside the window: it keeps its size and its title bar.
+    Window,
+}
+
+impl FullScreenPlace {
+    /// Every choice for one app, in the order the settings app offers them.
+    pub const ALL: [FullScreenPlace; 3] = [
+        FullScreenPlace::Default,
+        FullScreenPlace::Screen,
+        FullScreenPlace::Window,
+    ];
+
+    /// The word `dsa` takes and prints.
+    pub fn code(self) -> &'static str {
+        match self {
+            FullScreenPlace::Default => "default",
+            FullScreenPlace::Screen => "screen",
+            FullScreenPlace::Window => "window",
+        }
+    }
+
+    /// The choice `dsa` names; anything else, or nothing, is `missing`.
+    pub fn read_or(code: &str, missing: FullScreenPlace) -> FullScreenPlace {
+        FullScreenPlace::ALL
+            .into_iter()
+            .find(|place| place.code() == code)
+            .unwrap_or(missing)
+    }
+}
+
 /// The user's window settings for one app.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppWindow {
@@ -749,6 +800,9 @@ pub struct AppWindow {
     pub fixed_size: bool,
     pub start_size: Option<(u32, u32)>,
     pub dpi_scaling: DpiScaling,
+    /// Where the app shows a clear full screen request, and its bars hidden alone.
+    pub fullscreen: FullScreenPlace,
+    pub immersive: FullScreenPlace,
 }
 
 /// Every app's window settings, and whether this build of Android scales an app the System
@@ -772,6 +826,14 @@ impl AppWindow {
             fixed_size: flag(json, "fixed_size", false),
             start_size: size,
             dpi_scaling: DpiScaling::read(json["dpi_scaling"].as_str().unwrap_or_default()),
+            fullscreen: FullScreenPlace::read_or(
+                json["fullscreen"].as_str().unwrap_or_default(),
+                FullScreenPlace::Default,
+            ),
+            immersive: FullScreenPlace::read_or(
+                json["immersive"].as_str().unwrap_or_default(),
+                FullScreenPlace::Default,
+            ),
         }
     }
 }
@@ -1888,6 +1950,16 @@ impl Client {
         self.switch("host-certificates", on)
     }
 
+    /// Where every app without its own choice shows a clear full screen request.
+    pub fn set_app_fullscreen(&self, place: FullScreenPlace) -> Result<Settings, Failure> {
+        self.set("app-fullscreen", place.code())
+    }
+
+    /// Where every app without its own choice shows its bars hidden alone.
+    pub fn set_app_immersive(&self, place: FullScreenPlace) -> Result<Settings, Failure> {
+        self.set("app-immersive", place.code())
+    }
+
     /// The most memory Android may grow to, in MiB; 0 is automatic.
     pub fn set_memory_limit(&self, mb: u32) -> Result<Settings, Failure> {
         let value = if mb == 0 {
@@ -2178,6 +2250,25 @@ impl Client {
             &size,
             "--dpi-scaling",
             dpi_scaling.code(),
+        ])
+        .map(|_| ())
+    }
+
+    /// Changes where an app shows a clear full screen request and its bars hidden alone; its
+    /// other window settings stay as they are.
+    pub fn set_app_full_screen(
+        &self,
+        package: &str,
+        fullscreen: FullScreenPlace,
+        immersive: FullScreenPlace,
+    ) -> Result<(), Failure> {
+        self.json(&[
+            "app-window",
+            package,
+            "--fullscreen",
+            fullscreen.code(),
+            "--immersive",
+            immersive.code(),
         ])
         .map(|_| ())
     }

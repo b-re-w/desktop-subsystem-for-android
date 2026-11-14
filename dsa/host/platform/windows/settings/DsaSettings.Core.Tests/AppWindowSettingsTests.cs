@@ -50,9 +50,9 @@ public class AppWindowSettingsTests
         var cli = new FakeCli()
             .Answer("apps list --json", List)
             .Answer("app-window --json", "{\"apps\":[]}")
-            .Answer("app-window com.example.notes --fixed-size on --start-size auto --dpi-scaling auto --json",
+            .Answer("app-window com.example.notes --fixed-size on --start-size auto --dpi-scaling auto --fullscreen default --immersive default --json",
                 "{\"apps\":[{\"package\":\"com.example.notes\",\"fixed_size\":true,\"start_size\":null}]}")
-            .Answer("app-window com.example.notes --fixed-size on --start-size 1280x800 --dpi-scaling auto --json",
+            .Answer("app-window com.example.notes --fixed-size on --start-size 1280x800 --dpi-scaling auto --fullscreen default --immersive default --json",
                 "{\"apps\":[{\"package\":\"com.example.notes\",\"fixed_size\":true,\"start_size\":[1280,800]}]}");
         var vm = Make(cli);
         await vm.RefreshAsync();
@@ -92,7 +92,7 @@ public class AppWindowSettingsTests
             .Answer("app-window --json",
                 "{\"apps\":[{\"package\":\"com.example.reader\",\"fixed_size\":false,\"start_size\":null,\"dpi_scaling\":\"system\"}]," +
                 "\"system_forced_available\":false}")
-            .Answer("app-window com.example.notes --fixed-size off --start-size auto --dpi-scaling app --json",
+            .Answer("app-window com.example.notes --fixed-size off --start-size auto --dpi-scaling app --fullscreen default --immersive default --json",
                 "{\"apps\":[{\"package\":\"com.example.notes\",\"fixed_size\":false,\"start_size\":null,\"dpi_scaling\":\"app\"}]}");
         var vm = Make(cli);
         await vm.RefreshAsync();
@@ -159,6 +159,50 @@ public class AppWindowSettingsTests
         Assert.All(DpiScalings.All, s => Assert.Equal(s, DpiScalings.Parse(DpiScalings.Code(s))));
         Assert.Equal(DpiScaling.Auto, DpiScalings.Parse(null));
         Assert.Equal(DpiScaling.Auto, DpiScalings.Parse("enhanced"));
+    }
+
+    [Fact]
+    public async Task Fr30_an_apps_full_screen_choice_wins_over_the_default()
+    {
+        var cli = new FakeCli()
+            .Answer("apps list --json", List)
+            .Answer("app-window --json",
+                "{\"apps\":[{\"package\":\"com.example.reader\",\"fixed_size\":false,\"start_size\":null," +
+                "\"dpi_scaling\":\"auto\",\"fullscreen\":\"window\",\"immersive\":\"default\"}]," +
+                "\"defaults\":{\"fullscreen\":\"screen\",\"immersive\":\"window\"}}")
+            .Answer("app-window com.example.notes --fixed-size off --start-size auto --dpi-scaling auto --fullscreen default --immersive screen --json",
+                "{\"apps\":[{\"package\":\"com.example.notes\",\"fixed_size\":false,\"start_size\":null," +
+                "\"dpi_scaling\":\"auto\",\"fullscreen\":\"default\",\"immersive\":\"screen\"}]}");
+        var vm = Make(cli);
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.False(vm.HasError, vm.Error);
+        // An app without its own choice follows the default; one with a choice shows it.
+        var notes = vm.Rows.Single(r => r.Package == "com.example.notes");
+        Assert.Equal(FullScreenPlace.Default, vm.FullScreenChoices[notes.FullScreenIndex].Place);
+        Assert.Equal(FullScreenPlace.Default, vm.FullScreenChoices[notes.ImmersiveIndex].Place);
+        var reader = vm.Rows.Single(r => r.Package == "com.example.reader");
+        Assert.Equal(FullScreenPlace.Window, vm.FullScreenChoices[reader.FullScreenIndex].Place);
+        Assert.Equal(new[] { "Apps_FullScreen_Default", "Apps_FullScreen_Screen", "Apps_FullScreen_Window" },
+            vm.FullScreenChoices.Select(c => c.Label));
+
+        var screen = vm.FullScreenChoices.ToList().FindIndex(c => c.Place == FullScreenPlace.Screen);
+        await vm.SetImmersiveAsync("com.example.notes", screen);
+        Assert.False(vm.HasError, vm.Error);
+        Assert.Equal(screen, vm.Rows.Single(r => r.Package == "com.example.notes").ImmersiveIndex);
+        // Choosing what the app has already sends nothing.
+        var calls = cli.Calls.Count;
+        await vm.SetImmersiveAsync("com.example.notes", screen);
+        Assert.Equal(calls, cli.Calls.Count);
+    }
+
+    [Fact]
+    public void Fr30_full_screen_places_are_passed_to_dsa_as_it_takes_them()
+    {
+        Assert.Equal(new[] { "default", "screen", "window" }, FullScreenPlaces.All.Select(FullScreenPlaces.Code));
+        Assert.All(FullScreenPlaces.All, p => Assert.Equal(p, FullScreenPlaces.Parse(FullScreenPlaces.Code(p))));
+        Assert.Equal(FullScreenPlace.Default, FullScreenPlaces.Parse(null));
+        Assert.Equal(FullScreenPlace.Window, FullScreenPlaces.Parse("monitor", FullScreenPlace.Window));
     }
 
     [Fact]

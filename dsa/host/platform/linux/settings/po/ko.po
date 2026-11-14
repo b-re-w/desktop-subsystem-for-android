@@ -1464,6 +1464,45 @@ msgstr "루트 권한 설정은 Android가 다음에 시작할 때 적용됩니�
 msgid "Where requests are recorded"
 msgstr "요청이 기록되는 곳"
 
+msgid "Follow the default"
+msgstr "기본값 따르기"
+
+msgid "On the whole screen"
+msgstr "화면 전체로"
+
+msgid "Inside the window"
+msgstr "창 안에서"
+
+msgid "Full screen"
+msgstr "전체 화면"
+
+msgid "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+msgstr "동영상 앱의 전체 화면 단추처럼 이 앱이 분명하게 전체 화면을 요청할 때 어디에 보일지 정합니다. F11은 언제나 전체 화면을 켜고 끕니다."
+
+msgid "Bars hidden"
+msgstr "막대 숨김"
+
+msgid "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+msgstr "짧은 동영상 피드처럼 이 앱이 전체 화면 요청 없이 막대만 숨길 때 어디에 보일지 정합니다."
+
+msgid "{0}'s windows follow the new settings now."
+msgstr "{0}의 창이 지금부터 새 설정을 따릅니다."
+
+msgid "App full screen"
+msgstr "앱의 전체 화면"
+
+msgid "On the whole screen, the title bar appears when the pointer reaches the top edge."
+msgstr "화면 전체로 보이면 포인터가 화면 위쪽 끝에 닿을 때 제목 표시줄이 나타납니다."
+
+msgid "Full screen request"
+msgstr "전체 화면 요청"
+
+msgid "Where an app's full screen request shows, such as a video's full screen button."
+msgstr "동영상의 전체 화면 단추처럼 앱이 전체 화면을 요청할 때 어디에 보일지 정합니다."
+
+msgid "Where an app shows when it only hides its bars, as a feed of short videos does."
+msgstr "짧은 동영상 피드처럼 앱이 막대만 숨길 때 어디에 보일지 정합니다."
+
 msgid "Scaling on another monitor"
 msgstr "다른 모니터에서의 크기 조정"
 

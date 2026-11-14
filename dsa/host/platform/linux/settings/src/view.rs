@@ -7,9 +7,9 @@ use crate::api::{Failure, Problem};
 use crate::i18n::{tr, trf};
 use crate::model::{
     AdbAutoConnectState, AndroidVersion, App, AppWindow, ArmTranslation, Backup, BackupJob,
-    DnsResolver, DpiScaling, Gapps, GappsState, GuestMemory, HostRole, ImportedCertificate,
-    KeyProtection, KeyProtectionShown, Memory, MemoryShare, Network, NetworkMode, Outcome,
-    ProgramUpdateAnswer, ProgramUpdatePhase, State, Status, ALL_FOLDERS,
+    DnsResolver, DpiScaling, FullScreenPlace, Gapps, GappsState, GuestMemory, HostRole,
+    ImportedCertificate, KeyProtection, KeyProtectionShown, Memory, MemoryShare, Network,
+    NetworkMode, Outcome, ProgramUpdateAnswer, ProgramUpdatePhase, State, Status, ALL_FOLDERS,
 };
 
 /// The dsa commands the Advanced page's command line group shows, each on its own row with a
@@ -576,6 +576,52 @@ pub fn dpi_scaling_subtitle(window: Option<&AppWindow>, system_forced_available:
         tr("System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System.")
     } else {
         tr("App: the app redraws at the new scale, and text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks App for apps that say they handle it, and System for the others.\nAutomatic and System never restart the app.")
+    }
+}
+
+/// Where an app's full screen can show, in the order of [`FullScreenPlace::ALL`]: as the
+/// default for every app, on the whole screen, or inside the window.
+pub fn full_screen_choices() -> Vec<(String, FullScreenPlace)> {
+    FullScreenPlace::ALL
+        .into_iter()
+        .map(|place| (full_screen_label(place), place))
+        .collect()
+}
+
+/// What a full screen place is called.
+pub fn full_screen_label(place: FullScreenPlace) -> String {
+    match place {
+        FullScreenPlace::Default => tr("Follow the default"),
+        FullScreenPlace::Screen => tr("On the whole screen"),
+        FullScreenPlace::Window => tr("Inside the window"),
+    }
+}
+
+/// The places the choice for every app offers: it is the default itself.
+pub const DEFAULT_FULL_SCREEN_PLACES: [FullScreenPlace; 2] =
+    [FullScreenPlace::Screen, FullScreenPlace::Window];
+
+/// Where `place` is among [`DEFAULT_FULL_SCREEN_PLACES`]; the first for a place it does not
+/// offer.
+pub fn default_full_screen_index(place: FullScreenPlace) -> usize {
+    DEFAULT_FULL_SCREEN_PLACES
+        .iter()
+        .position(|p| *p == place)
+        .unwrap_or(0)
+}
+
+/// Where an app's choices for a clear full screen request and for its bars hidden alone are
+/// among [`full_screen_choices`].
+pub fn full_screen_indexes(window: Option<&AppWindow>) -> (usize, usize) {
+    let index = |place: FullScreenPlace| {
+        FullScreenPlace::ALL
+            .iter()
+            .position(|p| *p == place)
+            .unwrap_or(0)
+    };
+    match window {
+        Some(window) => (index(window.fullscreen), index(window.immersive)),
+        None => (0, 0),
     }
 }
 
