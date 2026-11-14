@@ -214,6 +214,22 @@ message SetTaskDensity {
   bool recreate = 3;
 }
 
+// The monitor the window of the next task opens on: asks the caller's Android to start the
+// tasks it starts from now on at that monitor's density and size, so an app's first frame is
+// already right and it is never relaunched right after it opens (see the control protocol's
+// LaunchPlacement). A client in the user's session sends it before it starts an app, and the
+// window manager whenever the monitor new windows open on changes. Answered with Done.
+message LaunchPlacement {
+  // The density apps draw at on the monitor (130 at a scale of 100%); 0 sends no monitor.
+  uint32 density_dpi = 1;
+  // The largest client area a window has on the monitor, in pixels.
+  uint32 width = 2;
+  uint32 height = 3;
+  // The whole monitor, in pixels.
+  uint32 monitor_width = 4;
+  uint32 monitor_height = 5;
+}
+
 // A task's window draws its title bar over the top `height` pixels of the task: asks the
 // caller's Android to give the task a top system bar inset of that height. 0 removes it.
 //
@@ -2844,6 +2860,7 @@ message Request {
     InstallWidevine install_widevine = 700;
     GetWidevine get_widevine = 701;
     RemoveWidevine remove_widevine = 702;
+    LaunchPlacement launch_placement = 710;
   }
 }
 

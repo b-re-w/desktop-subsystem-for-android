@@ -1706,7 +1706,7 @@ mod tests {
                 vec![TaskRequest::SetDensity {
                     task_id: 1,
                     density_dpi: 262,
-                    recreate: true
+                    recreate: false
                 }],
                 vec![]
             ))
@@ -1834,7 +1834,7 @@ mod tests {
                 vec![TaskRequest::SetDensity {
                     task_id: 1,
                     density_dpi: 196,
-                    recreate: true
+                    recreate: false
                 }]
             )
         );

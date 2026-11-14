@@ -3094,6 +3094,15 @@ impl Session {
             TaskRequest::WindowsShown { shown } => return self.windows_shown(shown),
             TaskRequest::TasksShown { task_ids } => return self.tasks_shown(task_ids),
             TaskRequest::Close { task_id } => Body::CloseTask(control::CloseTask { task_id }),
+            TaskRequest::PlaceLaunches(placement) => {
+                Body::LaunchPlacement(control::LaunchPlacement {
+                    density_dpi: placement.density_dpi,
+                    width: placement.width,
+                    height: placement.height,
+                    monitor_width: placement.monitor_width,
+                    monitor_height: placement.monitor_height,
+                })
+            }
             TaskRequest::Launch { package_name } => Body::LaunchApp(control::LaunchApp {
                 package_name,
                 new_window: false,
@@ -6783,6 +6792,7 @@ impl Worker {
             | Some(Body::LaunchApp(_))
             | Some(Body::ResizeTask(_))
             | Some(Body::SetTaskDensity(_))
+            | Some(Body::LaunchPlacement(_))
             | Some(Body::SetTaskCaption(_))
             | Some(Body::SetTaskFullScreen(_))
             | Some(Body::PointerEvent(_))

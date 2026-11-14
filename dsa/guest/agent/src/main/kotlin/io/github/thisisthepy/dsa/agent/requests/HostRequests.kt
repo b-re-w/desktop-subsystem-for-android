@@ -3,6 +3,7 @@ package io.github.thisisthepy.dsa.agent.requests
 import com.google.protobuf.InvalidProtocolBufferException
 import io.github.thisisthepy.dsa.agent.tasks.ScreenDp
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
+import io.github.thisisthepy.dsa.agent.windowing.NewTaskPlacement
 import io.github.thisisthepy.dsa.agent.windowing.Size
 import io.github.thisisthepy.dsa.control.v1.AppSettingsPage
 import io.github.thisisthepy.dsa.control.v1.Envelope
@@ -187,6 +188,13 @@ sealed interface RequestResult {
      */
     data class FullScreen(val taskId: Int, val inWindow: Boolean) : RequestResult
 
+    /**
+     * The monitor the window of the next task opens on: the tasks the agent starts from now
+     * on start at its density and size ([placement]); null when the host names none, and
+     * they start at Android's own.
+     */
+    data class Placement(val placement: NewTaskPlacement?) : RequestResult
+
     /** A resize or density for a task the host was never told about. */
     data class SizeRefused(val taskId: Int, val reason: String) : RequestResult
 
@@ -233,6 +241,9 @@ class HostRequests(
             }
             Envelope.BodyCase.SET_TASK_DENSITY -> envelope.setTaskDensity.let {
                 density(it.taskId, it.densityDpi, it.recreate)
+            }
+            Envelope.BodyCase.LAUNCH_PLACEMENT -> envelope.launchPlacement.let {
+                placement(it.densityDpi, it.width, it.height, it.monitorWidth, it.monitorHeight)
             }
             Envelope.BodyCase.SET_TASK_CAPTION -> caption(
                 envelope.setTaskCaption.taskId,
@@ -317,6 +328,21 @@ class HostRequests(
             RequestResult.Malformed("SetTaskDensity asks for ${Integer.toUnsignedString(densityDpi)} dpi")
         !reported(taskId) -> RequestResult.SizeRefused(taskId, "the host was never told about this task")
         else -> RequestResult.Density(taskId, densityDpi, recreate)
+    }
+
+    // The sizes are unsigned on the wire; a value past Int.MAX_VALUE reads as negative here.
+    private fun placement(densityDpi: Int, width: Int, height: Int, monitorWidth: Int, monitorHeight: Int): RequestResult {
+        if (densityDpi == 0) return RequestResult.Placement(null)
+        val lengths = listOf(width, height, monitorWidth, monitorHeight)
+        return when {
+            densityDpi < MIN_DENSITY || densityDpi > MAX_DENSITY ->
+                RequestResult.Malformed("LaunchPlacement names a monitor of ${Integer.toUnsignedString(densityDpi)} dpi")
+            lengths.any { it <= 0 || it > MAX_LENGTH } ->
+                RequestResult.Malformed(
+                    "LaunchPlacement names a monitor of ${lengths.joinToString("x") { Integer.toUnsignedString(it) }} pixels",
+                )
+            else -> RequestResult.Placement(NewTaskPlacement(densityDpi, Size(width, height), Size(monitorWidth, monitorHeight)))
+        }
     }
 
     // The height is unsigned on the wire; a value past Int.MAX_VALUE reads as negative here.
