@@ -121,10 +121,17 @@ pub fn band_luminance(band: &[u32]) -> Option<u16> {
 pub const LIGHT_GLYPHS_BELOW: u16 = 130;
 pub const DARK_GLYPHS_ABOVE: u16 = 240;
 
+/// The band luminance (thousandths) over which black and white glyphs have the same contrast:
+/// below it light glyphs stand out more, from it dark ones. It decides the first sample of a
+/// window whose tone nothing has decided yet, which has no shown tone to keep.
+pub const EQUAL_CONTRAST: u16 = 179;
+
 /// The tone a window's caption glyphs are drawn in, given the tone the app asked for
 /// (`reported`, from [`reported_tone`]; `None` when it expressed nothing), what the window
 /// last read from the app's frame under the band (`sample`), whether the app draws its own
-/// title bar (`app_drawn`, which is never filled over), and the tone shown now (`shown`).
+/// title bar (`app_drawn`, which is never filled over), and the tone shown now (`shown`;
+/// `None` while neither a sample nor the app has decided one). `None` comes back only while
+/// still nothing decides; the window then draws [`CaptionTone::default`].
 ///
 /// A band the window fills takes the tone of the fill, since the glyphs stand on the window's
 /// own color there. Otherwise the app's word decides, whatever its pixels look like, as
@@ -132,26 +139,33 @@ pub const DARK_GLYPHS_ABOVE: u16 = 240;
 /// an average over a header with light and dark parts picks the wrong side as often as the
 /// right one, and the app knows which side its bar is meant to be. Only an app that expressed
 /// nothing has its pixels read: below [`LIGHT_GLYPHS_BELOW`] the glyphs turn light, above
-/// [`DARK_GLYPHS_ABOVE`] dark, and between them the shown tone stays. A frame that could not
-/// be sampled then keeps the shown tone as well.
+/// [`DARK_GLYPHS_ABOVE`] dark, and between them the shown tone stays. A window whose tone is
+/// still undecided has none to keep: its first sample takes the side of [`EQUAL_CONTRAST`]
+/// with more contrast, so a header in the middle (a green or a grey one) seen first does not
+/// keep the dark glyphs a window starts with. A frame that could not be sampled keeps the
+/// shown tone, or leaves it undecided.
 pub fn shown_tone(
     reported: Option<CaptionTone>,
     sample: BandSample,
     app_drawn: bool,
-    shown: CaptionTone,
-) -> CaptionTone {
+    shown: Option<CaptionTone>,
+) -> Option<CaptionTone> {
     if let Some(fill) = sample.fill.filter(|_| !app_drawn) {
-        return caption_tone(StatusBarAppearance::Unspecified, fill);
+        return Some(caption_tone(StatusBarAppearance::Unspecified, fill));
     }
     if let Some(reported) = reported {
-        return reported;
+        return Some(reported);
     }
-    match sample.luminance {
-        None => shown,
-        Some(luminance) if luminance < LIGHT_GLYPHS_BELOW => CaptionTone::LightGlyphs,
-        Some(luminance) if luminance > DARK_GLYPHS_ABOVE => CaptionTone::DarkGlyphs,
-        Some(_) => shown,
-    }
+    let Some(luminance) = sample.luminance else {
+        return shown;
+    };
+    Some(match shown {
+        _ if luminance < LIGHT_GLYPHS_BELOW => CaptionTone::LightGlyphs,
+        _ if luminance > DARK_GLYPHS_ABOVE => CaptionTone::DarkGlyphs,
+        Some(shown) => shown,
+        None if luminance < EQUAL_CONTRAST => CaptionTone::LightGlyphs,
+        None => CaptionTone::DarkGlyphs,
+    })
 }
 
 /// The luminance of an 0xAARRGGBB color, from 0 (black) to 1 (white), with the sRGB weights.
@@ -1088,10 +1102,14 @@ mod tests {
         for header in [0xFFFF_FFFF, 0xFFF8_F9FA, 0xFFE8_F0FE, 0xFFDA_E2FF] {
             let sample = sampled(header, header);
             assert_eq!(sample.fill, None, "the app draws the band");
-            for shown in [CaptionTone::DarkGlyphs, CaptionTone::LightGlyphs] {
+            for shown in [
+                None,
+                Some(CaptionTone::DarkGlyphs),
+                Some(CaptionTone::LightGlyphs),
+            ] {
                 assert_eq!(
                     shown_tone(reported, sample, false, shown),
-                    CaptionTone::DarkGlyphs,
+                    Some(CaptionTone::DarkGlyphs),
                     "{header:08X} while {shown:?} show"
                 );
             }
@@ -1111,10 +1129,14 @@ mod tests {
             0xFF67_50A4,
         ] {
             let sample = sampled(header, header);
-            for shown in [CaptionTone::DarkGlyphs, CaptionTone::LightGlyphs] {
+            for shown in [
+                None,
+                Some(CaptionTone::DarkGlyphs),
+                Some(CaptionTone::LightGlyphs),
+            ] {
                 assert_eq!(
                     shown_tone(reported, sample, false, shown),
-                    CaptionTone::LightGlyphs,
+                    Some(CaptionTone::LightGlyphs),
                     "{header:08X} while {shown:?} show"
                 );
             }
@@ -1142,10 +1164,14 @@ mod tests {
             reported_tone(StatusBarAppearance::Dark, 0),
             reported_tone(StatusBarAppearance::Unspecified, 0),
         ] {
-            for shown in [CaptionTone::DarkGlyphs, CaptionTone::LightGlyphs] {
+            for shown in [
+                None,
+                Some(CaptionTone::DarkGlyphs),
+                Some(CaptionTone::LightGlyphs),
+            ] {
                 assert_eq!(
                     shown_tone(reported, sample, false, shown),
-                    CaptionTone::LightGlyphs
+                    Some(CaptionTone::LightGlyphs)
                 );
             }
         }
@@ -1171,10 +1197,14 @@ mod tests {
         assert_eq!(dark_header.fill, None, "the app draws the band");
         for app_drawn in [false, true] {
             for band in unfilled_bands() {
-                for shown in [CaptionTone::DarkGlyphs, CaptionTone::LightGlyphs] {
+                for shown in [
+                    None,
+                    Some(CaptionTone::DarkGlyphs),
+                    Some(CaptionTone::LightGlyphs),
+                ] {
                     assert_eq!(
                         shown_tone(says_light, band, app_drawn, shown),
-                        CaptionTone::DarkGlyphs,
+                        Some(CaptionTone::DarkGlyphs),
                         "{band:?} while {shown:?} show"
                     );
                 }
@@ -1190,10 +1220,14 @@ mod tests {
         assert_eq!(says_dark, Some(CaptionTone::LightGlyphs));
         for app_drawn in [false, true] {
             for band in unfilled_bands() {
-                for shown in [CaptionTone::DarkGlyphs, CaptionTone::LightGlyphs] {
+                for shown in [
+                    None,
+                    Some(CaptionTone::DarkGlyphs),
+                    Some(CaptionTone::LightGlyphs),
+                ] {
                     assert_eq!(
                         shown_tone(says_dark, band, app_drawn, shown),
-                        CaptionTone::LightGlyphs,
+                        Some(CaptionTone::LightGlyphs),
                         "{band:?} while {shown:?} show"
                     );
                 }
@@ -1206,9 +1240,9 @@ mod tests {
                 says_by_color,
                 sampled(0xFFFF_FFFF, 0xFFFF_FFFF),
                 false,
-                CaptionTone::DarkGlyphs
+                Some(CaptionTone::DarkGlyphs)
             ),
-            CaptionTone::LightGlyphs
+            Some(CaptionTone::LightGlyphs)
         );
     }
 
@@ -1217,14 +1251,14 @@ mod tests {
         // A tab switch: the app's appearance goes from light to dark and back, and the glyphs
         // follow on the next settle, over the same pixels, with no hysteresis in the way.
         let band = sampled(0xFF80_8080, 0xFF80_8080);
-        let mut shown = CaptionTone::DarkGlyphs;
+        let mut shown = Some(CaptionTone::DarkGlyphs);
         for (appearance, expected) in [
             (StatusBarAppearance::Light, CaptionTone::DarkGlyphs),
             (StatusBarAppearance::Dark, CaptionTone::LightGlyphs),
             (StatusBarAppearance::Light, CaptionTone::DarkGlyphs),
         ] {
             shown = shown_tone(reported_tone(appearance, 0), band, false, shown);
-            assert_eq!(shown, expected, "{appearance:?}");
+            assert_eq!(shown, Some(expected), "{appearance:?}");
         }
     }
 
@@ -1232,19 +1266,23 @@ mod tests {
     fn fr22_an_app_that_expressed_nothing_falls_back_to_its_pixels() {
         let light_header = sampled(0xFFFF_FFFF, 0xFFFF_FFFF);
         let dark_header = sampled(0xFF12_1212, 0xFF12_1212);
-        for shown in [CaptionTone::DarkGlyphs, CaptionTone::LightGlyphs] {
+        for shown in [
+            None,
+            Some(CaptionTone::DarkGlyphs),
+            Some(CaptionTone::LightGlyphs),
+        ] {
             assert_eq!(
                 shown_tone(None, light_header, false, shown),
-                CaptionTone::DarkGlyphs
+                Some(CaptionTone::DarkGlyphs)
             );
             assert_eq!(
                 shown_tone(None, dark_header, false, shown),
-                CaptionTone::LightGlyphs
+                Some(CaptionTone::LightGlyphs)
             );
             // So do the glyphs over an app's own title bar, whose content fills the band.
             assert_eq!(
                 shown_tone(None, light_header, true, shown),
-                CaptionTone::DarkGlyphs
+                Some(CaptionTone::DarkGlyphs)
             );
             // A frame that could not be sampled keeps the tone shown: an empty band, or none
             // read yet.
@@ -1265,10 +1303,12 @@ mod tests {
             reported_tone(StatusBarAppearance::Dark, 0),
             reported_tone(StatusBarAppearance::Light, 0),
         ] {
-            assert_eq!(
-                shown_tone(reported, filled, false, CaptionTone::LightGlyphs),
-                CaptionTone::DarkGlyphs
-            );
+            for shown in [None, Some(CaptionTone::LightGlyphs)] {
+                assert_eq!(
+                    shown_tone(reported, filled, false, shown),
+                    Some(CaptionTone::DarkGlyphs)
+                );
+            }
         }
         // An app that draws its own title bar is never filled over: its word stands.
         assert_eq!(
@@ -1276,35 +1316,100 @@ mod tests {
                 reported_tone(StatusBarAppearance::Dark, 0),
                 filled,
                 true,
-                CaptionTone::DarkGlyphs
+                Some(CaptionTone::DarkGlyphs)
             ),
-            CaptionTone::LightGlyphs
+            Some(CaptionTone::LightGlyphs)
         );
+    }
+
+    /// The tone shown after a sample of `luminance` by an app that expressed nothing, while
+    /// `shown` shows.
+    fn tone_at(luminance: u16, shown: Option<CaptionTone>) -> Option<CaptionTone> {
+        let sample = BandSample {
+            fill: None,
+            luminance: Some(luminance),
+        };
+        shown_tone(None, sample, false, shown)
+    }
+
+    #[test]
+    fn fr22_a_mid_luminance_band_seen_first_takes_the_tone_with_more_contrast() {
+        // A green or grey header from the first frame: no sample has decided the tone yet, so
+        // the first one takes the side of the equal-contrast point that stands out more,
+        // rather than keeping the dark glyphs a window starts with.
+        for luminance in [130, 150, 170, 178] {
+            assert_eq!(
+                tone_at(luminance, None),
+                Some(CaptionTone::LightGlyphs),
+                "at {luminance}"
+            );
+        }
+        for luminance in [179, 200, 220, 240] {
+            assert_eq!(
+                tone_at(luminance, None),
+                Some(CaptionTone::DarkGlyphs),
+                "at {luminance}"
+            );
+        }
+        // A Material green 800 header (luminance about 155) is such a band: light glyphs, from
+        // the first frame.
+        let green = sampled(0xFF2E_7D32, 0xFF2E_7D32);
+        let luminance = green.luminance.unwrap();
+        assert!(
+            (LIGHT_GLYPHS_BELOW..EQUAL_CONTRAST).contains(&luminance),
+            "{luminance}"
+        );
+        assert_eq!(
+            shown_tone(None, green, false, None),
+            Some(CaptionTone::LightGlyphs)
+        );
+        // A frame that could not be sampled leaves the tone undecided, for the next one.
+        assert_eq!(shown_tone(None, BandSample::default(), false, None), None);
+    }
+
+    #[test]
+    fn fr22_once_decided_a_mid_luminance_band_keeps_the_shown_tone() {
+        // The first sample decides light glyphs; the header then wavers on the dark glyphs'
+        // side of the crossover, and the light glyphs stay until it passes the upper bound.
+        let mut shown = tone_at(160, None);
+        assert_eq!(shown, Some(CaptionTone::LightGlyphs));
+        for luminance in [200, 230, 179, 240] {
+            shown = tone_at(luminance, shown);
+            assert_eq!(shown, Some(CaptionTone::LightGlyphs), "at {luminance}");
+        }
+        // And the other way: dark glyphs decided first stay over a band below the crossover.
+        let mut shown = tone_at(210, None);
+        assert_eq!(shown, Some(CaptionTone::DarkGlyphs));
+        for luminance in [170, 140, 130] {
+            shown = tone_at(luminance, shown);
+            assert_eq!(shown, Some(CaptionTone::DarkGlyphs), "at {luminance}");
+        }
+        // A tone the app reported decides too: the band in the middle keeps it afterwards.
+        let middle = BandSample {
+            fill: None,
+            luminance: Some(150),
+        };
+        let shown = shown_tone(Some(CaptionTone::DarkGlyphs), middle, false, None);
+        assert_eq!(shown, Some(CaptionTone::DarkGlyphs));
+        assert_eq!(tone_at(150, shown), Some(CaptionTone::DarkGlyphs));
     }
 
     #[test]
     fn fr22_a_band_near_the_middle_does_not_make_the_glyphs_flicker() {
-        let tone_of = |luminance: u16, shown| {
-            let sample = BandSample {
-                fill: None,
-                luminance: Some(luminance),
-            };
-            shown_tone(None, sample, false, shown)
-        };
         // A header whose lightness wavers around the middle (an animation, a scrolled
         // picture) keeps the tone it has, whichever it is.
-        let mut shown = CaptionTone::DarkGlyphs;
+        let mut shown = Some(CaptionTone::DarkGlyphs);
         for luminance in [200, 150, 230, 140, 179] {
-            shown = tone_of(luminance, shown);
-            assert_eq!(shown, CaptionTone::DarkGlyphs, "at {luminance}");
+            shown = tone_at(luminance, shown);
+            assert_eq!(shown, Some(CaptionTone::DarkGlyphs), "at {luminance}");
         }
-        shown = tone_of(100, shown);
-        assert_eq!(shown, CaptionTone::LightGlyphs);
+        shown = tone_at(100, shown);
+        assert_eq!(shown, Some(CaptionTone::LightGlyphs));
         for luminance in [150, 230, 140, 179, 240] {
-            shown = tone_of(luminance, shown);
-            assert_eq!(shown, CaptionTone::LightGlyphs, "at {luminance}");
+            shown = tone_at(luminance, shown);
+            assert_eq!(shown, Some(CaptionTone::LightGlyphs), "at {luminance}");
         }
-        assert_eq!(tone_of(241, shown), CaptionTone::DarkGlyphs);
+        assert_eq!(tone_at(241, shown), Some(CaptionTone::DarkGlyphs));
         // The samples are averaged, and only opaque ones count.
         assert_eq!(band_luminance(&[0xFFFF_FFFF; 8]), Some(1000));
         assert_eq!(band_luminance(&[0xFF00_0000; 8]), Some(0));

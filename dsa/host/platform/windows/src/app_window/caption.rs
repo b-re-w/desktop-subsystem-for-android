@@ -429,8 +429,10 @@ pub struct CaptionWindow {
     /// What was last read from the app's frame under the band: the color the band is filled
     /// with while the app leaves it empty, and how light the band is.
     sample: Cell<BandSample>,
-    /// The tone the glyphs, the name and the frame are drawn in now ([`shown_tone`]).
-    shown: Cell<CaptionTone>,
+    /// The tone the glyphs, the name and the frame are drawn in now ([`shown_tone`]); `None`
+    /// while neither a sample nor the app has decided it, when they are drawn in the default
+    /// tone ([`CaptionWindow::shown`]).
+    shown: Cell<Option<CaptionTone>>,
     /// The icon as last read, at the side it was read at.
     icon: RefCell<Option<IconPixels>>,
     /// How the icon was last drawn: bare, or on a plate over a band it would vanish into.
@@ -485,7 +487,7 @@ impl CaptionWindow {
             icon_id,
             title: RefCell::new(String::new()),
             sample: Cell::new(BandSample::default()),
-            shown: Cell::new(CaptionTone::default()),
+            shown: Cell::new(None),
             icon: RefCell::new(None),
             icon_look: Cell::new(None),
             text: RefCell::new(None),
@@ -718,15 +720,22 @@ impl CaptionWindow {
     ///
     /// `hwnd` is this window, a live window of the calling thread.
     unsafe fn retone(&self, hwnd: HWND) {
-        let now = shown_tone(
+        let before = self.shown();
+        self.shown.set(shown_tone(
             self.tone.get(),
             self.sample.get(),
             self.app_drawn.get(),
             self.shown.get(),
-        );
-        if self.shown.replace(now) != now {
+        ));
+        if self.shown() != before {
             self.apply_tone(hwnd);
         }
+    }
+
+    /// The tone the glyphs, the name and the frame are drawn in now: the decided one, or the
+    /// default while nothing has decided it.
+    fn shown(&self) -> CaptionTone {
+        self.shown.get().unwrap_or_default()
     }
 
     /// The title bar's icon `side` pixels square, as it is drawn over the band now, and how:
@@ -745,12 +754,12 @@ impl CaptionWindow {
                 fill: Some(palette.rest),
                 luminance: None,
             };
-            caption_icon::background_luminance(fill, false, self.shown.get())
+            caption_icon::background_luminance(fill, false, self.shown())
         } else {
             caption_icon::background_luminance(
                 self.sample.get(),
                 self.app_drawn.get(),
-                self.shown.get(),
+                self.shown(),
             )
         };
         let chosen = caption_icon::choose(
@@ -799,7 +808,7 @@ impl CaptionWindow {
     }
 
     unsafe fn apply_tone(&self, hwnd: HWND) {
-        let dark: i32 = i32::from(self.shown.get() == CaptionTone::LightGlyphs);
+        let dark: i32 = i32::from(self.shown() == CaptionTone::LightGlyphs);
         DwmSetWindowAttribute(
             hwnd,
             DWMWA_USE_IMMERSIVE_DARK_MODE as u32,
@@ -859,7 +868,7 @@ impl CaptionWindow {
             maximized: IsZoomed(hwnd) != 0 || self.full_screen.get(),
             active: self.active.get(),
         };
-        let palette = palette(self.shown.get());
+        let palette = palette(self.shown());
         // The icon is chosen again each time the band may have changed under it.
         let icon = self.icon_pixels(layout.icon, &palette);
         let now = Some((
