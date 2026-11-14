@@ -7,8 +7,7 @@ could start without developer mode, listen on TCP or ask for an authorisation, w
 app is not signed with one of the keys in the key folder, when a system screen overlay is
 missing or was built against another framework-res or another build of the app it overlays,
 when Settings' pages would open with their large title folded, when the trace script is missing, when the agent is missing or not signed with the platform key, when
-Settings still has the preferences or code that crash it without Bluetooth, when Settings'
-home list would add Android's freeform padding below its last row, when the window
+Settings still has the preferences or code that crash it without Bluetooth, when the window
 manager would not give a freeform window its status bar inset, when the
 package manager would refuse a multiArch app with arm64-v8a code only while ARM translation is
 on, or services.jar stores its dex unaligned, when the framework overlay's status bar heights
@@ -206,14 +205,6 @@ with zipfile.ZipFile(image / "signed-target_files.zip") as z:
                 if left:
                     problems.append(f"{name}:{dex} still has the code in {', '.join(sorted(set(left)))} "
                                     "that crashes Settings without the Bluetooth adapter")
-    # Settings' home list ends on the window's bottom edge, as its other lists do, without
-    # Android 17's freeform padding below its last row.
-    for name in names:
-        if name.endswith(make_image.SETTINGS_APK):
-            left = make_image.apk_edits_left(z.read(name), code=make_image.SETTINGS_CODE_FREEFORM_PADDING)
-            if left:
-                problems.append(f"{name} still has {'; '.join(left)}, so its home list ends higher above "
-                                "the window's bottom edge than its other lists")
     # Settings' pages take whether their large title opens expanded from the theme, which the
     # Settings overlay sets by the window's height.
     for name in names:

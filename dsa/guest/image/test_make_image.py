@@ -4708,25 +4708,19 @@ class ListBottomRoomTests(unittest.TestCase):
         self.assertIs(make_image.edit_permission_controller_apk(controller, "PermissionController.apk"), controller)
         self.assertNotIn("res/layout/preference_recyclerview.xml", make_image.permission_controller_edits())
 
-    def test_fr22_settings_home_list_on_android_17_gets_no_freeform_padding(self):
-        # Android 17 adds dashboard_padding_bottom (16 dp) to the home list's bottom when the
-        # window shows a caption bar, which a DSA task does: the method says it does not, so
-        # the list ends on the window's bottom edge, as Settings' other lists do.
+    def test_fr22_settings_home_list_on_android_17_keeps_its_own_freeform_padding(self):
+        # Android 17 adds dashboard_padding_bottom (16 dp) below the home list in a window with
+        # a caption bar, standing in for the navigation bar inset a desktop window lacks. A DSA
+        # task has none either, so the method is left as Settings ships it and the last card
+        # does not sit on the window's bottom edge.
+        self.assertEqual(make_image.SETTINGS_FREEFORM_WINDOW, FREEFORM_WINDOW)
         dex = top_level_settings_dex()
-        edited, changed = make_image.edit_dex(dex, make_image.SETTINGS_CODE_FREEFORM_PADDING)
-        self.assertEqual(changed, [FREEFORM_WINDOW])
-        self.assertEqual(dex_code(edited, FREEFORM_WINDOW)[:4], bytes.fromhex("12000f00"))  # const/4 v0, 0; return v0
+        settings = make_image.edit_settings_apk(self.apk({"classes2.dex": dex}), "Settings.apk")
+        with zipfile.ZipFile(io.BytesIO(settings)) as archive:
+            edited = archive.read("classes2.dex")
+        self.assertEqual(dex_code(edited, FREEFORM_WINDOW), dex_code(dex, FREEFORM_WINDOW))
         on_create = f"{TOP_LEVEL_SETTINGS}->onCreateRecyclerView"
         self.assertEqual(dex_code(edited, on_create), dex_code(dex, on_create))
-        SettingsWithoutBluetoothTests.assert_dex_is_sealed(self, edited)
-        self.assertEqual(make_image.edit_dex(edited, make_image.SETTINGS_CODE_FREEFORM_PADDING)[1], [])
-        settings = make_image.edit_settings_apk(self.apk({"classes2.dex": dex}), "Settings.apk")
-        self.assertEqual(make_image.apk_edits_left(settings, code=make_image.SETTINGS_CODE_FREEFORM_PADDING), [])
-        self.assertNotEqual(make_image.apk_edits_left(self.apk({"classes2.dex": dex}),
-                                                      code=make_image.SETTINGS_CODE_FREEFORM_PADDING), [])
-        # Android 16's Settings has no such method, and nothing changes there.
-        android16 = dex_file([(TOP_LEVEL_SETTINGS, "onCreateRecyclerView", "LLLL")], {0: (4, bytes.fromhex("1101"))})
-        self.assertEqual(make_image.edit_dex(android16, make_image.SETTINGS_CODE_FREEFORM_PADDING)[1], [])
         # The Settings overlay pads nothing either.
         self.assertNotIn("dimen/dashboard_padding_bottom", make_image.settings_overlay_map())
 
@@ -4824,28 +4818,6 @@ class ListBottomRoomTests(unittest.TestCase):
                 capex, "SYSTEM/apex/com.android.permission.capex", None, Path(".")), capex)
         run.assert_not_called()
 
-    def test_fr22_check_image_rejects_a_settings_home_list_padded_twice(self):
-        check_script = Path(__file__).with_name("check-image.py")
-        settings = self.apk({"classes2.dex": top_level_settings_dex()})
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            img_dir = root / "image"
-            img_dir.mkdir()
-            keys_dir = root / "keys"
-            keys_dir.mkdir()
-            (img_dir / "image.json").write_text(json.dumps({"files": {}, "kernel_cmdline": ""}))
-            (img_dir / "initrd.img").write_bytes(gzip.compress(b""))
-            outputs = []
-            for settings_apk in [settings, make_image.edit_settings_apk(settings, "Settings.apk")]:
-                with zipfile.ZipFile(img_dir / "signed-target_files.zip", "w") as archive:
-                    archive.writestr("SYSTEM/build.prop", "ro.debuggable=0\n")
-                    archive.writestr("META/apkcerts.txt", "")
-                    archive.writestr(make_image.SETTINGS_APP, settings_apk)
-                outputs.append(subprocess.run([sys.executable, str(check_script), str(img_dir), str(keys_dir)],
-                                              capture_output=True, text=True).stdout)
-        self.assertIn("TopLevelSettings;->isRunningInFreeformWindow", outputs[0])
-        self.assertIn("so its home list ends higher above the window's bottom edge than its other lists", outputs[0])
-        self.assertNotIn("so its home list ends higher above", outputs[1])
 
 
 def string_pool(strings):
