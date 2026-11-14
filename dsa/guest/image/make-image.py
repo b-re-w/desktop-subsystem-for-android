@@ -289,6 +289,44 @@ SETTINGS_CODE_WITHOUT_BLUETOOTH = {
     ],
 }
 
+# Settings code that asks an app the image leaves out (REMOVED_APPS), and takes the Settings
+# process and its window down when that app is not there.
+#
+# EmergencyInfo holds the emergency SOS gesture's state behind its content provider
+# (com.android.emergency.gesture). SettingsLib's EmergencyNumberUtils asks it with
+# ContentResolver.call, which throws IllegalArgumentException("Unknown authority") when no
+# package has the provider: the Safety & emergency page asked for the gesture's summary each
+# time it opened and Settings ended. The page's entry is hidden by the Settings overlay
+# (SETTINGS_OVERLAY_BOOLEANS). These edits answer for the code behind it, which that entry's
+# page still runs when something opens it by name: a guest with no telephony has no emergency
+# call to place, so the gesture and its sound are off, the true answer, and the page watches
+# no provider (registering an observer on an authority no package has throws
+# SecurityException for an app that targets Android 8 or later).
+#
+# SystemUI draws the brightness slider (Intent.ACTION_SHOW_BRIGHTNESS_DIALOG, sent to
+# com.android.systemui by name). Display's "Brightness level" row starts it without asking
+# whether anything answers, so a click threw ActivityNotFoundException. The row stays and
+# shows the level; the click starts nothing. The host owns the monitor's brightness.
+SETTINGS_BRIGHTNESS_DIALOG_STARTS = [
+    ("skip call", "Landroid/content/Context;->startActivityForResult"),
+    ("skip call", "Landroid/content/Context;->startActivityAsUser"),
+]
+SETTINGS_CODE_WITHOUT_REMOVED_APPS = {
+    "Lcom/android/settingslib/emergencynumber/EmergencyNumberUtils;->getEmergencyGestureEnabled": (
+        "return false", None),
+    "Lcom/android/settingslib/emergencynumber/EmergencyNumberUtils;->getEmergencyGestureSoundEnabled": (
+        "return false", None),
+    "Lcom/android/settings/emergency/EmergencyGestureNumberOverridePreferenceController;->onStart": [
+        ("skip call", "Landroid/content/ContentResolver;->registerContentObserver"),
+    ],
+    "Lcom/android/settings/display/BrightnessLevelPreferenceController;->handlePreferenceTreeClick":
+        SETTINGS_BRIGHTNESS_DIALOG_STARTS,
+    "Lcom/android/settings/display/BrightnessLevelPreference;->onPreferenceClick": SETTINGS_BRIGHTNESS_DIALOG_STARTS,
+    "Lcom/android/settings/BrightnessPreference;->onClick": SETTINGS_BRIGHTNESS_DIALOG_STARTS,
+}
+# Every edit of Settings' code.
+SETTINGS_CODE = {**SETTINGS_CODE_WITHOUT_BLUETOOTH, **SETTINGS_CODE_WITHOUT_REMOVED_APPS}
+
 # Android 17's Settings home page (TopLevelSettings.setPaddingHorizontal) pads its list's
 # bottom by dashboard_padding_bottom (16 dp) when isRunningInFreeformWindow, which asks
 # whether the window shows a caption bar. That padding stands in for the navigation bar inset
@@ -1377,6 +1415,7 @@ def settings_overlay_map():
     the map makes the framework rewrite the overlay layouts' references to them into
     Settings' ids."""
     mapping = {name: name for name in SETTINGS_OVERLAID}
+    mapping.update({f"bool/{name}": f"bool/{name}" for name in SETTINGS_OVERLAY_BOOLEANS})
     mapping.update({f"drawable/{name}": f"drawable/{name}" for name in SETTINGS_CARDS})
     mapping["dimen/settingslib_preference_corner_radius"] = "dimen/settingslib_preference_corner_radius"
     mapping[f"style/{SETTINGS_TITLE_THEME}"] = "style/DsaAppBarTheme"
@@ -1400,6 +1439,9 @@ def settings_overlay_files():
                                                 resource_map=True),
         "res/values/dsa.xml": resources_xml(
             [*SETTINGS_HOME_ATTRS.values(), '<attr name="expanded" format="boolean" />']),
+        "res/values/dsa_config.xml": resources_xml(
+            [f'<bool name="{name}">{str(value).lower()}</bool>'
+             for name, value in SETTINGS_OVERLAY_BOOLEANS.items()]),
         "res/values-v36/dsa_design.xml": resources_xml(
             [f'<dimen name="settingslib_preference_corner_radius">{DESIGN_CORNER_DP}dp</dimen>']
             + [design_style(ours, "", f"{size}dp") for ours, size in SETTINGS_TITLE_STYLES.values()]),
@@ -1803,6 +1845,60 @@ def arsc_dimension_entries(table):
     return found
 
 
+ARSC_TYPE_BOOLEAN = 0x12
+ARSC_ENTRY_COMPLEX = 0x0001
+
+
+def arsc_booleans(table):
+    """{name: [value]} of each boolean a compiled resource table defines: its value in each
+    configuration it has one in."""
+    chunk_type, header_size, _ = struct.unpack_from("<HHI", table, 0)
+    if chunk_type != ARSC_TABLE:
+        raise ValueError("not a compiled resource table")
+    found = {}
+    offset = header_size
+    while offset < len(table):
+        chunk_type, header_size, size = struct.unpack_from("<HHI", table, offset)
+        if chunk_type == ARSC_PACKAGE:
+            type_strings, _, key_strings = struct.unpack_from("<III", table, offset + 8 + 4 + 256)
+            types = xml_strings(table, offset + type_strings)
+            keys = xml_strings(table, offset + key_strings)
+            child = offset + header_size
+            while child < offset + size:
+                kind, child_header, child_size = struct.unpack_from("<HHI", table, child)
+                if kind == ARSC_TYPE:
+                    type_id, flags, _, count, entries_start = struct.unpack_from("<BBHII", table, child + 8)
+                    if types[type_id - 1] == "bool":
+                        for _, entry in _arsc_entry_offsets(table, child + child_header, flags, count):
+                            at = child + entries_start + entry
+                            first, entry_flags = struct.unpack_from("<HH", table, at)
+                            if entry_flags & ARSC_ENTRY_COMPACT:
+                                key, data_type, data = first, entry_flags >> 8, struct.unpack_from("<I", table, at + 4)[0]
+                            elif entry_flags & ARSC_ENTRY_COMPLEX:
+                                continue
+                            else:
+                                key = struct.unpack_from("<I", table, at + 4)[0]
+                                data_type, data = struct.unpack_from("<BI", table, at + first + 3)
+                            if data_type == ARSC_TYPE_BOOLEAN:
+                                found.setdefault(keys[key], []).append(data != 0)
+                child += child_size
+        offset += size
+    return found
+
+
+def settings_overlay_problems(table):
+    """What is wrong with the switches of the Settings overlay's resource table: each of
+    SETTINGS_OVERLAY_BOOLEANS must be there, with that value in every configuration."""
+    found = arsc_booleans(table)
+    problems = []
+    for name, value in SETTINGS_OVERLAY_BOOLEANS.items():
+        if name not in found:
+            problems.append(f"{name} has no value")
+        elif any(other != value for other in found[name]):
+            problems.append(f"{name} is {str(not value).lower()}, not {str(value).lower()}")
+    return problems
+
+
 def status_bar_overlay_problems(table):
     """What is wrong with the status bar heights of the framework overlay's resource table:
     each STATUS_BAR_DIMENS value must be there for every density status_bar_heights names and
@@ -2084,6 +2180,17 @@ def system_overlay_problems(names, read):
                 if found:
                     problems.append(f"{path}: {'; '.join(found)}, so an app that pads by the navigation bar's "
                                     "height leaves an empty band along the window's bottom edge")
+        if path == SETTINGS_OVERLAY_APK:
+            try:
+                found = settings_overlay_problems(apk_resource_table(read(path)))
+            except (zipfile.BadZipFile, KeyError):
+                found = ["it has no resource table"]
+            except (ValueError, IndexError, struct.error):
+                found = ["its resource table cannot be read"]
+            if found:
+                problems.append(f"{path}: {'; '.join(found)}, so Settings' Safety & emergency page asks the "
+                                "emergency information app, which the image leaves out, and Settings ends "
+                                "when the page opens")
     return problems
 
 
@@ -2696,10 +2803,11 @@ def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_att
 
 def edit_settings_apk(data, name):
     """Settings.apk without the preferences, and the code, that need the Bluetooth service,
+    without the calls into apps the image leaves out (SETTINGS_CODE_WITHOUT_REMOVED_APPS),
     and with its pages' large titles opening expanded or folded as the Settings overlay's theme
     says (SETTINGS_TITLE_EXPANDED). Its home list keeps Android's own freeform padding
     (SETTINGS_FREEFORM_WINDOW)."""
-    return edit_apk(data, name, code=SETTINGS_CODE_WITHOUT_BLUETOOTH,
+    return edit_apk(data, name, code=SETTINGS_CODE,
                     controllers=SETTINGS_CONTROLLERS_WITHOUT_BLUETOOTH, theme_attributes=SETTINGS_TITLE_EXPANDED)
 
 
@@ -4913,6 +5021,16 @@ SETTINGS_OVERLAY_MAP = "dsa_overlay"
 SETTINGS_OVERLAID = [
     f"drawable/{SETTINGS_BACK_ICON}",
 ]
+# Settings' own switches for what a device has. The emergency SOS gesture's settings belong
+# to EmergencyInfo, which the image leaves out (UNNEEDED_APPS): a guest with no modem places
+# no emergency call. Settings shows the gesture's entry on its Safety & emergency page unless
+# this says the device has none, and the entry's summary asked EmergencyInfo's provider,
+# which ended Settings each time the page opened (see SETTINGS_CODE_WITHOUT_REMOVED_APPS).
+# Off, the entry's controller is unavailable: the page leaves the row out and asks nothing,
+# and search does not list the gesture's page.
+SETTINGS_OVERLAY_BOOLEANS = {
+    "config_show_emergency_gesture_settings": False,
+}
 # SettingsLib's arrow (packages/SettingsLib/CollapsingToolbarBaseActivity, Android 16).
 SETTINGS_BACK_ARROW = (
     "M3.626,9L8.526,13.9C8.726,14.1 8.817,14.333 8.801,14.6C8.801,14.867 8.701,15.1 8.501,15.3"

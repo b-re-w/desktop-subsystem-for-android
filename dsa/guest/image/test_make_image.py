@@ -3863,6 +3863,155 @@ def dex_code(dex, method):
     return dex[code_off + 16:code_off + 16 + 2 * count]
 
 
+EMERGENCY_GESTURE_SHOWN = "config_show_emergency_gesture_settings"
+EMERGENCY_UTILS = "Lcom/android/settingslib/emergencynumber/EmergencyNumberUtils;"
+EMERGENCY_GESTURE_ENABLED = EMERGENCY_UTILS + "->getEmergencyGestureEnabled"
+EMERGENCY_SOUND_ENABLED = EMERGENCY_UTILS + "->getEmergencyGestureSoundEnabled"
+EMERGENCY_NUMBER_ON_START = ("Lcom/android/settings/emergency/EmergencyGestureNumberOverridePreferenceController;"
+                             "->onStart")
+BRIGHTNESS_CLICK = "Lcom/android/settings/display/BrightnessLevelPreferenceController;->handlePreferenceTreeClick"
+BRIGHTNESS_PREFERENCE_CLICK = "Lcom/android/settings/display/BrightnessLevelPreference;->onPreferenceClick"
+OLD_BRIGHTNESS_CLICK = "Lcom/android/settings/BrightnessPreference;->onClick"
+
+
+def removed_apps_dex(android=17):
+    """The methods of Settings.apk that call into EmergencyInfo and SystemUI, as the published
+    builds compiled them (Android 16 starts the brightness dialog for a result, Android 17 as
+    the system user), cut down to the instructions that matter."""
+    methods = [
+        (EMERGENCY_UTILS, "getEmergencyGestureEnabled", "Z"),
+        (EMERGENCY_UTILS, "getEmergencyGestureSoundEnabled", "Z"),
+        ("Landroid/content/Context;", "getContentResolver", "L"),
+        ("Landroid/content/ContentResolver;", "call", "LLLLL"),
+        ("Landroid/os/Bundle;", "getInt", "ILI"),
+        ("Lcom/android/settings/emergency/EmergencyGestureNumberOverridePreferenceController;", "onStart", "V"),
+        ("Landroid/content/ContentResolver;", "registerContentObserver", "VLZL"),
+        ("Lcom/android/settings/display/BrightnessLevelPreferenceController;", "handlePreferenceTreeClick", "ZL"),
+        ("Lcom/android/settings/display/BrightnessLevelPreference;", "onPreferenceClick", "ZL"),
+        ("Lcom/android/settings/BrightnessPreference;", "onClick", "V"),
+        ("Landroid/content/Context;", "startActivityAsUser", "VLLL"),
+        ("Landroid/content/Context;", "startActivityForResult", "VLLIL"),
+    ]
+    enabled = bytes.fromhex(
+        "6e100200 0300"  # invoke-virtual {v3}, Context.getContentResolver
+        "0c00"  # move-result-object v0
+        "6e520300 0321"  # invoke-virtual {v0, v1, v2, v3, v3}, ContentResolver.call
+        "0c00"  # move-result-object v0
+        "6e300400 1002"  # invoke-virtual {v0, v1, v2}, Bundle.getInt
+        "0a00"  # move-result v0
+        "0f00"  # return v0
+    )
+    on_start = bytes.fromhex(
+        "6e100200 0100"  # invoke-virtual {v1}, Context.getContentResolver
+        "0c00"  # move-result-object v0
+        "6e400600 1032"  # invoke-virtual {v0, v1, v2, v3}, registerContentObserver
+        "0e00"  # return-void
+    )
+    start = ("6e400a00 5420"  # invoke-virtual {v0, v5, v4, v2}, Context.startActivityAsUser
+             if android >= 17 else
+             "6e520b00 7610")  # invoke-virtual {v0, v1, v6, v7, v2}, Context.startActivityForResult
+    click = bytes.fromhex(
+        start
+        + "1210"  # const/4 v0, 1
+        "0f00"  # return v0
+    )
+    old_click = bytes.fromhex(
+        "6e300a00 0201"  # invoke-virtual {v2, v0, v1}, Context.startActivityAsUser
+        "0e00"  # return-void
+    )
+    return dex_file(methods, {0: (4, enabled), 1: (4, enabled), 5: (4, on_start), 7: (8, click), 8: (8, click),
+                              9: (3, old_click)})
+
+
+class SettingsWithoutRemovedAppsTests(unittest.TestCase):
+    """Settings code that calls into an app the image leaves out, and ended Settings there."""
+
+    def edited(self, android):
+        apk = SettingsWithoutBluetoothTests.apk({"classes2.dex": removed_apps_dex(android)})
+        edited = make_image.edit_settings_apk(apk, "Settings.apk")
+        # A second pass finds nothing left to edit.
+        self.assertEqual(make_image.edit_settings_apk(edited, "Settings.apk"), edited)
+        with zipfile.ZipFile(io.BytesIO(edited)) as archive:
+            return archive.read("classes2.dex")
+
+    def test_fr1_the_safety_and_emergency_page_opens_without_the_emergency_information_app(self):
+        # Settings ended each time the page opened: its emergency gesture entry asked the
+        # provider com.android.emergency.gesture for its summary, and EmergencyInfo, which
+        # has that provider, is not in the image ("Unknown authority").
+        self.assertIn("EmergencyInfo", make_image.UNNEEDED_APPS)
+        self.assertEqual(make_image.SETTINGS_OVERLAY_BOOLEANS, {EMERGENCY_GESTURE_SHOWN: False})
+        self.assertEqual(make_image.settings_overlay_map()[f"bool/{EMERGENCY_GESTURE_SHOWN}"],
+                         f"bool/{EMERGENCY_GESTURE_SHOWN}")
+        self.assertIn(f"bool/{EMERGENCY_GESTURE_SHOWN}", make_image.overlaid_resources("DsaSettingsOverlay.apk"))
+        with tempfile.TemporaryDirectory() as tmp:
+            make_image.settings_overlay_sources(Path(tmp))
+            # Settings' own value is in its default configuration, so the overlay's is too.
+            values = ET.fromstring((Path(tmp) / "res/values/dsa_config.xml").read_text())
+            overlay_map = ET.fromstring((Path(tmp) / f"res/xml/{make_image.SETTINGS_OVERLAY_MAP}.xml").read_text())
+        self.assertEqual([(item.get("name"), item.text) for item in values.findall("bool")],
+                         [(EMERGENCY_GESTURE_SHOWN, "false")])
+        self.assertIn((f"bool/{EMERGENCY_GESTURE_SHOWN}", f"@bool/{EMERGENCY_GESTURE_SHOWN}"),
+                      [(item.get("target"), item.get("value")) for item in overlay_map.findall("item")])
+
+    def test_fr1_an_overlay_for_a_settings_without_the_emergency_switch_is_not_built(self):
+        # A Settings build that names the switch otherwise would keep the entry, and the crash.
+        table = table_of([name for name in make_image.overlaid_resources("DsaSettingsOverlay.apk")
+                          if name != f"bool/{EMERGENCY_GESTURE_SHOWN}"])
+        self.assertEqual(make_image.missing_overlaid(make_image.overlaid_resources("DsaSettingsOverlay.apk"), table),
+                         [f"bool/{EMERGENCY_GESTURE_SHOWN}"])
+
+    def test_fr1_the_emergency_gesture_reads_as_off_without_asking_the_missing_provider(self):
+        for android in (16, 17):
+            dex = self.edited(android)
+            for method in (EMERGENCY_GESTURE_ENABLED, EMERGENCY_SOUND_ENABLED):
+                # const/4 v0, 0; return v0, with the first call and its move-result as no-ops.
+                self.assertEqual(dex_code(dex, method)[:8], bytes.fromhex("12000f0000000000"), (android, method))
+            # The page's observer of the provider is not registered; the rest of onStart stays.
+            self.assertEqual(dex_code(dex, EMERGENCY_NUMBER_ON_START),
+                             bytes.fromhex("6e10020001000c000000000000000e00"), android)
+            self.assertEqual(dex[12:32], hashlib.sha1(dex[32:]).digest())
+            self.assertEqual(struct.unpack_from("<I", dex, 8)[0], zlib.adler32(dex[12:]))
+
+    def test_fr1_a_click_on_brightness_level_starts_no_dialog_of_the_missing_systemui(self):
+        # Display's Brightness level row started SystemUI's dialog by name without asking
+        # whether anything answers: ActivityNotFoundException, and Settings ended.
+        self.assertIn("SystemUI", make_image.SHELL_APPS)
+        for android in (16, 17):
+            dex = self.edited(android)
+            for method in (BRIGHTNESS_CLICK, BRIGHTNESS_PREFERENCE_CLICK):
+                # The start is no-ops; the click still counts as handled.
+                self.assertEqual(dex_code(dex, method), bytes.fromhex("00000000000012100f00"), (android, method))
+            self.assertEqual(dex_code(dex, OLD_BRIGHTNESS_CLICK), bytes.fromhex("0000000000000e00"), android)
+
+    def test_fr1_check_image_rejects_settings_code_that_calls_into_a_removed_app(self):
+        check_script = Path(__file__).with_name("check-image.py")
+        settings = SettingsWithoutBluetoothTests.apk({"classes2.dex": removed_apps_dex()})
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            img_dir = root / "image"
+            img_dir.mkdir()
+            keys_dir = root / "keys"
+            keys_dir.mkdir()
+            (img_dir / "image.json").write_text(json.dumps({"files": {}, "kernel_cmdline": ""}))
+            (img_dir / "initrd.img").write_bytes(gzip.compress(b""))
+            outputs = []
+            for apk in [settings, make_image.edit_settings_apk(settings, "Settings.apk")]:
+                with zipfile.ZipFile(img_dir / "signed-target_files.zip", "w") as archive:
+                    archive.writestr("SYSTEM/build.prop", "ro.debuggable=0\n")
+                    archive.writestr("META/apkcerts.txt", "")
+                    archive.writestr("SYSTEM_EXT/priv-app/Settings/Settings.apk", apk)
+                outputs.append(subprocess.run(
+                    [sys.executable, str(check_script), str(img_dir), str(keys_dir)],
+                    capture_output=True,
+                    text=True,
+                ).stdout)
+        self.assertIn("calls into an app the image leaves out", outputs[0])
+        for method in (EMERGENCY_GESTURE_ENABLED, EMERGENCY_SOUND_ENABLED, EMERGENCY_NUMBER_ON_START,
+                       BRIGHTNESS_CLICK, BRIGHTNESS_PREFERENCE_CLICK, OLD_BRIGHTNESS_CLICK):
+            self.assertIn(method, outputs[0])
+        self.assertNotIn("calls into an app the image leaves out", outputs[1])
+
+
 class TouchLatencyTests(unittest.TestCase):
     """What the image changes so a press shows sooner, and what it logs to measure the rest."""
 
@@ -5121,6 +5270,31 @@ def framework_overlay_table(heights=None, navigation=None):
     return dimens_table(status_bar_configs(heights) + navigation)
 
 
+def booleans_table(values):
+    """A compiled resource table of the booleans `values` ({name: value}) in the default
+    configuration, as aapt2 writes an overlay's."""
+    names = sorted(values)
+    type_pool, key_pool = string_pool(["bool"]), string_pool(names)
+    spec_body = struct.pack("<BBHI", 1, 0, 0, len(names)) + bytes(4 * len(names))
+    chunks = struct.pack("<HHI", make_image.ARSC_TYPE_SPEC, 16, 8 + len(spec_body)) + spec_body
+    entries, offsets = b"", []
+    for i, name in enumerate(names):
+        offsets.append(len(entries))
+        entries += struct.pack("<HHI", 8, 0, i) + struct.pack("<HBBI", 8, 0, 0x12, 0xFFFFFFFF if values[name] else 0)
+    array = b"".join(struct.pack("<I", offset) for offset in offsets)
+    config = struct.pack("<I", 64) + bytes(60)
+    header_size = 8 + 12 + len(config)
+    body = struct.pack("<BBHII", 1, 0, 0, len(names), header_size + len(array)) + config + array + entries
+    chunks += struct.pack("<HHI", make_image.ARSC_TYPE, header_size, 8 + len(body)) + body
+    name = make_image.SETTINGS_OVERLAY_PACKAGE.encode("utf-16-le").ljust(256, b"\0")
+    package_body = (struct.pack("<I", 0x7F) + name
+                    + struct.pack("<IIIII", 288, 1, 288 + len(type_pool), len(names), 0)
+                    + type_pool + key_pool + chunks)
+    package = struct.pack("<HHI", 0x0200, 288, 8 + len(package_body)) + package_body
+    globals_pool = string_pool(["x"])
+    return struct.pack("<HHII", 0x0002, 12, 12 + len(globals_pool) + len(package), 1) + globals_pool + package
+
+
 def apk_with_table(table, files=None):
     """An APK holding the resource table `table` and `files`."""
     out = io.BytesIO()
@@ -5311,10 +5485,34 @@ class SystemScreenDesignTests(unittest.TestCase):
                                                own if overlay["target"] == "android" else app)
             if overlay["apk"] != without:
                 table = framework_overlay_table() if overlay["target"] == "android" \
-                    else b"overlay"
+                    else booleans_table(make_image.SETTINGS_OVERLAY_BOOLEANS) \
+                    if overlay["target"] == "com.android.settings" else b"overlay"
                 files[f"VENDOR/overlay/{overlay['apk']}"] = apk_with_table(
                     table, {make_image.SYSTEM_OVERLAY_RECORD: json.dumps(record)})
         return list(files), files.__getitem__
+
+    def test_fr1_check_image_rejects_a_settings_overlay_that_still_shows_the_emergency_gesture(self):
+        # Without the switch off, Settings' Safety & emergency page asks EmergencyInfo's
+        # provider, which the image does not have, and Settings ends when the page opens.
+        self.assertEqual(
+            make_image.settings_overlay_problems(booleans_table(make_image.SETTINGS_OVERLAY_BOOLEANS)), [])
+        names, read = self.image()
+        files = {name: read(name) for name in names}
+        path = make_image.SETTINGS_OVERLAY_APK
+        with zipfile.ZipFile(io.BytesIO(files[path])) as apk:
+            record = apk.read(make_image.SYSTEM_OVERLAY_RECORD)
+        for table, wanted in [
+            # Settings' own value.
+            (booleans_table({EMERGENCY_GESTURE_SHOWN: True}), f"{EMERGENCY_GESTURE_SHOWN} is true, not false"),
+            # An overlay made before the switch.
+            (booleans_table({"config_other": False}), f"{EMERGENCY_GESTURE_SHOWN} has no value"),
+            (b"overlay", "its resource table cannot be read"),
+        ]:
+            files[path] = apk_with_table(table, {make_image.SYSTEM_OVERLAY_RECORD: record})
+            problems = make_image.system_overlay_problems(list(files), files.__getitem__)
+            self.assertEqual(len(problems), 1, problems)
+            self.assertIn("Settings ends when the page opens", problems[0])
+            self.assertIn(wanted, problems[0])
 
     def test_fr34_check_image_accepts_overlays_built_against_its_framework_res_and_apps(self):
         self.assertEqual(make_image.system_overlay_problems(*self.image()), [])
