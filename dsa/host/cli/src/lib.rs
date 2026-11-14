@@ -431,6 +431,7 @@ use dsa_host_core::arm_translation::{self, google};
 use dsa_host_core::background::{BackgroundApp, BackgroundCommand, MediaSession, Playback};
 use dsa_host_core::files::{FileAction, FileTransfer};
 use dsa_host_core::gapps;
+use dsa_host_core::graphics_state::GraphicsState;
 use dsa_host_core::host_api::{
     ArmTranslationStatus, ClientError, GappsStatus, HostApiClient, NetworkStatus, SettingsReport,
     Status, TaskList,
@@ -678,6 +679,8 @@ pub enum BackgroundAction {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Change {
     RenderGpu(String),
+    /// Which Vulkan implementation the renderer uses: auto, native or dozen.
+    VulkanDriver(String),
     Freeze(bool),
     LinksInAndroid(bool),
     Clipboard(bool),
@@ -726,6 +729,8 @@ impl Change {
         }
         match name {
             "render-gpu" => Ok(Change::RenderGpu(value.to_string())),
+            "vulkan-driver" => dsa_host_core::settings::normalise_vulkan_driver(value)
+                .map(Change::VulkanDriver),
             "freeze" => switch().map(Change::Freeze),
             "clipboard" => switch().map(Change::Clipboard),
             "links-in-android" => switch().map(Change::LinksInAndroid),
@@ -760,7 +765,7 @@ impl Change {
                  image-updates, input-trace, resize-trace, root-elevation, memory-limit, developer-mode, adb-port, adb-auto-connect, \
                  arm-translation, stop-without-asking, file-sharing, shared-folders, \
                  advanced-networking, touch-gestures-off, app-fullscreen, app-immersive, \
-                 image-auto-restart, host-certificates and \
+                 image-auto-restart, host-certificates, vulkan-driver and \
                  device.<field>"
             )),
         }
@@ -2532,6 +2537,9 @@ pub fn status_json(status: &Status) -> Value {
 pub fn settings_json(report: &SettingsReport) -> Value {
     json!({
         "render_gpu": report.settings.render_gpu,
+        "vulkan_driver": report.settings.vulkan_driver,
+        "graphics_state": report.graphics.as_str(),
+        "graphics_detail": report.graphics.detail(),
         "freeze": report.settings.freeze,
         "links_in_android": report.settings.links_in_android,
         "clipboard": report.settings.clipboard,
@@ -3119,6 +3127,26 @@ fn describe_channel(prereleases: bool, available: bool) -> String {
     }
 }
 
+/// What the user's graphics renderer runs on, as their window manager last said, in words.
+pub fn describe_graphics(state: &GraphicsState) -> String {
+    let with = |what: &str| {
+        if state.detail().is_empty() {
+            what.to_string()
+        } else {
+            format!("{what}: {}", state.detail())
+        }
+    };
+    match state {
+        GraphicsState::Unknown => "the window manager has not said what it renders on".into(),
+        GraphicsState::Native(_) => with("renders on a native Vulkan driver"),
+        GraphicsState::Layered(_) => with("renders through Dozen (Vulkan on Direct3D 12)"),
+        GraphicsState::LayeredOnCpu(_) => {
+            with("renders through Dozen on the CPU (no GPU has Direct3D 12), so games are slow")
+        }
+        GraphicsState::Unavailable(_) => with("no Vulkan to render on, so Android does not start"),
+    }
+}
+
 /// The settings, one per line.
 pub fn describe_settings(report: &SettingsReport) -> String {
     let settings = &report.settings;
@@ -3132,6 +3160,11 @@ pub fn describe_settings(report: &SettingsReport) -> String {
     };
     let mut lines = vec![
         format!("Render GPU: {}", settings.render_gpu),
+        format!(
+            "Vulkan driver: {} ({})",
+            settings.vulkan_driver,
+            describe_graphics(&report.graphics)
+        ),
         format!("Freeze when idle: {}", on_off(settings.freeze)),
         format!(
             "Web links open in: {}",
@@ -3396,6 +3429,100 @@ pub fn render_gpu_choice(value: &str, gpus: &Value) -> Result<String, String> {
     dsa_host_core::settings::check_render_gpu_choice(value, &names)
 }
 
+/// The Vulkan devices this computer's Vulkan loader lists, whether each is a native driver or
+/// Dozen (Vulkan on Direct3D 12), whether Microsoft's Compatibility Pack (which carries Dozen)
+/// is installed, and what each `vulkan_driver` setting would render on. `null` where the
+/// platform has no choice of Vulkan implementation.
+pub fn vulkan_json() -> Value {
+    #[cfg(windows)]
+    {
+        use dsa_host_windows::render_gpu::GpuRequest;
+        use dsa_host_windows::vulkan_driver::{self, VulkanDriverSetting};
+        let pack = vulkan_driver::find_compatibility_pack();
+        let found = vulkan_driver::look_with(pack.clone());
+        let device = |d: &vulkan_driver::VulkanDevice| {
+            json!({
+                "name": d.name,
+                "luid": d.luid.map(|luid| luid.to_string()),
+                "kind": if d.is_native() {
+                    "native"
+                } else if d.is_dozen() {
+                    "dozen"
+                } else {
+                    "other"
+                },
+                "cpu": d.on_cpu(),
+            })
+        };
+        let choice = |setting: VulkanDriverSetting| {
+            let plan = vulkan_driver::plan(setting, &found, &GpuRequest::Ranking);
+            json!({
+                "outcome": match plan.outcome {
+                    vulkan_driver::DriverOutcome::Native => "native",
+                    vulkan_driver::DriverOutcome::Dozen => "dozen",
+                    vulkan_driver::DriverOutcome::DozenOnCpu => "dozen-cpu",
+                    vulkan_driver::DriverOutcome::None => "unavailable",
+                },
+                "reason": plan.reason,
+            })
+        };
+        json!({
+            "devices": found.devices.iter().map(device).collect::<Vec<_>>(),
+            "loader_failure": found.failure,
+            "compatibility_pack": pack.as_ref().map(|(root, _)| root.display().to_string()),
+            "dozen_manifest": found.pack.as_ref().map(|pack| pack.manifest.display().to_string()),
+            "auto": choice(VulkanDriverSetting::Auto),
+            "native": choice(VulkanDriverSetting::Native),
+            "dozen": choice(VulkanDriverSetting::Dozen),
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        Value::Null
+    }
+}
+
+/// [`vulkan_json`] in words.
+pub fn describe_vulkan(vulkan: &Value) -> String {
+    if vulkan.is_null() {
+        return String::new();
+    }
+    let mut lines = vec!["Vulkan devices:".to_string()];
+    let devices = vulkan["devices"].as_array().cloned().unwrap_or_default();
+    if devices.is_empty() {
+        lines.push(format!(
+            "  none{}",
+            vulkan["loader_failure"]
+                .as_str()
+                .map(|why| format!(" ({why})"))
+                .unwrap_or_default()
+        ));
+    }
+    for device in &devices {
+        let kind = match (device["kind"].as_str(), device["cpu"].as_bool()) {
+            (Some("dozen"), Some(true)) => "Dozen on the CPU",
+            (Some("dozen"), _) => "Dozen (Vulkan on Direct3D 12)",
+            (Some("native"), _) => "native driver",
+            _ => "not used by DSA",
+        };
+        lines.push(format!(
+            "  {} ({kind})",
+            device["name"].as_str().unwrap_or_default()
+        ));
+    }
+    lines.push(match vulkan["compatibility_pack"].as_str() {
+        Some(root) => format!("Compatibility Pack: installed ({root})"),
+        None => "Compatibility Pack: not installed".to_string(),
+    });
+    for setting in ["auto", "native", "dozen"] {
+        lines.push(format!(
+            "vulkan-driver {setting}: {}",
+            vulkan[setting]["reason"].as_str().unwrap_or_default()
+        ));
+    }
+    lines.join("\n")
+}
+
 fn describe_gpus(gpus: &Value) -> String {
     let list = gpus["gpus"].as_array().cloned().unwrap_or_default();
     if list.is_empty() {
@@ -3507,6 +3634,7 @@ fn settings(invocation: &Invocation, client: &mut HostApiClient) -> Result<Strin
             Change::RenderGpu(value) => {
                 wanted.render_gpu = render_gpu_choice(value, &gpus_json())?;
             }
+            Change::VulkanDriver(value) => wanted.vulkan_driver = value.clone(),
             Change::Freeze(on) => wanted.freeze = *on,
             Change::LinksInAndroid(on) => wanted.links_in_android = *on,
             Change::Clipboard(on) => wanted.clipboard = *on,
@@ -5232,11 +5360,18 @@ pub fn run_with_starter(
         return android_install_image(invocation);
     }
     if invocation.command == Command::Gpus {
-        let gpus = gpus_json();
+        let mut gpus = gpus_json();
+        gpus["vulkan"] = vulkan_json();
         return Ok(if invocation.json {
             gpus.to_string()
-        } else {
+        } else if gpus["vulkan"].is_null() {
             describe_gpus(&gpus)
+        } else {
+            format!(
+                "{}\n{}",
+                describe_gpus(&gpus),
+                describe_vulkan(&gpus["vulkan"])
+            )
         });
     }
     // Stopping or freezing needs an Android that runs, so neither starts the service.
