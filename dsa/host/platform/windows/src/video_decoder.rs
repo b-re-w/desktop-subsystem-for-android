@@ -186,6 +186,36 @@ mod system {
                 .manager
         }
 
+        /// Asks the GPU driver to free what it keeps for the device beyond live resources: the
+        /// pools a closed or idle decoder's surfaces and staging textures were made from, which
+        /// the driver otherwise keeps for the next allocation of that size for as long as the
+        /// device lives (as long as any decoder, of any video, is open). The immediate context
+        /// is flushed first, so the resources released before are destroyed and their memory
+        /// can go. Nothing is bound to the context (the decoders and the reads back use none of
+        /// its pipeline state), so nothing needs clearing and the other decoders go on.
+        fn trim(&self) {
+            let Some(gpu) = &self.gpu else {
+                return;
+            };
+            let multithread = gpu.device.cast::<ID3D11Multithread>().ok();
+            // SAFETY: plain calls on a live, multithread protected device; the lock keeps the
+            // other decoders' calls out while the context flushes and the driver trims.
+            unsafe {
+                if let Some(lock) = &multithread {
+                    lock.Enter();
+                }
+                if let Ok(context) = gpu.device.GetImmediateContext() {
+                    context.Flush();
+                }
+                if let Ok(dxgi) = gpu.device.cast::<IDXGIDevice3>() {
+                    dxgi.Trim();
+                }
+                if let Some(lock) = &multithread {
+                    lock.Leave();
+                }
+            }
+        }
+
         /// Whether a GPU reset removed the device, so no new decoder can use it.
         fn removed(&self) -> bool {
             self.gpu
@@ -510,6 +540,25 @@ mod system {
         format: DXGI_FORMAT,
     }
 
+    impl Staging {
+        /// What the texture is and the memory it holds, for the log: NV12 is a byte a sample
+        /// for luma and half as many rows of chroma, P010 two bytes a sample.
+        fn describe(&self) -> String {
+            let (name, sample) = if self.format == DXGI_FORMAT_P010 {
+                ("P010", 2)
+            } else {
+                ("NV12", 1)
+            };
+            let bytes = u64::from(self.width) * u64::from(self.rows) * 3 / 2 * sample;
+            format!(
+                "its {}x{} {name} staging texture ({:.1} MiB)",
+                self.width,
+                self.rows,
+                bytes as f64 / (1024.0 * 1024.0)
+            )
+        }
+    }
+
     /// The height of the texture a decoded sample's first buffer is, when it is one.
     fn texture_rows(sample: &IMFSample) -> Option<usize> {
         // SAFETY: plain Media Foundation and Direct3D calls on interfaces the sample holds.
@@ -532,8 +581,12 @@ mod system {
     struct MediaFoundationDecoder {
         codec: Codec,
         /// Declared before the platform, so it goes first: the transform holds the device.
-        decoder: Transform,
+        /// `None` once released ([`VideoDecoder::release`]).
+        decoder: Option<Transform>,
         platform: Arc<Platform>,
+        /// Tells the window manager something large was let go, so it gives back the heap's
+        /// free memory a few seconds later.
+        let_go: Arc<dyn Fn() + Send + Sync>,
         output: Output,
         /// The size the guest opened the stream with, and the sizes the stream's own headers
         /// gave (VP9, AV1), by packet, for decoders that report no display area.
@@ -557,6 +610,7 @@ mod system {
             width: u32,
             height: u32,
             shared: &Mutex<Weak<Platform>>,
+            let_go: Arc<dyn Fn() + Send + Sync>,
         ) -> Result<MediaFoundationDecoder, String> {
             // SAFETY: this thread's COM, which it keeps for its life.
             let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
@@ -597,8 +651,9 @@ mod system {
             }
             Ok(MediaFoundationDecoder {
                 codec,
-                decoder,
+                decoder: Some(decoder),
                 platform,
+                let_go,
                 output,
                 opened: (width, height),
                 stream: StreamSizes::default(),
@@ -634,8 +689,22 @@ mod system {
             }
         }
 
+        /// The transform, until the decoder is released.
+        fn mft(&self) -> Result<IMFTransform, String> {
+            self.decoder
+                .as_ref()
+                .map(|transform| transform.transform.clone())
+                .ok_or_else(|| format!("the {} decoder was released", self.codec.name()))
+        }
+
+        /// Lets go of the staging texture, when there is one, and says what it was.
+        fn drop_staging(&mut self) -> Option<String> {
+            self.staging.take().map(|staging| staging.describe())
+        }
+
         /// Takes every picture the decoder has ready.
         fn pictures(&mut self) -> Result<Vec<Picture>, String> {
+            let decoder = self.mft()?;
             let mut out = Vec::new();
             loop {
                 let sample = if self.provides_samples {
@@ -658,7 +727,7 @@ mod system {
                 }];
                 let mut status = 0u32;
                 // SAFETY: one output buffer for the decoder's one stream.
-                let result = unsafe { self.decoder.ProcessOutput(0, &mut buffers, &mut status) };
+                let result = unsafe { decoder.ProcessOutput(0, &mut buffers, &mut status) };
                 // SAFETY: each taken out once, so the references are released.
                 let sample = unsafe { std::mem::ManuallyDrop::take(&mut buffers[0].pSample) };
                 // SAFETY: as above.
@@ -667,12 +736,12 @@ mod system {
                     Ok(()) => {}
                     Err(e) if e.code() == MF_E_TRANSFORM_NEED_MORE_INPUT => return Ok(out),
                     Err(e) if e.code() == MF_E_TRANSFORM_STREAM_CHANGE => {
-                        self.output = choose_output(&self.decoder)?;
+                        self.output = choose_output(&decoder)?;
                         // A new size may come with samples of a new size, or from the
                         // decoder's own pool where it gave none before: an output sample made
                         // for the old size would be too small for the first new picture.
                         // SAFETY: a plain Media Foundation call.
-                        if let Ok(info) = unsafe { self.decoder.GetOutputStreamInfo(0) } {
+                        if let Ok(info) = unsafe { decoder.GetOutputStreamInfo(0) } {
                             self.provides_samples =
                                 info.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES.0 as u32 != 0;
                             self.sample_size = info.cbSize;
@@ -908,11 +977,12 @@ mod system {
             if packet.codec_config && matches!(self.codec, Codec::Vp9 | Codec::Av1) {
                 return Ok(Vec::new());
             }
+            let decoder = self.mft()?;
             let sample = self.input_sample(&packet)?;
             let mut out = Vec::new();
             loop {
                 // SAFETY: a sample for the decoder's one input stream.
-                match unsafe { self.decoder.ProcessInput(0, &sample, 0) } {
+                match unsafe { decoder.ProcessInput(0, &sample, 0) } {
                     Ok(()) => break,
                     Err(e) if e.code() == MF_E_NOTACCEPTING => {
                         // Full: take what is ready, then give the packet again.
@@ -938,28 +1008,76 @@ mod system {
         }
 
         fn drain(&mut self) -> Result<Vec<Picture>, String> {
+            let decoder = self.mft()?;
             // SAFETY: a plain Media Foundation call.
-            unsafe { self.decoder.ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0) }
+            unsafe { decoder.ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0) }
                 .map_err(|e| format!("the decoder did not drain: {e}"))?;
             let pictures = self.pictures();
             // SAFETY: as above; the stream goes on after a drain.
             unsafe {
-                let _ = self
-                    .decoder
-                    .ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
+                let _ = decoder.ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
             }
             pictures
         }
 
         fn flush(&mut self) {
-            // SAFETY: a plain Media Foundation call.
-            unsafe {
-                let _ = self.decoder.ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+            if let Ok(decoder) = self.mft() {
+                // SAFETY: a plain Media Foundation call.
+                unsafe {
+                    let _ = decoder.ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+                }
             }
         }
 
         fn take_report(&mut self) -> DecoderReport {
             std::mem::take(&mut self.report)
+        }
+
+        /// A paused stream lets go of its staging texture (the next picture makes it again,
+        /// once, which costs well under a millisecond) and the driver's spare memory. The
+        /// transform keeps its surfaces: they hold the pictures the next packets refer to, and
+        /// a stream made again would wait for a key frame.
+        fn idle(&mut self) -> Option<String> {
+            let staging = self.drop_staging()?;
+            self.platform.trim();
+            (self.let_go)();
+            Some(format!("{staging} and the GPU driver's spare memory"))
+        }
+
+        /// Shuts the transform down (its surfaces and sample pool go with it), lets go of the
+        /// staging texture, then trims the device the decoders share, so what this stream's
+        /// pictures took goes back now rather than when the last video closes.
+        fn release(&mut self) -> Option<String> {
+            let staging = self.drop_staging();
+            let transform = self.decoder.take()?;
+            drop(transform);
+            self.platform.trim();
+            (self.let_go)();
+            // This decoder's hold is the one left once the others' are counted out.
+            let others = Arc::strong_count(&self.platform).saturating_sub(1);
+            let mut freed = String::from("its Media Foundation transform with its surfaces");
+            if let Some(staging) = staging {
+                freed.push_str(", ");
+                freed.push_str(&staging);
+            }
+            freed.push_str(&match others {
+                0 => ", and the GPU device and Media Foundation (no other video is open)".into(),
+                n => format!(
+                    ", and the GPU driver's spare memory on the device {n} other decoder{} still \
+                     use{}",
+                    if n == 1 { "" } else { "s" },
+                    if n == 1 { "s" } else { "" }
+                ),
+            });
+            Some(freed)
+        }
+    }
+
+    impl Drop for MediaFoundationDecoder {
+        fn drop(&mut self) {
+            // A decoder dropped without being released (an open that failed half way) lets go
+            // in the same order.
+            let _ = self.release();
         }
     }
 
@@ -976,8 +1094,9 @@ mod system {
         platform: Mutex<Weak<Platform>>,
         /// A decoder was opened since the last time every one closed.
         opened: AtomicBool,
-        /// Told once every decoder has closed and what they shared is gone.
-        let_go: Box<dyn Fn() + Send + Sync>,
+        /// Told each time a decoder let go of something large (it closed, or its stream went
+        /// idle), and once every decoder has closed and what they shared is gone.
+        let_go: Arc<dyn Fn() + Send + Sync>,
     }
 
     /// How long the probe may take before it is given up, and no format is offered.
@@ -989,7 +1108,8 @@ mod system {
         let mut out = String::new();
         let shared = Mutex::new(Weak::new());
         for codec in super::ALL_CODECS {
-            let result = MediaFoundationDecoder::open(codec, 1280, 720, &shared).map(drop);
+            let result =
+                MediaFoundationDecoder::open(codec, 1280, 720, &shared, Arc::new(|| {})).map(drop);
             out.push_str(&super::probe_line(codec, &result));
             out.push('\n');
         }
@@ -1004,9 +1124,9 @@ mod system {
 
     impl MediaFoundationDecoders {
         /// Decoders that find their formats when first asked. `log` takes a line for each
-        /// format then. `let_go` is called each time the last open decoder has closed and
-        /// the device and Media Foundation they shared are released, so the caller can give
-        /// back the memory that freed.
+        /// format then. `let_go` is called each time a decoder closes or its stream goes idle,
+        /// and each time the last open decoder has closed and the device and Media Foundation
+        /// they shared are released, so the caller can give back the memory that freed.
         pub fn lazy(
             log: Box<dyn Fn(&str) + Send + Sync>,
             let_go: Box<dyn Fn() + Send + Sync>,
@@ -1016,7 +1136,7 @@ mod system {
                 log,
                 platform: Mutex::new(Weak::new()),
                 opened: AtomicBool::new(false),
-                let_go,
+                let_go: Arc::from(let_go),
             }
         }
 
@@ -1059,7 +1179,14 @@ mod system {
                 width,
                 height,
                 &self.platform,
+                Arc::clone(&self.let_go),
             )?))
+        }
+
+        fn decoder_closed(&self) {
+            // The decoder trimmed the device as it went; the heap's free memory it left goes
+            // back a few seconds later, whether or not other videos still play.
+            (self.let_go)();
         }
 
         fn all_closed(&self) {

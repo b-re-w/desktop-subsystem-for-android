@@ -475,6 +475,172 @@ fn nfr2_the_platform_hears_once_the_last_decoder_closed_so_it_lets_its_device_go
     host.join().unwrap();
 }
 
+/// A decoder that says what it lets go of, idle and at the end, and records the order of what
+/// the host asks of it and its platform.
+struct FreeingDecoder {
+    events: Arc<Mutex<Vec<String>>>,
+}
+
+impl VideoDecoder for FreeingDecoder {
+    fn decode(&mut self, packet: Packet) -> Result<Vec<Picture>, String> {
+        Ok(vec![picture(packet.id, packet.data[0])])
+    }
+    fn drain(&mut self) -> Result<Vec<Picture>, String> {
+        Ok(Vec::new())
+    }
+    fn flush(&mut self) {}
+    fn idle(&mut self) -> Option<String> {
+        self.events.lock().unwrap().push("idle".into());
+        Some("its staging texture (16.9 MiB)".into())
+    }
+    fn release(&mut self) -> Option<String> {
+        self.events.lock().unwrap().push("released".into());
+        Some("its 3840x2880 NV12 staging texture (15.8 MiB)".into())
+    }
+}
+
+impl Drop for FreeingDecoder {
+    fn drop(&mut self) {
+        self.events.lock().unwrap().push("dropped".into());
+    }
+}
+
+struct FreeingDecoders {
+    events: Arc<Mutex<Vec<String>>>,
+}
+
+impl VideoDecoders for FreeingDecoders {
+    fn capabilities(&self) -> Vec<CodecSupport> {
+        FakeDecoders {
+            log: Arc::default(),
+        }
+        .capabilities()
+    }
+    fn open(&self, _: Codec, _: u32, _: u32) -> Result<Box<dyn VideoDecoder>, String> {
+        Ok(Box::new(FreeingDecoder {
+            events: Arc::clone(&self.events),
+        }))
+    }
+    fn decoder_closed(&self) {
+        self.events.lock().unwrap().push("decoder closed".into());
+    }
+}
+
+type Freeing = (
+    Box<dyn Connection>,
+    thread::JoinHandle<VideoEnd>,
+    Arc<Mutex<Vec<String>>>,
+    Arc<Mutex<Vec<String>>>,
+);
+
+/// A guest connected to a host whose decoder is told it is idle after `idle_after`, opened
+/// and answered, with the decoder's events and the host's log lines.
+fn connect_freeing(idle_after: Duration) -> Freeing {
+    let (mut listener, mut connector) = memory::pair();
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let lines = Arc::new(Mutex::new(Vec::<String>::new()));
+    let decoders = FreeingDecoders {
+        events: Arc::clone(&events),
+    };
+    let host = {
+        let lines = Arc::clone(&lines);
+        thread::spawn(move || {
+            let connection = listener.accept(WAIT).expect("accepts");
+            dsa_host_core::video::serve_connection_idle(
+                connection,
+                &decoders,
+                "dsa-host test",
+                &|line: &str| lines.lock().unwrap().push(line.to_string()),
+                idle_after,
+            )
+        })
+    };
+    let mut guest = connector.connect(WAIT).expect("connects");
+    send(
+        guest.as_mut(),
+        Body::Hello(local_hello(Role::GuestVideo, "dsa-codec2 test")),
+    );
+    open(guest.as_mut(), VideoCodec::H264, 1280, 720);
+    assert!(matches!(next(guest.as_mut()), Body::VideoDecoderOpened(o) if o.ok));
+    (guest, host, events, lines)
+}
+
+#[test]
+fn nfr1_a_stream_that_ends_releases_its_decoder_before_the_platform_hears_and_logs_it_once() {
+    // The 4K stream's buffers went only when every video had closed; with any other video
+    // open (a music app's looping cover) they stayed for as long as it played.
+    let (mut guest, host, events, lines) = connect_freeing(Duration::from_secs(60));
+    send(guest.as_mut(), packet(1, &[1]));
+    send(guest.as_mut(), packet(2, &[2]));
+    frame(next(guest.as_mut()));
+    frame(next(guest.as_mut()));
+    guest.close();
+    assert_eq!(host.join().unwrap(), VideoEnd::Closed);
+    assert_eq!(
+        *events.lock().unwrap(),
+        ["released", "dropped", "decoder closed"]
+    );
+    let lines = lines.lock().unwrap();
+    let ended: Vec<_> = lines.iter().filter(|l| l.contains("ended")).collect();
+    assert_eq!(ended.len(), 1, "{lines:?}");
+    let line = ended[0];
+    assert!(
+        line.starts_with(
+            "video: the H.264 2x2 stream ended after 2 pictures (the guest closed it)"
+        ),
+        "{line}"
+    );
+    assert!(line.contains("pictures in flight"), "{line}");
+    assert!(
+        line.contains("its 3840x2880 NV12 staging texture"),
+        "{line}"
+    );
+}
+
+#[test]
+fn nfr1_an_idle_stream_gives_back_its_buffers_once_and_plays_on_after() {
+    let idle_after = Duration::from_millis(100);
+    let (mut guest, host, events, lines) = connect_freeing(idle_after);
+    send(guest.as_mut(), packet(1, &[1]));
+    frame(next(guest.as_mut()));
+    // Paused: told once, not again every interval while nothing comes.
+    thread::sleep(idle_after * 5);
+    assert_eq!(*events.lock().unwrap(), ["idle"]);
+    assert!(
+        lines
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|l| l.contains("no packet for") && l.contains("its staging texture")),
+        "{:?}",
+        lines.lock().unwrap()
+    );
+    // Playing again: the stream goes on, and a second pause is a second idle.
+    send(guest.as_mut(), packet(2, &[7]));
+    assert_eq!(frame(next(guest.as_mut())).nv12, vec![7; 6]);
+    thread::sleep(idle_after * 5);
+    assert_eq!(*events.lock().unwrap(), ["idle", "idle"]);
+    guest.close();
+    assert_eq!(host.join().unwrap(), VideoEnd::Closed);
+}
+
+#[test]
+fn nfr1_a_stream_end_line_says_what_its_pictures_in_flight_held() {
+    let line = dsa_host_core::video::stream_end_line(
+        Codec::Av1,
+        Some((3840, 1920)),
+        900,
+        &VideoEnd::Failed("the connection failed".into()),
+        Some("its staging texture"),
+    );
+    // 3840 x 1920 x 1.5 bytes, three of them.
+    assert_eq!(
+        line,
+        "video: the AV1 3840x1920 stream ended after 900 pictures (the connection failed); \
+         let go of its decoder, up to 3 pictures in flight (31.6 MiB), its staging texture"
+    );
+}
+
 #[test]
 fn fr26_a_streams_numbers_go_to_the_log_every_few_seconds() {
     let start = Instant::now();
