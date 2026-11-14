@@ -954,6 +954,142 @@ class ServicesTests(unittest.TestCase):
         # Before the fetch and the build, which it protects the runner from.
         self.assertLess(job.index("Keep the runner responsive"), job.index("- name: Build services.jar"))
 
+    def test_fr22_the_services_analysis_is_not_incremental(self):
+        # android17's analysis never finished on a standard runner (run 43644988414): its
+        # release configuration turns Soong's incremental analysis on, which keeps every
+        # module's providers and ninja statements a second time for a later analysis this build
+        # never runs.
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn("export SOONG_INCREMENTAL_ANALYSIS=false", script)
+        # Before the build system reads it, and so for the analysis and the build alike: a
+        # second run with another setting would analyse the tree again.
+        self.assertLess(script.index("export SOONG_INCREMENTAL_ANALYSIS=false"), script.index('lunch "$product'))
+        self.assertEqual(script.count("export SOONG_INCREMENTAL_ANALYSIS="), 1)
+        self.assertIn('grep -q -- "--incremental-build-actions" "$bootstrap"', script)
+
+    SOONG_GO = (
+        "package build\n\nimport (\n\t\"fmt\"\n\t\"os\"\n)\n\n"
+        "func (pb PrimaryBuilderFactory) primaryBuilderInvocation(config Config) bootstrap.PrimaryBuilderInvocation {\n"
+        "\tcommonArgs := make([]string, 0, 0)\n"
+        "\tinvocationEnv := make(map[string]string)\n"
+        "\tif pb.debugPort != \"\" {\n"
+        "\t\tinvocationEnv[\"GODEBUG\"] = \"asyncpreemptoff=1\"\n"
+        "\t}\n"
+        "\tif profileCpu := os.Getenv(\"SOONG_PROFILE_CPU\"); profileCpu != \"\" {\n"
+        "\t}\n"
+        "\treturn bootstrap.PrimaryBuilderInvocation{Env: invocationEnv}\n"
+        "}\n"
+    )
+
+    def test_fr22_the_go_memory_limit_reaches_the_analysis(self):
+        # soong_ui starts soong_build with `env -i $env`, so the exported GOMEMLIMIT stopped at
+        # soong_ui; the failed run's log shows the command with nothing between `env -i` and
+        # the builder.
+        changed = framework_lock.soong_memory_limit(self.SOONG_GO)
+        lines = changed.splitlines()
+        made = lines.index("\tinvocationEnv := make(map[string]string)")
+        self.assertEqual(lines[made + 2:made + 5], [
+            '\tif limit := os.Getenv("GOMEMLIMIT"); limit != "" {',
+            '\t\tinvocationEnv["GOMEMLIMIT"] = limit',
+            "\t}",
+        ])
+        # Nothing else changes, and nothing is lost.
+        self.assertEqual(changed.replace(framework_lock.SOONG_MEMORY_LIMIT, ""), self.SOONG_GO)
+        # One variable only: the rule writes the map in Go's map order, and a command that
+        # differs between the analysis and the build makes ninja analyse the tree twice.
+        self.assertEqual(framework_lock.SOONG_MEMORY_LIMIT.count("invocationEnv["), 1)
+        # Applying it twice changes nothing more.
+        self.assertEqual(framework_lock.soong_memory_limit(changed), changed)
+        # A source this was not written against stops the build rather than run without a limit.
+        with self.assertRaisesRegex(framework_lock.LockError, "GOMEMLIMIT cannot be handed on"):
+            framework_lock.soong_memory_limit(self.SOONG_GO.replace("invocationEnv := make", "env := make"))
+        with self.assertRaisesRegex(framework_lock.LockError, "GOMEMLIMIT cannot be handed on"):
+            framework_lock.soong_memory_limit(self.SOONG_GO.replace('\t"os"\n', ""))
+        with self.assertRaisesRegex(framework_lock.LockError, "GOMEMLIMIT cannot be handed on"):
+            framework_lock.soong_memory_limit(self.SOONG_GO + framework_lock.SOONG_INVOCATION_ENV)
+
+    def test_fr22_the_services_build_hands_the_memory_limit_on_before_it_starts(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        change = 'framework_lock.py" soong-memory-limit "$top/' + framework_lock.SOONG_UI_SOURCE + '"'
+        self.assertIn(change, script)
+        # soong_ui is compiled from the tree when the first build step starts.
+        self.assertLess(script.index(change), script.index('build "the analysis of the tree"'))
+        self.assertIn('grep -q "GOMEMLIMIT=$GOMEMLIMIT" "$bootstrap"', script)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "soong.go"
+            source.write_text(self.SOONG_GO)
+            run = [sys.executable, str(HERE / "framework_lock.py"), "soong-memory-limit", str(source)]
+            subprocess.run(run, check=True, capture_output=True)
+            self.assertIn(framework_lock.SOONG_MEMORY_LIMIT, source.read_text())
+            source.write_text("package build\n")
+            failed = subprocess.run(run, capture_output=True, text=True)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertIn("GOMEMLIMIT cannot be handed on", failed.stderr)
+            self.assertEqual(source.read_text(), "package build\n")
+
+    def test_fr22_the_services_build_says_what_it_has_of_the_runner_every_minute(self):
+        # The run that lost its runner printed nothing for 58 minutes, so nothing said whether
+        # the memory or the disk had run out.
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        for source in ("/proc/meminfo", '"/proc/pressure/$what"', 'df -BM --output=avail "$top"',
+                       "ps -eo rss=,pid=,comm= --sort=-rss", "VmSwap"):
+            self.assertIn(source, script)
+        self.assertIn('local every="${DSA_ROOM_SECONDS:-60}"', script)
+        # It starts before the analysis and ends with the script, however that ends.
+        self.assertLess(script.index("watch_room &\n"), script.index('build "the analysis of the tree"'))
+        self.assertIn("trap 'kill \"$watcher\" 2>/dev/null || true' EXIT", script)
+        # It runs outside the build's lowest priority, which is given to soong_ui alone.
+        self.assertNotIn("nice -n 19 watch_room", script)
+
+    def test_fr22_an_analysis_that_does_not_fit_is_stopped_while_the_runner_answers(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('analysis_minutes="${DSA_ANALYSIS_MINUTES:-45}"', script)
+        self.assertIn('step_minutes="$analysis_minutes"\nbuild "the analysis of the tree" nothing\nstep_minutes=0\n',
+                      script)
+        self.assertIn("$what ran out of time: it was stopped after $stopped_after", script)
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        bound = int(re.search(r"DSA_ANALYSIS_MINUTES: (\d+)", job).group(1))
+        # Longer than android16's 9 minutes several times over, and sooner than the 50 and 58
+        # minutes after which GitHub gave the two android17 runs up.
+        self.assertGreaterEqual(bound, 30)
+        self.assertLess(bound, 50)
+        self.assertLess(bound, int(re.search(r"DSA_BUILD_MINUTES: (\d+)", job).group(1)))
+
+    def test_fr22_the_services_tree_takes_one_version_of_the_musl_rust_toolchain(self):
+        # 6 GB for three versions, of the 17 GB the fetch leaves android17 (run 43644988414).
+        musl = "prebuilts/rust-toolchain/linux-musl-x86"
+        manifest = (
+            "<manifest>"
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/rust-toolchain/linux-x86" '
+            f'name="platform/prebuilts/rust-toolchain/linux-x86" revision="{COMMIT}"/>'
+            f'<project path="{musl}" name="platform/{musl}" revision="{COMMIT}"/>'
+            "</manifest>"
+        ).encode()
+        version = {
+            "android": "android17", "android_major": 17, "build_id": "1", "release": "cp2a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()},
+            "projects": [{"path": "prebuilts/rust-toolchain/linux-x86", "url": GOOGLESOURCE_CLANG,
+                          "commit": COMMIT, "cone": ["{rust}"]}],
+        }
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        projects = {p["path"]: p for p in entry["projects"]}
+        # Still fetched, with its build file (a cone keeps the files of the project's root), so
+        # the analysis reads what it read before.
+        self.assertEqual(projects[musl]["cone"], ["{rust}"])
+        self.assertEqual(projects[musl]["url"], "https://android.googlesource.com/platform/" + musl)
+        self.assertFalse(framework_lock.services_skipped(musl))
+        # Without a native lock that says which part, it is taken whole, as before.
+        version["projects"] = []
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        self.assertNotIn("cone", {p["path"]: p for p in entry["projects"]}[musl])
+        # The real lock says which part for Android 17, and Android 16's manifest has no such
+        # project, so its tree is the one that already builds.
+        lock = framework_lock.load()
+        native = {p["path"]: p for p in framework_lock.version_entry(lock, "android17")["projects"]}
+        self.assertEqual(native[framework_lock.SERVICES_TREE_CONES_LIKE[musl]]["cone"], ["{rust}"])
+
     def test_fr22_the_framework_artifact_carries_services_jar_from_the_services_build(self):
         workflow = (REPO / ".github/workflows/framework.yml").read_text()
         self.assertIn("build-services.sh", workflow)

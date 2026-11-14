@@ -89,6 +89,28 @@ nothing. Its one activity is the guest's home, which draws nothing (see "The hom
   and sends each (`MediaSession`: title, artist, album, art of at most 256 pixels, playback
   state and the commands it takes) until it ends (`MediaSessionGone`); a host media key
   (`MediaControl`) goes to the session's transport controls.
+- **Text toasts.** Since Android 11 an app that targets Android 11 or later does not draw
+  its own text toast: the notification manager queues it and asks the status bar, on a phone
+  SystemUI, to show it and to hide it when its time is up. The agent is the guest's status bar
+  (see "Status bar tone"), so both calls reach it (`platform/AndroidSystemBars.kt`), and it
+  draws the toast inside a task's window (`toasts/TextToasts.kt`, `platform/AndroidToasts.kt`):
+  the window of the app that showed it (its focused task, else its most recent one, minimized
+  or not), and for an app with no window the focused app window, as on a phone such a toast
+  shows over the app in front. With no app window open nothing is drawn. The view is the
+  framework's own toast layout, inflated with the app's resources, its top activity's theme
+  and the task's density, with the app's icon where SystemUI shows one (an app that targets
+  Android 12 or later, a system app only when it has a launcher activity). The framework's
+  `ToastPresenter` adds the window, sends the accessibility event (in the app's name, with
+  `ACT_AS_PACKAGE_FOR_ACCESSIBILITY`), tells the app's `Toast.Callback`, and gives the token
+  back when the toast is hidden. Every task is a window on one display and a toast window is
+  laid out on the display, so the agent measures the toast and adds it at the exact place the
+  framework's default gravity and offset give it in the task's bounds, wholly inside them:
+  the hwcomposer gives a task only the layers its bounds contain. While a toast shows, its
+  task is read every 100 ms, so the toast follows a resized window and ends with its task.
+  The window is a trusted overlay, so a click on it reaches the app. The notification manager
+  keeps the queue and the durations (2 s, 3.5 s, longer with an accessibility timeout). A
+  toast an app draws itself (a custom view, or an app that targets Android 10 or earlier) does
+  not come this way.
 - **Widgets.** The agent is the guest's widget host (`AppWidgetHost`, host ID `0x0D5A`).
   It lists the installed widgets for the host's gallery (`WidgetProviders`, in parts under
   256 KiB, with previews of at most 160 pixels and 48 KiB), and places one the host asks for
@@ -752,6 +774,8 @@ A platform app may use framework interfaces the SDK does not publish. The agent 
 | `InputManager.injectInputEvent`, `MotionEvent.setActionButton`, `InputEvent.setDisplayId` | Injecting the host's pointer and key input (reflection) |
 | `IActivityTaskManager.setFocusedTask` | Giving a task the input focus before its keys |
 | `TaskOrganizer`, `StartingWindowInfo`, `TaskInfo.positionInParent`, `IActivityTaskManager.onSplashScreenViewCopyFinished` | Drawing starting windows and placing organized tasks' surfaces (reflection for the fields and the copy answer) |
+| `IStatusBarService.registerStatusBar`, `IStatusBar` (`onSystemBarAttributesChanged`, `showToast`, `hideToast`) | The system bars' live appearance and the apps' text toasts (reflection, read from the parcel) |
+| `ToastPresenter`, `ITransientNotificationCallback`, `INotificationManager`, `IAccessibilityManager`, `WindowManager.LayoutParams.setTrustedOverlay` | Drawing a text toast as the framework does (reflection) |
 
 `hidden-api/` declares the classes the agent links against. It is compile-only: at run time
 the classes are the guest's own.

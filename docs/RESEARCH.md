@@ -1856,7 +1856,7 @@ Windows의 Hyper-V VM 대신 USB로 연결한 폰의 AVF(Android Virtualization 
 - **카드**: SettingsLib의 그룹 배경은 바깥 모서리를 `settingslib_preference_corner_radius`(20 dp)로, 안쪽 모서리를 4 dp로 둥글게 하고, `MarginItemDecoration`이 행 아래에 2 dp(`settingslib_expressive_space_extrasmall1`)를 둔다. 그 2 dp 값은 다른 여백에도 쓰이므로 바꾸지 않았다.
 - **색**: SettingsLib과 Material 3 앱의 색은 프레임워크의 `system_*_light`, `system_*_dark` 값으로 간다. DSA 게스트에는 SystemUI의 테마 서비스가 없으므로 이 기본값이 모든 앱의 색이다. 오버레이가 바꾸는 이름은 모두 16과 17의 `colors.xml`에 있다.
 - **겹쳐 쓸 수 있는 것**: DocumentsUI, PermissionController, IntentResolver는 `<overlayable>`을 선언한다. DocumentsUI는 `force_material3`과 몇 가지 색과 글꼴 이름만, PermissionController는 대화상자 스타일과 설정 값만, IntentResolver는 몇 가지 크기와 색만 연다. PermissionController의 목록 배경(SettingsLib의 `settingslib_round_background*`)은 열려 있지 않다. Settings와 PackageInstaller는 선언하지 않는다. 공유 시트의 제목은 프레임워크의 `TextAppearance.DeviceDefault.WindowTitle`이고 시트의 모서리는 `config_bottomDialogCornerRadius`(16 dp)다.
-- **토스트**: Android 11부터 R 이상을 대상으로 하는 앱의 글자 토스트는 `NotificationManagerService`가 `StatusBarManagerService.showToast`로 SystemUI에 그리게 한다. DSA 게스트에는 SystemUI가 없으므로 이 토스트는 어디에도 그려지지 않는다(소스로 확인, 기기에서 확인하지 않음). 앱이 스스로 그리는 토스트(Q 이하 대상, `transient_notification`)만 오버레이가 바꿀 수 있다.
+- **토스트**: Android 11부터 R 이상을 대상으로 하는 앱의 글자 토스트는 `NotificationManagerService`가 `StatusBarManagerService.showToast`로 SystemUI에 그리게 한다. DSA 게스트에는 SystemUI가 없으므로 이 토스트는 어디에도 그려지지 않는다(소스로 확인, 기기에서 확인하지 않음). 앱이 스스로 그리는 토스트(Q 이하 대상, `transient_notification`)만 오버레이가 바꿀 수 있다. (2026-11-15 고침: 소유자 PC에서 그려지지 않음을 확인했다. 까닭은 받는 쪽이 없어서가 아니라, 상태 표시줄로 등록된 에이전트가 `showToast`를 받고도 그리지 않아서다. FR-40부터 에이전트가 같은 `transient_notification` 레이아웃으로 그리므로 이 오버레이가 글자 토스트에도 적용된다. R48.)
 - **글꼴**: 이미지의 `sans-serif`는 `external/roboto-fonts`의 Roboto(가변 글꼴, 3.005)이고, 저장소의 NOTICE는 Apache-2.0이다. 17의 저장소에는 `MODULE_LICENSE_OFL`도 있다. 굵기 700은 `textStyle="bold"`로 쓸 수 있다.
 
 ### 결정
@@ -1870,7 +1870,7 @@ Windows의 Hyper-V VM 대신 USB로 연결한 폰의 AVF(Android Virtualization 
 - 첫 화면은 창 크기가 바뀌어도 레이아웃을 다시 만들지 않으므로, 600 dp를 넘나들게 크기를 바꾼 창은 화면을 다시 열 때까지 처음의 상태를 지킨다.
 - DocumentsUI의 레이아웃은 겹쳐 쓸 수 없으므로 파일 선택기에는 큰 제목 영역이 없다. 색과 Material 3의 둥근 모양만 바뀐다. 큰 제목을 넣으려면 DocumentsUI의 레이아웃 코드를 고쳐야 한다.
 - PermissionController는 앱 바의 테마 오버레이를 `<overlayable>`에 열지 않아, 권한 화면은 SettingsLib대로 큰 제목을 접은 채 연다. 높은 창에서 펼쳐 열려면 그 앱의 레이아웃이나 코드를 고쳐야 한다.
-- 소유자에게 따로 보고할 것: SystemUI가 없는 게스트에서는 앱의 글자 토스트가 보이지 않는다. 호스트 알림 등으로 보여 주는 것은 새 요구사항이다.
+- 소유자에게 따로 보고할 것: SystemUI가 없는 게스트에서는 앱의 글자 토스트가 보이지 않는다. 호스트 알림 등으로 보여 주는 것은 새 요구사항이다. (2026-11-15: 소유자가 호스트 알림이 아니라 그 앱의 창 안에 그리기로 정했다. FR-40, R48.)
 
 ### 확인하지 못한 것
 - 이미지를 만들거나 부팅하지 않았다. aapt2가 오버레이를 받아들이는지, idmap2가 각 오버레이를 받아들이는지(`adb shell cmd overlay list`), 오버레이 레이아웃의 `app:` 속성이 실제로 Settings의 속성으로 읽히는지, 컴파일된 레이아웃을 고친 Settings와 PermissionController가 그대로 뜨는지는 develop의 이미지 테스트가 처음 확인한다.
@@ -3256,6 +3256,47 @@ hwcomposer와 호스트 합성기는 틀리지 않았으므로 거기서 옮기�
 
 첫 실행(2026-11-14, 실행 43637660922)에서 android17의 services 작업이 `Build services.jar` 단계 약 50분째에 "The hosted runner lost communication with the server"로 끝났다. 로그가 남지 않아 분석 중이었는지 자바 빌드 중이었는지는 모른다. 빌드가 프로세서 4개를 모두 쓰고 스왑하는 동안 러너 에이전트가 응답하지 못한 것으로 보고 다음을 더했다. ninja 작업 2개(`DSA_SERVICES_JOBS`), 높은 메모리 작업 1개(`NINJA_HIGHMEM_NUM_JOBS=1`), Soong 분석의 `GOMEMLIMIT=10GiB`, 가장 낮은 프로세서와 디스크 우선순위, 빌드의 OOM 점수 1000과 러너 프로세스의 -1000, zswap(메모리의 20 %), `vm.watermark_scale_factor=200`, `--skip-soong-tests`. 스왑은 키우지 않았다. 두 스왑 파일을 둔 채 받기 뒤 디스크에 17 GB만 남는다(실행 43633250360). 이 설정으로 시간 안에 끝나는지는 다음 Framework build가 보인다.
 
+### android17의 분석이 표준 러너에서 끝나지 않은 원인 (2026-11-15)
+
+위 설정으로 돌린 실행 43644988414에서도 android17은 끝나지 않았다. 같은 실행의 두 작업 로그(android17 작업 132600961496, android16 작업 132600961513)와 고정한 `build/soong`(android17 `6722dd88`, android16 `f389fa2a`), `build/blueprint`(`7f2058de`, `c39c8a4c`) 소스를 읽었다. 이 PC에서는 아무것도 빌드하지 않았다.
+
+| | android16 (통과) | android17 (실패) |
+|---|---|---|
+| 프로젝트 수, 트리 크기 | 1002개, 73 GB | 1075개, 82 GB |
+| 받기 뒤 남은 디스크 | 26 GB | 17 GB |
+| `soong_build` 빌드 | 약 1분 | 약 1분 |
+| Android.bp 분석 | 9분(22:07:55에서 22:16:43) | 22:11:00부터 58분 동안 출력 없음. 23:09:00에 "The runner has received a shutdown signal", `soong bootstrap failed with: signal: killed` |
+| 분석이 쓴 디스크 | 8 GB(26에서 18 GB) | 알 수 없음 |
+| 분석 뒤 스왑 | 263 MiB | 알 수 없음 |
+| 배너 | `SOONG_ONLY=true` | `SOONG_ONLY=true`, `SOONG_INCREMENTAL_ANALYSIS=true` |
+| 전체 | 64분에 `services.jar` 22.8 MB | 없음 |
+
+찾은 것은 둘이다.
+
+1. **Android 17은 Soong의 증분 분석을 기본으로 켠다.** `ui/build/dumpvars.go`가 릴리스 플래그 `RELEASE_SOONG_INCREMENTAL_ANALYSIS`가 `true`이고 환경 변수 `SOONG_INCREMENTAL_ANALYSIS`가 없으면 `incrementalBuildActions`를 켠다. 로그의 배너가 `SOONG_INCREMENTAL_ANALYSIS=true`이고, 죽을 때 찍힌 `soong_build` 명령에 `--incremental-build-actions`가 있다. Android 16의 Soong에는 그 플래그를 읽는 코드가 없고 명령줄 옵션으로만 켜진다. 켜지면 분석은 ninja 파일을 쓰는 것에 더해 모듈마다 입력 해시를 계산하고, 프로바이더를 모두 직렬화해 `out/soong` 아래의 키-값 저장소(pogreb: `providers.db`, `module_actions.db`, `singleton_actions.db`, `references.db`)에 쓰고, 모듈의 ninja 문장을 한 벌 더 `ninja.db`에 쓴다(`blueprint/incremental.go`, `context.go`의 `writeIncrementalModules`와 `cacheModuleBuildActions`). 같은 트리를 다시 분석할 때 바뀌지 않은 모듈을 건너뛰려는 것인데, 이 작업은 새 트리를 한 번 분석하고 버린다. 그러니 얻는 것 없이 메모리와 디스크만 든다. 디스크만 보아도 Android 16의 분석이 8 GB를 썼는데 Android 17은 ninja 문장을 두 벌 쓰고 남은 디스크가 17 GB였다.
+2. **`GOMEMLIMIT`은 분석에 닿은 적이 없다.** soong_ui는 `soong_build`를 ninja 규칙 `env -i $env "$BUILDER" ...`로 띄운다(`blueprint/bootstrap/bootstrap.go`). `$env`에는 `soong.go`의 `invocationEnv`에 든 것만 들어가고, 디버거를 붙일 때의 `GODEBUG`뿐이다. 실패한 로그의 명령도 `env -i  "$BUILDER"`로 사이가 비어 있다. 그래서 두 버전 모두 `soong_build`는 Go 기본값(GOGC 100)으로 돌았고, 힙은 살아 있는 양의 두 배까지 자란 뒤에야 수거되었다. 위의 첫 대응에서 넣은 `GOMEMLIMIT=10GiB`는 soong_ui에서 멈췄다.
+
+58분 동안 메모리와 디스크 수치가 하나도 찍히지 않았으므로, 러너를 잃은 직접 원인이 스왑 폭주인지 디스크인지는 로그로 가를 수 없다. 다만 두 버전의 분석에서 확인되는 차이는 프로젝트 7 % 증가와 증분 분석 하나이고, 7 %로는 9분이 58분 이상이 되지 않는다.
+
+바꾼 것(`.github/scripts/framework/build-services.sh`, `dsa/guest/framework/framework_lock.py`):
+
+- `SOONG_INCREMENTAL_ANALYSIS=false`를 내보낸다. `ui/build/config.go`가 이 값을 읽어 릴리스 플래그보다 앞세운다. Android 16의 Soong은 이 변수를 읽지 않으므로 Android 16의 빌드는 그대로다. 증분 분석을 끈 경로는 Kati를 쓰는 빌드가 늘 타는 경로다(`soong_build`는 증분 분석을 soong-only일 때만 켠다).
+- `framework_lock.py soong-memory-limit`이 트리의 `build/soong/ui/build/soong.go`에서 `invocationEnv`를 만드는 줄 아래에 `GOMEMLIMIT`을 넘기는 세 줄을 넣는다. soong_ui는 빌드를 시작할 때 이 소스에서 빌드되므로 첫 실행부터 적용된다. 그 줄은 두 버전에서 같고, 줄이 없거나 둘이면 빌드를 멈춘다. 변수는 하나만 넘긴다. 규칙이 맵을 Go의 맵 순서로 쓰므로, 둘이면 분석과 빌드 사이에 명령이 달라져 ninja가 트리를 다시 분석할 수 있다. 한도를 넘게 살아 있으면 Go는 시간의 절반까지만 수거에 쓰고 힙이 한도를 넘게 두므로, 한도는 분석을 늦출 뿐 멈추지 않는다.
+- 빌드 내내 1분마다 한 줄(`[room ...]`)을 찍는다: 쓸 수 있는 메모리, 스왑 사용량과 zswap이 쥔 양, 쓰기를 기다리는 페이지, 메모리와 디스크 압력(PSI 10초 평균), 남은 디스크, 부하, 가장 큰 프로세스 셋의 RSS와 스왑. 빌드의 낮은 우선순위 밖에서 돈다.
+- 분석만 `DSA_ANALYSIS_MINUTES`(45분)로 묶었다. Android 16은 9분이 걸리고, 러너를 잃은 두 실행은 50분과 58분째였다. 넘으면 스크립트가 러너가 응답하는 동안 스스로 멈추고 무엇이 모자랐는지 말한다.
+- 분석이 끝나면 `out/soong/bootstrap.ninja`에서 `soong_build`가 `GOMEMLIMIT`과 함께, `--incremental-build-actions` 없이 떴는지 보고, 아니면 경고한다.
+- Android 17의 musl 호스트용 Rust 툴체인(`prebuilts/rust-toolchain/linux-musl-x86`, 세 버전 6.0 GB)을 glibc용과 같은 꼴로 빌드의 버전 하나만 받는다(`SERVICES_TREE_CONES_LIKE`). 루트의 `Android.bp`는 남으므로 분석이 읽는 빌드 파일은 그대로이고, 디스크가 약 4 GB 더 남는다. Android 16의 매니페스트에는 이 프로젝트가 없어 그 트리는 통과한 실행과 같다.
+
+맞을 것으로 보는 근거: Android 16의 분석은 한도 없이도 9분에 끝났고 끝난 뒤 스왑이 263 MiB였으니, 힙이 두 배까지 자라고도 15.6 GiB 안에 있었다. 증분 분석을 끈 Android 17의 분석은 같은 경로에 프로젝트만 7 % 많고, 이제 힙이 10 GiB에서 수거된다. 디스크는 17 GB에 4 GB가 더해지고 ninja 문장을 한 벌만 쓴다.
+
+하지 않은 것과 이유:
+
+- `cts`(2.7 GB)와 다른 테스트 트리를 빼는 것. 분석할 모듈이 줄지만 얼마나 줄어 메모리가 얼마나 남는지 잰 값이 없고, 빠진 모듈이 분석을 오류로 멈추는지 CI 밖에서 확인할 길이 없으며, 통과하는 Android 16의 트리도 바뀐다. `[room]` 줄이 분석의 최고 메모리를 보여 주면 그 수치로 정한다.
+- `SOONG_PARTIAL_ANALYSIS=<모듈>`(Android 17에만 있다. 이름을 준 모듈 밖의 모듈 그룹을 `passive`로 둔다). 필요한 것만 분석하는 바로 그 기능이지만 이 리비전에서 `nothing` 목표와 설치 경로 조회가 그대로 되는지 읽기만으로는 알 수 없다. 위의 것으로 모자랄 때 다음으로 시험할 것이다.
+- Soong 없이 javac와 d8로 직접 빌드하는 길. 위의 원인이 맞으면 필요하지 않다.
+
+확인하지 못한 것: 이 변경은 CI에서 돌지 않았다. Android 17의 분석이 실제로 45분 안에 끝나는지, 증분 분석을 끈 뒤의 최고 메모리와 ninja 파일 크기, musl 툴체인을 한 버전만 둔 트리를 Soong이 그대로 분석하는지, 분석 뒤 자바 빌드가 Android 17에서 남은 디스크로 끝나는지는 다음 Framework build의 `[room]` 줄과 결과가 보인다.
+
 ## R47. Vulkan 드라이버가 없는 GPU에서 호스트 Vulkan으로 Dozen(Vulkan on D3D12)을 쓰는 길 (PR-3, NFR-7, FR-27)
 
 **질문.** 이슈 #610(Intel Iris Pro 5200, Haswell, MacBook Pro 2015의 Boot Camp)처럼 Windows Vulkan 드라이버가 없는 GPU에서는 호스트 렌더러(gfxstream)가 시작하지 못한다. 소유자는 두 번째 안드로이드 그래픽 경로를 거절했고 CPU ASTC 디코딩도 원하지 않는다. Mesa의 Dozen(`dzn`, Vulkan을 D3D12 위에 구현한 드라이버)을 호스트 Vulkan 구현으로만 바꿔 끼우면 경로는 하나로 남는다. 이것이 서는가, 어떤 GPU를 살리는가, 어떻게 싣는가.
@@ -3385,7 +3426,61 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 - `vulkan_dzn.dll`의 크기와 렌더러 메모리(NFR-1)에 더하는 양.
 - WSA가 Haswell에서 무엇으로 그렸는지.
 
-## R48. 설정의 "안전 및 긴급 상황" 화면에서 설정 앱이 끝난 까닭: 이미지에 없는 앱의 제공자를 부른다 (FR-1)
+## R48. 글자 토스트가 보이지 않은 까닭과 앱 창 안에 그리는 길: 상태 표시줄로 오는 `showToast` (FR-40)
+
+**기준.** 2026-11-15 소유자 PC(Android 17 이미지)에서 안드로이드 설정의 "빌드 번호"를 누르면 `dumpsys notification`의 Toast Queue에 `TextToastRecord{... com.android.settings/1000 isSystemToast=true ... duration=0}`이 들어갔다가 사라지고, `TYPE_TOAST` 창은 한 번도 생기지 않았다. 소유자가 같은 날 정했다: 호스트 알림이 아니라 그 앱의 창 안에, 앱이 청한 모양으로 그린다(FR-40). 이 조사는 소스만 읽었다. 기기는 만지지 않았고, 에이전트는 빌드하거나 실행하지 않았다. 프레임워크 소스는 `framework-lock.json`이 고정한 `frameworks/base` 두 커밋(Android 16 `45034f06`, Android 17 `94b4c163`)을 android.googlesource.com에서 읽었다. 그 페이지는 줄 번호를 주지 않으므로 아래는 파일과 메서드로 적는다.
+
+### 본 것
+
+- **앱 쪽**(`core/java/android/widget/Toast.java`, 17): `show()`는 호환성 변경 `CHANGE_TEXT_TOASTS_IN_THE_SYSTEM`(147798919, `@EnabledAfter(targetSdkVersion = Q)`)이 켜져 있고 사용자 지정 뷰가 없으면 `service.enqueueTextToast(pkg, mToken, mText, mDuration, isUiContext, displayId, callback)`을 부른다. 위치 값은 넘기지 않는다. `setGravity`와 `setMargin`은 글자 토스트에서 "값이 쓰이지 않는다"는 오류만 남기고, 문서는 안드로이드 11 이상 대상 앱에서 아무 일도 하지 않는다고 적는다. 기본 위치는 `Toast` 생성자가 `config_toastDefaultGravity`와 `toast_y_offset`에서 읽는다. 변경이 꺼진 앱(Q 이하 대상)은 `ToastPresenter.getTextToastView(context, text)`로 뷰를 스스로 만든다.
+- **알림 관리자 쪽**(`services/core/java/com/android/server/notification/toast/TextToastRecord.java`, 17): `show()`는 `mStatusBar.showToast(uid, pkg, token, text, windowToken, getDuration(), mCallback, displayId)`를 부르고 참을 돌려준다. `mStatusBar`(`StatusBarManagerInternal`)가 없을 때만 거짓이다. `hide()`는 `mStatusBar.hideToast(pkg, token)`이다. 다른 길은 없다.
+- **상태 표시줄 서비스**(`services/core/java/com/android/server/statusbar/StatusBarManagerService.java`, 17): `showToast`와 `hideToast`는 `runWithStatusBarIfPresent(bar -> bar.showToast(...))`로 등록된 `IStatusBar` 하나(`mBar`)에 그대로 넘긴다. `registerStatusBar`와 `registerStatusBarForAllDisplays`는 `STATUS_BAR_SERVICE` 권한을 확인하고 `mBar = bar`로 둔 뒤 죽음 알림을 걸고 `notifyBarAttachChanged()`를 부른다. 그것이 하는 일은 전역 동작 메뉴가 쓸 수 있는지 알리기(`onGlobalActionsAvailableChanged(mBar != null)`)와 UDFPS, 생체 인식 콜백을 다시 거는 것뿐이다. 이 파일에서 `mBar != null`을 상태 표시줄이나 내비게이션 바가 보인다는 뜻으로 쓰는 곳은 없고, 등록이 창 관리자를 부르지도 않는다.
+- **DSA 에이전트는 이미 그 상태 표시줄이다.** FR-22의 제목 표시줄 색 때문에 `AndroidSystemBars`가 `registerStatusBarForAllDisplays`로 등록되어 있고, 그 바인더는 `onSystemBarAttributesChanged`만 읽고 나머지 호출은 받은 것으로 치고 버렸다. 그래서 `showToast`는 에이전트까지 왔다가 버려졌고, 알림 관리자는 보였다고 여겨 제 시간이 지나면 기록을 큐에서 뺐다. 이것이 소유자 PC에서 본 그대로다. 시스템 화면 디자인 조사의 "토스트" 항목이 "SystemUI가 없어 어디에도 그려지지 않는다"고 적은 것은 결과는 맞고 까닭이 덜 정확했다: 받는 쪽이 없는 것이 아니라 받는 쪽(에이전트)이 그리지 않았다.
+- **`IStatusBar.aidl`**(16과 17이 같다): `oneway interface IStatusBar`, `showToast(int uid, String packageName, IBinder token, CharSequence text, IBinder windowToken, int duration, @nullable ITransientNotificationCallback callback, int displayId)`, `hideToast(String packageName, IBinder token)`.
+- **`ToastPresenter`**(`core/java/android/widget/ToastPresenter.java`, 16과 17이 같다): 생성자 `(Context, IAccessibilityManager, INotificationManager, String packageName)`, `show(View, IBinder token, IBinder windowToken, int duration, int gravity, int xOffset, int yOffset, float horizontalMargin, float verticalMargin, ITransientNotificationCallback)`, `hide(ITransientNotificationCallback)`, 정적 `getTextToastView(Context, CharSequence)`와 `getTextToastViewWithIcon(Context, CharSequence, Drawable)`. `createLayoutParams`는 `TYPE_TOAST`, `WRAP_CONTENT`, `FLAG_KEEP_SCREEN_ON | FLAG_NOT_FOCUSABLE | FLAG_NOT_TOUCHABLE`, `Animation_Toast`를 준다. `adjustLayoutParams`는 창의 `packageName`을 생성자에 준 컨텍스트의 패키지(`mContextPackageName`)로, `hideTimeoutMilliseconds`를 긴 토스트 7000, 짧은 토스트 4000으로 둔다. `show`는 뷰를 붙이고 접근성 이벤트(`TYPE_NOTIFICATION_STATE_CHANGED`, 클래스 `android.widget.Toast`, 패키지는 생성자의 `packageName`)를 보낸 뒤 `callback.onToastShown()`을 부른다. `hide`는 `removeViewImmediate`, `mNotificationManager.finishToken(mPackageName, mToken)`, `callback.onToastHidden()` 순서다. 컨텍스트는 약한 참조로 잡는다.
+- **SystemUI가 하는 일**(`packages/SystemUI/src/com/android/systemui/toast/ToastUI.java`, `SystemUIToast.java`, 17): 디스플레이 컨텍스트로 `ToastPresenter`를 만들고, 레이아웃 매개변수를 신뢰된 오버레이로 표시한 뒤(터치가 지나가게) `show`를 부른다. 새 토스트가 오면 떠 있던 것을 먼저 숨기고, `hideToast`는 패키지와 토큰이 지금 것과 같을 때만 따른다. 뷰는 SystemUI 자신의 `text_toast` 레이아웃이다. 앱이 안드로이드 12 미만을 대상으로 하면 두 줄 제한을 풀고 아이콘을 숨긴다. 아니면 `getBadgedIcon`의 아이콘을 보이는데, 시스템 앱(`FLAG_SYSTEM | FLAG_UPDATED_SYSTEM_APP`)은 실행 인텐트가 있을 때만이다(`showApplicationIcon`).
+- **접근성 이벤트의 패키지 이름**(`services/accessibility/java/com/android/server/accessibility/AccessibilitySecurityPolicy.java`, 17, `resolveValidReportedPackageLocked`): 보낸 쪽이 시스템 uid도 아니고 그 패키지의 주인도 아니면 `ACT_AS_PACKAGE_FOR_ACCESSIBILITY` 권한이 있을 때만 그 이름을 그대로 둔다. 없으면 보낸 쪽 uid의 첫 패키지로 바꾼다. 에이전트의 FR-18 안내는 이벤트의 패키지로 태스크를 고르므로(`AccessibilityExport.announce`), 권한 없이는 토스트 안내가 에이전트의 이름으로 와서 그 앱의 태스크를 찾지 못한다.
+- **hwcomposer**(`dsa/guest/hwcomposer/src/task_layout.h`): 층은 창 종류가 아니라 자리로 태스크에 나뉜다. 태스크의 경계가 층의 프레임을 통째로 담아야 하고, 경계에 걸친 층은 어느 창에도 가지 않는다. 토스트 창은 디스플레이 수준의 창이라 모든 태스크 위에 있고, 한 태스크의 경계 안에 통째로 있으면 그 태스크의 맨 위 층이 된다. hwcomposer와 호스트 합성기는 고칠 것이 없다. 입력은 호스트가 태스크 좌표로 보내고 에이전트가 디스플레이에 주입하므로, 터치할 수 없는 토스트 창은 입력 경로에도 없다.
+
+### 고른 길
+
+`services.jar`를 고치지 않는다. 에이전트의 상태 표시줄 바인더가 `showToast`와 `hideToast`의 트랜잭션 번호를 스텁에서 찾아(이미 `onSystemBarAttributesChanged`에 쓰는 방법) 인자를 읽고, 프레임워크의 `ToastPresenter`로 그린다. 새로 등록하는 것이 없으므로 새로 켜지는 동작도 없다.
+
+- 뷰: `ToastPresenter.getTextToastView`(아이콘을 보일 앱이면 `getTextToastViewWithIcon`)를 그 앱의 패키지 컨텍스트로 부른다. 앱이 스스로 그리는 토스트와 같은 코드이므로 FR-34의 오버레이(`transient_notification`, `toast_frame`)가 그대로 적용된다. 테마는 태스크 맨 위 액티비티의 것, 밀도는 태스크의 것이다. 제한된 컨텍스트(`CONTEXT_RESTRICTED`)라 앱의 글꼴이나 코드를 에이전트 프로세스에 올리지 않는다. 스플래시 화면이 같은 방식으로 앱의 테마를 읽는다.
+- 창의 주인: `ToastPresenter`의 컨텍스트는 에이전트의 것이어야 한다. 창 관리자는 토스트 창에 `OP_TOAST_WINDOW`를 창의 uid와 패키지 짝으로 시작하므로, 창의 `packageName`이 붙이는 프로세스의 것이 아니면 창을 숨긴다. SystemUI도 자기 컨텍스트를 쓴다.
+- 자리: 모든 태스크가 한 디스플레이의 프리폼 창이고 토스트 창은 디스플레이를 기준으로 놓이므로, 에이전트가 뷰를 미리 재어(`AT_MOST` 태스크 크기) 프레임워크의 기본 위치를 태스크의 경계에 적용한 자리(`toastFrame`, `Gravity.apply`와 같은 계산)를 구하고, `TOP | LEFT`와 그 좌표, 잰 크기를 그대로 창에 준다. 인셋에 맞추지 않게 해서(`setFitInsetsTypes(0)`) 좌표가 디스플레이의 모서리에서 시작한다. 크기를 고정하는 까닭은 `WRAP_CONTENT` 창을 `ViewRootImpl`이 재는 방법이 에이전트의 측정과 달라질 수 있어서다.
+- 따라가기: 토스트가 떠 있는 동안 100 ms마다 태스크를 읽어, 경계가 바뀌면 다시 재어 `updateViewLayout`으로 옮기고, 태스크가 끝나면 숨긴다.
+- 시간과 큐는 알림 관리자의 것이다. 에이전트는 시간을 재지 않는다.
+
+### 버린 길
+
+- **`services.jar` 패치**(알림 관리자가 다른 곳에 그리게): 필요가 없고, Android 17의 서비스 소스 빌드가 지금 깨져 있어 실을 수 없다.
+- **앱이 스스로 그리게 하는 호환성 변경 끄기**(`CHANGE_TEXT_TOASTS_IN_THE_SYSTEM`을 모든 앱에서 끔): 앱이 그리는 토스트 창은 앱의 것이라 에이전트가 자리를 정할 수 없고, 디스플레이의 아래 가운데에 놓여 그 자리의 다른 태스크 창에 들어가거나 경계에 걸쳐 사라진다. 릴리스 빌드에서 디버그할 수 없는 앱의 변경을 덮어쓸 수 있는지도 확인하지 못했다.
+- **프레임워크 설정이나 오버레이**: `TextToastRecord.show()`에는 상태 표시줄 말고 다른 갈래가 없다. 바꿀 설정이 없다.
+- **상태 표시줄을 하나 더 등록**: 상태 표시줄 서비스는 하나(`mBar`)만 잡으므로 두 번째 등록은 첫 번째를 밀어내 FR-22의 보고가 끊긴다. 같은 바인더에서 받는다.
+- **호스트 알림**: 소유자가 받지 않았다. 앱의 화면에 뜨는 것을 다른 곳에 띄우는 일이기 때문이다.
+- **창 관리자의 gravity만으로 놓기**(디스플레이 기준 오프셋으로 환산): 토스트의 크기를 모르면 창이 작을 때 경계 안에 넣을 수 없다.
+
+### 대가와 남은 것
+
+- 창이 최소화된 앱의 토스트는 그 창 안에 그려지므로, 사용자가 다른 창을 보고 있으면 보지 못한다. FR-40이 그렇게 정했다.
+- 토스트가 떠 있는 동안(보통 2초에서 3.5초) 100 ms마다 태스크 목록을 한 번 읽는다.
+- 앱이 스스로 그리는 토스트(사용자 지정 뷰, 안드로이드 10 이하 대상)는 여전히 디스플레이를 기준으로 놓인다. 그 창은 앱의 것이라 이 길로는 옮길 수 없다. 디스플레이의 아래 가운데가 어느 태스크의 경계 안이냐에 따라 다른 앱의 창에 보이거나 보이지 않을 수 있다. FR-40이 다루지 않는 토스트라 소유자에게 따로 보고한다.
+
+### 확인하지 못한 것
+
+- 기기에서 아무것도 돌리지 않았다. 에이전트는 이 PC에서 컴파일하지도 않았다(Kotlin은 CI가 빌드한다).
+- `NotificationManagerService`의 큐와 시간(`showNextToastLocked`, `cancelToastLocked`, `finishToken`, 접근성 시간 제한을 더하는 곳)과 창 관리자의 토스트 규칙(`WindowManagerService.addWindow`의 `TYPE_TOAST` 토큰 검사, uid마다 토스트 창 하나, `OP_TOAST_WINDOW`, 창 숨김 시간)은 고정한 커밋에서 다시 읽지 못했다. 파일이 커서 페이지가 잘린다. 위의 설명은 AOSP의 알려진 동작이고, 소유자 PC의 관찰(기록이 큐에 들어갔다가 제 시간에 빠짐)과 맞는다.
+- `ACT_AS_PACKAGE_FOR_ACCESSIBILITY`가 플랫폼 서명으로 주어지는 권한인지(`core/res/AndroidManifest.xml`)는 페이지가 잘려 읽지 못했다. SystemUI가 같은 목적으로 가진 권한이다. 주어지지 않으면 토스트는 그대로 보이고, 스크린 리더 안내만 듣는 태스크 중 첫 태스크로 간다.
+- `Animation_Toast`의 들어오는 움직임이 층의 프레임을 태스크 경계 밖으로 내는지. 그렇다면 그 몇 프레임 동안 토스트가 창에 없다가 나타난다.
+
+### 기기에서 확인하는 법
+
+- `adb logcat -s DsaAgent`: 토스트마다 `the toast of <패키지> is shown in task <번호>`가 나온다. 열린 앱 창이 없으면 `no app window is open for the toast of <패키지>; it is not drawn`이다. `this framework's status bar takes no text toasts`나 `could not read a text toast`가 나오면 바인더 쪽이, `this framework could not draw the toast`가 나오면 `ToastPresenter` 쪽이 맞지 않는 것이다.
+- 토스트가 떠 있는 동안 `adb shell dumpsys window windows`에서 제목이 `Toast`인 창을 찾는다: `ty=TOAST`, 패키지는 에이전트(`io.github.thisisthepy.dsa.agent`), 프레임이 그 태스크의 경계 안에 있다. `adb shell dumpsys notification`의 Toast Queue에는 `TextToastRecord`가 그 시간 동안 있다가 빠진다.
+- `adb shell dumpsys SurfaceFlinger --list`에 `Toast` 층이 있는지 본다.
+
+## R49. 설정의 "안전 및 긴급 상황" 화면에서 설정 앱이 끝난 까닭: 이미지에 없는 앱의 제공자를 부른다 (FR-1)
 
 **기준.** 2026-11-15 소유자 PC(Android 17 `16373615`)에서 설정의 하위 화면을 열자 설정 앱이 끝났다. logcat: `IllegalArgumentException: Unknown authority com.android.emergency.gesture`, `ContentResolver.call` ← `EmergencyNumberUtils.getEmergencyGestureEnabled` ← `EmergencyGestureEntrypointPreferenceController.getSummary` ← `updateState` ← `DashboardFragment.updatePreferenceStates` ← `onResume`. 기기는 만지지 않았다.
 
@@ -3414,12 +3509,12 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 - 안전 및 긴급 상황 화면에 남는 "무선 긴급 경보" 줄(`app_and_notif_cell_broadcast_settings`)은 셀 브로드캐스트 모듈의 설정을 이름으로 연다. 그 모듈이 이미지에 있는지, 눌렀을 때 열리는지는 기기에서 본다.
 - 최상위 "안전 및 긴급 상황" 줄 자체를 숨기려면 `config_show_emergency_settings`를 거짓으로 두면 된다. 화면에 남는 것이 있어 이번에는 바꾸지 않았다. 숨길지는 소유자가 정한다.
 
-## R49. 설정 하위 화면의 아래 여백: 소스와 APK에서는 여백을 만드는 곳을 찾지 못했다 (FR-22)
+## R50. 설정 하위 화면의 아래 여백: 소스와 APK에서는 여백을 만드는 곳을 찾지 못했다 (FR-22)
 
 **기준.** 2026-11-15 소유자가 PC(Android 17)에서 설정의 하위 화면(`SubSettings`, SettingsLib의 접히는 툴바 레이아웃) 아래에 빈 여백이 남는다고 알렸다. 첫 화면은 #760(아래 인셋 0)과 #767(Android의 프리폼 패딩 16 dp 유지) 뒤로 바르다. 기기는 만지지 않았다. 소스, 실제 APK, CI가 남긴 갈무리만 읽었다.
 
 ### 확인한 자료와 방법
-- R48과 같은 고정 커밋의 Settings와 SettingsLib 소스(16과 17).
+- R49와 같은 고정 커밋의 Settings와 SettingsLib 소스(16과 17).
 - 두 빌드의 실제 `Settings.apk`: 하위 화면이 쓰는 컴파일된 레이아웃의 속성, 그리고 모든 dex에서 `WindowInsets.Type`과 `WindowInsetsCompat.Type`의 유형을 읽는 메서드 전부(`.scratch/settings-subpages/probe.py`). 소스에 없는 androidx와 Material 코드도 여기서 본다.
 - Image test가 Android 16에서 남긴 디스플레이 화면의 `uiautomator dump`와 화면(`.scratch/fr34-fold/captures`, 2026-11-09, 아래 인셋이 없던 때).
 
