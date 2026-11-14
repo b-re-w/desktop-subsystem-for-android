@@ -140,6 +140,33 @@ impl<A: Authorization> ApprovalPrompt for AuthorizationPrompt<A> {
 #[cfg(target_os = "macos")]
 pub use security::SecurityAuthorization;
 
+/// Whether VoiceOver runs for this user, as `NSWorkspace`'s `isVoiceOverEnabled` says. The
+/// agent runs as the user in their login session, so it asks AppKit directly, as each prompt is
+/// about to open: while VoiceOver runs the dialog has longer to be answered, as hearing its
+/// words and buttons read out takes longer than reading them. No on a macOS that cannot say.
+#[cfg(target_os = "macos")]
+pub fn voice_over_running() -> bool {
+    use objc2::msg_send;
+    use objc2::runtime::AnyObject;
+    use objc2::sel;
+    let Ok(class) = crate::objc::class(c"NSWorkspace") else {
+        return false;
+    };
+    // SAFETY: NSWorkspace's shared instance may be used from any thread; each message is one it
+    // answers, `isVoiceOverEnabled` only after it says it has it.
+    objc2::rc::autoreleasepool(|_| unsafe {
+        let workspace: *mut AnyObject = msg_send![class, sharedWorkspace];
+        if workspace.is_null() {
+            return false;
+        }
+        let answers: bool = msg_send![workspace, respondsToSelector: sel!(isVoiceOverEnabled)];
+        if !answers {
+            return false;
+        }
+        msg_send![workspace, isVoiceOverEnabled]
+    })
+}
+
 #[cfg(target_os = "macos")]
 mod security {
     use std::ffi::{c_char, c_void, CString};

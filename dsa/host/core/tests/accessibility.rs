@@ -245,6 +245,42 @@ fn fr18_an_oversized_tree_from_the_guest_is_refused_and_long_text_cut() {
     assert_eq!(update.nodes[0].actions, vec![NodeAction::Click]);
 }
 
+/// A watch, an action and a guest's answer name a desktop widget by its own field, with no
+/// task, so a widget's window and a task window of the same number never share a tree.
+#[test]
+fn fr18_widget_tree_watch_names_the_widget_on_the_wire() {
+    use dsa_host_core::accessibility::AccessibilityTarget;
+    let widget = AccessibilityTarget::Widget(12);
+    assert_eq!(widget.ids(), (0, 12));
+    assert_eq!(
+        widget.to_control_watch(true),
+        control::AccessibilityWatch {
+            task_id: 0,
+            on: true,
+            widget_id: 12,
+        }
+    );
+    assert_eq!(AccessibilityTarget::of(0, 12), widget);
+    assert_eq!(
+        AccessibilityTarget::of(12, 0),
+        AccessibilityTarget::Task(12)
+    );
+    assert_ne!(AccessibilityTarget::of(12, 0), widget);
+    assert_eq!(widget.to_string(), "widget 12");
+    assert_eq!(AccessibilityTarget::Task(3).to_string(), "task 3");
+    let action = ActionRequest {
+        epoch: 4,
+        node_id: 2,
+        action: NodeAction::Click,
+        text: String::new(),
+        request_id: 1,
+    };
+    let sent = action.to_control_for(widget);
+    assert_eq!((sent.task_id, sent.widget_id, sent.node_id), (0, 12, 2));
+    let task = action.to_control(3);
+    assert_eq!((task.task_id, task.widget_id), (3, 0));
+}
+
 #[test]
 fn fr18_the_tree_crosses_the_local_api_unchanged() {
     let mut update = settings_screen(3);

@@ -120,7 +120,8 @@ use dsa_protocol::control::{self, envelope::Body};
 use dsa_transport::{Connection, FrameSender, Listener, TransportError};
 
 use crate::accessibility::{
-    AccessibilityWatch, ActionRequest, ActionResult, GuestAccessibility, TreeUpdate,
+    AccessibilityTarget, AccessibilityWatch, ActionRequest, ActionResult, GuestAccessibility,
+    TreeUpdate,
 };
 use crate::adb_bridge::{AdbBridge, BridgeStream, GuestAdb};
 use crate::adb_discovery::{AdbAdvertise, AdbServerLink, AutoConnectState, AutoConnectWatcher};
@@ -939,15 +940,15 @@ enum InstallEvent {
     Done(InstallOutcome),
 }
 
-/// The watchers of each task's accessibility tree. The guest reads a task's tree while the
-/// task has at least one.
+/// The watchers of each task's and each desktop widget's accessibility tree. The guest reads
+/// a tree while it has at least one.
 #[derive(Default)]
 struct AccessibilityHub {
     next_watch: u64,
-    watchers: HashMap<i32, Vec<(u64, Sender<GuestAccessibility>)>>,
-    /// The tasks whose first tree since their newest watch began the service's log has
+    watchers: HashMap<AccessibilityTarget, Vec<(u64, Sender<GuestAccessibility>)>>,
+    /// The trees whose first update since their newest watch began the service's log has
     /// named, so a watch that never gets one shows by the missing line.
-    announced: HashSet<i32>,
+    announced: HashSet<AccessibilityTarget>,
     /// The watches of each task whose client says a screen reader listens. The guest sends
     /// a task's focus at once while it has at least one.
     listening: HashMap<i32, HashSet<u64>>,
@@ -1282,36 +1283,42 @@ impl Shared {
         }
     }
 
-    /// Hands what the guest sent about a task's accessibility to the task's watchers.
-    fn publish_accessibility(&self, task_id: i32, message: GuestAccessibility) {
+    /// Hands what the guest sent about a task's or a widget's accessibility to its watchers.
+    fn publish_accessibility(&self, target: AccessibilityTarget, message: GuestAccessibility) {
         let mut hub = self.accessibility.lock().unwrap_or_else(|e| e.into_inner());
         if let GuestAccessibility::Tree(tree) = &message {
-            if hub.watchers.contains_key(&task_id) && hub.announced.insert(task_id) {
+            if hub.watchers.contains_key(&target) && hub.announced.insert(target) {
                 eprintln!(
-                    "accessibility: Android sent task {task_id}'s tree ({} nodes)",
+                    "accessibility: Android sent {target}'s tree ({} nodes)",
                     tree.nodes.len()
                 );
             }
         }
-        match hub.watchers.get_mut(&task_id) {
+        match hub.watchers.get_mut(&target) {
             Some(watchers) => watchers.retain(|(_, w)| w.send(message.clone()).is_ok()),
             None => eprintln!(
-                "accessibility: dropped the guest's tree of task {task_id}, which nobody watches"
+                "accessibility: dropped the guest's tree of {target}, which nobody watches"
             ),
         }
     }
 
-    /// The tasks whose accessibility tree is watched, each with whether a screen reader
-    /// listens for its events.
-    fn watched_tasks(&self) -> Vec<(i32, bool)> {
+    /// The tasks and widgets whose accessibility tree is watched, each with whether a screen
+    /// reader listens for its events (never for a widget: listening is said per task).
+    fn watched_trees(&self) -> Vec<(AccessibilityTarget, bool)> {
         let hub = self.accessibility.lock().unwrap_or_else(|e| e.into_inner());
-        let mut tasks: Vec<(i32, bool)> = hub
+        let mut targets: Vec<(AccessibilityTarget, bool)> = hub
             .watchers
             .keys()
-            .map(|task_id| (*task_id, hub.is_listening(*task_id)))
+            .map(|target| {
+                let listening = match target {
+                    AccessibilityTarget::Task(task_id) => hub.is_listening(*task_id),
+                    AccessibilityTarget::Widget(_) => false,
+                };
+                (*target, listening)
+            })
             .collect();
-        tasks.sort();
-        tasks
+        targets.sort();
+        targets
     }
 
     /// Hands text the guest copied to every clipboard watcher still listening.
@@ -2875,8 +2882,8 @@ impl Session {
         rx
     }
 
-    /// Passes what the user did with a notification to the guest. Opening one wakes a guest
-    /// in Doze or frozen first. Needs a running guest that has the notification; one the
+    /// Passes what the user did with a notification to the guest. Opening one, or choosing
+    /// one of its buttons, wakes a guest in Doze or frozen first. Needs a running guest that has the notification; one the
     /// guest has not shown is ignored.
     pub fn notification_action(&self, action: NotificationAction) -> Result<(), SessionError> {
         let (reply_tx, reply_rx) = mpsc::channel();
@@ -2981,6 +2988,19 @@ impl Session {
     /// asks the guest for a full tree again, which every watcher receives. The watch lasts
     /// across restarts of the guest: each agent that connects is asked again.
     pub fn watch_accessibility(&self, task_id: i32) -> AccessibilityWatch {
+        self.watch_tree(AccessibilityTarget::Task(task_id))
+    }
+
+    /// Watches the accessibility tree of the desktop widget `widget_id`'s window: the nodes
+    /// of the widget's own views (its text, buttons and lists), in pixels of its image. The
+    /// same rule as for a task holds: the guest reads the widget's nodes only while a watch of
+    /// it lasts.
+    pub fn watch_widget_accessibility(&self, widget_id: i32) -> AccessibilityWatch {
+        self.watch_tree(AccessibilityTarget::Widget(widget_id))
+    }
+
+    /// Watches `target`'s tree, as [`Session::watch_accessibility`] says.
+    fn watch_tree(&self, target: AccessibilityTarget) -> AccessibilityWatch {
         let (tx, updates) = mpsc::channel();
         let id = {
             let mut hub = self
@@ -2990,35 +3010,39 @@ impl Session {
                 .unwrap_or_else(|e| e.into_inner());
             hub.next_watch += 1;
             let id = hub.next_watch;
-            hub.watchers.entry(task_id).or_default().push((id, tx));
-            hub.announced.remove(&task_id);
+            hub.watchers.entry(target).or_default().push((id, tx));
+            hub.announced.remove(&target);
             id
         };
-        eprintln!(
-            "accessibility: a host client watches task {task_id}; asking Android for its tree"
-        );
+        eprintln!("accessibility: a host client watches {target}; asking Android for its tree");
         send_quietly(
             &self.shared,
             &self.commands,
-            Body::AccessibilityWatch(control::AccessibilityWatch { task_id, on: true }),
+            Body::AccessibilityWatch(target.to_control_watch(true)),
         );
+        // Whether a screen reader listens is said per task: a widget's tree is read whole each
+        // time, so there is nothing faster to ask for.
+        let listen_task = match target {
+            AccessibilityTarget::Task(task_id) => Some(task_id),
+            AccessibilityTarget::Widget(_) => None,
+        };
         // A new watch of a task a screen reader listens for: the agent forgets that with
         // the `on` it was just sent, so it hears it again.
-        let listening = {
+        let listening = listen_task.filter(|task_id| {
             let hub = self
                 .shared
                 .accessibility
                 .lock()
                 .unwrap_or_else(|e| e.into_inner());
-            hub.is_listening(task_id)
-        };
-        if listening {
+            hub.is_listening(*task_id)
+        });
+        if let Some(task_id) = listening {
             send_quietly(
                 &self.shared,
                 &self.commands,
                 Body::AccessibilityListening(control::AccessibilityListening {
                     task_id,
-                    listening,
+                    listening: true,
                 }),
             );
         }
@@ -3032,25 +3056,25 @@ impl Session {
                     .accessibility
                     .lock()
                     .unwrap_or_else(|e| e.into_inner());
-                let watchers = hub.watchers.entry(task_id).or_default();
+                let watchers = hub.watchers.entry(target).or_default();
                 watchers.retain(|(watch, _)| *watch != id);
                 let last = watchers.is_empty();
                 if last {
-                    hub.watchers.remove(&task_id);
+                    hub.watchers.remove(&target);
                 }
-                let quiet = hub.set_listening(task_id, id, false);
+                let quiet = listen_task.filter(|task_id| hub.set_listening(*task_id, id, false));
                 (last, quiet)
             };
             if last {
                 eprintln!(
-                    "accessibility: no host client watches task {task_id}; Android stops reading it"
+                    "accessibility: no host client watches {target}; Android stops reading it"
                 );
                 send_quietly(
                     &shared,
                     &commands,
-                    Body::AccessibilityWatch(control::AccessibilityWatch { task_id, on: false }),
+                    Body::AccessibilityWatch(target.to_control_watch(false)),
                 );
-            } else if quiet {
+            } else if let Some(task_id) = quiet {
                 eprintln!(
                     "accessibility: no screen reader listens for task {task_id} any more; \
                      Android keeps its usual waits"
@@ -3066,6 +3090,9 @@ impl Session {
             }
         })
         .with_listening(move |listening| {
+            let Some(task_id) = listen_task else {
+                return;
+            };
             let changed = {
                 let mut hub = listen_shared
                     .accessibility
@@ -3106,8 +3133,27 @@ impl Session {
         task_id: i32,
         action: &ActionRequest,
     ) -> Result<(), SessionError> {
+        self.tree_action(AccessibilityTarget::Task(task_id), action)
+    }
+
+    /// Asks the guest to do `action` on a node of the desktop widget `widget_id`, as an Invoke
+    /// on one of its buttons presses that button in the widget. The answer arrives on the
+    /// widget's watches. Needs a running guest.
+    pub fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), SessionError> {
+        self.tree_action(AccessibilityTarget::Widget(widget_id), action)
+    }
+
+    fn tree_action(
+        &self,
+        target: AccessibilityTarget,
+        action: &ActionRequest,
+    ) -> Result<(), SessionError> {
         self.send(dsa_protocol::encode(&control::Envelope {
-            body: Some(Body::AccessibilityAction(action.to_control(task_id))),
+            body: Some(Body::AccessibilityAction(action.to_control_for(target))),
         }))
     }
 
@@ -4934,7 +4980,8 @@ impl Worker {
     }
 
     /// Decides an app's su call on a thread of its own, since the host's administrator may
-    /// take up to a minute to answer, and sends the decision back to the guest's su relay. A
+    /// take up to a minute to answer (five while a screen reader runs), and sends the decision
+    /// back to the guest's su relay. A
     /// host that cannot ask an administrator refuses at once, so su does not wait for nothing.
     fn su_request(&mut self, request: control::SuRequest) {
         let approval = self
@@ -5176,10 +5223,10 @@ impl Worker {
             let package = package.to_string();
             return self.act_on_notice(notice, package, &action);
         }
-        let Some(clearable) = self
+        let Some((clearable, buttons)) = self
             .notifications
             .get(action.key())
-            .map(|shown| shown.clearable)
+            .map(|shown| (shown.clearable, shown.buttons.len()))
         else {
             eprintln!("notifications: the host acted on one the guest does not have; ignored");
             return Ok(());
@@ -5197,6 +5244,36 @@ impl Worker {
                 self.send_body(Body::NotificationClicked(control::NotificationClicked {
                     key,
                 }));
+            }
+            NotificationAction::Button {
+                key,
+                button,
+                title,
+                reply,
+            } => {
+                if button as usize >= buttons {
+                    eprintln!(
+                        "notifications: the host chose button {button} of one with {buttons} \
+                         buttons; ignored"
+                    );
+                    return Ok(());
+                }
+                // The action runs in an app that may open a window or send the reply over the
+                // network, which Doze holds back: the guest leaves Doze first, as for a click,
+                // and reads the button after the screen's word on the same channel.
+                self.hidden_since = Instant::now();
+                self.wake();
+                if !self.running() {
+                    return Err(SessionError::NotActive(self.state()));
+                }
+                self.send_body(Body::NotificationButtonClicked(
+                    control::NotificationButtonClicked {
+                        key,
+                        button,
+                        title,
+                        reply_text: notifications::cut_reply(reply),
+                    },
+                ));
             }
             NotificationAction::Dismiss { key } => {
                 if !clearable {
@@ -5964,14 +6041,11 @@ impl Worker {
             if let Some(body) = self.shared.android_files_body() {
                 self.send_body(body);
             }
-            // A new agent reads no task's accessibility tree until it is asked, and keeps
-            // its usual waits until it hears a screen reader listens.
-            for (task_id, listening) in self.shared.watched_tasks() {
-                self.send_body(Body::AccessibilityWatch(control::AccessibilityWatch {
-                    task_id,
-                    on: true,
-                }));
-                if listening {
+            // A new agent reads no task's or widget's accessibility tree until it is asked,
+            // and keeps its usual waits until it hears a screen reader listens.
+            for (target, listening) in self.shared.watched_trees() {
+                self.send_body(Body::AccessibilityWatch(target.to_control_watch(true)));
+                if let (AccessibilityTarget::Task(task_id), true) = (target, listening) {
                     self.send_body(Body::AccessibilityListening(
                         control::AccessibilityListening { task_id, listening },
                     ));
@@ -6837,27 +6911,28 @@ impl Worker {
                 eprintln!("control channel: dropping a message that stops at the guest's daemon");
             }
             Some(Body::AccessibilityTree(tree)) => {
-                let task_id = tree.task_id;
+                let target = AccessibilityTarget::of(tree.task_id, tree.widget_id);
                 match TreeUpdate::from_control(tree) {
                     Ok(update) => self
                         .shared
-                        .publish_accessibility(task_id, GuestAccessibility::Tree(update)),
-                    Err(why) => eprintln!(
-                        "accessibility: dropped the guest's tree of task {task_id}: {why}"
-                    ),
+                        .publish_accessibility(target, GuestAccessibility::Tree(update)),
+                    Err(why) => {
+                        eprintln!("accessibility: dropped the guest's tree of {target}: {why}")
+                    }
                 }
             }
             Some(Body::AccessibilityActionResult(result)) => {
-                let task_id = result.task_id;
+                let target = AccessibilityTarget::of(result.task_id, result.widget_id);
                 self.shared.publish_accessibility(
-                    task_id,
+                    target,
                     GuestAccessibility::ActionResult(ActionResult::from_control(result)),
                 );
             }
             Some(Body::AccessibilityAnnouncement(announcement)) => {
-                let task_id = announcement.task_id;
+                // An announcement comes from an app, so it is always about a task.
+                let target = AccessibilityTarget::Task(announcement.task_id);
                 self.shared.publish_accessibility(
-                    task_id,
+                    target,
                     GuestAccessibility::Announcement(
                         crate::accessibility::Announcement::from_control(announcement),
                     ),
@@ -6971,6 +7046,7 @@ impl Worker {
             | Some(Body::GoogleDeviceIdQuery(_))
             | Some(Body::NotificationClicked(_))
             | Some(Body::NotificationDismissed(_))
+            | Some(Body::NotificationButtonClicked(_))
             | Some(Body::BackgroundAppAction(_))
             | Some(Body::MediaControl(_))
             | Some(Body::InstallApk(_))

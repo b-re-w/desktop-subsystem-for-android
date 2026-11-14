@@ -7,7 +7,7 @@ struct GappsSection: View {
     @ObservedObject var vm: GappsViewModel
 
     var body: some View {
-        Section(T("GappsHeader.Text")) {
+        Section(heading: T("GappsHeader.Text")) {
             if let error = vm.error {
                 Banner(kind: .error, title: T("GappsErrorBar.Title"), message: error)
             }

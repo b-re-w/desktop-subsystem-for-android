@@ -11,7 +11,14 @@
 //! with rounded corners or a see-through background looks as it does on a phone. Nothing is
 //! drawn over the widget, not even while the pointer is over it, so the widget's own buttons
 //! stay free to click in every corner. A right click opens the widget's menu at the pointer,
-//! and the menu key or Shift+F10 opens it under the widget ([`super::widget_menu`]).
+//! and the menu key or Shift+F10 opens it under the widget ([`super::widget_menu`]). Its Move
+//! and Size lift the widget and hand it to the arrow keys, which move it or resize it a step at
+//! a time; Enter keeps the placement and tells the service, as the end of a drag does, and Esc
+//! puts it back ([`key_use`]).
+//!
+//! UI Automation reads the widget's own Android views in its window, as it reads a task
+//! window's: its text, buttons and lists, and an Invoke on a button presses it in the widget
+//! ([`super::widget_automation`]).
 //!
 //! A press, a move and a release inside the widget go to the widget's view in Android, so its
 //! buttons and lists work and an app it opens shows as a window. A press that moves before
@@ -288,6 +295,68 @@ pub fn context_menu_at(lparam: isize) -> MenuAt {
     MenuAt::Point(lo, hi)
 }
 
+/// The key a Windows virtual-key code is to a widget window: the arrows, Enter, Space, Esc,
+/// the menu key (`VK_APPS`) and F10, which open the menu, move or resize the widget after the
+/// menu's Move or Size, and end that ([`widget_windows::keyboard`]).
+pub fn key_of_vk(vk: u16) -> widget_windows::keyboard::Key {
+    use widget_windows::keyboard::Key;
+    match vk {
+        0x25 => Key::Left,
+        0x26 => Key::Up,
+        0x27 => Key::Right,
+        0x28 => Key::Down,
+        0x0D => Key::Enter,
+        0x20 => Key::Space,
+        0x1B => Key::Escape,
+        0x5D => Key::Menu,
+        0x79 => Key::F10,
+        _ => Key::Other,
+    }
+}
+
+/// What a key does to a widget window, with Shift and Ctrl held as `shift` and `ctrl` say,
+/// while it is moved or resized with the keyboard (`keyboard`) or not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeyUse {
+    /// The key goes on to the system.
+    Pass,
+    /// It is swallowed: the menu key or Shift+F10 while the widget is being moved with the
+    /// keyboard, which opens no menu over it.
+    Swallow,
+    /// It goes to the keyboard move or resize, Ctrl making it a step of one pixel.
+    Keyboard(widget_windows::keyboard::Key, bool),
+    /// Esc ends the edit.
+    EndEdit,
+    /// It opens the widget's menu under it.
+    Menu,
+}
+
+/// What `key` does in a widget window ([`KeyUse`]).
+pub fn key_use(
+    key: widget_windows::keyboard::Key,
+    shift: bool,
+    ctrl: bool,
+    keyboard: bool,
+) -> KeyUse {
+    use widget_windows::keyboard::{opens_menu, Key};
+    if keyboard {
+        return match key {
+            Key::Left | Key::Right | Key::Up | Key::Down | Key::Enter | Key::Escape => {
+                KeyUse::Keyboard(key, ctrl)
+            }
+            Key::Other => KeyUse::Pass,
+            _ => KeyUse::Swallow,
+        };
+    }
+    if key == Key::Escape {
+        KeyUse::EndEdit
+    } else if opens_menu(key, shift) {
+        KeyUse::Menu
+    } else {
+        KeyUse::Pass
+    }
+}
+
 /// The anchor of a widget's menu opened `at`, under `shown` (the widget's rectangle on the
 /// screen as drawn, lifted while it is edited), and whether it was opened from the keyboard,
 /// which highlights its first item.
@@ -324,8 +393,12 @@ pub struct WindowsWidgetWindows {
 
 #[cfg(windows)]
 impl WindowsWidgetWindows {
-    /// Starts the windows' thread.
-    pub fn open(logger: Option<Arc<CompositorLogger>>) -> Result<WindowsWidgetWindows, String> {
+    /// Starts the windows' thread. `trees` dials the service for the widgets' accessibility
+    /// trees, which a window watches while a UI Automation client reads it; None reads none.
+    pub fn open(
+        logger: Option<Arc<CompositorLogger>>,
+        trees: Option<super::widget_automation::TreeConnect>,
+    ) -> Result<WindowsWidgetWindows, String> {
         let (commands, command_rx) = std::sync::mpsc::channel();
         let (report_tx, reports) = std::sync::mpsc::channel();
         let (ready_tx, ready) = std::sync::mpsc::channel();
@@ -333,7 +406,7 @@ impl WindowsWidgetWindows {
         let slot = Arc::clone(&controller);
         let thread = thread::Builder::new()
             .name("dsa-wm-widget-windows".into())
-            .spawn(move || win::run(slot, command_rx, report_tx, ready_tx, logger))
+            .spawn(move || win::run(slot, command_rx, report_tx, ready_tx, logger, trees))
             .map_err(|e| format!("could not start the widgets' thread: {e}"))?;
         match ready.recv() {
             Ok(Ok(())) => Ok(WindowsWidgetWindows {
@@ -401,8 +474,8 @@ mod win {
         DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
     };
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-        GetAsyncKeyState, ReleaseCapture, SetCapture, SetFocus, VK_ESCAPE, VK_LBUTTON, VK_RBUTTON,
-        VK_RETURN, VK_SPACE,
+        GetAsyncKeyState, GetKeyState, ReleaseCapture, SetCapture, SetFocus, VK_APPS, VK_CONTROL,
+        VK_F10, VK_LBUTTON, VK_RBUTTON, VK_SHIFT,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, FindWindowExW,
@@ -422,20 +495,26 @@ mod win {
         GetForegroundWindow, GetMessageExtraInfo, IsWindow,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{IsIconic, IsWindowVisible, GW_HWNDNEXT};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP};
 
     use std::time::Instant;
 
+    use dsa_host_core::widget_windows::keyboard::{self, KeyStep, KeyboardEdit, KeyboardMode};
+
     use super::{
         context_menu_at, draw_lifted, edit_layout, edit_look, edit_margin, frame_overdue, hit_test,
-        hold_timer_ms, keep_clickable, max_window_size, menu_anchor, menu_closed_by,
-        min_window_size, placed_report, placement_of, press_threshold, reachable_origin,
-        right_above_desktop, to_frame, window_size, window_styles, z_place, Below, Cursor, Gesture,
-        Hit, MenuAt, MenuClosed, Press, ResizePoll, ResizeReports, Step, WindowCommand,
-        WindowReport, ZPlace, HOLD_TO_MOVE, NO_FRAME, NO_FRAME_CHECK, RESIZE_POLL, RESTACK_CHECK,
+        hold_timer_ms, keep_clickable, key_of_vk, key_use, max_window_size, menu_anchor,
+        menu_closed_by, min_window_size, placed_report, placement_of, press_threshold,
+        reachable_origin, right_above_desktop, to_frame, window_size, window_styles, z_place,
+        Below, Cursor, Gesture, Hit, KeyUse, MenuAt, MenuClosed, Press, ResizePoll, ResizeReports,
+        Step, WindowCommand, WindowReport, ZPlace, HOLD_TO_MOVE, NO_FRAME, NO_FRAME_CHECK,
+        RESIZE_POLL, RESTACK_CHECK,
     };
     use crate::compositor::fluent::{read_theme, Theme};
     use crate::compositor::log::{note, CompositorLogger};
-    use crate::compositor::widget_automation::{self, WidgetView, WM_WIDGET_FOCUS};
+    use crate::compositor::widget_automation::{
+        self, TreeConnect, WidgetTree, WidgetView, WM_WIDGET_FOCUS, WM_WIDGET_TREE,
+    };
     use crate::compositor::widget_menu::{self, MenuChoice};
     use windows::Win32::UI::Accessibility::IRawElementProviderSimple;
 
@@ -468,8 +547,13 @@ mod win {
         /// What UI Automation reads of the window, and the provider it was answered with.
         view: Arc<Mutex<WidgetView>>,
         provider: Option<IRawElementProviderSimple>,
+        /// When the widget's own nodes are read from Android for UI Automation.
+        tree: WidgetTree,
         /// Some while the widget is being edited after a long press.
         editing: Option<Edit>,
+        /// Some while the widget is moved or resized with the arrow keys, after its menu's
+        /// Move or Size; it is edited (lifted) meanwhile.
+        keyboard: Option<KeyboardEdit>,
     }
 
     /// A widget being edited: its window has `margin` pixels of room on each side for the
@@ -527,6 +611,8 @@ mod win {
         decoder: Option<super::png::Decoder>,
         /// The theme a widget being edited is drawn in.
         theme: Theme,
+        /// Where the widgets' accessibility trees are watched; None reads none.
+        trees: Option<TreeConnect>,
     }
 
     thread_local! {
@@ -674,18 +760,24 @@ mod win {
     /// Ends the widget's edit, if it is being edited: its window shrinks back around the
     /// widget, which stays where the edit left it. With `give_back`, the window that had the
     /// keyboard before the edit gets it back, as after Esc or a finished move; a click on
-    /// another window has given it away already.
+    /// another window has given it away already. A keyboard move or resize still going on
+    /// ends with it and is kept, as Enter keeps it.
     fn leave_edit(hwnd: HWND, give_back: bool) {
         let key = hwnd as isize;
-        let Some(edit) = with_state(|s| {
+        let Some((edit, keyed)) = with_state(|s| {
             let w = s.windows.get_mut(&key)?;
+            let keyed = w.keyboard.take().is_some();
             let edit = w.editing.take()?;
             w.base = None;
-            Some(edit)
+            Some((edit, keyed))
         })
         .flatten() else {
             return;
         };
+        if keyed {
+            // SAFETY: the resize timer of this window.
+            unsafe { KillTimer(hwnd, RESIZE_TIMER) };
+        }
         let rect = rect_of(hwnd);
         let m = edit.margin;
         // SAFETY: a window of this thread; it keeps its place in the z-order.
@@ -710,6 +802,162 @@ mod win {
             }
         }
         present(hwnd);
+        if keyed {
+            report_placement(hwnd);
+        }
+    }
+
+    /// Starts moving or resizing the widget with the arrow keys, after its menu's Move or
+    /// Size: it lifts as an edit does and has the keyboard, so the arrows reach it.
+    fn start_keyboard(hwnd: HWND, mode: KeyboardMode) {
+        let key = hwnd as isize;
+        enter_edit(hwnd);
+        let rect = widget_rect(hwnd);
+        let widget = (rect.left, rect.top, rect.right, rect.bottom);
+        let dpi = dpi_of(hwnd);
+        let area = work_area(hwnd);
+        let started = with_state(|s| {
+            let w = s.windows.get_mut(&key)?;
+            w.editing?;
+            w.keyboard = Some(KeyboardEdit::new(
+                mode,
+                widget,
+                &w.widget.provider,
+                dpi,
+                area,
+            ));
+            if mode == KeyboardMode::Size {
+                w.resizes.restart();
+                w.resize_ended = false;
+            }
+            note(
+                s.logger.as_deref(),
+                &format!(
+                    "widget {}: {} it with the arrow keys; Enter keeps it, Esc puts it back",
+                    w.widget.widget_id,
+                    match mode {
+                        KeyboardMode::Move => "moving",
+                        KeyboardMode::Size => "resizing",
+                    }
+                ),
+            );
+            Some(())
+        })
+        .flatten()
+        .is_some();
+        if !started {
+            return;
+        }
+        // SAFETY: a window of this thread takes the keyboard, as the user's menu choice asked;
+        // the resize timer passes a keyboard resize's size on as it pauses.
+        unsafe {
+            SetForegroundWindow(hwnd);
+            SetFocus(hwnd);
+            if mode == KeyboardMode::Size {
+                SetTimer(hwnd, RESIZE_TIMER, RESIZE_POLL.as_millis() as u32, None);
+            }
+        }
+    }
+
+    /// Puts the widget, being edited, at `rect` on the screen, its window keeping the room of
+    /// the edit around it.
+    fn show_widget_at(hwnd: HWND, rect: super::ScreenRect) {
+        let margin = edit_of(hwnd).map_or(0, |edit| edit.margin);
+        let (l, t, r, b) = rect;
+        // SAFETY: a window of this thread; it keeps its place in the z-order.
+        unsafe {
+            SetWindowPos(
+                hwnd,
+                null_mut(),
+                l - margin,
+                t - margin,
+                (r - l).max(1) + 2 * margin,
+                (b - t).max(1) + 2 * margin,
+                SWP_NOACTIVATE | SWP_NOZORDER,
+            );
+        }
+    }
+
+    /// Takes a key for a keyboard move or resize; `fine` with Ctrl held.
+    fn keyboard_key(hwnd: HWND, key: keyboard::Key, fine: bool) {
+        let handle = hwnd as isize;
+        let Some((step, mode)) = with_state(|s| {
+            let w = s.windows.get_mut(&handle)?;
+            let edit = w.keyboard.as_mut()?;
+            Some((edit.key(key, fine), edit.mode))
+        })
+        .flatten() else {
+            return;
+        };
+        match step {
+            KeyStep::Nothing => {}
+            KeyStep::Show(rect) => {
+                show_widget_at(hwnd, rect);
+                if mode == KeyboardMode::Size {
+                    let now = Instant::now();
+                    with_state(|s| {
+                        if let Some(w) = s.windows.get_mut(&handle) {
+                            w.resizes.moved(rect, now);
+                        }
+                    });
+                }
+            }
+            // Kept as the end of a drag keeps it: the edit ends and the service is told.
+            KeyStep::Finish(_) => leave_edit(hwnd, true),
+            KeyStep::Restore { to, resized } => {
+                with_state(|s| {
+                    if let Some(w) = s.windows.get_mut(&handle) {
+                        w.keyboard = None;
+                        w.resizes.restart();
+                    }
+                });
+                // SAFETY: the resize timer of this window.
+                unsafe { KillTimer(hwnd, RESIZE_TIMER) };
+                show_widget_at(hwnd, to);
+                leave_edit(hwnd, true);
+                if resized {
+                    // Android drew it at the sizes the keys gave it: it is told the old one.
+                    report_placement(hwnd);
+                }
+            }
+        }
+    }
+
+    /// Whether the widget is being moved or resized with the keyboard.
+    fn keyboard_active(hwnd: HWND) -> bool {
+        with_state(|s| {
+            s.windows
+                .get(&(hwnd as isize))
+                .is_some_and(|w| w.keyboard.is_some())
+        })
+        .unwrap_or(false)
+    }
+
+    /// A key went down in the window: true when the window took it.
+    fn key_down(hwnd: HWND, vk: u16) -> bool {
+        // SAFETY: plain reads of the keyboard's state as of this message.
+        let (shift, ctrl) = unsafe {
+            (
+                GetKeyState(i32::from(VK_SHIFT)) < 0,
+                GetKeyState(i32::from(VK_CONTROL)) < 0,
+            )
+        };
+        match key_use(key_of_vk(vk), shift, ctrl, keyboard_active(hwnd)) {
+            KeyUse::Pass => false,
+            KeyUse::Swallow => true,
+            KeyUse::Keyboard(key, fine) => {
+                keyboard_key(hwnd, key, fine);
+                true
+            }
+            KeyUse::EndEdit => {
+                leave_edit(hwnd, true);
+                true
+            }
+            KeyUse::Menu => {
+                open_menu(hwnd, MenuAt::Keyboard);
+                true
+            }
+        }
     }
 
     fn work_area(hwnd: HWND) -> Option<super::ScreenRect> {
@@ -734,6 +982,7 @@ mod win {
         reports: Sender<WindowReport>,
         ready: Sender<Result<(), String>>,
         logger: Option<Arc<CompositorLogger>>,
+        trees: Option<TreeConnect>,
     ) {
         // Every window of this thread follows its monitor's scale.
         // SAFETY: changes this thread's DPI awareness only.
@@ -786,6 +1035,7 @@ mod win {
                 logger,
                 decoder,
                 theme: read_theme(),
+                trees,
             })
         });
         // SAFETY: a message-only window, never shown.
@@ -861,12 +1111,23 @@ mod win {
             }
             WM_TIMER if wparam == RESTACK_TIMER => {
                 keep_above_desktop();
+                // Android stops reading a widget's nodes once no client reads its window.
+                with_state(|s| {
+                    for window in s.windows.values_mut() {
+                        window.tree.tick(&window.view);
+                    }
+                });
                 0
             }
             WM_CLOSE => {
                 let windows = with_state(|s| s.windows.drain().collect::<Vec<_>>());
-                for (hwnd, window) in windows.unwrap_or_default() {
-                    widget_automation::release(hwnd, &window.view, window.provider);
+                for (hwnd, mut window) in windows.unwrap_or_default() {
+                    widget_automation::release(
+                        hwnd,
+                        &window.view,
+                        window.provider.take(),
+                        &mut window.tree,
+                    );
                     // SAFETY: windows of this thread.
                     unsafe { DestroyWindow(hwnd as HWND) };
                 }
@@ -926,8 +1187,13 @@ mod win {
                     })
                     .flatten();
                     if let Some((hwnd, window)) = gone {
-                        if let Some(window) = window {
-                            widget_automation::release(hwnd, &window.view, window.provider);
+                        if let Some(mut window) = window {
+                            widget_automation::release(
+                                hwnd,
+                                &window.view,
+                                window.provider.take(),
+                                &mut window.tree,
+                            );
                         }
                         // SAFETY: a window of this thread.
                         unsafe { DestroyWindow(hwnd as HWND) };
@@ -1063,10 +1329,11 @@ mod win {
                 // where the placement says. While the user is moving or resizing it, the
                 // window stays under the pointer: the placement is the one it reported a
                 // moment ago, and moving it back made the widget jump.
+                // The same while the keys move or resize it.
                 let dragging = with_state(|s| {
                     let window = s.windows.get_mut(&hwnd)?;
                     window.widget = widget.clone();
-                    Some(window.gesture.dragging())
+                    Some(window.gesture.dragging() || window.keyboard.is_some())
                 })
                 .flatten()
                 .unwrap_or(false);
@@ -1118,6 +1385,7 @@ mod win {
                 unsafe { crate::app_window::pointer::deliver_contacts_at_once(hwnd) };
                 with_state(|s| {
                     s.by_id.insert(widget.widget_id, hwnd as isize);
+                    let tree = WidgetTree::new(widget.widget_id, s.trees.clone(), s.logger.clone());
                     s.windows.insert(
                         hwnd as isize,
                         Window {
@@ -1135,7 +1403,9 @@ mod win {
                             noted: false,
                             view: Arc::new(Mutex::new(WidgetView::default())),
                             provider: None,
+                            tree,
                             editing: None,
+                            keyboard: None,
                         },
                     );
                 });
@@ -1372,6 +1642,7 @@ mod win {
             view.hwnd = hwnd as isize;
             view.name = widget_menu::menu_name(&text, &window.widget.provider);
             view.focused = window.focused;
+            view.margin = window.editing.map_or(0, |edit| edit.margin);
         });
     }
 
@@ -1762,12 +2033,30 @@ mod win {
                 }
                 0
             }
-            WM_KEYDOWN if wparam as u16 == VK_ESCAPE => {
-                leave_edit(hwnd, true);
-                0
+            // Esc ends an edit; Enter, Space, the menu key and Shift+F10 open the menu under the
+            // widget; after the menu's Move or Size the arrows move or resize it, Enter keeps
+            // it and Esc puts it back. Shift+F10 comes as a system key.
+            WM_KEYDOWN | WM_SYSKEYDOWN => {
+                if key_down(hwnd, wparam as u16) {
+                    0
+                } else {
+                    // SAFETY: the default handling of every other key.
+                    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+                }
             }
-            WM_KEYDOWN if matches!(wparam as u16, VK_RETURN | VK_SPACE) => {
-                open_menu(hwnd, MenuAt::Keyboard);
+            // The menu key and F10 were handled as they went down: their release, which the
+            // default handling turns into a second menu, goes nowhere.
+            WM_KEYUP | WM_SYSKEYUP if matches!(wparam as u16, VK_APPS | VK_F10) => 0,
+            WM_WIDGET_TREE => {
+                // The widget's tree changed: a client that reads the window hears of it.
+                let target = with_state(|s| {
+                    let w = s.windows.get(&key)?;
+                    Some((Arc::clone(&w.view), w.provider.clone()?))
+                })
+                .flatten();
+                if let Some((view, provider)) = target {
+                    widget_automation::raise(&view, &provider);
+                }
                 0
             }
             WM_WIDGET_FOCUS => {
@@ -1779,9 +2068,14 @@ mod win {
                 0
             }
             WM_GETOBJECT => {
+                let tree_asked = widget_automation::asks_for_tree(lparam);
                 let provider = with_state(|s| {
                     let w = s.windows.get_mut(&key)?;
                     let view = Arc::clone(&w.view);
+                    // A client reads the window: Android is asked for the widget's nodes.
+                    if tree_asked {
+                        w.tree.asked(&view);
+                    }
                     let slot = &mut w.provider;
                     let provider = slot.get_or_insert_with(|| widget_automation::provider(&view));
                     Some(provider.clone())
@@ -2103,6 +2397,8 @@ mod win {
                     let _ = s.reports.send(WindowReport::Reconfigure { widget_id });
                 });
             }
+            Some(MenuChoice::Move) => start_keyboard(hwnd, KeyboardMode::Move),
+            Some(MenuChoice::Size) => start_keyboard(hwnd, KeyboardMode::Size),
             None if editing => {
                 // Closed by a press: the menu took it, so a press on a handle goes on as that
                 // press, a resize; one beside the widget or on another window ends the edit;
@@ -2435,6 +2731,42 @@ mod tests {
         assert_eq!(ex & 0x0000_0008, 0, "never topmost");
     }
 
+    /// The menu key and Shift+F10 open the widget's menu, as Enter and Space do; F10 alone and
+    /// other keys go on to the system. While the widget is moved or resized with the keyboard
+    /// the arrows, Enter and Esc go to that, Ctrl making a step fine, and no menu opens over it.
+    #[test]
+    fn fr18_shift_f10_and_menu_key_open_the_widget_menu() {
+        use dsa_host_core::widget_windows::keyboard::Key;
+        const VK_APPS: u16 = 0x5D;
+        const VK_F10: u16 = 0x79;
+        assert_eq!(key_of_vk(VK_APPS), Key::Menu);
+        assert_eq!(key_of_vk(VK_F10), Key::F10);
+        assert_eq!(key_of_vk(0x25), Key::Left);
+        assert_eq!(key_of_vk(0x28), Key::Down);
+        assert_eq!(key_of_vk(0x41), Key::Other);
+        let menu = |vk: u16, shift: bool| key_use(key_of_vk(vk), shift, false, false);
+        assert_eq!(menu(VK_APPS, false), KeyUse::Menu);
+        assert_eq!(menu(VK_F10, true), KeyUse::Menu);
+        assert_eq!(menu(VK_F10, false), KeyUse::Pass);
+        assert_eq!(menu(0x0D, false), KeyUse::Menu);
+        assert_eq!(menu(0x20, false), KeyUse::Menu);
+        assert_eq!(menu(0x1B, false), KeyUse::EndEdit);
+        assert_eq!(menu(0x25, false), KeyUse::Pass);
+        let keyed = |vk: u16, shift: bool, ctrl: bool| key_use(key_of_vk(vk), shift, ctrl, true);
+        assert_eq!(keyed(0x27, false, true), KeyUse::Keyboard(Key::Right, true));
+        assert_eq!(
+            keyed(0x0D, false, false),
+            KeyUse::Keyboard(Key::Enter, false)
+        );
+        assert_eq!(
+            keyed(0x1B, false, false),
+            KeyUse::Keyboard(Key::Escape, false)
+        );
+        assert_eq!(keyed(VK_APPS, false, false), KeyUse::Swallow);
+        assert_eq!(keyed(VK_F10, true, false), KeyUse::Swallow);
+        assert_eq!(keyed(0x41, false, false), KeyUse::Pass);
+    }
+
     #[test]
     fn fr12_a_widget_window_is_resized_by_its_edges_and_has_no_band_along_its_top() {
         let (w, h) = (200, 120);
@@ -2607,11 +2939,22 @@ mod tests {
         };
         assert_eq!(
             ids(&settable),
-            vec![SETTINGS, widget_menu::RESIZE, widget_menu::REMOVE]
+            vec![
+                SETTINGS,
+                widget_menu::RESIZE,
+                widget_menu::MOVE,
+                widget_menu::SIZE,
+                widget_menu::REMOVE
+            ]
         );
         assert_eq!(
             ids(&clock()),
-            vec![widget_menu::RESIZE, widget_menu::REMOVE]
+            vec![
+                widget_menu::RESIZE,
+                widget_menu::MOVE,
+                widget_menu::SIZE,
+                widget_menu::REMOVE
+            ]
         );
         let sizes = widget_menu::size_choices(&settable);
         assert_eq!(
@@ -3745,7 +4088,8 @@ mod tests {
             WS_EX_LAYERED,
         };
 
-        let mut windows = WindowsWidgetWindows::open(None).expect("opening the widget windows");
+        let mut windows =
+            WindowsWidgetWindows::open(None, None).expect("opening the widget windows");
         let placement = Placement {
             x: 40,
             y: 40,

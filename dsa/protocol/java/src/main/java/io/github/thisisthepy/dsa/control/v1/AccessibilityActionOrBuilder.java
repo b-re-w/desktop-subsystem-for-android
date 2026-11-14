@@ -112,4 +112,14 @@ public interface AccessibilityActionOrBuilder extends
    * @return The column.
    */
   int getColumn();
+
+  /**
+   * <pre>
+   * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+   * </pre>
+   *
+   * <code>int32 widget_id = 12;</code>
+   * @return The widgetId.
+   */
+  int getWidgetId();
 }

@@ -95,6 +95,7 @@ public  final class Envelope extends
     NOTIFICATION_REMOVED(71),
     NOTIFICATION_CLICKED(72),
     NOTIFICATION_DISMISSED(73),
+    NOTIFICATION_BUTTON_CLICKED(730),
     BACKGROUND_APP(74),
     BACKGROUND_APP_GONE(75),
     BACKGROUND_APP_ACTION(76),
@@ -312,6 +313,7 @@ public  final class Envelope extends
         case 71: return NOTIFICATION_REMOVED;
         case 72: return NOTIFICATION_CLICKED;
         case 73: return NOTIFICATION_DISMISSED;
+        case 730: return NOTIFICATION_BUTTON_CLICKED;
         case 74: return BACKGROUND_APP;
         case 75: return BACKGROUND_APP_GONE;
         case 76: return BACKGROUND_APP_ACTION;
@@ -4205,6 +4207,56 @@ public  final class Envelope extends
    */
   private void clearNotificationDismissed() {
     if (bodyCase_ == 73) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
+  public static final int NOTIFICATION_BUTTON_CLICKED_FIELD_NUMBER = 730;
+  /**
+   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+   */
+  @java.lang.Override
+  public boolean hasNotificationButtonClicked() {
+    return bodyCase_ == 730;
+  }
+  /**
+   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked getNotificationButtonClicked() {
+    if (bodyCase_ == 730) {
+       return (io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+   */
+  private void setNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 730;
+  }
+  /**
+   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+   */
+  private void mergeNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
+    value.getClass();
+  if (bodyCase_ == 730 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.newBuilder((io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 730;
+  }
+  /**
+   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+   */
+  private void clearNotificationButtonClicked() {
+    if (bodyCase_ == 730) {
       bodyCase_ = 0;
       body_ = null;
     }
@@ -14272,6 +14324,54 @@ public  final class Envelope extends
     }
 
     /**
+     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+     */
+    @java.lang.Override
+    public boolean hasNotificationButtonClicked() {
+      return instance.hasNotificationButtonClicked();
+    }
+    /**
+     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked getNotificationButtonClicked() {
+      return instance.getNotificationButtonClicked();
+    }
+    /**
+     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+     */
+    public Builder setNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
+      copyOnWrite();
+      instance.setNotificationButtonClicked(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+     */
+    public Builder setNotificationButtonClicked(
+        io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNotificationButtonClicked(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+     */
+    public Builder mergeNotificationButtonClicked(io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked value) {
+      copyOnWrite();
+      instance.mergeNotificationButtonClicked(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+     */
+    public Builder clearNotificationButtonClicked() {
+      copyOnWrite();
+      instance.clearNotificationButtonClicked();
+      return this;
+    }
+
+    /**
      * <code>.dsa.control.v1.BackgroundApp background_app = 74;</code>
      */
     @java.lang.Override
@@ -20587,9 +20687,10 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.DnsQuery.class,
             io.github.thisisthepy.dsa.control.v1.DnsAnswer.class,
             io.github.thisisthepy.dsa.control.v1.LaunchPlacement.class,
+            io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked.class,
           };
           java.lang.String info =
-              "\u0000\u00ca\u0001\u0000\u0001\u02c6\u00ca\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u00cb\u0001\u0000\u0001\u02da\u00cb\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
               "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
               "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000" +
@@ -20617,7 +20718,7 @@ public  final class Envelope extends
               "\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289<\u0000\u028a<\u0000\u028b<\u0000\u028c" +
               "<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000\u0290<\u0000\u0291<\u0000\u0292<\u0000" +
               "\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3" +
-              "<\u0000\u02c6<\u0000";
+              "<\u0000\u02c6<\u0000\u02da<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

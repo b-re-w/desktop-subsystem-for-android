@@ -1444,6 +1444,30 @@ pub fn log_copy_text(shown: &[crate::model::LogLine], selected: &[usize]) -> Str
         .join("\n")
 }
 
+/// A log line as a screen reader reads its row: the time, the priority as a word, the tag and
+/// the message. The row shows them in columns, and its letters and numbers read as noise. A
+/// record that stands for dropped records says how many.
+pub fn log_line_spoken(line: &crate::model::LogLine) -> String {
+    if line.dropped > 0 {
+        return trf("{0} records dropped", &[&line.dropped.to_string()]);
+    }
+    let level = if LOG_PRIORITIES.contains(&line.priority.as_str()) {
+        priority_label(&line.priority)
+    } else {
+        line.priority.clone()
+    };
+    trf(
+        "{0}, {1}, {2}: {3}",
+        &[&line.time, &level, &line.tag, &line.message],
+    )
+}
+
+/// The name a screen reader says for a control repeated in every row of a list: what it does
+/// and whose row it is in, such as "Open, Notes". "Open" alone does not say whose.
+pub fn item_name(action: &str, item: &str) -> String {
+    trf("{0}, {1}", &[action, item])
+}
+
 /// The user's DSA logs: the window manager's and the app windows'.
 pub fn user_log_folder() -> std::path::PathBuf {
     let data = std::env::var_os("XDG_DATA_HOME")

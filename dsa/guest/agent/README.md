@@ -64,12 +64,16 @@ nothing. Its one activity is the guest's home, which draws nothing (see "The hom
 - **Notifications.** The guest has no SystemUI, so the agent's notification listener reads
   the guest's notifications and sends each one a person would see to the host
   (`GuestNotification`): title, text, app name, a 96-pixel PNG icon, its importance, and
-  whether it is high priority. It leaves out group summaries, the ongoing notices of
+  whether it is high priority, and its action buttons (`NotificationButton`: each title,
+  and for a button with a `RemoteInput`, its label and choices). It leaves out group
+  summaries, the ongoing notices of
   foreground services, minimum-importance and empty notifications. A notification posted
   again replaces the host's, and a removed one is removed there (`NotificationRemoved`).
   A click on the host (`NotificationClicked`) sends the notification's content intent, which
   may start an activity from the background; a dismissal (`NotificationDismissed`) cancels
-  it. The agent allows its own listener at start (`MANAGE_NOTIFICATION_LISTENERS`). The
+  it. A button chosen on the host (`NotificationButtonClicked`) sends that action's intent,
+  with the reply the user wrote filled in through `RemoteInput.addResultsToIntent`, as
+  SystemUI does. The agent allows its own listener at start (`MANAGE_NOTIFICATION_LISTENERS`). The
   listener is called over binder in the agent's persistent process, so notifications still
   arrive while the device is in Doze.
 - **Apps that run in the background.** An app that runs a foreground service (music, a

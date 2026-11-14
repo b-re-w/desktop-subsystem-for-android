@@ -1579,4 +1579,14 @@ impl UserAndroid for WithProgramStatus {
     ) -> Result<(), TaskRequestError> {
         UserAndroid::accessibility_action(&*self.android, task_id, action)
     }
+    fn watch_widget_accessibility(&self, widget_id: i32) -> Option<AccessibilityWatch> {
+        UserAndroid::watch_widget_accessibility(&*self.android, widget_id)
+    }
+    fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), TaskRequestError> {
+        UserAndroid::widget_accessibility_action(&*self.android, widget_id, action)
+    }
 }

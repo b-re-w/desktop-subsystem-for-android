@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+    xmlns:l="clr-namespace:Dsa.Settings"
     ShutdownMode="OnLastWindowClose">
     <Application.Resources>
         <ResourceDictionary>
@@ -62,6 +63,9 @@
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <!-- A screen reader lists the page's headings and jumps between them: the page
+                     title is the first level, each section header the second. -->
+                <Setter Property="AutomationProperties.HeadingLevel" Value="Level1" />
             </Style>
             <Style x:Key="SectionHeader" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{DynamicResource StrongTextFont}" />
@@ -70,6 +74,7 @@
                 <Setter Property="LineHeight" Value="20" />
                 <Setter Property="Margin" Value="1,30,0,6" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
             </Style>
             <!-- No colour of its own: it takes the card's, which turns grey when the card is
                  disabled, as a WinUI settings card's header does. -->
@@ -402,6 +407,8 @@
                 <Setter Property="KeyboardNavigation.IsTabStop" Value="False" />
                 <Setter Property="SnapsToDevicePixels" Value="True" />
                 <Setter Property="OverridesDefaultStyle" Value="True" />
+                <!-- A screen reader hears the bar when it opens and when its words change. -->
+                <Setter Property="l:Announce.Changes" Value="True" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ui:InfoBar">
@@ -429,6 +436,7 @@
                                         </WrapPanel>
                                         <Border Grid.Column="2" Margin="12,-2,0,0" VerticalAlignment="Top">
                                             <ui:Button x:Name="CloseButton" MinWidth="0" Padding="4" Background="Transparent" BorderThickness="0"
+                                                       AutomationProperties.Name="{l:Text A11y_Close}"
                                                        Command="{Binding Path=TemplateButtonCommand, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}">
                                                 <ui:Button.Icon>
                                                     <ui:SymbolIcon Symbol="Dismiss24" />

@@ -655,13 +655,20 @@ pub fn create_user_android(
     )));
     // An app's su call is decided by the user's settings, and asked of the computer's
     // administrator through UAC under the app's own name and icon; each decision goes to this
-    // log.
-    session.set_root_approval(Arc::new(dsa_host_core::root_approval::RootApproval::new(
-        sid,
-        settings_store(config),
-        Arc::new(crate::root_approval::UacPrompt::new(sid)),
-        dsa_host_core::root_approval::service_log(),
-    )));
+    // log. While a screen reader runs in the user's session the prompt has longer, as hearing
+    // it read out takes longer than reading it; that is asked as each prompt opens.
+    let reader_sid = sid.to_string();
+    session.set_root_approval(Arc::new(
+        dsa_host_core::root_approval::RootApproval::new(
+            sid,
+            settings_store(config),
+            Arc::new(crate::root_approval::UacPrompt::new(sid)),
+            dsa_host_core::root_approval::service_log(),
+        )
+        .with_screen_reader(Arc::new(move || {
+            crate::root_approval::screen_reader_running(&reader_sid)
+        })),
+    ));
     serve_host_services(
         &session,
         sid,

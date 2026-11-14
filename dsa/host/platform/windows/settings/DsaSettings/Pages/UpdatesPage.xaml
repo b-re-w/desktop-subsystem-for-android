@@ -26,7 +26,8 @@
                 <TextBlock Text="{l:Text UpdatesAndroidHeader.Text}" Style="{StaticResource SectionHeader}" />
                 <StackPanel x:Name="AndroidStatus">
                     <ProgressBar IsIndeterminate="True" Margin="0,0,0,4"
-                                 Visibility="{Binding IsBusy, Converter={StaticResource Visible}}" />
+                                 Visibility="{Binding IsBusy, Converter={StaticResource Visible}}"
+                                 AutomationProperties.Name="{l:Text A11y_Loading}" />
                     <ui:InfoBar Title="{l:Text SettingsErrorBar.Title}" Severity="Error" IsClosable="False"
                                 IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" />
                     <ui:CardControl Icon="{ui:SymbolIcon Phone24}">
@@ -60,20 +61,24 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{l:Text AndroidUpdateCard.Header}" Style="{StaticResource CardTitle}" />
-                                    <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}" />
+                                    <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}"
+                                                   AutomationProperties.Name="{l:Text AdminShield.ToolTip}" />
                                 </StackPanel>
                                 <TextBlock Text="{Binding UpdateStatusText, Mode=OneWay}" Style="{StaticResource CardDescription}" />
                                 <ProgressBar Margin="0,6,0,0" Minimum="0" Maximum="100" Value="{Binding DownloadPercent, Mode=OneWay, TargetNullValue=0}"
-                                             Visibility="{Binding IsDownloading, Converter={StaticResource Visible}}" />
+                                             Visibility="{Binding IsDownloading, Converter={StaticResource Visible}}"
+                                             AutomationProperties.Name="{l:Text AndroidUpdateCard.Header}" />
                             </StackPanel>
                         </ui:CardControl.Header>
                         <StackPanel Style="{StaticResource CardControls}">
                             <!-- Shown while a downloaded image waits for this user's Android to restart. -->
                             <ui:Button x:Name="RestartNowButton" Content="{l:Text AndroidRestartButton.Content}" Appearance="Primary"
                                        Margin="0,0,8,0" Click="OnRestartNow" IsEnabled="{Binding CanRestartNow, Mode=OneWay}"
-                                       Visibility="{Binding IsRestartPending, Converter={StaticResource Visible}}" />
+                                       Visibility="{Binding IsRestartPending, Converter={StaticResource Visible}}"
+                                       AutomationProperties.HelpText="{l:Text AdminShield.ToolTip}" />
                             <ui:Button x:Name="CheckNowButton" Content="{l:Text AndroidCheckButton.Content}" Click="OnCheckNow"
-                                       IsEnabled="{Binding CanCheckNow, Mode=OneWay}" />
+                                       IsEnabled="{Binding CanCheckNow, Mode=OneWay}"
+                                       AutomationProperties.HelpText="{l:Text AdminShield.ToolTip}" />
                         </StackPanel>
                     </ui:CardControl>
                 </StackPanel>
@@ -93,7 +98,8 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{l:Text ImageUpdatesCard.Header}" Style="{StaticResource CardTitle}" />
-                                <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}" />
+                                <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}"
+                                               AutomationProperties.Name="{l:Text AdminShield.ToolTip}" />
                             </StackPanel>
                             <TextBlock Text="{l:Text ImageUpdatesCard.Description}" Style="{StaticResource CardDescription}" />
                         </StackPanel>
@@ -101,9 +107,12 @@
                     <StackPanel Style="{StaticResource CardControls}">
                         <ui:Button Content="{l:Text ChangeAsAdmin.Content}" Icon="{ui:SymbolIcon Shield24}" Margin="0,0,12,0"
                                    Visibility="{Binding ImageUpdatesNeedAdministrator, Converter={StaticResource Visible}}"
-                                   Click="OnImageAsAdministrator" />
+                                   Click="OnImageAsAdministrator"
+                                   AutomationProperties.Name="{l:ItemName ChangeAsAdmin.Content, Item=ImageUpdatesCard.Header}" />
                         <ui:ToggleSwitch x:Name="ImageSwitch" IsChecked="{Binding ImageUpdates, Mode=OneWay}"
-                                         IsEnabled="{Binding CanChangeImageUpdates, Mode=OneWay}" Click="OnImageToggled" />
+                                         IsEnabled="{Binding CanChangeImageUpdates, Mode=OneWay}" Click="OnImageToggled"
+                                         AutomationProperties.Name="{l:Text ImageUpdatesCard.Header}"
+                                         AutomationProperties.HelpText="{l:Text AdminShield.ToolTip}" />
                     </StackPanel>
                 </ui:CardControl>
                 <StackPanel x:Name="AndroidChoice">
@@ -112,7 +121,8 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{l:Text AndroidChooseCard.Header}" Style="{StaticResource CardTitle}" />
-                                    <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}" />
+                                    <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}"
+                                                   AutomationProperties.Name="{l:Text AdminShield.ToolTip}" />
                                 </StackPanel>
                                 <TextBlock Text="{l:Text AndroidChooseCard.Description}" Style="{StaticResource CardDescription}" />
                                 <TextBlock Text="{Binding SupportedText, Mode=OneWay}" Style="{StaticResource CardDescription}" />
@@ -121,9 +131,11 @@
                         <StackPanel Style="{StaticResource CardControls}">
                             <ComboBox x:Name="Choice" MinWidth="200" ItemsSource="{Binding Choices}" DisplayMemberPath="Label"
                                       SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
-                                      AutomationProperties.Name="{l:Text AndroidChooseCard.Header}" />
+                                      AutomationProperties.Name="{l:Text AndroidChooseCard.Header}"
+                                      AutomationProperties.HelpText="{l:Text AdminShield.ToolTip}" />
                             <ui:Button Content="{l:Text AndroidApplyButton.Content}" Appearance="Primary" Margin="8,0,0,0"
-                                       IsEnabled="{Binding CanApply, Mode=OneWay}" Click="OnApply" />
+                                       IsEnabled="{Binding CanApply, Mode=OneWay}" Click="OnApply"
+                                       AutomationProperties.HelpText="{l:Text AdminShield.ToolTip}" />
                         </StackPanel>
                     </ui:CardControl>
                     <TextBlock Text="{l:Text AndroidChooseNote.Text}" Style="{StaticResource Note}" />
@@ -157,7 +169,8 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{l:Text ProgramUpdatesCard.Header}" Style="{StaticResource CardTitle}" />
-                                <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}" />
+                                <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}"
+                                               AutomationProperties.Name="{l:Text AdminShield.ToolTip}" />
                             </StackPanel>
                             <TextBlock Text="{l:Text ProgramUpdatesCard.Description}" Style="{StaticResource CardDescription}" />
                         </StackPanel>
@@ -165,9 +178,12 @@
                     <StackPanel Style="{StaticResource CardControls}">
                         <ui:Button Content="{l:Text ChangeAsAdmin.Content}" Icon="{ui:SymbolIcon Shield24}" Margin="0,0,12,0"
                                    Visibility="{Binding ProgramUpdatesNeedAdministrator, Converter={StaticResource Visible}}"
-                                   Click="OnProgramAsAdministrator" />
+                                   Click="OnProgramAsAdministrator"
+                                   AutomationProperties.Name="{l:ItemName ChangeAsAdmin.Content, Item=ProgramUpdatesCard.Header}" />
                         <ui:ToggleSwitch x:Name="ProgramSwitch" IsChecked="{Binding ProgramUpdates, Mode=OneWay}"
-                                         IsEnabled="{Binding CanChangeProgramUpdates, Mode=OneWay}" Click="OnProgramToggled" />
+                                         IsEnabled="{Binding CanChangeProgramUpdates, Mode=OneWay}" Click="OnProgramToggled"
+                                         AutomationProperties.Name="{l:Text ProgramUpdatesCard.Header}"
+                                         AutomationProperties.HelpText="{l:Text AdminShield.ToolTip}" />
                     </StackPanel>
                 </ui:CardControl>
                 <ui:CardControl Icon="{ui:SymbolIcon Beaker24}">
@@ -175,7 +191,8 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{l:Text PrereleaseUpdatesCard.Header}" Style="{StaticResource CardTitle}" />
-                                <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}" />
+                                <ui:SymbolIcon Symbol="Shield24" Margin="6,0,0,0" ToolTip="{l:Text AdminShield.ToolTip}"
+                                               AutomationProperties.Name="{l:Text AdminShield.ToolTip}" />
                             </StackPanel>
                             <TextBlock Text="{l:Text PrereleaseUpdatesCard.Description}" Style="{StaticResource CardDescription}" />
                         </StackPanel>
@@ -183,9 +200,12 @@
                     <StackPanel Style="{StaticResource CardControls}">
                         <ui:Button Content="{l:Text ChangeAsAdmin.Content}" Icon="{ui:SymbolIcon Shield24}" Margin="0,0,12,0"
                                    Visibility="{Binding PrereleaseUpdatesNeedAdministrator, Converter={StaticResource Visible}}"
-                                   Click="OnPrereleaseAsAdministrator" />
+                                   Click="OnPrereleaseAsAdministrator"
+                                   AutomationProperties.Name="{l:ItemName ChangeAsAdmin.Content, Item=PrereleaseUpdatesCard.Header}" />
                         <ui:ToggleSwitch x:Name="PrereleaseSwitch" IsChecked="{Binding PrereleaseUpdates, Mode=OneWay}"
-                                         IsEnabled="{Binding CanChangePrereleaseUpdates, Mode=OneWay}" Click="OnPrereleaseToggled" />
+                                         IsEnabled="{Binding CanChangePrereleaseUpdates, Mode=OneWay}" Click="OnPrereleaseToggled"
+                                         AutomationProperties.Name="{l:Text PrereleaseUpdatesCard.Header}"
+                                         AutomationProperties.HelpText="{l:Text AdminShield.ToolTip}" />
                     </StackPanel>
                 </ui:CardControl>
                 <ui:CardControl Icon="{ui:SymbolIcon ArrowUpload24}">
@@ -200,7 +220,8 @@
                     <StackPanel x:Name="UpdateNowGate" Style="{StaticResource CardControls}"
                                 IsEnabled="{Binding CanStartUpdate, Mode=OneWay}">
                         <ui:ProgressRing IsIndeterminate="True" Width="20" Height="20" Margin="0,0,12,0"
-                                         Visibility="{Binding InProgress, Converter={StaticResource Visible}}" />
+                                         Visibility="{Binding InProgress, Converter={StaticResource Visible}}"
+                                         AutomationProperties.Name="{l:Text UpdateNowCard.Header}" />
                         <ui:Button x:Name="UpdateNowButton" Content="{l:Text UpdateNowButton.Content}" Click="OnUpdateNow"
                                    IsEnabled="{Binding CanUpdateNow, Mode=OneWay}" />
                     </StackPanel>

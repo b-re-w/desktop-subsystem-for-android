@@ -67,7 +67,8 @@ use dsa_transport::{Connection, Connector, TransportError};
 pub use dsa_protocol::host_api::types::AppRootStatus;
 
 use crate::accessibility::{
-    AccessibilityWatch, ActionRequest, ActionResult, Announcement, GuestAccessibility, TreeUpdate,
+    AccessibilityTarget, AccessibilityWatch, ActionRequest, ActionResult, Announcement,
+    GuestAccessibility, TreeUpdate,
 };
 use crate::adb_discovery::AutoConnectState;
 use crate::addon_disk::{Addon, AddonDisk};
@@ -102,7 +103,9 @@ use crate::memory::{
     snapshot_from_wire, snapshot_to_wire, GuestMemoryReport, HostMemory, MemorySnapshot,
 };
 use crate::native_abi::{self, NativeLibraries, RunAsArmOutcome};
-use crate::notifications::{self, Notification, NotificationAction, NotificationEvent};
+use crate::notifications::{
+    self, Notification, NotificationAction, NotificationButton, NotificationEvent,
+};
 use crate::print::{self, PrintEvent, PrintJob, PrintOutcome, PrintSettings};
 use crate::resize_trace::{self, detail_requested, ResizeTrace, DETAIL_ENV};
 use crate::session::{BackgroundRequest, Session, SessionError, SessionState};
@@ -718,6 +721,25 @@ pub trait UserAndroid: Send + Sync {
             "this Android does not export its accessibility tree".into(),
         ))
     }
+    /// Watches the accessibility tree of the desktop widget `widget_id`; Android reads the
+    /// widget's nodes while any watch of it lasts. `None` when this Android does not export
+    /// its widgets' trees.
+    fn watch_widget_accessibility(&self, widget_id: i32) -> Option<AccessibilityWatch> {
+        let _ = widget_id;
+        None
+    }
+    /// Asks this Android to do an action on a node of a desktop widget; the answer arrives on
+    /// the widget's watches.
+    fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), TaskRequestError> {
+        let _ = (widget_id, action);
+        Err(TaskRequestError::Failed(
+            "this Android does not export its widgets' accessibility trees".into(),
+        ))
+    }
     /// Reads this Android's log: the records the host holds that pass `filter`, then each new
     /// one. This Android reads its log only while a watch lasts. `None` when it cannot send
     /// its log.
@@ -1168,6 +1190,16 @@ impl UserAndroid for Session {
         action: &ActionRequest,
     ) -> Result<(), TaskRequestError> {
         Session::accessibility_action(self, task_id, action).map_err(request_error)
+    }
+    fn watch_widget_accessibility(&self, widget_id: i32) -> Option<AccessibilityWatch> {
+        Some(Session::watch_widget_accessibility(self, widget_id))
+    }
+    fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), TaskRequestError> {
+        Session::widget_accessibility_action(self, widget_id, action).map_err(request_error)
     }
 }
 
@@ -2735,7 +2767,8 @@ impl HostApiService {
                 return self.watch_links(connection, &peer, request.id);
             }
             if let Some(request::Body::WatchAccessibility(watch)) = &request.body {
-                return self.watch_accessibility(connection, &peer, request.id, watch.task_id);
+                let target = AccessibilityTarget::of(watch.task_id, watch.widget_id);
+                return self.watch_accessibility(connection, &peer, request.id, target);
             }
             if let Some(request::Body::OpenFile(open)) = &request.body {
                 return self.open_file(connection, &peer, request.id, open.clone());
@@ -2820,23 +2853,32 @@ impl HostApiService {
     /// client sends to it, until the client goes away. Closing the connection ends the watch,
     /// so Android stops reading the task's tree once no client watches it. A client may also
     /// say whether a screen reader listens (AccessibilityListening); one that sends anything
-    /// else is disconnected.
+    /// else is disconnected. A desktop widget's tree (`target` a widget) is watched the same
+    /// way.
     fn watch_accessibility(
         &self,
         mut connection: Box<dyn Connection>,
         peer: &Peer,
         id: u64,
-        task_id: i32,
+        target: AccessibilityTarget,
     ) {
         let watch = match self.androids.android(&peer.user) {
             Err(why) => Err(error(ErrorCode::Unavailable, why)),
-            Ok(android) => match android.watch_accessibility(task_id) {
-                Some(watch) => Ok((android, watch)),
-                None => Err(error(
-                    ErrorCode::Unavailable,
-                    "this Android does not export its accessibility tree".into(),
-                )),
-            },
+            Ok(android) => {
+                let watch = match target {
+                    AccessibilityTarget::Task(task_id) => android.watch_accessibility(task_id),
+                    AccessibilityTarget::Widget(widget_id) => {
+                        android.watch_widget_accessibility(widget_id)
+                    }
+                };
+                match watch {
+                    Some(watch) => Ok((android, watch)),
+                    None => Err(error(
+                        ErrorCode::Unavailable,
+                        "this Android does not export its accessibility tree".into(),
+                    )),
+                }
+            }
         };
         let (android, watch) = match watch {
             Ok(watch) => watch,
@@ -2900,7 +2942,15 @@ impl HostApiService {
             match action {
                 Ok(action) => {
                     let request_id = action.request_id;
-                    if let Err(error) = android.accessibility_action(task_id, &action) {
+                    let sent = match target {
+                        AccessibilityTarget::Task(task_id) => {
+                            android.accessibility_action(task_id, &action)
+                        }
+                        AccessibilityTarget::Widget(widget_id) => {
+                            android.widget_accessibility_action(widget_id, &action)
+                        }
+                    };
+                    if let Err(error) = sent {
                         let why = match error {
                             TaskRequestError::NotRunning(why) | TaskRequestError::Failed(why) => {
                                 why
@@ -2922,8 +2972,8 @@ impl HostApiService {
                 }
                 Err(why) => {
                     eprintln!(
-                        "local API: a client of {} broke the accessibility watch of task \
-                         {task_id} ({why}); closing its connection",
+                        "local API: a client of {} broke the accessibility watch of \
+                         {target} ({why}); closing its connection",
                         peer.user
                     );
                     connection.close();
@@ -4678,10 +4728,43 @@ impl HostApiService {
         let action = match types::NotificationAction::try_from(act.action) {
             Ok(types::NotificationAction::Open) => NotificationAction::Open { key: act.key },
             Ok(types::NotificationAction::Dismiss) => NotificationAction::Dismiss { key: act.key },
+            Ok(types::NotificationAction::Button) => {
+                if act.reply_text.chars().count() > notifications::MAX_REPLY_CHARS {
+                    return error(
+                        ErrorCode::UnknownRequest,
+                        format!(
+                            "a reply to a notification is at most {} characters",
+                            notifications::MAX_REPLY_CHARS
+                        ),
+                    );
+                }
+                if act.button as usize >= notifications::MAX_BUTTONS {
+                    return error(
+                        ErrorCode::UnknownRequest,
+                        format!(
+                            "a notification has at most {} buttons, so there is no button {}",
+                            notifications::MAX_BUTTONS,
+                            act.button
+                        ),
+                    );
+                }
+                NotificationAction::Button {
+                    key: act.key,
+                    button: act.button,
+                    title: act
+                        .button_title
+                        .chars()
+                        .take(notifications::MAX_LINE_CHARS)
+                        .collect(),
+                    reply: act.reply_text,
+                }
+            }
             _ => {
                 return error(
                     ErrorCode::UnknownRequest,
-                    "the action on a notification is to open it or to dismiss it".into(),
+                    "the action on a notification is to open it, to dismiss it or to choose one \
+                     of its buttons"
+                        .into(),
                 )
             }
         };
@@ -7816,7 +7899,10 @@ impl HostApiClient {
 
     /// Sets how far one app may elevate to root: "off", "ask" or "remember".
     /// Returns the level as it stands now and a message. Moving an app to "remember" needs
-    /// the caller to be an administrator, as turning the whole feature on does.
+    /// the caller to be an administrator, as turning the whole feature on does. A caller who is
+    /// not one waits for an administrator to answer the host's prompt, which may stay open for
+    /// minutes while a screen reader reads it out, so the answer is awaited at least as long
+    /// as su would wait for it.
     pub fn set_app_root(
         &mut self,
         package: &str,
@@ -7827,7 +7913,7 @@ impl HostApiClient {
                 package_name: package.to_string(),
                 level: level.to_string(),
             }),
-            self.timeout,
+            self.timeout.max(crate::root_elevation::ANSWER_TIMEOUT),
         )? {
             response::Body::AppRootResult(result) => Ok(result),
             _ => Err(ClientError::Malformed(
@@ -8364,11 +8450,32 @@ impl HostApiClient {
     /// to actions arrive on the stream, which also sends the actions. The caller's Android
     /// reads the tree until the stream is dropped. The connection carries nothing else from
     /// here on, so the client is used up.
-    pub fn watch_accessibility(mut self, task_id: i32) -> Result<AccessibilityStream, ClientError> {
-        match self.exchange(
-            request::Body::WatchAccessibility(types::WatchAccessibility { task_id }),
-            self.timeout,
-        )? {
+    pub fn watch_accessibility(self, task_id: i32) -> Result<AccessibilityStream, ClientError> {
+        self.watch_tree(types::WatchAccessibility {
+            task_id,
+            widget_id: 0,
+        })
+    }
+
+    /// Watches the accessibility tree of the caller's desktop widget `widget_id`: the nodes
+    /// of the widget's own views, with bounds in pixels of its image. Otherwise the same as
+    /// [`HostApiClient::watch_accessibility`]: the caller's Android reads the widget's nodes
+    /// until the stream is dropped, and the client is used up.
+    pub fn watch_widget_accessibility(
+        self,
+        widget_id: i32,
+    ) -> Result<AccessibilityStream, ClientError> {
+        self.watch_tree(types::WatchAccessibility {
+            task_id: 0,
+            widget_id,
+        })
+    }
+
+    fn watch_tree(
+        mut self,
+        watch: types::WatchAccessibility,
+    ) -> Result<AccessibilityStream, ClientError> {
+        match self.exchange(request::Body::WatchAccessibility(watch), self.timeout)? {
             response::Body::Done(_) => Ok(AccessibilityStream {
                 connection: self.connection,
             }),
@@ -8437,14 +8544,31 @@ impl HostApiClient {
 
     /// Passes what the user did with a notification on the host to the caller's Android.
     pub fn act_on_notification(&mut self, action: &NotificationAction) -> Result<(), ClientError> {
-        let (key, kind) = match action {
-            NotificationAction::Open { key } => (key, types::NotificationAction::Open),
-            NotificationAction::Dismiss { key } => (key, types::NotificationAction::Dismiss),
+        let act = match action {
+            NotificationAction::Open { key } => types::ActOnNotification {
+                key: key.clone(),
+                action: types::NotificationAction::Open as i32,
+                ..Default::default()
+            },
+            NotificationAction::Dismiss { key } => types::ActOnNotification {
+                key: key.clone(),
+                action: types::NotificationAction::Dismiss as i32,
+                ..Default::default()
+            },
+            NotificationAction::Button {
+                key,
+                button,
+                title,
+                reply,
+            } => types::ActOnNotification {
+                key: key.clone(),
+                action: types::NotificationAction::Button as i32,
+                button: *button,
+                button_title: title.clone(),
+                reply_text: reply.clone(),
+            },
         };
-        self.done(request::Body::ActOnNotification(types::ActOnNotification {
-            key: key.clone(),
-            action: kind as i32,
-        }))
+        self.done(request::Body::ActOnNotification(act))
     }
 
     /// Watches the print jobs of the caller's Android. The connection carries nothing else
@@ -9395,6 +9519,18 @@ impl NotificationStream {
                 high_priority: n.high_priority,
                 clearable: n.clearable,
                 when_millis: n.when_millis,
+                buttons: n
+                    .buttons
+                    .into_iter()
+                    .map(|b| NotificationButton {
+                        title: b.title,
+                        reply: b.reply,
+                        reply_label: b.reply_label,
+                        reply_choices: b.reply_choices,
+                        reply_choices_only: b.reply_choices_only,
+                        semantic_action: b.semantic_action,
+                    })
+                    .collect(),
             }))),
             Ok(Envelope {
                 body: Some(Body::NotificationRemoved(removed)),
@@ -9777,6 +9913,18 @@ fn notification_to_wire(event: NotificationEvent) -> Body {
             high_priority: n.high_priority,
             clearable: n.clearable,
             when_millis: n.when_millis,
+            buttons: n
+                .buttons
+                .into_iter()
+                .map(|b| types::NotificationButton {
+                    title: b.title,
+                    reply: b.reply,
+                    reply_label: b.reply_label,
+                    reply_choices: b.reply_choices,
+                    reply_choices_only: b.reply_choices_only,
+                    semantic_action: b.semantic_action,
+                })
+                .collect(),
         }),
         NotificationEvent::Removed { key } => {
             Body::NotificationRemoved(types::NotificationRemoved { key })

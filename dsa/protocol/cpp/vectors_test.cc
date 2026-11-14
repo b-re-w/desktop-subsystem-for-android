@@ -402,6 +402,24 @@ std::map<std::string, v1::Envelope> Cases() {
     n->set_high_priority(true);
     n->set_clearable(true);
     n->set_when_millis(1700000000000LL);
+    v1::GuestNotification* b = cases["notification_buttons"].mutable_notification();
+    b->set_key(key);
+    b->set_title("Ann");
+    v1::NotificationButton* reply = b->add_buttons();
+    reply->set_title("Reply");
+    reply->set_reply(true);
+    reply->set_reply_label("Reply to Ann");
+    reply->add_reply_choices("Yes");
+    reply->set_semantic_action(1);
+    v1::NotificationButton* remove = b->add_buttons();
+    remove->set_title("Delete");
+    remove->set_semantic_action(4);
+    v1::NotificationButtonClicked* chosen =
+        cases["notification_button_clicked"].mutable_notification_button_clicked();
+    chosen->set_key(key);
+    chosen->set_button(1);
+    chosen->set_title("Reply");
+    chosen->set_reply_text("\xec\x95\x88\xeb\x85\x95");
     cases["notification_removed"].mutable_notification_removed()->set_key(key);
     cases["notification_clicked"].mutable_notification_clicked()->set_key(key);
     cases["notification_dismissed"].mutable_notification_dismissed()->set_key(key);

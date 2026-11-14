@@ -1,6 +1,7 @@
 //! The menu of a widget window, which the user opens by long-pressing the widget, by
 //! right-clicking it, or with the menu key or Shift+F10: Widget settings, for a widget whose
-//! app lets it be set up again, Resize, with the sizes the widget allows, and Remove, as
+//! app lets it be set up again, Resize, with the sizes the widget allows, Move and Size, which
+//! move and resize it with the arrow keys as a window's system menu does, and Remove, as
 //! Android's home screen offers them. It is a Windows 11 menu
 //! ([`crate::compositor::fluent_menu`]), with an icon for each item and a check mark on the
 //! widget's current size.
@@ -19,8 +20,8 @@
 //! (`dsa_host_core::widget_windows::menu`); what is here is its Windows 11 look.
 
 pub use dsa_host_core::widget_windows::menu::{
-    choice_of, is_current, menu_name, menu_text, size_choices, size_label, MenuChoice, MenuText,
-    SizeChoice, SizeName, FIRST_SIZE, REMOVE, RESIZE, SETTINGS,
+    choice_of, is_current, keyboard_items, menu_name, menu_text, size_choices, size_label,
+    MenuChoice, MenuText, SizeChoice, SizeName, FIRST_SIZE, MOVE, REMOVE, RESIZE, SETTINGS, SIZE,
 };
 use dsa_host_core::widgets::{Placement, WidgetProvider};
 
@@ -39,9 +40,10 @@ fn size_key(name: SizeName) -> char {
 }
 
 /// The menu's entries: Widget settings when `settings` (the widget can be set up again),
-/// Resize, which opens the sizes with the current one checked, a separator, and Remove.
-/// Widget settings is chosen with W, Resize opens with R and Remove is chosen with M (Resize
-/// has R).
+/// Resize, which opens the sizes with the current one checked, Move, Size when the widget can
+/// be resized (more than one size), a separator, and Remove. Widget settings is chosen with W,
+/// Resize opens with R, Move is chosen with V, Size with Z, and Remove with M (Resize has R,
+/// Remove has M).
 pub fn entries(
     text: &MenuText,
     sizes: &[SizeChoice],
@@ -57,8 +59,9 @@ pub fn entries(
             MenuEntry::Item(item.with_check(is_current(size, placement)))
         })
         .collect();
+    let can_size = sizes.len() > 1;
     let remove = MenuItem::new(REMOVE, text.remove).with_glyph(glyph::UNPIN);
-    let mut out = Vec::with_capacity(4);
+    let mut out = Vec::with_capacity(6);
     if settings {
         let item = MenuItem::new(SETTINGS, text.settings).with_glyph(glyph::SETTINGS);
         out.push(MenuEntry::Item(item.with_access_key('W')));
@@ -68,8 +71,15 @@ pub fn entries(
         out.push(MenuEntry::Item(
             resize.with_access_key('R').with_submenu(sizes),
         ));
-        out.push(MenuEntry::Separator);
     }
+    let moving = MenuItem::new(MOVE, text.move_widget).with_glyph(glyph::MOVE);
+    out.push(MenuEntry::Item(moving.with_access_key('V')));
+    if can_size {
+        out.push(MenuEntry::Item(
+            MenuItem::new(SIZE, text.size).with_access_key('Z'),
+        ));
+    }
+    out.push(MenuEntry::Separator);
     out.push(MenuEntry::Item(remove.with_access_key('M')));
     out
 }
@@ -201,7 +211,7 @@ mod tests {
         assert_eq!(size_label(&menu_text(false), &large), "Large (270 × 165)");
         assert_eq!(size_label(&menu_text(true), &large), "크게 (270 × 165)");
         assert_eq!(menu_text(false).remove, "Remove");
-        assert_eq!(menu_text(true).resize, "크기 조정");
+        assert_eq!(menu_text(true).resize, "크기 선택");
         assert_eq!(menu_text(false).settings, "Widget settings");
         assert_eq!(menu_text(true).settings, "위젯 설정");
     }
@@ -214,7 +224,7 @@ mod tests {
         for korean in [false, true] {
             let text = menu_text(korean);
             let menu = entries(&text, &sizes, &at(180, 110), true);
-            assert_eq!(menu.len(), 4);
+            assert_eq!(menu.len(), 6);
             let settings = menu[0].item().unwrap();
             assert_eq!(
                 (settings.id, settings.label.as_str()),
@@ -224,7 +234,7 @@ mod tests {
             assert_eq!(settings.access_key, Some('W'));
             assert!(settings.submenu.is_empty());
             assert_eq!(menu[1].item().unwrap().id, RESIZE);
-            assert_eq!(menu[3].item().unwrap().id, REMOVE);
+            assert_eq!(menu[5].item().unwrap().id, REMOVE);
             let without = entries(&text, &sizes, &at(180, 110), false);
             assert!(without
                 .iter()
@@ -240,13 +250,13 @@ mod tests {
         for korean in [false, true] {
             let text = menu_text(korean);
             let menu = entries(&text, &sizes, &at(270, 165), false);
-            assert_eq!(menu.len(), 3);
+            assert_eq!(menu.len(), 5);
             let resize = menu[0].item().unwrap();
             assert_eq!(resize.label, text.resize);
             assert_eq!(resize.glyph, Some(glyph::RESIZE));
             assert_eq!(resize.access_key, Some('R'));
-            assert_eq!(menu[1], MenuEntry::Separator);
-            let remove = menu[2].item().unwrap();
+            assert_eq!(menu[3], MenuEntry::Separator);
+            let remove = menu[4].item().unwrap();
             assert_eq!((remove.id, remove.label.as_str()), (REMOVE, text.remove));
             assert_eq!(remove.glyph, Some(glyph::UNPIN));
             assert_eq!(remove.access_key, Some('M'));
@@ -277,6 +287,57 @@ mod tests {
             ..clock()
         };
         assert_eq!(menu_name(&menu_text(true), &named), "Clock");
+    }
+
+    /// Move and Size follow Resize, each with its own key, in English and Korean; a widget
+    /// that cannot be resized has Move only.
+    #[test]
+    fn fr18_widget_menu_lists_move_and_size_in_both_languages() {
+        let sizes = size_choices(&clock());
+        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
+            let text = menu_text(korean);
+            let menu = entries(&text, &sizes, &at(180, 110), false);
+            let moving = menu[1].item().unwrap();
+            assert_eq!(
+                (moving.id, moving.label.as_str(), moving.access_key),
+                (MOVE, words[0], Some('V'))
+            );
+            assert_eq!(moving.glyph, Some(glyph::MOVE));
+            let size = menu[2].item().unwrap();
+            assert_eq!(
+                (size.id, size.label.as_str(), size.access_key),
+                (SIZE, words[1], Some('Z'))
+            );
+            // No two items share a key.
+            let keys: Vec<char> = menu
+                .iter()
+                .filter_map(MenuEntry::item)
+                .filter_map(|item| item.access_key)
+                .collect();
+            let mut unique = keys.clone();
+            unique.sort();
+            unique.dedup();
+            assert_eq!(unique.len(), keys.len(), "{keys:?}");
+        }
+        let fixed = WidgetProvider {
+            resize_mode: 0,
+            ..clock()
+        };
+        let menu = entries(
+            &menu_text(false),
+            &size_choices(&fixed),
+            &at(180, 110),
+            false,
+        );
+        let ids: Vec<u32> = menu
+            .iter()
+            .filter_map(MenuEntry::item)
+            .map(|i| i.id)
+            .collect();
+        assert!(ids.contains(&MOVE));
+        assert!(!ids.contains(&SIZE));
+        assert_eq!(choice_of(MOVE, &sizes), Some(MenuChoice::Move));
+        assert_eq!(choice_of(SIZE, &sizes), Some(MenuChoice::Size));
     }
 
     /// The widget windows never fall back to a plain Win32 popup menu: neither the menu nor

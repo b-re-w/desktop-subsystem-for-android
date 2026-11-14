@@ -52,6 +52,7 @@ pub fn question(request: &PinShortcutRequest, korean: bool) -> Notify {
         urgency: 1,
         desktop_entry: app_id(&request.package_name),
         resident: true,
+        reply_placeholder: String::new(),
     }
 }
 

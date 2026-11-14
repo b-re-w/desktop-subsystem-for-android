@@ -48,4 +48,14 @@ public interface AccessibilityActionResultOrBuilder extends
    */
   com.google.protobuf.ByteString
       getErrorBytes();
+
+  /**
+   * <pre>
+   * The widget the action was for, as the action named it; 0 for a task's.
+   * </pre>
+   *
+   * <code>int32 widget_id = 5;</code>
+   * @return The widgetId.
+   */
+  int getWidgetId();
 }

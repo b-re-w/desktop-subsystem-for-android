@@ -1286,4 +1286,14 @@ impl UserAndroid for UpdatingAndroid {
     ) -> Result<(), TaskRequestError> {
         UserAndroid::accessibility_action(&*self.session, task_id, action)
     }
+    fn watch_widget_accessibility(&self, widget_id: i32) -> Option<AccessibilityWatch> {
+        UserAndroid::watch_widget_accessibility(&*self.session, widget_id)
+    }
+    fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), TaskRequestError> {
+        UserAndroid::widget_accessibility_action(&*self.session, widget_id, action)
+    }
 }

@@ -47,7 +47,8 @@
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"
                              AutomationProperties.Name="{l:Text Identity_model}" />
                 </StackPanel>
-                <ui:CardExpander x:Name="SpecsCard" IsExpanded="True" Icon="{ui:SymbolIcon Info24}">
+                <ui:CardExpander x:Name="SpecsCard" IsExpanded="True" Icon="{ui:SymbolIcon Info24}"
+                                 AutomationProperties.Name="{l:Text IdentitySpecsCard.Header}">
                     <ui:CardExpander.Header>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -83,7 +84,8 @@
                 <TextBlock Text="{l:Text IdentityIntro.Text}" Style="{StaticResource PageIntro}" />
 
                 <ProgressBar IsIndeterminate="True" Margin="0,8,0,0"
-                             Visibility="{Binding IsBusy, Converter={StaticResource Visible}}" />
+                             Visibility="{Binding IsBusy, Converter={StaticResource Visible}}"
+                             AutomationProperties.Name="{l:Text A11y_Loading}" />
                 <ui:InfoBar Title="{l:Text IdentityWarning.Title}" Message="{l:Text IdentityWarning.Message}"
                             Severity="Warning" IsClosable="False" IsOpen="True" />
                 <ui:InfoBar Title="{l:Text SettingsErrorBar.Title}" Severity="Error" IsClosable="False"
@@ -110,7 +112,8 @@
                         <StackPanel>
                             <TextBlock Text="{l:Text IdentityPreview.Text}" Style="{StaticResource CardTitle}" />
                             <TextBox Style="{StaticResource SelectableCode}" Margin="0,4,0,0" Text="{Binding FingerprintPreview, Mode=OneWay}"
-                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                     AutomationProperties.Name="{l:Text IdentityPreview.Text}" />
                         </StackPanel>
                     </ui:CardControl.Header>
                 </ui:CardControl>

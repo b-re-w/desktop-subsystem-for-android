@@ -15,8 +15,20 @@ const PATH: &str = "/org/freedesktop/Notifications";
 /// What the service says the user did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Signal {
-    ActionInvoked { id: u32, action: String },
-    Closed { id: u32, reason: u32 },
+    ActionInvoked {
+        id: u32,
+        action: String,
+    },
+    Closed {
+        id: u32,
+        reason: u32,
+    },
+    /// The user sent `text` in the inline reply field (`NotificationReplied`), on a service
+    /// that offers one.
+    Replied {
+        id: u32,
+        text: String,
+    },
 }
 
 /// A connection to the notification service.
@@ -31,6 +43,20 @@ impl Notifier {
         let connection = Connection::session()
             .map_err(|error| format!("cannot reach the session bus: {error}"))?;
         Ok(Notifier { connection, icons })
+    }
+
+    /// Whether the service offers an inline reply field (the `inline-reply` capability).
+    /// False when it cannot be asked.
+    pub fn offers_inline_reply(&self) -> bool {
+        self.connection
+            .call_method(Some(SERVICE), PATH, Some(SERVICE), "GetCapabilities", &())
+            .ok()
+            .and_then(|reply| reply.body().deserialize::<Vec<String>>().ok())
+            .is_some_and(|capabilities| {
+                capabilities
+                    .iter()
+                    .any(|capability| capability == super::notifications::INLINE_REPLY)
+            })
     }
 
     /// Shows a notification; returns the number the service gave it.
@@ -53,6 +79,12 @@ impl Notifier {
         };
         if !icon.is_empty() {
             hints.insert("image-path", Value::from(icon.as_str()));
+        }
+        if !notify.reply_placeholder.is_empty() {
+            hints.insert(
+                "x-kde-reply-placeholder-text",
+                Value::from(notify.reply_placeholder.as_str()),
+            );
         }
         let actions: Vec<&str> = notify.actions.iter().map(String::as_str).collect();
         let reply = self
@@ -113,6 +145,11 @@ impl Notifier {
                 "NotificationClosed" => {
                     if let Ok((id, reason)) = message.body().deserialize::<(u32, u32)>() {
                         each(Signal::Closed { id, reason });
+                    }
+                }
+                "NotificationReplied" => {
+                    if let Ok((id, text)) = message.body().deserialize::<(u32, String)>() {
+                        each(Signal::Replied { id, text });
                     }
                 }
                 _ => {}

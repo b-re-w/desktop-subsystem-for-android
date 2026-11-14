@@ -6,8 +6,9 @@
 //! DSA draws, in the look of the window menu. GNOME's menus show a submenu as a section with
 //! its name over its items rather than as a menu beside the menu, and so does this one:
 //! Widget settings (for a widget that can be set up again), then Resize with its sizes under
-//! it, the current size checked, a separator, and Remove. The arrow keys move through the
-//! items, Enter or Space chooses, and Escape or a click elsewhere closes it.
+//! it, the current size checked, Move and Size (which move and resize the widget with the arrow
+//! keys), a separator, and Remove. The arrow keys move through the items, Enter or Space
+//! chooses, and Escape or a click elsewhere closes it.
 
 use dsa_host_core::compositor::caption::scaled;
 use dsa_host_core::widget_windows::menu::Entry;
@@ -395,7 +396,32 @@ mod tests {
             &settable[0],
             Row::Item { command: SETTINGS, label, indented: false, .. } if label == "위젯 설정"
         ));
-        assert_eq!(settable[1], Row::Header("크기 조정".into()));
+        assert_eq!(settable[1], Row::Header("크기 선택".into()));
+    }
+
+    #[test]
+    fn fr18_widget_menu_lists_move_and_size_in_both_languages() {
+        use dsa_host_core::widget_windows::menu::{MOVE, SIZE};
+        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
+            let menu = rows(&entries(&menu_text(korean), &clock(false), &at_default()));
+            let keyboard: Vec<(u32, &str)> = menu
+                .iter()
+                .filter_map(|row| match row {
+                    Row::Item {
+                        command,
+                        label,
+                        indented: false,
+                        ..
+                    } if *command == MOVE || *command == SIZE => Some((*command, label.as_str())),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(keyboard, [(MOVE, words[0]), (SIZE, words[1])]);
+            // They come right before the separator and Remove.
+            let at = menu.len() - 4;
+            assert!(matches!(menu[at], Row::Item { command: MOVE, .. }));
+            assert_eq!(menu[menu.len() - 2], Row::Separator);
+        }
     }
 
     #[test]

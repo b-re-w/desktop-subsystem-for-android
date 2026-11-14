@@ -4,7 +4,23 @@ import com.google.protobuf.ByteString
 import io.github.thisisthepy.dsa.agent.Log
 import io.github.thisisthepy.dsa.control.v1.Envelope
 import io.github.thisisthepy.dsa.control.v1.GuestNotification
+import io.github.thisisthepy.dsa.control.v1.NotificationButton
 import io.github.thisisthepy.dsa.control.v1.NotificationRemoved
+
+/** One action button of a notification (Notification.Action), as the agent reads it. */
+data class NoticeAction(
+    val title: String,
+    /** Whether it takes a reply: it has a RemoteInput that takes text or offers choices. */
+    val reply: Boolean = false,
+    /** The RemoteInput's label, which the reply field shows while it is empty. */
+    val replyLabel: String = "",
+    /** The replies the RemoteInput offers to pick from. */
+    val replyChoices: List<String> = emptyList(),
+    /** True when the RemoteInput takes only one of [replyChoices]. */
+    val replyChoicesOnly: Boolean = false,
+    /** Notification.Action.getSemanticAction(): 0 none, 1 reply, 2 mark as read, ... */
+    val semanticAction: Int = 0,
+)
 
 /** One notification posted in the guest, as the agent reads it. */
 data class GuestNotice(
@@ -24,8 +40,8 @@ data class GuestNotice(
     val groupSummary: Boolean,
     val clearable: Boolean,
     val whenMillis: Long,
-    /** The titles of its actions, in its order ("Pause", "Next"). */
-    val actions: List<String> = emptyList(),
+    /** Its actions, in its order ("Pause", "Next"; "Reply", "Mark as read"). */
+    val actions: List<NoticeAction> = emptyList(),
 ) {
     override fun equals(other: Any?): Boolean =
         other is GuestNotice && key == other.key && packageName == other.packageName &&
@@ -71,6 +87,15 @@ interface NotificationSource {
      */
     fun runAction(key: String, index: Int): Boolean = false
 
+    /**
+     * Runs the action button the user chose on the host, as pressing it in the shade does:
+     * the action at [index] when its title is [title], else the first one titled [title], so
+     * an app that changed its buttons since runs the one the user saw. [reply] goes into the
+     * action's RemoteInput when it takes one and is not empty. False only when there is no
+     * such notification; when no button has the title, nothing runs.
+     */
+    fun runButton(key: String, index: Int, title: String, reply: String): Boolean = false
+
     companion object {
         val NONE = object : NotificationSource {
             override fun listen(listener: NoticeListener) = Unit
@@ -89,9 +114,14 @@ interface NotificationSource {
  * posted again with the same key replaces the host's; one that stops being forwardable is
  * removed there. When the agent connects, the host is told of every notification shown.
  *
- * A click from the host runs the notification's content intent; a dismissal cancels it. A key
- * the guest no longer has is answered with its removal, so the host never keeps a notification
- * that does nothing.
+ * A notification goes with its action buttons, and a button that takes a reply goes with its
+ * RemoteInput's label and choices, so the host shows them and a person acts on the
+ * notification from the host's notification centre.
+ *
+ * A click from the host runs the notification's content intent; a dismissal cancels it; a
+ * chosen button runs that action, with the reply the user wrote. A key the guest no longer
+ * has is answered with its removal, so the host never keeps a notification that does
+ * nothing.
  *
  * Every method but [start]'s listener runs on the agent's one thread.
  */
@@ -177,6 +207,17 @@ class NotificationForwarder(
             .setHighPriority(highPriority(notice))
             .setClearable(notice.clearable)
             .setWhenMillis(notice.whenMillis)
+        for (action in notice.actions.take(MAX_BUTTONS)) {
+            message.addButtons(
+                NotificationButton.newBuilder()
+                    .setTitle(action.title.take(MAX_LINE_CHARS))
+                    .setReply(action.reply)
+                    .setReplyLabel(action.replyLabel.take(MAX_LINE_CHARS))
+                    .addAllReplyChoices(action.replyChoices.take(MAX_CHOICES).map { it.take(MAX_LINE_CHARS) })
+                    .setReplyChoicesOnly(action.replyChoicesOnly)
+                    .setSemanticAction(action.semanticAction),
+            )
+        }
         if (send(Envelope.newBuilder().setNotification(message).build().toByteArray())) forwarded += notice.key
     }
 
@@ -190,11 +231,17 @@ class NotificationForwarder(
         send(Envelope.newBuilder().setNotificationRemoved(NotificationRemoved.newBuilder().setKey(key)).build().toByteArray())
     }
 
-    /** Acts on the frame if it is the user's click or dismissal on the host. */
+    /** Acts on the frame if it is the user's click, dismissal or chosen button on the host. */
     fun handle(envelope: Envelope): Boolean {
         when (envelope.bodyCase) {
             Envelope.BodyCase.NOTIFICATION_CLICKED -> act(envelope.notificationClicked.key, "open") { source.open(it) }
             Envelope.BodyCase.NOTIFICATION_DISMISSED -> act(envelope.notificationDismissed.key, "cancel") { source.cancel(it) }
+            Envelope.BodyCase.NOTIFICATION_BUTTON_CLICKED -> {
+                val chosen = envelope.notificationButtonClicked
+                act(chosen.key, "run an action of") {
+                    source.runButton(it, chosen.button, chosen.title, chosen.replyText.take(MAX_TEXT_CHARS))
+                }
+            }
             else -> return false
         }
         return true
@@ -252,6 +299,10 @@ class NotificationForwarder(
         /** The host keeps no longer title or body; the rest is cut here, before it crosses. */
         const val MAX_LINE_CHARS = 256
         const val MAX_TEXT_CHARS = 4096
+
+        /** The host keeps no more buttons, nor more choices of a reply, than these. */
+        const val MAX_BUTTONS = 5
+        const val MAX_CHOICES = 5
 
         /** Whether the app asked for the notification to interrupt the user. */
         fun highPriority(notice: GuestNotice): Boolean =

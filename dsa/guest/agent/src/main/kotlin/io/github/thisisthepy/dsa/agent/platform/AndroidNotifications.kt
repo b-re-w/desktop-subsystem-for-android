@@ -4,15 +4,18 @@ import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.view.Display
 import io.github.thisisthepy.dsa.agent.Log
 import io.github.thisisthepy.dsa.agent.notifications.GuestNotice
+import io.github.thisisthepy.dsa.agent.notifications.NoticeAction
 import io.github.thisisthepy.dsa.agent.notifications.NoticeListener
 import io.github.thisisthepy.dsa.agent.notifications.NotificationForwarder
 import io.github.thisisthepy.dsa.agent.notifications.NotificationSource
@@ -34,7 +37,8 @@ import java.util.concurrent.ConcurrentHashMap
  * that wakes an app in Doze, as FCM's do, reaches the listener as soon as the app posts it.
  *
  * Each notification shown is kept by key, so a click from the host can send its content
- * intent and a dismissal can cancel it.
+ * intent, a dismissal can cancel it, and a button chosen on the host can send its action's
+ * intent with the reply the user wrote.
  */
 class AndroidNotifications(private val context: Context, private val log: Log) : NotificationSource {
     private val shown = ConcurrentHashMap<String, StatusBarNotification>()
@@ -165,6 +169,48 @@ class AndroidNotifications(private val context: Context, private val log: Log) :
         }
     }
 
+    /**
+     * Sends the action's intent for the button the user chose on the host, as pressing it in
+     * the shade does. A reply goes in as SystemUI puts one: RemoteInput.addResultsToIntent on
+     * a fill-in intent, under the RemoteInput's result key, with the reply's source (typed, or
+     * one of the choices), so the app reads it with RemoteInput.getResultsFromIntent.
+     */
+    override fun runButton(key: String, index: Int, title: String, reply: String): Boolean {
+        val sbn = shown[key] ?: return false
+        val actions = sbn.notification.actions.orEmpty()
+        val action = actions.getOrNull(index)?.takeIf { it.title?.toString().orEmpty() == title }
+            ?: actions.firstOrNull { it.title?.toString().orEmpty() == title }
+        if (action == null) {
+            log.warn("a notification of ${sbn.packageName} no longer has the button the user chose; nothing runs")
+            return true
+        }
+        val intent = action.actionIntent
+        if (intent == null) {
+            log.warn("the button the user chose on a notification of ${sbn.packageName} does nothing")
+            return true
+        }
+        val fillIn = Intent()
+        val input = replyInput(action)
+        if (input != null && reply.isNotEmpty()) {
+            val results = Bundle().apply { putCharSequence(input.resultKey, reply) }
+            RemoteInput.addResultsToIntent(arrayOf(input), fillIn, results)
+            val picked = input.choices.orEmpty().any { it.toString() == reply }
+            RemoteInput.setResultsSource(fillIn, if (picked) RemoteInput.SOURCE_CHOICE else RemoteInput.SOURCE_FREE_FORM_INPUT)
+        }
+        val options = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        options.setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+        try {
+            intent.send(context, 0, fillIn, null, null, null, options.toBundle())
+        } catch (e: PendingIntent.CanceledException) {
+            log.warn("the action of a notification of ${sbn.packageName} was cancelled by its app", e)
+        }
+        return true
+    }
+
+    /** The RemoteInput a reply goes to: the first that takes text or offers choices. */
+    private fun replyInput(action: Notification.Action): RemoteInput? =
+        action.remoteInputs?.firstOrNull { it.allowFreeFormInput || !it.choices.isNullOrEmpty() }
+
     override fun cancel(key: String): Boolean {
         if (!shown.containsKey(key)) return false
         val service = HostNotificationListener.instance ?: return false
@@ -202,7 +248,19 @@ class AndroidNotifications(private val context: Context, private val log: Log) :
             groupSummary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0,
             clearable = sbn.isClearable,
             whenMillis = notification.`when`,
-            actions = notification.actions.orEmpty().map { it.title?.toString().orEmpty() },
+            actions = notification.actions.orEmpty().map { noticeAction(it) },
+        )
+    }
+
+    private fun noticeAction(action: Notification.Action): NoticeAction {
+        val input = replyInput(action)
+        return NoticeAction(
+            title = action.title?.toString().orEmpty(),
+            reply = input != null,
+            replyLabel = input?.label?.toString().orEmpty(),
+            replyChoices = input?.choices.orEmpty().map { it.toString() },
+            replyChoicesOnly = input != null && !input.allowFreeFormInput,
+            semanticAction = action.semanticAction,
         )
     }
 

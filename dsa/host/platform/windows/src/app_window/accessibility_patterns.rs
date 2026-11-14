@@ -81,8 +81,13 @@ impl IRawElementProviderFragment_Impl for LoadingProvider_Impl {
     ) -> windows::core::Result<IRawElementProviderFragment> {
         match direction {
             NavigateDirection_Parent => root_of(&self.shared).cast(),
-            NavigateDirection_PreviousSibling if self.shared.lock().back.is_some() => {
-                Ok(back_of(&self.shared))
+            // The title bar's buttons come before it, the last of them right before it.
+            NavigateDirection_PreviousSibling => {
+                let last = self.shared.lock().caption.kinds().last().copied();
+                match last {
+                    Some(kind) => Ok(caption_of(&self.shared, kind)),
+                    None => none(),
+                }
             }
             _ => none(),
         }

@@ -2476,4 +2476,43 @@ DSA는 Widevine을 싣거나 다시 배포하지 않습니다.</value>
   <data name="Widevine_RemovedPending" xml:space="preserve">
     <value>제거했습니다. Android는 다음에 시작할 때까지 계속 씁니다.</value>
   </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{1} {0}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}. {1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}, {1}, {2}: {3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>기록 {0}개가 빠졌습니다</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>표시할 최소 우선순위</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>불러오는 중</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>복사했습니다</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>탐색 창 표시 또는 숨기기</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>닫기</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>최소화</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>최대화</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>이전 크기로</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>도움말</value>
+  </data>
 </root>

@@ -18,7 +18,8 @@
                 <ui:CardControl>
                     <ui:CardControl.Header>
                         <StackPanel Orientation="Horizontal">
-                            <Image Source="pack://application:,,,/Assets/logo.png" Width="32" Height="32" Margin="0,0,16,0" />
+                            <Image Source="pack://application:,,,/Assets/logo.png" Width="32" Height="32" Margin="0,0,16,0"
+                                   AutomationProperties.Name="{l:Text AboutProductCard.Header}" />
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{l:Text AboutProductCard.Header}" Style="{StaticResource CardTitle}" />
                                 <TextBlock Text="{l:Text AboutProductCard.Description}" Style="{StaticResource CardDescription}" />
@@ -48,7 +49,9 @@
                     </ui:CardControl.Header>
                     <TextBlock Text="{Binding AndroidVersion, Mode=OneWay}" Style="{StaticResource CardValue}" />
                 </ui:CardControl>
-                <ui:CardAction Click="OnOpenLicenses">
+                <ui:CardAction Click="OnOpenLicenses"
+                               AutomationProperties.Name="{l:Text AboutLicenseCard.Header}"
+                               AutomationProperties.HelpText="{l:Text AboutLicenseCard.Description}">
                     <StackPanel>
                         <TextBlock Text="{l:Text AboutLicenseCard.Header}" Style="{StaticResource CardTitle}" />
                         <TextBlock Text="{l:Text AboutLicenseCard.Description}" Style="{StaticResource CardDescription}" />

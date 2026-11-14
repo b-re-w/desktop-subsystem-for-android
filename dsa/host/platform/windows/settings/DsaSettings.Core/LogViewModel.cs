@@ -32,6 +32,18 @@ public sealed record LogLine(
 
     public string BodyColumn => Dropped > 0 ? Text : $"{Tag}: {Message}";
 
+    /// <summary>The record as a screen reader reads its row: the time, the priority as a word
+    /// in the user's language, the tag and the message. A record that stands for dropped
+    /// records says how many.</summary>
+    public string Spoken(ITextSource text) => Dropped > 0
+        ? string.Format(CultureInfo.CurrentCulture, text.Get("A11y_LogDropped"), Dropped)
+        : string.Format(CultureInfo.CurrentCulture, text.Get("A11y_LogLine"), Time,
+            AccessibleText.LogLevel(text, Priority), Tag, Message);
+
+    /// <summary>The record as the log prints it. A list row whose words are not set falls back
+    /// to this; the record's own form ("LogLine { Time = ... }") read as noise.</summary>
+    public override string ToString() => Text;
+
     /// <summary>Reads one line of <c>dsa logcat --json</c>; null for a line that is not a record.</summary>
     public static LogLine? Parse(string json)
     {

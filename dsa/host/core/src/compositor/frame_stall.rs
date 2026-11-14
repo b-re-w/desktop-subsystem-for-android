@@ -263,6 +263,7 @@ impl Notice {
                 .duration_since(UNIX_EPOCH)
                 .map(|since| since.as_millis() as i64)
                 .unwrap_or(0),
+            buttons: Vec::new(),
         }
     }
 }

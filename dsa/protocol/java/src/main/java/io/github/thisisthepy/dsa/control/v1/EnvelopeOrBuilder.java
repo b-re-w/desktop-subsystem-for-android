@@ -833,6 +833,17 @@ public interface EnvelopeOrBuilder extends
   io.github.thisisthepy.dsa.control.v1.NotificationDismissed getNotificationDismissed();
 
   /**
+   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+   * @return Whether the notificationButtonClicked field is set.
+   */
+  boolean hasNotificationButtonClicked();
+  /**
+   * <code>.dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;</code>
+   * @return The notificationButtonClicked.
+   */
+  io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked getNotificationButtonClicked();
+
+  /**
    * <code>.dsa.control.v1.BackgroundApp background_app = 74;</code>
    * @return Whether the backgroundApp field is set.
    */

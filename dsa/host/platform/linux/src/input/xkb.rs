@@ -255,6 +255,11 @@ impl Keyboard {
         self.active(c"Control")
     }
 
+    /// Whether Shift is held.
+    pub fn shift(&self) -> bool {
+        self.active(c"Shift")
+    }
+
     /// What pressing the key with evdev code `code` types.
     pub fn press(&mut self, code: u32) -> Typed {
         if self.state.is_null() {

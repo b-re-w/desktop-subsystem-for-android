@@ -36,6 +36,8 @@
 //! - [`geometry`]: where the parts of a widget window are, at a monitor's scale.
 //! - [`gesture`]: what a press is doing, and when a resize passes its size on.
 //! - [`menu`]: what the widget's menu offers.
+//! - [`keyboard`]: moving and resizing a widget with the arrow keys after the menu's Move or
+//!   Size, and the keys that open the menu (the menu key, Shift+F10, Enter, Space).
 //! - [`service`]: the commands and reports between the windows and the service, and the watch.
 //! - [`desk`]: the widget windows' behaviour for a host that draws them itself (Linux, macOS):
 //!   everything but the windows themselves, which the host makes and moves as it is told.
@@ -47,6 +49,7 @@
 pub mod desk;
 pub mod geometry;
 pub mod gesture;
+pub mod keyboard;
 pub mod menu;
 pub mod paint;
 pub mod service;

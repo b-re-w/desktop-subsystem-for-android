@@ -12,6 +12,10 @@ package io.github.thisisthepy.dsa.control.v1;
  * accessibility service is off and reads nothing, so a user who uses no such client pays
  * nothing for it. The host says `on` again for every watched task each time the agent
  * connects, and a repeated `on` makes the agent send a full tree again.
+ * A watch with a `widget_id` (never 0) is for the window of that desktop widget instead, and
+ * its `task_id` is 0: the agent reads the nodes of the widget's own views, which live in the
+ * agent, and sends them as the widget's tree, in the pixels of the widget's image. Reading a
+ * widget needs no accessibility service, and the agent reads it only while it is watched.
  * </pre>
  *
  * Protobuf type {@code dsa.control.v1.AccessibilityWatch}
@@ -73,6 +77,32 @@ public  final class AccessibilityWatch extends
   private void clearOn() {
     
     on_ = false;
+  }
+
+  public static final int WIDGET_ID_FIELD_NUMBER = 3;
+  private int widgetId_;
+  /**
+   * <code>int32 widget_id = 3;</code>
+   * @return The widgetId.
+   */
+  @java.lang.Override
+  public int getWidgetId() {
+    return widgetId_;
+  }
+  /**
+   * <code>int32 widget_id = 3;</code>
+   * @param value The widgetId to set.
+   */
+  private void setWidgetId(int value) {
+    
+    widgetId_ = value;
+  }
+  /**
+   * <code>int32 widget_id = 3;</code>
+   */
+  private void clearWidgetId() {
+    
+    widgetId_ = 0;
   }
 
   public static io.github.thisisthepy.dsa.control.v1.AccessibilityWatch parseFrom(
@@ -165,6 +195,10 @@ public  final class AccessibilityWatch extends
    * accessibility service is off and reads nothing, so a user who uses no such client pays
    * nothing for it. The host says `on` again for every watched task each time the agent
    * connects, and a repeated `on` makes the agent send a full tree again.
+   * A watch with a `widget_id` (never 0) is for the window of that desktop widget instead, and
+   * its `task_id` is 0: the agent reads the nodes of the widget's own views, which live in the
+   * agent, and sends them as the widget's tree, in the pixels of the widget's image. Reading a
+   * widget needs no accessibility service, and the agent reads it only while it is watched.
    * </pre>
    *
    * Protobuf type {@code dsa.control.v1.AccessibilityWatch}
@@ -236,6 +270,34 @@ public  final class AccessibilityWatch extends
       return this;
     }
 
+    /**
+     * <code>int32 widget_id = 3;</code>
+     * @return The widgetId.
+     */
+    @java.lang.Override
+    public int getWidgetId() {
+      return instance.getWidgetId();
+    }
+    /**
+     * <code>int32 widget_id = 3;</code>
+     * @param value The widgetId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWidgetId(int value) {
+      copyOnWrite();
+      instance.setWidgetId(value);
+      return this;
+    }
+    /**
+     * <code>int32 widget_id = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWidgetId() {
+      copyOnWrite();
+      instance.clearWidgetId();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.AccessibilityWatch)
   }
   @java.lang.Override
@@ -254,10 +316,11 @@ public  final class AccessibilityWatch extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "taskId_",
             "on_",
+            "widgetId_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0004\u0002\u0007" +
-              "";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0004\u0002\u0007" +
+              "\u0003\u0004";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

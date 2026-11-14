@@ -19,6 +19,7 @@ namespace Dsa.Setup
         public const string Architecture = "x64";
         public static string VersionChip => Pick("Version {0}", "버전 {0}");
         public const string AndroidChip = "Android {0}";
+        public static string Logo => Pick("Desktop Subsystem for Android™ logo", "Desktop Subsystem for Android™ 로고");
 
         public static string InstallText => Pick(
             "Run Android apps in their own windows on your desktop. Setup installs the DSA service and downloads Android (about 1.8 GB).",

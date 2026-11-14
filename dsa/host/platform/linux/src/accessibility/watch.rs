@@ -18,7 +18,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use dsa_host_core::accessibility::{
-    ActionRequest, GuestAccessibility, NodeAction, PresenceChange, TreeError, TreeUpdate,
+    AccessibilityTarget, ActionRequest, GuestAccessibility, NodeAction, PresenceChange, TreeError,
+    TreeUpdate,
 };
 use dsa_host_core::host_api::HostApiClient;
 use dsa_transport::Connector;
@@ -41,6 +42,23 @@ pub trait EventSink: Send + Sync {
 
 /// The build a watch names itself by.
 const BUILD: &str = "dsa-compositor accessibility";
+
+/// The key a desktop widget's window has among the windows: its widget ID, negated, so it
+/// never meets a task's ID (never negative) and a widget's window and a task's window of the
+/// same number keep their own trees.
+pub fn widget_window_key(widget_id: i32) -> i32 {
+    -widget_id.abs()
+}
+
+/// Whose tree the window of `key` shows: a widget's for a key of [`widget_window_key`], else
+/// its task's.
+pub fn target_of(key: i32) -> AccessibilityTarget {
+    if key < 0 {
+        AccessibilityTarget::Widget(-key)
+    } else {
+        AccessibilityTarget::Task(key)
+    }
+}
 
 /// How long a watch waits for the service, and between two tries after it failed.
 const CONNECT: Duration = Duration::from_secs(5);
@@ -297,15 +315,23 @@ fn watch(
             return;
         }
         let mut connector = connect();
-        let stream = HostApiClient::connect(&mut *connector, BUILD, CONNECT)
-            .and_then(|client| client.watch_accessibility(task_id));
+        let target = target_of(task_id);
+        let stream =
+            HostApiClient::connect(&mut *connector, BUILD, CONNECT).and_then(
+                |client| match target {
+                    AccessibilityTarget::Task(task_id) => client.watch_accessibility(task_id),
+                    AccessibilityTarget::Widget(widget_id) => {
+                        client.watch_widget_accessibility(widget_id)
+                    }
+                },
+            );
         let mut stream = match stream {
             Ok(stream) => stream,
             Err(why) => {
                 failures += 1;
                 if failures == 1 {
                     shared.log(&format!(
-                        "task {task_id}: could not watch the accessibility tree: {why}"
+                        "{target}: could not watch the accessibility tree: {why}"
                     ));
                 }
                 if shared.wait(task_id, id, RETRY) {
@@ -387,5 +413,27 @@ fn watch(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A desktop widget's window is one of the provider's windows under a key of its own,
+    /// whose watch names the widget, never a task of the same number.
+    #[test]
+    fn fr18_widget_tree_watch_names_the_widget() {
+        let key = widget_window_key(12);
+        assert!(key < 0);
+        assert_eq!(target_of(key), AccessibilityTarget::Widget(12));
+        assert_eq!(target_of(12), AccessibilityTarget::Task(12));
+        assert_eq!(target_of(0), AccessibilityTarget::Task(0));
+        // Its objects' paths name it and come back to it.
+        let window = super::super::objects::Object::Window(key);
+        assert_eq!(
+            super::super::objects::Object::from_path(&window.path()),
+            Some(window)
+        );
     }
 }

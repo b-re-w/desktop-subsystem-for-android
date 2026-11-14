@@ -306,7 +306,8 @@ unsafe extern "C-unwind" fn key_down(this: &AnyObject, _: Sel, event: *mut AnyOb
         return;
     };
     let code: u16 = msg_send![event, keyCode];
-    if let Some(key) = key(code) {
+    let modifiers: usize = msg_send![event, modifierFlags];
+    if let Some(key) = key(code, modifiers as u64) {
         with_panels(|panels| panels.desk.key(widget_id, key));
         after_input();
     }

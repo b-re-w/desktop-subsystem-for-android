@@ -8,7 +8,7 @@ struct WidevineSection: View {
     @ObservedObject var vm: WidevineViewModel
 
     var body: some View {
-        Section(T("WidevineHeader.Text")) {
+        Section(heading: T("WidevineHeader.Text")) {
             if let error = vm.error {
                 Banner(kind: .error, title: T("WidevineErrorBar.Title"), message: error)
             }

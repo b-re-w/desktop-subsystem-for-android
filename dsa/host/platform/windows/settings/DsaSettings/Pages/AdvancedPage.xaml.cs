@@ -114,6 +114,8 @@ public partial class AdvancedPage : Page
         {
             return;
         }
+        // The check mark is only seen; a screen reader says it in words.
+        Announce.Say(GappsDeviceIdCopyButton, App.Text.Get("A11y_Copied"));
         GappsDeviceIdCopyButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Checkmark24 };
         await System.Threading.Tasks.Task.Delay(1500);
         GappsDeviceIdCopyButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Copy24 };
@@ -136,6 +138,7 @@ public partial class AdvancedPage : Page
         {
             return;
         }
+        Announce.Say(button, App.Text.Get("A11y_Copied"));
         button.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Checkmark24 };
         await System.Threading.Tasks.Task.Delay(1500);
         button.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Copy24 };
@@ -182,6 +185,7 @@ public partial class AdvancedPage : Page
         {
             return;
         }
+        Announce.Say(RecoveryKeyCopyButton, App.Text.Get("A11y_Copied"));
         RecoveryKeyCopyButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Checkmark24 };
         await System.Threading.Tasks.Task.Delay(1500);
         RecoveryKeyCopyButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Copy24 };

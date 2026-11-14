@@ -104,4 +104,15 @@ public interface AccessibilityTreeOrBuilder extends
    * @return The accessibilityFocusedId.
    */
   int getAccessibilityFocusedId();
+
+  /**
+   * <pre>
+   * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+   * are in pixels of the widget's image: (0, 0) is its top left.
+   * </pre>
+   *
+   * <code>int32 widget_id = 9;</code>
+   * @return The widgetId.
+   */
+  int getWidgetId();
 }

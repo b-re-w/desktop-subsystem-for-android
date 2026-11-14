@@ -38,6 +38,12 @@ public partial class GeneralPage : Page
         }
         catch (System.Runtime.InteropServices.ExternalException)
         {
+            return;
+        }
+        if (sender is UIElement button)
+        {
+            // Nothing on screen changes; a screen reader says the copy happened.
+            Announce.Say(button, App.Text.Get("A11y_Copied"));
         }
     }
 

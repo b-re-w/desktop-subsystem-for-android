@@ -64,6 +64,7 @@ public partial class MainWindow : FluentWindow
             }
             Navigation.Navigate(StartPage());
             MakePaneScroll();
+            NameTitleBarButtons();
             _ = App.Settings.LoadAsync();
         };
     }
@@ -189,6 +190,58 @@ public partial class MainWindow : FluentWindow
         else if (bottom > scroller.ViewportHeight)
         {
             scroller.ScrollToVerticalOffset(scroller.VerticalOffset + bottom - scroller.ViewportHeight);
+        }
+    }
+
+    /// <summary>Names the title bar's buttons for screen readers: the library draws each as a
+    /// glyph with no name. The maximize button says "Restore" while the window is maximized,
+    /// as Windows' own caption button does.</summary>
+    private void NameTitleBarButtons()
+    {
+        var buttons = Descendants<TitleBarButton>(this).ToList();
+        void NameAll()
+        {
+            foreach (var button in buttons)
+            {
+                var key = button.ButtonType switch
+                {
+                    TitleBarButtonType.Minimize => "A11y_Minimize",
+                    TitleBarButtonType.Maximize or TitleBarButtonType.Restore =>
+                        WindowState == WindowState.Maximized ? "A11y_Restore" : "A11y_Maximize",
+                    TitleBarButtonType.Close => "A11y_Close",
+                    TitleBarButtonType.Help => "A11y_Help",
+                    _ => null,
+                };
+                if (key is not null)
+                {
+                    System.Windows.Automation.AutomationProperties.SetName(button, App.Text.Get(key));
+                }
+            }
+        }
+        NameAll();
+        StateChanged += (_, _) => NameAll();
+        var type = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
+            TitleBarButton.ButtonTypeProperty, typeof(TitleBarButton));
+        foreach (var button in buttons)
+        {
+            type.AddValueChanged(button, (_, _) => NameAll());
+        }
+    }
+
+    /// <summary>Every element of type <typeparamref name="T"/> under <paramref name="root"/>.</summary>
+    private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T found)
+            {
+                yield return found;
+            }
+            foreach (var deeper in Descendants<T>(child))
+            {
+                yield return deeper;
+            }
         }
     }
 

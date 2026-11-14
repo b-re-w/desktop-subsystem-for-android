@@ -25,6 +25,12 @@
 //! buttons themselves are pressed here, on the non-client mouse messages, so Windows never
 //! draws its classic buttons over them.
 //!
+//! UI Automation clients find the title bar in the window's own tree, as buttons named in the
+//! display language ([`super::accessibility`]). The title bar's information the window answers
+//! (`WM_GETTITLEBARINFOEX`) gives the buttons' real places and marks them invisible, so the
+//! non-client proxy Windows adds to every window's tree does not describe them a second time
+//! ([`withdraw_from_proxies`]).
+//!
 //! The glyphs are dark over a light band and light over a dark one. What the app asked its
 //! status bar's icons to be (`ToHost::CaptionTone`, from the appearance the guest's window
 //! manager reports as the app changes it) decides, as it does on Android's own status bar.
@@ -243,6 +249,31 @@ fn title_bar_rects(layout: &CaptionLayout, x: i32, y: i32) -> (RECT, [RECT; 3]) 
     let title = rect((0, 0, layout.width, layout.height));
     let buttons = CaptionButton::ALL.map(|button| rect(layout.button_rect(button)));
     (title, buttons)
+}
+
+/// `STATE_SYSTEM_INVISIBLE`, the state bit of a part of a title bar that is not there.
+const STATE_INVISIBLE: u32 = 0x0000_8000;
+
+/// Marks the title bar and its buttons invisible in the states `WM_GETTITLEBARINFOEX`
+/// answers (`rgstate`: the title bar, a reserved one, minimize, maximize, help and close).
+///
+/// UI Automation's non-client proxy, which every client merges into a window's tree, and the
+/// standard title bar object of Microsoft Active Accessibility build a caption's elements from
+/// this answer. The window's own tree has the title bar the window draws, every button named
+/// and placed, with the window menu Alt+Space opens, the back arrow, Restore in full screen,
+/// and the buttons kept while a full screen window hides them ([`super::accessibility`]). Left
+/// visible, the proxy's copy would stand beside them: a second set of buttons, without the
+/// icon's back arrow, gone while the window fills its monitor, which clients would find first
+/// at a point (the proxy answers the band's hit test codes before the window's own tree is
+/// asked). Marked invisible, the proxy leaves them out, and clients find the window's own. The
+/// rectangles stay the real ones, for any caller that reads where the buttons are.
+fn withdraw_from_proxies(states: &mut [u32; 6]) {
+    for (index, state) in states.iter_mut().enumerate() {
+        // Index 1 is reserved and holds nothing.
+        if index != 1 {
+            *state |= STATE_INVISIBLE;
+        }
+    }
 }
 
 /// The key events a click on the back arrow sends the task: Back pressed and released, at
@@ -1077,6 +1108,8 @@ impl CaptionWindow {
                 (*info).rgrect[2] = minimize;
                 (*info).rgrect[3] = maximize;
                 (*info).rgrect[5] = close;
+                // The window's own tree describes them; Windows' proxy leaves them out.
+                withdraw_from_proxies(&mut (*info).rgstate);
                 Some(result)
             }
             WM_NCACTIVATE => {
@@ -1127,6 +1160,22 @@ mod tests {
                 "button {index}"
             );
         }
+    }
+
+    #[test]
+    fn fr18_windows_proxy_leaves_the_drawn_title_bar_to_the_windows_own_tree() {
+        // What DefWindowProc fills in for a window with a caption: the title bar and its
+        // buttons there, the help button and the reserved slot not.
+        let mut states = [0, STATE_INVISIBLE, 0, 0, STATE_INVISIBLE, 0];
+        withdraw_from_proxies(&mut states);
+        for index in [0, 2, 3, 4, 5] {
+            assert_ne!(states[index] & STATE_INVISIBLE, 0, "part {index}");
+        }
+        // Nothing else Windows said about them changes.
+        let mut pressed = [0x8 /* STATE_SYSTEM_PRESSED */, 0, 0x8, 0, 0, 0];
+        withdraw_from_proxies(&mut pressed);
+        assert_eq!(pressed[0] & 0x8, 0x8);
+        assert_eq!(pressed[1], 0, "the reserved slot");
     }
 
     #[test]
