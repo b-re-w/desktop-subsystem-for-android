@@ -308,6 +308,13 @@ pub struct HostConfig {
     /// system's commit limit, and takes memory only while video plays.
     #[serde(default)]
     pub video_shared_memory_mb: Option<u64>,
+    /// The size in MiB of the memory the VM shares with the graphics renderer (256 when absent,
+    /// 0 for none). Apps' Vulkan host-visible memory and gralloc buffers' CPU uploads and read
+    /// backs go there instead of through the graphics stream; the size is fixed when the VM is
+    /// made, counts against the system's commit limit, and takes memory only where the guest or
+    /// the GPU writes, which the renderer gives back when an app frees it.
+    #[serde(default)]
+    pub graphics_shared_memory_mb: Option<u64>,
     /// The machine's DSA folder: the folder the configuration file is in, which `dsa-hostd`
     /// fills in when it reads the file. Not a key of the file.
     #[serde(skip)]
@@ -697,6 +704,10 @@ impl HostConfig {
             socket_sids.first().map(String::as_str),
             self.video_shared_memory_mb,
         );
+        let graphics_region = crate::graphics_region::graphics_region(
+            socket_sids.first().map(String::as_str),
+            self.graphics_shared_memory_mb,
+        );
         AndroidVmConfig {
             owner: format!("DSA ({vm_name})"),
             kernel: files.kernel,
@@ -720,6 +731,7 @@ impl HostConfig {
             network_adapter: None,
             direct_mapped: None,
             picture_region,
+            graphics_region,
         }
     }
 

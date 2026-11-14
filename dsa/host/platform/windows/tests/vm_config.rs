@@ -72,6 +72,7 @@ fn config() -> AndroidVmConfig {
         network_adapter: None,
         direct_mapped: None,
         picture_region: None,
+        graphics_region: None,
     }
 }
 
@@ -120,6 +121,48 @@ fn pr7_the_hcs_document_shares_the_picture_section_read_only_with_the_guest() {
     );
     assert_eq!(picture_region(Some(USER_SID), Some(1)), None, "too small");
     assert_eq!(picture_region(None, None), None);
+}
+
+#[test]
+fn pr7_the_hcs_document_shares_the_graphics_memory_and_its_read_only_grants() {
+    use dsa_host_windows::graphics_region::{
+        data_section_name, grants_section_name, graphics_region,
+    };
+    use dsa_host_windows::picture_region::picture_region;
+    let mut vm = config();
+    vm.graphics_region = graphics_region(Some(USER_SID), None);
+    let region = vm.graphics_region.clone().expect("on by default");
+    assert_eq!(region.data_section, data_section_name(USER_SID));
+    assert_eq!(region.grants_section, grants_section_name(USER_SID));
+    assert!(region.data_section.starts_with(r"Global\") && region.data_section.ends_with(USER_SID));
+    assert_ne!(region.data_section, region.grants_section);
+    assert_eq!(region.data_length, 256 << 20);
+    assert_eq!(region.grants_length, 2 << 20);
+    let doc = document(&vm);
+    let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
+    assert_eq!(regions.as_array().map(Vec::len), Some(2));
+    // The guest writes its host-visible memory, and only reads the grants.
+    assert_eq!(regions[0]["SectionName"], region.data_section);
+    assert_eq!(regions[0]["Length"], 256u64 << 20);
+    assert_eq!(regions[0]["AllowGuestWrite"], true);
+    assert_eq!(regions[1]["SectionName"], region.grants_section);
+    assert_eq!(regions[1]["AllowGuestWrite"], false);
+    // With the pictures' region too: all three, the pictures' first.
+    vm.picture_region = picture_region(Some(USER_SID), None);
+    let doc = document(&vm);
+    let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
+    assert_eq!(regions.as_array().map(Vec::len), Some(3));
+    assert_eq!(
+        regions[0]["SectionName"],
+        vm.picture_region.unwrap().section_name
+    );
+    // 0 turns it off; a size is whole 2 MiB; no user, none.
+    assert_eq!(graphics_region(Some(USER_SID), Some(0)), None);
+    assert_eq!(
+        graphics_region(Some(USER_SID), Some(33)).map(|r| r.data_length),
+        Some(34 << 20)
+    );
+    assert_eq!(graphics_region(None, None), None);
 }
 
 #[test]
