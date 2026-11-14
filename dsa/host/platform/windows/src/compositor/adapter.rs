@@ -411,6 +411,16 @@ impl NativeBackend {
         path: &Path,
         request: &GpuRequest,
     ) -> Result<(NativeBackend, Option<String>), String> {
+        Self::load_with(path, request, &[])
+    }
+
+    /// [`load_on`](Self::load_on), with gfxstream renderer features to turn on or off
+    /// (`Name:enabled` or `Name:disabled`) beside the backend's own.
+    pub fn load_with(
+        path: &Path,
+        request: &GpuRequest,
+        features: &[String],
+    ) -> Result<(NativeBackend, Option<String>), String> {
         let wide_path = wide(&path.to_string_lossy());
         // SAFETY: LoadLibraryW with null-terminated UTF-16 path.
         let handle = unsafe { LoadLibraryW(wide_path.as_ptr()) };
@@ -455,7 +465,24 @@ impl NativeBackend {
                 set_log(Some(renderer_log_trampoline), std::ptr::null_mut());
             }
 
-            let note = select_gpu(fn_select_gpu, request);
+            let mut note = select_gpu(fn_select_gpu, request);
+            if !features.is_empty() {
+                let set_features: Option<unsafe extern "C" fn(*const c_char) -> c_int> =
+                    Self::get_symbol(handle, b"dsa_gfx_set_renderer_features\0").ok();
+                let joined = features.join(",");
+                match (set_features, CString::new(joined.as_str())) {
+                    (Some(set), Ok(text)) if set(text.as_ptr()) == 0 => {}
+                    _ => {
+                        let why = format!(
+                            "this graphics backend cannot be given the renderer features {joined}"
+                        );
+                        note = Some(match note {
+                            Some(before) => format!("{before}; {why}"),
+                            None => why,
+                        });
+                    }
+                }
+            }
 
             let ret = (fn_init)(1280, 720);
             if ret != 0 {
@@ -803,10 +830,29 @@ impl GfxstreamAdapter {
 
     /// Like [`new`](Self::new), starting the renderer on the GPU `request` asks for.
     pub fn on_gpu(custom_path: Option<PathBuf>, request: &GpuRequest) -> GfxstreamAdapter {
+        Self::on_gpu_with(custom_path, request, &[])
+    }
+
+    /// An adapter with no backend, for a renderer with nothing to run on: `note` says why.
+    pub fn without_backend(note: String) -> GfxstreamAdapter {
+        GfxstreamAdapter {
+            dll_path: None,
+            backend: None,
+            sink: Mutex::new(None),
+            notes: vec![note],
+        }
+    }
+
+    /// Like [`on_gpu`](Self::on_gpu), with gfxstream renderer `features` (`Name:disabled`).
+    pub fn on_gpu_with(
+        custom_path: Option<PathBuf>,
+        request: &GpuRequest,
+        features: &[String],
+    ) -> GfxstreamAdapter {
         let dll_path = custom_path.or_else(Self::find_backend_dll);
         let mut notes = Vec::new();
         let backend = if let Some(path) = &dll_path {
-            match NativeBackend::load_on(path, request) {
+            match NativeBackend::load_with(path, request, features) {
                 Ok((b, note)) => {
                     notes.extend(note);
                     Some(Arc::new(b) as Arc<dyn GfxBackend>)
