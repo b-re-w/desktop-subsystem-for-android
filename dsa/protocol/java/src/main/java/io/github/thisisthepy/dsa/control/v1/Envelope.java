@@ -158,6 +158,7 @@ public  final class Envelope extends
     CAMERA_STILL_TAKEN(266),
     CAMERA_ERROR(267),
     SET_TASK_CAPTION(155),
+    SET_TASK_FULL_SCREEN(156),
     SYSTEM_SETTINGS(340),
     DEVICE_NAME(383),
     GAMEPAD_CONNECTED(341),
@@ -369,6 +370,7 @@ public  final class Envelope extends
         case 266: return CAMERA_STILL_TAKEN;
         case 267: return CAMERA_ERROR;
         case 155: return SET_TASK_CAPTION;
+        case 156: return SET_TASK_FULL_SCREEN;
         case 340: return SYSTEM_SETTINGS;
         case 383: return DEVICE_NAME;
         case 341: return GAMEPAD_CONNECTED;
@@ -7343,6 +7345,56 @@ public  final class Envelope extends
    */
   private void clearSetTaskCaption() {
     if (bodyCase_ == 155) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
+  public static final int SET_TASK_FULL_SCREEN_FIELD_NUMBER = 156;
+  /**
+   * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+   */
+  @java.lang.Override
+  public boolean hasSetTaskFullScreen() {
+    return bodyCase_ == 156;
+  }
+  /**
+   * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen getSetTaskFullScreen() {
+    if (bodyCase_ == 156) {
+       return (io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+   */
+  private void setSetTaskFullScreen(io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 156;
+  }
+  /**
+   * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+   */
+  private void mergeSetTaskFullScreen(io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen value) {
+    value.getClass();
+  if (bodyCase_ == 156 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen.newBuilder((io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 156;
+  }
+  /**
+   * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+   */
+  private void clearSetTaskFullScreen() {
+    if (bodyCase_ == 156) {
       bodyCase_ = 0;
       body_ = null;
     }
@@ -16984,6 +17036,54 @@ public  final class Envelope extends
     }
 
     /**
+     * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+     */
+    @java.lang.Override
+    public boolean hasSetTaskFullScreen() {
+      return instance.hasSetTaskFullScreen();
+    }
+    /**
+     * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen getSetTaskFullScreen() {
+      return instance.getSetTaskFullScreen();
+    }
+    /**
+     * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+     */
+    public Builder setSetTaskFullScreen(io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen value) {
+      copyOnWrite();
+      instance.setSetTaskFullScreen(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+     */
+    public Builder setSetTaskFullScreen(
+        io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSetTaskFullScreen(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+     */
+    public Builder mergeSetTaskFullScreen(io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen value) {
+      copyOnWrite();
+      instance.mergeSetTaskFullScreen(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.SetTaskFullScreen set_task_full_screen = 156;</code>
+     */
+    public Builder clearSetTaskFullScreen() {
+      copyOnWrite();
+      instance.clearSetTaskFullScreen();
+      return this;
+    }
+
+    /**
      * <code>.dsa.control.v1.SystemSettings system_settings = 340;</code>
      */
     @java.lang.Override
@@ -19890,6 +19990,7 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.ArmTranslationQuery.class,
             io.github.thisisthepy.dsa.control.v1.ArmTranslationState.class,
             io.github.thisisthepy.dsa.control.v1.SetTaskCaption.class,
+            io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen.class,
             io.github.thisisthepy.dsa.control.v1.LocationRequest.class,
             io.github.thisisthepy.dsa.control.v1.LocationStatus.class,
             io.github.thisisthepy.dsa.control.v1.LocationFix.class,
@@ -19983,7 +20084,7 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.DnsAnswer.class,
           };
           java.lang.String info =
-              "\u0000\u00c4\u0001\u0000\u0001\u02b3\u00c4\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u00c5\u0001\u0000\u0001\u02b3\u00c5\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
               "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
               "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000" +
@@ -19996,21 +20097,21 @@ public  final class Envelope extends
               "g<\u0000h<\u0000i<\u0000j<\u0000k<\u0000n<\u0000x<\u0000y<\u0000z<\u0000{<\u0000" +
               "|<\u0000}<\u0000~<\u0000<\u0000\u0082<\u0000\u0083<\u0000\u0084<\u0000\u0085<\u0000" +
               "\u0086<\u0000\u0087<\u0000\u0088<\u0000\u008c<\u0000\u008d<\u0000\u0098<\u0000\u0099" +
-              "<\u0000\u009a<\u0000\u009b<\u0000\u00c8<\u0000\u00c9<\u0000\u00ca<\u0000\u00dc<\u0000" +
-              "\u00dd<\u0000\u00de<\u0000\u00df<\u0000\u00f0<\u0000\u00f1<\u0000\u00f2<\u0000\u0104" +
-              "<\u0000\u0105<\u0000\u0106<\u0000\u0107<\u0000\u0108<\u0000\u0109<\u0000\u010a<\u0000" +
-              "\u010b<\u0000\u0122<\u0000\u0123<\u0000\u0154<\u0000\u0155<\u0000\u0156<\u0000\u0157" +
-              "<\u0000\u0158<\u0000\u015e<\u0000\u015f<\u0000\u0160<\u0000\u0161<\u0000\u0162<\u0000" +
-              "\u0179<\u0000\u017c<\u0000\u017d<\u0000\u017e<\u0000\u017f<\u0000\u0192<\u0000\u0193" +
-              "<\u0000\u0194<\u0000\u0195<\u0000\u0196<\u0000\u0197<\u0000\u0198<\u0000\u0199<\u0000" +
-              "\u019a<\u0000\u019b<\u0000\u019c<\u0000\u019d<\u0000\u019e<\u0000\u019f<\u0000\u01d6" +
-              "<\u0000\u01d7<\u0000\u01d8<\u0000\u01d9<\u0000\u026c<\u0000\u026d<\u0000\u026e<\u0000" +
-              "\u026f<\u0000\u0270<\u0000\u0271<\u0000\u0272<\u0000\u0273<\u0000\u0274<\u0000\u0275" +
-              "<\u0000\u0276<\u0000\u0277<\u0000\u0280<\u0000\u0281<\u0000\u0282<\u0000\u0283<\u0000" +
-              "\u0284<\u0000\u0285<\u0000\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289<\u0000\u028a" +
-              "<\u0000\u028b<\u0000\u028c<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000\u0290<\u0000" +
-              "\u0291<\u0000\u0292<\u0000\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab<\u0000\u02ac" +
-              "<\u0000\u02b2<\u0000\u02b3<\u0000";
+              "<\u0000\u009a<\u0000\u009b<\u0000\u009c<\u0000\u00c8<\u0000\u00c9<\u0000\u00ca<\u0000" +
+              "\u00dc<\u0000\u00dd<\u0000\u00de<\u0000\u00df<\u0000\u00f0<\u0000\u00f1<\u0000\u00f2" +
+              "<\u0000\u0104<\u0000\u0105<\u0000\u0106<\u0000\u0107<\u0000\u0108<\u0000\u0109<\u0000" +
+              "\u010a<\u0000\u010b<\u0000\u0122<\u0000\u0123<\u0000\u0154<\u0000\u0155<\u0000\u0156" +
+              "<\u0000\u0157<\u0000\u0158<\u0000\u015e<\u0000\u015f<\u0000\u0160<\u0000\u0161<\u0000" +
+              "\u0162<\u0000\u0179<\u0000\u017c<\u0000\u017d<\u0000\u017e<\u0000\u017f<\u0000\u0192" +
+              "<\u0000\u0193<\u0000\u0194<\u0000\u0195<\u0000\u0196<\u0000\u0197<\u0000\u0198<\u0000" +
+              "\u0199<\u0000\u019a<\u0000\u019b<\u0000\u019c<\u0000\u019d<\u0000\u019e<\u0000\u019f" +
+              "<\u0000\u01d6<\u0000\u01d7<\u0000\u01d8<\u0000\u01d9<\u0000\u026c<\u0000\u026d<\u0000" +
+              "\u026e<\u0000\u026f<\u0000\u0270<\u0000\u0271<\u0000\u0272<\u0000\u0273<\u0000\u0274" +
+              "<\u0000\u0275<\u0000\u0276<\u0000\u0277<\u0000\u0280<\u0000\u0281<\u0000\u0282<\u0000" +
+              "\u0283<\u0000\u0284<\u0000\u0285<\u0000\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289" +
+              "<\u0000\u028a<\u0000\u028b<\u0000\u028c<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000" +
+              "\u0290<\u0000\u0291<\u0000\u0292<\u0000\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab" +
+              "<\u0000\u02ac<\u0000\u02b2<\u0000\u02b3<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
