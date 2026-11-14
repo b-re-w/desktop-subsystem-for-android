@@ -106,6 +106,7 @@ pub mod files_door;
 pub mod gamepads;
 pub mod gapps;
 pub mod geocode;
+pub mod graphics_state;
 pub mod guest_display;
 pub mod guest_log;
 pub mod guest_log_api;

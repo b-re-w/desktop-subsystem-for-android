@@ -32,6 +32,7 @@
 //!                              "touch_gestures_off": true,
 //!                              "image_auto_restart": true,
 //!                              "host_certificates": true,
+//!                              "vulkan_driver": "auto",
 //!                              "app_full_screen": {"fullscreen": "screen",
 //!                                                    "immersive": "window"}}
 //! <dir>/users/<user>.app-windows.json
@@ -147,11 +148,16 @@ pub struct Settings {
     /// request and an app hiding both its bars alone: the whole screen and inside the window
     /// by default. The user's own; it applies at once.
     pub app_full_screen: FullScreenDefaults,
+    /// Which Vulkan implementation the user's graphics renderer uses: `auto` (the default),
+    /// `native` or `dozen` ([`normalise_vulkan_driver`]). The user's own; the window manager
+    /// reads it when it starts.
+    pub vulkan_driver: String,
 }
 
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
+            vulkan_driver: auto(),
             render_gpu: "display".into(),
             freeze: false,
             links_in_android: false,
@@ -228,6 +234,29 @@ fn display() -> String {
     "display".into()
 }
 
+fn auto() -> String {
+    VULKAN_DRIVERS[0].into()
+}
+
+/// The values of the Vulkan driver setting: `auto` (a native Vulkan driver, and Dozen,
+/// Vulkan on Direct3D 12, only when no native driver works), `native` (never Dozen) and
+/// `dozen` (only Dozen, to test and compare). The first is the default.
+pub const VULKAN_DRIVERS: [&str; 3] = ["auto", "native", "dozen"];
+
+/// Checks a Vulkan driver value and writes it the way it is kept, in lower case. Anything but
+/// [`VULKAN_DRIVERS`] is refused, with the values to choose from.
+pub fn normalise_vulkan_driver(value: &str) -> Result<String, String> {
+    let lower = value.trim().to_ascii_lowercase();
+    if VULKAN_DRIVERS.contains(&lower.as_str()) {
+        return Ok(lower);
+    }
+    Err(format!(
+        "the Vulkan driver {:?} is not one DSA knows; use auto (a native Vulkan driver, and \
+         Dozen only when none works), native (never Dozen) or dozen (only Dozen)",
+        value.trim()
+    ))
+}
+
 fn default_adb_port() -> u16 {
     DEFAULT_ADB_PORT
 }
@@ -279,11 +308,14 @@ pub struct UserSettings {
     pub host_certificates: bool,
     #[serde(default)]
     pub app_full_screen: FullScreenDefaults,
+    #[serde(default = "auto")]
+    pub vulkan_driver: String,
 }
 
 impl Default for UserSettings {
     fn default() -> UserSettings {
         UserSettings {
+            vulkan_driver: auto(),
             render_gpu: display(),
             freeze: false,
             links_in_android: false,
@@ -331,6 +363,9 @@ impl UserSettings {
             image_auto_restart: settings.image_auto_restart,
             host_certificates: settings.host_certificates,
             app_full_screen: settings.app_full_screen.resolved(),
+            // Checked by the caller; a value that does not check is kept as the default.
+            vulkan_driver: normalise_vulkan_driver(&settings.vulkan_driver)
+                .unwrap_or_else(|_| auto()),
         }
     }
 }
@@ -679,6 +714,8 @@ fn combine(mine: UserSettings, machine: MachineSettings) -> Settings {
         image_auto_restart: mine.image_auto_restart,
         host_certificates: mine.host_certificates,
         app_full_screen: mine.app_full_screen.resolved(),
+        // A value a later release no longer knows reads as the default.
+        vulkan_driver: normalise_vulkan_driver(&mine.vulkan_driver).unwrap_or_else(|_| auto()),
     }
 }
 
@@ -704,6 +741,7 @@ impl SettingsStore for FileSettings {
 
     fn set(&self, user: &str, settings: &Settings) -> Result<Settings, String> {
         let render_gpu = normalise_render_gpu(&settings.render_gpu)?;
+        let vulkan_driver = normalise_vulkan_driver(&settings.vulkan_driver)?;
         let shared_folders = file_share::normalise_folders(&settings.shared_folders)?;
         let user_file = self.user_file(user)?;
         let _held = self.lock.lock().unwrap_or_else(|e| e.into_inner());
@@ -714,6 +752,7 @@ impl SettingsStore for FileSettings {
         write_json(&self.machine_file(), &machine_part(settings))?;
         Ok(Settings {
             render_gpu,
+            vulkan_driver,
             adb_port: normalise_adb_port(settings.adb_port),
             shared_folders,
             ..settings.clone()
@@ -895,6 +934,7 @@ impl SettingsStore for MemorySettings {
 
     fn set(&self, user: &str, settings: &Settings) -> Result<Settings, String> {
         let render_gpu = normalise_render_gpu(&settings.render_gpu)?;
+        let vulkan_driver = normalise_vulkan_driver(&settings.vulkan_driver)?;
         let shared_folders = file_share::normalise_folders(&settings.shared_folders)?;
         self.users.lock().unwrap_or_else(|e| e.into_inner()).insert(
             user.to_string(),
@@ -903,6 +943,7 @@ impl SettingsStore for MemorySettings {
         *self.machine.lock().unwrap_or_else(|e| e.into_inner()) = machine_part(settings);
         Ok(Settings {
             render_gpu,
+            vulkan_driver,
             adb_port: normalise_adb_port(settings.adb_port),
             shared_folders,
             ..settings.clone()
@@ -1128,10 +1169,12 @@ mod tests {
                     host_certificates: true,
                     root_elevation: false,
                     app_full_screen: crate::app_windows::FullScreenDefaults::default(),
+                    vulkan_driver: " Dozen ".into(),
                 },
             )
             .unwrap();
         assert_eq!(saved.render_gpu, "discrete");
+        assert_eq!(saved.vulkan_driver, "dozen");
 
         let again = FileSettings::new(&dir);
         let mine = again.get("S-1-5-21-1-2-3-1001").unwrap();
@@ -1147,6 +1190,70 @@ mod tests {
         assert!(!theirs.program_updates);
         assert!(!again.machine().program_updates);
         assert!(theirs.prerelease_updates, "the channel is the machine's");
+        assert_eq!(mine.vulkan_driver, "dozen");
+        assert_eq!(
+            theirs.vulkan_driver, "auto",
+            "the Vulkan driver is the user's own"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn pr3_the_vulkan_driver_is_auto_native_or_dozen_and_nothing_else() {
+        assert_eq!(Settings::default().vulkan_driver, "auto");
+        assert_eq!(UserSettings::default().vulkan_driver, "auto");
+        assert_eq!(normalise_vulkan_driver(" Native ").unwrap(), "native");
+        assert_eq!(normalise_vulkan_driver("DOZEN").unwrap(), "dozen");
+        assert_eq!(normalise_vulkan_driver("auto").unwrap(), "auto");
+        for bad in ["", "swiftshader", "dzn", "warp"] {
+            let refused = normalise_vulkan_driver(bad).unwrap_err();
+            assert!(
+                refused.contains("auto") && refused.contains("dozen"),
+                "{refused}"
+            );
+        }
+    }
+
+    #[test]
+    fn pr3_an_invalid_vulkan_driver_changes_nothing() {
+        let dir = scratch("invalid-vulkan");
+        let store = FileSettings::new(&dir);
+        let error = store
+            .set(
+                "uid:1000",
+                &Settings {
+                    vulkan_driver: "lavapipe".into(),
+                    ..Settings::default()
+                },
+            )
+            .unwrap_err();
+        assert!(error.contains("Vulkan driver"), "{error}");
+        assert!(!dir.exists(), "nothing was written");
+        let memory = MemorySettings::default();
+        assert!(memory
+            .set(
+                "uid:1000",
+                &Settings {
+                    vulkan_driver: "lavapipe".into(),
+                    ..Settings::default()
+                }
+            )
+            .is_err());
+        assert_eq!(memory.get("uid:1000").unwrap().vulkan_driver, "auto");
+    }
+
+    #[test]
+    fn pr3_a_settings_file_without_the_vulkan_driver_reads_as_auto() {
+        let dir = scratch("vulkan-missing");
+        std::fs::create_dir_all(dir.join("users")).unwrap();
+        std::fs::write(
+            dir.join("users").join("uid_1000.json"),
+            r#"{"render_gpu": "display", "vulkan_driver": "something-newer"}"#,
+        )
+        .unwrap();
+        let store = FileSettings::new(&dir);
+        assert_eq!(store.get("uid:1000").unwrap().vulkan_driver, "auto");
+        assert_eq!(store.get("uid:1001").unwrap().vulkan_driver, "auto");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
