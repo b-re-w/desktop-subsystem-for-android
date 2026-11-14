@@ -22,8 +22,8 @@ use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 use dsa_host_core::accessibility::{
-    from_screen, to_screen, ActionRequest, Changes, ClientPresence, Node, NodeAction, NodeRange,
-    Tree, TreeError, TreeUpdate,
+    chars_to_utf16, from_screen, to_screen, utf16_to_chars, ActionRequest, Changes, ClientPresence,
+    Node, NodeAction, NodeRange, Tree, TreeError, TreeUpdate,
 };
 use dsa_host_core::compositor::caption::CaptionButton;
 use dsa_host_core::input::WindowGeometry;
@@ -44,6 +44,8 @@ pub mod interface {
     pub const VALUE: &str = "org.a11y.atspi.Value";
     pub const TEXT: &str = "org.a11y.atspi.Text";
     pub const EDITABLE_TEXT: &str = "org.a11y.atspi.EditableText";
+    pub const TABLE: &str = "org.a11y.atspi.Table";
+    pub const TABLE_CELL: &str = "org.a11y.atspi.TableCell";
 }
 
 /// The application's object path, which AT-SPI fixes.
@@ -798,7 +800,7 @@ impl Access {
                     let (_, _, width, height) = window.node_rect(node.bounds);
                     atspi::states_of(
                         node,
-                        window.tree.focused() == Some(id),
+                        window.tree.client_focus() == Some(id),
                         width > 0 && height > 0,
                     )
                 }
@@ -810,13 +812,85 @@ impl Access {
     /// The object's attributes: what the node is in Android.
     pub fn attributes(&self, object: Object) -> Vec<(String, String)> {
         let mut attributes = vec![("toolkit".to_string(), "Android".to_string())];
-        if let Some((_, node)) = self.node(object) {
+        if let Some((window, node)) = self.node(object) {
             attributes.push(("class".into(), node.class_name.clone()));
             if !node.view_id.is_empty() {
                 attributes.push(("id".into(), node.view_id.clone()));
             }
+            attributes.extend(atspi::node_attributes(node));
+            // Where an item is in its list, which a screen reader says ("3 of 40").
+            if let Some((place, size)) = window.tree.place_in_set(node.id) {
+                attributes.push(("posinset".into(), place.to_string()));
+                attributes.push(("setsize".into(), size.to_string()));
+            }
         }
         attributes
+    }
+
+    /// An editable node's selection, in characters of its text: where it starts and where it
+    /// ends. `None` while Android says none.
+    pub fn selection(&self, object: Object) -> Option<(i32, i32)> {
+        let (_, node) = self.node(object)?;
+        let (start, end) = node.selection?;
+        let text = node.value().unwrap_or_default();
+        Some((
+            utf16_to_chars(&text, start) as i32,
+            utf16_to_chars(&text, end) as i32,
+        ))
+    }
+
+    /// Asks Android to select the characters from `start` to `end` of an editable node, or to
+    /// put the cursor there when the two are equal.
+    pub fn select_text(&mut self, object: Object, start: i32, end: i32) -> Result<(), String> {
+        let text = self.text(object).unwrap_or_default();
+        let at = |offset: i32| chars_to_utf16(&text, offset.max(0) as u32);
+        let request = ActionRequest {
+            selection: (at(start), at(end)),
+            ..ActionRequest::default()
+        };
+        self.request_with(object, NodeAction::SetSelection, request)
+    }
+
+    /// A list's or a grid's rows and columns; a list that says no columns has one.
+    pub fn table(&self, object: Object) -> Option<(i32, i32)> {
+        let collection = self.node(object)?.1.collection?;
+        Some((collection.rows.max(0), collection.columns.max(1)))
+    }
+
+    /// The item of the list or grid at `row` and `column`, while it is on the screen.
+    pub fn table_cell_at(&self, object: Object, row: i32, column: i32) -> Option<Object> {
+        let Object::Node { task_id, epoch, id } = object else {
+            return None;
+        };
+        let (window, _) = self.node(object)?;
+        let item = window.tree.item_at(id, row, column)?;
+        Some(Object::Node {
+            task_id,
+            epoch,
+            id: item,
+        })
+    }
+
+    /// An item's place in its list or grid: row, column, row span and column span, and the
+    /// list or grid.
+    pub fn table_cell(&self, object: Object) -> Option<(i32, i32, i32, i32, Option<Object>)> {
+        let Object::Node { task_id, epoch, id } = object else {
+            return None;
+        };
+        let (window, node) = self.node(object)?;
+        let item = node.collection_item?;
+        let table = window.tree.collection_of(id).map(|table| Object::Node {
+            task_id,
+            epoch,
+            id: table,
+        });
+        Some((
+            item.row,
+            item.column,
+            item.row_span.max(1),
+            item.column_span.max(1),
+            table,
+        ))
     }
 
     /// The AT-SPI interfaces the object implements.
@@ -840,6 +914,12 @@ impl Access {
                     }
                     if node.states.editable && node.supports(NodeAction::SetText) {
                         interfaces.push(interface::EDITABLE_TEXT);
+                    }
+                    if node.collection.is_some() {
+                        interfaces.push(interface::TABLE);
+                    }
+                    if node.collection_item.is_some() {
+                        interfaces.push(interface::TABLE_CELL);
                     }
                 }
             }
@@ -985,6 +1065,25 @@ impl Access {
         })
     }
 
+    /// Asks Android to give a slider `value`: at once where the slider takes a value
+    /// (`ACTION_SET_PROGRESS`), else a step toward it ([`Access::value_action`]).
+    pub fn set_value(&mut self, object: Object, value: f64) -> Result<(), String> {
+        let (_, node) = self.node(object).ok_or("the node is gone")?;
+        if node.supports(NodeAction::SetProgress) {
+            let range = node.range.ok_or("the node has no range")?;
+            let value = value.clamp(f64::from(range.min), f64::from(range.max)) as f32;
+            let request = ActionRequest {
+                progress: value,
+                ..ActionRequest::default()
+            };
+            return self.request_with(object, NodeAction::SetProgress, request);
+        }
+        match self.value_action(object, value) {
+            Some(action) => self.request(object, action, String::new()),
+            None => Ok(()),
+        }
+    }
+
     /// The action a new value for a slider asks for: Android moves a slider a step forward or
     /// backward.
     pub fn value_action(&self, object: Object, value: f64) -> Option<NodeAction> {
@@ -1008,6 +1107,23 @@ impl Access {
         action: NodeAction,
         text: String,
     ) -> Result<(), String> {
+        self.request_with(
+            object,
+            action,
+            ActionRequest {
+                text,
+                ..ActionRequest::default()
+            },
+        )
+    }
+
+    /// As [`Access::request`], with what the action needs besides (a selection, a value).
+    pub fn request_with(
+        &mut self,
+        object: Object,
+        action: NodeAction,
+        details: ActionRequest,
+    ) -> Result<(), String> {
         let Object::Node { task_id, epoch, id } = object else {
             return Err("only an Android node takes an accessibility action".into());
         };
@@ -1025,9 +1141,8 @@ impl Access {
             epoch,
             node_id: id,
             action,
-            text,
             request_id: window.next_request,
-            ..ActionRequest::default()
+            ..details
         };
         match &window.actions {
             Some(actions) if actions.send(request).is_ok() => Ok(()),
