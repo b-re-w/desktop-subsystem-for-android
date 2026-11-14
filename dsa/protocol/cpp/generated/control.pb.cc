@@ -1219,7 +1219,8 @@ struct SuDecisionDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SuDecisionDefaultTypeInternal _SuDecision_default_instance_;
 PROTOBUF_CONSTEXPR GuestNotification::GuestNotification(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+    /*decltype(_impl_.buttons_)*/{}
+  , /*decltype(_impl_.key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.package_name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.app_label_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.title_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -1239,6 +1240,24 @@ struct GuestNotificationDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GuestNotificationDefaultTypeInternal _GuestNotification_default_instance_;
+PROTOBUF_CONSTEXPR NotificationButton::NotificationButton(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.reply_choices_)*/{}
+  , /*decltype(_impl_.title_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.reply_label_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.reply_)*/false
+  , /*decltype(_impl_.reply_choices_only_)*/false
+  , /*decltype(_impl_.semantic_action_)*/0
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct NotificationButtonDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR NotificationButtonDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~NotificationButtonDefaultTypeInternal() {}
+  union {
+    NotificationButton _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NotificationButtonDefaultTypeInternal _NotificationButton_default_instance_;
 PROTOBUF_CONSTEXPR NotificationRemoved::NotificationRemoved(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -1278,6 +1297,22 @@ struct NotificationDismissedDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NotificationDismissedDefaultTypeInternal _NotificationDismissed_default_instance_;
+PROTOBUF_CONSTEXPR NotificationButtonClicked::NotificationButtonClicked(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.title_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.reply_text_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.button_)*/0u
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct NotificationButtonClickedDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR NotificationButtonClickedDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~NotificationButtonClickedDefaultTypeInternal() {}
+  union {
+    NotificationButtonClicked _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NotificationButtonClickedDefaultTypeInternal _NotificationButtonClicked_default_instance_;
 PROTOBUF_CONSTEXPR BackgroundApp::BackgroundApp(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.actions_)*/{}
@@ -2265,6 +2300,7 @@ PROTOBUF_CONSTEXPR AccessibilityWatch::AccessibilityWatch(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.task_id_)*/0
   , /*decltype(_impl_.on_)*/false
+  , /*decltype(_impl_.widget_id_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AccessibilityWatchDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AccessibilityWatchDefaultTypeInternal()
@@ -2338,6 +2374,7 @@ PROTOBUF_CONSTEXPR AccessibilityTree::AccessibilityTree(
   , /*decltype(_impl_.epoch_)*/0u
   , /*decltype(_impl_.full_)*/false
   , /*decltype(_impl_.focused_id_)*/0u
+  , /*decltype(_impl_.widget_id_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AccessibilityTreeDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AccessibilityTreeDefaultTypeInternal()
@@ -2356,6 +2393,7 @@ PROTOBUF_CONSTEXPR AccessibilityAction::AccessibilityAction(
   , /*decltype(_impl_.node_id_)*/0u
   , /*decltype(_impl_.action_)*/0
   , /*decltype(_impl_.request_id_)*/0u
+  , /*decltype(_impl_.widget_id_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AccessibilityActionDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AccessibilityActionDefaultTypeInternal()
@@ -2372,6 +2410,7 @@ PROTOBUF_CONSTEXPR AccessibilityActionResult::AccessibilityActionResult(
   , /*decltype(_impl_.task_id_)*/0
   , /*decltype(_impl_.request_id_)*/0u
   , /*decltype(_impl_.done_)*/false
+  , /*decltype(_impl_.widget_id_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AccessibilityActionResultDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AccessibilityActionResultDefaultTypeInternal()
@@ -27454,7 +27493,8 @@ GuestNotification::GuestNotification(const GuestNotification& from)
   : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
   GuestNotification* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.key_){}
+      decltype(_impl_.buttons_){from._impl_.buttons_}
+    , decltype(_impl_.key_){}
     , decltype(_impl_.package_name_){}
     , decltype(_impl_.app_label_){}
     , decltype(_impl_.title_){}
@@ -27526,7 +27566,8 @@ inline void GuestNotification::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.key_){}
+      decltype(_impl_.buttons_){arena}
+    , decltype(_impl_.key_){}
     , decltype(_impl_.package_name_){}
     , decltype(_impl_.app_label_){}
     , decltype(_impl_.title_){}
@@ -27575,6 +27616,7 @@ GuestNotification::~GuestNotification() {
 
 inline void GuestNotification::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.buttons_.~RepeatedPtrField();
   _impl_.key_.Destroy();
   _impl_.package_name_.Destroy();
   _impl_.app_label_.Destroy();
@@ -27593,6 +27635,7 @@ void GuestNotification::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  _impl_.buttons_.Clear();
   _impl_.key_.ClearToEmpty();
   _impl_.package_name_.ClearToEmpty();
   _impl_.app_label_.ClearToEmpty();
@@ -27699,6 +27742,19 @@ const char* GuestNotification::_InternalParse(const char* ptr, ::_pbi::ParseCont
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 80)) {
           _impl_.when_millis_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated .dsa.control.v1.NotificationButton buttons = 11;
+      case 11:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 90)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(_internal_add_buttons(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<90>(ptr));
         } else
           goto handle_unusual;
         continue;
@@ -27811,6 +27867,14 @@ uint8_t* GuestNotification::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteInt64ToArray(10, this->_internal_when_millis(), target);
   }
 
+  // repeated .dsa.control.v1.NotificationButton buttons = 11;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_buttons_size()); i < n; i++) {
+    const auto& repfield = this->_internal_buttons(i);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+        InternalWriteMessage(11, repfield, repfield.GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -27826,6 +27890,13 @@ size_t GuestNotification::ByteSizeLong() const {
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
+
+  // repeated .dsa.control.v1.NotificationButton buttons = 11;
+  total_size += 1UL * this->_internal_buttons_size();
+  for (const auto& msg : this->_impl_.buttons_) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
+  }
 
   // string key = 1;
   if (!this->_internal_key().empty()) {
@@ -27910,6 +27981,7 @@ void GuestNotification::MergeFrom(const GuestNotification& from) {
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
+  _this->_impl_.buttons_.MergeFrom(from._impl_.buttons_);
   if (!from._internal_key().empty()) {
     _this->_internal_set_key(from._internal_key());
   }
@@ -27959,6 +28031,7 @@ void GuestNotification::InternalSwap(GuestNotification* other) {
   auto* lhs_arena = GetArenaForAllocation();
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.buttons_.InternalSwap(&other->_impl_.buttons_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.key_, lhs_arena,
       &other->_impl_.key_, rhs_arena
@@ -27993,6 +28066,384 @@ void GuestNotification::InternalSwap(GuestNotification* other) {
 
 std::string GuestNotification::GetTypeName() const {
   return "dsa.control.v1.GuestNotification";
+}
+
+
+// ===================================================================
+
+class NotificationButton::_Internal {
+ public:
+};
+
+NotificationButton::NotificationButton(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.NotificationButton)
+}
+NotificationButton::NotificationButton(const NotificationButton& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  NotificationButton* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.reply_choices_){from._impl_.reply_choices_}
+    , decltype(_impl_.title_){}
+    , decltype(_impl_.reply_label_){}
+    , decltype(_impl_.reply_){}
+    , decltype(_impl_.reply_choices_only_){}
+    , decltype(_impl_.semantic_action_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  _impl_.title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_title().empty()) {
+    _this->_impl_.title_.Set(from._internal_title(), 
+      _this->GetArenaForAllocation());
+  }
+  _impl_.reply_label_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.reply_label_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_reply_label().empty()) {
+    _this->_impl_.reply_label_.Set(from._internal_reply_label(), 
+      _this->GetArenaForAllocation());
+  }
+  ::memcpy(&_impl_.reply_, &from._impl_.reply_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.semantic_action_) -
+    reinterpret_cast<char*>(&_impl_.reply_)) + sizeof(_impl_.semantic_action_));
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.NotificationButton)
+}
+
+inline void NotificationButton::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.reply_choices_){arena}
+    , decltype(_impl_.title_){}
+    , decltype(_impl_.reply_label_){}
+    , decltype(_impl_.reply_){false}
+    , decltype(_impl_.reply_choices_only_){false}
+    , decltype(_impl_.semantic_action_){0}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.reply_label_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.reply_label_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+NotificationButton::~NotificationButton() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.NotificationButton)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void NotificationButton::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.reply_choices_.~RepeatedPtrField();
+  _impl_.title_.Destroy();
+  _impl_.reply_label_.Destroy();
+}
+
+void NotificationButton::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void NotificationButton::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.NotificationButton)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.reply_choices_.Clear();
+  _impl_.title_.ClearToEmpty();
+  _impl_.reply_label_.ClearToEmpty();
+  ::memset(&_impl_.reply_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.semantic_action_) -
+      reinterpret_cast<char*>(&_impl_.reply_)) + sizeof(_impl_.semantic_action_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* NotificationButton::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string title = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_title();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool reply = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.reply_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // string reply_label = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          auto str = _internal_mutable_reply_label();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated string reply_choices = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            auto str = _internal_add_reply_choices();
+            ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+            CHK_(ptr);
+            CHK_(::_pbi::VerifyUTF8(str, nullptr));
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<34>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool reply_choices_only = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _impl_.reply_choices_only_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 semantic_action = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
+          _impl_.semantic_action_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* NotificationButton::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.NotificationButton)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string title = 1;
+  if (!this->_internal_title().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_title().data(), static_cast<int>(this->_internal_title().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.NotificationButton.title");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_title(), target);
+  }
+
+  // bool reply = 2;
+  if (this->_internal_reply() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_reply(), target);
+  }
+
+  // string reply_label = 3;
+  if (!this->_internal_reply_label().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_reply_label().data(), static_cast<int>(this->_internal_reply_label().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.NotificationButton.reply_label");
+    target = stream->WriteStringMaybeAliased(
+        3, this->_internal_reply_label(), target);
+  }
+
+  // repeated string reply_choices = 4;
+  for (int i = 0, n = this->_internal_reply_choices_size(); i < n; i++) {
+    const auto& s = this->_internal_reply_choices(i);
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      s.data(), static_cast<int>(s.length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.NotificationButton.reply_choices");
+    target = stream->WriteString(4, s, target);
+  }
+
+  // bool reply_choices_only = 5;
+  if (this->_internal_reply_choices_only() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(5, this->_internal_reply_choices_only(), target);
+  }
+
+  // int32 semantic_action = 6;
+  if (this->_internal_semantic_action() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(6, this->_internal_semantic_action(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.NotificationButton)
+  return target;
+}
+
+size_t NotificationButton::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.NotificationButton)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated string reply_choices = 4;
+  total_size += 1 *
+      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.reply_choices_.size());
+  for (int i = 0, n = _impl_.reply_choices_.size(); i < n; i++) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+      _impl_.reply_choices_.Get(i));
+  }
+
+  // string title = 1;
+  if (!this->_internal_title().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_title());
+  }
+
+  // string reply_label = 3;
+  if (!this->_internal_reply_label().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_reply_label());
+  }
+
+  // bool reply = 2;
+  if (this->_internal_reply() != 0) {
+    total_size += 1 + 1;
+  }
+
+  // bool reply_choices_only = 5;
+  if (this->_internal_reply_choices_only() != 0) {
+    total_size += 1 + 1;
+  }
+
+  // int32 semantic_action = 6;
+  if (this->_internal_semantic_action() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_semantic_action());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void NotificationButton::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const NotificationButton*>(
+      &from));
+}
+
+void NotificationButton::MergeFrom(const NotificationButton& from) {
+  NotificationButton* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.NotificationButton)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_impl_.reply_choices_.MergeFrom(from._impl_.reply_choices_);
+  if (!from._internal_title().empty()) {
+    _this->_internal_set_title(from._internal_title());
+  }
+  if (!from._internal_reply_label().empty()) {
+    _this->_internal_set_reply_label(from._internal_reply_label());
+  }
+  if (from._internal_reply() != 0) {
+    _this->_internal_set_reply(from._internal_reply());
+  }
+  if (from._internal_reply_choices_only() != 0) {
+    _this->_internal_set_reply_choices_only(from._internal_reply_choices_only());
+  }
+  if (from._internal_semantic_action() != 0) {
+    _this->_internal_set_semantic_action(from._internal_semantic_action());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void NotificationButton::CopyFrom(const NotificationButton& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.NotificationButton)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool NotificationButton::IsInitialized() const {
+  return true;
+}
+
+void NotificationButton::InternalSwap(NotificationButton* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.reply_choices_.InternalSwap(&other->_impl_.reply_choices_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.title_, lhs_arena,
+      &other->_impl_.title_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.reply_label_, lhs_arena,
+      &other->_impl_.reply_label_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(NotificationButton, _impl_.semantic_action_)
+      + sizeof(NotificationButton::_impl_.semantic_action_)
+      - PROTOBUF_FIELD_OFFSET(NotificationButton, _impl_.reply_)>(
+          reinterpret_cast<char*>(&_impl_.reply_),
+          reinterpret_cast<char*>(&other->_impl_.reply_));
+}
+
+std::string NotificationButton::GetTypeName() const {
+  return "dsa.control.v1.NotificationButton";
 }
 
 
@@ -28608,6 +29059,338 @@ void NotificationDismissed::InternalSwap(NotificationDismissed* other) {
 
 std::string NotificationDismissed::GetTypeName() const {
   return "dsa.control.v1.NotificationDismissed";
+}
+
+
+// ===================================================================
+
+class NotificationButtonClicked::_Internal {
+ public:
+};
+
+NotificationButtonClicked::NotificationButtonClicked(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.NotificationButtonClicked)
+}
+NotificationButtonClicked::NotificationButtonClicked(const NotificationButtonClicked& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  NotificationButtonClicked* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.key_){}
+    , decltype(_impl_.title_){}
+    , decltype(_impl_.reply_text_){}
+    , decltype(_impl_.button_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  _impl_.key_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.key_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_key().empty()) {
+    _this->_impl_.key_.Set(from._internal_key(), 
+      _this->GetArenaForAllocation());
+  }
+  _impl_.title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_title().empty()) {
+    _this->_impl_.title_.Set(from._internal_title(), 
+      _this->GetArenaForAllocation());
+  }
+  _impl_.reply_text_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.reply_text_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_reply_text().empty()) {
+    _this->_impl_.reply_text_.Set(from._internal_reply_text(), 
+      _this->GetArenaForAllocation());
+  }
+  _this->_impl_.button_ = from._impl_.button_;
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.NotificationButtonClicked)
+}
+
+inline void NotificationButtonClicked::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.key_){}
+    , decltype(_impl_.title_){}
+    , decltype(_impl_.reply_text_){}
+    , decltype(_impl_.button_){0u}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.key_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.key_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.title_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.title_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.reply_text_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.reply_text_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+NotificationButtonClicked::~NotificationButtonClicked() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.NotificationButtonClicked)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void NotificationButtonClicked::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.key_.Destroy();
+  _impl_.title_.Destroy();
+  _impl_.reply_text_.Destroy();
+}
+
+void NotificationButtonClicked::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void NotificationButtonClicked::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.NotificationButtonClicked)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.key_.ClearToEmpty();
+  _impl_.title_.ClearToEmpty();
+  _impl_.reply_text_.ClearToEmpty();
+  _impl_.button_ = 0u;
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* NotificationButtonClicked::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string key = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_key();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // uint32 button = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.button_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // string title = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          auto str = _internal_mutable_title();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // string reply_text = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+          auto str = _internal_mutable_reply_text();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* NotificationButtonClicked::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.NotificationButtonClicked)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string key = 1;
+  if (!this->_internal_key().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_key().data(), static_cast<int>(this->_internal_key().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.NotificationButtonClicked.key");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_key(), target);
+  }
+
+  // uint32 button = 2;
+  if (this->_internal_button() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(2, this->_internal_button(), target);
+  }
+
+  // string title = 3;
+  if (!this->_internal_title().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_title().data(), static_cast<int>(this->_internal_title().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.NotificationButtonClicked.title");
+    target = stream->WriteStringMaybeAliased(
+        3, this->_internal_title(), target);
+  }
+
+  // string reply_text = 4;
+  if (!this->_internal_reply_text().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_reply_text().data(), static_cast<int>(this->_internal_reply_text().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.NotificationButtonClicked.reply_text");
+    target = stream->WriteStringMaybeAliased(
+        4, this->_internal_reply_text(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.NotificationButtonClicked)
+  return target;
+}
+
+size_t NotificationButtonClicked::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.NotificationButtonClicked)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string key = 1;
+  if (!this->_internal_key().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_key());
+  }
+
+  // string title = 3;
+  if (!this->_internal_title().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_title());
+  }
+
+  // string reply_text = 4;
+  if (!this->_internal_reply_text().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_reply_text());
+  }
+
+  // uint32 button = 2;
+  if (this->_internal_button() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_button());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void NotificationButtonClicked::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const NotificationButtonClicked*>(
+      &from));
+}
+
+void NotificationButtonClicked::MergeFrom(const NotificationButtonClicked& from) {
+  NotificationButtonClicked* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.NotificationButtonClicked)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_key().empty()) {
+    _this->_internal_set_key(from._internal_key());
+  }
+  if (!from._internal_title().empty()) {
+    _this->_internal_set_title(from._internal_title());
+  }
+  if (!from._internal_reply_text().empty()) {
+    _this->_internal_set_reply_text(from._internal_reply_text());
+  }
+  if (from._internal_button() != 0) {
+    _this->_internal_set_button(from._internal_button());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void NotificationButtonClicked::CopyFrom(const NotificationButtonClicked& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.NotificationButtonClicked)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool NotificationButtonClicked::IsInitialized() const {
+  return true;
+}
+
+void NotificationButtonClicked::InternalSwap(NotificationButtonClicked* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.key_, lhs_arena,
+      &other->_impl_.key_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.title_, lhs_arena,
+      &other->_impl_.title_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.reply_text_, lhs_arena,
+      &other->_impl_.reply_text_, rhs_arena
+  );
+  swap(_impl_.button_, other->_impl_.button_);
+}
+
+std::string NotificationButtonClicked::GetTypeName() const {
+  return "dsa.control.v1.NotificationButtonClicked";
 }
 
 
@@ -45867,12 +46650,13 @@ AccessibilityWatch::AccessibilityWatch(const AccessibilityWatch& from)
   new (&_impl_) Impl_{
       decltype(_impl_.task_id_){}
     , decltype(_impl_.on_){}
+    , decltype(_impl_.widget_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.on_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.on_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.widget_id_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityWatch)
 }
 
@@ -45883,6 +46667,7 @@ inline void AccessibilityWatch::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.task_id_){0}
     , decltype(_impl_.on_){false}
+    , decltype(_impl_.widget_id_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -45911,8 +46696,8 @@ void AccessibilityWatch::Clear() {
   (void) cached_has_bits;
 
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.on_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.on_));
+      reinterpret_cast<char*>(&_impl_.widget_id_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -45934,6 +46719,14 @@ const char* AccessibilityWatch::_InternalParse(const char* ptr, ::_pbi::ParseCon
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           _impl_.on_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 widget_id = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.widget_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -45979,6 +46772,12 @@ uint8_t* AccessibilityWatch::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_on(), target);
   }
 
+  // int32 widget_id = 3;
+  if (this->_internal_widget_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(3, this->_internal_widget_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -46003,6 +46802,11 @@ size_t AccessibilityWatch::ByteSizeLong() const {
   // bool on = 2;
   if (this->_internal_on() != 0) {
     total_size += 1 + 1;
+  }
+
+  // int32 widget_id = 3;
+  if (this->_internal_widget_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_widget_id());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -46032,6 +46836,9 @@ void AccessibilityWatch::MergeFrom(const AccessibilityWatch& from) {
   if (from._internal_on() != 0) {
     _this->_internal_set_on(from._internal_on());
   }
+  if (from._internal_widget_id() != 0) {
+    _this->_internal_set_widget_id(from._internal_widget_id());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -46050,8 +46857,8 @@ void AccessibilityWatch::InternalSwap(AccessibilityWatch* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AccessibilityWatch, _impl_.on_)
-      + sizeof(AccessibilityWatch::_impl_.on_)
+      PROTOBUF_FIELD_OFFSET(AccessibilityWatch, _impl_.widget_id_)
+      + sizeof(AccessibilityWatch::_impl_.widget_id_)
       - PROTOBUF_FIELD_OFFSET(AccessibilityWatch, _impl_.task_id_)>(
           reinterpret_cast<char*>(&_impl_.task_id_),
           reinterpret_cast<char*>(&other->_impl_.task_id_));
@@ -47309,12 +48116,13 @@ AccessibilityTree::AccessibilityTree(const AccessibilityTree& from)
     , decltype(_impl_.epoch_){}
     , decltype(_impl_.full_){}
     , decltype(_impl_.focused_id_){}
+    , decltype(_impl_.widget_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.focused_id_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.focused_id_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.widget_id_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityTree)
 }
 
@@ -47332,6 +48140,7 @@ inline void AccessibilityTree::SharedCtor(
     , decltype(_impl_.epoch_){0u}
     , decltype(_impl_.full_){false}
     , decltype(_impl_.focused_id_){0u}
+    , decltype(_impl_.widget_id_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -47366,8 +48175,8 @@ void AccessibilityTree::Clear() {
   _impl_.nodes_.Clear();
   _impl_.removed_ids_.Clear();
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.focused_id_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.focused_id_));
+      reinterpret_cast<char*>(&_impl_.widget_id_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -47440,6 +48249,14 @@ const char* AccessibilityTree::_InternalParse(const char* ptr, ::_pbi::ParseCont
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
           _impl_.focused_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 widget_id = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 64)) {
+          _impl_.widget_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -47523,6 +48340,12 @@ uint8_t* AccessibilityTree::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(7, this->_internal_focused_id(), target);
   }
 
+  // int32 widget_id = 8;
+  if (this->_internal_widget_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(8, this->_internal_widget_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -47594,6 +48417,11 @@ size_t AccessibilityTree::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_focused_id());
   }
 
+  // int32 widget_id = 8;
+  if (this->_internal_widget_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_widget_id());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -47630,6 +48458,9 @@ void AccessibilityTree::MergeFrom(const AccessibilityTree& from) {
   if (from._internal_focused_id() != 0) {
     _this->_internal_set_focused_id(from._internal_focused_id());
   }
+  if (from._internal_widget_id() != 0) {
+    _this->_internal_set_widget_id(from._internal_widget_id());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -47651,8 +48482,8 @@ void AccessibilityTree::InternalSwap(AccessibilityTree* other) {
   _impl_.nodes_.InternalSwap(&other->_impl_.nodes_);
   _impl_.removed_ids_.InternalSwap(&other->_impl_.removed_ids_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AccessibilityTree, _impl_.focused_id_)
-      + sizeof(AccessibilityTree::_impl_.focused_id_)
+      PROTOBUF_FIELD_OFFSET(AccessibilityTree, _impl_.widget_id_)
+      + sizeof(AccessibilityTree::_impl_.widget_id_)
       - PROTOBUF_FIELD_OFFSET(AccessibilityTree, _impl_.task_id_)>(
           reinterpret_cast<char*>(&_impl_.task_id_),
           reinterpret_cast<char*>(&other->_impl_.task_id_));
@@ -47685,6 +48516,7 @@ AccessibilityAction::AccessibilityAction(const AccessibilityAction& from)
     , decltype(_impl_.node_id_){}
     , decltype(_impl_.action_){}
     , decltype(_impl_.request_id_){}
+    , decltype(_impl_.widget_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -47697,8 +48529,8 @@ AccessibilityAction::AccessibilityAction(const AccessibilityAction& from)
       _this->GetArenaForAllocation());
   }
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.request_id_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.request_id_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.widget_id_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityAction)
 }
 
@@ -47713,6 +48545,7 @@ inline void AccessibilityAction::SharedCtor(
     , decltype(_impl_.node_id_){0u}
     , decltype(_impl_.action_){0}
     , decltype(_impl_.request_id_){0u}
+    , decltype(_impl_.widget_id_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.text_.InitDefault();
@@ -47747,8 +48580,8 @@ void AccessibilityAction::Clear() {
 
   _impl_.text_.ClearToEmpty();
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.request_id_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.request_id_));
+      reinterpret_cast<char*>(&_impl_.widget_id_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -47805,6 +48638,14 @@ const char* AccessibilityAction::_InternalParse(const char* ptr, ::_pbi::ParseCo
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
           _impl_.request_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 widget_id = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
+          _impl_.widget_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -47879,6 +48720,12 @@ uint8_t* AccessibilityAction::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(6, this->_internal_request_id(), target);
   }
 
+  // int32 widget_id = 7;
+  if (this->_internal_widget_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(7, this->_internal_widget_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -47928,6 +48775,11 @@ size_t AccessibilityAction::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_request_id());
   }
 
+  // int32 widget_id = 7;
+  if (this->_internal_widget_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_widget_id());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -47967,6 +48819,9 @@ void AccessibilityAction::MergeFrom(const AccessibilityAction& from) {
   if (from._internal_request_id() != 0) {
     _this->_internal_set_request_id(from._internal_request_id());
   }
+  if (from._internal_widget_id() != 0) {
+    _this->_internal_set_widget_id(from._internal_widget_id());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -47991,8 +48846,8 @@ void AccessibilityAction::InternalSwap(AccessibilityAction* other) {
       &other->_impl_.text_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AccessibilityAction, _impl_.request_id_)
-      + sizeof(AccessibilityAction::_impl_.request_id_)
+      PROTOBUF_FIELD_OFFSET(AccessibilityAction, _impl_.widget_id_)
+      + sizeof(AccessibilityAction::_impl_.widget_id_)
       - PROTOBUF_FIELD_OFFSET(AccessibilityAction, _impl_.task_id_)>(
           reinterpret_cast<char*>(&_impl_.task_id_),
           reinterpret_cast<char*>(&other->_impl_.task_id_));
@@ -48023,6 +48878,7 @@ AccessibilityActionResult::AccessibilityActionResult(const AccessibilityActionRe
     , decltype(_impl_.task_id_){}
     , decltype(_impl_.request_id_){}
     , decltype(_impl_.done_){}
+    , decltype(_impl_.widget_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -48035,8 +48891,8 @@ AccessibilityActionResult::AccessibilityActionResult(const AccessibilityActionRe
       _this->GetArenaForAllocation());
   }
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.done_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.done_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.widget_id_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.AccessibilityActionResult)
 }
 
@@ -48049,6 +48905,7 @@ inline void AccessibilityActionResult::SharedCtor(
     , decltype(_impl_.task_id_){0}
     , decltype(_impl_.request_id_){0u}
     , decltype(_impl_.done_){false}
+    , decltype(_impl_.widget_id_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.error_.InitDefault();
@@ -48083,8 +48940,8 @@ void AccessibilityActionResult::Clear() {
 
   _impl_.error_.ClearToEmpty();
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.done_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.done_));
+      reinterpret_cast<char*>(&_impl_.widget_id_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.widget_id_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -48125,6 +48982,14 @@ const char* AccessibilityActionResult::_InternalParse(const char* ptr, ::_pbi::P
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
           CHK_(::_pbi::VerifyUTF8(str, nullptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 widget_id = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _impl_.widget_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
@@ -48185,6 +49050,12 @@ uint8_t* AccessibilityActionResult::_InternalSerialize(
         4, this->_internal_error(), target);
   }
 
+  // int32 widget_id = 5;
+  if (this->_internal_widget_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(5, this->_internal_widget_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -48223,6 +49094,11 @@ size_t AccessibilityActionResult::ByteSizeLong() const {
     total_size += 1 + 1;
   }
 
+  // int32 widget_id = 5;
+  if (this->_internal_widget_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_widget_id());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -48256,6 +49132,9 @@ void AccessibilityActionResult::MergeFrom(const AccessibilityActionResult& from)
   if (from._internal_done() != 0) {
     _this->_internal_set_done(from._internal_done());
   }
+  if (from._internal_widget_id() != 0) {
+    _this->_internal_set_widget_id(from._internal_widget_id());
+  }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -48280,8 +49159,8 @@ void AccessibilityActionResult::InternalSwap(AccessibilityActionResult* other) {
       &other->_impl_.error_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AccessibilityActionResult, _impl_.done_)
-      + sizeof(AccessibilityActionResult::_impl_.done_)
+      PROTOBUF_FIELD_OFFSET(AccessibilityActionResult, _impl_.widget_id_)
+      + sizeof(AccessibilityActionResult::_impl_.widget_id_)
       - PROTOBUF_FIELD_OFFSET(AccessibilityActionResult, _impl_.task_id_)>(
           reinterpret_cast<char*>(&_impl_.task_id_),
           reinterpret_cast<char*>(&other->_impl_.task_id_));
@@ -68172,6 +69051,7 @@ class Envelope::_Internal {
   static const ::dsa::control::v1::NotificationRemoved& notification_removed(const Envelope* msg);
   static const ::dsa::control::v1::NotificationClicked& notification_clicked(const Envelope* msg);
   static const ::dsa::control::v1::NotificationDismissed& notification_dismissed(const Envelope* msg);
+  static const ::dsa::control::v1::NotificationButtonClicked& notification_button_clicked(const Envelope* msg);
   static const ::dsa::control::v1::BackgroundApp& background_app(const Envelope* msg);
   static const ::dsa::control::v1::BackgroundAppGone& background_app_gone(const Envelope* msg);
   static const ::dsa::control::v1::BackgroundAppAction& background_app_action(const Envelope* msg);
@@ -68598,6 +69478,10 @@ Envelope::_Internal::notification_clicked(const Envelope* msg) {
 const ::dsa::control::v1::NotificationDismissed&
 Envelope::_Internal::notification_dismissed(const Envelope* msg) {
   return *msg->_impl_.body_.notification_dismissed_;
+}
+const ::dsa::control::v1::NotificationButtonClicked&
+Envelope::_Internal::notification_button_clicked(const Envelope* msg) {
+  return *msg->_impl_.body_.notification_button_clicked_;
 }
 const ::dsa::control::v1::BackgroundApp&
 Envelope::_Internal::background_app(const Envelope* msg) {
@@ -70223,6 +71107,21 @@ void Envelope::set_allocated_notification_dismissed(::dsa::control::v1::Notifica
     _impl_.body_.notification_dismissed_ = notification_dismissed;
   }
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.notification_dismissed)
+}
+void Envelope::set_allocated_notification_button_clicked(::dsa::control::v1::NotificationButtonClicked* notification_button_clicked) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_body();
+  if (notification_button_clicked) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(notification_button_clicked);
+    if (message_arena != submessage_arena) {
+      notification_button_clicked = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, notification_button_clicked, submessage_arena);
+    }
+    set_has_notification_button_clicked();
+    _impl_.body_.notification_button_clicked_ = notification_button_clicked;
+  }
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.notification_button_clicked)
 }
 void Envelope::set_allocated_background_app(::dsa::control::v1::BackgroundApp* background_app) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -72491,6 +73390,11 @@ Envelope::Envelope(const Envelope& from)
           from._internal_notification_dismissed());
       break;
     }
+    case kNotificationButtonClicked: {
+      _this->_internal_mutable_notification_button_clicked()->::dsa::control::v1::NotificationButtonClicked::MergeFrom(
+          from._internal_notification_button_clicked());
+      break;
+    }
     case kBackgroundApp: {
       _this->_internal_mutable_background_app()->::dsa::control::v1::BackgroundApp::MergeFrom(
           from._internal_background_app());
@@ -73605,6 +74509,12 @@ void Envelope::clear_body() {
     case kNotificationDismissed: {
       if (GetArenaForAllocation() == nullptr) {
         delete _impl_.body_.notification_dismissed_;
+      }
+      break;
+    }
+    case kNotificationButtonClicked: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.body_.notification_button_clicked_;
       }
       break;
     }
@@ -75982,6 +76892,14 @@ const char* Envelope::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
         } else
           goto handle_unusual;
         continue;
+      // .dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;
+      case 730:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 210)) {
+          ptr = ctx->ParseMessage(_internal_mutable_notification_button_clicked(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -77411,6 +78329,13 @@ uint8_t* Envelope::_InternalSerialize(
         _Internal::launch_placement(this).GetCachedSize(), target, stream);
   }
 
+  // .dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;
+  if (_internal_has_notification_button_clicked()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(730, _Internal::notification_button_clicked(this),
+        _Internal::notification_button_clicked(this).GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -77951,6 +78876,13 @@ size_t Envelope::ByteSizeLong() const {
       total_size += 2 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
           *_impl_.body_.notification_dismissed_);
+      break;
+    }
+    // .dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;
+    case kNotificationButtonClicked: {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.body_.notification_button_clicked_);
       break;
     }
     // .dsa.control.v1.BackgroundApp background_app = 74;
@@ -79229,6 +80161,11 @@ void Envelope::MergeFrom(const Envelope& from) {
           from._internal_notification_dismissed());
       break;
     }
+    case kNotificationButtonClicked: {
+      _this->_internal_mutable_notification_button_clicked()->::dsa::control::v1::NotificationButtonClicked::MergeFrom(
+          from._internal_notification_button_clicked());
+      break;
+    }
     case kBackgroundApp: {
       _this->_internal_mutable_background_app()->::dsa::control::v1::BackgroundApp::MergeFrom(
           from._internal_background_app());
@@ -80201,6 +81138,10 @@ template<> PROTOBUF_NOINLINE ::dsa::control::v1::GuestNotification*
 Arena::CreateMaybeMessage< ::dsa::control::v1::GuestNotification >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::GuestNotification >(arena);
 }
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::NotificationButton*
+Arena::CreateMaybeMessage< ::dsa::control::v1::NotificationButton >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::NotificationButton >(arena);
+}
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::NotificationRemoved*
 Arena::CreateMaybeMessage< ::dsa::control::v1::NotificationRemoved >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::NotificationRemoved >(arena);
@@ -80212,6 +81153,10 @@ Arena::CreateMaybeMessage< ::dsa::control::v1::NotificationClicked >(Arena* aren
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::NotificationDismissed*
 Arena::CreateMaybeMessage< ::dsa::control::v1::NotificationDismissed >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::NotificationDismissed >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::NotificationButtonClicked*
+Arena::CreateMaybeMessage< ::dsa::control::v1::NotificationButtonClicked >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::NotificationButtonClicked >(arena);
 }
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::BackgroundApp*
 Arena::CreateMaybeMessage< ::dsa::control::v1::BackgroundApp >(Arena* arena) {

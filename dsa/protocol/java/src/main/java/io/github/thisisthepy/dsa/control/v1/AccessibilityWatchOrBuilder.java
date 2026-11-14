@@ -18,4 +18,10 @@ public interface AccessibilityWatchOrBuilder extends
    * @return The on.
    */
   boolean getOn();
+
+  /**
+   * <code>int32 widget_id = 3;</code>
+   * @return The widgetId.
+   */
+  int getWidgetId();
 }

@@ -465,6 +465,12 @@ extern NativeLibraryCrashDefaultTypeInternal _NativeLibraryCrash_default_instanc
 class NodeRange;
 struct NodeRangeDefaultTypeInternal;
 extern NodeRangeDefaultTypeInternal _NodeRange_default_instance_;
+class NotificationButton;
+struct NotificationButtonDefaultTypeInternal;
+extern NotificationButtonDefaultTypeInternal _NotificationButton_default_instance_;
+class NotificationButtonClicked;
+struct NotificationButtonClickedDefaultTypeInternal;
+extern NotificationButtonClickedDefaultTypeInternal _NotificationButtonClicked_default_instance_;
 class NotificationClicked;
 struct NotificationClickedDefaultTypeInternal;
 extern NotificationClickedDefaultTypeInternal _NotificationClicked_default_instance_;
@@ -858,6 +864,8 @@ template<> ::dsa::control::v1::MediaSessionGone* Arena::CreateMaybeMessage<::dsa
 template<> ::dsa::control::v1::NativeLibraries* Arena::CreateMaybeMessage<::dsa::control::v1::NativeLibraries>(Arena*);
 template<> ::dsa::control::v1::NativeLibraryCrash* Arena::CreateMaybeMessage<::dsa::control::v1::NativeLibraryCrash>(Arena*);
 template<> ::dsa::control::v1::NodeRange* Arena::CreateMaybeMessage<::dsa::control::v1::NodeRange>(Arena*);
+template<> ::dsa::control::v1::NotificationButton* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationButton>(Arena*);
+template<> ::dsa::control::v1::NotificationButtonClicked* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationButtonClicked>(Arena*);
 template<> ::dsa::control::v1::NotificationClicked* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationClicked>(Arena*);
 template<> ::dsa::control::v1::NotificationDismissed* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationDismissed>(Arena*);
 template<> ::dsa::control::v1::NotificationRemoved* Arena::CreateMaybeMessage<::dsa::control::v1::NotificationRemoved>(Arena*);
@@ -14714,6 +14722,7 @@ class GuestNotification final :
   // accessors -------------------------------------------------------
 
   enum : int {
+    kButtonsFieldNumber = 11,
     kKeyFieldNumber = 1,
     kPackageNameFieldNumber = 2,
     kAppLabelFieldNumber = 3,
@@ -14725,6 +14734,24 @@ class GuestNotification final :
     kClearableFieldNumber = 9,
     kWhenMillisFieldNumber = 10,
   };
+  // repeated .dsa.control.v1.NotificationButton buttons = 11;
+  int buttons_size() const;
+  private:
+  int _internal_buttons_size() const;
+  public:
+  void clear_buttons();
+  ::dsa::control::v1::NotificationButton* mutable_buttons(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::dsa::control::v1::NotificationButton >*
+      mutable_buttons();
+  private:
+  const ::dsa::control::v1::NotificationButton& _internal_buttons(int index) const;
+  ::dsa::control::v1::NotificationButton* _internal_add_buttons();
+  public:
+  const ::dsa::control::v1::NotificationButton& buttons(int index) const;
+  ::dsa::control::v1::NotificationButton* add_buttons();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::dsa::control::v1::NotificationButton >&
+      buttons() const;
+
   // string key = 1;
   void clear_key();
   const std::string& key() const;
@@ -14853,6 +14880,7 @@ class GuestNotification final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::dsa::control::v1::NotificationButton > buttons_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr key_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr package_name_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr app_label_;
@@ -14863,6 +14891,216 @@ class GuestNotification final :
     bool high_priority_;
     bool clearable_;
     int64_t when_millis_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
+class NotificationButton final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.NotificationButton) */ {
+ public:
+  inline NotificationButton() : NotificationButton(nullptr) {}
+  ~NotificationButton() override;
+  explicit PROTOBUF_CONSTEXPR NotificationButton(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  NotificationButton(const NotificationButton& from);
+  NotificationButton(NotificationButton&& from) noexcept
+    : NotificationButton() {
+    *this = ::std::move(from);
+  }
+
+  inline NotificationButton& operator=(const NotificationButton& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NotificationButton& operator=(NotificationButton&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const NotificationButton& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const NotificationButton* internal_default_instance() {
+    return reinterpret_cast<const NotificationButton*>(
+               &_NotificationButton_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    78;
+
+  friend void swap(NotificationButton& a, NotificationButton& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(NotificationButton* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NotificationButton* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NotificationButton* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<NotificationButton>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const NotificationButton& from);
+  void MergeFrom(const NotificationButton& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(NotificationButton* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.NotificationButton";
+  }
+  protected:
+  explicit NotificationButton(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kReplyChoicesFieldNumber = 4,
+    kTitleFieldNumber = 1,
+    kReplyLabelFieldNumber = 3,
+    kReplyFieldNumber = 2,
+    kReplyChoicesOnlyFieldNumber = 5,
+    kSemanticActionFieldNumber = 6,
+  };
+  // repeated string reply_choices = 4;
+  int reply_choices_size() const;
+  private:
+  int _internal_reply_choices_size() const;
+  public:
+  void clear_reply_choices();
+  const std::string& reply_choices(int index) const;
+  std::string* mutable_reply_choices(int index);
+  void set_reply_choices(int index, const std::string& value);
+  void set_reply_choices(int index, std::string&& value);
+  void set_reply_choices(int index, const char* value);
+  void set_reply_choices(int index, const char* value, size_t size);
+  std::string* add_reply_choices();
+  void add_reply_choices(const std::string& value);
+  void add_reply_choices(std::string&& value);
+  void add_reply_choices(const char* value);
+  void add_reply_choices(const char* value, size_t size);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>& reply_choices() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>* mutable_reply_choices();
+  private:
+  const std::string& _internal_reply_choices(int index) const;
+  std::string* _internal_add_reply_choices();
+  public:
+
+  // string title = 1;
+  void clear_title();
+  const std::string& title() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_title(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_title();
+  PROTOBUF_NODISCARD std::string* release_title();
+  void set_allocated_title(std::string* title);
+  private:
+  const std::string& _internal_title() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_title(const std::string& value);
+  std::string* _internal_mutable_title();
+  public:
+
+  // string reply_label = 3;
+  void clear_reply_label();
+  const std::string& reply_label() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_reply_label(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_reply_label();
+  PROTOBUF_NODISCARD std::string* release_reply_label();
+  void set_allocated_reply_label(std::string* reply_label);
+  private:
+  const std::string& _internal_reply_label() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_reply_label(const std::string& value);
+  std::string* _internal_mutable_reply_label();
+  public:
+
+  // bool reply = 2;
+  void clear_reply();
+  bool reply() const;
+  void set_reply(bool value);
+  private:
+  bool _internal_reply() const;
+  void _internal_set_reply(bool value);
+  public:
+
+  // bool reply_choices_only = 5;
+  void clear_reply_choices_only();
+  bool reply_choices_only() const;
+  void set_reply_choices_only(bool value);
+  private:
+  bool _internal_reply_choices_only() const;
+  void _internal_set_reply_choices_only(bool value);
+  public:
+
+  // int32 semantic_action = 6;
+  void clear_semantic_action();
+  int32_t semantic_action() const;
+  void set_semantic_action(int32_t value);
+  private:
+  int32_t _internal_semantic_action() const;
+  void _internal_set_semantic_action(int32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.NotificationButton)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> reply_choices_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr title_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr reply_label_;
+    bool reply_;
+    bool reply_choices_only_;
+    int32_t semantic_action_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -14909,7 +15147,7 @@ class NotificationRemoved final :
                &_NotificationRemoved_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    78;
+    79;
 
   friend void swap(NotificationRemoved& a, NotificationRemoved& b) {
     a.Swap(&b);
@@ -15044,7 +15282,7 @@ class NotificationClicked final :
                &_NotificationClicked_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    79;
+    80;
 
   friend void swap(NotificationClicked& a, NotificationClicked& b) {
     a.Swap(&b);
@@ -15179,7 +15417,7 @@ class NotificationDismissed final :
                &_NotificationDismissed_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    80;
+    81;
 
   friend void swap(NotificationDismissed& a, NotificationDismissed& b) {
     a.Swap(&b);
@@ -15275,6 +15513,184 @@ class NotificationDismissed final :
 };
 // -------------------------------------------------------------------
 
+class NotificationButtonClicked final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.NotificationButtonClicked) */ {
+ public:
+  inline NotificationButtonClicked() : NotificationButtonClicked(nullptr) {}
+  ~NotificationButtonClicked() override;
+  explicit PROTOBUF_CONSTEXPR NotificationButtonClicked(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  NotificationButtonClicked(const NotificationButtonClicked& from);
+  NotificationButtonClicked(NotificationButtonClicked&& from) noexcept
+    : NotificationButtonClicked() {
+    *this = ::std::move(from);
+  }
+
+  inline NotificationButtonClicked& operator=(const NotificationButtonClicked& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NotificationButtonClicked& operator=(NotificationButtonClicked&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const NotificationButtonClicked& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const NotificationButtonClicked* internal_default_instance() {
+    return reinterpret_cast<const NotificationButtonClicked*>(
+               &_NotificationButtonClicked_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    82;
+
+  friend void swap(NotificationButtonClicked& a, NotificationButtonClicked& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(NotificationButtonClicked* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NotificationButtonClicked* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NotificationButtonClicked* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<NotificationButtonClicked>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const NotificationButtonClicked& from);
+  void MergeFrom(const NotificationButtonClicked& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(NotificationButtonClicked* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "dsa.control.v1.NotificationButtonClicked";
+  }
+  protected:
+  explicit NotificationButtonClicked(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kKeyFieldNumber = 1,
+    kTitleFieldNumber = 3,
+    kReplyTextFieldNumber = 4,
+    kButtonFieldNumber = 2,
+  };
+  // string key = 1;
+  void clear_key();
+  const std::string& key() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_key(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_key();
+  PROTOBUF_NODISCARD std::string* release_key();
+  void set_allocated_key(std::string* key);
+  private:
+  const std::string& _internal_key() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_key(const std::string& value);
+  std::string* _internal_mutable_key();
+  public:
+
+  // string title = 3;
+  void clear_title();
+  const std::string& title() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_title(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_title();
+  PROTOBUF_NODISCARD std::string* release_title();
+  void set_allocated_title(std::string* title);
+  private:
+  const std::string& _internal_title() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_title(const std::string& value);
+  std::string* _internal_mutable_title();
+  public:
+
+  // string reply_text = 4;
+  void clear_reply_text();
+  const std::string& reply_text() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_reply_text(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_reply_text();
+  PROTOBUF_NODISCARD std::string* release_reply_text();
+  void set_allocated_reply_text(std::string* reply_text);
+  private:
+  const std::string& _internal_reply_text() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_reply_text(const std::string& value);
+  std::string* _internal_mutable_reply_text();
+  public:
+
+  // uint32 button = 2;
+  void clear_button();
+  uint32_t button() const;
+  void set_button(uint32_t value);
+  private:
+  uint32_t _internal_button() const;
+  void _internal_set_button(uint32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:dsa.control.v1.NotificationButtonClicked)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr key_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr title_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr reply_text_;
+    uint32_t button_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_control_2eproto;
+};
+// -------------------------------------------------------------------
+
 class BackgroundApp final :
     public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:dsa.control.v1.BackgroundApp) */ {
  public:
@@ -15314,7 +15730,7 @@ class BackgroundApp final :
                &_BackgroundApp_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    81;
+    83;
 
   friend void swap(BackgroundApp& a, BackgroundApp& b) {
     a.Swap(&b);
@@ -15539,7 +15955,7 @@ class BackgroundAppGone final :
                &_BackgroundAppGone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    82;
+    84;
 
   friend void swap(BackgroundAppGone& a, BackgroundAppGone& b) {
     a.Swap(&b);
@@ -15674,7 +16090,7 @@ class BackgroundAppAction final :
                &_BackgroundAppAction_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    83;
+    85;
 
   friend void swap(BackgroundAppAction& a, BackgroundAppAction& b) {
     a.Swap(&b);
@@ -15831,7 +16247,7 @@ class MediaSession final :
                &_MediaSession_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    84;
+    86;
 
   friend void swap(MediaSession& a, MediaSession& b) {
     a.Swap(&b);
@@ -16101,7 +16517,7 @@ class MediaSessionGone final :
                &_MediaSessionGone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    85;
+    87;
 
   friend void swap(MediaSessionGone& a, MediaSessionGone& b) {
     a.Swap(&b);
@@ -16236,7 +16652,7 @@ class MediaControl final :
                &_MediaControl_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    86;
+    88;
 
   friend void swap(MediaControl& a, MediaControl& b) {
     a.Swap(&b);
@@ -16382,7 +16798,7 @@ class RequestGuestMemory final :
                &_RequestGuestMemory_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    87;
+    89;
 
   friend void swap(RequestGuestMemory& a, RequestGuestMemory& b) {
     a.Swap(&b);
@@ -16499,7 +16915,7 @@ class ProcessMemory final :
                &_ProcessMemory_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    88;
+    90;
 
   friend void swap(ProcessMemory& a, ProcessMemory& b) {
     a.Swap(&b);
@@ -16678,7 +17094,7 @@ class GuestMemory final :
                &_GuestMemory_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    89;
+    91;
 
   friend void swap(GuestMemory& a, GuestMemory& b) {
     a.Swap(&b);
@@ -17125,7 +17541,7 @@ class AgentConnected final :
                &_AgentConnected_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    90;
+    92;
 
   friend void swap(AgentConnected& a, AgentConnected& b) {
     a.Swap(&b);
@@ -17242,7 +17658,7 @@ class GuestBoot final :
                &_GuestBoot_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    91;
+    93;
 
   friend void swap(GuestBoot& a, GuestBoot& b) {
     a.Swap(&b);
@@ -17383,7 +17799,7 @@ class InstallPart final :
                &_InstallPart_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    92;
+    94;
 
   friend void swap(InstallPart& a, InstallPart& b) {
     a.Swap(&b);
@@ -17540,7 +17956,7 @@ class InstallApk final :
                &_InstallApk_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    93;
+    95;
 
   friend void swap(InstallApk& a, InstallApk& b) {
     a.Swap(&b);
@@ -17733,7 +18149,7 @@ class ApkChunk final :
                &_ApkChunk_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    94;
+    96;
 
   friend void swap(ApkChunk& a, ApkChunk& b) {
     a.Swap(&b);
@@ -17890,7 +18306,7 @@ class QueryPackage final :
                &_QueryPackage_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    95;
+    97;
 
   friend void swap(QueryPackage& a, QueryPackage& b) {
     a.Swap(&b);
@@ -18036,7 +18452,7 @@ class PackageState final :
                &_PackageState_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    96;
+    98;
 
   friend void swap(PackageState& a, PackageState& b) {
     a.Swap(&b);
@@ -18230,7 +18646,7 @@ class OpenLink final :
                &_OpenLink_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    97;
+    99;
 
   friend void swap(OpenLink& a, OpenLink& b) {
     a.Swap(&b);
@@ -18365,7 +18781,7 @@ class LinkHandling final :
                &_LinkHandling_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    98;
+    100;
 
   friend void swap(LinkHandling& a, LinkHandling& b) {
     a.Swap(&b);
@@ -18495,7 +18911,7 @@ class OpenFile final :
                &_OpenFile_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    99;
+    101;
 
   friend void swap(OpenFile& a, OpenFile& b) {
     a.Swap(&b);
@@ -18679,7 +19095,7 @@ class FileChunk final :
                &_FileChunk_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    100;
+    102;
 
   friend void swap(FileChunk& a, FileChunk& b) {
     a.Swap(&b);
@@ -18836,7 +19252,7 @@ class CancelInstall final :
                &_CancelInstall_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    101;
+    103;
 
   friend void swap(CancelInstall& a, CancelInstall& b) {
     a.Swap(&b);
@@ -18966,7 +19382,7 @@ class InstallProgress final :
                &_InstallProgress_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    102;
+    104;
 
   friend void swap(InstallProgress& a, InstallProgress& b) {
     a.Swap(&b);
@@ -19107,7 +19523,7 @@ class InstallResult final :
                &_InstallResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    103;
+    105;
 
   friend void swap(InstallResult& a, InstallResult& b) {
     a.Swap(&b);
@@ -19280,7 +19696,7 @@ class FileProgress final :
                &_FileProgress_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    104;
+    106;
 
   friend void swap(FileProgress& a, FileProgress& b) {
     a.Swap(&b);
@@ -19437,7 +19853,7 @@ class FileSharing final :
                &_FileSharing_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    105;
+    107;
 
   friend void swap(FileSharing& a, FileSharing& b) {
     a.Swap(&b);
@@ -19620,7 +20036,7 @@ class AndroidFiles final :
                &_AndroidFiles_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    106;
+    108;
 
   friend void swap(AndroidFiles& a, AndroidFiles& b) {
     a.Swap(&b);
@@ -19766,7 +20182,7 @@ class DragItem final :
                &_DragItem_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    107;
+    109;
 
   friend void swap(DragItem& a, DragItem& b) {
     a.Swap(&b);
@@ -19966,7 +20382,7 @@ class DragOut final :
                &_DragOut_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    108;
+    110;
 
   friend void swap(DragOut& a, DragOut& b) {
     a.Swap(&b);
@@ -20151,7 +20567,7 @@ class DragOffer final :
                &_DragOffer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    109;
+    111;
 
   friend void swap(DragOffer& a, DragOffer& b) {
     a.Swap(&b);
@@ -20328,7 +20744,7 @@ class DragRead final :
                &_DragRead_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    110;
+    112;
 
   friend void swap(DragRead& a, DragRead& b) {
     a.Swap(&b);
@@ -20502,7 +20918,7 @@ class DragData final :
                &_DragData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    111;
+    113;
 
   friend void swap(DragData& a, DragData& b) {
     a.Swap(&b);
@@ -20675,7 +21091,7 @@ class DragEnd final :
                &_DragEnd_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    112;
+    114;
 
   friend void swap(DragEnd& a, DragEnd& b) {
     a.Swap(&b);
@@ -20816,7 +21232,7 @@ class ClockProbe final :
                &_ClockProbe_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    113;
+    115;
 
   friend void swap(ClockProbe& a, ClockProbe& b) {
     a.Swap(&b);
@@ -20946,7 +21362,7 @@ class VideoCodecSupport final :
                &_VideoCodecSupport_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    114;
+    116;
 
   friend void swap(VideoCodecSupport& a, VideoCodecSupport& b) {
     a.Swap(&b);
@@ -21098,7 +21514,7 @@ class VideoCapabilities final :
                &_VideoCapabilities_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    115;
+    117;
 
   friend void swap(VideoCapabilities& a, VideoCapabilities& b) {
     a.Swap(&b);
@@ -21237,7 +21653,7 @@ class VideoDecoderOpen final :
                &_VideoDecoderOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    116;
+    118;
 
   friend void swap(VideoDecoderOpen& a, VideoDecoderOpen& b) {
     a.Swap(&b);
@@ -21400,7 +21816,7 @@ class VideoDecoderOpened final :
                &_VideoDecoderOpened_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    117;
+    119;
 
   friend void swap(VideoDecoderOpened& a, VideoDecoderOpened& b) {
     a.Swap(&b);
@@ -21557,7 +21973,7 @@ class VideoPacket final :
                &_VideoPacket_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    118;
+    120;
 
   friend void swap(VideoPacket& a, VideoPacket& b) {
     a.Swap(&b);
@@ -21736,7 +22152,7 @@ class VideoFrame final :
                &_VideoFrame_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    119;
+    121;
 
   friend void swap(VideoFrame& a, VideoFrame& b) {
     a.Swap(&b);
@@ -21959,7 +22375,7 @@ class VideoSlotReturned final :
                &_VideoSlotReturned_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    120;
+    122;
 
   friend void swap(VideoSlotReturned& a, VideoSlotReturned& b) {
     a.Swap(&b);
@@ -22089,7 +22505,7 @@ class GuestSharedMemory final :
                &_GuestSharedMemory_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    121;
+    123;
 
   friend void swap(GuestSharedMemory& a, GuestSharedMemory& b) {
     a.Swap(&b);
@@ -22246,7 +22662,7 @@ class VideoFlush final :
                &_VideoFlush_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    122;
+    124;
 
   friend void swap(VideoFlush& a, VideoFlush& b) {
     a.Swap(&b);
@@ -22363,7 +22779,7 @@ class VideoFlushed final :
                &_VideoFlushed_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    123;
+    125;
 
   friend void swap(VideoFlushed& a, VideoFlushed& b) {
     a.Swap(&b);
@@ -22480,7 +22896,7 @@ class VideoError final :
                &_VideoError_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    124;
+    126;
 
   friend void swap(VideoError& a, VideoError& b) {
     a.Swap(&b);
@@ -22615,7 +23031,7 @@ class SensorDescription final :
                &_SensorDescription_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    125;
+    127;
 
   friend void swap(SensorDescription& a, SensorDescription& b) {
     a.Swap(&b);
@@ -22810,7 +23226,7 @@ class SensorList final :
                &_SensorList_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    126;
+    128;
 
   friend void swap(SensorList& a, SensorList& b) {
     a.Swap(&b);
@@ -22949,7 +23365,7 @@ class SensorActivate final :
                &_SensorActivate_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    127;
+    129;
 
   friend void swap(SensorActivate& a, SensorActivate& b) {
     a.Swap(&b);
@@ -23101,7 +23517,7 @@ class SensorReading final :
                &_SensorReading_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    128;
+    130;
 
   friend void swap(SensorReading& a, SensorReading& b) {
     a.Swap(&b);
@@ -23266,7 +23682,7 @@ class SensorReadings final :
                &_SensorReadings_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    129;
+    131;
 
   friend void swap(SensorReadings& a, SensorReadings& b) {
     a.Swap(&b);
@@ -23405,7 +23821,7 @@ class ClockAnswer final :
                &_ClockAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    130;
+    132;
 
   friend void swap(ClockAnswer& a, ClockAnswer& b) {
     a.Swap(&b);
@@ -23546,7 +23962,7 @@ class ListWidgetProviders final :
                &_ListWidgetProviders_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    131;
+    133;
 
   friend void swap(ListWidgetProviders& a, ListWidgetProviders& b) {
     a.Swap(&b);
@@ -23676,7 +24092,7 @@ class WidgetProvider final :
                &_WidgetProvider_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    132;
+    134;
 
   friend void swap(WidgetProvider& a, WidgetProvider& b) {
     a.Swap(&b);
@@ -23974,7 +24390,7 @@ class WidgetProviders final :
                &_WidgetProviders_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    133;
+    135;
 
   friend void swap(WidgetProviders& a, WidgetProviders& b) {
     a.Swap(&b);
@@ -24135,7 +24551,7 @@ class AddWidget final :
                &_AddWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    134;
+    136;
 
   friend void swap(AddWidget& a, AddWidget& b) {
     a.Swap(&b);
@@ -24281,7 +24697,7 @@ class WidgetAdded final :
                &_WidgetAdded_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    135;
+    137;
 
   friend void swap(WidgetAdded& a, WidgetAdded& b) {
     a.Swap(&b);
@@ -24438,7 +24854,7 @@ class WidgetUpdated final :
                &_WidgetUpdated_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    136;
+    138;
 
   friend void swap(WidgetUpdated& a, WidgetUpdated& b) {
     a.Swap(&b);
@@ -24588,7 +25004,7 @@ class WidgetList final :
                &_WidgetList_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    137;
+    139;
 
   friend void swap(WidgetList& a, WidgetList& b) {
     a.Swap(&b);
@@ -24732,7 +25148,7 @@ class RemoveWidget final :
                &_RemoveWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    138;
+    140;
 
   friend void swap(RemoveWidget& a, RemoveWidget& b) {
     a.Swap(&b);
@@ -24862,7 +25278,7 @@ class ReconfigureWidget final :
                &_ReconfigureWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    139;
+    141;
 
   friend void swap(ReconfigureWidget& a, ReconfigureWidget& b) {
     a.Swap(&b);
@@ -25003,7 +25419,7 @@ class WidgetReconfigured final :
                &_WidgetReconfigured_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    140;
+    142;
 
   friend void swap(WidgetReconfigured& a, WidgetReconfigured& b) {
     a.Swap(&b);
@@ -25171,7 +25587,7 @@ class ResizeWidget final :
                &_ResizeWidget_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    141;
+    143;
 
   friend void swap(ResizeWidget& a, ResizeWidget& b) {
     a.Swap(&b);
@@ -25356,7 +25772,7 @@ class WidgetFrame final :
                &_WidgetFrame_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    142;
+    144;
 
   friend void swap(WidgetFrame& a, WidgetFrame& b) {
     a.Swap(&b);
@@ -25524,7 +25940,7 @@ class WidgetPointer final :
                &_WidgetPointer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    143;
+    145;
 
   friend void swap(WidgetPointer& a, WidgetPointer& b) {
     a.Swap(&b);
@@ -25698,7 +26114,7 @@ class AccessibilityWatch final :
                &_AccessibilityWatch_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    144;
+    146;
 
   friend void swap(AccessibilityWatch& a, AccessibilityWatch& b) {
     a.Swap(&b);
@@ -25764,6 +26180,7 @@ class AccessibilityWatch final :
   enum : int {
     kTaskIdFieldNumber = 1,
     kOnFieldNumber = 2,
+    kWidgetIdFieldNumber = 3,
   };
   // int32 task_id = 1;
   void clear_task_id();
@@ -25783,6 +26200,15 @@ class AccessibilityWatch final :
   void _internal_set_on(bool value);
   public:
 
+  // int32 widget_id = 3;
+  void clear_widget_id();
+  int32_t widget_id() const;
+  void set_widget_id(int32_t value);
+  private:
+  int32_t _internal_widget_id() const;
+  void _internal_set_widget_id(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityWatch)
  private:
   class _Internal;
@@ -25793,6 +26219,7 @@ class AccessibilityWatch final :
   struct Impl_ {
     int32_t task_id_;
     bool on_;
+    int32_t widget_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -25839,7 +26266,7 @@ class NodeRange final :
                &_NodeRange_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    145;
+    147;
 
   friend void swap(NodeRange& a, NodeRange& b) {
     a.Swap(&b);
@@ -25991,7 +26418,7 @@ class AccessibilityNode final :
                &_AccessibilityNode_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    146;
+    148;
 
   friend void swap(AccessibilityNode& a, AccessibilityNode& b) {
     a.Swap(&b);
@@ -26434,7 +26861,7 @@ class AccessibilityTree final :
                &_AccessibilityTree_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    147;
+    149;
 
   friend void swap(AccessibilityTree& a, AccessibilityTree& b) {
     a.Swap(&b);
@@ -26505,6 +26932,7 @@ class AccessibilityTree final :
     kEpochFieldNumber = 2,
     kFullFieldNumber = 3,
     kFocusedIdFieldNumber = 7,
+    kWidgetIdFieldNumber = 8,
   };
   // repeated uint32 root_ids = 4;
   int root_ids_size() const;
@@ -26604,6 +27032,15 @@ class AccessibilityTree final :
   void _internal_set_focused_id(uint32_t value);
   public:
 
+  // int32 widget_id = 8;
+  void clear_widget_id();
+  int32_t widget_id() const;
+  void set_widget_id(int32_t value);
+  private:
+  int32_t _internal_widget_id() const;
+  void _internal_set_widget_id(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityTree)
  private:
   class _Internal;
@@ -26621,6 +27058,7 @@ class AccessibilityTree final :
     uint32_t epoch_;
     bool full_;
     uint32_t focused_id_;
+    int32_t widget_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -26667,7 +27105,7 @@ class AccessibilityAction final :
                &_AccessibilityAction_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    148;
+    150;
 
   friend void swap(AccessibilityAction& a, AccessibilityAction& b) {
     a.Swap(&b);
@@ -26737,6 +27175,7 @@ class AccessibilityAction final :
     kNodeIdFieldNumber = 3,
     kActionFieldNumber = 4,
     kRequestIdFieldNumber = 6,
+    kWidgetIdFieldNumber = 7,
   };
   // string text = 5;
   void clear_text();
@@ -26797,6 +27236,15 @@ class AccessibilityAction final :
   void _internal_set_request_id(uint32_t value);
   public:
 
+  // int32 widget_id = 7;
+  void clear_widget_id();
+  int32_t widget_id() const;
+  void set_widget_id(int32_t value);
+  private:
+  int32_t _internal_widget_id() const;
+  void _internal_set_widget_id(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityAction)
  private:
   class _Internal;
@@ -26811,6 +27259,7 @@ class AccessibilityAction final :
     uint32_t node_id_;
     int action_;
     uint32_t request_id_;
+    int32_t widget_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -26857,7 +27306,7 @@ class AccessibilityActionResult final :
                &_AccessibilityActionResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    149;
+    151;
 
   friend void swap(AccessibilityActionResult& a, AccessibilityActionResult& b) {
     a.Swap(&b);
@@ -26925,6 +27374,7 @@ class AccessibilityActionResult final :
     kTaskIdFieldNumber = 1,
     kRequestIdFieldNumber = 2,
     kDoneFieldNumber = 3,
+    kWidgetIdFieldNumber = 5,
   };
   // string error = 4;
   void clear_error();
@@ -26967,6 +27417,15 @@ class AccessibilityActionResult final :
   void _internal_set_done(bool value);
   public:
 
+  // int32 widget_id = 5;
+  void clear_widget_id();
+  int32_t widget_id() const;
+  void set_widget_id(int32_t value);
+  private:
+  int32_t _internal_widget_id() const;
+  void _internal_set_widget_id(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.AccessibilityActionResult)
  private:
   class _Internal;
@@ -26979,6 +27438,7 @@ class AccessibilityActionResult final :
     int32_t task_id_;
     uint32_t request_id_;
     bool done_;
+    int32_t widget_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -27025,7 +27485,7 @@ class AudioOutputOpen final :
                &_AudioOutputOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    150;
+    152;
 
   friend void swap(AudioOutputOpen& a, AudioOutputOpen& b) {
     a.Swap(&b);
@@ -27204,7 +27664,7 @@ class AudioOutputReady final :
                &_AudioOutputReady_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    151;
+    153;
 
   friend void swap(AudioOutputReady& a, AudioOutputReady& b) {
     a.Swap(&b);
@@ -27345,7 +27805,7 @@ class AudioPcm final :
                &_AudioPcm_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    152;
+    154;
 
   friend void swap(AudioPcm& a, AudioPcm& b) {
     a.Swap(&b);
@@ -27491,7 +27951,7 @@ class AudioInputOpen final :
                &_AudioInputOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    153;
+    155;
 
   friend void swap(AudioInputOpen& a, AudioInputOpen& b) {
     a.Swap(&b);
@@ -27670,7 +28130,7 @@ class AudioInputOpened final :
                &_AudioInputOpened_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    154;
+    156;
 
   friend void swap(AudioInputOpened& a, AudioInputOpened& b) {
     a.Swap(&b);
@@ -27816,7 +28276,7 @@ class AudioOutputControl final :
                &_AudioOutputControl_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    155;
+    157;
 
   friend void swap(AudioOutputControl& a, AudioOutputControl& b) {
     a.Swap(&b);
@@ -27946,7 +28406,7 @@ class AppAudioStream final :
                &_AppAudioStream_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    156;
+    158;
 
   friend void swap(AppAudioStream& a, AppAudioStream& b) {
     a.Swap(&b);
@@ -28135,7 +28595,7 @@ class AppAudio final :
                &_AppAudio_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    157;
+    159;
 
   friend void swap(AppAudio& a, AppAudio& b) {
     a.Swap(&b);
@@ -28274,7 +28734,7 @@ class SetAppVolume final :
                &_SetAppVolume_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    158;
+    160;
 
   friend void swap(SetAppVolume& a, SetAppVolume& b) {
     a.Swap(&b);
@@ -28431,7 +28891,7 @@ class LogStream final :
                &_LogStream_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    159;
+    161;
 
   friend void swap(LogStream& a, LogStream& b) {
     a.Swap(&b);
@@ -28594,7 +29054,7 @@ class LogDump final :
                &_LogDump_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    160;
+    162;
 
   friend void swap(LogDump& a, LogDump& b) {
     a.Swap(&b);
@@ -28746,7 +29206,7 @@ class LogRecord final :
                &_LogRecord_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    161;
+    163;
 
   friend void swap(LogRecord& a, LogRecord& b) {
     a.Swap(&b);
@@ -28974,7 +29434,7 @@ class LogRecords final :
                &_LogRecords_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    162;
+    164;
 
   friend void swap(LogRecords& a, LogRecords& b) {
     a.Swap(&b);
@@ -29151,7 +29611,7 @@ class CollectDiagnostics final :
                &_CollectDiagnostics_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    163;
+    165;
 
   friend void swap(CollectDiagnostics& a, CollectDiagnostics& b) {
     a.Swap(&b);
@@ -29281,7 +29741,7 @@ class DiagnosticsFile final :
                &_DiagnosticsFile_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    164;
+    166;
 
   friend void swap(DiagnosticsFile& a, DiagnosticsFile& b) {
     a.Swap(&b);
@@ -29454,7 +29914,7 @@ class DiagnosticsDone final :
                &_DiagnosticsDone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    165;
+    167;
 
   friend void swap(DiagnosticsDone& a, DiagnosticsDone& b) {
     a.Swap(&b);
@@ -29600,7 +30060,7 @@ class PrintJob final :
                &_PrintJob_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    166;
+    168;
 
   friend void swap(PrintJob& a, PrintJob& b) {
     a.Swap(&b);
@@ -29866,7 +30326,7 @@ class PrintJobChunk final :
                &_PrintJobChunk_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    167;
+    169;
 
   friend void swap(PrintJobChunk& a, PrintJobChunk& b) {
     a.Swap(&b);
@@ -30023,7 +30483,7 @@ class PrintJobCancel final :
                &_PrintJobCancel_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    168;
+    170;
 
   friend void swap(PrintJobCancel& a, PrintJobCancel& b) {
     a.Swap(&b);
@@ -30153,7 +30613,7 @@ class PrintJobResult final :
                &_PrintJobResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    169;
+    171;
 
   friend void swap(PrintJobResult& a, PrintJobResult& b) {
     a.Swap(&b);
@@ -30310,7 +30770,7 @@ class CameraMode final :
                &_CameraMode_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    170;
+    172;
 
   friend void swap(CameraMode& a, CameraMode& b) {
     a.Swap(&b);
@@ -30473,7 +30933,7 @@ class CameraDevice final :
                &_CameraDevice_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    171;
+    173;
 
   friend void swap(CameraDevice& a, CameraDevice& b) {
     a.Swap(&b);
@@ -30666,7 +31126,7 @@ class CameraList final :
                &_CameraList_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    172;
+    174;
 
   friend void swap(CameraList& a, CameraList& b) {
     a.Swap(&b);
@@ -30805,7 +31265,7 @@ class CameraOpen final :
                &_CameraOpen_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    173;
+    175;
 
   friend void swap(CameraOpen& a, CameraOpen& b) {
     a.Swap(&b);
@@ -30973,7 +31433,7 @@ class CameraOpened final :
                &_CameraOpened_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    174;
+    176;
 
   friend void swap(CameraOpened& a, CameraOpened& b) {
     a.Swap(&b);
@@ -31152,7 +31612,7 @@ class CameraFrame final :
                &_CameraFrame_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    175;
+    177;
 
   friend void swap(CameraFrame& a, CameraFrame& b) {
     a.Swap(&b);
@@ -31342,7 +31802,7 @@ class CameraStop final :
                &_CameraStop_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    176;
+    178;
 
   friend void swap(CameraStop& a, CameraStop& b) {
     a.Swap(&b);
@@ -31459,7 +31919,7 @@ class CameraStill final :
                &_CameraStill_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    177;
+    179;
 
   friend void swap(CameraStill& a, CameraStill& b) {
     a.Swap(&b);
@@ -31622,7 +32082,7 @@ class CameraStillTaken final :
                &_CameraStillTaken_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    178;
+    180;
 
   friend void swap(CameraStillTaken& a, CameraStillTaken& b) {
     a.Swap(&b);
@@ -31784,7 +32244,7 @@ class CameraError final :
                &_CameraError_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    179;
+    181;
 
   friend void swap(CameraError& a, CameraError& b) {
     a.Swap(&b);
@@ -31919,7 +32379,7 @@ class SystemSettings final :
                &_SystemSettings_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    180;
+    182;
 
   friend void swap(SystemSettings& a, SystemSettings& b) {
     a.Swap(&b);
@@ -32151,7 +32611,7 @@ class DeviceName final :
                &_DeviceName_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    181;
+    183;
 
   friend void swap(DeviceName& a, DeviceName& b) {
     a.Swap(&b);
@@ -32286,7 +32746,7 @@ class GamepadConnected final :
                &_GamepadConnected_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    182;
+    184;
 
   friend void swap(GamepadConnected& a, GamepadConnected& b) {
     a.Swap(&b);
@@ -32465,7 +32925,7 @@ class GamepadDisconnected final :
                &_GamepadDisconnected_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    183;
+    185;
 
   friend void swap(GamepadDisconnected& a, GamepadDisconnected& b) {
     a.Swap(&b);
@@ -32595,7 +33055,7 @@ class GamepadState final :
                &_GamepadState_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    184;
+    186;
 
   friend void swap(GamepadState& a, GamepadState& b) {
     a.Swap(&b);
@@ -32802,7 +33262,7 @@ class GamepadRumble final :
                &_GamepadRumble_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    185;
+    187;
 
   friend void swap(GamepadRumble& a, GamepadRumble& b) {
     a.Swap(&b);
@@ -32965,7 +33425,7 @@ class BackupUpload final :
                &_BackupUpload_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    186;
+    188;
 
   friend void swap(BackupUpload& a, BackupUpload& b) {
     a.Swap(&b);
@@ -33122,7 +33582,7 @@ class BackupCommit final :
                &_BackupCommit_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    187;
+    189;
 
   friend void swap(BackupCommit& a, BackupCommit& b) {
     a.Swap(&b);
@@ -33354,7 +33814,7 @@ class BackupDiscard final :
                &_BackupDiscard_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    188;
+    190;
 
   friend void swap(BackupDiscard& a, BackupDiscard& b) {
     a.Swap(&b);
@@ -33484,7 +33944,7 @@ class BackupClear final :
                &_BackupClear_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    189;
+    191;
 
   friend void swap(BackupClear& a, BackupClear& b) {
     a.Swap(&b);
@@ -33630,7 +34090,7 @@ class BackupAnswer final :
                &_BackupAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    190;
+    192;
 
   friend void swap(BackupAnswer& a, BackupAnswer& b) {
     a.Swap(&b);
@@ -33798,7 +34258,7 @@ class BackupQuery final :
                &_BackupQuery_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    191;
+    193;
 
   friend void swap(BackupQuery& a, BackupQuery& b) {
     a.Swap(&b);
@@ -33928,7 +34388,7 @@ class BackupPackage final :
                &_BackupPackage_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    192;
+    194;
 
   friend void swap(BackupPackage& a, BackupPackage& b) {
     a.Swap(&b);
@@ -34144,7 +34604,7 @@ class BackupContents final :
                &_BackupContents_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    193;
+    195;
 
   friend void swap(BackupContents& a, BackupContents& b) {
     a.Swap(&b);
@@ -34348,7 +34808,7 @@ class BackupFetch final :
                &_BackupFetch_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    194;
+    196;
 
   friend void swap(BackupFetch& a, BackupFetch& b) {
     a.Swap(&b);
@@ -34543,7 +35003,7 @@ class BackupFetchData final :
                &_BackupFetchData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    195;
+    197;
 
   friend void swap(BackupFetchData& a, BackupFetchData& b) {
     a.Swap(&b);
@@ -34749,7 +35209,7 @@ class BackupRun final :
                &_BackupRun_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    196;
+    198;
 
   friend void swap(BackupRun& a, BackupRun& b) {
     a.Swap(&b);
@@ -34879,7 +35339,7 @@ class BackupRestore final :
                &_BackupRestore_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    197;
+    199;
 
   friend void swap(BackupRestore& a, BackupRestore& b) {
     a.Swap(&b);
@@ -35046,7 +35506,7 @@ class BackupRunResult final :
                &_BackupRunResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    198;
+    200;
 
   friend void swap(BackupRunResult& a, BackupRunResult& b) {
     a.Swap(&b);
@@ -35225,7 +35685,7 @@ class BackupSetting final :
                &_BackupSetting_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    199;
+    201;
 
   friend void swap(BackupSetting& a, BackupSetting& b) {
     a.Swap(&b);
@@ -35355,7 +35815,7 @@ class HostCertificates final :
                &_HostCertificates_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    200;
+    202;
 
   friend void swap(HostCertificates& a, HostCertificates& b) {
     a.Swap(&b);
@@ -35511,7 +35971,7 @@ class PasskeyRequest final :
                &_PasskeyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    201;
+    203;
 
   friend void swap(PasskeyRequest& a, PasskeyRequest& b) {
     a.Swap(&b);
@@ -35758,7 +36218,7 @@ class PasskeyResponse final :
                &_PasskeyResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    202;
+    204;
 
   friend void swap(PasskeyResponse& a, PasskeyResponse& b) {
     a.Swap(&b);
@@ -35931,7 +36391,7 @@ class KeyMintRootKeyRequest final :
                &_KeyMintRootKeyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    203;
+    205;
 
   friend void swap(KeyMintRootKeyRequest& a, KeyMintRootKeyRequest& b) {
     a.Swap(&b);
@@ -36048,7 +36508,7 @@ class KeyMintRootKey final :
                &_KeyMintRootKey_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    204;
+    206;
 
   friend void swap(KeyMintRootKey& a, KeyMintRootKey& b) {
     a.Swap(&b);
@@ -36199,7 +36659,7 @@ class DnsQuery final :
                &_DnsQuery_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    205;
+    207;
 
   friend void swap(DnsQuery& a, DnsQuery& b) {
     a.Swap(&b);
@@ -36356,7 +36816,7 @@ class DnsAnswer final :
                &_DnsAnswer_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    206;
+    208;
 
   friend void swap(DnsAnswer& a, DnsAnswer& b) {
     a.Swap(&b);
@@ -36502,7 +36962,7 @@ class ListSpeechVoices final :
                &_ListSpeechVoices_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    207;
+    209;
 
   friend void swap(ListSpeechVoices& a, ListSpeechVoices& b) {
     a.Swap(&b);
@@ -36619,7 +37079,7 @@ class SpeechVoice final :
                &_SpeechVoice_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    208;
+    210;
 
   friend void swap(SpeechVoice& a, SpeechVoice& b) {
     a.Swap(&b);
@@ -36808,7 +37268,7 @@ class SpeechVoices final :
                &_SpeechVoices_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    209;
+    211;
 
   friend void swap(SpeechVoices& a, SpeechVoices& b) {
     a.Swap(&b);
@@ -36974,7 +37434,7 @@ class SpeakText final :
                &_SpeakText_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    210;
+    212;
 
   friend void swap(SpeakText& a, SpeakText& b) {
     a.Swap(&b);
@@ -37174,7 +37634,7 @@ class SpeechAudio final :
                &_SpeechAudio_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    211;
+    213;
 
   friend void swap(SpeechAudio& a, SpeechAudio& b) {
     a.Swap(&b);
@@ -37342,7 +37802,7 @@ class SpeechDone final :
                &_SpeechDone_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    212;
+    214;
 
   friend void swap(SpeechDone& a, SpeechDone& b) {
     a.Swap(&b);
@@ -37499,7 +37959,7 @@ class StopSpeaking final :
                &_StopSpeaking_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    213;
+    215;
 
   friend void swap(StopSpeaking& a, StopSpeaking& b) {
     a.Swap(&b);
@@ -37629,7 +38089,7 @@ class StartRecognition final :
                &_StartRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    214;
+    216;
 
   friend void swap(StartRecognition& a, StartRecognition& b) {
     a.Swap(&b);
@@ -37808,7 +38268,7 @@ class StopRecognition final :
                &_StopRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    215;
+    217;
 
   friend void swap(StopRecognition& a, StopRecognition& b) {
     a.Swap(&b);
@@ -37938,7 +38398,7 @@ class CancelRecognition final :
                &_CancelRecognition_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    216;
+    218;
 
   friend void swap(CancelRecognition& a, CancelRecognition& b) {
     a.Swap(&b);
@@ -38068,7 +38528,7 @@ class RecognitionEvent final :
                &_RecognitionEvent_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    217;
+    219;
 
   friend void swap(RecognitionEvent& a, RecognitionEvent& b) {
     a.Swap(&b);
@@ -38286,7 +38746,7 @@ class CheckSpelling final :
                &_CheckSpelling_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    218;
+    220;
 
   friend void swap(CheckSpelling& a, CheckSpelling& b) {
     a.Swap(&b);
@@ -38469,7 +38929,7 @@ class SpellingMistake final :
                &_SpellingMistake_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    219;
+    221;
 
   friend void swap(SpellingMistake& a, SpellingMistake& b) {
     a.Swap(&b);
@@ -38647,7 +39107,7 @@ class SpellingText final :
                &_SpellingText_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    220;
+    222;
 
   friend void swap(SpellingText& a, SpellingText& b) {
     a.Swap(&b);
@@ -38786,7 +39246,7 @@ class SpellingResult final :
                &_SpellingResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    221;
+    223;
 
   friend void swap(SpellingResult& a, SpellingResult& b) {
     a.Swap(&b);
@@ -39018,6 +39478,7 @@ class Envelope final :
     kNotificationRemoved = 71,
     kNotificationClicked = 72,
     kNotificationDismissed = 73,
+    kNotificationButtonClicked = 730,
     kBackgroundApp = 74,
     kBackgroundAppGone = 75,
     kBackgroundAppAction = 76,
@@ -39151,7 +39612,7 @@ class Envelope final :
                &_Envelope_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    222;
+    224;
 
   friend void swap(Envelope& a, Envelope& b) {
     a.Swap(&b);
@@ -39290,6 +39751,7 @@ class Envelope final :
     kNotificationRemovedFieldNumber = 71,
     kNotificationClickedFieldNumber = 72,
     kNotificationDismissedFieldNumber = 73,
+    kNotificationButtonClickedFieldNumber = 730,
     kBackgroundAppFieldNumber = 74,
     kBackgroundAppGoneFieldNumber = 75,
     kBackgroundAppActionFieldNumber = 76,
@@ -40765,6 +41227,24 @@ class Envelope final :
   void unsafe_arena_set_allocated_notification_dismissed(
       ::dsa::control::v1::NotificationDismissed* notification_dismissed);
   ::dsa::control::v1::NotificationDismissed* unsafe_arena_release_notification_dismissed();
+
+  // .dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;
+  bool has_notification_button_clicked() const;
+  private:
+  bool _internal_has_notification_button_clicked() const;
+  public:
+  void clear_notification_button_clicked();
+  const ::dsa::control::v1::NotificationButtonClicked& notification_button_clicked() const;
+  PROTOBUF_NODISCARD ::dsa::control::v1::NotificationButtonClicked* release_notification_button_clicked();
+  ::dsa::control::v1::NotificationButtonClicked* mutable_notification_button_clicked();
+  void set_allocated_notification_button_clicked(::dsa::control::v1::NotificationButtonClicked* notification_button_clicked);
+  private:
+  const ::dsa::control::v1::NotificationButtonClicked& _internal_notification_button_clicked() const;
+  ::dsa::control::v1::NotificationButtonClicked* _internal_mutable_notification_button_clicked();
+  public:
+  void unsafe_arena_set_allocated_notification_button_clicked(
+      ::dsa::control::v1::NotificationButtonClicked* notification_button_clicked);
+  ::dsa::control::v1::NotificationButtonClicked* unsafe_arena_release_notification_button_clicked();
 
   // .dsa.control.v1.BackgroundApp background_app = 74;
   bool has_background_app() const;
@@ -43096,6 +43576,7 @@ class Envelope final :
   void set_has_notification_removed();
   void set_has_notification_clicked();
   void set_has_notification_dismissed();
+  void set_has_notification_button_clicked();
   void set_has_background_app();
   void set_has_background_app_gone();
   void set_has_background_app_action();
@@ -43307,6 +43788,7 @@ class Envelope final :
       ::dsa::control::v1::NotificationRemoved* notification_removed_;
       ::dsa::control::v1::NotificationClicked* notification_clicked_;
       ::dsa::control::v1::NotificationDismissed* notification_dismissed_;
+      ::dsa::control::v1::NotificationButtonClicked* notification_button_clicked_;
       ::dsa::control::v1::BackgroundApp* background_app_;
       ::dsa::control::v1::BackgroundAppGone* background_app_gone_;
       ::dsa::control::v1::BackgroundAppAction* background_app_action_;
@@ -52516,6 +52998,285 @@ inline void GuestNotification::set_when_millis(int64_t value) {
   // @@protoc_insertion_point(field_set:dsa.control.v1.GuestNotification.when_millis)
 }
 
+// repeated .dsa.control.v1.NotificationButton buttons = 11;
+inline int GuestNotification::_internal_buttons_size() const {
+  return _impl_.buttons_.size();
+}
+inline int GuestNotification::buttons_size() const {
+  return _internal_buttons_size();
+}
+inline void GuestNotification::clear_buttons() {
+  _impl_.buttons_.Clear();
+}
+inline ::dsa::control::v1::NotificationButton* GuestNotification::mutable_buttons(int index) {
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.GuestNotification.buttons)
+  return _impl_.buttons_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::dsa::control::v1::NotificationButton >*
+GuestNotification::mutable_buttons() {
+  // @@protoc_insertion_point(field_mutable_list:dsa.control.v1.GuestNotification.buttons)
+  return &_impl_.buttons_;
+}
+inline const ::dsa::control::v1::NotificationButton& GuestNotification::_internal_buttons(int index) const {
+  return _impl_.buttons_.Get(index);
+}
+inline const ::dsa::control::v1::NotificationButton& GuestNotification::buttons(int index) const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.GuestNotification.buttons)
+  return _internal_buttons(index);
+}
+inline ::dsa::control::v1::NotificationButton* GuestNotification::_internal_add_buttons() {
+  return _impl_.buttons_.Add();
+}
+inline ::dsa::control::v1::NotificationButton* GuestNotification::add_buttons() {
+  ::dsa::control::v1::NotificationButton* _add = _internal_add_buttons();
+  // @@protoc_insertion_point(field_add:dsa.control.v1.GuestNotification.buttons)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::dsa::control::v1::NotificationButton >&
+GuestNotification::buttons() const {
+  // @@protoc_insertion_point(field_list:dsa.control.v1.GuestNotification.buttons)
+  return _impl_.buttons_;
+}
+
+// -------------------------------------------------------------------
+
+// NotificationButton
+
+// string title = 1;
+inline void NotificationButton::clear_title() {
+  _impl_.title_.ClearToEmpty();
+}
+inline const std::string& NotificationButton::title() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButton.title)
+  return _internal_title();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void NotificationButton::set_title(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.title_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButton.title)
+}
+inline std::string* NotificationButton::mutable_title() {
+  std::string* _s = _internal_mutable_title();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.NotificationButton.title)
+  return _s;
+}
+inline const std::string& NotificationButton::_internal_title() const {
+  return _impl_.title_.Get();
+}
+inline void NotificationButton::_internal_set_title(const std::string& value) {
+  
+  _impl_.title_.Set(value, GetArenaForAllocation());
+}
+inline std::string* NotificationButton::_internal_mutable_title() {
+  
+  return _impl_.title_.Mutable(GetArenaForAllocation());
+}
+inline std::string* NotificationButton::release_title() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.NotificationButton.title)
+  return _impl_.title_.Release();
+}
+inline void NotificationButton::set_allocated_title(std::string* title) {
+  if (title != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.title_.SetAllocated(title, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.title_.IsDefault()) {
+    _impl_.title_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.NotificationButton.title)
+}
+
+// bool reply = 2;
+inline void NotificationButton::clear_reply() {
+  _impl_.reply_ = false;
+}
+inline bool NotificationButton::_internal_reply() const {
+  return _impl_.reply_;
+}
+inline bool NotificationButton::reply() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButton.reply)
+  return _internal_reply();
+}
+inline void NotificationButton::_internal_set_reply(bool value) {
+  
+  _impl_.reply_ = value;
+}
+inline void NotificationButton::set_reply(bool value) {
+  _internal_set_reply(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButton.reply)
+}
+
+// string reply_label = 3;
+inline void NotificationButton::clear_reply_label() {
+  _impl_.reply_label_.ClearToEmpty();
+}
+inline const std::string& NotificationButton::reply_label() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButton.reply_label)
+  return _internal_reply_label();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void NotificationButton::set_reply_label(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.reply_label_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButton.reply_label)
+}
+inline std::string* NotificationButton::mutable_reply_label() {
+  std::string* _s = _internal_mutable_reply_label();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.NotificationButton.reply_label)
+  return _s;
+}
+inline const std::string& NotificationButton::_internal_reply_label() const {
+  return _impl_.reply_label_.Get();
+}
+inline void NotificationButton::_internal_set_reply_label(const std::string& value) {
+  
+  _impl_.reply_label_.Set(value, GetArenaForAllocation());
+}
+inline std::string* NotificationButton::_internal_mutable_reply_label() {
+  
+  return _impl_.reply_label_.Mutable(GetArenaForAllocation());
+}
+inline std::string* NotificationButton::release_reply_label() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.NotificationButton.reply_label)
+  return _impl_.reply_label_.Release();
+}
+inline void NotificationButton::set_allocated_reply_label(std::string* reply_label) {
+  if (reply_label != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.reply_label_.SetAllocated(reply_label, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.reply_label_.IsDefault()) {
+    _impl_.reply_label_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.NotificationButton.reply_label)
+}
+
+// repeated string reply_choices = 4;
+inline int NotificationButton::_internal_reply_choices_size() const {
+  return _impl_.reply_choices_.size();
+}
+inline int NotificationButton::reply_choices_size() const {
+  return _internal_reply_choices_size();
+}
+inline void NotificationButton::clear_reply_choices() {
+  _impl_.reply_choices_.Clear();
+}
+inline std::string* NotificationButton::add_reply_choices() {
+  std::string* _s = _internal_add_reply_choices();
+  // @@protoc_insertion_point(field_add_mutable:dsa.control.v1.NotificationButton.reply_choices)
+  return _s;
+}
+inline const std::string& NotificationButton::_internal_reply_choices(int index) const {
+  return _impl_.reply_choices_.Get(index);
+}
+inline const std::string& NotificationButton::reply_choices(int index) const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButton.reply_choices)
+  return _internal_reply_choices(index);
+}
+inline std::string* NotificationButton::mutable_reply_choices(int index) {
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.NotificationButton.reply_choices)
+  return _impl_.reply_choices_.Mutable(index);
+}
+inline void NotificationButton::set_reply_choices(int index, const std::string& value) {
+  _impl_.reply_choices_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline void NotificationButton::set_reply_choices(int index, std::string&& value) {
+  _impl_.reply_choices_.Mutable(index)->assign(std::move(value));
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline void NotificationButton::set_reply_choices(int index, const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.reply_choices_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline void NotificationButton::set_reply_choices(int index, const char* value, size_t size) {
+  _impl_.reply_choices_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline std::string* NotificationButton::_internal_add_reply_choices() {
+  return _impl_.reply_choices_.Add();
+}
+inline void NotificationButton::add_reply_choices(const std::string& value) {
+  _impl_.reply_choices_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline void NotificationButton::add_reply_choices(std::string&& value) {
+  _impl_.reply_choices_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline void NotificationButton::add_reply_choices(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.reply_choices_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline void NotificationButton::add_reply_choices(const char* value, size_t size) {
+  _impl_.reply_choices_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:dsa.control.v1.NotificationButton.reply_choices)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>&
+NotificationButton::reply_choices() const {
+  // @@protoc_insertion_point(field_list:dsa.control.v1.NotificationButton.reply_choices)
+  return _impl_.reply_choices_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>*
+NotificationButton::mutable_reply_choices() {
+  // @@protoc_insertion_point(field_mutable_list:dsa.control.v1.NotificationButton.reply_choices)
+  return &_impl_.reply_choices_;
+}
+
+// bool reply_choices_only = 5;
+inline void NotificationButton::clear_reply_choices_only() {
+  _impl_.reply_choices_only_ = false;
+}
+inline bool NotificationButton::_internal_reply_choices_only() const {
+  return _impl_.reply_choices_only_;
+}
+inline bool NotificationButton::reply_choices_only() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButton.reply_choices_only)
+  return _internal_reply_choices_only();
+}
+inline void NotificationButton::_internal_set_reply_choices_only(bool value) {
+  
+  _impl_.reply_choices_only_ = value;
+}
+inline void NotificationButton::set_reply_choices_only(bool value) {
+  _internal_set_reply_choices_only(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButton.reply_choices_only)
+}
+
+// int32 semantic_action = 6;
+inline void NotificationButton::clear_semantic_action() {
+  _impl_.semantic_action_ = 0;
+}
+inline int32_t NotificationButton::_internal_semantic_action() const {
+  return _impl_.semantic_action_;
+}
+inline int32_t NotificationButton::semantic_action() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButton.semantic_action)
+  return _internal_semantic_action();
+}
+inline void NotificationButton::_internal_set_semantic_action(int32_t value) {
+  
+  _impl_.semantic_action_ = value;
+}
+inline void NotificationButton::set_semantic_action(int32_t value) {
+  _internal_set_semantic_action(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButton.semantic_action)
+}
+
 // -------------------------------------------------------------------
 
 // NotificationRemoved
@@ -52676,6 +53437,180 @@ inline void NotificationDismissed::set_allocated_key(std::string* key) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.NotificationDismissed.key)
+}
+
+// -------------------------------------------------------------------
+
+// NotificationButtonClicked
+
+// string key = 1;
+inline void NotificationButtonClicked::clear_key() {
+  _impl_.key_.ClearToEmpty();
+}
+inline const std::string& NotificationButtonClicked::key() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButtonClicked.key)
+  return _internal_key();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void NotificationButtonClicked::set_key(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.key_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButtonClicked.key)
+}
+inline std::string* NotificationButtonClicked::mutable_key() {
+  std::string* _s = _internal_mutable_key();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.NotificationButtonClicked.key)
+  return _s;
+}
+inline const std::string& NotificationButtonClicked::_internal_key() const {
+  return _impl_.key_.Get();
+}
+inline void NotificationButtonClicked::_internal_set_key(const std::string& value) {
+  
+  _impl_.key_.Set(value, GetArenaForAllocation());
+}
+inline std::string* NotificationButtonClicked::_internal_mutable_key() {
+  
+  return _impl_.key_.Mutable(GetArenaForAllocation());
+}
+inline std::string* NotificationButtonClicked::release_key() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.NotificationButtonClicked.key)
+  return _impl_.key_.Release();
+}
+inline void NotificationButtonClicked::set_allocated_key(std::string* key) {
+  if (key != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.key_.SetAllocated(key, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.key_.IsDefault()) {
+    _impl_.key_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.NotificationButtonClicked.key)
+}
+
+// uint32 button = 2;
+inline void NotificationButtonClicked::clear_button() {
+  _impl_.button_ = 0u;
+}
+inline uint32_t NotificationButtonClicked::_internal_button() const {
+  return _impl_.button_;
+}
+inline uint32_t NotificationButtonClicked::button() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButtonClicked.button)
+  return _internal_button();
+}
+inline void NotificationButtonClicked::_internal_set_button(uint32_t value) {
+  
+  _impl_.button_ = value;
+}
+inline void NotificationButtonClicked::set_button(uint32_t value) {
+  _internal_set_button(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButtonClicked.button)
+}
+
+// string title = 3;
+inline void NotificationButtonClicked::clear_title() {
+  _impl_.title_.ClearToEmpty();
+}
+inline const std::string& NotificationButtonClicked::title() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButtonClicked.title)
+  return _internal_title();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void NotificationButtonClicked::set_title(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.title_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButtonClicked.title)
+}
+inline std::string* NotificationButtonClicked::mutable_title() {
+  std::string* _s = _internal_mutable_title();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.NotificationButtonClicked.title)
+  return _s;
+}
+inline const std::string& NotificationButtonClicked::_internal_title() const {
+  return _impl_.title_.Get();
+}
+inline void NotificationButtonClicked::_internal_set_title(const std::string& value) {
+  
+  _impl_.title_.Set(value, GetArenaForAllocation());
+}
+inline std::string* NotificationButtonClicked::_internal_mutable_title() {
+  
+  return _impl_.title_.Mutable(GetArenaForAllocation());
+}
+inline std::string* NotificationButtonClicked::release_title() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.NotificationButtonClicked.title)
+  return _impl_.title_.Release();
+}
+inline void NotificationButtonClicked::set_allocated_title(std::string* title) {
+  if (title != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.title_.SetAllocated(title, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.title_.IsDefault()) {
+    _impl_.title_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.NotificationButtonClicked.title)
+}
+
+// string reply_text = 4;
+inline void NotificationButtonClicked::clear_reply_text() {
+  _impl_.reply_text_.ClearToEmpty();
+}
+inline const std::string& NotificationButtonClicked::reply_text() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.NotificationButtonClicked.reply_text)
+  return _internal_reply_text();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void NotificationButtonClicked::set_reply_text(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.reply_text_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:dsa.control.v1.NotificationButtonClicked.reply_text)
+}
+inline std::string* NotificationButtonClicked::mutable_reply_text() {
+  std::string* _s = _internal_mutable_reply_text();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.NotificationButtonClicked.reply_text)
+  return _s;
+}
+inline const std::string& NotificationButtonClicked::_internal_reply_text() const {
+  return _impl_.reply_text_.Get();
+}
+inline void NotificationButtonClicked::_internal_set_reply_text(const std::string& value) {
+  
+  _impl_.reply_text_.Set(value, GetArenaForAllocation());
+}
+inline std::string* NotificationButtonClicked::_internal_mutable_reply_text() {
+  
+  return _impl_.reply_text_.Mutable(GetArenaForAllocation());
+}
+inline std::string* NotificationButtonClicked::release_reply_text() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.NotificationButtonClicked.reply_text)
+  return _impl_.reply_text_.Release();
+}
+inline void NotificationButtonClicked::set_allocated_reply_text(std::string* reply_text) {
+  if (reply_text != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.reply_text_.SetAllocated(reply_text, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.reply_text_.IsDefault()) {
+    _impl_.reply_text_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.NotificationButtonClicked.reply_text)
 }
 
 // -------------------------------------------------------------------
@@ -59513,6 +60448,26 @@ inline void AccessibilityWatch::set_on(bool value) {
   // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityWatch.on)
 }
 
+// int32 widget_id = 3;
+inline void AccessibilityWatch::clear_widget_id() {
+  _impl_.widget_id_ = 0;
+}
+inline int32_t AccessibilityWatch::_internal_widget_id() const {
+  return _impl_.widget_id_;
+}
+inline int32_t AccessibilityWatch::widget_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityWatch.widget_id)
+  return _internal_widget_id();
+}
+inline void AccessibilityWatch::_internal_set_widget_id(int32_t value) {
+  
+  _impl_.widget_id_ = value;
+}
+inline void AccessibilityWatch::set_widget_id(int32_t value) {
+  _internal_set_widget_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityWatch.widget_id)
+}
+
 // -------------------------------------------------------------------
 
 // NodeRange
@@ -60629,6 +61584,26 @@ inline void AccessibilityTree::set_focused_id(uint32_t value) {
   // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityTree.focused_id)
 }
 
+// int32 widget_id = 8;
+inline void AccessibilityTree::clear_widget_id() {
+  _impl_.widget_id_ = 0;
+}
+inline int32_t AccessibilityTree::_internal_widget_id() const {
+  return _impl_.widget_id_;
+}
+inline int32_t AccessibilityTree::widget_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityTree.widget_id)
+  return _internal_widget_id();
+}
+inline void AccessibilityTree::_internal_set_widget_id(int32_t value) {
+  
+  _impl_.widget_id_ = value;
+}
+inline void AccessibilityTree::set_widget_id(int32_t value) {
+  _internal_set_widget_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityTree.widget_id)
+}
+
 // -------------------------------------------------------------------
 
 // AccessibilityAction
@@ -60783,6 +61758,26 @@ inline void AccessibilityAction::set_request_id(uint32_t value) {
   // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.request_id)
 }
 
+// int32 widget_id = 7;
+inline void AccessibilityAction::clear_widget_id() {
+  _impl_.widget_id_ = 0;
+}
+inline int32_t AccessibilityAction::_internal_widget_id() const {
+  return _impl_.widget_id_;
+}
+inline int32_t AccessibilityAction::widget_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityAction.widget_id)
+  return _internal_widget_id();
+}
+inline void AccessibilityAction::_internal_set_widget_id(int32_t value) {
+  
+  _impl_.widget_id_ = value;
+}
+inline void AccessibilityAction::set_widget_id(int32_t value) {
+  _internal_set_widget_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityAction.widget_id)
+}
+
 // -------------------------------------------------------------------
 
 // AccessibilityActionResult
@@ -60895,6 +61890,26 @@ inline void AccessibilityActionResult::set_allocated_error(std::string* error) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.AccessibilityActionResult.error)
+}
+
+// int32 widget_id = 5;
+inline void AccessibilityActionResult::clear_widget_id() {
+  _impl_.widget_id_ = 0;
+}
+inline int32_t AccessibilityActionResult::_internal_widget_id() const {
+  return _impl_.widget_id_;
+}
+inline int32_t AccessibilityActionResult::widget_id() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.AccessibilityActionResult.widget_id)
+  return _internal_widget_id();
+}
+inline void AccessibilityActionResult::_internal_set_widget_id(int32_t value) {
+  
+  _impl_.widget_id_ = value;
+}
+inline void AccessibilityActionResult::set_widget_id(int32_t value) {
+  _internal_set_widget_id(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.AccessibilityActionResult.widget_id)
 }
 
 // -------------------------------------------------------------------
@@ -74531,6 +75546,80 @@ inline ::dsa::control::v1::NotificationDismissed* Envelope::mutable_notification
   return _msg;
 }
 
+// .dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;
+inline bool Envelope::_internal_has_notification_button_clicked() const {
+  return body_case() == kNotificationButtonClicked;
+}
+inline bool Envelope::has_notification_button_clicked() const {
+  return _internal_has_notification_button_clicked();
+}
+inline void Envelope::set_has_notification_button_clicked() {
+  _impl_._oneof_case_[0] = kNotificationButtonClicked;
+}
+inline void Envelope::clear_notification_button_clicked() {
+  if (_internal_has_notification_button_clicked()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.body_.notification_button_clicked_;
+    }
+    clear_has_body();
+  }
+}
+inline ::dsa::control::v1::NotificationButtonClicked* Envelope::release_notification_button_clicked() {
+  // @@protoc_insertion_point(field_release:dsa.control.v1.Envelope.notification_button_clicked)
+  if (_internal_has_notification_button_clicked()) {
+    clear_has_body();
+    ::dsa::control::v1::NotificationButtonClicked* temp = _impl_.body_.notification_button_clicked_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.body_.notification_button_clicked_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::dsa::control::v1::NotificationButtonClicked& Envelope::_internal_notification_button_clicked() const {
+  return _internal_has_notification_button_clicked()
+      ? *_impl_.body_.notification_button_clicked_
+      : reinterpret_cast< ::dsa::control::v1::NotificationButtonClicked&>(::dsa::control::v1::_NotificationButtonClicked_default_instance_);
+}
+inline const ::dsa::control::v1::NotificationButtonClicked& Envelope::notification_button_clicked() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.Envelope.notification_button_clicked)
+  return _internal_notification_button_clicked();
+}
+inline ::dsa::control::v1::NotificationButtonClicked* Envelope::unsafe_arena_release_notification_button_clicked() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:dsa.control.v1.Envelope.notification_button_clicked)
+  if (_internal_has_notification_button_clicked()) {
+    clear_has_body();
+    ::dsa::control::v1::NotificationButtonClicked* temp = _impl_.body_.notification_button_clicked_;
+    _impl_.body_.notification_button_clicked_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void Envelope::unsafe_arena_set_allocated_notification_button_clicked(::dsa::control::v1::NotificationButtonClicked* notification_button_clicked) {
+  clear_body();
+  if (notification_button_clicked) {
+    set_has_notification_button_clicked();
+    _impl_.body_.notification_button_clicked_ = notification_button_clicked;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:dsa.control.v1.Envelope.notification_button_clicked)
+}
+inline ::dsa::control::v1::NotificationButtonClicked* Envelope::_internal_mutable_notification_button_clicked() {
+  if (!_internal_has_notification_button_clicked()) {
+    clear_body();
+    set_has_notification_button_clicked();
+    _impl_.body_.notification_button_clicked_ = CreateMaybeMessage< ::dsa::control::v1::NotificationButtonClicked >(GetArenaForAllocation());
+  }
+  return _impl_.body_.notification_button_clicked_;
+}
+inline ::dsa::control::v1::NotificationButtonClicked* Envelope::mutable_notification_button_clicked() {
+  ::dsa::control::v1::NotificationButtonClicked* _msg = _internal_mutable_notification_button_clicked();
+  // @@protoc_insertion_point(field_mutable:dsa.control.v1.Envelope.notification_button_clicked)
+  return _msg;
+}
+
 // .dsa.control.v1.BackgroundApp background_app = 74;
 inline bool Envelope::_internal_has_background_app() const {
   return body_case() == kBackgroundApp;
@@ -83793,6 +84882,10 @@ inline Envelope::BodyCase Envelope::body_case() const {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

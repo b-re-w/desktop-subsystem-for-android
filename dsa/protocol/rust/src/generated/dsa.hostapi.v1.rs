@@ -464,7 +464,7 @@ pub struct LanguageServiceFrame {
 }
 /// A notification of the caller's Android, on a connection that watches them
 /// (WatchNotifications). One with the key of an earlier one replaces it.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Notification {
     #[prost(string, tag = "1")]
     pub key: ::prost::alloc::string::String,
@@ -489,6 +489,33 @@ pub struct Notification {
     pub clearable: bool,
     #[prost(int64, tag = "10")]
     pub when_millis: i64,
+    /// Its action buttons, in the app's order, at most 5. The client shows each, with a field
+    /// for the reply beside one that takes a reply, and passes the one chosen with
+    /// ActOnNotification.
+    #[prost(message, repeated, tag = "11")]
+    pub buttons: ::prost::alloc::vec::Vec<NotificationButton>,
+}
+/// One action button of a notification.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct NotificationButton {
+    #[prost(string, tag = "1")]
+    pub title: ::prost::alloc::string::String,
+    /// Whether it takes a reply the user writes or picks.
+    #[prost(bool, tag = "2")]
+    pub reply: bool,
+    /// The words the reply field shows while it is empty; empty for none.
+    #[prost(string, tag = "3")]
+    pub reply_label: ::prost::alloc::string::String,
+    /// The replies offered to pick from; empty for none.
+    #[prost(string, repeated, tag = "4")]
+    pub reply_choices: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// True when the reply must be one of `reply_choices`.
+    #[prost(bool, tag = "5")]
+    pub reply_choices_only: bool,
+    /// What it does, as Android numbers it: 0 none, 1 reply, 2 mark as read, 3 mark as unread,
+    /// 4 delete, 5 archive, 6 mute, 7 unmute, 8 thumbs up, 9 thumbs down, 10 call.
+    #[prost(int32, tag = "6")]
+    pub semantic_action: i32,
 }
 /// The notification with this key is gone, on a connection that watches them.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -504,6 +531,17 @@ pub struct ActOnNotification {
     pub key: ::prost::alloc::string::String,
     #[prost(enumeration = "NotificationAction", tag = "2")]
     pub action: i32,
+    /// For NOTIFICATION_ACTION_BUTTON: the button's place in Notification.buttons and its title,
+    /// which Android checks, so a notification whose app changed its buttons since runs the one
+    /// the user saw.
+    #[prost(uint32, tag = "3")]
+    pub button: u32,
+    #[prost(string, tag = "4")]
+    pub button_title: ::prost::alloc::string::String,
+    /// For NOTIFICATION_ACTION_BUTTON: what the user wrote or picked; empty for a button that
+    /// takes no reply. At most 4096 characters.
+    #[prost(string, tag = "5")]
+    pub reply_text: ::prost::alloc::string::String,
 }
 /// Turns the connection into a watch of the print jobs of the caller's Android: after the
 /// answer (Done), the service sends a PrintJobOffer for each document an app prints, followed
@@ -2769,10 +2807,17 @@ pub struct DeviceIdentityReport {
 /// for each AccessibilityAction the client sends. Android reads the task's accessibility nodes
 /// only while at least one such connection for the task is open: closing the last one stops
 /// it. The connection lasts across restarts of the Android, which sends a full tree again.
+///
+/// With a `widget_id` (never 0) set instead of `task_id`, the connection is the tree of that
+/// desktop widget's window: the widget's text, buttons and lists, with bounds in pixels of the
+/// widget's image, (0, 0) being its top left. The same rule holds: Android reads the widget's
+/// nodes only while a connection watches it.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WatchAccessibility {
     #[prost(int32, tag = "1")]
     pub task_id: i32,
+    #[prost(int32, tag = "2")]
+    pub widget_id: i32,
 }
 /// The range a slider or a progress bar has, and where it stands in it.
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
@@ -3749,6 +3794,9 @@ pub enum NotificationAction {
     /// Dismissed it: it is removed in Android too, unless the app made it one the user cannot
     /// dismiss.
     Dismiss = 2,
+    /// Chose one of its buttons (`button`, `button_title`), with the reply the user wrote or
+    /// picked (`reply_text`) when the button takes one: Android runs that action.
+    Button = 3,
 }
 impl NotificationAction {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -3760,6 +3808,7 @@ impl NotificationAction {
             Self::Unspecified => "NOTIFICATION_ACTION_UNSPECIFIED",
             Self::Open => "NOTIFICATION_ACTION_OPEN",
             Self::Dismiss => "NOTIFICATION_ACTION_DISMISS",
+            Self::Button => "NOTIFICATION_ACTION_BUTTON",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -3768,6 +3817,7 @@ impl NotificationAction {
             "NOTIFICATION_ACTION_UNSPECIFIED" => Some(Self::Unspecified),
             "NOTIFICATION_ACTION_OPEN" => Some(Self::Open),
             "NOTIFICATION_ACTION_DISMISS" => Some(Self::Dismiss),
+            "NOTIFICATION_ACTION_BUTTON" => Some(Self::Button),
             _ => None,
         }
     }

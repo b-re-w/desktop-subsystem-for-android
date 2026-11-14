@@ -70,4 +70,14 @@ public interface AccessibilityActionOrBuilder extends
    * @return The requestId.
    */
   int getRequestId();
+
+  /**
+   * <pre>
+   * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+   * </pre>
+   *
+   * <code>int32 widget_id = 7;</code>
+   * @return The widgetId.
+   */
+  int getWidgetId();
 }
