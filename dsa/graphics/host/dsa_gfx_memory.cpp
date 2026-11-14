@@ -28,6 +28,7 @@
 
 #include "dsa_gfx_backend.h"
 #include "dsa_gfx_memory.h"
+#include "dsa_graphics_memory.h"
 
 #include <algorithm>
 #include <atomic>
@@ -246,6 +247,10 @@ void trim_run() {
              * 128 MiB of host-visible memory held from the start. */
             emu->releaseIdleStaging(kStagingIdle);
         }
+        /* Graphics memory shared with the guest that the renderer revoked while a guest file
+         * still held it: once the guest kernel says it let go, the pages are zeroed and given
+         * back here, rather than when the next allocation looks (dsa_graphics_memory.h). */
+        dsa::graphicsMemory().reclaim();
         lock.lock();
     }
 }
