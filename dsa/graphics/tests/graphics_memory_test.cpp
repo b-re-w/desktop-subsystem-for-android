@@ -309,6 +309,162 @@ static void pr7_a_staging_copy_stays_inside_its_own_grant() {
     EXPECT(!memory.owns(at, kGranule, 70));
 }
 
+// The commit layer of a section that only reserves its size, faked: it records what it
+// committed, can refuse, and checks that no grant over a range is visible in the table yet when
+// the range is committed.
+struct FakeCommit {
+    FakeRegion* region = nullptr;
+    std::vector<bool> committed;  // one per granule of the data region
+    std::vector<std::pair<uint64_t, uint64_t>> calls;  // offset in the data region, length
+    bool refuse = false;
+    bool grantsCommitted = false;
+    bool keyVisibleAtCommit = false;
+};
+
+static bool fakeCommit(void* context, uint8_t* at, uint64_t length) {
+    auto* fake = static_cast<FakeCommit*>(context);
+    if (fake->refuse) return false;
+    uint8_t* data = fake->region->data.data();
+    if (at == fake->region->grants.data()) {
+        fake->grantsCommitted = true;
+        return true;
+    }
+    const uint64_t offset = static_cast<uint64_t>(at - data);
+    fake->calls.push_back({offset, length});
+    const uint8_t* entry = fake->region->grants.data() + dsa::kGrantsHeaderBytes +
+                           (offset / kGranule) * dsa::kGrantEntryBytes;
+    if (dsa::sharedLoad(entry + dsa::kGrantKeyAt) != 0) fake->keyVisibleAtCommit = true;
+    for (uint64_t i = offset / kGranule; i < (offset + length) / kGranule; ++i) {
+        fake->committed[i] = true;
+    }
+    return true;
+}
+
+static bool attachCommitted(dsa::GraphicsMemory& memory, FakeRegion& region, ScrubLog* log,
+                            FakeCommit* fake, const char** failure = nullptr) {
+    log->base = region.data.data();
+    fake->region = &region;
+    fake->committed.assign(dsa::graphicsGranules(region.length), false);
+    const bool ok = memory.attach(region.data.data(), region.length, region.grants.data(),
+                                  region.grants.size(), recordScrub, log, fakeCommit, fake,
+                                  failure);
+    memory.seedKeys(99);
+    log->ranges.clear();
+    return ok;
+}
+
+static bool allCommitted(const FakeCommit& fake, uint64_t offset, uint64_t length) {
+    for (uint64_t i = offset / kGranule; i < (offset + length) / kGranule; ++i) {
+        if (!fake.committed[i]) return false;
+    }
+    return true;
+}
+
+// pr7: the renderer commits the grants table and the release slots when it takes the region
+// over, and a grant's granules before its key is in the table, so the guest can never touch a
+// page of the section that is only reserved.
+static void pr7_a_grant_is_committed_before_the_guest_can_see_it() {
+    FakeRegion region(16 * kMiB);
+    dsa::GraphicsMemory memory;
+    ScrubLog log;
+    FakeCommit fake;
+    EXPECT(attachCommitted(memory, region, &log, &fake));
+    EXPECT(fake.grantsCommitted);
+    EXPECT(allCommitted(fake, 0, dsa::graphicsAckBytes(region.length)));
+    EXPECT(!fake.committed[dsa::graphicsAckBytes(region.length) / kGranule]);
+    auto grant = memory.allocate(3 * kGranule, 4);
+    EXPECT(grant);
+    EXPECT(allCommitted(fake, grant->offset, grant->length));
+    EXPECT(!fake.keyVisibleAtCommit);
+    // Nothing past the grant: the rest of the region stays reserved.
+    EXPECT(!fake.committed[(grant->offset + grant->length) / kGranule]);
+    EXPECT(memory.stats().committedBytes == dsa::graphicsAckBytes(region.length) + 3 * kGranule);
+    // The guest binds it only after that.
+    dsa::GuestGrantTable guest(region.data.data(), region.grants.data());
+    EXPECT(guest.bind(1, grant->offset, grant->length, grant->key) == 0);
+}
+
+// pr7: a grant whose granules the system will not commit is refused with its own reason, so
+// the allocation takes the copy path, and the table says nothing of it; granules committed
+// already are still handed out.
+static void pr7_a_grant_that_cannot_be_committed_takes_the_copy_path() {
+    FakeRegion region(16 * kMiB);
+    dsa::GraphicsMemory memory;
+    ScrubLog log;
+    FakeCommit fake;
+    EXPECT(attachCommitted(memory, region, &log, &fake));
+    auto first = memory.allocate(2 * kGranule, 1);
+    EXPECT(first);
+    memory.release(first->offset);
+    EXPECT(memory.reclaim() == 2 * kGranule);
+
+    fake.refuse = true;
+    dsa::GrantRefusal why = dsa::GrantRefusal::None;
+    EXPECT(!memory.allocate(4 * kGranule, 2, &why));
+    EXPECT(why == dsa::GrantRefusal::CommitFailed);
+    EXPECT(std::strstr(dsa::grantRefusalText(why), "commit") != nullptr);
+    for (uint64_t index = 0; index < dsa::graphicsGranules(region.length); ++index) {
+        const uint8_t* entry =
+            region.grants.data() + dsa::kGrantsHeaderBytes + index * dsa::kGrantEntryBytes;
+        EXPECT(dsa::sharedLoad(entry + dsa::kGrantKeyAt) == 0);
+    }
+    EXPECT(memory.stats().grants == 0);
+    // The two granules the first grant committed fit an allocation of that size still.
+    auto again = memory.allocate(2 * kGranule, 2, &why);
+    EXPECT(again && again->offset == first->offset);
+
+    fake.refuse = false;
+    EXPECT(memory.allocate(4 * kGranule, 2, &why));
+}
+
+// pr7: a granule is committed once: a grant over granules committed before commits nothing
+// more, so the commit is the high-water mark of what grants used.
+static void pr7_granules_are_committed_once_up_to_the_high_water_mark() {
+    FakeRegion region(16 * kMiB);
+    dsa::GraphicsMemory memory;
+    ScrubLog log;
+    FakeCommit fake;
+    EXPECT(attachCommitted(memory, region, &log, &fake));
+    fake.calls.clear();
+    auto a = memory.allocate(4 * kGranule, 1);
+    EXPECT(a);
+    EXPECT(fake.calls.size() == 1 && fake.calls[0].first == a->offset &&
+           fake.calls[0].second == 4 * kGranule);
+    memory.release(a->offset);
+    EXPECT(memory.reclaim() == 4 * kGranule);
+    // Scrubbed and given back, but still committed: the same granules again commit nothing.
+    auto b = memory.allocate(2 * kGranule, 1);
+    auto c = memory.allocate(2 * kGranule, 1);
+    EXPECT(b && c);
+    EXPECT(fake.calls.size() == 1);
+    // One more granule than has been committed commits only that one.
+    memory.release(b->offset);
+    memory.release(c->offset);
+    EXPECT(memory.reclaim() == 4 * kGranule);
+    auto d = memory.allocate(5 * kGranule, 1);
+    EXPECT(d && d->offset == a->offset);
+    EXPECT(fake.calls.size() == 2 && fake.calls[1].first == a->offset + 4 * kGranule &&
+           fake.calls[1].second == kGranule);
+    EXPECT(memory.stats().committedBytes == dsa::graphicsAckBytes(region.length) + 5 * kGranule);
+}
+
+// pr7: a region whose grants table or release slots cannot be committed is not taken over,
+// and says why.
+static void pr7_a_region_that_cannot_be_committed_is_not_taken_over() {
+    FakeRegion region(16 * kMiB);
+    dsa::GraphicsMemory memory;
+    ScrubLog log;
+    FakeCommit fake;
+    fake.refuse = true;
+    const char* failure = nullptr;
+    EXPECT(!attachCommitted(memory, region, &log, &fake, &failure));
+    EXPECT(failure && std::strstr(failure, "committed") != nullptr);
+    EXPECT(!memory.attached());
+    dsa::GrantRefusal why = dsa::GrantRefusal::None;
+    EXPECT(!memory.allocate(kGranule, 1, &why));
+    EXPECT(why == dsa::GrantRefusal::NoRegion);
+}
+
 // pr7: the layout constants the guest kernel uses.
 static void pr7_the_layout_is_the_kernels() {
     EXPECT(dsa::kGraphicsGranule == 65536);
@@ -332,6 +488,10 @@ int main() {
     pr7_a_restarted_renderer_takes_back_the_last_ones_grants();
     pr7_a_late_free_from_before_a_take_over_leaves_the_new_grant_alone();
     pr7_a_staging_copy_stays_inside_its_own_grant();
+    pr7_a_grant_is_committed_before_the_guest_can_see_it();
+    pr7_a_grant_that_cannot_be_committed_takes_the_copy_path();
+    pr7_granules_are_committed_once_up_to_the_high_water_mark();
+    pr7_a_region_that_cannot_be_committed_is_not_taken_over();
     pr7_the_layout_is_the_kernels();
     if (failures != 0) {
         std::fprintf(stderr, "%d failure(s)\n", failures);

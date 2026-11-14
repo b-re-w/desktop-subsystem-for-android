@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * The graphics memory the host shares with the guest (dsa_graphics_memory.h): handing the
- * embedder's mapping of the two sections to the renderer's allocator, and giving the pages of
- * a range nothing maps any more back to the system.
+ * embedder's mapping of the two sections to the renderer's allocator, committing the pages of
+ * a grant before the guest hears of it (the sections only reserve their size), and giving the
+ * pages of a range nothing maps any more back to the system.
  *
  * Kept apart from dsa_gfx_backend.cpp so the platform headers it needs meet no gfxstream
  * header.
@@ -61,6 +62,35 @@ void scrub(void*, uint8_t* at, uint64_t length) {
 #endif
 }
 
+std::atomic<bool> s_commit_failure_said{false};
+
+/* Commits the pages of a range of this process's view of a section that only reserves its
+ * size, before anything touches them: what a grant covers, before the guest hears of it. A
+ * page committed already costs nothing more. False when Windows refuses (the system's commit
+ * limit is reached); the allocation then takes the copy path. */
+bool commit(void*, uint8_t* at, uint64_t length) {
+#ifdef _WIN32
+    if (VirtualAlloc(at, static_cast<SIZE_T>(length), MEM_COMMIT, PAGE_READWRITE) != nullptr) {
+        return true;
+    }
+    if (!s_commit_failure_said.exchange(true)) {
+        char line[200];
+        std::snprintf(line, sizeof(line),
+                      "graphics memory: Windows would not commit %llu KiB of the memory shared "
+                      "with the guest (error %lu); what does not fit is copied through the stream",
+                      static_cast<unsigned long long>(length >> 10),
+                      static_cast<unsigned long>(GetLastError()));
+        dsa_gfx_log_line('W', line);
+    }
+    return false;
+#else
+    /* A shared mapping of a memfd: its pages come in when they are touched. */
+    (void)at;
+    (void)length;
+    return true;
+#endif
+}
+
 }  // namespace
 
 extern "C" DSA_GFX_EXPORT int dsa_gfx_set_shared_graphics_memory(uint8_t* data,
@@ -72,10 +102,14 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_set_shared_graphics_memory(uint8_t* data,
         memory.detach();
         return 0;
     }
-    if (!memory.attach(data, data_length, grants, grants_length, scrub, nullptr)) {
-        dsa_gfx_log_line('W',
-                         "graphics memory: the memory the service shares is not a grants table "
-                         "this renderer knows; host-visible memory is copied through the stream");
+    const char* failure = nullptr;
+    if (!memory.attach(data, data_length, grants, grants_length, scrub, nullptr, commit, nullptr,
+                       &failure)) {
+        char line[240];
+        std::snprintf(line, sizeof(line),
+                      "graphics memory: %s; host-visible memory is copied through the stream",
+                      failure ? failure : "the memory the service shares cannot be used");
+        dsa_gfx_log_line('W', line);
         return -1;
     }
     /* The embedder says in its own log that the region is in use. */

@@ -38,6 +38,17 @@
 // between the write and the read on both sides, so at least one of them sees the other: either
 // the renderer sees "bound" and waits for "released", or the guest sees the key gone.
 //
+// The sections only reserve their size (SEC_RESERVE on Windows): a section made committed
+// charges all of it against the system's commit limit at once, 1 GiB for a 1 GiB region,
+// whether or not anything is ever granted. The service commits what both sides read from the
+// start (the grants table and the release slots) when it makes them. The renderer commits a
+// grant's granules in its own view before it writes the grant's key, so neither the guest nor
+// a driver ever touches a page that is not committed; a grant whose granules cannot be
+// committed (the commit limit is reached) is refused, and the allocation takes the copy path.
+// A granule stays committed once it is (Windows gives the commit back only when the section
+// closes, with the VM), so the renderer keeps a bitmap of them and commits each one once. Its
+// pages still go back to the system when it is scrubbed.
+//
 // Entry i describes the grant that starts at byte i * kGraphicsGranule of the data region.
 // The layout is the guest kernel's too (dsa/kernel/patches/dsa-shared-memory.patch, which
 // a test keeps in step with these constants).
@@ -136,6 +147,7 @@ enum class GrantRefusal {
     NoRegion,  // the renderer has no region (the service made none, or it is off)
     TooLarge,  // larger than the region
     Full,      // no run of free granules is long enough
+    CommitFailed,  // the system would not commit the granules (its commit limit is reached)
 };
 
 inline const char* grantRefusalText(GrantRefusal why) {
@@ -148,6 +160,9 @@ inline const char* grantRefusalText(GrantRefusal why) {
             return "the allocation is larger than the memory shared with the guest";
         case GrantRefusal::Full:
             return "the memory shared with the guest is full";
+        case GrantRefusal::CommitFailed:
+            return "the system would not commit more of the memory shared with the guest (its "
+                   "commit limit is reached)";
     }
     return "unknown";
 }
@@ -156,31 +171,50 @@ inline const char* grantRefusalText(GrantRefusal why) {
 //
 // Thread safe. `scrub` is called with no lock held on a range nothing maps any more, to zero
 // it and give its pages back to the system; it must leave the range reading as zeros.
+// `commit` is called with the lock held on a range of this process's view of a section, to
+// commit its pages (the sections only reserve their size); false when the system refuses. A
+// null `commit` takes every page as committed already (memory that is not a reserved section).
 class GraphicsMemory {
    public:
     using Scrub = void (*)(void* context, uint8_t* at, uint64_t length);
+    using Commit = bool (*)(void* context, uint8_t* at, uint64_t length);
 
     struct Stats {
         uint64_t regionBytes = 0;
         uint64_t grantedBytes = 0;
         // Revoked by the renderer, still held by the guest.
         uint64_t heldBytes = 0;
+        // The granules of the data region committed so far: the high-water mark of the grants.
+        uint64_t committedBytes = 0;
         uint32_t grants = 0;
     };
 
     // Takes over the region: `data` (`dataLength` bytes) and the grants table (`grants`,
     // `grantsLength` bytes) the service made. Every grant a renderer before this one wrote is
     // revoked; the granules a guest still holds come back once it lets them go. False, with
-    // nothing taken, when the table is not the service's (its magic, length or granule differ)
-    // or the region is smaller than its release slots.
+    // nothing taken, when the table is not the service's (its magic, length or granule differ),
+    // the region is smaller than its release slots, or the table and the release slots cannot
+    // be committed; `failure`, when given, then says which.
     bool attach(uint8_t* data, uint64_t dataLength, uint8_t* grants, uint64_t grantsLength,
-                Scrub scrub, void* scrubContext) {
+                Scrub scrub, void* scrubContext, Commit commit = nullptr,
+                void* commitContext = nullptr, const char** failure = nullptr) {
         std::vector<Range> scrubs;
         {
             std::lock_guard<std::mutex> lock(mMutex);
             mData = nullptr;
-            if (!data || !grants || grantsLength < kGrantsHeaderBytes ||
-                std::memcmp(grants, kGrantsMagic, sizeof(kGrantsMagic)) != 0 ||
+            mGrants = nullptr;
+            mCommitted.clear();
+            if (failure) *failure = "the memory the service shares is not a grants table this "
+                                    "renderer knows";
+            if (!data || !grants || grantsLength < kGrantsHeaderBytes) return false;
+            // The service committed the table when it made it; committing it again costs
+            // nothing and makes sure, before anything here reads it.
+            if (commit && !commit(commitContext, grants, grantsLength)) {
+                if (failure) *failure = "the grants table of the memory the service shares "
+                                        "could not be committed";
+                return false;
+            }
+            if (std::memcmp(grants, kGrantsMagic, sizeof(kGrantsMagic)) != 0 ||
                 sharedLoad(grants + kGrantsDataLengthAt) != dataLength ||
                 sharedLoad(grants + kGrantsGranuleAt) != kGraphicsGranule ||
                 dataLength % kGraphicsGranule != 0 ||
@@ -190,6 +224,18 @@ class GraphicsMemory {
             }
             mData = data;
             mDataLength = dataLength;
+            mCommit = commit;
+            mCommitContext = commitContext;
+            mCommitted.assign(graphicsGranules(dataLength), false);
+            // The release slots, which the guest writes and the take over below reads.
+            if (!commitLocked(0, graphicsAckBytes(dataLength) / kGraphicsGranule)) {
+                mData = nullptr;
+                mDataLength = 0;
+                mCommitted.clear();
+                if (failure) *failure = "the release slots of the memory the service shares "
+                                        "could not be committed";
+                return false;
+            }
             mGrants = grants;
             mScrub = scrub;
             mScrubContext = scrubContext;
@@ -211,6 +257,7 @@ class GraphicsMemory {
         mGrants = nullptr;
         mState.clear();
         mGrantsByStart.clear();
+        mCommitted.clear();
     }
 
     bool attached() const {
@@ -319,6 +366,9 @@ class GraphicsMemory {
         std::lock_guard<std::mutex> lock(mMutex);
         Stats stats;
         stats.regionBytes = mDataLength;
+        for (bool committed : mCommitted) {
+            if (committed) stats.committedBytes += kGraphicsGranule;
+        }
         for (const Grant& grant : mGrantsByStart) {
             const uint64_t bytes = grant.granules * kGraphicsGranule;
             if (grant.live) {
@@ -339,7 +389,9 @@ class GraphicsMemory {
     }
 
    private:
-    enum class Granule : uint8_t { Free, Busy, Slots };
+    // Unusable: a granule a renderer before this one granted that cannot be committed now, so
+    // it is never scrubbed (that would touch it) nor handed out again.
+    enum class Granule : uint8_t { Free, Busy, Slots, Unusable };
 
     struct Grant {
         uint64_t start = 0;  // in granules
@@ -389,6 +441,38 @@ class GraphicsMemory {
         return seq;
     }
 
+    // Commits the granules [start, start + count) that are not committed yet, in runs, and
+    // marks them. False when the system refuses a run; the runs committed before it stay
+    // marked, since they are committed.
+    bool commitLocked(uint64_t start, uint64_t count) {
+        const uint64_t end = start + count;
+        if (end > mCommitted.size()) return false;
+        uint64_t index = start;
+        while (index < end) {
+            if (mCommitted[index]) {
+                ++index;
+                continue;
+            }
+            uint64_t runEnd = index;
+            while (runEnd < end && !mCommitted[runEnd]) ++runEnd;
+            if (mCommit && !mCommit(mCommitContext, mData + index * kGraphicsGranule,
+                                    (runEnd - index) * kGraphicsGranule)) {
+                return false;
+            }
+            for (; index < runEnd; ++index) mCommitted[index] = true;
+        }
+        return true;
+    }
+
+    // Whether every granule of [start, start + count) is committed already.
+    bool committedLocked(uint64_t start, uint64_t count) const {
+        if (start + count > mCommitted.size()) return false;
+        for (uint64_t i = start; i < start + count; ++i) {
+            if (!mCommitted[i]) return false;
+        }
+        return true;
+    }
+
     // Whether the guest kernel shows grant `seq` at `index` as bound and not yet released.
     bool guestHoldsLocked(uint64_t index, uint64_t seq) const {
         return sharedLoad(slot(index)) == slotValue(seq, kSlotBound);
@@ -421,6 +505,14 @@ class GraphicsMemory {
             }
             sharedStore(at + kGrantKeyAt, 0);
             std::atomic_thread_fence(std::memory_order_seq_cst);
+            // The renderer before committed the grant before it wrote the key, so this commits
+            // nothing new; it marks the granules, which the scrub below then touches. Granules
+            // it cannot commit were never touched, and are left out for good.
+            if (!commitLocked(index, count)) {
+                for (uint64_t i = 0; i < count; ++i) mState[index + i] = Granule::Unusable;
+                index += count;
+                continue;
+            }
             Grant grant{index, count, seq, sharedLoad(at + kGrantOwnerAt), false};
             for (uint64_t i = 0; i < count; ++i) mState[index + i] = Granule::Busy;
             if (guestHoldsLocked(index, seq)) {
@@ -458,10 +550,19 @@ class GraphicsMemory {
             return std::nullopt;
         }
         uint64_t run = 0;
+        // Once the system refuses a commit, only granules committed already are taken.
+        bool commitRefused = false;
         for (uint64_t index = 0; index < mState.size(); ++index) {
             run = mState[index] == Granule::Free ? run + 1 : 0;
             if (run < count) continue;
             const uint64_t start = index + 1 - count;
+            // Committed before the key is written below, which is what lets the guest map the
+            // granules, and before the grant goes to the caller: nothing ever touches a page
+            // that is only reserved.
+            if (commitRefused ? !committedLocked(start, count) : !commitLocked(start, count)) {
+                commitRefused = true;
+                continue;
+            }
             for (uint64_t i = 0; i < count; ++i) mState[start + i] = Granule::Busy;
             Grant grant{start, count, nextSeqLocked(), owner, true};
             mGrantsByStart.push_back(grant);
@@ -477,7 +578,7 @@ class GraphicsMemory {
             return GraphicsGrant{start * kGraphicsGranule, count * kGraphicsGranule, key,
                                  mGeneration};
         }
-        *why = GrantRefusal::Full;
+        *why = commitRefused ? GrantRefusal::CommitFailed : GrantRefusal::Full;
         return std::nullopt;
     }
 
@@ -523,6 +624,11 @@ class GraphicsMemory {
     uint8_t* mGrants = nullptr;
     Scrub mScrub = nullptr;
     void* mScrubContext = nullptr;
+    Commit mCommit = nullptr;
+    void* mCommitContext = nullptr;
+    // One bit for each granule of the data region: committed in the section. Only ever set
+    // while attached, since a committed page stays committed until the section closes.
+    std::vector<bool> mCommitted;
     std::vector<Granule> mState;
     std::vector<Grant> mGrantsByStart;
     std::mt19937_64 mRandom;
@@ -560,7 +666,7 @@ class GraphicsRefusalLog {
     }
 
    private:
-    static constexpr size_t kReasons = 4;
+    static constexpr size_t kReasons = 5;
     std::atomic<bool> mSaid[kReasons] = {};
 };
 

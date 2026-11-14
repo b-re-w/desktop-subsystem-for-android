@@ -11,9 +11,19 @@
 //!
 //! The sections admit SYSTEM, the VM worker processes (S-1-5-83-0) and the user the VM belongs
 //! to, whose renderer maps them; their names carry that user's SID, so each user's VM has its
-//! own. A section commits its whole size against the system's commit limit when it is made
-//! (page file, not memory); a page takes memory only once the guest or the GPU writes it, and
-//! the renderer zeroes and discards the pages of every grant it takes back.
+//! own.
+//!
+//! Both sections only reserve their size (`SEC_RESERVE`). A section made committed charges its
+//! whole size against the system's commit limit at once: 1 GiB of it added about 1000 MiB of
+//! system commit on the owner's PC, against about 20 to 40 MiB for the same section reserved,
+//! which HCS takes and maps for the VM without committing it. The service commits what both
+//! sides read from the start when it makes the sections: the whole grants table, and the
+//! release slots at the start of the data region. The renderer commits each grant's granules
+//! before it writes the grant's key (`dsa/graphics/include/dsa_graphics_memory.h`), so the
+//! guest maps only committed pages. A committed page stays committed until the section closes
+//! with the VM (Windows decommits no page of a section view), so the commit is the high-water
+//! mark of what grants used; the renderer zeroes and discards the pages of every grant it takes
+//! back, which gives the memory back while the commit stays.
 //!
 //! What this module decides (the names, the document's entries) is tested on every platform;
 //! making the sections is Windows only.
@@ -107,7 +117,7 @@ mod system {
     use std::io;
     use std::sync::Arc;
 
-    use dsa_host_core::graphics_memory::{write_grants_header, GRANTS_MAGIC};
+    use dsa_host_core::graphics_memory::{ack_bytes, write_grants_header, GRANTS_MAGIC};
     use dsa_host_core::video_slots::{new_region_id, SharedRegion};
     use windows_sys::Win32::Foundation::{
         CloseHandle, GetLastError, LocalFree, ERROR_ALREADY_EXISTS, HANDLE, HLOCAL,
@@ -118,8 +128,9 @@ mod system {
     };
     use windows_sys::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
     use windows_sys::Win32::System::Memory::{
-        CreateFileMappingW, DiscardVirtualMemory, MapViewOfFile, UnmapViewOfFile, FILE_MAP_READ,
-        FILE_MAP_WRITE, MEMORY_MAPPED_VIEW_ADDRESS, PAGE_READWRITE, SEC_COMMIT,
+        CreateFileMappingW, DiscardVirtualMemory, MapViewOfFile, UnmapViewOfFile, VirtualAlloc,
+        VirtualQuery, FILE_MAP_READ, FILE_MAP_WRITE, MEMORY_BASIC_INFORMATION,
+        MEMORY_MAPPED_VIEW_ADDRESS, MEM_COMMIT, PAGE_READWRITE, SEC_RESERVE,
     };
 
     use super::GraphicsRegion;
@@ -143,9 +154,10 @@ mod system {
         }
     }
 
-    /// Makes the page-file backed section `name` of `length` bytes that `sddl` admits. Also
-    /// says whether a section of that name was still open (a renderer kept its view of the boot
-    /// before), which is then taken as it is.
+    /// Makes the page-file backed section `name` of `length` bytes that `sddl` admits, which
+    /// reserves its size and commits nothing (see the module's notes). Also says whether a
+    /// section of that name was still open (a renderer kept its view of the boot before), which
+    /// is then taken as it is.
     fn create(name: &str, sddl: &str, length: u64) -> io::Result<(Handle, bool)> {
         let sddl_w = wide(sddl);
         let mut descriptor: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
@@ -172,7 +184,7 @@ mod system {
             CreateFileMappingW(
                 INVALID_HANDLE_VALUE,
                 &attributes,
-                PAGE_READWRITE | SEC_COMMIT,
+                PAGE_READWRITE | SEC_RESERVE,
                 (length >> 32) as u32,
                 length as u32,
                 name_w.as_ptr(),
@@ -189,32 +201,103 @@ mod system {
         Ok((Handle(handle), existed))
     }
 
-    /// Maps `length` bytes of `section`, lets `write` have them, and unmaps them.
-    fn with_view(section: &Handle, length: u64, write: impl FnOnce(&mut [u8])) -> io::Result<()> {
-        // SAFETY: a live section handle at least `length` bytes long.
-        let address = unsafe {
-            MapViewOfFile(
-                section.0,
-                FILE_MAP_READ | FILE_MAP_WRITE,
-                0,
-                0,
-                length as usize,
-            )
-        };
-        if address.Value.is_null() {
-            return Err(io::Error::last_os_error());
-        }
-        // SAFETY: this process's own view of `length` bytes, unmapped below.
-        let bytes =
-            unsafe { std::slice::from_raw_parts_mut(address.Value.cast::<u8>(), length as usize) };
-        write(bytes);
-        // SAFETY: unmapped once; nothing refers to it after.
-        unsafe {
-            UnmapViewOfFile(MEMORY_MAPPED_VIEW_ADDRESS {
-                Value: address.Value,
+    /// This process's view of `len` bytes of a section, unmapped when dropped. Its pages may be
+    /// only reserved, so nothing here makes a slice of it before the range is committed.
+    struct View {
+        base: *mut u8,
+        len: usize,
+    }
+
+    impl View {
+        /// Maps `length` bytes of `section`.
+        fn map(section: &Handle, length: u64) -> io::Result<View> {
+            // SAFETY: a live section handle at least `length` bytes long.
+            let address = unsafe {
+                MapViewOfFile(
+                    section.0,
+                    FILE_MAP_READ | FILE_MAP_WRITE,
+                    0,
+                    0,
+                    length as usize,
+                )
+            };
+            if address.Value.is_null() {
+                return Err(io::Error::last_os_error());
+            }
+            Ok(View {
+                base: address.Value.cast(),
+                len: length as usize,
             })
-        };
-        Ok(())
+        }
+
+        /// Commits the pages of `len` bytes from `offset`; pages committed already cost nothing
+        /// more. Fails when the system refuses (its commit limit is reached).
+        fn commit(&self, offset: usize, len: usize) -> io::Result<()> {
+            match offset.checked_add(len) {
+                Some(end) if end <= self.len => {}
+                _ => return Err(io::Error::other("a commit outside the section's view")),
+            }
+            // SAFETY: a range of this view; committing touches no page.
+            let at = unsafe {
+                VirtualAlloc(
+                    self.base.add(offset).cast(),
+                    len,
+                    MEM_COMMIT,
+                    PAGE_READWRITE,
+                )
+            };
+            if at.is_null() {
+                return Err(io::Error::last_os_error());
+            }
+            Ok(())
+        }
+
+        /// Zeroes the committed pages of the view and gives them back; the pages that are only
+        /// reserved are left alone, since touching one faults.
+        fn scrub_committed(&self) {
+            let mut offset = 0;
+            while offset < self.len {
+                // SAFETY: a plain structure, for which all zeros is a valid value.
+                let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+                // SAFETY: a query of a page of this view.
+                let got = unsafe {
+                    VirtualQuery(
+                        self.base.add(offset).cast(),
+                        &mut info,
+                        std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+                    )
+                };
+                if got == 0 || info.RegionSize == 0 {
+                    return;
+                }
+                let end = (offset + info.RegionSize).min(self.len);
+                if info.State == MEM_COMMIT {
+                    // SAFETY: committed pages of this view, which nothing reads now (the VM
+                    // that used them is gone and the next one has not started).
+                    unsafe {
+                        std::ptr::write_bytes(self.base.add(offset), 0, end - offset);
+                        DiscardVirtualMemory(self.base.add(offset).cast(), end - offset);
+                    }
+                }
+                offset = end;
+            }
+        }
+    }
+
+    impl Drop for View {
+        fn drop(&mut self) {
+            // SAFETY: unmapped once; nothing refers to it after.
+            unsafe {
+                UnmapViewOfFile(MEMORY_MAPPED_VIEW_ADDRESS {
+                    Value: self.base.cast(),
+                })
+            };
+        }
+    }
+
+    /// `why` as an error that says what could not be committed.
+    fn not_committed(what: &str, why: io::Error) -> io::Error {
+        io::Error::new(why.kind(), format!("{what} could not be committed ({why})"))
     }
 
     /// The two sections the service makes for a VM, held for as long as the VM runs.
@@ -225,26 +308,34 @@ mod system {
     }
 
     impl GraphicsSections {
-        /// Makes both sections of `region`, which `sddl` admits, and writes the grants table's
-        /// header with a new id. Sections a renderer still holds from the boot before are taken
-        /// as they are: the table is cleared, and the data region zeroed and given back, so no
-        /// grant or byte of the last boot reaches this one.
+        /// Makes both sections of `region`, which `sddl` admits, commits what the guest and the
+        /// renderer read from the start (the whole grants table and the data region's release
+        /// slots), and writes the table's header with a new id. Sections a renderer still holds
+        /// from the boot before are taken as they are: the table is cleared, and the committed
+        /// pages of the data region zeroed and given back, so no grant or byte of the last boot
+        /// reaches this one. Fails, and the boot goes without the region, when the system will
+        /// not commit those pages.
         pub fn create(region: &GraphicsRegion, sddl: &str) -> io::Result<GraphicsSections> {
             let (data, data_existed) = create(&region.data_section, sddl, region.data_length)?;
             let (grants, _) = create(&region.grants_section, sddl, region.grants_length)?;
-            if data_existed {
-                with_view(&data, region.data_length, |bytes| {
-                    bytes.fill(0);
-                    // SAFETY: this process's view, which nothing else uses through it.
-                    unsafe { DiscardVirtualMemory(bytes.as_mut_ptr().cast(), bytes.len()) };
-                })?;
+            {
+                let view = View::map(&data, region.data_length)?;
+                view.commit(0, ack_bytes(region.data_length) as usize)
+                    .map_err(|e| not_committed("the graphics memory's release slots", e))?;
+                if data_existed {
+                    view.scrub_committed();
+                }
             }
             let id = new_region_id();
-            let mut written = false;
-            with_view(&grants, region.grants_length, |table| {
-                table.fill(0);
-                written = write_grants_header(table, id, region.data_length);
-            })?;
+            let view = View::map(&grants, region.grants_length)?;
+            view.commit(0, view.len)
+                .map_err(|e| not_committed("the graphics grants table", e))?;
+            // SAFETY: the whole view, committed just now; nothing else in this process uses it,
+            // and the slice goes before the view does.
+            let table = unsafe { std::slice::from_raw_parts_mut(view.base, view.len) };
+            table.fill(0);
+            let written = write_grants_header(table, id, region.data_length);
+            drop(view);
             if !written {
                 return Err(io::Error::other(
                     "the graphics grants section has no room for its header",
@@ -266,6 +357,9 @@ mod system {
 
     impl RendererGraphicsMemory {
         /// Opens the sections the service made for the VM of `user_sid` and maps both whole.
+        /// Only the grants table and the release slots are committed; the renderer commits each
+        /// grant's pages in its view of the data region before it hands the grant out, and
+        /// nothing here touches the rest.
         pub fn open(user_sid: &str) -> io::Result<RendererGraphicsMemory> {
             let data = SectionView::open(&super::data_section_name(user_sid))?;
             let grants = SectionView::open(&super::grants_section_name(user_sid))?;

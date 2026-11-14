@@ -95,11 +95,31 @@ class BackendTests(unittest.TestCase):
     def test_pr7_the_embedder_hands_the_renderer_the_region(self):
         self.assertIn("dsa_gfx_set_shared_graphics_memory", read(HERE / "host" / "dsa_gfx_backend.h"))
         shared = read(SHARED)
-        self.assertIn("memory.attach(data, data_length, grants, grants_length, scrub, nullptr)", shared)
+        self.assertIn("memory.attach(data, data_length, grants, grants_length, scrub, nullptr, commit, nullptr,", shared)
         # Freed pages are zeroed for the next app, then given back.
         scrub = shared[shared.index("void scrub("):]
         self.assertLess(scrub.index("std::memset(at, 0, length);"), scrub.index("DiscardVirtualMemory("))
         self.assertIn("dsa_gfx_shared_memory.cpp", read(HERE / "host" / "CMakeLists.txt"))
+
+    def test_pr7_the_sections_only_reserve_and_a_grant_is_committed_before_its_key(self):
+        # The service makes both graphics sections reserved, never committed whole.
+        region = read(HERE.parent / "host" / "platform" / "windows" / "src" / "graphics_region.rs")
+        self.assertIn("PAGE_READWRITE | SEC_RESERVE", region)
+        self.assertNotIn("SEC_COMMIT", region)
+        # The renderer commits in its own view, and a refusal is said once.
+        shared = read(SHARED)
+        commit = shared[shared.index("bool commit("):]
+        self.assertIn("VirtualAlloc(at, static_cast<SIZE_T>(length), MEM_COMMIT, PAGE_READWRITE)", commit)
+        self.assertIn("s_commit_failure_said.exchange(true)", commit)
+        # The allocator commits the granules before the key that makes the grant visible.
+        header = read(HEADER)
+        allocate = header[header.index("std::optional<GraphicsGrant> allocateLocked("):]
+        self.assertLess(allocate.index("commitLocked(start, count)"),
+                        allocate.index("sharedStore(at + kGrantKeyAt, key);"))
+        self.assertIn("GrantRefusal::CommitFailed", allocate)
+        # Its own one-time log line in the Vulkan path, apart from the other reasons.
+        self.assertIn("dsaSayCopied(10 + static_cast<int>(why), dsa::grantRefusalText(why));",
+                      added(HOST_PATCH, "host/vulkan/VkDecoderGlobalState.cpp"))
 
     def test_pr7_an_ended_process_and_the_trim_take_grants_back(self):
         backend = read(BACKEND)

@@ -329,7 +329,7 @@ diff --git a/host/vulkan/VkDecoderGlobalState.cpp b/host/vulkan/VkDecoderGlobalS
 +        dsa::GrantRefusal why = dsa::GrantRefusal::None;
 +        auto grant = dsa::graphicsMemory().allocate(allocInfo.allocationSize, owner, &why);
 +        if (!grant) {
-+            dsaSayCopied(4 + static_cast<int>(why), dsa::grantRefusalText(why));
++            dsaSayCopied(10 + static_cast<int>(why), dsa::grantRefusalText(why));
 +            return std::nullopt;
 +        }
 +        void* at = dsa::graphicsMemory().pointer(grant->offset);

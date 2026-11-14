@@ -269,20 +269,28 @@ mod system {
             if address.Value.is_null() {
                 return Err(io::Error::last_os_error());
             }
-            // SAFETY: a plain structure, for which all zeros is a valid value.
-            let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
-            // SAFETY: a query of the view just mapped.
-            let got = unsafe {
-                VirtualQuery(
-                    address.Value,
-                    &mut info,
-                    std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
-                )
-            };
-            let view = View {
-                base: address.Value.cast(),
-                len: if got == 0 { 0 } else { info.RegionSize },
-            };
+            // The view's length: every range of the one allocation the view is. The first range
+            // alone is not it for a section that only reserves its size (the graphics memory),
+            // whose committed first pages end that range.
+            let base: *mut u8 = address.Value.cast();
+            let mut len = 0usize;
+            loop {
+                // SAFETY: a plain structure, for which all zeros is a valid value.
+                let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+                // SAFETY: a query of an address; it reads nothing there.
+                let got = unsafe {
+                    VirtualQuery(
+                        base.wrapping_add(len).cast(),
+                        &mut info,
+                        std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+                    )
+                };
+                if got == 0 || info.RegionSize == 0 || info.AllocationBase != address.Value {
+                    break;
+                }
+                len += info.RegionSize;
+            }
+            let view = View { base, len };
             if view.len < 24 {
                 return Err(io::Error::other(
                     "the section's view has no room for a header",
