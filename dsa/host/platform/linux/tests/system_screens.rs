@@ -6,7 +6,9 @@
 //! It checks that Settings' home page opens with its large title expanded in a window 800 dp
 //! tall and folds it when the list scrolls, that it opens folded in a window under 600 dp
 //! tall, and that the rows of a Settings list are grouped in rounded cards: the first row of a
-//! group has rounded corners, and a row joined to the one above it square ones.
+//! group has rounded corners, and a row joined to the one above it square ones. The list of
+//! that page, one opened from the home list, ends on the window's bottom edge: a task window
+//! has no navigation bar inset, so nothing is left below it.
 //!
 //! It also checks that `screencap` shows what the GPU drew: the guest driver copies a
 //! capture's drawing back from the host for the CPU that reads it, so no capture may come back
@@ -198,6 +200,20 @@ fn nodes(xml: &str) -> Vec<Node> {
 fn by_id<'a>(nodes: &'a [Node], name: &str) -> Option<(usize, &'a Node)> {
     let id = format!("{SETTINGS}:id/{name}");
     nodes.iter().enumerate().find(|(_, node)| node.id == id)
+}
+
+/// How far the list of a Settings page ends above the bottom edge of its window, in pixels: 0
+/// when the list reaches the edge. The window is the dump's first node, and uiautomator cuts
+/// every node's bounds to it, so a list that runs on below the edge counts as reaching it. A
+/// task window has no navigation bar inset, so anything left below the list is an empty band.
+fn list_bottom_gap(nodes: &[Node]) -> Result<i32, String> {
+    let window = nodes
+        .first()
+        .map(|node| node.bounds)
+        .ok_or_else(|| "the dump has no nodes".to_string())?;
+    let (_, list) = by_id(nodes, "recycler_view")
+        .ok_or_else(|| "the dump has no list (recycler_view)".to_string())?;
+    Ok(window.bottom - list.bounds.bottom)
 }
 
 /// The large title of Settings' home page: a text view with text above the search bar, at
@@ -510,6 +526,24 @@ fn fr34_the_dump_parser_reads_nodes_their_parents_and_bounds() {
         .cloned()
         .collect();
     assert_eq!(large_title(&folded).unwrap(), None);
+}
+
+#[test]
+fn fr22_a_settings_page_s_list_that_ends_above_the_window_s_bottom_edge_is_measured() {
+    // The Display page as Android 16 drew it in a 548 x 974 window: the content under the
+    // title bar's 32 px, and the list down to the window's bottom edge.
+    let page = |list_bottom: i32| {
+        format!(
+            r#"<hierarchy rotation="0"><node index="0" text="" resource-id="" class="android.widget.FrameLayout" bounds="[0,0][548,974]"><node index="0" text="" resource-id="android:id/content" class="android.widget.FrameLayout" bounds="[0,0][548,974]"><node index="0" text="" resource-id="com.android.settings:id/content_frame" class="android.widget.FrameLayout" bounds="[0,211][548,{list_bottom}]"><node index="0" text="" resource-id="com.android.settings:id/recycler_view" class="androidx.recyclerview.widget.RecyclerView" bounds="[0,211][548,{list_bottom}]" /></node></node></node></hierarchy>"#
+        )
+    };
+    assert_eq!(list_bottom_gap(&nodes(&page(974))), Ok(0));
+    // Padded by a 24 dp navigation bar inset at 262 dpi, as a gesture navigation phone's.
+    assert_eq!(list_bottom_gap(&nodes(&page(935))), Ok(39));
+    // A page with no list is not taken for one that reaches the edge.
+    let empty = r#"<hierarchy rotation="0"><node index="0" text="" resource-id="" class="android.widget.FrameLayout" bounds="[0,0][548,974]" /></hierarchy>"#;
+    assert!(list_bottom_gap(&nodes(empty)).is_err());
+    assert!(list_bottom_gap(&[]).is_err());
 }
 
 #[test]
@@ -887,6 +921,15 @@ fn fr34_settings_opens_with_a_large_title_that_folds_and_lists_its_rows_in_round
             }
         }
         Err(why) => failures.push(format!("reading Settings' display page: {why}")),
+    }
+    // The same page is one opened from the home list (SubSettings): its list ends on the
+    // window's bottom edge, with no band below it.
+    match list_bottom_gap(&page) {
+        Ok(0) => {}
+        Ok(gap) => failures.push(format!(
+            "Settings' display page leaves {gap} px empty between its list and the window's bottom edge"
+        )),
+        Err(why) => failures.push(format!("Settings' display page: {why}")),
     }
 
     // A short window: the home page opens folded.
