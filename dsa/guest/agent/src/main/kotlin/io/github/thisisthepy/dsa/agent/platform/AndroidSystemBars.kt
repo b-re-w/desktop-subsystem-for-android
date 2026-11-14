@@ -6,10 +6,10 @@ import android.os.IBinder
 import android.os.Parcel
 import android.os.Parcelable
 import android.os.ServiceManager
-import android.view.Display
 import io.github.thisisthepy.dsa.agent.Log
 import io.github.thisisthepy.dsa.agent.tasks.AppearanceArea
 import io.github.thisisthepy.dsa.agent.tasks.BarsReport
+import io.github.thisisthepy.dsa.agent.tasks.DEFAULT_DISPLAY
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 
 /**
@@ -21,6 +21,10 @@ import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
  * bar icons follow an app from screen to screen. The guest has no SystemUI, because the host is
  * the shell, so the agent registers in its place (IStatusBarService.registerStatusBar, which
  * takes STATUS_BAR_SERVICE, a permission of the platform's signature the agent holds).
+ *
+ * The display policy of each display reports its own bars, naming the display, and the status
+ * bar service passes every one on to the one status bar. A report of any display is passed on,
+ * with its display, so a task on another display than the default one is not left out.
  *
  * IStatusBar is a oneway interface of many methods that change between Android versions, so
  * the agent does not implement the generated stub: its binder answers every call, reads only
@@ -38,7 +42,10 @@ class AndroidSystemBars(private val log: Log) {
     // Held so the status bar service's binder stays alive in this process.
     private var callback: Binder? = null
 
-    /** Calls [onReport] with every report of the default display; false when it cannot. */
+    /**
+     * Calls [onReport] with every report of every display, each naming its display; false
+     * when it cannot.
+     */
     fun listen(onReport: (BarsReport) -> Unit): Boolean {
         return try {
             val stub = Class.forName("$STATUS_BAR\$Stub")
@@ -51,11 +58,21 @@ class AndroidSystemBars(private val log: Log) {
                 .getMethod("asInterface", IBinder::class.java)
                 .invoke(null, service)
             val asBar = stub.getMethod("asInterface", IBinder::class.java).invoke(null, bar)
-            val result = Class.forName(STATUS_BAR_SERVICE_INTERFACE)
-                .getMethod("registerStatusBar", Class.forName(STATUS_BAR))
-                .invoke(barService, asBar)
+            val serviceType = Class.forName(STATUS_BAR_SERVICE_INTERFACE)
+            val barType = Class.forName(STATUS_BAR)
+            // Every display's bars as they are now, where the framework gives them, else the
+            // default display's.
+            val results: Map<Int, Any?> = try {
+                val all = serviceType.getMethod("registerStatusBarForAllDisplays", barType).invoke(barService, asBar)
+                (all as Map<*, *>?).orEmpty().entries
+                    .mapNotNull { (display, result) -> (display as? String)?.toIntOrNull()?.let { it to result } }
+                    .toMap()
+            } catch (e: ReflectiveOperationException) {
+                // A framework without it, or one that refused it: the default display's call.
+                mapOf(DEFAULT_DISPLAY to serviceType.getMethod("registerStatusBar", barType).invoke(barService, asBar))
+            }
             callback = bar
-            initial(result, regions)?.let(onReport)
+            for ((displayId, result) in results) initial(displayId, result, regions)?.let(onReport)
             true
         } catch (e: ReflectiveOperationException) {
             log.warn("could not listen to the system bars' appearance; caption tones follow the apps' pixels", e)
@@ -86,11 +103,11 @@ class AndroidSystemBars(private val log: Log) {
     }
 
     /**
-     * What the status bar service says the bars look like when the agent registers
-     * (RegisterStatusBarResult's appearance, regions and package), so an agent that starts
-     * after the apps does not wait for their next change. Null when it does not say.
+     * What the status bar service says the bars of [displayId] look like when the agent
+     * registers (RegisterStatusBarResult's appearance, regions and package), so an agent that
+     * starts after the apps does not wait for their next change. Null when it does not say.
      */
-    private fun initial(result: Any?, regions: AppearanceRegions): BarsReport? {
+    private fun initial(displayId: Int, result: Any?, regions: AppearanceRegions): BarsReport? {
         if (result == null) return null
         return try {
             val type = result.javaClass
@@ -104,7 +121,7 @@ class AndroidSystemBars(private val log: Log) {
             } catch (e: ReflectiveOperationException) {
                 null
             }
-            BarsReport(appearance, areas, packageName)
+            BarsReport(appearance, areas, packageName, displayId)
         } catch (e: ReflectiveOperationException) {
             null
         } catch (e: RuntimeException) {
@@ -161,7 +178,7 @@ class AndroidSystemBars(private val log: Log) {
                 } catch (e: RuntimeException) {
                     null
                 }
-                if (displayId == Display.DEFAULT_DISPLAY) onReport(BarsReport(appearance, areas, packageName))
+                onReport(BarsReport(appearance, areas, packageName, displayId))
             } catch (e: Exception) {
                 if (!warned) {
                     warned = true
