@@ -499,24 +499,29 @@ DROPPED_PROPS = {"persist.adb.tcp.port", "service.adb.tcp.port"}
 # guest thrash through a full zram. Thrashing past 30% of the time reclaiming counts as
 # pressure too, as on Android Go devices, which have the same small-memory, zram-backed shape.
 #
-# ART keeps less free space in each process's heap: the heap is 75% full rather than 60%
-# after a collection, as on a 1 GiB phone, with at most 4 MiB free, half a 1 GiB phone's 8 and
-# twice a 512 MiB Android Go phone's 2. Cuttlefish's values are for a 4 GiB phone that has
-# nothing else to do with its memory. The free space matters in the processes with the largest
-# heaps, which are the ones that stay: system_server (its heap holds the state of every
-# service), Google Play services and the app on screen each grow by up to that much between
-# two collections, and none of them is in the background, where ART would trim it. The cost
-# is a collection twice as often in those, which ART does concurrently with pauses well under
-# a millisecond, on a desktop's processor. The limits on how far a heap may grow stay as they
-# are, so no app has less memory to work with.
+# ART keeps little free space in each process's heap: the heap is 90% full after a
+# collection, where a phone keeps it 75% full (60% on Cuttlefish's 4 GiB phone), with between
+# 256 KiB and 2 MiB free. 2 MiB is a 512 MiB Android Go phone's most, a quarter of a 1 GiB
+# phone's 8; 256 KiB is half the least any phone keeps, which only the smallest heaps (a few
+# MiB live) reach. A phone's values are for a device that has nothing else to do with its
+# memory; here what a heap keeps free is memory the host does not get back. Between two
+# collections the free space fills with new objects and becomes resident, so on average about
+# half of it is resident in every process at any time: with live heaps of 10 to 100 MiB, 2 to
+# 4 MiB each before, 1 to 2 now. The free space matters most in the processes with the
+# largest heaps, which are the ones that stay: system_server (its heap holds the state of
+# every service), Google Play services and the app on screen, none of which is in the
+# background, where ART would trim it. The cost is a collection two to four times as often in
+# those, which ART does concurrently with pauses well under a millisecond, on a desktop's
+# processor. The limits on how far a heap may grow (heapgrowthlimit, heapsize) stay as the
+# build sets them, so no app, however large, has less memory to work with.
 #
 # Those processes are also the ones ART counts as in the foreground, where it multiplies the
 # free space it keeps after a collection by the foreground heap growth multiplier, plus one it
-# adds for its concurrent compacting collectors: 2 + 1 by default, so system_server could keep
-# 12 MiB free rather than 4. At 1 the factor is 2 (1 + 1), up to 8 MiB, which still leaves the
-# app on screen twice the room a background process gets between collections; system_server
-# and the other foreground heaps keep up to 4 MiB less each. Low-memory Android devices go
-# further, to 1 in all.
+# adds for its concurrent compacting collectors: 2 + 1 by default. At 1 the factor is 2 (1 + 1),
+# up to 4 MiB, which still leaves the app on screen twice the room a background process gets
+# between collections, so scrolling and animations, which allocate the most, do not collect
+# more often than a background process would. Low-memory Android devices go further, to 1 in
+# all.
 #
 # ro.config.low_ram is not set, whatever it would save: it turns off multi-window, and every
 # task here is a freeform window.
@@ -527,11 +532,93 @@ MEMORY_PROPS = {
     "ro.lmk.swap_free_low_percentage": "10",
     "ro.lmk.swap_util_max": "90",
     "ro.lmk.thrashing_limit": "30",
-    "dalvik.vm.heaptargetutilization": "0.75",
-    "dalvik.vm.heapminfree": "512k",
-    "dalvik.vm.heapmaxfree": "4m",
+    "dalvik.vm.heaptargetutilization": "0.9",
+    "dalvik.vm.heapminfree": "256k",
+    "dalvik.vm.heapmaxfree": "2m",
     "dalvik.vm.foreground-heap-growth-multiplier": "1.0",
 }
+
+# The classes the zygote loads and initializes before it forks any app, one per line. A class
+# it preloads stays in the zygote's memory, shared with every app it forks: worth it for the
+# classes many processes use (the UI toolkit, graphics, networking), which each would otherwise
+# load into memory of its own, and pure cost for the classes no process here ever uses. These
+# are the features a desktop guest has no device or app for: the modem's telephony (the radio
+# HAL and TeleService are removed), SIM and eSIM, SMS and MMS, IMS and carrier services, cars,
+# TV input, watches and wearables, NFC, the Bluetooth profiles (the guest has no controller),
+# and the lock screen's pattern and credential UI (there is no keyguard and no SystemUI). An
+# app that does use one loads the class the first time it does, as for any class not
+# preloaded, so nothing behaves differently. The telephony and Bluetooth classes apps reach in
+# ordinary code (TelephonyManager for the network's country, BluetoothAdapter to ask whether
+# there is one) stay preloaded, since nearly every app's libraries touch them.
+#
+# The OpenGL driver's preload stays too (ro.zygote.disable_gl_preload is not set): ANGLE's
+# libraries are loaded once in the zygote and their relocated data shared, where every app
+# would otherwise relocate its own copy.
+PRELOADED_CLASSES = "SYSTEM/etc/preloaded-classes"
+PRELOAD_DROPPED_PREFIXES = (
+    # Telephony past what apps reach in ordinary code.
+    "android.telephony.ims.",
+    "android.telephony.mbms.",
+    "android.telephony.euicc.",
+    "android.telephony.gba.",
+    "android.telephony.satellite.",
+    "android.telephony.emergency.",
+    "android.telephony.data.",
+    "android.telephony.cdma.",
+    "android.telephony.gsm.",
+    "android.telephony.Sms",
+    "android.telephony.Mms",
+    "android.telephony.ImsManager",
+    "android.provider.Telephony",
+    "android.service.carrier.",
+    "android.service.euicc.",
+    "com.android.ims.",
+    "com.android.internal.telephony.cdma.",
+    "com.android.internal.telephony.gsm.",
+    "com.android.internal.telephony.uicc.",
+    "com.android.internal.telephony.euicc.",
+    "com.android.internal.telephony.ims",
+    "com.android.internal.telephony.satellite.",
+    "com.android.internal.telephony.Sms",
+    "com.android.internal.telephony.GsmAlphabet",
+    # Cars, TV, watches.
+    "android.car.",
+    "android.media.tv.",
+    "android.tv.",
+    "android.app.wearable.",
+    "android.service.wearable.",
+    # NFC, and Bluetooth past the adapter.
+    "android.nfc.",
+    "android.bluetooth.",
+    # The lock screen.
+    "com.android.internal.widget.LockPattern",
+    "com.android.internal.widget.LockscreenCredential",
+    "android.app.trust.",
+)
+# What stays of those: the classes apps' libraries reach in ordinary code, with their inner
+# classes.
+PRELOAD_KEPT_CLASSES = (
+    "android.bluetooth.BluetoothAdapter",
+    "android.bluetooth.BluetoothManager",
+    "android.bluetooth.BluetoothDevice",
+    "android.bluetooth.BluetoothProfile",
+    "android.bluetooth.BluetoothClass",
+)
+
+
+def preload_dropped(class_name):
+    """Whether the zygote stops preloading `class_name` (PRELOAD_DROPPED_PREFIXES)."""
+    if any(class_name == kept or class_name.startswith(kept + "$") for kept in PRELOAD_KEPT_CLASSES):
+        return False
+    return class_name.startswith(PRELOAD_DROPPED_PREFIXES)
+
+
+def edit_preloaded_classes(text):
+    """Returns the zygote's preloaded-classes without the classes no process here uses.
+    Comments and blank lines stay."""
+    kept = [line for line in text.splitlines()
+            if not line.strip() or line.lstrip().startswith("#") or not preload_dropped(line.strip())]
+    return "".join(line + "\n" for line in kept)
 
 # Isolated compilation recompiles the system server's and the boot image's code inside a
 # protected VM of Android's own virtualization framework, which needs KVM in the guest. A
@@ -4384,6 +4471,30 @@ GAPPS_COMPILE_PROPERTY_CONTEXTS = {
     GAPPS_COMPILE_PROPERTY: f"{GAPPS_COMPILE_PROPERTY} u:object_r:dsa_gapps_compile_prop:s0 exact string",
     GAPPS_IMAGE_FORMAT_PROPERTY: f"{GAPPS_IMAGE_FORMAT_PROPERTY} u:object_r:dsa_gapps_compile_prop:s0 exact string",
 }
+# The agent's requests for the memory of the apps the user uses (dsa-app-memory.rc): a trim
+# and a compaction of an app no window of which the user can see (app-trim.sh), and a compile
+# of an app the user opens with the speed filter while the guest is idle (app-compile.sh).
+# Both scripts run as the shell, which may ask the activity manager and the package manager
+# for them; the agent sets the request properties and reads the answers, which the scripts set
+# (sepolicy/app-memory.cil).
+APP_MEMORY_RC = "SYSTEM/etc/init/dsa-app-memory.rc"
+APP_TRIM_SCRIPT = "SYSTEM/etc/dsa/app-trim.sh"
+APP_COMPILE_SCRIPT = "SYSTEM/etc/dsa/app-compile.sh"
+APP_MEMORY_PROPERTIES = [
+    "vendor.dsa.app.trim",
+    "vendor.dsa.app.trim.done",
+    "vendor.dsa.app.compile",
+    "vendor.dsa.app.compile.done",
+]
+APP_MEMORY_PROPERTY_CONTEXTS = {
+    name: f"{name} u:object_r:dsa_app_memory_prop:s0 exact string" for name in APP_MEMORY_PROPERTIES
+}
+APP_MEMORY_FS_CONFIG = [
+    "system/etc/init/dsa-app-memory.rc 0 0 644 capabilities=0x0",
+    "system/etc/dsa/app-trim.sh 0 0 644 capabilities=0x0",
+    "system/etc/dsa/app-compile.sh 0 0 644 capabilities=0x0",
+]
+APP_MEMORY_POLICY_FILE = "sepolicy/app-memory.cil"
 GAPPS_FS_CONFIG = [
     "system/etc/init/dsa-gapps.rc 0 0 644 capabilities=0x0",
     "system/etc/dsa/gapps-on.prop 0 0 644 capabilities=0x0",
@@ -5173,7 +5284,7 @@ def update_vendor_property_contexts(text):
         lines.append(HOST_MEMORY_PROPERTY_CONTEXT)
     if not any(line.split()[:1] == [VIDEO_PICTURES_PROPERTY] for line in lines):
         lines.append(VIDEO_PICTURES_PROPERTY_CONTEXT)
-    for name, context in GAPPS_COMPILE_PROPERTY_CONTEXTS.items():
+    for name, context in {**GAPPS_COMPILE_PROPERTY_CONTEXTS, **APP_MEMORY_PROPERTY_CONTEXTS}.items():
         if not any(line.split()[:1] == [name] for line in lines):
             lines.append(context)
     return "\n".join(lines) + "\n"
@@ -5305,6 +5416,7 @@ ADB_POLICY = HERE / "sepolicy/adb.cil"
 KERNEL_POLICY = HERE / "sepolicy/kernel.cil"
 ARM_TRANSLATION_POLICY = HERE / "sepolicy/arm-translation.cil"
 GAPPS_POLICY = HERE / "sepolicy/gapps.cil"
+APP_MEMORY_POLICY = HERE / APP_MEMORY_POLICY_FILE
 ADDONS_POLICY = HERE / "sepolicy/addons.cil"
 WIDEVINE_POLICY = HERE / "sepolicy/widevine.cil"
 WIDEVINE_HAL_POLICY = HERE / "sepolicy/widevine-hal.cil"
@@ -5933,6 +6045,8 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
             plat_patched += "\n" + ARM_TRANSLATION_POLICY.read_text()
             # init laying a user's Google apps over /product and /system_ext.
             plat_patched += "\n" + GAPPS_POLICY.read_text()
+            # The agent's trim, compaction and compile requests for the apps the user uses.
+            plat_patched += "\n" + APP_MEMORY_POLICY.read_text()
             # init mounting the user's add-on disk, which those images are on.
             plat_patched += "\n" + ADDONS_POLICY.read_text()
             # init laying a user's Widevine module over /vendor/apex, and its service's types
@@ -6093,6 +6207,8 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
                     data = without_kernel_disk_entries(data.decode()).encode()
                 elif name == WIFI_RC:
                     data = edit_wifi_rc(data.decode()).encode()
+                elif name == PRELOADED_CLASSES:
+                    data = edit_preloaded_classes(data.decode()).encode()
                 elif name.endswith(SETTINGS_APK):
                     data = edit_settings_apk(data, name)
                 elif name.endswith(tuple(BOOT_RECEIVER_FREE_APKS)):
@@ -6137,6 +6253,7 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
                                                  + (ARM_TRANSLATION_DEFAULT_FS_CONFIG
                                                     if default_translator is not None else [])
                                                  + GAPPS_FS_CONFIG + ADDONS_FS_CONFIG + WIDEVINE_FS_CONFIG
+                                                 + APP_MEMORY_FS_CONFIG
                                                  + (["system/etc/init/dsa-su-guard.rc 0 0 644 capabilities=0x0",
                                                      "system/etc/init/dsa-keymint-key.rc 0 0 644 capabilities=0x0",
                                                      "system/etc/init/dsa-cacerts.rc 0 0 644 capabilities=0x0",
@@ -6231,6 +6348,9 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
         for target, source_file in GAPPS_PROPS.items():
             zout.writestr(target, source_file.read_bytes())
         zout.writestr(GAPPS_COMPILE_SCRIPT, (HERE / "gapps-compile.sh").read_bytes())
+        zout.writestr(APP_MEMORY_RC, (HERE / "dsa-app-memory.rc").read_bytes())
+        zout.writestr(APP_TRIM_SCRIPT, (HERE / "app-trim.sh").read_bytes())
+        zout.writestr(APP_COMPILE_SCRIPT, (HERE / "app-compile.sh").read_bytes())
         for folder in added_gapps_folders:
             zout.writestr(directory_entry(folder + "/"), b"")
         if VENDOR_PROPERTY_CONTEXTS not in names:

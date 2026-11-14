@@ -1,0 +1,14 @@
+; Desktop Subsystem for Android (DSA)
+; The agent's requests for the memory of the apps the user uses (dsa-app-memory.rc): a memory
+; trim and a compaction of an app the user cannot see (app-trim.sh), and a speed compile of an
+; app the user opens (app-compile.sh). The agent, a platform app, sets each request and reads
+; its answer; init runs the script as the shell, which may already ask the activity manager and
+; the package manager for these, and which reads the request and sets the answer.
+(type dsa_app_memory_prop)
+(roletype object_r dsa_app_memory_prop)
+(typeattributeset property_type (dsa_app_memory_prop))
+(typeattributeset vendor_property_type (dsa_app_memory_prop))
+(allow platform_app dsa_app_memory_prop (property_service (set)))
+(allow platform_app dsa_app_memory_prop (file (read open getattr map)))
+(allow shell dsa_app_memory_prop (property_service (set)))
+(allow shell dsa_app_memory_prop (file (read open getattr map)))

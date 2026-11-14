@@ -48,6 +48,7 @@ pub mod location;
 pub mod log;
 pub mod microphone;
 pub mod notifications;
+pub mod occlusion;
 pub mod passkeys;
 pub mod pin_shortcuts;
 pub mod present;

@@ -3052,13 +3052,69 @@ class GuestMemoryTests(unittest.TestCase):
             self.assertLess(trigger.index("drop_caches"), trigger.index("compact_memory"))
 
     def test_nfr1_art_keeps_less_free_heap_without_lowering_what_an_app_may_use(self):
-        props = make_image.edit_props("dalvik.vm.heapmaxfree=32m\ndalvik.vm.heapsize=512m\n").splitlines()
-        self.assertIn("dalvik.vm.heaptargetutilization=0.75", props)
-        self.assertIn("dalvik.vm.heapminfree=512k", props)
-        self.assertIn("dalvik.vm.heapmaxfree=4m", props)
+        props = make_image.edit_props(
+            "dalvik.vm.heapmaxfree=32m\ndalvik.vm.heaptargetutilization=0.75\n"
+            "dalvik.vm.heapgrowthlimit=192m\ndalvik.vm.heapsize=512m\n").splitlines()
+        self.assertIn("dalvik.vm.heaptargetutilization=0.9", props)
+        self.assertNotIn("dalvik.vm.heaptargetutilization=0.75", props)
+        self.assertIn("dalvik.vm.heapminfree=256k", props)
+        self.assertIn("dalvik.vm.heapmaxfree=2m", props)
         self.assertNotIn("dalvik.vm.heapmaxfree=32m", props)
+        # What an app may use stays as the build sets it.
+        self.assertIn("dalvik.vm.heapgrowthlimit=192m", props)
         self.assertIn("dalvik.vm.heapsize=512m", props)
         self.assertNotIn("ro.config.low_ram", "\n".join(props))
+        # ART takes a utilization between 0.1 and 0.9, and the least free below the most.
+        self.assertLessEqual(float(make_image.MEMORY_PROPS["dalvik.vm.heaptargetutilization"]), 0.9)
+        size = {"k": 1, "m": 1024}
+        least, most = (int(make_image.MEMORY_PROPS[f"dalvik.vm.heap{name}free"][:-1])
+                       * size[make_image.MEMORY_PROPS[f"dalvik.vm.heap{name}free"][-1]] for name in ("min", "max"))
+        self.assertLess(least, most)
+
+    def test_nfr1_zygote_does_not_preload_what_a_desktop_never_uses(self):
+        listed = [
+            "# Preloaded-classes filter file for phones.",
+            "android.app.Activity",
+            "android.view.View$1",
+            "android.telephony.TelephonyManager",
+            "android.telephony.TelephonyManager$5",
+            "android.telephony.SmsManager",
+            "android.telephony.ims.ImsMmTelManager",
+            "android.provider.Telephony$Sms",
+            "com.android.internal.telephony.ITelephony$Stub$Proxy",
+            "com.android.internal.telephony.uicc.IccUtils",
+            "com.android.ims.ImsManager",
+            "android.car.Car",
+            "android.media.tv.TvInputManager",
+            "android.nfc.NfcAdapter",
+            "android.bluetooth.BluetoothAdapter",
+            "android.bluetooth.BluetoothAdapter$1",
+            "android.bluetooth.BluetoothA2dp",
+            "android.bluetooth.le.ScanSettings",
+            "com.android.internal.widget.LockPatternUtils",
+            "com.android.internal.widget.LockPatternView$Cell",
+            "",
+        ]
+        kept = make_image.edit_preloaded_classes("\n".join(listed)).splitlines()
+        # What apps share stays: the UI, and what apps' libraries reach in ordinary code.
+        for name in ["# Preloaded-classes filter file for phones.", "android.app.Activity", "android.view.View$1",
+                     "android.telephony.TelephonyManager", "android.telephony.TelephonyManager$5",
+                     "com.android.internal.telephony.ITelephony$Stub$Proxy",
+                     "android.bluetooth.BluetoothAdapter", "android.bluetooth.BluetoothAdapter$1"]:
+            self.assertIn(name, kept)
+        for name in ["android.telephony.SmsManager", "android.telephony.ims.ImsMmTelManager",
+                     "android.provider.Telephony$Sms", "com.android.internal.telephony.uicc.IccUtils",
+                     "com.android.ims.ImsManager", "android.car.Car", "android.media.tv.TvInputManager",
+                     "android.nfc.NfcAdapter", "android.bluetooth.BluetoothA2dp", "android.bluetooth.le.ScanSettings",
+                     "com.android.internal.widget.LockPatternUtils", "com.android.internal.widget.LockPatternView$Cell"]:
+            self.assertNotIn(name, kept)
+        # The image's own list goes through the same filter; the GL driver's preload stays on.
+        with tempfile.TemporaryDirectory() as tmp, self._modify(
+                Path(tmp), extra={make_image.PRELOADED_CLASSES: "\n".join(listed)}) as archive:
+            image = archive.read(make_image.PRELOADED_CLASSES).decode().splitlines()
+        self.assertIn("android.app.Activity", image)
+        self.assertNotIn("android.car.Car", image)
+        self.assertNotIn("ro.zygote.disable_gl_preload", make_image.edit_props("ro.build.type=user\n"))
 
     def test_nfr1_the_secure_element_service_is_removed(self):
         self.assertTrue(make_image.removed("SYSTEM/app/SecureElement/SecureElement.apk"))
@@ -3105,6 +3161,7 @@ class GuestMemoryTests(unittest.TestCase):
             + make_image.HOST_MEMORY_PROPERTY_CONTEXT + "\n"
             + make_image.VIDEO_PICTURES_PROPERTY_CONTEXT + "\n"
             + "".join(context + "\n" for context in make_image.GAPPS_COMPILE_PROPERTY_CONTEXTS.values())
+            + "".join(context + "\n" for context in make_image.APP_MEMORY_PROPERTY_CONTEXTS.values())
         )
         self.assertEqual(make_image.update_vendor_property_contexts(all_of_them), all_of_them)
 
@@ -7000,6 +7057,136 @@ echo "$*" >> {state}/log
         self.assertEqual(log.count("checked"), 1)
 
 
+class AppMemoryTests(unittest.TestCase):
+    """The agent's trims and compactions of the apps the user cannot see, and its speed compiles
+    of the apps the user opens, which init runs as the shell (dsa-app-memory.rc)."""
+
+    RC = Path(__file__).with_name("dsa-app-memory.rc")
+    TRIM = Path(__file__).with_name("app-trim.sh")
+    COMPILE = Path(__file__).with_name("app-compile.sh")
+
+    def test_nfr1_init_runs_the_trim_and_the_compile_as_the_shell_when_the_agent_asks(self):
+        sections = dict(GoogleAppsCompileTests._sections(self.RC.read_text()))
+        for service, script, request in [
+            ("dsa_app_trim", "app-trim.sh", "vendor.dsa.app.trim"),
+            ("dsa_app_compile", "app-compile.sh", "vendor.dsa.app.compile"),
+        ]:
+            commands = sections[f"service {service} /system/bin/sh /system/etc/dsa/{script}"]
+            for line in ["user shell", "seclabel u:r:shell:s0", "oneshot", "disabled"]:
+                self.assertIn(line, commands)
+            self.assertEqual(sections[f"on property:{request}=*"], [f"start {service}"])
+        # The compile takes nothing from the user's work.
+        compile_service = sections["service dsa_app_compile /system/bin/sh /system/etc/dsa/app-compile.sh"]
+        self.assertIn("priority 19", compile_service)
+        self.assertIn("ioprio idle 7", compile_service)
+
+    def test_nfr1_the_image_carries_the_scripts_their_properties_and_their_policy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "target-files.zip"
+            with zipfile.ZipFile(source, "w") as archive:
+                archive.writestr("SYSTEM/etc/selinux/plat_sepolicy.cil", "(type init)\n")
+                archive.writestr("META/vendor_filesystem_config.txt", "vendor/bin/sh 0 2000 755 capabilities=0x0\n")
+                archive.writestr("META/filesystem_config.txt", "system/bin/sh 0 2000 755 capabilities=0x0\n")
+            modified = root / "modified.zip"
+            make_image.modify(source, modified)
+            with zipfile.ZipFile(modified) as archive:
+                self.assertEqual(archive.read(make_image.APP_MEMORY_RC), self.RC.read_bytes())
+                self.assertEqual(archive.read(make_image.APP_TRIM_SCRIPT), self.TRIM.read_bytes())
+                self.assertEqual(archive.read(make_image.APP_COMPILE_SCRIPT), self.COMPILE.read_bytes())
+                config = archive.read("META/filesystem_config.txt").decode()
+                contexts = archive.read(make_image.VENDOR_PROPERTY_CONTEXTS).decode().splitlines()
+                policy = archive.read("SYSTEM/etc/selinux/plat_sepolicy.cil").decode()
+        for line in make_image.APP_MEMORY_FS_CONFIG:
+            self.assertIn(line, config)
+        for name in make_image.APP_MEMORY_PROPERTIES:
+            self.assertIn(f"{name} u:object_r:dsa_app_memory_prop:s0 exact string", contexts)
+        # The agent asks and the scripts answer; no other domain sets them.
+        setters = set(re.findall(r"\(allow (\S+) dsa_app_memory_prop \(property_service \(set\)\)\)", policy))
+        self.assertEqual(setters, {"platform_app", "shell"})
+        self.assertIn("(allow platform_app dsa_app_memory_prop (file (read open getattr map)))", policy)
+
+    def _run(self, script, request, tools):
+        """Runs `script` with the request property set to `request`, fake `getprop`, `setprop`
+        and `log`, and `tools` (name to shell text, with {s} the state folder). Returns the
+        state folder, which holds every property as prop.<name>, the log and the calls."""
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        root = Path(folder.name)
+        bin_dir = root / "bin"
+        bin_dir.mkdir()
+        state = root / "state"
+        state.mkdir()
+        name = "vendor.dsa.app.trim" if script == self.TRIM else "vendor.dsa.app.compile"
+        (state / f"prop.{name}").write_text(request)
+        scripts = {
+            "getprop": f'#!/bin/sh\ncat "{state}/prop.$1" 2>/dev/null\n',
+            "setprop": f'#!/bin/sh\nprintf %s "$2" > "{state}/prop.$1"\n',
+            "log": f'#!/bin/sh\necho "$*" >> "{state}/log"\n',
+            **{tool: text.replace("{s}", str(state)) for tool, text in tools.items()},
+        }
+        for tool, text in scripts.items():
+            (bin_dir / tool).write_text(text)
+            (bin_dir / tool).chmod(0o755)
+        subprocess.run(["sh", str(script)], env={"PATH": f"{bin_dir}:/usr/bin:/bin"}, check=True, timeout=30)
+        return state
+
+    AM = '#!/bin/sh\necho "$*" >> "{s}/calls"\n'
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "runs the script with a POSIX sh")
+    def test_nfr1_a_hidden_app_is_trimmed_then_compacted_once(self):
+        state = self._run(self.TRIM, "7 HIDDEN 0 com.spotify.music", {"am": self.AM})
+        self.assertEqual((state / "calls").read_text().splitlines(), ["send-trim-memory com.spotify.music HIDDEN"])
+        self.assertEqual((state / "prop.vendor.dsa.app.trim.done").read_text(), "7")
+        state = self._run(self.TRIM, "8 BACKGROUND 1 com.spotify.music", {"am": self.AM})
+        self.assertEqual((state / "calls").read_text().splitlines(),
+                         ["send-trim-memory com.spotify.music BACKGROUND", "compact full com.spotify.music"])
+        self.assertEqual((state / "prop.vendor.dsa.app.trim.done").read_text(), "8")
+        # A level or a process name it does not take is answered but never passed on.
+        for request in ["9 COMPLETE 1 com.spotify.music", "9 HIDDEN 1 com.x;reboot"]:
+            state = self._run(self.TRIM, request, {"am": self.AM})
+            self.assertFalse((state / "calls").exists(), request)
+            self.assertEqual((state / "prop.vendor.dsa.app.trim.done").read_text(), "9")
+
+    def _cmd(self, status):
+        """The package manager, whose ART dump gives `status` (filter, reason) or nothing, and
+        whose compile records its arguments and leaves the package compiled with speed."""
+        dump = "" if status is None else ART_DUMP.format(package="com.spotify.music", status=status[0], reason=status[1])
+        compiled = ART_DUMP.format(package="com.spotify.music", status="speed", reason="cmdline")
+        return {"cmd": f"""#!/bin/sh
+s={{s}}
+if [ "$1 $2 $3" = "package art dump" ]; then
+    if [ -f "$s/compiled" ]; then
+        cat <<'EOF'
+{compiled}EOF
+    else
+        cat <<'EOF'
+{dump}EOF
+    fi
+    exit 0
+fi
+if [ "$1 $2" = "package compile" ]; then echo "$*" >> "$s/calls"; touch "$s/compiled"; exit 0; fi
+exit 1
+"""}
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "runs the script with a POSIX sh")
+    def test_nfr1_used_apps_are_compiled_with_speed_one_at_a_time_while_idle(self):
+        for status, calls, result in [
+            (("speed-profile", "install-dm"), ["package compile -m speed -p PRIORITY_BACKGROUND com.spotify.music"],
+             "3 compiled"),
+            (("speed", "cmdline"), [], "3 current"),
+            (None, [], "3 missing"),
+        ]:
+            state = self._run(self.COMPILE, "3 com.spotify.music", self._cmd(status))
+            self.assertEqual((state / "calls").read_text().splitlines() if (state / "calls").exists() else [],
+                             calls, status)
+            self.assertEqual((state / "prop.vendor.dsa.app.compile.done").read_text(), result, status)
+        # No forced recompile: an update's speed-profile is compiled again, speed is left alone.
+        self.assertNotIn(" -f ", self.COMPILE.read_text())
+        state = self._run(self.COMPILE, "4 com.x;reboot", self._cmd(None))
+        self.assertEqual((state / "prop.vendor.dsa.app.compile.done").read_text(), "4 invalid")
+
+
 class DefaultArmTranslationTests(unittest.TestCase):
     """The default translator an x86_64 image's release carries (the Translator build's
     Digitalis package), and that an arm64 image never carries one."""
@@ -8632,7 +8819,7 @@ class SlimSystemServerTests(unittest.TestCase):
             self.assertIn("dalvik.vm.foreground-heap-growth-multiplier=1.0", props)
             self.assertNotIn("dalvik.vm.foreground-heap-growth-multiplier=2.0", props)
             self.assertIn("dalvik.vm.heapgrowthlimit=192m", props)
-            self.assertIn("dalvik.vm.heapmaxfree=4m", props)
+            self.assertIn("dalvik.vm.heapmaxfree=2m", props)
         # ART refuses a multiplier outside 0.1 to 5.
         self.assertTrue(0.1 <= float(make_image.MEMORY_PROPS["dalvik.vm.foreground-heap-growth-multiplier"]) <= 5)
 
