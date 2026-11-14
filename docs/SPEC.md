@@ -794,7 +794,18 @@ WSA가 제공한 Widevine L3를 제공한다. DSA는 Google 바이너리를 싣�
 - 게스트의 OpenGL ES 드라이버는 모든 앱에서 ANGLE이다.
 - Vulkan은 원격 방식으로 호스트에서 실행한다. gfxstream을 출발점으로, 전송 계층을 PR-1에 맞춘다.
 - 호스트 렌더러는 기본으로 주 모니터를 구동하는 GPU에서 렌더링한다(INTENT D20). 다른 GPU에 연결된 모니터의 태스크 창도 이 GPU가 렌더링한다. 사용자는 설정으로 `integrated`(내장 GPU), `discrete`(외장 GPU), 또는 장치 이름의 일부를 고를 수 있다. 맞는 GPU가 없으면 gfxstream의 기본 순위로 고르고, 합성기 로그에 어느 GPU에서 렌더링하는지와 그 이유를 남긴다.
+- 호스트 Vulkan 구현(INTENT D4, 2026-11-15 소유자 승인): Windows 호스트의 렌더러는 네이티브 Vulkan 장치(드라이버 ID가 Dozen이 아니고, `VK_MSFT_layered_driver`가 D3D12 위에 겹친 드라이버라고 하지 않는 장치)를 쓴다. 네이티브 장치가 하나도 없으면 Microsoft의 OpenCL, OpenGL, and Vulkan Compatibility Pack(패키지 `Microsoft.D3DMappingLayers`)에 든 Dozen(Vulkan on Direct3D 12)으로 렌더링한다. 같은 GPU에 네이티브와 Dozen 장치가 함께 보이면 네이티브를 고른다.
+  - 설정 `vulkan_driver`는 사용자마다의 값이고 `auto`(기본, 위의 규칙), `native`(Dozen을 쓰지 않는다), `dozen`(시험과 비교용, 팩의 Dozen만 쓴다)이다. 그 밖의 값은 거부된다. 렌더러가 시작할 때 읽으므로, 바꾼 값은 창 관리자가 다시 시작할 때 적용된다. 설정 앱과 `dsa settings set vulkan-driver`로 바꾸고, `dsa gpus`가 각 Vulkan 장치와 그것이 네이티브인지 Dozen인지, 팩이 있는지를 보인다.
+  - Dozen은 렌더러 프로세스에만 Vulkan 로더의 환경 변수로 준다. 사용자의 시스템 Vulkan 구성은 바꾸지 않는다.
+  - DSA는 Dozen도 `dxil.dll`도 싣지 않는다(NFR-7 그대로). 팩을 찾는 곳은 그 패키지의 설치 폴더와 그 안의 ICD JSON이다. 시스템 Vulkan 로더가 팩의 Dozen을 이미 목록에 올렸으면 그것을 쓴다.
+  - Dozen으로 렌더링하면 렌더러는 Dozen에 없는 기능을 기대하지 않게 시작한다. 장치가 `VK_EXT_external_memory_host`를 내지 않으면 gfxstream의 호스트 메모리 할당(`VulkanAllocateHostMemory`)을 끈다. 테셀레이션, YCbCr 변환, descriptor indexing은 장치가 내는 대로 게스트에 넘어가므로 Dozen에서는 꺼진다. CPU ASTC 디코딩은 쓰지 않는다.
+  - 창 관리자 로그에는 어떤 Vulkan 구현을 쓰는지와 그 이유를 렌더러가 시작할 때마다 한 줄 남긴다.
+  - 쓸 수 있는 네이티브 장치가 없고 팩도 없으면(또는 `native`인데 네이티브가 없거나, `dozen`인데 팩이 없으면), 사용자에게 알린다. 알림에는 팩의 Store 링크(`ms-windows-store://pdp/?ProductId=9NQPSL29BFFF`)와 winget id(`Microsoft.OpenCLGLVulkanCompatibilityPack`), `dsa gpus`로 확인하라는 말이 있다. 이때 서비스는 안드로이드를 시작하지 않고, 시작 요청에 같은 이유를 돌려준다. 게스트가 그래픽 없이 부팅해 알 수 없게 실패하지 않게 하기 위함이다.
+  - 하드웨어 D3D12 장치가 없어 Dozen이 WARP(Windows의 소프트웨어 D3D12)에서 돌면, 렌더링이 CPU에서 돌아 게임이 느리다는 것을 사용자에게 한 번 알린다(같은 판정이 이어지는 동안 다시 알리지 않는다).
 - 수용 기준: Vulkan CTS의 정해진 부분 집합과 OpenGL ES 앱 하나, Vulkan 앱 하나가 태스크 창에 올바르게 그려진다.
+- 수용 기준: 장치 목록(네이티브만, 같은 LUID의 네이티브와 Dozen, Dozen만, WARP 위의 Dozen만, 없음)과 팩의 유무, 설정 `vulkan_driver`가 주어지면, 고르기 규칙이 기대한 구현과 렌더러 환경을 고르고 그 이유를 알리며, 쓸 것이 없으면 안내와 함께 거부한다. 서비스는 렌더러가 쓸 Vulkan이 없다고 보고한 사용자의 안드로이드를 시작하지 않는다. 잘못된 `vulkan_driver`는 거부된다. (단위 시험)
+- 수용 기준: GPU 없는 Windows CI 러너에서 렌더러가 WARP 위의 Dozen으로 시작해 자기 시험을 통과한다. 러너에 팩이나 Mesa의 Dozen을 들일 수 있을 때 손으로 시작하는 작업이다.
+- 수용 기준: 소유자 PC에서 설정 `dozen`으로 OpenGL ES 앱 하나와 Vulkan 앱 하나가 태스크 창에 올바르게 그려지고, PR-3의 세 측정을 같은 GPU의 네이티브 드라이버와 함께 기록한다. 네이티브 Vulkan이 없는 실기(예: Haswell, Broadwell, 옛 Snapdragon)를 구하면 같은 확인을 그 기기에서도 한다. (수동 확인)
 - 수용 기준: 활성 디스플레이 목록이 주어지면, 설정이 없거나 `display`일 때 주 모니터 어댑터의 LUID를 고르고, `integrated`, `discrete`, 장치 이름은 각각 그 규칙이 되며, 주 모니터를 찾지 못하면 기본 순위로 돌아간다. 잘못된 설정은 거부되고 기본값으로 돌아간다.
 - 수용 기준: 렌더러는 요청한 규칙에 맞는 Vulkan 장치를 고르고, 맞는 장치가 없으면 기본 순위로 고르며, 어느 쪽이었는지 알려 준다.
 - 측정 기준: 일반 앱 스크롤, OpenGL ES 게임, Vulkan 게임 세 가지로 프레임 시간, CPU 사용률, 게스트와 호스트 메모리를 기록한다. dxg 대안 경로를 실험하면 같은 세 가지로 비교한다.
@@ -856,3 +867,4 @@ WSA가 제공한 Widevine L3를 제공한다. DSA는 Google 바이너리를 싣�
 - FR-26 실제 PC에서 마이크 녹음, 앞뒤 카메라 미리 보기와 사진과 동영상, 지도 앱의 현재 위치, 센서 확인 앱의 가속도계와 자이로스코프와 조도, 문서 인쇄를 확인하고, Windows 개인 정보 설정에서 각각을 끄면 앱이 권한 오류를 보이며 작업 표시줄에 사용 중 표시가 나타났다 사라지는지 확인
 - FR-27 실제 ARM64 Windows PC(예: Snapdragon X)에서 ARM64 설치 파일을 깨끗이 설치하고, `arm64-v8a`만 담은 APK를 설치해 창으로 열고 입력, IME, 소리, 알림, 절전 뒤 복귀가 x64와 같게 동작하며, 대기 메모리가 반환되는지 확인
 - PR-3 화면이 내장 GPU에 연결된 하이브리드 노트북에서 합성기 로그가 내장 GPU를 렌더링 GPU로 적고, `discrete`로 바꾸고 합성기를 다시 시작하면 외장 GPU를 적는다
+- PR-3 Compatibility Pack을 설치한 소유자 PC에서 `vulkan_driver`를 `dozen`으로 바꾸고 창 관리자를 다시 시작하면 로그가 Dozen과 그 이유를 적고, OpenGL ES 앱 하나와 Vulkan 앱 하나가 태스크 창에 올바르게 그려지며, 세 측정을 `native`와 함께 기록한다. 팩을 제거하고 `dozen`이면 설치 안내 알림이 나오고 안드로이드가 시작되지 않는다
