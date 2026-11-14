@@ -502,6 +502,7 @@ impl Window {
     /// Shows the window in `mode`. Returns the size a picture-in-picture window asks the
     /// task for.
     fn apply_mode(&mut self, mode: WindowMode, work: (i32, i32)) -> Option<(u32, u32)> {
+        self.model.mode_changed();
         match mode {
             WindowMode::Fullscreen => {
                 self.toplevel.set_fullscreen(None);

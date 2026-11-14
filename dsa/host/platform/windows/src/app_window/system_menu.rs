@@ -3,14 +3,15 @@
 //! The system menu (Alt+Space, a right click on the title bar, a click on the app's icon in
 //! it) keeps Windows' own items: Restore, Move, Size, Minimize, Maximize and Close. Under them,
 //! after a separator, come the items an Android desktop window offers in its window menu:
-//! New window (only for an app that supports several windows), Screenshot, Aspect ratio, Open
+//! Full screen (on and off, as F11, whatever the user's setting for the app's full screen), New
+//! window (only for an app that supports several windows), Screenshot, Aspect ratio, Open
 //! by default and App info. They sit where a Windows user looks for what a window can do, and
 //! they take no room in the title bar. The default title bar and one the app draws itself
 //! share the same menu, since Windows opens it from the same window. The window shows it as a
 //! Windows 11 menu ([`super::window_menu`]), whose Android part is these items.
 //!
 //! The window host takes the screenshot itself ([`super::screenshot`]), since it has the
-//! window's frames. Every other item goes to the window manager as `FromHost::MenuChosen`.
+//! window's frames, and turns full screen on and off itself, as it does for F11. Every other item goes to the window manager as `FromHost::MenuChosen`.
 //!
 //! The items speak the user's display language when DSA has it (Korean), else English.
 
@@ -21,6 +22,7 @@ use dsa_host_core::compositor::window_hosts::MenuAction;
 pub enum SystemMenuItem {
     /// The line between Windows' items and these.
     Separator,
+    FullScreen,
     NewWindow,
     Screenshot,
     AspectRatio,
@@ -32,7 +34,7 @@ pub enum SystemMenuItem {
 /// does not support several windows, since its second task would only bring the first to the
 /// front.
 pub fn items(new_window: bool) -> Vec<SystemMenuItem> {
-    let mut items = vec![SystemMenuItem::Separator];
+    let mut items = vec![SystemMenuItem::Separator, SystemMenuItem::FullScreen];
     if new_window {
         items.push(SystemMenuItem::NewWindow);
     }
@@ -46,8 +48,9 @@ pub fn items(new_window: bool) -> Vec<SystemMenuItem> {
 }
 
 /// Every entry this menu may have, for removing them all before the menu is made again.
-pub const ALL: [SystemMenuItem; 6] = [
+pub const ALL: [SystemMenuItem; 7] = [
     SystemMenuItem::Separator,
+    SystemMenuItem::FullScreen,
     SystemMenuItem::NewWindow,
     SystemMenuItem::Screenshot,
     SystemMenuItem::AspectRatio,
@@ -66,6 +69,7 @@ pub fn command(item: SystemMenuItem) -> u32 {
         SystemMenuItem::AspectRatio => 0xE030,
         SystemMenuItem::OpenByDefault => 0xE040,
         SystemMenuItem::AppInfo => 0xE050,
+        SystemMenuItem::FullScreen => 0xE060,
     }
 }
 
@@ -78,15 +82,15 @@ pub fn chosen(wparam: usize) -> Option<SystemMenuItem> {
         .find(|item| command(*item) == id)
 }
 
-/// What the window manager does for an entry; `None` for the separator and for Screenshot,
-/// which the window host takes.
+/// What the window manager does for an entry; `None` for the separator, Screenshot and Full
+/// screen, which the window host takes.
 pub fn action(item: SystemMenuItem) -> Option<MenuAction> {
     match item {
         SystemMenuItem::NewWindow => Some(MenuAction::NewWindow),
         SystemMenuItem::AspectRatio => Some(MenuAction::AspectRatio),
         SystemMenuItem::OpenByDefault => Some(MenuAction::OpenByDefault),
         SystemMenuItem::AppInfo => Some(MenuAction::AppInfo),
-        SystemMenuItem::Separator | SystemMenuItem::Screenshot => None,
+        SystemMenuItem::Separator | SystemMenuItem::Screenshot | SystemMenuItem::FullScreen => None,
     }
 }
 
@@ -94,6 +98,7 @@ pub fn action(item: SystemMenuItem) -> Option<MenuAction> {
 /// differ from Windows' own items (R, M, S, N, X, C), so each key still picks one item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MenuText {
+    pub full_screen: &'static str,
     pub new_window: &'static str,
     pub screenshot: &'static str,
     pub aspect_ratio: &'static str,
@@ -107,6 +112,7 @@ pub struct MenuText {
 pub fn menu_text(korean: bool) -> MenuText {
     if korean {
         MenuText {
+            full_screen: "전체 화면(&F)",
             new_window: "새 창(&E)",
             screenshot: "스크린샷(&H)",
             aspect_ratio: "화면 비율(&A)",
@@ -116,6 +122,7 @@ pub fn menu_text(korean: bool) -> MenuText {
         }
     } else {
         MenuText {
+            full_screen: "&Full screen",
             new_window: "N&ew window",
             screenshot: "Screens&hot",
             aspect_ratio: "&Aspect ratio",
@@ -130,6 +137,7 @@ pub fn menu_text(korean: bool) -> MenuText {
 pub fn label(text: &MenuText, item: SystemMenuItem) -> Option<&'static str> {
     Some(match item {
         SystemMenuItem::Separator => return None,
+        SystemMenuItem::FullScreen => text.full_screen,
         SystemMenuItem::NewWindow => text.new_window,
         SystemMenuItem::Screenshot => text.screenshot,
         SystemMenuItem::AspectRatio => text.aspect_ratio,
@@ -205,6 +213,7 @@ mod tests {
             items(true),
             vec![
                 Separator,
+                FullScreen,
                 NewWindow,
                 Screenshot,
                 AspectRatio,
@@ -215,7 +224,14 @@ mod tests {
         // New window only for an app that supports several windows.
         assert_eq!(
             items(false),
-            vec![Separator, Screenshot, AspectRatio, OpenByDefault, AppInfo]
+            vec![
+                Separator,
+                FullScreen,
+                Screenshot,
+                AspectRatio,
+                OpenByDefault,
+                AppInfo
+            ]
         );
         // Each ID is one WM_SYSCOMMAND carries back whole, and none is one of Windows' own.
         for item in ALL {
@@ -235,6 +251,9 @@ mod tests {
         assert_eq!(action(OpenByDefault), Some(MenuAction::OpenByDefault));
         assert_eq!(action(AppInfo), Some(MenuAction::AppInfo));
         assert_eq!(action(Screenshot), None);
+        // Full screen goes on and off in the window itself, as F11 does.
+        assert_eq!(action(FullScreen), None);
+        assert_eq!(chosen(command(FullScreen) as usize), Some(FullScreen));
     }
 
     #[test]
@@ -245,7 +264,7 @@ mod tests {
                 .into_iter()
                 .filter_map(|item| label(&text, item))
                 .collect();
-            assert_eq!(labels.len(), 5);
+            assert_eq!(labels.len(), 6);
             // One access key each, none of Windows' own (R, M, S, N, X, C).
             let mut keys = Vec::new();
             for label in labels {

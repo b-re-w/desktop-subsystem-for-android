@@ -464,6 +464,10 @@ pub struct CaptionWindow {
     tracking: Cell<bool>,
     /// What was last drawn, so a message that changes nothing draws nothing.
     drawn: RefCell<Option<Drawn>>,
+    /// Whether the window fills its monitor, where its title bar shows only while the pointer
+    /// is at the top edge: it then has no resize edges, and its middle button leaves full
+    /// screen, drawn as Restore.
+    full_screen: Cell<bool>,
 }
 
 impl CaptionWindow {
@@ -500,6 +504,7 @@ impl CaptionWindow {
             input,
             tracking: Cell::new(false),
             drawn: RefCell::new(None),
+            full_screen: Cell::new(false),
         }
     }
 
@@ -535,6 +540,23 @@ impl CaptionWindow {
         // The task's state is fresh again: the arrow may send the next Back.
         self.back_sent.set(None);
         self.paint(hwnd, presenter);
+    }
+
+    /// The window fills its monitor now, or no longer does.
+    pub fn set_full_screen(&self, full_screen: bool) {
+        self.full_screen.set(full_screen);
+        self.drawn.replace(None);
+    }
+
+    /// Takes the title bar away, as a full screen window does once the pointer leaves it. The
+    /// next paint draws it whole again.
+    pub fn hide(&self, presenter: Option<&WindowPresenter>) {
+        self.drawn.replace(None);
+        self.hovered.set(None);
+        self.pressed.set(None);
+        if let Some(presenter) = presenter {
+            presenter.hide_caption();
+        }
     }
 
     /// Whether the icon's cell shows the back arrow now, for the window's accessibility.
@@ -604,7 +626,7 @@ impl CaptionWindow {
         let dpi = GetDpiForWindow(hwnd).max(96);
         let mut client: RECT = std::mem::zeroed();
         GetClientRect(hwnd, &mut client);
-        let maximized = IsZoomed(hwnd) != 0;
+        let maximized = IsZoomed(hwnd) != 0 || self.full_screen.get();
         let border = if maximized {
             0
         } else {
@@ -834,7 +856,7 @@ impl CaptionWindow {
         let state = CaptionState {
             hovered: self.hovered.get(),
             pressed: self.pressed.get(),
-            maximized: IsZoomed(hwnd) != 0,
+            maximized: IsZoomed(hwnd) != 0 || self.full_screen.get(),
             active: self.active.get(),
         };
         let palette = palette(self.shown.get());

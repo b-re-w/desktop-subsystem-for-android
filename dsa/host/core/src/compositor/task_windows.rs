@@ -15,7 +15,9 @@ use super::window_sizing::{
     to_task_length, to_window_rect, Scale, ScalingMode, WindowSizing, BASE_DENSITY,
     DENSITY_AT_BASE_DPI, SETTLE,
 };
-use crate::app_windows::AppWindowSettings;
+use crate::app_windows::{
+    full_screen_place, AppWindowSettings, FullScreenDefaults, FullScreenPlace,
+};
 use crate::tasks::{Bounds, Task, TaskEvent, TaskOrientation, TaskRequest};
 
 /// The display the guest's whole freeform screen is posted to. Its frames are never shown,
@@ -275,6 +277,8 @@ pub struct TaskWindows {
     told_sizes: BTreeMap<i32, (TaskSize, Scale)>,
     /// The user's window settings for each app, by package.
     app_windows: BTreeMap<String, AppWindowSettings>,
+    /// Where every app without its own choice shows its full screen.
+    fullscreen_defaults: FullScreenDefaults,
     /// Tasks whose window opens once the guest has given them their start size.
     pending: BTreeMap<i32, PendingOpen>,
     /// The mode and resizability each window was last told.
@@ -284,8 +288,9 @@ pub struct TaskWindows {
     cursors: BTreeMap<i32, crate::ime::ImeCursor>,
     /// The title bar band each window last reported, in its pixels, with the scale its
     /// caption inset was given to the task at: given again at a window's new scale, since the
-    /// task has it in its own pixels.
-    bands: BTreeMap<i32, (CaptionBand, Scale)>,
+    /// task has it in its own pixels. With them, whether the band was last given as none,
+    /// because the task's app asks to fill the screen.
+    bands: BTreeMap<i32, (CaptionBand, Scale, bool)>,
     /// What the window manager logs, until it takes it ([`TaskWindows::take_notes`]).
     notes: Vec<String>,
 }
@@ -314,6 +319,15 @@ fn shown_cursor(cursor: crate::ime::ImeCursor, scale: Scale) -> crate::ime::ImeC
         top: shown.top,
         right: shown.right,
         bottom: shown.bottom,
+    }
+}
+
+/// The band a task is given: none while its app asks to fill the screen (`cleared`).
+fn given_band(band: CaptionBand, cleared: bool) -> CaptionBand {
+    if cleared {
+        CaptionBand::default()
+    } else {
+        band
     }
 }
 
@@ -385,10 +399,31 @@ impl TaskWindows {
             .iter()
             .map(|app| (app.package_name.clone(), app.clone()))
             .collect();
+        self.retell_modes()
+    }
+
+    /// Takes where every app without its own choice shows its full screen, which the windows
+    /// open already follow at once.
+    pub fn set_full_screen_defaults(&mut self, defaults: FullScreenDefaults) -> Vec<WindowChange> {
+        self.fullscreen_defaults = defaults.resolved();
+        self.retell_modes()
+    }
+
+    /// The mode changes of every open window after a change of the user's settings.
+    fn retell_modes(&mut self) -> Vec<WindowChange> {
         let open = self.windows();
         open.into_iter()
             .filter_map(|task_id| self.mode_change(task_id, false))
             .collect()
+    }
+
+    /// Where `task`'s window shows its app's full screen: `None` while it asks for none.
+    fn full_screen_place_of(&self, task: &Task) -> Option<FullScreenPlace> {
+        full_screen_place(
+            task.fullscreen_request,
+            self.app_windows.get(&task.package_name),
+            self.fullscreen_defaults,
+        )
     }
 
     /// How `task`'s window follows a monitor of another scale: as the user chose for its app,
@@ -424,7 +459,10 @@ impl TaskWindows {
             .get(&task.package_name)
             .is_some_and(|app| app.fixed_size);
         (
-            WindowMode::of(task.fullscreen, task.picture_in_picture),
+            WindowMode::of(
+                self.full_screen_place_of(task) == Some(FullScreenPlace::Screen),
+                task.picture_in_picture,
+            ),
             !fixed,
         )
     }
@@ -812,8 +850,9 @@ impl TaskWindows {
             return Vec::new();
         }
         let scale = self.scale_of(task_id);
-        self.bands.insert(task_id, (band, scale));
-        vec![caption_request(task_id, band, scale)]
+        let cleared = self.band_cleared(task_id);
+        self.bands.insert(task_id, (band, scale, cleared));
+        vec![caption_request(task_id, given_band(band, cleared), scale)]
     }
 
     /// The task's window opened on a monitor of `dpi`. Returns the client size it takes, the
@@ -969,12 +1008,23 @@ impl TaskWindows {
             return None;
         }
         let scale = self.scale_of(task_id);
-        let (band, given) = self.bands.get_mut(&task_id)?;
-        if *given == scale {
+        let cleared = self.band_cleared(task_id);
+        let (band, given, given_cleared) = self.bands.get_mut(&task_id)?;
+        if *given == scale && *given_cleared == cleared {
             return None;
         }
         *given = scale;
-        Some(caption_request(task_id, *band, scale))
+        *given_cleared = cleared;
+        Some(caption_request(task_id, given_band(*band, cleared), scale))
+    }
+
+    /// Whether `task_id` is given no title band: its app asks to fill the screen. Its window
+    /// either fills the monitor with no title bar, or keeps its title bar over an app drawn to
+    /// the window's edges, as the user's setting for that kind of request says.
+    fn band_cleared(&self, task_id: i32) -> bool {
+        self.tasks
+            .get(&task_id)
+            .is_some_and(Task::asks_for_full_screen)
     }
 
     fn size_reconfigures(&mut self, now: Instant) -> Vec<TaskRequest> {
@@ -2270,11 +2320,100 @@ mod tests {
     }
 
     #[test]
+    fn fr30_inside_the_window_keeps_the_caption_and_gives_the_task_no_band() {
+        use crate::app_windows::FullScreenDefaults;
+        use crate::tasks::FullScreenRequest;
+        let now = Instant::now();
+        let mut windows = TaskWindows::new();
+        windows.apply(&updated(1, "Shorts"));
+        let band = CaptionBand {
+            height: 32,
+            start_width: 48,
+            end_width: 138,
+        };
+        let given = |band: CaptionBand| TaskRequest::SetCaption {
+            task_id: 1,
+            height: band.height,
+            start_width: band.start_width,
+            end_width: band.end_width,
+        };
+        assert_eq!(windows.window_caption(1, band), vec![given(band)]);
+        // Hiding both bars alone stays in the window by default: an ordinary window, which
+        // keeps its title bar, and a task with no band under it.
+        let immersive = Task {
+            fullscreen_request: FullScreenRequest::BarsHidden,
+            ..task(1, "Shorts", 720, 1280)
+        };
+        assert!(!windows
+            .apply(&TaskEvent::Updated(immersive.clone()))
+            .iter()
+            .any(|change| matches!(change, WindowChange::Mode { .. })));
+        assert_eq!(
+            windows.reconfigures(now),
+            vec![given(CaptionBand::default())]
+        );
+        // A band the window reports again while the app fills it is not given either.
+        assert_eq!(
+            windows.window_caption(1, band),
+            vec![given(CaptionBand::default())]
+        );
+        // The band comes back when the app shows its bars again.
+        windows.apply(&updated(1, "Shorts"));
+        assert_eq!(windows.reconfigures(now), vec![given(band)]);
+        // Set to the whole screen, the same request fills the monitor.
+        windows.apply(&TaskEvent::Updated(immersive));
+        windows.reconfigures(now);
+        assert_eq!(
+            windows.set_full_screen_defaults(FullScreenDefaults {
+                immersive: FullScreenPlace::Screen,
+                ..FullScreenDefaults::default()
+            }),
+            vec![WindowChange::Mode {
+                task_id: 1,
+                mode: WindowMode::Fullscreen,
+                resizable: true,
+            }]
+        );
+    }
+
+    #[test]
+    fn fr30_a_clear_request_fills_the_screen_unless_the_app_is_set_to_its_window() {
+        use crate::tasks::FullScreenRequest;
+        let mut windows = TaskWindows::new();
+        windows.apply(&updated(1, "Video"));
+        let full = Task {
+            fullscreen_request: FullScreenRequest::Explicit,
+            ..task(1, "Video", 720, 1280)
+        };
+        assert!(windows
+            .apply(&TaskEvent::Updated(full))
+            .contains(&WindowChange::Mode {
+                task_id: 1,
+                mode: WindowMode::Fullscreen,
+                resizable: true,
+            }));
+        // The app's own choice wins over the default, at once for the window open already.
+        let package = windows.package_of(1).unwrap().to_string();
+        assert_eq!(
+            windows.set_app_windows(&[AppWindowSettings {
+                package_name: package,
+                fullscreen: FullScreenPlace::Window,
+                ..AppWindowSettings::default()
+            }]),
+            vec![WindowChange::Mode {
+                task_id: 1,
+                mode: WindowMode::Normal,
+                resizable: true,
+            }]
+        );
+    }
+
+    #[test]
     fn fr30_full_screen_and_picture_in_picture_requests_reach_the_window() {
         let mut windows = TaskWindows::new();
         windows.apply(&updated(1, "Video"));
         let full = Task {
-            fullscreen: true,
+            fullscreen_request: crate::tasks::FullScreenRequest::Explicit,
             ..task(1, "Video", 720, 1280)
         };
         assert_eq!(

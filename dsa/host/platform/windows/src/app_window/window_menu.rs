@@ -514,6 +514,7 @@ mod tests {
                 None,
                 some("Close"),
                 None,
+                some("Full screen"),
                 some("New window"),
                 some("Screenshot"),
                 some("Aspect ratio"),
@@ -537,6 +538,10 @@ mod tests {
         );
         assert_eq!(
             system_menu::chosen(ids[6] as usize),
+            Some(SystemMenuItem::FullScreen)
+        );
+        assert_eq!(
+            system_menu::chosen(ids[7] as usize),
             Some(SystemMenuItem::NewWindow)
         );
         // Windows' access keys, and Close's shortcut.

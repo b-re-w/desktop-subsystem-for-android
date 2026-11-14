@@ -62,6 +62,9 @@ const TIMEOUT: Duration = Duration::from_secs(5);
 /// How often the main loop looks at the window rules' timers.
 const TICK: Duration = Duration::from_millis(16);
 
+/// How often the windows read the user's window settings for apps again.
+const APP_WINDOWS_EVERY: Duration = Duration::from_secs(2);
+
 /// The service's local socket: `DSA_SOCKET` when set, else the system service's.
 pub fn socket_path() -> PathBuf {
     std::env::var_os("DSA_SOCKET")
@@ -1306,13 +1309,33 @@ pub fn run() -> Result<(), String> {
         stall: FrameStall::new(),
         frames_shown: 0,
     };
-    if let Ok(mut client) = connect() {
-        if let Ok(settings) = client.app_window_settings() {
-            let changes = main.windows.set_app_windows(&settings);
-            main.changes(changes);
-        }
-    }
+    // The user's window settings for apps, and the full screen choices every app follows, are
+    // read when the windows start and again now and then, so a change made in the settings
+    // app reaches the windows open already.
+    let mut app_windows_read: Option<(Instant, dsa_host_core::app_windows::AppWindows)> = None;
     loop {
+        let due = app_windows_read
+            .as_ref()
+            .is_none_or(|(at, _)| at.elapsed() >= APP_WINDOWS_EVERY);
+        if due {
+            let read = connect()
+                .ok()
+                .and_then(|mut client| client.app_windows().ok());
+            let known = app_windows_read.take().map(|(_, known)| known);
+            match read {
+                Some(windows) => {
+                    if known.as_ref() != Some(&windows) {
+                        let mut changes = main.windows.set_app_windows(&windows.apps);
+                        changes.extend(main.windows.set_full_screen_defaults(windows.defaults));
+                        main.changes(changes);
+                    }
+                    app_windows_read = Some((Instant::now(), windows));
+                }
+                None => {
+                    app_windows_read = Some((Instant::now(), known.unwrap_or_default()));
+                }
+            }
+        }
         main.desktop.wait(wake_read.as_raw_fd(), TICK)?;
         drain(&wake_read);
         while let Ok(message) = messages.try_recv() {
