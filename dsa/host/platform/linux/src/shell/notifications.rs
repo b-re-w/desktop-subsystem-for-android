@@ -153,7 +153,12 @@ impl Shown {
     /// [Later], labelled in Korean when `korean`.
     pub fn notify_in(&self, notification: &Notification, korean: bool) -> Notify {
         let mut notify = self.notify(notification);
-        for button in buttons_of(&notification.key, korean) {
+        let lang = if korean {
+            dsa_host_core::ui_language::UiLanguage::Korean
+        } else {
+            dsa_host_core::ui_language::UiLanguage::English
+        };
+        for button in buttons_of(&notification.key, lang) {
             notify.actions.push(button.action.to_string());
             notify.actions.push(button.label);
         }
@@ -400,7 +405,8 @@ mod tests {
     #[test]
     fn nfr5_the_notice_that_android_restarts_for_its_graphics_shows_under_dsa() {
         use dsa_host_core::compositor::frame_stall::Notice;
-        let notice = Notice::Restarting.notification(true);
+        let notice =
+            Notice::Restarting.notification(dsa_host_core::ui_language::UiLanguage::Korean);
         let notify = dsa_notice(&notice);
         assert_eq!(notify.app_name, "DSA");
         assert_eq!(notify.desktop_entry, SETTINGS_ENTRY);

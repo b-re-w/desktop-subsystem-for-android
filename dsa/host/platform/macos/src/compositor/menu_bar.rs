@@ -62,6 +62,15 @@ pub fn korean() -> bool {
     }
 }
 
+/// The interface language the user reads, as far as DSA tells it.
+pub fn ui_language() -> dsa_host_core::ui_language::UiLanguage {
+    if korean() {
+        dsa_host_core::ui_language::UiLanguage::Korean
+    } else {
+        dsa_host_core::ui_language::UiLanguage::English
+    }
+}
+
 unsafe extern "C-unwind" fn choose(_this: &AnyObject, _: Sel, sender: *mut AnyObject) {
     if sender.is_null() {
         return;

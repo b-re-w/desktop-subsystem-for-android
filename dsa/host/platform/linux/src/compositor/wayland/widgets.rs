@@ -167,7 +167,11 @@ impl Widgets {
             desk: Desk::new(
                 crate::compositor::widget_windows::look(false, 0),
                 96,
-                korean,
+                if korean {
+                    dsa_host_core::ui_language::UiLanguage::Korean
+                } else {
+                    dsa_host_core::ui_language::UiLanguage::English
+                },
                 decode,
             ),
             shell: widget_shell(layer_shell, x11),

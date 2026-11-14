@@ -25,7 +25,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use dsa_host_core::root_approval::{ApprovalPrompt, ApprovalRequest, PromptAnswer, Purpose};
-use dsa_host_core::root_requester::{Language, Requester};
+use dsa_host_core::root_requester::Requester;
+use dsa_host_core::ui_language::UiLanguage;
 
 use crate::shell::desktop_entry;
 
@@ -57,12 +58,14 @@ pub fn details(request: &ApprovalRequest, icon_name: &str) -> Vec<(String, Strin
     let language = request.language();
     let command = match (request.purpose, language) {
         (Purpose::Run, _) if !request.command.is_empty() => request.command_line(),
-        (Purpose::KeepRoot, Language::English) => {
+        (Purpose::KeepRoot, UiLanguage::English) => {
             "(any command, without asking each time)".to_string()
         }
-        (Purpose::Run, Language::English) => "(an interactive root shell)".to_string(),
-        (Purpose::KeepRoot, Language::Korean) => "(묻지 않고 모든 명령)".to_string(),
-        (Purpose::Run, Language::Korean) => "(대화형 루트 셸)".to_string(),
+        (Purpose::Run, UiLanguage::English) => "(an interactive root shell)".to_string(),
+        (Purpose::KeepRoot, UiLanguage::Korean) => "(묻지 않고 모든 명령)".to_string(),
+        (Purpose::Run, UiLanguage::Korean) => "(대화형 루트 셸)".to_string(),
+        // The other languages take the core's words for what is asked.
+        _ => format!("({})", request.command_text_in(language)),
     };
     vec![
         ("polkit.message".into(), request.message_in(language)),

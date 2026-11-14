@@ -6477,7 +6477,7 @@ fn fr35_the_root_prompt_speaks_the_users_language() {
         ApprovalPrompt, ApprovalRequest, PromptAnswer, RootApproval,
     };
     use dsa_host_core::root_elevation::{AppLevel, Level};
-    use dsa_host_core::root_requester::Language;
+    use dsa_host_core::ui_language::UiLanguage;
 
     struct LanguagePrompt {
         seen: Mutex<Vec<ApprovalRequest>>,
@@ -6525,7 +6525,7 @@ fn fr35_the_root_prompt_speaks_the_users_language() {
     let seen = prompt.seen.lock().unwrap();
     assert_eq!(seen.len(), 2);
     for request in seen.iter() {
-        assert_eq!(request.language(), Language::Korean, "{request:?}");
+        assert_eq!(request.language(), UiLanguage::Korean, "{request:?}");
     }
     assert_eq!(seen[0].name_in(seen[0].language()), "adb 셸");
 }

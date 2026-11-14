@@ -19,6 +19,7 @@
 //! What it offers is the platform-neutral menu every host shares
 //! (`dsa_host_core::widget_windows::menu`); what is here is its Windows 11 look.
 
+use dsa_host_core::ui_language::UiLanguage;
 pub use dsa_host_core::widget_windows::menu::{
     choice_of, is_current, keyboard_items, menu_name, menu_text, size_choices, size_label,
     MenuChoice, MenuText, SizeChoice, SizeName, FIRST_SIZE, MOVE, REMOVE, RESIZE, SETTINGS, SIZE,
@@ -94,7 +95,12 @@ pub fn is_korean(lang_id: u16) -> bool {
 pub fn display_text() -> MenuText {
     use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
     // SAFETY: reads the user's display language.
-    menu_text(is_korean(unsafe { GetUserDefaultUILanguage() }))
+    let korean = is_korean(unsafe { GetUserDefaultUILanguage() });
+    menu_text(if korean {
+        UiLanguage::Korean
+    } else {
+        UiLanguage::English
+    })
 }
 
 /// Shows the menu of a widget window where `anchor` says and returns what the user chose.
@@ -208,12 +214,14 @@ mod tests {
             width_dp: 270,
             height_dp: 165,
         };
-        assert_eq!(size_label(&menu_text(false), &large), "Large (270 × 165)");
-        assert_eq!(size_label(&menu_text(true), &large), "크게 (270 × 165)");
-        assert_eq!(menu_text(false).remove, "Remove");
-        assert_eq!(menu_text(true).resize, "크기 선택");
-        assert_eq!(menu_text(false).settings, "Widget settings");
-        assert_eq!(menu_text(true).settings, "위젯 설정");
+        let english = menu_text(UiLanguage::English);
+        let korean = menu_text(UiLanguage::Korean);
+        assert_eq!(size_label(&english, &large), "Large (270 × 165)");
+        assert_eq!(size_label(&korean, &large), "크게 (270 × 165)");
+        assert_eq!(english.remove, "Remove");
+        assert_eq!(korean.resize, "크기 선택");
+        assert_eq!(english.settings, "Widget settings");
+        assert_eq!(korean.settings, "위젯 설정");
     }
 
     /// A widget whose app lets it be set up again has Widget settings first, in the long
@@ -221,8 +229,8 @@ mod tests {
     #[test]
     fn fr12_the_widget_menu_offers_settings_only_for_a_widget_that_can_be_set_up_again() {
         let sizes = size_choices(&clock());
-        for korean in [false, true] {
-            let text = menu_text(korean);
+        for lang in UiLanguage::ALL {
+            let text = menu_text(lang);
             let menu = entries(&text, &sizes, &at(180, 110), true);
             assert_eq!(menu.len(), 6);
             let settings = menu[0].item().unwrap();
@@ -247,8 +255,8 @@ mod tests {
     #[test]
     fn fr12_right_clicking_a_widget_offers_resize_and_remove() {
         let sizes = size_choices(&clock());
-        for korean in [false, true] {
-            let text = menu_text(korean);
+        for lang in UiLanguage::ALL {
+            let text = menu_text(lang);
             let menu = entries(&text, &sizes, &at(270, 165), false);
             assert_eq!(menu.len(), 5);
             let resize = menu[0].item().unwrap();
@@ -281,12 +289,15 @@ mod tests {
             assert_eq!(keys, [Some('S'), Some('D'), Some('L'), Some('X')]);
         }
         // A widget with no name is called "Widget".
-        assert_eq!(menu_name(&menu_text(false), &clock()), "Widget");
+        assert_eq!(
+            menu_name(&menu_text(UiLanguage::English), &clock()),
+            "Widget"
+        );
         let named = WidgetProvider {
             label: "Clock".into(),
             ..clock()
         };
-        assert_eq!(menu_name(&menu_text(true), &named), "Clock");
+        assert_eq!(menu_name(&menu_text(UiLanguage::Korean), &named), "Clock");
     }
 
     /// Move and Size follow Resize, each with its own key, in English and Korean; a widget
@@ -294,8 +305,11 @@ mod tests {
     #[test]
     fn fr18_widget_menu_lists_move_and_size_in_both_languages() {
         let sizes = size_choices(&clock());
-        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
-            let text = menu_text(korean);
+        for (lang, words) in [
+            (UiLanguage::English, ["Move", "Size"]),
+            (UiLanguage::Korean, ["이동", "크기 조정"]),
+        ] {
+            let text = menu_text(lang);
             let menu = entries(&text, &sizes, &at(180, 110), false);
             let moving = menu[1].item().unwrap();
             assert_eq!(
@@ -324,7 +338,7 @@ mod tests {
             ..clock()
         };
         let menu = entries(
-            &menu_text(false),
+            &menu_text(UiLanguage::English),
             &size_choices(&fixed),
             &at(180, 110),
             false,

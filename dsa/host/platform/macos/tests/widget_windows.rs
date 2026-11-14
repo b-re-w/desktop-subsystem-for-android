@@ -45,7 +45,7 @@ impl DeskWindows {
             desk: Arc::new(Mutex::new(Desk::new(
                 look(false, 0),
                 dpi_of_backing(scale),
-                false,
+                dsa_host_core::ui_language::UiLanguage::English,
                 decode,
             ))),
             effects: Arc::default(),

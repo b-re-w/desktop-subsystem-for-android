@@ -36,6 +36,7 @@ use dsa_transport::Connector;
 use crate::host_api::HostApiClient;
 use crate::notifications::Notification;
 use crate::session::SessionState;
+use crate::ui_language::UiLanguage;
 
 /// How long a shown task window may go without a frame in any window, after a GPU reset,
 /// before the guest's compositor is taken not to recover.
@@ -209,46 +210,20 @@ impl Notice {
         format!("{NOTICE_PREFIX}graphics:{}", self.word())
     }
 
-    /// The title and text, in Korean when `korean`, else in English.
-    pub fn text(self, korean: bool) -> (String, String) {
-        let seconds = STALL_AFTER.as_secs();
-        match (self, korean) {
-            (Notice::Restarting, false) => (
-                "Restarting Android".into(),
-                format!(
-                    "After a GPU reset, no app window showed anything for {seconds} seconds: \
-                     Android's graphics did not recover. The apps whose windows were open open \
-                     again once it has started."
-                ),
-            ),
-            (Notice::Restarting, true) => (
-                "Android를 다시 시작합니다".into(),
-                format!(
-                    "GPU가 재설정된 뒤 {seconds}초 동안 어떤 앱 창에도 화면이 나오지 않아 \
-                     Android의 그래픽이 돌아오지 않았습니다. 창이 열려 있던 앱은 Android가 \
-                     시작되면 다시 열립니다."
-                ),
-            ),
-            (Notice::GaveUp, false) => (
-                "Android's graphics did not recover".into(),
-                "After a GPU reset, app windows show nothing. DSA restarted Android for this \
-                 more than once in the last hour; restart it from DSA Settings to see the \
-                 apps again."
-                    .into(),
-            ),
-            (Notice::GaveUp, true) => (
-                "Android의 그래픽이 돌아오지 않았습니다".into(),
-                "GPU가 재설정된 뒤 앱 창에 아무것도 나오지 않습니다. 지난 한 시간 동안 DSA가 \
-                 이 때문에 Android를 여러 번 다시 시작했습니다. 앱을 다시 보려면 DSA 설정에서 \
-                 Android를 다시 시작하십시오."
-                    .into(),
-            ),
-        }
+    /// The title and text, in `lang`.
+    pub fn text(self, lang: UiLanguage) -> (String, String) {
+        let (restarting, gave_up) = stall_words(lang);
+        let (title, text) = match self {
+            Notice::Restarting => restarting,
+            Notice::GaveUp => gave_up,
+        };
+        let seconds = STALL_AFTER.as_secs().to_string();
+        (title.to_string(), text.replace("{seconds}", &seconds))
     }
 
-    /// The notification of this notice, in Korean when `korean`.
-    pub fn notification(self, korean: bool) -> Notification {
-        let (title, text) = self.text(korean);
+    /// The notification of this notice, in `lang`.
+    pub fn notification(self, lang: UiLanguage) -> Notification {
+        let (title, text) = self.text(lang);
         Notification {
             key: self.key(),
             package_name: String::new(),
@@ -265,6 +240,211 @@ impl Notice {
                 .unwrap_or(0),
             buttons: Vec::new(),
         }
+    }
+}
+
+/// A notice's title and text, in which `{seconds}` stands for how long the windows showed
+/// nothing.
+type NoticeWords = (&'static str, &'static str);
+
+/// The words of the notices in one language: [`Notice::Restarting`], then [`Notice::GaveUp`].
+fn stall_words(lang: UiLanguage) -> (NoticeWords, NoticeWords) {
+    match lang {
+        UiLanguage::English => (
+            (
+                "Restarting Android",
+                "After a GPU reset, no app window showed anything for {seconds} seconds: \
+                 Android's graphics did not recover. The apps whose windows were open open again \
+                 once it has started.",
+            ),
+            (
+                "Android's graphics did not recover",
+                "After a GPU reset, app windows show nothing. DSA restarted Android for this \
+                 more than once in the last hour; restart it from DSA Settings to see the apps \
+                 again.",
+            ),
+        ),
+        UiLanguage::Korean => (
+            (
+                "Android를 다시 시작합니다",
+                "GPU가 재설정된 뒤 {seconds}초 동안 어떤 앱 창에도 화면이 나오지 않아 \
+                 Android의 그래픽이 돌아오지 않았습니다. 창이 열려 있던 앱은 Android가 \
+                 시작되면 다시 열립니다.",
+            ),
+            (
+                "Android의 그래픽이 돌아오지 않았습니다",
+                "GPU가 재설정된 뒤 앱 창에 아무것도 나오지 않습니다. 지난 한 시간 동안 DSA가 \
+                 이 때문에 Android를 여러 번 다시 시작했습니다. 앱을 다시 보려면 DSA 설정에서 \
+                 Android를 다시 시작하십시오.",
+            ),
+        ),
+        UiLanguage::Japanese => (
+            (
+                "Android を再起動しています",
+                "GPU のリセット後、{seconds} 秒間どのアプリ ウィンドウにも何も表示されず、\
+                 Android のグラフィックスが回復しませんでした。ウィンドウが開いていたアプリは、\
+                 Android の起動後にもう一度開きます。",
+            ),
+            (
+                "Android のグラフィックスが回復しませんでした",
+                "GPU のリセット後、アプリ ウィンドウに何も表示されません。この 1 時間に DSA は\
+                 このために Android を複数回再起動しました。アプリをもう一度表示するには、DSA \
+                 の設定から Android を再起動してください。",
+            ),
+        ),
+        UiLanguage::ChineseSimplified => (
+            (
+                "正在重启 Android",
+                "GPU 重置后，{seconds} 秒内所有应用窗口都没有显示任何内容：Android 的图形未能\
+                 恢复。原先打开窗口的应用会在 Android 启动后重新打开。",
+            ),
+            (
+                "Android 的图形未能恢复",
+                "GPU 重置后，应用窗口不显示任何内容。在过去一小时内，DSA 已为此多次重启 \
+                 Android；请在 DSA 设置中重启 Android 以重新显示应用。",
+            ),
+        ),
+        UiLanguage::ChineseTraditional => (
+            (
+                "正在重新啟動 Android",
+                "GPU 重設後，{seconds} 秒內所有應用程式視窗都沒有顯示任何內容：Android 的圖形\
+                 未能復原。原本開啟視窗的應用程式會在 Android 啟動後重新開啟。",
+            ),
+            (
+                "Android 的圖形未能復原",
+                "GPU 重設後，應用程式視窗沒有顯示任何內容。過去一小時內，DSA 已因此多次重新\
+                 啟動 Android；請從 DSA 設定重新啟動 Android，以再次顯示應用程式。",
+            ),
+        ),
+        UiLanguage::Spanish => (
+            (
+                "Reiniciando Android",
+                "Tras restablecerse la GPU, ninguna ventana de aplicación mostró nada durante \
+                 {seconds} segundos: los gráficos de Android no se recuperaron. Las aplicaciones \
+                 que tenían ventanas abiertas se volverán a abrir cuando Android se haya \
+                 iniciado.",
+            ),
+            (
+                "Los gráficos de Android no se recuperaron",
+                "Tras restablecerse la GPU, las ventanas de aplicaciones no muestran nada. DSA \
+                 reinició Android por este motivo más de una vez en la última hora; reinícielo \
+                 desde Configuración de DSA para volver a ver las aplicaciones.",
+            ),
+        ),
+        UiLanguage::French => (
+            (
+                "Redémarrage d'Android",
+                "Après une réinitialisation du GPU, aucune fenêtre d'application n'a rien \
+                 affiché pendant {seconds} secondes : les graphismes d'Android ne se sont pas \
+                 rétablis. Les applications dont les fenêtres étaient ouvertes se rouvriront une \
+                 fois Android démarré.",
+            ),
+            (
+                "Les graphismes d'Android ne se sont pas rétablis",
+                "Après une réinitialisation du GPU, les fenêtres d'applications n'affichent \
+                 rien. DSA a redémarré Android pour cette raison plus d'une fois au cours de la \
+                 dernière heure ; redémarrez-le depuis Paramètres DSA pour revoir les \
+                 applications.",
+            ),
+        ),
+        UiLanguage::German => (
+            (
+                "Android wird neu gestartet",
+                "Nach einem Zurücksetzen der GPU hat {seconds} Sekunden lang kein App-Fenster \
+                 etwas angezeigt: Die Grafik von Android hat sich nicht erholt. Die Apps, deren \
+                 Fenster geöffnet waren, werden nach dem Start von Android wieder geöffnet.",
+            ),
+            (
+                "Die Grafik von Android hat sich nicht erholt",
+                "Nach einem Zurücksetzen der GPU zeigen App-Fenster nichts an. DSA hat Android \
+                 deshalb in der letzten Stunde mehr als einmal neu gestartet; starten Sie \
+                 Android in den DSA-Einstellungen neu, um die Apps wieder zu sehen.",
+            ),
+        ),
+        UiLanguage::PortugueseBrazil => (
+            (
+                "Reiniciando o Android",
+                "Após uma redefinição da GPU, nenhuma janela de app mostrou nada por {seconds} \
+                 segundos: os gráficos do Android não se recuperaram. Os apps que tinham janelas \
+                 abertas serão abertos de novo quando o Android iniciar.",
+            ),
+            (
+                "Os gráficos do Android não se recuperaram",
+                "Após uma redefinição da GPU, as janelas de apps não mostram nada. O DSA \
+                 reiniciou o Android por esse motivo mais de uma vez na última hora; reinicie-o \
+                 nas Configurações do DSA para ver os apps novamente.",
+            ),
+        ),
+        UiLanguage::Russian => (
+            (
+                "Перезапуск Android",
+                "После сброса GPU ни одно окно приложения ничего не показывало в течение \
+                 {seconds} с: графика Android не восстановилась. Приложения, окна которых были \
+                 открыты, откроются снова после запуска Android.",
+            ),
+            (
+                "Графика Android не восстановилась",
+                "После сброса GPU окна приложений ничего не показывают. За последний час DSA уже \
+                 несколько раз перезапускал Android по этой причине; перезапустите его в \
+                 параметрах DSA, чтобы снова увидеть приложения.",
+            ),
+        ),
+        UiLanguage::Italian => (
+            (
+                "Riavvio di Android",
+                "Dopo un ripristino della GPU, nessuna finestra di app ha mostrato nulla per \
+                 {seconds} secondi: la grafica di Android non si è ripresa. Le app che avevano \
+                 finestre aperte si riapriranno una volta avviato Android.",
+            ),
+            (
+                "La grafica di Android non si è ripresa",
+                "Dopo un ripristino della GPU, le finestre delle app non mostrano nulla. \
+                 Nell'ultima ora DSA ha riavviato Android per questo motivo più di una volta; \
+                 riavvialo da Impostazioni DSA per rivedere le app.",
+            ),
+        ),
+        UiLanguage::Vietnamese => (
+            (
+                "Đang khởi động lại Android",
+                "Sau khi GPU được đặt lại, không cửa sổ ứng dụng nào hiển thị gì trong {seconds} \
+                 giây: đồ họa của Android không phục hồi. Các ứng dụng có cửa sổ đang mở sẽ mở \
+                 lại sau khi Android khởi động.",
+            ),
+            (
+                "Đồ họa của Android không phục hồi",
+                "Sau khi GPU được đặt lại, cửa sổ ứng dụng không hiển thị gì. Trong một giờ qua, \
+                 DSA đã khởi động lại Android vì lý do này nhiều lần; hãy khởi động lại Android \
+                 từ Cài đặt DSA để xem lại ứng dụng.",
+            ),
+        ),
+        UiLanguage::Indonesian => (
+            (
+                "Memulai ulang Android",
+                "Setelah GPU diatur ulang, tidak ada jendela aplikasi yang menampilkan apa pun \
+                 selama {seconds} detik: grafis Android tidak pulih. Aplikasi yang jendelanya \
+                 terbuka akan dibuka lagi setelah Android dimulai.",
+            ),
+            (
+                "Grafis Android tidak pulih",
+                "Setelah GPU diatur ulang, jendela aplikasi tidak menampilkan apa pun. DSA sudah \
+                 memulai ulang Android karena hal ini lebih dari sekali dalam satu jam terakhir; \
+                 mulai ulang Android dari Pengaturan DSA untuk melihat aplikasi lagi.",
+            ),
+        ),
+        UiLanguage::Turkish => (
+            (
+                "Android yeniden başlatılıyor",
+                "GPU sıfırlandıktan sonra {seconds} saniye boyunca hiçbir uygulama penceresi bir \
+                 şey göstermedi: Android'in grafikleri düzelmedi. Pencereleri açık olan \
+                 uygulamalar Android başladıktan sonra yeniden açılacak.",
+            ),
+            (
+                "Android'in grafikleri düzelmedi",
+                "GPU sıfırlandıktan sonra uygulama pencereleri hiçbir şey göstermiyor. DSA son \
+                 bir saat içinde bu nedenle Android'i birden çok kez yeniden başlattı; \
+                 uygulamaları yeniden görmek için Android'i DSA Ayarları'ndan yeniden başlatın.",
+            ),
+        ),
     }
 }
 
@@ -587,8 +767,8 @@ mod tests {
     #[test]
     fn nfr5_the_notices_are_the_hosts_own_and_in_the_users_language() {
         for notice in [Notice::Restarting, Notice::GaveUp] {
-            let english = notice.notification(false);
-            let korean = notice.notification(true);
+            let english = notice.notification(UiLanguage::English);
+            let korean = notice.notification(UiLanguage::Korean);
             assert!(is_recovery_key(&english.key));
             assert!(english
                 .key
@@ -601,11 +781,46 @@ mod tests {
             assert!(!english.text.contains(dash) && !korean.text.contains(dash));
         }
         assert!(Notice::Restarting
-            .notification(false)
+            .notification(UiLanguage::English)
             .text
             .contains("30 seconds"));
         assert!(!is_recovery_key("0|com.example.chat|1|null|10100"));
         assert!(!is_recovery_key("dsa:update:android"));
+    }
+
+    /// Both notices read in every interface language: a title and a text, none empty and none
+    /// with an em dash, the restart naming how long the windows showed nothing. A language
+    /// with no translation reads in English.
+    #[test]
+    fn fr17_the_graphics_notices_read_in_every_language() {
+        let dash = char::from_u32(0x2014).unwrap();
+        for lang in UiLanguage::ALL {
+            for notice in [Notice::Restarting, Notice::GaveUp] {
+                let (title, text) = notice.text(lang);
+                assert!(
+                    !title.trim().is_empty() && !text.trim().is_empty(),
+                    "{lang:?}"
+                );
+                assert!(!title.contains(dash) && !text.contains(dash), "{lang:?}");
+                assert!(
+                    crate::ui_language::placeholders(&text).is_empty(),
+                    "{lang:?}: {text}"
+                );
+                assert_eq!(notice.notification(lang).key, notice.key());
+            }
+            let (_, text) = Notice::Restarting.text(lang);
+            assert!(text.contains("30"), "{lang:?}: {text}");
+        }
+        assert_eq!(
+            Notice::GaveUp.text(UiLanguage::from_tag_or_english("sv-SE")),
+            Notice::GaveUp.text(UiLanguage::English)
+        );
+        assert_eq!(
+            Notice::Restarting
+                .text(UiLanguage::from_tag_or_english("pt-PT"))
+                .0,
+            "Reiniciando o Android"
+        );
     }
 
     /// A service that plays Android's life: each request moves its state after a few looks.

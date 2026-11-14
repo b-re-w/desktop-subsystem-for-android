@@ -67,6 +67,7 @@ use dsa_host_core::compositor::frame_stall::is_recovery_key;
 use dsa_host_core::host_api::HostApiClient;
 use dsa_host_core::native_abi::in_user_language;
 use dsa_host_core::notifications::{Notification, NotificationAction, NotificationEvent};
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::update::alerts::{buttons_of, is_update_key, thread_of, RESTART_NOW};
 use dsa_transport::Connector;
 use sha2::{Digest, Sha256};
@@ -309,6 +310,15 @@ pub fn user_reads_korean() -> bool {
     }
 }
 
+/// The interface language the user reads Windows in, as far as DSA tells it.
+pub fn user_language() -> UiLanguage {
+    if user_reads_korean() {
+        UiLanguage::Korean
+    } else {
+        UiLanguage::English
+    }
+}
+
 /// The toast's XML for `notification`, with its icon at `icon` when it has one. A
 /// notification of low importance or below makes no sound, as in Android.
 pub fn toast_xml(notification: &Notification, icon: Option<&Path>) -> String {
@@ -336,7 +346,7 @@ pub fn toast_xml(notification: &Notification, icon: Option<&Path>) -> String {
     // DSA's question whether Android restarts into a downloaded image: [Restart now] launches
     // this program to ask the service, and [Later] only closes the toast.
     let mut actions = String::new();
-    for button in buttons_of(&notification.key, user_reads_korean()) {
+    for button in buttons_of(&notification.key, user_language()) {
         let action = if button.action == RESTART_NOW {
             format!(
                 "<action content=\"{}\" arguments=\"{}\" activationType=\"protocol\"/>",
@@ -614,7 +624,7 @@ fn apply(
 ) {
     match event {
         NotificationEvent::Posted(notification) => {
-            let notification = in_user_language(notification, user_reads_korean());
+            let notification = in_user_language(notification, user_language());
             let ours = dsa_thread(&notification.key);
             let (app_id, tag, icon_png) = match &ours {
                 Some(thread) => (DSA_APP_ID.to_string(), tag_of(thread), DSA_LOGO_PNG),
@@ -1111,13 +1121,13 @@ mod tests {
             title: "Game could not start".into(),
             ..chat(KEY)
         };
-        let korean = in_user_language(offer.clone(), true);
+        let korean = in_user_language(offer.clone(), UiLanguage::Korean);
         assert_eq!(korean.title, "Game을(를) 시작하지 못했습니다");
         assert!(korean.text.contains("ARM"), "{}", korean.text);
-        let english = in_user_language(offer, false);
+        let english = in_user_language(offer, UiLanguage::English);
         assert_eq!(english.title, "Game could not start");
         // A notification of an app is shown as the app wrote it.
-        assert_eq!(in_user_language(chat(KEY), true), chat(KEY));
+        assert_eq!(in_user_language(chat(KEY), UiLanguage::Korean), chat(KEY));
         // A click on the offer reaches the service, which installs the app again.
         let key = Notice::Offer.key("com.example.game");
         assert_eq!(
@@ -1319,7 +1329,7 @@ mod tests {
         let mut toasts = Recorded::default();
         let mut shown = HashMap::new();
         let (tx, _rx) = mpsc::channel();
-        let notice = Notice::Restarting.notification(false);
+        let notice = Notice::Restarting.notification(UiLanguage::English);
         apply(
             NotificationEvent::Posted(notice.clone()),
             &mut toasts,
@@ -1345,7 +1355,7 @@ mod tests {
         use dsa_host_core::update::alerts::{AlertKind, Subject, UpdateAlert};
         let asked = in_user_language(
             UpdateAlert::new(Subject::Android, AlertKind::Restart, "16.0.3").notification(),
-            false,
+            UiLanguage::English,
         );
         let xml = toast_xml(&asked, None);
         assert!(xml.contains("<actions>"), "{xml}");

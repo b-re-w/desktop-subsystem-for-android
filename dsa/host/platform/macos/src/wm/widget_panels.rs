@@ -202,6 +202,7 @@ pub fn menu_items(entries: &[Entry]) -> Vec<MenuItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dsa_host_core::ui_language::UiLanguage;
     use dsa_host_core::widget_windows::menu::{entries, menu_text, MOVE, REMOVE, SETTINGS, SIZE};
     use dsa_host_core::widgets::{Placement, WidgetProvider};
 
@@ -282,7 +283,11 @@ mod tests {
             height_dp: 110,
             resized: false,
         };
-        let items = menu_items(&entries(&menu_text(false), &provider, &placement));
+        let items = menu_items(&entries(
+            &menu_text(UiLanguage::English),
+            &provider,
+            &placement,
+        ));
         assert_eq!(
             items[0],
             MenuItem::Item {
@@ -311,7 +316,7 @@ mod tests {
             reconfigurable: false,
             ..provider
         };
-        let items = menu_items(&entries(&menu_text(true), &plain, &placement));
+        let items = menu_items(&entries(&menu_text(UiLanguage::Korean), &plain, &placement));
         assert!(matches!(&items[0], MenuItem::Submenu { title, .. } if title == "크기 선택"));
     }
 
@@ -355,8 +360,11 @@ mod tests {
             height_dp: 110,
             resized: false,
         };
-        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
-            let items = menu_items(&entries(&menu_text(korean), &provider, &placement));
+        for (lang, words) in [
+            (UiLanguage::English, ["Move", "Size"]),
+            (UiLanguage::Korean, ["이동", "크기 조정"]),
+        ] {
+            let items = menu_items(&entries(&menu_text(lang), &provider, &placement));
             assert_eq!(
                 items[1],
                 MenuItem::Item {

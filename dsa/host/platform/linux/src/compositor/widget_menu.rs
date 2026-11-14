@@ -335,7 +335,11 @@ pub const CHECK: &str = "✓";
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dsa_host_core::ui_language::UiLanguage;
     use dsa_host_core::widget_windows::menu::{entries, menu_text, REMOVE, SETTINGS};
+
+    const EN: UiLanguage = UiLanguage::English;
+    const KO: UiLanguage = UiLanguage::Korean;
     use dsa_host_core::widgets::{Placement, WidgetProvider};
 
     fn clock(reconfigurable: bool) -> WidgetProvider {
@@ -363,7 +367,7 @@ mod tests {
 
     #[test]
     fn fr12_right_clicking_a_widget_offers_resize_and_remove() {
-        let menu = rows(&entries(&menu_text(false), &clock(false), &at_default()));
+        let menu = rows(&entries(&menu_text(EN), &clock(false), &at_default()));
         assert_eq!(menu[0], Row::Header("Resize".into()));
         let sizes: Vec<&Row> = menu
             .iter()
@@ -383,7 +387,7 @@ mod tests {
 
     #[test]
     fn fr12_the_widget_menu_offers_settings_only_for_a_widget_that_can_be_set_up_again() {
-        let plain = rows(&entries(&menu_text(true), &clock(false), &at_default()));
+        let plain = rows(&entries(&menu_text(KO), &clock(false), &at_default()));
         assert!(!plain.iter().any(|row| matches!(
             row,
             Row::Item {
@@ -391,7 +395,7 @@ mod tests {
                 ..
             }
         )));
-        let settable = rows(&entries(&menu_text(true), &clock(true), &at_default()));
+        let settable = rows(&entries(&menu_text(KO), &clock(true), &at_default()));
         assert!(matches!(
             &settable[0],
             Row::Item { command: SETTINGS, label, indented: false, .. } if label == "위젯 설정"
@@ -402,8 +406,8 @@ mod tests {
     #[test]
     fn fr18_widget_menu_lists_move_and_size_in_both_languages() {
         use dsa_host_core::widget_windows::menu::{MOVE, SIZE};
-        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
-            let menu = rows(&entries(&menu_text(korean), &clock(false), &at_default()));
+        for (lang, words) in [(EN, ["Move", "Size"]), (KO, ["이동", "크기 조정"])] {
+            let menu = rows(&entries(&menu_text(lang), &clock(false), &at_default()));
             let keyboard: Vec<(u32, &str)> = menu
                 .iter()
                 .filter_map(|row| match row {
@@ -426,7 +430,7 @@ mod tests {
 
     #[test]
     fn fr12_the_widget_menu_skips_its_section_names_and_separator() {
-        let menu = rows(&entries(&menu_text(false), &clock(true), &at_default()));
+        let menu = rows(&entries(&menu_text(EN), &clock(true), &at_default()));
         let widths = vec![80; menu.len()];
         let layout = WidgetMenuLayout::new(menu, &widths, 96);
         // Down from nothing wraps to the last item (Remove); up from the first item wraps too.
@@ -448,7 +452,7 @@ mod tests {
         // Sizes sit in from the other labels.
         assert!(layout.indent_left > layout.label_left);
         // At 200% the menu is a whole number of logical pixels.
-        let menu = rows(&entries(&menu_text(false), &clock(true), &at_default()));
+        let menu = rows(&entries(&menu_text(EN), &clock(true), &at_default()));
         let layout = WidgetMenuLayout::new(menu, &[81; 8], 192);
         assert_eq!(layout.width % 2, 0);
         assert_eq!(layout.height % 2, 0);
@@ -456,7 +460,7 @@ mod tests {
 
     #[test]
     fn fr12_the_widget_menu_is_drawn_with_its_highlight_and_check_mark() {
-        let menu = rows(&entries(&menu_text(false), &clock(false), &at_default()));
+        let menu = rows(&entries(&menu_text(EN), &clock(false), &at_default()));
         let count = menu.len();
         let layout = WidgetMenuLayout::new(menu, &vec![10; count], 96);
         let label = Coverage {
