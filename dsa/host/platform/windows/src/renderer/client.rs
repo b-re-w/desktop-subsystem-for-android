@@ -32,13 +32,18 @@ use dsa_transport::TransportError;
 use windows_sys::Win32::Foundation::{CloseHandle, DuplicateHandle, DUPLICATE_SAME_ACCESS, HANDLE};
 use windows_sys::Win32::System::Threading::GetCurrentProcess;
 
-use super::{describe_frame_path, start_for, started_adapter, started_gpu, RENDERER_EXE};
+use dsa_host_core::graphics_state::GraphicsState;
+
+use super::{
+    describe_frame_path, graphics_state_of, start_with, started_adapter, started_gpu, RENDERER_EXE,
+};
 use crate::compositor::adapter::{DisplayPresenter, DisplaySink};
 use crate::compositor::log::{note, renderer_line, CompositorLogger};
 use crate::guid::Guid;
 use crate::pipe::{current_user_only_sddl, NamedPipeListener};
 use crate::render_gpu::{describe_outcome, GpuRequest};
 use crate::vm_listener::VmIdSlot;
+use crate::vulkan_driver::VulkanDriverSetting;
 
 /// No console window for the renderer.
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -291,9 +296,15 @@ struct State {
     refused: HashSet<u32>,
 }
 
+/// Told what each renderer that starts runs on: the window manager passes it to the service
+/// and tells the user where they must act.
+pub type GraphicsListener = Box<dyn Fn(&GraphicsState) + Send + Sync>;
+
 /// The renderer process, as the compositor presents through it.
 pub struct RendererClient {
     request: GpuRequest,
+    vulkan: VulkanDriverSetting,
+    on_graphics: Option<GraphicsListener>,
     ports: (u32, u32),
     state: Mutex<State>,
     changed: Condvar,
@@ -314,8 +325,30 @@ impl RendererClient {
         process: RendererProcess,
         logger: Option<Arc<CompositorLogger>>,
     ) -> Arc<RendererClient> {
+        Self::with_vulkan(
+            request,
+            VulkanDriverSetting::Auto,
+            None,
+            ports,
+            process,
+            logger,
+        )
+    }
+
+    /// [`new`](Self::new), with the user's Vulkan driver setting, and `on_graphics` told what
+    /// each renderer runs on once it has started.
+    pub fn with_vulkan(
+        request: GpuRequest,
+        vulkan: VulkanDriverSetting,
+        on_graphics: Option<GraphicsListener>,
+        ports: (u32, u32),
+        process: RendererProcess,
+        logger: Option<Arc<CompositorLogger>>,
+    ) -> Arc<RendererClient> {
         Arc::new(RendererClient {
             request,
+            vulkan,
+            on_graphics,
             ports,
             state: Mutex::new(State::default()),
             changed: Condvar::new(),
@@ -480,7 +513,7 @@ impl RendererClient {
 
 impl RendererHandler for RendererClient {
     fn start(&self) -> Start {
-        start_for(&self.request, self.ports)
+        start_with(&self.request, self.vulkan, self.ports)
     }
 
     fn connected(&self, started: &Started, link: &RendererLink) {
@@ -488,6 +521,14 @@ impl RendererHandler for RendererClient {
         crate::scheduling::raise_this_thread();
         for line in &started.notes {
             self.log_line(line);
+        }
+        // Which Vulkan and why, once for each renderer that starts.
+        let graphics = graphics_state_of(started);
+        if !started.vulkan_driver_reason.is_empty() {
+            self.log_line(&format!("Vulkan: {}", started.vulkan_driver_reason));
+        }
+        if let Some(listener) = &self.on_graphics {
+            listener(&graphics);
         }
         match started_gpu(started) {
             Some(gpu) => self.log_line(&describe_outcome(&self.request, &gpu)),
@@ -620,6 +661,38 @@ mod tests {
 
     fn client() -> Arc<RendererClient> {
         RendererClient::new(GpuRequest::Ranking, (0, 0), Arc::default(), None)
+    }
+
+    #[test]
+    fn pr3_each_started_renderer_says_what_it_runs_on_and_asks_with_the_setting() {
+        let heard: Arc<Mutex<Vec<GraphicsState>>> = Arc::default();
+        let into = Arc::clone(&heard);
+        let client = RendererClient::with_vulkan(
+            GpuRequest::Ranking,
+            VulkanDriverSetting::Dozen,
+            Some(Box::new(move |state: &GraphicsState| {
+                into.lock().unwrap().push(state.clone())
+            })),
+            (0, 0),
+            Arc::default(),
+            None,
+        );
+        let start = RendererHandler::start(&*client);
+        assert_eq!(
+            super::super::vulkan_driver_of(&start),
+            VulkanDriverSetting::Dozen
+        );
+        let mut started = Started::default();
+        super::super::report_vulkan_driver(
+            &mut started,
+            crate::vulkan_driver::DriverOutcome::None,
+            "install the pack",
+        );
+        RendererHandler::connected(&*client, &started, &RendererLink::detached());
+        assert_eq!(
+            *heard.lock().unwrap(),
+            vec![GraphicsState::Unavailable("install the pack".into())]
+        );
     }
 
     #[test]
