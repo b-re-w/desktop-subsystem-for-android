@@ -148,6 +148,27 @@ pub struct SetTaskDensity {
     #[prost(bool, tag = "3")]
     pub recreate: bool,
 }
+/// The monitor the window of the next task opens on: asks the caller's Android to start the
+/// tasks it starts from now on at that monitor's density and size, so an app's first frame is
+/// already right and it is never relaunched right after it opens (see the control protocol's
+/// LaunchPlacement). A client in the user's session sends it before it starts an app, and the
+/// window manager whenever the monitor new windows open on changes. Answered with Done.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct LaunchPlacement {
+    /// The density apps draw at on the monitor (130 at a scale of 100%); 0 sends no monitor.
+    #[prost(uint32, tag = "1")]
+    pub density_dpi: u32,
+    /// The largest client area a window has on the monitor, in pixels.
+    #[prost(uint32, tag = "2")]
+    pub width: u32,
+    #[prost(uint32, tag = "3")]
+    pub height: u32,
+    /// The whole monitor, in pixels.
+    #[prost(uint32, tag = "4")]
+    pub monitor_width: u32,
+    #[prost(uint32, tag = "5")]
+    pub monitor_height: u32,
+}
 /// A task's window draws its title bar over the top `height` pixels of the task: asks the
 /// caller's Android to give the task a top system bar inset of that height. 0 removes it.
 ///
@@ -3057,7 +3078,7 @@ pub struct Request {
     pub id: u64,
     #[prost(
         oneof = "request::Body",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 48, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 48, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702, 710"
     )]
     pub body: ::core::option::Option<request::Body>,
 }
@@ -3251,6 +3272,8 @@ pub mod request {
         GetWidevine(super::GetWidevine),
         #[prost(message, tag = "702")]
         RemoveWidevine(super::RemoveWidevine),
+        #[prost(message, tag = "710")]
+        LaunchPlacement(super::LaunchPlacement),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

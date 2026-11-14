@@ -2174,5 +2174,16 @@ public interface EnvelopeOrBuilder extends
    */
   io.github.thisisthepy.dsa.control.v1.DnsAnswer getDnsAnswer();
 
+  /**
+   * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+   * @return Whether the launchPlacement field is set.
+   */
+  boolean hasLaunchPlacement();
+  /**
+   * <code>.dsa.control.v1.LaunchPlacement launch_placement = 710;</code>
+   * @return The launchPlacement.
+   */
+  io.github.thisisthepy.dsa.control.v1.LaunchPlacement getLaunchPlacement();
+
   public io.github.thisisthepy.dsa.control.v1.Envelope.BodyCase getBodyCase();
 }
