@@ -22,7 +22,22 @@ use std::path::{Path, PathBuf};
 
 use std::time::Duration;
 
-use dsa_host_core::root_approval::{ApprovalPrompt, ApprovalRequest, PromptAnswer};
+use dsa_host_core::root_approval::{ApprovalPrompt, ApprovalRequest, PromptAnswer, PromptIcon};
+
+/// The words macOS's dialog shows: the sentence naming who asks in the user's language (an
+/// app by its label with its package beside it, `adb shell` as the developer shell, Android's
+/// own services in words), and the package or uid on a line of its own under it, as the
+/// dialog has one text and no second line of its own.
+pub fn prompt_text(request: &ApprovalRequest) -> String {
+    let language = request.language();
+    let message = request.message_in(language);
+    match request.requester() {
+        // The sentence already names the app's package, or the group's.
+        dsa_host_core::root_requester::Requester::App
+        | dsa_host_core::root_requester::Requester::SharedApps => message,
+        _ => format!("{message}\n{}", request.detail_in(language)),
+    }
+}
 
 /// DSA's right in the authorization database.
 pub const RIGHT: &str = "io.github.thisisthepy.DSA.root-elevation";
@@ -78,27 +93,34 @@ impl<A: Authorization> AuthorizationPrompt<A> {
         AuthorizationPrompt { api, icons }
     }
 
-    /// Writes the app's icon where the dialog reads it, when the guest gave one.
+    /// Writes the icon of who asks where the dialog reads it: the app's launcher icon when the
+    /// guest gave one (the first app's that has one, for apps sharing a user ID), a generic
+    /// icon for the developer shell and Android's own services.
     fn icon_for(&self, request: &ApprovalRequest) -> Option<PathBuf> {
-        if request.icon_png().is_empty() {
-            return None;
-        }
-        let safe: String = request
-            .package()
-            .chars()
-            .map(|c| {
-                if c.is_ascii_alphanumeric() || c == '.' || c == '_' {
-                    c
-                } else {
-                    '_'
-                }
-            })
-            .collect();
-        let path = self.icons.join(format!("{safe}.png"));
+        let (stem, png) = match request.prompt_icon() {
+            PromptIcon::App(png) => (safe_stem(request.package()), png.to_vec()),
+            PromptIcon::Generic(icon) => (icon.file_stem().to_string(), icon.png()),
+            PromptIcon::None => return None,
+        };
+        let path = self.icons.join(format!("{stem}.png"));
         std::fs::create_dir_all(&self.icons).ok()?;
-        std::fs::write(&path, request.icon_png()).ok()?;
+        std::fs::write(&path, png).ok()?;
         Some(path)
     }
+}
+
+/// `package` as a file name: letters, digits, dots and underscores only.
+fn safe_stem(package: &str) -> String {
+    package
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
 }
 
 impl<A: Authorization> ApprovalPrompt for AuthorizationPrompt<A> {
@@ -111,7 +133,7 @@ impl<A: Authorization> ApprovalPrompt for AuthorizationPrompt<A> {
             ));
         }
         let icon = self.icon_for(request);
-        answer_of(self.api.copy_right(&request.message(), icon.as_deref()))
+        answer_of(self.api.copy_right(&prompt_text(request), icon.as_deref()))
     }
 }
 
@@ -392,7 +414,44 @@ mod tests {
             command: vec!["id".into()],
             interactive: false,
             purpose: dsa_host_core::root_approval::Purpose::Run,
+            language: String::new(),
         }
+    }
+
+    #[test]
+    fn fr35_the_macos_dialog_names_an_app_by_its_label_in_the_users_language() {
+        let mut korean = request();
+        korean.app.label = "백업".into();
+        let korean = korean.with_language("ko-KR");
+        assert_eq!(
+            prompt_text(&korean),
+            "Android 앱 백업(com.example.backup)에서 다음 명령을 루트 권한으로 실행하려고 \
+             합니다: `id`"
+        );
+    }
+
+    #[test]
+    fn fr35_the_macos_dialog_names_the_adb_shell_as_the_developer_shell() {
+        let dir = icons("shell");
+        let mut shell = request();
+        shell.app.package_name = "com.android.shell".into();
+        shell.app.label = "Shell".into();
+        shell.app.icon_png.clear();
+        shell.uid = 2000;
+        let shell = shell.with_language("ko");
+        let prompt = AuthorizationPrompt::new(fake(SUCCESS), dir.clone());
+        assert_eq!(prompt.ask(&shell, WAIT), PromptAnswer::Approved);
+        let asked = prompt.api.asked.lock().unwrap();
+        assert_eq!(
+            asked[0].0,
+            "개발자 셸 (adb)에서 다음 명령을 루트 권한으로 실행하려고 합니다: `id`\n\
+             com.android.shell (uid 2000)"
+        );
+        // A generic terminal icon, drawn by the host, in place of none.
+        let icon = asked[0].1.clone().expect("the developer shell's icon");
+        let png = std::fs::read(&icon).unwrap();
+        assert_eq!(&png[1..4], b"PNG");
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     const WAIT: Duration = dsa_host_core::root_approval::PROMPT_TIMEOUT;
