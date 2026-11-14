@@ -48,6 +48,7 @@ struct AppsPage: View {
                 HStack {
                     TextField(T("AppsSearch.PlaceholderText"), text: $vm.search)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel(T("AppsSearch.PlaceholderText"))
                     Text(vm.count).foregroundStyle(.secondary).monospacedDigit()
                 }
                 if vm.hasNoApps {
@@ -61,9 +62,10 @@ struct AppsPage: View {
                 }
             } header: {
                 HStack {
-                    Text(T("AppsInstalledHeader.Text"))
+                    SectionHeading(text: T("AppsInstalledHeader.Text"))
                     if vm.isBusy {
                         ProgressView().controlSize(.small)
+                            .accessibilityLabel(T("A11y_Loading"))
                     }
                 }
             }
@@ -100,6 +102,8 @@ struct AppRowView: View {
                     .toggleStyle(.checkbox)
                     .help(T("AppsResizable.ToolTip"))
                     .disabled(vm.isBusy)
+                    // Every row has these controls, so each one's name says whose it is.
+                    .accessibilityLabel(name("AppsResizable.Content"))
                 Picker(T("AppsStartSize.ToolTip"), selection: Binding(
                     get: { row.startSizeIndex },
                     set: { index in Task { await vm.setStartSize(row.package, index) } })) {
@@ -112,6 +116,7 @@ struct AppRowView: View {
                 }
                 .labelsHidden()
                 .help(T("AppsStartSize.ToolTip"))
+                .accessibilityLabel(name("AppsStartSize.ToolTip"))
                 .frame(maxWidth: 260)
                 .disabled(vm.isBusy)
                 // How the app's windows follow a monitor of another scale: the app redraws, or
@@ -126,7 +131,7 @@ struct AppRowView: View {
                 }
                 .labelsHidden()
                 .help(row.dpiScalingTip ?? T("AppsDpiScaling.ToolTip"))
-                .accessibilityLabel(T("AppsDpiScaling.Name"))
+                .accessibilityLabel(name("AppsDpiScaling.Name"))
                 .frame(maxWidth: 300)
                 .disabled(vm.isBusy)
                 // Where the app's full screen shows: a clear request, and its bars hidden alone.
@@ -139,7 +144,7 @@ struct AppRowView: View {
                 }
                 .labelsHidden()
                 .help(T("AppsFullScreen.ToolTip"))
-                .accessibilityLabel(T("AppsFullScreen.Name"))
+                .accessibilityLabel(name("AppsFullScreen.Name"))
                 .frame(maxWidth: 220)
                 .disabled(vm.isBusy)
                 Picker(T("AppsImmersive.Name"), selection: Binding(
@@ -151,17 +156,21 @@ struct AppRowView: View {
                 }
                 .labelsHidden()
                 .help(T("AppsImmersive.ToolTip"))
-                .accessibilityLabel(T("AppsImmersive.Name"))
+                .accessibilityLabel(name("AppsImmersive.Name"))
                 .frame(maxWidth: 220)
                 .disabled(vm.isBusy)
                 Spacer()
                 Button(T("AppsOpenButton.Content")) { Task { await vm.open(row.package) } }
+                    .accessibilityLabel(name("AppsOpenButton.Content"))
                 Button(T("AppsInfoButton.Content")) { Task { await vm.info(row.package) } }
+                    .accessibilityLabel(name("AppsInfoButton.Content"))
                 Button(T("AppsDesktopShortcutButton.Content")) { Task { await vm.desktopShortcut(row.package) } }
                     .help(T("AppsDesktopShortcutButton.ToolTip"))
+                    .accessibilityLabel(name("AppsDesktopShortcutButton.Content"))
                 Button(T("AppsUninstallButton.Content")) { uninstall() }
                     .disabled(!row.canUninstall || vm.isBusy)
                     .help(row.uninstallTip ?? "")
+                    .accessibilityLabel(name("AppsUninstallButton.Content"))
             }
             .disabled(vm.isBusy)
             // Whether the app runs its ARM code through the translator, and why not when it cannot.
@@ -172,6 +181,7 @@ struct AppRowView: View {
                     .toggleStyle(.switch)
                     .disabled(!row.canRunAsArm || vm.isBusy)
                     .help(row.runAsArmTip ?? "")
+                    .accessibilityLabel(name("AppsRunAsArm.Content"))
                 if let tip = row.runAsArmTip {
                     Note(text: tip)
                 }
@@ -191,6 +201,7 @@ struct AppRowView: View {
                 .frame(maxWidth: 260)
                 .disabled(!row.canChangeRoot || vm.isBusy)
                 .help(row.rootTip ?? T("AppsRootNote.Text"))
+                .accessibilityLabel(name("AppsRoot.Name"))
                 Spacer()
             }
             // Apps that share a user ID: which, and that root is one setting for them.
@@ -198,6 +209,11 @@ struct AppRowView: View {
                 Note(text: note)
             }
         }
+    }
+
+    /// The name VoiceOver says for this row's control `key`: what it does and the app's name.
+    private func name(_ key: String) -> String {
+        AccessibleText.itemName(appText, key, row.label)
     }
 
     /// Asks whether to erase the app's data, which Android cannot keep when the app's ABI changes.
@@ -241,19 +257,22 @@ struct BackgroundPage: View {
                         RowLabel(title: app.label, detail: app.detail)
                         Spacer()
                         Button(T("BackgroundOpenButton.Content")) { Task { await vm.open(app.package) } }
+                            .accessibilityLabel(AccessibleText.itemName(appText, "BackgroundOpenButton.Content", app.label))
                         Button(T("BackgroundStopButton.Content")) { Task { await vm.stop(app.package) } }
+                            .accessibilityLabel(AccessibleText.itemName(appText, "BackgroundStopButton.Content", app.label))
                     }
                     .disabled(vm.isBusy)
                 }
             } header: {
                 HStack {
-                    Text(T("BackgroundAppsHeader.Text"))
+                    SectionHeading(text: T("BackgroundAppsHeader.Text"))
                     if vm.isBusy {
                         ProgressView().controlSize(.small)
+                            .accessibilityLabel(T("A11y_Loading"))
                     }
                 }
             }
-            Section(T("BackgroundStoppingHeader.Text")) {
+            Section(heading: T("BackgroundStoppingHeader.Text")) {
                 SwitchRow(title: T("BackgroundAskCard.Header"), detail: T("BackgroundAskCard.Description"),
                           isOn: vm.askBeforeStop, enabled: !vm.isBusy, set: { await vm.setAskBeforeStop($0) })
             }
@@ -289,17 +308,19 @@ struct WidgetsPage: View {
                         Spacer()
                         Button(T("WidgetsRemoveButton.Content")) { Task { await vm.remove(widget.id) } }
                             .disabled(vm.isBusy)
+                            .accessibilityLabel(AccessibleText.itemName(appText, "WidgetsRemoveButton.Content", widget.label))
                     }
                 }
             } header: {
                 HStack {
-                    Text(T("WidgetsPlacedHeader.Text"))
+                    SectionHeading(text: T("WidgetsPlacedHeader.Text"))
                     if vm.isBusy {
                         ProgressView().controlSize(.small)
+                            .accessibilityLabel(T("A11y_Loading"))
                     }
                 }
             }
-            Section(T("WidgetsGalleryHeader.Text")) {
+            Section(heading: T("WidgetsGalleryHeader.Text")) {
                 if vm.hasNoOffers {
                     Text(T("WidgetsGalleryNone.Text")).foregroundStyle(.secondary)
                 }
@@ -310,6 +331,7 @@ struct WidgetsPage: View {
                         Spacer()
                         Button(T("WidgetsAddButton.Content")) { Task { await vm.add(offer.provider) } }
                             .disabled(vm.isBusy)
+                            .accessibilityLabel(AccessibleText.itemName(appText, "WidgetsAddButton.Content", offer.label))
                     }
                 }
             }
@@ -341,6 +363,8 @@ struct IdentityFieldRow: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
                     .disabled(vm.isBusy)
+                    // The placeholder is Android's own value, not the box's name.
+                    .accessibilityLabel(vm.label(field))
             } label: {
                 RowLabel(title: vm.label(field), detail: vm.detail(field))
             }
@@ -377,20 +401,23 @@ struct DeviceIdentityPage: View {
                 }
             } header: {
                 HStack {
-                    Text(T("IdentitySpecsCard.Header"))
+                    SectionHeading(text: T("IdentitySpecsCard.Header"))
                     Spacer()
                     Button(T("IdentityCopyButton.Content")) {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(vm.aboutText, forType: .string)
+                        Announce.say(T("A11y_Copied"))
                     }
                     .buttonStyle(.borderless)
+                    .accessibilityLabel(AccessibleText.itemName(appText, "IdentityCopyButton.Content", T("IdentitySpecsCard.Header")))
                 }
             } footer: {
                 Note(text: T("IdentityComputerNote.Text"))
             }
-            Section(T("IdentityAndroidHeader.Text")) {
+            Section(heading: T("IdentityAndroidHeader.Text")) {
                 Note(text: T("IdentityIntro.Text"))
-                Banner(kind: .warning, title: T("IdentityWarning.Title"), message: T("IdentityWarning.Message"))
+                Banner(kind: .warning, title: T("IdentityWarning.Title"), message: T("IdentityWarning.Message"),
+                       announces: false)
             }
             BannerSection(shown: vm.error != nil, kind: .error, title: T("SettingsErrorBar.Title"), message: vm.error ?? "")
             BannerSection(shown: vm.message != nil, kind: .success, title: T("IdentityDoneBar.Title"), message: vm.message ?? "")
@@ -398,6 +425,7 @@ struct DeviceIdentityPage: View {
                 HStack {
                     if vm.isBusy {
                         ProgressView().controlSize(.small)
+                            .accessibilityLabel(T("A11y_Loading"))
                     }
                     Spacer()
                     if vm.needsRestart {
@@ -415,10 +443,10 @@ struct DeviceIdentityPage: View {
                         .disabled(!vm.canSave)
                 }
             }
-            Section(T("IdentityNamesHeader.Text")) {
+            Section(heading: T("IdentityNamesHeader.Text")) {
                 ForEach(vm.names) { IdentityFieldRow(vm: vm, key: $0.key) }
             }
-            Section(T("IdentityFingerprintHeader.Text")) {
+            Section(heading: T("IdentityFingerprintHeader.Text")) {
                 LabeledContent(T("IdentityPreview.Text")) {
                     Text(vm.fingerprintPreview).font(.system(.body, design: .monospaced)).textSelection(.enabled)
                 }
@@ -477,14 +505,14 @@ struct NetworkPage: View {
                     LabeledContent(T("NetworkGatewayLabel.Text")) { Text(vm.networkGateway).textSelection(.enabled) }
                 }
             }
-            Section(T("NetworkAdvancedHeader.Text")) {
+            Section(heading: T("NetworkAdvancedHeader.Text")) {
                 SwitchRow(title: T("AdvancedNetworkingCard.Header"), detail: T("AdvancedNetworkingCard.Description"),
                           isOn: vm.advancedNetworking, enabled: vm.canChange, set: { await vm.setAdvancedNetworking($0) })
                 if vm.networkRestartNeeded {
                     Banner(kind: .info, title: T("NetworkRestartBar.Title"), message: T("NetworkRestartBar.Message"))
                 }
             }
-            Section(T("HostCertificatesHeader.Text")) {
+            Section(heading: T("HostCertificatesHeader.Text")) {
                 SwitchRow(title: T("HostCertificatesCard.Header"), detail: T("HostCertificatesCard.Description"),
                           isOn: vm.hostCertificates, enabled: vm.canChange, set: { await vm.setHostCertificates($0) })
                 if vm.hasNoImportedCertificates {
@@ -499,7 +527,7 @@ struct NetworkPage: View {
                     }
                 }
             }
-            Section(T("DeveloperHeader.Text")) {
+            Section(heading: T("DeveloperHeader.Text")) {
                 SwitchRow(title: T("DeveloperModeCard.Header"), detail: T("DeveloperModeCard.Description"),
                           isOn: vm.developerMode, enabled: vm.canChange, set: { await vm.setDeveloperMode($0) })
                 SwitchRow(title: T("AdbAutoConnectCard.Header"), detail: T("AdbAutoConnectCard.Description"),
@@ -508,7 +536,7 @@ struct NetworkPage: View {
                 LabeledContent {
                     HStack {
                         Text(vm.adbConnect).font(.system(.body, design: .monospaced)).textSelection(.enabled)
-                        CopyButton(text: vm.adbConnect)
+                        CopyButton(text: vm.adbConnect, item: T("AdbCard.Header"))
                     }
                 } label: {
                     RowLabel(title: T("AdbCard.Header"), detail: T("AdbCard.Description"))
@@ -516,6 +544,7 @@ struct NetworkPage: View {
                 LabeledContent(T("AdbPortLabel.Text")) {
                     TextField("", text: $adbPort)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel(T("AdbPortLabel.Text"))
                         .frame(width: 90)
                         .onSubmit { Task { await vm.setAdbPort(adbPort) } }
                         .disabled(!vm.canChange)
@@ -553,7 +582,7 @@ struct AdvancedPage: View {
                 SwitchRow(title: T("ClipboardCard.Header"), detail: T("ClipboardCard.Description"),
                           isOn: vm.clipboard, enabled: vm.canChange, set: { await vm.setClipboard($0) })
             }
-            Section(T("FilesHeader.Text")) {
+            Section(heading: T("FilesHeader.Text")) {
                 SwitchRow(title: T("FileSharingCard.Header"), detail: T("FileSharingCard.Description"),
                           isOn: vm.fileSharing, enabled: vm.canChange, set: { await vm.setFileSharing($0) })
                 VStack(alignment: .leading, spacing: 6) {
@@ -582,7 +611,7 @@ struct AdvancedPage: View {
                           isOn: vm.linksInAndroid, enabled: vm.canChange, set: { await vm.setLinksInAndroid($0) })
             }
             BackupSection(vm: backup)
-            Section(T("ResetDataHeader.Text")) {
+            Section(heading: T("ResetDataHeader.Text")) {
                 if vm.resetDone {
                     Banner(kind: .success, title: T("ResetDoneBar.Title"), message: T("ResetDoneBar.Message"))
                 }
@@ -594,7 +623,7 @@ struct AdvancedPage: View {
                     Task { await vm.resetData() }
                 }
             }
-            Section(T("ArmHeader.Text")) {
+            Section(heading: T("ArmHeader.Text")) {
                 SwitchRow(title: T("ArmCard.Header"), detail: vm.armStatus + "\n" + vm.armAbis + "\n" + T("ArmCard.Description"),
                           isOn: vm.armTranslation, enabled: vm.canChange, set: { await vm.setArmTranslation($0) })
                 LearnMore(text: T("ArmCard.More"))
@@ -631,7 +660,7 @@ struct AdvancedPage: View {
             }
             GappsSection(vm: gapps)
             WidevineSection(vm: widevine)
-            Section(T("RootHeader.Text")) {
+            Section(heading: T("RootHeader.Text")) {
                 AdministratorSwitchRow(
                     title: T("RootElevationCard.Header"), detail: T("RootElevationCard.Description"),
                     isOn: vm.rootElevation, canChange: vm.canChangeRootElevation,
@@ -650,7 +679,7 @@ struct AdvancedPage: View {
                 }
                 Note(text: T("RootNote.Text"))
             }
-            Section(T("DiagnosticsHeader.Text")) {
+            Section(heading: T("DiagnosticsHeader.Text")) {
                 AdministratorSwitchRow(
                     title: T("InputTraceCard.Header"), detail: T("InputTraceCard.Description"), isOn: vm.inputTrace,
                     canChange: vm.canChangeTraces, needsAdministrator: vm.tracesNeedAdministrator, set: { await vm.setInputTrace($0) }) {
@@ -663,7 +692,7 @@ struct AdvancedPage: View {
                 }
                 Note(text: T("DiagnosticsNote.Text"))
             }
-            Section(T("LogsHeader.Text")) {
+            Section(heading: T("LogsHeader.Text")) {
                 LinkRow(title: T("UserLogsCard.Header"), detail: T("UserLogsCard.Description")) {
                     Shell.open(folder: Shell.userLogFolder)
                 }
@@ -671,7 +700,7 @@ struct AdvancedPage: View {
                     Shell.open(folder: Shell.serviceLogFolder(vm.logDir))
                 }
             }
-            Section(T("CommandLineHeader.Text")) {
+            Section(heading: T("CommandLineHeader.Text")) {
                 RowLabel(title: T("CommandLineCard.Header"), detail: T("CommandLineCard.Description"))
                 ForEach(SettingsViewModel.commandLineCommands, id: \.self) { command in
                     CommandRow(command: command)
@@ -685,6 +714,8 @@ struct AdvancedPage: View {
 
 /// One log line as columns: time, PID, TID, priority and the body. The app's font is
 /// proportional, so the fields have fixed widths to line up; the body takes the rest.
+/// VoiceOver reads the row as one sentence: the time, the priority as a word, the tag and the
+/// message.
 struct LogRow: View {
     let line: LogLine
 
@@ -696,6 +727,8 @@ struct LogRow: View {
             Text(line.priorityColumn).frame(width: 32, alignment: .center)
             Text(line.bodyColumn).padding(.leading, 6)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(AccessibleText.logLine(appText, line))
     }
 }
 
@@ -731,12 +764,14 @@ struct LogsPage: View {
             }
             HStack {
                 TextField(T("LogsFilter.PlaceholderText"), text: $vm.filter).textFieldStyle(.roundedBorder)
+                    .accessibilityLabel(T("LogsFilter.PlaceholderText"))
                 Picker("", selection: $vm.priority) {
                     ForEach(LogViewModel.priorities, id: \.self) { priority in
                         Text(T("Logs_Priority_\(priority)")).tag(priority)
                     }
                 }
                 .labelsHidden()
+                .accessibilityLabel(T("A11y_LogPriority"))
                 .frame(width: 140)
                 Toggle(T("LogsPause.Content"), isOn: $vm.paused).toggleStyle(.button)
             }

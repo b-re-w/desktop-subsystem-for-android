@@ -122,8 +122,12 @@ pub enum WidgetInput {
         local: (i32, i32),
         root: (i32, i32),
     },
-    /// A key went down, by its evdev code.
-    Key(u32),
+    /// A key went down, by its evdev code, with Shift and Ctrl held or not.
+    Key {
+        code: u32,
+        shift: bool,
+        ctrl: bool,
+    },
     /// The window took the keyboard, or lost it.
     Focus(bool),
     /// The window must be drawn again.
@@ -935,7 +939,12 @@ fn widget_input(event: &XEvent) -> Option<WidgetInput> {
             root: at(e.root_x, e.root_y),
         },
         XEvent::KeyPress(e) => {
-            WidgetInput::Key(u32::from(e.detail.checked_sub(X11_KEYCODE_OFFSET)?))
+            let state = u16::from(e.state);
+            WidgetInput::Key {
+                code: u32::from(e.detail.checked_sub(X11_KEYCODE_OFFSET)?),
+                shift: state & u16::from(KeyButMask::SHIFT) != 0,
+                ctrl: state & u16::from(KeyButMask::CONTROL) != 0,
+            }
         }
         XEvent::FocusIn(_) => WidgetInput::Focus(true),
         XEvent::FocusOut(_) => WidgetInput::Focus(false),

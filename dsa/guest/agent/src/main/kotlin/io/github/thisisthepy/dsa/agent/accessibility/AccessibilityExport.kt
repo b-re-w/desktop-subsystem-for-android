@@ -196,6 +196,38 @@ interface AccessibilitySource {
 }
 
 /**
+ * The views of the desktop widgets the agent hosts, read as accessibility nodes. A widget's
+ * views live in the agent's own process, so they are read directly, with no accessibility
+ * service, and only while the host watches the widget.
+ */
+interface WidgetNodes {
+    /**
+     * The root node of the widget's views, with bounds in pixels of the widget's image ((0, 0)
+     * its top left); null while the widget is not drawn. Called on the export's reader thread.
+     */
+    fun roots(widgetId: Int): List<NodeHandle>?
+
+    /** The widget's image as bounds from (0, 0); null while the widget is not drawn. */
+    fun bounds(widgetId: Int): TaskBounds?
+
+    /**
+     * Calls [changed], from any thread, with a widget whose views may have changed, until it is
+     * set to null. Null while no widget is watched, so a widget that redraws costs nothing.
+     */
+    fun listen(changed: ((Int) -> Unit)?)
+
+    companion object {
+        val NONE = object : WidgetNodes {
+            override fun roots(widgetId: Int): List<NodeHandle>? = null
+
+            override fun bounds(widgetId: Int): TaskBounds? = null
+
+            override fun listen(changed: ((Int) -> Unit)?) = Unit
+        }
+    }
+}
+
+/**
  * A node the agent adds below a real one: a link inside its text, or one of the app's own
  * actions. It is read with its parent, so it costs the app nothing more, and pressing it
  * follows the link or does the action on the parent.
@@ -242,7 +274,29 @@ private class AddedNode(private val parent: NodeHandle, private val kind: String
 }
 
 /**
- * Exports the accessibility tree of the tasks the host watches.
+ * Whose tree the host watches: a task's window ([widgetId] 0), or a desktop widget's window
+ * ([taskId] 0). Its name is how the guest's log names it.
+ */
+data class TreeTarget(val taskId: Int, val widgetId: Int) {
+    val isWidget: Boolean
+        get() = widgetId != 0
+
+    override fun toString(): String = if (isWidget) "widget $widgetId" else "task $taskId"
+
+    companion object {
+        fun task(taskId: Int) = TreeTarget(taskId, 0)
+
+        fun widget(widgetId: Int) = TreeTarget(0, widgetId)
+
+        /** The target a message names: its widget when it names one, else its task. */
+        fun of(taskId: Int, widgetId: Int) = if (widgetId != 0) widget(widgetId) else task(taskId)
+    }
+}
+
+/**
+ * Exports the accessibility tree of the tasks the host watches, and of the desktop widgets it
+ * watches ([WidgetNodes]): a widget's tree is sent and acted on as a task's is, named by its
+ * widget ID, and reading it never turns the accessibility service on.
  *
  * While no task is watched, the guest's accessibility service is off: Android then tells no
  * app that accessibility is on, no app builds accessibility events, and the agent reads
@@ -308,6 +362,8 @@ class AccessibilityExport(
     private val clock: () -> Long = { System.nanoTime() / 1_000_000 },
     /** Where the nodes are read: a thread of their own on the guest, the scheduler in tests. */
     private val reader: Scheduler = scheduler,
+    /** The desktop widgets' views, whose trees the host may watch too. */
+    private val widgets: WidgetNodes = WidgetNodes.NONE,
     /** The package of a task's app, to tell which task a toast belongs to. */
     private val taskPackage: (Int) -> String? = { null },
 ) {
@@ -355,8 +411,8 @@ class AccessibilityExport(
             get() = if (listening) FAST_MIN_INTERVAL_MILLIS else MIN_INTERVAL_MILLIS
     }
 
-    private val watched = HashMap<Int, TaskState>()
-    private val retired = LinkedHashMap<Int, TaskState>()
+    private val watched = HashMap<TreeTarget, TaskState>()
+    private val retired = LinkedHashMap<TreeTarget, TaskState>()
     private var enabled = false
     private var epochs = 0
     private var reconnectAt = 0L
@@ -368,7 +424,11 @@ class AccessibilityExport(
 
     /** The tasks the host watches. */
     val tasks: Set<Int>
-        get() = watched.keys.toSet()
+        get() = watched.keys.filter { !it.isWidget }.map { it.taskId }.toSet()
+
+    /** The desktop widgets the host watches. */
+    val watchedWidgets: Set<Int>
+        get() = watched.keys.filter { it.isWidget }.map { it.widgetId }.toSet()
 
     /** At boot: a service left on by an agent that died is turned off. */
     fun start() {
@@ -379,10 +439,11 @@ class AccessibilityExport(
         }
     }
 
-    /** A new connection: the host says again which tasks it watches. */
+    /** A new connection: the host says again which tasks and widgets it watches. */
     fun connected() {
         watched.clear()
         retired.clear()
+        followWidgets()
         turnOff()
     }
 
@@ -391,7 +452,8 @@ class AccessibilityExport(
         when (envelope.bodyCase) {
             Envelope.BodyCase.ACCESSIBILITY_WATCH -> {
                 val watch = envelope.accessibilityWatch
-                if (watch.on) watch(watch.taskId) else unwatch(watch.taskId)
+                val target = TreeTarget.of(watch.taskId, watch.widgetId)
+                if (watch.on) watch(target) else unwatch(target)
             }
             Envelope.BodyCase.ACCESSIBILITY_LISTENING -> listen(envelope.accessibilityListening.taskId, envelope.accessibilityListening.listening)
             Envelope.BodyCase.ACCESSIBILITY_ACTION -> perform(envelope.accessibilityAction)
@@ -405,16 +467,19 @@ class AccessibilityExport(
      * and its tree is not read until it has had [RESIZE_QUIET_MILLIS] to draw.
      */
     fun resizing(taskId: Int) {
-        watched[taskId]?.quietAt = clock() + RESIZE_QUIET_MILLIS
+        watched[TreeTarget.task(taskId)]?.quietAt = clock() + RESIZE_QUIET_MILLIS
     }
 
     /** The content of some window may have changed. Called on the scheduler thread. */
     fun changed() = changed(AccessibilityChange.ANY)
 
-    /** What an event said. Called on the scheduler thread. */
+    /**
+     * What an event said. Called on the scheduler thread. Events come from the accessibility
+     * service, so they are about tasks only; a widget's changes come through [widgetChanged].
+     */
     fun changed(change: AccessibilityChange) {
         val taskId = change.taskId
-        if (taskId != null && taskId !in watched) return
+        if (taskId != null && TreeTarget.task(taskId) !in watched) return
         when (change.kind) {
             AccessibilityChange.Kind.ANNOUNCEMENT, AccessibilityChange.Kind.TOAST -> {
                 announce(change)
@@ -422,25 +487,45 @@ class AccessibilityExport(
             }
             else -> Unit
         }
-        val targets = if (taskId != null) listOf(taskId) else watched.keys.toList()
-        for (id in targets) {
-            val state = watched[id] ?: continue
+        val targets = if (taskId != null) listOf(TreeTarget.task(taskId)) else watched.keys.filter { !it.isWidget }
+        for (target in targets) {
+            val state = watched[target] ?: continue
             val node = change.source
             if (!state.listening || node == null || taskId == null) {
                 state.readAll = true
-                schedule(id, state, state.batch)
+                schedule(target, state, state.batch)
                 continue
             }
-            if (change.kind == AccessibilityChange.Kind.FOCUS && focusUpdate(id, state, node)) continue
+            if (change.kind == AccessibilityChange.Kind.FOCUS && focusUpdate(target, state, node)) continue
             state.dirty[node.key] = node
-            schedule(id, state, if (change.kind == AccessibilityChange.Kind.FOCUS) 0 else state.batch)
+            schedule(target, state, if (change.kind == AccessibilityChange.Kind.FOCUS) 0 else state.batch)
         }
     }
 
-    private fun watch(taskId: Int) {
+    /** The views of widget [widgetId] may have changed. Called on the scheduler thread. */
+    fun widgetChanged(widgetId: Int) {
+        val target = TreeTarget.widget(widgetId)
+        watched[target]?.let {
+            it.readAll = true
+            schedule(target, it, it.batch)
+        }
+    }
+
+    /** Listens to the widgets' changes while a widget is watched, and not otherwise. */
+    private fun followWidgets() {
+        val any = watched.keys.any { it.isWidget }
+        val changed: (Int) -> Unit = { widgetId -> scheduler.post { widgetChanged(widgetId) } }
+        try {
+            widgets.listen(if (any) changed else null)
+        } catch (e: Exception) {
+            log.warn("could not follow the widgets' changes", e)
+        }
+    }
+
+    private fun watch(target: TreeTarget) {
         pruneRetired()
-        val state = watched.getOrPut(taskId) {
-            retired.remove(taskId)?.also {
+        val state = watched.getOrPut(target) {
+            retired.remove(target)?.also {
                 it.keepIds = true
                 it.pending = false
             } ?: TaskState()
@@ -452,10 +537,14 @@ class AccessibilityExport(
         state.announced = false
         state.warned = false
         state.listening = false
-        if (!enabled) {
+        if (target.isWidget) {
+            // A widget's views are the agent's own: no service is needed to read them.
+            log.info("a host accessibility client watches $target; reading its views")
+            followWidgets()
+        } else if (!enabled) {
             enabled = true
             reconnectAt = clock() + RECONNECT_MILLIS
-            log.info("a host accessibility client watches task $taskId; the accessibility service is on")
+            log.info("a host accessibility client watches $target; the accessibility service is on")
             try {
                 source.enableEvents { change -> scheduler.post { changed(change) } }
             } catch (e: Exception) {
@@ -463,11 +552,11 @@ class AccessibilityExport(
             }
         }
         sayListening()
-        schedule(taskId, state, 0)
+        schedule(target, state, 0)
     }
 
     private fun listen(taskId: Int, listening: Boolean) {
-        val state = watched[taskId] ?: return
+        val state = watched[TreeTarget.task(taskId)] ?: return
         if (state.listening == listening) return
         state.listening = listening
         log.info(
@@ -489,18 +578,28 @@ class AccessibilityExport(
         }
     }
 
-    private fun retry(taskId: Int, state: TaskState, why: String) {
+    /**
+     * The tree could not be read yet: the service is still coming up, or the task is not
+     * placed yet (a widget not drawn yet). Tries again soon a few times, then slowly for as
+     * long as it is watched.
+     */
+    private fun retry(target: TreeTarget, state: TaskState, why: String) {
         if (state.retries++ < MAX_RETRIES) {
-            schedule(taskId, state, RETRY_MILLIS)
+            schedule(target, state, RETRY_MILLIS)
             return
         }
         if (!state.warned) {
             state.warned = true
+            val about = if (target.isWidget) "" else " (${describeSource()})"
             log.warn(
-                "task $taskId is watched, but its accessibility tree could not be read " +
-                    "${clock() - state.watchedAt} ms after the host asked: $why (${describeSource()}); " +
+                "$target is watched, but its accessibility tree could not be read " +
+                    "${clock() - state.watchedAt} ms after the host asked: $why$about; " +
                     "trying again every ${SLOW_RETRY_MILLIS / 1000} s",
             )
+        }
+        if (target.isWidget) {
+            schedule(target, state, SLOW_RETRY_MILLIS)
+            return
         }
         val connected = try {
             source.connected
@@ -516,7 +615,7 @@ class AccessibilityExport(
                 log.warn("could not ask Android again to bind the accessibility service", e)
             }
         }
-        schedule(taskId, state, SLOW_RETRY_MILLIS)
+        schedule(target, state, SLOW_RETRY_MILLIS)
     }
 
     private fun describeSource(): String = try {
@@ -525,19 +624,24 @@ class AccessibilityExport(
         "the service's state could not be read: ${e.message}"
     }
 
-    private fun unwatch(taskId: Int) {
-        val state = watched.remove(taskId) ?: return
+    private fun unwatch(target: TreeTarget) {
+        val state = watched.remove(target) ?: return
         // Kept a while, without its node handles, so an action on its last tree still finds
-        // its node when the host watches the task again for it.
+        // its node when the host watches the task (or widget) again for it.
         if (state.epoch != 0) {
             state.handles = emptyMap()
             state.dirty.clear()
             state.retiredAt = clock()
-            retired.remove(taskId)
-            retired[taskId] = state
+            retired.remove(target)
+            retired[target] = state
             while (retired.size > MAX_RETIRED) retired.remove(retired.keys.first())
         }
-        if (watched.isEmpty()) turnOff() else sayListening()
+        if (target.isWidget) {
+            log.info("no host accessibility client watches $target; its views are not read")
+            followWidgets()
+        }
+        // The service stays on while a task is watched, and only then.
+        if (watched.keys.none { !it.isWidget }) turnOff() else sayListening()
     }
 
     private fun pruneRetired() {
@@ -557,7 +661,7 @@ class AccessibilityExport(
         }
     }
 
-    private fun schedule(taskId: Int, state: TaskState, wait: Long) {
+    private fun schedule(target: TreeTarget, state: TaskState, wait: Long) {
         if (state.pending) return
         state.pending = true
         val now = clock()
@@ -566,20 +670,32 @@ class AccessibilityExport(
         val delay = maxOf(wait, interval, state.quietAt - now, 0L)
         scheduler.postDelayed(delay) {
             state.pending = false
-            if (watched[taskId] === state) read(taskId, state)
+            if (watched[target] === state) read(target, state)
         }
     }
+
+    /** Where the target's nodes are measured from: its task's place, or its widget's image. */
+    private fun boundsOf(target: TreeTarget): TaskBounds? = try {
+        if (target.isWidget) widgets.bounds(target.widgetId) else taskBounds(target.taskId)
+    } catch (e: Exception) {
+        log.warn("reading where $target is failed", e)
+        null
+    }
+
+    /** Why the target cannot be read when it has no bounds. */
+    private fun unplaced(target: TreeTarget) =
+        if (target.isWidget) "the widget is not drawn yet" else "the task is not placed yet"
 
     /**
      * Sends a focus event's node at once, as a change of it and of the node that had the focus
      * before. Its fields come with the event, so this asks the app nothing. False when the
      * node is new to the tree, which is then read.
      */
-    private fun focusUpdate(taskId: Int, state: TaskState, handle: NodeHandle): Boolean {
+    private fun focusUpdate(target: TreeTarget, state: TaskState, handle: NodeHandle): Boolean {
         if (state.needFull || state.sent.isEmpty()) return false
         val id = state.ids[handle.key] ?: return false
         val previous = state.sent[id] ?: return false
-        val bounds = taskBounds(taskId) ?: return false
+        val bounds = boundsOf(target) ?: return false
         val info = try {
             handle.info()
         } catch (e: Exception) {
@@ -606,7 +722,8 @@ class AccessibilityExport(
         }
         if (changed.isEmpty() && focus == state.sentFocus && accessibilityFocus == state.sentAccessibilityFocus) return true
         val tree = AccessibilityTree.newBuilder()
-            .setTaskId(taskId)
+            .setTaskId(target.taskId)
+            .setWidgetId(target.widgetId)
             .setEpoch(state.epoch)
             .setFull(false)
             .addAllRootIds(state.sentRoots)
@@ -627,7 +744,7 @@ class AccessibilityExport(
 
     private fun announce(change: AccessibilityChange) {
         if (change.text.isBlank()) return
-        val listening = watched.filterValues { it.listening }.keys
+        val listening = watched.filter { (target, state) -> state.listening && !target.isWidget }.keys.map { it.taskId }
         if (listening.isEmpty()) return
         // A toast is shown by the system, not in the app's window: it goes to the app's task.
         val targets = when {
@@ -646,19 +763,19 @@ class AccessibilityExport(
         }
     }
 
-    /** Reads the task's nodes on [reader], then sends what changed from the scheduler's thread. */
-    private fun read(taskId: Int, state: TaskState) {
+    /** Reads the target's nodes on [reader], then sends what changed from the scheduler's thread. */
+    private fun read(target: TreeTarget, state: TaskState) {
         if (state.reading) {
             state.changedWhileReading = true
             return
         }
         if (clock() < state.quietAt) {
-            schedule(taskId, state, 0)
+            schedule(target, state, 0)
             return
         }
-        val bounds = taskBounds(taskId)
+        val bounds = boundsOf(target)
         if (bounds == null) {
-            retry(taskId, state, "the task is not placed yet")
+            retry(target, state, unplaced(target))
             return
         }
         // Only the nodes events named, when all of them are in the tree already.
@@ -673,44 +790,50 @@ class AccessibilityExport(
         state.changedWhileReading = false
         reader.post {
             val read = try {
-                if (starts != null) readNodes(starts, bounds, subtree = true) else source.roots(taskId)?.let { roots -> readNodes(roots, bounds, subtree = false) }
+                if (starts != null) {
+                    readNodes(starts, bounds, subtree = true)
+                } else {
+                    val roots = if (target.isWidget) widgets.roots(target.widgetId) else source.roots(target.taskId)
+                    roots?.let { readNodes(it, bounds, subtree = false) }
+                }
             } catch (e: Exception) {
-                log.warn("reading the accessibility nodes of task $taskId failed", e)
+                log.warn("reading the accessibility nodes of $target failed", e)
                 null
             }
             scheduler.post {
                 state.reading = false
-                if (watched[taskId] !== state) return@post
+                if (watched[target] !== state) return@post
                 if (read?.busy != null) {
                     if (!state.busyWarned) {
                         state.busyWarned = true
-                        log.info("task $taskId's app is busy (${read.busy}); what was read is sent, and its accessibility tree is read again in $BUSY_RETRY_MILLIS ms")
+                        log.info("$target's app is busy (${read.busy}); what was read is sent, and its accessibility tree is read again in $BUSY_RETRY_MILLIS ms")
                     }
-                    if (read.nodes.isNotEmpty()) sendRead(taskId, state, read)
+                    if (read.nodes.isNotEmpty()) sendRead(target, state, read)
                     state.changedWhileReading = false
                     state.readAll = true
-                    schedule(taskId, state, BUSY_RETRY_MILLIS)
+                    schedule(target, state, BUSY_RETRY_MILLIS)
                     return@post
                 }
                 state.busyWarned = false
-                sendRead(taskId, state, read)
+                sendRead(target, state, read)
                 if (state.changedWhileReading) {
                     state.changedWhileReading = false
                     state.readAll = state.readAll || !state.listening
-                    schedule(taskId, state, state.batch)
+                    schedule(target, state, state.batch)
                 }
             }
         }
     }
 
-    private fun sendRead(taskId: Int, state: TaskState, read: ReadNodes?) {
-        val bounds = taskBounds(taskId)
+    private fun sendRead(target: TreeTarget, state: TaskState, read: ReadNodes?) {
+        val bounds = boundsOf(target)
         if (read == null) {
-            retry(taskId, state, "the accessibility service gave no windows")
+            val why = if (target.isWidget) "the widget's views could not be read" else "the accessibility service gave no windows"
+            retry(target, state, why)
             return
         }
         if (bounds == null) {
-            retry(taskId, state, "the task is not placed yet")
+            retry(target, state, unplaced(target))
             return
         }
         state.retries = 0
@@ -750,7 +873,8 @@ class AccessibilityExport(
             return
         }
         val tree = AccessibilityTree.newBuilder()
-            .setTaskId(taskId)
+            .setTaskId(target.taskId)
+            .setWidgetId(target.widgetId)
             .setEpoch(state.epoch)
             .setFull(full)
             .addAllRootIds(roots)
@@ -760,14 +884,14 @@ class AccessibilityExport(
             .setAccessibilityFocusedId(accessibilityFocus)
             .build()
         if (!send(Envelope.newBuilder().setAccessibilityTree(tree).build().toByteArray())) {
-            log.warn("the host did not take the accessibility tree of task $taskId; sending it whole next time")
+            log.warn("the host did not take the accessibility tree of $target; sending it whole next time")
             state.needFull = true
             return
         }
         state.needFull = false
         if (!state.announced) {
             state.announced = true
-            log.info("sent task $taskId's accessibility tree to the host: ${next.size} nodes, ${clock() - state.watchedAt} ms after it asked")
+            log.info("sent $target's accessibility tree to the host: ${next.size} nodes, ${clock() - state.watchedAt} ms after it asked")
         }
         state.lastSentAt = clock()
         state.sent = next
@@ -775,7 +899,7 @@ class AccessibilityExport(
         state.sentFocus = focus
         state.sentAccessibilityFocus = accessibilityFocus
         state.handles = (if (whole) emptyMap() else state.handles - removed.toSet()) + snapshot.handles
-        if (snapshot.truncated) log.warn("task $taskId has more accessibility nodes than one tree holds; the farthest were left out")
+        if (snapshot.truncated) log.warn("$target has more accessibility nodes than one tree holds; the farthest were left out")
     }
 
     /**
@@ -925,9 +1049,10 @@ class AccessibilityExport(
     }
 
     private fun perform(action: AccessibilityAction) {
-        val state = watched[action.taskId]
+        val target = TreeTarget.of(action.taskId, action.widgetId)
+        val state = watched[target]
         val error = when {
-            state == null -> "nobody watches task ${action.taskId}"
+            state == null -> "nobody watches $target"
             action.epoch != state.epoch -> "the screen changed; the node is no longer there"
             action.action == NodeAction.NODE_ACTION_UNSPECIFIED || action.action == NodeAction.UNRECOGNIZED -> "the action is not one the agent knows"
             else -> {
@@ -953,6 +1078,7 @@ class AccessibilityExport(
         }
         val result = AccessibilityActionResult.newBuilder()
             .setTaskId(action.taskId)
+            .setWidgetId(action.widgetId)
             .setRequestId(action.requestId)
             .setDone(error == null)
             .setError(error ?: "")
@@ -960,7 +1086,7 @@ class AccessibilityExport(
         send(Envelope.newBuilder().setAccessibilityActionResult(result).build().toByteArray())
         if (state != null) {
             state.readAll = true
-            schedule(action.taskId, state, state.batch)
+            schedule(target, state, state.batch)
         }
     }
 

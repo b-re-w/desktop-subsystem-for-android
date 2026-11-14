@@ -347,6 +347,27 @@ pub fn window_facts(model: &Toplevel, title_bar: &TitleBar) -> WindowFacts {
     }
 }
 
+/// What a desktop widget's window shows a client of itself: a frame named after the widget,
+/// with no title bar, whose nodes are the widget's in pixels of its image, which the window
+/// shows 1:1 from its top left.
+pub fn widget_facts(window: &dsa_host_core::widget_windows::desk::DeskWindow) -> WindowFacts {
+    use dsa_host_core::widget_windows::menu::{menu_name, menu_text};
+    let korean = prefers_korean(|name| std::env::var(name).ok());
+    let (_, _, width, height) = window.widget_rect();
+    let size = (width.max(1) as u32, height.max(1) as u32);
+    WindowFacts {
+        title: menu_name(&menu_text(korean), &window.widget.provider),
+        scale: (window.dpi / 96).max(1),
+        shown: size,
+        task: size,
+        frame_scale: (1, 1),
+        active: false,
+        maximized: false,
+        resizable: false,
+        caption: None,
+    }
+}
+
 /// A rectangle of the window's pixels in its logical pixels, grown to whole logical pixels.
 fn logical(left: f64, top: f64, width: f64, height: f64, scale: u32) -> Rect {
     let scale = f64::from(scale.max(1));

@@ -30,7 +30,8 @@
                               DisplayMemberPath="Label"
                               SelectedIndex="{Binding SelectedGpuIndex, Mode=OneWay}"
                               IsEnabled="{Binding CanChange, Mode=OneWay}"
-                              SelectionChanged="OnGpuChosen" />
+                              SelectionChanged="OnGpuChosen"
+                              AutomationProperties.Name="{l:Text RenderGpuCard.Header}" />
                 </ui:CardControl>
                 <ui:CardControl Icon="{ui:SymbolIcon DeveloperBoard24}">
                     <ui:CardControl.Header>

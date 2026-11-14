@@ -15,6 +15,7 @@
 //! - [`ClientPresence`]: when a window starts asking the guest for its tree, and when it stops.
 //! - [`ClientDemand`]: whether a window watches its tree continuously (while an assistive
 //!   technology uses it) or reads it once for a client that only reads.
+//! - [`AccessibilityTarget`]: whose tree a watch reads, a task's window or a desktop widget's.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -317,6 +318,54 @@ pub struct ActionResult {
     pub request_id: u32,
     /// `Ok` when the node did it, else why not.
     pub outcome: Result<(), String>,
+}
+
+/// Whose tree a watch reads: a task's window, or a desktop widget's window. A widget's tree
+/// comes from the widget's own views, which the agent hosts, with bounds in pixels of the
+/// widget's image; it is otherwise the same tree, watched, changed and acted on alike.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum AccessibilityTarget {
+    Task(i32),
+    Widget(i32),
+}
+
+impl AccessibilityTarget {
+    /// The target a message names: its widget when `widget_id` is set (never 0), else its
+    /// task.
+    pub fn of(task_id: i32, widget_id: i32) -> AccessibilityTarget {
+        if widget_id != 0 {
+            AccessibilityTarget::Widget(widget_id)
+        } else {
+            AccessibilityTarget::Task(task_id)
+        }
+    }
+
+    /// The task ID and the widget ID the wires carry for it, the other being 0.
+    pub fn ids(self) -> (i32, i32) {
+        match self {
+            AccessibilityTarget::Task(task_id) => (task_id, 0),
+            AccessibilityTarget::Widget(widget_id) => (0, widget_id),
+        }
+    }
+
+    /// The watch the control channel carries for it, `on` or off.
+    pub fn to_control_watch(self, on: bool) -> control::AccessibilityWatch {
+        let (task_id, widget_id) = self.ids();
+        control::AccessibilityWatch {
+            task_id,
+            on,
+            widget_id,
+        }
+    }
+}
+
+impl fmt::Display for AccessibilityTarget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AccessibilityTarget::Task(task_id) => write!(f, "task {task_id}"),
+            AccessibilityTarget::Widget(widget_id) => write!(f, "widget {widget_id}"),
+        }
+    }
 }
 
 /// What the guest sends about a watched task.
@@ -671,6 +720,7 @@ impl TreeUpdate {
             removed_ids: tree.removed_ids,
             focused_id: tree.focused_id,
             accessibility_focused_id: tree.accessibility_focused_id,
+            widget_id: 0,
         };
         TreeUpdate::from_control(as_control)
     }
@@ -679,6 +729,12 @@ impl TreeUpdate {
 impl ActionRequest {
     /// The request as the control channel carries it, for `task_id`.
     pub fn to_control(&self, task_id: i32) -> control::AccessibilityAction {
+        self.to_control_for(AccessibilityTarget::Task(task_id))
+    }
+
+    /// The request as the control channel carries it, for a node of `target`'s tree.
+    pub fn to_control_for(&self, target: AccessibilityTarget) -> control::AccessibilityAction {
+        let (task_id, widget_id) = target.ids();
         control::AccessibilityAction {
             task_id,
             epoch: self.epoch,
@@ -691,6 +747,7 @@ impl ActionRequest {
             progress: self.progress,
             row: self.position.0,
             column: self.position.1,
+            widget_id,
         }
     }
 
@@ -757,6 +814,7 @@ impl ActionResult {
             request_id: result.request_id,
             done: result.done,
             error: result.error,
+            widget_id: 0,
         })
     }
 }

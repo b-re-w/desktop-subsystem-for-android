@@ -39,12 +39,19 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.AdapterView
 import android.widget.AnalogClock
 import android.widget.FrameLayout
 import android.widget.RemoteViews
 import android.widget.TextClock
 import io.github.thisisthepy.dsa.agent.Log
+import io.github.thisisthepy.dsa.agent.accessibility.AccessibilityExport
+import io.github.thisisthepy.dsa.agent.accessibility.NodeHandle
+import io.github.thisisthepy.dsa.agent.accessibility.NodeInfo
+import io.github.thisisthepy.dsa.agent.accessibility.RangeInfo
+import io.github.thisisthepy.dsa.agent.accessibility.WidgetNodes
+import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 import io.github.thisisthepy.dsa.agent.widgets.FrameGate
 import io.github.thisisthepy.dsa.agent.widgets.WidgetFit
 import io.github.thisisthepy.dsa.agent.widgets.WidgetInfo
@@ -54,10 +61,15 @@ import io.github.thisisthepy.dsa.agent.widgets.WidgetSetup
 import io.github.thisisthepy.dsa.agent.widgets.WidgetSize
 import io.github.thisisthepy.dsa.agent.widgets.WidgetStore
 import io.github.thisisthepy.dsa.agent.widgets.allClear
+import io.github.thisisthepy.dsa.control.v1.NodeAction
 import io.github.thisisthepy.dsa.control.v1.PointerAction
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /**
  * The guest's widget framework, with the agent as its widget host.
@@ -85,8 +97,14 @@ import kotlin.math.ceil
  * every placed widget, and a widget's view is made before anything else about its drawing,
  * so a window or display that fails to open never leaves the widget deaf. When the window
  * cannot be opened, the widget is drawn without one, in software ([Renderer]).
+ *
+ * The widget's views are also its accessibility nodes ([WidgetNodes]): while the host watches
+ * a widget for a screen reader, its views are read on the main thread as the accessibility
+ * framework describes them, with their places in the widget's image, and an action on one (a
+ * click on a button) is the view's own accessibility action, as a tap on it would be. Nothing
+ * is read while no widget is watched.
  */
-class AndroidWidgets(private val context: Context, private val log: Log) : WidgetPlatform {
+class AndroidWidgets(private val context: Context, private val log: Log) : WidgetPlatform, WidgetNodes {
     private val manager = AppWidgetManager.getInstance(context)
     private val host = object : AppWidgetHost(context, HOST_ID) {
         override fun onCreateView(context: Context, appWidgetId: Int, appWidget: AppWidgetProviderInfo?): AppWidgetHostView =
@@ -111,8 +129,127 @@ class AndroidWidgets(private val context: Context, private val log: Log) : Widge
     @Volatile
     private var dozing = false
 
+    /** Who hears that a widget's views may have changed, while a widget is watched. */
+    @Volatile
+    private var nodesChanged: ((Int) -> Unit)? = null
+
     override fun fitting(needs: (widgetId: Int, widthDp: Int, heightDp: Int) -> Unit) {
         onNeeds = needs
+    }
+
+    override fun listen(changed: ((Int) -> Unit)?) {
+        nodesChanged = changed
+    }
+
+    override fun bounds(widgetId: Int): TaskBounds? =
+        renderers[widgetId]?.let { TaskBounds(0, 0, it.size.width, it.size.height) }
+
+    override fun roots(widgetId: Int): List<NodeHandle>? = onMain(null) { renderers[widgetId]?.nodes() }
+
+    /**
+     * Runs [work] on the main thread, where the widgets' views live, and waits for it at most
+     * [MAIN_WAIT_MILLIS]: [otherwise] when it did not run in time.
+     */
+    private fun <T> onMain(otherwise: T, work: () -> T): T {
+        if (Looper.myLooper() == Looper.getMainLooper()) return work()
+        val task = FutureTask(Callable { work() })
+        if (!main.post(task)) return otherwise
+        return try {
+            task.get(MAIN_WAIT_MILLIS, TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            task.cancel(false)
+            otherwise
+        }
+    }
+
+    /**
+     * The node of [view] and of the views in it, [view] being at [left], [top] from the corner
+     * of the room the widget is laid out in, which its image shows shrunk by [scale]. [count]
+     * counts the nodes made, which stop at [AccessibilityExport.MAX_NODES].
+     */
+    private fun viewNode(view: View, left: Int, top: Int, scale: Float, count: IntArray): WidgetViewNode {
+        count[0]++
+        val px = { value: Int -> (value * scale).roundToInt() }
+        val bounds = TaskBounds(px(left), px(top), px(left + view.width), px(top + view.height))
+        val info = viewInfo(view, bounds)
+        val children = if (view is ViewGroup && info.visible) {
+            (0 until view.childCount).mapNotNull { i ->
+                if (count[0] >= AccessibilityExport.MAX_NODES) return@mapNotNull null
+                val child = view.getChildAt(i) ?: return@mapNotNull null
+                viewNode(child, left + child.left - view.scrollX, top + child.top - view.scrollY, scale, count)
+            }
+        } else {
+            emptyList()
+        }
+        return WidgetViewNode(view, info, children)
+    }
+
+    /** What [view] says of itself as the accessibility framework describes it, at [bounds]. */
+    private fun viewInfo(view: View, bounds: TaskBounds): NodeInfo {
+        val visible = view.visibility == View.VISIBLE && view.width > 0 && view.height > 0
+        val node = try {
+            view.createAccessibilityNodeInfo()
+        } catch (e: Exception) {
+            return NodeInfo(className = view.javaClass.name, bounds = bounds, visible = visible)
+        }
+        val ids = node.actionList.map { it.id }.toSet()
+        return NodeInfo(
+            className = node.className?.toString() ?: view.javaClass.name,
+            text = node.text?.toString().orEmpty(),
+            description = node.contentDescription?.toString().orEmpty(),
+            hint = node.hintText?.toString().orEmpty(),
+            viewId = node.viewIdResourceName.orEmpty(),
+            stateDescription = node.stateDescription?.toString().orEmpty(),
+            bounds = bounds,
+            visible = visible,
+            checkable = node.isCheckable,
+            checked = node.isChecked,
+            selected = node.isSelected,
+            enabled = node.isEnabled,
+            focusable = node.isFocusable,
+            focused = node.isFocused,
+            scrollable = node.isScrollable,
+            clickable = node.isClickable,
+            longClickable = node.isLongClickable,
+            editable = node.isEditable,
+            password = node.isPassword,
+            heading = node.isHeading,
+            range = node.rangeInfo?.let { RangeInfo(it.min, it.max, it.current) },
+            actions = VIEW_ACTIONS.filter { (_, id) -> id in ids }.map { (action, _) -> action },
+        )
+    }
+
+    /** One view of a widget as an accessibility node, read once on the main thread. */
+    private inner class WidgetViewNode(
+        private val view: View,
+        private val info: NodeInfo,
+        private val children: List<WidgetViewNode>,
+    ) : NodeHandle {
+        // The same view is the same node however often it is read.
+        override val key: Any = view
+
+        override fun info(): NodeInfo = info
+
+        override fun children(): List<NodeHandle> = children
+
+        override fun perform(action: NodeAction, text: String): Boolean {
+            val id = VIEW_ACTIONS.firstOrNull { it.first == action }?.second ?: return false
+            val arguments = if (action == NodeAction.NODE_ACTION_SET_TEXT) {
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text) }
+            } else {
+                null
+            }
+            // A click runs the widget's PendingIntent through the agent's click handler, so
+            // what it opens shows as a task window, as after a tap.
+            return onMain(false) {
+                try {
+                    view.performAccessibilityAction(id, arguments)
+                } catch (e: Exception) {
+                    log.warn("an accessibility action on a widget's view failed", e)
+                    false
+                }
+            }
+        }
     }
 
     override fun start(frame: (Int, Int, Int, ByteArray) -> Unit, changed: () -> Unit, failed: (Int) -> Unit) {
@@ -629,8 +766,13 @@ class AndroidWidgets(private val context: Context, private val log: Log) : Widge
             if (png != null) onFrame(id, width, height, png)
         }
 
+        /** The widget's views as accessibility nodes, in pixels of its image. Main thread. */
+        fun nodes(): List<NodeHandle> = listOf(viewNode(view, 0, 0, scale, intArrayOf(0)))
+
         fun requestCapture() {
             if (closed || captureScheduled) return
+            // A watched widget's tree is read again once its views have changed.
+            nodesChanged?.invoke(id)
             captureScheduled = true
             main.postDelayed({
                 captureScheduled = false
@@ -916,6 +1058,21 @@ class AndroidWidgets(private val context: Context, private val log: Log) : Widge
 
     private companion object {
         const val HOST_ID = WIDGET_HOST_ID
+
+        /** The longest a read of a widget's views, or an action on one, waits for the main thread. */
+        const val MAIN_WAIT_MILLIS = 500L
+
+        /** The node actions a widget's view can do, as the accessibility framework names them. */
+        val VIEW_ACTIONS = listOf(
+            NodeAction.NODE_ACTION_CLICK to AccessibilityNodeInfo.ACTION_CLICK,
+            NodeAction.NODE_ACTION_LONG_CLICK to AccessibilityNodeInfo.ACTION_LONG_CLICK,
+            NodeAction.NODE_ACTION_SET_TEXT to AccessibilityNodeInfo.ACTION_SET_TEXT,
+            NodeAction.NODE_ACTION_SCROLL_FORWARD to AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+            NodeAction.NODE_ACTION_SCROLL_BACKWARD to AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+            NodeAction.NODE_ACTION_FOCUS to AccessibilityNodeInfo.ACTION_FOCUS,
+            NodeAction.NODE_ACTION_ACCESSIBILITY_FOCUS to AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS,
+            NodeAction.NODE_ACTION_SELECT to AccessibilityNodeInfo.ACTION_SELECT,
+        )
     }
 }
 

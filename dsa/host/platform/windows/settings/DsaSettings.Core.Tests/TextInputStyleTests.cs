@@ -159,7 +159,8 @@ public class TextInputStyleTests
             Assert.Equal("Transparent", (string?)button.Attribute("Appearance"));
             Assert.Equal("{ui:SymbolIcon Copy24}", (string?)button.Attribute("Icon"));
             Assert.Equal("{l:Text CopyButton.ToolTip}", (string?)button.Attribute("ToolTip"));
-            Assert.Equal("{l:Text CopyButton.ToolTip}",
+            // The three buttons look alike, so each one's name says which command it copies.
+            Assert.Equal("{l:ItemName CopyButton.ToolTip, Path=Tag, FromSelf=True}",
                 (string?)button.Attribute(XName.Get("AutomationProperties.Name")));
         }
 

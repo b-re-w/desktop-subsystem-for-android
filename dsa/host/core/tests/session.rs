@@ -15,7 +15,9 @@ use dsa_host_core::ime::{ImeCursor, ImeEvent};
 use dsa_host_core::input::{buttons, PointerAction, PointerEvent, PointerTool};
 use dsa_host_core::keys::{keycode, meta, KeyAction, KeyEvent};
 use dsa_host_core::location::{Fix, LocationEvent, Wanted};
-use dsa_host_core::notifications::{Notification, NotificationAction, NotificationEvent};
+use dsa_host_core::notifications::{
+    Notification, NotificationAction, NotificationButton, NotificationEvent,
+};
 use dsa_host_core::power::{PowerHub, PowerState};
 use dsa_host_core::power_hints::{mode, PowerHint};
 use dsa_host_core::print::{PrintEvent, PrintJob, PrintOutcome};
@@ -3456,6 +3458,7 @@ fn guest_notification(key: &str, title: &str) -> dsa_protocol::control::GuestNot
         high_priority: true,
         clearable: true,
         when_millis: 1_700_000_000_000,
+        buttons: Vec::new(),
     }
 }
 
@@ -3471,6 +3474,7 @@ fn posted(key: &str, title: &str) -> NotificationEvent {
         high_priority: true,
         clearable: true,
         when_millis: 1_700_000_000_000,
+        buttons: Vec::new(),
     })
 }
 
@@ -3608,6 +3612,136 @@ fn fr8_dismissing_a_notification_on_the_host_cancels_it_in_the_guest_unless_it_i
             key: CHAT.into()
         })
     );
+    nothing_for_the_guest(&mut agent);
+}
+
+fn chat_with_buttons() -> dsa_protocol::control::GuestNotification {
+    dsa_protocol::control::GuestNotification {
+        buttons: vec![
+            dsa_protocol::control::NotificationButton {
+                title: "Reply".into(),
+                reply: true,
+                reply_label: "Reply to Ann".into(),
+                reply_choices: vec!["On my way".into()],
+                reply_choices_only: false,
+                semantic_action: 1,
+            },
+            dsa_protocol::control::NotificationButton {
+                title: "Mark as read".into(),
+                semantic_action: 2,
+                ..Default::default()
+            },
+        ],
+        ..guest_notification(CHAT, "Ann")
+    }
+}
+
+#[test]
+fn fr18_notification_actions_reach_the_watcher() {
+    let (session, mut agent, _launcher) = active_session();
+    let watch = session.watch_notifications();
+    send_body(&mut agent, Body::Notification(chat_with_buttons()));
+    let NotificationEvent::Posted(shown) = watch.recv_timeout(WAIT).unwrap() else {
+        panic!("expected the notification to be posted");
+    };
+    assert_eq!(
+        shown.buttons,
+        vec![
+            NotificationButton {
+                title: "Reply".into(),
+                reply: true,
+                reply_label: "Reply to Ann".into(),
+                reply_choices: vec!["On my way".into()],
+                reply_choices_only: false,
+                semantic_action: 1,
+            },
+            NotificationButton {
+                title: "Mark as read".into(),
+                semantic_action: 2,
+                ..Default::default()
+            },
+        ]
+    );
+}
+
+#[test]
+fn fr18_running_an_action_reaches_the_agent() {
+    let (session, mut agent, _launcher) = active_session();
+    let watch = session.watch_notifications();
+    send_body(&mut agent, Body::Notification(chat_with_buttons()));
+    watch.recv_timeout(WAIT).unwrap();
+    session
+        .notification_action(NotificationAction::Button {
+            key: CHAT.into(),
+            button: 0,
+            title: "Reply".into(),
+            reply: "see you \u{c548}\u{b155}".into(),
+        })
+        .expect("taken");
+    assert_eq!(
+        next_body(&mut agent),
+        Body::NotificationButtonClicked(dsa_protocol::control::NotificationButtonClicked {
+            key: CHAT.into(),
+            button: 0,
+            title: "Reply".into(),
+            reply_text: "see you \u{c548}\u{b155}".into(),
+        })
+    );
+    session
+        .notification_action(NotificationAction::Button {
+            key: CHAT.into(),
+            button: 1,
+            title: "Mark as read".into(),
+            reply: String::new(),
+        })
+        .expect("taken");
+    assert_eq!(
+        next_body(&mut agent),
+        Body::NotificationButtonClicked(dsa_protocol::control::NotificationButtonClicked {
+            key: CHAT.into(),
+            button: 1,
+            title: "Mark as read".into(),
+            reply_text: String::new(),
+        })
+    );
+}
+
+#[test]
+fn fr18_running_an_action_while_dozing_wakes_the_guest_first() {
+    let (session, mut agent, _launcher) = lifecycle_session(None);
+    let watch = session.watch_notifications();
+    dozing(&session, &mut agent);
+    send_body(&mut agent, Body::Notification(chat_with_buttons()));
+    watch.recv_timeout(WAIT).unwrap();
+    session
+        .notification_action(NotificationAction::Button {
+            key: CHAT.into(),
+            button: 1,
+            title: "Mark as read".into(),
+            reply: String::new(),
+        })
+        .expect("taken while dozing");
+    assert_eq!(next_body(&mut agent), screen(true));
+    assert!(matches!(
+        next_body(&mut agent),
+        Body::NotificationButtonClicked(_)
+    ));
+}
+
+#[test]
+fn fr18_a_button_the_notification_does_not_have_sends_nothing() {
+    let (session, mut agent, _launcher) = active_session();
+    let watch = session.watch_notifications();
+    send_body(&mut agent, Body::Notification(chat_with_buttons()));
+    watch.recv_timeout(WAIT).unwrap();
+    session
+        .notification_action(NotificationAction::Button {
+            key: CHAT.into(),
+            button: 2,
+            title: "Archive".into(),
+            reply: String::new(),
+        })
+        .expect("ignored, not refused");
     nothing_for_the_guest(&mut agent);
 }
 
@@ -4606,7 +4740,19 @@ fn nfr5_word_on_an_install_that_is_not_under_way_is_dropped() {
 }
 
 fn accessibility_watch(task_id: i32, on: bool) -> Body {
-    Body::AccessibilityWatch(dsa_protocol::control::AccessibilityWatch { task_id, on })
+    Body::AccessibilityWatch(dsa_protocol::control::AccessibilityWatch {
+        task_id,
+        on,
+        widget_id: 0,
+    })
+}
+
+fn widget_accessibility_watch(widget_id: i32, on: bool) -> Body {
+    Body::AccessibilityWatch(dsa_protocol::control::AccessibilityWatch {
+        task_id: 0,
+        on,
+        widget_id,
+    })
 }
 
 fn accessibility_tree(task_id: i32, epoch: u32, nodes: u32) -> Body {
@@ -4742,6 +4888,7 @@ fn fr18_actions_go_to_the_guest_and_their_results_come_back() {
             request_id: 5,
             done: true,
             error: String::new(),
+            widget_id: 0,
         }),
     );
     match watch.updates.recv_timeout(WAIT).unwrap() {
@@ -4751,6 +4898,75 @@ fn fr18_actions_go_to_the_guest_and_their_results_come_back() {
         }
         other => panic!("expected a result, got {other:?}"),
     }
+}
+
+/// A desktop widget's window is watched as a task's is: the watch names the widget, the guest
+/// reads it only while a watch lasts, its tree reaches only its own watchers, and an Invoke on
+/// one of its buttons goes to that widget.
+#[test]
+fn fr18_widget_tree_watch_names_the_widget() {
+    use dsa_host_core::accessibility::{ActionRequest, GuestAccessibility, NodeAction};
+    let (session, mut agent, _launcher) = active_session();
+    let watch = session.watch_widget_accessibility(12);
+    assert_eq!(next_body(&mut agent), widget_accessibility_watch(12, true));
+    // The widget's tree reaches its watch; a task's tree of the same number does not.
+    send_body(&mut agent, accessibility_tree(12, 1, 2));
+    assert!(watch
+        .updates
+        .recv_timeout(Duration::from_millis(200))
+        .is_err());
+    let widget_tree = match accessibility_tree(0, 1, 2) {
+        Body::AccessibilityTree(tree) => {
+            Body::AccessibilityTree(dsa_protocol::control::AccessibilityTree {
+                widget_id: 12,
+                ..tree
+            })
+        }
+        _ => unreachable!(),
+    };
+    send_body(&mut agent, widget_tree);
+    match watch.updates.recv_timeout(WAIT).unwrap() {
+        GuestAccessibility::Tree(tree) => assert_eq!(tree.nodes[1].text, "item 2"),
+        other => panic!("expected the widget's tree, got {other:?}"),
+    }
+    // An Invoke on a node goes to the widget's tree, and its result comes back to the watch.
+    let action = ActionRequest {
+        epoch: 1,
+        node_id: 2,
+        action: NodeAction::Click,
+        text: String::new(),
+        request_id: 9,
+    };
+    session.widget_accessibility_action(12, &action).unwrap();
+    match next_body(&mut agent) {
+        Body::AccessibilityAction(sent) => {
+            assert_eq!((sent.task_id, sent.widget_id), (0, 12));
+            assert_eq!(sent.node_id, 2);
+        }
+        other => panic!("expected the widget's action, got {other:?}"),
+    }
+    send_body(
+        &mut agent,
+        Body::AccessibilityActionResult(dsa_protocol::control::AccessibilityActionResult {
+            task_id: 0,
+            request_id: 9,
+            done: true,
+            error: String::new(),
+            widget_id: 12,
+        }),
+    );
+    match watch.updates.recv_timeout(WAIT).unwrap() {
+        GuestAccessibility::ActionResult(result) => assert_eq!(result.request_id, 9),
+        other => panic!("expected the result, got {other:?}"),
+    }
+    // A new agent is asked again; the last watch ending stops the reading.
+    report_boot(&mut agent, true, false);
+    thread::sleep(Duration::from_millis(50));
+    report_boot(&mut agent, true, true);
+    assert_eq!(next_body(&mut agent), widget_accessibility_watch(12, true));
+    drop(watch);
+    assert_eq!(next_body(&mut agent), widget_accessibility_watch(12, false));
+    assert_eq!(session.state(), SessionState::Active);
 }
 
 #[test]

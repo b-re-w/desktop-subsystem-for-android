@@ -2476,4 +2476,46 @@ For high definition, use this computer's own browser or app.</value>
   <data name="Widevine_RemovedPending" xml:space="preserve">
     <value>Removed. Android uses it until its next start.</value>
   </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{0}, {1}</value>
+    <comment>A screen reader's name for a control repeated in every row of a list: {0} is what it does (Open), {1} the row (the app's name).</comment>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}. {1}</value>
+    <comment>What a screen reader says when a notice bar opens: {0} its title, {1} its message.</comment>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}, {1}, {2}: {3}</value>
+    <comment>A log row as a screen reader reads it: {0} the time, {1} the priority as a word, {2} the tag, {3} the message.</comment>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>{0} records dropped</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>Lowest priority shown</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>Loading</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>Show or hide navigation</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>Minimize</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>Maximize</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>Help</value>
+  </data>
 </root>

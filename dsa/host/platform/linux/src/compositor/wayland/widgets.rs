@@ -887,7 +887,11 @@ impl State {
             return false;
         };
         if down {
-            if let Some(key) = key(code) {
+            let (shift, ctrl) = match self.xkb.as_ref() {
+                Some(xkb) => (xkb.shift(), xkb.ctrl()),
+                None => (false, false),
+            };
+            if let Some(key) = key(code, shift, ctrl) {
                 self.widgets.desk.key(widget_id, key);
                 self.widget_effects();
             }
@@ -934,8 +938,8 @@ impl State {
                     self.widgets.desk.up(widget_id, local, button);
                 }
             }
-            WidgetInput::Key(code) => {
-                if let Some(key) = key(code) {
+            WidgetInput::Key { code, shift, ctrl } => {
+                if let Some(key) = key(code, shift, ctrl) {
                     self.widgets.desk.key(widget_id, key);
                 }
             }

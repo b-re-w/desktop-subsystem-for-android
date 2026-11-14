@@ -38,7 +38,7 @@ use super::frames::{LatestFrames, Shown};
 use super::gfxstream::{self, FrameSink};
 use super::wayland::{Desktop, Event, Events, Wake};
 use super::window_menu::{app_page_arguments, menu_work, reads_korean_in};
-use crate::accessibility::objects::{window_facts, TitleCommand, WindowFacts};
+use crate::accessibility::objects::{widget_facts, window_facts, TitleCommand, WindowFacts};
 use crate::accessibility::watch::{ApiConnect, Shared as Accessibility};
 use crate::input::evdev::EvdevGamepads;
 use crate::renderer::client::RendererClient;
@@ -553,6 +553,8 @@ fn ask_pins(folders: Folders) -> Sender<PinShortcutRequest> {
                         answer(&request, false);
                     }
                 }
+                // A question has no reply field.
+                Ok(PinWork::Signal(Signal::Replied { .. })) => {}
                 Err(mpsc::RecvTimeoutError::Timeout) => {}
                 Err(mpsc::RecvTimeoutError::Disconnected) => return,
             }
@@ -598,6 +600,7 @@ fn show_notifications(requests: Sender<Request>, icons: PathBuf) {
                                     shown.action_invoked(id, &action)
                                 }
                                 Signal::Closed { id, reason } => shown.closed(id, reason),
+                                Signal::Replied { id, text } => shown.replied(id, &text),
                             },
                             Err(_) => None,
                         };
@@ -645,6 +648,10 @@ fn show_notifications(requests: Sender<Request>, icons: PathBuf) {
                 continue;
             }
         };
+        let inline_reply = notifier.offers_inline_reply();
+        if let Ok(mut shown) = shown.lock() {
+            shown.inline_reply = inline_reply;
+        }
         loop {
             match stream.next(Duration::from_secs(1)) {
                 Ok(Some(NotificationEvent::Posted(notification))) => {
@@ -656,7 +663,7 @@ fn show_notifications(requests: Sender<Request>, icons: PathBuf) {
                     match notifier.notify(&notify, &notification.icon_png) {
                         Ok(id) => {
                             if let Ok(mut shown) = shown.lock() {
-                                shown.shown(&notification.key, id);
+                                shown.shown_with(&notification, id);
                             }
                         }
                         Err(why) => log(&why),
@@ -1229,11 +1236,25 @@ impl Main {
             return;
         }
         let windows = &self.desktop.state.windows;
+        // The desktop widgets' windows too, each under its own key: a screen reader reads a
+        // widget's text, buttons and lists as it reads a task window's.
+        let desk = &self.desktop.state.widgets.desk;
+        let widgets: Vec<(i32, WindowFacts)> = desk
+            .ids()
+            .into_iter()
+            .filter_map(|widget_id| {
+                let window = desk.window(widget_id)?;
+                Some((
+                    crate::accessibility::watch::widget_window_key(widget_id),
+                    widget_facts(window),
+                ))
+            })
+            .collect();
         let accessibility = &self.accessibility;
-        self.accessible.retain(|task_id, _| {
-            let open = windows.contains_key(task_id);
+        self.accessible.retain(|key, _| {
+            let open = windows.contains_key(key) || widgets.iter().any(|(k, _)| k == key);
             if !open {
-                accessibility.close(*task_id);
+                accessibility.close(*key);
             }
             open
         });
@@ -1242,6 +1263,12 @@ impl Main {
             if self.accessible.get(task_id) != Some(&facts) {
                 accessibility.sync(*task_id, facts.clone());
                 self.accessible.insert(*task_id, facts);
+            }
+        }
+        for (key, facts) in widgets {
+            if self.accessible.get(&key) != Some(&facts) {
+                accessibility.sync(key, facts.clone());
+                self.accessible.insert(key, facts);
             }
         }
     }

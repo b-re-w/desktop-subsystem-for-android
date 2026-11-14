@@ -48,7 +48,8 @@
                         <ComboBox x:Name="LimitBox" MinWidth="180" DisplayMemberPath="Label"
                                   ItemsSource="{Binding MemoryLimitChoices, Mode=OneWay}"
                                   SelectedIndex="{Binding SelectedMemoryLimitIndex, Mode=OneWay}"
-                                  IsEnabled="{Binding CanChange, Mode=OneWay}" SelectionChanged="OnLimitChanged" />
+                                  IsEnabled="{Binding CanChange, Mode=OneWay}" SelectionChanged="OnLimitChanged"
+                                  AutomationProperties.Name="{l:Text MemoryLimitCard.Header}" />
                     </ui:CardControl>
                 </StackPanel>
                 <ui:CardControl Icon="{ui:SymbolIcon Server24}"
@@ -106,7 +107,8 @@
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                 <TextBlock Text="{Binding GuestTotal, Mode=OneWay}" Style="{StaticResource CardValue}" />
                             </StackPanel>
-                            <ProgressBar Value="{Binding GuestUsedPercent, Mode=OneWay}" Maximum="100" Margin="0,6,0,0" />
+                            <ProgressBar Value="{Binding GuestUsedPercent, Mode=OneWay}" Maximum="100" Margin="0,6,0,0"
+                                         AutomationProperties.Name="{l:Text MemoryGuestTotalCard.Header}" />
                         </StackPanel>
                     </ui:CardControl>
                     <l:RowList ItemsSource="{Binding GuestRows, Mode=OneWay}" ItemTemplate="{StaticResource MemoryRow}" />

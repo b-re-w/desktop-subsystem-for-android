@@ -271,10 +271,13 @@ fn show_page(ctx: &Shared, split: &adw::NavigationSplitView, page: Page) {
         Page::Logs => logs::logs(ctx),
         Page::About => status::about(ctx),
     };
-    let view = adw::ToolbarView::new();
-    view.add_top_bar(&adw::HeaderBar::new());
-    view.set_content(Some(&content));
     let title = tr(page.title());
+    let view = adw::ToolbarView::new();
+    let header = adw::HeaderBar::new();
+    // The page's title is its first heading for a screen reader; its groups' titles follow.
+    header.set_title_widget(Some(&common::page_title(&title)));
+    view.add_top_bar(&header);
+    view.set_content(Some(&content));
     split.set_content(Some(&adw::NavigationPage::new(&view, &title)));
     split.set_show_content(true);
 }

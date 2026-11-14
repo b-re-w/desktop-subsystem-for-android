@@ -21,7 +21,8 @@
                 <TextBlock Text="{l:Text WidgetsIntro.Text}" Style="{StaticResource PageIntro}" />
 
                 <ProgressBar IsIndeterminate="True" Margin="0,8,0,0"
-                             Visibility="{Binding IsBusy, Converter={StaticResource Visible}}" />
+                             Visibility="{Binding IsBusy, Converter={StaticResource Visible}}"
+                             AutomationProperties.Name="{l:Text A11y_Loading}" />
                 <ui:InfoBar Title="{l:Text WidgetsErrorBar.Title}" Severity="Error" IsClosable="False"
                             IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" />
                 <ui:InfoBar Title="{l:Text WidgetsDoneBar.Title}" Severity="Success" IsClosable="False"
@@ -42,7 +43,8 @@
                                     </StackPanel>
                                 </ui:CardControl.Header>
                                 <ui:Button Content="{l:Text WidgetsRemoveButton.Content}" Tag="{Binding Id}" Click="OnRemove"
-                                           Icon="{ui:SymbolIcon Delete24}" />
+                                           Icon="{ui:SymbolIcon Delete24}"
+                                           AutomationProperties.Name="{l:ItemName WidgetsRemoveButton.Content}" />
                             </ui:CardControl>
                         </DataTemplate>
                     </l:RowList.ItemTemplate>
@@ -73,7 +75,8 @@
                                     </StackPanel>
                                 </ui:CardControl.Header>
                                 <ui:Button Content="{l:Text WidgetsAddButton.Content}" Tag="{Binding Provider}" Click="OnAdd"
-                                           Appearance="Primary" Icon="{ui:SymbolIcon Add24}" />
+                                           Appearance="Primary" Icon="{ui:SymbolIcon Add24}"
+                                           AutomationProperties.Name="{l:ItemName WidgetsAddButton.Content}" />
                             </ui:CardControl>
                         </DataTemplate>
                     </l:RowList.ItemTemplate>

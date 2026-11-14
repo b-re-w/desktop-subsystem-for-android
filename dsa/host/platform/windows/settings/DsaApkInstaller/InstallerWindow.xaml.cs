@@ -29,6 +29,10 @@ public partial class InstallerWindow : FluentWindow
     private bool _closed;
     private ApkIcon? _drawnIcon;
     private bool _iconShown;
+    /// <summary>The page the keyboard focus was last placed on, null before the first.</summary>
+    private ApkInstallPage? _focusedPage;
+    /// <summary>The result last told to a screen reader, so each one is told once.</summary>
+    private string _announced = "";
 
     private InstallerWindow(string path)
     {
@@ -47,6 +51,8 @@ public partial class InstallerWindow : FluentWindow
         TitleBar.Title = Title;
         TrademarkText.Text = App.Text.Get("AboutTrademark.Text");
         ReadingText.Text = App.Text.Get("ApkWindow_Reading");
+        // The bar is named for what it shows, so a screen reader says "Reading the file".
+        System.Windows.Automation.AutomationProperties.SetName(ReadingProgress, ReadingText.Text);
         PackageLabel.Text = ApkInstallViewModel.PackageLabel;
         PublisherLabel.Text = ApkInstallViewModel.PublisherLabel;
         VersionLabel.Text = ApkInstallViewModel.VersionLabel;
@@ -158,6 +164,8 @@ public partial class InstallerWindow : FluentWindow
         {
             AppIcon.Source = InstallerIcon;
         }
+        // The icon is the app's own once the file gives one, and a screen reader says whose.
+        System.Windows.Automation.AutomationProperties.SetName(AppIcon, _iconShown ? $"{_vm.Title} icon" : Title);
 
         var showDetails = page is ApkInstallPage.Details or ApkInstallPage.Progress;
         SummaryPanel.Visibility = Visible(showDetails);
@@ -196,6 +204,9 @@ public partial class InstallerWindow : FluentWindow
         Progress.IsIndeterminate = _vm.ProgressPercent is null;
         Progress.Value = _vm.ProgressPercent ?? 0;
         ProgressPercent.Text = _vm.ProgressPercent is { } percent ? percent + "%" : "";
+        // The bar is named for the step it measures: "Installing Foo", "Starting Android".
+        System.Windows.Automation.AutomationProperties.SetName(Progress,
+            _vm.ProgressTitle.Length > 0 ? _vm.ProgressTitle : ReadingText.Text);
 
         var good = page == ApkInstallPage.Done;
         ResultGlyph.Symbol = good ? SymbolRegular.CheckmarkCircle24 : SymbolRegular.ErrorCircle24;
@@ -218,6 +229,61 @@ public partial class InstallerWindow : FluentWindow
         CloseButton.IsDefault = page == ApkInstallPage.Failed;
         CancelButton.IsCancel = CancelButton.Visibility == Visibility.Visible;
         CloseButton.IsCancel = !CancelButton.IsCancel;
+
+        // A new page: the keyboard focus goes to its first control, so it is not left on a
+        // button the page has just hidden.
+        if (_focusedPage != page)
+        {
+            _focusedPage = page;
+            Dispatcher.InvokeAsync(FocusFirstControl, System.Windows.Threading.DispatcherPriority.Input);
+        }
+        // Installed, updated, or why not: a screen reader is told, once for each result.
+        if (page is ApkInstallPage.Done or ApkInstallPage.Failed)
+        {
+            var words = ScreenReader.Announcement(_vm.ResultTitle, _vm.ResultText);
+            if (words != _announced)
+            {
+                _announced = words;
+                Announce(words);
+            }
+        }
+    }
+
+    /// <summary>Puts the keyboard focus on the page's first control: the button Enter presses,
+    /// else the first button the page shows.</summary>
+    private void FocusFirstControl()
+    {
+        if (_closed)
+        {
+            return;
+        }
+        var first = ScreenReader.FirstControl(
+            Buttons.Children.OfType<System.Windows.Controls.Button>(),
+            b => b.Visibility == Visibility.Visible && b.IsEnabled,
+            b => b.IsDefault);
+        if (first is not null)
+        {
+            // The focus scope keeps it too, so the window gives it back when it is activated.
+            System.Windows.Input.FocusManager.SetFocusedElement(this, first);
+            first.Focus();
+        }
+    }
+
+    /// <summary>Tells a screen reader the words with a UI Automation notification, once the
+    /// page that shows them is laid out.</summary>
+    private void Announce(string words)
+    {
+        if (words.Length == 0)
+        {
+            return;
+        }
+        Dispatcher.InvokeAsync(() =>
+        {
+            var peer = System.Windows.Automation.Peers.UIElementAutomationPeer.FromElement(this)
+                ?? System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(this);
+            peer?.RaiseNotificationEvent(System.Windows.Automation.AutomationNotificationKind.ActionCompleted,
+                System.Windows.Automation.AutomationNotificationProcessing.ImportantMostRecent, words, "DsaApkInstallResult");
+        }, System.Windows.Threading.DispatcherPriority.ContextIdle);
     }
 
     /// <summary>The app's icon at the tile's size: its image, its vector drawable, or its
@@ -365,6 +431,11 @@ public partial class InstallerWindow : FluentWindow
         else
         {
             ResultText.Text = why;
+            // The focus goes back to Launch, which was off while it tried, and a screen reader
+            // is told why the app did not open.
+            OpenButton.Focus();
+            _announced = why;
+            Announce(why);
         }
     }
 

@@ -37,6 +37,7 @@ use dsa_protocol::control::{
     VideoPacket,
 };
 use dsa_protocol::control::{GuestSharedMemory, VideoSlotReturned};
+use dsa_protocol::control::{NotificationButton, NotificationButtonClicked};
 use dsa_protocol::control::{
     PrintJob, PrintJobCancel, PrintJobChunk, PrintJobResult, PrintOutcome,
 };
@@ -629,6 +630,39 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 high_priority: true,
                 clearable: true,
                 when_millis: 1_700_000_000_000,
+                buttons: vec![],
+            })),
+        ),
+        (
+            "notification_buttons",
+            wrap(Body::Notification(GuestNotification {
+                key: CHAT_KEY.into(),
+                title: "Ann".into(),
+                buttons: vec![
+                    NotificationButton {
+                        title: "Reply".into(),
+                        reply: true,
+                        reply_label: "Reply to Ann".into(),
+                        reply_choices: vec!["Yes".into()],
+                        reply_choices_only: false,
+                        semantic_action: 1,
+                    },
+                    NotificationButton {
+                        title: "Delete".into(),
+                        semantic_action: 4,
+                        ..NotificationButton::default()
+                    },
+                ],
+                ..GuestNotification::default()
+            })),
+        ),
+        (
+            "notification_button_clicked",
+            wrap(Body::NotificationButtonClicked(NotificationButtonClicked {
+                key: CHAT_KEY.into(),
+                button: 1,
+                title: "Reply".into(),
+                reply_text: "\u{c548}\u{b155}".into(),
             })),
         ),
         (
@@ -976,6 +1010,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             wrap(Body::AccessibilityWatch(AccessibilityWatch {
                 task_id: 42,
                 on: true,
+                widget_id: 0,
             })),
         ),
         (
@@ -983,6 +1018,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             wrap(Body::AccessibilityWatch(AccessibilityWatch {
                 task_id: 42,
                 on: false,
+                widget_id: 0,
             })),
         ),
         (
@@ -1052,6 +1088,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 removed_ids: vec![],
                 focused_id: 3,
                 accessibility_focused_id: 0,
+                widget_id: 0,
             })),
         ),
         (
@@ -1101,6 +1138,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 removed_ids: vec![3],
                 focused_id: 0,
                 accessibility_focused_id: 0,
+                widget_id: 0,
             })),
         ),
         (
@@ -1173,6 +1211,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 request_id: 7,
                 done: false,
                 error: "the node is gone".into(),
+                widget_id: 0,
             })),
         ),
         (

@@ -143,4 +143,33 @@ public interface GuestNotificationOrBuilder extends
    * @return The whenMillis.
    */
   long getWhenMillis();
+
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  java.util.List<io.github.thisisthepy.dsa.control.v1.NotificationButton> 
+      getButtonsList();
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  io.github.thisisthepy.dsa.control.v1.NotificationButton getButtons(int index);
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  int getButtonsCount();
 }

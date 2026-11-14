@@ -25,7 +25,8 @@
 //! - [`service`]: the system service behind `/run/dsa/host.sock`, one session per user
 //!   (`dsa-linux-hostd`);
 //! - [`root_approval`]: the administrator prompt an Android app's root request waits for,
-//!   through polkit in the user's desktop session;
+//!   through polkit in the user's desktop session, with longer to answer while a screen
+//!   reader runs there (`screen_reader`);
 //! - [`secret_service`]: each user's backup key, kept in their Secret Service through a
 //!   helper that runs as them, and their KeyMint root key where no TPM 2.0 works;
 //! - [`tpm2`]: each user's KeyMint root key, sealed by the computer's TPM 2.0 through the
@@ -70,6 +71,8 @@ pub mod pstore;
 #[cfg(target_os = "linux")]
 pub mod renderer;
 pub mod root_approval;
+#[cfg(target_os = "linux")]
+pub mod screen_reader;
 pub mod secret_service;
 #[cfg(target_os = "linux")]
 pub mod service;

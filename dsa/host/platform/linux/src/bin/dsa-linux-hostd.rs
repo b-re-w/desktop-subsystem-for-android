@@ -27,10 +27,14 @@ fn main() -> ExitCode {
     }
 
     let args: Vec<String> = std::env::args().skip(1).collect();
-    // The service starts this program again as a user, to reach that user's Secret Service.
+    // The service starts this program again as a user, to reach that user's Secret Service,
+    // or to ask their session whether a screen reader runs.
     if let [helper] = args.as_slice() {
         if helper == dsa_host_linux::secret_service::HELPER_ARG {
             return dsa_host_linux::secret_service::helper_main();
+        }
+        if helper == dsa_host_linux::screen_reader::HELPER_ARG {
+            return dsa_host_linux::screen_reader::helper_main();
         }
     }
     let path = match args.as_slice() {

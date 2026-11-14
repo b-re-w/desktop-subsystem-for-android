@@ -44,11 +44,12 @@ fn main() -> std::process::ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let program = std::env::current_exe().unwrap_or_default();
     // Started by the service to ask the computer's administrator to approve one of the app's
-    // root requests: the UAC prompt under this program's name and icon.
+    // root requests (the UAC prompt under this program's name and icon), or to say whether a
+    // screen reader runs in this session, which gives that prompt longer.
     if let Some(code) = dsa_host_windows::root_approval::run_helper(&args, &program) {
         note(
             logger.as_deref(),
-            &format!("root approval: the prompt ended with code {code}"),
+            &format!("root approval: the helper ended with code {code}"),
         );
         return std::process::ExitCode::from(code.min(255) as u8);
     }

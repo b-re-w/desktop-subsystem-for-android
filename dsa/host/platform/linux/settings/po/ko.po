@@ -1799,3 +1799,22 @@ msgstr "DSA가 이 Android 버전용 Google 에뮬레이터 이미지를 받아,
 
 msgid "Downloading about 2 GB from Google and taking out Widevine. It takes minutes."
 msgstr "Google에서 약 2GB를 받아 Widevine을 꺼내고 있습니다. 몇 분 걸립니다."
+
+# A screen reader's name for a control repeated in every row of a list: {0} is what it
+# does (Open), {1} the row's app or widget.
+msgid "{0}, {1}"
+msgstr "{1} {0}"
+
+# A log row as a screen reader reads it: the time, the priority as a word, the tag and the
+# message.
+msgid "{0}, {1}, {2}: {3}"
+msgstr "{0}, {1}, {2}: {3}"
+
+msgid "{0} records dropped"
+msgstr "기록 {0}개가 빠졌습니다"
+
+msgid "Lowest priority shown"
+msgstr "표시할 최소 우선순위"
+
+msgid "Copied"
+msgstr "복사했습니다"

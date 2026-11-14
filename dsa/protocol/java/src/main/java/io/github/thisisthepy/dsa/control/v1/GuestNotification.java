@@ -26,6 +26,7 @@ public  final class GuestNotification extends
     title_ = "";
     text_ = "";
     iconPng_ = com.google.protobuf.ByteString.EMPTY;
+    buttons_ = emptyProtobufList();
   }
   public static final int KEY_FIELD_NUMBER = 1;
   private java.lang.String key_;
@@ -520,6 +521,155 @@ public  final class GuestNotification extends
   private void clearWhenMillis() {
     
     whenMillis_ = 0L;
+  }
+
+  public static final int BUTTONS_FIELD_NUMBER = 11;
+  private com.google.protobuf.Internal.ProtobufList<io.github.thisisthepy.dsa.control.v1.NotificationButton> buttons_;
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  @java.lang.Override
+  public java.util.List<io.github.thisisthepy.dsa.control.v1.NotificationButton> getButtonsList() {
+    return buttons_;
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  public java.util.List<? extends io.github.thisisthepy.dsa.control.v1.NotificationButtonOrBuilder> 
+      getButtonsOrBuilderList() {
+    return buttons_;
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  @java.lang.Override
+  public int getButtonsCount() {
+    return buttons_.size();
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.NotificationButton getButtons(int index) {
+    return buttons_.get(index);
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  public io.github.thisisthepy.dsa.control.v1.NotificationButtonOrBuilder getButtonsOrBuilder(
+      int index) {
+    return buttons_.get(index);
+  }
+  private void ensureButtonsIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<io.github.thisisthepy.dsa.control.v1.NotificationButton> tmp = buttons_;
+    if (!tmp.isModifiable()) {
+      buttons_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  private void setButtons(
+      int index, io.github.thisisthepy.dsa.control.v1.NotificationButton value) {
+    value.getClass();
+  ensureButtonsIsMutable();
+    buttons_.set(index, value);
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  private void addButtons(io.github.thisisthepy.dsa.control.v1.NotificationButton value) {
+    value.getClass();
+  ensureButtonsIsMutable();
+    buttons_.add(value);
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  private void addButtons(
+      int index, io.github.thisisthepy.dsa.control.v1.NotificationButton value) {
+    value.getClass();
+  ensureButtonsIsMutable();
+    buttons_.add(index, value);
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  private void addAllButtons(
+      java.lang.Iterable<? extends io.github.thisisthepy.dsa.control.v1.NotificationButton> values) {
+    ensureButtonsIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, buttons_);
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  private void clearButtons() {
+    buttons_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+   * shows them on its own notification, so a person can act from the notification centre.
+   * </pre>
+   *
+   * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+   */
+  private void removeButtons(int index) {
+    ensureButtonsIsMutable();
+    buttons_.remove(index);
   }
 
   public static io.github.thisisthepy.dsa.control.v1.GuestNotification parseFrom(
@@ -1139,6 +1289,168 @@ public  final class GuestNotification extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    @java.lang.Override
+    public java.util.List<io.github.thisisthepy.dsa.control.v1.NotificationButton> getButtonsList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getButtonsList());
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    @java.lang.Override
+    public int getButtonsCount() {
+      return instance.getButtonsCount();
+    }/**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.NotificationButton getButtons(int index) {
+      return instance.getButtons(index);
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder setButtons(
+        int index, io.github.thisisthepy.dsa.control.v1.NotificationButton value) {
+      copyOnWrite();
+      instance.setButtons(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder setButtons(
+        int index, io.github.thisisthepy.dsa.control.v1.NotificationButton.Builder builderForValue) {
+      copyOnWrite();
+      instance.setButtons(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder addButtons(io.github.thisisthepy.dsa.control.v1.NotificationButton value) {
+      copyOnWrite();
+      instance.addButtons(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder addButtons(
+        int index, io.github.thisisthepy.dsa.control.v1.NotificationButton value) {
+      copyOnWrite();
+      instance.addButtons(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder addButtons(
+        io.github.thisisthepy.dsa.control.v1.NotificationButton.Builder builderForValue) {
+      copyOnWrite();
+      instance.addButtons(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder addButtons(
+        int index, io.github.thisisthepy.dsa.control.v1.NotificationButton.Builder builderForValue) {
+      copyOnWrite();
+      instance.addButtons(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder addAllButtons(
+        java.lang.Iterable<? extends io.github.thisisthepy.dsa.control.v1.NotificationButton> values) {
+      copyOnWrite();
+      instance.addAllButtons(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder clearButtons() {
+      copyOnWrite();
+      instance.clearButtons();
+      return this;
+    }
+    /**
+     * <pre>
+     * Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+     * shows them on its own notification, so a person can act from the notification centre.
+     * </pre>
+     *
+     * <code>repeated .dsa.control.v1.NotificationButton buttons = 11;</code>
+     */
+    public Builder removeButtons(int index) {
+      copyOnWrite();
+      instance.removeButtons(index);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.GuestNotification)
   }
   @java.lang.Override
@@ -1165,10 +1477,13 @@ public  final class GuestNotification extends
             "highPriority_",
             "clearable_",
             "whenMillis_",
+            "buttons_",
+            io.github.thisisthepy.dsa.control.v1.NotificationButton.class,
           };
           java.lang.String info =
-              "\u0000\n\u0000\u0000\u0001\n\n\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0208" +
-              "\u0004\u0208\u0005\u0208\u0006\n\u0007\u0004\b\u0007\t\u0007\n\u0002";
+              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208\u0005\u0208\u0006\n\u0007\u0004\b\u0007\t\u0007\n\u0002" +
+              "\u000b\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

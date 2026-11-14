@@ -443,6 +443,47 @@ public  final class AccessibilityTree extends
     accessibilityFocusedId_ = 0;
   }
 
+  public static final int WIDGET_ID_FIELD_NUMBER = 9;
+  private int widgetId_;
+  /**
+   * <pre>
+   * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+   * are in pixels of the widget's image: (0, 0) is its top left.
+   * </pre>
+   *
+   * <code>int32 widget_id = 9;</code>
+   * @return The widgetId.
+   */
+  @java.lang.Override
+  public int getWidgetId() {
+    return widgetId_;
+  }
+  /**
+   * <pre>
+   * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+   * are in pixels of the widget's image: (0, 0) is its top left.
+   * </pre>
+   *
+   * <code>int32 widget_id = 9;</code>
+   * @param value The widgetId to set.
+   */
+  private void setWidgetId(int value) {
+    
+    widgetId_ = value;
+  }
+  /**
+   * <pre>
+   * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+   * are in pixels of the widget's image: (0, 0) is its top left.
+   * </pre>
+   *
+   * <code>int32 widget_id = 9;</code>
+   */
+  private void clearWidgetId() {
+    
+    widgetId_ = 0;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.AccessibilityTree parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -979,6 +1020,49 @@ public  final class AccessibilityTree extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+     * are in pixels of the widget's image: (0, 0) is its top left.
+     * </pre>
+     *
+     * <code>int32 widget_id = 9;</code>
+     * @return The widgetId.
+     */
+    @java.lang.Override
+    public int getWidgetId() {
+      return instance.getWidgetId();
+    }
+    /**
+     * <pre>
+     * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+     * are in pixels of the widget's image: (0, 0) is its top left.
+     * </pre>
+     *
+     * <code>int32 widget_id = 9;</code>
+     * @param value The widgetId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWidgetId(int value) {
+      copyOnWrite();
+      instance.setWidgetId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+     * are in pixels of the widget's image: (0, 0) is its top left.
+     * </pre>
+     *
+     * <code>int32 widget_id = 9;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWidgetId() {
+      copyOnWrite();
+      instance.clearWidgetId();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.AccessibilityTree)
   }
   @java.lang.Override
@@ -1004,10 +1088,11 @@ public  final class AccessibilityTree extends
             "removedIds_",
             "focusedId_",
             "accessibilityFocusedId_",
+            "widgetId_",
           };
           java.lang.String info =
-              "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0003\u0000\u0001\u0004\u0002\u000b\u0003\u0007" +
-              "\u0004+\u0005\u001b\u0006+\u0007\u000b\b\u000b";
+              "\u0000\t\u0000\u0000\u0001\t\t\u0000\u0003\u0000\u0001\u0004\u0002\u000b\u0003\u0007" +
+              "\u0004+\u0005\u001b\u0006+\u0007\u000b\b\u000b\t\u0004";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

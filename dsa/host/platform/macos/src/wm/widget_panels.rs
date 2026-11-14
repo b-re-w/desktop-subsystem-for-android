@@ -13,7 +13,7 @@
 //! left corner of the main screen, so a widget of 180 dp is 108 points wide on any screen
 //! (96 x scale dpi: a dp is 0.6 of a point).
 
-use dsa_host_core::widget_windows::desk::{Button, Key};
+use dsa_host_core::widget_windows::desk::{key_of, Button, Key};
 use dsa_host_core::widget_windows::menu::Entry;
 use dsa_host_core::widget_windows::paint::Look;
 
@@ -89,18 +89,46 @@ pub fn button(number: isize, modifiers: u64) -> Option<Button> {
     }
 }
 
-/// The key a Mac virtual key code is to a widget panel: Escape ends an edit; Return, Space and
-/// the keypad's Enter open its menu.
-pub fn key(code: u16) -> Option<Key> {
+/// `NSEventModifierFlagShift`.
+pub const FLAG_SHIFT: u64 = 1 << 17;
+/// `NSEventModifierFlagOption`: with an arrow, a step of one pixel, as Control and an arrow
+/// switch Spaces on a Mac.
+pub const FLAG_OPTION: u64 = 1 << 19;
+
+/// The key a Mac virtual key code is to a widget panel, with the event's `modifiers`: Escape
+/// ends an edit (and puts back a widget being moved with the keyboard); Return, Space, the
+/// keypad's Enter, the contextual menu key of a PC keyboard and Shift+F10 open its menu, and
+/// Return finishes a keyboard move or resize; the arrows move or resize the widget after the
+/// menu's Move or Size, by a pixel with Option held.
+pub fn key(code: u16, modifiers: u64) -> Option<Key> {
+    use dsa_host_core::widget_windows::keyboard::Key as Pressed;
     const ESCAPE: u16 = 0x35;
     const RETURN: u16 = 0x24;
     const SPACE: u16 = 0x31;
     const KEYPAD_ENTER: u16 = 0x4C;
-    match code {
-        ESCAPE => Some(Key::Escape),
-        RETURN | SPACE | KEYPAD_ENTER => Some(Key::Menu),
-        _ => None,
-    }
+    const F10: u16 = 0x6D;
+    const CONTEXTUAL_MENU: u16 = 0x6E;
+    const LEFT: u16 = 0x7B;
+    const RIGHT: u16 = 0x7C;
+    const DOWN: u16 = 0x7D;
+    const UP: u16 = 0x7E;
+    let pressed = match code {
+        ESCAPE => Pressed::Escape,
+        RETURN | KEYPAD_ENTER => Pressed::Enter,
+        SPACE => Pressed::Space,
+        CONTEXTUAL_MENU => Pressed::Menu,
+        F10 => Pressed::F10,
+        LEFT => Pressed::Left,
+        RIGHT => Pressed::Right,
+        DOWN => Pressed::Down,
+        UP => Pressed::Up,
+        _ => return None,
+    };
+    key_of(
+        pressed,
+        modifiers & FLAG_SHIFT != 0,
+        modifiers & FLAG_OPTION != 0,
+    )
 }
 
 /// How firm a trackpad press is for a force click, as `NSEvent.stage` says: 2 and more is a
@@ -174,7 +202,7 @@ pub fn menu_items(entries: &[Entry]) -> Vec<MenuItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dsa_host_core::widget_windows::menu::{entries, menu_text, REMOVE, SETTINGS};
+    use dsa_host_core::widget_windows::menu::{entries, menu_text, MOVE, REMOVE, SETTINGS, SIZE};
     use dsa_host_core::widgets::{Placement, WidgetProvider};
 
     #[test]
@@ -225,10 +253,10 @@ mod tests {
         assert_eq!(button(0, FLAG_CONTROL), Some(Button::Secondary));
         assert_eq!(button(1, 0), Some(Button::Secondary));
         assert_eq!(button(2, 0), None);
-        assert_eq!(key(0x35), Some(Key::Escape));
-        assert_eq!(key(0x24), Some(Key::Menu));
-        assert_eq!(key(0x31), Some(Key::Menu));
-        assert_eq!(key(0x00), None);
+        assert_eq!(key(0x35, 0), Some(Key::Escape));
+        assert_eq!(key(0x24, 0), Some(Key::Enter));
+        assert_eq!(key(0x31, 0), Some(Key::Menu));
+        assert_eq!(key(0x00, 0), None);
         assert!(!force_click(1));
         assert!(force_click(2));
         assert_eq!(look(true, 0).accent, DEFAULT_ACCENT);
@@ -274,14 +302,77 @@ mod tests {
         assert!(sizes
             .iter()
             .any(|size| matches!(size, MenuItem::Item { checked: true, .. })));
-        assert_eq!(items[2], MenuItem::Separator);
-        assert!(matches!(&items[3], MenuItem::Item { tag, .. } if *tag == REMOVE as isize));
+        assert!(matches!(&items[2], MenuItem::Item { tag, .. } if *tag == MOVE as isize));
+        assert!(matches!(&items[3], MenuItem::Item { tag, .. } if *tag == SIZE as isize));
+        assert_eq!(items[4], MenuItem::Separator);
+        assert!(matches!(&items[5], MenuItem::Item { tag, .. } if *tag == REMOVE as isize));
         // Without a setup to open again, the menu starts with Resize.
         let plain = WidgetProvider {
             reconfigurable: false,
             ..provider
         };
         let items = menu_items(&entries(&menu_text(true), &plain, &placement));
-        assert!(matches!(&items[0], MenuItem::Submenu { title, .. } if title == "크기 조정"));
+        assert!(matches!(&items[0], MenuItem::Submenu { title, .. } if title == "크기 선택"));
+    }
+
+    #[test]
+    fn fr18_shift_f10_and_menu_key_open_the_widget_menu() {
+        use dsa_host_core::widget_windows::desk::Arrow;
+        // The contextual menu key of a PC keyboard and Shift+F10 open the menu.
+        assert_eq!(key(0x6E, 0), Some(Key::Menu));
+        assert_eq!(key(0x6D, FLAG_SHIFT), Some(Key::Menu));
+        assert_eq!(key(0x6D, 0), None);
+        // The arrows step a keyboard move or resize, by a pixel with Option held.
+        assert_eq!(
+            key(0x7B, 0),
+            Some(Key::Arrow {
+                arrow: Arrow::Left,
+                fine: false
+            })
+        );
+        assert_eq!(
+            key(0x7E, FLAG_OPTION),
+            Some(Key::Arrow {
+                arrow: Arrow::Up,
+                fine: true
+            })
+        );
+    }
+
+    #[test]
+    fn fr18_widget_menu_lists_move_and_size_in_both_languages() {
+        let provider = WidgetProvider {
+            provider: "com.example.clock/.ClockWidget".into(),
+            default_width_dp: 180,
+            default_height_dp: 110,
+            resize_mode: 3,
+            ..WidgetProvider::default()
+        };
+        let placement = Placement {
+            x: 0,
+            y: 0,
+            width_dp: 180,
+            height_dp: 110,
+            resized: false,
+        };
+        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
+            let items = menu_items(&entries(&menu_text(korean), &provider, &placement));
+            assert_eq!(
+                items[1],
+                MenuItem::Item {
+                    title: words[0].into(),
+                    tag: MOVE as isize,
+                    checked: false
+                }
+            );
+            assert_eq!(
+                items[2],
+                MenuItem::Item {
+                    title: words[1].into(),
+                    tag: SIZE as isize,
+                    checked: false
+                }
+            );
+        }
     }
 }

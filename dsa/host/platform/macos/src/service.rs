@@ -597,12 +597,17 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
         crate::root_approval::SecurityAuthorization,
         shared.user.boot_dir().join("prompt-icons"),
     ));
-    session.set_root_approval(Arc::new(RootApproval::new(
-        name,
-        Arc::clone(&shared.settings),
-        prompt,
-        dsa_host_core::root_approval::service_log(),
-    )));
+    // While VoiceOver runs the dialog has longer to be answered, as hearing it read out takes
+    // longer than reading it.
+    session.set_root_approval(Arc::new(
+        RootApproval::new(
+            name,
+            Arc::clone(&shared.settings),
+            prompt,
+            dsa_host_core::root_approval::service_log(),
+        )
+        .with_screen_reader(Arc::new(crate::root_approval::voice_over_running)),
+    ));
     let session = Arc::new(session);
     // The guest's battery follows the Mac's, and its data is on disk before the Mac sleeps.
     shared.power.attach(&session);

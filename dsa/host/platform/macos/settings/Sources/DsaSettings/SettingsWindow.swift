@@ -117,6 +117,7 @@ struct SettingsWindow: View {
             .navigationSplitViewColumnWidth(min: 224, ideal: 224, max: 300)
         } detail: {
             VStack(spacing: 0) {
+                PageHeading(text: T((page ?? .general).titleKey))
                 InstallBar(install: model.install)
                 detail
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -210,6 +211,7 @@ struct InstallBar: View {
                 Spacer(minLength: 0)
                 if install.isBusy {
                     ProgressView().controlSize(.small)
+                        .accessibilityLabel(install.title)
                 } else {
                     Button {
                         install.isOpen = false
@@ -217,7 +219,8 @@ struct InstallBar: View {
                         Image(systemName: "xmark.circle.fill")
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel(T("CancelButton"))
+                    .help(T("A11y_Close"))
+                    .accessibilityLabel(T("A11y_Close"))
                 }
             }
             .padding(12)

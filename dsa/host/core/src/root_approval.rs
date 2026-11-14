@@ -8,10 +8,14 @@
 //! ([`ApprovalPrompt`]: UAC on Windows, Authorization Services on macOS, polkit on Linux). An
 //! approval starts the app's grace, so the app's next su call within it is not asked again.
 //!
-//! The prompt has [`PROMPT_TIMEOUT`] to answer, shorter than su's own limit, so the host's
-//! "timed out" reaches su. It runs on a thread of its own: past its time the request has timed
-//! out, the prompt is withdrawn where the platform can withdraw it, and its late answer is
-//! ignored. A prompt that panics is a refusal, not a crash. Prompts go one at a time, so a
+//! The prompt has [`PROMPT_TIMEOUT`] to answer, or [`SCREEN_READER_PROMPT_TIMEOUT`] while a
+//! screen reader runs ([`prompt_timeout`]): hearing the prompt's words and buttons read out and
+//! choosing one takes longer than reading them. Both are shorter than su's own limit, so the
+//! host's "timed out" reaches su. Whether a screen reader runs is asked of the platform
+//! ([`ScreenReader`]) each time a prompt is about to open, not once at start, as one may be
+//! started or stopped at any time. The prompt runs on a thread of its own: past its time the
+//! request has timed out, the prompt is withdrawn where the platform can withdraw it, and its
+//! late answer is ignored. A prompt that panics is a refusal, not a crash. Prompts go one at a time, so a
 //! second call from an app waits for the first to be answered and is then approved within the
 //! grace that answer started.
 //!
@@ -64,6 +68,27 @@ const FOLDER_POLL: Duration = Duration::from_millis(25);
 /// [`ANSWER_TIMEOUT`](crate::root_elevation::ANSWER_TIMEOUT), so the host's "timed out"
 /// reaches su (and the log) before su gives up on its own.
 pub const PROMPT_TIMEOUT: Duration = Duration::from_secs(55);
+
+/// How long the prompt may stay open while a screen reader runs. A person who hears the prompt
+/// rather than sees it listens to the app's name, the command and each button in turn before
+/// choosing, and may go back over them, which takes far longer than a glance. Still shorter
+/// than the guest's [`ANSWER_TIMEOUT`](crate::root_elevation::ANSWER_TIMEOUT), so su hears the
+/// host's "timed out" rather than giving up first.
+pub const SCREEN_READER_PROMPT_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+
+/// How long the prompt may stay open, by whether a screen reader runs as it opens.
+pub fn prompt_timeout(screen_reader: bool) -> Duration {
+    if screen_reader {
+        SCREEN_READER_PROMPT_TIMEOUT
+    } else {
+        PROMPT_TIMEOUT
+    }
+}
+
+/// Says whether a screen reader runs in the session the prompt opens in. The platform answers
+/// it (each host OS keeps the flag its own way); a platform that cannot tell says no, which
+/// leaves the prompt its default time.
+pub type ScreenReader = Arc<dyn Fn() -> bool + Send + Sync>;
 
 /// How often a request that waits for another prompt to close looks again.
 const TURN_POLL: Duration = Duration::from_millis(50);
@@ -775,7 +800,10 @@ pub struct RootApproval {
     levels: LevelSource,
     prompt: Arc<dyn ApprovalPrompt>,
     log: LogLine,
-    timeout: Duration,
+    /// A fixed time for every prompt, which tests set; `None` picks it by [`prompt_timeout`].
+    timeout: Option<Duration>,
+    /// Whether a screen reader runs, asked as each prompt is about to open.
+    screen_reader: Option<ScreenReader>,
     boot: Mutex<BootPolicy>,
     /// Held while a prompt is open, so the user sees one prompt at a time and a second call
     /// from the same app finds the grace the first one's approval started.
@@ -807,7 +835,8 @@ impl RootApproval {
             levels,
             prompt,
             log,
-            timeout: PROMPT_TIMEOUT,
+            timeout: None,
+            screen_reader: None,
             boot: Mutex::new(BootPolicy {
                 booted_enabled: false,
                 policy: Policy::new(),
@@ -818,10 +847,32 @@ impl RootApproval {
         approval
     }
 
-    /// Gives the prompt `timeout` instead of [`PROMPT_TIMEOUT`].
+    /// Gives every prompt `timeout`, whether or not a screen reader runs, instead of the time
+    /// [`prompt_timeout`] picks.
     pub fn with_timeout(mut self, timeout: Duration) -> RootApproval {
-        self.timeout = timeout;
+        self.timeout = Some(timeout);
         self
+    }
+
+    /// Asks `screen_reader` whether a screen reader runs each time a prompt is about to open,
+    /// and gives the prompt [`SCREEN_READER_PROMPT_TIMEOUT`] while one does. Without it, every
+    /// prompt has [`PROMPT_TIMEOUT`].
+    pub fn with_screen_reader(mut self, screen_reader: ScreenReader) -> RootApproval {
+        self.screen_reader = Some(screen_reader);
+        self
+    }
+
+    /// The time the prompt about to open has: the fixed one, or the one for whether a screen
+    /// reader runs now. A screen reader check that panics counts as none running, so the prompt
+    /// still opens with its default time.
+    fn prompt_time(&self) -> Duration {
+        if let Some(fixed) = self.timeout {
+            return fixed;
+        }
+        let running = self.screen_reader.as_ref().is_some_and(|check| {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check())).unwrap_or(false)
+        });
+        prompt_timeout(running)
     }
 
     /// Writes each decision with `log` instead.
@@ -947,7 +998,7 @@ impl RootApproval {
     /// Answers one su request: by the policy, and by the administrator prompt when the policy
     /// asks for one. Writes one line with the decision to the log.
     pub fn answer(&self, request: &ApprovalRequest) -> control::SuDecision {
-        let deadline = Instant::now() + self.timeout;
+        let asked = Instant::now();
         let package = request.package();
         let (decision, level) = self.decide_now(package);
         let result = match decision {
@@ -956,7 +1007,12 @@ impl RootApproval {
                 "refused: the app may not use root".to_string(),
             )),
             Decision::ApproveWithoutPrompt => Ok(self.approve_without_prompt(package, level)),
-            Decision::PromptHost => self.prompt(request, deadline),
+            // The prompt's time counts from when su asked, so a call that waited for another
+            // prompt to close still has its answer before su's own limit.
+            Decision::PromptHost => {
+                let timeout = self.prompt_time();
+                self.prompt(request, asked + timeout, timeout)
+            }
         };
         let (approved, reason, how) = match result {
             Ok(how) => (true, String::new(), how),
@@ -988,11 +1044,12 @@ impl RootApproval {
         &self,
         request: &ApprovalRequest,
         deadline: Instant,
+        timeout: Duration,
     ) -> Result<String, (String, String)> {
         let package = request.package();
         let timed_out = || {
             let outcome = Outcome::TimedOut;
-            (outcome.reason(), outcome.how(self.timeout))
+            (outcome.reason(), outcome.how(timeout))
         };
         let Some(_turn) = self.wait_for_turn(deadline) else {
             return Err(timed_out());
@@ -1016,7 +1073,7 @@ impl RootApproval {
         }
         let outcome = ask_admin(&self.prompt, request, left);
         if outcome != Outcome::Approved {
-            return Err((outcome.reason(), outcome.how(self.timeout)));
+            return Err((outcome.reason(), outcome.how(timeout)));
         }
         // The feature or the level may have changed while the prompt was open.
         if self.decide_now(package).0 == Decision::Deny {
@@ -1026,7 +1083,7 @@ impl RootApproval {
             ));
         }
         self.record_approval(package);
-        Ok(outcome.how(self.timeout))
+        Ok(outcome.how(timeout))
     }
 
     /// The prompt's turn, or `None` when `deadline` passes first.
@@ -1054,7 +1111,9 @@ impl RootApproval {
     /// [`Self::approve_keep_root`] for a request made with [`ApprovalRequest::keep_root`],
     /// which may carry the language the prompt speaks.
     pub fn approve_keep_root_request(&self, request: ApprovalRequest) -> Result<(), String> {
-        let deadline = Instant::now() + self.timeout;
+        let asked = Instant::now();
+        let timeout = self.prompt_time();
+        let deadline = asked + timeout;
         let outcome = match self.wait_for_turn(deadline) {
             None => Outcome::TimedOut,
             Some(_turn) => {
@@ -1066,7 +1125,7 @@ impl RootApproval {
                 }
             }
         };
-        self.write(&request, &outcome.how(self.timeout));
+        self.write(&request, &outcome.how(timeout));
         match outcome {
             Outcome::Approved => Ok(()),
             other => Err(other.reason()),
@@ -1107,6 +1166,8 @@ mod tests {
         asked: AtomicUsize,
         withdrawn: AtomicUsize,
         seen: Mutex<Vec<ApprovalRequest>>,
+        /// The time each prompt was given.
+        timeouts: Mutex<Vec<Duration>>,
     }
 
     impl FakePrompt {
@@ -1120,14 +1181,16 @@ mod tests {
                 asked: AtomicUsize::new(0),
                 withdrawn: AtomicUsize::new(0),
                 seen: Mutex::new(Vec::new()),
+                timeouts: Mutex::new(Vec::new()),
             })
         }
     }
 
     impl ApprovalPrompt for FakePrompt {
-        fn ask(&self, request: &ApprovalRequest, _timeout: Duration) -> PromptAnswer {
+        fn ask(&self, request: &ApprovalRequest, timeout: Duration) -> PromptAnswer {
             self.asked.fetch_add(1, Ordering::SeqCst);
             self.seen.lock().unwrap().push(request.clone());
+            self.timeouts.lock().unwrap().push(timeout);
             thread::sleep(self.delay);
             self.answer.clone()
         }
@@ -1675,5 +1738,101 @@ mod tests {
         assert_eq!(denied, PromptAnswer::Denied);
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fr18_prompt_waits_longer_while_a_screen_reader_runs() {
+        assert_eq!(prompt_timeout(false), PROMPT_TIMEOUT);
+        assert_eq!(prompt_timeout(true), SCREEN_READER_PROMPT_TIMEOUT);
+        assert!(SCREEN_READER_PROMPT_TIMEOUT > PROMPT_TIMEOUT);
+
+        // The screen reader is asked about as each prompt opens, so one started after DSA
+        // started still gets the longer time, and one stopped gives the default back.
+        let running = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let asked = Arc::new(AtomicUsize::new(0));
+        let (flag, count) = (Arc::clone(&running), Arc::clone(&asked));
+        let fake = FakePrompt::new(PromptAnswer::Denied);
+        let root = elevation(fake.clone(), levels(true, &[("com.ask.app", Level::Ask)]))
+            .with_screen_reader(Arc::new(move || {
+                count.fetch_add(1, Ordering::SeqCst);
+                flag.load(Ordering::SeqCst)
+            }));
+        let _ = root.answer(&request("com.ask.app"));
+        running.store(true, Ordering::SeqCst);
+        let _ = root.answer(&request("com.ask.app"));
+        assert!(root.approve_keep_root(request("com.ask.app").app).is_err());
+        running.store(false, Ordering::SeqCst);
+        let _ = root.answer(&request("com.ask.app"));
+        let timeouts = fake.timeouts.lock().unwrap().clone();
+        assert_eq!(timeouts.len(), 4);
+        assert!(timeouts[0] <= PROMPT_TIMEOUT);
+        assert!(timeouts[1] > PROMPT_TIMEOUT && timeouts[1] <= SCREEN_READER_PROMPT_TIMEOUT);
+        assert!(timeouts[2] > PROMPT_TIMEOUT && timeouts[2] <= SCREEN_READER_PROMPT_TIMEOUT);
+        assert!(timeouts[3] <= PROMPT_TIMEOUT);
+        assert_eq!(asked.load(Ordering::SeqCst), 4);
+
+        // A call the policy answers without a prompt does not ask about a screen reader, which
+        // on some hosts means starting a process in the user's session.
+        let asked = Arc::new(AtomicUsize::new(0));
+        let count = Arc::clone(&asked);
+        let root = elevation(
+            FakePrompt::new(PromptAnswer::Approved),
+            levels(true, &[("com.keep.app", Level::Remember)]),
+        )
+        .with_screen_reader(Arc::new(move || {
+            count.fetch_add(1, Ordering::SeqCst);
+            true
+        }));
+        assert!(root.answer(&request("com.keep.app")).approved);
+        assert!(!root.answer(&request("com.off.app")).approved);
+        assert_eq!(asked.load(Ordering::SeqCst), 0);
+
+        // A check that breaks leaves the prompt its default time rather than failing it.
+        let fake = FakePrompt::new(PromptAnswer::Approved);
+        let root = elevation(fake.clone(), levels(true, &[("com.ask.app", Level::Ask)]))
+            .with_screen_reader(Arc::new(|| -> bool {
+                panic!("the screen reader check broke")
+            }));
+        assert!(root.answer(&request("com.ask.app")).approved);
+        assert!(fake.timeouts.lock().unwrap()[0] <= PROMPT_TIMEOUT);
+    }
+
+    #[test]
+    fn fr18_host_timeout_still_reaches_su_first() {
+        use crate::root_elevation::ANSWER_TIMEOUT;
+        // Whichever time the prompt has, the host answers "timed out" before su stops waiting,
+        // with room for the answer to cross to the guest.
+        for screen_reader in [false, true] {
+            let prompt = prompt_timeout(screen_reader);
+            assert!(
+                prompt + Duration::from_secs(5) <= ANSWER_TIMEOUT,
+                "a prompt of {prompt:?} leaves su's {ANSWER_TIMEOUT:?} no room"
+            );
+        }
+    }
+
+    #[test]
+    fn fr18_su_waits_past_the_longer_prompt() {
+        // With a screen reader, a prompt nobody answers ends in the host's own "timed out",
+        // which names the longer time, and that time is within what su waits.
+        let fake = FakePrompt::new(PromptAnswer::TimedOut);
+        let (log, lines) = logged();
+        let root = elevation(fake.clone(), levels(true, &[("com.ask.app", Level::Ask)]))
+            .with_screen_reader(Arc::new(|| true))
+            .with_log(log);
+        let decision = root.answer(&request("com.ask.app"));
+        assert!(!decision.approved);
+        assert_eq!(decision.reason, DecisionDenied::TimedOut.describe());
+        let given = fake.timeouts.lock().unwrap()[0];
+        assert!(given > PROMPT_TIMEOUT);
+        assert!(given < crate::root_elevation::ANSWER_TIMEOUT);
+        let line = lines.lock().unwrap()[0].clone();
+        assert!(
+            line.contains(&format!(
+                "within {} seconds",
+                SCREEN_READER_PROMPT_TIMEOUT.as_secs()
+            )),
+            "{line}"
+        );
     }
 }

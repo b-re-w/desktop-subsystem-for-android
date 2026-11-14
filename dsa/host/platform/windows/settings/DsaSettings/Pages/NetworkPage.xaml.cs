@@ -55,6 +55,8 @@ public partial class NetworkPage : Page
         {
             return;
         }
+        // The check mark is only seen; a screen reader says it in words.
+        Announce.Say(AdbCopyButton, App.Text.Get("A11y_Copied"));
         AdbCopyButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Checkmark24 };
         await System.Threading.Tasks.Task.Delay(1500);
         AdbCopyButton.Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Copy24 };

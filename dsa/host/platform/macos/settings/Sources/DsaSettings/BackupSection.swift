@@ -11,7 +11,7 @@ struct BackupSection: View {
     @State private var keyDraft = ""
 
     var body: some View {
-        Section(T("BackupHeader.Text")) {
+        Section(heading: T("BackupHeader.Text")) {
             SwitchRow(title: T("BackupSwitch.Header"), detail: vm.switchDetail, isOn: vm.enabled,
                       enabled: vm.canSwitch) { on in
                 await switchBackup(on)
@@ -25,6 +25,7 @@ struct BackupSection: View {
             if let progress = vm.progressText {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
+                        .accessibilityLabel(progress)
                     Note(text: progress)
                 }
             }
@@ -121,7 +122,7 @@ struct RecoveryKeySheet: View {
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                CopyButton(text: key)
+                CopyButton(text: key, item: T("BackupKeySheet.Title"))
             }
             .padding(12)
             .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
@@ -159,6 +160,7 @@ struct ImportKeySheet: View {
             HStack {
                 if vm.isImportingKey {
                     ProgressView().controlSize(.small)
+                        .accessibilityLabel(T("BackupImportSheet.Title"))
                 }
                 Spacer()
                 Button(T("CancelButton"), action: close)

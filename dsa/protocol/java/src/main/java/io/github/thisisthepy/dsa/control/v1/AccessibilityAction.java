@@ -426,6 +426,44 @@ public  final class AccessibilityAction extends
     column_ = 0;
   }
 
+  public static final int WIDGET_ID_FIELD_NUMBER = 12;
+  private int widgetId_;
+  /**
+   * <pre>
+   * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+   * </pre>
+   *
+   * <code>int32 widget_id = 12;</code>
+   * @return The widgetId.
+   */
+  @java.lang.Override
+  public int getWidgetId() {
+    return widgetId_;
+  }
+  /**
+   * <pre>
+   * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+   * </pre>
+   *
+   * <code>int32 widget_id = 12;</code>
+   * @param value The widgetId to set.
+   */
+  private void setWidgetId(int value) {
+    
+    widgetId_ = value;
+  }
+  /**
+   * <pre>
+   * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+   * </pre>
+   *
+   * <code>int32 widget_id = 12;</code>
+   */
+  private void clearWidgetId() {
+    
+    widgetId_ = 0;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.AccessibilityAction parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -957,6 +995,46 @@ public  final class AccessibilityAction extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+     * </pre>
+     *
+     * <code>int32 widget_id = 12;</code>
+     * @return The widgetId.
+     */
+    @java.lang.Override
+    public int getWidgetId() {
+      return instance.getWidgetId();
+    }
+    /**
+     * <pre>
+     * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+     * </pre>
+     *
+     * <code>int32 widget_id = 12;</code>
+     * @param value The widgetId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWidgetId(int value) {
+      copyOnWrite();
+      instance.setWidgetId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+     * </pre>
+     *
+     * <code>int32 widget_id = 12;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWidgetId() {
+      copyOnWrite();
+      instance.clearWidgetId();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.AccessibilityAction)
   }
   @java.lang.Override
@@ -984,11 +1062,12 @@ public  final class AccessibilityAction extends
             "progress_",
             "row_",
             "column_",
+            "widgetId_",
           };
           java.lang.String info =
-              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001\u0004\u0002\u000b" +
-              "\u0003\u000b\u0004\f\u0005\u0208\u0006\u000b\u0007\u0004\b\u0004\t\u0001\n\u0004" +
-              "\u000b\u0004";
+              "\u0000\f\u0000\u0000\u0001\f\f\u0000\u0000\u0000\u0001\u0004\u0002\u000b\u0003\u000b" +
+              "\u0004\f\u0005\u0208\u0006\u000b\u0007\u0004\b\u0004\t\u0001\n\u0004\u000b\u0004" +
+              "\f\u0004";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
