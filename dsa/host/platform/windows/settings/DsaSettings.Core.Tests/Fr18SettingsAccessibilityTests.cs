@@ -286,8 +286,7 @@ public class Fr18SettingsAccessibilityTests
     }
 
     [Theory]
-    [InlineData("Strings.resx")]
-    [InlineData("Strings.ko.resx")]
+    [MemberData(nameof(StringTables.Files), MemberType = typeof(StringTables))]
     public void Fr18_a_row_control_name_says_what_it_does_and_whose_it_is(string file)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;

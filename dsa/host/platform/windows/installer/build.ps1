@@ -308,8 +308,13 @@ try {
     $msiExt = if (Test-Path $utilDll) { @("-ext", $utilDll) } else { @("-ext", "WixToolset.Util.wixext") }
     # The package's own tables are English (the machine's package, one language); every word
     # Windows shows each user afterwards is an indirect string into dsa-app-window.exe, in
-    # that user's display language. dsa.ko-kr.wxl holds the same strings for -culture ko-KR.
-    $loc = @("-culture", "en-US", "-loc", "dsa.en-us.wxl", "-loc", "dsa.ko-kr.wxl")
+    # that user's display language. dsa.<culture>.wxl holds the same strings in each of the
+    # other interface languages, for a package built with that -culture.
+    $loc = @("-culture", "en-US", "-loc", "dsa.en-us.wxl")
+    foreach ($wxl in @("dsa.ko-kr.wxl", "dsa.ja-jp.wxl", "dsa.zh-cn.wxl", "dsa.zh-tw.wxl", "dsa.es-es.wxl", "dsa.fr-fr.wxl",
+            "dsa.de-de.wxl", "dsa.pt-br.wxl", "dsa.ru-ru.wxl", "dsa.it-it.wxl", "dsa.vi-vn.wxl", "dsa.id-id.wxl", "dsa.tr-tr.wxl")) {
+        $loc += @("-loc", $wxl)
+    }
     wix build -arch $Arch @msiExt @defines @loc dsa.wxs -o $msi
     if ($LASTEXITCODE -ne 0) { throw "building the package failed" }
     $bundleDefines = @("-d", "Arch=$Arch", "-d", "Version=$packageVersion", "-d", "ProductName=$productName", "-d", "MsiPath=$msi", "-d", "SetupUiDir=$setupUi")
