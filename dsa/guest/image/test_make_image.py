@@ -3209,6 +3209,7 @@ class GuestMemoryTests(unittest.TestCase):
             + make_image.DNS_PROPERTY_CONTEXT + "\n"
             + make_image.HOST_MEMORY_PROPERTY_CONTEXT + "\n"
             + make_image.VIDEO_PICTURES_PROPERTY_CONTEXT + "\n"
+            + make_image.GRAPHICS_MEMORY_PROPERTY_CONTEXT + "\n"
             + "".join(context + "\n" for context in make_image.GAPPS_COMPILE_PROPERTY_CONTEXTS.values())
             + "".join(context + "\n" for context in make_image.APP_MEMORY_PROPERTY_CONTEXTS.values())
         )
@@ -9013,6 +9014,32 @@ class SharedPictureMemoryTests(unittest.TestCase):
         for codec2 in (False, True):
             contexts = make_image.update_vendor_file_contexts("", codec2=codec2).splitlines()
             self.assertIn(make_image.VIDEO_PICTURES_DEVICE_CONTEXT, contexts)
+
+    def test_pr7_init_hands_the_kernel_where_the_graphics_memory_is(self):
+        self.assertIn(
+            "on property:vendor.dsa.graphics_memory=*\n"
+            "    write /sys/module/dsa_graphics_memory/parameters/graphics_memory "
+            "${vendor.dsa.graphics_memory}\n",
+            self.RC.replace("\r\n", "\n"),
+        )
+        self.assertIn(make_image.GRAPHICS_MEMORY_PROPERTY_CONTEXT,
+                      make_image.update_vendor_property_contexts("").splitlines())
+        self.assertEqual(make_image.GRAPHICS_MEMORY_PROPERTY, "vendor.dsa.graphics_memory")
+        self.assertIn('(genfscon sysfs "/module/dsa_graphics_memory" (u object_r dsa_sysfs_shared_memory '
+                      '((s0) (s0))))', self.MEMORY)
+        policy = self.MEMORY + self.CHANNELD + self.CODEC2
+        setters = re.findall(r"\(allow\s+(\S+)\s+dsa_graphics_memory_prop\s+\(\s*property_service\s+\([^)]*\bset\b",
+                             policy)
+        self.assertEqual(setters, ["dsa_channeld"])
+
+    def test_pr7_every_gpu_user_opens_the_graphics_memory_device(self):
+        # Labelled as the GPU is: whoever may draw with the GPU maps its own grants; the driver
+        # keeps each to the keys the host gave it.
+        self.assertEqual(make_image.GRAPHICS_MEMORY_DEVICE_CONTEXT,
+                         "/dev/dsa_graphics_memory u:object_r:gpu_device:s0")
+        self.assertIn(make_image.GRAPHICS_MEMORY_DEVICE_CONTEXT,
+                      make_image.update_vendor_file_contexts("").splitlines())
+        self.assertIn("    chmod 0666 /dev/dsa_graphics_memory\n", self.RC.replace("\r\n", "\n"))
 
 
 if __name__ == "__main__":

@@ -392,6 +392,26 @@ pub struct NativeBackend {
     fn_device_generation: Option<unsafe extern "C" fn() -> u64>,
     /// Absent from a backend built before it made a lost device again on a thread of its own.
     fn_device_losses: Option<unsafe extern "C" fn() -> u64>,
+    /// Absent from a backend built before it shared graphics memory with the guest: every
+    /// host-visible byte then goes through the stream.
+    fn_set_shared_graphics_memory: Option<SetSharedGraphicsMemoryFn>,
+    /// The renderer's views of the graphics memory the VM shares, and the boot's id they were
+    /// handed over with (see `crate::graphics_region`).
+    shared_graphics: Mutex<SharedGraphics>,
+}
+
+/// `dsa_gfx_set_shared_graphics_memory`.
+type SetSharedGraphicsMemoryFn = unsafe extern "C" fn(*mut u8, u64, *mut u8, u64) -> c_int;
+
+/// What the renderer holds of the graphics memory the VM shares.
+#[derive(Default)]
+struct SharedGraphics {
+    views: Option<crate::graphics_region::RendererGraphicsMemory>,
+    region_id: Option<u64>,
+    /// Views of the boots before, kept mapped (see `share_graphics_memory`).
+    retired: Vec<crate::graphics_region::RendererGraphicsMemory>,
+    /// The last reason it is not shared, said once until it changes.
+    said: Option<String>,
 }
 
 // SAFETY: HMODULE is owned and accessed across threads safely through the loaded function pointers.
@@ -457,6 +477,8 @@ impl NativeBackend {
             let fn_device_generation =
                 Self::get_symbol(handle, b"dsa_gfx_device_generation\0").ok();
             let fn_device_losses = Self::get_symbol(handle, b"dsa_gfx_device_losses\0").ok();
+            let fn_set_shared_graphics_memory: Option<SetSharedGraphicsMemoryFn> =
+                Self::get_symbol(handle, b"dsa_gfx_set_shared_graphics_memory\0").ok();
 
             // Before the start, so what the start says reaches the log too.
             let set_log: Option<unsafe extern "C" fn(Option<LogFn>, *mut c_void)> =
@@ -490,27 +512,105 @@ impl NativeBackend {
                 return Err(format!("dsa_gfx_init failed with code {ret}"));
             }
 
-            Ok((
-                NativeBackend {
-                    handle,
-                    fn_init,
-                    fn_teardown,
-                    fn_serve_stream,
-                    fn_process_pipe,
-                    fn_on_process_create,
-                    fn_on_process_destroy,
-                    fn_set_display_callbacks,
-                    fn_get_adapter_luid,
-                    fn_get_gpu_info,
-                    fn_forget_display,
-                    fn_get_memory_stats,
-                    fn_get_memory_owners,
-                    fn_simulate_device_loss,
-                    fn_device_generation,
-                    fn_device_losses,
-                },
-                note,
-            ))
+            let backend = NativeBackend {
+                handle,
+                fn_init,
+                fn_teardown,
+                fn_serve_stream,
+                fn_process_pipe,
+                fn_on_process_create,
+                fn_on_process_destroy,
+                fn_set_display_callbacks,
+                fn_get_adapter_luid,
+                fn_get_gpu_info,
+                fn_forget_display,
+                fn_get_memory_stats,
+                fn_get_memory_owners,
+                fn_simulate_device_loss,
+                fn_device_generation,
+                fn_device_losses,
+                fn_set_shared_graphics_memory,
+                shared_graphics: Mutex::new(SharedGraphics::default()),
+            };
+            backend.share_graphics_memory();
+            Ok((backend, note))
+        }
+    }
+
+    /// Hands the renderer the graphics memory the VM shares, when the service made it and it is
+    /// not the one already handed over: at the start, and as each guest process starts, since
+    /// the renderer may start before the VM and outlive a boot (each boot's table has a new id).
+    /// Why it is not shared is logged once until the reason changes.
+    fn share_graphics_memory(&self) {
+        let Some(set) = self.fn_set_shared_graphics_memory else {
+            return;
+        };
+        let mut shared = self
+            .shared_graphics
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let current = shared.views.as_ref().and_then(|views| views.region_id());
+        if current.is_some() && current == shared.region_id {
+            return;
+        }
+        let opened = crate::account::current_user_sid()
+            .map_err(|e| format!("this user's SID is unknown ({e})"))
+            .and_then(|sid| {
+                crate::graphics_region::RendererGraphicsMemory::open(&sid)
+                    .map_err(|e| format!("the service made no graphics memory for this VM ({e})"))
+            });
+        let views = match opened {
+            Ok(views) => views,
+            Err(why) => {
+                if shared.said.as_deref() != Some(why.as_str()) {
+                    super::log::renderer_log(
+                        b'W',
+                        &format!(
+                            "graphics memory: host-visible memory goes through the stream: {why}"
+                        ),
+                    );
+                    shared.said = Some(why);
+                }
+                return;
+            }
+        };
+        use dsa_host_core::video_slots::SharedRegion;
+        let region_id = views.region_id();
+        // SAFETY: both views stay mapped while `shared` holds them, and they are handed over
+        // again (or taken back) before they go.
+        let code = unsafe {
+            set(
+                views.data.as_ptr(),
+                views.data.len() as u64,
+                views.grants.as_ptr(),
+                views.grants.len() as u64,
+            )
+        };
+        if code != 0 {
+            let why = format!("the renderer refused the memory the service shares ({code})");
+            if shared.said.as_deref() != Some(why.as_str()) {
+                super::log::renderer_log(
+                    b'W',
+                    &format!("graphics memory: host-visible memory goes through the stream: {why}"),
+                );
+                shared.said = Some(why);
+            }
+            return;
+        }
+        super::log::renderer_log(
+            b'W',
+            &format!(
+                "graphics memory: {} MiB shared with the guest; host-visible memory goes there \
+                 where the driver takes it, and is copied through the stream elsewhere",
+                views.data.len() >> 20
+            ),
+        );
+        shared.said = None;
+        shared.region_id = region_id;
+        // The views handed over before stay mapped: Vulkan memory the renderer imported from
+        // them may outlive the boot by the moment its guest process takes to be cleaned up.
+        if let Some(old) = shared.views.replace(views) {
+            shared.retired.push(old);
         }
     }
 
@@ -591,6 +691,9 @@ impl GfxBackend for NativeBackend {
         write_cb: StreamWriteFn,
         user_data: *mut c_void,
     ) -> Result<(), String> {
+        // A guest process is starting: the VM, and so its graphics memory, may be newer than
+        // what the renderer was handed.
+        self.share_graphics_memory();
         let ret = (self.fn_process_pipe)(read_cb, write_cb, user_data);
         if ret == 0 {
             Ok(())

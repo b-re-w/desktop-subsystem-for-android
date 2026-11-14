@@ -92,6 +92,12 @@ mkdir -p "$out"
     "$here/color_buffer_tiling_test.cpp" -o "$out/color_buffer_tiling_test"
 "$out/color_buffer_tiling_test"
 
+# The graphics memory the host shares with the guest: the renderer's grants and the guest
+# kernel's side of them, over a fake region (patch 0037, guest/mesa 0015).
+"$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -pthread -I"$here/../include" \
+    "$here/graphics_memory_test.cpp" -o "$out/graphics_memory_test"
+"$out/graphics_memory_test"
+
 # The upstream headers are not ours to warn about.
 upstream=(
     -isystem "$scratch/gfxstream/guest/OpenglSystemCommon"

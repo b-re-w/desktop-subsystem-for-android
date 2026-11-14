@@ -96,6 +96,7 @@ pub mod dns_resolver;
 #[cfg(windows)]
 pub mod file_share;
 pub mod gpt;
+pub mod graphics_region;
 #[cfg(windows)]
 pub mod guest_communication_services;
 pub mod guest_performance;

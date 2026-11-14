@@ -162,8 +162,14 @@ jobs:
           curl -fsSL --retry 8 --retry-all-errors -o "$RUNNER_TEMP/manifest.xml" "$url"
           uv run dsa/guest/framework/framework_lock.py services-lock "$ANDROID_BRANCH" "$RUNNER_TEMP/manifest.xml" "$RUNNER_TEMP/services-lock.json"
           uv run .github/scripts/translator/fetch-source.py --lock "$RUNNER_TEMP/services-lock.json" \
-            --android "$ANDROID_BRANCH" --top "$DSA_TRANSLATOR_WORK/aosp" --jobs 16
+            --android "$ANDROID_BRANCH" --top "$DSA_TRANSLATOR_WORK/aosp" --jobs 8
           echo "fetched in $(( (SECONDS - start) / 60 )) minutes"
+          # The tree leaves the VNDK snapshots out (SERVICES_TREE_SKIPPED), but the board
+          # configuration stops with "VNDK version 31 not found" unless each version the product
+          # names (PRODUCT_EXTRA_VNDK_VERSIONS) has its folder. An empty folder satisfies that
+          # check; the build allows the modules the snapshot would define to be missing.
+          { grep -o 'path="prebuilts/vndk/[^"]*"' "$RUNNER_TEMP/manifest.xml" || true; } | cut -d'"' -f2 | sort -u |
+            while read -r vndk; do mkdir -p "$DSA_TRANSLATOR_WORK/aosp/$vndk"; echo "empty $vndk"; done
           du -sh "$DSA_TRANSLATOR_WORK/aosp"
           echo "::group::The largest folders of the tree"
           du -x -h -d 3 "$DSA_TRANSLATOR_WORK/aosp" 2>/dev/null | sort -rh | head -60 || true

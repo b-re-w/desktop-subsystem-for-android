@@ -66,6 +66,7 @@ fn settings_screen() -> TreeUpdate {
         ],
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 

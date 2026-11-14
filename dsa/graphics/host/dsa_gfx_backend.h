@@ -306,6 +306,33 @@ typedef struct dsa_gfx_memory_owners {
 /* Fills `owners`. Returns 0 on success, -1 when the renderer is not running. */
 DSA_GFX_EXPORT int dsa_gfx_get_memory_owners(dsa_gfx_memory_owners* owners);
 
+/* Graphics memory shared with the guest (dsa_graphics_memory.h): the embedder's mapping of the
+ * two sections the service attaches to the VM, the data region (`data`, `data_length` bytes)
+ * and its grants table (`grants`, `grants_length` bytes). The renderer then puts a guest's
+ * host-visible memory there, where the driver imports it, and the guest maps those pages
+ * instead of keeping a copy that the stream carries; gralloc buffers' CPU uploads and read
+ * backs go through staging grants there too. The mapping must stay valid until this is called
+ * again with NULLs. Returns 0, or -1 when the table is not one the service wrote (nothing is
+ * then shared, and every allocation is copied as before). */
+DSA_GFX_EXPORT int dsa_gfx_set_shared_graphics_memory(uint8_t* data,
+                                                      uint64_t data_length,
+                                                      uint8_t* grants,
+                                                      uint64_t grants_length);
+
+/* How much of that memory is granted: to live allocations, and revoked but still held by the
+ * guest. */
+typedef struct dsa_gfx_shared_memory_stats {
+    uint64_t region_bytes;
+    uint64_t granted_bytes;
+    uint64_t held_bytes;
+    uint32_t grants;
+    uint32_t reserved;
+} dsa_gfx_shared_memory_stats;
+
+/* Fills `stats`, first taking back what the guest has let go of. Returns 0, or -1 when no
+ * memory is shared. */
+DSA_GFX_EXPORT int dsa_gfx_get_shared_graphics_memory_stats(dsa_gfx_shared_memory_stats* stats);
+
 #ifdef __cplusplus
 }
 #endif
