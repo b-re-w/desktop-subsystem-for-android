@@ -128,7 +128,7 @@ fn pr7_the_hcs_document_shares_the_graphics_memory_and_its_read_only_grants() {
     use dsa_host_windows::graphics_region::{
         data_section_name, grants_section_name, graphics_region,
     };
-    use dsa_host_windows::picture_region::picture_region;
+    use dsa_host_windows::picture_region::{hcs_section_name, picture_region};
     let mut vm = config();
     vm.graphics_region = graphics_region(Some(USER_SID), None);
     let region = vm.graphics_region.clone().expect("on by default");
@@ -142,11 +142,19 @@ fn pr7_the_hcs_document_shares_the_graphics_memory_and_its_read_only_grants() {
     let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
     assert_eq!(regions.as_array().map(Vec::len), Some(2));
     // The guest writes its host-visible memory, and only reads the grants.
-    assert_eq!(regions[0]["SectionName"], region.data_section);
     assert_eq!(regions[0]["Length"], 256u64 << 20);
     assert_eq!(regions[0]["AllowGuestWrite"], true);
-    assert_eq!(regions[1]["SectionName"], region.grants_section);
     assert_eq!(regions[1]["AllowGuestWrite"], false);
+    // HCS opens each section by its kernel object path; the Win32 `Global\` name fails to
+    // start the VM.
+    assert_eq!(
+        regions[0]["SectionName"],
+        format!(r"\BaseNamedObjects\DSA-GraphicsMemory-{USER_SID}")
+    );
+    assert_eq!(
+        regions[1]["SectionName"],
+        format!(r"\BaseNamedObjects\DSA-GraphicsGrants-{USER_SID}")
+    );
     // With the pictures' region too: all three, the pictures' first.
     vm.picture_region = picture_region(Some(USER_SID), None);
     let doc = document(&vm);
@@ -154,8 +162,12 @@ fn pr7_the_hcs_document_shares_the_graphics_memory_and_its_read_only_grants() {
     assert_eq!(regions.as_array().map(Vec::len), Some(3));
     assert_eq!(
         regions[0]["SectionName"],
-        vm.picture_region.unwrap().section_name
+        hcs_section_name(&vm.picture_region.unwrap().section_name)
     );
+    for entry in regions.as_array().unwrap() {
+        let name = entry["SectionName"].as_str().unwrap();
+        assert!(name.starts_with(r"\BaseNamedObjects\"), "{name}");
+    }
     // 0 turns it off; a size is whole 2 MiB; no user, none.
     assert_eq!(graphics_region(Some(USER_SID), Some(0)), None);
     assert_eq!(
@@ -188,6 +200,25 @@ fn pr7_the_guest_address_of_the_picture_section_is_read_from_the_vms_properties(
     assert_eq!(guest_address_from_properties(reported, name), Some(131072));
     assert_eq!(guest_address_from_properties("not json", name), None);
     assert_eq!(guest_address_from_properties("{}", name), None);
+}
+
+#[test]
+fn pr7_the_graphics_sections_are_found_under_the_kernel_paths_hcs_reports() {
+    use dsa_host_windows::graphics_region::{data_section_name, grants_section_name};
+    use dsa_host_windows::picture_region::guest_address_from_properties;
+    let data = data_section_name(USER_SID);
+    let grants = grants_section_name(USER_SID);
+    let properties = format!(
+        r#"{{"SharedMemoryRegionInfo":[{{"SectionName":"\\BaseNamedObjects\\DSA-GraphicsMemory-{USER_SID}","GuestPhysicalAddress":131072}},{{"SectionName":"\\BaseNamedObjects\\DSA-GraphicsGrants-{USER_SID}","GuestPhysicalAddress":196608}}]}}"#
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, &data),
+        Some(131072)
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, &grants),
+        Some(196608)
+    );
 }
 
 fn document(config: &AndroidVmConfig) -> Value {

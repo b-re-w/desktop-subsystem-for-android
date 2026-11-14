@@ -18,6 +18,7 @@
 //! What this module decides (the names, the document's entries) is tested on every platform;
 //! making the sections is Windows only.
 
+use crate::picture_region::hcs_section_name;
 use dsa_host_core::graphics_memory;
 use serde_json::{json, Value};
 
@@ -57,18 +58,20 @@ pub fn graphics_region(user_sid: Option<&str>, mb: Option<u64>) -> Option<Graphi
 
 impl GraphicsRegion {
     /// The two entries of the document's `Devices.SharedMemory.Regions`: the data region,
-    /// which the guest writes, and the grants table, which it must not.
+    /// which the guest writes, and the grants table, which it must not. Each section goes by
+    /// its kernel object path (`\BaseNamedObjects\...`): HCS refuses to start a VM whose
+    /// document names a section by its Win32 `Global\` name.
     pub fn to_hcs_regions(&self) -> Vec<Value> {
         vec![
             json!({
-                "SectionName": self.data_section,
+                "SectionName": hcs_section_name(&self.data_section),
                 "StartOffset": 0,
                 "Length": self.data_length,
                 "AllowGuestWrite": true,
                 "HiddenFromGuest": false,
             }),
             json!({
-                "SectionName": self.grants_section,
+                "SectionName": hcs_section_name(&self.grants_section),
                 "StartOffset": 0,
                 "Length": self.grants_length,
                 "AllowGuestWrite": false,
