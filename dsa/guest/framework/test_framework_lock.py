@@ -812,6 +812,28 @@ class ServicesTests(unittest.TestCase):
         with self.assertRaisesRegex(framework_lock.LockError, "SHA-256 differs"):
             framework_lock.services_lock(version, manifest + b" ")
 
+    def test_fr22_the_services_tree_takes_android_17s_rust_toolchain_in_part(self):
+        # Android 17 keeps its Rust toolchains in prebuilts/rust-toolchain/linux-x86, which the
+        # native lock takes in part, and only build files in prebuilts/rust, which it does not name.
+        manifest = (
+            "<manifest>"
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/rust" name="platform/prebuilts/rust" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/rust-toolchain/linux-x86" '
+            f'name="platform/prebuilts/rust-toolchain/linux-x86" revision="{COMMIT}"/>'
+            "</manifest>"
+        ).encode()
+        version = {
+            "android": "android17", "android_major": 17, "build_id": "1", "release": "cp2a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()},
+            "projects": [{"path": "prebuilts/rust-toolchain/linux-x86", "url": GOOGLESOURCE_CLANG,
+                          "commit": COMMIT, "cone": ["{rust}"]}],
+        }
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        projects = {p["path"]: p for p in entry["projects"]}
+        self.assertEqual(projects["prebuilts/rust-toolchain/linux-x86"]["cone"], ["{rust}"])
+        self.assertNotIn("cone", projects["prebuilts/rust"])
+
     def test_fr22_the_services_build_takes_the_published_product_and_no_dexpreopt(self):
         script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
         self.assertIn('lunch "$product-$release-userdebug"', script)
