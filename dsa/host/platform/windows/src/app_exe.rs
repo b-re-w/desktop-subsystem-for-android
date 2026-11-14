@@ -10,9 +10,21 @@
 //!
 //! A copy is made again when the installed window host changes (DSA was updated) or the app's
 //! name or icon does. A note beside it (`made.json`) records what it was made from. A copy
-//! under the app's old name is removed once it no longer runs. A copy that is running cannot
-//! be replaced; when its name stays the same, it stays as it is until the app's windows close,
-//! and is made again then.
+//! that is running cannot be replaced; it stays as it is until the app's windows close, and is
+//! made again then.
+//!
+//! The file keeps the name it was first given, even when the app is renamed later: the new
+//! name goes into the version information (which Task Manager and the taskbar show) and the
+//! Start menu shortcut, but not into the file's name. Every shortcut to the app runs the
+//! program by its path, and Windows' own copies of them (a taskbar pin is a copy of the Start
+//! menu shortcut) cannot all be followed, so a program that moved would leave them pointing at
+//! nothing. Only a program named after its package, because the app's name was not known yet,
+//! takes the app's name once it is.
+//!
+//! The app's name comes from the list of installed apps, which names an app as a launcher
+//! does (by its launcher activity, which may differ from the application's own label, as the
+//! Play Store's does). The description given before a window opens never renames a program the
+//! list has described.
 //!
 //! The guest describes an app in two ways: before its window opens ([`ensure`]), with the
 //! icon drawn large for the splash and the title bar's icon beside it, and in the list of
@@ -95,11 +107,46 @@ pub fn program_name(package: &str, label: &str) -> String {
     name
 }
 
-/// Where the program of `package` named `label` goes: its own folder, in `apps_dir`.
+/// Where the program of `package` named `label` is, in its own folder in `apps_dir`: the
+/// program already there, which keeps its name when the app is renamed, else where it goes,
+/// named after `label`.
 pub fn program_path(apps_dir: &Path, package: &str, label: &str) -> PathBuf {
-    apps_dir
-        .join(package)
-        .join(format!("{}.exe", program_name(package, label)))
+    let folder = apps_dir.join(package);
+    let named = folder.join(format!("{}.exe", program_name(package, label)));
+    if named.is_file() {
+        return named;
+    }
+    existing_program(&folder, package).unwrap_or(named)
+}
+
+/// The program already in `folder` that keeps its name: the newest `.exe` there, except one
+/// named after the package alone, which only stood in while the app's name was not known.
+fn existing_program(folder: &Path, package: &str) -> Option<PathBuf> {
+    let stand_in = format!("{package}.exe");
+    fs::read_dir(folder)
+        .ok()?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+                && path.is_file()
+                && !path
+                    .file_name()
+                    .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(&stand_in))
+        })
+        .max_by_key(|path| fs::metadata(path).and_then(|meta| meta.modified()).ok())
+}
+
+/// The app's name as the program at `program` was last made with, from the note beside it.
+/// `None` when there is no note.
+pub fn program_label(program: &Path) -> Option<String> {
+    let note = program.parent()?.join(NOTE_NAME);
+    let text = fs::read_to_string(note).ok()?;
+    serde_json::from_str::<Made>(&text)
+        .ok()
+        .map(|made| made.label)
+        .filter(|label| !label.trim().is_empty())
 }
 
 /// Removes what is left of the app's older programs: the ones under another name in its
@@ -194,6 +241,12 @@ fn plan(current: Option<&Made>, mut wanted: Made) -> Plan {
         // The window's description says nothing of the installed version, so the version the
         // program was last held against stays.
         wanted.updated = current.updated.clone();
+        // The list's name wins: it is the name a launcher shows, and the one the Start menu
+        // shortcut has. The window's description names the app by its application label,
+        // which may differ, and would rename the program at every window and every list.
+        if current.source == FROM_INSTALLED || !current.updated.is_empty() {
+            wanted.label = current.label.clone();
+        }
     }
     if current.template != wanted.template || current.label != wanted.label {
         return Plan::Make(wanted);
@@ -783,6 +836,34 @@ mod tests {
             ..made(FROM_WINDOW, "large", "caption", "")
         };
         assert!(matches!(plan(Some(&current), upgraded), Plan::Make(_)));
+    }
+
+    #[test]
+    fn fr7_a_windows_name_never_renames_a_program_the_list_named() {
+        // The list names the Play Store by its launcher activity ("Play Store"); its window's
+        // description by its application label ("Google Play Store").
+        let listed = Made {
+            label: "Play Store".into(),
+            ..made(FROM_INSTALLED, "small", "", "1-1")
+        };
+        let window = made(FROM_WINDOW, "small", "", "");
+        assert_eq!(plan(Some(&listed), window), Plan::Keep(listed.clone()));
+        // A new icon from the window still comes in, under the list's name.
+        let drawn = made(FROM_WINDOW, "large", "caption", "");
+        assert_eq!(
+            plan(Some(&listed), drawn),
+            Plan::Make(Made {
+                label: "Play Store".into(),
+                ..made(FROM_WINDOW, "large", "caption", "1-1")
+            })
+        );
+        // Before any list described the app, the window's name is the only one there is.
+        let unlisted = made(FROM_WINDOW, "large", "caption", "");
+        let renamed = Made {
+            label: "Clock".into(),
+            ..unlisted.clone()
+        };
+        assert_eq!(plan(Some(&unlisted), renamed.clone()), Plan::Make(renamed));
     }
 
     #[test]

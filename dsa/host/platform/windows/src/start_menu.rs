@@ -19,7 +19,9 @@
 //! The window manager keeps the shortcuts in step with the apps whenever Android says which it
 //! has. It records the shortcuts it made in a note (`start-menu.json` in
 //! `%LOCALAPPDATA%\DSA`) and only ever changes or removes those: a shortcut it did not make is
-//! never touched.
+//! never touched. The one exception is a taskbar pin, Windows' copy of an app's shortcut,
+//! which keeps the app's AppUserModelID: when it runs another program in the app's folder (one
+//! an earlier release renamed with the app, now gone), it is pointed at the app's program again.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -463,14 +465,9 @@ impl StartMenuSetup {
                 Ok((program, note)) => {
                     waiting |= note.is_some();
                     problems.extend(note);
-                    let label = app.label.trim();
                     entries.push(MenuEntry {
                         package: app.package_name.clone(),
-                        label: if label.is_empty() {
-                            app.package_name.clone()
-                        } else {
-                            label.to_string()
-                        },
+                        label: entry_label(app),
                         program,
                     });
                 }
@@ -488,6 +485,137 @@ impl StartMenuSetup {
             if is_valid_package(package) {
                 let _ = fs::remove_dir_all(self.apps_dir.join(package));
             }
+        }
+    }
+}
+
+/// The name an app's entry carries: the app's own, else its package.
+fn entry_label(app: &AppInfo) -> String {
+    let label = app.label.trim();
+    if label.is_empty() {
+        app.package_name.clone()
+    } else {
+        label.to_string()
+    }
+}
+
+/// The entry of each app in `apps` whose window program is in `apps_dir` already, as
+/// [`StartMenuSetup::sync`] made them.
+pub fn menu_entries(apps_dir: &Path, apps: &[AppInfo]) -> Vec<MenuEntry> {
+    apps.iter()
+        .filter(|app| is_valid_package(&app.package_name))
+        .filter_map(|app| {
+            let label = entry_label(app);
+            let program = crate::app_exe::program_path(apps_dir, &app.package_name, &label);
+            program.is_file().then(|| MenuEntry {
+                package: app.package_name.clone(),
+                label,
+                program,
+            })
+        })
+        .collect()
+}
+
+/// `link`, a shortcut to `entry`'s app (it carries the app's AppUserModelID), made to run the
+/// app's program as it is now: the program, its folder, and the program's icon where the link
+/// showed the icon of a program in the app's folder. Its arguments, its own icon and its name
+/// stay. `None` when it runs the program already, or is not a shortcut to the app.
+pub fn retargeted(link: &Shortcut, entry: &MenuEntry) -> Option<Shortcut> {
+    if link.app_user_model_id != app_user_model_id(&entry.package) {
+        return None;
+    }
+    let folder = entry.program.parent()?;
+    let same = |a: &Path, b: &Path| a.as_os_str().eq_ignore_ascii_case(b.as_os_str());
+    if same(&link.target, &entry.program) {
+        return None;
+    }
+    // Only a shortcut to a program in the app's own folder is the app's to point elsewhere.
+    if !link
+        .target
+        .parent()
+        .is_some_and(|parent| same(parent, folder))
+    {
+        return None;
+    }
+    let shows_a_program = link
+        .icon
+        .0
+        .parent()
+        .is_some_and(|parent| same(parent, folder))
+        && link
+            .icon
+            .0
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"));
+    Some(Shortcut {
+        target: entry.program.clone(),
+        icon: if shows_a_program || link.icon.0.as_os_str().is_empty() {
+            (entry.program.clone(), 0)
+        } else {
+            link.icon.clone()
+        },
+        working_dir: folder.to_path_buf(),
+        ..link.clone()
+    })
+}
+
+/// How deep below a pin folder pins are looked for: `ImplicitAppShortcuts` keeps each one in a
+/// folder of its own.
+const PIN_DEPTH: usize = 2;
+
+/// Points each taskbar pin of an app in `entries`, in `dirs`, at the app's program again when
+/// it runs another (one of an older name, now gone). A pin is Windows' copy of the app's
+/// shortcut and keeps the app's AppUserModelID; a pin of anything else is never touched.
+/// Returns what went wrong, one sentence each; the rest is done anyway.
+pub fn repair_pins(
+    dirs: &[PathBuf],
+    entries: &[MenuEntry],
+    shortcuts: &dyn Shortcuts,
+) -> Vec<String> {
+    let mut problems = Vec::new();
+    let mut links = Vec::new();
+    for dir in dirs {
+        collect_links(dir, PIN_DEPTH, &mut links);
+    }
+    for path in links {
+        let Ok(link) = shortcuts.read(&path) else {
+            continue;
+        };
+        if !link.app_user_model_id.starts_with(APP_ID_PREFIX) {
+            continue;
+        }
+        let Some(fixed) = entries.iter().find_map(|entry| retargeted(&link, entry)) else {
+            continue;
+        };
+        if let Err(why) = shortcuts.write(&path, &fixed) {
+            problems.push(format!(
+                "could not point the taskbar pin {} at its app's program: {why}",
+                path.display()
+            ));
+        }
+    }
+    problems
+}
+
+/// The `.lnk` files in `dir` and its folders, `depth` levels down.
+fn collect_links(dir: &Path, depth: usize, links: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
+        if kind.is_dir() {
+            if depth > 1 {
+                collect_links(&path, depth - 1, links);
+            }
+        } else if path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("lnk"))
+        {
+            links.push(path);
         }
     }
 }
@@ -589,9 +717,19 @@ pub fn keep(
                 note(logger.as_deref(), &format!("Installed apps: {problem}"));
             }
         }
+        // Shortcuts made before a program kept its name may point at one that is gone: the
+        // desktop's and the taskbar pins Windows copied from the Start menu's.
+        let entries = menu_entries(&setup.apps_dir, &apps);
+        for problem in repair_pins(&crate::paths::taskbar_pins(), &entries, &ShellLinks) {
+            note(logger.as_deref(), &format!("Taskbar: {problem}"));
+        }
         let now: BTreeSet<String> = apps.iter().map(|app| app.package_name.clone()).collect();
         if let Some(desktop) = &desktop {
-            for problem in desktop.keep_only(&now) {
+            for problem in desktop
+                .keep_in_step(&entries, &ShellLinks)
+                .into_iter()
+                .chain(desktop.keep_only(&now))
+            {
                 note(logger.as_deref(), &format!("Desktop: {problem}"));
             }
         }

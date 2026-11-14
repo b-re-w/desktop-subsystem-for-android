@@ -320,6 +320,29 @@ pub fn start_menu_programs() -> Option<PathBuf> {
     })
 }
 
+/// The folders where Windows keeps the copies of shortcuts it makes when the user pins an app
+/// to the taskbar: `%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar`,
+/// and `ImplicitAppShortcuts` beside it. Nothing is made there; a copy of an app's shortcut is
+/// only pointed at the app's program again when it points at one that is gone.
+pub fn taskbar_pins() -> Vec<PathBuf> {
+    let Some(dir) = std::env::var_os("APPDATA") else {
+        return Vec::new();
+    };
+    let pinned = join(
+        Path::new(&dir),
+        &[
+            "Microsoft",
+            "Internet Explorer",
+            "Quick Launch",
+            "User Pinned",
+        ],
+    );
+    vec![
+        join(&pinned, &["TaskBar"]),
+        join(&pinned, &["ImplicitAppShortcuts"]),
+    ]
+}
+
 /// The key in a user's registry where Windows' list of installed apps (Settings > Apps >
 /// Installed apps) finds the apps installed for that user. The window manager puts one key
 /// under it for each Android app; nothing else of DSA goes there.

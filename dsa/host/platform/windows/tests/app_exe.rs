@@ -168,13 +168,57 @@ fn fr3_a_window_program_is_made_again_only_when_its_app_changes() {
         ..clock()
     };
     let (renamed_program, _) = ensure(template, &dir, "com.example.clock", Some(&renamed)).unwrap();
-    assert_eq!(
-        renamed_program,
-        dir.join("com.example.clock").join("World Clock.exe")
-    );
+    // The program takes the new name inside, and keeps its file, which every shortcut and
+    // taskbar pin of the app runs.
+    assert_eq!(renamed_program, program);
     assert_eq!(description(&renamed_program), "World Clock");
-    // The program under the app's old name is gone.
-    assert!(!program.exists());
+    assert!(!dir
+        .join("com.example.clock")
+        .join("World Clock.exe")
+        .exists());
+}
+
+#[test]
+fn fr7_a_renamed_app_keeps_its_program_so_no_shortcut_points_at_nothing() {
+    // The Play Store, named "Play Store" by the list, then described as "Google Play Store"
+    // when its window opened after its data was cleared.
+    let dir = fresh_dir("stable");
+    let template = Path::new(TEMPLATE);
+    let listed = AppInfo {
+        label: "Play Store".into(),
+        ..listed_clock(png(), 1)
+    };
+    let (program, _) = ensure_installed(template, &dir, &listed).unwrap();
+    assert_eq!(
+        program,
+        dir.join("com.example.clock").join("Play Store.exe")
+    );
+    let window = AppInfo {
+        label: "Google Play Store".into(),
+        ..clock()
+    };
+    let (opened, _) = ensure(template, &dir, "com.example.clock", Some(&window)).unwrap();
+    assert_eq!(opened, program);
+    assert!(program.exists());
+    // The list's name stays: the window's description does not rename the app.
+    assert_eq!(description(&program), "Play Store");
+    // A real rename, from the list, changes the name inside but not the file.
+    let renamed = AppInfo {
+        label: "Store".into(),
+        ..listed_clock(png(), 2)
+    };
+    let (kept, _) = ensure_installed(template, &dir, &renamed).unwrap();
+    assert_eq!(kept, program);
+    assert_eq!(description(&program), "Store");
+    assert_eq!(
+        program_path(&dir, "com.example.clock", "Store"),
+        program,
+        "every caller finds the program under its new name"
+    );
+    assert_eq!(
+        dsa_host_windows::app_exe::program_label(&program).as_deref(),
+        Some("Store")
+    );
 }
 
 #[test]
