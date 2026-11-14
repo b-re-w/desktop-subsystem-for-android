@@ -39,6 +39,9 @@
 //!   system certificates and takes away those it no longer names, and then on to the
 //!   listeners: the agent has the running apps forget the trust anchors they looked up, once
 //!   the folders already say what the host said.
+//! - The host's `GuestSharedMemory` stops here: it goes to the platform's switch
+//!   ([`Router::on_shared_memory`]), which has init hand the region to the kernel
+//!   ([`crate::shared_memory`]).
 //! - The host's ARM translation and Google apps messages stop here as well, and so do its
 //!   reads of an add-on image an older host left on the user's disk: the daemon looks after
 //!   those images ([`Router::on_arm_translation`], [`Router::on_gapps`]) and answers each one.
@@ -60,8 +63,8 @@ use std::time::Duration;
 use dsa_protocol::control::envelope::Body;
 use dsa_protocol::control::{
     AddonImage, AddonImagePart, AddonImageRead, AndroidFiles, ArmTranslationState, Envelope,
-    FileSharing, GappsState, GuestBoot, HostCertificates, LocationRequest, PowerHintKind,
-    RootElevationConfig,
+    FileSharing, GappsState, GuestBoot, GuestSharedMemory, HostCertificates, LocationRequest,
+    PowerHintKind, RootElevationConfig,
 };
 
 use crate::arm_translation::ArmTranslation;
@@ -273,6 +276,8 @@ pub struct Router {
     android_files: Option<AndroidFilesSwitch>,
     /// Adds the host's root certificates to Android's system certificates.
     host_certificates: Option<HostCertificatesSwitch>,
+    /// Hands the memory the host shares with the guest to the kernel.
+    shared_memory: Option<SharedMemorySwitch>,
     /// The ARM translation package on the user's disk, which the host installs and removes.
     arm_translation: Option<Arc<ArmTranslation>>,
     /// The Google apps' image on the user's disk, which the host installs and removes.
@@ -303,6 +308,9 @@ type AndroidFilesSwitch = Box<dyn Fn(&AndroidFiles) + Send + Sync>;
 /// Makes Android's system certificates hold the host's root certificates it names.
 type HostCertificatesSwitch = Box<dyn Fn(&HostCertificates) + Send + Sync>;
 
+/// Has the kernel map a region of memory the host shares with the guest.
+type SharedMemorySwitch = Box<dyn Fn(&GuestSharedMemory) + Send + Sync>;
+
 /// Drives the kernel's su guard for a root elevation config: which uids may see su, on or off.
 type RootElevationSwitch = Box<dyn Fn(&RootElevationConfig) + Send + Sync>;
 
@@ -324,6 +332,7 @@ impl Router {
             file_sharing: None,
             android_files: None,
             host_certificates: None,
+            shared_memory: None,
             arm_translation: None,
             gapps: None,
             gamepads: None,
@@ -409,6 +418,16 @@ impl Router {
         switch: impl Fn(&HostCertificates) + Send + Sync + 'static,
     ) -> Router {
         self.host_certificates = Some(Box::new(switch));
+        self
+    }
+
+    /// Hands where the memory the host shares with the guest is to `switch`, which has init
+    /// tell the kernel. The message goes no further.
+    pub fn on_shared_memory(
+        mut self,
+        switch: impl Fn(&GuestSharedMemory) + Send + Sync + 'static,
+    ) -> Router {
+        self.shared_memory = Some(Box::new(switch));
         self
     }
 
@@ -685,6 +704,14 @@ impl Router {
             if let Some(switch) = &self.host_certificates {
                 switch(certificates);
             }
+        }
+        if let Some(Body::GuestSharedMemory(region)) = &body {
+            // For the daemon alone: it has init hand the region to the kernel, which maps it
+            // for the region's users. No client of the channel maps physical memory.
+            if let Some(switch) = &self.shared_memory {
+                switch(region);
+            }
+            return;
         }
         if let Some(Body::RootElevationConfig(config)) = &body {
             // For the daemon alone: it drives the kernel's su guard.

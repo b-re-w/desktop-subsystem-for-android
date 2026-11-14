@@ -67,6 +67,34 @@ class AndroidKernelConfigTests(unittest.TestCase):
         self.assertIn("+module_param_named(total_kb, dsa_total_kb, ulong, 0444);", patch)
         self.assertIn("+module_param_cb(uids, &dsa_uids_ops, NULL, 0644);", patch)
 
+    def test_pr7_the_codec_hal_maps_the_hosts_picture_memory_read_only(self):
+        # The host writes decoded pictures into memory it shares with the VM; the driver maps
+        # that range alone, for reading, once init has written where it is.
+        self.assertIn("CONFIG_DSA_SHARED_MEMORY=y", CONFIG.read_text())
+        patch = (PATCHES / "dsa-shared-memory.patch").read_text()
+        self.assertIn("+++ b/drivers/misc/dsa_shared_memory.c", patch)
+        self.assertIn("+config DSA_SHARED_MEMORY", patch)
+        self.assertIn("+obj-$(CONFIG_DSA_SHARED_MEMORY)\t+= dsa_shared_memory.o", patch)
+        self.assertIn("+module_param_cb(video_pictures, &dsa_video_pictures_ops, NULL, 0644);", patch)
+        self.assertIn('+\t.name = "dsa_video_pictures",', patch)
+        # Never the guest's RAM, never writable, and no struct pages for it.
+        self.assertIn("IORESOURCE_SYSTEM_RAM", patch)
+        self.assertIn("+\tif (vma->vm_flags & VM_WRITE)\n+\t\treturn -EPERM;", patch)
+        self.assertIn("VM_PFNMAP", patch)
+        # The header both sides write and read, and the ioctl the codec HAL asks the size with.
+        self.assertIn('+#define DSA_HEADER_MAGIC "DSAVPIC1"', patch)
+        self.assertIn("+#define DSA_SHARED_MEMORY_SIZE _IOR('D', 0x50, __u64)", patch)
+
+    def test_pr7_the_shared_memory_patch_hunks_count_their_lines(self):
+        patch = (PATCHES / "dsa-shared-memory.patch").read_text()
+        for header, body in re.findall(r"^(@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@.*)\n((?:[ +-].*\n?)*)",
+                                       patch, re.MULTILINE):
+            old, new = re.match(r"@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@", header).groups()
+            lines = [line for line in body.splitlines() if not line.startswith(("---", "+++"))]
+            lines = lines[:next((i for i, l in enumerate(lines) if l.startswith("diff --git")), len(lines))]
+            self.assertEqual(sum(1 for l in lines if l[:1] in " -"), int(old or 1), header)
+            self.assertEqual(sum(1 for l in lines if l[:1] in " +"), int(new or 1), header)
+
     def test_fr32_the_host_memory_patch_hunks_count_their_lines(self):
         header = re.compile(r"^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@")
         old_left = new_left = 0

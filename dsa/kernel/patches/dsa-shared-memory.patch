@@ -1,0 +1,256 @@
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index b9c11f67..104771e6 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -661,4 +661,18 @@ source "drivers/misc/mchp_pci1xxxx/Kconfig"
+ source "drivers/misc/keba/Kconfig"
+ source "drivers/misc/amd-sbi/Kconfig"
+ source "drivers/misc/rp1/Kconfig"
++
++config DSA_SHARED_MEMORY
++	bool "DSA: host memory shared with the guest for video pictures"
++	depends on MMU
++	default n
++	help
++	  The Desktop Subsystem for Android host decodes the guest's video
++	  on its own GPU and writes each picture into memory it shares with
++	  the guest, instead of sending it through a socket. This driver
++	  lets the guest's codec HAL map that memory, read only, through
++	  /dev/dsa_video_pictures, once init has written where it is to
++	  /sys/module/dsa_shared_memory/parameters/video_pictures.
++
++	  Unless you are building the DSA guest kernel, say N.
+ endmenu
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index b32a2597..529bf143 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -75,3 +75,4 @@ obj-$(CONFIG_MCHP_LAN966X_PCI)	+= lan966x-pci.o
+ obj-y				+= keba/
+ obj-y				+= amd-sbi/
+ obj-$(CONFIG_MISC_RP1)		+= rp1/
++obj-$(CONFIG_DSA_SHARED_MEMORY)	+= dsa_shared_memory.o
+diff --git a/drivers/misc/dsa_shared_memory.c b/drivers/misc/dsa_shared_memory.c
+new file mode 100644
+index 00000000..97c7427d
+--- /dev/null
++++ b/drivers/misc/dsa_shared_memory.c
+@@ -0,0 +1,218 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * DSA shared memory: the region of host memory the Desktop Subsystem for
++ * Android host shares with its guest for decoded video pictures, as a device
++ * the guest's codec HAL maps read only.
++ *
++ * The host's hardware decoder writes each decoded picture into a slot of the
++ * region and tells the codec HAL, on its video port, only the slot's number
++ * and where it is; the HAL copies the picture from its mapping into the app's
++ * buffer and gives the slot back. A 4K picture is about 11 MiB, which no
++ * longer crosses the socket.
++ *
++ * The region is not the guest's RAM: the hypervisor maps it into the VM's
++ * physical address space beside it (on Windows, an HCS shared memory region
++ * backed by a named section). Where it is becomes known only once the VM runs,
++ * so it cannot go on the command line: the host says it on the control
++ * channel, the guest's control daemon sets a property, and init writes
++ *
++ *   /sys/module/dsa_shared_memory/parameters/video_pictures
++ *
++ * with "<address>,<length>" (the address in hex, 0x first; the length in
++ * bytes). The address is as the host reports it, which on some hosts is the
++ * page number of the region rather than its byte address: the driver takes
++ * whichever of the two holds the region's header (the eight bytes "DSAVPIC1").
++ * A candidate must be page aligned and lie wholly outside the guest's RAM. The
++ * first value that names a region holds for the rest of the boot; the region
++ * does not move while the VM runs.
++ *
++ * /dev/dsa_video_pictures then maps any part of the region, for reading only:
++ * the host writes it and the guest has nothing to write there (the hypervisor
++ * refuses guest writes too). DSA_SHARED_MEMORY_SIZE tells its length. The
++ * mapping has no struct pages (VM_PFNMAP), so the region costs the guest no
++ * memory of its own. Until the region is known the device refuses to open,
++ * which tells the HAL to take its pictures from the video port instead.
++ *
++ * Only init may write the parameter and only the codec HAL may open the device
++ * (the image's SELinux policy), so no app can point the driver elsewhere or
++ * read the pictures of another app's video.
++ *
++ * Unless you are building the DSA guest kernel, say N.
++ */
++
++#include <linux/fs.h>
++#include <linux/io.h>
++#include <linux/ioport.h>
++#include <linux/kernel.h>
++#include <linux/miscdevice.h>
++#include <linux/mm.h>
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/mutex.h>
++#include <linux/string.h>
++#include <linux/uaccess.h>
++#include <linux/unaligned.h>
++
++/* The region's length in bytes, as a __u64. */
++#define DSA_SHARED_MEMORY_SIZE _IOR('D', 0x50, __u64)
++
++#define DSA_HEADER_MAGIC "DSAVPIC1"
++#define DSA_HEADER_BYTES 24
++
++static DEFINE_MUTEX(dsa_lock);
++static phys_addr_t dsa_base;
++/* Set last, once dsa_base is: a reader that sees a length sees the base. */
++static u64 dsa_length;
++static bool dsa_claimed;
++
++static u64 dsa_region_length(void)
++{
++	return smp_load_acquire(&dsa_length);
++}
++
++/* Whether the header lies at `base`, saying a length the range holds. */
++static bool dsa_has_header(phys_addr_t base, u64 length)
++{
++	void *header;
++	bool found;
++
++	header = memremap(base, PAGE_SIZE, MEMREMAP_WB);
++	if (!header)
++		return false;
++	found = !memcmp(header, DSA_HEADER_MAGIC, 8) &&
++		get_unaligned_le64(header + 16) <= length &&
++		get_unaligned_le64(header + 8) != 0;
++	memunmap(header);
++	return found;
++}
++
++/*
++ * Takes the region at `base` if it is one: aligned, outside the guest's RAM,
++ * and holding the header. The range is claimed, so /dev/mem cannot reach it,
++ * where nothing else holds it already.
++ */
++static int dsa_take(phys_addr_t base, u64 length)
++{
++	if (!base || !PAGE_ALIGNED(base) || !PAGE_ALIGNED(length) ||
++	    base + length < base)
++		return -EINVAL;
++	if (region_intersects(base, length, IORESOURCE_SYSTEM_RAM,
++			      IORES_DESC_NONE) != REGION_DISJOINT)
++		return -EINVAL;
++	if (!dsa_has_header(base, length))
++		return -ENODEV;
++	dsa_claimed = !!request_mem_region(base, length, "dsa_shared_memory");
++	if (!dsa_claimed)
++		pr_warn("dsa_shared_memory: %pa is held by another driver; mapping it anyway\n",
++			&base);
++	dsa_base = base;
++	smp_store_release(&dsa_length, length);
++	pr_info("dsa_shared_memory: %llu MiB of host memory for video pictures at %pa\n",
++		length >> 20, &base);
++	return 0;
++}
++
++static int dsa_set_video_pictures(const char *val, const struct kernel_param *kp)
++{
++	unsigned long long address, length;
++	int err;
++
++	if (sscanf(val, "%llx,%llu", &address, &length) != 2 || !length)
++		return -EINVAL;
++	mutex_lock(&dsa_lock);
++	if (dsa_region_length()) {
++		/* The region does not move within a boot. */
++		err = length == dsa_region_length() ? 0 : -EBUSY;
++		goto out;
++	}
++	err = dsa_take(address, length);
++	if (err && address < (1ULL << (63 - PAGE_SHIFT)))
++		err = dsa_take((phys_addr_t)address << PAGE_SHIFT, length);
++	if (err)
++		pr_warn("dsa_shared_memory: no region at %#llx (%llu bytes): %d\n",
++			address, length, err);
++out:
++	mutex_unlock(&dsa_lock);
++	return err;
++}
++
++static int dsa_get_video_pictures(char *buffer, const struct kernel_param *kp)
++{
++	u64 length = dsa_region_length();
++
++	if (!length)
++		return sysfs_emit(buffer, "none\n");
++	return sysfs_emit(buffer, "%#llx,%llu\n", (unsigned long long)dsa_base,
++			  (unsigned long long)length);
++}
++
++static const struct kernel_param_ops dsa_video_pictures_ops = {
++	.set = dsa_set_video_pictures,
++	.get = dsa_get_video_pictures,
++};
++
++module_param_cb(video_pictures, &dsa_video_pictures_ops, NULL, 0644);
++MODULE_PARM_DESC(video_pictures,
++		 "Where the host's memory for video pictures is: <address>,<length>");
++
++static int dsa_open(struct inode *inode, struct file *file)
++{
++	if (!dsa_region_length())
++		return -ENODEV;
++	if (file->f_mode & FMODE_WRITE)
++		return -EPERM;
++	return 0;
++}
++
++static int dsa_mmap(struct file *file, struct vm_area_struct *vma)
++{
++	u64 length = dsa_region_length();
++	u64 offset = (u64)vma->vm_pgoff << PAGE_SHIFT;
++	unsigned long size = vma->vm_end - vma->vm_start;
++
++	if (vma->vm_flags & VM_WRITE)
++		return -EPERM;
++	if (!length || offset >= length || size > length - offset)
++		return -EINVAL;
++	vm_flags_clear(vma, VM_MAYWRITE);
++	vm_flags_set(vma, VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP);
++	return remap_pfn_range(vma, vma->vm_start,
++			       PHYS_PFN(dsa_base) + vma->vm_pgoff, size,
++			       vma->vm_page_prot);
++}
++
++static long dsa_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
++{
++	u64 length = dsa_region_length();
++
++	if (cmd != DSA_SHARED_MEMORY_SIZE)
++		return -ENOTTY;
++	if (!length)
++		return -ENODEV;
++	return put_user(length, (u64 __user *)arg);
++}
++
++static const struct file_operations dsa_fops = {
++	.owner = THIS_MODULE,
++	.open = dsa_open,
++	.mmap = dsa_mmap,
++	.unlocked_ioctl = dsa_ioctl,
++	.compat_ioctl = compat_ptr_ioctl,
++};
++
++static struct miscdevice dsa_device = {
++	.minor = MISC_DYNAMIC_MINOR,
++	.name = "dsa_video_pictures",
++	.fops = &dsa_fops,
++	/* SELinux decides who opens it; the mode only keeps writers out. */
++	.mode = 0444,
++};
++
++static int __init dsa_shared_memory_init(void)
++{
++	return misc_register(&dsa_device);
++}
++device_initcall(dsa_shared_memory_init);
++
++MODULE_DESCRIPTION("DSA: host memory shared with the guest for video pictures");
++MODULE_LICENSE("GPL");
