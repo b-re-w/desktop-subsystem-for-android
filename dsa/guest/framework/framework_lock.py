@@ -27,6 +27,15 @@ a project fetched in part) and fetched by .github/scripts/translator/fetch-sourc
     framework_lock.py outputs                      where the build installs the files the image
                                                    takes (the framework's, then the KeyMint's),
                                                    one per line
+    framework_lock.py java-outputs                 services.jar's target_files name and where
+                                                   the services build installs it, one pair per
+                                                   line
+    framework_lock.py services-lock <android> <manifest.xml> <out.json>
+                                                   writes the lock of the services build's tree:
+                                                   every project the manifest syncs by default
+
+services.jar, with DSA's window manager, package manager and WebView service, is built in a tree
+of its own (SERVICES_JAR): the Java framework needs most of the platform.
 """
 
 import hashlib
@@ -84,6 +93,23 @@ KEYMINT_SOURCES = {
         f"{KEYMINT_DIR}/android.hardware.hardware_keystore.xml",
 }
 KEYMINT_FILES = list(KEYMINT_OUTPUTS) + list(KEYMINT_SOURCES)
+
+# The window manager, package manager and WebView service with DSA's changes (the patches to
+# frameworks/base/services in patches/frameworks/base/<android>/): services.jar, which the image
+# takes in place of the published build's. The Java framework reaches across most of the
+# platform's projects, so it is not built in the reduced tree the native files are built in, but
+# in a tree of every project the build's manifest syncs by default (services_lock), with the
+# build's own product (the version's target) and release configuration. A dex file is the same
+# for every architecture, so one services.jar, built with the x86_64 target, serves the images of
+# both. The native build applies no patch that changes Java sources only (java_only), as it
+# builds none.
+SERVICES_JAR = "SYSTEM/framework/services.jar"
+JAVA_OUTPUTS = {SERVICES_JAR: "system/framework/services.jar"}
+# The projects the services tree takes in part, as the native tree takes them: each holds every
+# toolchain version the platform ever used, and the build reads only the ones the lock names.
+SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust"]
+# Projects in a manifest group repo leaves out of a default sync on Linux.
+UNSYNCED_GROUPS = {"notdefault", "platform-darwin", "darwin"}
 
 # Projects every version fetches: the build system, and the projects the patches change.
 REQUIRED = ["build/make", "build/soong", "build/release", "build/blueprint",
@@ -208,6 +234,68 @@ def patch_files(android, patches=PATCHES):
     return found
 
 
+def patch_paths(patch):
+    """The files a patch changes, from its diff headers, relative to its project."""
+    paths = []
+    for line in Path(patch).read_text().splitlines():
+        for prefix in ("--- a/", "+++ b/"):
+            if line.startswith(prefix) and line[len(prefix):] not in paths:
+                paths.append(line[len(prefix):])
+    return paths
+
+
+def java_only(patch):
+    """Whether a patch changes Java sources only: it then changes nothing the native build makes,
+    which builds no Java, and only the services build applies it."""
+    paths = patch_paths(patch)
+    return bool(paths) and all(p.endswith(".java") for p in paths)
+
+
+def manifest_projects(text):
+    """Every project of a build manifest a default repo sync on Linux takes, as lock entries:
+    path, repository, commit, and the manifest's linkfile and copyfile entries."""
+    root = ElementTree.fromstring(text)
+    projects = []
+    for project in root.iter("project"):
+        groups = {g.strip() for g in (project.get("groups") or "").split(",") if g.strip()}
+        if groups & UNSYNCED_GROUPS and not groups & {"linux", "platform-linux"}:
+            continue
+        name = project.get("name")
+        entry = {"path": project.get("path") or name, "url": GOOGLESOURCE + name,
+                 "commit": project.get("revision")}
+        for kind in ("linkfile", "copyfile"):
+            found = [{"src": e.get("src"), "dest": e.get("dest")} for e in project.findall(kind)]
+            if found:
+                entry[kind + "s"] = found
+        projects.append(entry)
+    return projects
+
+
+def services_lock(version, text):
+    """The lock the services build fetches its tree by: `version` with every project its
+    manifest (`text`, the one it pins by SHA-256) syncs by default, each at the manifest's commit,
+    and the toolchain prebuilts (SERVICES_TREE_CONES) taken in part as `version` takes them."""
+    data = text.encode() if isinstance(text, str) else text
+    if hashlib.sha256(data).hexdigest() != version["manifest"]["sha256"]:
+        raise LockError(f"the manifest is not the one {version['android']} pins (SHA-256 differs)")
+    native = {p["path"]: p for p in version["projects"]}
+    projects = []
+    for project in manifest_projects(data):
+        if project["path"] in SERVICES_TREE_CONES:
+            if project["path"] not in native or "cone" not in native[project["path"]]:
+                raise LockError(f"{version['android']} does not say which part of {project['path']} to take")
+            project["cone"] = list(native[project["path"]]["cone"])
+        projects.append(project)
+    tree = {key: value for key, value in version.items() if key != "projects"}
+    tree["projects"] = sorted(projects, key=lambda p: p["path"])
+    return {
+        "comment": f"Every project build {version['build_id']}'s manifest syncs by default, for the "
+                   "services build (framework_lock.py services-lock).",
+        "kind": KIND,
+        "versions": [tree],
+    }
+
+
 def build_version(version, patches=PATCHES):
     """The version of what the build makes for one Android version: the Android major and the
     first 12 hex digits of a hash over the pins and every patch, so that any change to either
@@ -258,6 +346,13 @@ def main(argv):
         print(build_version(version_entry(lock, argv[2])))
     elif argv[1:] == ["outputs"]:
         print("\n".join(list(OUTPUTS.values()) + list(KEYMINT_OUTPUTS.values())))
+    elif argv[1:] == ["java-outputs"]:
+        print("\n".join(f"{name} {installed}" for name, installed in JAVA_OUTPUTS.items()))
+    elif len(argv) == 5 and argv[1] == "services-lock":
+        tree = services_lock(version_entry(lock, argv[2]), Path(argv[3]).read_bytes())
+        check(tree)
+        Path(argv[4]).write_text(json.dumps(tree, indent=2) + "\n")
+        print(f"{argv[2]}: {len(tree['versions'][0]['projects'])} projects for the services build")
     elif len(argv) == 4 and argv[1] == "check-manifest":
         problems = manifest_problems(version_entry(lock, argv[2]), Path(argv[3]).read_bytes())
         for problem in problems:
@@ -266,8 +361,9 @@ def main(argv):
             raise SystemExit(1)
         print(f"{argv[2]}: every pinned commit is the published build's")
     else:
-        raise SystemExit("usage: framework_lock.py versions | version <android> | outputs | "
-                         "check-manifest <android> <manifest.xml>")
+        raise SystemExit("usage: framework_lock.py versions | version <android> | outputs | java-outputs | "
+                         "check-manifest <android> <manifest.xml> | "
+                         "services-lock <android> <manifest.xml> <out.json>")
 
 
 if __name__ == "__main__":

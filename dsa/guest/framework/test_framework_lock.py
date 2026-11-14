@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -212,6 +213,10 @@ class LockTests(unittest.TestCase):
             found = framework_lock.patch_files(version["android"])
             self.assertTrue(found, version["android"])
             for project, patch in found:
+                # A patch to Java sources only is for the services build, whose tree takes every
+                # project whole (ServicesTests).
+                if framework_lock.java_only(patch):
+                    continue
                 cone = projects[project].get("cone")
                 for path in patched_paths(patch):
                     if cone is not None:
@@ -682,6 +687,171 @@ class CollectTests(unittest.TestCase):
             (root / "product" / framework_lock.KEYMINT_OUTPUTS[framework_lock.KEYMINT_BINARY]).unlink()
             with self.assertRaisesRegex(SystemExit, "did not make vendor/bin/hw/dsa-keymint"):
                 collect.collect(version, "x86_64", root / "product", root / "out4", top=self._tree(root))
+
+
+INSETS_POLICY = "services/core/java/com/android/server/wm/InsetsPolicy.java"
+
+
+def added_lines(patch):
+    return [line[1:] for line in Path(patch).read_text().splitlines()
+            if line.startswith("+") and not line.startswith("+++")]
+
+
+def removed_lines(patch):
+    return [line[1:] for line in Path(patch).read_text().splitlines()
+            if line.startswith("-") and not line.startswith("---")]
+
+
+class ServicesTests(unittest.TestCase):
+    """services.jar, built from the published build's source with DSA's patches to the window
+    manager (a dialog gets no caption bar inset), the package manager and the WebView service."""
+
+    def _patches_to(self, android, path):
+        return [patch for project, patch in framework_lock.patch_files(android)
+                if project == "frameworks/base" and path in framework_lock.patch_paths(patch)]
+
+    def test_fr22_a_dialog_gets_no_caption_inset(self):
+        for android in ("android16", "android17"):
+            patches = self._patches_to(android, INSETS_POLICY)
+            self.assertEqual(len(patches), 1, android)
+            added = "\n".join(added_lines(patches[0]))
+            # A window smaller than its parent, or one laid out below the band, loses the caption
+            # bar source; the task's full-size edge-to-edge window keeps it.
+            self.assertIn("if (!attrs.isFullscreen() || (attrs.getFitInsetsTypes()", added, android)
+            self.assertIn("& (Type.captionBar() | Type.statusBars())) != 0) {", added, android)
+            self.assertIn("                    state.removeSourceAt(i);", patches[0].read_text(), android)
+            # Not behind a flag the published build turns on.
+            self.assertNotIn("relativeInsets()", added, android)
+            self.assertIn(f"Applies to frameworks/base at {self._commit(android)}", patches[0].read_text())
+
+    def test_fr22_a_freeform_window_keeps_its_status_bar_inset_in_the_source(self):
+        # The dex edit of the published jar (SERVICES_INSETS_CODE), ported to the source.
+        for android in ("android16", "android17"):
+            patch = self._patches_to(android, INSETS_POLICY)[0]
+            self.assertIn("            int types = WindowInsets.Type.captionBar();", removed_lines(patch), android)
+            self.assertIn("            int types = WindowInsets.Type.systemBars();", added_lines(patch), android)
+
+    def test_fr22_the_other_services_dex_edits_are_ported_to_the_source(self):
+        for android in ("android16", "android17"):
+            abi = self._patches_to(android, "services/core/java/com/android/server/pm/PackageAbiHelperImpl.java")
+            self.assertEqual(len(abi), 1, android)
+            self.assertIn("        return Build.SUPPORTED_64_BIT_ABIS;", added_lines(abi[0]))
+            webview = self._patches_to(android, "services/core/java/com/android/server/webkit/SystemImpl.java")
+            self.assertEqual(len(webview), 1, android)
+            self.assertIn("        WebViewZygote.getProcess();", removed_lines(webview[0]))
+            self.assertFalse(any("getProcess()" in line and not line.strip().startswith("//")
+                                 for line in added_lines(webview[0])))
+
+    def _commit(self, android):
+        version = framework_lock.version_entry(framework_lock.load(), android)
+        return next(p["commit"] for p in version["projects"] if p["path"] == "frameworks/base")
+
+    def test_fr22_the_native_build_leaves_the_java_patches_to_the_services_build(self):
+        for android in ("android16", "android17"):
+            java = [p for _, p in framework_lock.patch_files(android) if framework_lock.java_only(p)]
+            self.assertEqual(len(java), 3, android)
+            native = [p for _, p in framework_lock.patch_files(android) if not framework_lock.java_only(p)]
+            self.assertTrue(native, android)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "patches/frameworks/base/android17"
+            folder.mkdir(parents=True)
+            (folder / "0001-native.patch").write_text(
+                "diff --git a/libs/hwui/a.txt b/libs/hwui/a.txt\n--- a/libs/hwui/a.txt\n+++ b/libs/hwui/a.txt\n"
+                "@@ -1 +1 @@\n-one\n+two\n")
+            (folder / "0002-java.patch").write_text(
+                "diff --git a/services/A.java b/services/A.java\n--- a/services/A.java\n+++ b/services/A.java\n"
+                "@@ -1 +1 @@\n-class A {}\n+final class A {}\n")
+            tree = root / "tree"
+            (tree / "frameworks/base/libs/hwui").mkdir(parents=True)
+            (tree / "frameworks/base/libs/hwui/a.txt").write_text("one\n")
+            done = apply_patches.apply_patches("android17", tree, patches=root / "patches", native=True)
+            self.assertEqual([name for _, name, _ in done], ["0001-native.patch"])
+            # The services tree has the file and takes both.
+            (tree / "frameworks/base/libs/hwui/a.txt").write_text("one\n")
+            (tree / "frameworks/base/services").mkdir()
+            (tree / "frameworks/base/services/A.java").write_text("class A {}\n")
+            done = apply_patches.apply_patches("android17", tree, patches=root / "patches")
+            self.assertEqual([name for _, name, _ in done], ["0001-native.patch", "0002-java.patch"])
+
+    def _manifest(self):
+        return (
+            "<manifest>"
+            f'<project path="build/make" name="platform/build" revision="{COMMIT}" groups="pdk">'
+            '<linkfile src="core" dest="build/core"/><copyfile src="root.mk" dest="Makefile"/></project>'
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/clang/host/linux-x86" name="platform/prebuilts/clang/host/linux-x86" '
+            f'revision="{COMMIT}" groups="pdk,linux"/>'
+            f'<project path="prebuilts/clang/host/darwin-x86" name="platform/prebuilts/clang/host/darwin-x86" '
+            f'revision="{COMMIT}" groups="pdk,darwin"/>'
+            f'<project path="device/google/unsynced" name="device/google/unsynced" revision="{COMMIT}" '
+            'groups="device,notdefault"/>'
+            "</manifest>"
+        ).encode()
+
+    def test_fr22_the_services_tree_is_every_project_the_manifest_syncs_by_default(self):
+        manifest = self._manifest()
+        version = {
+            "android": "android17", "android_major": 17, "build_id": "1", "release": "cp2a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()},
+            "projects": [{"path": "prebuilts/clang/host/linux-x86", "url": GOOGLESOURCE_CLANG,
+                          "commit": COMMIT, "cone": ["soong", "{clang}"]}],
+        }
+        tree = framework_lock.services_lock(version, manifest)
+        self.assertEqual(tree["kind"], framework_lock.KIND)
+        (entry,) = tree["versions"]
+        self.assertEqual(entry["release"], "cp2a")
+        projects = {p["path"]: p for p in entry["projects"]}
+        self.assertEqual(sorted(projects), ["build/make", "frameworks/base", "prebuilts/clang/host/linux-x86"])
+        self.assertNotIn("cone", projects["frameworks/base"])
+        self.assertEqual(projects["prebuilts/clang/host/linux-x86"]["cone"], ["soong", "{clang}"])
+        self.assertEqual(projects["build/make"]["linkfiles"], [{"src": "core", "dest": "build/core"}])
+        self.assertEqual(projects["build/make"]["copyfiles"], [{"src": "root.mk", "dest": "Makefile"}])
+        self.assertEqual(projects["frameworks/base"]["url"],
+                         "https://android.googlesource.com/platform/frameworks/base")
+        with self.assertRaisesRegex(framework_lock.LockError, "SHA-256 differs"):
+            framework_lock.services_lock(version, manifest + b" ")
+
+    def test_fr22_the_services_build_takes_the_published_product_and_no_dexpreopt(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('lunch "$product-$release-userdebug"', script)
+        self.assertIn("export WITH_DEXPREOPT=false", script)
+        self.assertNotIn("--native", script)
+        self.assertIn("--native", (REPO / ".github/scripts/framework/build.sh").read_text())
+        self.assertEqual(framework_lock.JAVA_OUTPUTS,
+                         {"SYSTEM/framework/services.jar": "system/framework/services.jar"})
+
+    def test_fr22_the_framework_artifact_carries_services_jar_from_the_services_build(self):
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        self.assertIn("build-services.sh", workflow)
+        self.assertIn("framework_lock.py services-lock", workflow)
+        self.assertIn("needs: [versions, services]", workflow)
+        self.assertIn('--services "$DSA_TRANSLATOR_WORK/services"', workflow)
+
+    def test_fr22_collect_takes_services_jar_from_the_services_build(self):
+        version = framework_lock.version_entry(framework_lock.load(), "android17")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            collect_tests = CollectTests()
+            services = root / "services"
+            jar = services / framework_lock.SERVICES_JAR
+            jar.parent.mkdir(parents=True)
+            with zipfile.ZipFile(jar, "w", zipfile.ZIP_DEFLATED) as z:
+                z.writestr("classes.dex", b"dex\n035\0" + bytes(100))
+            description = collect.collect(version, "x86_64", collect_tests._product(root, 62), root / "out",
+                                          top=collect_tests._tree(root), services=services)
+            self.assertIn(framework_lock.SERVICES_JAR, description["files"])
+            self.assertEqual((root / "out" / framework_lock.SERVICES_JAR).read_bytes(), jar.read_bytes())
+            # Without the services build's folder there is no services.jar, as before.
+            description = collect.collect(version, "x86_64", root / "product", root / "out2", top=root / "tree")
+            self.assertNotIn(framework_lock.SERVICES_JAR, description["files"])
+            jar.write_bytes(b"not a jar")
+            with self.assertRaisesRegex(SystemExit, "not a jar with dex code"):
+                collect.collect(version, "x86_64", root / "product", root / "out3", top=root / "tree",
+                                services=services)
+
+
+GOOGLESOURCE_CLANG = "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86"
 
 
 class KeyMintLockTests(unittest.TestCase):
