@@ -1,14 +1,16 @@
 # Android 버전
 
-Desktop Subsystem for Android™(DSA)는 가장 새로운 Android 주 버전 두 개를 지원합니다. 지금은 Android
-16과 Android 17입니다. 기본으로는 가장 새로운 버전을 실행합니다. 어떤 앱은 둘 중 한 버전에서만 동작하므로
-버전을 고를 수 있습니다.
+[English](../android-versions.md) · **한국어** · [日本語](../ja/android-versions.md) · [简体中文](../zh-CN/android-versions.md) · [繁體中文](../zh-TW/android-versions.md) · [Español](../es/android-versions.md) · [Français](../fr/android-versions.md) · [Deutsch](../de/android-versions.md) · [Português (Brasil)](../pt-BR/android-versions.md) · [Русский](../ru/android-versions.md) · [Italiano](../it/android-versions.md) · [Tiếng Việt](../vi/android-versions.md) · [Bahasa Indonesia](../id/android-versions.md) · [Türkçe](../tr/android-versions.md)
+
+Desktop Subsystem for Android™(DSA)는 가장 새로운 Android 주 버전 두 개를 지원합니다. 지금은
+Android 16과 Android 17입니다. 기본으로는 가장 새로운 버전을 실행합니다. 어떤 앱은 둘 중 한
+버전에서만 동작하므로 버전을 고를 수 있습니다.
 
 ## 실행 중인 버전 확인하기
 
-DSA 설정의 **업데이트** 페이지를 엽니다. **Android**에 버전, 빌드, 보안 패치 수준, 따르는 버전, 업데이트 상태와
-내려받기 진행률이 나옵니다. **지금 확인**을 누르면 서비스가 업데이트를 바로 찾습니다. 명령줄에서는 다음과
-같이 합니다.
+DSA 설정의 **업데이트** 페이지를 엽니다. **Android** 아래에 버전, 빌드, 보안 패치 수준, 따르는
+버전, 업데이트 상태와 내려받기 진행률이 나옵니다. **지금 확인**을 누르면 서비스가 업데이트를
+바로 찾습니다. 명령줄에서는 다음과 같이 합니다.
 
 ```
 dsa android version   # 실행 중인 버전과 고를 수 있는 버전
@@ -22,7 +24,8 @@ PC의 모든 사용자가 같은 Android 버전을 쓰므로 관리자만 바꿀
 2. **사용할 버전**에서 버전이나 **항상 최신 버전**을 고릅니다.
 3. **바꾸기**를 누르고 관리자 권한 요청을 승인합니다.
 
-고른 버전은 내려받아 다음에 Android를 시작할 때부터 씁니다. 관리자 권한 터미널에서는 다음과 같이 합니다.
+고른 버전은 내려받아 다음에 Android를 시작할 때부터 씁니다. 관리자 권한 터미널에서는 다음과
+같이 합니다.
 
 ```
 dsa android use 16
@@ -31,29 +34,30 @@ dsa android use latest
 
 ### 이전 버전으로 바꾸면 데이터가 지워집니다
 
-Android는 더 새로운 버전이 쓴 데이터를 읽지 못합니다. 그래서 더 오래된 주 버전으로 바꾸면 PC의 모든
-사용자의 Android 데이터, 즉 설치한 앱, 계정, 모든 앱 데이터가 지워집니다. DSA 설정은 남습니다. 되돌릴 수
-없습니다.
+Android는 더 새로운 버전이 쓴 데이터를 읽지 못합니다. 그래서 더 오래된 주 버전으로 바꾸면 PC의
+모든 사용자의 Android 데이터, 즉 설치한 앱, 계정, 모든 앱 데이터가 지워집니다. DSA 설정은
+남습니다. 되돌릴 수 없습니다.
 
-DSA 설정에서는 **데이터 지우고 바꾸기**로 확인을 받습니다. 명령줄에서는 `--erase-data`를 붙입니다.
+DSA 설정에서는 **데이터 지우고 바꾸기**로 확인을 받습니다. 명령줄에서는 `--erase-data`를
+붙입니다.
 
 ```
 dsa android use 16 --erase-data
 ```
 
-더 새로운 버전으로 바꾸면 앱과 데이터가 그대로 옮겨집니다.
+더 새로운 버전으로 바꾸면 앱과 데이터가 그대로 남습니다.
 
 ## 업데이트
 
 - 고른 버전의 보안 업데이트는 계속 받습니다.
 - 어떤 버전의 지원이 끝나면 DSA가 다음 버전으로 옮기고 앱은 그대로 둡니다.
 - DSA가 스스로 더 오래된 주 버전으로 옮기는 일은 없습니다.
-- 이미지는 쓰기 전에 서명된 목록과 대조합니다. 부팅에 실패한 이미지는 이전 이미지로 되돌립니다.
+- 이미지는 쓰기 전에 서명된 목록과 대조합니다. 부팅에 실패한 이미지는 이전 이미지로 바뀝니다.
 
-관리자는 DSA 설정 **업데이트** 페이지의 **안드로이드 이미지 자동 업데이트**나
+관리자는 DSA 설정 **업데이트** 페이지의 **Android 이미지 자동 업데이트**나
 `dsa settings set image-updates off`로 이미지 업데이트를 끌 수 있습니다.
 
 ---
 
-Android는 Google LLC의 상표입니다. Windows는 Microsoft 그룹의 상표입니다. DSA는 Google, Microsoft와
-제휴하거나 그들의 보증 또는 후원을 받지 않습니다.
+Android는 Google LLC의 상표입니다. Windows는 Microsoft 그룹의 상표입니다. DSA는 Google,
+Microsoft와 제휴하거나 그들의 보증 또는 후원을 받지 않습니다.
