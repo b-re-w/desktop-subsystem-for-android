@@ -19,11 +19,29 @@
 //! accessibility action in Android, so Invoke presses a list row without moving the cursor.
 //! As changes arrive the window raises structure, property and focus change events.
 //!
-//! While the title bar shows the back arrow in the icon's cell, the root's first child is a
-//! button for it ([`BackProvider`]), before the task's nodes because it sits at the window's top
-//! left. It is named "Back" ("뒤로" on a Korean display language), its bounds are the icon's
-//! cell, and its Invoke sends the task Back as a click on the arrow does. It appears and goes
-//! with the arrow, and the window raises a structure change event each time.
+//! The title bar the window draws is in the tree too, before the task's nodes because it sits
+//! at the window's top: one button for each of its parts ([`CaptionProvider`]), left to right.
+//! The icon's cell is "System menu" ("시스템 메뉴"), whose Invoke opens the window menu as
+//! Alt+Space does, or, while the task can go back and the cell shows the back arrow, "Back"
+//! ("뒤로"), whose Invoke sends the task Back as a click on the arrow does. Then come
+//! "Minimize" ("최소화"), "Maximize" ("최대화"), named "Restore" ("이전 크기로") while the
+//! window is maximized or fills its monitor, and "Close" ("닫기"); each Invoke posts the
+//! command a click on the button posts. Names follow the display language, Korean or English.
+//! A button's bounds are the cell the window draws it in, on the screen. While a window that
+//! fills its monitor keeps its title bar hidden, its buttons stay in the tree and say they are
+//! off the screen (`IsOffscreen`). The window raises structure change events as buttons come
+//! and go (the back arrow takes the icon's place), and property change events as they move,
+//! are renamed (Maximize and Restore), are hidden or shown, or are enabled.
+//!
+//! Windows' own non-client proxy would describe a standard caption beside these buttons. The
+//! title bar's information the window answers (`WM_GETTITLEBARINFOEX`, which that proxy reads)
+//! keeps the buttons' real places and marks them invisible, so clients find these buttons
+//! alone ([`super::caption`]).
+//!
+//! Until the app's first frame the window shows only its splash. Meanwhile the window says
+//! it is opening the app: its item status is "Opening the app" ("앱을 여는 중") and it is
+//! busy (`busy=true`). The first tick after the first frame empties the status and raises its
+//! property change event, so a screen reader learns the app is there.
 //!
 //! A tree that breaks the rules is dropped and logged, and the watch starts over; nothing a
 //! tree holds can end the window host.
@@ -45,6 +63,7 @@ use dsa_host_core::accessibility::{
     from_screen, to_screen, ActionRequest, Changes, ClientPresence, GuestAccessibility, Node,
     NodeAction, PresenceChange, Tree, TreeError,
 };
+use dsa_host_core::compositor::caption::{CaptionButton, CaptionLayout};
 use dsa_host_core::compositor::window_sizing::{frame_placement, FramePlacement};
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::host_api::HostApiClient;
@@ -69,39 +88,231 @@ use crate::ui_automation::{
 /// A rectangle in the window's client pixels: left, top, width, height.
 pub type ClientRect = (i32, i32, u32, u32);
 
-/// The back button's runtime ID. A node's has three parts, so this one of two never equals it.
-const BACK_RUNTIME_ID: [i32; 2] = [UiaAppendRuntimeId as i32, 0x4241_434b];
-
-/// The back button's name in the user's display language: Korean or English.
-fn back_name(korean: bool) -> &'static str {
-    if korean {
-        "뒤로"
-    } else {
-        "Back"
+/// What the window says of itself (its item status) while its app opens: until the first
+/// frame it shows only the splash, and a screen reader would otherwise read an empty window
+/// with no hint that something is coming. `None` once the app shows.
+fn loading_status(korean: bool, loading: bool) -> Option<&'static str> {
+    match (loading, korean) {
+        (false, _) => None,
+        (true, true) => Some("앱을 여는 중"),
+        (true, false) => Some("Opening the app"),
     }
 }
 
-/// The back button's name for the user's display language now.
-fn display_back_name() -> &'static str {
+/// Whether the window `hwnd` has not yet presented its app's first frame, as the presenter
+/// marks it on the window.
+fn shared_loading(hwnd: isize) -> bool {
+    use crate::compositor::window_marks::{read_time, FIRST_FRAME_PROPERTY};
+    read_time(hwnd, FIRST_FRAME_PROPERTY).is_none()
+}
+
+/// One button of the title bar the window draws.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CaptionKind {
+    /// The back arrow in the icon's cell, while the task can go back.
+    Back,
+    /// The app's icon in its cell, which opens the window menu.
+    SystemMenu,
+    Minimize,
+    /// Maximize, or Restore while the window is maximized or fills its monitor.
+    Maximize,
+    Close,
+}
+
+impl CaptionKind {
+    /// Every kind, in the order they stand in the title bar.
+    const ALL: [CaptionKind; 5] = [
+        CaptionKind::Back,
+        CaptionKind::SystemMenu,
+        CaptionKind::Minimize,
+        CaptionKind::Maximize,
+        CaptionKind::Close,
+    ];
+
+    /// The button's runtime ID. A node's has three parts, so one of two never equals it, and
+    /// the second part tells the buttons apart.
+    fn runtime_id(self) -> [i32; 2] {
+        let id = match self {
+            // "BACK", "MENU", "MINI", "MAXI" and "CLOS" in ASCII.
+            CaptionKind::Back => 0x4241_434b,
+            CaptionKind::SystemMenu => 0x4d45_4e55,
+            CaptionKind::Minimize => 0x4d49_4e49,
+            CaptionKind::Maximize => 0x4d41_5849,
+            CaptionKind::Close => 0x434c_4f53,
+        };
+        [UiaAppendRuntimeId as i32, id]
+    }
+
+    /// The button's automation ID, the same in every language and window state.
+    fn automation_id(self) -> &'static str {
+        match self {
+            CaptionKind::Back => "Back",
+            CaptionKind::SystemMenu => "SystemMenu",
+            CaptionKind::Minimize => "Minimize",
+            CaptionKind::Maximize => "Maximize",
+            CaptionKind::Close => "Close",
+        }
+    }
+
+    /// The keys that do what the button does, as Windows names them on its own menu.
+    fn accelerator(self) -> Option<&'static str> {
+        match self {
+            CaptionKind::SystemMenu => Some("Alt+Space"),
+            CaptionKind::Close => Some("Alt+F4"),
+            _ => None,
+        }
+    }
+}
+
+/// A title bar button's name in the user's display language, Korean or English. The maximize
+/// button is named Restore while the window is `maximized` (or fills its monitor), as the
+/// glyph it shows then says.
+fn caption_name(kind: CaptionKind, maximized: bool, korean: bool) -> &'static str {
+    match (kind, korean) {
+        (CaptionKind::Back, true) => "뒤로",
+        (CaptionKind::Back, false) => "Back",
+        (CaptionKind::SystemMenu, true) => "시스템 메뉴",
+        (CaptionKind::SystemMenu, false) => "System menu",
+        (CaptionKind::Minimize, true) => "최소화",
+        (CaptionKind::Minimize, false) => "Minimize",
+        (CaptionKind::Maximize, true) if maximized => "이전 크기로",
+        (CaptionKind::Maximize, false) if maximized => "Restore",
+        (CaptionKind::Maximize, true) => "최대화",
+        (CaptionKind::Maximize, false) => "Maximize",
+        (CaptionKind::Close, true) => "닫기",
+        (CaptionKind::Close, false) => "Close",
+    }
+}
+
+/// The back button's name in the user's display language: Korean or English.
+#[cfg(test)]
+fn back_name(korean: bool) -> &'static str {
+    caption_name(CaptionKind::Back, false, korean)
+}
+
+/// Whether the user's display language is Korean now, which the buttons are named in.
+fn display_korean() -> bool {
     use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
     // SAFETY: reads the user's display language.
-    back_name(is_korean(unsafe { GetUserDefaultUILanguage() }))
+    is_korean(unsafe { GetUserDefaultUILanguage() })
+}
+
+/// The title bar's buttons as the window draws them now: their cells in client pixels and
+/// what they say.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CaptionCells {
+    /// The icon's cell; `None` in a window too narrow for it.
+    pub icon: Option<ClientRect>,
+    /// Whether the icon's cell shows the back arrow rather than the app's icon.
+    pub back: bool,
+    /// The minimize, maximize and close buttons' cells; `None` before the window has laid
+    /// its title bar out.
+    pub buttons: Option<[ClientRect; 3]>,
+    /// Whether the window is maximized or fills its monitor, when the middle button restores.
+    pub maximized: bool,
+    /// Whether the middle button does anything: a window the user's settings fix in size
+    /// cannot be maximized, but one that fills its monitor can always leave it.
+    pub can_maximize: bool,
+    /// Whether the title bar is hidden: a window that fills its monitor shows it only once
+    /// the pointer or the keyboard brings it out.
+    pub offscreen: bool,
+}
+
+impl CaptionCells {
+    /// The buttons of a title bar laid out as `layout`, its icon's cell showing the back arrow
+    /// when `back`.
+    pub fn of(
+        layout: &CaptionLayout,
+        back: bool,
+        maximized: bool,
+        can_maximize: bool,
+        offscreen: bool,
+    ) -> CaptionCells {
+        CaptionCells {
+            icon: layout.icon_cell(),
+            back,
+            buttons: Some(CaptionButton::ALL.map(|button| layout.button_rect(button))),
+            maximized,
+            can_maximize,
+            offscreen,
+        }
+    }
+
+    /// The buttons there are, left to right.
+    fn kinds(&self) -> Vec<CaptionKind> {
+        CaptionKind::ALL
+            .into_iter()
+            .filter(|kind| self.cell(*kind).is_some())
+            .collect()
+    }
+
+    /// Where `kind` is drawn, in client pixels; `None` while the title bar has no such button.
+    fn cell(&self, kind: CaptionKind) -> Option<ClientRect> {
+        match kind {
+            CaptionKind::Back => self.icon.filter(|_| self.back),
+            CaptionKind::SystemMenu => self.icon.filter(|_| !self.back),
+            CaptionKind::Minimize => self.buttons.map(|cells| cells[0]),
+            CaptionKind::Maximize => self.buttons.map(|cells| cells[1]),
+            CaptionKind::Close => self.buttons.map(|cells| cells[2]),
+        }
+    }
+
+    /// Whether `kind` does anything when pressed now.
+    fn enabled(&self, kind: CaptionKind) -> bool {
+        kind != CaptionKind::Maximize || self.can_maximize
+    }
+}
+
+/// The button a client point (`x`, `y`) is on; none while the title bar is hidden.
+fn caption_at(cells: &CaptionCells, x: f64, y: f64) -> Option<CaptionKind> {
+    if cells.offscreen {
+        return None;
+    }
+    cells
+        .kinds()
+        .into_iter()
+        .find(|kind| cells.cell(*kind).is_some_and(|cell| in_cell(cell, x, y)))
+}
+
+/// What pressing `kind` posts to the window, as the `WM_SYSCOMMAND` command and its `lparam`:
+/// the window menu as Alt+Space opens it, and the commands a click on the caption buttons
+/// posts. `None` for the back arrow, which sends the task Back instead, and for a button that
+/// does nothing now.
+fn caption_command(kind: CaptionKind, cells: &CaptionCells) -> Option<(u32, isize)> {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SC_CLOSE, SC_KEYMENU, SC_MAXIMIZE, SC_MINIMIZE, SC_RESTORE,
+    };
+    if !cells.enabled(kind) {
+        return None;
+    }
+    match kind {
+        CaptionKind::Back => None,
+        // Alt+Space: the window menu, under the icon's cell, on its first item.
+        CaptionKind::SystemMenu => Some((SC_KEYMENU, isize::from(b' '))),
+        CaptionKind::Minimize => Some((SC_MINIMIZE, 0)),
+        // A window that fills its monitor leaves it on Restore, as its middle button does.
+        CaptionKind::Maximize if cells.maximized => Some((SC_RESTORE, 0)),
+        CaptionKind::Maximize => Some((SC_MAXIMIZE, 0)),
+        CaptionKind::Close => Some((SC_CLOSE, 0)),
+    }
 }
 
 /// One child of the window's fragment root.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RootChild {
-    /// The title bar's back arrow.
-    Back,
+    /// A button of the title bar.
+    Caption(CaptionKind),
     /// A top-level node of the task.
     Node(u32),
 }
 
-/// The root's children in order: the back arrow first while it shows (it is at the window's
-/// top left), then the task's top-level nodes.
-fn root_children(back: bool, roots: &[u32]) -> Vec<RootChild> {
-    back.then_some(RootChild::Back)
-        .into_iter()
+/// The root's children in order: the title bar's buttons first, left to right (they are at
+/// the window's top), then the task's top-level nodes.
+fn root_children(captions: &[CaptionKind], roots: &[u32]) -> Vec<RootChild> {
+    captions
+        .iter()
+        .copied()
+        .map(RootChild::Caption)
         .chain(roots.iter().copied().map(RootChild::Node))
         .collect()
 }
@@ -126,22 +337,59 @@ fn in_cell(cell: ClientRect, x: f64, y: f64) -> bool {
         && y < top as f64 + height as f64
 }
 
-/// What happened to the back button, for the events the window raises.
+/// What happened to a title bar button, for the events the window raises.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum BackChange {
+enum CaptionChange {
     Added,
     Removed,
     Moved,
+    /// The maximize button's name changed: it was named for a maximized window (`from`), and
+    /// is named for one now (`to`).
+    Renamed {
+        from: bool,
+        to: bool,
+    },
+    /// The title bar was hidden, or shown (`IsOffscreen` is now the value held).
+    Offscreen(bool),
+    /// The button can be pressed now, or no longer.
+    Enabled(bool),
 }
 
-/// The change from the back arrow's cell `before` to `after`; `None` while it shows neither.
-fn back_change(before: Option<ClientRect>, after: Option<ClientRect>) -> Option<BackChange> {
-    match (before, after) {
-        (None, Some(_)) => Some(BackChange::Added),
-        (Some(_), None) => Some(BackChange::Removed),
-        (Some(a), Some(b)) if a != b => Some(BackChange::Moved),
-        _ => None,
+/// What changed for each button from the title bar `before` to `after`, in the order the
+/// buttons stand.
+fn caption_changes(
+    before: &CaptionCells,
+    after: &CaptionCells,
+) -> Vec<(CaptionKind, CaptionChange)> {
+    let mut changes = Vec::new();
+    for kind in CaptionKind::ALL {
+        match (before.cell(kind), after.cell(kind)) {
+            (None, Some(_)) => changes.push((kind, CaptionChange::Added)),
+            (Some(_), None) => changes.push((kind, CaptionChange::Removed)),
+            (Some(was), Some(now)) => {
+                if was != now {
+                    changes.push((kind, CaptionChange::Moved));
+                }
+                if kind == CaptionKind::Maximize && before.maximized != after.maximized {
+                    changes.push((
+                        kind,
+                        CaptionChange::Renamed {
+                            from: before.maximized,
+                            to: after.maximized,
+                        },
+                    ));
+                }
+                if before.offscreen != after.offscreen {
+                    changes.push((kind, CaptionChange::Offscreen(after.offscreen)));
+                }
+                if before.enabled(kind) != after.enabled(kind) {
+                    changes.push((kind, CaptionChange::Enabled(after.enabled(kind))));
+                }
+            }
+            (None, None) => {}
+        }
     }
+    changes
 }
 
 /// Dials the service's local API, once for each watch.
@@ -217,10 +465,10 @@ struct State {
     /// Changes waiting for the UI thread to raise their events, each with the tree's names
     /// from before it.
     pending: Vec<(Changes, Vec<(u32, String)>)>,
-    /// The icon's cell while the title bar shows the back arrow in it.
-    back: Option<ClientRect>,
-    /// Changes to the back button waiting for the UI thread to raise their events.
-    back_changes: Vec<BackChange>,
+    /// The title bar's buttons as the window draws them now.
+    caption: CaptionCells,
+    /// Changes to the title bar's buttons waiting for the UI thread to raise their events.
+    caption_changes: Vec<(CaptionKind, CaptionChange)>,
     /// Where the back button's Back goes: the window host's input for the guest.
     input: Sender<InputEvent>,
 }
@@ -239,6 +487,12 @@ impl Shared {
 
     fn hwnd(&self) -> HWND {
         HWND(self.hwnd as *mut core::ffi::c_void)
+    }
+
+    /// Whether the window still waits for its app's first frame and shows the splash. The
+    /// presenter marks the window when it presents that frame, from whichever thread presents.
+    fn loading(&self) -> bool {
+        shared_loading(self.hwnd)
     }
 
     /// The client area's top left on the screen and its size.
@@ -299,7 +553,7 @@ impl Shared {
     /// not shown.
     fn go_back(&self) -> windows::core::Result<()> {
         let state = self.lock();
-        if state.back.is_none() {
+        if state.caption.cell(CaptionKind::Back).is_none() {
             return Err(not_available());
         }
         // The same clock as a message's time, which a click's Back carries; UI Automation may
@@ -313,6 +567,43 @@ impl Shared {
         }
         Ok(())
     }
+
+    /// Presses the title bar's `kind` button, as a click on it does. An error while the title
+    /// bar has no such button, or the button does nothing now.
+    fn press(&self, kind: CaptionKind) -> windows::core::Result<()> {
+        let cells = self.lock().caption;
+        if cells.cell(kind).is_none() {
+            return Err(not_available());
+        }
+        if kind == CaptionKind::Back {
+            return self.go_back();
+        }
+        let Some((command, lparam)) = caption_command(kind, &cells) else {
+            return Err(not_enabled());
+        };
+        use windows_sys::Win32::UI::WindowsAndMessaging::{PostMessageW, WM_SYSCOMMAND};
+        // Posted, as a click on the button posts it: UI Automation calls from a thread of its
+        // own, and the window carries the command out on its thread once the call returned
+        // (the window menu runs a loop of its own until it closes).
+        // SAFETY: posting to the window; a stale handle only fails.
+        let posted = unsafe {
+            PostMessageW(
+                self.hwnd as windows_sys::Win32::Foundation::HWND,
+                WM_SYSCOMMAND,
+                command as usize,
+                lparam,
+            )
+        };
+        if posted == 0 {
+            return Err(not_available());
+        }
+        Ok(())
+    }
+}
+
+/// The element cannot be used now.
+fn not_enabled() -> Error {
+    Error::from_hresult(HRESULT(UIA_E_ELEMENTNOTENABLED as i32))
 }
 
 pub(crate) fn not_available() -> Error {
@@ -421,19 +712,21 @@ struct NodeProvider {
     id: u32,
 }
 
-/// The title bar's back arrow, while it shows in the icon's cell.
+/// One button of the title bar the window draws, while the title bar has it.
 #[implement(
     IRawElementProviderSimple,
     IRawElementProviderFragment,
     IInvokeProvider
 )]
-struct BackProvider {
+struct CaptionProvider {
     shared: Arc<Shared>,
+    kind: CaptionKind,
 }
 
-fn back_of(shared: &Arc<Shared>) -> IRawElementProviderFragment {
-    BackProvider {
+fn caption_of(shared: &Arc<Shared>, kind: CaptionKind) -> IRawElementProviderFragment {
+    CaptionProvider {
         shared: Arc::clone(shared),
+        kind,
     }
     .into()
 }
@@ -445,7 +738,7 @@ fn child_of(
     child: Option<RootChild>,
 ) -> windows::core::Result<IRawElementProviderFragment> {
     match (child, epoch) {
-        (Some(RootChild::Back), _) => Ok(back_of(shared)),
+        (Some(RootChild::Caption(kind)), _) => Ok(caption_of(shared, kind)),
         (Some(RootChild::Node(id)), Some(epoch)) => Ok(node_of(shared, epoch, id)),
         _ => none(),
     }
@@ -480,6 +773,13 @@ impl IRawElementProviderSimple_Impl for RootProvider_Impl {
         Ok(match property {
             UIA_FrameworkIdPropertyId => variant_str("Android"),
             UIA_ProviderDescriptionPropertyId => variant_str("Desktop Subsystem for Android"),
+            UIA_ItemStatusPropertyId => {
+                match loading_status(display_korean(), self.shared.loading()) {
+                    Some(status) => variant_str(status),
+                    None => variant_empty(),
+                }
+            }
+            UIA_AriaPropertiesPropertyId if self.shared.loading() => variant_str("busy=true"),
             _ => variant_empty(),
         })
     }
@@ -503,7 +803,7 @@ impl IRawElementProviderFragment_Impl for RootProvider_Impl {
             } else {
                 &[]
             };
-            let children = root_children(state.back.is_some(), roots);
+            let children = root_children(&state.caption.kinds(), roots);
             let child = match direction {
                 NavigateDirection_FirstChild => children.first().copied(),
                 NavigateDirection_LastChild => children.last().copied(),
@@ -545,12 +845,12 @@ impl IRawElementProviderFragmentRoot_Impl for RootProvider_Impl {
     ) -> windows::core::Result<IRawElementProviderFragment> {
         let (origin, client) = self.shared.client();
         let state = self.shared.lock();
-        // The arrow is drawn over the app's top left, so it is what a point in its cell hits.
-        if let Some(cell) = state.back {
-            if in_cell(cell, x - origin.0 as f64, y - origin.1 as f64) {
-                drop(state);
-                return Ok(back_of(&self.shared));
-            }
+        // The title bar is drawn over the app's top, so a button is what a point in its cell
+        // hits, while the title bar shows.
+        let button = caption_at(&state.caption, x - origin.0 as f64, y - origin.1 as f64);
+        if let Some(kind) = button {
+            drop(state);
+            return Ok(caption_of(&self.shared, kind));
         }
         let Some(epoch) = state.tree.epoch() else {
             return none();
@@ -661,16 +961,17 @@ impl IRawElementProviderFragment_Impl for NodeProvider_Impl {
         &self,
         direction: NavigateDirection,
     ) -> windows::core::Result<IRawElementProviderFragment> {
-        let back = self.shared.lock().back.is_some();
-        // A top-level node's siblings are the root's children, the back arrow among them.
+        let captions = self.shared.lock().caption.kinds();
+        // A top-level node's siblings are the root's children, the title bar's buttons among
+        // them.
         let sibling = |tree: &Tree, id: u32, forward: bool| match tree.parent(id) {
             Some(_) => tree.sibling(id, forward).map(Target::Node),
             None => match root_sibling(
-                &root_children(back, tree.roots()),
+                &root_children(&captions, tree.roots()),
                 RootChild::Node(id),
                 forward,
             ) {
-                Some(RootChild::Back) => Some(Target::Back),
+                Some(RootChild::Caption(kind)) => Some(Target::Caption(kind)),
                 Some(RootChild::Node(id)) => Some(Target::Node(id)),
                 None => None,
             },
@@ -687,7 +988,7 @@ impl IRawElementProviderFragment_Impl for NodeProvider_Impl {
         })?;
         match target {
             Some(Target::Root) => Ok(root_of(&self.shared).cast()?),
-            Some(Target::Back) => Ok(back_of(&self.shared)),
+            Some(Target::Caption(kind)) => Ok(caption_of(&self.shared, kind)),
             Some(Target::Node(id)) => Ok(node_of(&self.shared, self.epoch, id)),
             None => none(),
         }
@@ -735,24 +1036,55 @@ impl IRawElementProviderFragment_Impl for NodeProvider_Impl {
 
 enum Target {
     Root,
-    Back,
+    Caption(CaptionKind),
     Node(u32),
 }
 
-impl BackProvider {
-    /// The icon's cell while the arrow shows; an error once it is gone.
-    fn cell(&self) -> windows::core::Result<ClientRect> {
-        self.shared.lock().back.ok_or_else(not_available)
+/// What a title bar button says of `property`, its title bar being `cells`, named in Korean
+/// when `korean`.
+fn caption_property(
+    kind: CaptionKind,
+    cells: &CaptionCells,
+    property: UIA_PROPERTY_ID,
+    korean: bool,
+) -> VARIANT {
+    match property {
+        UIA_ControlTypePropertyId => variant_i4(UIA_ButtonControlTypeId.0),
+        UIA_NamePropertyId => variant_str(caption_name(kind, cells.maximized, korean)),
+        UIA_AutomationIdPropertyId => variant_str(kind.automation_id()),
+        UIA_AcceleratorKeyPropertyId => match kind.accelerator() {
+            Some(keys) => variant_str(keys),
+            None => variant_empty(),
+        },
+        UIA_IsEnabledPropertyId => variant_bool(cells.enabled(kind)),
+        // A hidden title bar's buttons are still there, at the monitor's top edge, and come
+        // out with Alt or the pointer.
+        UIA_IsOffscreenPropertyId => variant_bool(cells.offscreen),
+        UIA_IsKeyboardFocusablePropertyId => variant_bool(false),
+        UIA_HasKeyboardFocusPropertyId => variant_bool(false),
+        UIA_IsControlElementPropertyId => variant_bool(true),
+        UIA_IsContentElementPropertyId => variant_bool(true),
+        UIA_IsInvokePatternAvailablePropertyId => variant_bool(true),
+        _ => variant_empty(),
     }
 }
 
-impl IRawElementProviderSimple_Impl for BackProvider_Impl {
+impl CaptionProvider {
+    /// The title bar while it has this button; an error once it is gone.
+    fn cells(&self) -> windows::core::Result<CaptionCells> {
+        let cells = self.shared.lock().caption;
+        cells.cell(self.kind).ok_or_else(not_available)?;
+        Ok(cells)
+    }
+}
+
+impl IRawElementProviderSimple_Impl for CaptionProvider_Impl {
     fn ProviderOptions(&self) -> windows::core::Result<ProviderOptions> {
         Ok(ProviderOptions_ServerSideProvider)
     }
 
     fn GetPatternProvider(&self, pattern: UIA_PATTERN_ID) -> windows::core::Result<IUnknown> {
-        self.cell()?;
+        self.cells()?;
         if pattern == UIA_InvokePatternId {
             Ok(self.to_interface::<IRawElementProviderSimple>().cast()?)
         } else {
@@ -761,19 +1093,13 @@ impl IRawElementProviderSimple_Impl for BackProvider_Impl {
     }
 
     fn GetPropertyValue(&self, property: UIA_PROPERTY_ID) -> windows::core::Result<VARIANT> {
-        self.cell()?;
-        Ok(match property {
-            UIA_ControlTypePropertyId => variant_i4(UIA_ButtonControlTypeId.0),
-            UIA_NamePropertyId => variant_str(display_back_name()),
-            UIA_AutomationIdPropertyId => variant_str("Back"),
-            UIA_IsEnabledPropertyId => variant_bool(true),
-            UIA_IsKeyboardFocusablePropertyId => variant_bool(false),
-            UIA_HasKeyboardFocusPropertyId => variant_bool(false),
-            UIA_IsControlElementPropertyId => variant_bool(true),
-            UIA_IsContentElementPropertyId => variant_bool(true),
-            UIA_IsInvokePatternAvailablePropertyId => variant_bool(true),
-            _ => variant_empty(),
-        })
+        let cells = self.cells()?;
+        Ok(caption_property(
+            self.kind,
+            &cells,
+            property,
+            display_korean(),
+        ))
     }
 
     fn HostRawElementProvider(&self) -> windows::core::Result<IRawElementProviderSimple> {
@@ -781,7 +1107,7 @@ impl IRawElementProviderSimple_Impl for BackProvider_Impl {
     }
 }
 
-impl IRawElementProviderFragment_Impl for BackProvider_Impl {
+impl IRawElementProviderFragment_Impl for CaptionProvider_Impl {
     fn Navigate(
         &self,
         direction: NavigateDirection,
@@ -797,7 +1123,8 @@ impl IRawElementProviderFragment_Impl for BackProvider_Impl {
         };
         let (epoch, child) = {
             let state = self.shared.lock();
-            if state.back.is_none() {
+            let captions = state.caption.kinds();
+            if !captions.contains(&self.kind) {
                 return Err(not_available());
             }
             let epoch = state.tree.epoch();
@@ -806,18 +1133,22 @@ impl IRawElementProviderFragment_Impl for BackProvider_Impl {
             } else {
                 &[]
             };
-            let children = root_children(true, roots);
-            (epoch, root_sibling(&children, RootChild::Back, forward))
+            let children = root_children(&captions, roots);
+            (
+                epoch,
+                root_sibling(&children, RootChild::Caption(self.kind), forward),
+            )
         };
         child_of(&self.shared, epoch, child)
     }
 
     fn GetRuntimeId(&self) -> windows::core::Result<*mut SAFEARRAY> {
-        safe_array(&BACK_RUNTIME_ID)
+        safe_array(&self.kind.runtime_id())
     }
 
     fn BoundingRectangle(&self) -> windows::core::Result<UiaRect> {
-        let (left, top, width, height) = self.cell()?;
+        let cells = self.cells()?;
+        let (left, top, width, height) = cells.cell(self.kind).ok_or_else(not_available)?;
         let (origin, _) = self.shared.client();
         Ok(UiaRect {
             left: (origin.0 + left) as f64,
@@ -832,7 +1163,7 @@ impl IRawElementProviderFragment_Impl for BackProvider_Impl {
     }
 
     fn SetFocus(&self) -> windows::core::Result<()> {
-        // The arrow takes no keyboard focus, as a caption button does not.
+        // A caption button takes no keyboard focus, as Windows' own do not.
         Err(invalid_operation())
     }
 
@@ -841,9 +1172,9 @@ impl IRawElementProviderFragment_Impl for BackProvider_Impl {
     }
 }
 
-impl IInvokeProvider_Impl for BackProvider_Impl {
+impl IInvokeProvider_Impl for CaptionProvider_Impl {
     fn Invoke(&self) -> windows::core::Result<()> {
-        self.shared.go_back()
+        self.shared.press(self.kind)
     }
 }
 
@@ -980,13 +1311,16 @@ pub struct AccessibilityWindow {
     scale: (u32, u32),
     /// Whether the window holds the size the desktop gave it.
     held: bool,
-    /// The icon's cell while the title bar shows the back arrow in it.
-    back: Option<ClientRect>,
+    /// The title bar's buttons as the window draws them now.
+    caption: CaptionCells,
     /// Where the back button's Back goes.
     input: Sender<InputEvent>,
     /// The task the window shows, whose tree is watched: another than `task_id` once a task
     /// took the window over after a GPU reset.
     tasks: WindowTasks,
+    /// Whether the window still says it is opening its app, until the tick that sees the
+    /// first frame tells clients it no longer is.
+    opening: bool,
 }
 
 impl AccessibilityWindow {
@@ -1013,8 +1347,9 @@ impl AccessibilityWindow {
             task_size,
             scale: (1, 1),
             held: false,
-            back: None,
+            caption: CaptionCells::default(),
             input,
+            opening: true,
         }
     }
 
@@ -1027,20 +1362,19 @@ impl AccessibilityWindow {
         }
     }
 
-    /// Whether the title bar shows the back arrow, by the icon's cell in client pixels, or
-    /// `None` while it does not. A client that reads the window is told the button came,
-    /// went or moved.
-    pub fn set_back(&mut self, hwnd: isize, cell: Option<ClientRect>) {
-        if self.back == cell {
+    /// The title bar's buttons as the window draws them now. A client that reads the window
+    /// is told which buttons came, went, moved, were renamed, hidden, shown or enabled.
+    pub fn set_caption(&mut self, hwnd: isize, cells: CaptionCells) {
+        if self.caption == cells {
             return;
         }
-        self.back = cell;
+        self.caption = cells;
         if let Some(shared) = &self.shared {
             let mut state = shared.lock();
-            let change = back_change(state.back, cell);
-            state.back = cell;
-            if let Some(change) = change {
-                state.back_changes.push(change);
+            let changes = caption_changes(&state.caption, &cells);
+            state.caption = cells;
+            if !changes.is_empty() {
+                state.caption_changes.extend(changes);
                 drop(state);
                 post_events(hwnd);
             }
@@ -1080,8 +1414,8 @@ impl AccessibilityWindow {
                 actions: None,
                 next_request: 0,
                 pending: Vec::new(),
-                back: self.back,
-                back_changes: Vec::new(),
+                caption: self.caption,
+                caption_changes: Vec::new(),
                 input: self.input.clone(),
             }),
         });
@@ -1209,6 +1543,41 @@ impl AccessibilityWindow {
             self.stop_watch();
             self.presence.end();
         }
+        self.opened(hwnd);
+    }
+
+    /// Once the app's first frame is up, tells a client that read the window while it opened
+    /// that it no longer is opening: its item status empties and it is no longer busy.
+    fn opened(&mut self, hwnd: isize) {
+        if !self.opening {
+            return;
+        }
+        let Some(shared) = &self.shared else {
+            // No client has read the window: nobody was told it was opening.
+            if !shared_loading(hwnd) {
+                self.opening = false;
+            }
+            return;
+        };
+        if shared.loading() {
+            return;
+        }
+        self.opening = false;
+        let Some(root) = &self.root else {
+            return;
+        };
+        // SAFETY: a plain query, then UI Automation's event call with this window's root.
+        unsafe {
+            if !UiaClientsAreListening().as_bool() {
+                return;
+            }
+            let old = variant_str(loading_status(display_korean(), true).unwrap_or_default());
+            let new = variant_empty();
+            let _ =
+                UiaRaiseAutomationPropertyChangedEvent(root, UIA_ItemStatusPropertyId, &old, &new);
+            free_variant(old);
+            free_variant(new);
+        }
     }
 
     /// Where the window raises its events, once a client has asked for its tree.
@@ -1245,15 +1614,15 @@ impl EventTarget {
     /// Raises the UI Automation events of the changes the watch received.
     pub fn raise(&self, hwnd: isize) {
         let shared = Arc::clone(&self.shared);
-        let (pending, back_changes, epoch) = {
+        let (pending, caption_changes, epoch) = {
             let mut state = shared.lock();
             (
                 std::mem::take(&mut state.pending),
-                std::mem::take(&mut state.back_changes),
+                std::mem::take(&mut state.caption_changes),
                 state.tree.epoch(),
             )
         };
-        if pending.is_empty() && back_changes.is_empty() {
+        if pending.is_empty() && caption_changes.is_empty() {
             return;
         }
         // SAFETY: a plain query.
@@ -1261,8 +1630,9 @@ impl EventTarget {
             return;
         }
         let root = self.root.clone();
-        for change in back_changes {
-            raise_back(&shared, &root, change);
+        let korean = display_korean();
+        for (kind, change) in caption_changes {
+            raise_caption(&shared, &root, kind, change, korean);
         }
         let foreground = {
             use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
@@ -1445,15 +1815,37 @@ fn raise(
     }
 }
 
-/// Raises the event of a change to the back button: an added child is raised on itself, a
-/// removed one on its parent with its runtime ID, as UI Automation asks.
-fn raise_back(shared: &Arc<Shared>, root: &IRawElementProviderSimple, change: BackChange) {
-    let mut runtime = BACK_RUNTIME_ID;
-    // SAFETY: UI Automation's event calls, with providers of this window.
-    unsafe {
-        match change {
-            BackChange::Added => {
-                if let Ok(provider) = back_of(shared).cast::<IRawElementProviderSimple>() {
+/// Raises the event of a change to the title bar's `kind` button: an added child is raised on
+/// itself, a removed one on its parent with its runtime ID, as UI Automation asks, and a
+/// change of its place, name, visibility or state as a property change on the button.
+fn raise_caption(
+    shared: &Arc<Shared>,
+    root: &IRawElementProviderSimple,
+    kind: CaptionKind,
+    change: CaptionChange,
+    korean: bool,
+) {
+    let mut runtime = kind.runtime_id();
+    let button = || {
+        caption_of(shared, kind)
+            .cast::<IRawElementProviderSimple>()
+            .ok()
+    };
+    let property = |property: UIA_PROPERTY_ID, old: VARIANT, new: VARIANT| {
+        if let Some(provider) = button() {
+            // SAFETY: UI Automation's event call, with a provider of this window.
+            unsafe {
+                let _ = UiaRaiseAutomationPropertyChangedEvent(&provider, property, &old, &new);
+            }
+        }
+        free_variant(old);
+        free_variant(new);
+    };
+    match change {
+        CaptionChange::Added => {
+            if let Some(provider) = button() {
+                // SAFETY: as above.
+                unsafe {
                     let _ = UiaRaiseStructureChangedEvent(
                         &provider,
                         StructureChangeType_ChildAdded,
@@ -1462,7 +1854,10 @@ fn raise_back(shared: &Arc<Shared>, root: &IRawElementProviderSimple, change: Ba
                     );
                 }
             }
-            BackChange::Removed => {
+        }
+        CaptionChange::Removed => {
+            // SAFETY: as above, raised on the root the button was a child of.
+            unsafe {
                 let _ = UiaRaiseStructureChangedEvent(
                     root,
                     StructureChangeType_ChildRemoved,
@@ -1470,19 +1865,27 @@ fn raise_back(shared: &Arc<Shared>, root: &IRawElementProviderSimple, change: Ba
                     runtime.len() as i32,
                 );
             }
-            BackChange::Moved => {
-                if let Ok(provider) = back_of(shared).cast::<IRawElementProviderSimple>() {
-                    let old = variant_empty();
-                    let new = variant_empty();
-                    let _ = UiaRaiseAutomationPropertyChangedEvent(
-                        &provider,
-                        UIA_BoundingRectanglePropertyId,
-                        &old,
-                        &new,
-                    );
-                }
-            }
         }
+        CaptionChange::Moved => property(
+            UIA_BoundingRectanglePropertyId,
+            variant_empty(),
+            variant_empty(),
+        ),
+        CaptionChange::Renamed { from, to } => property(
+            UIA_NamePropertyId,
+            variant_str(caption_name(kind, from, korean)),
+            variant_str(caption_name(kind, to, korean)),
+        ),
+        CaptionChange::Offscreen(now) => property(
+            UIA_IsOffscreenPropertyId,
+            variant_bool(!now),
+            variant_bool(now),
+        ),
+        CaptionChange::Enabled(now) => property(
+            UIA_IsEnabledPropertyId,
+            variant_bool(!now),
+            variant_bool(now),
+        ),
     }
 }
 
@@ -1709,31 +2112,34 @@ mod tests {
         assert_eq!(back_name(is_korean(0x0409)), "Back");
     }
 
+    const BACK: RootChild = RootChild::Caption(CaptionKind::Back);
+
     #[test]
     fn fr22_the_back_button_is_the_roots_first_child_while_the_arrow_shows() {
+        let back = [CaptionKind::Back];
         assert_eq!(
-            root_children(true, &[7, 9]),
-            vec![RootChild::Back, RootChild::Node(7), RootChild::Node(9)]
+            root_children(&back, &[7, 9]),
+            vec![BACK, RootChild::Node(7), RootChild::Node(9)]
         );
-        assert_eq!(root_children(true, &[]), vec![RootChild::Back]);
+        assert_eq!(root_children(&back, &[]), vec![BACK]);
         assert_eq!(
-            root_children(false, &[7, 9]),
+            root_children(&[], &[7, 9]),
             vec![RootChild::Node(7), RootChild::Node(9)]
         );
-        assert!(root_children(false, &[]).is_empty());
+        assert!(root_children(&[], &[]).is_empty());
     }
 
     #[test]
     fn fr22_the_back_button_and_the_tasks_nodes_are_siblings() {
-        let children = root_children(true, &[7, 9]);
+        let children = root_children(&[CaptionKind::Back], &[7, 9]);
         assert_eq!(
-            root_sibling(&children, RootChild::Back, true),
+            root_sibling(&children, BACK, true),
             Some(RootChild::Node(7))
         );
-        assert_eq!(root_sibling(&children, RootChild::Back, false), None);
+        assert_eq!(root_sibling(&children, BACK, false), None);
         assert_eq!(
             root_sibling(&children, RootChild::Node(7), false),
-            Some(RootChild::Back)
+            Some(BACK)
         );
         assert_eq!(
             root_sibling(&children, RootChild::Node(7), true),
@@ -1741,9 +2147,313 @@ mod tests {
         );
         assert_eq!(root_sibling(&children, RootChild::Node(9), true), None);
         // Without the arrow the first node has nothing before it.
-        let children = root_children(false, &[7, 9]);
+        let children = root_children(&[], &[7, 9]);
         assert_eq!(root_sibling(&children, RootChild::Node(7), false), None);
-        assert_eq!(root_sibling(&children, RootChild::Back, true), None);
+        assert_eq!(root_sibling(&children, BACK, true), None);
+    }
+
+    /// A title bar 800 pixels wide at 100%, its icon's cell showing the back arrow when
+    /// `back`.
+    fn title_bar(back: bool) -> CaptionCells {
+        CaptionCells::of(
+            &CaptionLayout::new(800, 31, 96, 0),
+            back,
+            false,
+            true,
+            false,
+        )
+    }
+
+    #[test]
+    fn fr18_caption_buttons_follow_back_in_the_root_children() {
+        let caption = RootChild::Caption;
+        let cells = title_bar(true);
+        assert_eq!(
+            root_children(&cells.kinds(), &[7, 9]),
+            vec![
+                BACK,
+                caption(CaptionKind::Minimize),
+                caption(CaptionKind::Maximize),
+                caption(CaptionKind::Close),
+                RootChild::Node(7),
+                RootChild::Node(9),
+            ]
+        );
+        // On the first screen the icon's cell is the system menu, in the same place.
+        let cells = title_bar(false);
+        assert_eq!(
+            cells.kinds(),
+            vec![
+                CaptionKind::SystemMenu,
+                CaptionKind::Minimize,
+                CaptionKind::Maximize,
+                CaptionKind::Close,
+            ]
+        );
+        assert_eq!(
+            cells.cell(CaptionKind::SystemMenu),
+            title_bar(true).cell(CaptionKind::Back)
+        );
+        // The buttons and the task's nodes are one row of siblings.
+        let children = root_children(&cells.kinds(), &[7]);
+        assert_eq!(
+            root_sibling(&children, caption(CaptionKind::Close), true),
+            Some(RootChild::Node(7))
+        );
+        assert_eq!(
+            root_sibling(&children, RootChild::Node(7), false),
+            Some(caption(CaptionKind::Close))
+        );
+        assert_eq!(
+            root_sibling(&children, caption(CaptionKind::Minimize), false),
+            Some(caption(CaptionKind::SystemMenu))
+        );
+        // A window too narrow for the icon keeps its three buttons.
+        let narrow = CaptionCells::of(
+            &CaptionLayout::new(100, 31, 96, 0),
+            false,
+            false,
+            true,
+            false,
+        );
+        assert_eq!(
+            narrow.kinds(),
+            vec![
+                CaptionKind::Minimize,
+                CaptionKind::Maximize,
+                CaptionKind::Close
+            ]
+        );
+        // Before the window laid its title bar out, the tree has only the task's nodes.
+        assert!(CaptionCells::default().kinds().is_empty());
+    }
+
+    #[test]
+    fn fr18_caption_buttons_are_where_the_window_draws_them() {
+        let layout = CaptionLayout::new(800, 31, 96, 0);
+        let cells = CaptionCells::of(&layout, false, false, true, false);
+        assert_eq!(cells.cell(CaptionKind::SystemMenu), layout.icon_cell());
+        for (kind, button) in [
+            (CaptionKind::Minimize, CaptionButton::Minimize),
+            (CaptionKind::Maximize, CaptionButton::Maximize),
+            (CaptionKind::Close, CaptionButton::Close),
+        ] {
+            assert_eq!(cells.cell(kind), Some(layout.button_rect(button)));
+            // A point in the middle of the cell finds that button.
+            let (left, top, width, height) = layout.button_rect(button);
+            let middle = (
+                left as f64 + width as f64 / 2.0,
+                top as f64 + height as f64 / 2.0,
+            );
+            assert_eq!(caption_at(&cells, middle.0, middle.1), Some(kind));
+        }
+        // Below the band is the app.
+        assert_eq!(caption_at(&cells, 790.0, 40.0), None);
+    }
+
+    /// The text a VARIANT this module made holds, if it holds text.
+    fn text_of(variant: &VARIANT) -> Option<String> {
+        // SAFETY: the member read is the one the tag names.
+        unsafe {
+            let inner = &variant.Anonymous.Anonymous;
+            (inner.vt == VT_BSTR).then(|| inner.Anonymous.bstrVal.to_string())
+        }
+    }
+
+    /// The truth a VARIANT this module made holds, if it holds one.
+    fn truth_of(variant: &VARIANT) -> Option<bool> {
+        // SAFETY: as above.
+        unsafe {
+            let inner = &variant.Anonymous.Anonymous;
+            (inner.vt == VT_BOOL).then(|| inner.Anonymous.boolVal.0 != 0)
+        }
+    }
+
+    fn name_of(kind: CaptionKind, cells: &CaptionCells, korean: bool) -> String {
+        let name = caption_property(kind, cells, UIA_NamePropertyId, korean);
+        let text = text_of(&name).expect("a name");
+        free_variant(name);
+        text
+    }
+
+    #[test]
+    fn fr18_a_window_says_it_is_opening_its_app_until_the_first_frame() {
+        assert_eq!(loading_status(false, true), Some("Opening the app"));
+        assert_eq!(loading_status(true, true), Some("앱을 여는 중"));
+        assert_eq!(loading_status(false, false), None);
+        assert_eq!(loading_status(true, false), None);
+    }
+
+    #[test]
+    fn fr18_a_window_without_a_first_frame_mark_is_loading() {
+        // A handle that names no window carries no mark, as a window before its first frame.
+        assert!(shared_loading(0));
+    }
+
+    #[test]
+    fn fr18_caption_buttons_are_named_in_the_display_language() {
+        let cells = title_bar(false);
+        let names = |korean| {
+            [
+                CaptionKind::SystemMenu,
+                CaptionKind::Minimize,
+                CaptionKind::Maximize,
+                CaptionKind::Close,
+            ]
+            .map(|kind| name_of(kind, &cells, korean))
+        };
+        assert_eq!(
+            names(false),
+            ["System menu", "Minimize", "Maximize", "Close"]
+        );
+        assert_eq!(names(true), ["시스템 메뉴", "최소화", "최대화", "닫기"]);
+        assert_eq!(name_of(CaptionKind::Back, &title_bar(true), true), "뒤로");
+        for kind in CaptionKind::ALL {
+            let control = caption_property(kind, &cells, UIA_ControlTypePropertyId, false);
+            // SAFETY: the tag and member a VARIANT of an integer has.
+            let control_type = unsafe {
+                let inner = &control.Anonymous.Anonymous;
+                (inner.vt == VT_I4).then_some(inner.Anonymous.lVal)
+            };
+            assert_eq!(control_type, Some(UIA_ButtonControlTypeId.0), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn fr18_maximize_button_is_named_restore_while_maximized() {
+        let layout = CaptionLayout::new(800, 31, 96, 0);
+        let maximized = CaptionCells::of(&layout, false, true, true, false);
+        assert_eq!(name_of(CaptionKind::Maximize, &maximized, false), "Restore");
+        assert_eq!(
+            name_of(CaptionKind::Maximize, &maximized, true),
+            "이전 크기로"
+        );
+        let normal = CaptionCells::of(&layout, false, false, true, false);
+        assert_eq!(name_of(CaptionKind::Maximize, &normal, false), "Maximize");
+        assert_eq!(name_of(CaptionKind::Maximize, &normal, true), "최대화");
+        // A client is told the name changed, with both names.
+        assert_eq!(
+            caption_changes(&normal, &maximized),
+            vec![(
+                CaptionKind::Maximize,
+                CaptionChange::Renamed {
+                    from: false,
+                    to: true
+                }
+            )]
+        );
+    }
+
+    #[test]
+    fn fr18_hidden_full_screen_caption_buttons_are_offscreen() {
+        // A full screen window on a monitor 1920 pixels wide, its title bar hidden.
+        let layout = CaptionLayout::new(1920, 31, 96, 0);
+        let hidden = CaptionCells::of(&layout, false, true, true, true);
+        for kind in hidden.kinds() {
+            let offscreen = caption_property(kind, &hidden, UIA_IsOffscreenPropertyId, false);
+            assert_eq!(truth_of(&offscreen), Some(true), "{kind:?}");
+        }
+        // Hidden, no point finds them: the app is drawn there.
+        let (left, _, _, _) = layout.button_rect(CaptionButton::Close);
+        assert_eq!(caption_at(&hidden, left as f64 + 4.0, 10.0), None);
+        // Revealed, they are on the screen, and each says so.
+        let revealed = CaptionCells::of(&layout, false, true, true, false);
+        let shown = caption_property(
+            CaptionKind::Close,
+            &revealed,
+            UIA_IsOffscreenPropertyId,
+            false,
+        );
+        assert_eq!(truth_of(&shown), Some(false));
+        assert_eq!(
+            caption_at(&revealed, left as f64 + 4.0, 10.0),
+            Some(CaptionKind::Close)
+        );
+        let changes = caption_changes(&hidden, &revealed);
+        assert_eq!(
+            changes,
+            revealed
+                .kinds()
+                .into_iter()
+                .map(|kind| (kind, CaptionChange::Offscreen(false)))
+                .collect::<Vec<_>>()
+        );
+        // Its middle button is Restore, which leaves full screen.
+        assert_eq!(name_of(CaptionKind::Maximize, &hidden, false), "Restore");
+    }
+
+    #[test]
+    fn fr18_each_caption_button_does_what_a_click_on_it_does() {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            SC_CLOSE, SC_KEYMENU, SC_MAXIMIZE, SC_MINIMIZE, SC_RESTORE,
+        };
+        let layout = CaptionLayout::new(800, 31, 96, 0);
+        let normal = CaptionCells::of(&layout, false, false, true, false);
+        // The icon opens the window menu as Alt+Space does.
+        assert_eq!(
+            caption_command(CaptionKind::SystemMenu, &normal),
+            Some((SC_KEYMENU, b' ' as isize))
+        );
+        assert_eq!(
+            caption_command(CaptionKind::Minimize, &normal),
+            Some((SC_MINIMIZE, 0))
+        );
+        assert_eq!(
+            caption_command(CaptionKind::Maximize, &normal),
+            Some((SC_MAXIMIZE, 0))
+        );
+        assert_eq!(
+            caption_command(CaptionKind::Close, &normal),
+            Some((SC_CLOSE, 0))
+        );
+        let maximized = CaptionCells::of(&layout, false, true, true, false);
+        assert_eq!(
+            caption_command(CaptionKind::Maximize, &maximized),
+            Some((SC_RESTORE, 0))
+        );
+        // The back arrow sends the task Back itself, with no command.
+        assert_eq!(caption_command(CaptionKind::Back, &title_bar(true)), None);
+        // A window fixed in size cannot be maximized: the button says so and does nothing.
+        let fixed = CaptionCells::of(&layout, false, false, false, false);
+        assert_eq!(caption_command(CaptionKind::Maximize, &fixed), None);
+        let enabled = caption_property(
+            CaptionKind::Maximize,
+            &fixed,
+            UIA_IsEnabledPropertyId,
+            false,
+        );
+        assert_eq!(truth_of(&enabled), Some(false));
+        assert_eq!(
+            caption_changes(&normal, &fixed),
+            vec![(CaptionKind::Maximize, CaptionChange::Enabled(false))]
+        );
+    }
+
+    #[test]
+    fn fr18_the_back_arrow_takes_the_place_of_the_system_menu() {
+        assert_eq!(
+            caption_changes(&title_bar(false), &title_bar(true)),
+            vec![
+                (CaptionKind::Back, CaptionChange::Added),
+                (CaptionKind::SystemMenu, CaptionChange::Removed),
+            ]
+        );
+        // A wider window moves the buttons, not the icon's cell.
+        let wider = CaptionCells::of(
+            &CaptionLayout::new(900, 31, 96, 0),
+            false,
+            false,
+            true,
+            false,
+        );
+        assert_eq!(
+            caption_changes(&title_bar(false), &wider),
+            vec![
+                (CaptionKind::Minimize, CaptionChange::Moved),
+                (CaptionKind::Maximize, CaptionChange::Moved),
+                (CaptionKind::Close, CaptionChange::Moved),
+            ]
+        );
     }
 
     #[test]
@@ -1758,20 +2468,36 @@ mod tests {
 
     #[test]
     fn fr22_the_back_button_comes_and_goes_with_the_arrow() {
-        let cell = (4, 0, 40, 32);
-        assert_eq!(back_change(None, Some(cell)), Some(BackChange::Added));
-        assert_eq!(back_change(Some(cell), None), Some(BackChange::Removed));
+        let back = |icon: Option<ClientRect>| CaptionCells {
+            icon,
+            back: true,
+            ..CaptionCells::default()
+        };
+        let cell = Some((4, 0, 40, 32));
+        let added = vec![(CaptionKind::Back, CaptionChange::Added)];
+        let removed = vec![(CaptionKind::Back, CaptionChange::Removed)];
+        let moved = vec![(CaptionKind::Back, CaptionChange::Moved)];
+        assert_eq!(caption_changes(&back(None), &back(cell)), added);
+        assert_eq!(caption_changes(&back(cell), &back(None)), removed);
         assert_eq!(
-            back_change(Some(cell), Some((6, 0, 50, 40))),
-            Some(BackChange::Moved)
+            caption_changes(&back(cell), &back(Some((6, 0, 50, 40)))),
+            moved
         );
-        assert_eq!(back_change(Some(cell), Some(cell)), None);
-        assert_eq!(back_change(None, None), None);
+        assert!(caption_changes(&back(cell), &back(cell)).is_empty());
+        assert!(caption_changes(&back(None), &back(None)).is_empty());
     }
 
     #[test]
     fn fr22_the_back_buttons_runtime_id_cannot_equal_a_nodes() {
-        assert_ne!(BACK_RUNTIME_ID.len(), runtime_id(0, 0).len());
+        let ids: HashSet<[i32; 2]> = CaptionKind::ALL
+            .into_iter()
+            .map(|kind| kind.runtime_id())
+            .collect();
+        // Each button has its own, and none is as long as a node's.
+        assert_eq!(ids.len(), CaptionKind::ALL.len());
+        for id in ids {
+            assert_ne!(id.len(), runtime_id(0, 0).len());
+        }
     }
 
     /// Connects to the in-memory local API as one user.

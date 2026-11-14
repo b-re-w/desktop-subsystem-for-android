@@ -166,6 +166,55 @@ unsafe fn locks() -> u32 {
     bits
 }
 
+/// Tells when Alt is pressed and released alone, with no other key, press or modifier in
+/// between, as Windows tells it to open a menu bar. A window that fills its monitor brings
+/// its hidden title bar out on it. Alt itself still goes to the guest as a key, and Alt with
+/// another key (Alt+Space, Alt+F4, Alt+Tab, an app's Alt shortcut) is never taken for it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct AltTap {
+    /// Whether Alt is down and nothing else has happened since it went down.
+    armed: bool,
+}
+
+impl AltTap {
+    /// Follows one key message for virtual key `vk`: pressed (`down`, `repeat` when the press
+    /// is the key's auto-repeat) or released. `others_held` says whether Ctrl, Shift or a
+    /// Windows key is held now. Returns true for the release of an Alt pressed alone.
+    pub fn key(&mut self, vk: VIRTUAL_KEY, down: bool, repeat: bool, others_held: bool) -> bool {
+        if !matches!(vk, VK_MENU | VK_LMENU | VK_RMENU) {
+            self.armed = false;
+            return false;
+        }
+        if down {
+            // Held down, Alt repeats; only its first press arms it.
+            if !repeat {
+                self.armed = !others_held;
+            }
+            return false;
+        }
+        let tapped = self.armed && !others_held;
+        self.armed = false;
+        tapped
+    }
+
+    /// Something other than a key happened while Alt was down (a press of the pointer, the
+    /// keyboard focus going): the release that follows is not Alt alone.
+    pub fn interrupt(&mut self) {
+        self.armed = false;
+    }
+}
+
+/// Whether Ctrl, Shift or a Windows key is held now, which makes Alt part of a shortcut.
+///
+/// # Safety
+///
+/// Called on a thread that reads keyboard input, as a window procedure is.
+pub unsafe fn other_modifiers_held() -> bool {
+    [VK_CONTROL, VK_SHIFT, VK_LWIN, VK_RWIN]
+        .into_iter()
+        .any(|vk| GetKeyState(i32::from(vk)) < 0)
+}
+
 /// One task window's key input.
 pub struct KeyWindow {
     mapper: RefCell<KeyMapper>,

@@ -33,7 +33,10 @@
 //! others. F11 and the window menu's Full screen turn full screen on and off. A window that fills
 //! its monitor shows its title bar while the pointer is at the monitor's top edge
 //! ([`caption_revealed`]), so minimize and close stay in reach; its middle button leaves full
-//! screen. Each change of mode proposes the new size like any
+//! screen. The keyboard reaches it too: Alt pressed and released alone brings the title bar
+//! out and keeps it out ([`AltTap`], [`keyboard_reveal`]), and Alt again, Esc or a press in the
+//! app takes it away. Alt still reaches the app, and Alt with another key stays a shortcut.
+//! Each change of mode proposes the new size like any
 //! other, so the window takes it together with a frame of that size. A window the user's
 //! settings for the app make fixed in size cannot be resized or maximized by the user; it
 //! still takes the sizes Android gives it.
@@ -76,7 +79,7 @@ use windows_sys::Win32::UI::HiDpi::{
     GetDpiForMonitor, GetDpiForWindow, SetProcessDpiAwarenessContext, SetThreadDpiAwarenessContext,
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, MDT_EFFECTIVE_DPI,
 };
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_F11;
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_F11};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW,
     GetWindowLongPtrW, GetWindowRect, IsIconic, IsZoomed, KillTimer, LoadCursorW, LoadIconW,
@@ -101,18 +104,22 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetCursorPos, HTCAPTION, HTNOWHERE, SC_RESTORE, WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCMOUSELEAVE,
     WM_NCMOUSEMOVE, WS_SYSMENU,
 };
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    WM_KILLFOCUS, WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_MOUSEWHEEL, WM_NCLBUTTONDOWN,
+    WM_NCRBUTTONDOWN, WM_POINTERDOWN, WM_RBUTTONDOWN,
+};
 
 use crate::compositor::log::{input_trace, input_trace_on};
 use crate::compositor::log::{note, CompositorLogger};
 use crate::compositor::present::{self, Gpu, WindowPresenter};
 use crate::compositor::window_marks;
 
-use super::accessibility::{AccessibilityWindow, ApiConnect, WM_APP_ACCESSIBILITY};
+use super::accessibility::{AccessibilityWindow, ApiConnect, CaptionCells, WM_APP_ACCESSIBILITY};
 use super::caption::{task_frame, CaptionWindow};
 use super::drag_source::{self, DragStarter, WM_APP_DRAG_OUT};
 use super::drop_target::{self, DropHandler};
 use super::ime::ImeWindow;
-use super::keys::KeyWindow;
+use super::keys::{other_modifiers_held, AltTap, KeyWindow};
 use super::pointer::PointerWindow;
 use super::system_menu::{self, SystemMenuItem};
 use super::tsf;
@@ -329,8 +336,13 @@ struct WindowData {
     /// The mode the window is shown in now.
     shown_mode: Cell<WindowMode>,
     /// Whether a window that fills its monitor shows its title bar now: the pointer came to
-    /// the top edge.
+    /// the top edge, or Alt brought it out.
     revealed: Cell<bool>,
+    /// Whether the keyboard brought the title bar out (Alt alone), which keeps it out until
+    /// Alt again, Esc or a press in the app, wherever the pointer goes.
+    revealed_by_keys: Cell<bool>,
+    /// Whether Alt is being pressed alone, which brings a full screen window's title bar out.
+    alt_tap: Cell<AltTap>,
     /// Whether the user may resize the window, as the user's settings for the app say.
     resizable: Cell<bool>,
     /// Where an ordinary window was before it filled its monitor or went into
@@ -650,6 +662,12 @@ unsafe extern "system" fn task_window_proc(
                 return 0;
             }
         }
+        // A window that fills its monitor shows its title bar on Alt alone too, and hides it
+        // on Esc or a press in the app. It sees every key first, F11 too, so Alt+F11 is never
+        // taken for Alt alone.
+        if let Some(result) = reveal_message(hwnd, data, message, wparam, lparam) {
+            return result;
+        }
         if let Some(result) = mode_message(hwnd, data, message, wparam, lparam) {
             return result;
         }
@@ -757,8 +775,9 @@ unsafe extern "system" fn task_window_proc(
                     if titled(data) {
                         data.caption.paint(hwnd, data.presenter.borrow().as_deref());
                     }
-                    // A narrow window has no room for the icon's cell, and so no back arrow.
-                    sync_back_button(hwnd, data);
+                    // The buttons move with the right edge, the middle one is Restore while
+                    // the window is maximized, and a narrow window has no icon's cell.
+                    sync_caption_buttons(hwnd, data);
                 }
             }
             0
@@ -1004,8 +1023,8 @@ unsafe extern "system" fn task_window_proc(
                 if titled(data) {
                     data.caption.paint(hwnd, data.presenter.borrow().as_deref());
                 }
-                // The icon's cell follows the scale.
-                sync_back_button(hwnd, data);
+                // The title bar's cells follow the scale.
+                sync_caption_buttons(hwnd, data);
             }
             0
         }
@@ -1020,7 +1039,7 @@ unsafe extern "system" fn task_window_proc(
                 data.caption.report_height(hwnd, &*data.report);
                 data.caption
                     .repaint(hwnd, data.presenter.borrow().as_deref());
-                sync_back_button(hwnd, data);
+                sync_caption_buttons(hwnd, data);
             }
             DefWindowProcW(hwnd, message, wparam, lparam)
         }
@@ -1421,6 +1440,10 @@ unsafe fn follow_reveal(
     lparam: LPARAM,
     presenter: Option<&WindowPresenter>,
 ) {
+    // A title bar the keyboard brought out stays until the keyboard or a press takes it away.
+    if data.revealed_by_keys.get() {
+        return;
+    }
     let pointer_y = match message {
         WM_MOUSEMOVE => Some(((lparam >> 16) & 0xffff) as i16 as i32),
         WM_NCMOUSEMOVE | WM_NCMOUSELEAVE => {
@@ -1440,15 +1463,110 @@ unsafe fn follow_reveal(
     let dpi = GetDpiForWindow(hwnd).max(96);
     let band = data.caption.layout(hwnd).height;
     let now = caption_revealed(data.revealed.get(), pointer_y, band, dpi);
-    if data.revealed.replace(now) == now {
+    show_revealed(hwnd, data, now, presenter);
+}
+
+/// Shows a full screen window's title bar (`revealed`) or takes it away, and tells the
+/// window's UI Automation tree its buttons are on the screen or off it.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn show_revealed(
+    hwnd: HWND,
+    data: &WindowData,
+    revealed: bool,
+    presenter: Option<&WindowPresenter>,
+) {
+    if data.revealed.replace(revealed) == revealed {
         return;
     }
-    if now {
+    if revealed {
         data.caption.paint(hwnd, presenter);
     } else {
         data.caption.hide(presenter);
     }
-    sync_back_button(hwnd, data);
+    sync_caption_buttons(hwnd, data);
+}
+
+/// What a message does to a full screen window's hidden title bar, from the keyboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RevealInput {
+    /// Alt was pressed and released alone.
+    AltTapped,
+    /// Esc was pressed.
+    Escape,
+    /// The pointer pressed the app, below the title bar.
+    PressInApp,
+}
+
+/// The title bar of a full screen window after `input`, as (whether it shows, whether the
+/// keyboard brought it out), from whether it shows now (`revealed`) and whether the keyboard
+/// brought it out (`by_keys`); `None` when the input changes nothing. Alt alone brings it out
+/// and keeps it out, as Alt shows a menu bar; Alt again, Esc or a press in the app takes away
+/// what the keyboard brought out. The pointer's reveal follows the pointer instead
+/// ([`caption_revealed`]), so Esc and presses leave it to the app.
+fn keyboard_reveal(revealed: bool, by_keys: bool, input: RevealInput) -> Option<(bool, bool)> {
+    let held = revealed && by_keys;
+    match input {
+        RevealInput::AltTapped if held => Some((false, false)),
+        RevealInput::AltTapped => Some((true, true)),
+        RevealInput::Escape | RevealInput::PressInApp if held => Some((false, false)),
+        RevealInput::Escape | RevealInput::PressInApp => None,
+    }
+}
+
+/// Follows the keys and presses that bring a full screen window's title bar out from the
+/// keyboard or take it away. Alt goes on to the guest as it always does; only the Esc that
+/// hides the title bar is taken (`Some`), as Esc closes a menu without reaching the app.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn reveal_message(
+    hwnd: HWND,
+    data: &WindowData,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> Option<LRESULT> {
+    let mut tap = data.alt_tap.get();
+    let input = match message {
+        WM_KEYDOWN | WM_SYSKEYDOWN | WM_KEYUP | WM_SYSKEYUP => {
+            let vk = wparam as u16;
+            let down = matches!(message, WM_KEYDOWN | WM_SYSKEYDOWN);
+            let repeat = down && (lparam >> 30) & 1 != 0;
+            if tap.key(vk, down, repeat, other_modifiers_held()) {
+                Some(RevealInput::AltTapped)
+            } else if down && vk == VK_ESCAPE {
+                Some(RevealInput::Escape)
+            } else {
+                None
+            }
+        }
+        WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_POINTERDOWN => {
+            tap.interrupt();
+            Some(RevealInput::PressInApp)
+        }
+        // Alt with a click on the title bar, a turn of the wheel, or the focus going (Alt+Tab
+        // takes it) is not Alt alone.
+        WM_NCLBUTTONDOWN | WM_NCRBUTTONDOWN | WM_MOUSEWHEEL | WM_KILLFOCUS => {
+            tap.interrupt();
+            None
+        }
+        _ => None,
+    };
+    data.alt_tap.set(tap);
+    let input = input?;
+    if titled(data) {
+        return None;
+    }
+    let (revealed, by_keys) =
+        keyboard_reveal(data.revealed.get(), data.revealed_by_keys.get(), input)?;
+    data.revealed_by_keys.set(by_keys);
+    let presenter = data.presenter.borrow().clone();
+    show_revealed(hwnd, data, revealed, presenter.as_deref());
+    (input == RevealInput::Escape).then_some(0)
 }
 
 /// What a point of a full screen window's revealed band is: the band's buttons and its icon as
@@ -1473,7 +1591,7 @@ unsafe fn toggle_full_screen(hwnd: HWND, data: &WindowData) {
     let shown = mode.toggle_fullscreen();
     data.mode.set(mode);
     apply_mode(hwnd, data, shown);
-    sync_back_button(hwnd, data);
+    sync_caption_buttons(hwnd, data);
 }
 
 /// Whether the window has its title bar for good: not while it fills its monitor, where it
@@ -1482,16 +1600,23 @@ fn titled(data: &WindowData) -> bool {
     data.shown_mode.get() != WindowMode::Fullscreen
 }
 
-/// Tells the window's UI Automation tree whether the title bar shows the back arrow now, and
-/// the icon's cell it is in, so its button comes, goes and moves with the arrow.
-unsafe fn sync_back_button(hwnd: HWND, data: &WindowData) {
-    let cell = if titled(data) && data.caption.shows_back() {
-        data.caption.layout(hwnd).icon_cell()
-    } else {
-        None
-    };
+/// Tells the window's UI Automation tree where the title bar's buttons are now and what they
+/// say: the icon's cell (the back arrow in it while the task can go back), minimize, maximize
+/// (Restore while the window is maximized or fills its monitor) and close, off the screen
+/// while a window that fills its monitor hides its title bar. Its buttons come, go, move and
+/// are renamed with the title bar.
+unsafe fn sync_caption_buttons(hwnd: HWND, data: &WindowData) {
+    let full_screen = !titled(data);
+    let cells = CaptionCells::of(
+        &data.caption.layout(hwnd),
+        data.caption.shows_back(),
+        full_screen || IsZoomed(hwnd) != 0,
+        // A window that fills its monitor can always leave it from its middle button.
+        full_screen || data.resizable.get(),
+        full_screen && !data.revealed.get(),
+    );
     if let Ok(mut tree) = data.accessibility.try_borrow_mut() {
-        tree.set_back(hwnd as isize, cell);
+        tree.set_caption(hwnd as isize, cells);
     }
 }
 
@@ -1690,6 +1815,7 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
     data.shown_mode.set(mode);
     // A window that fills its monitor starts with its title bar hidden.
     data.revealed.set(false);
+    data.revealed_by_keys.set(false);
     data.caption.set_full_screen(mode == WindowMode::Fullscreen);
     let keep = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
     match previous {
@@ -1937,7 +2063,7 @@ impl Ui {
                                 let shown = state.app_asks(mode);
                                 data.mode.set(state);
                                 apply_mode(*hwnd, data, shown);
-                                sync_back_button(*hwnd, data);
+                                sync_caption_buttons(*hwnd, data);
                             }
                         }
                     }
@@ -1971,7 +2097,7 @@ impl Ui {
                             if let Some(data) = window_data(*hwnd) {
                                 let presenter = data.presenter.borrow().clone();
                                 data.caption.set_back(*hwnd, back, presenter.as_deref());
-                                sync_back_button(*hwnd, data);
+                                sync_caption_buttons(*hwnd, data);
                             }
                         }
                     }
@@ -2115,6 +2241,8 @@ impl Ui {
             mode: Cell::new(ModeState::new()),
             shown_mode: Cell::new(WindowMode::Normal),
             revealed: Cell::new(false),
+            revealed_by_keys: Cell::new(false),
+            alt_tap: Cell::new(AltTap::default()),
             resizable: Cell::new(true),
             restore: Cell::new(None),
             self_sizing: Cell::new(false),
@@ -2344,6 +2472,88 @@ mod tests {
         fn release_content(&mut self) {
             self.steps.push("release_content");
             self.content_attached = false;
+        }
+    }
+
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        VK_F4, VK_LMENU, VK_MENU, VK_RMENU, VK_SPACE, VK_TAB, VK_X,
+    };
+
+    /// Alt pressed and released with `between` pressed and released in the middle; whether
+    /// the release of Alt was Alt alone.
+    fn alt_around(tap: &mut AltTap, alt: u16, between: &[u16]) -> bool {
+        assert!(!tap.key(alt, true, false, false));
+        for key in between {
+            assert!(!tap.key(*key, true, false, false));
+            assert!(!tap.key(*key, false, false, false));
+        }
+        tap.key(alt, false, false, false)
+    }
+
+    #[test]
+    fn fr18_alt_alone_reveals_the_full_screen_caption() {
+        let mut tap = AltTap::default();
+        for alt in [VK_MENU, VK_LMENU, VK_RMENU] {
+            assert!(alt_around(&mut tap, alt, &[]), "alt {alt:#x}");
+        }
+        // Held down, Alt repeats; it is still Alt alone.
+        assert!(!tap.key(VK_MENU, true, false, false));
+        assert!(!tap.key(VK_MENU, true, true, false));
+        assert!(!tap.key(VK_MENU, true, true, false));
+        assert!(tap.key(VK_MENU, false, false, false));
+        // The release brings a hidden title bar out, held by the keyboard.
+        assert_eq!(
+            keyboard_reveal(false, false, RevealInput::AltTapped),
+            Some((true, true))
+        );
+        // Over a title bar the pointer brought out, the keyboard now holds it.
+        assert_eq!(
+            keyboard_reveal(true, false, RevealInput::AltTapped),
+            Some((true, true))
+        );
+        // Alt alone again takes it away, as it closes a menu bar.
+        assert_eq!(
+            keyboard_reveal(true, true, RevealInput::AltTapped),
+            Some((false, false))
+        );
+    }
+
+    #[test]
+    fn fr18_alt_with_another_key_does_not_reveal() {
+        let mut tap = AltTap::default();
+        // Alt+Space opens the window menu, Alt+F4 closes the window, Alt+Tab switches
+        // windows, and Alt+X is the app's shortcut: none of them is Alt alone.
+        for key in [VK_SPACE, VK_F4, VK_TAB, VK_X] {
+            assert!(!alt_around(&mut tap, VK_MENU, &[key]), "key {key:#x}");
+        }
+        // Alt with Ctrl, Shift or a Windows key held is a shortcut too, whichever went first.
+        assert!(!tap.key(VK_MENU, true, false, true));
+        assert!(!tap.key(VK_MENU, false, false, true));
+        assert!(!tap.key(VK_MENU, true, false, false));
+        assert!(!tap.key(VK_MENU, false, false, true));
+        // A press of the pointer, or the focus going, while Alt is down.
+        assert!(!tap.key(VK_MENU, true, false, false));
+        tap.interrupt();
+        assert!(!tap.key(VK_MENU, false, false, false));
+        // A key released while Alt is down (pressed before it) is not Alt alone either.
+        assert!(!tap.key(VK_MENU, true, false, false));
+        assert!(!tap.key(VK_X, false, false, false));
+        assert!(!tap.key(VK_MENU, false, false, false));
+        // A release of Alt with no press of it (pressed in another window) is nothing.
+        assert!(!tap.key(VK_MENU, false, false, false));
+        // And alone again, it still works.
+        assert!(alt_around(&mut tap, VK_MENU, &[]));
+    }
+
+    #[test]
+    fn fr18_escape_or_a_press_in_the_app_hides_the_revealed_caption() {
+        for input in [RevealInput::Escape, RevealInput::PressInApp] {
+            // What the keyboard brought out, Esc and a press take away.
+            assert_eq!(keyboard_reveal(true, true, input), Some((false, false)));
+            // A hidden title bar stays hidden, and Esc goes to the app.
+            assert_eq!(keyboard_reveal(false, false, input), None);
+            // The pointer's reveal follows the pointer; Esc and presses are the app's.
+            assert_eq!(keyboard_reveal(true, false, input), None);
         }
     }
 
