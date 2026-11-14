@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use dsa_host_core::root_approval::{ApprovalPrompt, ApprovalRequest, PromptAnswer, PromptIcon};
+use dsa_host_core::ui_language::UiLanguage;
 
 /// The words macOS's dialog shows: the sentence naming who asks in the user's language (an
 /// app by its label with its package beside it, `adb shell` as the developer shell, Android's
@@ -85,12 +86,28 @@ pub struct AuthorizationPrompt<A: Authorization> {
     api: A,
     /// Where an app's icon is written for the dialog to show.
     icons: PathBuf,
+    /// The language the dialog's words are in, asked as each prompt opens; `None` keeps the
+    /// request's own.
+    language: Option<fn() -> UiLanguage>,
 }
 
 impl<A: Authorization> AuthorizationPrompt<A> {
-    /// The prompt, writing the apps' icons for the dialog into `icons`.
+    /// The prompt, writing the apps' icons for the dialog into `icons`. Its words are in the
+    /// request's language until [`AuthorizationPrompt::in_language_of`] says otherwise.
     pub fn new(api: A, icons: PathBuf) -> AuthorizationPrompt<A> {
-        AuthorizationPrompt { api, icons }
+        AuthorizationPrompt {
+            api,
+            icons,
+            language: None,
+        }
+    }
+
+    /// Words the dialog in the language `language` gives as each prompt opens, such as the one
+    /// the rest of the Mac's DSA reads ([`crate::ui_language`]): the first of the user's
+    /// preferred languages that DSA has, where the request carries only the first of them.
+    pub fn in_language_of(mut self, language: fn() -> UiLanguage) -> AuthorizationPrompt<A> {
+        self.language = Some(language);
+        self
     }
 
     /// Writes the icon of who asks where the dialog reads it: the app's launcher icon when the
@@ -133,7 +150,11 @@ impl<A: Authorization> ApprovalPrompt for AuthorizationPrompt<A> {
             ));
         }
         let icon = self.icon_for(request);
-        answer_of(self.api.copy_right(&prompt_text(request), icon.as_deref()))
+        let text = match self.language {
+            Some(language) => prompt_text(&request.clone().with_language(language().tag())),
+            None => prompt_text(request),
+        };
+        answer_of(self.api.copy_right(&text, icon.as_deref()))
     }
 }
 
@@ -455,6 +476,63 @@ mod tests {
             "Android 앱 백업(com.example.backup)에서 다음 명령을 루트 권한으로 실행하려고 \
              합니다: `id`"
         );
+    }
+
+    #[test]
+    fn fr17_the_macos_dialog_is_worded_in_every_language() {
+        use dsa_host_core::ui_language::UiLanguage;
+        let mut shell = request();
+        shell.app.package_name = "com.android.shell".into();
+        shell.app.label = "Shell".into();
+        shell.uid = 2000;
+        let english_app = prompt_text(&request());
+        let english_shell = prompt_text(&shell);
+        for lang in UiLanguage::ALL {
+            let app = prompt_text(&request().with_language(lang.tag()));
+            let adb = prompt_text(&shell.clone().with_language(lang.tag()));
+            for text in [&app, &adb] {
+                assert!(!text.trim().is_empty(), "{lang:?}");
+                assert!(
+                    text.contains("`id`"),
+                    "{lang:?} leaves out the command: {text}"
+                );
+                assert!(
+                    !text.contains(char::from_u32(0x2014).unwrap()),
+                    "{lang:?}: {text}"
+                );
+            }
+            assert!(app.contains("com.example.backup"), "{lang:?}: {app}");
+            // The developer shell's line under the sentence names its package and uid.
+            assert!(
+                adb.ends_with("\ncom.android.shell (uid 2000)"),
+                "{lang:?}: {adb}"
+            );
+            if lang != UiLanguage::English {
+                assert_ne!(app, english_app, "{lang:?} is not translated");
+                assert_ne!(adb, english_shell, "{lang:?} is not translated");
+            }
+        }
+    }
+
+    #[test]
+    fn fr17_the_macos_dialog_speaks_the_language_the_mac_shows() {
+        fn german() -> UiLanguage {
+            UiLanguage::German
+        }
+        let dir = icons("language");
+        let prompt = AuthorizationPrompt::new(fake(SUCCESS), dir.clone()).in_language_of(german);
+        // The request carries the first preferred language only (Dutch, which DSA has no
+        // words in); the dialog follows the Mac's list to German.
+        let asked_for = request().with_language("nl-NL");
+        assert_eq!(prompt.ask(&asked_for, WAIT), PromptAnswer::Approved);
+        let asked = prompt.api.asked.lock().unwrap();
+        assert_eq!(
+            asked[0].0,
+            prompt_text(&request().with_language("de")),
+            "the dialog is not in German"
+        );
+        assert_ne!(asked[0].0, prompt_text(&request()));
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

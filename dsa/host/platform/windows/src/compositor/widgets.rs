@@ -2922,7 +2922,7 @@ mod tests {
             needs_configuration: true,
             ..clock()
         };
-        let text = widget_menu::menu_text(false);
+        let text = widget_menu::menu_text(dsa_host_core::ui_language::UiLanguage::English);
         let placement = Placement {
             x: 0,
             y: 0,
@@ -3823,7 +3823,7 @@ mod tests {
             };
             let palette = menu_palette(&theme);
             for dpi in [96, 144] {
-                let words = widget_menu::menu_text(false);
+                let words = widget_menu::menu_text(dsa_host_core::ui_language::UiLanguage::English);
                 // The menu of a widget that can be set up again: every item it may have.
                 let entries = widget_menu::entries(&words, &sizes, &placement, true);
                 let submenu = entries

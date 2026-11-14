@@ -146,7 +146,10 @@ fn fr18_a_client_reads_the_settings_window_and_activates_its_nodes_and_buttons()
     let shared = {
         let commands = Arc::clone(&commands);
         Shared::new(
-            Access::new(false, Duration::from_secs(30)),
+            Access::new(
+                dsa_host_core::ui_language::UiLanguage::English,
+                Duration::from_secs(30),
+            ),
             None,
             Arc::new(move |command: TitleCommand| commands.lock().unwrap().push(command)),
             Arc::new(|line: &str| eprintln!("{line}")),

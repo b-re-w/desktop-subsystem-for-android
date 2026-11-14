@@ -14,7 +14,6 @@ use objc2::rc::{Allocated, Retained};
 use objc2::runtime::{AnyClass, AnyObject, Bool, ClassBuilder, Sel};
 use objc2::sel;
 
-use super::title_bar::is_korean;
 use super::window_menu::{
     android_items, app_menu, from_tag, key_equivalent, label, menu_text, system_action, tag,
     window_menu, with_app, AppMenuItem, MenuText, WindowMenuItem,
@@ -45,21 +44,6 @@ struct MenuBar {
 
 thread_local! {
     static MENU: RefCell<Option<MenuBar>> = const { RefCell::new(None) };
-}
-
-/// Whether the user's first preferred language is Korean.
-pub fn korean() -> bool {
-    unsafe {
-        let Ok(locale) = class(c"NSLocale") else {
-            return false;
-        };
-        let languages: *mut AnyObject = msg_send![locale, preferredLanguages];
-        if languages.is_null() {
-            return false;
-        }
-        let first: *mut AnyObject = msg_send![languages, firstObject];
-        is_korean(&string_of(first))
-    }
 }
 
 unsafe extern "C-unwind" fn choose(_this: &AnyObject, _: Sel, sender: *mut AnyObject) {
@@ -202,7 +186,7 @@ pub fn install(
 ) -> Result<(), String> {
     let _ = HANDLERS.set(Handlers { chosen, available });
     unsafe {
-        let text = menu_text(korean());
+        let text = menu_text(crate::ui_language::current());
         let target: Option<Retained<AnyObject>> = msg_send![target_class()?, new];
         let target = target.ok_or("no target for the window menu could be made")?;
         let name = app_name();

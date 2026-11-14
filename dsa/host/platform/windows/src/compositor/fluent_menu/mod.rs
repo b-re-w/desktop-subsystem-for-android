@@ -28,6 +28,12 @@ pub use window::{row_art, show, Request};
 use super::fluent::{Argb, Canvas, MenuPalette};
 use super::widgets::{px_of_dip, ScreenRect};
 
+/// Whether `typed` is the access key `key`, in either case and in any script (a Cyrillic or
+/// Vietnamese key as well as a Latin one).
+pub fn same_key(key: char, typed: char) -> bool {
+    key == typed || key.to_lowercase().eq(typed.to_lowercase())
+}
+
 /// One item of a menu.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MenuItem {
@@ -650,7 +656,7 @@ impl MenuState {
                     .filter(|(_, entry)| entry.selectable())
                     .filter(|(_, entry)| {
                         let access = entry.item().and_then(|item| item.access_key);
-                        access.is_some_and(|access| access.eq_ignore_ascii_case(&key))
+                        access.is_some_and(|access| same_key(access, key))
                     })
                     .map(|(index, _)| index)
                     .collect();

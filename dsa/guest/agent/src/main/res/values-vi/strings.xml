@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_target_name">Chia sẻ trên PC</string>
+    <string name="share_unavailable">Không kết nối được với PC nên không thể chia sẻ ở đó.</string>
+    <string name="share_failed">PC không thể chia sẻ nội dung này: %1$s</string>
+</resources>

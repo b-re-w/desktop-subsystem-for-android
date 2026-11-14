@@ -106,9 +106,8 @@ public class StopReasonTextTests
     }
 
     [Theory]
-    [InlineData("Strings.resx")]
-    [InlineData("Strings.ko.resx")]
-    public void Fr17_every_sentence_exists_in_both_languages_and_fits_two_lines(string file)
+    [MemberData(nameof(StringTables.Files), MemberType = typeof(StringTables))]
+    public void Fr17_every_sentence_exists_in_every_language_and_fits_two_lines(string file)
     {
         var strings = Strings(file);
         foreach (var key in StopReasonText.AllKeys)

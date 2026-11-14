@@ -57,17 +57,26 @@ public class CardStyleTests
         Assert.Equal("4", Resource("CardCornerRadius"));
     }
 
-    // A Semibold family name in the list also turns Korean into Bold, so both apps must replace
-    // the strong fonts with the regular ones when they run in Korean.
+    // A Semibold family name in the list also turns Korean and Chinese into Bold, so both apps
+    // must replace the strong fonts with the regular ones when they run in those languages; and
+    // Japanese and Chinese take their own fonts before Malgun Gothic. Both follow the language
+    // the string tables are read in.
     [Theory]
     [InlineData("DsaSettings")]
     [InlineData("DsaApkInstaller")]
-    public void Fr17_korean_replaces_the_strong_fonts_with_the_regular_ones(string app)
+    public void Fr17_korean_and_chinese_replace_the_strong_fonts_with_the_regular_ones(string app)
     {
         var code = File.ReadAllText(XamlPath(app, "App.xaml.cs"));
-        Assert.Contains("TwoLetterISOLanguageName == \"ko\"", code);
+        Assert.Contains("var language = UiLanguage.Resolve(", code);
+        Assert.Contains("UiFonts.For(language)", code);
+        Assert.Contains("Resources[\"TextFont\"] = new System.Windows.Media.FontFamily(fonts.Text)", code);
+        Assert.Contains("if (UiFonts.HasNoSemibold(language))", code);
         Assert.Contains("Resources[\"StrongTextFont\"] = Resources[\"TextFont\"]", code);
         Assert.Contains("Resources[\"StrongDisplayFont\"] = Resources[\"DisplayFont\"]", code);
+        Assert.DoesNotContain("TwoLetterISOLanguageName", code);
+        // The strong fonts follow the language's own lists, so they are replaced after them.
+        Assert.True(code.IndexOf("UiFonts.For(language)", StringComparison.Ordinal)
+            < code.IndexOf("UiFonts.HasNoSemibold(language)", StringComparison.Ordinal));
     }
 
     // Malgun Gothic has Regular, Semilight and Bold. A weight of Medium or more on a style turns

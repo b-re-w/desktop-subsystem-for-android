@@ -12,6 +12,9 @@
 //! [`accessibility`] exports each task window's Android UI as an AT-SPI tree, with the title
 //! bar's buttons, for screen readers and other accessibility clients.
 //!
+//! [`interface_language`] picks the language the host's own words are shown in from the
+//! session's locale, as gettext does.
+//!
 //! The VM and the service:
 //! - [`crosvm`]: the VM as a crosvm command line (KVM, virtio disks, vhost-vsock, a balloon
 //!   with free page reporting, virtio-mem for growth, the network adapter, the device
@@ -57,6 +60,7 @@ pub mod host_certificates;
 pub mod host_services;
 pub mod image;
 pub mod input;
+pub mod interface_language;
 #[cfg(target_os = "linux")]
 pub mod launcher;
 #[cfg(target_os = "linux")]

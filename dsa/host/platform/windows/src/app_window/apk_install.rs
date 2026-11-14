@@ -16,9 +16,11 @@ use std::time::Duration;
 use dsa_host_core::apk::InstallOutcome;
 use dsa_host_core::apk_bundle::{Device, InstallFile};
 use dsa_host_core::host_api::HostApiClient;
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_transport::Connector;
 
 use super::argument;
+use super::messages::{messages, say};
 
 /// The argument that names an APK to install.
 pub const INSTALL_APK_ARGUMENT: &str = "--install-apk";
@@ -94,8 +96,10 @@ pub fn install(api: &mut dyn Connector, file: &mut InstallFile) -> Result<Instal
     }
 }
 
-/// What the message box says when the install ended, and whether it is good news.
-pub fn result_text(name: &str, outcome: &InstallOutcome) -> (String, bool) {
+/// What the message box says in `language` when the install ended, and whether it is good
+/// news.
+pub fn result_text(name: &str, outcome: &InstallOutcome, language: UiLanguage) -> (String, bool) {
+    let words = messages(language);
     if outcome.installed() {
         let package = outcome
             .package_name
@@ -103,17 +107,24 @@ pub fn result_text(name: &str, outcome: &InstallOutcome) -> (String, bool) {
             .map(|package| format!(" ({package})"))
             .unwrap_or_default();
         (
-            format!("{name}{package} is installed. Open it from the Start menu."),
+            say(words.installed, &[("name", name), ("package", &package)]),
             true,
         )
     } else {
-        (format!("{name} was not installed. {outcome}."), false)
+        let why = outcome.to_string();
+        (
+            say(words.not_installed, &[("name", name), ("why", &why)]),
+            false,
+        )
     }
 }
 
-/// What the message box says when the APK did not reach Android.
-pub fn failure_text(name: &str, why: &str) -> String {
-    format!("{name} was not installed. {why}.")
+/// What the message box says in `language` when the APK did not reach Android.
+pub fn failure_text(name: &str, why: &str, language: UiLanguage) -> String {
+    say(
+        messages(language).not_installed,
+        &[("name", name), ("why", why)],
+    )
 }
 
 #[cfg(test)]
@@ -161,22 +172,33 @@ mod tests {
                 package_name: Some("com.example.notes".into()),
                 message: String::new(),
             },
+            UiLanguage::English,
         );
         assert!(good);
         assert!(
             text.contains("com.example.notes") && text.contains("Start menu"),
             "{text}"
         );
-        let (text, good) = result_text(
-            "notes.apk",
-            &InstallOutcome {
-                status: InstallStatus::Incompatible,
-                package_name: None,
-                message: "INSTALL_FAILED_NO_MATCHING_ABIS".into(),
-            },
-        );
+        let failed = InstallOutcome {
+            status: InstallStatus::Incompatible,
+            package_name: None,
+            message: "INSTALL_FAILED_NO_MATCHING_ABIS".into(),
+        };
+        let (text, good) = result_text("notes.apk", &failed, UiLanguage::English);
         assert!(!good);
         assert!(text.contains("was not installed"), "{text}");
         assert!(text.contains("INSTALL_FAILED_NO_MATCHING_ABIS"), "{text}");
+        // In every language the message names the APK and keeps the reason.
+        for language in UiLanguage::ALL {
+            let (text, good) = result_text("notes.apk", &failed, language);
+            assert!(!good);
+            assert!(text.contains("notes.apk"), "{language:?}: {text}");
+            assert!(
+                text.contains("INSTALL_FAILED_NO_MATCHING_ABIS"),
+                "{language:?}: {text}"
+            );
+            let text = failure_text("notes.apk", "the service is not running", language);
+            assert!(text.contains("the service is not running"), "{text}");
+        }
     }
 }

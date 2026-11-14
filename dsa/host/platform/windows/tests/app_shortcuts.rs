@@ -17,6 +17,7 @@ use dsa_host_windows::compositor::pin_shortcuts::{
 use dsa_host_windows::desktop_shortcuts::{entry_in, read_note, Desktop};
 use dsa_host_windows::jump_list::{sync_apps, Committed, JumpList, JumpLists, Texts};
 use dsa_host_windows::start_menu::{app_user_model_id, Shortcut, Shortcuts};
+use dsa_host_windows::ui_language::{assert_translation, UiLanguage};
 
 const CHAT: &str = "com.example.chat";
 
@@ -175,7 +176,7 @@ fn fr7_app_shortcuts_are_jump_list_tasks_and_desktop_shortcuts() {
     );
     assert_eq!(list.tasks[2].icon, (program.clone(), 0));
     assert_eq!(
-        Texts::korean().create_desktop_shortcut,
+        Texts::of(UiLanguage::Korean).create_desktop_shortcut,
         "바탕 화면 바로 가기 만들기"
     );
 
@@ -289,18 +290,49 @@ fn fr7_the_pin_question_speaks_korean_and_english() {
         app_label: "Chat".into(),
         shortcut: shortcut("ana", "Ana", 1),
     };
-    let korean = question(&request, &PinTexts::korean());
+    let korean = question(&request, &PinTexts::of(UiLanguage::Korean));
     assert_eq!(korean.add, "바탕 화면에 추가");
     assert_eq!(korean.cancel, "취소");
     assert!(korean.instruction.contains("Ana"));
     let english = question(&request, &PinTexts::english());
     assert!(english.content.contains("Chat"));
+    // Every language names the shortcut and the app.
+    for language in UiLanguage::ALL {
+        let asked = question(&request, &PinTexts::of(language));
+        assert!(asked.instruction.contains("Ana"), "{language:?}");
+        assert!(asked.content.contains("Chat"), "{language:?}");
+    }
     // An app without a name is named by its package.
     let unnamed = PinShortcutRequest {
         app_label: " ".into(),
         ..request
     };
     assert_eq!(question(&unnamed, &PinTexts::english()).title, CHAT);
+}
+
+#[test]
+fn fr17_the_pin_question_and_the_jump_list_speak_every_language() {
+    let english = PinTexts::english().templates();
+    let what = ["the heading", "the request", "Add to desktop", "Cancel"];
+    for language in UiLanguage::ALL {
+        let words = PinTexts::of(language).templates();
+        for ((what, en), text) in what.iter().zip(english).zip(words) {
+            assert_translation(language, what, en, text);
+        }
+        assert_translation(
+            language,
+            "Create desktop shortcut",
+            Texts::english().create_desktop_shortcut,
+            Texts::of(language).create_desktop_shortcut,
+        );
+        if language != UiLanguage::English {
+            assert_ne!(words[2], english[2], "{language:?} has no translation");
+            assert_ne!(
+                Texts::of(language).create_desktop_shortcut,
+                Texts::english().create_desktop_shortcut
+            );
+        }
+    }
 }
 
 #[test]
@@ -407,7 +439,7 @@ fn fr7_the_pin_question_is_a_windows_11_dialog_with_add_as_its_accent_button() {
     };
     for (texts, add, cancel) in [
         (PinTexts::english(), "Add to desktop", "Cancel"),
-        (PinTexts::korean(), "바탕 화면에 추가", "취소"),
+        (PinTexts::of(UiLanguage::Korean), "바탕 화면에 추가", "취소"),
     ] {
         let text = dialog_text(&question(&request, &texts));
         // The heading names the shortcut, the body the app; no check box.

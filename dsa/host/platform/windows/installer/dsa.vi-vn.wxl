@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The package's own words in Vietnamese, for a package built with -culture vi-VN. -->
+<WixLocalization Culture="vi-VN" Language="1066" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+    <String Id="ArpComments" Value="Desktop Subsystem for Android là một dự án mã nguồn mở độc lập, không liên kết với Microsoft hay Google, và không được hai công ty này xác nhận hoặc tài trợ. Android là nhãn hiệu của Google LLC." />
+    <String Id="SettingsShortcutDescription" Value="Cài đặt và trạng thái của Desktop Subsystem for Android" />
+    <String Id="ApkFileType" Value="Gói ứng dụng APK" />
+    <String Id="ApkBundleType" Value="Gói APK tách rời" />
+</WixLocalization>

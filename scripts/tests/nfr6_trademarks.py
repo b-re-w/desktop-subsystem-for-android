@@ -23,8 +23,23 @@ from pathlib import Path
 
 MICROSOFT_MARKS = ["Windows", "Microsoft", "Win32", "Xbox", "Azure", "Hyper-V", "WSL", "DirectX", "Bing"]
 
-TRADEMARK = ["Android is a trademark of Google LLC.", "Android는 Google LLC의 상표"]
-INDEPENDENT = ["not affiliated with", "제휴하거나"]
+TRADEMARK = [
+    "Android is a trademark of Google LLC.", "Android는 Google LLC의 상표", "Android は Google LLC の商標",
+    "Android 是 Google LLC 的商标", "Android 是 Google LLC 的商標", "Android es una marca comercial de Google LLC",
+    "Android est une marque de Google LLC", "Android ist eine Marke von Google LLC",
+    "Android é uma marca registrada da Google LLC", "Android является товарным знаком Google LLC",
+    "Android è un marchio di Google LLC", "Android là nhãn hiệu của Google LLC",
+    "Android adalah merek dagang Google LLC", "Android, Google LLC'nin ticari markasıdır",
+]
+INDEPENDENT = [
+    "not affiliated with", "제휴하거나", "提携しておらず", "没有关联", "沒有任何關聯", "No está afiliado",
+    "ni affilié", "in keiner Verbindung", "não é afiliado", "не связан с", "Non è affiliato",
+    "không liên kết với", "tidak berafiliasi", "ile bağlantılı değildir",
+]
+
+# The package's localized words, one file for each interface language.
+WXL_CULTURES = ["en-us", "ko-kr", "ja-jp", "zh-cn", "zh-tw", "es-es", "fr-fr", "de-de", "pt-br", "ru-ru",
+                "it-it", "vi-vn", "id-id", "tr-tr"]
 
 SKIP_DIRS = {"target", "build", "out", "bin", "obj", ".gradle", "node_modules", ".scratch", ".claude", ".git"}
 
@@ -39,8 +54,7 @@ NOTICES = {
     "docs/locales/README_ko.md": (TRADEMARK, INDEPENDENT),
     f"{SETUP_UI}/Text.cs": (TRADEMARK, INDEPENDENT),
     # The package's comments are localized: each language's strings carry the notice.
-    f"{WINDOWS}/installer/dsa.en-us.wxl": (TRADEMARK, INDEPENDENT),
-    f"{WINDOWS}/installer/dsa.ko-kr.wxl": (TRADEMARK, INDEPENDENT),
+    **{f"{WINDOWS}/installer/dsa.{culture}.wxl": (TRADEMARK, INDEPENDENT) for culture in WXL_CULTURES},
     f"{SETTINGS}/Strings.resx": (TRADEMARK, INDEPENDENT),
     f"{SETTINGS}/Strings.ko.resx": (TRADEMARK, INDEPENDENT),
 }

@@ -111,7 +111,11 @@ fn main() -> std::process::ExitCode {
         drop(starting);
         return match installed {
             Ok(outcome) => {
-                let (text, good) = apk_install::result_text(&name, &outcome);
+                let (text, good) = apk_install::result_text(
+                    &name,
+                    &outcome,
+                    dsa_host_windows::ui_language::user_language(),
+                );
                 note(
                     logger.as_deref(),
                     &format!("{}: {} ({})", path.display(), outcome, outcome.status),
@@ -129,7 +133,14 @@ fn main() -> std::process::ExitCode {
                     logger.as_deref(),
                     &format!("{}: not installed: {why}", path.display()),
                 );
-                tell_user(TITLE, &apk_install::failure_text(&name, &why));
+                tell_user(
+                    TITLE,
+                    &apk_install::failure_text(
+                        &name,
+                        &why,
+                        dsa_host_windows::ui_language::user_language(),
+                    ),
+                );
                 std::process::ExitCode::FAILURE
             }
         };
@@ -188,14 +199,13 @@ fn main() -> std::process::ExitCode {
                     logger.as_deref(),
                     &format!("{}: not sent to Android: {why}", path.display()),
                 );
+                let file = path
+                    .file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| path.display().to_string());
                 tell_user(
                     TITLE,
-                    &format!(
-                        "{} could not be opened in Android. {why}.",
-                        path.file_name()
-                            .map(|name| name.to_string_lossy().into_owned())
-                            .unwrap_or_else(|| path.display().to_string())
-                    ),
+                    &dsa_host_windows::app_window::messages::file_not_opened(&file, &why),
                 );
                 std::process::ExitCode::FAILURE
             }
@@ -258,7 +268,7 @@ fn main() -> std::process::ExitCode {
                 );
                 tell_user(
                     TITLE,
-                    &format!("Android's files could not be opened. {why}."),
+                    &dsa_host_windows::app_window::messages::files_not_opened(&why),
                 );
                 std::process::ExitCode::FAILURE
             }
@@ -302,7 +312,7 @@ fn main() -> std::process::ExitCode {
                     .unwrap_or_else(|| package.clone());
                 tell_user(
                     &name,
-                    &format!("A desktop shortcut to {name} could not be made. {why}."),
+                    &dsa_host_windows::app_window::messages::shortcut_not_made(&name, &why),
                 );
                 std::process::ExitCode::FAILURE
             }
@@ -362,7 +372,10 @@ fn main() -> std::process::ExitCode {
         if let Err(why) = prepared {
             note(logger.as_deref(), &format!("{package}: {why}"));
             drop(starting);
-            tell_user(&title, &format!("{title} could not be opened. {why}."));
+            tell_user(
+                &title,
+                &dsa_host_windows::app_window::messages::app_not_opened(&title, &why),
+            );
             return std::process::ExitCode::FAILURE;
         }
     }

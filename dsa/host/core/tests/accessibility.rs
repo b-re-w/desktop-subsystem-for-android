@@ -274,6 +274,7 @@ fn fr18_widget_tree_watch_names_the_widget_on_the_wire() {
         action: NodeAction::Click,
         text: String::new(),
         request_id: 1,
+        ..ActionRequest::default()
     };
     let sent = action.to_control_for(widget);
     assert_eq!((sent.task_id, sent.widget_id, sent.node_id), (0, 12, 2));

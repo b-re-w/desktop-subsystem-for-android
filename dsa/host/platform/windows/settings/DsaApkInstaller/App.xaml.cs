@@ -40,8 +40,19 @@ public partial class App : Application
             {
             }
         }
-        // Malgun Gothic has no Semibold: a strong font would draw Korean titles in Bold.
-        if (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ko")
+        // Japanese and Chinese are drawn in their own UI fonts, not in Malgun Gothic's Korean
+        // forms of the same characters.
+        var language = UiLanguage.Resolve(CultureInfo.CurrentUICulture);
+        if (UiFonts.For(language) is { } fonts)
+        {
+            Resources["TextFont"] = new System.Windows.Media.FontFamily(fonts.Text);
+            Resources["DisplayFont"] = new System.Windows.Media.FontFamily(fonts.Display);
+            Resources["StrongTextFont"] = new System.Windows.Media.FontFamily(fonts.StrongText);
+            Resources["StrongDisplayFont"] = new System.Windows.Media.FontFamily(fonts.StrongDisplay);
+        }
+        // Malgun Gothic, Microsoft YaHei UI and Microsoft JhengHei UI have no Semibold: a
+        // strong font would draw Korean and Chinese titles in Bold.
+        if (UiFonts.HasNoSemibold(language))
         {
             Resources["StrongTextFont"] = Resources["TextFont"];
             Resources["StrongDisplayFont"] = Resources["DisplayFont"];
@@ -52,8 +63,8 @@ public partial class App : Application
             // Started without a file (by hand, or from Open with on nothing): ask for one.
             var picker = new Microsoft.Win32.OpenFileDialog
             {
-                Title = ApkInstallerTitle.For(CultureInfo.CurrentUICulture),
-                Filter = "APK and split APK bundles (*.apk, *.xapk, *.apks, *.apkm)|*.apk;*.xapk;*.apks;*.apkm|All files (*.*)|*.*",
+                Title = Text.Get("ApkWindow_Caption"),
+                Filter = PickerFilter(Text),
                 CheckFileExists = true,
             };
             if (picker.ShowDialog() != true)
@@ -65,6 +76,12 @@ public partial class App : Application
         }
         InstallerWindow.Open(path);
     }
+
+    /// <summary>The file picker's two choices, named in the user's language: APKs and split APK
+    /// bundles, and all files. The patterns are the same in every language.</summary>
+    internal static string PickerFilter(ITextSource text) =>
+        $"{text.Get("ApkWindow_PickerApks")} (*.apk, *.xapk, *.apks, *.apkm)|*.apk;*.xapk;*.apks;*.apkm|" +
+        $"{text.Get("ApkWindow_PickerAllFiles")} (*.*)|*.*";
 
     /// <summary>The APK the command line names: after --install-apk, or on its own, as Open
     /// with passes it.</summary>

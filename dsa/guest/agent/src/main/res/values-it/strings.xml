@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_target_name">Condividi sul PC</string>
+    <string name="share_unavailable">Il PC non è raggiungibile, quindi non è possibile condividere questo contenuto.</string>
+    <string name="share_failed">Il PC non è riuscito a condividere questo contenuto: %1$s</string>
+</resources>

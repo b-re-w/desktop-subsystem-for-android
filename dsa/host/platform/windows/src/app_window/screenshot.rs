@@ -9,7 +9,7 @@
 //!
 //! The file is named as the Snipping Tool names its own: "Screenshot 2026-11-08 143022.png",
 //! the date and the local time to the second, in the user's display language ("스크린샷 ..."
-//! in Korean). A second screenshot in the same second gets " (2)" before the extension, the
+//! in Korean, "Captura de pantalla ..." in Spanish). A second screenshot in the same second gets " (2)" before the extension, the
 //! next " (3)", and so on, so no file is ever written over.
 //!
 //! The work runs on a thread of its own: reading the frame back and encoding it take a moment,

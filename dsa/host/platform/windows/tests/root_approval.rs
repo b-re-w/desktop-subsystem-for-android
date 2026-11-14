@@ -10,11 +10,13 @@ use std::time::{Duration, Instant};
 use dsa_host_core::root_approval::{ApprovalRequest, PromptAnswer, Purpose};
 use dsa_host_core::tasks::AppInfo;
 use dsa_host_windows::root_approval::{
-    answer_of_exit, approval_arguments, confirm_text, confirm_text_for, exit, helper_mode,
-    is_pipe_name, pipe_name, prompt_program, screen_reader_of_exit, time_limit_text,
-    wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_ARGUMENT, APPROVED_ARGUMENT,
-    RECEIVED, SCREEN_READER_ARGUMENT, SHARED_PROGRAM_KEY, SHELL_PROGRAM_KEY, SYSTEM_PROGRAM_KEY,
+    answer_of_exit, approval_arguments, confirm_text, confirm_text_for, confirm_words, exit,
+    helper_mode, is_pipe_name, pipe_name, prompt_program, screen_reader_of_exit, time_limit_text,
+    time_words, wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_ARGUMENT,
+    APPROVED_ARGUMENT, RECEIVED, SCREEN_READER_ARGUMENT, SHARED_PROGRAM_KEY, SHELL_PROGRAM_KEY,
+    SYSTEM_PROGRAM_KEY,
 };
+use dsa_host_windows::ui_language::{assert_translation, UiLanguage};
 use dsa_transport::local::{self, Peer};
 
 /// A window program that ends with `code` after `after`, or runs until it is ended.
@@ -197,7 +199,7 @@ fn fr35_the_window_program_reads_what_the_service_asks() {
         label: "Backup \"Pro\"".into(),
         detail: "com.example.backup".into(),
         command: "sh -c 'echo hi'".into(),
-        korean: true,
+        language: UiLanguage::Korean,
         seconds: 55,
     };
     let line = approval_arguments(&pipe, &words);
@@ -212,7 +214,7 @@ fn fr35_the_window_program_reads_what_the_service_asks() {
     // An empty line still leaves every other flag its value.
     let bare = AskedWords {
         detail: String::new(),
-        korean: false,
+        language: UiLanguage::English,
         ..words.clone()
     };
     let args: Vec<String> = approval_arguments(&pipe, &bare)
@@ -226,6 +228,21 @@ fn fr35_the_window_program_reads_what_the_service_asks() {
             words: bare,
         })
     );
+    // Every language reaches the program as it was asked in.
+    for language in UiLanguage::ALL {
+        let asked = AskedWords {
+            language,
+            ..words.clone()
+        };
+        let args: Vec<String> = approval_arguments(&pipe, &asked)
+            .split(' ')
+            .map(str::to_string)
+            .collect();
+        let Some(HelperMode::Ask { words: read, .. }) = helper_mode(&args) else {
+            panic!("the program was not asked to approve in {language:?}");
+        };
+        assert_eq!(read.language, language);
+    }
     let elevated = vec![APPROVED_ARGUMENT.to_string(), pipe.clone()];
     assert_eq!(
         helper_mode(&elevated),
@@ -273,9 +290,9 @@ fn fr35_the_root_prompt_names_an_app_by_its_label_and_icon() {
     let words = AskedWords::of(&request);
     assert_eq!(words.label, "백업");
     assert_eq!(words.detail, "com.example.backup");
-    assert!(words.korean);
+    assert_eq!(words.language, UiLanguage::Korean);
     // With UAC off, the program's own dialog has the name, then the package under it.
-    let shown = confirm_text(&words.label, &words.detail, &words.command, words.korean);
+    let shown = confirm_text(&words.label, &words.detail, &words.command, words.language);
     assert_eq!(shown.caption, "백업: 관리자 승인");
     assert!(
         shown
@@ -284,10 +301,57 @@ fn fr35_the_root_prompt_names_an_app_by_its_label_and_icon() {
         "{}",
         shown.text
     );
-    let english = confirm_text("Backup", "com.example.backup", "id", false);
+    let english = confirm_text("Backup", "com.example.backup", "id", UiLanguage::English);
     assert!(english
         .text
         .starts_with("Backup\ncom.example.backup\n\nwants to run this"));
+}
+
+#[test]
+fn fr17_the_root_prompt_speaks_every_language() {
+    let english = confirm_words(UiLanguage::English);
+    for language in UiLanguage::ALL {
+        let words = confirm_words(language);
+        for (what, en, text) in [
+            ("the unnamed app", english.unnamed, words.unnamed),
+            ("the caption", english.caption, words.caption),
+            ("the text", english.text, words.text),
+            ("the time limit", english.time_limit, words.time_limit),
+        ] {
+            assert_translation(language, what, en, text);
+        }
+        // The dialog names who asks, the package and the command, and says how long it has.
+        let shown = confirm_text_for(&AskedWords {
+            label: "Backup".into(),
+            detail: "com.example.backup".into(),
+            command: "id -u".into(),
+            language,
+            seconds: 90,
+        });
+        assert!(shown.caption.contains("Backup"), "{language:?}");
+        assert!(
+            shown.text.starts_with("Backup\ncom.example.backup"),
+            "{language:?}"
+        );
+        assert!(shown.text.contains("id -u"), "{language:?}");
+        assert!(shown.text.contains("90"), "{language:?}: {}", shown.text);
+        assert!(!shown.text.contains('{'), "{language:?}: {}", shown.text);
+        assert!(shown.text.contains("Desktop Subsystem for Android"));
+        let unnamed = confirm_text(" ", "", "id", language);
+        assert!(unnamed.caption.contains("Android"), "{language:?}");
+        for seconds in [1, 2, 5, 21, 60, 120, 300] {
+            let time = time_words(seconds, language);
+            let limit = time_limit_text(seconds, language).unwrap();
+            assert!(limit.contains(&time), "{language:?}: {limit}");
+            assert!(!limit.contains('{'), "{language:?}: {limit}");
+        }
+    }
+    assert_eq!(time_words(1, UiLanguage::English), "1 second");
+    assert_eq!(time_words(120, UiLanguage::German), "2 Minuten");
+    assert_eq!(time_words(60, UiLanguage::Russian), "1 минуты");
+    assert_eq!(time_words(21, UiLanguage::Russian), "21 секунды");
+    assert_eq!(time_words(300, UiLanguage::Russian), "5 минут");
+    assert_eq!(time_words(11, UiLanguage::Russian), "11 секунд");
 }
 
 #[test]
@@ -379,7 +443,7 @@ fn fr18_the_own_dialog_says_how_long_it_has_once_without_a_countdown() {
     let shown = confirm_text_for(&read);
     assert!(shown
         .text
-        .starts_with(&confirm_text(&read.label, &read.detail, &read.command, false).text));
+        .starts_with(&confirm_text(&read.label, &read.detail, &read.command, read.language).text));
     assert!(
         shown
             .text
@@ -396,21 +460,21 @@ fn fr18_the_own_dialog_says_how_long_it_has_once_without_a_countdown() {
         korean.text
     );
     assert_eq!(
-        time_limit_text(60, false).as_deref(),
+        time_limit_text(60, UiLanguage::English).as_deref(),
         Some("If nobody answers within 1 minute, the request is refused.")
     );
     assert_eq!(
-        time_limit_text(300, true).as_deref(),
+        time_limit_text(300, UiLanguage::Korean).as_deref(),
         Some("5분 안에 답하지 않으면 요청은 거부됩니다.")
     );
     // A program started by an older service, which gives no time, says nothing about it.
-    assert_eq!(time_limit_text(0, false), None);
+    assert_eq!(time_limit_text(0, UiLanguage::English), None);
     let untimed = AskedWords {
         seconds: 0,
         ..read.clone()
     };
     assert_eq!(
         confirm_text_for(&untimed),
-        confirm_text(&read.label, &read.detail, &read.command, false)
+        confirm_text(&read.label, &read.detail, &read.command, read.language)
     );
 }

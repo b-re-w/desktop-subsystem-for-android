@@ -204,18 +204,36 @@ final class AccessibilityTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(system.components(separatedBy: #".accessibilityHint(T("AdminShield.ToolTip"))"#).count - 1, 3)
     }
 
-    func test_fr18_new_strings_exist_in_korean_and_english() throws {
+    func test_fr18_new_strings_exist_in_every_language() throws {
         let english = try catalog("en")
-        let korean = try catalog("ko")
         func holes(_ text: String) -> [String] {
             (0..<4).map { "{\($0)}" }.filter { text.contains($0) }
         }
-        for key in ["A11y_ItemName", "A11y_Notice", "A11y_LogLine", "A11y_LogDropped", "A11y_LogPriority",
-                    "A11y_Loading", "A11y_Copied", "A11y_Close"] {
-            let en = try XCTUnwrap(english.values[key], "\(key) has no English text")
-            let ko = try XCTUnwrap(korean.values[key], "\(key) has no Korean text")
-            XCTAssertFalse(en.isEmpty || ko.isEmpty, key)
-            XCTAssertEqual(holes(en), holes(ko), "\(key) says other things in English and Korean")
+        for language in InterfaceLanguage.all {
+            let texts = try catalog(language)
+            for key in ["A11y_ItemName", "A11y_Notice", "A11y_LogLine", "A11y_LogDropped", "A11y_LogPriority",
+                        "A11y_Loading", "A11y_Copied", "A11y_Close"] {
+                let en = try XCTUnwrap(english.values[key], "\(key) has no English text")
+                let text = try XCTUnwrap(texts.values[key], "\(key) has no \(language) text")
+                XCTAssertFalse(en.isEmpty || text.isEmpty, "\(key) (\(language))")
+                XCTAssertEqual(holes(en), holes(text), "\(key) says other things in English and \(language)")
+            }
+        }
+    }
+
+    func test_fr18_spoken_words_read_their_values_in_every_language() throws {
+        let line = try XCTUnwrap(LogLine.parse(
+            #"{"time":"2026-11-04 10:00:00.000","priority":"W","pid":12,"tid":13,"tag":"ActivityManager","message":"Start proc"}"#))
+        let dropped = try XCTUnwrap(LogLine.parse(#"{"priority":"W","dropped":3}"#))
+        for language in InterfaceLanguage.all {
+            let texts = try catalog(language)
+            let spoken = AccessibleText.logLine(texts, line)
+            XCTAssertTrue(spoken.contains("ActivityManager") && spoken.contains("Start proc"), "\(language): \(spoken)")
+            XCTAssertFalse(spoken.contains("{"), "\(language) leaves a placeholder unfilled: \(spoken)")
+            XCTAssertTrue(AccessibleText.logLine(texts, dropped).contains("3"), language)
+            let name = AccessibleText.itemName(texts, "AppsOpenButton.Content", "Notes")
+            XCTAssertTrue(name.contains("Notes"), "\(language): \(name)")
+            XCTAssertFalse(name.contains("{"), "\(language): \(name)")
         }
     }
 }

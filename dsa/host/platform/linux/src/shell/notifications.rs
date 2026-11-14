@@ -27,6 +27,7 @@
 use std::collections::BTreeMap;
 
 use dsa_host_core::notifications::{Notification, NotificationAction, NotificationButton};
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::update::alerts::{buttons_of, is_update_key, thread_of, RESTART_NOW};
 
 use super::desktop_entry::app_id;
@@ -46,6 +47,27 @@ pub const INLINE_REPLY: &str = "inline-reply";
 /// The action of the button at `place`.
 pub fn button_action(place: usize) -> String {
     format!("{BUTTON_ACTION}{place}")
+}
+
+/// The name of the action a click on a notification runs, [`DEFAULT_ACTION`], in `language`:
+/// it opens the notification in its app. A service that lists the actions shows it.
+pub fn open_label(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "Open",
+        UiLanguage::Korean => "열기",
+        UiLanguage::Japanese => "開く",
+        UiLanguage::ChineseSimplified => "打开",
+        UiLanguage::ChineseTraditional => "開啟",
+        UiLanguage::Spanish => "Abrir",
+        UiLanguage::French => "Ouvrir",
+        UiLanguage::German => "Öffnen",
+        UiLanguage::PortugueseBrazil => "Abrir",
+        UiLanguage::Russian => "Открыть",
+        UiLanguage::Italian => "Apri",
+        UiLanguage::Vietnamese => "Mở",
+        UiLanguage::Indonesian => "Buka",
+        UiLanguage::Turkish => "Aç",
+    }
 }
 
 /// The launcher entry of DSA's settings app, which DSA's own notifications show under.
@@ -148,12 +170,15 @@ impl Shown {
         Shown::default()
     }
 
-    /// The `Notify` call that shows `notification`, replacing the one with its key. DSA's
-    /// question whether Android restarts into a downloaded image gets [Restart now] and
-    /// [Later], labelled in Korean when `korean`.
-    pub fn notify_in(&self, notification: &Notification, korean: bool) -> Notify {
+    /// The `Notify` call that shows `notification`, replacing the one with its key, with its
+    /// click's action named in `language`. DSA's question whether Android restarts into a
+    /// downloaded image gets [Restart now] and [Later], labelled in `language`.
+    pub fn notify_in(&self, notification: &Notification, language: UiLanguage) -> Notify {
         let mut notify = self.notify(notification);
-        for button in buttons_of(&notification.key, korean) {
+        if let Some(label) = notify.actions.get_mut(1) {
+            *label = open_label(language).to_string();
+        }
+        for button in buttons_of(&notification.key, language) {
             notify.actions.push(button.action.to_string());
             notify.actions.push(button.label);
         }
@@ -400,7 +425,8 @@ mod tests {
     #[test]
     fn nfr5_the_notice_that_android_restarts_for_its_graphics_shows_under_dsa() {
         use dsa_host_core::compositor::frame_stall::Notice;
-        let notice = Notice::Restarting.notification(true);
+        let notice =
+            Notice::Restarting.notification(dsa_host_core::ui_language::UiLanguage::Korean);
         let notify = dsa_notice(&notice);
         assert_eq!(notify.app_name, "DSA");
         assert_eq!(notify.desktop_entry, SETTINGS_ENTRY);
@@ -414,7 +440,7 @@ mod tests {
         use dsa_host_core::update::alerts::{AlertKind, Subject, UpdateAlert, LATER};
         let mut shown = Shown::new();
         let asked = UpdateAlert::new(Subject::Android, AlertKind::Restart, "16.0.3").notification();
-        let notify = shown.notify_in(&asked, false);
+        let notify = shown.notify_in(&asked, UiLanguage::English);
         assert_eq!(
             notify.actions,
             [
@@ -426,7 +452,9 @@ mod tests {
                 "Later"
             ]
         );
-        assert_eq!(shown.notify_in(&asked, true).actions[3], "지금 다시 시작");
+        let korean = shown.notify_in(&asked, UiLanguage::Korean);
+        assert_eq!(korean.actions[1], "열기");
+        assert_eq!(korean.actions[3], "지금 다시 시작");
         shown.shown(&asked.key, 21);
         assert!(shown.restart_asked(21, RESTART_NOW));
         assert!(!shown.restart_asked(21, LATER));
@@ -436,7 +464,37 @@ mod tests {
         shown.shown("0|com.example.chat|1|null|10100", 22);
         assert!(!shown.restart_asked(22, RESTART_NOW));
         let ready = UpdateAlert::new(Subject::Android, AlertKind::Ready, "16.0.3").notification();
-        assert_eq!(shown.notify_in(&ready, false).actions.len(), 2);
+        assert_eq!(
+            shown.notify_in(&ready, UiLanguage::English).actions.len(),
+            2
+        );
+    }
+
+    #[test]
+    fn fr17_a_notifications_actions_are_named_in_every_interface_language() {
+        use dsa_host_core::update::alerts::{AlertKind, Subject, UpdateAlert};
+        let shown = Shown::new();
+        let asked = UpdateAlert::new(Subject::Android, AlertKind::Restart, "16.0.3").notification();
+        for language in UiLanguage::ALL {
+            let open = open_label(language);
+            assert!(!open.trim().is_empty(), "{language:?}");
+            assert!(
+                !open.contains(char::from_u32(0x2014).unwrap()),
+                "{language:?}"
+            );
+            if language != UiLanguage::English {
+                assert_ne!(open, "Open", "{language:?}");
+            }
+            let notify = shown.notify_in(&asked, language);
+            // The actions keep their names; only their labels are translated.
+            assert_eq!(notify.actions.len(), 6, "{language:?}");
+            assert_eq!(notify.actions[0], DEFAULT_ACTION);
+            assert_eq!(notify.actions[1], open);
+            assert_eq!(notify.actions[2], RESTART_NOW);
+            assert!(notify.actions.iter().all(|label| !label.trim().is_empty()));
+        }
+        assert_eq!(open_label(UiLanguage::Japanese), "開く");
+        assert_eq!(open_label(UiLanguage::German), "Öffnen");
     }
 
     fn with_buttons(key: &str) -> Notification {

@@ -14,6 +14,18 @@
 	<array>
 		<string>en</string>
 		<string>ko</string>
+		<string>ja</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>de</string>
+		<string>pt-BR</string>
+		<string>ru</string>
+		<string>it</string>
+		<string>vi</string>
+		<string>id</string>
+		<string>tr</string>
 	</array>
 	<key>CFBundleIdentifier</key>
 	<string>org.thisisthepy.dsa</string>

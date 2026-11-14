@@ -116,9 +116,8 @@ public class TouchGesturesTests
     }
 
     [Theory]
-    [InlineData("Strings.resx")]
-    [InlineData("Strings.ko.resx")]
-    public void Fr5_every_touch_gestures_text_is_in_both_languages(string file)
+    [MemberData(nameof(StringTables.Files), MemberType = typeof(StringTables))]
+    public void Fr5_every_touch_gestures_text_is_in_every_language(string file)
     {
         var values = Strings(file).Descendants("data")
             .ToDictionary(d => (string?)d.Attribute("name") ?? "", d => d.Element("value")?.Value ?? "");

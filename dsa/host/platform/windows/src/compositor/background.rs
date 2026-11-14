@@ -45,6 +45,7 @@ use dsa_host_core::background::{
 };
 use dsa_host_core::compositor::window_hosts::MediaButtons;
 use dsa_host_core::host_api::HostApiClient;
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_transport::Connector;
 use sha2::{Digest, Sha256};
 
@@ -127,47 +128,162 @@ pub struct Texts {
     pub stop: &'static str,
     pub cancel: &'static str,
     pub do_not_ask: &'static str,
-    korean: bool,
+    /// The question asked before an app is stopped, `{name}` being the app.
+    pub stop_question: &'static str,
+    /// What stopping does, under the question.
+    pub stop_explained: &'static str,
 }
 
 impl Texts {
     pub fn english() -> Texts {
-        Texts {
-            open: "Open",
-            stop: "Stop",
-            cancel: "Cancel",
-            do_not_ask: "Do not ask again",
-            korean: false,
-        }
+        Texts::of(UiLanguage::English)
     }
 
-    pub fn korean() -> Texts {
+    /// The words in `language`.
+    pub fn of(language: UiLanguage) -> Texts {
+        let (open, stop, cancel, do_not_ask, stop_question, stop_explained) = match language {
+            UiLanguage::English => (
+                "Open",
+                "Stop",
+                "Cancel",
+                "Do not ask again",
+                "Stop {name}?",
+                "It stops everything it does in the background, such as playing music, and the \
+                 memory it used is freed.",
+            ),
+            UiLanguage::Korean => (
+                "열기",
+                "중지",
+                "취소",
+                "다시 묻지 않음",
+                "{name}을(를) 중지할까요?",
+                "백그라운드에서 하던 일(음악 재생 등)을 모두 멈추고, 앱이 쓰던 메모리를 돌려받습니다.",
+            ),
+            UiLanguage::Japanese => (
+                "開く",
+                "停止",
+                "キャンセル",
+                "今後確認しない",
+                "{name} を停止しますか?",
+                "バックグラウンドで行っていること (音楽の再生など) をすべて停止し、アプリが使用して\
+                 いたメモリを解放します。",
+            ),
+            UiLanguage::ChineseSimplified => (
+                "打开",
+                "停止",
+                "取消",
+                "不再询问",
+                "要停止 {name} 吗?",
+                "这会停止它在后台进行的所有操作（例如播放音乐），并释放它使用的内存。",
+            ),
+            UiLanguage::ChineseTraditional => (
+                "開啟",
+                "停止",
+                "取消",
+                "不要再詢問",
+                "要停止 {name} 嗎?",
+                "這會停止它在背景進行的所有工作 (例如播放音樂)，並釋放它使用的記憶體。",
+            ),
+            UiLanguage::Spanish => (
+                "Abrir",
+                "Detener",
+                "Cancelar",
+                "No volver a preguntar",
+                "¿Detener {name}?",
+                "Se detiene todo lo que hace en segundo plano, como reproducir música, y se libera \
+                 la memoria que usaba.",
+            ),
+            UiLanguage::French => (
+                "Ouvrir",
+                "Arrêter",
+                "Annuler",
+                "Ne plus demander",
+                "Arrêter {name} ?",
+                "Tout ce que l'application fait en arrière-plan, comme la lecture de musique, \
+                 s'arrête et la mémoire qu'elle utilisait est libérée.",
+            ),
+            UiLanguage::German => (
+                "Öffnen",
+                "Beenden",
+                "Abbrechen",
+                "Nicht mehr fragen",
+                "{name} beenden?",
+                "Alles, was die App im Hintergrund tut, etwa Musik abspielen, wird beendet, und \
+                 der von ihr belegte Arbeitsspeicher wird freigegeben.",
+            ),
+            UiLanguage::PortugueseBrazil => (
+                "Abrir",
+                "Parar",
+                "Cancelar",
+                "Não perguntar novamente",
+                "Parar {name}?",
+                "Tudo o que o app faz em segundo plano, como tocar música, é interrompido, e a \
+                 memória que ele usava é liberada.",
+            ),
+            UiLanguage::Russian => (
+                "Открыть",
+                "Остановить",
+                "Отмена",
+                "Больше не спрашивать",
+                "Остановить {name}?",
+                "Все, что приложение делает в фоновом режиме, например воспроизведение музыки, \
+                 будет остановлено, а используемая им память освободится.",
+            ),
+            UiLanguage::Italian => (
+                "Apri",
+                "Arresta",
+                "Annulla",
+                "Non chiedere più",
+                "Arrestare {name}?",
+                "Tutto ciò che l'app fa in background, come la riproduzione di musica, viene \
+                 interrotto e la memoria che usava viene liberata.",
+            ),
+            UiLanguage::Vietnamese => (
+                "Mở",
+                "Dừng",
+                "Hủy",
+                "Không hỏi lại",
+                "Dừng {name}?",
+                "Mọi việc ứng dụng đang làm trong nền, chẳng hạn như phát nhạc, sẽ dừng lại và \
+                 bộ nhớ ứng dụng đã dùng sẽ được giải phóng.",
+            ),
+            UiLanguage::Indonesian => (
+                "Buka",
+                "Hentikan",
+                "Batal",
+                "Jangan tanya lagi",
+                "Hentikan {name}?",
+                "Semua yang dilakukannya di latar belakang, seperti memutar musik, akan berhenti, \
+                 dan memori yang digunakannya akan dibebaskan.",
+            ),
+            UiLanguage::Turkish => (
+                "Aç",
+                "Durdur",
+                "İptal",
+                "Bir daha sorma",
+                "{name} durdurulsun mu?",
+                "Arka planda yaptığı her şey (ör. müzik çalma) durdurulur ve kullandığı bellek \
+                 serbest bırakılır.",
+            ),
+        };
         Texts {
-            open: "열기",
-            stop: "중지",
-            cancel: "취소",
-            do_not_ask: "다시 묻지 않음",
-            korean: true,
+            open,
+            stop,
+            cancel,
+            do_not_ask,
+            stop_question,
+            stop_explained,
         }
     }
 
     /// The question asked before `name` is stopped: the dialog's title.
     pub fn stop_title(&self, name: &str) -> String {
-        if self.korean {
-            format!("{name}을(를) 중지할까요?")
-        } else {
-            format!("Stop {name}?")
-        }
+        self.stop_question.replace("{name}", name)
     }
 
     /// What stopping does, under the question.
     pub fn stop_detail(&self) -> &'static str {
-        if self.korean {
-            "백그라운드에서 하던 일(음악 재생 등)을 모두 멈추고, 앱이 쓰던 메모리를 돌려받습니다."
-        } else {
-            "It stops everything it does in the background, such as playing music, and the \
-             memory it used is freed."
-        }
+        self.stop_explained
     }
 
     /// The question asked before `name` is stopped, as a Windows 11 dialog shows it: the
@@ -229,20 +345,118 @@ pub fn stop_chosen(
 }
 
 /// The Segoe Fluent Icons glyph of a notification action, read from its title as a media
-/// notification names its actions (in English or Korean): play, pause, previous, next, stop.
-/// `None` for any other action, which shows no icon.
+/// notification names its actions (in any of the languages DSA speaks): play, pause, previous,
+/// next, stop. `None` for any other action, which shows no icon.
 pub fn action_glyph(title: &str) -> Option<char> {
     let title = title.trim().to_lowercase();
     let is = |words: &[&str]| words.iter().any(|word| title == *word);
-    if is(&["pause", "일시 정지", "일시정지"]) {
+    if is(&[
+        "pause",
+        "일시 정지",
+        "일시정지",
+        "一時停止",
+        "暂停",
+        "暫停",
+        "pausa",
+        "pausar",
+        "pausieren",
+        "пауза",
+        "tạm dừng",
+        "jeda",
+        "duraklat",
+    ]) {
         Some(glyph::PAUSE)
-    } else if is(&["play", "resume", "재생", "다시 재생"]) {
+    } else if is(&[
+        "play",
+        "resume",
+        "재생",
+        "다시 재생",
+        "再生",
+        "播放",
+        "reproducir",
+        "lire",
+        "wiedergeben",
+        "abspielen",
+        "reproduzir",
+        "tocar",
+        "воспроизвести",
+        "riproduci",
+        "phát",
+        "putar",
+        "oynat",
+    ]) {
         Some(glyph::PLAY)
-    } else if is(&["previous", "prev", "skip to previous", "이전", "이전 곡"]) {
+    } else if is(&[
+        "previous",
+        "prev",
+        "skip to previous",
+        "이전",
+        "이전 곡",
+        "前へ",
+        "前の曲",
+        "上一首",
+        "上一曲",
+        "上一個",
+        "上一个",
+        "anterior",
+        "précédent",
+        "zurück",
+        "vorheriger titel",
+        "предыдущий",
+        "назад",
+        "precedente",
+        "trước",
+        "bài trước",
+        "sebelumnya",
+        "önceki",
+    ]) {
         Some(glyph::PREVIOUS)
-    } else if is(&["next", "skip", "skip to next", "다음", "다음 곡"]) {
+    } else if is(&[
+        "next",
+        "skip",
+        "skip to next",
+        "다음",
+        "다음 곡",
+        "次へ",
+        "次の曲",
+        "下一首",
+        "下一曲",
+        "下一個",
+        "下一个",
+        "siguiente",
+        "suivant",
+        "weiter",
+        "nächster titel",
+        "próximo",
+        "próxima",
+        "следующий",
+        "далее",
+        "successivo",
+        "tiếp",
+        "bài tiếp theo",
+        "berikutnya",
+        "selanjutnya",
+        "sonraki",
+    ]) {
         Some(glyph::NEXT)
-    } else if is(&["stop", "중지", "정지"]) {
+    } else if is(&[
+        "stop",
+        "중지",
+        "정지",
+        "停止",
+        "detener",
+        "arrêter",
+        "arrêt",
+        "stopp",
+        "parar",
+        "стоп",
+        "остановить",
+        "interrompi",
+        "dừng",
+        "hentikan",
+        "berhenti",
+        "durdur",
+    ]) {
         Some(glyph::STOP)
     } else {
         None
@@ -597,7 +811,6 @@ mod win {
     use dsa_host_core::background::{BackgroundApp, BackgroundCommand, MediaSession};
     use windows_sys::core::GUID;
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
-    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
     use windows_sys::Win32::Graphics::Gdi::{
         CreateBitmap, CreateDIBSection, DeleteObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
         DIB_RGB_COLORS,
@@ -767,8 +980,7 @@ mod win {
             )));
             return;
         }
-        // SAFETY: reads the user's language.
-        let korean = unsafe { GetUserDefaultUILanguage() } & 0x3ff == 0x12;
+        let language = crate::ui_language::user_language();
         STATE.with(|state| {
             *state.borrow_mut() = Some(State {
                 commands,
@@ -779,11 +991,7 @@ mod win {
                 next_id: 1,
                 ask_before_stop: true,
                 taskbar_created,
-                texts: if korean {
-                    Texts::korean()
-                } else {
-                    Texts::english()
-                },
+                texts: Texts::of(language),
                 media_class,
                 media: HashMap::new(),
                 decoder,
@@ -1644,7 +1852,10 @@ mod tests {
             .filter_map(MenuEntry::item)
             .all(|i| i.enabled));
         // The same in Korean, with a Korean media action's glyph.
-        let korean = menu_entries(&music(&["일시 정지", "다음"]), &Texts::korean());
+        let korean = menu_entries(
+            &music(&["일시 정지", "다음"]),
+            &Texts::of(UiLanguage::Korean),
+        );
         let labels: Vec<&str> = korean
             .iter()
             .filter_map(MenuEntry::item)
@@ -1702,18 +1913,57 @@ mod tests {
 
     #[test]
     fn fr24_the_stop_question_names_the_app_in_the_users_language() {
+        let korean = Texts::of(UiLanguage::Korean);
         assert_eq!(Texts::english().stop_title("Music"), "Stop Music?");
-        assert!(Texts::korean().stop_title("Music").starts_with("Music"));
-        assert_ne!(Texts::korean().stop, Texts::english().stop);
-        assert_ne!(
-            Texts::korean().stop_detail(),
-            Texts::english().stop_detail()
-        );
+        assert!(korean.stop_title("Music").starts_with("Music"));
+        assert_ne!(korean.stop, Texts::english().stop);
+        assert_ne!(korean.stop_detail(), Texts::english().stop_detail());
+        for language in UiLanguage::ALL {
+            let texts = Texts::of(language);
+            assert!(texts.stop_title("Music").contains("Music"), "{language:?}");
+            assert!(!texts.stop_title("Music").contains("{name}"));
+        }
+    }
+
+    #[test]
+    fn fr17_the_tray_speaks_every_language() {
+        use crate::ui_language::assert_translation;
+        let english = Texts::english();
+        for language in UiLanguage::ALL {
+            let texts = Texts::of(language);
+            for (what, en, text) in [
+                ("Open", english.open, texts.open),
+                ("Stop", english.stop, texts.stop),
+                ("Cancel", english.cancel, texts.cancel),
+                ("Do not ask again", english.do_not_ask, texts.do_not_ask),
+                (
+                    "the stop question",
+                    english.stop_question,
+                    texts.stop_question,
+                ),
+                (
+                    "the stop detail",
+                    english.stop_explained,
+                    texts.stop_explained,
+                ),
+            ] {
+                assert_translation(language, what, en, text);
+            }
+            if language != UiLanguage::English {
+                assert_ne!(texts.stop_explained, english.stop_explained, "{language:?}");
+            }
+        }
+        // A media action named in another language still has its icon.
+        assert_eq!(action_glyph("Pausieren"), Some(glyph::PAUSE));
+        assert_eq!(action_glyph("一時停止"), Some(glyph::PAUSE));
+        assert_eq!(action_glyph("Suivant"), Some(glyph::NEXT));
+        assert_eq!(action_glyph("Anterior"), Some(glyph::PREVIOUS));
+        assert_eq!(action_glyph("播放"), Some(glyph::PLAY));
     }
 
     #[test]
     fn fr24_the_stop_question_is_a_windows_11_dialog_with_a_do_not_ask_again_box() {
-        for texts in [Texts::english(), Texts::korean()] {
+        for texts in UiLanguage::ALL.map(Texts::of) {
             let dialog = texts.stop_dialog("Music");
             assert_eq!(dialog.title, texts.stop_title("Music"));
             assert_eq!(dialog.body, texts.stop_detail());

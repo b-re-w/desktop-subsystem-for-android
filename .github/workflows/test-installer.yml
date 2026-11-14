@@ -946,22 +946,28 @@ jobs:
             Close-Apk $app
 
             # Many permissions, code for another processor and transparent icon corners: the
-            # labels, the warning and More, and the labels stay English in Korean.
+            # labels, the warning and More, each in the window's language.
             foreach ($lang in 'en-US', 'ko-KR') {
               $line = $command.Replace('%1', "$apks\many.apk")
               $exe = $line.Substring(1, $line.IndexOf('"', 1) - 1)
               $app = Start-Process $exe -ArgumentList ($line.Substring($exe.Length + 3) + " --lang $lang") -PassThru
               $null = $app.Handle
               Wait-SetupControl InstallButton -Enabled -Seconds 90 | Out-Null
-              Expect-Text HeroTitle 'Install Many[?]'
-              Expect-Text HeroPackage 'Package Name: com.example.many'
-              Expect-Text VersionChip 'Version: 3.20.8107'
-              Expect-Text SourceText 'Source: downloads.example.com'
-              Expect-Text PermissionsHeader 'Capabilities (40):'
-              Expect-Text MoreLink 'More'
+              $words = if ($lang -eq 'ko-KR') {
+                @{ Hero = 'Many을(를) 설치하시겠습니까[?]'; Package = '패키지 이름: com.example.many'; Version = '버전: 3.20.8107'
+                   Source = '출처: downloads.example.com'; Header = '기능(40):'; More = '자세히'; Less = '간단히'; Title = 'APK 설치 관리자' }
+              } else {
+                @{ Hero = 'Install Many[?]'; Package = 'Package Name: com.example.many'; Version = 'Version: 3.20.8107'
+                   Source = 'Source: downloads.example.com'; Header = 'Capabilities (40):'; More = 'More'; Less = 'Less'; Title = 'APK Installer' }
+              }
+              Expect-Text HeroTitle $words.Hero
+              Expect-Text HeroPackage $words.Package
+              Expect-Text VersionChip $words.Version
+              Expect-Text SourceText $words.Source
+              Expect-Text PermissionsHeader $words.Header
+              Expect-Text MoreLink $words.More
               $title = (Find-SetupWindow).Current.Name
-              $want = if ($lang -eq 'ko-KR') { 'APK 설치 관리자' } else { 'APK Installer' }
-              if ($title -cne $want) { throw "the window's title is '$title', not '$want'" }
+              if ($title -cne $words.Title) { throw "the window's title is '$title', not '$($words.Title)'" }
               Wait-SetupControl CompatibilityTitle | Out-Null
               Save-SetupScreen "$PWD\screens\apk-$theme-many-$lang.png"
               # More is a toggle, as App Installer's is: it opens the list and becomes Less,
@@ -975,12 +981,12 @@ jobs:
               Invoke-SetupButton MoreLink
               Wait-SetupControl PermissionList | Out-Null
               Start-Sleep -Seconds 1
-              Expect-Text MoreLink 'Less'
+              Expect-Text MoreLink $words.Less
               Expect-Expanded 'Expanded'
               Save-SetupScreen "$PWD\screens\apk-$theme-many-expanded-$lang.png"
               Invoke-SetupButton MoreLink
               Start-Sleep -Seconds 1
-              Expect-Text MoreLink 'More'
+              Expect-Text MoreLink $words.More
               Expect-Expanded 'Collapsed'
               Save-SetupScreen "$PWD\screens\apk-$theme-many-collapsed-again-$lang.png"
               Close-Apk $app

@@ -4,8 +4,10 @@ using Dsa.Settings.Core;
 
 namespace Dsa.ApkInstaller;
 
-/// <summary>The window's texts, in English in every language, from the settings app's
-/// English string table (Strings.resx), which this app embeds as its own.</summary>
+/// <summary>The window's texts in the user's language, from the settings app's string tables
+/// (Strings.resx and its translations), which this app embeds as its own. The language is the
+/// one of DSA's fourteen that the display language resolves to (<see cref="UiLanguage"/>), as
+/// in the settings app, so both windows speak the same language.</summary>
 internal sealed class ResourceText : ITextSource
 {
     private static readonly ResourceManager Manager =
@@ -15,7 +17,7 @@ internal sealed class ResourceText : ITextSource
     {
         try
         {
-            return Manager.GetString(key, CultureInfo.InvariantCulture) ?? key;
+            return Manager.GetString(key, UiLanguage.Resolve(CultureInfo.CurrentUICulture).Culture) ?? key;
         }
         catch (MissingManifestResourceException)
         {
