@@ -183,9 +183,53 @@ void fr4_a_read_back_past_the_end_is_cut_at_the_end() {
     check(blocks.changed(memory.data()).empty(), test, "and is known to match");
 }
 
+// The kernel says which bytes were written (dsa_dirty_pages.h): only their blocks are hashed.
+void nfr2_only_the_blocks_the_kernel_saw_written_are_compared() {
+    const char* test = __func__;
+    std::vector<uint8_t> memory(16 * kShadowBlockSize, 0);
+    ShadowBlocks blocks(memory.size());
+    memory[2 * kShadowBlockSize] = 1;
+    memory[9 * kShadowBlockSize] = 1;  // not reported: it stays for a later full compare
+    uint64_t compared = 0;
+    const auto ranges = blocks.changedIn(
+        memory.data(), {ShadowBlocks::Range{2 * kShadowBlockSize, 2 * kShadowBlockSize}},
+        &compared);
+    check(ranges.size() == 1 && ranges[0].offset == 2 * kShadowBlockSize &&
+              ranges[0].size == kShadowBlockSize,
+          test, "the written block that changed goes");
+    check(compared == 2 * kShadowBlockSize, test, "two blocks hashed");
+    check(blocks.changedIn(memory.data(), {}, &compared).empty(), test,
+          "nothing written, nothing sent");
+    const auto later = blocks.changed(memory.data());
+    check(later.size() == 1 && later[0].offset == 9 * kShadowBlockSize, test,
+          "every other block kept its hash");
+}
+
+void nfr2_written_ranges_past_the_end_are_cut_and_shared_blocks_compared_once() {
+    const char* test = __func__;
+    const uint64_t size = 2 * kShadowBlockSize + 100;
+    std::vector<uint8_t> memory(size, 0);
+    ShadowBlocks blocks(size);
+    memory[size - 1] = 5;
+    uint64_t compared = 0;
+    const auto ranges = blocks.changedIn(
+        memory.data(),
+        {ShadowBlocks::Range{2 * kShadowBlockSize, 50},
+         ShadowBlocks::Range{2 * kShadowBlockSize + 50, 4 * kShadowBlockSize}},
+        &compared);
+    check(ranges.size() == 1 && ranges[0].offset == 2 * kShadowBlockSize && ranges[0].size == 100,
+          test, "the short last block goes once");
+    check(compared == 100, test, "and is hashed once");
+    memory[kShadowBlockSize] = 3;
+    blocks.refreshIn(memory.data(), {ShadowBlocks::Range{kShadowBlockSize, kShadowBlockSize}});
+    check(blocks.changed(memory.data()).empty(), test, "a refreshed block is known to match");
+}
+
 }  // namespace
 
 int main() {
+    nfr2_only_the_blocks_the_kernel_saw_written_are_compared();
+    nfr2_written_ranges_past_the_end_are_cut_and_shared_blocks_compared_once();
     fr4_a_read_back_takes_only_what_the_device_changed_and_keeps_the_apps_writes();
     fr4_a_read_back_of_unchanged_memory_takes_nothing();
     fr4_a_block_read_back_in_part_goes_whole_at_the_next_flush();

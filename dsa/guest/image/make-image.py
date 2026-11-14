@@ -5411,6 +5411,7 @@ SENSORS_POLICY = HERE / "sepolicy/sensors.cil"
 CAMERA_POLICY = HERE / "sepolicy/camera.cil"
 AGENT_POLICY = HERE / "sepolicy/agent.cil"
 MEMORY_POLICY = HERE / "sepolicy/memory.cil"
+GRAPHICS_MEMORY_POLICY = HERE / "sepolicy/graphics-memory.cil"
 AUDIO_POLICY = HERE / "sepolicy/audio.cil"
 ADB_POLICY = HERE / "sepolicy/adb.cil"
 KERNEL_POLICY = HERE / "sepolicy/kernel.cil"
@@ -5761,6 +5762,22 @@ def narrow_vsock_neverallows(text):
     return re.sub(r"\n{3,}", "\n\n", narrowed)
 
 
+def userfaultfd_getattr_rules(plat_sepolicy_text):
+    """Lets each domain the platform gives a userfaultfd of its own (every app domain,
+    system_server, zygote) stat it, as it may already create, read and ask it ioctls. The
+    platform's rules leave getattr out, so each app's log showed a denial on
+    anon_inode:[userfaultfd] (ART's, and the Vulkan driver's write protection makes another).
+    Only the domain's own type: the platform forbids every other domain its userfaultfds."""
+    rules = []
+    for source, target, created in re.findall(
+            r'\(typetransition\s+(\S+)\s+(\S+)\s+anon_inode\s+"?\[userfaultfd\]"?\s+([^\s()]+)\s*\)',
+            plat_sepolicy_text):
+        rule = f"(allow {source} {created} (anon_inode (getattr)))"
+        if source == target and rule not in rules:
+            rules.append(rule)
+    return "\n" + "\n".join(rules) + "\n" if rules else ""
+
+
 def with_versioned_app_domains(rules_text, plat_sepolicy_text):
     """Gives each rule of `rules_text` that names platform_app the same rule for every
     platform_app_<sdk> domain the platform policy declares. Android 17 runs a platform app that
@@ -6037,6 +6054,9 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
             plat_patched = patch_plat_sepolicy(plat_orig, fragment_text)
             # The memory controls the vendor scripts write, and the reclaim property.
             plat_patched += "\n" + MEMORY_POLICY.read_text()
+            # The Vulkan driver asking the kernel which pages of its copies an app wrote.
+            plat_patched += "\n" + GRAPHICS_MEMORY_POLICY.read_text()
+            plat_patched += userfaultfd_getattr_rules(plat_orig)
             # adbd listening on vsock, and the property that starts it.
             plat_patched += "\n" + ADB_POLICY.read_text()
             # The kernel thread whose devtmpfs nodes nothing uses.
