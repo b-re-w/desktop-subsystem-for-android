@@ -1,0 +1,2544 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The texts of DSA Settings in Traditional Chinese, read through ResourceManager. Each key has the same meaning in every language. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>DSA 設定</value>
+  </data>
+  <data name="AppTitle.Text" xml:space="preserve">
+    <value>DSA 設定</value>
+  </data>
+  <data name="NavGeneral.Content" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="NavMemory.Content" xml:space="preserve">
+    <value>記憶體</value>
+  </data>
+  <data name="NavDisplay.Content" xml:space="preserve">
+    <value>顯示器與 GPU</value>
+  </data>
+  <data name="NavUpdates.Content" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="NavAdvanced.Content" xml:space="preserve">
+    <value>進階</value>
+  </data>
+  <data name="NavAbout.Content" xml:space="preserve">
+    <value>關於</value>
+  </data>
+  <data name="GeneralTitle.Text" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="GeneralErrorBar.Title" xml:space="preserve">
+    <value>發生問題</value>
+  </data>
+  <data name="GeneralStateCard.Header" xml:space="preserve">
+    <value>狀態</value>
+  </data>
+  <data name="GeneralStateCard.Description" xml:space="preserve">
+    <value>Desktop Subsystem for Android™ 在專屬的輕量虛擬機器中執行 Android，並將每個應用程式顯示在各自的視窗中。</value>
+  </data>
+  <data name="StartButton.Content" xml:space="preserve">
+    <value>啟動</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="ProblemBar.Title" xml:space="preserve">
+    <value>Android 尚未就緒</value>
+  </data>
+  <data name="LastReasonBar.Title" xml:space="preserve">
+    <value>上次停止原因</value>
+  </data>
+  <data name="LastReason_Requested" xml:space="preserve">
+    <value>Android 已依要求停止。需要時請再次啟動。</value>
+  </data>
+  <data name="LastReason_Updating" xml:space="preserve">
+    <value>DSA 正在更新。更新完成後，請再次啟動 Android。</value>
+  </data>
+  <data name="LastReason_Virtualization" xml:space="preserve">
+    <value>虛擬化已關閉或缺少 Hyper-V。請開啟「虛擬機器平台」，然後重新啟動電腦。</value>
+  </data>
+  <data name="LastReason_InvalidConfiguration" xml:space="preserve">
+    <value>Windows 拒絕了 Android 虛擬機器的設定。請更新或重新安裝 DSA。</value>
+  </data>
+  <data name="LastReason_OutOfMemory" xml:space="preserve">
+    <value>記憶體不足，無法啟動 Android。請關閉其他應用程式，然後再試一次。</value>
+  </data>
+  <data name="LastReason_Disk" xml:space="preserve">
+    <value>磁碟問題導致 Android 無法啟動。請釋放空間或檢查磁碟機，然後再試一次。</value>
+  </data>
+  <data name="LastReason_TimedOut" xml:space="preserve">
+    <value>Android 啟動時間過長。請再試著啟動一次。</value>
+  </data>
+  <data name="LastReason_Lost" xml:space="preserve">
+    <value>Android 意外停止。請再試著啟動一次。</value>
+  </data>
+  <data name="LastReason_General" xml:space="preserve">
+    <value>無法啟動 Android。請再試一次，若持續失敗，請查看詳細資料。</value>
+  </data>
+  <data name="LastReasonDetails.Header" xml:space="preserve">
+    <value>詳細資料</value>
+  </data>
+  <data name="LastReasonCopy.ToolTip" xml:space="preserve">
+    <value>複製詳細資料</value>
+  </data>
+  <data name="UpdateNoticeBar.Title" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="UpdateNotice_AndroidUpdated" xml:space="preserve">
+    <value>Android 已更新為 {0}。</value>
+  </data>
+  <data name="UpdateNotice_AndroidInstalled" xml:space="preserve">
+    <value>已安裝 Android {0}。</value>
+  </data>
+  <data name="UpdateNotice_AndroidChosen" xml:space="preserve">
+    <value>已選擇 Android {0}。DSA 現在會下載它，並在下次啟動 Android 時使用。</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
+    <value>Android {0} 無法啟動 ({1})，因此已改回使用 Android {2}。
+等 Android {0} 推出較新的組建或 DSA 推出新版本後，會再試一次。</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
+    <value>Android {0} 無法啟動 ({1})，因此已改回使用 Android {2}。
+Android {2} 尚未完成啟動 ({3})。請再次啟動 Android 以將其開機。</value>
+  </data>
+  <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
+    <value>Android {0} 無法啟動 ({1})，且未安裝其他映像。
+若有其他映像，DSA 會下載它。下一個 DSA 版本會再試一次此映像。</value>
+  </data>
+  <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
+    <value>Android {0} 仍保持試用狀態，問題並非由它造成：{1}</value>
+  </data>
+  <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
+    <value>DSA 已更新為 {0}。</value>
+  </data>
+  <data name="UpdateNotice_DsaDownloaded" xml:space="preserve">
+    <value>已下載 DSA {0}。會在 Android 未執行時安裝。</value>
+  </data>
+  <data name="UpdateNotice_DsaInstalling" xml:space="preserve">
+    <value>正在安裝 DSA {0}。完成後服務會重新啟動。</value>
+  </data>
+  <data name="UpdateNotice_DsaFailed" xml:space="preserve">
+    <value>無法將 DSA 更新為 {0} ({1})。目前仍安裝 DSA {2}。</value>
+  </data>
+  <data name="GeneralMoreHeader.Text" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="OpenLogsCard.Header" xml:space="preserve">
+    <value>開啟我的記錄資料夾</value>
+  </data>
+  <data name="OpenLogsCard.Description" xml:space="preserve">
+    <value>視窗管理員與應用程式視窗的記錄，可用於回報問題。</value>
+  </data>
+  <data name="RefreshCard.Header" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="RefreshCard.Description" xml:space="preserve">
+    <value>再次向 DSA 服務查詢狀態。</value>
+  </data>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="State_Stopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="State_Starting" xml:space="preserve">
+    <value>正在啟動</value>
+  </data>
+  <data name="State_Active" xml:space="preserve">
+    <value>執行中</value>
+  </data>
+  <data name="State_Dozing" xml:space="preserve">
+    <value>Doze (閒置)</value>
+  </data>
+  <data name="State_Frozen" xml:space="preserve">
+    <value>已凍結</value>
+  </data>
+  <data name="State_Stopping" xml:space="preserve">
+    <value>正在停止</value>
+  </data>
+  <data name="State_Stalled" xml:space="preserve">
+    <value>未就緒</value>
+  </data>
+  <data name="Problem_CliMissing" xml:space="preserve">
+    <value>無法啟動 dsa 指令。請重新安裝 DSA。</value>
+  </data>
+  <data name="Problem_ServiceUnreachable" xml:space="preserve">
+    <value>DSA 服務未在執行。</value>
+  </data>
+  <data name="Problem_Refused" xml:space="preserve">
+    <value>DSA 服務無法執行此動作。</value>
+  </data>
+  <data name="Problem_Unreadable" xml:space="preserve">
+    <value>無法讀取 dsa 指令的回應。請重新安裝 DSA。</value>
+  </data>
+  <data name="MemoryTitle.Text" xml:space="preserve">
+    <value>記憶體</value>
+  </data>
+  <data name="MemoryRefreshButton.Content" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="MemoryErrorBar.Title" xml:space="preserve">
+    <value>無法測量記憶體</value>
+  </data>
+  <data name="MemoryHostHeader.Text" xml:space="preserve">
+    <value>在這部電腦上</value>
+  </data>
+  <data name="MemoryHostTotalCard.Header" xml:space="preserve">
+    <value>這部電腦上使用中</value>
+  </data>
+  <data name="MemoryHostTotalCard.Description" xml:space="preserve">
+    <value>虛擬機器、視窗管理員與應用程式視窗目前佔用的 RAM。</value>
+  </data>
+  <data name="MemoryHostNone.Text" xml:space="preserve">
+    <value>Android 未在執行，因此不會佔用這部電腦的記憶體。</value>
+  </data>
+  <data name="MemoryGuestHeader.Text" xml:space="preserve">
+    <value>Android 內部</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Title" xml:space="preserve">
+    <value>尚無報告</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Message" xml:space="preserve">
+    <value>Android 啟動數分鐘後，會回報其記憶體的使用方式。</value>
+  </data>
+  <data name="MemoryGuestTotalCard.Header" xml:space="preserve">
+    <value>Android 可用的記憶體</value>
+  </data>
+  <data name="MemoryAvailableOf.Text" xml:space="preserve">
+    <value>可用，總共</value>
+  </data>
+  <data name="MemoryTopHeader.Text" xml:space="preserve">
+    <value>最大的處理程序</value>
+  </data>
+  <data name="Role_Vm" xml:space="preserve">
+    <value>虛擬機器 (vmmem)</value>
+  </data>
+  <data name="Role_WindowManager" xml:space="preserve">
+    <value>視窗管理員</value>
+  </data>
+  <data name="Role_Renderer" xml:space="preserve">
+    <value>圖形轉譯器</value>
+  </data>
+  <data name="Role_AppWindow" xml:space="preserve">
+    <value>應用程式視窗</value>
+  </data>
+  <data name="Memory_ProcessDetail" xml:space="preserve">
+    <value>處理程序 {0}，私人 {1}</value>
+  </data>
+  <data name="Memory_ReportAge" xml:space="preserve">
+    <value>{0} 秒前回報</value>
+  </data>
+  <data name="Memory_Apps" xml:space="preserve">
+    <value>應用程式與系統</value>
+  </data>
+  <data name="Memory_AppsDetail" xml:space="preserve">
+    <value>記憶體中 {0}，已壓縮 {1}</value>
+  </data>
+  <data name="Memory_Cache" xml:space="preserve">
+    <value>快取</value>
+  </data>
+  <data name="Memory_CacheDetail" xml:space="preserve">
+    <value>保留在記憶體中的檔案內容。Android 需要記憶體時會將其釋放。</value>
+  </data>
+  <data name="Memory_Kernel" xml:space="preserve">
+    <value>核心快取</value>
+  </data>
+  <data name="Memory_KernelDetail" xml:space="preserve">
+    <value>核心可視需要釋放的核心快取。</value>
+  </data>
+  <data name="Memory_Shared" xml:space="preserve">
+    <value>共用記憶體</value>
+  </data>
+  <data name="Memory_Zram" xml:space="preserve">
+    <value>壓縮記憶體</value>
+  </data>
+  <data name="Memory_ZramDetail" xml:space="preserve">
+    <value>以壓縮方式保存 {0} 的分頁</value>
+  </data>
+  <data name="Memory_Free" xml:space="preserve">
+    <value>可用</value>
+  </data>
+  <data name="Memory_GuestProcessDetail" xml:space="preserve">
+    <value>處理程序 {0}</value>
+  </data>
+  <data name="Memory_GuestProcessGooglePlay" xml:space="preserve">
+    <value>處理程序 {0}，Google Play 服務</value>
+  </data>
+  <data name="Memory_GooglePlay" xml:space="preserve">
+    <value>Google Play 服務</value>
+  </data>
+  <data name="Memory_GooglePlayDetail" xml:space="preserve">
+    <value>您安裝的 Google 應用程式，{0} 個處理程序：{1}</value>
+  </data>
+  <data name="Memory_Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="DisplayTitle.Text" xml:space="preserve">
+    <value>顯示器與 GPU</value>
+  </data>
+  <data name="SettingsErrorBar.Title" xml:space="preserve">
+    <value>設定未變更</value>
+  </data>
+  <data name="RenderGpuCard.Header" xml:space="preserve">
+    <value>轉譯 GPU</value>
+  </data>
+  <data name="RenderGpuCard.Description" xml:space="preserve">
+    <value>繪製 Android 應用程式的 GPU。預設為主要監視器的 GPU，讓畫面留在同一個 GPU 上，筆記型電腦的獨立 GPU 也能休眠。</value>
+  </data>
+  <data name="Gpu_Display" xml:space="preserve">
+    <value>主要監視器的 GPU (建議)</value>
+  </data>
+  <data name="Gpu_Integrated" xml:space="preserve">
+    <value>內建 GPU</value>
+  </data>
+  <data name="Gpu_Discrete" xml:space="preserve">
+    <value>獨立 GPU (例如用於遊戲)</value>
+  </data>
+  <data name="DisplayGpuCard.Header" xml:space="preserve">
+    <value>主要監視器的 GPU</value>
+  </data>
+  <data name="DisplayGpuCard.Description" xml:space="preserve">
+    <value>預設選項目前所使用的轉譯 GPU。</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Title" xml:space="preserve">
+    <value>重新啟動後套用</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
+    <value>新的轉譯 GPU 會在視窗管理員重新啟動時生效：下次登入時，或在下方重新啟動它時。</value>
+  </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Vulkan 驅動程式</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Android 應用程式透過 Vulkan 繪製。沒有 Vulkan 驅動程式的 GPU 可使用 Microsoft 的 OpenCL, OpenGL, and Vulkan Compatibility Pack 中的 Dozen (Vulkan on Direct3D 12)。會在視窗管理員重新啟動時套用。</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>自動：GPU 的驅動程式，沒有時才使用 Dozen (建議)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>僅使用 GPU 本身的 Vulkan 驅動程式</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>僅使用 Dozen (用於測試與比較)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>視窗管理員尚未回報其轉譯方式。</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>目前透過 GPU 的 Vulkan 驅動程式轉譯。</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>目前透過 Dozen (Vulkan on Direct3D 12) 轉譯。</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>目前透過 CPU 上的 Dozen 轉譯：此 GPU 沒有 Direct3D 12 驅動程式。</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>沒有 Vulkan 可轉譯，Android 無法啟動。請從 Microsoft Store 或以 winget install Microsoft.OpenCLGLVulkanCompatibilityPack 安裝 Compatibility Pack，再登出並重新登入。</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>在 Microsoft Store 取得 Compatibility Pack</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android 以 CPU 繪製</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>這部電腦的 GPU 沒有 Direct3D 12 驅動程式，因此應用程式可以運作，但遊戲與動畫會很慢。</value>
+  </data>
+  <data name="TouchGesturesCard.Header" xml:space="preserve">
+    <value>在 DSA 應用程式視窗中關閉 Windows 觸控手勢</value>
+  </data>
+  <data name="TouchGesturesCard.Description" xml:space="preserve">
+    <value>DSA 視窗位於前景時，會關閉 Windows 的三指與四指手勢，讓應用程式最多能接收十指觸控。
+預設為開啟。其他應用程式仍使用您在 Windows 設定中設定的手勢。</value>
+  </data>
+  <data name="TouchGestures_Failed" xml:space="preserve">
+    <value>無法使用此設定：Windows 拒絕變更其觸控手勢 ({0})。您可以在 Windows 設定中為所有應用程式關閉這些手勢。</value>
+  </data>
+  <data name="TouchGestures_NoReason" xml:space="preserve">
+    <value>未提供原因</value>
+  </data>
+  <data name="TouchSettingsLink.Content" xml:space="preserve">
+    <value>開啟觸控設定</value>
+  </data>
+  <data name="RestartWindowManagerCard.Header" xml:space="preserve">
+    <value>重新啟動視窗管理員</value>
+  </data>
+  <data name="RestartWindowManagerCard.Description" xml:space="preserve">
+    <value>已開啟的 Android 應用程式視窗會關閉後再重新出現。</value>
+  </data>
+  <data name="RestartWindowManagerButton.Content" xml:space="preserve">
+    <value>重新啟動</value>
+  </data>
+  <data name="RestartWindowManagerTitle" xml:space="preserve">
+    <value>要重新啟動視窗管理員嗎？</value>
+  </data>
+  <data name="RestartWindowManagerBody" xml:space="preserve">
+    <value>Android 應用程式的視窗會暫時關閉。
+
+Android 與其應用程式會繼續執行。</value>
+  </data>
+  <data name="RestartWindowManagerAction" xml:space="preserve">
+    <value>重新啟動</value>
+  </data>
+  <data name="RestartWindowManagerFailed" xml:space="preserve">
+    <value>無法重新啟動視窗管理員</value>
+  </data>
+  <data name="UpdatesTitle.Text" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="ProgramUpdatesCard.Header" xml:space="preserve">
+    <value>自動更新 DSA</value>
+  </data>
+  <data name="ProgramUpdatesCard.Description" xml:space="preserve">
+    <value>下載已簽署的 DSA 新版本，並在沒有 Android 執行時安裝。</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Header" xml:space="preserve">
+    <value>取得預先發行版本</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Description" xml:space="preserve">
+    <value>也安裝仍在完成中的版本。1.0 之前的每個版本都是預先發行版。
+關閉此選項絕不會讓 DSA 退回舊版：它會等待更新的穩定版本。</value>
+  </data>
+  <data name="ImageUpdatesCard.Header" xml:space="preserve">
+    <value>自動更新 Android 映像</value>
+  </data>
+  <data name="ImageUpdatesCard.Description" xml:space="preserve">
+    <value>下載已簽署的安全性更新與 Android 新版本。依下方設定，會在 Android 重新啟動時套用。</value>
+  </data>
+  <data name="UpdatesMachineNote.Text" xml:space="preserve">
+    <value>這些設定會套用到這部電腦的所有使用者，因此只有系統管理員可以變更。
+一直保持關閉的開關，表示此安裝未提供該功能。</value>
+  </data>
+  <data name="AdminBar.Title" xml:space="preserve">
+    <value>需要系統管理員權限</value>
+  </data>
+  <data name="AdminBar.Message" xml:space="preserve">
+    <value>更新設定會套用到這部電腦的所有使用者，因此只有系統管理員可以變更。
+使用「以系統管理員身分變更」，Windows 會要求您授權。</value>
+  </data>
+  <data name="AdminShield.ToolTip" xml:space="preserve">
+    <value>只有系統管理員可以變更此設定。</value>
+  </data>
+  <data name="ChangeAsAdmin.Content" xml:space="preserve">
+    <value>以系統管理員身分變更</value>
+  </data>
+  <data name="ElevatedFailed" xml:space="preserve">
+    <value>設定未變更 (dsa 結束代碼為 {0})。</value>
+  </data>
+  <data name="ElevationDeclined" xml:space="preserve">
+    <value>由於未授予系統管理員權限，設定未變更。</value>
+  </data>
+  <data name="UpdateNowHeader.Text" xml:space="preserve">
+    <value>立即安裝</value>
+  </data>
+  <data name="UpdateNowCard.Header" xml:space="preserve">
+    <value>立即安裝最新版本的 DSA</value>
+  </data>
+  <data name="UpdateNowCard.Description" xml:space="preserve">
+    <value>安裝程式執行期間，所有使用者的 Android 都會停止。</value>
+  </data>
+  <data name="UpdateNowButton.Content" xml:space="preserve">
+    <value>立即安裝</value>
+  </data>
+  <data name="UpdateNowTitle" xml:space="preserve">
+    <value>要立即安裝最新版本嗎？</value>
+  </data>
+  <data name="UpdateNowBody" xml:space="preserve">
+    <value>DSA 會停止所有使用者的 Android，並安裝最新版本。
+
+安裝完成後，DSA 服務會重新啟動。</value>
+  </data>
+  <data name="UpdateNowAction" xml:space="preserve">
+    <value>安裝</value>
+  </data>
+  <data name="UpdateNowFailed" xml:space="preserve">
+    <value>DSA 未更新</value>
+  </data>
+  <data name="ProgramUpdateCard.Header" xml:space="preserve">
+    <value>正在更新 DSA</value>
+  </data>
+  <data name="ProgramUpdateDone.Title" xml:space="preserve">
+    <value>DSA 已更新</value>
+  </data>
+  <data name="ProgramUpdate_Starting" xml:space="preserve">
+    <value>正在準備更新</value>
+  </data>
+  <data name="ProgramUpdate_Downloading" xml:space="preserve">
+    <value>正在下載 DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_StoppingAndroid" xml:space="preserve">
+    <value>正在停止 Android 以安裝 DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Installing" xml:space="preserve">
+    <value>正在安裝 DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Restarting" xml:space="preserve">
+    <value>DSA 正在重新啟動以完成更新</value>
+  </data>
+  <data name="ProgramUpdate_Version" xml:space="preserve">
+    <value>版本 {0}</value>
+  </data>
+  <data name="ProgramUpdate_KeepOpen" xml:space="preserve">
+    <value>更新完成前，請勿關閉 DSA 或啟動 Android 應用程式。</value>
+  </data>
+  <data name="ProgramUpdate_Applied" xml:space="preserve">
+    <value>已更新為 {0}</value>
+  </data>
+  <data name="ProgramUpdate_Failed" xml:space="preserve">
+    <value>無法更新為 {0}。目前仍安裝先前的版本。</value>
+  </data>
+  <data name="ProgramUpdate_NotBack" xml:space="preserve">
+    <value>更新為 {0} 後，DSA 尚未恢復運作。如果它沒有很快啟動，請重新啟動電腦。</value>
+  </data>
+  <data name="AdvancedTitle.Text" xml:space="preserve">
+    <value>進階</value>
+  </data>
+  <data name="FilesHeader.Text" xml:space="preserve">
+    <value>檔案</value>
+  </data>
+  <data name="FileSharingCard.Header" xml:space="preserve">
+    <value>與 Android 共用 Windows 資料夾</value>
+  </data>
+  <data name="FileSharingCard.Description" xml:space="preserve">
+    <value>在 Android 共用儲存空間的 Host 資料夾中顯示下方選擇的資料夾。預設為開啟。
+Android 應用程式需要 Android 的儲存空間權限，且只能執行您的 Windows 帳戶有權執行的動作。</value>
+  </data>
+  <data name="SharedFoldersCard.Header" xml:space="preserve">
+    <value>共用的資料夾</value>
+  </data>
+  <data name="SharedFoldersCard.Description" xml:space="preserve">
+    <value>您取消選取的資料夾會立即從 Android 中移除。</value>
+  </data>
+  <data name="Folder_Documents" xml:space="preserve">
+    <value>文件</value>
+  </data>
+  <data name="Folder_Downloads" xml:space="preserve">
+    <value>下載</value>
+  </data>
+  <data name="Folder_Pictures" xml:space="preserve">
+    <value>圖片</value>
+  </data>
+  <data name="Folder_Music" xml:space="preserve">
+    <value>音樂</value>
+  </data>
+  <data name="Folder_Videos" xml:space="preserve">
+    <value>影片</value>
+  </data>
+  <data name="Folder_Desktop" xml:space="preserve">
+    <value>桌面</value>
+  </data>
+  <data name="AndroidFilesCard.Header" xml:space="preserve">
+    <value>Android 檔案</value>
+  </data>
+  <data name="AndroidFilesCard.Description" xml:space="preserve">
+    <value>在檔案總管中開啟 Android 應用程式儲存的檔案，例如相片與下載項目。若 Android 未在執行，會先啟動它。
+也可以從檔案總管瀏覽窗格中的 Android 開啟這些檔案。</value>
+  </data>
+  <data name="FilesDropCard.Header" xml:space="preserve">
+    <value>傳送檔案給 Android 應用程式</value>
+  </data>
+  <data name="FilesNote.Text" xml:space="preserve">
+    <value>若要將檔案傳送給 Android 應用程式，請將它從檔案總管拖曳到應用程式的視窗上。拖放的 APK 會被安裝。</value>
+  </data>
+  <data name="LinksCard.Header" xml:space="preserve">
+    <value>在 Android 應用程式中開啟網頁連結</value>
+  </data>
+  <data name="LinksCard.Description" xml:space="preserve">
+    <value>預設為關閉：您在 Android 應用程式中點選的連結會在 Windows 瀏覽器中開啟。開啟時，連結會像在手機上一樣於 Android 應用程式中開啟。
+已安裝的應用程式驗證為其所有的連結，一律在該應用程式中開啟。</value>
+  </data>
+  <data name="ArmHeader.Text" xml:space="preserve">
+    <value>ARM 應用程式</value>
+  </data>
+  <data name="ArmCard.Header" xml:space="preserve">
+    <value>執行僅為 ARM 建置的應用程式</value>
+  </data>
+  <data name="ArmCard.Description" xml:space="preserve">
+    <value>透過 ARM 轉譯器，讓僅為 ARM 處理器建置的應用程式能在此安裝與執行。從下次啟動 Android 起套用。
+只能執行 64 位元 ARM 應用程式 (arm64-v8a)。
+Android 會使用內建的開放原始碼轉譯器，除非您安裝下方的 Google 轉譯器，或以 dsa arm-translation install 安裝其他轉譯器。</value>
+  </data>
+  <data name="ArmRestartBar.Title" xml:space="preserve">
+    <value>重新啟動 Android 以套用</value>
+  </data>
+  <data name="ArmRestartBar.Message" xml:space="preserve">
+    <value>Android 在此變更之前就已啟動。請停止後再啟動 Android，讓 ARM 應用程式套用此變更。</value>
+  </data>
+  <data name="ArmDefaultCard.Header" xml:space="preserve">
+    <value>使用預設轉譯器</value>
+  </data>
+  <data name="ArmDefaultButton.Content" xml:space="preserve">
+    <value>使用</value>
+  </data>
+  <data name="Arm_DefaultDescription" xml:space="preserve">
+    <value>{0} {1} ({2}) 隨附於此 Android，除非您安裝其他轉譯器，否則會使用它。
+改回使用它會移除已安裝的套件，從下次啟動 Android 起生效。</value>
+  </data>
+  <data name="Arm_SupportedDefault" xml:space="preserve">
+    <value>由此 Android 隨附的轉譯器 {0} {1} ({2}) 支援。</value>
+  </data>
+  <data name="Arm_DefaultTurnedOff" xml:space="preserve">
+    <value>不支援：{0} {1} 已關閉。</value>
+  </data>
+  <data name="ArmRemoveCard.Header" xml:space="preserve">
+    <value>移除 ARM 轉譯套件</value>
+  </data>
+  <data name="ArmRemoveCard.Description" xml:space="preserve">
+    <value>從您的附加元件磁碟刪除此套件。您安裝的 ARM 應用程式會保留，但 Android 重新啟動後將無法執行。</value>
+  </data>
+  <data name="ArmRemoveButton.Content" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Arm_NotSupported" xml:space="preserve">
+    <value>不支援：未安裝任何 ARM 轉譯套件。</value>
+  </data>
+  <data name="Arm_Supported" xml:space="preserve">
+    <value>由 {0} {1} ({2}) 支援。</value>
+  </data>
+  <data name="Arm_TurnedOff" xml:space="preserve">
+    <value>不支援：已安裝 {0} {1}，但已關閉。</value>
+  </data>
+  <data name="Arm_NoLicense" xml:space="preserve">
+    <value>未提供授權</value>
+  </data>
+  <data name="Arm_Abis" xml:space="preserve">
+    <value>Android 安裝應用程式的目標：{0}</value>
+  </data>
+  <data name="Arm_NotRunning" xml:space="preserve">
+    <value>Android 未在執行，因此目前無法得知其支援的項目。</value>
+  </data>
+  <data name="ArmGoogleCard.Header" xml:space="preserve">
+    <value>Google 的 ARM 轉譯器</value>
+  </data>
+  <data name="ArmGoogleCard.Description" xml:space="preserve">
+    <value>從適用於此 Android 版本的 Google Android 模擬器映像中安裝 ARM 轉譯器。
+從 Google 下載約 2 GB，只保留轉譯器並刪除其餘部分。在您同意之前不會下載任何內容。
+以其他轉譯器 (例如 Digitalis) 建置的套件也能達到相同效果。</value>
+  </data>
+  <data name="ArmGoogleButton.Content" xml:space="preserve">
+    <value>取得</value>
+  </data>
+  <data name="ArmGoogleTermsLink.Content" xml:space="preserve">
+    <value>Android SDK 授權</value>
+  </data>
+  <data name="ArmGoogleConfirm.Title" xml:space="preserve">
+    <value>要取得 Google 的 ARM 轉譯器嗎？</value>
+  </data>
+  <data name="ArmGoogleConfirm.Action" xml:space="preserve">
+    <value>接受並下載</value>
+  </data>
+  <data name="ArmGoogle_Notice" xml:space="preserve">
+    <value>DSA 會從 Google 下載適用於此 Android 版本的 Android 模擬器映像，並只取出其中的 ARM 轉譯器。
+
+• 下載：約 2 GB，用完後刪除。
+• 來源：{0}
+• 條款：此轉譯器是 Google 依 Android SDK 授權 ({1}) 提供的軟體。下載即表示您接受這些條款。
+• 轉譯器從下次啟動 Android 起運作。
+
+DSA 不會隨附或轉發此轉譯器。</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Title" xml:space="preserve">
+    <value>正在取得 Google 的 ARM 轉譯器</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Message" xml:space="preserve">
+    <value>正在從 Google 下載約 2 GB 並取出轉譯器。這需要幾分鐘。</value>
+  </data>
+  <data name="GappsHeader.Text" xml:space="preserve">
+    <value>Google Play</value>
+  </data>
+  <data name="GappsCard.Header" xml:space="preserve">
+    <value>Google Play 服務與 Play 商店</value>
+  </data>
+  <data name="GappsCard.Description" xml:space="preserve">
+    <value>安裝 LiteGapps Core，這是適用於此 Android 版本的公開套件，包含 Google Play 服務、Play 商店與帳戶同步。
+DSA 不包含 Google 的應用程式。從下次啟動 Android 起套用。</value>
+  </data>
+  <data name="GappsInstallButton.Content" xml:space="preserve">
+    <value>安裝</value>
+  </data>
+  <data name="GappsInstallingBar.Title" xml:space="preserve">
+    <value>正在安裝 Google Play</value>
+  </data>
+  <data name="GappsInstallingBar.Message" xml:space="preserve">
+    <value>正在下載並安裝 Google Play。這可能需要幾分鐘。</value>
+  </data>
+  <data name="GappsRestartBar.Title" xml:space="preserve">
+    <value>重新啟動 Android 以套用此變更</value>
+  </data>
+  <data name="GappsRestartBar.Message" xml:space="preserve">
+    <value>Android 在此變更之前就已啟動。請停止 Android 後再次啟動，以將變更套用到 Google Play。</value>
+  </data>
+  <data name="GappsRemoveCard.Header" xml:space="preserve">
+    <value>移除 Google Play</value>
+  </data>
+  <data name="GappsRemoveCard.Description" xml:space="preserve">
+    <value>從下次啟動 Android 起，從您的附加元件磁碟刪除 Google 的應用程式。
+從 Play 商店安裝的應用程式會保留，但需要 Google Play 服務的應用程式可能會停止運作。</value>
+  </data>
+  <data name="GappsRemoveButton.Content" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="GappsTermsCard.Header" xml:space="preserve">
+    <value>Google 的條款</value>
+  </data>
+  <data name="GappsTermsCard.Description" xml:space="preserve">
+    <value>Google Play 服務與 Play 商店是 Google 的軟體，並遵循 Google 的條款。
+DSA 不會散布它們。只有在您要求時，才會下載公開的 LiteGapps 套件。</value>
+  </data>
+  <data name="GappsTermsLink.Content" xml:space="preserve">
+    <value>Google 服務條款</value>
+  </data>
+  <data name="GappsRegisterCard.Header" xml:space="preserve">
+    <value>向 Google 註冊此裝置</value>
+  </data>
+  <data name="GappsRegisterCard.Description" xml:space="preserve">
+    <value>這裡的 Android 未經 Google 認證，因此在您註冊此裝置之前，Google 可能會拒絕讓您登入。
+1. 開啟註冊頁面，並以您的 Google 帳戶登入。
+2. 輸入此裝置的 Android ID。
+3. 重新啟動 Android，然後再次登入。</value>
+  </data>
+  <data name="GappsRegisterLink.Content" xml:space="preserve">
+    <value>開啟註冊頁面</value>
+  </data>
+  <data name="GappsDeviceIdLabel.Text" xml:space="preserve">
+    <value>Android ID</value>
+  </data>
+  <data name="Gapps_NotInstalled" xml:space="preserve">
+    <value>未安裝：Android 沒有 Google Play 服務或 Play 商店。</value>
+  </data>
+  <data name="Gapps_Installed" xml:space="preserve">
+    <value>已安裝：適用於 Android {1} ({2}) 的 LiteGapps Core {0}。</value>
+  </data>
+  <data name="Gapps_InstalledPending" xml:space="preserve">
+    <value>已安裝：適用於 Android {1} ({2}) 的 LiteGapps Core {0}。從下次啟動 Android 起使用。</value>
+  </data>
+  <data name="Gapps_RemovedPending" xml:space="preserve">
+    <value>已移除：Google 的應用程式會在下次啟動 Android 時移除。</value>
+  </data>
+  <data name="Gapps_ReinstallNeeded" xml:space="preserve">
+    <value>來自舊版 DSA、適用於 Android {1} ({2}) 的 LiteGapps Core {0} 已不再使用，因此 Android 啟動時不含 Google 應用程式。
+請重新安裝 Google Play。</value>
+  </data>
+  <data name="Gapps_Source" xml:space="preserve">
+    <value>從 LiteGapps 下載：{0}</value>
+  </data>
+  <data name="Gapps_DeviceId" xml:space="preserve">
+    <value>Android ID：{0}</value>
+  </data>
+  <data name="Gapps_NoDeviceId" xml:space="preserve">
+    <value>安裝 Google Play 且 Android 以它啟動後，Android ID 會顯示在這裡。</value>
+  </data>
+  <data name="DeveloperHeader.Text" xml:space="preserve">
+    <value>開發人員</value>
+  </data>
+  <data name="DeveloperModeCard.Header" xml:space="preserve">
+    <value>開發人員模式</value>
+  </data>
+  <data name="DeveloperModeCard.Description" xml:space="preserve">
+    <value>讓這部電腦上的 adb 不需在 Android 中確認即可連線到 Android，使用的連接埠只有這部電腦能存取。
+預設為關閉。使用完畢後請將它關閉。</value>
+  </data>
+  <data name="AdbAutoConnectCard.Header" xml:space="preserve">
+    <value>自動連線 adb</value>
+  </data>
+  <data name="AdbAutoConnectCard.Description" xml:space="preserve">
+    <value>開發人員模式開啟時，不需 adb connect，Android 就會出現在 adb devices 與 Android Studio 中。預設為開啟。
+執行 adb disconnect 後，會保持中斷，直到 adb 伺服器重新啟動。</value>
+  </data>
+  <data name="AdbAutoConnect_Off" xml:space="preserve">
+    <value>未連線：開發人員模式或自動連線已關閉。</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForServer" xml:space="preserve">
+    <value>正在等待 adb：這部電腦上的 adb 啟動時，Android 就會連線。</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForAndroid" xml:space="preserve">
+    <value>正在等待 Android：Android 執行後就會連線。</value>
+  </data>
+  <data name="AdbAutoConnect_Attached" xml:space="preserve">
+    <value>已連線：adb 已列出 Android。</value>
+  </data>
+  <data name="AdbAutoConnect_Detached" xml:space="preserve">
+    <value>已透過 adb disconnect 中斷連線。adb 伺服器重新啟動時，Android 會再次連線。</value>
+  </data>
+  <data name="AdbCard.Header" xml:space="preserve">
+    <value>連線 adb</value>
+  </data>
+  <data name="AdbCard.Description" xml:space="preserve">
+    <value>在開發人員模式開啟且 Android 正在執行時，執行此指令：</value>
+  </data>
+  <data name="CopyButton.ToolTip" xml:space="preserve">
+    <value>複製</value>
+  </data>
+  <data name="AdbPortLabel.Text" xml:space="preserve">
+    <value>連接埠</value>
+  </data>
+  <data name="ClipboardCard.Header" xml:space="preserve">
+    <value>與 Android 共用剪貼簿</value>
+  </data>
+  <data name="ClipboardCard.Description" xml:space="preserve">
+    <value>您在 Windows 中複製的文字可以貼到 Android 應用程式中，反之亦然。預設為開啟。
+影像只留在複製它的地方。</value>
+  </data>
+  <data name="FreezeCard.Header" xml:space="preserve">
+    <value>閒置時凍結 Android</value>
+  </data>
+  <data name="FreezeCard.Description" xml:space="preserve">
+    <value>預設為關閉：閒置的 Android 會進入 Doze，並繼續接收通知。
+凍結時不會使用 CPU，但在您開啟應用程式之前不會接收任何內容。</value>
+  </data>
+  <data name="FreezeNowCard.Header" xml:space="preserve">
+    <value>立即凍結 Android</value>
+  </data>
+  <data name="FreezeNowCard.Description" xml:space="preserve">
+    <value>停止 Android 中的所有處理程序，直到您再次開啟其中一個視窗。通知、鬧鐘與小工具也會一併停止。</value>
+  </data>
+  <data name="FreezeNowButton.Content" xml:space="preserve">
+    <value>凍結</value>
+  </data>
+  <data name="MemoryLimitCard.Header" xml:space="preserve">
+    <value>記憶體上限</value>
+  </data>
+  <data name="MemoryLimitCard.Description" xml:space="preserve">
+    <value>Android 最多可成長到的記憶體。Android 只在需要時取用記憶體，用完就歸還。
+自動：最多為這部電腦的記憶體減去 Windows 保留的部分。從下次啟動 Android 起套用。</value>
+  </data>
+  <data name="MemoryLimit_Auto" xml:space="preserve">
+    <value>自動</value>
+  </data>
+  <data name="MemoryVmSizeCard.Header" xml:space="preserve">
+    <value>目前的 Android VM</value>
+  </data>
+  <data name="MemoryVmSizeCard.Description" xml:space="preserve">
+    <value>VM 在這部電腦上佔用的記憶體，以及其中 Android 使用的量</value>
+  </data>
+  <data name="MemoryGuestUsedLabel.Text" xml:space="preserve">
+    <value>Android 使用中</value>
+  </data>
+  <data name="MemoryBeyondGuestLabel.Text" xml:space="preserve">
+    <value>可用，但尚未歸還</value>
+  </data>
+  <data name="MemoryKernelHeader.Text" xml:space="preserve">
+    <value>Android 的核心</value>
+  </data>
+  <data name="Memory_KernelSlab" xml:space="preserve">
+    <value>核心物件</value>
+  </data>
+  <data name="Memory_KernelSlabDetail" xml:space="preserve">
+    <value>核心為自身資料保留且無法回收的記憶體</value>
+  </data>
+  <data name="Memory_KernelStacks" xml:space="preserve">
+    <value>執行緒堆疊</value>
+  </data>
+  <data name="Memory_KernelPageTables" xml:space="preserve">
+    <value>分頁表</value>
+  </data>
+  <data name="Memory_KernelVmalloc" xml:space="preserve">
+    <value>核心對應 (vmalloc)</value>
+  </data>
+  <data name="Memory_KernelPercpu" xml:space="preserve">
+    <value>個別 CPU 資料</value>
+  </data>
+  <data name="Memory_KernelUnaccounted" xml:space="preserve">
+    <value>驅動程式</value>
+  </data>
+  <data name="Memory_KernelUnaccountedDetail" xml:space="preserve">
+    <value>沒有任何計數器列出的記憶體，例如 GPU 與 DMA 緩衝區</value>
+  </data>
+  <data name="Memory_KernelReserved" xml:space="preserve">
+    <value>開機時保留</value>
+  </data>
+  <data name="Memory_KernelReservedDetail" xml:space="preserve">
+    <value>核心程式碼、分頁結構與緩衝區，佔所提供 {0} 的一部分；連續區域 {1}</value>
+  </data>
+  <data name="DiagnosticsHeader.Text" xml:space="preserve">
+    <value>診斷</value>
+  </data>
+  <data name="InputTraceCard.Header" xml:space="preserve">
+    <value>輸入追蹤</value>
+  </data>
+  <data name="InputTraceCard.Description" xml:space="preserve">
+    <value>每個 DSA 處理程序都會記錄每次觸控、按一下與按鍵抵達的時間，以便測量從輸入到畫面的延遲。預設為關閉。</value>
+  </data>
+  <data name="ResizeTraceCard.Header" xml:space="preserve">
+    <value>調整大小追蹤</value>
+  </data>
+  <data name="ResizeTraceCard.Description" xml:space="preserve">
+    <value>每個 DSA 處理程序都會記錄每次調整視窗大小的每個階段，以找出調整大小變慢或閃爍的地方。預設為關閉。</value>
+  </data>
+  <data name="DiagnosticsNote.Text" xml:space="preserve">
+    <value>追蹤會寫入下方的 DSA 記錄並使其變大，因此請只在回報問題時開啟。
+追蹤會套用到這部電腦的所有使用者，因此只有系統管理員可以變更。</value>
+  </data>
+  <data name="LogsHeader.Text" xml:space="preserve">
+    <value>記錄</value>
+  </data>
+  <data name="UserLogsCard.Header" xml:space="preserve">
+    <value>開啟我的記錄資料夾</value>
+  </data>
+  <data name="UserLogsCard.Description" xml:space="preserve">
+    <value>您的視窗管理員與應用程式視窗的記錄。</value>
+  </data>
+  <data name="ServiceLogsCard.Header" xml:space="preserve">
+    <value>開啟服務的記錄資料夾 (系統管理員)</value>
+  </data>
+  <data name="ServiceLogsCard.Description" xml:space="preserve">
+    <value>DSA 服務與 Android 本身的記錄。</value>
+  </data>
+  <data name="CommandLineHeader.Text" xml:space="preserve">
+    <value>命令列</value>
+  </data>
+  <data name="CommandLineCard.Header" xml:space="preserve">
+    <value>dsa 指令</value>
+  </data>
+  <data name="CommandLineCard.Description" xml:space="preserve">
+    <value>這些頁面上的所有功能也都能從終端機使用。</value>
+  </data>
+  <data name="AboutTitle.Text" xml:space="preserve">
+    <value>關於</value>
+  </data>
+  <data name="AboutProductCard.Header" xml:space="preserve">
+    <value>Desktop Subsystem for Android™</value>
+  </data>
+  <data name="AboutProductCard.Description" xml:space="preserve">
+    <value>Thisisthepy</value>
+  </data>
+  <data name="AboutAppVersionCard.Header" xml:space="preserve">
+    <value>DSA 設定版本</value>
+  </data>
+  <data name="AboutServiceVersionCard.Header" xml:space="preserve">
+    <value>DSA 服務版本</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Header" xml:space="preserve">
+    <value>Android 映像版本</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Description" xml:space="preserve">
+    <value>下次啟動時開機的 Android 映像。映像更新會變更此版本。</value>
+  </data>
+  <data name="AboutLicenseCard.Header" xml:space="preserve">
+    <value>授權</value>
+  </data>
+  <data name="AboutLicenseCard.Description" xml:space="preserve">
+    <value>DSA 依 Apache License 2.0 授權。開啟其隨附的每個元件的授權。</value>
+  </data>
+  <data name="AboutSourceCard.Header" xml:space="preserve">
+    <value>原始程式碼</value>
+  </data>
+  <data name="AboutIndependent.Text" xml:space="preserve">
+    <value>Desktop Subsystem for Android 是獨立的開放原始碼專案。
+它與 Microsoft 或 Google 沒有任何關聯，也未獲得其背書或贊助。</value>
+  </data>
+  <data name="AboutTrademark.Text" xml:space="preserve">
+    <value>Android 是 Google LLC 的商標。</value>
+  </data>
+  <data name="FolderMissingTitle" xml:space="preserve">
+    <value>無法開啟資料夾</value>
+  </data>
+  <data name="FolderMissingBody" xml:space="preserve">
+    <value>{0} 尚不存在，或您沒有開啟它的權限。</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>確定</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Install_BusyTitle" xml:space="preserve">
+    <value>正在安裝</value>
+  </data>
+  <data name="Install_Busy" xml:space="preserve">
+    <value>正在 Android 中安裝 {0}…</value>
+  </data>
+  <data name="Install_DoneTitle" xml:space="preserve">
+    <value>已安裝</value>
+  </data>
+  <data name="Install_FailedTitle" xml:space="preserve">
+    <value>未安裝</value>
+  </data>
+  <data name="Install_Installed" xml:space="preserve">
+    <value>已安裝 {0} ({1})。請從開始功能表開啟。</value>
+  </data>
+  <data name="Install_Refused" xml:space="preserve">
+    <value>未安裝 {0}：{1} ({2})</value>
+  </data>
+  <data name="Install_NotSent" xml:space="preserve">
+    <value>{0} 未傳送到 Android。{1}</value>
+  </data>
+  <data name="Install_NotApk" xml:space="preserve">
+    <value>只能安裝 APK 檔案：{0}</value>
+  </data>
+  <data name="Install_Reason_incompatible" xml:space="preserve">
+    <value>此應用程式無法在這個 Android 上執行：它需要其他處理器類型、較新的 Android 版本，或此裝置沒有的功能。</value>
+  </data>
+  <data name="Install_Reason_conflicting-signature" xml:space="preserve">
+    <value>此應用程式已安裝，且以其他金鑰簽署。請先在 Android 中將其解除安裝。</value>
+  </data>
+  <data name="Install_Reason_invalid-apk" xml:space="preserve">
+    <value>此檔案不是 Android 能讀取的已簽署 APK。</value>
+  </data>
+  <data name="Install_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android 沒有空間可安裝此應用程式。</value>
+  </data>
+  <data name="Install_Reason_downgrade" xml:space="preserve">
+    <value>已安裝此應用程式的較新版本。請先在 Android 中將其解除安裝。</value>
+  </data>
+  <data name="Install_Reason_blocked" xml:space="preserve">
+    <value>此 Android 的原則不允許此應用程式。</value>
+  </data>
+  <data name="Install_Reason_other" xml:space="preserve">
+    <value>Android 未安裝此應用程式。</value>
+  </data>
+  <data name="NavWidgets.Content" xml:space="preserve">
+    <value>小工具</value>
+  </data>
+  <data name="WidgetsTitle.Text" xml:space="preserve">
+    <value>小工具</value>
+  </data>
+  <data name="WidgetsRefreshButton.Content" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="WidgetsIntro.Text" xml:space="preserve">
+    <value>將 Android 應用程式提供的小工具放在桌面上。開啟此頁面時，Android 會啟動。
+• 每個小工具都有自己的視窗，位於其他視窗下方。
+• 長按小工具即可編輯：拖曳以移動，拖曳控點以調整大小。
+• 以滑鼠右鍵按一下小工具，即可使用其設定、大小與「移除」。</value>
+  </data>
+  <data name="WidgetsErrorBar.Title" xml:space="preserve">
+    <value>無法讀取或變更小工具</value>
+  </data>
+  <data name="WidgetsDoneBar.Title" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="WidgetsPlacedHeader.Text" xml:space="preserve">
+    <value>在您的桌面上</value>
+  </data>
+  <data name="WidgetsPlacedNone.Text" xml:space="preserve">
+    <value>桌面上尚無任何小工具。</value>
+  </data>
+  <data name="WidgetsGalleryHeader.Text" xml:space="preserve">
+    <value>您的應用程式提供的小工具</value>
+  </data>
+  <data name="WidgetsGalleryNone.Text" xml:space="preserve">
+    <value>Android 中沒有任何應用程式提供小工具。</value>
+  </data>
+  <data name="WidgetsAddButton.Content" xml:space="preserve">
+    <value>新增到桌面</value>
+  </data>
+  <data name="WidgetsRemoveButton.Content" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Widgets_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Widgets_Setup" xml:space="preserve">
+    <value>會要求您進行設定</value>
+  </data>
+  <data name="Widgets_At" xml:space="preserve">
+    <value>位置 {0}, {1}，大小 {2} × {3}</value>
+  </data>
+  <data name="Widgets_Placed" xml:space="preserve">
+    <value>{0} 已放到您的桌面上。</value>
+  </data>
+  <data name="Widgets_Removed" xml:space="preserve">
+    <value>已從您的桌面移除 {0}。</value>
+  </data>
+  <data name="ApkWindow_Caption" xml:space="preserve">
+    <value>APK 安裝程式</value>
+  </data>
+  <data name="ApkWindow_Reading" xml:space="preserve">
+    <value>正在讀取檔案</value>
+  </data>
+  <data name="ApkWindow_Install" xml:space="preserve">
+    <value>安裝</value>
+  </data>
+  <data name="ApkWindow_Update" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="ApkWindow_Reinstall" xml:space="preserve">
+    <value>重新安裝</value>
+  </data>
+  <data name="ApkWindow_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="ApkWindow_Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="ApkWindow_Open" xml:space="preserve">
+    <value>啟動</value>
+  </data>
+  <data name="ApkWindow_AndroidChip" xml:space="preserve">
+    <value>Android {0} 或更新版本</value>
+  </data>
+  <data name="ApkWindow_SummaryUpdate" xml:space="preserve">
+    <value>已安裝 {0}。這會將它從版本 {1} 更新為版本 {2}。其資料會保留。</value>
+  </data>
+  <data name="ApkWindow_SummaryReinstall" xml:space="preserve">
+    <value>已安裝 {0} 版本 {1}。這會再次安裝相同版本。其資料會保留。</value>
+  </data>
+  <data name="ApkWindow_SummaryDowngrade" xml:space="preserve">
+    <value>已安裝 {0} 版本 {1}，而此檔案是較舊的版本 {2}。Android 不會以較舊的版本覆蓋較新的版本。
+若要使用此檔案，請先在 Android 中解除安裝此應用程式。</value>
+  </data>
+  <data name="ApkWindow_SummarySignature" xml:space="preserve">
+    <value>已安裝 {0}，但其簽署金鑰與此檔案不同。為了保護應用程式的資料，Android 不允許取代它。
+若要使用此檔案，請先在 Android 中解除安裝此應用程式。</value>
+  </data>
+  <data name="ApkWindow_FactPackage" xml:space="preserve">
+    <value>套件</value>
+  </data>
+  <data name="ApkWindow_FactVersion" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ApkWindow_FactInstalled" xml:space="preserve">
+    <value>目前已安裝</value>
+  </data>
+  <data name="ApkWindow_FactAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="ApkWindow_FactSize" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="ApkWindow_FactAbis" xml:space="preserve">
+    <value>處理器</value>
+  </data>
+  <data name="ApkWindow_FactSigner" xml:space="preserve">
+    <value>簽署者</value>
+  </data>
+  <data name="ApkWindow_AndroidRange" xml:space="preserve">
+    <value>{0} 或更新版本，為 {1} 打造</value>
+  </data>
+  <data name="ApkWindow_VersionText" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ApkWindow_ApiLevel" xml:space="preserve">
+    <value>API 層級 {0}</value>
+  </data>
+  <data name="ApkWindow_AndroidVersion" xml:space="preserve">
+    <value>Android {0} (API {1})</value>
+  </data>
+  <data name="ApkWindow_Signer" xml:space="preserve">
+    <value>SHA-256 {1} ({0} 簽章)</value>
+  </data>
+  <data name="ApkWindow_Unsigned" xml:space="preserve">
+    <value>未簽署。Android 只安裝已簽署的應用程式。</value>
+  </data>
+  <data name="ApkWindow_NoPermissions" xml:space="preserve">
+    <value>它不要求任何權限。</value>
+  </data>
+  <data name="ApkWindow_Sensitive" xml:space="preserve">
+    <value>Android 會先詢問您</value>
+  </data>
+  <data name="ApkWindow_StartingTitle" xml:space="preserve">
+    <value>正在啟動 Android</value>
+  </data>
+  <data name="ApkWindow_StartingDetail" xml:space="preserve">
+    <value>Android 只需啟動一次，之後會隨時為您的應用程式做好準備。</value>
+  </data>
+  <data name="ApkWindow_CheckingTitle" xml:space="preserve">
+    <value>正在檢查應用程式</value>
+  </data>
+  <data name="ApkWindow_CheckingDetail" xml:space="preserve">
+    <value>正在檢查此應用程式是否已安裝。</value>
+  </data>
+  <data name="ApkWindow_InstallingTitle" xml:space="preserve">
+    <value>正在安裝 {0}</value>
+  </data>
+  <data name="ApkWindow_SendingDetail" xml:space="preserve">
+    <value>正在將應用程式複製到 Android</value>
+  </data>
+  <data name="ApkWindow_AndroidInstallingDetail" xml:space="preserve">
+    <value>Android 正在安裝應用程式</value>
+  </data>
+  <data name="ApkWindow_Cancelling" xml:space="preserve">
+    <value>正在停止</value>
+  </data>
+  <data name="ApkWindow_Cancelled" xml:space="preserve">
+    <value>安裝已停止。未變更任何內容。</value>
+  </data>
+  <data name="ApkWindow_DoneTitle" xml:space="preserve">
+    <value>已安裝 {0}</value>
+  </data>
+  <data name="ApkWindow_UpdatedTitle" xml:space="preserve">
+    <value>已更新 {0}</value>
+  </data>
+  <data name="ApkWindow_DoneText" xml:space="preserve">
+    <value>立即啟動，或稍後從開始功能表啟動。</value>
+  </data>
+  <data name="ApkWindow_FailedTitle" xml:space="preserve">
+    <value>未安裝</value>
+  </data>
+  <data name="ApkWindow_NotApkTitle" xml:space="preserve">
+    <value>無法安裝此檔案</value>
+  </data>
+  <data name="ApkWindow_StartFailed" xml:space="preserve">
+    <value>Android 未啟動，因此未安裝應用程式。{0}</value>
+  </data>
+  <data name="ApkWindow_NotSent" xml:space="preserve">
+    <value>應用程式未傳送到 Android。{0}</value>
+  </data>
+  <data name="ApkWindow_ReasonWithWords" xml:space="preserve">
+    <value>{0} Android 的訊息：{1}</value>
+  </data>
+  <data name="ApkWindow_OpenFailed" xml:space="preserve">
+    <value>無法開啟 {0}。{1}</value>
+  </data>
+  <data name="ApkWindow_Reason_incompatible" xml:space="preserve">
+    <value>此應用程式無法在這個 Android 上執行：它需要其他處理器類型、較新的 Android 版本，或此裝置沒有的功能。</value>
+  </data>
+  <data name="ApkWindow_Reason_conflicting-signature" xml:space="preserve">
+    <value>此應用程式已安裝，且以其他金鑰簽署。請先在 Android 中將其解除安裝。</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-apk" xml:space="preserve">
+    <value>此檔案不是 Android 能讀取的已簽署 APK。</value>
+  </data>
+  <data name="ApkWindow_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android 沒有空間可安裝此應用程式。請在 Android 中釋放一些空間，然後再試一次。</value>
+  </data>
+  <data name="ApkWindow_Reason_downgrade" xml:space="preserve">
+    <value>已安裝此應用程式的較新版本。請先在 Android 中將其解除安裝。</value>
+  </data>
+  <data name="ApkWindow_Reason_blocked" xml:space="preserve">
+    <value>此 Android 的原則不允許此應用程式。</value>
+  </data>
+  <data name="ApkWindow_Reason_other" xml:space="preserve">
+    <value>Android 未安裝此應用程式。</value>
+  </data>
+  <data name="ApkWindow_AbiWarning" xml:space="preserve">
+    <value>此應用程式只有適用於 {0} 處理器的程式碼，沒有適用於這部電腦處理器的程式碼。
+Android 只有在安裝 ARM 轉譯套件時才能執行它，而且可能會拒絕安裝。</value>
+  </data>
+  <data name="ApkWindow_Abi32Warning" xml:space="preserve">
+    <value>此應用程式只有適用於 {0} 處理器的程式碼。
+ARM 轉譯器只執行 64 位元 ARM (arm64-v8a) 程式碼，因此 Android 可能會拒絕安裝，或應用程式可能無法啟動。</value>
+  </data>
+  <data name="ApkWindow_LaunchFailedAfterInstall" xml:space="preserve">
+    <value>已安裝 {0}，但無法開啟。{1}</value>
+  </data>
+  <data name="ApkWindow_LaunchWhenReady" xml:space="preserve">
+    <value>就緒時啟動</value>
+  </data>
+  <data name="NavLogs.Content" xml:space="preserve">
+    <value>記錄</value>
+  </data>
+  <data name="LogsTitle.Text" xml:space="preserve">
+    <value>記錄</value>
+  </data>
+  <data name="LogsNote.Text" xml:space="preserve">
+    <value>Android 只在此頁面開啟時傳送其記錄，且不會寫入任何內容到磁碟。
+「儲存診斷資料」會將問題回報所需的內容收集到一個 zip 檔案中。</value>
+  </data>
+  <data name="LogsSaveButton.Content" xml:space="preserve">
+    <value>儲存診斷資料</value>
+  </data>
+  <data name="LogsFilter.PlaceholderText" xml:space="preserve">
+    <value>依標籤或文字篩選</value>
+  </data>
+  <data name="LogsPause.Content" xml:space="preserve">
+    <value>暫停</value>
+  </data>
+  <data name="LogsErrorBar.Title" xml:space="preserve">
+    <value>無法讀取記錄</value>
+  </data>
+  <data name="LogsStatusBar.Title" xml:space="preserve">
+    <value>診斷資料</value>
+  </data>
+  <data name="Logs_Paused" xml:space="preserve">
+    <value>已暫停。有 {0} 行新記錄正在等候。</value>
+  </data>
+  <data name="Logs_Saving" xml:space="preserve">
+    <value>正在收集診斷資料。這需要一分鐘以上。</value>
+  </data>
+  <data name="Logs_Saved" xml:space="preserve">
+    <value>已將診斷資料儲存到 {0}。</value>
+  </data>
+  <data name="Logs_SaveDialogTitle" xml:space="preserve">
+    <value>儲存診斷資料</value>
+  </data>
+  <data name="Logs_SaveDialogFilter" xml:space="preserve">
+    <value>Zip 壓縮檔</value>
+  </data>
+  <data name="Logs_Priority_V" xml:space="preserve">
+    <value>詳細資訊</value>
+  </data>
+  <data name="Logs_Priority_D" xml:space="preserve">
+    <value>偵錯</value>
+  </data>
+  <data name="Logs_Priority_I" xml:space="preserve">
+    <value>資訊</value>
+  </data>
+  <data name="Logs_Priority_W" xml:space="preserve">
+    <value>警告</value>
+  </data>
+  <data name="Logs_Priority_E" xml:space="preserve">
+    <value>錯誤</value>
+  </data>
+  <data name="Logs_Priority_F" xml:space="preserve">
+    <value>嚴重錯誤</value>
+  </data>
+  <data name="NavIdentity.Content" xml:space="preserve">
+    <value>裝置識別</value>
+  </data>
+  <data name="IdentityTitle.Text" xml:space="preserve">
+    <value>裝置識別</value>
+  </data>
+  <data name="IdentityIntro.Text" xml:space="preserve">
+    <value>Android 向應用程式回報的名稱與組建指紋。將方塊留白即可保留其中顯示的值。
+變更從下次啟動 Android 起套用。</value>
+  </data>
+  <data name="IdentityWarning.Title" xml:space="preserve">
+    <value>應用程式可能會察覺</value>
+  </data>
+  <data name="IdentityWarning.Message" xml:space="preserve">
+    <value>變更型號或指紋可能會改變應用程式的行為。
+有些應用程式會在執行前檢查裝置，付款與完整性檢查也可能會失敗。</value>
+  </data>
+  <data name="IdentityDoneBar.Title" xml:space="preserve">
+    <value>裝置識別</value>
+  </data>
+  <data name="IdentitySaveButton.Content" xml:space="preserve">
+    <value>儲存</value>
+  </data>
+  <data name="IdentityResetButton.Content" xml:space="preserve">
+    <value>重設為預設值</value>
+  </data>
+  <data name="IdentityRestartButton.Content" xml:space="preserve">
+    <value>立即重新啟動 Android</value>
+  </data>
+  <data name="IdentityResetConfirmTitle" xml:space="preserve">
+    <value>要重設裝置識別嗎？</value>
+  </data>
+  <data name="IdentityResetConfirmBody" xml:space="preserve">
+    <value>每個值都會恢復為預設值：這部電腦的值，或在電腦未提供時使用 DSA 自己的值。
+
+從下次啟動 Android 起套用。</value>
+  </data>
+  <data name="IdentityNamesHeader.Text" xml:space="preserve">
+    <value>裝置</value>
+  </data>
+  <data name="IdentityFingerprintHeader.Text" xml:space="preserve">
+    <value>組建指紋</value>
+  </data>
+  <data name="IdentityPreview.Text" xml:space="preserve">
+    <value>下次啟動起使用的指紋</value>
+  </data>
+  <data name="Identity_Saved" xml:space="preserve">
+    <value>已儲存。Android 會從下次啟動起使用。</value>
+  </data>
+  <data name="Identity_SavedRestart" xml:space="preserve">
+    <value>已儲存。若要立即使用，請重新啟動 Android。</value>
+  </data>
+  <data name="Identity_Reset" xml:space="preserve">
+    <value>已恢復為預設值。Android 會從下次啟動起使用。</value>
+  </data>
+  <data name="Identity_ResetRestart" xml:space="preserve">
+    <value>已恢復為預設值。若要立即使用，請重新啟動 Android。</value>
+  </data>
+  <data name="Identity_Restarted" xml:space="preserve">
+    <value>Android 已使用此識別重新啟動。</value>
+  </data>
+  <data name="Identity_FromComputer" xml:space="preserve">
+    <value>預設：來自這部電腦</value>
+  </data>
+  <data name="Identity_FromDsa" xml:space="preserve">
+    <value>預設：DSA 的值</value>
+  </data>
+  <data name="Identity_NotSaid" xml:space="preserve">
+    <value>這部電腦未提供此值；Android 會保留自己的值。</value>
+  </data>
+  <data name="IdentityComputerHeader.Text" xml:space="preserve">
+    <value>來自這部電腦</value>
+  </data>
+  <data name="IdentityComputerNote.Text" xml:space="preserve">
+    <value>這些值依循這部電腦，每次啟動 Android 時都會重新讀取，因此電腦改名後，會從下次啟動起跟著變更。
+Android 的設定會顯示裝置名稱與晶片。型號名稱只顯示在這裡。</value>
+  </data>
+  <data name="Identity_model_name" xml:space="preserve">
+    <value>型號名稱</value>
+  </data>
+  <data name="Identity_model_name_Description" xml:space="preserve">
+    <value>這部電腦販售時使用的名稱 (ro.product.marketname)。</value>
+  </data>
+  <data name="Identity_device_name" xml:space="preserve">
+    <value>裝置名稱</value>
+  </data>
+  <data name="Identity_device_name_Description" xml:space="preserve">
+    <value>這部電腦的名稱，設定、Bluetooth 與 Wi-Fi Direct 會以此顯示此裝置。</value>
+  </data>
+  <data name="Identity_soc_manufacturer" xml:space="preserve">
+    <value>晶片製造商</value>
+  </data>
+  <data name="Identity_soc_manufacturer_Description" xml:space="preserve">
+    <value>Build.SOC_MANUFACTURER：這部電腦處理器的製造商。</value>
+  </data>
+  <data name="Identity_soc_model" xml:space="preserve">
+    <value>晶片型號</value>
+  </data>
+  <data name="Identity_soc_model_Description" xml:space="preserve">
+    <value>Build.SOC_MODEL：這部電腦的處理器。</value>
+  </data>
+  <data name="Identity_manufacturer" xml:space="preserve">
+    <value>製造商</value>
+  </data>
+  <data name="Identity_manufacturer_Description" xml:space="preserve">
+    <value>Build.MANUFACTURER。最多 64 個可列印的 ASCII 字元。</value>
+  </data>
+  <data name="Identity_manufacturer_Invalid" xml:space="preserve">
+    <value>請使用 1 到 64 個可列印的 ASCII 字元，開頭或結尾不可有空格。</value>
+  </data>
+  <data name="Identity_brand" xml:space="preserve">
+    <value>品牌</value>
+  </data>
+  <data name="Identity_brand_Description" xml:space="preserve">
+    <value>Build.BRAND，也是指紋的第一部分。可使用英文字母、數字、'.'、'_' 與 '-'。</value>
+  </data>
+  <data name="Identity_brand_Invalid" xml:space="preserve">
+    <value>請使用最多 32 個英文字母、數字、'.'、'_' 或 '-'，並以英文字母或數字開頭。</value>
+  </data>
+  <data name="Identity_model" xml:space="preserve">
+    <value>型號</value>
+  </data>
+  <data name="Identity_model_Description" xml:space="preserve">
+    <value>Build.MODEL，應用程式顯示此裝置時使用的名稱。</value>
+  </data>
+  <data name="Identity_model_Invalid" xml:space="preserve">
+    <value>請使用 1 到 64 個可列印的 ASCII 字元，開頭或結尾不可有空格。</value>
+  </data>
+  <data name="Identity_device" xml:space="preserve">
+    <value>裝置</value>
+  </data>
+  <data name="Identity_device_Description" xml:space="preserve">
+    <value>Build.DEVICE。可使用英文字母、數字、'.'、'_' 與 '-'。</value>
+  </data>
+  <data name="Identity_device_Invalid" xml:space="preserve">
+    <value>請使用最多 32 個英文字母、數字、'.'、'_' 或 '-'，並以英文字母或數字開頭。</value>
+  </data>
+  <data name="Identity_name" xml:space="preserve">
+    <value>產品名稱</value>
+  </data>
+  <data name="Identity_name_Description" xml:space="preserve">
+    <value>Build.PRODUCT。可使用英文字母、數字、'.'、'_' 與 '-'。</value>
+  </data>
+  <data name="Identity_name_Invalid" xml:space="preserve">
+    <value>請使用最多 32 個英文字母、數字、'.'、'_' 或 '-'，並以英文字母或數字開頭。</value>
+  </data>
+  <data name="Identity_characteristics" xml:space="preserve">
+    <value>裝置類型</value>
+  </data>
+  <data name="Identity_characteristics_Description" xml:space="preserve">
+    <value>ro.build.characteristics：tablet (大螢幕版面配置)、default (手機)，或以逗號分隔的其他字詞。</value>
+  </data>
+  <data name="Identity_characteristics_Invalid" xml:space="preserve">
+    <value>請使用由小寫英文字母、數字與 '_' 組成的字詞，並以逗號分隔。</value>
+  </data>
+  <data name="Identity_fingerprint_release" xml:space="preserve">
+    <value>發行版本</value>
+  </data>
+  <data name="Identity_fingerprint_release_Description" xml:space="preserve">
+    <value>指紋中的 Android 發行版本。</value>
+  </data>
+  <data name="Identity_fingerprint_release_Invalid" xml:space="preserve">
+    <value>請使用 1 到 64 個英文字母、數字、'.'、'_' 或 '-'。</value>
+  </data>
+  <data name="Identity_fingerprint_id" xml:space="preserve">
+    <value>組建 ID</value>
+  </data>
+  <data name="Identity_fingerprint_id_Description" xml:space="preserve">
+    <value>指紋中的組建 ID。</value>
+  </data>
+  <data name="Identity_fingerprint_id_Invalid" xml:space="preserve">
+    <value>請使用 1 到 64 個英文字母、數字、'.'、'_' 或 '-'。</value>
+  </data>
+  <data name="Identity_fingerprint_incremental" xml:space="preserve">
+    <value>累加版本</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Description" xml:space="preserve">
+    <value>指紋中的累加組建版本。</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Invalid" xml:space="preserve">
+    <value>請使用 1 到 64 個英文字母、數字、'.'、'_' 或 '-'。</value>
+  </data>
+  <data name="Identity_fingerprint_type" xml:space="preserve">
+    <value>組建類型</value>
+  </data>
+  <data name="Identity_fingerprint_type_Description" xml:space="preserve">
+    <value>user、userdebug 或 eng。只有指紋會顯示此值；Android 仍是 user 組建。</value>
+  </data>
+  <data name="Identity_fingerprint_type_Invalid" xml:space="preserve">
+    <value>請使用 user、userdebug 或 eng。</value>
+  </data>
+  <data name="Identity_fingerprint_tags" xml:space="preserve">
+    <value>標籤</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Description" xml:space="preserve">
+    <value>例如 release-keys。</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Invalid" xml:space="preserve">
+    <value>請使用英文字母、數字、'.'、'_'、'-' 或 ','。</value>
+  </data>
+  <data name="Identity_fingerprint" xml:space="preserve">
+    <value>完整指紋</value>
+  </data>
+  <data name="Identity_fingerprint_Description" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags
+設定後，無論上方各部分為何，此值都會成為 Build.FINGERPRINT。</value>
+  </data>
+  <data name="Identity_fingerprint_Invalid" xml:space="preserve">
+    <value>請以 brand/name/device:release/id/incremental:type/tags 的格式填寫，類型為 user、userdebug 或 eng。</value>
+  </data>
+  <data name="NavApps.Content" xml:space="preserve">
+    <value>應用程式</value>
+  </data>
+  <data name="AppsTitle.Text" xml:space="preserve">
+    <value>應用程式</value>
+  </data>
+  <data name="AppsRefreshButton.Content" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="AppsIntro.Text" xml:space="preserve">
+    <value>這部電腦上安裝的 Android 應用程式。開啟此頁面時，Android 會啟動。
+開啟應用程式、在「應用程式資訊」中變更其權限、儲存空間與通知，或解除安裝您安裝的應用程式。
+這些應用程式也會列在 Windows 設定的「應用程式 &gt; 已安裝的應用程式」中。</value>
+  </data>
+  <data name="AppsErrorBar.Title" xml:space="preserve">
+    <value>無法讀取或變更應用程式</value>
+  </data>
+  <data name="AppsDoneBar.Title" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="AppsManageCard.Title" xml:space="preserve">
+    <value>管理應用程式</value>
+  </data>
+  <data name="AppsManageCard.Description" xml:space="preserve">
+    <value>在 Android 本身的設定中開啟應用程式清單</value>
+  </data>
+  <data name="AppsInstalledHeader.Text" xml:space="preserve">
+    <value>已安裝的應用程式</value>
+  </data>
+  <data name="AppsSearch.PlaceholderText" xml:space="preserve">
+    <value>搜尋應用程式</value>
+  </data>
+  <data name="AppsNone.Text" xml:space="preserve">
+    <value>Android 中尚未安裝任何應用程式。開啟 APK 檔案即可安裝。</value>
+  </data>
+  <data name="AppsNoMatch.Text" xml:space="preserve">
+    <value>沒有符合搜尋條件的應用程式。</value>
+  </data>
+  <data name="AppsOpenButton.Content" xml:space="preserve">
+    <value>開啟</value>
+  </data>
+  <data name="AppsInfoButton.Content" xml:space="preserve">
+    <value>應用程式資訊</value>
+  </data>
+  <data name="AppsDesktopShortcutButton.Content" xml:space="preserve">
+    <value>建立桌面捷徑</value>
+  </data>
+  <data name="Apps_DesktopShortcutMade" xml:space="preserve">
+    <value>{0} 的捷徑已放在桌面上。</value>
+  </data>
+  <data name="AppsUninstallButton.Content" xml:space="preserve">
+    <value>解除安裝</value>
+  </data>
+  <data name="AppsUninstallConfirmTitle" xml:space="preserve">
+    <value>要解除安裝 {0} 嗎？</value>
+  </data>
+  <data name="AppsUninstallConfirmBody" xml:space="preserve">
+    <value>{0} 及其資料將從 Android 中移除。
+
+此動作無法復原。</value>
+  </data>
+  <data name="Apps_Count" xml:space="preserve">
+    <value>{0} 個應用程式</value>
+  </data>
+  <data name="Apps_CountMatching" xml:space="preserve">
+    <value>{1} 個應用程式中的 {0} 個</value>
+  </data>
+  <data name="Apps_Version" xml:space="preserve">
+    <value>版本 {0}</value>
+  </data>
+  <data name="Apps_Installed" xml:space="preserve">
+    <value>安裝於 {0}</value>
+  </data>
+  <data name="Apps_System" xml:space="preserve">
+    <value>Android 的一部分</value>
+  </data>
+  <data name="Apps_SystemTip" xml:space="preserve">
+    <value>此應用程式是 Android 的一部分，無法解除安裝。</value>
+  </data>
+  <data name="Apps_Uninstalled" xml:space="preserve">
+    <value>已解除安裝 {0}。</value>
+  </data>
+  <data name="Apps_NotUninstalled" xml:space="preserve">
+    <value>未解除安裝 {0}：{1} ({2})</value>
+  </data>
+  <data name="Apps_Refused_not-installed" xml:space="preserve">
+    <value>它已不再安裝</value>
+  </data>
+  <data name="Apps_Refused_system-app" xml:space="preserve">
+    <value>它是 Android 的一部分</value>
+  </data>
+  <data name="Apps_Refused_blocked" xml:space="preserve">
+    <value>Android 不允許，因為此應用程式是裝置管理員，或有原則保留它</value>
+  </data>
+  <data name="Apps_Refused_other" xml:space="preserve">
+    <value>Android 無法將其解除安裝</value>
+  </data>
+  <data name="UninstallWindow_Caption" xml:space="preserve">
+    <value>解除安裝 Android 應用程式</value>
+  </data>
+  <data name="UninstallWindow_Version" xml:space="preserve">
+    <value>版本 {0}</value>
+  </data>
+  <data name="UninstallWindow_Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="UninstallWindow_Busy" xml:space="preserve">
+    <value>正在解除安裝 {0}</value>
+  </data>
+  <data name="UninstallWindow_BusyDetail" xml:space="preserve">
+    <value>正在從 Android 移除應用程式及其資料。若 Android 未在執行，會先啟動它。</value>
+  </data>
+  <data name="UninstallWindow_DoneTitle" xml:space="preserve">
+    <value>已解除安裝</value>
+  </data>
+  <data name="UninstallWindow_DoneText" xml:space="preserve">
+    <value>已從 Android 移除 {0}。</value>
+  </data>
+  <data name="UninstallWindow_FailedTitle" xml:space="preserve">
+    <value>未解除安裝</value>
+  </data>
+  <data name="UninstallWindow_Refused" xml:space="preserve">
+    <value>未解除安裝 {0}：{1}。</value>
+  </data>
+  <data name="UninstallWindow_RefusedDetail" xml:space="preserve">
+    <value>未解除安裝 {0}：{1} ({2})。</value>
+  </data>
+  <data name="NavBackground.Content" xml:space="preserve">
+    <value>在背景執行</value>
+  </data>
+  <data name="BackgroundTitle.Text" xml:space="preserve">
+    <value>在背景執行</value>
+  </data>
+  <data name="BackgroundRefreshButton.Content" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="BackgroundIntro.Text" xml:space="preserve">
+    <value>這些 Android 應用程式在視窗關閉後仍會繼續執行，以播放音樂、下載檔案、保持 VPN 連線或進行其他工作。
+每個應用程式在工作列的通知區域中都有圖示。停止應用程式會結束其工作並釋放其記憶體。</value>
+  </data>
+  <data name="BackgroundErrorBar.Title" xml:space="preserve">
+    <value>無法讀取或變更在背景執行的應用程式</value>
+  </data>
+  <data name="BackgroundDoneBar.Title" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="BackgroundAppsHeader.Text" xml:space="preserve">
+    <value>應用程式</value>
+  </data>
+  <data name="BackgroundNone.Text" xml:space="preserve">
+    <value>沒有任何應用程式在背景執行。</value>
+  </data>
+  <data name="BackgroundOpenButton.Content" xml:space="preserve">
+    <value>開啟</value>
+  </data>
+  <data name="BackgroundStopButton.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="BackgroundStoppingHeader.Text" xml:space="preserve">
+    <value>停止應用程式</value>
+  </data>
+  <data name="BackgroundAskCard.Header" xml:space="preserve">
+    <value>從通知區域停止應用程式前先詢問</value>
+  </data>
+  <data name="BackgroundAskCard.Description" xml:space="preserve">
+    <value>如果您曾選擇不再詢問，可以在這裡重新開啟。</value>
+  </data>
+  <data name="Background_Playing" xml:space="preserve">
+    <value>正在播放 {0}</value>
+  </data>
+  <data name="Background_Paused" xml:space="preserve">
+    <value>已暫停：{0}</value>
+  </data>
+  <data name="Background_Stopped" xml:space="preserve">
+    <value>已停止 {0}。</value>
+  </data>
+  <data name="AppsResizable.Content" xml:space="preserve">
+    <value>可調整大小</value>
+  </data>
+  <data name="AppsResizable.ToolTip" xml:space="preserve">
+    <value>是否可以調整此應用程式視窗的大小並將其最大化。關閉時，每個視窗都會維持開啟時的大小。</value>
+  </data>
+  <data name="AppsStartSize.ToolTip" xml:space="preserve">
+    <value>此應用程式視窗開啟時的大小</value>
+  </data>
+  <data name="Apps_StartSize_Auto" xml:space="preserve">
+    <value>以 Android 選擇的大小開啟</value>
+  </data>
+  <data name="Apps_StartSize_PhonePortrait" xml:space="preserve">
+    <value>手機，直向 ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_PhoneLandscape" xml:space="preserve">
+    <value>手機，橫向 ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletPortrait" xml:space="preserve">
+    <value>平板電腦，直向 ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletLandscape" xml:space="preserve">
+    <value>平板電腦，橫向 ({0} × {1})</value>
+  </data>
+  <data name="Apps_WindowChanged" xml:space="preserve">
+    <value>{0} 的視窗會從下一個開啟的視窗起套用新設定。</value>
+  </data>
+  <data name="AppsDpiScaling.Name" xml:space="preserve">
+    <value>在其他監視器上的縮放</value>
+  </data>
+  <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
+    <value>此應用程式的視窗移到縮放比例不同的監視器時，由誰負責縮放。
+• 應用程式：拖曳時由 DSA 縮放視窗。放開後，應用程式以新縮放比例重繪，文字清晰：Android 會重建畫面一次並保留狀態，因此會短暫重繪。
+• 系統：應用程式保留其縮放比例，由 DSA 將視窗縮放到相同的實際大小。應用程式不會被重建。文字可能看起來有點模糊。
+• 自動：對執行中變更縮放比例就會出問題的應用程式 (例如 YouTube) 使用「系統」，其他應用程式使用「應用程式」。</value>
+  </data>
+  <data name="Apps_DpiScaling_Auto" xml:space="preserve">
+    <value>縮放：自動</value>
+  </data>
+  <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
+    <value>縮放：系統 (建議用於此應用程式)</value>
+  </data>
+  <data name="Apps_DpiScaling_App" xml:space="preserve">
+    <value>縮放執行者：應用程式</value>
+  </data>
+  <data name="Apps_DpiScaling_System" xml:space="preserve">
+    <value>縮放執行者：系統</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
+    <value>縮放執行者：系統 (強制)</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
+    <value>縮放執行者：系統 (強制)，尚未提供</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
+    <value>「系統 (強制)」會在不重新啟動應用程式的情況下提供新的縮放比例，即使應用程式未表明能處理縮放變更。
+尚未提供：它需要此組建缺少的 Android 架構變更，因此目前的運作方式與「系統」相同。</value>
+  </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>全螢幕</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>此應用程式明確要求全螢幕時 (例如影片播放器的全螢幕按鈕) 要顯示在何處。F11 隨時都能切換全螢幕。</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>隱藏列</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>此應用程式未要求全螢幕而只隱藏其列時 (例如短影片動態) 要顯示在何處。</value>
+  </data>
+  <data name="Apps_FullScreen_Default" xml:space="preserve">
+    <value>依照預設值</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>在整個螢幕上</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>在視窗內</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>應用程式全螢幕</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>應用程式的全螢幕要求 (例如影片的全螢幕按鈕) 顯示的位置。在整個螢幕上時，標題列會在頂端邊緣出現。「應用程式」頁面上的個別設定優先。</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>隱藏其列的應用程式</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>應用程式只隱藏其列時 (例如短影片動態) 要顯示在何處。</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>在整個螢幕上</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>在視窗內</value>
+  </data>
+  <data name="NavNetwork.Content" xml:space="preserve">
+    <value>網路</value>
+  </data>
+  <data name="NetworkTitle.Text" xml:space="preserve">
+    <value>網路</value>
+  </data>
+  <data name="NetworkStatusCard.Header" xml:space="preserve">
+    <value>Android 的網路</value>
+  </data>
+  <data name="NetworkRefreshButton.Content" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="Network_ModeNat" xml:space="preserve">
+    <value>透過這部電腦連線 (NAT)。Android 應用程式會將其視為 Wi-Fi，不會產生數據費用。</value>
+  </data>
+  <data name="Network_ModeAdvanced" xml:space="preserve">
+    <value>以獨立裝置的身分連線到這部電腦的網路 (進階網路)。</value>
+  </data>
+  <data name="Network_ModeOff" xml:space="preserve">
+    <value>Android 未在執行，因此尚無網路。</value>
+  </data>
+  <data name="Network_ModeUnknown" xml:space="preserve">
+    <value>DSA 服務未回報網路。請更新 DSA 以查看。</value>
+  </data>
+  <data name="Network_None" xml:space="preserve">
+    <value>無</value>
+  </data>
+  <data name="Network_DnsHost" xml:space="preserve">
+    <value>由這部電腦的解析程式回應，因此其 hosts 檔案、VPN 與 DNS 篩選器也會套用到 Android 應用程式。</value>
+  </data>
+  <data name="Network_DnsFallback" xml:space="preserve">
+    <value>這部電腦的解析程式沒有回應，因此 Android 會詢問網路的 DNS 伺服器：{0}</value>
+  </data>
+  <data name="NetworkAddressLabel.Text" xml:space="preserve">
+    <value>位址</value>
+  </data>
+  <data name="NetworkDnsLabel.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="NetworkGatewayLabel.Text" xml:space="preserve">
+    <value>閘道</value>
+  </data>
+  <data name="NetworkProblemBar.Title" xml:space="preserve">
+    <value>未使用進階網路</value>
+  </data>
+  <data name="NetworkAdvancedHeader.Text" xml:space="preserve">
+    <value>進階</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Header" xml:space="preserve">
+    <value>進階網路</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Description" xml:space="preserve">
+    <value>Android 會以獨立裝置的身分加入這部電腦的網路：其他裝置可以連到 Android 應用程式，Android 應用程式也能連到它們。預設為關閉。
+這部電腦上的程式隨時都能透過上方的位址連到 Android 中的伺服器。</value>
+  </data>
+  <data name="NetworkRestartBar.Title" xml:space="preserve">
+    <value>重新啟動 Android 以套用</value>
+  </data>
+  <data name="NetworkRestartBar.Message" xml:space="preserve">
+    <value>變更會在下次啟動 Android 時套用。請在「一般」頁面上停止 Android，然後開啟應用程式。</value>
+  </data>
+  <data name="NetworkCertificatesHeader.Text" xml:space="preserve">
+    <value>受信任的憑證</value>
+  </data>
+  <data name="HostCertificatesCard.Header" xml:space="preserve">
+    <value>使用這部電腦上新增的根憑證</value>
+  </data>
+  <data name="HostCertificatesCard.Description" xml:space="preserve">
+    <value>Android 應用程式會信任新增到這部電腦的根憑證，例如您公司或安全性程式的憑證。預設為開啟。
+Windows 隨附的根憑證不會列出。變更會立即套用。</value>
+  </data>
+  <data name="CertificatesNone.Text" xml:space="preserve">
+    <value>在這部電腦上找不到任何新增的根憑證。</value>
+  </data>
+  <data name="Certificate_IssuedBy" xml:space="preserve">
+    <value>簽發者：{0}</value>
+  </data>
+  <data name="Certificate_SourceMachine" xml:space="preserve">
+    <value>這部電腦的受信任的根憑證授權單位</value>
+  </data>
+  <data name="Certificate_SourceMachineGroupPolicy" xml:space="preserve">
+    <value>這部電腦的受信任的根憑證授權單位，由群組原則設定</value>
+  </data>
+  <data name="Certificate_SourceMachineEnterprise" xml:space="preserve">
+    <value>這部電腦的受信任的根憑證授權單位，由您的組織設定</value>
+  </data>
+  <data name="Certificate_SourceUser" xml:space="preserve">
+    <value>您的受信任的根憑證授權單位</value>
+  </data>
+  <data name="Certificate_SourceUserGroupPolicy" xml:space="preserve">
+    <value>您的受信任的根憑證授權單位，由群組原則設定</value>
+  </data>
+  <data name="Certificate_SourceAdmin" xml:space="preserve">
+    <value>由這部電腦的系統管理員新增</value>
+  </data>
+  <data name="Certificate_SourceSystem" xml:space="preserve">
+    <value>已新增到系統的憑證存放區</value>
+  </data>
+  <data name="BackupHeader.Text" xml:space="preserve">
+    <value>備份</value>
+  </data>
+  <data name="BackupUnavailableBar.Title" xml:space="preserve">
+    <value>目前無法使用備份</value>
+  </data>
+  <data name="BackupErrorBar.Title" xml:space="preserve">
+    <value>操作未成功</value>
+  </data>
+  <data name="BackupResultBar.Title" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="BackupCard.Header" xml:space="preserve">
+    <value>備份應用程式資料</value>
+  </data>
+  <data name="BackupCard.Description" xml:space="preserve">
+    <value>Android 會將其應用程式的資料備份到您的使用者資料夾，並以 Windows 為您保管的金鑰加密。
+可在重設資料後還原，或使用修復金鑰在其他電腦上還原。</value>
+  </data>
+  <data name="BackupNowButton.Content" xml:space="preserve">
+    <value>立即備份</value>
+  </data>
+  <data name="BackupRestoreButton.Content" xml:space="preserve">
+    <value>還原</value>
+  </data>
+  <data name="BackupRestoreConfirm.Title" xml:space="preserve">
+    <value>要從備份還原應用程式資料嗎？</value>
+  </data>
+  <data name="BackupRestoreConfirm.Action" xml:space="preserve">
+    <value>還原</value>
+  </data>
+  <data name="RecoveryKeyCard.Header" xml:space="preserve">
+    <value>修復金鑰</value>
+  </data>
+  <data name="RecoveryKeyCard.Description" xml:space="preserve">
+    <value>修復金鑰可在其他電腦上，或重新安裝 Windows 後開啟您的備份。
+沒有修復金鑰時，只有這部電腦上的這個 Windows 帳戶能讀取備份。</value>
+  </data>
+  <data name="RecoveryKeyShowButton.Content" xml:space="preserve">
+    <value>顯示修復金鑰</value>
+  </data>
+  <data name="RecoveryKeyHideButton.Content" xml:space="preserve">
+    <value>隱藏</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Header" xml:space="preserve">
+    <value>使用修復金鑰</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Description" xml:space="preserve">
+    <value>若要還原在其他電腦上建立的備份，請將其 DSA Backup 資料夾複製到您的使用者資料夾，並輸入建立該備份時的修復金鑰。</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Placeholder" xml:space="preserve">
+    <value>修復金鑰</value>
+  </data>
+  <data name="UseRecoveryKeyButton.Content" xml:space="preserve">
+    <value>使用金鑰</value>
+  </data>
+  <data name="Backup_NoService" xml:space="preserve">
+    <value>DSA 服務未回報您的備份狀態。請稍後再開啟此頁面。</value>
+  </data>
+  <data name="Backup_Unavailable" xml:space="preserve">
+    <value>目前無法使用備份資料夾或其金鑰。</value>
+  </data>
+  <data name="Backup_Folder" xml:space="preserve">
+    <value>資料夾：{0}</value>
+  </data>
+  <data name="Backup_Last" xml:space="preserve">
+    <value>上次備份：{0}</value>
+  </data>
+  <data name="Backup_Never" xml:space="preserve">
+    <value>從未</value>
+  </data>
+  <data name="Backup_Apps" xml:space="preserve">
+    <value>備份中的應用程式：{0} 個 ({1})</value>
+  </data>
+  <data name="Backup_LastError" xml:space="preserve">
+    <value>上次的問題：{0}</value>
+  </data>
+  <data name="Backup_Done" xml:space="preserve">
+    <value>已備份 {0} 個應用程式的資料。</value>
+  </data>
+  <data name="Backup_DoneSome" xml:space="preserve">
+    <value>已備份 {0} 個應用程式的資料；{1} 個無法備份。</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>已還原 {0} 個應用程式的資料，並安裝 {1} 個應用程式。</value>
+  </data>
+  <data name="Backup_RestoredSome" xml:space="preserve">
+    <value>已還原 {0} 個應用程式的資料，並安裝 {1} 個應用程式；{2} 個無法還原。</value>
+  </data>
+  <data name="Backup_RestoreWarning" xml:space="preserve">
+    <value>備份中的每個應用程式，其目前的資料都會被備份的資料取代。
+
+• 缺少的應用程式會重新安裝。
+• 若 Android 未在執行，會先啟動它。</value>
+  </data>
+  <data name="Backup_KeyAdvice" xml:space="preserve">
+    <value>請將金鑰寫下來或存放在密碼管理員中，並與這部電腦分開保管。任何擁有金鑰與您備份資料夾的人都能讀取備份。</value>
+  </data>
+  <data name="Backup_KeyEmpty" xml:space="preserve">
+    <value>請先輸入修復金鑰。</value>
+  </data>
+  <data name="Backup_KeyUsed" xml:space="preserve">
+    <value>修復金鑰已保存為您的備份金鑰。現在可以在這裡還原以它建立的備份資料夾。</value>
+  </data>
+  <data name="BackupSwitchCard.Header" xml:space="preserve">
+    <value>將應用程式資料備份到這部電腦</value>
+  </data>
+  <data name="BackupSwitchCard.Description" xml:space="preserve">
+    <value>在這部電腦上保留一份 Android 應用程式使用者資料的加密副本，以便在重設資料後或在其他電腦上還原。
+在您開啟之前保持關閉。</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>備份已關閉。不會建立備份，也不會在這部電腦上保留任何應用程式資料。</value>
+  </data>
+  <data name="Backup_OffKept" xml:space="preserve">
+    <value>備份已關閉。先前 {0} 個應用程式的備份 ({1}) 仍保留在您的 DSA Backup 資料夾中。</value>
+  </data>
+  <data name="Backup_DeleteQuestion" xml:space="preserve">
+    <value>{0} 個應用程式的備份 ({1}) 仍保留在這部電腦上。
+
+要一併刪除這些備份及其金鑰，還是保留以供日後還原？</value>
+  </data>
+  <data name="BackupOffConfirm.Title" xml:space="preserve">
+    <value>關閉備份</value>
+  </data>
+  <data name="BackupOffConfirm.Delete" xml:space="preserve">
+    <value>刪除備份</value>
+  </data>
+  <data name="BackupOffConfirm.Keep" xml:space="preserve">
+    <value>保留</value>
+  </data>
+  <data name="Backup_TurnedOn" xml:space="preserve">
+    <value>備份已開啟。從現在起，Android 會將其應用程式的資料備份到這部電腦。</value>
+  </data>
+  <data name="Backup_TurnedOff" xml:space="preserve">
+    <value>備份已關閉。目前為止建立的備份會保留。</value>
+  </data>
+  <data name="Backup_TurnedOffDeleted" xml:space="preserve">
+    <value>備份已關閉，備份及其金鑰也已刪除。</value>
+  </data>
+  <data name="KeyProtectionCard.Header" xml:space="preserve">
+    <value>Android 金鑰的保護</value>
+  </data>
+  <data name="KeyProtection_None" xml:space="preserve">
+    <value>Android 第一次啟動時，Android 的金鑰會取得保護。</value>
+  </data>
+  <data name="KeyProtection_Tpm" xml:space="preserve">
+    <value>由這部電腦的 TPM 密封。Android 磁碟的複本在其他任何地方都無法開啟應用程式的金鑰或 Android 的加密儲存空間。</value>
+  </data>
+  <data name="KeyProtection_Dpapi" xml:space="preserve">
+    <value>由於這部電腦沒有可用的 TPM，由 Windows 只為您的帳戶保管。沒有您的帳戶，Android 磁碟的複本無法開啟這些金鑰。
+TPM 可以運作後，DSA 會以它密封金鑰。</value>
+  </data>
+  <data name="KeyProtection_Hardware" xml:space="preserve">
+    <value>由 {0} 密封。</value>
+  </data>
+  <data name="KeyProtection_Store" xml:space="preserve">
+    <value>由 {0} 保管。</value>
+  </data>
+  <data name="KeyProtection_Why" xml:space="preserve">
+    <value>未使用 TPM 的原因：{0}</value>
+  </data>
+  <data name="KeyProblemBar.Title" xml:space="preserve">
+    <value>無法開啟 Android 的金鑰</value>
+  </data>
+  <data name="ResetDataHeader.Text" xml:space="preserve">
+    <value>重設</value>
+  </data>
+  <data name="ResetDataCard.Header" xml:space="preserve">
+    <value>重設 Android 的資料</value>
+  </data>
+  <data name="ResetDataCard.Description" xml:space="preserve">
+    <value>清除您安裝的每個應用程式、您的帳戶與所有應用程式資料，讓 Android 像初次安裝時一樣啟動。
+Android 映像與這些設定會保留。</value>
+  </data>
+  <data name="ResetDataButton.Content" xml:space="preserve">
+    <value>重設</value>
+  </data>
+  <data name="ResetDataConfirm.Title" xml:space="preserve">
+    <value>要重設 Android 的資料嗎？</value>
+  </data>
+  <data name="ResetDataConfirm.Action" xml:space="preserve">
+    <value>重設</value>
+  </data>
+  <data name="ResetData_Warning" xml:space="preserve">
+    <value>這會從 Android 清除：
+• 您安裝的每個應用程式
+• 您登入的帳戶
+• 每個應用程式的資料
+
+Android 會立即停止，下次啟動時會回到初次安裝時的狀態。Android 映像與 DSA 的設定會保留。
+
+此動作無法復原。</value>
+  </data>
+  <data name="ResetDoneBar.Title" xml:space="preserve">
+    <value>已重設 Android 的資料</value>
+  </data>
+  <data name="ResetDoneBar.Message" xml:space="preserve">
+    <value>您開啟的下一個應用程式會以初次安裝時的狀態啟動 Android。</value>
+  </data>
+  <data name="Toggle.On" xml:space="preserve">
+    <value>開啟</value>
+  </data>
+  <data name="Toggle.Off" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="AndroidRunningHeader.Text" xml:space="preserve">
+    <value>目前執行中</value>
+  </data>
+  <data name="Android_Major" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="Android_Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Android_Supported" xml:space="preserve">
+    <value>支援的版本：Android {0}</value>
+  </data>
+  <data name="Android_Switching" xml:space="preserve">
+    <value>已選擇 Android {0}。現在會下載它，並在下次啟動 Android 時使用。</value>
+  </data>
+  <data name="AndroidSwitchingBar.Title" xml:space="preserve">
+    <value>正在變更 Android 版本</value>
+  </data>
+  <data name="AndroidBuildCard.Header" xml:space="preserve">
+    <value>組建</value>
+  </data>
+  <data name="AndroidPatchCard.Header" xml:space="preserve">
+    <value>安全性修補程式等級</value>
+  </data>
+  <data name="AndroidChooseHeader.Text" xml:space="preserve">
+    <value>Android 版本</value>
+  </data>
+  <data name="AndroidChooseCard.Header" xml:space="preserve">
+    <value>要使用的版本</value>
+  </data>
+  <data name="AndroidChooseCard.Description" xml:space="preserve">
+    <value>DSA 支援最新的兩個 Android 版本。有些應用程式只能在其中一個版本上執行。</value>
+  </data>
+  <data name="Android_ChoiceLatest" xml:space="preserve">
+    <value>一律使用最新版本 (目前為 Android {0})</value>
+  </data>
+  <data name="Android_ChoiceMajor" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="AndroidApplyButton.Content" xml:space="preserve">
+    <value>變更</value>
+  </data>
+  <data name="AndroidChooseNote.Text" xml:space="preserve">
+    <value>這部電腦的所有使用者都執行相同的 Android 版本，因此變更版本需要系統管理員。
+所選的版本會持續取得安全性更新。其支援結束時，DSA 會移至下一個版本並保留您的應用程式。</value>
+  </data>
+  <data name="AndroidUpConfirm.Title" xml:space="preserve">
+    <value>要移至較新的 Android 嗎？</value>
+  </data>
+  <data name="AndroidUpConfirm.Body" xml:space="preserve">
+    <value>會下載 Android {0}，並從下次啟動 Android 起使用。您的應用程式及其資料會一併移轉。
+
+日後若改回舊版，資料會被清除。</value>
+  </data>
+  <data name="AndroidDownConfirm.Title" xml:space="preserve">
+    <value>要清除 Android 資料以移至較舊的版本嗎？</value>
+  </data>
+  <data name="AndroidDownConfirm.Action" xml:space="preserve">
+    <value>清除資料並變更</value>
+  </data>
+  <data name="Android_DownWarning" xml:space="preserve">
+    <value>Android {0} 比目前執行的 Android {1} 舊，無法讀取較新版本寫入的資料。
+
+移轉會清除這部電腦所有使用者的 Android 資料：
+• 他們安裝的每個應用程式
+• 他們登入的帳戶
+• 每個應用程式的資料
+
+之後每位使用者的 Android 都會以初次安裝時的狀態啟動。DSA 的設定會保留。
+
+此動作無法復原。</value>
+  </data>
+  <data name="ApkWindow_AbiWarningTitle" xml:space="preserve">
+    <value>此應用程式可能無法在這部電腦上執行</value>
+  </data>
+  <data name="ApkWindow_InstalledTitle" xml:space="preserve">
+    <value>已安裝</value>
+  </data>
+  <data name="ApkWindow_DowngradeTitle" xml:space="preserve">
+    <value>已安裝較新的版本</value>
+  </data>
+  <data name="ApkWindow_SignatureTitle" xml:space="preserve">
+    <value>以其他金鑰簽署</value>
+  </data>
+  <data name="AppsRunAsArm.Content" xml:space="preserve">
+    <value>以 ARM 執行</value>
+  </data>
+  <data name="Apps_RunAsArm_system-app" xml:space="preserve">
+    <value>屬於 Android 一部分的應用程式會依 Android 安裝的方式執行。</value>
+  </data>
+  <data name="Apps_RunAsArm_no-arm-libraries" xml:space="preserve">
+    <value>裝置上此應用程式的 APK 都不含其 ARM 程式碼。</value>
+  </data>
+  <data name="Apps_RunAsArm_translation-off" xml:space="preserve">
+    <value>ARM 轉譯未開啟。請在「ARM 應用程式」下將其開啟，然後重新啟動 Android。</value>
+  </data>
+  <data name="Apps_RunAsArm_arm-only" xml:space="preserve">
+    <value>此應用程式只有 ARM 程式碼，因此一律以 ARM 執行。</value>
+  </data>
+  <data name="Apps_RunAsArm_unknown" xml:space="preserve">
+    <value>此版本的 DSA 無法判斷此應用程式是否能以 ARM 執行。</value>
+  </data>
+  <data name="AppsRunAsArmEraseTitle" xml:space="preserve">
+    <value>要清除 {0} 的資料嗎？</value>
+  </data>
+  <data name="AppsRunAsArmEraseBody" xml:space="preserve">
+    <value>Android 無法在保留資料的情況下變更 {0} 的執行方式。
+
+重新安裝會清除其資料：登入資訊、設定，以及它為自己保存的檔案。</value>
+  </data>
+  <data name="AppsRunAsArmEraseButton" xml:space="preserve">
+    <value>清除並重新安裝</value>
+  </data>
+  <data name="Apps_RunAsArmKept" xml:space="preserve">
+    <value>{0} 已保持原狀，其資料也會保留。</value>
+  </data>
+  <data name="Apps_RunAsArmOn" xml:space="preserve">
+    <value>{0} 現在以 ARM 執行。</value>
+  </data>
+  <data name="Apps_RunAsArmOff" xml:space="preserve">
+    <value>{0} 現在執行其 x86_64 程式碼。</value>
+  </data>
+  <data name="Apps_RunAsArmNotChanged" xml:space="preserve">
+    <value>未重新安裝 {0}：{1} ({2})</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_not-installed" xml:space="preserve">
+    <value>它已不再安裝</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_system-app" xml:space="preserve">
+    <value>它是 Android 的一部分</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_no-libraries" xml:space="preserve">
+    <value>裝置上的 APK 不含該程式碼</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_translation-off" xml:space="preserve">
+    <value>ARM 轉譯未開啟</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_data-would-be-erased" xml:space="preserve">
+    <value>其資料會被清除</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_other" xml:space="preserve">
+    <value>Android 拒絕了</value>
+  </data>
+  <data name="ApkWindow_BundleTitle" xml:space="preserve">
+    <value>分割 APK 套件組合</value>
+  </data>
+  <data name="ApkWindow_BundleSummary" xml:space="preserve">
+    <value>{0} 由多個 APK 組成。這部電腦需要的 {1} 個會一起安裝，總共 {2}。</value>
+  </data>
+  <data name="ApkWindow_BundleSummaryObb" xml:space="preserve">
+    <value>{0} 由多個 APK 組成。這部電腦需要的 {1} 個會連同其擴充檔案一起安裝，總共 {2}。</value>
+  </data>
+  <data name="ApkWindow_FactApks" xml:space="preserve">
+    <value>APK</value>
+  </data>
+  <data name="ApkWindow_ApksValue" xml:space="preserve">
+    <value>{0} 個 (基本 APK 與 {1} 個分割 APK)</value>
+  </data>
+  <data name="ApkWindow_FactObbs" xml:space="preserve">
+    <value>擴充檔案</value>
+  </data>
+  <data name="Install_Reason_app-bundle" xml:space="preserve">
+    <value>它是 Android App Bundle，用於上傳到應用程式商店。請以 APK，或 .xapk、.apks、.apkm 套件組合的形式取得應用程式。</value>
+  </data>
+  <data name="Install_Reason_encrypted-bundle" xml:space="preserve">
+    <value>此套件組合已加密，因此無法讀取其 APK。請以 APK 或較新的套件組合形式取得應用程式。</value>
+  </data>
+  <data name="Install_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>此套件組合中有分割 APK 的簽署金鑰與其基本 APK 不同，因此 Android 會拒絕安裝。</value>
+  </data>
+  <data name="Install_Reason_invalid-bundle" xml:space="preserve">
+    <value>此套件組合不是 Android 能安裝的單一應用程式。</value>
+  </data>
+  <data name="ApkWindow_Reason_app-bundle" xml:space="preserve">
+    <value>它是 Android App Bundle，用於上傳到應用程式商店。請以 APK，或 .xapk、.apks、.apkm 套件組合的形式取得應用程式。</value>
+  </data>
+  <data name="ApkWindow_Reason_encrypted-bundle" xml:space="preserve">
+    <value>此套件組合已加密，因此無法讀取其 APK。請以 APK 或較新的套件組合形式取得應用程式。</value>
+  </data>
+  <data name="ApkWindow_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>此套件組合中有分割 APK 的簽署金鑰與其基本 APK 不同，因此 Android 會拒絕安裝。</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-bundle" xml:space="preserve">
+    <value>此套件組合不是 Android 能安裝的單一應用程式。</value>
+  </data>
+  <data name="ApkWindow_Reason_translation-off" xml:space="preserve">
+    <value>此應用程式只能以 ARM 程式碼 (arm64-v8a) 執行，而 ARM 轉譯未開啟。
+請在「ARM 應用程式」下將其開啟，重新啟動 Android，然後再次安裝應用程式。</value>
+  </data>
+  <data name="UpdatesAndroidHeader.Text" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="UpdatesProgramHeader.Text" xml:space="preserve">
+    <value>DSA</value>
+  </data>
+  <data name="AndroidFollowsCard.Header" xml:space="preserve">
+    <value>依循的版本</value>
+  </data>
+  <data name="Android_FollowsLatest" xml:space="preserve">
+    <value>支援的最新版本 (目前為 Android {0})</value>
+  </data>
+  <data name="Android_FollowsMajor" xml:space="preserve">
+    <value>Android {0} 及其安全性更新</value>
+  </data>
+  <data name="AndroidUpdateCard.Header" xml:space="preserve">
+    <value>Android 更新</value>
+  </data>
+  <data name="Android_UpToDate" xml:space="preserve">
+    <value>沒有等候中的 Android 更新。DSA 每天都會檢查，並在沒有開啟任何應用程式視窗時重新啟動 Android 以套用更新。</value>
+  </data>
+  <data name="AndroidCheckButton.Content" xml:space="preserve">
+    <value>立即檢查</value>
+  </data>
+  <data name="Android_RestartPending" xml:space="preserve">
+    <value>已下載 Android {0}。若要立即使用，請重新啟動 Android。</value>
+  </data>
+  <data name="AndroidRestartButton.Content" xml:space="preserve">
+    <value>立即重新啟動</value>
+  </data>
+  <data name="AndroidRestartConfirm.Title" xml:space="preserve">
+    <value>要立即重新啟動 Android 嗎？</value>
+  </data>
+  <data name="AndroidRestartConfirm.Body" xml:space="preserve">
+    <value>Android 會重新啟動為 Android {0}。
+
+其應用程式視窗會關閉。啟動完成後，請再次開啟應用程式。</value>
+  </data>
+  <data name="ImageAutoRestartCard.Header" xml:space="preserve">
+    <value>自動重新啟動 Android 以套用更新</value>
+  </data>
+  <data name="ImageAutoRestartCard.Description" xml:space="preserve">
+    <value>沒有開啟任何應用程式視窗時，會立即重新啟動 Android 以套用已下載的更新。否則 DSA 會先詢問，或等到您關閉視窗。
+預設為開啟。關閉時，更新會在您下次啟動 Android 時使用。</value>
+  </data>
+  <data name="IdentitySpecsCard.Header" xml:space="preserve">
+    <value>裝置規格</value>
+  </data>
+  <data name="IdentityCopyButton.Content" xml:space="preserve">
+    <value>複製</value>
+  </data>
+  <data name="IdentityAndroidHeader.Text" xml:space="preserve">
+    <value>Android 回報的內容</value>
+  </data>
+  <data name="Identity_NotReported" xml:space="preserve">
+    <value>未回報</value>
+  </data>
+  <data name="AppsRoot.Name" xml:space="preserve">
+    <value>root 存取權</value>
+  </data>
+  <data name="Apps_Root_off" xml:space="preserve">
+    <value>root：不允許</value>
+  </data>
+  <data name="Apps_Root_ask" xml:space="preserve">
+    <value>root：每次詢問</value>
+  </data>
+  <data name="Apps_Root_remember" xml:space="preserve">
+    <value>root：記住 (不詢問)</value>
+  </data>
+  <data name="Apps_RootGroup" xml:space="preserve">
+    <value>與 {0} 共用使用者 ID。Android 無法區分這些應用程式，因此它們共用一個 root 存取權設定。
+在這裡變更會套用到全部。只要其中任何一個為「不允許」，它們都無法使用 su。</value>
+  </data>
+  <data name="Apps_RootTip_unavailable" xml:space="preserve">
+    <value>這部電腦的 root 存取權已關閉。系統管理員可在「進階」中將其開啟。</value>
+  </data>
+  <data name="Apps_RootTip_unknown" xml:space="preserve">
+    <value>DSA 服務未回報此應用程式的 root 等級。請更新 DSA，以便在這裡選擇。</value>
+  </data>
+  <data name="Apps_RootNotChanged" xml:space="preserve">
+    <value>{0} 的 root 等級未變更：{1}</value>
+  </data>
+  <data name="Apps_RootSet_off" xml:space="preserve">
+    <value>{0} 無法再使用 root。從下次啟動 Android 起，它將看不到 su。</value>
+  </data>
+  <data name="Apps_RootSet_ask" xml:space="preserve">
+    <value>{0} 現在每次使用 su 時，都會詢問這部電腦的系統管理員。如果它之前看不到 su，會從下次啟動 Android 起看到。</value>
+  </data>
+  <data name="Apps_RootSet_remember" xml:space="preserve">
+    <value>{0} 現在不經詢問即可使用 su。如果它之前看不到 su，會從下次啟動 Android 起看到。</value>
+  </data>
+  <data name="AppsRootOffBar.Title" xml:space="preserve">
+    <value>root 存取權已關閉</value>
+  </data>
+  <data name="AppsRootOffBar.Message" xml:space="preserve">
+    <value>沒有任何應用程式能使用 su。這部電腦的系統管理員可以在「進階」中開啟 root 存取權，之後您就能在這裡為每個應用程式選擇等級。</value>
+  </data>
+  <data name="AppsRootNote.Text" xml:space="preserve">
+    <value>root 存取權：
+• 「不允許」會對應用程式隱藏 su。
+• 「每次詢問」會在每次要求時，顯示附有應用程式名稱的系統管理員提示。核准的效力持續 15 分鐘。
+• 「記住」會不經詢問直接核准，因此選擇它需要系統管理員核准。</value>
+  </data>
+  <data name="RootHeader.Text" xml:space="preserve">
+    <value>root 存取權</value>
+  </data>
+  <data name="RootElevationCard.Header" xml:space="preserve">
+    <value>允許 Android 應用程式要求 root</value>
+  </data>
+  <data name="RootElevationCard.Description" xml:space="preserve">
+    <value>您在「應用程式」頁面上允許的應用程式，經這部電腦的系統管理員核准後，即可像 sudo 一樣以 root 執行指令。預設為關閉。
+Android 映像、其組建屬性與 SELinux 都會保持原狀。</value>
+  </data>
+  <data name="RootElevationAdminReason.Text" xml:space="preserve">
+    <value>此設定會套用到這部電腦的所有使用者，因此只有系統管理員可以變更。
+使用「以系統管理員身分變更」，Windows 會要求您授權。</value>
+  </data>
+  <data name="RootElevationRestartBar.Title" xml:space="preserve">
+    <value>重新啟動 Android 以套用</value>
+  </data>
+  <data name="RootElevationRestartBar.Message" xml:space="preserve">
+    <value>root 存取權會從下次啟動 Android 起變更。請在「一般」頁面上停止 Android，然後開啟應用程式。</value>
+  </data>
+  <data name="RootLogCard.Header" xml:space="preserve">
+    <value>要求的記錄位置</value>
+  </data>
+  <data name="RootElevation_LogAt" xml:space="preserve">
+    <value>每次要求都會連同應用程式、時間、是否核准與指令一起保存在服務記錄中：{0}</value>
+  </data>
+  <data name="RootElevation_LogUnknown" xml:space="preserve">
+    <value>每次要求都會連同應用程式、時間、是否核准與指令一起保存在服務記錄中。</value>
+  </data>
+  <data name="RootNote.Text" xml:space="preserve">
+    <value>請在「應用程式」頁面上為每個應用程式選擇等級。每位使用者為自己 Android 中的應用程式選擇。</value>
+  </data>
+  <data name="AppsAdbShell.Text" xml:space="preserve">
+    <value>adb shell</value>
+  </data>
+  <data name="WidevineHeader.Text" xml:space="preserve">
+    <value>受保護的內容</value>
+  </data>
+  <data name="WidevineCard.Header" xml:space="preserve">
+    <value>Widevine</value>
+  </data>
+  <data name="WidevineCard.Description" xml:space="preserve">
+    <value>讓串流應用程式能播放受保護的影片。從下次啟動 Android 起套用。
+依 Android SDK 授權從 Google 下載約 2 GB，只保留 Widevine 並刪除其餘部分。</value>
+  </data>
+  <data name="WidevineInstallButton.Content" xml:space="preserve">
+    <value>取得</value>
+  </data>
+  <data name="WidevineConfirm.Title" xml:space="preserve">
+    <value>要從 Google 取得 Widevine 嗎？</value>
+  </data>
+  <data name="WidevineConfirm.Action" xml:space="preserve">
+    <value>接受並下載</value>
+  </data>
+  <data name="Widevine_Notice" xml:space="preserve">
+    <value>DSA 會從 Google 下載適用於此 Android 版本的 Android 模擬器映像，並只取出其中未經修改的 Widevine 模組。
+
+• 下載：約 2 GB，用完後刪除。
+• 來源：{0}
+• 條款：Widevine 是 Google 依 Android SDK 授權 ({1}) 提供的軟體。下載即表示您接受這些條款。
+• 畫質：安全性等級為 L3，因此串流服務最多只提供標準畫質 (SD)。
+• Widevine 從下次啟動 Android 起運作。
+
+DSA 不會隨附或轉發 Widevine。</value>
+  </data>
+  <data name="WidevineInstallingBar.Title" xml:space="preserve">
+    <value>正在取得 Widevine</value>
+  </data>
+  <data name="WidevineInstallingBar.Message" xml:space="preserve">
+    <value>正在從 Google 下載約 2 GB 並取出 Widevine。這需要幾分鐘。</value>
+  </data>
+  <data name="WidevineRestartBar.Title" xml:space="preserve">
+    <value>重新啟動 Android 以套用</value>
+  </data>
+  <data name="WidevineRestartBar.Message" xml:space="preserve">
+    <value>Android 會從下次啟動起使用此變更。</value>
+  </data>
+  <data name="WidevineQualityCard.Header" xml:space="preserve">
+    <value>僅限標準畫質</value>
+  </data>
+  <data name="Widevine_Quality" xml:space="preserve">
+    <value>這裡的 Widevine 為安全性等級 L3，因此串流服務最多只提供標準畫質 (SD)。
+若要觀看高畫質內容，請使用這部電腦本身的瀏覽器或應用程式。</value>
+  </data>
+  <data name="WidevineRemoveCard.Header" xml:space="preserve">
+    <value>移除 Widevine</value>
+  </data>
+  <data name="WidevineRemoveCard.Description" xml:space="preserve">
+    <value>從下次啟動 Android 起，移除此模組及其保存的裝置憑證。</value>
+  </data>
+  <data name="WidevineRemoveButton.Content" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="WidevineTermsLink.Content" xml:space="preserve">
+    <value>Android SDK 授權</value>
+  </data>
+  <data name="Widevine_NotInstalled" xml:space="preserve">
+    <value>未安裝。</value>
+  </data>
+  <data name="Widevine_Installed" xml:space="preserve">
+    <value>已安裝：來自適用於 Android {1} ({2}) 的 Google 映像 {0}。</value>
+  </data>
+  <data name="Widevine_InstalledPending" xml:space="preserve">
+    <value>已安裝：來自適用於 Android {1} ({2}) 的 Google 映像 {0}。從下次啟動 Android 起使用。</value>
+  </data>
+  <data name="Widevine_RemovedPending" xml:space="preserve">
+    <value>已移除。Android 會繼續使用它，直到下次啟動。</value>
+  </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{0} {1}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}。{1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}，{1}，{2}：{3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>已捨棄 {0} 筆記錄</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>顯示的最低優先順序</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>正在載入</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>已複製</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>顯示或隱藏瀏覽窗格</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>最小化</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>最大化</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>還原</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>說明</value>
+  </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>要安裝 {0} 嗎？</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>套件名稱：</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>發行者：</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>版本：</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>來源：</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>功能 ({0})：</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>較少</value>
+  </data>
+</root>

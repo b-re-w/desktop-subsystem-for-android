@@ -1,0 +1,2544 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The texts of DSA Settings in Russian, read through ResourceManager. Each key has the same meaning in every language. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Параметры DSA</value>
+  </data>
+  <data name="AppTitle.Text" xml:space="preserve">
+    <value>Параметры DSA</value>
+  </data>
+  <data name="NavGeneral.Content" xml:space="preserve">
+    <value>Общие</value>
+  </data>
+  <data name="NavMemory.Content" xml:space="preserve">
+    <value>Память</value>
+  </data>
+  <data name="NavDisplay.Content" xml:space="preserve">
+    <value>Экран и GPU</value>
+  </data>
+  <data name="NavUpdates.Content" xml:space="preserve">
+    <value>Обновления</value>
+  </data>
+  <data name="NavAdvanced.Content" xml:space="preserve">
+    <value>Дополнительно</value>
+  </data>
+  <data name="NavAbout.Content" xml:space="preserve">
+    <value>О программе</value>
+  </data>
+  <data name="GeneralTitle.Text" xml:space="preserve">
+    <value>Общие</value>
+  </data>
+  <data name="GeneralErrorBar.Title" xml:space="preserve">
+    <value>Что-то пошло не так</value>
+  </data>
+  <data name="GeneralStateCard.Header" xml:space="preserve">
+    <value>Состояние</value>
+  </data>
+  <data name="GeneralStateCard.Description" xml:space="preserve">
+    <value>Desktop Subsystem for Android™ запускает Android в собственной лёгкой виртуальной машине и показывает каждое приложение в отдельном окне.</value>
+  </data>
+  <data name="StartButton.Content" xml:space="preserve">
+    <value>Запустить</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>Остановить</value>
+  </data>
+  <data name="ProblemBar.Title" xml:space="preserve">
+    <value>Android не готов</value>
+  </data>
+  <data name="LastReasonBar.Title" xml:space="preserve">
+    <value>Последняя остановка</value>
+  </data>
+  <data name="LastReason_Requested" xml:space="preserve">
+    <value>Android остановлен по запросу. Запустите его снова, когда он понадобится.</value>
+  </data>
+  <data name="LastReason_Updating" xml:space="preserve">
+    <value>DSA обновляется. Запустите Android снова, когда обновление завершится.</value>
+  </data>
+  <data name="LastReason_Virtualization" xml:space="preserve">
+    <value>Виртуализация выключена или нет Hyper-V. Включите «Платформу виртуальной машины» и перезагрузите компьютер.</value>
+  </data>
+  <data name="LastReason_InvalidConfiguration" xml:space="preserve">
+    <value>Windows отклонила параметры виртуальной машины Android. Обновите или переустановите DSA.</value>
+  </data>
+  <data name="LastReason_OutOfMemory" xml:space="preserve">
+    <value>Недостаточно памяти для запуска Android. Закройте другие приложения и повторите попытку.</value>
+  </data>
+  <data name="LastReason_Disk" xml:space="preserve">
+    <value>Android не запустился из-за проблемы с диском. Освободите место или проверьте диск и повторите попытку.</value>
+  </data>
+  <data name="LastReason_TimedOut" xml:space="preserve">
+    <value>Android запускался слишком долго. Попробуйте запустить его снова.</value>
+  </data>
+  <data name="LastReason_Lost" xml:space="preserve">
+    <value>Android неожиданно остановился. Попробуйте запустить его снова.</value>
+  </data>
+  <data name="LastReason_General" xml:space="preserve">
+    <value>Не удалось запустить Android. Повторите попытку, а если ошибка повторится, посмотрите подробности.</value>
+  </data>
+  <data name="LastReasonDetails.Header" xml:space="preserve">
+    <value>Подробности</value>
+  </data>
+  <data name="LastReasonCopy.ToolTip" xml:space="preserve">
+    <value>Копировать подробности</value>
+  </data>
+  <data name="UpdateNoticeBar.Title" xml:space="preserve">
+    <value>Обновление</value>
+  </data>
+  <data name="UpdateNotice_AndroidUpdated" xml:space="preserve">
+    <value>Android обновлён до версии {0}.</value>
+  </data>
+  <data name="UpdateNotice_AndroidInstalled" xml:space="preserve">
+    <value>Android {0} установлен.</value>
+  </data>
+  <data name="UpdateNotice_AndroidChosen" xml:space="preserve">
+    <value>Выбран Android {0}. DSA сейчас скачивает его, он будет использоваться при следующем запуске Android.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
+    <value>Android {0} не запустился ({1}), поэтому снова используется Android {2}.
+Android {0} будет испробован снова, когда выйдет его новая сборка или новая версия DSA.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
+    <value>Android {0} не запустился ({1}), поэтому снова используется Android {2}.
+Android {2} ещё не завершил запуск ({3}). Запустите Android снова, чтобы загрузить его.</value>
+  </data>
+  <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
+    <value>Android {0} не запустился ({1}), а другой образ не установлен.
+DSA скачает другой образ, если он есть. Следующая версия DSA попробует этот образ снова.</value>
+  </data>
+  <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
+    <value>Android {0} остаётся на испытании и не является причиной: {1}</value>
+  </data>
+  <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
+    <value>DSA обновлена до версии {0}.</value>
+  </data>
+  <data name="UpdateNotice_DsaDownloaded" xml:space="preserve">
+    <value>DSA {0} скачана. Она установится, когда Android не будет запущен.</value>
+  </data>
+  <data name="UpdateNotice_DsaInstalling" xml:space="preserve">
+    <value>Устанавливается DSA {0}. По завершении служба перезапустится.</value>
+  </data>
+  <data name="UpdateNotice_DsaFailed" xml:space="preserve">
+    <value>Не удалось обновить DSA до версии {0} ({1}). Установлена прежняя DSA {2}.</value>
+  </data>
+  <data name="GeneralMoreHeader.Text" xml:space="preserve">
+    <value>Ещё</value>
+  </data>
+  <data name="OpenLogsCard.Header" xml:space="preserve">
+    <value>Открыть папку с моими журналами</value>
+  </data>
+  <data name="OpenLogsCard.Description" xml:space="preserve">
+    <value>Журналы диспетчера окон и окон приложений, чтобы сообщить о проблеме.</value>
+  </data>
+  <data name="RefreshCard.Header" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="RefreshCard.Description" xml:space="preserve">
+    <value>Снова запросить состояние у службы DSA.</value>
+  </data>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>Неизвестно</value>
+  </data>
+  <data name="State_Stopped" xml:space="preserve">
+    <value>Остановлен</value>
+  </data>
+  <data name="State_Starting" xml:space="preserve">
+    <value>Запускается</value>
+  </data>
+  <data name="State_Active" xml:space="preserve">
+    <value>Работает</value>
+  </data>
+  <data name="State_Dozing" xml:space="preserve">
+    <value>Doze (простой)</value>
+  </data>
+  <data name="State_Frozen" xml:space="preserve">
+    <value>Заморожен</value>
+  </data>
+  <data name="State_Stopping" xml:space="preserve">
+    <value>Останавливается</value>
+  </data>
+  <data name="State_Stalled" xml:space="preserve">
+    <value>Не готов</value>
+  </data>
+  <data name="Problem_CliMissing" xml:space="preserve">
+    <value>Не удалось запустить команду dsa. Переустановите DSA.</value>
+  </data>
+  <data name="Problem_ServiceUnreachable" xml:space="preserve">
+    <value>Служба DSA не запущена.</value>
+  </data>
+  <data name="Problem_Refused" xml:space="preserve">
+    <value>Служба DSA не смогла выполнить это действие.</value>
+  </data>
+  <data name="Problem_Unreadable" xml:space="preserve">
+    <value>Не удалось прочитать ответ команды dsa. Переустановите DSA.</value>
+  </data>
+  <data name="MemoryTitle.Text" xml:space="preserve">
+    <value>Память</value>
+  </data>
+  <data name="MemoryRefreshButton.Content" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="MemoryErrorBar.Title" xml:space="preserve">
+    <value>Не удалось измерить память</value>
+  </data>
+  <data name="MemoryHostHeader.Text" xml:space="preserve">
+    <value>На этом компьютере</value>
+  </data>
+  <data name="MemoryHostTotalCard.Header" xml:space="preserve">
+    <value>Используется на этом компьютере</value>
+  </data>
+  <data name="MemoryHostTotalCard.Description" xml:space="preserve">
+    <value>ОЗУ, которое сейчас занимают виртуальная машина, диспетчер окон и окна приложений.</value>
+  </data>
+  <data name="MemoryHostNone.Text" xml:space="preserve">
+    <value>Android не запущен, поэтому не занимает память на этом компьютере.</value>
+  </data>
+  <data name="MemoryGuestHeader.Text" xml:space="preserve">
+    <value>Внутри Android</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Title" xml:space="preserve">
+    <value>Отчёта пока нет</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Message" xml:space="preserve">
+    <value>Android сообщает, как использует память, через несколько минут после запуска.</value>
+  </data>
+  <data name="MemoryGuestTotalCard.Header" xml:space="preserve">
+    <value>Доступно для Android</value>
+  </data>
+  <data name="MemoryAvailableOf.Text" xml:space="preserve">
+    <value>доступно из</value>
+  </data>
+  <data name="MemoryTopHeader.Text" xml:space="preserve">
+    <value>Самые крупные процессы</value>
+  </data>
+  <data name="Role_Vm" xml:space="preserve">
+    <value>Виртуальная машина (vmmem)</value>
+  </data>
+  <data name="Role_WindowManager" xml:space="preserve">
+    <value>Диспетчер окон</value>
+  </data>
+  <data name="Role_Renderer" xml:space="preserve">
+    <value>Графический отрисовщик</value>
+  </data>
+  <data name="Role_AppWindow" xml:space="preserve">
+    <value>Окно приложения</value>
+  </data>
+  <data name="Memory_ProcessDetail" xml:space="preserve">
+    <value>Процесс {0}, личная память {1}</value>
+  </data>
+  <data name="Memory_ReportAge" xml:space="preserve">
+    <value>Отчёт получен {0} с назад</value>
+  </data>
+  <data name="Memory_Apps" xml:space="preserve">
+    <value>Приложения и система</value>
+  </data>
+  <data name="Memory_AppsDetail" xml:space="preserve">
+    <value>В памяти {0}, сжато {1}</value>
+  </data>
+  <data name="Memory_Cache" xml:space="preserve">
+    <value>Кэш</value>
+  </data>
+  <data name="Memory_CacheDetail" xml:space="preserve">
+    <value>Содержимое файлов, хранящееся в памяти. Android освобождает его, когда нужна память.</value>
+  </data>
+  <data name="Memory_Kernel" xml:space="preserve">
+    <value>Кэши ядра</value>
+  </data>
+  <data name="Memory_KernelDetail" xml:space="preserve">
+    <value>Кэши, которые ядро может освободить по требованию.</value>
+  </data>
+  <data name="Memory_Shared" xml:space="preserve">
+    <value>Общая память</value>
+  </data>
+  <data name="Memory_Zram" xml:space="preserve">
+    <value>Сжатая память</value>
+  </data>
+  <data name="Memory_ZramDetail" xml:space="preserve">
+    <value>Хранит страницы объёмом {0} в сжатом виде</value>
+  </data>
+  <data name="Memory_Free" xml:space="preserve">
+    <value>Свободно</value>
+  </data>
+  <data name="Memory_GuestProcessDetail" xml:space="preserve">
+    <value>Процесс {0}</value>
+  </data>
+  <data name="Memory_GuestProcessGooglePlay" xml:space="preserve">
+    <value>Процесс {0}, сервисы Google Play</value>
+  </data>
+  <data name="Memory_GooglePlay" xml:space="preserve">
+    <value>Сервисы Google Play</value>
+  </data>
+  <data name="Memory_GooglePlayDetail" xml:space="preserve">
+    <value>Установленные вами приложения Google (процессов: {0}): {1}</value>
+  </data>
+  <data name="Memory_Unknown" xml:space="preserve">
+    <value>неизвестно</value>
+  </data>
+  <data name="DisplayTitle.Text" xml:space="preserve">
+    <value>Экран и GPU</value>
+  </data>
+  <data name="SettingsErrorBar.Title" xml:space="preserve">
+    <value>Параметр не изменён</value>
+  </data>
+  <data name="RenderGpuCard.Header" xml:space="preserve">
+    <value>GPU для отрисовки</value>
+  </data>
+  <data name="RenderGpuCard.Description" xml:space="preserve">
+    <value>GPU для приложений Android. По умолчанию это GPU основного монитора: кадры остаются на одном GPU, а дискретный GPU ноутбука может спать.</value>
+  </data>
+  <data name="Gpu_Display" xml:space="preserve">
+    <value>GPU основного монитора (рекомендуется)</value>
+  </data>
+  <data name="Gpu_Integrated" xml:space="preserve">
+    <value>Встроенный GPU</value>
+  </data>
+  <data name="Gpu_Discrete" xml:space="preserve">
+    <value>Дискретный GPU (например, для игр)</value>
+  </data>
+  <data name="DisplayGpuCard.Header" xml:space="preserve">
+    <value>GPU основного монитора</value>
+  </data>
+  <data name="DisplayGpuCard.Description" xml:space="preserve">
+    <value>На чём сейчас идёт отрисовка при выборе по умолчанию.</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Title" xml:space="preserve">
+    <value>Применится после перезапуска</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
+    <value>Новый GPU для отрисовки начнёт работать, когда диспетчер окон запустится снова: при следующем входе или после перезапуска ниже.</value>
+  </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Драйвер Vulkan</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Приложения Android рисуют через Vulkan. GPU без драйвера Vulkan может использовать Dozen (Vulkan on Direct3D 12) из пакета Microsoft OpenCL, OpenGL, and Vulkan Compatibility Pack. Применяется после перезапуска диспетчера окон.</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>Автоматически: драйвер GPU, а Dozen только без него (рекомендуется)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>Только собственный драйвер Vulkan GPU</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>Только Dozen (для проверки и сравнения)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>Диспетчер окон ещё не сообщил, на чём идёт отрисовка.</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>Сейчас отрисовка идёт через драйвер Vulkan GPU.</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>Сейчас отрисовка идёт через Dozen (Vulkan on Direct3D 12).</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>Сейчас отрисовка идёт через Dozen на ЦП: у этого GPU нет драйвера Direct3D 12.</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>Нет Vulkan для отрисовки, поэтому Android не запускается. Установите Compatibility Pack из Microsoft Store или командой winget install Microsoft.OpenCLGLVulkanCompatibilityPack, затем выйдите и войдите снова.</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>Получить Compatibility Pack в Microsoft Store</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android рисует на ЦП</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>У GPU этого компьютера нет драйвера Direct3D 12: приложения работают, но игры и анимации будут медленными.</value>
+  </data>
+  <data name="TouchGesturesCard.Header" xml:space="preserve">
+    <value>Отключать сенсорные жесты Windows в окнах приложений DSA</value>
+  </data>
+  <data name="TouchGesturesCard.Description" xml:space="preserve">
+    <value>Пока окно DSA на переднем плане, жесты Windows тремя и четырьмя пальцами отключены, и приложения получают до десяти пальцев.
+Включено по умолчанию. В других приложениях жесты работают так, как задано в параметрах Windows.</value>
+  </data>
+  <data name="TouchGestures_Failed" xml:space="preserve">
+    <value>Этот параметр недоступен: Windows не разрешила изменить сенсорные жесты ({0}). Их можно отключить для всех приложений в параметрах Windows.</value>
+  </data>
+  <data name="TouchGestures_NoReason" xml:space="preserve">
+    <value>причина не указана</value>
+  </data>
+  <data name="TouchSettingsLink.Content" xml:space="preserve">
+    <value>Открыть параметры сенсорного ввода</value>
+  </data>
+  <data name="RestartWindowManagerCard.Header" xml:space="preserve">
+    <value>Перезапустить диспетчер окон</value>
+  </data>
+  <data name="RestartWindowManagerCard.Description" xml:space="preserve">
+    <value>Открытые окна приложений Android закроются и появятся снова.</value>
+  </data>
+  <data name="RestartWindowManagerButton.Content" xml:space="preserve">
+    <value>Перезапустить</value>
+  </data>
+  <data name="RestartWindowManagerTitle" xml:space="preserve">
+    <value>Перезапустить диспетчер окон?</value>
+  </data>
+  <data name="RestartWindowManagerBody" xml:space="preserve">
+    <value>Окна приложений Android ненадолго закроются.
+
+Android и его приложения продолжат работать.</value>
+  </data>
+  <data name="RestartWindowManagerAction" xml:space="preserve">
+    <value>Перезапустить</value>
+  </data>
+  <data name="RestartWindowManagerFailed" xml:space="preserve">
+    <value>Не удалось перезапустить диспетчер окон</value>
+  </data>
+  <data name="UpdatesTitle.Text" xml:space="preserve">
+    <value>Обновления</value>
+  </data>
+  <data name="ProgramUpdatesCard.Header" xml:space="preserve">
+    <value>Обновлять DSA автоматически</value>
+  </data>
+  <data name="ProgramUpdatesCard.Description" xml:space="preserve">
+    <value>Скачивать подписанные новые версии DSA и устанавливать их, когда Android не запущен.</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Header" xml:space="preserve">
+    <value>Получать предварительные версии</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Description" xml:space="preserve">
+    <value>Устанавливать и версии, работа над которыми ещё идёт. Все выпуски до 1.0 предварительные.
+Если выключить, DSA не откатится назад, а дождётся более нового стабильного выпуска.</value>
+  </data>
+  <data name="ImageUpdatesCard.Header" xml:space="preserve">
+    <value>Обновлять образ Android автоматически</value>
+  </data>
+  <data name="ImageUpdatesCard.Description" xml:space="preserve">
+    <value>Скачивать подписанные обновления безопасности и новые версии Android. Они применяются при перезапуске Android согласно параметру ниже.</value>
+  </data>
+  <data name="UpdatesMachineNote.Text" xml:space="preserve">
+    <value>Эти параметры действуют для всех пользователей этого компьютера, поэтому изменить их может только администратор.
+Переключатель, который не включается, недоступен в этой установке.</value>
+  </data>
+  <data name="AdminBar.Title" xml:space="preserve">
+    <value>Требуются права администратора</value>
+  </data>
+  <data name="AdminBar.Message" xml:space="preserve">
+    <value>Параметры обновления действуют для всех пользователей этого компьютера, поэтому изменить их может только администратор.
+Нажмите «Изменить от имени администратора», и Windows запросит разрешение.</value>
+  </data>
+  <data name="AdminShield.ToolTip" xml:space="preserve">
+    <value>Изменить этот параметр может только администратор.</value>
+  </data>
+  <data name="ChangeAsAdmin.Content" xml:space="preserve">
+    <value>Изменить от имени администратора</value>
+  </data>
+  <data name="ElevatedFailed" xml:space="preserve">
+    <value>Параметр не изменён (dsa завершилась с кодом {0}).</value>
+  </data>
+  <data name="ElevationDeclined" xml:space="preserve">
+    <value>Параметр не изменён, так как права администратора не предоставлены.</value>
+  </data>
+  <data name="UpdateNowHeader.Text" xml:space="preserve">
+    <value>Установить сейчас</value>
+  </data>
+  <data name="UpdateNowCard.Header" xml:space="preserve">
+    <value>Установить новейшую версию DSA сейчас</value>
+  </data>
+  <data name="UpdateNowCard.Description" xml:space="preserve">
+    <value>Пока идёт установка, Android всех пользователей остановлен.</value>
+  </data>
+  <data name="UpdateNowButton.Content" xml:space="preserve">
+    <value>Установить сейчас</value>
+  </data>
+  <data name="UpdateNowTitle" xml:space="preserve">
+    <value>Установить новейшую версию сейчас?</value>
+  </data>
+  <data name="UpdateNowBody" xml:space="preserve">
+    <value>DSA остановит Android всех пользователей и установит новейшую версию.
+
+По завершении установки служба DSA перезапустится.</value>
+  </data>
+  <data name="UpdateNowAction" xml:space="preserve">
+    <value>Установить</value>
+  </data>
+  <data name="UpdateNowFailed" xml:space="preserve">
+    <value>DSA не обновлена</value>
+  </data>
+  <data name="ProgramUpdateCard.Header" xml:space="preserve">
+    <value>Обновление DSA</value>
+  </data>
+  <data name="ProgramUpdateDone.Title" xml:space="preserve">
+    <value>DSA обновлена</value>
+  </data>
+  <data name="ProgramUpdate_Starting" xml:space="preserve">
+    <value>Подготовка обновления</value>
+  </data>
+  <data name="ProgramUpdate_Downloading" xml:space="preserve">
+    <value>Скачивание DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_StoppingAndroid" xml:space="preserve">
+    <value>Остановка Android для установки DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Installing" xml:space="preserve">
+    <value>Установка DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Restarting" xml:space="preserve">
+    <value>DSA перезапускается, чтобы завершить обновление</value>
+  </data>
+  <data name="ProgramUpdate_Version" xml:space="preserve">
+    <value>Версия {0}</value>
+  </data>
+  <data name="ProgramUpdate_KeepOpen" xml:space="preserve">
+    <value>Не закрывайте DSA и не запускайте приложения Android, пока обновление не завершится.</value>
+  </data>
+  <data name="ProgramUpdate_Applied" xml:space="preserve">
+    <value>Обновлено до версии {0}</value>
+  </data>
+  <data name="ProgramUpdate_Failed" xml:space="preserve">
+    <value>Не удалось обновить до версии {0}. Предыдущая версия по-прежнему установлена.</value>
+  </data>
+  <data name="ProgramUpdate_NotBack" xml:space="preserve">
+    <value>DSA не запустилась снова после обновления до версии {0}. Если она скоро не запустится, перезагрузите компьютер.</value>
+  </data>
+  <data name="AdvancedTitle.Text" xml:space="preserve">
+    <value>Дополнительно</value>
+  </data>
+  <data name="FilesHeader.Text" xml:space="preserve">
+    <value>Файлы</value>
+  </data>
+  <data name="FileSharingCard.Header" xml:space="preserve">
+    <value>Открыть папки Windows для Android</value>
+  </data>
+  <data name="FileSharingCard.Description" xml:space="preserve">
+    <value>Показывает выбранные ниже папки в общем хранилище Android, в папке Host. Включено по умолчанию.
+Приложениям Android нужно разрешение на доступ к хранилищу, и они могут только то, что разрешено вашей учётной записи Windows.</value>
+  </data>
+  <data name="SharedFoldersCard.Header" xml:space="preserve">
+    <value>Общие папки</value>
+  </data>
+  <data name="SharedFoldersCard.Description" xml:space="preserve">
+    <value>Папка, с которой снят флажок, сразу становится недоступной для Android.</value>
+  </data>
+  <data name="Folder_Documents" xml:space="preserve">
+    <value>Документы</value>
+  </data>
+  <data name="Folder_Downloads" xml:space="preserve">
+    <value>Загрузки</value>
+  </data>
+  <data name="Folder_Pictures" xml:space="preserve">
+    <value>Изображения</value>
+  </data>
+  <data name="Folder_Music" xml:space="preserve">
+    <value>Музыка</value>
+  </data>
+  <data name="Folder_Videos" xml:space="preserve">
+    <value>Видео</value>
+  </data>
+  <data name="Folder_Desktop" xml:space="preserve">
+    <value>Рабочий стол</value>
+  </data>
+  <data name="AndroidFilesCard.Header" xml:space="preserve">
+    <value>Файлы Android</value>
+  </data>
+  <data name="AndroidFilesCard.Description" xml:space="preserve">
+    <value>Открывает в проводнике файлы, сохранённые приложениями Android, например фото и загрузки. Android запустится, если он не запущен.
+Их также открывает пункт Android в области навигации проводника.</value>
+  </data>
+  <data name="FilesDropCard.Header" xml:space="preserve">
+    <value>Отправка файлов в приложения Android</value>
+  </data>
+  <data name="FilesNote.Text" xml:space="preserve">
+    <value>Чтобы отправить файл в приложение Android, перетащите его из проводника на окно приложения. Перетащенный APK устанавливается.</value>
+  </data>
+  <data name="LinksCard.Header" xml:space="preserve">
+    <value>Открывать веб-ссылки в приложениях Android</value>
+  </data>
+  <data name="LinksCard.Description" xml:space="preserve">
+    <value>По умолчанию выключено: ссылки в приложениях Android открываются в браузере Windows. Включено: в приложении Android, как на телефоне.
+Ссылка, которую установленное приложение подтвердило как свою, всегда открывается в этом приложении.</value>
+  </data>
+  <data name="ArmHeader.Text" xml:space="preserve">
+    <value>Приложения для ARM</value>
+  </data>
+  <data name="ArmCard.Header" xml:space="preserve">
+    <value>Запускать приложения только для ARM</value>
+  </data>
+  <data name="ArmCard.Description" xml:space="preserve">
+    <value>Позволяет устанавливать и запускать здесь приложения только для ARM через транслятор ARM. Применяется при следующем запуске Android.
+Запускаются только 64-разрядные приложения ARM (arm64-v8a).
+Используется встроенный открытый транслятор, если не установить транслятор Google ниже или другой через dsa arm-translation install.</value>
+  </data>
+  <data name="ArmRestartBar.Title" xml:space="preserve">
+    <value>Перезапустите Android, чтобы применить</value>
+  </data>
+  <data name="ArmRestartBar.Message" xml:space="preserve">
+    <value>Android запущен до этого изменения. Остановите и снова запустите Android, чтобы оно применилось к приложениям ARM.</value>
+  </data>
+  <data name="ArmDefaultCard.Header" xml:space="preserve">
+    <value>Использовать транслятор по умолчанию</value>
+  </data>
+  <data name="ArmDefaultButton.Content" xml:space="preserve">
+    <value>Использовать</value>
+  </data>
+  <data name="Arm_DefaultDescription" xml:space="preserve">
+    <value>{0} {1} ({2}) входит в этот Android и используется, если не установлен другой транслятор.
+Возврат к нему удаляет установленный пакет, начиная со следующего запуска Android.</value>
+  </data>
+  <data name="Arm_SupportedDefault" xml:space="preserve">
+    <value>Поддерживается через {0} {1} ({2}), транслятор, входящий в этот Android.</value>
+  </data>
+  <data name="Arm_DefaultTurnedOff" xml:space="preserve">
+    <value>Не поддерживается: {0} {1} выключен.</value>
+  </data>
+  <data name="ArmRemoveCard.Header" xml:space="preserve">
+    <value>Удалить пакет трансляции ARM</value>
+  </data>
+  <data name="ArmRemoveCard.Description" xml:space="preserve">
+    <value>Удаляет пакет с диска дополнений. Установленные приложения ARM останутся, но не будут запускаться после перезапуска Android.</value>
+  </data>
+  <data name="ArmRemoveButton.Content" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="Arm_NotSupported" xml:space="preserve">
+    <value>Не поддерживается: пакет трансляции ARM не установлен.</value>
+  </data>
+  <data name="Arm_Supported" xml:space="preserve">
+    <value>Поддерживается через {0} {1} ({2}).</value>
+  </data>
+  <data name="Arm_TurnedOff" xml:space="preserve">
+    <value>Не поддерживается: {0} {1} установлен, но выключен.</value>
+  </data>
+  <data name="Arm_NoLicense" xml:space="preserve">
+    <value>лицензия не указана</value>
+  </data>
+  <data name="Arm_Abis" xml:space="preserve">
+    <value>Android устанавливает приложения для: {0}</value>
+  </data>
+  <data name="Arm_NotRunning" xml:space="preserve">
+    <value>Android не запущен, поэтому неизвестно, что он сейчас поддерживает.</value>
+  </data>
+  <data name="ArmGoogleCard.Header" xml:space="preserve">
+    <value>Транслятор ARM от Google</value>
+  </data>
+  <data name="ArmGoogleCard.Description" xml:space="preserve">
+    <value>Устанавливает транслятор ARM из образа эмулятора Android от Google для этой версии Android.
+Скачивает около 2 GB у Google, оставляет только транслятор и удаляет остальное. Ничего не скачивается без вашего согласия.
+Ту же задачу выполняет пакет, собранный из другого транслятора, например Digitalis.</value>
+  </data>
+  <data name="ArmGoogleButton.Content" xml:space="preserve">
+    <value>Получить</value>
+  </data>
+  <data name="ArmGoogleTermsLink.Content" xml:space="preserve">
+    <value>Лицензия Android SDK</value>
+  </data>
+  <data name="ArmGoogleConfirm.Title" xml:space="preserve">
+    <value>Получить транслятор ARM от Google?</value>
+  </data>
+  <data name="ArmGoogleConfirm.Action" xml:space="preserve">
+    <value>Принять и скачать</value>
+  </data>
+  <data name="ArmGoogle_Notice" xml:space="preserve">
+    <value>DSA скачивает у Google образ эмулятора Android для этой версии Android и извлекает из него только транслятор ARM.
+
+• Загрузка: около 2 GB, затем удаляется.
+• Источник: {0}
+• Условия: транслятор является ПО Google и распространяется по лицензии Android SDK ({1}). Скачивая его, вы принимаете эти условия.
+• Транслятор работает со следующего запуска Android.
+
+DSA не поставляет и не передаёт транслятор.</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Title" xml:space="preserve">
+    <value>Получение транслятора ARM от Google</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Message" xml:space="preserve">
+    <value>Скачивается около 2 GB у Google и извлекается транслятор. Это займёт несколько минут.</value>
+  </data>
+  <data name="GappsHeader.Text" xml:space="preserve">
+    <value>Google Play</value>
+  </data>
+  <data name="GappsCard.Header" xml:space="preserve">
+    <value>Сервисы Google Play и Play Маркет</value>
+  </data>
+  <data name="GappsCard.Description" xml:space="preserve">
+    <value>Устанавливает LiteGapps Core, публичный пакет с сервисами Google Play, Play Маркетом и синхронизацией аккаунтов для этой версии Android.
+DSA не включает приложения Google. Применяется при следующем запуске Android.</value>
+  </data>
+  <data name="GappsInstallButton.Content" xml:space="preserve">
+    <value>Установить</value>
+  </data>
+  <data name="GappsInstallingBar.Title" xml:space="preserve">
+    <value>Установка Google Play</value>
+  </data>
+  <data name="GappsInstallingBar.Message" xml:space="preserve">
+    <value>Google Play скачивается и устанавливается. Это может занять несколько минут.</value>
+  </data>
+  <data name="GappsRestartBar.Title" xml:space="preserve">
+    <value>Перезапустите Android, чтобы применить изменение</value>
+  </data>
+  <data name="GappsRestartBar.Message" xml:space="preserve">
+    <value>Android запущен до этого изменения. Остановите Android и запустите снова, чтобы применить его к Google Play.</value>
+  </data>
+  <data name="GappsRemoveCard.Header" xml:space="preserve">
+    <value>Удалить Google Play</value>
+  </data>
+  <data name="GappsRemoveCard.Description" xml:space="preserve">
+    <value>Удаляет приложения Google с диска дополнений, начиная со следующего запуска Android.
+Приложения из Play Маркета останутся, но те, которым нужны сервисы Google Play, могут перестать работать.</value>
+  </data>
+  <data name="GappsRemoveButton.Content" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="GappsTermsCard.Header" xml:space="preserve">
+    <value>Условия Google</value>
+  </data>
+  <data name="GappsTermsCard.Description" xml:space="preserve">
+    <value>Сервисы Google Play и Play Маркет являются ПО Google и подчиняются условиям Google.
+DSA не распространяет их. Публичный пакет LiteGapps скачивается только по вашему запросу.</value>
+  </data>
+  <data name="GappsTermsLink.Content" xml:space="preserve">
+    <value>Условия использования Google</value>
+  </data>
+  <data name="GappsRegisterCard.Header" xml:space="preserve">
+    <value>Зарегистрировать это устройство в Google</value>
+  </data>
+  <data name="GappsRegisterCard.Description" xml:space="preserve">
+    <value>Этот Android не сертифицирован Google, поэтому Google может не разрешить вход, пока вы не зарегистрируете устройство.
+1. Откройте страницу регистрации и войдите в аккаунт Google.
+2. Введите Android ID этого устройства.
+3. Перезапустите Android и войдите снова.</value>
+  </data>
+  <data name="GappsRegisterLink.Content" xml:space="preserve">
+    <value>Открыть страницу регистрации</value>
+  </data>
+  <data name="GappsDeviceIdLabel.Text" xml:space="preserve">
+    <value>Android ID</value>
+  </data>
+  <data name="Gapps_NotInstalled" xml:space="preserve">
+    <value>Не установлено: в Android нет сервисов Google Play и Play Маркета.</value>
+  </data>
+  <data name="Gapps_Installed" xml:space="preserve">
+    <value>Установлено: LiteGapps Core {0} для Android {1} ({2}).</value>
+  </data>
+  <data name="Gapps_InstalledPending" xml:space="preserve">
+    <value>Установлено: LiteGapps Core {0} для Android {1} ({2}). Используется со следующего запуска Android.</value>
+  </data>
+  <data name="Gapps_RemovedPending" xml:space="preserve">
+    <value>Удалено: приложения Google исчезнут из Android при следующем запуске.</value>
+  </data>
+  <data name="Gapps_ReinstallNeeded" xml:space="preserve">
+    <value>LiteGapps Core {0} для Android {1} ({2}) от прежней версии DSA больше не используется, и Android запускается без приложений Google.
+Установите Google Play снова.</value>
+  </data>
+  <data name="Gapps_Source" xml:space="preserve">
+    <value>Скачано из LiteGapps: {0}</value>
+  </data>
+  <data name="Gapps_DeviceId" xml:space="preserve">
+    <value>Android ID: {0}</value>
+  </data>
+  <data name="Gapps_NoDeviceId" xml:space="preserve">
+    <value>Android ID появится здесь, когда Google Play будет установлен и Android запустится с ним.</value>
+  </data>
+  <data name="DeveloperHeader.Text" xml:space="preserve">
+    <value>Для разработчиков</value>
+  </data>
+  <data name="DeveloperModeCard.Header" xml:space="preserve">
+    <value>Режим разработчика</value>
+  </data>
+  <data name="DeveloperModeCard.Description" xml:space="preserve">
+    <value>Позволяет adb на этом компьютере подключаться к Android без запроса в Android через порт, доступный только этому компьютеру.
+Выключено по умолчанию. Выключите, когда закончите.</value>
+  </data>
+  <data name="AdbAutoConnectCard.Header" xml:space="preserve">
+    <value>Подключать adb автоматически</value>
+  </data>
+  <data name="AdbAutoConnectCard.Description" xml:space="preserve">
+    <value>Пока включён режим разработчика, Android виден в adb devices и Android Studio без adb connect. Включено по умолчанию.
+После adb disconnect подключение не возобновится, пока не перезапустится сервер adb.</value>
+  </data>
+  <data name="AdbAutoConnect_Off" xml:space="preserve">
+    <value>Нет подключения: режим разработчика или автоподключение выключены.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForServer" xml:space="preserve">
+    <value>Ожидание adb: Android подключится, когда adb запустится на этом компьютере.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForAndroid" xml:space="preserve">
+    <value>Ожидание Android: подключение произойдёт, когда Android запустится.</value>
+  </data>
+  <data name="AdbAutoConnect_Attached" xml:space="preserve">
+    <value>Подключено: Android есть в списке adb.</value>
+  </data>
+  <data name="AdbAutoConnect_Detached" xml:space="preserve">
+    <value>Отключено командой adb disconnect. Android подключится снова, когда перезапустится сервер adb.</value>
+  </data>
+  <data name="AdbCard.Header" xml:space="preserve">
+    <value>Подключение adb</value>
+  </data>
+  <data name="AdbCard.Description" xml:space="preserve">
+    <value>Когда режим разработчика включён и Android запущен, выполните эту команду:</value>
+  </data>
+  <data name="CopyButton.ToolTip" xml:space="preserve">
+    <value>Копировать</value>
+  </data>
+  <data name="AdbPortLabel.Text" xml:space="preserve">
+    <value>Порт</value>
+  </data>
+  <data name="ClipboardCard.Header" xml:space="preserve">
+    <value>Общий буфер обмена с Android</value>
+  </data>
+  <data name="ClipboardCard.Description" xml:space="preserve">
+    <value>Текст, скопированный в Windows, можно вставить в приложениях Android, и наоборот. Включено по умолчанию.
+Изображения остаются там, где их скопировали.</value>
+  </data>
+  <data name="FreezeCard.Header" xml:space="preserve">
+    <value>Замораживать Android при простое</value>
+  </data>
+  <data name="FreezeCard.Description" xml:space="preserve">
+    <value>По умолчанию выключено: Android в простое переходит в Doze и по-прежнему получает уведомления.
+Замороженный, он не тратит ЦП, но ничего не получает, пока вы не откроете приложение.</value>
+  </data>
+  <data name="FreezeNowCard.Header" xml:space="preserve">
+    <value>Заморозить Android сейчас</value>
+  </data>
+  <data name="FreezeNowCard.Description" xml:space="preserve">
+    <value>Останавливает все процессы в Android, пока вы снова не откроете одно из его окон. Уведомления, будильники и виджеты тоже останавливаются.</value>
+  </data>
+  <data name="FreezeNowButton.Content" xml:space="preserve">
+    <value>Заморозить</value>
+  </data>
+  <data name="MemoryLimitCard.Header" xml:space="preserve">
+    <value>Ограничение памяти</value>
+  </data>
+  <data name="MemoryLimitCard.Description" xml:space="preserve">
+    <value>Наибольший объём памяти, до которого может вырасти Android. Android берёт память только по мере необходимости и возвращает её после.
+Автоматически: вся память компьютера за вычетом того, что оставляет себе Windows. Применяется при следующем запуске Android.</value>
+  </data>
+  <data name="MemoryLimit_Auto" xml:space="preserve">
+    <value>Автоматически</value>
+  </data>
+  <data name="MemoryVmSizeCard.Header" xml:space="preserve">
+    <value>Виртуальная машина Android сейчас</value>
+  </data>
+  <data name="MemoryVmSizeCard.Description" xml:space="preserve">
+    <value>Память, которую виртуальная машина занимает на этом компьютере, и сколько из неё использует Android</value>
+  </data>
+  <data name="MemoryGuestUsedLabel.Text" xml:space="preserve">
+    <value>Использует Android</value>
+  </data>
+  <data name="MemoryBeyondGuestLabel.Text" xml:space="preserve">
+    <value>Свободно, но ещё не возвращено</value>
+  </data>
+  <data name="MemoryKernelHeader.Text" xml:space="preserve">
+    <value>Ядро Android</value>
+  </data>
+  <data name="Memory_KernelSlab" xml:space="preserve">
+    <value>Объекты ядра</value>
+  </data>
+  <data name="Memory_KernelSlabDetail" xml:space="preserve">
+    <value>Память, которую ядро держит для своих данных и не может освободить</value>
+  </data>
+  <data name="Memory_KernelStacks" xml:space="preserve">
+    <value>Стеки потоков</value>
+  </data>
+  <data name="Memory_KernelPageTables" xml:space="preserve">
+    <value>Таблицы страниц</value>
+  </data>
+  <data name="Memory_KernelVmalloc" xml:space="preserve">
+    <value>Отображения ядра (vmalloc)</value>
+  </data>
+  <data name="Memory_KernelPercpu" xml:space="preserve">
+    <value>Данные для каждого ЦП</value>
+  </data>
+  <data name="Memory_KernelUnaccounted" xml:space="preserve">
+    <value>Драйверы</value>
+  </data>
+  <data name="Memory_KernelUnaccountedDetail" xml:space="preserve">
+    <value>То, что не учитывает ни один счётчик, например буферы GPU и DMA</value>
+  </data>
+  <data name="Memory_KernelReserved" xml:space="preserve">
+    <value>Зарезервировано при загрузке</value>
+  </data>
+  <data name="Memory_KernelReservedDetail" xml:space="preserve">
+    <value>Код ядра, структуры страниц и буферы из выделенных {0}; непрерывная область {1}</value>
+  </data>
+  <data name="DiagnosticsHeader.Text" xml:space="preserve">
+    <value>Диагностика</value>
+  </data>
+  <data name="InputTraceCard.Header" xml:space="preserve">
+    <value>Трассировка ввода</value>
+  </data>
+  <data name="InputTraceCard.Description" xml:space="preserve">
+    <value>Процессы DSA записывают время каждого касания, щелчка и клавиши, чтобы измерить задержку от ввода до кадра. Выключено по умолчанию.</value>
+  </data>
+  <data name="ResizeTraceCard.Header" xml:space="preserve">
+    <value>Трассировка изменения размера</value>
+  </data>
+  <data name="ResizeTraceCard.Description" xml:space="preserve">
+    <value>Процессы DSA записывают каждый этап изменения размера окна, чтобы найти, где оно тормозит или мерцает. Выключено по умолчанию.</value>
+  </data>
+  <data name="DiagnosticsNote.Text" xml:space="preserve">
+    <value>Трассировки попадают в журналы DSA ниже и увеличивают их, поэтому включайте их только для отчёта о проблеме.
+Они действуют для всех пользователей этого компьютера, поэтому изменить их может только администратор.</value>
+  </data>
+  <data name="LogsHeader.Text" xml:space="preserve">
+    <value>Журналы</value>
+  </data>
+  <data name="UserLogsCard.Header" xml:space="preserve">
+    <value>Открыть папку с моими журналами</value>
+  </data>
+  <data name="UserLogsCard.Description" xml:space="preserve">
+    <value>Журналы вашего диспетчера окон и окон приложений.</value>
+  </data>
+  <data name="ServiceLogsCard.Header" xml:space="preserve">
+    <value>Открыть папку журналов службы (для администраторов)</value>
+  </data>
+  <data name="ServiceLogsCard.Description" xml:space="preserve">
+    <value>Журналы службы DSA и самого Android.</value>
+  </data>
+  <data name="CommandLineHeader.Text" xml:space="preserve">
+    <value>Командная строка</value>
+  </data>
+  <data name="CommandLineCard.Header" xml:space="preserve">
+    <value>Команда dsa</value>
+  </data>
+  <data name="CommandLineCard.Description" xml:space="preserve">
+    <value>Всё, что есть на этих страницах, доступно и из терминала.</value>
+  </data>
+  <data name="AboutTitle.Text" xml:space="preserve">
+    <value>О программе</value>
+  </data>
+  <data name="AboutProductCard.Header" xml:space="preserve">
+    <value>Desktop Subsystem for Android™</value>
+  </data>
+  <data name="AboutProductCard.Description" xml:space="preserve">
+    <value>Thisisthepy</value>
+  </data>
+  <data name="AboutAppVersionCard.Header" xml:space="preserve">
+    <value>Версия параметров DSA</value>
+  </data>
+  <data name="AboutServiceVersionCard.Header" xml:space="preserve">
+    <value>Версия службы DSA</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Header" xml:space="preserve">
+    <value>Версия образа Android</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Description" xml:space="preserve">
+    <value>Образ Android, который загрузится при следующем запуске. Обновления образа меняют его.</value>
+  </data>
+  <data name="AboutLicenseCard.Header" xml:space="preserve">
+    <value>Лицензии</value>
+  </data>
+  <data name="AboutLicenseCard.Description" xml:space="preserve">
+    <value>DSA распространяется по лицензии Apache License 2.0. Откройте лицензии всех компонентов, которые входят в поставку.</value>
+  </data>
+  <data name="AboutSourceCard.Header" xml:space="preserve">
+    <value>Исходный код</value>
+  </data>
+  <data name="AboutIndependent.Text" xml:space="preserve">
+    <value>Desktop Subsystem for Android является независимым проектом с открытым исходным кодом.
+Он не связан с Microsoft или Google, не одобрен и не спонсируется ими.</value>
+  </data>
+  <data name="AboutTrademark.Text" xml:space="preserve">
+    <value>Android является товарным знаком Google LLC.</value>
+  </data>
+  <data name="FolderMissingTitle" xml:space="preserve">
+    <value>Не удалось открыть папку</value>
+  </data>
+  <data name="FolderMissingBody" xml:space="preserve">
+    <value>{0} ещё не существует, или у вас нет прав на её открытие.</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>ОК</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="Install_BusyTitle" xml:space="preserve">
+    <value>Установка</value>
+  </data>
+  <data name="Install_Busy" xml:space="preserve">
+    <value>Установка {0} в Android…</value>
+  </data>
+  <data name="Install_DoneTitle" xml:space="preserve">
+    <value>Установлено</value>
+  </data>
+  <data name="Install_FailedTitle" xml:space="preserve">
+    <value>Не установлено</value>
+  </data>
+  <data name="Install_Installed" xml:space="preserve">
+    <value>Приложение {0} установлено ({1}). Откройте его из меню «Пуск».</value>
+  </data>
+  <data name="Install_Refused" xml:space="preserve">
+    <value>Приложение {0} не установлено: {1} ({2})</value>
+  </data>
+  <data name="Install_NotSent" xml:space="preserve">
+    <value>{0} не удалось передать в Android. {1}</value>
+  </data>
+  <data name="Install_NotApk" xml:space="preserve">
+    <value>Можно установить только файлы APK: {0}</value>
+  </data>
+  <data name="Install_Reason_incompatible" xml:space="preserve">
+    <value>приложение не работает в этом Android: нужен другой тип процессора, более новая версия Android или функция, которой нет на устройстве.</value>
+  </data>
+  <data name="Install_Reason_conflicting-signature" xml:space="preserve">
+    <value>приложение уже установлено и подписано другим ключом. Сначала удалите его в Android.</value>
+  </data>
+  <data name="Install_Reason_invalid-apk" xml:space="preserve">
+    <value>файл не является подписанным APK, который может прочитать Android.</value>
+  </data>
+  <data name="Install_Reason_insufficient-storage" xml:space="preserve">
+    <value>в Android нет места для приложения.</value>
+  </data>
+  <data name="Install_Reason_downgrade" xml:space="preserve">
+    <value>установлена более новая версия приложения. Сначала удалите её в Android.</value>
+  </data>
+  <data name="Install_Reason_blocked" xml:space="preserve">
+    <value>политика этого Android не разрешает это приложение.</value>
+  </data>
+  <data name="Install_Reason_other" xml:space="preserve">
+    <value>Android не установил приложение.</value>
+  </data>
+  <data name="NavWidgets.Content" xml:space="preserve">
+    <value>Виджеты</value>
+  </data>
+  <data name="WidgetsTitle.Text" xml:space="preserve">
+    <value>Виджеты</value>
+  </data>
+  <data name="WidgetsRefreshButton.Content" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="WidgetsIntro.Text" xml:space="preserve">
+    <value>Разместите на рабочем столе виджеты, которые предлагают ваши приложения Android. Android запускается при открытии этой страницы.
+• Каждый виджет получает собственное окно, под остальными окнами.
+• Нажмите и удерживайте виджет, чтобы изменить его: перетащите, чтобы переместить, и потяните за маркеры, чтобы изменить размер.
+• Щёлкните виджет правой кнопкой мыши, чтобы открыть его настройки, размеры и команду «Удалить».</value>
+  </data>
+  <data name="WidgetsErrorBar.Title" xml:space="preserve">
+    <value>Не удалось прочитать или изменить виджеты</value>
+  </data>
+  <data name="WidgetsDoneBar.Title" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="WidgetsPlacedHeader.Text" xml:space="preserve">
+    <value>На рабочем столе</value>
+  </data>
+  <data name="WidgetsPlacedNone.Text" xml:space="preserve">
+    <value>На рабочем столе пока нет виджетов.</value>
+  </data>
+  <data name="WidgetsGalleryHeader.Text" xml:space="preserve">
+    <value>Виджеты ваших приложений</value>
+  </data>
+  <data name="WidgetsGalleryNone.Text" xml:space="preserve">
+    <value>Ни одно приложение в Android не предлагает виджетов.</value>
+  </data>
+  <data name="WidgetsAddButton.Content" xml:space="preserve">
+    <value>Добавить на рабочий стол</value>
+  </data>
+  <data name="WidgetsRemoveButton.Content" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="Widgets_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Widgets_Setup" xml:space="preserve">
+    <value>запросит настройку</value>
+  </data>
+  <data name="Widgets_At" xml:space="preserve">
+    <value>Положение {0}, {1}, размер {2} × {3}</value>
+  </data>
+  <data name="Widgets_Placed" xml:space="preserve">
+    <value>{0} на рабочем столе.</value>
+  </data>
+  <data name="Widgets_Removed" xml:space="preserve">
+    <value>{0} удалён с рабочего стола.</value>
+  </data>
+  <data name="ApkWindow_Caption" xml:space="preserve">
+    <value>Установщик APK</value>
+  </data>
+  <data name="ApkWindow_Reading" xml:space="preserve">
+    <value>Чтение файла</value>
+  </data>
+  <data name="ApkWindow_Install" xml:space="preserve">
+    <value>Установить</value>
+  </data>
+  <data name="ApkWindow_Update" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="ApkWindow_Reinstall" xml:space="preserve">
+    <value>Установить снова</value>
+  </data>
+  <data name="ApkWindow_Cancel" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="ApkWindow_Close" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="ApkWindow_Open" xml:space="preserve">
+    <value>Запустить</value>
+  </data>
+  <data name="ApkWindow_AndroidChip" xml:space="preserve">
+    <value>Android {0} или новее</value>
+  </data>
+  <data name="ApkWindow_SummaryUpdate" xml:space="preserve">
+    <value>{0} уже установлено. Приложение будет обновлено с версии {1} до версии {2}. Его данные сохранятся.</value>
+  </data>
+  <data name="ApkWindow_SummaryReinstall" xml:space="preserve">
+    <value>{0} версии {1} уже установлено. Та же версия будет установлена снова. Его данные сохранятся.</value>
+  </data>
+  <data name="ApkWindow_SummaryDowngrade" xml:space="preserve">
+    <value>Установлено {0} версии {1}, а этот файл содержит более старую версию {2}. Android не ставит старую версию поверх новой.
+Чтобы использовать этот файл, сначала удалите приложение в Android.</value>
+  </data>
+  <data name="ApkWindow_SummarySignature" xml:space="preserve">
+    <value>{0} уже установлено и подписано другим ключом, чем этот файл. Чтобы защитить данные приложения, Android не разрешает его заменить.
+Чтобы использовать этот файл, сначала удалите приложение в Android.</value>
+  </data>
+  <data name="ApkWindow_FactPackage" xml:space="preserve">
+    <value>Пакет</value>
+  </data>
+  <data name="ApkWindow_FactVersion" xml:space="preserve">
+    <value>Версия</value>
+  </data>
+  <data name="ApkWindow_FactInstalled" xml:space="preserve">
+    <value>Установлено сейчас</value>
+  </data>
+  <data name="ApkWindow_FactAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="ApkWindow_FactSize" xml:space="preserve">
+    <value>Размер</value>
+  </data>
+  <data name="ApkWindow_FactAbis" xml:space="preserve">
+    <value>Процессор</value>
+  </data>
+  <data name="ApkWindow_FactSigner" xml:space="preserve">
+    <value>Подпись</value>
+  </data>
+  <data name="ApkWindow_AndroidRange" xml:space="preserve">
+    <value>{0} или новее, создано для {1}</value>
+  </data>
+  <data name="ApkWindow_VersionText" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ApkWindow_ApiLevel" xml:space="preserve">
+    <value>Уровень API {0}</value>
+  </data>
+  <data name="ApkWindow_AndroidVersion" xml:space="preserve">
+    <value>Android {0} (API {1})</value>
+  </data>
+  <data name="ApkWindow_Signer" xml:space="preserve">
+    <value>SHA-256 {1} (подпись {0})</value>
+  </data>
+  <data name="ApkWindow_Unsigned" xml:space="preserve">
+    <value>Не подписано. Android устанавливает только подписанные приложения.</value>
+  </data>
+  <data name="ApkWindow_NoPermissions" xml:space="preserve">
+    <value>Разрешения не запрашиваются.</value>
+  </data>
+  <data name="ApkWindow_Sensitive" xml:space="preserve">
+    <value>Android сначала спросит вас</value>
+  </data>
+  <data name="ApkWindow_StartingTitle" xml:space="preserve">
+    <value>Запуск Android</value>
+  </data>
+  <data name="ApkWindow_StartingDetail" xml:space="preserve">
+    <value>Android запускается один раз и затем остаётся готовым для ваших приложений.</value>
+  </data>
+  <data name="ApkWindow_CheckingTitle" xml:space="preserve">
+    <value>Проверка приложения</value>
+  </data>
+  <data name="ApkWindow_CheckingDetail" xml:space="preserve">
+    <value>Проверяется, установлено ли приложение.</value>
+  </data>
+  <data name="ApkWindow_InstallingTitle" xml:space="preserve">
+    <value>Установка {0}</value>
+  </data>
+  <data name="ApkWindow_SendingDetail" xml:space="preserve">
+    <value>Копирование приложения в Android</value>
+  </data>
+  <data name="ApkWindow_AndroidInstallingDetail" xml:space="preserve">
+    <value>Android устанавливает приложение</value>
+  </data>
+  <data name="ApkWindow_Cancelling" xml:space="preserve">
+    <value>Остановка</value>
+  </data>
+  <data name="ApkWindow_Cancelled" xml:space="preserve">
+    <value>Установка остановлена. Ничего не изменено.</value>
+  </data>
+  <data name="ApkWindow_DoneTitle" xml:space="preserve">
+    <value>Приложение {0} установлено</value>
+  </data>
+  <data name="ApkWindow_UpdatedTitle" xml:space="preserve">
+    <value>Приложение {0} обновлено</value>
+  </data>
+  <data name="ApkWindow_DoneText" xml:space="preserve">
+    <value>Запустите его сейчас или позже из меню «Пуск».</value>
+  </data>
+  <data name="ApkWindow_FailedTitle" xml:space="preserve">
+    <value>Не установлено</value>
+  </data>
+  <data name="ApkWindow_NotApkTitle" xml:space="preserve">
+    <value>Этот файл нельзя установить</value>
+  </data>
+  <data name="ApkWindow_StartFailed" xml:space="preserve">
+    <value>Android не запустился, поэтому приложение не установлено. {0}</value>
+  </data>
+  <data name="ApkWindow_NotSent" xml:space="preserve">
+    <value>Приложение не удалось передать в Android. {0}</value>
+  </data>
+  <data name="ApkWindow_ReasonWithWords" xml:space="preserve">
+    <value>{0} Сообщение Android: {1}</value>
+  </data>
+  <data name="ApkWindow_OpenFailed" xml:space="preserve">
+    <value>Не удалось открыть {0}. {1}</value>
+  </data>
+  <data name="ApkWindow_Reason_incompatible" xml:space="preserve">
+    <value>Приложение не работает в этом Android: нужен другой тип процессора, более новая версия Android или функция, которой нет на устройстве.</value>
+  </data>
+  <data name="ApkWindow_Reason_conflicting-signature" xml:space="preserve">
+    <value>Приложение уже установлено и подписано другим ключом. Сначала удалите его в Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-apk" xml:space="preserve">
+    <value>Файл не является подписанным APK, который может прочитать Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_insufficient-storage" xml:space="preserve">
+    <value>В Android нет места для приложения. Освободите место в Android и повторите попытку.</value>
+  </data>
+  <data name="ApkWindow_Reason_downgrade" xml:space="preserve">
+    <value>Установлена более новая версия приложения. Сначала удалите её в Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_blocked" xml:space="preserve">
+    <value>Политика этого Android не разрешает это приложение.</value>
+  </data>
+  <data name="ApkWindow_Reason_other" xml:space="preserve">
+    <value>Android не установил приложение.</value>
+  </data>
+  <data name="ApkWindow_AbiWarning" xml:space="preserve">
+    <value>В этом приложении есть код только для процессоров {0}, а не для процессора этого компьютера.
+Android запустит его только с пакетом трансляции ARM и может отказаться его устанавливать.</value>
+  </data>
+  <data name="ApkWindow_Abi32Warning" xml:space="preserve">
+    <value>В этом приложении есть код только для процессоров {0}.
+Транслятор ARM выполняет только 64-разрядный код ARM (arm64-v8a), поэтому Android может не установить приложение или оно не запустится.</value>
+  </data>
+  <data name="ApkWindow_LaunchFailedAfterInstall" xml:space="preserve">
+    <value>Приложение {0} установлено, но не открылось. {1}</value>
+  </data>
+  <data name="ApkWindow_LaunchWhenReady" xml:space="preserve">
+    <value>Запустить, когда будет готово</value>
+  </data>
+  <data name="NavLogs.Content" xml:space="preserve">
+    <value>Журналы</value>
+  </data>
+  <data name="LogsTitle.Text" xml:space="preserve">
+    <value>Журналы</value>
+  </data>
+  <data name="LogsNote.Text" xml:space="preserve">
+    <value>Android отправляет журнал, только пока открыта эта страница, и ничего не записывается на диск.
+Сохранение диагностики собирает всё нужное для отчёта о проблеме в один zip-файл.</value>
+  </data>
+  <data name="LogsSaveButton.Content" xml:space="preserve">
+    <value>Сохранить диагностику</value>
+  </data>
+  <data name="LogsFilter.PlaceholderText" xml:space="preserve">
+    <value>Фильтр по тегу или тексту</value>
+  </data>
+  <data name="LogsPause.Content" xml:space="preserve">
+    <value>Пауза</value>
+  </data>
+  <data name="LogsErrorBar.Title" xml:space="preserve">
+    <value>Не удалось прочитать журнал</value>
+  </data>
+  <data name="LogsStatusBar.Title" xml:space="preserve">
+    <value>Диагностика</value>
+  </data>
+  <data name="Logs_Paused" xml:space="preserve">
+    <value>Пауза. Ожидают новые строки: {0}.</value>
+  </data>
+  <data name="Logs_Saving" xml:space="preserve">
+    <value>Сбор диагностических данных. Это займёт минуту или больше.</value>
+  </data>
+  <data name="Logs_Saved" xml:space="preserve">
+    <value>Диагностические данные сохранены в {0}.</value>
+  </data>
+  <data name="Logs_SaveDialogTitle" xml:space="preserve">
+    <value>Сохранить диагностику</value>
+  </data>
+  <data name="Logs_SaveDialogFilter" xml:space="preserve">
+    <value>ZIP-архив</value>
+  </data>
+  <data name="Logs_Priority_V" xml:space="preserve">
+    <value>Подробно</value>
+  </data>
+  <data name="Logs_Priority_D" xml:space="preserve">
+    <value>Отладка</value>
+  </data>
+  <data name="Logs_Priority_I" xml:space="preserve">
+    <value>Сведения</value>
+  </data>
+  <data name="Logs_Priority_W" xml:space="preserve">
+    <value>Предупреждение</value>
+  </data>
+  <data name="Logs_Priority_E" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="Logs_Priority_F" xml:space="preserve">
+    <value>Критическая ошибка</value>
+  </data>
+  <data name="NavIdentity.Content" xml:space="preserve">
+    <value>Идентификация устройства</value>
+  </data>
+  <data name="IdentityTitle.Text" xml:space="preserve">
+    <value>Идентификация устройства</value>
+  </data>
+  <data name="IdentityIntro.Text" xml:space="preserve">
+    <value>Имена и отпечаток сборки, которые Android сообщает приложениям. Оставьте поле пустым, чтобы сохранить показанное в нём значение.
+Изменения применяются при следующем запуске Android.</value>
+  </data>
+  <data name="IdentityWarning.Title" xml:space="preserve">
+    <value>Приложения могут это заметить</value>
+  </data>
+  <data name="IdentityWarning.Message" xml:space="preserve">
+    <value>Изменение модели или отпечатка может изменить поведение приложений.
+Некоторые приложения проверяют устройство перед запуском, а проверки платежей и целостности могут не пройти.</value>
+  </data>
+  <data name="IdentityDoneBar.Title" xml:space="preserve">
+    <value>Идентификация устройства</value>
+  </data>
+  <data name="IdentitySaveButton.Content" xml:space="preserve">
+    <value>Сохранить</value>
+  </data>
+  <data name="IdentityResetButton.Content" xml:space="preserve">
+    <value>Восстановить значения по умолчанию</value>
+  </data>
+  <data name="IdentityRestartButton.Content" xml:space="preserve">
+    <value>Перезапустить Android сейчас</value>
+  </data>
+  <data name="IdentityResetConfirmTitle" xml:space="preserve">
+    <value>Сбросить идентификацию устройства?</value>
+  </data>
+  <data name="IdentityResetConfirmBody" xml:space="preserve">
+    <value>Все значения вернутся к значениям по умолчанию: данным этого компьютера или собственным значениям DSA, если компьютер их не сообщает.
+
+Это применится при следующем запуске Android.</value>
+  </data>
+  <data name="IdentityNamesHeader.Text" xml:space="preserve">
+    <value>Устройство</value>
+  </data>
+  <data name="IdentityFingerprintHeader.Text" xml:space="preserve">
+    <value>Отпечаток сборки</value>
+  </data>
+  <data name="IdentityPreview.Text" xml:space="preserve">
+    <value>Отпечаток со следующего запуска</value>
+  </data>
+  <data name="Identity_Saved" xml:space="preserve">
+    <value>Сохранено. Android будет использовать это со следующего запуска.</value>
+  </data>
+  <data name="Identity_SavedRestart" xml:space="preserve">
+    <value>Сохранено. Перезапустите Android, чтобы применить сейчас.</value>
+  </data>
+  <data name="Identity_Reset" xml:space="preserve">
+    <value>Восстановлены значения по умолчанию. Android будет использовать их со следующего запуска.</value>
+  </data>
+  <data name="Identity_ResetRestart" xml:space="preserve">
+    <value>Восстановлены значения по умолчанию. Перезапустите Android, чтобы применить их сейчас.</value>
+  </data>
+  <data name="Identity_Restarted" xml:space="preserve">
+    <value>Android снова запущен с этой идентификацией.</value>
+  </data>
+  <data name="Identity_FromComputer" xml:space="preserve">
+    <value>По умолчанию: с этого компьютера</value>
+  </data>
+  <data name="Identity_FromDsa" xml:space="preserve">
+    <value>По умолчанию: значение DSA</value>
+  </data>
+  <data name="Identity_NotSaid" xml:space="preserve">
+    <value>Компьютер этого не сообщает; Android оставляет своё значение.</value>
+  </data>
+  <data name="IdentityComputerHeader.Text" xml:space="preserve">
+    <value>С этого компьютера</value>
+  </data>
+  <data name="IdentityComputerNote.Text" xml:space="preserve">
+    <value>Эти значения берутся с компьютера и читаются при каждом запуске Android, так что новое имя компьютера появится со следующего запуска.
+Имя устройства и чип видны в настройках Android. Название модели видно только здесь.</value>
+  </data>
+  <data name="Identity_model_name" xml:space="preserve">
+    <value>Название модели</value>
+  </data>
+  <data name="Identity_model_name_Description" xml:space="preserve">
+    <value>Название, под которым продаётся компьютер (ro.product.marketname).</value>
+  </data>
+  <data name="Identity_device_name" xml:space="preserve">
+    <value>Имя устройства</value>
+  </data>
+  <data name="Identity_device_name_Description" xml:space="preserve">
+    <value>Имя компьютера, которое настройки, Bluetooth и Wi-Fi Direct показывают для устройства.</value>
+  </data>
+  <data name="Identity_soc_manufacturer" xml:space="preserve">
+    <value>Производитель чипа</value>
+  </data>
+  <data name="Identity_soc_manufacturer_Description" xml:space="preserve">
+    <value>Build.SOC_MANUFACTURER: производитель процессора компьютера.</value>
+  </data>
+  <data name="Identity_soc_model" xml:space="preserve">
+    <value>Модель чипа</value>
+  </data>
+  <data name="Identity_soc_model_Description" xml:space="preserve">
+    <value>Build.SOC_MODEL: процессор компьютера.</value>
+  </data>
+  <data name="Identity_manufacturer" xml:space="preserve">
+    <value>Производитель</value>
+  </data>
+  <data name="Identity_manufacturer_Description" xml:space="preserve">
+    <value>Build.MANUFACTURER. До 64 печатаемых символов ASCII.</value>
+  </data>
+  <data name="Identity_manufacturer_Invalid" xml:space="preserve">
+    <value>Используйте от 1 до 64 печатаемых символов ASCII без пробелов в начале и в конце.</value>
+  </data>
+  <data name="Identity_brand" xml:space="preserve">
+    <value>Бренд</value>
+  </data>
+  <data name="Identity_brand_Description" xml:space="preserve">
+    <value>Build.BRAND и первая часть отпечатка. Латинские буквы, цифры, '.', '_' и '-'.</value>
+  </data>
+  <data name="Identity_brand_Invalid" xml:space="preserve">
+    <value>Используйте до 32 латинских букв, цифр, '.', '_' или '-', начиная с буквы или цифры.</value>
+  </data>
+  <data name="Identity_model" xml:space="preserve">
+    <value>Модель</value>
+  </data>
+  <data name="Identity_model_Description" xml:space="preserve">
+    <value>Build.MODEL, имя, которое приложения показывают для этого устройства.</value>
+  </data>
+  <data name="Identity_model_Invalid" xml:space="preserve">
+    <value>Используйте от 1 до 64 печатаемых символов ASCII без пробелов в начале и в конце.</value>
+  </data>
+  <data name="Identity_device" xml:space="preserve">
+    <value>Устройство</value>
+  </data>
+  <data name="Identity_device_Description" xml:space="preserve">
+    <value>Build.DEVICE. Латинские буквы, цифры, '.', '_' и '-'.</value>
+  </data>
+  <data name="Identity_device_Invalid" xml:space="preserve">
+    <value>Используйте до 32 латинских букв, цифр, '.', '_' или '-', начиная с буквы или цифры.</value>
+  </data>
+  <data name="Identity_name" xml:space="preserve">
+    <value>Название продукта</value>
+  </data>
+  <data name="Identity_name_Description" xml:space="preserve">
+    <value>Build.PRODUCT. Латинские буквы, цифры, '.', '_' и '-'.</value>
+  </data>
+  <data name="Identity_name_Invalid" xml:space="preserve">
+    <value>Используйте до 32 латинских букв, цифр, '.', '_' или '-', начиная с буквы или цифры.</value>
+  </data>
+  <data name="Identity_characteristics" xml:space="preserve">
+    <value>Форм-фактор</value>
+  </data>
+  <data name="Identity_characteristics_Description" xml:space="preserve">
+    <value>ro.build.characteristics: tablet (макеты для больших экранов), default (телефон) или другие слова через запятую.</value>
+  </data>
+  <data name="Identity_characteristics_Invalid" xml:space="preserve">
+    <value>Используйте слова в нижнем регистре из латинских букв, цифр и '_', разделённые запятыми.</value>
+  </data>
+  <data name="Identity_fingerprint_release" xml:space="preserve">
+    <value>Выпуск</value>
+  </data>
+  <data name="Identity_fingerprint_release_Description" xml:space="preserve">
+    <value>Выпуск Android в отпечатке.</value>
+  </data>
+  <data name="Identity_fingerprint_release_Invalid" xml:space="preserve">
+    <value>Используйте от 1 до 64 латинских букв, цифр, '.', '_' или '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_id" xml:space="preserve">
+    <value>Идентификатор сборки</value>
+  </data>
+  <data name="Identity_fingerprint_id_Description" xml:space="preserve">
+    <value>Идентификатор сборки в отпечатке.</value>
+  </data>
+  <data name="Identity_fingerprint_id_Invalid" xml:space="preserve">
+    <value>Используйте от 1 до 64 латинских букв, цифр, '.', '_' или '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental" xml:space="preserve">
+    <value>Инкрементная версия</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Description" xml:space="preserve">
+    <value>Инкрементная версия сборки в отпечатке.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Invalid" xml:space="preserve">
+    <value>Используйте от 1 до 64 латинских букв, цифр, '.', '_' или '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_type" xml:space="preserve">
+    <value>Тип сборки</value>
+  </data>
+  <data name="Identity_fingerprint_type_Description" xml:space="preserve">
+    <value>user, userdebug или eng. Это указывается только в отпечатке; Android остаётся сборкой user.</value>
+  </data>
+  <data name="Identity_fingerprint_type_Invalid" xml:space="preserve">
+    <value>Используйте user, userdebug или eng.</value>
+  </data>
+  <data name="Identity_fingerprint_tags" xml:space="preserve">
+    <value>Теги</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Description" xml:space="preserve">
+    <value>Например, release-keys.</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Invalid" xml:space="preserve">
+    <value>Используйте латинские буквы, цифры, '.', '_', '-' или ','.</value>
+  </data>
+  <data name="Identity_fingerprint" xml:space="preserve">
+    <value>Отпечаток целиком</value>
+  </data>
+  <data name="Identity_fingerprint_Description" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags
+Если задан, он становится Build.FINGERPRINT независимо от частей выше.</value>
+  </data>
+  <data name="Identity_fingerprint_Invalid" xml:space="preserve">
+    <value>Запишите в виде brand/name/device:release/id/incremental:type/tags, где type: user, userdebug или eng.</value>
+  </data>
+  <data name="NavApps.Content" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
+  <data name="AppsTitle.Text" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
+  <data name="AppsRefreshButton.Content" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="AppsIntro.Text" xml:space="preserve">
+    <value>Приложения Android, установленные на этом компьютере. Android запускается при открытии этой страницы.
+Откройте приложение, измените разрешения, хранилище и уведомления в разделе «О приложении» или удалите установленное вами приложение.
+Они также перечислены в параметрах Windows в разделе «Приложения &gt; Установленные приложения».</value>
+  </data>
+  <data name="AppsErrorBar.Title" xml:space="preserve">
+    <value>Не удалось прочитать или изменить приложения</value>
+  </data>
+  <data name="AppsDoneBar.Title" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="AppsManageCard.Title" xml:space="preserve">
+    <value>Управление приложениями</value>
+  </data>
+  <data name="AppsManageCard.Description" xml:space="preserve">
+    <value>Открыть список приложений в настройках самого Android</value>
+  </data>
+  <data name="AppsInstalledHeader.Text" xml:space="preserve">
+    <value>Установленные приложения</value>
+  </data>
+  <data name="AppsSearch.PlaceholderText" xml:space="preserve">
+    <value>Поиск приложений</value>
+  </data>
+  <data name="AppsNone.Text" xml:space="preserve">
+    <value>В Android пока нет установленных приложений. Откройте файл APK, чтобы установить приложение.</value>
+  </data>
+  <data name="AppsNoMatch.Text" xml:space="preserve">
+    <value>Нет приложений, соответствующих запросу.</value>
+  </data>
+  <data name="AppsOpenButton.Content" xml:space="preserve">
+    <value>Открыть</value>
+  </data>
+  <data name="AppsInfoButton.Content" xml:space="preserve">
+    <value>О приложении</value>
+  </data>
+  <data name="AppsDesktopShortcutButton.Content" xml:space="preserve">
+    <value>Создать ярлык на рабочем столе</value>
+  </data>
+  <data name="Apps_DesktopShortcutMade" xml:space="preserve">
+    <value>Ярлык {0} создан на рабочем столе.</value>
+  </data>
+  <data name="AppsUninstallButton.Content" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="AppsUninstallConfirmTitle" xml:space="preserve">
+    <value>Удалить {0}?</value>
+  </data>
+  <data name="AppsUninstallConfirmBody" xml:space="preserve">
+    <value>{0} и данные приложения будут удалены из Android.
+
+Это действие нельзя отменить.</value>
+  </data>
+  <data name="Apps_Count" xml:space="preserve">
+    <value>Приложений: {0}</value>
+  </data>
+  <data name="Apps_CountMatching" xml:space="preserve">
+    <value>Приложений: {0} из {1}</value>
+  </data>
+  <data name="Apps_Version" xml:space="preserve">
+    <value>Версия {0}</value>
+  </data>
+  <data name="Apps_Installed" xml:space="preserve">
+    <value>Установлено {0}</value>
+  </data>
+  <data name="Apps_System" xml:space="preserve">
+    <value>Часть Android</value>
+  </data>
+  <data name="Apps_SystemTip" xml:space="preserve">
+    <value>Это приложение входит в Android, и его нельзя удалить.</value>
+  </data>
+  <data name="Apps_Uninstalled" xml:space="preserve">
+    <value>Приложение {0} удалено.</value>
+  </data>
+  <data name="Apps_NotUninstalled" xml:space="preserve">
+    <value>Приложение {0} не удалено: {1} ({2})</value>
+  </data>
+  <data name="Apps_Refused_not-installed" xml:space="preserve">
+    <value>оно больше не установлено</value>
+  </data>
+  <data name="Apps_Refused_system-app" xml:space="preserve">
+    <value>оно входит в Android</value>
+  </data>
+  <data name="Apps_Refused_blocked" xml:space="preserve">
+    <value>Android не разрешает это, так как приложение является администратором устройства или его защищает политика</value>
+  </data>
+  <data name="Apps_Refused_other" xml:space="preserve">
+    <value>Android не смог его удалить</value>
+  </data>
+  <data name="UninstallWindow_Caption" xml:space="preserve">
+    <value>Удаление приложения Android</value>
+  </data>
+  <data name="UninstallWindow_Version" xml:space="preserve">
+    <value>Версия {0}</value>
+  </data>
+  <data name="UninstallWindow_Close" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="UninstallWindow_Busy" xml:space="preserve">
+    <value>Удаление {0}</value>
+  </data>
+  <data name="UninstallWindow_BusyDetail" xml:space="preserve">
+    <value>Приложение и его данные удаляются из Android. Если Android не запущен, сначала он запустится.</value>
+  </data>
+  <data name="UninstallWindow_DoneTitle" xml:space="preserve">
+    <value>Удалено</value>
+  </data>
+  <data name="UninstallWindow_DoneText" xml:space="preserve">
+    <value>Приложение {0} удалено из Android.</value>
+  </data>
+  <data name="UninstallWindow_FailedTitle" xml:space="preserve">
+    <value>Не удалено</value>
+  </data>
+  <data name="UninstallWindow_Refused" xml:space="preserve">
+    <value>Приложение {0} не удалено: {1}.</value>
+  </data>
+  <data name="UninstallWindow_RefusedDetail" xml:space="preserve">
+    <value>Приложение {0} не удалено: {1} ({2}).</value>
+  </data>
+  <data name="NavBackground.Content" xml:space="preserve">
+    <value>Работают в фоновом режиме</value>
+  </data>
+  <data name="BackgroundTitle.Text" xml:space="preserve">
+    <value>Работают в фоновом режиме</value>
+  </data>
+  <data name="BackgroundRefreshButton.Content" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="BackgroundIntro.Text" xml:space="preserve">
+    <value>Эти приложения Android работают и после закрытия окон, чтобы играть музыку, скачивать файлы, держать VPN или делать другую работу.
+У каждого есть значок в области уведомлений панели задач. Остановка приложения завершает его работу и освобождает память.</value>
+  </data>
+  <data name="BackgroundErrorBar.Title" xml:space="preserve">
+    <value>Не удалось прочитать или изменить приложения, работающие в фоновом режиме</value>
+  </data>
+  <data name="BackgroundDoneBar.Title" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="BackgroundAppsHeader.Text" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
+  <data name="BackgroundNone.Text" xml:space="preserve">
+    <value>Нет приложений, работающих в фоновом режиме.</value>
+  </data>
+  <data name="BackgroundOpenButton.Content" xml:space="preserve">
+    <value>Открыть</value>
+  </data>
+  <data name="BackgroundStopButton.Content" xml:space="preserve">
+    <value>Остановить</value>
+  </data>
+  <data name="BackgroundStoppingHeader.Text" xml:space="preserve">
+    <value>Остановка приложений</value>
+  </data>
+  <data name="BackgroundAskCard.Header" xml:space="preserve">
+    <value>Спрашивать перед остановкой приложения из области уведомлений</value>
+  </data>
+  <data name="BackgroundAskCard.Description" xml:space="preserve">
+    <value>Включите снова, если вы выбрали больше не спрашивать.</value>
+  </data>
+  <data name="Background_Playing" xml:space="preserve">
+    <value>Воспроизводится: {0}</value>
+  </data>
+  <data name="Background_Paused" xml:space="preserve">
+    <value>Пауза: {0}</value>
+  </data>
+  <data name="Background_Stopped" xml:space="preserve">
+    <value>Приложение {0} остановлено.</value>
+  </data>
+  <data name="AppsResizable.Content" xml:space="preserve">
+    <value>Изменяемый размер</value>
+  </data>
+  <data name="AppsResizable.ToolTip" xml:space="preserve">
+    <value>Можно ли изменять размер окон этого приложения и разворачивать их. Если выключено, каждое окно сохраняет размер, с которым открылось.</value>
+  </data>
+  <data name="AppsStartSize.ToolTip" xml:space="preserve">
+    <value>Размер, с которым открываются окна этого приложения</value>
+  </data>
+  <data name="Apps_StartSize_Auto" xml:space="preserve">
+    <value>Открывается в размере, который выберет Android</value>
+  </data>
+  <data name="Apps_StartSize_PhonePortrait" xml:space="preserve">
+    <value>Телефон, книжная ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_PhoneLandscape" xml:space="preserve">
+    <value>Телефон, альбомная ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletPortrait" xml:space="preserve">
+    <value>Планшет, книжная ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletLandscape" xml:space="preserve">
+    <value>Планшет, альбомная ({0} × {1})</value>
+  </data>
+  <data name="Apps_WindowChanged" xml:space="preserve">
+    <value>Окна {0} будут следовать новым параметрам, начиная со следующего открытого окна.</value>
+  </data>
+  <data name="AppsDpiScaling.Name" xml:space="preserve">
+    <value>Масштабирование на другом мониторе</value>
+  </data>
+  <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
+    <value>Кто масштабирует это приложение, когда его окно переходит на монитор с другим масштабом.
+• Приложение: при перетаскивании окно масштабирует DSA. Когда вы отпустите его, приложение перерисуется в новом масштабе с чётким текстом: Android пересоздаёт экран, сохраняя состояние.
+• Система: приложение сохраняет свой масштаб, а DSA масштабирует окно до того же физического размера. Приложение не пересоздаётся. Текст может быть немного размытым.
+• Автоматически: «Система» для приложений, которые ломаются от смены масштаба на ходу, например YouTube; «Приложение» для остальных.</value>
+  </data>
+  <data name="Apps_DpiScaling_Auto" xml:space="preserve">
+    <value>Масштабирование: автоматически</value>
+  </data>
+  <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
+    <value>Масштабирование: система (рекомендуется для этого приложения)</value>
+  </data>
+  <data name="Apps_DpiScaling_App" xml:space="preserve">
+    <value>Масштабирует: приложение</value>
+  </data>
+  <data name="Apps_DpiScaling_System" xml:space="preserve">
+    <value>Масштабирует: система</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
+    <value>Масштабирует: система (принудительно)</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
+    <value>Масштабирует: система (принудительно), пока недоступно</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
+    <value>«Система (принудительно)» передаёт приложению новый масштаб без перезапуска, даже если оно не заявляет, что умеет его обрабатывать.
+Пока недоступно: нужно изменение фреймворка Android, которого нет в этой сборке, поэтому сейчас работает как «Система».</value>
+  </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>Во весь экран</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>Где показывается это приложение при явном запросе полного экрана, например кнопкой видеоплеера. F11 всегда переключает полный экран.</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>Панели скрыты</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>Где показывается это приложение, когда оно скрывает панели без запроса полного экрана, как лента коротких видео.</value>
+  </data>
+  <data name="Apps_FullScreen_Default" xml:space="preserve">
+    <value>Как по умолчанию</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>Во весь экран</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>Внутри окна</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>Полный экран в приложениях</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>Где показывается запрос приложения на полный экран, например кнопка в видео. Во весь экран строка заголовка появляется у верхнего края. Выбор для приложения на странице «Приложения» важнее.</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>Приложения, скрывающие панели</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>Где показывается приложение, когда оно только скрывает панели, как лента коротких видео.</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>Во весь экран</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>Внутри окна</value>
+  </data>
+  <data name="NavNetwork.Content" xml:space="preserve">
+    <value>Сеть</value>
+  </data>
+  <data name="NetworkTitle.Text" xml:space="preserve">
+    <value>Сеть</value>
+  </data>
+  <data name="NetworkStatusCard.Header" xml:space="preserve">
+    <value>Сеть Android</value>
+  </data>
+  <data name="NetworkRefreshButton.Content" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="Network_ModeNat" xml:space="preserve">
+    <value>Подключено через этот компьютер (NAT). Приложения Android видят это как Wi-Fi без оплаты трафика.</value>
+  </data>
+  <data name="Network_ModeAdvanced" xml:space="preserve">
+    <value>Подключено к сети этого компьютера как отдельное устройство (расширенная сеть).</value>
+  </data>
+  <data name="Network_ModeOff" xml:space="preserve">
+    <value>Android не запущен, поэтому у него пока нет сети.</value>
+  </data>
+  <data name="Network_ModeUnknown" xml:space="preserve">
+    <value>Служба DSA не сообщает о сети. Обновите DSA, чтобы увидеть сведения.</value>
+  </data>
+  <data name="Network_None" xml:space="preserve">
+    <value>Нет</value>
+  </data>
+  <data name="Network_DnsHost" xml:space="preserve">
+    <value>Отвечает резолвер DNS этого компьютера, поэтому его файл hosts, VPN и фильтры DNS действуют для приложений Android.</value>
+  </data>
+  <data name="Network_DnsFallback" xml:space="preserve">
+    <value>Резолвер DNS этого компьютера не отвечает, поэтому Android обращается к DNS-серверам сети: {0}</value>
+  </data>
+  <data name="NetworkAddressLabel.Text" xml:space="preserve">
+    <value>Адрес</value>
+  </data>
+  <data name="NetworkDnsLabel.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="NetworkGatewayLabel.Text" xml:space="preserve">
+    <value>Шлюз</value>
+  </data>
+  <data name="NetworkProblemBar.Title" xml:space="preserve">
+    <value>Расширенная сеть не используется</value>
+  </data>
+  <data name="NetworkAdvancedHeader.Text" xml:space="preserve">
+    <value>Дополнительно</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Header" xml:space="preserve">
+    <value>Расширенная сеть</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Description" xml:space="preserve">
+    <value>Android входит в локальную сеть как отдельное устройство: другие устройства и приложения Android видят друг друга. Выключено по умолчанию.
+Программы на этом компьютере всегда могут обратиться к серверу в Android по адресу выше.</value>
+  </data>
+  <data name="NetworkRestartBar.Title" xml:space="preserve">
+    <value>Перезапустите Android, чтобы применить</value>
+  </data>
+  <data name="NetworkRestartBar.Message" xml:space="preserve">
+    <value>Изменение применится при следующем запуске Android. Остановите Android на странице «Общие», затем откройте приложение.</value>
+  </data>
+  <data name="NetworkCertificatesHeader.Text" xml:space="preserve">
+    <value>Доверенные сертификаты</value>
+  </data>
+  <data name="HostCertificatesCard.Header" xml:space="preserve">
+    <value>Использовать корневые сертификаты, добавленные на этот компьютер</value>
+  </data>
+  <data name="HostCertificatesCard.Description" xml:space="preserve">
+    <value>Приложения Android доверяют добавленным на компьютер корневым сертификатам, например компании или средства защиты. Включено по умолчанию.
+Корневые сертификаты, входящие в Windows, не показываются. Изменение применяется сразу.</value>
+  </data>
+  <data name="CertificatesNone.Text" xml:space="preserve">
+    <value>На этом компьютере не найдено добавленных корневых сертификатов.</value>
+  </data>
+  <data name="Certificate_IssuedBy" xml:space="preserve">
+    <value>Кем выдан: {0}</value>
+  </data>
+  <data name="Certificate_SourceMachine" xml:space="preserve">
+    <value>Доверенные корневые центры сертификации этого компьютера</value>
+  </data>
+  <data name="Certificate_SourceMachineGroupPolicy" xml:space="preserve">
+    <value>Доверенные корневые центры сертификации этого компьютера, заданы групповой политикой</value>
+  </data>
+  <data name="Certificate_SourceMachineEnterprise" xml:space="preserve">
+    <value>Доверенные корневые центры сертификации этого компьютера, заданы вашей организацией</value>
+  </data>
+  <data name="Certificate_SourceUser" xml:space="preserve">
+    <value>Ваши доверенные корневые центры сертификации</value>
+  </data>
+  <data name="Certificate_SourceUserGroupPolicy" xml:space="preserve">
+    <value>Ваши доверенные корневые центры сертификации, заданы групповой политикой</value>
+  </data>
+  <data name="Certificate_SourceAdmin" xml:space="preserve">
+    <value>Добавлен администратором этого компьютера</value>
+  </data>
+  <data name="Certificate_SourceSystem" xml:space="preserve">
+    <value>Добавлен в системное хранилище сертификатов</value>
+  </data>
+  <data name="BackupHeader.Text" xml:space="preserve">
+    <value>Резервное копирование</value>
+  </data>
+  <data name="BackupUnavailableBar.Title" xml:space="preserve">
+    <value>Резервные копии сейчас недоступны</value>
+  </data>
+  <data name="BackupErrorBar.Title" xml:space="preserve">
+    <value>Не получилось</value>
+  </data>
+  <data name="BackupResultBar.Title" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="BackupCard.Header" xml:space="preserve">
+    <value>Резервное копирование данных приложений</value>
+  </data>
+  <data name="BackupCard.Description" xml:space="preserve">
+    <value>Android создаёт резервные копии данных приложений в вашей папке пользователя, шифруя их ключом, который Windows хранит для вас.
+Восстановите их после сброса данных или на другом компьютере с помощью ключа восстановления.</value>
+  </data>
+  <data name="BackupNowButton.Content" xml:space="preserve">
+    <value>Создать копию сейчас</value>
+  </data>
+  <data name="BackupRestoreButton.Content" xml:space="preserve">
+    <value>Восстановить</value>
+  </data>
+  <data name="BackupRestoreConfirm.Title" xml:space="preserve">
+    <value>Восстановить данные приложений из резервной копии?</value>
+  </data>
+  <data name="BackupRestoreConfirm.Action" xml:space="preserve">
+    <value>Восстановить</value>
+  </data>
+  <data name="RecoveryKeyCard.Header" xml:space="preserve">
+    <value>Ключ восстановления</value>
+  </data>
+  <data name="RecoveryKeyCard.Description" xml:space="preserve">
+    <value>Ключ восстановления открывает резервную копию на другом компьютере или после переустановки Windows.
+Без него копию может прочитать только эта учётная запись Windows на этом компьютере.</value>
+  </data>
+  <data name="RecoveryKeyShowButton.Content" xml:space="preserve">
+    <value>Показать ключ восстановления</value>
+  </data>
+  <data name="RecoveryKeyHideButton.Content" xml:space="preserve">
+    <value>Скрыть</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Header" xml:space="preserve">
+    <value>Использовать ключ восстановления</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Description" xml:space="preserve">
+    <value>Чтобы восстановить копию с другого компьютера, скопируйте его папку DSA Backup в папку пользователя и введите её ключ восстановления.</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Placeholder" xml:space="preserve">
+    <value>Ключ восстановления</value>
+  </data>
+  <data name="UseRecoveryKeyButton.Content" xml:space="preserve">
+    <value>Использовать ключ</value>
+  </data>
+  <data name="Backup_NoService" xml:space="preserve">
+    <value>Служба DSA не сообщила состояние резервной копии. Откройте эту страницу снова чуть позже.</value>
+  </data>
+  <data name="Backup_Unavailable" xml:space="preserve">
+    <value>Папка резервных копий или её ключ сейчас недоступны.</value>
+  </data>
+  <data name="Backup_Folder" xml:space="preserve">
+    <value>Папка: {0}</value>
+  </data>
+  <data name="Backup_Last" xml:space="preserve">
+    <value>Последняя копия: {0}</value>
+  </data>
+  <data name="Backup_Never" xml:space="preserve">
+    <value>никогда</value>
+  </data>
+  <data name="Backup_Apps" xml:space="preserve">
+    <value>Приложений в копии: {0} ({1})</value>
+  </data>
+  <data name="Backup_LastError" xml:space="preserve">
+    <value>Последняя проблема: {0}</value>
+  </data>
+  <data name="Backup_Done" xml:space="preserve">
+    <value>Сохранены данные приложений: {0}.</value>
+  </data>
+  <data name="Backup_DoneSome" xml:space="preserve">
+    <value>Сохранены данные приложений: {0}; не удалось сохранить: {1}.</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>Восстановлены данные приложений: {0}, установлено приложений: {1}.</value>
+  </data>
+  <data name="Backup_RestoredSome" xml:space="preserve">
+    <value>Восстановлены данные приложений: {0}, установлено приложений: {1}; не удалось восстановить: {2}.</value>
+  </data>
+  <data name="Backup_RestoreWarning" xml:space="preserve">
+    <value>Данные каждого приложения из копии заменят его текущие данные.
+
+• Отсутствующие приложения будут установлены снова.
+• Android запустится, если он не запущен.</value>
+  </data>
+  <data name="Backup_KeyAdvice" xml:space="preserve">
+    <value>Запишите ключ или храните его в диспетчере паролей вне этого компьютера. Любой, у кого есть ключ и ваша папка копий, может прочитать копию.</value>
+  </data>
+  <data name="Backup_KeyEmpty" xml:space="preserve">
+    <value>Сначала введите ключ восстановления.</value>
+  </data>
+  <data name="Backup_KeyUsed" xml:space="preserve">
+    <value>Ключ восстановления сохранён как ваш ключ резервного копирования. Теперь здесь можно восстановить папку копий, созданную с ним.</value>
+  </data>
+  <data name="BackupSwitchCard.Header" xml:space="preserve">
+    <value>Резервное копирование данных приложений на этот компьютер</value>
+  </data>
+  <data name="BackupSwitchCard.Description" xml:space="preserve">
+    <value>Хранит на компьютере вторую зашифрованную копию данных приложений Android для восстановления после сброса или на другом компьютере.
+Выключено, пока вы не включите.</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>Резервное копирование выключено. Копии не создаются, и данные приложений не хранятся на этом компьютере.</value>
+  </data>
+  <data name="Backup_OffKept" xml:space="preserve">
+    <value>Резервное копирование выключено. Прежние копии приложений ({0}, {1}) по-прежнему хранятся в папке DSA Backup.</value>
+  </data>
+  <data name="Backup_DeleteQuestion" xml:space="preserve">
+    <value>На этом компьютере по-прежнему хранятся копии приложений ({0}, {1}).
+
+Удалить их вместе с ключом или оставить для восстановления позже?</value>
+  </data>
+  <data name="BackupOffConfirm.Title" xml:space="preserve">
+    <value>Выключить резервное копирование</value>
+  </data>
+  <data name="BackupOffConfirm.Delete" xml:space="preserve">
+    <value>Удалить копии</value>
+  </data>
+  <data name="BackupOffConfirm.Keep" xml:space="preserve">
+    <value>Оставить</value>
+  </data>
+  <data name="Backup_TurnedOn" xml:space="preserve">
+    <value>Резервное копирование включено. С этого момента Android сохраняет данные приложений на этот компьютер.</value>
+  </data>
+  <data name="Backup_TurnedOff" xml:space="preserve">
+    <value>Резервное копирование выключено. Созданные копии сохранены.</value>
+  </data>
+  <data name="Backup_TurnedOffDeleted" xml:space="preserve">
+    <value>Резервное копирование выключено, копии и их ключ удалены.</value>
+  </data>
+  <data name="KeyProtectionCard.Header" xml:space="preserve">
+    <value>Защита ключей Android</value>
+  </data>
+  <data name="KeyProtection_None" xml:space="preserve">
+    <value>Ключи Android получат защиту при первом запуске Android.</value>
+  </data>
+  <data name="KeyProtection_Tpm" xml:space="preserve">
+    <value>Запечатаны TPM этого компьютера. Копия диска Android не откроет ключи приложений или зашифрованное хранилище Android в другом месте.</value>
+  </data>
+  <data name="KeyProtection_Dpapi" xml:space="preserve">
+    <value>Хранятся Windows только для вашей учётной записи: на компьютере нет рабочего TPM. Без неё копия диска Android не откроет ключи.
+Когда TPM заработает, DSA запечатает ключи с его помощью.</value>
+  </data>
+  <data name="KeyProtection_Hardware" xml:space="preserve">
+    <value>Запечатаны: {0}.</value>
+  </data>
+  <data name="KeyProtection_Store" xml:space="preserve">
+    <value>Хранятся: {0}.</value>
+  </data>
+  <data name="KeyProtection_Why" xml:space="preserve">
+    <value>Почему не TPM: {0}</value>
+  </data>
+  <data name="KeyProblemBar.Title" xml:space="preserve">
+    <value>Не удалось открыть ключи Android</value>
+  </data>
+  <data name="ResetDataHeader.Text" xml:space="preserve">
+    <value>Сброс</value>
+  </data>
+  <data name="ResetDataCard.Header" xml:space="preserve">
+    <value>Сбросить данные Android</value>
+  </data>
+  <data name="ResetDataCard.Description" xml:space="preserve">
+    <value>Удаляет все установленные вами приложения, учётные записи и данные приложений, и Android запускается как после первой установки.
+Образ Android и эти параметры сохраняются.</value>
+  </data>
+  <data name="ResetDataButton.Content" xml:space="preserve">
+    <value>Сбросить</value>
+  </data>
+  <data name="ResetDataConfirm.Title" xml:space="preserve">
+    <value>Сбросить данные Android?</value>
+  </data>
+  <data name="ResetDataConfirm.Action" xml:space="preserve">
+    <value>Сбросить</value>
+  </data>
+  <data name="ResetData_Warning" xml:space="preserve">
+    <value>Из Android будут удалены:
+• все установленные вами приложения
+• учётные записи, в которые вы вошли
+• данные всех приложений
+
+Android сейчас остановится, а при следующем запуске будет как после первой установки. Образ Android и параметры DSA сохранятся.
+
+Это действие нельзя отменить.</value>
+  </data>
+  <data name="ResetDoneBar.Title" xml:space="preserve">
+    <value>Данные Android сброшены</value>
+  </data>
+  <data name="ResetDoneBar.Message" xml:space="preserve">
+    <value>Следующее открытое приложение запустит Android в состоянии первой установки.</value>
+  </data>
+  <data name="Toggle.On" xml:space="preserve">
+    <value>Вкл.</value>
+  </data>
+  <data name="Toggle.Off" xml:space="preserve">
+    <value>Откл.</value>
+  </data>
+  <data name="AndroidRunningHeader.Text" xml:space="preserve">
+    <value>Работает сейчас</value>
+  </data>
+  <data name="Android_Major" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="Android_Unknown" xml:space="preserve">
+    <value>Неизвестно</value>
+  </data>
+  <data name="Android_Supported" xml:space="preserve">
+    <value>Поддерживаемые версии: Android {0}</value>
+  </data>
+  <data name="Android_Switching" xml:space="preserve">
+    <value>Выбран Android {0}. Он скачивается сейчас и будет использоваться при следующем запуске Android.</value>
+  </data>
+  <data name="AndroidSwitchingBar.Title" xml:space="preserve">
+    <value>Смена версии Android</value>
+  </data>
+  <data name="AndroidBuildCard.Header" xml:space="preserve">
+    <value>Сборка</value>
+  </data>
+  <data name="AndroidPatchCard.Header" xml:space="preserve">
+    <value>Уровень исправлений безопасности</value>
+  </data>
+  <data name="AndroidChooseHeader.Text" xml:space="preserve">
+    <value>Версия Android</value>
+  </data>
+  <data name="AndroidChooseCard.Header" xml:space="preserve">
+    <value>Используемая версия</value>
+  </data>
+  <data name="AndroidChooseCard.Description" xml:space="preserve">
+    <value>DSA поддерживает две последние версии Android. Некоторые приложения работают только в одной из них.</value>
+  </data>
+  <data name="Android_ChoiceLatest" xml:space="preserve">
+    <value>Всегда новейшая (сейчас Android {0})</value>
+  </data>
+  <data name="Android_ChoiceMajor" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="AndroidApplyButton.Content" xml:space="preserve">
+    <value>Изменить</value>
+  </data>
+  <data name="AndroidChooseNote.Text" xml:space="preserve">
+    <value>Все пользователи этого компьютера используют одну версию Android, поэтому для её смены нужны права администратора.
+Выбранная версия получает обновления безопасности. Когда её поддержка закончится, DSA перейдёт на следующую версию и сохранит приложения.</value>
+  </data>
+  <data name="AndroidUpConfirm.Title" xml:space="preserve">
+    <value>Перейти на более новый Android?</value>
+  </data>
+  <data name="AndroidUpConfirm.Body" xml:space="preserve">
+    <value>Android {0} будет скачан и использован со следующего запуска Android. Приложения и их данные перейдут вместе с ним.
+
+Возврат назад позже удалит данные.</value>
+  </data>
+  <data name="AndroidDownConfirm.Title" xml:space="preserve">
+    <value>Стереть данные Android, чтобы перейти на более старую версию?</value>
+  </data>
+  <data name="AndroidDownConfirm.Action" xml:space="preserve">
+    <value>Стереть данные и изменить</value>
+  </data>
+  <data name="Android_DownWarning" xml:space="preserve">
+    <value>Android {0} старее работающего сейчас Android {1} и не может читать данные, записанные более новой версией.
+
+Переход сотрёт данные Android всех пользователей этого компьютера:
+• все установленные ими приложения
+• учётные записи, в которые они вошли
+• данные всех приложений
+
+Затем Android каждого пользователя запустится как после первой установки. Параметры DSA сохранятся.
+
+Это действие нельзя отменить.</value>
+  </data>
+  <data name="ApkWindow_AbiWarningTitle" xml:space="preserve">
+    <value>Это приложение может не работать на этом компьютере</value>
+  </data>
+  <data name="ApkWindow_InstalledTitle" xml:space="preserve">
+    <value>Уже установлено</value>
+  </data>
+  <data name="ApkWindow_DowngradeTitle" xml:space="preserve">
+    <value>Установлена более новая версия</value>
+  </data>
+  <data name="ApkWindow_SignatureTitle" xml:space="preserve">
+    <value>Подписано другим ключом</value>
+  </data>
+  <data name="AppsRunAsArm.Content" xml:space="preserve">
+    <value>Запускать как ARM</value>
+  </data>
+  <data name="Apps_RunAsArm_system-app" xml:space="preserve">
+    <value>Приложения, входящие в Android, работают так, как их установил Android.</value>
+  </data>
+  <data name="Apps_RunAsArm_no-arm-libraries" xml:space="preserve">
+    <value>Ни один APK этого приложения на устройстве не содержит его код ARM.</value>
+  </data>
+  <data name="Apps_RunAsArm_translation-off" xml:space="preserve">
+    <value>Трансляция ARM не включена. Включите её в разделе «Приложения для ARM» и перезапустите Android.</value>
+  </data>
+  <data name="Apps_RunAsArm_arm-only" xml:space="preserve">
+    <value>В этом приложении есть только код ARM, поэтому оно всегда работает как ARM.</value>
+  </data>
+  <data name="Apps_RunAsArm_unknown" xml:space="preserve">
+    <value>Эта версия DSA не может определить, может ли приложение работать как ARM.</value>
+  </data>
+  <data name="AppsRunAsArmEraseTitle" xml:space="preserve">
+    <value>Стереть данные {0}?</value>
+  </data>
+  <data name="AppsRunAsArmEraseBody" xml:space="preserve">
+    <value>Android не может изменить способ запуска {0}, сохранив его данные.
+
+Повторная установка сотрёт его данные: входы в аккаунты, настройки и файлы, которые приложение хранит для себя.</value>
+  </data>
+  <data name="AppsRunAsArmEraseButton" xml:space="preserve">
+    <value>Стереть и установить снова</value>
+  </data>
+  <data name="Apps_RunAsArmKept" xml:space="preserve">
+    <value>Приложение {0} оставлено как было, вместе с данными.</value>
+  </data>
+  <data name="Apps_RunAsArmOn" xml:space="preserve">
+    <value>Приложение {0} теперь работает как ARM.</value>
+  </data>
+  <data name="Apps_RunAsArmOff" xml:space="preserve">
+    <value>Приложение {0} теперь выполняет свой код x86_64.</value>
+  </data>
+  <data name="Apps_RunAsArmNotChanged" xml:space="preserve">
+    <value>Приложение {0} не установлено снова: {1} ({2})</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_not-installed" xml:space="preserve">
+    <value>оно больше не установлено</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_system-app" xml:space="preserve">
+    <value>оно входит в Android</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_no-libraries" xml:space="preserve">
+    <value>его APK на устройстве не содержат нужного для этого кода</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_translation-off" xml:space="preserve">
+    <value>трансляция ARM не включена</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_data-would-be-erased" xml:space="preserve">
+    <value>его данные были бы стёрты</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_other" xml:space="preserve">
+    <value>Android отказал</value>
+  </data>
+  <data name="ApkWindow_BundleTitle" xml:space="preserve">
+    <value>Пакет из разделённых APK</value>
+  </data>
+  <data name="ApkWindow_BundleSummary" xml:space="preserve">
+    <value>{0} состоит из нескольких APK. Нужные этому компьютеру ({1}) устанавливаются вместе, всего {2}.</value>
+  </data>
+  <data name="ApkWindow_BundleSummaryObb" xml:space="preserve">
+    <value>{0} состоит из нескольких APK. Нужные этому компьютеру ({1}) устанавливаются вместе с файлами расширения, всего {2}.</value>
+  </data>
+  <data name="ApkWindow_FactApks" xml:space="preserve">
+    <value>Файлы APK</value>
+  </data>
+  <data name="ApkWindow_ApksValue" xml:space="preserve">
+    <value>{0} (основной и разделённых: {1})</value>
+  </data>
+  <data name="ApkWindow_FactObbs" xml:space="preserve">
+    <value>Файлы расширения</value>
+  </data>
+  <data name="Install_Reason_app-bundle" xml:space="preserve">
+    <value>это Android App Bundle, предназначенный для загрузки в магазин приложений. Скачайте приложение как APK или пакет .xapk, .apks или .apkm.</value>
+  </data>
+  <data name="Install_Reason_encrypted-bundle" xml:space="preserve">
+    <value>пакет зашифрован, поэтому его APK нельзя прочитать. Скачайте приложение как APK или как более новый пакет.</value>
+  </data>
+  <data name="Install_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>разделённый APK из пакета подписан другим ключом, чем основной APK, поэтому Android его отклонит.</value>
+  </data>
+  <data name="Install_Reason_invalid-bundle" xml:space="preserve">
+    <value>пакет не является одним приложением, которое может установить Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_app-bundle" xml:space="preserve">
+    <value>Это Android App Bundle, предназначенный для загрузки в магазин приложений. Скачайте приложение как APK или пакет .xapk, .apks или .apkm.</value>
+  </data>
+  <data name="ApkWindow_Reason_encrypted-bundle" xml:space="preserve">
+    <value>Пакет зашифрован, поэтому его APK нельзя прочитать. Скачайте приложение как APK или как более новый пакет.</value>
+  </data>
+  <data name="ApkWindow_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>Разделённый APK из пакета подписан другим ключом, чем основной APK, поэтому Android его отклонит.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-bundle" xml:space="preserve">
+    <value>Пакет не является одним приложением, которое может установить Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_translation-off" xml:space="preserve">
+    <value>Приложение работает только как код ARM (arm64-v8a), а трансляция ARM не включена.
+Включите её в разделе «Приложения для ARM», перезапустите Android и установите приложение снова.</value>
+  </data>
+  <data name="UpdatesAndroidHeader.Text" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="UpdatesProgramHeader.Text" xml:space="preserve">
+    <value>DSA</value>
+  </data>
+  <data name="AndroidFollowsCard.Header" xml:space="preserve">
+    <value>Отслеживаемая версия</value>
+  </data>
+  <data name="Android_FollowsLatest" xml:space="preserve">
+    <value>Новейшая поддерживаемая версия (сейчас Android {0})</value>
+  </data>
+  <data name="Android_FollowsMajor" xml:space="preserve">
+    <value>Android {0} и его обновления безопасности</value>
+  </data>
+  <data name="AndroidUpdateCard.Header" xml:space="preserve">
+    <value>Обновление Android</value>
+  </data>
+  <data name="Android_UpToDate" xml:space="preserve">
+    <value>Обновлений Android нет. DSA проверяет их каждый день и перезапускает Android с обновлением, когда не открыто ни одно окно приложения.</value>
+  </data>
+  <data name="AndroidCheckButton.Content" xml:space="preserve">
+    <value>Проверить сейчас</value>
+  </data>
+  <data name="Android_RestartPending" xml:space="preserve">
+    <value>Android {0} скачан. Перезапустите Android, чтобы применить его сейчас.</value>
+  </data>
+  <data name="AndroidRestartButton.Content" xml:space="preserve">
+    <value>Перезапустить сейчас</value>
+  </data>
+  <data name="AndroidRestartConfirm.Title" xml:space="preserve">
+    <value>Перезапустить Android сейчас?</value>
+  </data>
+  <data name="AndroidRestartConfirm.Body" xml:space="preserve">
+    <value>Android перезапустится в версии Android {0}.
+
+Его окна приложений закроются. Откройте приложения снова, когда он запустится.</value>
+  </data>
+  <data name="ImageAutoRestartCard.Header" xml:space="preserve">
+    <value>Перезапускать Android для обновлений автоматически</value>
+  </data>
+  <data name="ImageAutoRestartCard.Description" xml:space="preserve">
+    <value>Сразу перезапускает Android с загруженным обновлением, если нет открытых окон приложений. Иначе DSA спросит или дождётся их закрытия.
+Включено по умолчанию. Если выключить, обновление применится при следующем запуске Android.</value>
+  </data>
+  <data name="IdentitySpecsCard.Header" xml:space="preserve">
+    <value>Характеристики устройства</value>
+  </data>
+  <data name="IdentityCopyButton.Content" xml:space="preserve">
+    <value>Копировать</value>
+  </data>
+  <data name="IdentityAndroidHeader.Text" xml:space="preserve">
+    <value>Что сообщает Android</value>
+  </data>
+  <data name="Identity_NotReported" xml:space="preserve">
+    <value>Не сообщается</value>
+  </data>
+  <data name="AppsRoot.Name" xml:space="preserve">
+    <value>Root-доступ</value>
+  </data>
+  <data name="Apps_Root_off" xml:space="preserve">
+    <value>Root: запрещено</value>
+  </data>
+  <data name="Apps_Root_ask" xml:space="preserve">
+    <value>Root: спрашивать каждый раз</value>
+  </data>
+  <data name="Apps_Root_remember" xml:space="preserve">
+    <value>Root: запомнить (без вопросов)</value>
+  </data>
+  <data name="Apps_RootGroup" xml:space="preserve">
+    <value>Использует общий ID пользователя с {0}. Android не различает эти приложения, поэтому у них один параметр root-доступа.
+Изменение здесь меняет его для всех. Если у любого из них «Запрещено», никто из них не может использовать su.</value>
+  </data>
+  <data name="Apps_RootTip_unavailable" xml:space="preserve">
+    <value>Root-доступ на этом компьютере выключен. Администратор включает его в разделе «Дополнительно».</value>
+  </data>
+  <data name="Apps_RootTip_unknown" xml:space="preserve">
+    <value>Служба DSA не сообщает уровень root для этого приложения. Обновите DSA, чтобы выбрать его здесь.</value>
+  </data>
+  <data name="Apps_RootNotChanged" xml:space="preserve">
+    <value>Уровень root для {0} не изменён: {1}</value>
+  </data>
+  <data name="Apps_RootSet_off" xml:space="preserve">
+    <value>{0} больше не может использовать root. su исчезнет для него со следующего запуска Android.</value>
+  </data>
+  <data name="Apps_RootSet_ask" xml:space="preserve">
+    <value>{0} теперь спрашивает администратора при каждом вызове su. Если su раньше было не видно, оно появится при следующем запуске Android.</value>
+  </data>
+  <data name="Apps_RootSet_remember" xml:space="preserve">
+    <value>{0} теперь использует su без запроса. Если su раньше было не видно, оно появится при следующем запуске Android.</value>
+  </data>
+  <data name="AppsRootOffBar.Title" xml:space="preserve">
+    <value>Root-доступ выключен</value>
+  </data>
+  <data name="AppsRootOffBar.Message" xml:space="preserve">
+    <value>Приложения не могут использовать su. Администратор может включить root-доступ в «Дополнительно», затем уровни приложений выбираются здесь.</value>
+  </data>
+  <data name="AppsRootNote.Text" xml:space="preserve">
+    <value>Root-доступ:
+• «Запрещено» скрывает su от приложения.
+• «Спрашивать каждый раз» показывает запрос администратора с именем приложения при каждом запросе. Одобрение действует 15 минут.
+• «Запомнить» одобряет без вопросов, поэтому для его выбора нужно одобрение администратора.</value>
+  </data>
+  <data name="RootHeader.Text" xml:space="preserve">
+    <value>Root-доступ</value>
+  </data>
+  <data name="RootElevationCard.Header" xml:space="preserve">
+    <value>Разрешить приложениям Android запрашивать root</value>
+  </data>
+  <data name="RootElevationCard.Description" xml:space="preserve">
+    <value>Приложение, разрешённое в «Приложениях», может запускать команды от root с одобрения администратора, как sudo. Выключено по умолчанию.
+Образ Android, его свойства сборки и SELinux не меняются.</value>
+  </data>
+  <data name="RootElevationAdminReason.Text" xml:space="preserve">
+    <value>Изменить это может только администратор, так как параметр действует для всех пользователей этого компьютера.
+Нажмите «Изменить от имени администратора», и Windows запросит разрешение.</value>
+  </data>
+  <data name="RootElevationRestartBar.Title" xml:space="preserve">
+    <value>Перезапустите Android, чтобы применить</value>
+  </data>
+  <data name="RootElevationRestartBar.Message" xml:space="preserve">
+    <value>Root-доступ изменится при следующем запуске Android. Остановите Android на странице «Общие», затем откройте приложение.</value>
+  </data>
+  <data name="RootLogCard.Header" xml:space="preserve">
+    <value>Где записываются запросы</value>
+  </data>
+  <data name="RootElevation_LogAt" xml:space="preserve">
+    <value>Каждый запрос записывается в журнал службы: приложение, время, одобрен ли он и команда: {0}</value>
+  </data>
+  <data name="RootElevation_LogUnknown" xml:space="preserve">
+    <value>Каждый запрос записывается в журнал службы: приложение, время, одобрен ли он и команда.</value>
+  </data>
+  <data name="RootNote.Text" xml:space="preserve">
+    <value>Уровень для каждого приложения выбирается на странице «Приложения». Каждый пользователь выбирает его для приложений в своём Android.</value>
+  </data>
+  <data name="AppsAdbShell.Text" xml:space="preserve">
+    <value>adb shell</value>
+  </data>
+  <data name="WidevineHeader.Text" xml:space="preserve">
+    <value>Защищённое содержимое</value>
+  </data>
+  <data name="WidevineCard.Header" xml:space="preserve">
+    <value>Widevine</value>
+  </data>
+  <data name="WidevineCard.Description" xml:space="preserve">
+    <value>Позволяет стриминговым приложениям воспроизводить защищённое видео. Применяется при следующем запуске Android.
+Скачивает около 2 GB у Google по лицензии Android SDK, оставляет только Widevine и удаляет остальное.</value>
+  </data>
+  <data name="WidevineInstallButton.Content" xml:space="preserve">
+    <value>Получить</value>
+  </data>
+  <data name="WidevineConfirm.Title" xml:space="preserve">
+    <value>Получить Widevine от Google?</value>
+  </data>
+  <data name="WidevineConfirm.Action" xml:space="preserve">
+    <value>Принять и скачать</value>
+  </data>
+  <data name="Widevine_Notice" xml:space="preserve">
+    <value>DSA скачивает у Google образ эмулятора Android для этой версии Android и извлекает из него только модуль Widevine без изменений.
+
+• Загрузка: около 2 GB, затем удаляется.
+• Источник: {0}
+• Условия: Widevine является ПО Google и распространяется по лицензии Android SDK ({1}). Скачивая его, вы принимаете эти условия.
+• Качество: уровень защиты L3, поэтому стриминговые сервисы отдают не выше стандартной чёткости (SD).
+• Widevine работает со следующего запуска Android.
+
+DSA не поставляет и не передаёт Widevine.</value>
+  </data>
+  <data name="WidevineInstallingBar.Title" xml:space="preserve">
+    <value>Получение Widevine</value>
+  </data>
+  <data name="WidevineInstallingBar.Message" xml:space="preserve">
+    <value>Скачивается около 2 GB у Google и извлекается Widevine. Это займёт несколько минут.</value>
+  </data>
+  <data name="WidevineRestartBar.Title" xml:space="preserve">
+    <value>Перезапустите Android, чтобы применить</value>
+  </data>
+  <data name="WidevineRestartBar.Message" xml:space="preserve">
+    <value>Android применит изменение со следующего запуска.</value>
+  </data>
+  <data name="WidevineQualityCard.Header" xml:space="preserve">
+    <value>Только стандартная чёткость</value>
+  </data>
+  <data name="Widevine_Quality" xml:space="preserve">
+    <value>Здесь Widevine имеет уровень защиты L3, поэтому стриминговые сервисы отдают не выше стандартной чёткости (SD).
+Для высокой чёткости используйте браузер или приложение этого компьютера.</value>
+  </data>
+  <data name="WidevineRemoveCard.Header" xml:space="preserve">
+    <value>Удалить Widevine</value>
+  </data>
+  <data name="WidevineRemoveCard.Description" xml:space="preserve">
+    <value>Удаляет модуль и сохранённые им сертификаты устройства, начиная со следующего запуска Android.</value>
+  </data>
+  <data name="WidevineRemoveButton.Content" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="WidevineTermsLink.Content" xml:space="preserve">
+    <value>Лицензия Android SDK</value>
+  </data>
+  <data name="Widevine_NotInstalled" xml:space="preserve">
+    <value>Не установлено.</value>
+  </data>
+  <data name="Widevine_Installed" xml:space="preserve">
+    <value>Установлено: из образа Google {0} для Android {1} ({2}).</value>
+  </data>
+  <data name="Widevine_InstalledPending" xml:space="preserve">
+    <value>Установлено: из образа Google {0} для Android {1} ({2}). Используется со следующего запуска Android.</value>
+  </data>
+  <data name="Widevine_RemovedPending" xml:space="preserve">
+    <value>Удалено. Android использует его до следующего запуска.</value>
+  </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}. {1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}, {1}, {2}: {3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>Пропущено записей: {0}</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>Минимальный показываемый приоритет</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>Загрузка</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>Скопировано</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>Показать или скрыть навигацию</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>Свернуть</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>Развернуть</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>Восстановить</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>Справка</value>
+  </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>Установить {0}?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>Имя пакета:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>Издатель:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>Версия:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>Источник:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>Возможности ({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>Подробнее</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>Свернуть</value>
+  </data>
+</root>

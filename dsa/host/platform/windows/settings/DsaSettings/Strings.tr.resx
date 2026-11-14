@@ -1,0 +1,2544 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The texts of DSA Settings in Turkish, read through ResourceManager. Each key has the same meaning in every language. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>DSA Ayarları</value>
+  </data>
+  <data name="AppTitle.Text" xml:space="preserve">
+    <value>DSA Ayarları</value>
+  </data>
+  <data name="NavGeneral.Content" xml:space="preserve">
+    <value>Genel</value>
+  </data>
+  <data name="NavMemory.Content" xml:space="preserve">
+    <value>Bellek</value>
+  </data>
+  <data name="NavDisplay.Content" xml:space="preserve">
+    <value>Ekran ve GPU</value>
+  </data>
+  <data name="NavUpdates.Content" xml:space="preserve">
+    <value>Güncellemeler</value>
+  </data>
+  <data name="NavAdvanced.Content" xml:space="preserve">
+    <value>Gelişmiş</value>
+  </data>
+  <data name="NavAbout.Content" xml:space="preserve">
+    <value>Hakkında</value>
+  </data>
+  <data name="GeneralTitle.Text" xml:space="preserve">
+    <value>Genel</value>
+  </data>
+  <data name="GeneralErrorBar.Title" xml:space="preserve">
+    <value>Bir sorun oluştu</value>
+  </data>
+  <data name="GeneralStateCard.Header" xml:space="preserve">
+    <value>Durum</value>
+  </data>
+  <data name="GeneralStateCard.Description" xml:space="preserve">
+    <value>Desktop Subsystem for Android™, Android'i kendine ait hafif bir sanal makinede çalıştırır ve her uygulamayı kendi penceresinde gösterir.</value>
+  </data>
+  <data name="StartButton.Content" xml:space="preserve">
+    <value>Başlat</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>Durdur</value>
+  </data>
+  <data name="ProblemBar.Title" xml:space="preserve">
+    <value>Android hazır değil</value>
+  </data>
+  <data name="LastReasonBar.Title" xml:space="preserve">
+    <value>Son durma nedeni</value>
+  </data>
+  <data name="LastReason_Requested" xml:space="preserve">
+    <value>Android istek üzerine durduruldu. Gerektiğinde yeniden başlatın.</value>
+  </data>
+  <data name="LastReason_Updating" xml:space="preserve">
+    <value>DSA güncelleniyor. Güncelleme bitince Android'i yeniden başlatın.</value>
+  </data>
+  <data name="LastReason_Virtualization" xml:space="preserve">
+    <value>Sanallaştırma kapalı veya Hyper-V yok. Sanal Makine Platformu'nu açın, ardından bilgisayarı yeniden başlatın.</value>
+  </data>
+  <data name="LastReason_InvalidConfiguration" xml:space="preserve">
+    <value>Windows, Android'in sanal makinesi için ayarları reddetti. DSA'yı güncelleyin veya yeniden yükleyin.</value>
+  </data>
+  <data name="LastReason_OutOfMemory" xml:space="preserve">
+    <value>Android'i başlatmak için yeterli bellek yok. Diğer uygulamaları kapatıp yeniden deneyin.</value>
+  </data>
+  <data name="LastReason_Disk" xml:space="preserve">
+    <value>Bir disk sorunu Android'in başlamasını engelledi. Yer açın veya sürücüyü denetleyin, ardından yeniden deneyin.</value>
+  </data>
+  <data name="LastReason_TimedOut" xml:space="preserve">
+    <value>Android'in başlaması çok uzun sürdü. Yeniden başlatmayı deneyin.</value>
+  </data>
+  <data name="LastReason_Lost" xml:space="preserve">
+    <value>Android beklenmedik şekilde durdu. Yeniden başlatmayı deneyin.</value>
+  </data>
+  <data name="LastReason_General" xml:space="preserve">
+    <value>Android başlatılamadı. Yeniden deneyin, sorun sürerse ayrıntılara bakın.</value>
+  </data>
+  <data name="LastReasonDetails.Header" xml:space="preserve">
+    <value>Ayrıntılar</value>
+  </data>
+  <data name="LastReasonCopy.ToolTip" xml:space="preserve">
+    <value>Ayrıntıları kopyala</value>
+  </data>
+  <data name="UpdateNoticeBar.Title" xml:space="preserve">
+    <value>Güncelleme</value>
+  </data>
+  <data name="UpdateNotice_AndroidUpdated" xml:space="preserve">
+    <value>Android şu sürüme güncellendi: {0}.</value>
+  </data>
+  <data name="UpdateNotice_AndroidInstalled" xml:space="preserve">
+    <value>Android {0} yüklendi.</value>
+  </data>
+  <data name="UpdateNotice_AndroidChosen" xml:space="preserve">
+    <value>Android {0} seçildi. DSA şimdi indiriyor ve Android bir sonraki başlatılışında kullanılacak.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
+    <value>Android {0} başlamadı ({1}), bu nedenle yeniden Android {2} kullanılıyor.
+Android {0}, yeni bir derlemesi veya yeni bir DSA sürümü çıktığında yeniden denenir.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
+    <value>Android {0} başlamadı ({1}), bu nedenle yeniden Android {2} kullanılıyor.
+Android {2} henüz başlamayı bitirmedi ({3}). Önyüklemek için Android'i yeniden başlatın.</value>
+  </data>
+  <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
+    <value>Android {0} başlamadı ({1}) ve yüklü başka bir görüntü yok.
+Varsa DSA başka bir görüntü indirir. Sonraki DSA sürümü bunu yeniden dener.</value>
+  </data>
+  <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
+    <value>Android {0} denemede tutuluyor ve sorunun nedeni değil: {1}</value>
+  </data>
+  <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
+    <value>DSA şu sürüme güncellendi: {0}.</value>
+  </data>
+  <data name="UpdateNotice_DsaDownloaded" xml:space="preserve">
+    <value>DSA {0} indirildi. Android çalışmıyorken yüklenir.</value>
+  </data>
+  <data name="UpdateNotice_DsaInstalling" xml:space="preserve">
+    <value>DSA {0} yükleniyor. Bitince hizmet yeniden başlar.</value>
+  </data>
+  <data name="UpdateNotice_DsaFailed" xml:space="preserve">
+    <value>DSA, {0} sürümüne güncellenemedi ({1}). DSA {2} hâlâ yüklü.</value>
+  </data>
+  <data name="GeneralMoreHeader.Text" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="OpenLogsCard.Header" xml:space="preserve">
+    <value>Günlük klasörümü aç</value>
+  </data>
+  <data name="OpenLogsCard.Description" xml:space="preserve">
+    <value>Bir sorunu bildirmek için pencere yöneticisinin ve uygulama pencerelerinin günlükleri.</value>
+  </data>
+  <data name="RefreshCard.Header" xml:space="preserve">
+    <value>Yenile</value>
+  </data>
+  <data name="RefreshCard.Description" xml:space="preserve">
+    <value>Durumu DSA hizmetinden yeniden iste.</value>
+  </data>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>Bilinmiyor</value>
+  </data>
+  <data name="State_Stopped" xml:space="preserve">
+    <value>Durduruldu</value>
+  </data>
+  <data name="State_Starting" xml:space="preserve">
+    <value>Başlatılıyor</value>
+  </data>
+  <data name="State_Active" xml:space="preserve">
+    <value>Çalışıyor</value>
+  </data>
+  <data name="State_Dozing" xml:space="preserve">
+    <value>Doze (boşta)</value>
+  </data>
+  <data name="State_Frozen" xml:space="preserve">
+    <value>Donduruldu</value>
+  </data>
+  <data name="State_Stopping" xml:space="preserve">
+    <value>Durduruluyor</value>
+  </data>
+  <data name="State_Stalled" xml:space="preserve">
+    <value>Hazır değil</value>
+  </data>
+  <data name="Problem_CliMissing" xml:space="preserve">
+    <value>dsa komutu başlatılamadı. DSA'yı yeniden yükleyin.</value>
+  </data>
+  <data name="Problem_ServiceUnreachable" xml:space="preserve">
+    <value>DSA hizmeti çalışmıyor.</value>
+  </data>
+  <data name="Problem_Refused" xml:space="preserve">
+    <value>DSA hizmeti bu işlemi yapamadı.</value>
+  </data>
+  <data name="Problem_Unreadable" xml:space="preserve">
+    <value>dsa komutunun yanıtı okunamadı. DSA'yı yeniden yükleyin.</value>
+  </data>
+  <data name="MemoryTitle.Text" xml:space="preserve">
+    <value>Bellek</value>
+  </data>
+  <data name="MemoryRefreshButton.Content" xml:space="preserve">
+    <value>Yenile</value>
+  </data>
+  <data name="MemoryErrorBar.Title" xml:space="preserve">
+    <value>Bellek ölçülemedi</value>
+  </data>
+  <data name="MemoryHostHeader.Text" xml:space="preserve">
+    <value>Bu bilgisayarda</value>
+  </data>
+  <data name="MemoryHostTotalCard.Header" xml:space="preserve">
+    <value>Bu bilgisayarda kullanımda</value>
+  </data>
+  <data name="MemoryHostTotalCard.Description" xml:space="preserve">
+    <value>Sanal makinenin, pencere yöneticisinin ve uygulama pencerelerinin şu anda tuttuğu RAM.</value>
+  </data>
+  <data name="MemoryHostNone.Text" xml:space="preserve">
+    <value>Android çalışmıyor, bu nedenle bu bilgisayarda bellek kullanmıyor.</value>
+  </data>
+  <data name="MemoryGuestHeader.Text" xml:space="preserve">
+    <value>Android içinde</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Title" xml:space="preserve">
+    <value>Henüz rapor yok</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Message" xml:space="preserve">
+    <value>Android, başladıktan birkaç dakika sonra belleğini nasıl kullandığını bildirir.</value>
+  </data>
+  <data name="MemoryGuestTotalCard.Header" xml:space="preserve">
+    <value>Android'in kullanabileceği</value>
+  </data>
+  <data name="MemoryAvailableOf.Text" xml:space="preserve">
+    <value>kullanılabilir / toplam</value>
+  </data>
+  <data name="MemoryTopHeader.Text" xml:space="preserve">
+    <value>En büyük işlemler</value>
+  </data>
+  <data name="Role_Vm" xml:space="preserve">
+    <value>Sanal makine (vmmem)</value>
+  </data>
+  <data name="Role_WindowManager" xml:space="preserve">
+    <value>Pencere yöneticisi</value>
+  </data>
+  <data name="Role_Renderer" xml:space="preserve">
+    <value>Grafik işleyici</value>
+  </data>
+  <data name="Role_AppWindow" xml:space="preserve">
+    <value>Uygulama penceresi</value>
+  </data>
+  <data name="Memory_ProcessDetail" xml:space="preserve">
+    <value>İşlem {0}, {1} özel</value>
+  </data>
+  <data name="Memory_ReportAge" xml:space="preserve">
+    <value>{0} saniye önce bildirildi</value>
+  </data>
+  <data name="Memory_Apps" xml:space="preserve">
+    <value>Uygulamalar ve sistem</value>
+  </data>
+  <data name="Memory_AppsDetail" xml:space="preserve">
+    <value>Bellekte {0}, sıkıştırılmış {1}</value>
+  </data>
+  <data name="Memory_Cache" xml:space="preserve">
+    <value>Önbellek</value>
+  </data>
+  <data name="Memory_CacheDetail" xml:space="preserve">
+    <value>Bellekte tutulan dosya içerikleri. Android belleğe ihtiyaç duyduğunda bunları bırakır.</value>
+  </data>
+  <data name="Memory_Kernel" xml:space="preserve">
+    <value>Çekirdek önbellekleri</value>
+  </data>
+  <data name="Memory_KernelDetail" xml:space="preserve">
+    <value>Çekirdeğin istendiğinde boşaltabildiği çekirdek önbellekleri.</value>
+  </data>
+  <data name="Memory_Shared" xml:space="preserve">
+    <value>Paylaşılan bellek</value>
+  </data>
+  <data name="Memory_Zram" xml:space="preserve">
+    <value>Sıkıştırılmış bellek</value>
+  </data>
+  <data name="Memory_ZramDetail" xml:space="preserve">
+    <value>{0} sayfayı sıkıştırılmış olarak tutar</value>
+  </data>
+  <data name="Memory_Free" xml:space="preserve">
+    <value>Boş</value>
+  </data>
+  <data name="Memory_GuestProcessDetail" xml:space="preserve">
+    <value>İşlem {0}</value>
+  </data>
+  <data name="Memory_GuestProcessGooglePlay" xml:space="preserve">
+    <value>İşlem {0}, Google Play hizmetleri</value>
+  </data>
+  <data name="Memory_GooglePlay" xml:space="preserve">
+    <value>Google Play hizmetleri</value>
+  </data>
+  <data name="Memory_GooglePlayDetail" xml:space="preserve">
+    <value>Yüklediğiniz Google uygulamaları, {0} işlem: {1}</value>
+  </data>
+  <data name="Memory_Unknown" xml:space="preserve">
+    <value>bilinmiyor</value>
+  </data>
+  <data name="DisplayTitle.Text" xml:space="preserve">
+    <value>Ekran ve GPU</value>
+  </data>
+  <data name="SettingsErrorBar.Title" xml:space="preserve">
+    <value>Ayar değiştirilmedi</value>
+  </data>
+  <data name="RenderGpuCard.Header" xml:space="preserve">
+    <value>İşleme GPU'su</value>
+  </data>
+  <data name="RenderGpuCard.Description" xml:space="preserve">
+    <value>Android uygulamalarını çizen GPU. Varsayılan: ana monitörün GPU'su; kareler tek GPU'da kalır, dizüstünün harici GPU'su uyuyabilir.</value>
+  </data>
+  <data name="Gpu_Display" xml:space="preserve">
+    <value>Birincil monitörün GPU'su (önerilen)</value>
+  </data>
+  <data name="Gpu_Integrated" xml:space="preserve">
+    <value>Tümleşik GPU</value>
+  </data>
+  <data name="Gpu_Discrete" xml:space="preserve">
+    <value>Harici GPU (örneğin oyunlar için)</value>
+  </data>
+  <data name="DisplayGpuCard.Header" xml:space="preserve">
+    <value>Birincil monitörün GPU'su</value>
+  </data>
+  <data name="DisplayGpuCard.Description" xml:space="preserve">
+    <value>Varsayılan seçimin şu anda işlediği GPU.</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Title" xml:space="preserve">
+    <value>Yeniden başlatmadan sonra uygulanır</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
+    <value>Yeni işleme GPU'su, pencere yöneticisi yeniden başladığında etkili olur: sonraki oturum açışta veya aşağıdan yeniden başlattığınızda.</value>
+  </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Vulkan sürücüsü</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Android uygulamaları Vulkan ile çizer. Vulkan sürücüsü olmayan bir GPU, Microsoft'un OpenCL, OpenGL, and Vulkan Compatibility Pack'indeki Dozen'i (Vulkan on Direct3D 12) kullanabilir. Pencere yöneticisi yeniden başladığında uygulanır.</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>Otomatik: GPU'nun sürücüsü, yalnızca sürücü yoksa Dozen (önerilen)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>Yalnızca GPU'nun kendi Vulkan sürücüsü</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>Yalnızca Dozen (test ve karşılaştırma için)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>Pencere yöneticisi henüz neyle işlediğini bildirmedi.</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>Şu anda GPU'nun Vulkan sürücüsüyle işleniyor.</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>Şu anda Dozen (Vulkan on Direct3D 12) ile işleniyor.</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>Şu anda CPU üzerinde Dozen ile işleniyor: bu GPU'nun Direct3D 12 sürücüsü yok.</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>İşlenecek Vulkan yok, bu nedenle Android başlamaz. Compatibility Pack'i Microsoft Store'dan veya winget install Microsoft.OpenCLGLVulkanCompatibilityPack ile yükleyin, ardından oturumu kapatıp yeniden açın.</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>Compatibility Pack'i Microsoft Store'dan alın</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android CPU ile çiziyor</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>Bu bilgisayarın GPU'sunun Direct3D 12 sürücüsü yok; uygulamalar çalışır ancak oyunlar ve animasyonlar yavaş olur.</value>
+  </data>
+  <data name="TouchGesturesCard.Header" xml:space="preserve">
+    <value>DSA uygulama pencerelerinde Windows dokunma hareketlerini kapat</value>
+  </data>
+  <data name="TouchGesturesCard.Description" xml:space="preserve">
+    <value>Bir DSA penceresi öndeyken Windows'un üç ve dört parmaklı hareketleri kapalıdır, böylece uygulamalar on parmağa kadar alır.
+Varsayılan olarak açık. Diğer uygulamalar Windows Ayarları'nda belirlediğiniz hareketleri korur.</value>
+  </data>
+  <data name="TouchGestures_Failed" xml:space="preserve">
+    <value>Bu ayar kullanılamıyor: Windows dokunma hareketlerini değiştirmedi ({0}). Windows Ayarları'nda tüm uygulamalar için kapatabilirsiniz.</value>
+  </data>
+  <data name="TouchGestures_NoReason" xml:space="preserve">
+    <value>neden belirtilmedi</value>
+  </data>
+  <data name="TouchSettingsLink.Content" xml:space="preserve">
+    <value>Dokunma ayarlarını aç</value>
+  </data>
+  <data name="RestartWindowManagerCard.Header" xml:space="preserve">
+    <value>Pencere yöneticisini yeniden başlat</value>
+  </data>
+  <data name="RestartWindowManagerCard.Description" xml:space="preserve">
+    <value>Açık Android uygulama pencereleri kapanır ve geri gelir.</value>
+  </data>
+  <data name="RestartWindowManagerButton.Content" xml:space="preserve">
+    <value>Yeniden başlat</value>
+  </data>
+  <data name="RestartWindowManagerTitle" xml:space="preserve">
+    <value>Pencere yöneticisi yeniden başlatılsın mı?</value>
+  </data>
+  <data name="RestartWindowManagerBody" xml:space="preserve">
+    <value>Android uygulamalarının pencereleri bir süreliğine kapanır.
+
+Android ve uygulamaları çalışmaya devam eder.</value>
+  </data>
+  <data name="RestartWindowManagerAction" xml:space="preserve">
+    <value>Yeniden başlat</value>
+  </data>
+  <data name="RestartWindowManagerFailed" xml:space="preserve">
+    <value>Pencere yöneticisi yeniden başlatılamadı</value>
+  </data>
+  <data name="UpdatesTitle.Text" xml:space="preserve">
+    <value>Güncellemeler</value>
+  </data>
+  <data name="ProgramUpdatesCard.Header" xml:space="preserve">
+    <value>DSA'yı otomatik olarak güncelle</value>
+  </data>
+  <data name="ProgramUpdatesCard.Description" xml:space="preserve">
+    <value>DSA'nın imzalı yeni sürümlerini indir ve hiçbir Android çalışmıyorken yükle.</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Header" xml:space="preserve">
+    <value>Ön sürümleri al</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Description" xml:space="preserve">
+    <value>Henüz tamamlanmakta olan sürümleri de yükle. 1.0'dan önceki her sürüm bir ön sürümdür.
+Bunu kapatmak DSA'yı asla geri almaz: daha yeni bir kararlı sürümü bekler.</value>
+  </data>
+  <data name="ImageUpdatesCard.Header" xml:space="preserve">
+    <value>Android görüntüsünü otomatik olarak güncelle</value>
+  </data>
+  <data name="ImageUpdatesCard.Description" xml:space="preserve">
+    <value>İmzalı güvenlik güncellemelerini ve Android'in yeni sürümlerini indir. Aşağıdaki ayara göre Android yeniden başladığında uygulanır.</value>
+  </data>
+  <data name="UpdatesMachineNote.Text" xml:space="preserve">
+    <value>Bu ayarlar bu bilgisayarın tüm kullanıcılarına uygulanır, bu nedenle yalnızca bir yönetici değiştirebilir.
+Kapalı kalan bir anahtar bu yüklemede sunulmuyor demektir.</value>
+  </data>
+  <data name="AdminBar.Title" xml:space="preserve">
+    <value>Yönetici hakları gerekiyor</value>
+  </data>
+  <data name="AdminBar.Message" xml:space="preserve">
+    <value>Güncelleme ayarları bu bilgisayarın tüm kullanıcılarına uygulanır, bu nedenle yalnızca bir yönetici değiştirebilir.
+Yönetici olarak değiştir'i kullanın, Windows izin ister.</value>
+  </data>
+  <data name="AdminShield.ToolTip" xml:space="preserve">
+    <value>Bu ayarı yalnızca bir yönetici değiştirebilir.</value>
+  </data>
+  <data name="ChangeAsAdmin.Content" xml:space="preserve">
+    <value>Yönetici olarak değiştir</value>
+  </data>
+  <data name="ElevatedFailed" xml:space="preserve">
+    <value>Ayar değiştirilmedi (dsa {0} koduyla sonlandı).</value>
+  </data>
+  <data name="ElevationDeclined" xml:space="preserve">
+    <value>Yönetici hakları verilmediği için ayar değiştirilmedi.</value>
+  </data>
+  <data name="UpdateNowHeader.Text" xml:space="preserve">
+    <value>Şimdi yükle</value>
+  </data>
+  <data name="UpdateNowCard.Header" xml:space="preserve">
+    <value>DSA'nın en yeni sürümünü şimdi yükle</value>
+  </data>
+  <data name="UpdateNowCard.Description" xml:space="preserve">
+    <value>Kurulum sürerken her kullanıcının Android'i durur.</value>
+  </data>
+  <data name="UpdateNowButton.Content" xml:space="preserve">
+    <value>Şimdi yükle</value>
+  </data>
+  <data name="UpdateNowTitle" xml:space="preserve">
+    <value>En yeni sürüm şimdi yüklensin mi?</value>
+  </data>
+  <data name="UpdateNowBody" xml:space="preserve">
+    <value>DSA her kullanıcının Android'ini durdurur ve en yeni sürümü yükler.
+
+Kurulum bitince DSA hizmeti yeniden başlar.</value>
+  </data>
+  <data name="UpdateNowAction" xml:space="preserve">
+    <value>Yükle</value>
+  </data>
+  <data name="UpdateNowFailed" xml:space="preserve">
+    <value>DSA güncellenmedi</value>
+  </data>
+  <data name="ProgramUpdateCard.Header" xml:space="preserve">
+    <value>DSA güncelleniyor</value>
+  </data>
+  <data name="ProgramUpdateDone.Title" xml:space="preserve">
+    <value>DSA güncellendi</value>
+  </data>
+  <data name="ProgramUpdate_Starting" xml:space="preserve">
+    <value>Güncelleme hazırlanıyor</value>
+  </data>
+  <data name="ProgramUpdate_Downloading" xml:space="preserve">
+    <value>DSA {0} indiriliyor</value>
+  </data>
+  <data name="ProgramUpdate_StoppingAndroid" xml:space="preserve">
+    <value>DSA {0} yüklenmek üzere Android durduruluyor</value>
+  </data>
+  <data name="ProgramUpdate_Installing" xml:space="preserve">
+    <value>DSA {0} yükleniyor</value>
+  </data>
+  <data name="ProgramUpdate_Restarting" xml:space="preserve">
+    <value>Güncellemeyi bitirmek için DSA yeniden başlatılıyor</value>
+  </data>
+  <data name="ProgramUpdate_Version" xml:space="preserve">
+    <value>Sürüm {0}</value>
+  </data>
+  <data name="ProgramUpdate_KeepOpen" xml:space="preserve">
+    <value>Güncelleme bitene kadar DSA'yı kapatmayın veya Android uygulamalarını başlatmayın.</value>
+  </data>
+  <data name="ProgramUpdate_Applied" xml:space="preserve">
+    <value>Şu sürüme güncellendi: {0}</value>
+  </data>
+  <data name="ProgramUpdate_Failed" xml:space="preserve">
+    <value>{0} sürümüne güncelleme başarısız oldu. Önceki sürüm hâlâ yüklü.</value>
+  </data>
+  <data name="ProgramUpdate_NotBack" xml:space="preserve">
+    <value>DSA, {0} sürümüne güncellendikten sonra geri gelmedi. Yakında başlamazsa bilgisayarı yeniden başlatın.</value>
+  </data>
+  <data name="AdvancedTitle.Text" xml:space="preserve">
+    <value>Gelişmiş</value>
+  </data>
+  <data name="FilesHeader.Text" xml:space="preserve">
+    <value>Dosyalar</value>
+  </data>
+  <data name="FileSharingCard.Header" xml:space="preserve">
+    <value>Windows klasörlerini Android ile paylaş</value>
+  </data>
+  <data name="FileSharingCard.Description" xml:space="preserve">
+    <value>Aşağıda seçilen klasörleri Android'in paylaşılan depolamasında, Host klasöründe gösterir. Varsayılan olarak açık.
+Android uygulamaları Android'in depolama iznine ihtiyaç duyar ve yalnızca Windows hesabınızın yapabildiklerini yapabilir.</value>
+  </data>
+  <data name="SharedFoldersCard.Header" xml:space="preserve">
+    <value>Paylaşılan klasörler</value>
+  </data>
+  <data name="SharedFoldersCard.Description" xml:space="preserve">
+    <value>Seçimini kaldırdığınız klasör Android'den hemen kaldırılır.</value>
+  </data>
+  <data name="Folder_Documents" xml:space="preserve">
+    <value>Belgeler</value>
+  </data>
+  <data name="Folder_Downloads" xml:space="preserve">
+    <value>İndirilenler</value>
+  </data>
+  <data name="Folder_Pictures" xml:space="preserve">
+    <value>Resimler</value>
+  </data>
+  <data name="Folder_Music" xml:space="preserve">
+    <value>Müzik</value>
+  </data>
+  <data name="Folder_Videos" xml:space="preserve">
+    <value>Videolar</value>
+  </data>
+  <data name="Folder_Desktop" xml:space="preserve">
+    <value>Masaüstü</value>
+  </data>
+  <data name="AndroidFilesCard.Header" xml:space="preserve">
+    <value>Android dosyaları</value>
+  </data>
+  <data name="AndroidFilesCard.Description" xml:space="preserve">
+    <value>Android uygulamalarının kaydettiği fotoğraf ve indirme gibi dosyaları Dosya Gezgini'nde açar. Android çalışmıyorsa başlar.
+Dosya Gezgini'nin gezinti bölmesindeki Android de bunları açar.</value>
+  </data>
+  <data name="FilesDropCard.Header" xml:space="preserve">
+    <value>Android uygulamalarına dosya gönder</value>
+  </data>
+  <data name="FilesNote.Text" xml:space="preserve">
+    <value>Bir Android uygulamasına dosya göndermek için dosyayı Dosya Gezgini'nden uygulamanın penceresine sürükleyin. Bıraktığınız APK yüklenir.</value>
+  </data>
+  <data name="LinksCard.Header" xml:space="preserve">
+    <value>Web bağlantılarını Android uygulamalarında aç</value>
+  </data>
+  <data name="LinksCard.Description" xml:space="preserve">
+    <value>Kapalıyken (varsayılan) Android uygulamalarındaki bağlantılar Windows tarayıcınızda açılır. Açıkken telefondaki gibi uygulamada açılır.
+Yüklü bir uygulamanın kendisine ait olarak doğruladığı bağlantı her zaman o uygulamada açılır.</value>
+  </data>
+  <data name="ArmHeader.Text" xml:space="preserve">
+    <value>ARM uygulamaları</value>
+  </data>
+  <data name="ArmCard.Header" xml:space="preserve">
+    <value>Yalnızca ARM için derlenmiş uygulamaları çalıştır</value>
+  </data>
+  <data name="ArmCard.Description" xml:space="preserve">
+    <value>Yalnızca ARM için derlenmiş uygulamalar bir ARM çeviricisiyle burada yüklenir ve çalışır. Android'in sonraki başlatılışından geçerlidir.
+Yalnızca 64 bit ARM uygulamaları (arm64-v8a) çalışır.
+Yerleşik açık kaynaklı çevirici kullanılır; aşağıdan Google'ınkini veya dsa arm-translation install ile başkasını yüklerseniz o kullanılır.</value>
+  </data>
+  <data name="ArmRestartBar.Title" xml:space="preserve">
+    <value>Uygulamak için Android'i yeniden başlatın</value>
+  </data>
+  <data name="ArmRestartBar.Message" xml:space="preserve">
+    <value>Android bu değişiklikten önce başladı. ARM uygulamalarına uygulanması için Android'i durdurup yeniden başlatın.</value>
+  </data>
+  <data name="ArmDefaultCard.Header" xml:space="preserve">
+    <value>Varsayılan çeviriciyi kullan</value>
+  </data>
+  <data name="ArmDefaultButton.Content" xml:space="preserve">
+    <value>Kullan</value>
+  </data>
+  <data name="Arm_DefaultDescription" xml:space="preserve">
+    <value>{0} {1} ({2}) bu Android ile birlikte gelir ve başka bir çevirici yüklemediğiniz sürece kullanılır.
+Ona geri dönmek, Android'in sonraki başlatılışından itibaren yüklü paketi kaldırır.</value>
+  </data>
+  <data name="Arm_SupportedDefault" xml:space="preserve">
+    <value>Bu Android ile birlikte gelen çevirici {0} {1} ({2}) tarafından destekleniyor.</value>
+  </data>
+  <data name="Arm_DefaultTurnedOff" xml:space="preserve">
+    <value>Desteklenmiyor: {0} {1} kapalı.</value>
+  </data>
+  <data name="ArmRemoveCard.Header" xml:space="preserve">
+    <value>ARM çeviri paketini kaldır</value>
+  </data>
+  <data name="ArmRemoveCard.Description" xml:space="preserve">
+    <value>Paketi eklenti diskinizden siler. Yüklediğiniz ARM uygulamaları kalır ancak Android yeniden başladıktan sonra çalışmaz.</value>
+  </data>
+  <data name="ArmRemoveButton.Content" xml:space="preserve">
+    <value>Kaldır</value>
+  </data>
+  <data name="Arm_NotSupported" xml:space="preserve">
+    <value>Desteklenmiyor: yüklü ARM çeviri paketi yok.</value>
+  </data>
+  <data name="Arm_Supported" xml:space="preserve">
+    <value>{0} {1} ({2}) tarafından destekleniyor.</value>
+  </data>
+  <data name="Arm_TurnedOff" xml:space="preserve">
+    <value>Desteklenmiyor: {0} {1} yüklü ancak kapalı.</value>
+  </data>
+  <data name="Arm_NoLicense" xml:space="preserve">
+    <value>lisans belirtilmedi</value>
+  </data>
+  <data name="Arm_Abis" xml:space="preserve">
+    <value>Android uygulamaları şunlar için yükler: {0}</value>
+  </data>
+  <data name="Arm_NotRunning" xml:space="preserve">
+    <value>Android çalışmıyor, bu nedenle şu anda neyi desteklediği bilinmiyor.</value>
+  </data>
+  <data name="ArmGoogleCard.Header" xml:space="preserve">
+    <value>Google'ın ARM çeviricisi</value>
+  </data>
+  <data name="ArmGoogleCard.Description" xml:space="preserve">
+    <value>Bu Android sürümü için Google'ın Android öykünücü görüntüsündeki ARM çeviricisini yükler.
+Google'dan yaklaşık 2 GB indirir, yalnızca çeviriciyi tutar ve gerisini siler. Siz onaylamadan hiçbir şey indirilmez.
+Digitalis gibi başka bir çeviriciden oluşturulan bir paket de aynı işi görür.</value>
+  </data>
+  <data name="ArmGoogleButton.Content" xml:space="preserve">
+    <value>Al</value>
+  </data>
+  <data name="ArmGoogleTermsLink.Content" xml:space="preserve">
+    <value>Android SDK Lisansı</value>
+  </data>
+  <data name="ArmGoogleConfirm.Title" xml:space="preserve">
+    <value>Google'ın ARM çeviricisi alınsın mı?</value>
+  </data>
+  <data name="ArmGoogleConfirm.Action" xml:space="preserve">
+    <value>Kabul et ve indir</value>
+  </data>
+  <data name="ArmGoogle_Notice" xml:space="preserve">
+    <value>DSA, bu Android sürümü için Android öykünücü görüntüsünü Google'dan indirir ve içinden yalnızca ARM çeviricisini çıkarır.
+
+• İndirme: yaklaşık 2 GB, sonra silinir.
+• Kaynak: {0}
+• Koşullar: çevirici, Android SDK Lisansı ({1}) kapsamında Google'ın yazılımıdır. İndirerek bu koşulları kabul edersiniz.
+• Çevirici, Android'in sonraki başlatılışından itibaren çalışır.
+
+DSA çeviriciyi dağıtmaz veya başkasına aktarmaz.</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Title" xml:space="preserve">
+    <value>Google'ın ARM çeviricisi alınıyor</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Message" xml:space="preserve">
+    <value>Google'dan yaklaşık 2 GB indiriliyor ve çevirici çıkarılıyor. Bu birkaç dakika sürer.</value>
+  </data>
+  <data name="GappsHeader.Text" xml:space="preserve">
+    <value>Google Play</value>
+  </data>
+  <data name="GappsCard.Header" xml:space="preserve">
+    <value>Google Play hizmetleri ve Play Store</value>
+  </data>
+  <data name="GappsCard.Description" xml:space="preserve">
+    <value>Bu Android sürümü için Google Play hizmetleri, Play Store ve hesap eşitlemesi içeren herkese açık LiteGapps Core paketini yükler.
+DSA, Google'ın uygulamalarını içermez. Android'in sonraki başlatılışından itibaren uygulanır.</value>
+  </data>
+  <data name="GappsInstallButton.Content" xml:space="preserve">
+    <value>Yükle</value>
+  </data>
+  <data name="GappsInstallingBar.Title" xml:space="preserve">
+    <value>Google Play yükleniyor</value>
+  </data>
+  <data name="GappsInstallingBar.Message" xml:space="preserve">
+    <value>Google Play indiriliyor ve yükleniyor. Bu birkaç dakika sürebilir.</value>
+  </data>
+  <data name="GappsRestartBar.Title" xml:space="preserve">
+    <value>Uygulamak için Android'i yeniden başlatın</value>
+  </data>
+  <data name="GappsRestartBar.Message" xml:space="preserve">
+    <value>Android bu değişiklikten önce başladı. Google Play'e uygulamak için Android'i durdurup yeniden başlatın.</value>
+  </data>
+  <data name="GappsRemoveCard.Header" xml:space="preserve">
+    <value>Google Play'i kaldır</value>
+  </data>
+  <data name="GappsRemoveCard.Description" xml:space="preserve">
+    <value>Android'in sonraki başlatılışından itibaren Google'ın uygulamalarını eklenti diskinizden siler.
+Play Store'dan alınan uygulamalar kalır, ancak Google Play hizmetlerine ihtiyaç duyanlar çalışmayı durdurabilir.</value>
+  </data>
+  <data name="GappsRemoveButton.Content" xml:space="preserve">
+    <value>Kaldır</value>
+  </data>
+  <data name="GappsTermsCard.Header" xml:space="preserve">
+    <value>Google'ın koşulları</value>
+  </data>
+  <data name="GappsTermsCard.Description" xml:space="preserve">
+    <value>Google Play hizmetleri ve Play Store, Google'ın yazılımıdır ve Google'ın koşullarına tabidir.
+DSA bunları dağıtmaz. Herkese açık LiteGapps paketini yalnızca siz istediğinizde indirir.</value>
+  </data>
+  <data name="GappsTermsLink.Content" xml:space="preserve">
+    <value>Google Hizmet Şartları</value>
+  </data>
+  <data name="GappsRegisterCard.Header" xml:space="preserve">
+    <value>Bu cihazı Google'a kaydet</value>
+  </data>
+  <data name="GappsRegisterCard.Description" xml:space="preserve">
+    <value>Buradaki Android, Google sertifikalı değildir; bu nedenle bu cihazı kaydedene kadar Google oturum açmanızı reddedebilir.
+1. Kayıt sayfasını açın ve Google hesabınızla oturum açın.
+2. Bu cihazın Android kimliğini girin.
+3. Android'i yeniden başlatın ve yeniden oturum açın.</value>
+  </data>
+  <data name="GappsRegisterLink.Content" xml:space="preserve">
+    <value>Kayıt sayfasını aç</value>
+  </data>
+  <data name="GappsDeviceIdLabel.Text" xml:space="preserve">
+    <value>Android kimliği</value>
+  </data>
+  <data name="Gapps_NotInstalled" xml:space="preserve">
+    <value>Yüklü değil: Android'de Google Play hizmetleri veya Play Store yok.</value>
+  </data>
+  <data name="Gapps_Installed" xml:space="preserve">
+    <value>Yüklü: Android {1} ({2}) için LiteGapps Core {0}.</value>
+  </data>
+  <data name="Gapps_InstalledPending" xml:space="preserve">
+    <value>Yüklü: Android {1} ({2}) için LiteGapps Core {0}. Android'in sonraki başlatılışından itibaren kullanılır.</value>
+  </data>
+  <data name="Gapps_RemovedPending" xml:space="preserve">
+    <value>Kaldırıldı: Google'ın uygulamaları Android'in sonraki başlatılışında kaldırılır.</value>
+  </data>
+  <data name="Gapps_ReinstallNeeded" xml:space="preserve">
+    <value>Eski bir DSA'dan kalan Android {1} ({2}) için LiteGapps Core {0} artık kullanılmıyor; Android Google uygulamaları olmadan başlar.
+Google Play'i yeniden yükleyin.</value>
+  </data>
+  <data name="Gapps_Source" xml:space="preserve">
+    <value>LiteGapps'ten indirildi: {0}</value>
+  </data>
+  <data name="Gapps_DeviceId" xml:space="preserve">
+    <value>Android kimliği: {0}</value>
+  </data>
+  <data name="Gapps_NoDeviceId" xml:space="preserve">
+    <value>Android kimliği, Google Play yüklendikten ve Android onunla başladıktan sonra burada görünür.</value>
+  </data>
+  <data name="DeveloperHeader.Text" xml:space="preserve">
+    <value>Geliştirici</value>
+  </data>
+  <data name="DeveloperModeCard.Header" xml:space="preserve">
+    <value>Geliştirici modu</value>
+  </data>
+  <data name="DeveloperModeCard.Description" xml:space="preserve">
+    <value>Bu bilgisayardaki adb, yalnızca bu bilgisayarın erişebildiği bir bağlantı noktasından Android'de onay sormadan bağlanabilir.
+Varsayılan olarak kapalı. İşiniz bitince kapatın.</value>
+  </data>
+  <data name="AdbAutoConnectCard.Header" xml:space="preserve">
+    <value>adb'yi otomatik bağla</value>
+  </data>
+  <data name="AdbAutoConnectCard.Description" xml:space="preserve">
+    <value>Geliştirici modu açıkken Android, adb connect olmadan adb devices'ta ve Android Studio'da görünür. Varsayılan olarak açık.
+adb disconnect sonrasında adb sunucusu yeniden başlayana kadar kapalı kalır.</value>
+  </data>
+  <data name="AdbAutoConnect_Off" xml:space="preserve">
+    <value>Bağlanmıyor: geliştirici modu veya otomatik bağlantı kapalı.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForServer" xml:space="preserve">
+    <value>adb bekleniyor: bu bilgisayarda adb başladığında Android bağlanır.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForAndroid" xml:space="preserve">
+    <value>Android bekleniyor: Android çalışınca bağlanır.</value>
+  </data>
+  <data name="AdbAutoConnect_Attached" xml:space="preserve">
+    <value>Bağlandı: adb, Android'i listeliyor.</value>
+  </data>
+  <data name="AdbAutoConnect_Detached" xml:space="preserve">
+    <value>adb disconnect ile bağlantı kesildi. adb sunucusu yeniden başladığında Android yeniden bağlanır.</value>
+  </data>
+  <data name="AdbCard.Header" xml:space="preserve">
+    <value>adb'yi bağla</value>
+  </data>
+  <data name="AdbCard.Description" xml:space="preserve">
+    <value>Geliştirici modu açıkken ve Android çalışırken şu komutu çalıştırın:</value>
+  </data>
+  <data name="CopyButton.ToolTip" xml:space="preserve">
+    <value>Kopyala</value>
+  </data>
+  <data name="AdbPortLabel.Text" xml:space="preserve">
+    <value>Bağlantı noktası</value>
+  </data>
+  <data name="ClipboardCard.Header" xml:space="preserve">
+    <value>Panoyu Android ile paylaş</value>
+  </data>
+  <data name="ClipboardCard.Description" xml:space="preserve">
+    <value>Windows'ta kopyaladığınız metin Android uygulamalarına yapıştırılabilir, tersi de geçerlidir. Varsayılan olarak açık.
+Görüntüler kopyalandıkları yerde kalır.</value>
+  </data>
+  <data name="FreezeCard.Header" xml:space="preserve">
+    <value>Boştayken Android'i dondur</value>
+  </data>
+  <data name="FreezeCard.Description" xml:space="preserve">
+    <value>Varsayılan olarak kapalı: boştaki Android Doze'a girer ve bildirim almaya devam eder.
+Dondurulduğunda CPU kullanmaz, ancak bir uygulama açana kadar hiçbir şey almaz.</value>
+  </data>
+  <data name="FreezeNowCard.Header" xml:space="preserve">
+    <value>Android'i şimdi dondur</value>
+  </data>
+  <data name="FreezeNowCard.Description" xml:space="preserve">
+    <value>Pencerelerinden birini yeniden açana kadar Android'deki tüm işlemleri durdurur. Bildirimler, alarmlar ve pencere öğeleri de durur.</value>
+  </data>
+  <data name="FreezeNowButton.Content" xml:space="preserve">
+    <value>Dondur</value>
+  </data>
+  <data name="MemoryLimitCard.Header" xml:space="preserve">
+    <value>Bellek sınırı</value>
+  </data>
+  <data name="MemoryLimitCard.Description" xml:space="preserve">
+    <value>Android'in büyüyebileceği en fazla bellek. Android belleği yalnızca gerektikçe alır ve işi bitince geri verir.
+Otomatik: bu bilgisayarın belleğinden Windows'un payı düşülen miktara kadar. Android'in sonraki başlatılışından itibaren uygulanır.</value>
+  </data>
+  <data name="MemoryLimit_Auto" xml:space="preserve">
+    <value>Otomatik</value>
+  </data>
+  <data name="MemoryVmSizeCard.Header" xml:space="preserve">
+    <value>Android'in VM'si şu anda</value>
+  </data>
+  <data name="MemoryVmSizeCard.Description" xml:space="preserve">
+    <value>VM'nin bu bilgisayarda tuttuğu bellek ve bunun ne kadarını Android'in kullandığı</value>
+  </data>
+  <data name="MemoryGuestUsedLabel.Text" xml:space="preserve">
+    <value>Android'in kullandığı</value>
+  </data>
+  <data name="MemoryBeyondGuestLabel.Text" xml:space="preserve">
+    <value>Boş, henüz geri verilmedi</value>
+  </data>
+  <data name="MemoryKernelHeader.Text" xml:space="preserve">
+    <value>Android'in çekirdeği</value>
+  </data>
+  <data name="Memory_KernelSlab" xml:space="preserve">
+    <value>Çekirdek nesneleri</value>
+  </data>
+  <data name="Memory_KernelSlabDetail" xml:space="preserve">
+    <value>Çekirdeğin kendi verileri için tuttuğu ve geri alamadığı bellek</value>
+  </data>
+  <data name="Memory_KernelStacks" xml:space="preserve">
+    <value>İş parçacığı yığınları</value>
+  </data>
+  <data name="Memory_KernelPageTables" xml:space="preserve">
+    <value>Sayfa tabloları</value>
+  </data>
+  <data name="Memory_KernelVmalloc" xml:space="preserve">
+    <value>Çekirdek eşlemeleri (vmalloc)</value>
+  </data>
+  <data name="Memory_KernelPercpu" xml:space="preserve">
+    <value>CPU başına veriler</value>
+  </data>
+  <data name="Memory_KernelUnaccounted" xml:space="preserve">
+    <value>Sürücüler</value>
+  </data>
+  <data name="Memory_KernelUnaccountedDetail" xml:space="preserve">
+    <value>GPU ve DMA arabellekleri gibi hiçbir sayacın adlandırmadığı bellek</value>
+  </data>
+  <data name="Memory_KernelReserved" xml:space="preserve">
+    <value>Önyüklemede ayrılan</value>
+  </data>
+  <data name="Memory_KernelReservedDetail" xml:space="preserve">
+    <value>Verilen {0} içinden çekirdek kodu, sayfa yapıları ve arabellekler; bitişik alan {1}</value>
+  </data>
+  <data name="DiagnosticsHeader.Text" xml:space="preserve">
+    <value>Tanılama</value>
+  </data>
+  <data name="InputTraceCard.Header" xml:space="preserve">
+    <value>Giriş izleme</value>
+  </data>
+  <data name="InputTraceCard.Description" xml:space="preserve">
+    <value>Her DSA işlemi her dokunma, tıklama ve tuşun ne zaman ulaştığını kaydeder; girişten görüntüye gecikme ölçülebilir. Varsayılan: kapalı.</value>
+  </data>
+  <data name="ResizeTraceCard.Header" xml:space="preserve">
+    <value>Yeniden boyutlandırma izleme</value>
+  </data>
+  <data name="ResizeTraceCard.Description" xml:space="preserve">
+    <value>Her DSA işlemi, pencere yeniden boyutlandırmasının yavaşladığı veya titrediği yeri bulmak için her aşamayı yazar. Varsayılan olarak kapalı.</value>
+  </data>
+  <data name="DiagnosticsNote.Text" xml:space="preserve">
+    <value>İzlemeler aşağıdaki DSA günlüklerine yazılır ve onları büyütür; bu nedenle yalnızca bir sorunu bildirmek için açın.
+Bu bilgisayarın tüm kullanıcılarına uygulanır, bu nedenle yalnızca bir yönetici değiştirebilir.</value>
+  </data>
+  <data name="LogsHeader.Text" xml:space="preserve">
+    <value>Günlükler</value>
+  </data>
+  <data name="UserLogsCard.Header" xml:space="preserve">
+    <value>Günlük klasörümü aç</value>
+  </data>
+  <data name="UserLogsCard.Description" xml:space="preserve">
+    <value>Pencere yöneticinizin ve uygulama pencerelerinizin günlükleri.</value>
+  </data>
+  <data name="ServiceLogsCard.Header" xml:space="preserve">
+    <value>Hizmetin günlük klasörünü aç (yöneticiler)</value>
+  </data>
+  <data name="ServiceLogsCard.Description" xml:space="preserve">
+    <value>DSA hizmetinin ve Android'in kendisinin günlükleri.</value>
+  </data>
+  <data name="CommandLineHeader.Text" xml:space="preserve">
+    <value>Komut satırı</value>
+  </data>
+  <data name="CommandLineCard.Header" xml:space="preserve">
+    <value>dsa komutu</value>
+  </data>
+  <data name="CommandLineCard.Description" xml:space="preserve">
+    <value>Bu sayfalardaki her şey bir terminalden de kullanılabilir.</value>
+  </data>
+  <data name="AboutTitle.Text" xml:space="preserve">
+    <value>Hakkında</value>
+  </data>
+  <data name="AboutProductCard.Header" xml:space="preserve">
+    <value>Desktop Subsystem for Android™</value>
+  </data>
+  <data name="AboutProductCard.Description" xml:space="preserve">
+    <value>Thisisthepy</value>
+  </data>
+  <data name="AboutAppVersionCard.Header" xml:space="preserve">
+    <value>DSA Ayarları sürümü</value>
+  </data>
+  <data name="AboutServiceVersionCard.Header" xml:space="preserve">
+    <value>DSA hizmeti sürümü</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Header" xml:space="preserve">
+    <value>Android görüntüsü sürümü</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Description" xml:space="preserve">
+    <value>Sonraki başlatmada önyüklenen Android görüntüsü. Görüntü güncellemeleri bunu değiştirir.</value>
+  </data>
+  <data name="AboutLicenseCard.Header" xml:space="preserve">
+    <value>Lisanslar</value>
+  </data>
+  <data name="AboutLicenseCard.Description" xml:space="preserve">
+    <value>DSA, Apache License 2.0 ile lisanslanmıştır. Birlikte dağıttığı her bileşenin lisanslarını açın.</value>
+  </data>
+  <data name="AboutSourceCard.Header" xml:space="preserve">
+    <value>Kaynak kodu</value>
+  </data>
+  <data name="AboutIndependent.Text" xml:space="preserve">
+    <value>Desktop Subsystem for Android bağımsız bir açık kaynak projesidir.
+Microsoft veya Google ile bağlantılı değildir; onlar tarafından onaylanmaz veya desteklenmez.</value>
+  </data>
+  <data name="AboutTrademark.Text" xml:space="preserve">
+    <value>Android, Google LLC'nin ticari markasıdır.</value>
+  </data>
+  <data name="FolderMissingTitle" xml:space="preserve">
+    <value>Klasör açılamadı</value>
+  </data>
+  <data name="FolderMissingBody" xml:space="preserve">
+    <value>{0} henüz yok veya onu açma izniniz yok.</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>Tamam</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>İptal</value>
+  </data>
+  <data name="Install_BusyTitle" xml:space="preserve">
+    <value>Yükleniyor</value>
+  </data>
+  <data name="Install_Busy" xml:space="preserve">
+    <value>{0}, Android'e yükleniyor…</value>
+  </data>
+  <data name="Install_DoneTitle" xml:space="preserve">
+    <value>Yüklendi</value>
+  </data>
+  <data name="Install_FailedTitle" xml:space="preserve">
+    <value>Yüklenmedi</value>
+  </data>
+  <data name="Install_Installed" xml:space="preserve">
+    <value>{0} yüklendi ({1}). Başlat menüsünden açın.</value>
+  </data>
+  <data name="Install_Refused" xml:space="preserve">
+    <value>{0} yüklenmedi: {1} ({2})</value>
+  </data>
+  <data name="Install_NotSent" xml:space="preserve">
+    <value>{0}, Android'e ulaşmadı. {1}</value>
+  </data>
+  <data name="Install_NotApk" xml:space="preserve">
+    <value>Yalnızca APK dosyaları yüklenebilir: {0}</value>
+  </data>
+  <data name="Install_Reason_incompatible" xml:space="preserve">
+    <value>uygulama bu Android'de çalışmıyor: başka bir işlemci türü, daha yeni bir Android sürümü veya bu cihazda olmayan bir özellik gerekiyor.</value>
+  </data>
+  <data name="Install_Reason_conflicting-signature" xml:space="preserve">
+    <value>uygulama zaten başka bir anahtarla imzalanmış olarak yüklü. Önce Android'de kaldırın.</value>
+  </data>
+  <data name="Install_Reason_invalid-apk" xml:space="preserve">
+    <value>dosya, Android'in okuyabileceği imzalı bir APK değil.</value>
+  </data>
+  <data name="Install_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android'de uygulama için yer yok.</value>
+  </data>
+  <data name="Install_Reason_downgrade" xml:space="preserve">
+    <value>uygulamanın daha yeni bir sürümü yüklü. Önce Android'de kaldırın.</value>
+  </data>
+  <data name="Install_Reason_blocked" xml:space="preserve">
+    <value>bu Android'in bir ilkesi uygulamaya izin vermiyor.</value>
+  </data>
+  <data name="Install_Reason_other" xml:space="preserve">
+    <value>Android uygulamayı yüklemedi.</value>
+  </data>
+  <data name="NavWidgets.Content" xml:space="preserve">
+    <value>Pencere öğeleri</value>
+  </data>
+  <data name="WidgetsTitle.Text" xml:space="preserve">
+    <value>Pencere öğeleri</value>
+  </data>
+  <data name="WidgetsRefreshButton.Content" xml:space="preserve">
+    <value>Yenile</value>
+  </data>
+  <data name="WidgetsIntro.Text" xml:space="preserve">
+    <value>Android uygulamalarınızın sunduğu pencere öğelerini masaüstünüze yerleştirin. Bu sayfayı açtığınızda Android başlar.
+• Her pencere öğesi, diğer pencerelerinizin altında kendi penceresini alır.
+• Düzenlemek için pencere öğesini basılı tutun: taşımak için sürükleyin, boyutlandırmak için tutamaçlarını sürükleyin.
+• Ayarları, boyutları ve Kaldır için pencere öğesine sağ tıklayın.</value>
+  </data>
+  <data name="WidgetsErrorBar.Title" xml:space="preserve">
+    <value>Pencere öğeleri okunamadı veya değiştirilemedi</value>
+  </data>
+  <data name="WidgetsDoneBar.Title" xml:space="preserve">
+    <value>Bitti</value>
+  </data>
+  <data name="WidgetsPlacedHeader.Text" xml:space="preserve">
+    <value>Masaüstünüzde</value>
+  </data>
+  <data name="WidgetsPlacedNone.Text" xml:space="preserve">
+    <value>Masaüstünüzde henüz pencere öğesi yok.</value>
+  </data>
+  <data name="WidgetsGalleryHeader.Text" xml:space="preserve">
+    <value>Uygulamalarınızın sunduğu pencere öğeleri</value>
+  </data>
+  <data name="WidgetsGalleryNone.Text" xml:space="preserve">
+    <value>Android'deki hiçbir uygulama pencere öğesi sunmuyor.</value>
+  </data>
+  <data name="WidgetsAddButton.Content" xml:space="preserve">
+    <value>Masaüstüne ekle</value>
+  </data>
+  <data name="WidgetsRemoveButton.Content" xml:space="preserve">
+    <value>Kaldır</value>
+  </data>
+  <data name="Widgets_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Widgets_Setup" xml:space="preserve">
+    <value>kurmanızı ister</value>
+  </data>
+  <data name="Widgets_At" xml:space="preserve">
+    <value>Konum {0}, {1}, boyut {2} × {3}</value>
+  </data>
+  <data name="Widgets_Placed" xml:space="preserve">
+    <value>{0} masaüstünüzde.</value>
+  </data>
+  <data name="Widgets_Removed" xml:space="preserve">
+    <value>{0} masaüstünüzden kaldırıldı.</value>
+  </data>
+  <data name="ApkWindow_Caption" xml:space="preserve">
+    <value>APK Yükleyicisi</value>
+  </data>
+  <data name="ApkWindow_Reading" xml:space="preserve">
+    <value>Dosya okunuyor</value>
+  </data>
+  <data name="ApkWindow_Install" xml:space="preserve">
+    <value>Yükle</value>
+  </data>
+  <data name="ApkWindow_Update" xml:space="preserve">
+    <value>Güncelle</value>
+  </data>
+  <data name="ApkWindow_Reinstall" xml:space="preserve">
+    <value>Yeniden yükle</value>
+  </data>
+  <data name="ApkWindow_Cancel" xml:space="preserve">
+    <value>İptal</value>
+  </data>
+  <data name="ApkWindow_Close" xml:space="preserve">
+    <value>Kapat</value>
+  </data>
+  <data name="ApkWindow_Open" xml:space="preserve">
+    <value>Başlat</value>
+  </data>
+  <data name="ApkWindow_AndroidChip" xml:space="preserve">
+    <value>Android {0} veya üstü</value>
+  </data>
+  <data name="ApkWindow_SummaryUpdate" xml:space="preserve">
+    <value>{0} zaten yüklü. Bu, onu {1} sürümünden {2} sürümüne günceller. Verileri korunur.</value>
+  </data>
+  <data name="ApkWindow_SummaryReinstall" xml:space="preserve">
+    <value>{0} {1} sürümü zaten yüklü. Bu, aynı sürümü yeniden yükler. Verileri korunur.</value>
+  </data>
+  <data name="ApkWindow_SummaryDowngrade" xml:space="preserve">
+    <value>{0} {1} sürümü yüklü ve bu dosya daha eski {2} sürümü. Android, yeni bir sürümün üzerine eski sürüm yüklemez.
+Bu dosyayı kullanmak için önce uygulamayı Android'de kaldırın.</value>
+  </data>
+  <data name="ApkWindow_SummarySignature" xml:space="preserve">
+    <value>{0} zaten yüklü ve bu dosyadan farklı bir anahtarla imzalanmış. Uygulamanın verilerini korumak için Android onu değiştirmez.
+Bu dosyayı kullanmak için önce uygulamayı Android'de kaldırın.</value>
+  </data>
+  <data name="ApkWindow_FactPackage" xml:space="preserve">
+    <value>Paket</value>
+  </data>
+  <data name="ApkWindow_FactVersion" xml:space="preserve">
+    <value>Sürüm</value>
+  </data>
+  <data name="ApkWindow_FactInstalled" xml:space="preserve">
+    <value>Şu anda yüklü</value>
+  </data>
+  <data name="ApkWindow_FactAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="ApkWindow_FactSize" xml:space="preserve">
+    <value>Boyut</value>
+  </data>
+  <data name="ApkWindow_FactAbis" xml:space="preserve">
+    <value>İşlemci</value>
+  </data>
+  <data name="ApkWindow_FactSigner" xml:space="preserve">
+    <value>İmzalayan</value>
+  </data>
+  <data name="ApkWindow_AndroidRange" xml:space="preserve">
+    <value>{0} veya üstü, {1} için hazırlanmış</value>
+  </data>
+  <data name="ApkWindow_VersionText" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ApkWindow_ApiLevel" xml:space="preserve">
+    <value>API düzeyi {0}</value>
+  </data>
+  <data name="ApkWindow_AndroidVersion" xml:space="preserve">
+    <value>Android {0} (API {1})</value>
+  </data>
+  <data name="ApkWindow_Signer" xml:space="preserve">
+    <value>SHA-256 {1} ({0} imzası)</value>
+  </data>
+  <data name="ApkWindow_Unsigned" xml:space="preserve">
+    <value>İmzalı değil. Android yalnızca imzalı uygulamaları yükler.</value>
+  </data>
+  <data name="ApkWindow_NoPermissions" xml:space="preserve">
+    <value>Hiçbir izin istemiyor.</value>
+  </data>
+  <data name="ApkWindow_Sensitive" xml:space="preserve">
+    <value>Android önce size sorar</value>
+  </data>
+  <data name="ApkWindow_StartingTitle" xml:space="preserve">
+    <value>Android başlatılıyor</value>
+  </data>
+  <data name="ApkWindow_StartingDetail" xml:space="preserve">
+    <value>Android bir kez başlar, ardından uygulamalarınız için hazır kalır.</value>
+  </data>
+  <data name="ApkWindow_CheckingTitle" xml:space="preserve">
+    <value>Uygulama denetleniyor</value>
+  </data>
+  <data name="ApkWindow_CheckingDetail" xml:space="preserve">
+    <value>Uygulamanın zaten yüklü olup olmadığı denetleniyor.</value>
+  </data>
+  <data name="ApkWindow_InstallingTitle" xml:space="preserve">
+    <value>{0} yükleniyor</value>
+  </data>
+  <data name="ApkWindow_SendingDetail" xml:space="preserve">
+    <value>Uygulama Android'e kopyalanıyor</value>
+  </data>
+  <data name="ApkWindow_AndroidInstallingDetail" xml:space="preserve">
+    <value>Android uygulamayı yüklüyor</value>
+  </data>
+  <data name="ApkWindow_Cancelling" xml:space="preserve">
+    <value>Durduruluyor</value>
+  </data>
+  <data name="ApkWindow_Cancelled" xml:space="preserve">
+    <value>Yükleme durduruldu. Hiçbir şey değiştirilmedi.</value>
+  </data>
+  <data name="ApkWindow_DoneTitle" xml:space="preserve">
+    <value>{0} yüklendi</value>
+  </data>
+  <data name="ApkWindow_UpdatedTitle" xml:space="preserve">
+    <value>{0} güncellendi</value>
+  </data>
+  <data name="ApkWindow_DoneText" xml:space="preserve">
+    <value>Şimdi veya daha sonra Başlat menüsünden başlatın.</value>
+  </data>
+  <data name="ApkWindow_FailedTitle" xml:space="preserve">
+    <value>Yüklenmedi</value>
+  </data>
+  <data name="ApkWindow_NotApkTitle" xml:space="preserve">
+    <value>Bu dosya yüklenemiyor</value>
+  </data>
+  <data name="ApkWindow_StartFailed" xml:space="preserve">
+    <value>Android başlamadı, bu nedenle uygulama yüklenmedi. {0}</value>
+  </data>
+  <data name="ApkWindow_NotSent" xml:space="preserve">
+    <value>Uygulama Android'e ulaşmadı. {0}</value>
+  </data>
+  <data name="ApkWindow_ReasonWithWords" xml:space="preserve">
+    <value>{0} Android'in iletisi: {1}</value>
+  </data>
+  <data name="ApkWindow_OpenFailed" xml:space="preserve">
+    <value>{0} açılamadı. {1}</value>
+  </data>
+  <data name="ApkWindow_Reason_incompatible" xml:space="preserve">
+    <value>Uygulama bu Android'de çalışmıyor: başka bir işlemci türü, daha yeni bir Android sürümü veya bu cihazda olmayan bir özellik gerekiyor.</value>
+  </data>
+  <data name="ApkWindow_Reason_conflicting-signature" xml:space="preserve">
+    <value>Uygulama zaten başka bir anahtarla imzalanmış olarak yüklü. Önce Android'de kaldırın.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-apk" xml:space="preserve">
+    <value>Dosya, Android'in okuyabileceği imzalı bir APK değil.</value>
+  </data>
+  <data name="ApkWindow_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android'de uygulama için yer yok. Android'de biraz yer açıp yeniden deneyin.</value>
+  </data>
+  <data name="ApkWindow_Reason_downgrade" xml:space="preserve">
+    <value>Uygulamanın daha yeni bir sürümü yüklü. Önce Android'de kaldırın.</value>
+  </data>
+  <data name="ApkWindow_Reason_blocked" xml:space="preserve">
+    <value>Bu Android'in bir ilkesi uygulamaya izin vermiyor.</value>
+  </data>
+  <data name="ApkWindow_Reason_other" xml:space="preserve">
+    <value>Android uygulamayı yüklemedi.</value>
+  </data>
+  <data name="ApkWindow_AbiWarning" xml:space="preserve">
+    <value>Bu uygulamada yalnızca {0} işlemciler için kod var, bu bilgisayarınki için yok.
+Android onu yalnızca bir ARM çeviri paketiyle çalıştırır ve yüklemeyi reddedebilir.</value>
+  </data>
+  <data name="ApkWindow_Abi32Warning" xml:space="preserve">
+    <value>Bu uygulamada yalnızca {0} işlemciler için kod var.
+ARM çevirici yalnızca 64 bit ARM (arm64-v8a) kodunu çalıştırır; bu nedenle Android yüklemeyi reddedebilir veya uygulama başlamayabilir.</value>
+  </data>
+  <data name="ApkWindow_LaunchFailedAfterInstall" xml:space="preserve">
+    <value>{0} yüklendi ancak açılmadı. {1}</value>
+  </data>
+  <data name="ApkWindow_LaunchWhenReady" xml:space="preserve">
+    <value>Hazır olunca başlat</value>
+  </data>
+  <data name="NavLogs.Content" xml:space="preserve">
+    <value>Günlükler</value>
+  </data>
+  <data name="LogsTitle.Text" xml:space="preserve">
+    <value>Günlükler</value>
+  </data>
+  <data name="LogsNote.Text" xml:space="preserve">
+    <value>Android günlüğünü yalnızca bu sayfa açıkken gönderir ve diske hiçbir şey yazılmaz.
+Tanılamayı kaydet, bir sorun raporunun gerektirdiklerini tek bir zip dosyasında toplar.</value>
+  </data>
+  <data name="LogsSaveButton.Content" xml:space="preserve">
+    <value>Tanılamayı kaydet</value>
+  </data>
+  <data name="LogsFilter.PlaceholderText" xml:space="preserve">
+    <value>Etikete veya metne göre filtrele</value>
+  </data>
+  <data name="LogsPause.Content" xml:space="preserve">
+    <value>Duraklat</value>
+  </data>
+  <data name="LogsErrorBar.Title" xml:space="preserve">
+    <value>Günlük okunamıyor</value>
+  </data>
+  <data name="LogsStatusBar.Title" xml:space="preserve">
+    <value>Tanılama</value>
+  </data>
+  <data name="Logs_Paused" xml:space="preserve">
+    <value>Duraklatıldı. {0} yeni satır bekliyor.</value>
+  </data>
+  <data name="Logs_Saving" xml:space="preserve">
+    <value>Tanılama bilgileri toplanıyor. Bu bir dakika veya daha uzun sürer.</value>
+  </data>
+  <data name="Logs_Saved" xml:space="preserve">
+    <value>Tanılama bilgileri kaydedildi: {0}.</value>
+  </data>
+  <data name="Logs_SaveDialogTitle" xml:space="preserve">
+    <value>Tanılamayı kaydet</value>
+  </data>
+  <data name="Logs_SaveDialogFilter" xml:space="preserve">
+    <value>Zip arşivi</value>
+  </data>
+  <data name="Logs_Priority_V" xml:space="preserve">
+    <value>Ayrıntılı</value>
+  </data>
+  <data name="Logs_Priority_D" xml:space="preserve">
+    <value>Hata ayıklama</value>
+  </data>
+  <data name="Logs_Priority_I" xml:space="preserve">
+    <value>Bilgi</value>
+  </data>
+  <data name="Logs_Priority_W" xml:space="preserve">
+    <value>Uyarı</value>
+  </data>
+  <data name="Logs_Priority_E" xml:space="preserve">
+    <value>Hata</value>
+  </data>
+  <data name="Logs_Priority_F" xml:space="preserve">
+    <value>Önemli hata</value>
+  </data>
+  <data name="NavIdentity.Content" xml:space="preserve">
+    <value>Cihaz kimliği</value>
+  </data>
+  <data name="IdentityTitle.Text" xml:space="preserve">
+    <value>Cihaz kimliği</value>
+  </data>
+  <data name="IdentityIntro.Text" xml:space="preserve">
+    <value>Android'in uygulamalara bildirdiği adlar ve derleme parmak izi. Kutuda gösterilen değeri korumak için kutuyu boş bırakın.
+Değişiklikler Android'in sonraki başlatılışından itibaren uygulanır.</value>
+  </data>
+  <data name="IdentityWarning.Title" xml:space="preserve">
+    <value>Uygulamalar fark edebilir</value>
+  </data>
+  <data name="IdentityWarning.Message" xml:space="preserve">
+    <value>Modeli veya parmak izini değiştirmek, uygulamaların davranışını değiştirebilir.
+Bazı uygulamalar çalışmadan önce cihazı denetler; ödeme ve bütünlük denetimleri başarısız olabilir.</value>
+  </data>
+  <data name="IdentityDoneBar.Title" xml:space="preserve">
+    <value>Cihaz kimliği</value>
+  </data>
+  <data name="IdentitySaveButton.Content" xml:space="preserve">
+    <value>Kaydet</value>
+  </data>
+  <data name="IdentityResetButton.Content" xml:space="preserve">
+    <value>Varsayılanlara sıfırla</value>
+  </data>
+  <data name="IdentityRestartButton.Content" xml:space="preserve">
+    <value>Android'i şimdi yeniden başlat</value>
+  </data>
+  <data name="IdentityResetConfirmTitle" xml:space="preserve">
+    <value>Cihaz kimliği sıfırlansın mı?</value>
+  </data>
+  <data name="IdentityResetConfirmBody" xml:space="preserve">
+    <value>Her değer varsayılanına döner: bu bilgisayarınki veya bilgisayarın bildirmediği yerde DSA'nın kendi değeri.
+
+Android'in sonraki başlatılışından itibaren uygulanır.</value>
+  </data>
+  <data name="IdentityNamesHeader.Text" xml:space="preserve">
+    <value>Cihaz</value>
+  </data>
+  <data name="IdentityFingerprintHeader.Text" xml:space="preserve">
+    <value>Derleme parmak izi</value>
+  </data>
+  <data name="IdentityPreview.Text" xml:space="preserve">
+    <value>Sonraki başlatmadan itibaren parmak izi</value>
+  </data>
+  <data name="Identity_Saved" xml:space="preserve">
+    <value>Kaydedildi. Android bunu sonraki başlatılışından itibaren kullanır.</value>
+  </data>
+  <data name="Identity_SavedRestart" xml:space="preserve">
+    <value>Kaydedildi. Şimdi kullanmak için Android'i yeniden başlatın.</value>
+  </data>
+  <data name="Identity_Reset" xml:space="preserve">
+    <value>Varsayılanlara dönüldü. Android bunları sonraki başlatılışından itibaren kullanır.</value>
+  </data>
+  <data name="Identity_ResetRestart" xml:space="preserve">
+    <value>Varsayılanlara dönüldü. Şimdi kullanmak için Android'i yeniden başlatın.</value>
+  </data>
+  <data name="Identity_Restarted" xml:space="preserve">
+    <value>Android bu kimlikle yeniden başladı.</value>
+  </data>
+  <data name="Identity_FromComputer" xml:space="preserve">
+    <value>Varsayılan: bu bilgisayardan</value>
+  </data>
+  <data name="Identity_FromDsa" xml:space="preserve">
+    <value>Varsayılan: DSA'nın değeri</value>
+  </data>
+  <data name="Identity_NotSaid" xml:space="preserve">
+    <value>Bu bilgisayar bildirmiyor; Android kendi değerini korur.</value>
+  </data>
+  <data name="IdentityComputerHeader.Text" xml:space="preserve">
+    <value>Bu bilgisayardan</value>
+  </data>
+  <data name="IdentityComputerNote.Text" xml:space="preserve">
+    <value>Bunlar bu bilgisayarı izler ve Android her başladığında yeniden okunur; bilgisayarın adı değişirse sonraki başlatmada izlenir.
+Android Ayarları cihaz adını ve yongayı gösterir. Model adı yalnızca burada görünür.</value>
+  </data>
+  <data name="Identity_model_name" xml:space="preserve">
+    <value>Model adı</value>
+  </data>
+  <data name="Identity_model_name_Description" xml:space="preserve">
+    <value>Bilgisayarın satıldığı ad (ro.product.marketname).</value>
+  </data>
+  <data name="Identity_device_name" xml:space="preserve">
+    <value>Cihaz adı</value>
+  </data>
+  <data name="Identity_device_name_Description" xml:space="preserve">
+    <value>Ayarlar, Bluetooth ve Wi-Fi Direct'in cihaz için gösterdiği bilgisayar adı.</value>
+  </data>
+  <data name="Identity_soc_manufacturer" xml:space="preserve">
+    <value>Yonga üreticisi</value>
+  </data>
+  <data name="Identity_soc_manufacturer_Description" xml:space="preserve">
+    <value>Build.SOC_MANUFACTURER: bilgisayarın işlemcisinin üreticisi.</value>
+  </data>
+  <data name="Identity_soc_model" xml:space="preserve">
+    <value>Yonga modeli</value>
+  </data>
+  <data name="Identity_soc_model_Description" xml:space="preserve">
+    <value>Build.SOC_MODEL: bilgisayarın işlemcisi.</value>
+  </data>
+  <data name="Identity_manufacturer" xml:space="preserve">
+    <value>Üretici</value>
+  </data>
+  <data name="Identity_manufacturer_Description" xml:space="preserve">
+    <value>Build.MANUFACTURER. En fazla 64 yazdırılabilir ASCII karakteri.</value>
+  </data>
+  <data name="Identity_manufacturer_Invalid" xml:space="preserve">
+    <value>Başında veya sonunda boşluk olmadan 1 ile 64 arası yazdırılabilir ASCII karakteri kullanın.</value>
+  </data>
+  <data name="Identity_brand" xml:space="preserve">
+    <value>Marka</value>
+  </data>
+  <data name="Identity_brand_Description" xml:space="preserve">
+    <value>Build.BRAND ve parmak izinin ilk kısmı. Harfler, rakamlar, '.', '_' ve '-'.</value>
+  </data>
+  <data name="Identity_brand_Invalid" xml:space="preserve">
+    <value>Harf veya rakamla başlayan, en fazla 32 harf, rakam, '.', '_' veya '-' kullanın.</value>
+  </data>
+  <data name="Identity_model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Identity_model_Description" xml:space="preserve">
+    <value>Build.MODEL, uygulamaların bu cihaz için gösterdiği ad.</value>
+  </data>
+  <data name="Identity_model_Invalid" xml:space="preserve">
+    <value>Başında veya sonunda boşluk olmadan 1 ile 64 arası yazdırılabilir ASCII karakteri kullanın.</value>
+  </data>
+  <data name="Identity_device" xml:space="preserve">
+    <value>Cihaz</value>
+  </data>
+  <data name="Identity_device_Description" xml:space="preserve">
+    <value>Build.DEVICE. Harfler, rakamlar, '.', '_' ve '-'.</value>
+  </data>
+  <data name="Identity_device_Invalid" xml:space="preserve">
+    <value>Harf veya rakamla başlayan, en fazla 32 harf, rakam, '.', '_' veya '-' kullanın.</value>
+  </data>
+  <data name="Identity_name" xml:space="preserve">
+    <value>Ürün adı</value>
+  </data>
+  <data name="Identity_name_Description" xml:space="preserve">
+    <value>Build.PRODUCT. Harfler, rakamlar, '.', '_' ve '-'.</value>
+  </data>
+  <data name="Identity_name_Invalid" xml:space="preserve">
+    <value>Harf veya rakamla başlayan, en fazla 32 harf, rakam, '.', '_' veya '-' kullanın.</value>
+  </data>
+  <data name="Identity_characteristics" xml:space="preserve">
+    <value>Form faktörü</value>
+  </data>
+  <data name="Identity_characteristics_Description" xml:space="preserve">
+    <value>ro.build.characteristics: tablet (geniş ekran düzenleri), default (telefon) veya virgülle ayrılmış başka sözcükler.</value>
+  </data>
+  <data name="Identity_characteristics_Invalid" xml:space="preserve">
+    <value>Küçük harf, rakam ve '_' içeren, virgülle ayrılmış sözcükler kullanın.</value>
+  </data>
+  <data name="Identity_fingerprint_release" xml:space="preserve">
+    <value>Sürüm</value>
+  </data>
+  <data name="Identity_fingerprint_release_Description" xml:space="preserve">
+    <value>Parmak izindeki Android sürümü.</value>
+  </data>
+  <data name="Identity_fingerprint_release_Invalid" xml:space="preserve">
+    <value>1 ile 64 arası harf, rakam, '.', '_' veya '-' kullanın.</value>
+  </data>
+  <data name="Identity_fingerprint_id" xml:space="preserve">
+    <value>Derleme kimliği</value>
+  </data>
+  <data name="Identity_fingerprint_id_Description" xml:space="preserve">
+    <value>Parmak izindeki derleme kimliği.</value>
+  </data>
+  <data name="Identity_fingerprint_id_Invalid" xml:space="preserve">
+    <value>1 ile 64 arası harf, rakam, '.', '_' veya '-' kullanın.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental" xml:space="preserve">
+    <value>Artımlı sürüm</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Description" xml:space="preserve">
+    <value>Parmak izindeki artımlı derleme sürümü.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Invalid" xml:space="preserve">
+    <value>1 ile 64 arası harf, rakam, '.', '_' veya '-' kullanın.</value>
+  </data>
+  <data name="Identity_fingerprint_type" xml:space="preserve">
+    <value>Derleme türü</value>
+  </data>
+  <data name="Identity_fingerprint_type_Description" xml:space="preserve">
+    <value>user, userdebug veya eng. Bunu yalnızca parmak izi söyler; Android bir user derlemesi olarak kalır.</value>
+  </data>
+  <data name="Identity_fingerprint_type_Invalid" xml:space="preserve">
+    <value>user, userdebug veya eng kullanın.</value>
+  </data>
+  <data name="Identity_fingerprint_tags" xml:space="preserve">
+    <value>Etiketler</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Description" xml:space="preserve">
+    <value>Örneğin release-keys.</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Invalid" xml:space="preserve">
+    <value>Harf, rakam, '.', '_', '-' veya ',' kullanın.</value>
+  </data>
+  <data name="Identity_fingerprint" xml:space="preserve">
+    <value>Tam parmak izi</value>
+  </data>
+  <data name="Identity_fingerprint_Description" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags
+Ayarlandığında, yukarıdaki parçalar ne derse desin Build.FINGERPRINT budur.</value>
+  </data>
+  <data name="Identity_fingerprint_Invalid" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags biçiminde yazın; tür user, userdebug veya eng olmalı.</value>
+  </data>
+  <data name="NavApps.Content" xml:space="preserve">
+    <value>Uygulamalar</value>
+  </data>
+  <data name="AppsTitle.Text" xml:space="preserve">
+    <value>Uygulamalar</value>
+  </data>
+  <data name="AppsRefreshButton.Content" xml:space="preserve">
+    <value>Yenile</value>
+  </data>
+  <data name="AppsIntro.Text" xml:space="preserve">
+    <value>Bu bilgisayarda yüklü Android uygulamaları. Bu sayfayı açtığınızda Android başlar.
+Bir uygulamayı açın, Uygulama bilgileri'nde izinlerini, depolamasını ve bildirimlerini değiştirin veya yüklediğiniz uygulamayı kaldırın.
+Bunlar Windows Ayarları'nda Uygulamalar &gt; Yüklü uygulamalar altında da listelenir.</value>
+  </data>
+  <data name="AppsErrorBar.Title" xml:space="preserve">
+    <value>Uygulamalar okunamadı veya değiştirilemedi</value>
+  </data>
+  <data name="AppsDoneBar.Title" xml:space="preserve">
+    <value>Bitti</value>
+  </data>
+  <data name="AppsManageCard.Title" xml:space="preserve">
+    <value>Uygulamaları yönet</value>
+  </data>
+  <data name="AppsManageCard.Description" xml:space="preserve">
+    <value>Android'in kendi ayarlarındaki uygulama listesini aç</value>
+  </data>
+  <data name="AppsInstalledHeader.Text" xml:space="preserve">
+    <value>Yüklü uygulamalar</value>
+  </data>
+  <data name="AppsSearch.PlaceholderText" xml:space="preserve">
+    <value>Uygulamalarda ara</value>
+  </data>
+  <data name="AppsNone.Text" xml:space="preserve">
+    <value>Android'de henüz yüklü uygulama yok. Yüklemek için bir APK dosyası açın.</value>
+  </data>
+  <data name="AppsNoMatch.Text" xml:space="preserve">
+    <value>Aramanızla eşleşen uygulama yok.</value>
+  </data>
+  <data name="AppsOpenButton.Content" xml:space="preserve">
+    <value>Aç</value>
+  </data>
+  <data name="AppsInfoButton.Content" xml:space="preserve">
+    <value>Uygulama bilgileri</value>
+  </data>
+  <data name="AppsDesktopShortcutButton.Content" xml:space="preserve">
+    <value>Masaüstü kısayolu oluştur</value>
+  </data>
+  <data name="Apps_DesktopShortcutMade" xml:space="preserve">
+    <value>{0} kısayolu masaüstünde.</value>
+  </data>
+  <data name="AppsUninstallButton.Content" xml:space="preserve">
+    <value>Kaldır</value>
+  </data>
+  <data name="AppsUninstallConfirmTitle" xml:space="preserve">
+    <value>{0} kaldırılsın mı?</value>
+  </data>
+  <data name="AppsUninstallConfirmBody" xml:space="preserve">
+    <value>{0} ve verileri Android'den kaldırılacak.
+
+Bu işlem geri alınamaz.</value>
+  </data>
+  <data name="Apps_Count" xml:space="preserve">
+    <value>{0} uygulama</value>
+  </data>
+  <data name="Apps_CountMatching" xml:space="preserve">
+    <value>{1} uygulamadan {0}</value>
+  </data>
+  <data name="Apps_Version" xml:space="preserve">
+    <value>Sürüm {0}</value>
+  </data>
+  <data name="Apps_Installed" xml:space="preserve">
+    <value>Yükleme: {0}</value>
+  </data>
+  <data name="Apps_System" xml:space="preserve">
+    <value>Android'in parçası</value>
+  </data>
+  <data name="Apps_SystemTip" xml:space="preserve">
+    <value>Bu uygulama Android'in parçasıdır ve kaldırılamaz.</value>
+  </data>
+  <data name="Apps_Uninstalled" xml:space="preserve">
+    <value>{0} kaldırıldı.</value>
+  </data>
+  <data name="Apps_NotUninstalled" xml:space="preserve">
+    <value>{0} kaldırılmadı: {1} ({2})</value>
+  </data>
+  <data name="Apps_Refused_not-installed" xml:space="preserve">
+    <value>artık yüklü değil</value>
+  </data>
+  <data name="Apps_Refused_system-app" xml:space="preserve">
+    <value>Android'in parçası</value>
+  </data>
+  <data name="Apps_Refused_blocked" xml:space="preserve">
+    <value>uygulama bir cihaz yöneticisi olduğu veya bir ilke onu tuttuğu için Android izin vermiyor</value>
+  </data>
+  <data name="Apps_Refused_other" xml:space="preserve">
+    <value>Android onu kaldıramadı</value>
+  </data>
+  <data name="UninstallWindow_Caption" xml:space="preserve">
+    <value>Android uygulamasını kaldır</value>
+  </data>
+  <data name="UninstallWindow_Version" xml:space="preserve">
+    <value>Sürüm {0}</value>
+  </data>
+  <data name="UninstallWindow_Close" xml:space="preserve">
+    <value>Kapat</value>
+  </data>
+  <data name="UninstallWindow_Busy" xml:space="preserve">
+    <value>{0} kaldırılıyor</value>
+  </data>
+  <data name="UninstallWindow_BusyDetail" xml:space="preserve">
+    <value>Uygulama ve verileri Android'den kaldırılıyor. Android çalışmıyorsa önce başlar.</value>
+  </data>
+  <data name="UninstallWindow_DoneTitle" xml:space="preserve">
+    <value>Kaldırıldı</value>
+  </data>
+  <data name="UninstallWindow_DoneText" xml:space="preserve">
+    <value>{0}, Android'den kaldırıldı.</value>
+  </data>
+  <data name="UninstallWindow_FailedTitle" xml:space="preserve">
+    <value>Kaldırılmadı</value>
+  </data>
+  <data name="UninstallWindow_Refused" xml:space="preserve">
+    <value>{0} kaldırılmadı: {1}.</value>
+  </data>
+  <data name="UninstallWindow_RefusedDetail" xml:space="preserve">
+    <value>{0} kaldırılmadı: {1} ({2}).</value>
+  </data>
+  <data name="NavBackground.Content" xml:space="preserve">
+    <value>Arka planda çalışanlar</value>
+  </data>
+  <data name="BackgroundTitle.Text" xml:space="preserve">
+    <value>Arka planda çalışanlar</value>
+  </data>
+  <data name="BackgroundRefreshButton.Content" xml:space="preserve">
+    <value>Yenile</value>
+  </data>
+  <data name="BackgroundIntro.Text" xml:space="preserve">
+    <value>Bu Android uygulamaları, müzik çalmak, dosya indirmek, VPN'i açık tutmak gibi işler için pencereleri kapandıktan sonra da çalışır.
+Her birinin görev çubuğunun bildirim alanında bir simgesi var. Bir uygulamayı durdurmak işini bitirir ve belleğini boşaltır.</value>
+  </data>
+  <data name="BackgroundErrorBar.Title" xml:space="preserve">
+    <value>Arka planda çalışan uygulamalar okunamadı veya değiştirilemedi</value>
+  </data>
+  <data name="BackgroundDoneBar.Title" xml:space="preserve">
+    <value>Bitti</value>
+  </data>
+  <data name="BackgroundAppsHeader.Text" xml:space="preserve">
+    <value>Uygulamalar</value>
+  </data>
+  <data name="BackgroundNone.Text" xml:space="preserve">
+    <value>Arka planda çalışan uygulama yok.</value>
+  </data>
+  <data name="BackgroundOpenButton.Content" xml:space="preserve">
+    <value>Aç</value>
+  </data>
+  <data name="BackgroundStopButton.Content" xml:space="preserve">
+    <value>Durdur</value>
+  </data>
+  <data name="BackgroundStoppingHeader.Text" xml:space="preserve">
+    <value>Uygulamaları durdurma</value>
+  </data>
+  <data name="BackgroundAskCard.Header" xml:space="preserve">
+    <value>Bildirim alanından bir uygulamayı durdurmadan önce sor</value>
+  </data>
+  <data name="BackgroundAskCard.Description" xml:space="preserve">
+    <value>Bir daha sorulmamayı seçtiyseniz bunu yeniden açın.</value>
+  </data>
+  <data name="Background_Playing" xml:space="preserve">
+    <value>Çalınıyor: {0}</value>
+  </data>
+  <data name="Background_Paused" xml:space="preserve">
+    <value>Duraklatıldı: {0}</value>
+  </data>
+  <data name="Background_Stopped" xml:space="preserve">
+    <value>{0} durduruldu.</value>
+  </data>
+  <data name="AppsResizable.Content" xml:space="preserve">
+    <value>Yeniden boyutlandırılabilir</value>
+  </data>
+  <data name="AppsResizable.ToolTip" xml:space="preserve">
+    <value>Bu uygulamanın pencerelerinin yeniden boyutlandırılıp ekranı kaplayabilmesi. Kapalıyken her pencere açıldığı boyutta kalır.</value>
+  </data>
+  <data name="AppsStartSize.ToolTip" xml:space="preserve">
+    <value>Bu uygulamanın pencerelerinin açıldığı boyut</value>
+  </data>
+  <data name="Apps_StartSize_Auto" xml:space="preserve">
+    <value>Android'in seçtiği boyutta açılır</value>
+  </data>
+  <data name="Apps_StartSize_PhonePortrait" xml:space="preserve">
+    <value>Telefon, dikey ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_PhoneLandscape" xml:space="preserve">
+    <value>Telefon, yatay ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletPortrait" xml:space="preserve">
+    <value>Tablet, dikey ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletLandscape" xml:space="preserve">
+    <value>Tablet, yatay ({0} × {1})</value>
+  </data>
+  <data name="Apps_WindowChanged" xml:space="preserve">
+    <value>{0} pencereleri, açılan bir sonraki pencereden itibaren yeni ayarları izler.</value>
+  </data>
+  <data name="AppsDpiScaling.Name" xml:space="preserve">
+    <value>Başka bir monitörde ölçekleme</value>
+  </data>
+  <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
+    <value>Penceresi farklı ölçekli bir monitöre taşındığında bu uygulamayı kimin ölçekleyeceği.
+• Uygulama: sürüklerken DSA pencereyi ölçekler. Bırakınca uygulama yeni ölçekte çizer, metin keskin kalır: Android ekranı bir kez yeniden oluşturup durumu korur, kısa bir yeniden çizim olur.
+• Sistem: uygulama ölçeğini korur, DSA penceresini aynı fiziksel boyuta ölçekler. Uygulama yeniden oluşturulmaz. Metin bulanık olabilir.
+• Otomatik: YouTube gibi çalışırken ölçeği değişince bozulan uygulamalar için Sistem, diğer tüm uygulamalar için Uygulama.</value>
+  </data>
+  <data name="Apps_DpiScaling_Auto" xml:space="preserve">
+    <value>Ölçekleme: otomatik</value>
+  </data>
+  <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
+    <value>Ölçekleme: sistem (bu uygulama için önerilen)</value>
+  </data>
+  <data name="Apps_DpiScaling_App" xml:space="preserve">
+    <value>Ölçeklemeyi yapan: uygulama</value>
+  </data>
+  <data name="Apps_DpiScaling_System" xml:space="preserve">
+    <value>Ölçeklemeyi yapan: sistem</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
+    <value>Ölçeklemeyi yapan: sistem (zorlanmış)</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
+    <value>Ölçeklemeyi yapan: sistem (zorlanmış), henüz kullanılamıyor</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
+    <value>Sistem (zorlanmış), ölçek değişikliğini işlediğini belirtmese bile uygulamaya yeniden başlatmadan yeni ölçeği verir.
+Henüz kullanılamıyor: bu derlemede olmayan bir Android çerçeve değişikliği gerekiyor, bu yüzden şimdilik Sistem gibi çalışır.</value>
+  </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>Tam ekran</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>Uygulama net bir tam ekran isteği yaptığında (ör. videonun tam ekran düğmesi) nerede görüneceği. F11 tam ekranı her zaman açıp kapatır.</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>Çubuklar gizli</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>Bu uygulama, kısa video akışlarının yaptığı gibi tam ekran istemeden çubuklarını gizlediğinde nerede gösterileceği.</value>
+  </data>
+  <data name="Apps_FullScreen_Default" xml:space="preserve">
+    <value>Varsayılanı izle</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>Tüm ekranda</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>Pencerenin içinde</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>Uygulama tam ekranı</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>Uygulamanın tam ekran isteğinin (ör. videonun tam ekran düğmesi) nerede görüneceği. Tüm ekranda başlık çubuğu üst kenarda belirir. Uygulamalar sayfasındaki uygulama seçimi önceliklidir.</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>Çubuklarını gizleyen uygulamalar</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>Kısa video akışlarının yaptığı gibi bir uygulama yalnızca çubuklarını gizlediğinde nerede gösterileceği.</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>Tüm ekranda</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>Pencerenin içinde</value>
+  </data>
+  <data name="NavNetwork.Content" xml:space="preserve">
+    <value>Ağ</value>
+  </data>
+  <data name="NetworkTitle.Text" xml:space="preserve">
+    <value>Ağ</value>
+  </data>
+  <data name="NetworkStatusCard.Header" xml:space="preserve">
+    <value>Android'in ağı</value>
+  </data>
+  <data name="NetworkRefreshButton.Content" xml:space="preserve">
+    <value>Yenile</value>
+  </data>
+  <data name="Network_ModeNat" xml:space="preserve">
+    <value>Bu bilgisayar üzerinden bağlı (NAT). Android uygulamaları bunu veri ücreti olmayan Wi-Fi olarak görür.</value>
+  </data>
+  <data name="Network_ModeAdvanced" xml:space="preserve">
+    <value>Bu bilgisayarın ağına ayrı bir cihaz olarak bağlı (gelişmiş ağ).</value>
+  </data>
+  <data name="Network_ModeOff" xml:space="preserve">
+    <value>Android çalışmıyor, bu nedenle henüz ağı yok.</value>
+  </data>
+  <data name="Network_ModeUnknown" xml:space="preserve">
+    <value>DSA hizmeti ağı bildirmiyor. Görmek için DSA'yı güncelleyin.</value>
+  </data>
+  <data name="Network_None" xml:space="preserve">
+    <value>Yok</value>
+  </data>
+  <data name="Network_DnsHost" xml:space="preserve">
+    <value>Bu bilgisayarın çözümleyicisi yanıtlar; bu nedenle hosts dosyası, VPN ve DNS filtreleri Android uygulamalarına da uygulanır.</value>
+  </data>
+  <data name="Network_DnsFallback" xml:space="preserve">
+    <value>Bu bilgisayarın çözümleyicisi yanıt vermiyor, bu nedenle Android ağın DNS sunucularına soruyor: {0}</value>
+  </data>
+  <data name="NetworkAddressLabel.Text" xml:space="preserve">
+    <value>Adres</value>
+  </data>
+  <data name="NetworkDnsLabel.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="NetworkGatewayLabel.Text" xml:space="preserve">
+    <value>Ağ geçidi</value>
+  </data>
+  <data name="NetworkProblemBar.Title" xml:space="preserve">
+    <value>Gelişmiş ağ kullanılmıyor</value>
+  </data>
+  <data name="NetworkAdvancedHeader.Text" xml:space="preserve">
+    <value>Gelişmiş</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Header" xml:space="preserve">
+    <value>Gelişmiş ağ</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Description" xml:space="preserve">
+    <value>Android bu bilgisayarın ağına ayrı bir cihaz olarak katılır: diğer cihazlar ve Android uygulamaları birbirine ulaşır. Varsayılan: kapalı.
+Bu bilgisayardaki programlar, yukarıdaki adresten Android'deki bir sunucuya her zaman ulaşabilir.</value>
+  </data>
+  <data name="NetworkRestartBar.Title" xml:space="preserve">
+    <value>Uygulamak için Android'i yeniden başlatın</value>
+  </data>
+  <data name="NetworkRestartBar.Message" xml:space="preserve">
+    <value>Değişiklik, Android bir sonraki başladığında uygulanır. Genel sayfasında Android'i durdurun, ardından bir uygulama açın.</value>
+  </data>
+  <data name="NetworkCertificatesHeader.Text" xml:space="preserve">
+    <value>Güvenilen sertifikalar</value>
+  </data>
+  <data name="HostCertificatesCard.Header" xml:space="preserve">
+    <value>Bu bilgisayara eklenen kök sertifikaları kullan</value>
+  </data>
+  <data name="HostCertificatesCard.Description" xml:space="preserve">
+    <value>Android uygulamaları bu bilgisayara eklenen kök sertifikalara (ör. şirketinizin veya bir güvenlik programının) güvenir. Varsayılan: açık.
+Windows ile gelen kök sertifikalar listelenmez. Değişiklik hemen uygulanır.</value>
+  </data>
+  <data name="CertificatesNone.Text" xml:space="preserve">
+    <value>Bu bilgisayarda eklenmiş kök sertifika bulunamadı.</value>
+  </data>
+  <data name="Certificate_IssuedBy" xml:space="preserve">
+    <value>Veren: {0}</value>
+  </data>
+  <data name="Certificate_SourceMachine" xml:space="preserve">
+    <value>Bu bilgisayarın Güvenilen Kök Sertifika Yetkilileri</value>
+  </data>
+  <data name="Certificate_SourceMachineGroupPolicy" xml:space="preserve">
+    <value>Bu bilgisayarın Güvenilen Kök Sertifika Yetkilileri, Grup İlkesi ile ayarlandı</value>
+  </data>
+  <data name="Certificate_SourceMachineEnterprise" xml:space="preserve">
+    <value>Bu bilgisayarın Güvenilen Kök Sertifika Yetkilileri, kuruluşunuz tarafından ayarlandı</value>
+  </data>
+  <data name="Certificate_SourceUser" xml:space="preserve">
+    <value>Sizin Güvenilen Kök Sertifika Yetkilileriniz</value>
+  </data>
+  <data name="Certificate_SourceUserGroupPolicy" xml:space="preserve">
+    <value>Sizin Güvenilen Kök Sertifika Yetkilileriniz, Grup İlkesi ile ayarlandı</value>
+  </data>
+  <data name="Certificate_SourceAdmin" xml:space="preserve">
+    <value>Bu bilgisayarın bir yöneticisi tarafından eklendi</value>
+  </data>
+  <data name="Certificate_SourceSystem" xml:space="preserve">
+    <value>Sistemin sertifika deposuna eklendi</value>
+  </data>
+  <data name="BackupHeader.Text" xml:space="preserve">
+    <value>Yedekleme</value>
+  </data>
+  <data name="BackupUnavailableBar.Title" xml:space="preserve">
+    <value>Yedekler şu anda kullanılamıyor</value>
+  </data>
+  <data name="BackupErrorBar.Title" xml:space="preserve">
+    <value>Bu işlem yapılamadı</value>
+  </data>
+  <data name="BackupResultBar.Title" xml:space="preserve">
+    <value>Bitti</value>
+  </data>
+  <data name="BackupCard.Header" xml:space="preserve">
+    <value>Uygulama verilerini yedekle</value>
+  </data>
+  <data name="BackupCard.Description" xml:space="preserve">
+    <value>Android, uygulamalarının verilerini kullanıcı klasörünüze, Windows'un sizin için tuttuğu bir anahtarla şifreleyerek yedekler.
+Veri sıfırlamasından sonra veya kurtarma anahtarıyla başka bir bilgisayarda geri yükleyin.</value>
+  </data>
+  <data name="BackupNowButton.Content" xml:space="preserve">
+    <value>Şimdi yedekle</value>
+  </data>
+  <data name="BackupRestoreButton.Content" xml:space="preserve">
+    <value>Geri yükle</value>
+  </data>
+  <data name="BackupRestoreConfirm.Title" xml:space="preserve">
+    <value>Uygulama verileri yedekten geri yüklensin mi?</value>
+  </data>
+  <data name="BackupRestoreConfirm.Action" xml:space="preserve">
+    <value>Geri yükle</value>
+  </data>
+  <data name="RecoveryKeyCard.Header" xml:space="preserve">
+    <value>Kurtarma anahtarı</value>
+  </data>
+  <data name="RecoveryKeyCard.Description" xml:space="preserve">
+    <value>Kurtarma anahtarı, yedeğinizi başka bir bilgisayarda veya Windows yeniden yüklendikten sonra açar.
+Anahtar olmadan yedeği yalnızca bu bilgisayardaki bu Windows hesabı okuyabilir.</value>
+  </data>
+  <data name="RecoveryKeyShowButton.Content" xml:space="preserve">
+    <value>Kurtarma anahtarını göster</value>
+  </data>
+  <data name="RecoveryKeyHideButton.Content" xml:space="preserve">
+    <value>Gizle</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Header" xml:space="preserve">
+    <value>Kurtarma anahtarı kullan</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Description" xml:space="preserve">
+    <value>Başka bilgisayardaki bir yedeği geri yüklemek için DSA Backup klasörünü kullanıcı klasörünüze kopyalayın ve kurtarma anahtarını girin.</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Placeholder" xml:space="preserve">
+    <value>Kurtarma anahtarı</value>
+  </data>
+  <data name="UseRecoveryKeyButton.Content" xml:space="preserve">
+    <value>Anahtarı kullan</value>
+  </data>
+  <data name="Backup_NoService" xml:space="preserve">
+    <value>DSA hizmeti yedeğinizin durumunu bildirmedi. Bu sayfayı birazdan yeniden açın.</value>
+  </data>
+  <data name="Backup_Unavailable" xml:space="preserve">
+    <value>Yedek klasörü veya anahtarı şu anda kullanılamıyor.</value>
+  </data>
+  <data name="Backup_Folder" xml:space="preserve">
+    <value>Klasör: {0}</value>
+  </data>
+  <data name="Backup_Last" xml:space="preserve">
+    <value>Son yedekleme: {0}</value>
+  </data>
+  <data name="Backup_Never" xml:space="preserve">
+    <value>hiç</value>
+  </data>
+  <data name="Backup_Apps" xml:space="preserve">
+    <value>Yedekteki uygulamalar: {0} ({1})</value>
+  </data>
+  <data name="Backup_LastError" xml:space="preserve">
+    <value>Son sorun: {0}</value>
+  </data>
+  <data name="Backup_Done" xml:space="preserve">
+    <value>{0} uygulamanın verileri yedeklendi.</value>
+  </data>
+  <data name="Backup_DoneSome" xml:space="preserve">
+    <value>{0} uygulamanın verileri yedeklendi; {1} uygulama yedeklenemedi.</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>{0} uygulamanın verileri geri yüklendi ve {1} uygulama yüklendi.</value>
+  </data>
+  <data name="Backup_RestoredSome" xml:space="preserve">
+    <value>{0} uygulamanın verileri geri yüklendi ve {1} uygulama yüklendi; {2} uygulama geri yüklenemedi.</value>
+  </data>
+  <data name="Backup_RestoreWarning" xml:space="preserve">
+    <value>Yedekteki her uygulama, şu anki verileri yerine yedekteki verileri alır.
+
+• Eksik uygulamalar yeniden yüklenir.
+• Android çalışmıyorsa başlar.</value>
+  </data>
+  <data name="Backup_KeyAdvice" xml:space="preserve">
+    <value>Anahtarı yazın veya bir parola yöneticisinde, bu bilgisayardan ayrı saklayın. Anahtar ve yedek klasörü olan herkes yedeği okuyabilir.</value>
+  </data>
+  <data name="Backup_KeyEmpty" xml:space="preserve">
+    <value>Önce kurtarma anahtarını girin.</value>
+  </data>
+  <data name="Backup_KeyUsed" xml:space="preserve">
+    <value>Kurtarma anahtarı yedekleme anahtarınız olarak saklandı. Onunla oluşturulan yedek klasörü artık burada geri yüklenebilir.</value>
+  </data>
+  <data name="BackupSwitchCard.Header" xml:space="preserve">
+    <value>Uygulama verilerini bu bilgisayara yedekle</value>
+  </data>
+  <data name="BackupSwitchCard.Description" xml:space="preserve">
+    <value>Android uygulama verilerinin şifreli ikinci bir kopyasını bu bilgisayarda tutar; sıfırlama sonrası veya başka bilgisayarda geri yüklenir.
+Siz açana kadar kapalıdır.</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>Yedekleme kapalı. Yedek oluşturulmaz ve uygulama verilerinden hiçbir şey bu bilgisayarda tutulmaz.</value>
+  </data>
+  <data name="Backup_OffKept" xml:space="preserve">
+    <value>Yedekleme kapalı. {0} uygulamanın önceki yedekleri ({1}) DSA Backup klasörünüzde hâlâ duruyor.</value>
+  </data>
+  <data name="Backup_DeleteQuestion" xml:space="preserve">
+    <value>{0} uygulamanın yedekleri ({1}) bu bilgisayarda hâlâ duruyor.
+
+Bunlar ve anahtarları da silinsin mi, yoksa daha sonra geri yüklemek için tutulsun mu?</value>
+  </data>
+  <data name="BackupOffConfirm.Title" xml:space="preserve">
+    <value>Yedeklemeyi kapat</value>
+  </data>
+  <data name="BackupOffConfirm.Delete" xml:space="preserve">
+    <value>Yedekleri sil</value>
+  </data>
+  <data name="BackupOffConfirm.Keep" xml:space="preserve">
+    <value>Tut</value>
+  </data>
+  <data name="Backup_TurnedOn" xml:space="preserve">
+    <value>Yedekleme açık. Android bundan sonra uygulamalarının verilerini bu bilgisayara yedekler.</value>
+  </data>
+  <data name="Backup_TurnedOff" xml:space="preserve">
+    <value>Yedekleme kapalı. Şimdiye kadar yapılan yedekler tutuluyor.</value>
+  </data>
+  <data name="Backup_TurnedOffDeleted" xml:space="preserve">
+    <value>Yedekleme kapalı; yedekler ve anahtarları silindi.</value>
+  </data>
+  <data name="KeyProtectionCard.Header" xml:space="preserve">
+    <value>Android anahtarlarının korunması</value>
+  </data>
+  <data name="KeyProtection_None" xml:space="preserve">
+    <value>Android'in anahtarları, Android ilk kez başladığında korumalarını alır.</value>
+  </data>
+  <data name="KeyProtection_Tpm" xml:space="preserve">
+    <value>Bu bilgisayarın TPM'siyle mühürlü. Android diskinin kopyası, uygulama anahtarlarını veya Android'in şifreli deposunu başka yerde açamaz.</value>
+  </data>
+  <data name="KeyProtection_Dpapi" xml:space="preserve">
+    <value>Kullanılabilir TPM olmadığından Windows yalnızca hesabınız için tutuyor. Android diskinin kopyası hesabınız olmadan anahtarları açamaz.
+Bir TPM çalıştığında DSA anahtarları onunla mühürler.</value>
+  </data>
+  <data name="KeyProtection_Hardware" xml:space="preserve">
+    <value>Mühürleyen: {0}.</value>
+  </data>
+  <data name="KeyProtection_Store" xml:space="preserve">
+    <value>Tutan: {0}.</value>
+  </data>
+  <data name="KeyProtection_Why" xml:space="preserve">
+    <value>Neden TPM değil: {0}</value>
+  </data>
+  <data name="KeyProblemBar.Title" xml:space="preserve">
+    <value>Android'in anahtarları açılamadı</value>
+  </data>
+  <data name="ResetDataHeader.Text" xml:space="preserve">
+    <value>Sıfırla</value>
+  </data>
+  <data name="ResetDataCard.Header" xml:space="preserve">
+    <value>Android'in verilerini sıfırla</value>
+  </data>
+  <data name="ResetDataCard.Description" xml:space="preserve">
+    <value>Yüklediğiniz her uygulamayı, hesaplarınızı ve tüm uygulama verilerini siler; Android ilk yüklendiği gibi başlar.
+Android görüntüsü ve bu ayarlar kalır.</value>
+  </data>
+  <data name="ResetDataButton.Content" xml:space="preserve">
+    <value>Sıfırla</value>
+  </data>
+  <data name="ResetDataConfirm.Title" xml:space="preserve">
+    <value>Android'in verileri sıfırlansın mı?</value>
+  </data>
+  <data name="ResetDataConfirm.Action" xml:space="preserve">
+    <value>Sıfırla</value>
+  </data>
+  <data name="ResetData_Warning" xml:space="preserve">
+    <value>Bu, Android'den şunları siler:
+• yüklediğiniz her uygulama
+• oturum açtığınız hesaplar
+• her uygulamanın verileri
+
+Android şimdi durur ve bir dahaki sefere ilk yüklendiği gibi başlar. Android görüntüsü ve DSA'nın ayarları kalır.
+
+Bu işlem geri alınamaz.</value>
+  </data>
+  <data name="ResetDoneBar.Title" xml:space="preserve">
+    <value>Android'in verileri sıfırlandı</value>
+  </data>
+  <data name="ResetDoneBar.Message" xml:space="preserve">
+    <value>Açacağınız bir sonraki uygulama, Android'i ilk yüklendiği gibi başlatır.</value>
+  </data>
+  <data name="Toggle.On" xml:space="preserve">
+    <value>Açık</value>
+  </data>
+  <data name="Toggle.Off" xml:space="preserve">
+    <value>Kapalı</value>
+  </data>
+  <data name="AndroidRunningHeader.Text" xml:space="preserve">
+    <value>Şu anda çalışan</value>
+  </data>
+  <data name="Android_Major" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="Android_Unknown" xml:space="preserve">
+    <value>Bilinmiyor</value>
+  </data>
+  <data name="Android_Supported" xml:space="preserve">
+    <value>Desteklenen sürümler: Android {0}</value>
+  </data>
+  <data name="Android_Switching" xml:space="preserve">
+    <value>Android {0} seçildi. Şimdi indiriliyor ve Android bir sonraki başladığında kullanılacak.</value>
+  </data>
+  <data name="AndroidSwitchingBar.Title" xml:space="preserve">
+    <value>Android sürümü değiştiriliyor</value>
+  </data>
+  <data name="AndroidBuildCard.Header" xml:space="preserve">
+    <value>Derleme</value>
+  </data>
+  <data name="AndroidPatchCard.Header" xml:space="preserve">
+    <value>Güvenlik yaması düzeyi</value>
+  </data>
+  <data name="AndroidChooseHeader.Text" xml:space="preserve">
+    <value>Android sürümü</value>
+  </data>
+  <data name="AndroidChooseCard.Header" xml:space="preserve">
+    <value>Kullanılacak sürüm</value>
+  </data>
+  <data name="AndroidChooseCard.Description" xml:space="preserve">
+    <value>DSA en son iki Android sürümünü destekler. Bazı uygulamalar bunlardan yalnızca birinde çalışır.</value>
+  </data>
+  <data name="Android_ChoiceLatest" xml:space="preserve">
+    <value>Her zaman en yenisi (şu anda Android {0})</value>
+  </data>
+  <data name="Android_ChoiceMajor" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="AndroidApplyButton.Content" xml:space="preserve">
+    <value>Değiştir</value>
+  </data>
+  <data name="AndroidChooseNote.Text" xml:space="preserve">
+    <value>Bu bilgisayarın tüm kullanıcıları aynı Android sürümünü çalıştırır, bu nedenle değiştirmek için yönetici gerekir.
+Seçilen sürüm güvenlik güncellemelerini almaya devam eder. Desteği bitince DSA sonraki sürüme geçer ve uygulamalarınızı korur.</value>
+  </data>
+  <data name="AndroidUpConfirm.Title" xml:space="preserve">
+    <value>Daha yeni bir Android'e geçilsin mi?</value>
+  </data>
+  <data name="AndroidUpConfirm.Body" xml:space="preserve">
+    <value>Android {0} indirilir ve Android'in sonraki başlatılışından itibaren kullanılır. Uygulamalarınız ve verileri de taşınır.
+
+Daha sonra geri dönmek verileri siler.</value>
+  </data>
+  <data name="AndroidDownConfirm.Title" xml:space="preserve">
+    <value>Eski bir sürüme geçmek için Android verileri silinsin mi?</value>
+  </data>
+  <data name="AndroidDownConfirm.Action" xml:space="preserve">
+    <value>Verileri sil ve değiştir</value>
+  </data>
+  <data name="Android_DownWarning" xml:space="preserve">
+    <value>Android {0}, şu anda çalışan Android {1} sürümünden eskidir ve daha yeni bir sürümün yazdığı verileri okuyamaz.
+
+Geçiş, bu bilgisayarın tüm kullanıcılarının Android verilerini siler:
+• yükledikleri her uygulama
+• oturum açtıkları hesaplar
+• her uygulamanın verileri
+
+Ardından her kullanıcının Android'i ilk yüklendiği gibi başlar. DSA'nın ayarları kalır.
+
+Bu işlem geri alınamaz.</value>
+  </data>
+  <data name="ApkWindow_AbiWarningTitle" xml:space="preserve">
+    <value>Bu uygulama bu bilgisayarda çalışmayabilir</value>
+  </data>
+  <data name="ApkWindow_InstalledTitle" xml:space="preserve">
+    <value>Zaten yüklü</value>
+  </data>
+  <data name="ApkWindow_DowngradeTitle" xml:space="preserve">
+    <value>Daha yeni bir sürüm yüklü</value>
+  </data>
+  <data name="ApkWindow_SignatureTitle" xml:space="preserve">
+    <value>Başka bir anahtarla imzalanmış</value>
+  </data>
+  <data name="AppsRunAsArm.Content" xml:space="preserve">
+    <value>ARM olarak çalıştır</value>
+  </data>
+  <data name="Apps_RunAsArm_system-app" xml:space="preserve">
+    <value>Android'in parçası olan uygulamalar, Android'in yüklediği şekilde çalışır.</value>
+  </data>
+  <data name="Apps_RunAsArm_no-arm-libraries" xml:space="preserve">
+    <value>Cihazda bu uygulamanın ARM kodunu içeren bir APK yok.</value>
+  </data>
+  <data name="Apps_RunAsArm_translation-off" xml:space="preserve">
+    <value>ARM çevirisi açık değil. ARM uygulamaları altında açın ve Android'i yeniden başlatın.</value>
+  </data>
+  <data name="Apps_RunAsArm_arm-only" xml:space="preserve">
+    <value>Bu uygulamada yalnızca ARM kodu var, bu nedenle her zaman ARM olarak çalışır.</value>
+  </data>
+  <data name="Apps_RunAsArm_unknown" xml:space="preserve">
+    <value>DSA'nın bu sürümü, uygulamanın ARM olarak çalışıp çalışamayacağını bilemiyor.</value>
+  </data>
+  <data name="AppsRunAsArmEraseTitle" xml:space="preserve">
+    <value>{0} verileri silinsin mi?</value>
+  </data>
+  <data name="AppsRunAsArmEraseBody" xml:space="preserve">
+    <value>Android, verilerini koruyarak {0} uygulamasının çalışma şeklini değiştiremez.
+
+Yeniden yüklemek verilerini siler: oturum açma bilgileri, ayarlar ve kendisi için tuttuğu dosyalar.</value>
+  </data>
+  <data name="AppsRunAsArmEraseButton" xml:space="preserve">
+    <value>Sil ve yeniden yükle</value>
+  </data>
+  <data name="Apps_RunAsArmKept" xml:space="preserve">
+    <value>{0}, verileriyle birlikte olduğu gibi bırakıldı.</value>
+  </data>
+  <data name="Apps_RunAsArmOn" xml:space="preserve">
+    <value>{0} artık ARM olarak çalışıyor.</value>
+  </data>
+  <data name="Apps_RunAsArmOff" xml:space="preserve">
+    <value>{0} artık x86_64 kodunu çalıştırıyor.</value>
+  </data>
+  <data name="Apps_RunAsArmNotChanged" xml:space="preserve">
+    <value>{0} yeniden yüklenmedi: {1} ({2})</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_not-installed" xml:space="preserve">
+    <value>artık yüklü değil</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_system-app" xml:space="preserve">
+    <value>Android'in parçası</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_no-libraries" xml:space="preserve">
+    <value>cihazdaki APK'lerinde bunun için kod yok</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_translation-off" xml:space="preserve">
+    <value>ARM çevirisi açık değil</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_data-would-be-erased" xml:space="preserve">
+    <value>verileri silinirdi</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_other" xml:space="preserve">
+    <value>Android reddetti</value>
+  </data>
+  <data name="ApkWindow_BundleTitle" xml:space="preserve">
+    <value>Bölünmüş APK paketi</value>
+  </data>
+  <data name="ApkWindow_BundleSummary" xml:space="preserve">
+    <value>{0} birden çok APK olarak gelir. Bu bilgisayarın gerektirdiği {1} APK birlikte yüklenir, toplam {2}.</value>
+  </data>
+  <data name="ApkWindow_BundleSummaryObb" xml:space="preserve">
+    <value>{0} birden çok APK olarak gelir. Bu bilgisayarın gerektirdiği {1} APK genişletme dosyalarıyla birlikte yüklenir, toplam {2}.</value>
+  </data>
+  <data name="ApkWindow_FactApks" xml:space="preserve">
+    <value>APK'ler</value>
+  </data>
+  <data name="ApkWindow_ApksValue" xml:space="preserve">
+    <value>{0} (temel APK ve {1} bölüm)</value>
+  </data>
+  <data name="ApkWindow_FactObbs" xml:space="preserve">
+    <value>Genişletme dosyaları</value>
+  </data>
+  <data name="Install_Reason_app-bundle" xml:space="preserve">
+    <value>bu, uygulama mağazasına yüklenmek üzere yapılmış bir Android App Bundle. Uygulamayı APK ya da .xapk, .apks veya .apkm paketi olarak alın.</value>
+  </data>
+  <data name="Install_Reason_encrypted-bundle" xml:space="preserve">
+    <value>paket şifreli, bu nedenle APK'leri okunamıyor. Uygulamayı APK veya daha yeni bir paket olarak edinin.</value>
+  </data>
+  <data name="Install_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>paketin bölünmüş bir APK'si temel APK'den farklı bir anahtarla imzalanmış, bu nedenle Android onu reddederdi.</value>
+  </data>
+  <data name="Install_Reason_invalid-bundle" xml:space="preserve">
+    <value>paket, Android'in yükleyebileceği tek bir uygulama değil.</value>
+  </data>
+  <data name="ApkWindow_Reason_app-bundle" xml:space="preserve">
+    <value>Bu, uygulama mağazasına yüklenmek üzere yapılmış bir Android App Bundle. Uygulamayı APK ya da .xapk, .apks veya .apkm paketi olarak alın.</value>
+  </data>
+  <data name="ApkWindow_Reason_encrypted-bundle" xml:space="preserve">
+    <value>Paket şifreli, bu nedenle APK'leri okunamıyor. Uygulamayı APK veya daha yeni bir paket olarak edinin.</value>
+  </data>
+  <data name="ApkWindow_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>Paketin bölünmüş bir APK'si temel APK'den farklı bir anahtarla imzalanmış, bu nedenle Android onu reddederdi.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-bundle" xml:space="preserve">
+    <value>Paket, Android'in yükleyebileceği tek bir uygulama değil.</value>
+  </data>
+  <data name="ApkWindow_Reason_translation-off" xml:space="preserve">
+    <value>Uygulama yalnızca ARM kodu (arm64-v8a) olarak çalışır ve ARM çevirisi açık değil.
+ARM uygulamaları altında açın, Android'i yeniden başlatın ve uygulamayı yeniden yükleyin.</value>
+  </data>
+  <data name="UpdatesAndroidHeader.Text" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="UpdatesProgramHeader.Text" xml:space="preserve">
+    <value>DSA</value>
+  </data>
+  <data name="AndroidFollowsCard.Header" xml:space="preserve">
+    <value>İzlediği sürüm</value>
+  </data>
+  <data name="Android_FollowsLatest" xml:space="preserve">
+    <value>Desteklenen en yeni sürüm (şu anda Android {0})</value>
+  </data>
+  <data name="Android_FollowsMajor" xml:space="preserve">
+    <value>Android {0} ve güvenlik güncellemeleri</value>
+  </data>
+  <data name="AndroidUpdateCard.Header" xml:space="preserve">
+    <value>Android güncellemesi</value>
+  </data>
+  <data name="Android_UpToDate" xml:space="preserve">
+    <value>Bekleyen Android güncellemesi yok. DSA her gün denetler ve açık uygulama penceresi kalmayınca Android'i güncellemeyle yeniden başlatır.</value>
+  </data>
+  <data name="AndroidCheckButton.Content" xml:space="preserve">
+    <value>Şimdi denetle</value>
+  </data>
+  <data name="Android_RestartPending" xml:space="preserve">
+    <value>Android {0} indirildi. Şimdi kullanmak için Android'i yeniden başlatın.</value>
+  </data>
+  <data name="AndroidRestartButton.Content" xml:space="preserve">
+    <value>Şimdi yeniden başlat</value>
+  </data>
+  <data name="AndroidRestartConfirm.Title" xml:space="preserve">
+    <value>Android şimdi yeniden başlatılsın mı?</value>
+  </data>
+  <data name="AndroidRestartConfirm.Body" xml:space="preserve">
+    <value>Android, Android {0} ile yeniden başlar.
+
+Uygulama pencereleri kapanır. Başladıktan sonra uygulamaları yeniden açın.</value>
+  </data>
+  <data name="ImageAutoRestartCard.Header" xml:space="preserve">
+    <value>Güncellemeler için Android'i kendiliğinden yeniden başlat</value>
+  </data>
+  <data name="ImageAutoRestartCard.Description" xml:space="preserve">
+    <value>Açık uygulama penceresi yokken Android'i indirilen güncellemeyle hemen yeniden başlatır. Aksi halde DSA önce sorar veya kapatmanızı bekler.
+Varsayılan olarak açık. Kapalıyken güncelleme, Android'i bir sonraki başlatışınızda kullanılır.</value>
+  </data>
+  <data name="IdentitySpecsCard.Header" xml:space="preserve">
+    <value>Cihaz özellikleri</value>
+  </data>
+  <data name="IdentityCopyButton.Content" xml:space="preserve">
+    <value>Kopyala</value>
+  </data>
+  <data name="IdentityAndroidHeader.Text" xml:space="preserve">
+    <value>Android'in bildirdikleri</value>
+  </data>
+  <data name="Identity_NotReported" xml:space="preserve">
+    <value>Bildirilmedi</value>
+  </data>
+  <data name="AppsRoot.Name" xml:space="preserve">
+    <value>Kök erişimi</value>
+  </data>
+  <data name="Apps_Root_off" xml:space="preserve">
+    <value>Kök: izin verilmiyor</value>
+  </data>
+  <data name="Apps_Root_ask" xml:space="preserve">
+    <value>Kök: her seferinde sor</value>
+  </data>
+  <data name="Apps_Root_remember" xml:space="preserve">
+    <value>Kök: hatırla (sorma)</value>
+  </data>
+  <data name="Apps_RootGroup" xml:space="preserve">
+    <value>Kullanıcı kimliğini {0} ile paylaşır. Android bu uygulamaları ayırt edemez, bu yüzden tek bir kök erişimi ayarını paylaşırlar.
+Burada değiştirmek hepsi için değiştirir. Herhangi biri İzin verilmiyor ise hiçbiri su kullanamaz.</value>
+  </data>
+  <data name="Apps_RootTip_unavailable" xml:space="preserve">
+    <value>Bu bilgisayar için kök erişimi kapalı. Bir yönetici bunu Gelişmiş'te açar.</value>
+  </data>
+  <data name="Apps_RootTip_unknown" xml:space="preserve">
+    <value>DSA hizmeti bu uygulamanın kök düzeyini bildirmiyor. Burada seçmek için DSA'yı güncelleyin.</value>
+  </data>
+  <data name="Apps_RootNotChanged" xml:space="preserve">
+    <value>{0} kök düzeyi değiştirilmedi: {1}</value>
+  </data>
+  <data name="Apps_RootSet_off" xml:space="preserve">
+    <value>{0} artık kök kullanamaz. Android'in sonraki başlatılışından itibaren su onun için kaybolur.</value>
+  </data>
+  <data name="Apps_RootSet_ask" xml:space="preserve">
+    <value>{0} artık su'yu her kullandığında bu bilgisayarın yöneticisine sorar. Önceden su'yu görmüyorsa Android'in sonraki başlatılışında görür.</value>
+  </data>
+  <data name="Apps_RootSet_remember" xml:space="preserve">
+    <value>{0} artık su'yu sormadan kullanır. Önceden su'yu görmüyorsa Android'in sonraki başlatılışında görür.</value>
+  </data>
+  <data name="AppsRootOffBar.Title" xml:space="preserve">
+    <value>Kök erişimi kapalı</value>
+  </data>
+  <data name="AppsRootOffBar.Message" xml:space="preserve">
+    <value>Hiçbir uygulama su kullanamaz. Bu bilgisayarın yöneticisi kök erişimini Gelişmiş'te açabilir; sonra uygulamaların düzeyini burada seçin.</value>
+  </data>
+  <data name="AppsRootNote.Text" xml:space="preserve">
+    <value>Kök erişimi:
+• İzin verilmiyor, su'yu uygulamadan gizler.
+• Her seferinde sor, her istek için uygulamanın adını içeren bir yönetici istemi gösterir. Onay 15 dakika geçerlidir.
+• Hatırla sormadan onaylar, bu nedenle onu seçmek bir yöneticinin onayını gerektirir.</value>
+  </data>
+  <data name="RootHeader.Text" xml:space="preserve">
+    <value>Kök erişimi</value>
+  </data>
+  <data name="RootElevationCard.Header" xml:space="preserve">
+    <value>Android uygulamalarının kök erişimi istemesine izin ver</value>
+  </data>
+  <data name="RootElevationCard.Description" xml:space="preserve">
+    <value>Uygulamalar sayfasında izin verilen uygulama, bilgisayar yöneticisi onaylayınca sudo gibi kök olarak komut çalıştırır. Varsayılan: kapalı.
+Android görüntüsü, derleme özellikleri ve SELinux olduğu gibi kalır.</value>
+  </data>
+  <data name="RootElevationAdminReason.Text" xml:space="preserve">
+    <value>Bu bilgisayarın tüm kullanıcılarına uygulandığı için bunu yalnızca bir yönetici değiştirebilir.
+Yönetici olarak değiştir'i kullanın, Windows izin ister.</value>
+  </data>
+  <data name="RootElevationRestartBar.Title" xml:space="preserve">
+    <value>Uygulamak için Android'i yeniden başlatın</value>
+  </data>
+  <data name="RootElevationRestartBar.Message" xml:space="preserve">
+    <value>Kök erişimi Android'in sonraki başlatılışından itibaren değişir. Genel sayfasında Android'i durdurun, ardından bir uygulama açın.</value>
+  </data>
+  <data name="RootLogCard.Header" xml:space="preserve">
+    <value>İsteklerin kaydedildiği yer</value>
+  </data>
+  <data name="RootElevation_LogAt" xml:space="preserve">
+    <value>Her istek; uygulama, zaman, onaylanıp onaylanmadığı ve komutla birlikte hizmet günlüğünde tutulur: {0}</value>
+  </data>
+  <data name="RootElevation_LogUnknown" xml:space="preserve">
+    <value>Her istek; uygulama, zaman, onaylanıp onaylanmadığı ve komutla birlikte hizmet günlüğünde tutulur.</value>
+  </data>
+  <data name="RootNote.Text" xml:space="preserve">
+    <value>Her uygulamanın düzeyini Uygulamalar sayfasında seçin. Her kullanıcı kendi Android'indeki uygulamalar için seçer.</value>
+  </data>
+  <data name="AppsAdbShell.Text" xml:space="preserve">
+    <value>adb shell</value>
+  </data>
+  <data name="WidevineHeader.Text" xml:space="preserve">
+    <value>Korumalı içerik</value>
+  </data>
+  <data name="WidevineCard.Header" xml:space="preserve">
+    <value>Widevine</value>
+  </data>
+  <data name="WidevineCard.Description" xml:space="preserve">
+    <value>Akış uygulamalarının korumalı video oynatmasını sağlar. Android'in sonraki başlatılışından itibaren uygulanır.
+Android SDK Lisansı kapsamında Google'dan yaklaşık 2 GB indirir, yalnızca Widevine'ı tutar ve gerisini siler.</value>
+  </data>
+  <data name="WidevineInstallButton.Content" xml:space="preserve">
+    <value>Al</value>
+  </data>
+  <data name="WidevineConfirm.Title" xml:space="preserve">
+    <value>Widevine Google'dan alınsın mı?</value>
+  </data>
+  <data name="WidevineConfirm.Action" xml:space="preserve">
+    <value>Kabul et ve indir</value>
+  </data>
+  <data name="Widevine_Notice" xml:space="preserve">
+    <value>DSA, bu Android sürümü için Android öykünücü görüntüsünü Google'dan indirir ve içinden yalnızca Widevine modülünü değiştirmeden çıkarır.
+
+• İndirme: yaklaşık 2 GB, sonra silinir.
+• Kaynak: {0}
+• Koşullar: Widevine, Android SDK Lisansı ({1}) kapsamında Google'ın yazılımıdır. İndirerek bu koşulları kabul edersiniz.
+• Kalite: güvenlik düzeyi L3, bu nedenle akış hizmetleri en fazla standart çözünürlük (SD) gönderir.
+• Widevine, Android'in sonraki başlatılışından itibaren çalışır.
+
+DSA, Widevine'ı dağıtmaz veya başkasına aktarmaz.</value>
+  </data>
+  <data name="WidevineInstallingBar.Title" xml:space="preserve">
+    <value>Widevine alınıyor</value>
+  </data>
+  <data name="WidevineInstallingBar.Message" xml:space="preserve">
+    <value>Google'dan yaklaşık 2 GB indiriliyor ve Widevine çıkarılıyor. Bu birkaç dakika sürer.</value>
+  </data>
+  <data name="WidevineRestartBar.Title" xml:space="preserve">
+    <value>Uygulamak için Android'i yeniden başlatın</value>
+  </data>
+  <data name="WidevineRestartBar.Message" xml:space="preserve">
+    <value>Android değişikliği sonraki başlatılışından itibaren kullanır.</value>
+  </data>
+  <data name="WidevineQualityCard.Header" xml:space="preserve">
+    <value>Yalnızca standart çözünürlük</value>
+  </data>
+  <data name="Widevine_Quality" xml:space="preserve">
+    <value>Buradaki Widevine güvenlik düzeyi L3'tür, bu nedenle akış hizmetleri en fazla standart çözünürlük (SD) gönderir.
+Yüksek çözünürlük için bu bilgisayarın kendi tarayıcısını veya uygulamasını kullanın.</value>
+  </data>
+  <data name="WidevineRemoveCard.Header" xml:space="preserve">
+    <value>Widevine'ı kaldır</value>
+  </data>
+  <data name="WidevineRemoveCard.Description" xml:space="preserve">
+    <value>Android'in sonraki başlatılışından itibaren modülü ve tuttuğu cihaz sertifikalarını kaldırır.</value>
+  </data>
+  <data name="WidevineRemoveButton.Content" xml:space="preserve">
+    <value>Kaldır</value>
+  </data>
+  <data name="WidevineTermsLink.Content" xml:space="preserve">
+    <value>Android SDK Lisansı</value>
+  </data>
+  <data name="Widevine_NotInstalled" xml:space="preserve">
+    <value>Yüklü değil.</value>
+  </data>
+  <data name="Widevine_Installed" xml:space="preserve">
+    <value>Yüklü: Android {1} ({2}) için Google görüntüsü {0} kaynağından.</value>
+  </data>
+  <data name="Widevine_InstalledPending" xml:space="preserve">
+    <value>Yüklü: Android {1} ({2}) için Google görüntüsü {0} kaynağından. Android'in sonraki başlatılışından itibaren kullanılır.</value>
+  </data>
+  <data name="Widevine_RemovedPending" xml:space="preserve">
+    <value>Kaldırıldı. Android onu sonraki başlatılışına kadar kullanır.</value>
+  </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}. {1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}, {1}, {2}: {3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>{0} kayıt atlandı</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>Gösterilen en düşük öncelik</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>Yükleniyor</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>Kopyalandı</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>Gezinmeyi göster veya gizle</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>Kapat</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>Simge durumuna küçült</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>Ekranı kapla</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>Önceki boyut</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>Yardım</value>
+  </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>{0} yüklensin mi?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>Paket Adı:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>Yayımcı:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>Sürüm:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>Kaynak:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>Özellikler ({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>Daha fazla</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>Daha az</value>
+  </data>
+</root>
