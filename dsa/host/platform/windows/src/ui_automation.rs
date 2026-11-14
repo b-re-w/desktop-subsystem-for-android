@@ -58,10 +58,13 @@ pub enum Pattern {
     ScrollItem,
     /// The node's default action, for clients that ask the way older ones did.
     LegacyIAccessible,
+    /// A list whose items a client can find, those off the screen too.
+    ItemContainer,
 }
 
 /// Every pattern, in the order [`Pattern::from_id`] looks.
-const PATTERNS: [Pattern; 14] = [
+const PATTERNS: [Pattern; 15] = [
+    Pattern::ItemContainer,
     Pattern::Invoke,
     Pattern::Value,
     Pattern::Toggle,
@@ -96,6 +99,7 @@ impl Pattern {
             Pattern::Toggle => 10015,
             Pattern::ScrollItem => 10017,
             Pattern::LegacyIAccessible => 10018,
+            Pattern::ItemContainer => 10019,
         }
     }
 
@@ -173,6 +177,7 @@ pub fn patterns_of(node: &Node) -> Vec<Pattern> {
     if node.collection.is_some() {
         patterns.push(Pattern::Grid);
         patterns.push(Pattern::Table);
+        patterns.push(Pattern::ItemContainer);
     }
     if node.collection_item.is_some() {
         patterns.push(Pattern::GridItem);
@@ -218,6 +223,23 @@ pub fn scroll_percent(rows: i32, first: i32, visible: i32) -> Option<(f64, f64)>
         (f64::from(first.clamp(0, hidden)) * 100.0 / f64::from(hidden)).clamp(0.0, 100.0)
     };
     Some((percent, view))
+}
+
+/// How many items a list or grid of `rows` and `columns` has: a list that says no columns
+/// has one.
+pub fn item_count(rows: i32, columns: i32) -> i32 {
+    rows.max(0).saturating_mul(columns.max(1))
+}
+
+/// The place, counted row by row from 0, of the item at `row` and `column`.
+pub fn item_index(row: i32, column: i32, columns: i32) -> i32 {
+    row.saturating_mul(columns.max(1)).saturating_add(column)
+}
+
+/// The row and column of the item at place `index`.
+pub fn item_place(index: i32, columns: i32) -> (i32, i32) {
+    let columns = columns.max(1);
+    (index / columns, index % columns)
 }
 
 /// The row a scroll to `percent` of a list of `rows` items goes to.

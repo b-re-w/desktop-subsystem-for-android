@@ -134,17 +134,7 @@ fn container_of(tree: &Tree, id: u32) -> Option<&Node> {
 /// An item's place in its list or grid, counted from 1, and the number of items: a column of
 /// rows counts rows, a row of columns counts columns, a grid counts cells row by row.
 pub(super) fn place_in_set(tree: &Tree, node: &Node) -> Option<(i32, i32)> {
-    let item = node.collection_item?;
-    let collection = container_of(tree, node.id)?.collection?;
-    let (rows, columns) = (collection.rows, collection.columns);
-    let (place, size) = if columns <= 1 {
-        (item.row + 1, rows)
-    } else if rows <= 1 {
-        (item.column + 1, columns)
-    } else {
-        (item.row * columns + item.column + 1, rows * columns)
-    };
-    (size > 0 && place > 0).then_some((place, size))
+    tree.place_in_set(node.id)
 }
 
 /// An expandable node's state: one that can collapse is expanded, one that can expand is
@@ -901,6 +891,279 @@ impl IRawElementProviderSimple2_Impl for NodeProvider_Impl {
     /// click, which opens an Android app's context menu.
     fn ShowContextMenu(&self) -> windows::core::Result<()> {
         self.act(NodeAction::LongClick, String::new())
+    }
+}
+
+// --- Items off the screen -------------------------------------------------------------------
+
+/// The runtime ID of a virtualized item: unlike a node's (three parts) and the back button's
+/// and the loading item's (two).
+const VIRTUAL_TAG: i32 = 0x5649_5254;
+
+/// An item of a virtualized list that is off the screen, so Android has not made it: a client
+/// finds it through the list's ItemContainer pattern and realizes it, which scrolls the list
+/// to it. Once on the screen it is a node of the tree like any other.
+#[implement(
+    IRawElementProviderSimple,
+    IRawElementProviderFragment,
+    IVirtualizedItemProvider
+)]
+pub(super) struct VirtualItem {
+    shared: Arc<Shared>,
+    epoch: u32,
+    list: u32,
+    index: i32,
+}
+
+fn virtual_of(
+    shared: &Arc<Shared>,
+    epoch: u32,
+    list: u32,
+    index: i32,
+) -> IRawElementProviderSimple {
+    VirtualItem {
+        shared: Arc::clone(shared),
+        epoch,
+        list,
+        index,
+    }
+    .into()
+}
+
+/// The runtime ID a provider of this window says it has.
+fn runtime_of(provider: &IRawElementProviderSimple) -> Option<Vec<i32>> {
+    use windows::Win32::System::Ole::{SafeArrayDestroy, SafeArrayGetElement, SafeArrayGetUBound};
+    let fragment: IRawElementProviderFragment = provider.cast().ok()?;
+    // SAFETY: GetRuntimeId hands over a vector of 4-byte integers, read and destroyed here.
+    unsafe {
+        let array = fragment.GetRuntimeId().ok()?;
+        if array.is_null() {
+            return None;
+        }
+        let upper = SafeArrayGetUBound(array, 1).unwrap_or(-1);
+        let mut values = Vec::new();
+        for index in 0..=upper {
+            let mut value = 0i32;
+            if SafeArrayGetElement(
+                array,
+                &index,
+                &mut value as *mut i32 as *mut core::ffi::c_void,
+            )
+            .is_ok()
+            {
+                values.push(value);
+            }
+        }
+        let _ = SafeArrayDestroy(array);
+        Some(values)
+    }
+}
+
+#[cfg(test)]
+pub(super) fn runtime_for_test(provider: &IRawElementProviderSimple) -> Option<Vec<i32>> {
+    runtime_of(provider)
+}
+
+impl NodeProvider {
+    /// The place in the list of the item `after` names (a node of this tree or a virtualized
+    /// item of this list), or `None` for none.
+    fn place_of(&self, after: &IRawElementProviderSimple, columns: i32) -> Option<i32> {
+        let runtime = runtime_of(after)?;
+        match runtime.as_slice() {
+            [_, tag, list, index] if *tag == VIRTUAL_TAG && *list as u32 == self.id => Some(*index),
+            [_, epoch, id] if *epoch as u32 == self.epoch => {
+                let state = self.shared.lock();
+                let item = state.tree.node(*id as u32)?.collection_item?;
+                Some(crate::ui_automation::item_index(
+                    item.row,
+                    item.column,
+                    columns,
+                ))
+            }
+            _ => None,
+        }
+    }
+}
+
+impl IItemContainerProvider_Impl for NodeProvider_Impl {
+    /// With no property, the item after `start_after` (or the first), on the screen or not:
+    /// how a client walks every item of a virtualized list. With a property, the next item
+    /// on the screen that has that value; one off the screen has none of its values yet.
+    fn FindItemByProperty(
+        &self,
+        start_after: windows::core::Ref<IRawElementProviderSimple>,
+        property: UIA_PROPERTY_ID,
+        value: &VARIANT,
+    ) -> windows::core::Result<IRawElementProviderSimple> {
+        let (rows, columns) = self.with_node(|_, node| {
+            node.collection
+                .map_or((0, 0), |collection| (collection.rows, collection.columns))
+        })?;
+        let count = crate::ui_automation::item_count(rows, columns);
+        let after = match start_after.ok() {
+            Ok(provider) => self.place_of(provider, columns),
+            Err(_) => None,
+        };
+        let first = after.map_or(0, |place| place + 1);
+        if property.0 == 0 {
+            if first >= count {
+                return none();
+            }
+            let (row, column) = crate::ui_automation::item_place(first, columns);
+            let found = self.with_node(|tree, node| tree.item_at(node.id, row, column))?;
+            return Ok(match found {
+                Some(id) => node_of(&self.shared, self.epoch, id).cast()?,
+                None => virtual_of(&self.shared, self.epoch, self.id, first),
+            });
+        }
+        let wanted = if property == UIA_NamePropertyId || property == UIA_AutomationIdPropertyId {
+            // SAFETY: reads the string of a VARIANT UI Automation passed, when it is one.
+            unsafe {
+                let inner = &value.Anonymous.Anonymous;
+                (inner.vt == VT_BSTR).then(|| inner.Anonymous.bstrVal.to_string())
+            }
+        } else {
+            None
+        };
+        let found = self.with_node(|tree, node| {
+            let mut items: Vec<(i32, u32)> = tree
+                .items_of(node.id)
+                .into_iter()
+                .filter_map(|id| {
+                    let place = tree.node(id)?.collection_item?;
+                    Some((
+                        crate::ui_automation::item_index(place.row, place.column, columns),
+                        id,
+                    ))
+                })
+                .filter(|(place, _)| *place >= first)
+                .collect();
+            items.sort();
+            items.into_iter().map(|(_, id)| id).find(|id| {
+                let Some(item) = tree.node(*id) else {
+                    return false;
+                };
+                match &wanted {
+                    Some(text) if property == UIA_NamePropertyId => tree.name(*id) == *text,
+                    Some(text) => item.view_id == *text,
+                    None if property == UIA_SelectionItemIsSelectedPropertyId => {
+                        item.states.selected
+                    }
+                    None => false,
+                }
+            })
+        })?;
+        match found {
+            Some(id) => node_of(&self.shared, self.epoch, id).cast(),
+            None => none(),
+        }
+    }
+}
+
+impl VirtualItem {
+    fn list_node<T>(&self, read: impl FnOnce(&Tree, &Node) -> T) -> windows::core::Result<T> {
+        let state = self.shared.lock();
+        if state.tree.epoch() != Some(self.epoch) {
+            return Err(not_available());
+        }
+        let node = state.tree.node(self.list).ok_or_else(not_available)?;
+        Ok(read(&state.tree, node))
+    }
+}
+
+impl IRawElementProviderSimple_Impl for VirtualItem_Impl {
+    fn ProviderOptions(&self) -> windows::core::Result<ProviderOptions> {
+        Ok(ProviderOptions_ServerSideProvider)
+    }
+
+    fn GetPatternProvider(&self, pattern: UIA_PATTERN_ID) -> windows::core::Result<IUnknown> {
+        if pattern == UIA_VirtualizedItemPatternId {
+            Ok(self.to_interface::<IRawElementProviderSimple>().cast()?)
+        } else {
+            none()
+        }
+    }
+
+    fn GetPropertyValue(&self, property: UIA_PROPERTY_ID) -> windows::core::Result<VARIANT> {
+        let count = self.list_node(|_, node| {
+            node.collection
+                .map_or(0, |c| crate::ui_automation::item_count(c.rows, c.columns))
+        })?;
+        Ok(match property {
+            UIA_ControlTypePropertyId => variant_i4(UIA_ListItemControlTypeId.0),
+            UIA_IsOffscreenPropertyId => variant_bool(true),
+            UIA_IsEnabledPropertyId => variant_bool(true),
+            UIA_IsControlElementPropertyId | UIA_IsContentElementPropertyId => variant_bool(true),
+            UIA_PositionInSetPropertyId => variant_i4(self.index + 1),
+            UIA_SizeOfSetPropertyId => variant_i4(count),
+            UIA_IsVirtualizedItemPatternAvailablePropertyId => variant_bool(true),
+            _ => variant_empty(),
+        })
+    }
+
+    fn HostRawElementProvider(&self) -> windows::core::Result<IRawElementProviderSimple> {
+        none()
+    }
+}
+
+impl IRawElementProviderFragment_Impl for VirtualItem_Impl {
+    fn Navigate(
+        &self,
+        direction: NavigateDirection,
+    ) -> windows::core::Result<IRawElementProviderFragment> {
+        self.list_node(|_, _| ())?;
+        match direction {
+            NavigateDirection_Parent => Ok(node_of(&self.shared, self.epoch, self.list)),
+            _ => none(),
+        }
+    }
+
+    fn GetRuntimeId(&self) -> windows::core::Result<*mut SAFEARRAY> {
+        safe_array(&[
+            UiaAppendRuntimeId as i32,
+            VIRTUAL_TAG,
+            self.list as i32,
+            self.index,
+        ])
+    }
+
+    fn BoundingRectangle(&self) -> windows::core::Result<UiaRect> {
+        Ok(UiaRect::default())
+    }
+
+    fn GetEmbeddedFragmentRoots(&self) -> windows::core::Result<*mut SAFEARRAY> {
+        Ok(std::ptr::null_mut())
+    }
+
+    fn SetFocus(&self) -> windows::core::Result<()> {
+        IVirtualizedItemProvider_Impl::Realize(self)
+    }
+
+    fn FragmentRoot(&self) -> windows::core::Result<IRawElementProviderFragmentRoot> {
+        Ok(root_of(&self.shared))
+    }
+}
+
+impl IVirtualizedItemProvider_Impl for VirtualItem_Impl {
+    /// Scrolls the list to the item, which Android then makes and the tree gains.
+    fn Realize(&self) -> windows::core::Result<()> {
+        let (columns, scrolls) = self.list_node(|_, node| {
+            (
+                node.collection.map_or(0, |c| c.columns),
+                node.supports(NodeAction::ScrollToPosition),
+            )
+        })?;
+        if !scrolls {
+            return Err(invalid_operation());
+        }
+        let (row, column) = crate::ui_automation::item_place(self.index, columns);
+        self.shared.perform(ActionRequest {
+            epoch: self.epoch,
+            node_id: self.list,
+            action: NodeAction::ScrollToPosition,
+            position: (row, column),
+            ..ActionRequest::default()
+        })
     }
 }
 

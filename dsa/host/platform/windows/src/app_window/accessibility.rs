@@ -510,7 +510,8 @@ struct RootProvider {
     ITableProvider,
     ITableItemProvider,
     IScrollItemProvider,
-    ILegacyIAccessibleProvider
+    ILegacyIAccessibleProvider,
+    IItemContainerProvider
 )]
 struct NodeProvider {
     shared: Arc<Shared>,
@@ -2363,6 +2364,89 @@ mod tests {
         wait_until("the watch to end", || {
             watches.lock().unwrap().contains(&(9, false))
         });
+    }
+
+    #[test]
+    fn fr18_a_client_finds_and_realizes_the_items_a_virtualized_list_keeps_off_the_screen() {
+        use dsa_host_core::accessibility::{Collection, CollectionItem, TreeUpdate};
+        let (input, _) = mpsc::channel();
+        let mut window =
+            AccessibilityWindow::new(9, (400, 300), input, WindowTasks::new(), None, None);
+        let shared = window.shared(0);
+        // A list of 40 rows of which rows 0 to 2 are on the screen.
+        let item = |id: u32, row: i32| Node {
+            id,
+            class_name: "android.widget.TextView".into(),
+            text: format!("row {row}"),
+            collection_item: Some(CollectionItem {
+                row,
+                row_span: 1,
+                column: 0,
+                column_span: 1,
+                heading: false,
+            }),
+            ..Node::default()
+        };
+        let list = Node {
+            id: 1,
+            children: vec![2, 3, 4],
+            class_name: "androidx.recyclerview.widget.RecyclerView".into(),
+            collection: Some(Collection {
+                rows: 40,
+                columns: 1,
+                hierarchical: false,
+            }),
+            actions: vec![NodeAction::ScrollToPosition],
+            ..Node::default()
+        };
+        shared
+            .lock()
+            .tree
+            .apply(TreeUpdate {
+                task_id: 9,
+                epoch: 1,
+                full: true,
+                roots: vec![1],
+                nodes: vec![list, item(2, 0), item(3, 1), item(4, 2)],
+                ..TreeUpdate::default()
+            })
+            .unwrap();
+        let container: IItemContainerProvider = node_of(&shared, 1, 1).cast().unwrap();
+        let nothing = VARIANT::default();
+        // SAFETY: calls into this window's own providers.
+        unsafe {
+            let first = container
+                .FindItemByProperty(None, UIA_PROPERTY_ID(0), &nothing)
+                .unwrap();
+            assert_eq!(
+                patterns::runtime_for_test(&first),
+                Some(vec![UiaAppendRuntimeId as i32, 1, 2])
+            );
+            let third = node_of(&shared, 1, 4)
+                .cast::<IRawElementProviderSimple>()
+                .unwrap();
+            // After the last row on the screen comes row 3, which Android has not made.
+            let fourth = container
+                .FindItemByProperty(&third, UIA_PROPERTY_ID(0), &nothing)
+                .unwrap();
+            let virtualized: IVirtualizedItemProvider = fourth.cast().unwrap();
+            virtualized.Realize().unwrap();
+            // A name finds a row on the screen.
+            let name = variant_str("row 1");
+            let found = container
+                .FindItemByProperty(None, UIA_NamePropertyId, &name)
+                .unwrap();
+            assert_eq!(
+                patterns::runtime_for_test(&found),
+                Some(vec![UiaAppendRuntimeId as i32, 1, 3])
+            );
+        }
+        // Realizing scrolled the list to row 3.
+        let queued = shared.lock().queued.clone();
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].action, NodeAction::ScrollToPosition);
+        assert_eq!(queued[0].node_id, 1);
+        assert_eq!(queued[0].position, (3, 0));
     }
 
     #[test]

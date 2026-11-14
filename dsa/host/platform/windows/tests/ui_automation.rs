@@ -5,8 +5,8 @@ use dsa_host_core::accessibility::{
 };
 use dsa_host_windows::ui_automation::{
     control_type, control_type_of, enclosing_unit, heading_level, is_content_element,
-    is_control_element, move_endpoint, move_range, patterns_of, row_at_percent, scroll_action,
-    scroll_percent, Pattern, TextUnit,
+    is_control_element, item_count, item_index, item_place, move_endpoint, move_range, patterns_of,
+    row_at_percent, scroll_action, scroll_percent, Pattern, TextUnit,
 };
 
 fn node(class_name: &str, states: NodeStates, actions: &[NodeAction]) -> Node {
@@ -139,6 +139,7 @@ fn fr18_patterns_follow_what_a_node_can_do() {
         Pattern::TableItem,
         Pattern::ScrollItem,
         Pattern::LegacyIAccessible,
+        Pattern::ItemContainer,
     ] {
         assert_eq!(Pattern::from_id(pattern.id()), Some(pattern));
     }
@@ -180,7 +181,12 @@ fn fr18_sliders_lists_and_expandable_nodes_get_their_patterns() {
     };
     assert_eq!(
         patterns_of(&list),
-        vec![Pattern::Scroll, Pattern::Grid, Pattern::Table]
+        vec![
+            Pattern::Scroll,
+            Pattern::Grid,
+            Pattern::Table,
+            Pattern::ItemContainer
+        ]
     );
     let item = Node {
         collection_item: Some(CollectionItem {
@@ -251,6 +257,17 @@ fn fr18_scroll_percent_follows_the_items_on_the_screen() {
     assert_eq!(row_at_percent(40, 50.0), 20);
     assert_eq!(row_at_percent(40, 100.0), 39);
     assert_eq!(row_at_percent(1, 70.0), 0);
+}
+
+#[test]
+fn fr18_a_lists_items_are_counted_and_placed_row_by_row() {
+    // A list says rows and no columns: one item a row.
+    assert_eq!(item_count(40, 0), 40);
+    assert_eq!(item_count(10, 3), 30);
+    assert_eq!(item_index(4, 0, 0), 4);
+    assert_eq!(item_index(2, 1, 3), 7);
+    assert_eq!(item_place(7, 3), (2, 1));
+    assert_eq!(item_place(4, 0), (4, 0));
 }
 
 fn utf16(text: &str) -> Vec<u16> {

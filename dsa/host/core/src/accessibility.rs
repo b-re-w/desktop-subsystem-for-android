@@ -371,6 +371,29 @@ impl LiveRegion {
     }
 }
 
+/// The place in characters of `text` of an offset in UTF-16 code units, as Android counts a
+/// selection; an offset past the end is the end.
+pub fn utf16_to_chars(text: &str, at: u32) -> u32 {
+    let mut units = 0u32;
+    let mut chars = 0u32;
+    for c in text.chars() {
+        if units >= at {
+            break;
+        }
+        units += c.len_utf16() as u32;
+        chars += 1;
+    }
+    chars
+}
+
+/// The place in UTF-16 code units of `text` of an offset in characters.
+pub fn chars_to_utf16(text: &str, at: u32) -> u32 {
+    text.chars()
+        .take(at as usize)
+        .map(|c| c.len_utf16() as u32)
+        .sum()
+}
+
 /// Cuts `text` to [`MAX_TEXT_CHARS`].
 fn capped(text: String) -> String {
     if text.chars().count() <= MAX_TEXT_CHARS {
@@ -856,6 +879,71 @@ impl Tree {
     /// Android has two, and the one that moved is the one the user just went to.
     pub fn client_focus(&self) -> Option<u32> {
         self.client_focus
+    }
+
+    /// The list or grid an item is in: the nearest of its ancestors, within the few levels a
+    /// list's rows sit at, that says its size.
+    pub fn collection_of(&self, id: u32) -> Option<u32> {
+        let mut at = self.parent(id);
+        for _ in 0..3 {
+            let node = self.nodes.get(&at?)?;
+            if node.collection.is_some() {
+                return Some(node.id);
+            }
+            at = self.parent(node.id);
+        }
+        None
+    }
+
+    /// An item's place in its list or grid, counted from 1, and how many items there are: a
+    /// column of rows counts rows, a row of columns counts columns, a grid counts cells row by
+    /// row.
+    pub fn place_in_set(&self, id: u32) -> Option<(i32, i32)> {
+        let item = self.nodes.get(&id)?.collection_item?;
+        let collection = self.nodes.get(&self.collection_of(id)?)?.collection?;
+        let (rows, columns) = (collection.rows, collection.columns);
+        let (place, size) = if columns <= 1 {
+            (item.row + 1, rows)
+        } else if rows <= 1 {
+            (item.column + 1, columns)
+        } else {
+            (item.row * columns + item.column + 1, rows * columns)
+        };
+        (size > 0 && place > 0).then_some((place, size))
+    }
+
+    /// The items of a list or grid that are in the tree (on the screen): its children, or
+    /// theirs for a list that wraps its rows.
+    pub fn items_of(&self, id: u32) -> Vec<u32> {
+        let Some(node) = self.nodes.get(&id) else {
+            return Vec::new();
+        };
+        let mut items = Vec::new();
+        for child in &node.children {
+            let Some(child) = self.nodes.get(child) else {
+                continue;
+            };
+            if child.collection_item.is_some() {
+                items.push(child.id);
+            } else {
+                items.extend(child.children.iter().copied().filter(|grandchild| {
+                    self.nodes
+                        .get(grandchild)
+                        .is_some_and(|node| node.collection_item.is_some())
+                }));
+            }
+        }
+        items
+    }
+
+    /// The item of a list or grid at `row` and `column`, while it is in the tree.
+    pub fn item_at(&self, id: u32, row: i32, column: i32) -> Option<u32> {
+        self.items_of(id).into_iter().find(|item| {
+            self.nodes
+                .get(item)
+                .and_then(|node| node.collection_item)
+                .is_some_and(|place| place.row == row && place.column == column)
+        })
     }
 
     /// The name a host client reads for a node. A node with no name of its own that the user
