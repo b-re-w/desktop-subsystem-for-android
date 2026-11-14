@@ -1,5 +1,7 @@
 # Developer mode and adb
 
+**English** · [한국어](ko/developer-mode.md) · [日本語](ja/developer-mode.md) · [简体中文](zh-CN/developer-mode.md) · [繁體中文](zh-TW/developer-mode.md) · [Español](es/developer-mode.md) · [Français](fr/developer-mode.md) · [Deutsch](de/developer-mode.md) · [Português (Brasil)](pt-BR/developer-mode.md) · [Русский](ru/developer-mode.md) · [Italiano](it/developer-mode.md) · [Tiếng Việt](vi/developer-mode.md) · [Bahasa Indonesia](id/developer-mode.md) · [Türkçe](tr/developer-mode.md)
+
 Developer mode lets the Android Debug Bridge (adb) on your PC connect to your Android in
 Desktop Subsystem for Android™ (DSA). It is off by default.
 

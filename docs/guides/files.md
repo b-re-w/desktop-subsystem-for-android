@@ -1,5 +1,7 @@
 # Files
 
+**English** · [한국어](ko/files.md) · [日本語](ja/files.md) · [简体中文](zh-CN/files.md) · [繁體中文](zh-TW/files.md) · [Español](es/files.md) · [Français](fr/files.md) · [Deutsch](de/files.md) · [Português (Brasil)](pt-BR/files.md) · [Русский](ru/files.md) · [Italiano](it/files.md) · [Tiếng Việt](vi/files.md) · [Bahasa Indonesia](id/files.md) · [Türkçe](tr/files.md)
+
 Desktop Subsystem for Android™ (DSA) lets you open Android's files in File Explorer, share
 your Windows folders with Android apps, and send a file to an Android app. This page
 describes DSA on Windows.
