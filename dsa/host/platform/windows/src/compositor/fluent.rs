@@ -50,6 +50,8 @@ pub mod glyph {
     pub const OPEN_WINDOW: char = '\u{E8A7}';
     /// "Stop": a square.
     pub const STOP: char = '\u{E71A}';
+    /// "Move": arrows out to the four sides, for moving with the keyboard.
+    pub const MOVE: char = '\u{E7C2}';
 }
 
 /// The system colors of a high contrast theme that a menu and a button are drawn in.

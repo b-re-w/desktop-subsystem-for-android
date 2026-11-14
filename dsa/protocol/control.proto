@@ -1280,6 +1280,28 @@ message GuestNotification {
   bool clearable = 9;
   // When it was posted, in milliseconds since the Unix epoch, as the app gave it.
   int64 when_millis = 10;
+  // Its action buttons ("Reply", "Mark as read"), in the app's order, at most 5. The host
+  // shows them on its own notification, so a person can act from the notification centre.
+  repeated NotificationButton buttons = 11;
+}
+
+// One action button of a notification (Notification.Action).
+message NotificationButton {
+  // The button's words, at most 256 characters.
+  string title = 1;
+  // Whether the button takes a reply the person writes (the action has a RemoteInput that
+  // takes text or offers choices). The host shows a text field, or the choices, beside it.
+  bool reply = 2;
+  // The words the reply field shows while it is empty ("Reply to Ann"); empty for none.
+  string reply_label = 3;
+  // The replies the app offers to pick from ("Yes", "No"), at most 5; empty for none.
+  repeated string reply_choices = 4;
+  // True when the reply must be one of `reply_choices`: the app takes no other text.
+  bool reply_choices_only = 5;
+  // What the action does, as Android numbers it (Notification.Action.SEMANTIC_ACTION_*):
+  // 0 none, 1 reply, 2 mark as read, 3 mark as unread, 4 delete, 5 archive, 6 mute,
+  // 7 unmute, 8 thumbs up, 9 thumbs down, 10 call.
+  int32 semantic_action = 6;
 }
 
 // Guest to host, from the agent: the notification with this key is gone from the guest,
@@ -1299,6 +1321,21 @@ message NotificationClicked {
 // cancels it in the guest. A key the guest does not have is answered with NotificationRemoved.
 message NotificationDismissed {
   string key = 1;
+}
+
+// Host to guest: the user chose an action button of the notification with this key on the
+// host, with the reply they wrote when the button takes one. The agent runs the action's
+// intent, as pressing the button in the guest would, with the reply filled into its
+// RemoteInput. The button is found by `button`, its place in GuestNotification.buttons, and
+// checked by its title; when the app changed its buttons since, the one with that title is
+// run, and none when no button has it. A key the guest does not have is answered with
+// NotificationRemoved.
+message NotificationButtonClicked {
+  string key = 1;
+  uint32 button = 2;
+  string title = 3;
+  // What the user wrote or picked; empty for a button that takes no reply.
+  string reply_text = 4;
 }
 
 // Guest to host, from the agent: an app runs a foreground service, so it keeps running with
@@ -2119,9 +2156,15 @@ message WidgetPointer {
 // accessibility service is off and reads nothing, so a user who uses no such client pays
 // nothing for it. The host says `on` again for every watched task each time the agent
 // connects, and a repeated `on` makes the agent send a full tree again.
+//
+// A watch with a `widget_id` (never 0) is for the window of that desktop widget instead, and
+// its `task_id` is 0: the agent reads the nodes of the widget's own views, which live in the
+// agent, and sends them as the widget's tree, in the pixels of the widget's image. Reading a
+// widget needs no accessibility service, and the agent reads it only while it is watched.
 message AccessibilityWatch {
   int32 task_id = 1;
   bool on = 2;
+  int32 widget_id = 3;
 }
 
 // What can be done to an accessibility node, as the host asks it and as a node says it
@@ -2204,6 +2247,9 @@ message AccessibilityTree {
   repeated uint32 removed_ids = 6;
   // The node with the input focus, or 0 for none.
   uint32 focused_id = 7;
+  // Set (never 0) for the tree of a watched desktop widget, whose `task_id` is 0. Its bounds
+  // are in pixels of the widget's image: (0, 0) is its top left.
+  int32 widget_id = 8;
 }
 
 // Host to guest, to the agent: do something to a node of a task, for a host accessibility
@@ -2220,6 +2266,8 @@ message AccessibilityAction {
   string text = 5;
   // Names the action in its answer.
   uint32 request_id = 6;
+  // Set (never 0) for a node of a watched desktop widget, whose `task_id` is 0.
+  int32 widget_id = 7;
 }
 
 // Guest to host, from the agent: what came of an AccessibilityAction.
@@ -2230,6 +2278,8 @@ message AccessibilityActionResult {
   bool done = 3;
   // Why it was not done, in words a person can act on. Empty when it was.
   string error = 4;
+  // The widget the action was for, as the action named it; 0 for a task's.
+  int32 widget_id = 5;
 }
 
 // The audio port (vsock 5568): the guest's audio HAL plays one output stream per connection
@@ -3293,6 +3343,7 @@ message Envelope {
     NotificationRemoved notification_removed = 71;
     NotificationClicked notification_clicked = 72;
     NotificationDismissed notification_dismissed = 73;
+    NotificationButtonClicked notification_button_clicked = 730;
     BackgroundApp background_app = 74;
     BackgroundAppGone background_app_gone = 75;
     BackgroundAppAction background_app_action = 76;

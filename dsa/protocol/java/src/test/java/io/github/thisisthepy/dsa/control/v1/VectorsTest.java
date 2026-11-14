@@ -414,6 +414,27 @@ public final class VectorsTest {
                         .setClearable(true)
                         .setWhenMillis(1700000000000L))
                 .build());
+        cases.put("notification_buttons", Envelope.newBuilder()
+                .setNotification(GuestNotification.newBuilder()
+                        .setKey(chatKey)
+                        .setTitle("Ann")
+                        .addButtons(NotificationButton.newBuilder()
+                                .setTitle("Reply")
+                                .setReply(true)
+                                .setReplyLabel("Reply to Ann")
+                                .addReplyChoices("Yes")
+                                .setSemanticAction(1))
+                        .addButtons(NotificationButton.newBuilder()
+                                .setTitle("Delete")
+                                .setSemanticAction(4)))
+                .build());
+        cases.put("notification_button_clicked", Envelope.newBuilder()
+                .setNotificationButtonClicked(NotificationButtonClicked.newBuilder()
+                        .setKey(chatKey)
+                        .setButton(1)
+                        .setTitle("Reply")
+                        .setReplyText("안녕"))
+                .build());
         cases.put("notification_removed", Envelope.newBuilder()
                 .setNotificationRemoved(NotificationRemoved.newBuilder().setKey(chatKey))
                 .build());

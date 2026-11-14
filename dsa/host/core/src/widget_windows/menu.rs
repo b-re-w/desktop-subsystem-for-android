@@ -1,8 +1,10 @@
 //! What the menu of a widget window offers, whichever host draws it: Widget settings, for a
-//! widget whose app lets it be set up again, Resize, with the sizes the widget allows, and
-//! Remove, as Android's home screen offers them.
+//! widget whose app lets it be set up again, Resize, with the sizes the widget allows, Move
+//! and Size, which move and resize it with the arrow keys as a window's system menu does
+//! ([`super::keyboard`]), and Remove, as Android's home screen offers them.
 //!
-//! The user opens it by long-pressing the widget, by right-clicking it, or with the menu key.
+//! The user opens it by long-pressing the widget, by right-clicking it, or with the menu key,
+//! Shift+F10, Enter or Space while the widget has the keyboard.
 //! Choosing Widget settings asks the service to open the widget's setup again, which
 //! shows as the app's window; once the user finishes it, the widget shows what they chose.
 //! Choosing a size resizes the window, which tells the service and Android the new size as a
@@ -42,6 +44,10 @@ pub enum MenuChoice {
     Remove,
     /// Open the widget's setup again.
     Settings,
+    /// Move the widget with the arrow keys until Enter or Esc.
+    Move,
+    /// Resize the widget with the arrow keys until Enter or Esc.
+    Size,
 }
 
 /// The menu item of Remove. A size is [`FIRST_SIZE`] plus its place in the list.
@@ -50,6 +56,10 @@ pub const REMOVE: u32 = 1;
 pub const RESIZE: u32 = 2;
 /// The menu item of Widget settings.
 pub const SETTINGS: u32 = 3;
+/// The menu item of Move, with the keyboard.
+pub const MOVE: u32 = 4;
+/// The menu item of Size, with the keyboard.
+pub const SIZE: u32 = 5;
 /// The menu item of the first size.
 pub const FIRST_SIZE: u32 = 100;
 
@@ -93,6 +103,12 @@ pub fn choice_of(command: u32, sizes: &[SizeChoice]) -> Option<MenuChoice> {
     if command == SETTINGS {
         return Some(MenuChoice::Settings);
     }
+    if command == MOVE {
+        return Some(MenuChoice::Move);
+    }
+    if command == SIZE {
+        return Some(MenuChoice::Size);
+    }
     let size = sizes.get(command.checked_sub(FIRST_SIZE)? as usize)?;
     Some(MenuChoice::Resize {
         width_dp: size.width_dp,
@@ -110,6 +126,10 @@ pub fn is_current(choice: &SizeChoice, placement: &Placement) -> bool {
 pub struct MenuText {
     pub settings: &'static str,
     pub resize: &'static str,
+    /// Move with the arrow keys, as a window's system menu says it.
+    pub move_widget: &'static str,
+    /// Resize with the arrow keys, as a window's system menu says it.
+    pub size: &'static str,
     pub remove: &'static str,
     pub small: &'static str,
     pub default: &'static str,
@@ -124,7 +144,9 @@ pub fn menu_text(korean: bool) -> MenuText {
     if korean {
         MenuText {
             settings: "위젯 설정",
-            resize: "크기 조정",
+            resize: "크기 선택",
+            move_widget: "이동",
+            size: "크기 조정",
             remove: "제거",
             small: "작게",
             default: "기본 크기",
@@ -136,6 +158,8 @@ pub fn menu_text(korean: bool) -> MenuText {
         MenuText {
             settings: "Widget settings",
             resize: "Resize",
+            move_widget: "Move",
+            size: "Size",
             remove: "Remove",
             small: "Small",
             default: "Default size",
@@ -166,6 +190,16 @@ pub fn menu_name(text: &MenuText, provider: &WidgetProvider) -> String {
     }
 }
 
+/// The menu's keyboard items, with their commands: Move, and Size when the widget can be
+/// resized at all.
+pub fn keyboard_items(text: &MenuText, provider: &WidgetProvider) -> Vec<(u32, &'static str)> {
+    let mut out = vec![(MOVE, text.move_widget)];
+    if super::keyboard::KeyboardEdit::can_size(provider) {
+        out.push((SIZE, text.size));
+    }
+    out
+}
+
 /// One entry of a widget's menu, as a host's own menu shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Entry {
@@ -185,7 +219,8 @@ pub enum Entry {
 }
 
 /// The entries of a widget's menu, in order: Widget settings when the widget can be set up
-/// again, Resize with its sizes (the current one checked), a separator, and Remove.
+/// again, Resize with its sizes (the current one checked), Move, Size when the widget can be
+/// resized, a separator, and Remove.
 pub fn entries(text: &MenuText, provider: &WidgetProvider, placement: &Placement) -> Vec<Entry> {
     let sizes: Vec<Entry> = size_choices(provider)
         .iter()
@@ -196,7 +231,7 @@ pub fn entries(text: &MenuText, provider: &WidgetProvider, placement: &Placement
             checked: is_current(size, placement),
         })
         .collect();
-    let mut out = Vec::with_capacity(4);
+    let mut out = Vec::with_capacity(6);
     if provider.reconfigurable {
         out.push(Entry::Item {
             command: SETTINGS,
@@ -209,8 +244,15 @@ pub fn entries(text: &MenuText, provider: &WidgetProvider, placement: &Placement
             label: text.resize.to_string(),
             sizes,
         });
-        out.push(Entry::Separator);
     }
+    for (command, label) in keyboard_items(text, provider) {
+        out.push(Entry::Item {
+            command,
+            label: label.to_string(),
+            checked: false,
+        });
+    }
+    out.push(Entry::Separator);
     out.push(Entry::Item {
         command: REMOVE,
         label: text.remove.to_string(),
@@ -251,9 +293,9 @@ mod tests {
         let text = menu_text(false);
         let menu = entries(&text, &clock(), &at(180, 110));
         assert!(matches!(&menu[0], Entry::Sizes { label, .. } if label == "Resize"));
-        assert_eq!(menu[1], Entry::Separator);
+        assert_eq!(menu[3], Entry::Separator);
         assert_eq!(
-            menu[2],
+            menu[4],
             Entry::Item {
                 command: REMOVE,
                 label: "Remove".into(),
@@ -313,6 +355,45 @@ mod tests {
             choice_of(SETTINGS, &size_choices(&settable)),
             Some(MenuChoice::Settings)
         );
+    }
+
+    /// The menu has Move and Size, which move and resize the widget with the arrow keys, after
+    /// Resize and before Remove, in English and in Korean. A widget that cannot be resized has
+    /// Move only.
+    #[test]
+    fn fr18_widget_menu_lists_move_and_size_in_both_languages() {
+        for (korean, words) in [(false, ["Move", "Size"]), (true, ["이동", "크기 조정"])] {
+            let text = menu_text(korean);
+            let menu = entries(&text, &clock(), &at(180, 110));
+            let items: Vec<(u32, &str)> = menu
+                .iter()
+                .filter_map(|entry| match entry {
+                    Entry::Item { command, label, .. } => Some((*command, label.as_str())),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                items,
+                [(MOVE, words[0]), (SIZE, words[1]), (REMOVE, text.remove)]
+            );
+            assert!(matches!(menu[0], Entry::Sizes { .. }));
+            // Move and Size are not the Resize submenu's own label.
+            assert_ne!(text.size, text.resize);
+            let fixed = WidgetProvider {
+                resize_mode: 0,
+                ..clock()
+            };
+            let menu = entries(&text, &fixed, &at(180, 110));
+            assert!(menu
+                .iter()
+                .any(|e| matches!(e, Entry::Item { command: MOVE, .. })));
+            assert!(!menu
+                .iter()
+                .any(|e| matches!(e, Entry::Item { command: SIZE, .. })));
+        }
+        let sizes = size_choices(&clock());
+        assert_eq!(choice_of(MOVE, &sizes), Some(MenuChoice::Move));
+        assert_eq!(choice_of(SIZE, &sizes), Some(MenuChoice::Size));
     }
 
     #[test]

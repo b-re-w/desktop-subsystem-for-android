@@ -9,8 +9,22 @@
 //! or failed. One kind of update has one identifier ([`thread_of`]), so the news that an
 //! update was applied replaces the news that it was ready, and a click on it opens the
 //! settings app's Updates page ([`UPDATES_URL`]); nothing about it goes to the guest.
+//!
+//! The notification's action buttons are the banner's actions, so a person acts on it from
+//! the Notification Center, with the keyboard or VoiceOver too, and choosing one runs that
+//! action in the guest. macOS takes a banner's actions from its category, which is
+//! registered before the banner is posted, so each set of buttons gets a category of its own
+//! ([`buttons_category`]), registered the first time a notification has it. A button that
+//! takes a reply is a text input action (`UNTextInputNotificationAction`), whose response
+//! carries what the user wrote (`userText`); one whose app takes only its own choices shows
+//! each choice as a button instead, since a banner has no list to pick from. A button that
+//! deletes is drawn as destructive.
 
-use dsa_host_core::notifications::{Notification, NotificationAction};
+use std::hash::{Hash, Hasher};
+
+use dsa_host_core::notifications::{
+    Notification, NotificationAction, NotificationButton, SEMANTIC_ACTION_DELETE,
+};
 use dsa_host_core::update::alerts::{buttons_of, thread_of};
 
 /// The link that opens the settings app on its Updates page.
@@ -23,6 +37,119 @@ pub const CATEGORY: &str = "org.thisisthepy.dsa.notification";
 /// actions are [Restart now] ([`RESTART_NOW`](dsa_host_core::update::alerts::RESTART_NOW)) and
 /// [Later].
 pub const RESTART_CATEGORY: &str = "org.thisisthepy.dsa.update-restart";
+
+/// What the category of a set of buttons is called: this, then a hash of the buttons.
+pub const BUTTONS_CATEGORY: &str = "org.thisisthepy.dsa.buttons.";
+
+/// What the action of a button is called: this, then the button's place.
+pub const BUTTON_ACTION: &str = "org.thisisthepy.dsa.button.";
+
+/// What the action of one choice of a button is called: this, then the button's place, a dot
+/// and the choice's place.
+pub const CHOICE_ACTION: &str = "org.thisisthepy.dsa.choice.";
+
+/// The most actions a banner is given; the rest are left out.
+pub const MAX_ACTIONS: usize = 10;
+
+/// One action of a banner, as a `UNNotificationAction` is made.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActionSpec {
+    pub identifier: String,
+    pub title: String,
+    /// The placeholder of its text field, for a button that takes a reply; `None` for a
+    /// plain button.
+    pub text_input: Option<String>,
+    /// Drawn as destructive: the button deletes.
+    pub destructive: bool,
+}
+
+/// The actions of a banner with `buttons`: one per button with words, and for a button whose
+/// app takes only its own choices, one per choice. Each names the button's place in the
+/// notification.
+pub fn button_actions(buttons: &[NotificationButton]) -> Vec<ActionSpec> {
+    let mut actions = Vec::new();
+    for (place, button) in buttons
+        .iter()
+        .enumerate()
+        .take(dsa_host_core::notifications::MAX_BUTTONS)
+    {
+        if button.title.trim().is_empty() {
+            continue;
+        }
+        let destructive = button.semantic_action == SEMANTIC_ACTION_DELETE;
+        if button.reply && button.reply_choices_only && !button.reply_choices.is_empty() {
+            for (choice_place, choice) in button.reply_choices.iter().enumerate() {
+                actions.push(ActionSpec {
+                    identifier: format!("{CHOICE_ACTION}{place}.{choice_place}"),
+                    title: choice.clone(),
+                    text_input: None,
+                    destructive,
+                });
+            }
+            continue;
+        }
+        let text_input = button.reply.then(|| {
+            if button.reply_label.trim().is_empty() {
+                button.title.clone()
+            } else {
+                button.reply_label.clone()
+            }
+        });
+        actions.push(ActionSpec {
+            identifier: format!("{BUTTON_ACTION}{place}"),
+            title: button.title.clone(),
+            text_input,
+            destructive,
+        });
+    }
+    actions.truncate(MAX_ACTIONS);
+    actions
+}
+
+/// The category of a banner with `buttons`, the same for the same buttons; `None` when they
+/// make no action.
+pub fn buttons_category(buttons: &[NotificationButton]) -> Option<String> {
+    if button_actions(buttons).is_empty() {
+        return None;
+    }
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    buttons.hash(&mut hasher);
+    Some(format!("{BUTTONS_CATEGORY}{:016x}", hasher.finish()))
+}
+
+/// What choosing the action `action` of the banner of the notification with `key`, whose
+/// buttons are `buttons`, asks for, with what the user wrote in its text field (`text`).
+/// `None` for an action that is not a button's, or a reply sent empty.
+pub fn button_response(
+    key: &str,
+    buttons: &[NotificationButton],
+    action: &str,
+    text: Option<&str>,
+) -> Option<NotificationAction> {
+    let (place, reply) = if let Some(place) = action.strip_prefix(BUTTON_ACTION) {
+        let place: usize = place.parse().ok()?;
+        let reply = match (buttons.get(place)?.reply, text) {
+            (true, Some(text)) if text.trim().is_empty() => return None,
+            (true, Some(text)) => text.to_string(),
+            _ => String::new(),
+        };
+        (place, reply)
+    } else {
+        let (place, choice) = action.strip_prefix(CHOICE_ACTION)?.split_once('.')?;
+        let place: usize = place.parse().ok()?;
+        let choice: usize = choice.parse().ok()?;
+        (
+            place,
+            buttons.get(place)?.reply_choices.get(choice)?.clone(),
+        )
+    };
+    Some(NotificationAction::Button {
+        key: key.to_string(),
+        button: place as u32,
+        title: buttons.get(place)?.title.clone(),
+        reply: dsa_host_core::notifications::cut_reply(reply),
+    })
+}
 
 /// What the user did with a banner.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,8 +192,9 @@ pub struct Content {
     /// Groups an app's notifications together.
     pub thread: String,
     pub interruption: Interruption,
-    /// [`CATEGORY`], or [`RESTART_CATEGORY`] for the question with its buttons.
-    pub category: &'static str,
+    /// [`CATEGORY`], [`RESTART_CATEGORY`] for the question with its buttons, or the category
+    /// of the notification's own buttons ([`buttons_category`]).
+    pub category: String,
 }
 
 /// The content of `notification`'s banner. The app's name heads it when the notification has
@@ -83,10 +211,10 @@ pub fn content(notification: &Notification) -> Content {
     } else {
         Interruption::Passive
     };
-    let category = if buttons_of(&notification.key, false).is_empty() {
-        CATEGORY
+    let category = if !buttons_of(&notification.key, false).is_empty() {
+        RESTART_CATEGORY.to_string()
     } else {
-        RESTART_CATEGORY
+        buttons_category(&notification.buttons).unwrap_or_else(|| CATEGORY.to_string())
     };
     match thread_of(&notification.key) {
         Some(thread) => Content {
@@ -120,7 +248,7 @@ mod center {
     use std::sync::{Mutex, OnceLock};
 
     use block2::{Block, RcBlock};
-    use dsa_host_core::notifications::{Notification, NotificationAction};
+    use dsa_host_core::notifications::{Notification, NotificationAction, NotificationButton};
     use dsa_host_core::update::alerts::RESTART_NOW;
     use dsa_host_core::update::alerts::{
         buttons_of, is_update_key, AlertKind, Subject, UpdateAlert,
@@ -130,7 +258,10 @@ mod center {
     use objc2::runtime::{AnyClass, AnyObject, Bool, ClassBuilder, Sel};
     use objc2::sel;
 
-    use super::{content, Response, CATEGORY, RESTART_CATEGORY};
+    use super::{
+        button_actions, button_response, content, Response, BUTTONS_CATEGORY, BUTTON_ACTION,
+        CATEGORY, CHOICE_ACTION, RESTART_CATEGORY,
+    };
     use crate::objc::{class, file_url, ns_string, string_of};
     use crate::shell::pin_shortcuts::{self, PIN_CATEGORY};
     use dsa_host_core::tasks::PinShortcutRequest;
@@ -148,7 +279,88 @@ mod center {
     /// is in front, as the guest's own notifications would be.
     const PRESENT: usize = 2 | 8 | 16;
 
+    /// `UNNotificationActionOptionDestructive`.
+    const DESTRUCTIVE: usize = 2;
+    /// The most categories of buttons kept registered; the oldest goes first.
+    const MAX_BUTTON_CATEGORIES: usize = 64;
+
     static ACTIONS: Mutex<Option<Sender<Response>>> = Mutex::new(None);
+
+    /// The categories made for the buttons of the notifications posted, oldest first, with
+    /// the buttons each stands for, so a chosen action names its button.
+    static BUTTON_CATEGORIES: Mutex<Vec<(String, Vec<NotificationButton>)>> =
+        Mutex::new(Vec::new());
+
+    /// What the user chose on a banner of the category `category`: a button of a notification.
+    fn chosen_button(
+        category: &str,
+        key: &str,
+        action: &str,
+        text: Option<&str>,
+    ) -> Option<Response> {
+        let known = BUTTON_CATEGORIES.lock().ok()?;
+        let (_, buttons) = known.iter().find(|(id, _)| id == category)?;
+        button_response(key, buttons, action, text).map(Response::Notification)
+    }
+
+    /// The `UNNotificationCategory` of the buttons `buttons`, called `id`.
+    fn buttons_category_object(
+        id: &str,
+        buttons: &[NotificationButton],
+    ) -> Result<*mut AnyObject, String> {
+        // SAFETY: messages to classes and objects of the UserNotifications framework with
+        // the arguments their methods take; every object is checked for nil before use.
+        unsafe { buttons_category_object_unchecked(id, buttons) }
+    }
+
+    unsafe fn buttons_category_object_unchecked(
+        id: &str,
+        buttons: &[NotificationButton],
+    ) -> Result<*mut AnyObject, String> {
+        let action_class = class(c"UNNotificationAction")?;
+        let text_class = class(c"UNTextInputNotificationAction")?;
+        let category_class = class(c"UNNotificationCategory")?;
+        let array_class = class(c"NSArray")?;
+        let mutable_array_class = class(c"NSMutableArray")?;
+        let actions: *mut AnyObject = msg_send![mutable_array_class, array];
+        for spec in button_actions(buttons) {
+            let options = if spec.destructive {
+                DESTRUCTIVE
+            } else {
+                0usize
+            };
+            let identifier = ns_string(&spec.identifier);
+            let title = ns_string(&spec.title);
+            let action: *mut AnyObject = match &spec.text_input {
+                Some(placeholder) => msg_send![
+                    text_class,
+                    actionWithIdentifier: &*identifier,
+                    title: &*title,
+                    options: options,
+                    textInputButtonTitle: &*title,
+                    textInputPlaceholder: &*ns_string(placeholder)
+                ],
+                None => msg_send![
+                    action_class,
+                    actionWithIdentifier: &*identifier,
+                    title: &*title,
+                    options: options
+                ],
+            };
+            if !action.is_null() {
+                let _: () = msg_send![actions, addObject: action];
+            }
+        }
+        let empty: *mut AnyObject = msg_send![array_class, array];
+        let category: *mut AnyObject = msg_send![
+            category_class,
+            categoryWithIdentifier: &*ns_string(id),
+            actions: actions,
+            intentIdentifiers: empty,
+            options: CUSTOM_DISMISS
+        ];
+        Ok(category)
+    }
 
     unsafe extern "C-unwind" fn did_receive(
         _this: &AnyObject,
@@ -163,6 +375,11 @@ mod center {
             let request: *mut AnyObject = msg_send![notification, request];
             let key = string_of(msg_send![request, identifier]);
             let action_id = string_of(action);
+            let request_content: *mut AnyObject = msg_send![request, content];
+            let category = string_of(msg_send![request_content, categoryIdentifier]);
+            // A text input action's response carries what the user wrote.
+            let has_text: bool = msg_send![response, respondsToSelector: sel!(userText)];
+            let text = has_text.then(|| string_of(msg_send![response, userText]));
             let pin = pin_shortcuts::request_of(&key).and_then(|request_id| {
                 pin_shortcuts::answer(&action_id, action_id == DISMISS_ACTION).map(|accepted| {
                     Response::Pin {
@@ -176,6 +393,12 @@ mod center {
                 DEFAULT_ACTION => Some(Response::Notification(NotificationAction::Open { key })),
                 DISMISS_ACTION => Some(Response::Notification(NotificationAction::Dismiss { key })),
                 RESTART_NOW if is_update_key(&key) => Some(Response::RestartForUpdate),
+                _ if category.starts_with(BUTTONS_CATEGORY)
+                    && (action_id.starts_with(BUTTON_ACTION)
+                        || action_id.starts_with(CHOICE_ACTION)) =>
+                {
+                    chosen_button(&category, &key, &action_id, text.as_deref())
+                }
                 // [Later] only closes the banner.
                 _ => None,
             };
@@ -232,6 +455,9 @@ mod center {
         _delegate: Retained<AnyObject>,
         /// Where icons are written for macOS to read as attachments.
         icons: PathBuf,
+        /// DSA's own categories: every banner's, the question to restart and the request to
+        /// pin a shortcut.
+        base: Retained<AnyObject>,
     }
 
     impl NotificationCenter {
@@ -328,15 +554,18 @@ mod center {
                     options: CUSTOM_DISMISS
                 ];
                 let set_class = class(c"NSSet")?;
-                let both: *mut AnyObject = msg_send![mutable_array_class, array];
-                let _: () = msg_send![both, addObject: category];
+                // Kept, since registering a category of buttons later sets every category
+                // again.
+                let both: Option<Retained<AnyObject>> = msg_send![mutable_array_class, new];
+                let both = both.ok_or("no list of notification categories could be made")?;
+                let _: () = msg_send![&*both, addObject: category];
                 if !restart_category.is_null() {
-                    let _: () = msg_send![both, addObject: restart_category];
+                    let _: () = msg_send![&*both, addObject: restart_category];
                 }
                 if !pin_category.is_null() {
-                    let _: () = msg_send![both, addObject: pin_category];
+                    let _: () = msg_send![&*both, addObject: pin_category];
                 }
-                let categories: *mut AnyObject = msg_send![set_class, setWithArray: both];
+                let categories: *mut AnyObject = msg_send![set_class, setWithArray: &*both];
                 let _: () = msg_send![&*center, setNotificationCategories: categories];
 
                 let answered = RcBlock::new(|_granted: Bool, _error: *mut AnyObject| {});
@@ -349,8 +578,40 @@ mod center {
                     center,
                     _delegate: delegate,
                     icons,
+                    base: both,
                 })
             }
+        }
+
+        /// Registers the category `id` of the buttons `buttons`, unless it is already, so a
+        /// banner of that category shows them. macOS takes the whole set of categories at
+        /// once, so DSA's own and every category of buttons kept are set again.
+        fn register(&self, id: &str, buttons: &[NotificationButton]) -> Result<(), String> {
+            let mut known = BUTTON_CATEGORIES
+                .lock()
+                .map_err(|_| "the notification categories lock failed")?;
+            if known.iter().any(|(known_id, _)| known_id == id) {
+                return Ok(());
+            }
+            known.push((id.to_string(), buttons.to_vec()));
+            if known.len() > MAX_BUTTON_CATEGORIES {
+                known.remove(0);
+            }
+            unsafe {
+                let mutable_array_class = class(c"NSMutableArray")?;
+                let all: *mut AnyObject =
+                    msg_send![mutable_array_class, arrayWithArray: &*self.base];
+                for (id, buttons) in known.iter() {
+                    let category = buttons_category_object(id, buttons)?;
+                    if !category.is_null() {
+                        let _: () = msg_send![all, addObject: category];
+                    }
+                }
+                let set_class = class(c"NSSet")?;
+                let categories: *mut AnyObject = msg_send![set_class, setWithArray: all];
+                let _: () = msg_send![&*self.center, setNotificationCategories: categories];
+            }
+            Ok(())
         }
 
         /// The icon's attachment, written to the icons folder under a name made from the
@@ -395,8 +656,11 @@ mod center {
                 let _: () = msg_send![&*banner, setSubtitle: &*ns_string(&content.subtitle)];
                 let _: () = msg_send![&*banner, setBody: &*ns_string(&content.body)];
                 let _: () = msg_send![&*banner, setThreadIdentifier: &*ns_string(&content.thread)];
+                if content.category.starts_with(super::BUTTONS_CATEGORY) {
+                    self.register(&content.category, &notification.buttons)?;
+                }
                 let _: () =
-                    msg_send![&*banner, setCategoryIdentifier: &*ns_string(content.category)];
+                    msg_send![&*banner, setCategoryIdentifier: &*ns_string(&content.category)];
                 let level_selector = sel!(setInterruptionLevel:);
                 let can_level: bool = msg_send![&*banner, respondsToSelector: level_selector];
                 if can_level {
@@ -523,6 +787,118 @@ mod tests {
             high_priority: false,
             clearable: true,
             when_millis: 0,
+            buttons: Vec::new(),
+        }
+    }
+
+    fn chat_buttons() -> Vec<NotificationButton> {
+        vec![
+            NotificationButton {
+                title: "Reply".into(),
+                reply: true,
+                reply_label: "Reply to Ann".into(),
+                semantic_action: 1,
+                ..NotificationButton::default()
+            },
+            NotificationButton::default(),
+            NotificationButton {
+                title: "Delete".into(),
+                semantic_action: SEMANTIC_ACTION_DELETE,
+                ..NotificationButton::default()
+            },
+            NotificationButton {
+                title: "Answer".into(),
+                reply: true,
+                reply_choices: vec!["Yes".into(), "No".into()],
+                reply_choices_only: true,
+                ..NotificationButton::default()
+            },
+        ]
+    }
+
+    #[test]
+    fn fr18_a_notifications_buttons_are_its_banners_actions() {
+        let actions = button_actions(&chat_buttons());
+        let ids: Vec<&str> = actions.iter().map(|a| a.identifier.as_str()).collect();
+        assert_eq!(
+            ids,
+            [
+                "org.thisisthepy.dsa.button.0",
+                "org.thisisthepy.dsa.button.2",
+                "org.thisisthepy.dsa.choice.3.0",
+                "org.thisisthepy.dsa.choice.3.1"
+            ]
+        );
+        assert_eq!(actions[0].text_input.as_deref(), Some("Reply to Ann"));
+        assert_eq!(actions[1].text_input, None);
+        assert!(actions[1].destructive && !actions[0].destructive);
+        assert_eq!(actions[2].title, "Yes");
+        // The same buttons have one category; other buttons another; none, DSA's own.
+        let with = Notification {
+            buttons: chat_buttons(),
+            ..note("t", 3)
+        };
+        let category = content(&with).category;
+        assert!(category.starts_with(BUTTONS_CATEGORY), "{category}");
+        assert_eq!(buttons_category(&chat_buttons()), Some(category.clone()));
+        assert_ne!(buttons_category(&chat_buttons()[2..]), Some(category));
+        assert_eq!(buttons_category(&[NotificationButton::default()]), None);
+        assert_eq!(content(&note("t", 3)).category, CATEGORY);
+    }
+
+    #[test]
+    fn fr18_choosing_an_action_or_sending_a_reply_runs_the_button() {
+        let key = "0|com.example|1|null|10123";
+        let buttons = chat_buttons();
+        assert_eq!(
+            button_response(
+                key,
+                &buttons,
+                "org.thisisthepy.dsa.button.0",
+                Some("on my way")
+            ),
+            Some(NotificationAction::Button {
+                key: key.into(),
+                button: 0,
+                title: "Reply".into(),
+                reply: "on my way".into(),
+            })
+        );
+        assert_eq!(
+            button_response(key, &buttons, "org.thisisthepy.dsa.button.2", None),
+            Some(NotificationAction::Button {
+                key: key.into(),
+                button: 2,
+                title: "Delete".into(),
+                reply: String::new(),
+            })
+        );
+        assert_eq!(
+            button_response(key, &buttons, "org.thisisthepy.dsa.choice.3.1", None),
+            Some(NotificationAction::Button {
+                key: key.into(),
+                button: 3,
+                title: "Answer".into(),
+                reply: "No".into(),
+            })
+        );
+        // An empty reply, and actions that name no button, do nothing.
+        assert_eq!(
+            button_response(key, &buttons, "org.thisisthepy.dsa.button.0", Some(" ")),
+            None
+        );
+        for action in [
+            "org.thisisthepy.dsa.button.9",
+            "org.thisisthepy.dsa.button.x",
+            "org.thisisthepy.dsa.choice.3.7",
+            "org.thisisthepy.dsa.choice.3",
+            "com.apple.UNNotificationDefaultActionIdentifier",
+        ] {
+            assert_eq!(
+                button_response(key, &buttons, action, None),
+                None,
+                "{action}"
+            );
         }
     }
 

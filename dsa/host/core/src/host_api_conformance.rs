@@ -40,7 +40,9 @@ use crate::host_api::{
 use crate::ime::{ImeCursor, ImeEvent};
 use crate::input::{buttons, PointerAction, PointerEvent, PointerTool};
 use crate::keys::{keycode, meta, KeyAction, KeyEvent};
-use crate::notifications::{Notification, NotificationAction, NotificationEvent};
+use crate::notifications::{
+    Notification, NotificationAction, NotificationButton, NotificationEvent,
+};
 use crate::print::{PrintEvent, PrintJob, PrintOutcome, PrintSettings};
 use crate::session::{BackgroundRequest, SessionState};
 use crate::settings::{MemorySettings, Settings, SettingsStore};
@@ -1467,6 +1469,14 @@ macro_rules! host_api_conformance {
         #[test]
         fn fr8_opening_and_dismissing_a_notification_reach_the_callers_android() {
             $crate::host_api_conformance::notification_actions_reach_the_caller(&mut || $make);
+        }
+        #[test]
+        fn fr18_notification_actions_reach_the_local_api() {
+            $crate::host_api_conformance::notification_buttons_reach_a_watcher(&mut || $make);
+        }
+        #[test]
+        fn fr18_choosing_a_button_with_a_reply_reaches_the_callers_android() {
+            $crate::host_api_conformance::notification_button_reaches_the_caller(&mut || $make);
         }
         #[test]
         fn fr8_acting_on_a_notification_of_a_stopped_android_says_it_is_not_running() {
@@ -3200,7 +3210,10 @@ pub fn accessibility_client_that_sends_a_request_is_disconnected(make: MakeLocal
     let watch = wire::Request {
         id: 1,
         body: Some(wire::request::Body::WatchAccessibility(
-            wire::WatchAccessibility { task_id: 7 },
+            wire::WatchAccessibility {
+                task_id: 7,
+                widget_id: 0,
+            },
         )),
     };
     dsa_protocol::host_api::send(
@@ -4700,7 +4713,72 @@ fn sample_notification(key: &str, title: &str) -> Notification {
         high_priority: true,
         clearable: true,
         when_millis: 1_700_000_000_000,
+        buttons: Vec::new(),
     }
+}
+
+pub fn notification_buttons_reach_a_watcher(make: MakeLocal<'_>) {
+    let (listener, mut connector, user) = make();
+    let androids = Arc::new(FakeAndroids::default());
+    let _service = RunningService::start(listener, androids.clone());
+    let mut watch = connect(&mut *connector)
+        .watch_notifications()
+        .expect("watching notifications");
+    let android = androids.of(&user).expect("the caller's Android");
+    let posted = Notification {
+        buttons: vec![
+            NotificationButton {
+                title: "Reply".into(),
+                reply: true,
+                reply_label: "Reply to Ann".into(),
+                reply_choices: vec!["On my way".into(), "\u{c548}\u{b155}".into()],
+                reply_choices_only: false,
+                semantic_action: 1,
+            },
+            NotificationButton {
+                title: "Delete".into(),
+                semantic_action: 4,
+                ..Default::default()
+            },
+        ],
+        ..sample_notification("0|com.example.chat|1|null|10100", "Ann")
+    };
+    android.notify(NotificationEvent::Posted(posted.clone()));
+    assert_eq!(
+        watch.next(WAIT).unwrap(),
+        Some(NotificationEvent::Posted(posted))
+    );
+}
+
+pub fn notification_button_reaches_the_caller(make: MakeLocal<'_>) {
+    let (listener, mut connector, user) = make();
+    let androids = Arc::new(FakeAndroids::default());
+    let _service = RunningService::start(listener, androids.clone());
+    let mut client = connect(&mut *connector);
+    client.start().unwrap();
+    let reply = NotificationAction::Button {
+        key: "0|com.example.chat|1|null|10100".into(),
+        button: 0,
+        title: "Reply".into(),
+        reply: "see you at noon".into(),
+    };
+    let read = NotificationAction::Button {
+        key: "0|com.example.chat|1|null|10100".into(),
+        button: 1,
+        title: "Mark as read".into(),
+        reply: String::new(),
+    };
+    client.act_on_notification(&reply).expect("replied");
+    client.act_on_notification(&read).expect("marked as read");
+    assert_eq!(
+        *androids
+            .of(&user)
+            .unwrap()
+            .notification_actions
+            .lock()
+            .unwrap(),
+        vec![reply, read]
+    );
 }
 
 pub fn notifications_reach_a_watcher(make: MakeLocal<'_>) {
@@ -4903,18 +4981,37 @@ pub fn malformed_notification_action_is_refused(make: MakeLocal<'_>) {
         ActOnNotification {
             key: String::new(),
             action: 1,
+            ..Default::default()
         },
         ActOnNotification {
             key: "k".repeat(crate::notifications::MAX_KEY_BYTES + 1),
             action: 1,
+            ..Default::default()
         },
         ActOnNotification {
             key: "k".into(),
             action: 0,
+            ..Default::default()
         },
         ActOnNotification {
             key: "k".into(),
             action: 77,
+            ..Default::default()
+        },
+        // A reply past the limit, and a button past the most a notification has.
+        ActOnNotification {
+            key: "k".into(),
+            action: 3,
+            button: 0,
+            button_title: "Reply".into(),
+            reply_text: "x".repeat(crate::notifications::MAX_REPLY_CHARS + 1),
+        },
+        ActOnNotification {
+            key: "k".into(),
+            action: 3,
+            button: crate::notifications::MAX_BUTTONS as u32,
+            button_title: "Reply".into(),
+            reply_text: String::new(),
         },
     ];
     for (id, act) in bad.into_iter().enumerate() {

@@ -32,8 +32,14 @@ use crate::settings::SettingsStore;
 pub const GRACE: Duration = Duration::from_secs(15 * 60);
 
 /// How long su waits for the host to answer before it fails. The guest relay fails the call
-/// with [`DecisionDenied::timed_out`] if no answer comes in this long.
-pub const ANSWER_TIMEOUT: Duration = Duration::from_secs(60);
+/// with [`DecisionDenied::TimedOut`] if no answer comes in this long; the guest keeps the same
+/// number. It is longer than the longest time the host's prompt may stay open (the time it
+/// has while a screen reader runs,
+/// [`SCREEN_READER_PROMPT_TIMEOUT`](crate::root_approval::SCREEN_READER_PROMPT_TIMEOUT)), with
+/// room for the answer to cross, so su always hears the host's own answer, "timed out"
+/// included. It only ends a wait the host never answers, as when the host stops responding
+/// without its connection closing; a closed connection fails every waiting su call at once.
+pub const ANSWER_TIMEOUT: Duration = Duration::from_secs(5 * 60 + 10);
 
 /// The package the host names `adb shell` by: Android's shell package, which owns uid 2000,
 /// the uid `adb shell` runs as. While developer mode is on, `adb shell` asks for root through
@@ -686,6 +692,17 @@ mod tests {
                 level: Level::Off,
             }]
         );
+    }
+
+    #[test]
+    fn fr18_su_waits_past_the_longer_prompt() {
+        use crate::root_approval::{prompt_timeout, SCREEN_READER_PROMPT_TIMEOUT};
+        // su waits longer than the prompt may stay open while a screen reader runs, and the
+        // guest keeps the same number (its su relay's own test checks it there).
+        assert!(ANSWER_TIMEOUT > SCREEN_READER_PROMPT_TIMEOUT);
+        assert!(ANSWER_TIMEOUT > prompt_timeout(true));
+        assert!(ANSWER_TIMEOUT > prompt_timeout(false));
+        assert_eq!(ANSWER_TIMEOUT, Duration::from_secs(310));
     }
 
     #[test]

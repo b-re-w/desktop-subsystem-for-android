@@ -11,6 +11,7 @@ import io.github.thisisthepy.dsa.agent.FakeTasks
 import io.github.thisisthepy.dsa.agent.FakeWindowing
 import io.github.thisisthepy.dsa.agent.RecordingLog
 import io.github.thisisthepy.dsa.control.v1.Envelope
+import io.github.thisisthepy.dsa.control.v1.NotificationButtonClicked
 import io.github.thisisthepy.dsa.control.v1.NotificationClicked
 import io.github.thisisthepy.dsa.control.v1.NotificationDismissed
 import io.github.thisisthepy.dsa.control.v1.ScreenState
@@ -25,12 +26,24 @@ class FakeNotifications : NotificationSource {
     val opened = mutableListOf<String>()
     val cancelled = mutableListOf<String>()
     val actionsRun = mutableListOf<Pair<String, Int>>()
+
+    /** The buttons run from the host: the key, the place of the button that ran, and the reply. */
+    val buttonsRun = mutableListOf<Triple<String, Int, String>>()
     var listener: NoticeListener? = null
 
     override fun runAction(key: String, index: Int): Boolean {
         val notice = shown[key] ?: return false
         if (index !in notice.actions.indices) return false
         actionsRun += key to index
+        return true
+    }
+
+    override fun runButton(key: String, index: Int, title: String, reply: String): Boolean {
+        val notice = shown[key] ?: return false
+        val ran = notice.actions.getOrNull(index)?.takeIf { it.title == title }?.let { index }
+            ?: notice.actions.indexOfFirst { it.title == title }.takeIf { it >= 0 }
+            ?: return true
+        buttonsRun += Triple(key, ran, if (notice.actions[ran].reply) reply else "")
         return true
     }
 
@@ -82,6 +95,7 @@ fun notice(
     icon: ByteArray = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte()),
     actions: List<String> = emptyList(),
     appLabel: String = "Chat",
+    buttons: List<NoticeAction> = actions.map { NoticeAction(it) },
 ) = GuestNotice(
     key = key,
     packageName = packageName,
@@ -96,7 +110,19 @@ fun notice(
     groupSummary = groupSummary,
     clearable = clearable,
     whenMillis = 1_700_000_000_000,
-    actions = actions,
+    actions = buttons,
+)
+
+/** A chat message's buttons: a reply, with a choice, and a mark as read. */
+val CHAT_BUTTONS = listOf(
+    NoticeAction(
+        title = "Reply",
+        reply = true,
+        replyLabel = "Reply to Ann",
+        replyChoices = listOf("On my way"),
+        semanticAction = 1,
+    ),
+    NoticeAction(title = "Mark as read", semanticAction = 2),
 )
 
 class NotificationForwarderTest {
@@ -256,6 +282,72 @@ class NotificationForwarderTest {
         fromHost(Envelope.newBuilder().setNotificationDismissed(NotificationDismissed.newBuilder().setKey("gone too")).build())
         assertEquals(listOf("gone", "gone too"), sentRemovals())
         assertTrue(notifications.opened.isEmpty())
+    }
+
+    private fun buttonClicked(key: String, button: Int, title: String, reply: String = "") =
+        Envelope.newBuilder()
+            .setNotificationButtonClicked(
+                NotificationButtonClicked.newBuilder().setKey(key).setButton(button).setTitle(title).setReplyText(reply),
+            )
+            .build()
+
+    @Test
+    fun fr18_a_notification_reaches_the_host_with_its_buttons_and_reply() {
+        started()
+        notifications.post(notice(buttons = CHAT_BUTTONS))
+        scheduler.runDue()
+        val buttons = sentNotifications().single().buttonsList
+        assertEquals(listOf("Reply", "Mark as read"), buttons.map { it.title })
+        assertTrue(buttons[0].reply)
+        assertEquals("Reply to Ann", buttons[0].replyLabel)
+        assertEquals(listOf("On my way"), buttons[0].replyChoicesList)
+        assertFalse(buttons[0].replyChoicesOnly)
+        assertEquals(1, buttons[0].semanticAction)
+        assertFalse(buttons[1].reply)
+        assertEquals(2, buttons[1].semanticAction)
+    }
+
+    @Test
+    fun fr18_buttons_past_the_hosts_limit_are_left_out() {
+        started()
+        notifications.post(notice(actions = (1..8).map { "b$it" }))
+        scheduler.runDue()
+        assertEquals(NotificationForwarder.MAX_BUTTONS, sentNotifications().single().buttonsCount)
+    }
+
+    @Test
+    fun fr18_a_button_chosen_on_the_host_runs_with_the_reply() {
+        started()
+        notifications.post(notice(buttons = CHAT_BUTTONS))
+        scheduler.runDue()
+        fromHost(buttonClicked(CHAT, 0, "Reply", "see you 안녕"))
+        fromHost(buttonClicked(CHAT, 1, "Mark as read"))
+        assertEquals(
+            listOf(Triple(CHAT, 0, "see you 안녕"), Triple(CHAT, 1, "")),
+            notifications.buttonsRun,
+        )
+        assertTrue(sentRemovals().isEmpty())
+    }
+
+    @Test
+    fun fr18_a_button_that_moved_runs_by_its_title_and_a_gone_one_runs_nothing() {
+        started()
+        notifications.post(notice(buttons = CHAT_BUTTONS.reversed()))
+        scheduler.runDue()
+        // The host saw "Reply" first; the app has since put it second.
+        fromHost(buttonClicked(CHAT, 0, "Reply", "ok"))
+        fromHost(buttonClicked(CHAT, 0, "Archive"))
+        assertEquals(listOf(Triple(CHAT, 1, "ok")), notifications.buttonsRun)
+        // The notification is still there, so the host keeps it.
+        assertTrue(sentRemovals().isEmpty())
+    }
+
+    @Test
+    fun fr18_a_button_of_a_notification_the_guest_no_longer_has_removes_it_on_the_host() {
+        started()
+        fromHost(buttonClicked("gone", 0, "Reply", "hi"))
+        assertEquals(listOf("gone"), sentRemovals())
+        assertTrue(notifications.buttonsRun.isEmpty())
     }
 
     @Test

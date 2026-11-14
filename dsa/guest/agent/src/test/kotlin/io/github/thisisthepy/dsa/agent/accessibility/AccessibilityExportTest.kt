@@ -440,4 +440,134 @@ class AccessibilityExportTest {
         assertEquals("", AccessibilityExport.withoutService(own, own))
         assertEquals("", AccessibilityExport.withoutService(null, own))
     }
+
+    /** A clock widget's views: its time, and a button that opens its app. */
+    private val time = FakeNode("time", NodeInfo(className = "android.widget.TextClock", text = "10:42", bounds = TaskBounds(10, 10, 150, 60)))
+    private val openApp = FakeNode(
+        "open",
+        NodeInfo(
+            className = "android.widget.ImageButton",
+            description = "Open Clock",
+            bounds = TaskBounds(120, 70, 170, 100),
+            clickable = true,
+            actions = listOf(NodeAction.NODE_ACTION_CLICK),
+        ),
+    )
+    private val widgetRoot = FakeNode("widget", NodeInfo(className = "android.widget.FrameLayout", bounds = TaskBounds(0, 0, 180, 110)), listOf(time, openApp))
+
+    /** The agent's widgets in a test: the views of widget 12, and who listens to them. */
+    private val widgetViews = object : WidgetNodes {
+        var reads = 0
+        var listener: ((Int) -> Unit)? = null
+
+        override fun roots(widgetId: Int): List<NodeHandle>? {
+            reads++
+            return if (widgetId == 12) listOf(widgetRoot) else null
+        }
+
+        override fun bounds(widgetId: Int): TaskBounds? = if (widgetId == 12) TaskBounds(0, 0, 180, 110) else null
+
+        override fun listen(changed: ((Int) -> Unit)?) {
+            listener = changed
+        }
+    }
+
+    private fun startedWithWidgets(): Agent {
+        locator.up = daemon
+        tasks.running = listOf(appTask(3, bounds = TaskBounds(30, 20, 430, 620)))
+        val agent = Agent(
+            AGENT, tasks, FakeActions(), locator, FakeWindowing(), FakeInjector(), scheduler, log,
+            accessibility = service,
+            clock = { scheduler.now },
+            widgetNodes = widgetViews,
+        )
+        agent.start()
+        scheduler.runDue()
+        return agent
+    }
+
+    private fun watchWidget(widgetId: Int, on: Boolean) =
+        deliver(Envelope.newBuilder().setAccessibilityWatch(AccessibilityWatch.newBuilder().setWidgetId(widgetId).setOn(on)).build())
+
+    @Test
+    fun fr18_widget_tree_watch_names_the_widget() {
+        startedWithWidgets()
+        // Nothing is read until the host watches the widget.
+        scheduler.advance(5_000)
+        assertEquals(0, widgetViews.reads)
+        assertEquals(null, widgetViews.listener)
+        watchWidget(12, true)
+        scheduler.advance(10)
+        // A widget's views are the agent's own: the accessibility service stays off.
+        assertFalse(service.on)
+        assertEquals(listOf("disable"), service.calls)
+        val tree = trees().single()
+        assertTrue(tree.full)
+        assertEquals(12, tree.widgetId)
+        assertEquals(0, tree.taskId)
+        assertEquals(3, tree.nodesCount)
+        val button = tree.nodesList.single { it.contentDescription == "Open Clock" }
+        // In pixels of the widget's image, from its top left.
+        assertEquals(120, button.bounds.left)
+        assertEquals(70, button.bounds.top)
+        assertEquals(listOf(NodeAction.NODE_ACTION_CLICK), button.actionsList)
+        assertTrue(log.lines.any { it.startsWith("info: sent widget 12's accessibility tree to the host") })
+        // A change of its views is read again and sent as a change.
+        time.info = time.info.copy(text = "10:43")
+        widgetViews.listener!!.invoke(12)
+        scheduler.advance(1_000)
+        val delta = trees().last()
+        assertFalse(delta.full)
+        assertEquals(12, delta.widgetId)
+        assertEquals("10:43", delta.nodesList.single().text)
+        // Once the host stops watching, nothing listens and nothing is read.
+        watchWidget(12, false)
+        assertEquals(null, widgetViews.listener)
+        val reads = widgetViews.reads
+        scheduler.advance(5_000)
+        assertEquals(reads, widgetViews.reads)
+    }
+
+    @Test
+    fun fr18_invoke_on_a_widget_button_presses_it() {
+        startedWithWidgets()
+        watchWidget(12, true)
+        scheduler.advance(10)
+        val tree = trees().single()
+        val buttonId = tree.nodesList.single { it.contentDescription == "Open Clock" }.id
+        deliver(
+            Envelope.newBuilder().setAccessibilityAction(
+                AccessibilityAction.newBuilder().setWidgetId(12).setEpoch(tree.epoch).setNodeId(buttonId)
+                    .setAction(NodeAction.NODE_ACTION_CLICK).setRequestId(4),
+            ).build(),
+        )
+        assertEquals(listOf(NodeAction.NODE_ACTION_CLICK to ""), openApp.performed)
+        val result = daemon.sentMessages().filter { it.hasAccessibilityActionResult() }.map { it.accessibilityActionResult }.single()
+        assertEquals(4, result.requestId)
+        assertEquals(12, result.widgetId)
+        assertTrue(result.done)
+        // A task of the same number is another tree: the action does not reach the widget.
+        deliver(
+            Envelope.newBuilder().setAccessibilityAction(
+                AccessibilityAction.newBuilder().setTaskId(12).setEpoch(tree.epoch).setNodeId(buttonId)
+                    .setAction(NodeAction.NODE_ACTION_CLICK).setRequestId(5),
+            ).build(),
+        )
+        assertEquals(1, openApp.performed.size)
+    }
+
+    @Test
+    fun fr18_a_watched_task_and_widget_keep_the_service_for_the_task_alone() {
+        startedWithWidgets()
+        service.windows[3] = listOf(list)
+        watchWidget(12, true)
+        watch(3, true)
+        assertTrue(service.on)
+        // The widget is still read once the task's watch ends, and the service goes off.
+        watch(3, false)
+        assertFalse(service.on)
+        assertTrue(widgetViews.listener != null)
+        watchWidget(12, false)
+        assertEquals(listOf("disable", "enable", "disable"), service.calls)
+    }
 }

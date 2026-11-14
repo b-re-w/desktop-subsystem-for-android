@@ -1055,13 +1055,18 @@ impl Compositor {
             return None;
         }
         let connector = (self.local_api_connector)();
+        // The widgets' accessibility trees are watched over connections of their own, only
+        // while a UI Automation client reads a widget's window.
+        let trees: widget_automation::TreeConnect =
+            Arc::new(Mutex::new((self.local_api_connector)()));
         let stop = Arc::clone(stop);
         let logger = self.logger.clone();
         let failed = self.logger.clone();
         thread::Builder::new()
             .name("dsa-wm-widgets".into())
             .spawn(move || {
-                let mut windows = match widgets::WindowsWidgetWindows::open(logger.clone()) {
+                let opened = widgets::WindowsWidgetWindows::open(logger.clone(), Some(trees));
+                let mut windows = match opened {
                     Ok(windows) => windows,
                     Err(why) => {
                         note(

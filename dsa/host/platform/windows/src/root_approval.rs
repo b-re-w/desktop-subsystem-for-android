@@ -29,6 +29,19 @@
 //! belongs to Windows and may stay open; answering it after that runs nothing, as the pipe is
 //! gone.
 //!
+//! A prompt has longer to be answered while a screen reader runs, because hearing its words and
+//! buttons read out takes longer than reading them. Windows keeps that flag per session
+//! (`SPI_GETSCREENREADER`, which Narrator, NVDA and JAWS set), and the service's session 0 is
+//! not the user's, so [`screen_reader_running`] asks a copy of the window program started in
+//! the user's session ([`SCREEN_READER_ARGUMENT`]), which answers with its exit code.
+//!
+//! Both prompts can be used with a screen reader and the keyboard alone. The UAC dialog is
+//! Windows' own, which Narrator reads on the secure desktop. The program's own dialog is a
+//! standard message box: a screen reader reads its caption and text as it opens, its buttons
+//! are named Yes and No, the keyboard focus starts on No, so a stray Enter refuses rather than
+//! approves, and its text says how long it has as a fixed sentence, with no countdown that
+//! would be read out again and again.
+//!
 //! [`wait_for_answer`] and the argument and exit code handling are platform neutral, so they are
 //! tested without a real prompt.
 
@@ -60,6 +73,15 @@ pub const DETAIL_ARGUMENT: &str = "--root-detail";
 
 /// The argument with the language of the program's own dialog: `en` or `ko`.
 pub const LANGUAGE_ARGUMENT: &str = "--root-language";
+
+/// The argument with how many seconds the program's own dialog has to be answered, which it
+/// says in its text.
+pub const TIME_ARGUMENT: &str = "--root-time";
+
+/// The argument the service starts the window program with in the user's session to learn
+/// whether a screen reader runs there. It answers with [`exit::SCREEN_READER_RUNNING`] or
+/// [`exit::NO_SCREEN_READER`] and shows nothing.
+pub const SCREEN_READER_ARGUMENT: &str = "--screen-reader-query";
 
 /// The folder, among the apps' own, of the program the developer shell (`adb shell`) asks
 /// under. It is not an Android package's, so no app's program is ever replaced by it.
@@ -157,6 +179,40 @@ pub fn confirm_text(label: &str, detail: &str, command: &str, korean: bool) -> C
     }
 }
 
+/// The program's own dialog for `words`: [`confirm_text`], then how long it has to be answered
+/// when the service said, as one sentence a screen reader reads with the rest. The time is
+/// written once rather than counted down, so nothing is read out every second, and the person
+/// still knows how long they have.
+pub fn confirm_text_for(words: &AskedWords) -> ConfirmText {
+    let mut shown = confirm_text(&words.label, &words.detail, &words.command, words.korean);
+    if let Some(limit) = time_limit_text(words.seconds, words.korean) {
+        shown.text.push_str("\n\n");
+        shown.text.push_str(&limit);
+    }
+    shown
+}
+
+/// The sentence that says the dialog is refused after `seconds`, in Korean when `korean`;
+/// `None` for no time given.
+pub fn time_limit_text(seconds: u64, korean: bool) -> Option<String> {
+    if seconds == 0 {
+        return None;
+    }
+    let minutes = seconds / 60;
+    let time = match (seconds % 60 == 0, korean) {
+        (true, true) => format!("{minutes}분"),
+        (false, true) => format!("{seconds}초"),
+        (true, false) if minutes == 1 => "1 minute".to_string(),
+        (true, false) => format!("{minutes} minutes"),
+        (false, false) => format!("{seconds} seconds"),
+    };
+    Some(if korean {
+        format!("{time} 안에 답하지 않으면 요청은 거부됩니다.")
+    } else {
+        format!("If nobody answers within {time}, the request is refused.")
+    })
+}
+
 /// What the start of every approval pipe's name is.
 pub const PIPE_PREFIX: &str = "dsa-root-approval-";
 
@@ -188,6 +244,17 @@ pub mod exit {
     pub const ELEVATION_FAILED: u32 = 5;
     /// The arguments did not name a valid approval pipe.
     pub const BAD_ARGUMENTS: u32 = 6;
+    /// Asked with [`super::SCREEN_READER_ARGUMENT`]: a screen reader runs in this session.
+    pub const SCREEN_READER_RUNNING: u32 = 7;
+    /// Asked with [`super::SCREEN_READER_ARGUMENT`]: no screen reader runs in this session.
+    pub const NO_SCREEN_READER: u32 = 8;
+}
+
+/// Whether the window program's exit `code`, asked with [`SCREEN_READER_ARGUMENT`], says a
+/// screen reader runs. Any other code (the program failed, or is older than the question) says
+/// no, which leaves the prompt its default time.
+pub fn screen_reader_of_exit(code: u32) -> bool {
+    code == exit::SCREEN_READER_RUNNING
 }
 
 /// What the window program's exit code says, when it ended before an approval arrived.
@@ -228,13 +295,15 @@ pub fn is_pipe_name(name: &str) -> bool {
 }
 
 /// What the program's own dialog shows, when UAC is off: who asks by name, the line under it,
-/// the command, and whether it is in Korean.
+/// the command, whether it is in Korean, and how many seconds it has to be answered (0 when
+/// the service did not say).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct AskedWords {
     pub label: String,
     pub detail: String,
     pub command: String,
     pub korean: bool,
+    pub seconds: u64,
 }
 
 impl AskedWords {
@@ -246,7 +315,14 @@ impl AskedWords {
             detail: request.detail_in(language),
             command: request.command_text_in(language),
             korean: language == dsa_host_core::root_requester::Language::Korean,
+            seconds: 0,
         }
+    }
+
+    /// The same words, saying the dialog has `timeout` to be answered, in whole seconds.
+    pub fn within(mut self, timeout: Duration) -> AskedWords {
+        self.seconds = timeout.as_secs();
+        self
     }
 }
 
@@ -254,11 +330,12 @@ impl AskedWords {
 pub fn approval_arguments(pipe: &str, words: &AskedWords) -> String {
     format!(
         "{APPROVAL_ARGUMENT} {pipe} {LABEL_ARGUMENT} {} {DETAIL_ARGUMENT} {} \
-         {COMMAND_ARGUMENT} {} {LANGUAGE_ARGUMENT} {}",
+         {COMMAND_ARGUMENT} {} {LANGUAGE_ARGUMENT} {} {TIME_ARGUMENT} {}",
         argument_hex(&words.label),
         argument_hex(&words.detail),
         argument_hex(&words.command),
         if words.korean { "ko" } else { "en" },
+        words.seconds,
     )
 }
 
@@ -281,6 +358,8 @@ pub enum HelperMode {
     Deliver { pipe: String },
     /// An approval was asked for, but not with a valid pipe.
     Invalid,
+    /// Asked whether a screen reader runs in this session: answer with the exit code.
+    ScreenReader,
 }
 
 /// What `args` ask of the window program, when they ask for an approval.
@@ -297,6 +376,9 @@ pub fn helper_mode(args: &[String]) -> Option<HelperMode> {
             .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
             .unwrap_or_default()
     };
+    if args.iter().any(|arg| arg == SCREEN_READER_ARGUMENT) {
+        return Some(HelperMode::ScreenReader);
+    }
     if args.iter().any(|arg| arg == APPROVED_ARGUMENT) {
         return Some(match value(APPROVED_ARGUMENT) {
             Some(pipe) if is_pipe_name(&pipe) => HelperMode::Deliver { pipe },
@@ -312,6 +394,9 @@ pub fn helper_mode(args: &[String]) -> Option<HelperMode> {
                     detail: text(DETAIL_ARGUMENT),
                     command: text(COMMAND_ARGUMENT),
                     korean: value(LANGUAGE_ARGUMENT).as_deref() == Some("ko"),
+                    seconds: value(TIME_ARGUMENT)
+                        .and_then(|seconds| seconds.parse().ok())
+                        .unwrap_or(0),
                 },
             },
             _ => HelperMode::Invalid,
@@ -386,7 +471,7 @@ fn unhex(text: &str) -> Option<Vec<u8>> {
 }
 
 #[cfg(windows)]
-pub use self::os::{run_helper, UacPrompt};
+pub use self::os::{run_helper, screen_reader_running, UacPrompt};
 
 #[cfg(windows)]
 mod os {
@@ -401,14 +486,90 @@ mod os {
     };
 
     use super::{
-        approval_arguments, confirm_text, exit, helper_mode, pipe_name, prompt_program,
-        wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_PIPE_SDDL,
-        APPROVED_ARGUMENT, RECEIVED,
+        approval_arguments, confirm_text_for, exit, helper_mode, pipe_name, prompt_program,
+        screen_reader_of_exit, wait_for_answer, AskedWords, HelperMode, PromptProcess,
+        APPROVAL_PIPE_SDDL, APPROVED_ARGUMENT, RECEIVED, SCREEN_READER_ARGUMENT,
     };
     use crate::pipe::{wide, NamedPipeConnector, NamedPipeListener, OwnedHandle};
 
     /// How long the elevated copy tries to reach the service.
     const DELIVER_WAIT: Duration = Duration::from_secs(5);
+
+    /// How long the service waits for the window program to say whether a screen reader runs.
+    /// Starting a small program takes well under a second; one that hangs past this is ended,
+    /// and the prompt opens with its default time rather than not at all.
+    const SCREEN_READER_WAIT: Duration = Duration::from_secs(5);
+
+    /// The installed window host, which every app's program is a copy of.
+    fn window_host() -> Result<PathBuf, String> {
+        let service = std::env::current_exe().ok();
+        crate::app_window::launch::window_manager_path(service.as_deref())
+            .and_then(|wm| {
+                wm.parent()
+                    .map(|dir| dir.join(crate::app_exe::TEMPLATE_NAME))
+            })
+            .filter(|path| path.is_file())
+            .or_else(|| crate::app_exe::default_template().filter(|path| path.is_file()))
+            .ok_or_else(|| {
+                format!(
+                    "{} is not installed; repair the installation",
+                    crate::app_exe::TEMPLATE_NAME
+                )
+            })
+    }
+
+    /// Whether a screen reader runs in the session of the user with SID `sid`, as Windows'
+    /// `SPI_GETSCREENREADER` says there. The service runs in session 0, whose flag is not the
+    /// user's, so the installed window host is started in the user's session to read it and
+    /// answer with its exit code. Asked as each prompt is about to open, since a screen reader
+    /// can be started or stopped at any time. No when it cannot tell, which leaves the prompt
+    /// its default time.
+    pub fn screen_reader_running(sid: &str) -> bool {
+        let asked = window_host().and_then(|program| {
+            crate::window_manager::start_as_user(sid, &program, SCREEN_READER_ARGUMENT)
+        });
+        let process = match asked {
+            Ok(process) => process,
+            Err(why) => {
+                eprintln!(
+                    "root: cannot tell whether a screen reader runs for {sid}, so the prompt \
+                     has its usual time: {why}"
+                );
+                return false;
+            }
+        };
+        let wait = SCREEN_READER_WAIT.as_millis() as u32;
+        // SAFETY: a process handle the call above returned and `process` owns.
+        if unsafe { WaitForSingleObject(process.0, wait) } != WAIT_OBJECT_0 {
+            // SAFETY: the same handle; ending an ended process does nothing.
+            unsafe { TerminateProcess(process.0, exit::FAILED) };
+            eprintln!(
+                "root: the screen reader check for {sid} did not answer in time, so the \
+                 prompt has its usual time"
+            );
+            return false;
+        }
+        let mut code = exit::FAILED;
+        // SAFETY: the same handle, and an out pointer that outlives the call.
+        if unsafe { GetExitCodeProcess(process.0, &mut code) } == 0 {
+            return false;
+        }
+        screen_reader_of_exit(code)
+    }
+
+    /// Whether a screen reader runs in this process's session: the flag Narrator, NVDA, JAWS
+    /// and other screen readers set while they run.
+    fn screen_reader_here() -> bool {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            SystemParametersInfoW, SPI_GETSCREENREADER,
+        };
+        let mut on: i32 = 0;
+        // SAFETY: a get action that writes one BOOL into a local.
+        let read = unsafe {
+            SystemParametersInfoW(SPI_GETSCREENREADER, 0, (&mut on as *mut i32).cast(), 0)
+        };
+        read != 0 && on != 0
+    }
 
     /// The UAC prompt for the su calls of the user with SID `sid`.
     pub struct UacPrompt {
@@ -427,20 +588,7 @@ mod os {
         /// ID, made when it is missing; the installed window host when it cannot be, which
         /// still brings up the prompt, under DSA's own name and icon.
         fn program(&self, request: &ApprovalRequest) -> Result<PathBuf, String> {
-            let service = std::env::current_exe().ok();
-            let template = crate::app_window::launch::window_manager_path(service.as_deref())
-                .and_then(|wm| {
-                    wm.parent()
-                        .map(|dir| dir.join(crate::app_exe::TEMPLATE_NAME))
-                })
-                .filter(|path| path.is_file())
-                .or_else(|| crate::app_exe::default_template().filter(|path| path.is_file()))
-                .ok_or_else(|| {
-                    format!(
-                        "{} is not installed; repair the installation",
-                        crate::app_exe::TEMPLATE_NAME
-                    )
-                })?;
+            let template = window_host()?;
             let (package, app) = prompt_program(request);
             let package = &package;
             let apps_dir = crate::host_config::local_app_data(&self.sid)
@@ -496,7 +644,9 @@ mod os {
                 Ok(program) => program,
                 Err(why) => return PromptAnswer::Unavailable(why),
             };
-            let arguments = approval_arguments(&pipe, &AskedWords::of(request));
+            // The program's own dialog says how long it has, which is longer while a screen
+            // reader runs.
+            let arguments = approval_arguments(&pipe, &AskedWords::of(request).within(timeout));
             let process =
                 match crate::window_manager::start_as_user(&self.sid, &program, &arguments) {
                     Ok(process) => process,
@@ -534,6 +684,13 @@ mod os {
     pub fn run_helper(args: &[String], program: &Path) -> Option<u32> {
         Some(match helper_mode(args)? {
             HelperMode::Invalid => exit::BAD_ARGUMENTS,
+            HelperMode::ScreenReader => {
+                if screen_reader_here() {
+                    exit::SCREEN_READER_RUNNING
+                } else {
+                    exit::NO_SCREEN_READER
+                }
+            }
             HelperMode::Deliver { pipe } => deliver(&pipe),
             HelperMode::Ask { pipe, words } => {
                 if uac_enabled() {
@@ -646,13 +803,21 @@ mod os {
 
     /// Asks in the program's own dialog, with its icon (the app's, or the generic one of a
     /// requester that is not an app), when UAC is off. True on Yes.
+    ///
+    /// The dialog is a standard message box, so a screen reader and the keyboard can use it
+    /// as they use any of Windows': it takes the foreground, so its caption and text are read
+    /// as it opens; its buttons are Windows' own Yes and No, named as such; the focus starts on
+    /// No (`MB_DEFBUTTON2`), the safe answer, so a stray Enter refuses; Esc is not taken, as a
+    /// Yes/No box has no Cancel, and the person answers with Y, N, Tab or the arrow keys. How
+    /// long it has is one sentence in its text rather than a countdown, which a screen reader
+    /// would announce every time it changed.
     fn confirm(words: &AskedWords) -> bool {
         use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
         use windows_sys::Win32::UI::WindowsAndMessaging::{
             MessageBoxIndirectW, IDYES, MB_DEFBUTTON2, MB_SETFOREGROUND, MB_TOPMOST, MB_USERICON,
             MB_YESNO, MSGBOXPARAMSW,
         };
-        let shown = confirm_text(&words.label, &words.detail, &words.command, words.korean);
+        let shown = confirm_text_for(words);
         let caption = wide(&shown.caption);
         let text = wide(&shown.text);
         // SAFETY: plain data, zero is its documented initial state.

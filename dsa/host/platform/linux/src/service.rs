@@ -587,15 +587,24 @@ pub fn create_user_android(
     // An app's root request that needs the administrator is asked through polkit, in the
     // user's desktop session, by the levels in the user's settings; in a boot check that
     // names a private folder approver, it is asked through that folder instead.
+    // Polkit's dialog has longer to be answered while a screen reader runs in the user's
+    // session, as hearing it read out takes longer than reading it; that is asked as each
+    // prompt opens.
+    let mut screen_reader: Option<dsa_host_core::root_approval::ScreenReader> = None;
     let prompt: Option<Arc<dyn dsa_host_core::root_approval::ApprovalPrompt>> = match config
         .test_root_approver()
         .map_err(|e| e.to_string())?
     {
         Some(folder) => Some(Arc::new(folder)),
         None => match crate::root_approval::SystemBusAuthority::connect() {
-            Ok(authority) => Some(Arc::new(
-                crate::root_approval::PolkitPrompt::new(authority, uid).with_home(&account.home),
-            )),
+            Ok(authority) => {
+                let reader = account.clone();
+                screen_reader = Some(Arc::new(move || crate::screen_reader::running_for(&reader)));
+                Some(Arc::new(
+                    crate::root_approval::PolkitPrompt::new(authority, uid)
+                        .with_home(&account.home),
+                ))
+            }
             Err(why) => {
                 eprintln!(
                     "{user}: root: polkit cannot be reached, so every root request is refused: {why}"
@@ -606,12 +615,16 @@ pub fn create_user_android(
     };
     if let Some(prompt) = prompt {
         let log_user = user.to_string();
-        session.set_root_approval(Arc::new(RootApproval::new(
+        let mut approval = RootApproval::new(
             user,
             Arc::clone(&store),
             prompt,
             Arc::new(move |line: &str| eprintln!("{log_user}: {line}")),
-        )));
+        );
+        if let Some(screen_reader) = screen_reader {
+            approval = approval.with_screen_reader(screen_reader);
+        }
+        session.set_root_approval(Arc::new(approval));
     }
     let session = Arc::new(session);
     {

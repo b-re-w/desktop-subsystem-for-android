@@ -220,6 +220,10 @@ class Agent(
     accessibility: AccessibilitySource = AccessibilitySource.NONE,
     /** Where the accessibility trees of watched tasks are read, past the scheduler's thread. */
     accessibilityReader: Scheduler = scheduler,
+    /** The desktop widgets' views as accessibility nodes: the widget platform's, when it has them. */
+    widgetNodes: io.github.thisisthepy.dsa.agent.accessibility.WidgetNodes =
+        (widgets as? io.github.thisisthepy.dsa.agent.accessibility.WidgetNodes)
+            ?: io.github.thisisthepy.dsa.agent.accessibility.WidgetNodes.NONE,
     clock: () -> Long = { System.nanoTime() / 1_000_000 },
     diagnostics: DiagnosticsSource = DiagnosticsSource.NONE,
     diagnosticsRunner: (Runnable) -> Unit = { Thread(it, "dsa-diagnostics").start() },
@@ -518,6 +522,7 @@ class Agent(
         reporter::reportedBounds,
         clock,
         accessibilityReader,
+        widgetNodes,
     )
     /** Where the apps on the display keep system gestures out, as last heard. */
     private var exclusion: List<TaskBounds> = emptyList()

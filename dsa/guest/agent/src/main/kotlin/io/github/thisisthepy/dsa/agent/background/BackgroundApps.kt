@@ -192,7 +192,7 @@ class BackgroundApps(
             .setIconPng(ByteString.copyFrom(icon))
             .setTitle(notice.title.take(MAX_LINE_CHARS))
             .setText(notice.text.take(MAX_LINE_CHARS))
-            .addAllActions(notice.actions.take(MAX_ACTIONS).map { it.take(MAX_LINE_CHARS) })
+            .addAllActions(notice.actions.take(MAX_ACTIONS).map { it.title.take(MAX_LINE_CHARS) })
             .build()
         if (sentApps[packageName] == message) return
         if (send(Envelope.newBuilder().setBackgroundApp(message).build().toByteArray())) {

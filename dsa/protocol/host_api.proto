@@ -503,6 +503,26 @@ message Notification {
   // Whether the user may dismiss it.
   bool clearable = 9;
   int64 when_millis = 10;
+  // Its action buttons, in the app's order, at most 5. The client shows each, with a field
+  // for the reply beside one that takes a reply, and passes the one chosen with
+  // ActOnNotification.
+  repeated NotificationButton buttons = 11;
+}
+
+// One action button of a notification.
+message NotificationButton {
+  string title = 1;
+  // Whether it takes a reply the user writes or picks.
+  bool reply = 2;
+  // The words the reply field shows while it is empty; empty for none.
+  string reply_label = 3;
+  // The replies offered to pick from; empty for none.
+  repeated string reply_choices = 4;
+  // True when the reply must be one of `reply_choices`.
+  bool reply_choices_only = 5;
+  // What it does, as Android numbers it: 0 none, 1 reply, 2 mark as read, 3 mark as unread,
+  // 4 delete, 5 archive, 6 mute, 7 unmute, 8 thumbs up, 9 thumbs down, 10 call.
+  int32 semantic_action = 6;
 }
 
 // The notification with this key is gone, on a connection that watches them.
@@ -518,6 +538,9 @@ enum NotificationAction {
   // Dismissed it: it is removed in Android too, unless the app made it one the user cannot
   // dismiss.
   NOTIFICATION_ACTION_DISMISS = 2;
+  // Chose one of its buttons (`button`, `button_title`), with the reply the user wrote or
+  // picked (`reply_text`) when the button takes one: Android runs that action.
+  NOTIFICATION_ACTION_BUTTON = 3;
 }
 
 // Passes what the user did with a notification of the caller's Android to it. Answered with
@@ -525,6 +548,14 @@ enum NotificationAction {
 message ActOnNotification {
   string key = 1;
   NotificationAction action = 2;
+  // For NOTIFICATION_ACTION_BUTTON: the button's place in Notification.buttons and its title,
+  // which Android checks, so a notification whose app changed its buttons since runs the one
+  // the user saw.
+  uint32 button = 3;
+  string button_title = 4;
+  // For NOTIFICATION_ACTION_BUTTON: what the user wrote or picked; empty for a button that
+  // takes no reply. At most 4096 characters.
+  string reply_text = 5;
 }
 
 // Turns the connection into a watch of the print jobs of the caller's Android: after the
@@ -2479,8 +2510,14 @@ message DeviceIdentityReport {
 // for each AccessibilityAction the client sends. Android reads the task's accessibility nodes
 // only while at least one such connection for the task is open: closing the last one stops
 // it. The connection lasts across restarts of the Android, which sends a full tree again.
+//
+// With a `widget_id` (never 0) set instead of `task_id`, the connection is the tree of that
+// desktop widget's window: the widget's text, buttons and lists, with bounds in pixels of the
+// widget's image, (0, 0) being its top left. The same rule holds: Android reads the widget's
+// nodes only while a connection watches it.
 message WatchAccessibility {
   int32 task_id = 1;
+  int32 widget_id = 2;
 }
 
 // What can be done to an accessibility node.

@@ -10,9 +10,10 @@ use std::time::{Duration, Instant};
 use dsa_host_core::root_approval::{ApprovalRequest, PromptAnswer, Purpose};
 use dsa_host_core::tasks::AppInfo;
 use dsa_host_windows::root_approval::{
-    answer_of_exit, approval_arguments, confirm_text, exit, helper_mode, is_pipe_name, pipe_name,
-    prompt_program, wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_ARGUMENT,
-    APPROVED_ARGUMENT, RECEIVED, SHARED_PROGRAM_KEY, SHELL_PROGRAM_KEY, SYSTEM_PROGRAM_KEY,
+    answer_of_exit, approval_arguments, confirm_text, confirm_text_for, exit, helper_mode,
+    is_pipe_name, pipe_name, prompt_program, screen_reader_of_exit, time_limit_text,
+    wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_ARGUMENT, APPROVED_ARGUMENT,
+    RECEIVED, SCREEN_READER_ARGUMENT, SHARED_PROGRAM_KEY, SHELL_PROGRAM_KEY, SYSTEM_PROGRAM_KEY,
 };
 use dsa_transport::local::{self, Peer};
 
@@ -197,6 +198,7 @@ fn fr35_the_window_program_reads_what_the_service_asks() {
         detail: "com.example.backup".into(),
         command: "sh -c 'echo hi'".into(),
         korean: true,
+        seconds: 55,
     };
     let line = approval_arguments(&pipe, &words);
     let args: Vec<String> = line.split(' ').map(str::to_string).collect();
@@ -333,4 +335,82 @@ fn fr35_the_root_prompt_names_a_shared_user_id_by_its_apps() {
     assert_eq!(folder, SHARED_PROGRAM_KEY);
     assert_eq!(app.label, "하나, 둘");
     assert_eq!(app.icon_png, icon);
+}
+
+#[test]
+fn fr18_the_window_program_answers_whether_a_screen_reader_runs() {
+    // The service asks the window program in the user's session, and reads the answer from
+    // its exit code.
+    assert_eq!(
+        helper_mode(&[SCREEN_READER_ARGUMENT.to_string()]),
+        Some(HelperMode::ScreenReader)
+    );
+    assert!(screen_reader_of_exit(exit::SCREEN_READER_RUNNING));
+    assert!(!screen_reader_of_exit(exit::NO_SCREEN_READER));
+    // A program that failed, or one too old to know the question, says no: the prompt keeps
+    // its usual time rather than not opening.
+    for code in [exit::FAILED, exit::BAD_ARGUMENTS, exit::APPROVED, 77] {
+        assert!(!screen_reader_of_exit(code), "code {code}");
+    }
+    // The answers are not taken for an approval's.
+    assert!(matches!(
+        answer_of_exit(exit::SCREEN_READER_RUNNING),
+        PromptAnswer::Unavailable(_)
+    ));
+}
+
+#[test]
+fn fr18_the_own_dialog_says_how_long_it_has_once_without_a_countdown() {
+    let request = su_from("com.example.backup", 10_200, "Backup", &[]);
+    let mut english = request.clone();
+    english.language = "en-US".into();
+    // The time the prompt has goes to the program, longer while a screen reader runs.
+    let words = AskedWords::of(&english).within(Duration::from_secs(300));
+    assert_eq!(words.seconds, 300);
+    let args: Vec<String> = approval_arguments(&secret(), &words)
+        .split(' ')
+        .map(str::to_string)
+        .collect();
+    let Some(HelperMode::Ask { words: read, .. }) = helper_mode(&args) else {
+        panic!("the program was not asked to approve");
+    };
+    assert_eq!(read.seconds, 300);
+    // The dialog's text says it once, at its end, after what is asked.
+    let shown = confirm_text_for(&read);
+    assert!(shown
+        .text
+        .starts_with(&confirm_text(&read.label, &read.detail, &read.command, false).text));
+    assert!(
+        shown
+            .text
+            .ends_with("If nobody answers within 5 minutes, the request is refused."),
+        "{}",
+        shown.text
+    );
+    let korean = confirm_text_for(&AskedWords::of(&request).within(Duration::from_secs(55)));
+    assert!(
+        korean
+            .text
+            .ends_with("55초 안에 답하지 않으면 요청은 거부됩니다."),
+        "{}",
+        korean.text
+    );
+    assert_eq!(
+        time_limit_text(60, false).as_deref(),
+        Some("If nobody answers within 1 minute, the request is refused.")
+    );
+    assert_eq!(
+        time_limit_text(300, true).as_deref(),
+        Some("5분 안에 답하지 않으면 요청은 거부됩니다.")
+    );
+    // A program started by an older service, which gives no time, says nothing about it.
+    assert_eq!(time_limit_text(0, false), None);
+    let untimed = AskedWords {
+        seconds: 0,
+        ..read.clone()
+    };
+    assert_eq!(
+        confirm_text_for(&untimed),
+        confirm_text(&read.label, &read.detail, &read.command, false)
+    );
 }

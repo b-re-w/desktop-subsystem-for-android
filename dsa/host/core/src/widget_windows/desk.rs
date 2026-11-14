@@ -33,6 +33,7 @@ use super::geometry::{
     to_frame, unscaled, window_size, Hit, ScreenRect, HOLD_TO_MOVE,
 };
 use super::gesture::{Gesture, Press, ResizePoll, ResizeReports, Step};
+use super::keyboard::{self, KeyStep, KeyboardEdit, KeyboardMode};
 use super::menu::{self, choice_of, size_choices, Entry, MenuChoice, MenuText};
 use super::paint::{draw_lifted, Image, Look};
 use super::service::{placed_report, WindowCommand, WindowReport};
@@ -57,10 +58,51 @@ pub enum Button {
 /// A key the widget windows answer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Key {
-    /// Ends an edit.
+    /// Ends an edit; puts back a widget being moved or resized with the keyboard.
     Escape,
-    /// Enter, Space or the menu key: opens the widget's menu.
+    /// Space, the menu key or Shift+F10: opens the widget's menu.
     Menu,
+    /// Enter: finishes a keyboard move or resize, and otherwise opens the widget's menu.
+    Enter,
+    /// An arrow key, with Ctrl held when `fine`: moves or resizes a widget after its menu's
+    /// Move or Size.
+    Arrow { arrow: Arrow, fine: bool },
+}
+
+/// An arrow key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Arrow {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl Arrow {
+    fn key(self) -> keyboard::Key {
+        match self {
+            Arrow::Left => keyboard::Key::Left,
+            Arrow::Right => keyboard::Key::Right,
+            Arrow::Up => keyboard::Key::Up,
+            Arrow::Down => keyboard::Key::Down,
+        }
+    }
+}
+
+/// The desk's key for a host's key: `key` as [`keyboard::Key`] names it, with Shift and Ctrl
+/// held as `shift` and `ctrl` say. None for a key the widget windows do not answer.
+pub fn key_of(key: keyboard::Key, shift: bool, ctrl: bool) -> Option<Key> {
+    let arrow = |arrow| Some(Key::Arrow { arrow, fine: ctrl });
+    match key {
+        keyboard::Key::Escape => Some(Key::Escape),
+        keyboard::Key::Enter => Some(Key::Enter),
+        keyboard::Key::Left => arrow(Arrow::Left),
+        keyboard::Key::Right => arrow(Arrow::Right),
+        keyboard::Key::Up => arrow(Arrow::Up),
+        keyboard::Key::Down => arrow(Arrow::Down),
+        other if keyboard::opens_menu(other, shift) => Some(Key::Menu),
+        _ => None,
+    }
 }
 
 /// Where the widget's menu opens.
@@ -107,6 +149,17 @@ pub enum Effect {
     Log(String),
 }
 
+/// The work area a widget at `widget` on the screen is kept on: the one its middle is on, else
+/// the first; None when the host has said of none.
+fn area_of(areas: &[ScreenRect], widget: ScreenRect) -> Option<ScreenRect> {
+    let (cx, cy) = ((widget.0 + widget.2) / 2, (widget.1 + widget.3) / 2);
+    areas
+        .iter()
+        .find(|(l, t, r, b)| cx >= *l && cx < *r && cy >= *t && cy < *b)
+        .or_else(|| areas.first())
+        .copied()
+}
+
 /// One widget's window, as the desk keeps it.
 #[derive(Debug, Clone)]
 pub struct DeskWindow {
@@ -127,6 +180,9 @@ pub struct DeskWindow {
     resize_ended: bool,
     /// The room around the widget while it is edited.
     edit: Option<i32>,
+    /// Some while the widget is moved or resized with the arrow keys, after its menu's Move or
+    /// Size; it is edited (lifted) meanwhile.
+    keyboard: Option<KeyboardEdit>,
     focused: bool,
     menu_open: bool,
     /// Whether Android has a press of this window.
@@ -142,6 +198,11 @@ impl DeskWindow {
     /// Whether the widget is being edited.
     pub fn editing(&self) -> bool {
         self.edit.is_some()
+    }
+
+    /// Whether the widget is being moved or resized with the keyboard, and which.
+    pub fn keyboard_mode(&self) -> Option<KeyboardMode> {
+        self.keyboard.as_ref().map(|edit| edit.mode)
     }
 
     /// The widget's own rectangle in the window: all of it, less the room around a widget
@@ -305,6 +366,7 @@ impl Desk {
                 w.gesture,
                 Gesture::Widget { slid: false, .. } | Gesture::Resizing { .. }
             ) || w.resize_ended
+                || w.keyboard_mode() == Some(KeyboardMode::Size)
         })
     }
 
@@ -329,6 +391,15 @@ impl Desk {
     fn place(&mut self, widget: Widget, now: Instant) {
         let widget_id = widget.widget_id;
         let opened = !self.windows.contains_key(&widget_id);
+        if let Some(window) = self.windows.get_mut(&widget_id) {
+            if window.keyboard.is_some() {
+                // Described again while the user moves or resizes it with the keyboard, as
+                // Android does when it draws the widget at the size the keys gave it: the
+                // window stays where the keys put it.
+                window.widget = widget;
+                return;
+            }
+        }
         if !opened {
             // Placed anew (described again, as when Android restarts): an edit ends, and the
             // window goes where the placement says.
@@ -368,6 +439,7 @@ impl Desk {
                         resizes: ResizeReports::new(),
                         resize_ended: false,
                         edit: None,
+                        keyboard: None,
                         focused: false,
                         menu_open: false,
                         pressed: false,
@@ -455,21 +527,102 @@ impl Desk {
     }
 
     /// Ends the widget's edit, if it is being edited: its window shrinks back around the
-    /// widget, which stays where the edit left it.
+    /// widget, which stays where the edit left it. A keyboard move or resize still going on
+    /// ends with it and is kept, as Enter keeps it: the widget stays where the keys put it.
     fn leave_edit(&mut self, widget_id: i32) {
         let Some(window) = self.windows.get_mut(&widget_id) else {
             return;
         };
-        let Some(margin) = window.edit.take() else {
+        let keyed = window.keyboard.take().is_some();
+        if let Some(margin) = window.edit.take() {
+            window.gesture.regrab((-margin, -margin));
+            window.origin = (window.origin.0 + margin, window.origin.1 + margin);
+            window.size = (
+                (window.size.0 - 2 * margin).max(1),
+                (window.size.1 - 2 * margin).max(1),
+            );
+            self.place_effect(widget_id);
+        }
+        if keyed {
+            self.report(widget_id);
+        }
+    }
+
+    /// Starts moving or resizing the widget with the arrow keys, after its menu's Move or
+    /// Size: it lifts as an edit does and takes the keyboard.
+    fn start_keyboard(&mut self, widget_id: i32, mode: KeyboardMode) {
+        self.enter_edit(widget_id);
+        let areas = self.areas.clone();
+        let Some(window) = self.windows.get_mut(&widget_id) else {
             return;
         };
-        window.gesture.regrab((-margin, -margin));
-        window.origin = (window.origin.0 + margin, window.origin.1 + margin);
-        window.size = (
-            (window.size.0 - 2 * margin).max(1),
-            (window.size.1 - 2 * margin).max(1),
-        );
+        let widget = window.widget_on_screen();
+        let area = area_of(&areas, widget);
+        window.keyboard = Some(KeyboardEdit::new(
+            mode,
+            widget,
+            &window.widget.provider,
+            window.dpi,
+            area,
+        ));
+        if mode == KeyboardMode::Size {
+            window.resizes.restart();
+            window.resize_ended = false;
+        }
+        let what = match mode {
+            KeyboardMode::Move => "moving",
+            KeyboardMode::Size => "resizing",
+        };
+        self.effects.push(Effect::Log(format!(
+            "widget {widget_id}: {what} it with the arrow keys; Enter keeps it, Esc puts it back"
+        )));
+        self.effects.push(Effect::Focus { widget_id });
+    }
+
+    /// Puts the widget, being edited, at `rect` on the screen: its window keeps the room of
+    /// the edit around it.
+    fn show_widget_at(&mut self, widget_id: i32, rect: ScreenRect, now: Instant) {
+        let Some(window) = self.windows.get_mut(&widget_id) else {
+            return;
+        };
+        let margin = window.margin();
+        let (l, t, r, b) = rect;
+        window.origin = (l - margin, t - margin);
+        window.size = ((r - l).max(1) + 2 * margin, (b - t).max(1) + 2 * margin);
+        if window.keyboard_mode() == Some(KeyboardMode::Size) {
+            window.resizes.moved(rect, now);
+        }
         self.place_effect(widget_id);
+    }
+
+    /// Does what a key did to a keyboard move or resize. True when there was one.
+    fn keyboard_key(&mut self, widget_id: i32, key: keyboard::Key, fine: bool) -> bool {
+        let now = Instant::now();
+        let Some(window) = self.windows.get_mut(&widget_id) else {
+            return false;
+        };
+        let Some(edit) = window.keyboard.as_mut() else {
+            return false;
+        };
+        match edit.key(key, fine) {
+            KeyStep::Nothing => {}
+            KeyStep::Show(rect) => self.show_widget_at(widget_id, rect, now),
+            KeyStep::Finish(_) => {
+                // Kept as the end of a drag keeps it: the edit ends and the service is told.
+                self.leave_edit(widget_id);
+            }
+            KeyStep::Restore { to, resized } => {
+                window.keyboard = None;
+                window.resizes.restart();
+                self.show_widget_at(widget_id, to, now);
+                self.leave_edit(widget_id);
+                if resized {
+                    // Android drew it at the sizes the keys gave it: it is told the old one.
+                    self.report(widget_id);
+                }
+            }
+        }
+        true
     }
 
     fn end_other_edits(&mut self, widget_id: i32) {
@@ -721,15 +874,37 @@ impl Desk {
         window.focused = focused;
         let menu_open = window.menu_open;
         if !focused && !menu_open {
+            // A keyboard move or resize ends with the edit and is kept.
             self.leave_edit(widget_id);
         }
     }
 
-    /// A key went down in the window.
+    /// A key went down in the window. While the widget is moved or resized with the
+    /// keyboard, the arrows step it, Enter keeps it and Esc puts it back; otherwise Esc ends
+    /// an edit and Enter, Space, the menu key and Shift+F10 open the menu under the widget.
     pub fn key(&mut self, widget_id: i32, key: Key) {
+        let keyboard = match key {
+            Key::Escape => Some((keyboard::Key::Escape, false)),
+            Key::Enter => Some((keyboard::Key::Enter, false)),
+            Key::Arrow { arrow, fine } => Some((arrow.key(), fine)),
+            Key::Menu => None,
+        };
+        if let Some((key, fine)) = keyboard {
+            if self.keyboard_key(widget_id, key, fine) {
+                return;
+            }
+        } else if self
+            .windows
+            .get(&widget_id)
+            .is_some_and(|w| w.keyboard.is_some())
+        {
+            // The menu does not open over a keyboard move or resize.
+            return;
+        }
         match key {
             Key::Escape => self.leave_edit(widget_id),
-            Key::Menu => self.open_menu_below(widget_id),
+            Key::Menu | Key::Enter => self.open_menu_below(widget_id),
+            Key::Arrow { .. } => {}
         }
     }
 
@@ -771,6 +946,8 @@ impl Desk {
                 self.leave_edit(widget_id);
                 self.reports.push(WindowReport::Reconfigure { widget_id });
             }
+            Some(MenuChoice::Move) => self.start_keyboard(widget_id, KeyboardMode::Move),
+            Some(MenuChoice::Size) => self.start_keyboard(widget_id, KeyboardMode::Size),
             None if editing && pressed_beside => self.leave_edit(widget_id),
             None => {}
         }
@@ -1454,6 +1631,158 @@ mod tests {
         desk.key(7, Key::Menu);
         let (anchor, _) = menu_of(&desk.take_effects()).expect("the menu key opens the menu");
         assert_eq!(anchor, Anchor::Below((100, 200, 100 + w, 200 + h)));
+    }
+
+    fn placed_at(desk: &Desk) -> Option<(i32, i32, u32, u32)> {
+        desk.window(7).map(|w| {
+            let p = w.widget.placement;
+            (p.x, p.y, p.width_dp, p.height_dp)
+        })
+    }
+
+    fn reported(reports: &[WindowReport]) -> usize {
+        reports
+            .iter()
+            .filter(|r| matches!(r, WindowReport::Placed { .. }))
+            .count()
+    }
+
+    /// The menu's Move lifts the widget and the arrows move it; Enter keeps where it went, as
+    /// the end of a drag does, and tells the service. The keys that open the menu go to it.
+    #[test]
+    fn fr18_enter_saves_the_placement_of_a_keyboard_move() {
+        let (mut desk, now) = placed(96, false);
+        desk.set_areas(vec![(0, 0, 1920, 1040)]);
+        desk.command(WindowCommand::Frame(frame_of(4, 4, [1, 2, 3, 255])), now);
+        desk.take_reports();
+        // Shift+F10 opens the menu; Move is on it.
+        let menu_key = key_of(keyboard::Key::F10, true, false).unwrap();
+        assert_eq!(menu_key, Key::Menu);
+        assert_eq!(key_of(keyboard::Key::F10, false, false), None);
+        desk.key(7, menu_key);
+        let (_, entries) = menu_of(&desk.take_effects()).expect("Shift+F10 opens the menu");
+        assert!(entries.iter().any(|e| matches!(
+            e,
+            Entry::Item {
+                command: menu::MOVE,
+                ..
+            }
+        )));
+        desk.menu_closed(7, Some(menu::MOVE), false);
+        let window = desk.window(7).unwrap();
+        assert_eq!(window.keyboard_mode(), Some(KeyboardMode::Move));
+        assert!(window.editing(), "it lifts while it is moved");
+        assert!(desk
+            .take_effects()
+            .iter()
+            .any(|e| matches!(e, Effect::Focus { widget_id: 7 })));
+        let step = px_of_dip(keyboard::MOVE_STEP_DIP, 96);
+        desk.key(
+            7,
+            Key::Arrow {
+                arrow: Arrow::Right,
+                fine: false,
+            },
+        );
+        desk.key(
+            7,
+            Key::Arrow {
+                arrow: Arrow::Down,
+                fine: false,
+            },
+        );
+        // Nothing is kept while it moves.
+        assert_eq!(reported(&desk.take_reports()), 0);
+        // The menu does not open over the move.
+        desk.take_effects();
+        desk.key(7, Key::Menu);
+        assert!(menu_of(&desk.take_effects()).is_none());
+        desk.key(7, Key::Enter);
+        let window = desk.window(7).unwrap();
+        assert_eq!(window.keyboard_mode(), None);
+        assert!(!window.editing());
+        assert_eq!(window.origin, (100 + step, 200 + step));
+        assert_eq!(reported(&desk.take_reports()), 1);
+        assert_eq!(
+            placed_at(&desk).map(|p| (p.0, p.1)),
+            Some((100 + step, 200 + step))
+        );
+    }
+
+    /// Esc puts a widget moved or resized with the keyboard back where it was; a resize tells
+    /// Android its old size again.
+    #[test]
+    fn fr18_escape_restores_the_placement_of_a_keyboard_move_and_size() {
+        let (mut desk, now) = placed(96, false);
+        desk.set_areas(vec![(0, 0, 1920, 1040)]);
+        let before = desk.window(7).map(|w| (w.origin, w.size)).unwrap();
+        desk.take_reports();
+        desk.menu_closed(7, Some(menu::MOVE), false);
+        for _ in 0..3 {
+            desk.key(
+                7,
+                Key::Arrow {
+                    arrow: Arrow::Left,
+                    fine: true,
+                },
+            );
+        }
+        desk.key(7, Key::Escape);
+        let window = desk.window(7).unwrap();
+        assert_eq!((window.origin, window.size), before);
+        assert!(!window.editing());
+        assert_eq!(
+            reported(&desk.take_reports()),
+            0,
+            "a move put back keeps nothing"
+        );
+        // A keyboard resize passes its size on as it pauses, and Esc tells the old size again.
+        desk.menu_closed(7, Some(menu::SIZE), false);
+        desk.key(
+            7,
+            Key::Arrow {
+                arrow: Arrow::Right,
+                fine: false,
+            },
+        );
+        assert!(desk.busy(now));
+        let later = Instant::now() + Duration::from_secs(2);
+        desk.tick(later);
+        assert_eq!(
+            reported(&desk.take_reports()),
+            1,
+            "the new size reaches Android"
+        );
+        desk.key(7, Key::Escape);
+        let window = desk.window(7).unwrap();
+        assert_eq!((window.origin, window.size), before);
+        assert_eq!(reported(&desk.take_reports()), 1, "the old size goes back");
+        assert_eq!(placed_at(&desk), Some((100, 200, 180, 110)));
+    }
+
+    #[test]
+    fn fr18_shift_f10_and_menu_key_open_the_widget_menu() {
+        for (key, shift) in [
+            (keyboard::Key::Menu, false),
+            (keyboard::Key::F10, true),
+            (keyboard::Key::Space, false),
+        ] {
+            assert_eq!(key_of(key, shift, false), Some(Key::Menu), "{key:?}");
+        }
+        assert_eq!(key_of(keyboard::Key::Enter, false, false), Some(Key::Enter));
+        assert_eq!(
+            key_of(keyboard::Key::Up, false, true),
+            Some(Key::Arrow {
+                arrow: Arrow::Up,
+                fine: true
+            })
+        );
+        assert_eq!(key_of(keyboard::Key::Other, true, true), None);
+        // Enter opens the menu when nothing is being moved.
+        let (mut desk, _) = placed(96, false);
+        desk.take_effects();
+        desk.key(7, Key::Enter);
+        assert!(menu_of(&desk.take_effects()).is_some());
     }
 
     #[test]

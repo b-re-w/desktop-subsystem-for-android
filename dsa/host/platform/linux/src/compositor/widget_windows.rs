@@ -18,7 +18,7 @@
 //! Sizes follow the monitor's scale as everywhere else: the desk measures in pixels at 96 x the
 //! output's scale, so a widget of 180 dp is 108 logical pixels wide at any scale.
 
-use dsa_host_core::widget_windows::desk::{Button, Key};
+use dsa_host_core::widget_windows::desk::{key_of, Button, Key};
 use dsa_host_core::widget_windows::paint::{Image, Look};
 use dsa_host_core::widget_windows::Hit;
 
@@ -145,19 +145,35 @@ pub fn x11_button(detail: u8) -> Option<Button> {
     }
 }
 
-/// The key an evdev key code is to a widget window: Escape ends an edit; Enter, Space and the
-/// menu key open its menu.
-pub fn key(code: u32) -> Option<Key> {
+/// The key an evdev key code is to a widget window, with Shift and Ctrl held as `shift` and
+/// `ctrl` say: Escape ends an edit (and puts back a widget being moved with the keyboard);
+/// Enter, Space, the menu key and Shift+F10 open its menu, and Enter finishes a keyboard move
+/// or resize; the arrows move or resize it after the menu's Move or Size, by a pixel with Ctrl.
+pub fn key(code: u32, shift: bool, ctrl: bool) -> Option<Key> {
+    use dsa_host_core::widget_windows::keyboard::Key as Pressed;
     const ESC: u32 = 1;
     const ENTER: u32 = 28;
     const SPACE: u32 = 57;
+    const F10: u32 = 68;
     const KP_ENTER: u32 = 96;
+    const UP: u32 = 103;
+    const LEFT: u32 = 105;
+    const RIGHT: u32 = 106;
+    const DOWN: u32 = 108;
     const COMPOSE: u32 = 127;
-    match code {
-        ESC => Some(Key::Escape),
-        ENTER | SPACE | KP_ENTER | COMPOSE => Some(Key::Menu),
-        _ => None,
-    }
+    let pressed = match code {
+        ESC => Pressed::Escape,
+        ENTER | KP_ENTER => Pressed::Enter,
+        SPACE => Pressed::Space,
+        COMPOSE => Pressed::Menu,
+        F10 => Pressed::F10,
+        LEFT => Pressed::Left,
+        RIGHT => Pressed::Right,
+        UP => Pressed::Up,
+        DOWN => Pressed::Down,
+        _ => return None,
+    };
+    key_of(pressed, shift, ctrl)
 }
 
 /// The accent the desktop has when the portal names none: GNOME's blue.
@@ -263,13 +279,39 @@ mod tests {
         assert_eq!(x11_button(1), Some(Button::Primary));
         assert_eq!(x11_button(3), Some(Button::Secondary));
         assert_eq!(x11_button(4), None);
-        assert_eq!(key(1), Some(Key::Escape));
-        assert_eq!(key(28), Some(Key::Menu));
-        assert_eq!(key(127), Some(Key::Menu));
-        assert_eq!(key(30), None);
+        assert_eq!(key(1, false, false), Some(Key::Escape));
+        assert_eq!(key(28, false, false), Some(Key::Enter));
+        assert_eq!(key(57, false, false), Some(Key::Menu));
+        assert_eq!(key(127, false, false), Some(Key::Menu));
+        assert_eq!(key(30, false, false), None);
         assert_eq!(cursor_name(Hit::BottomRight), "se-resize");
         assert_eq!(cursor_name(Hit::Client), "default");
         assert_eq!(look(true, 0).accent, DEFAULT_ACCENT);
         assert_eq!(look(false, 0xFFAA_0000).accent, 0xFFAA_0000);
+    }
+
+    #[test]
+    fn fr18_shift_f10_and_menu_key_open_the_widget_menu() {
+        use dsa_host_core::widget_windows::desk::Arrow;
+        // The menu key (evdev's Compose) and Shift+F10 open the menu; F10 alone does not.
+        assert_eq!(key(127, false, false), Some(Key::Menu));
+        assert_eq!(key(68, true, false), Some(Key::Menu));
+        assert_eq!(key(68, false, false), None);
+        // The arrows step a keyboard move or resize, by a pixel with Ctrl.
+        assert_eq!(
+            key(105, false, false),
+            Some(Key::Arrow {
+                arrow: Arrow::Left,
+                fine: false
+            })
+        );
+        assert_eq!(
+            key(108, false, true),
+            Some(Key::Arrow {
+                arrow: Arrow::Down,
+                fine: true
+            })
+        );
+        assert_eq!(key(96, false, false), Some(Key::Enter));
     }
 }

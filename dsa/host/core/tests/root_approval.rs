@@ -144,6 +144,33 @@ fn fr35_ask_app_request_reaches_the_prompt_with_its_name_and_icon() {
 }
 
 #[test]
+fn fr18_the_prompt_has_longer_while_a_screen_reader_runs_and_su_still_outlasts_it() {
+    use dsa_host_core::root_approval::{PROMPT_TIMEOUT, SCREEN_READER_PROMPT_TIMEOUT};
+    use dsa_host_core::root_elevation::ANSWER_TIMEOUT;
+    let fixture = Fixture::new(
+        &[(ASK_APP, "ask")],
+        vec![PromptAnswer::Denied, PromptAnswer::Denied],
+    );
+    let running = Arc::new(Mutex::new(true));
+    let flag = Arc::clone(&running);
+    let approval = fixture
+        .approval()
+        .with_screen_reader(Arc::new(move || *flag.lock().unwrap()));
+    approval.decide(&su(1, ASK_APP, &["id"]), Some(&backup_app()));
+    *running.lock().unwrap() = false;
+    approval.decide(&su(2, ASK_APP, &["id"]), Some(&backup_app()));
+    let asked = fixture.prompt.asked();
+    assert_eq!(asked.len(), 2);
+    let (with_reader, without) = (asked[0].1, asked[1].1);
+    // Longer than the default while a screen reader runs, the default once it stops.
+    assert!(with_reader > PROMPT_TIMEOUT, "{with_reader:?}");
+    assert!(with_reader <= SCREEN_READER_PROMPT_TIMEOUT);
+    assert!(without <= PROMPT_TIMEOUT);
+    // Either way the host answers before su gives up waiting.
+    assert!(with_reader < ANSWER_TIMEOUT && without < ANSWER_TIMEOUT);
+}
+
+#[test]
 fn fr35_an_app_the_guest_has_not_listed_is_asked_for_by_its_package() {
     let fixture = Fixture::new(&[(ASK_APP, "ask")], vec![PromptAnswer::Approved]);
     let approval = fixture.approval();
