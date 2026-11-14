@@ -46,4 +46,9 @@ public abstract class TaskStackListener extends ITaskStackListener.Stub {
     public void onTaskFocusChanged(int taskId, boolean focused) throws RemoteException {
         throw new RuntimeException("Stub!");
     }
+
+    @Override
+    public void onActivityRequestedOrientationChanged(int taskId, int requestedOrientation) throws RemoteException {
+        throw new RuntimeException("Stub!");
+    }
 }

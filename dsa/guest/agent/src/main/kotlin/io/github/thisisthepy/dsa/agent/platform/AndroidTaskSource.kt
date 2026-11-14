@@ -9,6 +9,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Rect
 import io.github.thisisthepy.dsa.agent.Log
+import io.github.thisisthepy.dsa.agent.tasks.RequestedOrientations
 import io.github.thisisthepy.dsa.agent.tasks.ScreenDp
 import io.github.thisisthepy.dsa.agent.tasks.SystemBarAppearances
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
@@ -54,6 +55,8 @@ class AndroidTaskSource(
 
     private val setups = WidgetSetupTasks(context.packageName, WidgetConfigureActivity::class.java.name)
 
+    private val orientations = RequestedOrientations()
+
     private val appearances = SystemBarAppearances()
     private val systemBars = AndroidSystemBars(log)
 
@@ -62,6 +65,7 @@ class AndroidTaskSource(
         @Suppress("DEPRECATION")
         val tasks = activityManager.getRunningTasks(MAX_TASKS).map(::read)
         setups.retain(tasks.map { it.taskId })
+        orientations.retain(tasks.map { it.taskId })
         appearances.apply(tasks)
     }
 
@@ -74,6 +78,12 @@ class AndroidTaskSource(
             override fun onTaskDescriptionChanged(taskInfo: ActivityManager.RunningTaskInfo?) = onChange()
             override fun onTaskDisplayChanged(taskId: Int, newDisplayId: Int) = onChange()
             override fun onTaskFocusChanged(taskId: Int, focused: Boolean) = onChange()
+
+            // An orientation asked for at run time is in no task's description.
+            override fun onActivityRequestedOrientationChanged(taskId: Int, requestedOrientation: Int) {
+                orientations.requested(taskId, requestedOrientation)
+                onChange()
+            }
         }
         ActivityTaskManager.getService().registerTaskStackListener(changes)
         listener = changes
@@ -92,6 +102,7 @@ class AndroidTaskSource(
         // A widget's setup runs above the agent's own activity, in a task that is the app's.
         val owner = setups.owner(info.taskId, root?.packageName, root?.className, info.topActivity?.packageName, info.numActivities)
         val setup = setups.isSetup(info.taskId)
+        val declared = fields.orientation(info)
         return TaskSnapshot(
             taskId = info.taskId,
             kind = if (fields.activityType(info) == ACTIVITY_TYPE_STANDARD) TaskKind.APP else TaskKind.OTHER,
@@ -104,14 +115,16 @@ class AndroidTaskSource(
             minWidth = smallest?.first ?: 0,
             minHeight = smallest?.second ?: 0,
             statusBarColor = fields.statusBarColor(info),
-            orientation = fields.orientation(info),
+            orientation = declared,
             // Full screen whichever way an app asks for it: leaving freeform for the fullscreen
-            // windowing mode, hiding both its status and navigation bars, or a full screen
-            // theme, which is known before the activity has a window.
+            // windowing mode, a full screen theme, which is known before the activity has a
+            // window, or hiding both its status and navigation bars while it asks for
+            // landscape, in its manifest or at run time, as a player's full screen button does.
             fullscreen = asksForFullScreen(
                 fullscreenMode = fields.windowingMode(info) == WINDOWING_MODE_FULLSCREEN,
                 requestedVisibleTypes = fields.requestedVisibleTypes(info),
                 fullscreenTheme = themes.asks(top),
+                orientation = orientations.of(info.taskId, info.topActivity?.flattenToShortString(), declared),
             ),
             pictureInPicture = fields.windowingMode(info) == WINDOWING_MODE_PINNED,
             transparentCaption = fields.transparentCaption(info),
