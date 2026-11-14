@@ -3213,3 +3213,132 @@ hwcomposer와 호스트 합성기는 틀리지 않았으므로 거기서 옮기�
 - 이미지: 각 아키텍처의 Framework 작업이 그 `services.jar`를 자기 아티팩트에 넣고(`collect.py --services`), make-image.py `--framework`는 그 jar를 공개 빌드의 것 대신 넣는다. dexpreopt 없는 빌드는 dex를 압축하므로 공개 빌드처럼 dex를 압축 없이 정렬해 저장하고(`image_services_jar`), 편집한 jar처럼 게스트의 부트 이미지에 맞춰 다시 컴파일한다. image.json의 `framework`가 이미지에 들어간 jar의 SHA-256을 적고, check-image가 같은 jar인지 본다. services 작업이 실패하면 아티팩트에 jar가 없고, 이미지는 예전처럼 공개 빌드의 jar를 dex 편집한다(그 이미지의 대화 상자는 여전히 어긋난다).
 
 확인하지 못한 것: 이 변경은 CI에서 돌지 않았다. 전체 트리를 받는 크기(수십 GB)와 표준 러너(16 GiB 메모리, 스왑 12+24 GiB)에서 Soong 분석과 자바 빌드가 시간 안에 끝나는지, 패치가 고정한 소스에 그대로 적용되는지(`check-patches.sh`)는 Framework build를 손으로 돌려 봐야 안다. 기기에서 대화 상자가 그려진 자리에서 눌리는지도 그 뒤에 본다.
+
+## R47. Vulkan 드라이버가 없는 GPU에서 호스트 Vulkan으로 Dozen(Vulkan on D3D12)을 쓰는 길 (PR-3, NFR-7, FR-27)
+
+**질문.** 이슈 #610(Intel Iris Pro 5200, Haswell, MacBook Pro 2015의 Boot Camp)처럼 Windows Vulkan 드라이버가 없는 GPU에서는 호스트 렌더러(gfxstream)가 시작하지 못한다. 소유자는 두 번째 안드로이드 그래픽 경로를 거절했고 CPU ASTC 디코딩도 원하지 않는다. Mesa의 Dozen(`dzn`, Vulkan을 D3D12 위에 구현한 드라이버)을 호스트 Vulkan 구현으로만 바꿔 끼우면 경로는 하나로 남는다. 이것이 서는가, 어떤 GPU를 살리는가, 어떻게 싣는가.
+
+**기준.** 소스와 문서만 읽었다. 이 PC에서 Mesa나 gfxstream을 빌드하지 않았고, 렌더러를 띄우지 않았고, 바탕 화면은 건드리지 않았다.
+
+| 자료 | 판 |
+|---|---|
+| Mesa `src/microsoft/vulkan/`(`dzn_device.c`, `dzn_util.c`, `dzn_dxcore.cpp`, `meson.build`) | `.scratch/mesa-full`, `VERSION` 25.0.0-devel |
+| Mesa Matrix(mesamatrix.net), Mesa 26.0.0 릴리스 노트, Arch `vulkan-dzn` 26.2.3 | 2026-11-15에 읽음 |
+| gfxstream 호스트 `host/vulkan/VkCommonOperations.cpp`, `VkDecoderGlobalState.cpp` | `d047a572`(`dsa/graphics/fetch.sh`의 고정 리비전) |
+| DSA `dsa/graphics/host/dsa_gfx_display.cpp`, `dsa_gfx_backend.h`, 패치 0007, 0012, 0013, 0019 | `origin/develop` `0e3856b5` |
+| Vulkan-Loader `loader/loader_windows.c` | KhronosGroup `main`, 2026-11-15 |
+| Intel 지원 문서 000057520(Haswell의 DirectX 12 제거), Broadwell 드라이버 15.40 릴리스 노트 | intel.com, 2026-11-15 |
+| OpenCL, OpenGL, and Vulkan Compatibility Pack(Store 9NQPSL29BFFF, winget `Microsoft.OpenCLGLVulkanCompatibilityPack` 1.2404.1.0) | 2026-11-15 |
+| DirectXShaderCompiler 1.8.2505 릴리스, NuGet `Microsoft.Direct3D.DXC`, `Microsoft.Direct3D.WARP`의 라이선스 표기 | 2026-11-15 |
+| 이 PC의 `C:\Windows\System32`(파일 목록만) | Windows 11 Pro 26300 |
+
+### 결론
+
+Dozen은 "D3D12 드라이버가 있고 Shader Model 6을 받는 GPU인데 Windows Vulkan 드라이버가 없는" 기기에서 gfxstream을 돌릴 수 있는 유일한 열린 길이다. gfxstream과 DSA 렌더러가 Windows에서 반드시 쓰는 것(Win32 외부 메모리, D3D11 공유 텍스처 가져오기, Win32 세마포어, 스왑체인 확장, 장치 LUID)은 Dozen에 모두 있다. 그러나 두 가지를 먼저 알린다.
+
+1. **이슈 #610의 Iris Pro 5200은 Dozen으로도 GPU에서 돌지 않는다.** Intel은 드라이버 15.40.44.5107부터 Haswell(4세대 Core)의 DirectX 12를 보안 문제로 껐다. 그 GPU에는 D3D12 하드웨어 장치가 없으므로 Dozen이 올라설 곳이 없다. 남는 것은 Windows의 소프트웨어 D3D12(WARP) 위의 Dozen, 곧 CPU 렌더링이다. 앱은 그려지지만 3D 게임은 느리고, ASTC 에뮬레이션도 CPU에서 돈다.
+2. **Dozen은 `dxil.dll`이 있어야 시작한다.** `dzn_CreateInstance`는 DXIL 검증기(`dxil_create_validator`)를 열지 못하면 `VK_ERROR_INITIALIZATION_FAILED`로 끝난다. `dxil.dll`은 Microsoft의 소스가 일부 닫힌 재배포 바이너리(`LICENSE-MS.txt`)라, DSA가 직접 실으면 NFR-7("모든 구성 요소는 소스가 공개")에 걸린다. 이 PC의 `System32`에는 `dxil.dll`이 없다(Edge WebView의 사본만 있다). 소유자의 결정이 필요하다(아래 "제안").
+
+### 1. Dozen의 현재 상태
+
+- 판과 적합성. 읽은 소스는 `DZN_API_VERSION`이 `VK_MAKE_VERSION(1, 2, ...)`, `conformanceVersion`이 0.0.0.0이고, 장치를 만들 때마다 `vk_warn_non_conformant_implementation("dzn")`을 부른다. Khronos 적합 제품 목록에서 Dozen을 찾지 못했다. 공개된 CTS 기록은 2023년의 Vulkan 1.0 통과율 99.75%(Phoronix, WARP에서 돈 Mesa CI)이고, Vulkan 1.2의 통과율(약 99.86%)은 검색 요약으로만 보았다. Mesa Matrix(2026-11)는 확장 66개(21.2%)를 적고, 2026-11-09에 `VK_EXT_depth_clip_control`이 들어갔다. 개발은 느리지만 이어지고, 26.x에도 포함된다.
+- gfxstream 호스트(`VkCommonOperations.cpp`)가 쓰는 것과 Dozen(25.0-devel 소스)의 대조:
+
+| gfxstream이 쓰는 것 | 쓰는 곳 | Dozen |
+|---|---|---|
+| Vulkan 1.1 인스턴스, `VK_KHR_get_physical_device_properties2` | 장치 탐색 | 있다(1.2) |
+| `VK_KHR_external_memory`, `_win32`, `dedicated_allocation`, `get_memory_requirements2` | ColorBuffer 내보내기와 가져오기, 없으면 외부 메모리를 끈다 | 있다. 내보내기는 `D3D12_HEAP_FLAG_SHARED` |
+| `VK_KHR_external_semaphore_win32` | 게스트에 항상 켜는 확장 | 있다 |
+| `VK_KHR_external_fence_*` | 게스트 쪽은 gfxstream이 흉내 낸다 | 없다. gfxstream의 에뮬레이트 목록(`kEmulatedDeviceExtensions`)에 있어 문제되지 않는다 |
+| `VK_KHR_swapchain` | 항상 켠다(`releaseColorBufferForGuestUse`의 레이아웃 전환) | 있다(Win32 WSI) |
+| `VK_KHR_timeline_semaphore`, `VK_KHR_synchronization2`, `VK_KHR_dynamic_rendering` | 게스트가 쓰면 그대로 넘긴다(패치 0033은 sync2의 큐 계열 변환) | 있다 |
+| `VK_EXT_descriptor_indexing` | 게스트 앱이 쓴다 | Shader Model 6.6 이상에서만 |
+| `VK_KHR_sampler_ycbcr_conversion` | 있으면 켠다. 없으면 gfxstream의 YCbCr 흉내(`isYcbcrEmulationEnabled`)가 가짜 변환 핸들을 준다 | 없다(`samplerYcbcrConversion = false`) |
+| `VK_EXT_external_memory_host` | `VulkanAllocateHostMemory`, R42의 영역 들이기 | `ID3D12Device13`이 있을 때만(`OpenExistingHeapFromAddress1`) |
+| `VK_EXT_private_data`, `VK_EXT_robustness2` | 있으면 켠다 | 확장 없음(1.3 기능 `privateData`만 참) |
+| ETC2, ASTC LDR | 없으면 gfxstream이 계산 셰이더로 푼다(`emulateTextureEtc2`, `emulateTextureAstc`) | 둘 다 없다. BC만 있다 |
+| 장치 LUID | D20의 GPU 고르기(패치 0007) | `deviceLUIDValid = true`, DXCore의 어댑터 LUID |
+
+- Dozen에 없는 그 밖의 기능: `tessellationShader`, `logicOp`, `dualSrcBlend`, `multiViewport`, `fullDrawIndexUint32`, `shaderStorageImageMultisample`, 희소 리소스, `vulkanMemoryModel`. 그래서 그 위의 ANGLE은 OpenGL ES 3.2(테셀레이션이 필요하다)를 내지 못하고 3.1까지일 것으로 본다. 게임 대부분은 ES 3.0, 3.1이지만, 3.2나 Vulkan 테셀레이션을 요구하는 앱은 Dozen에서 돌지 않는다.
+- DSA 렌더러 자신의 요구. `dsa_gfx_display.cpp`의 `import_target`은 합성기가 `D3D11_RESOURCE_MISC_SHARED_NTHANDLE`로 만든 `DXGI_FORMAT_R8G8B8A8_UNORM` 텍스처를 `VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_BIT`로 들이고, `vkGetMemoryWin32HandlePropertiesKHR`, 전용 할당, `OPTIMAL` 타일링 이미지를 쓴다. Dozen의 `dzn_GetMemoryWin32HandlePropertiesKHR`는 그 핸들을 `ID3D12Device::OpenSharedHandle`로 열어 `ID3D12Resource`로 받고, 할당은 `imported_from_d3d11`일 때 그 형식을 허용한다. 렌더러는 복사가 끝난 것을 CPU에서 펜스로 기다리고 콜백을 부르므로 API를 건너는 세마포어는 필요 없다. 곧 태스크 창 경로는 코드상 선다.
+- YUV ColorBuffer(패치 0019)는 `supportsYuvColorBuffer(NV12, YV12)`가 참일 때만 다중 평면 형식을 쓴다. Dozen에는 다중 평면 형식이 없을 것이므로 예전 경로로 돌아갈 것으로 본다. 실행해서 확인해야 한다.
+
+### 2. 하드웨어 하한
+
+- Dozen이 요구하는 것. `d3d12_create_device`는 `D3D_FEATURE_LEVEL_11_0`으로 장치를 만든다. 리소스 바인딩 등급(Tier 1, 2, 3)은 한도 값만 바꾸고 거절하지 않는다. 셰이더는 SPIR-V에서 NIR을 거쳐 DXIL로 만들므로 드라이버가 Shader Model 6.0(DXIL)을 받아야 한다. `dzn_physical_device_cache_caps`가 묻는 셰이더 모델은 6.1부터이고, 바인딩 없는 디스크립터(descriptor indexing, buffer device address)는 6.6부터다. 6.6 아래에서는 디스크립터를 그릴 때마다 복사하는 길을 쓴다.
+- 기기별 판정.
+
+| 기기 | Windows Vulkan | D3D12 | Dozen |
+|---|---|---|---|
+| Intel Haswell(Iris Pro 5200, HD 4600 등) | 없다 | 15.40.44.5107부터 꺼짐. 15.40.42.5063 이하로 내리면 FL 11_1이지만 보안 문제가 있고, 2016년 드라이버라 Shader Model 6을 받는지 확인하지 못했다 | GPU로는 안 된다. WARP만 |
+| Intel Broadwell(Gen8, HD 5500 등) | 없다(Intel Windows Vulkan은 Gen9부터) | FL 11_1, 공개 사양은 Shader Model 5.1 | Shader Model 6을 받는지 확인하지 못했다. 받지 않으면 안 된다 |
+| Intel Skylake 이후, AMD GCN 이후, NVIDIA Kepler 이후 | 있다 | 있다 | 필요 없다(네이티브가 먼저) |
+| AMD TeraScale, NVIDIA Fermi | 없다 | TeraScale은 없다. Fermi는 확인하지 못했다 | 대부분 안 된다 |
+| Snapdragon X(Adreno X1) | 있다(Qualcomm 드라이버) | 있다 | 필요 없다 |
+| 그 전의 Snapdragon(7c, 8cx) | 기기와 드라이버마다 다르다. 확인하지 못했다 | 있다 | 후보. 호환 팩이 이 기기들을 겨냥했다 |
+| Hyper-V GPU-P 게스트, Azure의 GPU 분할 VM | 게스트에 공급사 Vulkan ICD가 없는 경우가 많다 | 있다 | 후보. 단, DSA가 그 안에서 또 VM을 띄우려면 중첩 가상화가 있어야 한다 |
+| GPU 없는 VM, 원격 데스크톱 서버, Microsoft 기본 렌더링 드라이버 | 없다 | WARP | WARP |
+| VMware SVGA 게스트 | 없다 | 게스트는 D3D 10/11급으로 보고된다 | 안 된다(WARP만) |
+
+  곧 Dozen이 GPU 가속으로 살리는 기기는 생각보다 좁다(옛 Snapdragon, GPU 분할 VM, Broadwell은 확인 필요). 넓게 살리는 것은 "WARP로라도 돈다"이다.
+- WARP. `dzn_physical_device_get_properties`는 WARP를 `VK_PHYSICAL_DEVICE_TYPE_CPU`로 알린다. WARP는 Windows에 들어 있고(이 PC의 `System32\d3d10warp.dll`) Shader Model 6.x를 받는다. Mesa 자신의 CI가 Dozen의 Vulkan CTS를 WARP에서 돌렸다(`DZN_DEBUG=warp`, 2022-2023년 커밋과 MR !20361의 기록. 지금도 도는지는 확인하지 못했다). WSA가 Haswell에서 무엇으로 그렸는지는 확인하지 못했지만, 이슈의 사용자가 적은 "소프트웨어 ASTC 디코딩과 심한 끊김"은 WSA도 그 기기에서 GPU 가속이 약했다는 뜻으로 읽힌다. WARP 위의 Dozen은 그 기기에서 "돈다"는 WSA 수준을 맞추는 길이다.
+
+### 3. 싣는 방법
+
+- 빌드. Mesa를 고정 리비전으로 받아(gfxstream의 `fetch.sh`와 같은 방식, `.scratch`에) `meson setup -Dvulkan-drivers=microsoft-experimental -Dgallium-drivers= -Dopengl=false -Dplatforms=windows`처럼 Vulkan 드라이버만 MSVC로 빌드한다. 의존은 DirectX-Headers(meson wrap), Python의 mako, SPIR-V 헤더다. 산출물은 `vulkan_dzn.dll`과 `dzn_icd.<arch>.json`이다. x64와 arm64를 따로 만든다(FR-27). LLVM은 필요 없다(DXIL은 Mesa 자신의 NIR 백엔드가 만든다). 크기는 재지 못했다. 첫 CI 빌드에서 잰다.
+- 라이선스. Mesa의 Dozen과 그것이 링크하는 NIR, spirv_to_dxil, Vulkan 런타임은 MIT다. Apache-2.0과 함께 싣는 데 문제가 없다. 걸리는 것은 실행 때 여는 `dxil.dll`이다(결론 2). DXC는 2025년에 검증기 해시를 공개했고 1.8.2505부터 컴파일러가 내부 검증기(공개 소스)를 쓰지만, Mesa가 여는 외부 검증기 `dxil.dll`은 여전히 닫힌 부분이 섞인 바이너리다. `DZN_DEBUG=experimental`은 검증기 없이 돌지만 D3D12 실험 셰이더 모델(개발자 모드)이 필요해 제품에 쓸 수 없다. D3D12 Agility SDK(`D3D12Core.dll`, `ID3D12Device13` 등)도 Microsoft 바이너리이므로 싣지 않고 시스템의 것만 쓴다.
+- 고르기. 시스템에 설치하지 않는다(사용자의 Vulkan 구성을 바꾸지 않는다). 렌더러 프로세스에만 Vulkan 로더의 환경 변수를 준다. `VK_DRIVER_FILES`는 다른 드라이버를 모두 가리고, `VK_ADD_DRIVER_FILES`는 시스템 드라이버 옆에 더한다. 로더는 높은 무결성(관리자) 프로세스에서 이 변수들을 무시하는데, `dsa-gfx`는 사용자 세션에서 돌므로 걸리지 않는다. macOS 호스트가 이미 같은 방식으로 MoltenVK를 고른다(`dsa/host/platform/macos/src/gfx/process.rs`의 `VK_ICD_FILENAMES`). 로더 없이 `vulkan_dzn.dll`을 직접 열 수도 있지만, Mesa 드라이버는 `vk_icdGetInstanceProcAddr`만 내보내므로 gfxstream의 디스패치 초기화를 바꿔야 한다. 로더를 쓰는 편이 작다.
+- 이미 있는 Dozen. Vulkan 로더(`loader_windows.c`)는 패키지 계열 `Microsoft.D3DMappingLayers_8wekyb3d8bbwe`(Microsoft의 OpenCL, OpenGL, and Vulkan Compatibility Pack)를 찾아 그 안의 Dozen을 드라이버로 더한다. 또 `VK_MSFT_layered_driver`로 `underlyingAPI == D3D12`인 장치를 같은 하드웨어의 네이티브 장치 뒤로 정렬한다. 곧 그 팩을 설치한 PC에서는 지금의 DSA도 Dozen 장치를 본다. 네이티브 장치가 없으면 gfxstream이 그것을 골랐을 것이다(확인하지 못했다). 팩은 Microsoft가 Store로 갱신하고 `dxil.dll`도 함께 싣는다. 그러나 Store 계정이나 winget이 있어야 하고, 판(winget 1.2404.1.0)이 오래되었을 수 있다.
+- 갱신 경로. DSA가 싣는 Dozen은 DSA 릴리스와 함께 갱신한다(FR-15). Mesa 리비전을 올리는 것은 gfxstream 고정 리비전을 올리는 것과 같은 변경이다.
+
+### 4. 성능
+
+Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾지 못했다. 코드로 보이는 비용은 셋이다. 셰이더 모델 6.6 아래에서 그릴 때마다 디스크립터를 복사한다. 파이프라인을 만들 때 SPIR-V, NIR, DXIL 변환과 `dxil.dll` 검증이 더 들어 첫 실행의 끊김이 늘 것이다. Vulkan의 렌더 패스와 일부 형식 변환을 D3D12 위에서 흉내 낸다. WARP에서는 모든 그리기가 CPU이므로 일반 앱의 스크롤도 무겁다. 숫자는 PR-3의 측정 기준(일반 앱 스크롤, OpenGL ES 게임, Vulkan 게임)으로 재야 한다. 소유자 PC에서는 Intel Arc 위의 Dozen을 강제로 골라 같은 GPU의 네이티브 드라이버와 견줄 수 있다.
+
+### 5. DSA에 넣는 계획
+
+1. 고르는 규칙. 렌더러(`dsa-gfx`)는 지금처럼 시스템 드라이버로 시작한다. 네이티브 장치(드라이버 ID가 `VK_DRIVER_ID_MESA_DOZEN`이 아니고 `VkPhysicalDeviceLayeredDriverPropertiesMSFT::underlyingAPI`가 NONE인 장치)가 하나도 없거나 렌더러가 Vulkan을 시작하지 못하면(패치 0012, 0014가 이미 알린다), 창 관리자가 렌더러를 `VK_ADD_DRIVER_FILES=<설치 폴더>\dzn_icd.<arch>.json`으로 다시 띄운다. 설정이 `dozen`이면 처음부터 그렇게 띄운다. 같은 LUID에 네이티브와 Dozen 장치가 함께 있으면 패치 0007의 고르기가 네이티브를 고른다. 하드웨어 D3D12 장치가 없고 WARP만 있으면 CPU 렌더링이라는 것을 로그와 사용자 알림에 남긴다. 로그 줄 예: `rendering on Intel(R) HD Graphics 5500 through Dozen (Vulkan on Direct3D 12): no GPU has a Vulkan driver`.
+2. Dozen에서 꺼야 하는 것. 따로 끌 것은 없다. gfxstream이 이미 확장마다 있는지 보고 고른다(YCbCr 흉내, ETC2와 ASTC의 계산 셰이더 에뮬레이션, external fence 흉내). CPU ASTC 디코더(`AstcEmulationMode::Cpu`)는 지금처럼 쓰지 않는다. 다만 gfxstream의 YCbCr 흉내는 실제 변환을 하지 않으므로, Dozen에서는 동영상과 카메라의 YUV 버퍼가 RGB로 바뀌어 오는지(패치 0019의 예전 경로) 확인해야 한다.
+3. 배포물. 설치 파일의 렌더러 옆에 `vulkan_dzn.dll`과 ICD JSON(상대 경로)을 둔다. `dxil.dll`은 아래 제안의 결정을 따른다.
+4. CI. GitHub의 Windows 러너에는 GPU가 없지만 WARP는 Windows에 들어 있고, 러너 이미지에 설치된 Windows SDK에 `Redist\D3D\<arch>\dxil.dll`이 있을 것으로 본다(러너에서 확인하지 않았다. 없으면 NuGet `Microsoft.Direct3D.DXC`에서 받는다). 그래서 GPU 없이 "WARP, Dozen, gfxstream" 경로를 돌릴 수 있다. Mesa가 같은 일을 Vulkan CTS로 했다. 할 수 있는 시험: 렌더러가 Dozen 위에서 시작한다(`test_host_renderer.py`는 이미 `VK_DRIVER_FILES`를 다룬다), 합성기 없이 D3D11 공유 텍스처를 만들어 태스크 하나의 프레임을 받고 픽셀을 비교한다, ETC2와 ASTC 텍스처를 올려 GPU 에뮬레이션의 픽셀을 비교한다, Vulkan CTS의 부분 집합. 지금까지 렌더러를 그리는 데까지 시험하는 CI가 없었으므로 그래픽 회귀를 잡는 첫 자동 시험이 된다. 러너의 WARP가 오래되었으면 NuGet `Microsoft.Direct3D.WARP`(시험과 개발 용도 라이선스)를 시험에서만 쓴다. Dozen 빌드는 Mesa 리비전을 키로 캐시한다. 지금의 CI 정책(시험은 손으로 시작)에 맞춰 `checks.yml`의 입력 하나로 둔다.
+5. 위험.
+   - 적합하지 않은 구현이다. CTS 통과율이 높아도 앱마다의 렌더링 오류가 남을 수 있다. 네이티브가 있는 기기에서는 쓰지 않는 것이 이 위험을 줄인다.
+   - OpenGL ES 3.2와 테셀레이션이 없다. 그것을 요구하는 게임은 Dozen에서 돌지 않는다.
+   - `dxil.dll`의 라이선스(NFR-7).
+   - 셰이더 변환 비용과 첫 실행 끊김. 게스트의 파이프라인 캐시가 얼마나 줄이는지는 재야 한다.
+   - WARP에서는 CPU 사용률이 높고, CPU 사용률과 대기 CPU(NFR-3)를 쓰는 동안은 지키지 못한다. 쉬는 동안(Doze)은 그리지 않으므로 영향이 없다.
+   - Haswell 사용자에게 "GPU 가속"을 약속할 수 없다. 알림 문구가 정직해야 한다.
+   - Mesa 업스트림의 Dozen 개발 속도가 느리다. 필요한 수정은 DSA 패치로 들고 다니게 될 수 있다(gfxstream과 같은 방식).
+
+### 6. 제안(소유자 승인 전, INTENT와 SPEC은 바꾸지 않았다)
+
+**INTENT D4에 더할 항목(안).**
+
+> - **Windows Vulkan 드라이버가 없는 GPU에서는 호스트 Vulkan으로 Dozen을 쓴다.** Dozen은 Mesa의 Vulkan on D3D12 드라이버(MIT)다. 바뀌는 것은 호스트의 Vulkan 구현뿐이고, 게스트, ANGLE, gfxstream 원격 경로는 그대로다. 렌더러는 네이티브 Vulkan 장치가 없을 때나 설정으로 고를 때만 Dozen을 쓴다. Dozen은 Khronos 적합 구현이 아니고 테셀레이션, ETC2와 ASTC, YCbCr 변환이 없어서, 그 위에서 OpenGL ES는 3.1까지이고 압축 텍스처는 gfxstream이 GPU 계산 셰이더로 푼다. D3D12 하드웨어 장치도 없는 GPU(Intel Haswell)에서는 Windows의 WARP 위에서 CPU로 그리며, 사용자에게 그렇게 알린다.
+> - 검토한 대안: 두 번째 안드로이드 그래픽 경로(OpenGL ES를 호스트 D3D11이나 GL로 보내기). 소유자가 2026-11-15에 거절했다. 경로가 둘이 되면 모든 그래픽 수정과 시험이 두 벌이 된다.
+> - 검토한 대안: CPU ASTC 디코딩. 소유자가 원하지 않는다. GPU가 있는 기기에서 CPU를 쓰고, 큰 텍스처에서 끊긴다.
+> - 검토한 대안: SwiftShader나 lavapipe(CPU Vulkan). WARP 위의 Dozen과 같은 CPU 렌더링이면서, D3D11 공유 텍스처를 들이지 못해 DSA의 태스크 창 경로가 서지 않는다.
+
+**SPEC PR-3에 더할 항목(안).**
+
+> - 렌더러는 네이티브 Vulkan 장치(Dozen이 아니고, D3D12 위에 겹친 드라이버가 아닌 장치)가 없으면 DSA가 함께 싣는 Dozen으로 다시 시작한다. 설정 `vulkan_driver`는 `auto`(기본), `native`(Dozen을 쓰지 않는다), `dozen`(시험과 비교용)이다. 같은 GPU에 네이티브와 Dozen 장치가 함께 보이면 네이티브를 고른다. Dozen으로 렌더링하면 합성기 로그에 GPU, Dozen이라는 것, 그 이유를 남긴다. 하드웨어 D3D12 장치가 없어 WARP로 렌더링하면 사용자에게 소프트웨어 렌더링이라고 한 번 알린다.
+> - 수용 기준: 장치 목록(네이티브만, 네이티브와 같은 LUID의 Dozen, Dozen만, WARP만, 없음)과 설정이 주어지면, 고르기 규칙이 기대한 장치를 고르고 그 이유를 알린다. (단위 시험)
+> - 수용 기준: GPU 없는 Windows CI 러너에서 렌더러가 WARP 위의 Dozen으로 시작해, D3D11 공유 텍스처로 태스크 프레임 하나를 넘기고 픽셀이 기대와 같다. ETC2와 ASTC 텍스처가 GPU 에뮬레이션으로 기대한 픽셀이 된다. Vulkan CTS의 정해진 부분 집합이 기록한 실패 목록 밖에서 통과한다.
+> - 수용 기준: 소유자 PC에서 설정 `dozen`으로 OpenGL ES 앱 하나와 Vulkan 앱 하나가 태스크 창에 올바르게 그려지고, PR-3의 세 측정을 같은 GPU의 네이티브 드라이버와 함께 기록한다. 네이티브 Vulkan이 없는 실기(예: Broadwell 또는 옛 Snapdragon)를 구하면 같은 확인을 그 기기에서도 한다. (수동 확인)
+
+**NFR-7에 필요한 결정(셋 중 하나).**
+
+1. Microsoft가 재배포를 허락한 DirectX 구성 요소 `dxil.dll` 하나를 예외로 두고 싣는다. 비용: "모든 구성 요소의 소스가 공개"라는 약속에 예외가 하나 생긴다. 얻는 것: 설치만으로 Dozen이 돈다.
+2. 싣지 않고, Microsoft의 Compatibility Pack(Store, winget)이 설치되어 있으면 그 Dozen과 `dxil.dll`을 쓴다(로더가 이미 찾는다). 없으면 설정 앱이 그 팩을 설치하라고 안내한다. 비용: Vulkan 드라이버 없는 기기의 사용자가 따로 설치해야 하고, Dozen의 판을 DSA가 정하지 못한다. 얻는 것: NFR-7이 그대로다.
+3. DSA가 Dozen만 싣고 `dxil.dll`은 사용자의 Windows SDK나 팩에서 찾는다. 2와 비용이 같고 얻는 것이 적다.
+
+제안은 2를 먼저 하고(코드가 가장 작고 NFR-7을 지킨다), 1은 소유자가 예외를 허락할 때 더하는 것이다. 어느 것이든 CI의 시험(위 4)은 러너의 Windows SDK에 있는 `dxil.dll`로 돌 수 있다.
+
+### 확인하지 못한 것
+
+- 최신 Mesa(26.2)의 Dozen 기능 목록. 읽은 소스는 25.0-devel이다. 그 뒤에 YCbCr, 테셀레이션, external fence가 들어왔는지는 Mesa의 `docs/features.txt`나 소스로 다시 봐야 한다.
+- Broadwell과 옛 Snapdragon에서 D3D12 드라이버가 Shader Model 6을 받는지. 그 기기의 `D3D12_FEATURE_SHADER_MODEL` 질의 결과(사용자 보고)가 필요하다.
+- gfxstream의 ETC2, ASTC 계산 셰이더가 Dozen에서 도는지(저장 이미지 형식과 형식 바꾸기 뷰). 실행해야 안다.
+- Compatibility Pack의 Dozen 판과 x64 지원, 그리고 그 팩이 설치된 PC에서 지금의 DSA가 Dozen을 고르는지.
+- `vulkan_dzn.dll`의 크기와 렌더러 메모리(NFR-1)에 더하는 양.
+- WSA가 Haswell에서 무엇으로 그렸는지.
