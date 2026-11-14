@@ -4143,6 +4143,7 @@ class SetTaskDensity final :
   enum : int {
     kTaskIdFieldNumber = 1,
     kDensityDpiFieldNumber = 2,
+    kRecreateFieldNumber = 3,
   };
   // int32 task_id = 1;
   void clear_task_id();
@@ -4162,6 +4163,15 @@ class SetTaskDensity final :
   void _internal_set_density_dpi(uint32_t value);
   public:
 
+  // bool recreate = 3;
+  void clear_recreate();
+  bool recreate() const;
+  void set_recreate(bool value);
+  private:
+  bool _internal_recreate() const;
+  void _internal_set_recreate(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:dsa.control.v1.SetTaskDensity)
  private:
   class _Internal;
@@ -4172,6 +4182,7 @@ class SetTaskDensity final :
   struct Impl_ {
     int32_t task_id_;
     uint32_t density_dpi_;
+    bool recreate_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -44347,6 +44358,26 @@ inline void SetTaskDensity::_internal_set_density_dpi(uint32_t value) {
 inline void SetTaskDensity::set_density_dpi(uint32_t value) {
   _internal_set_density_dpi(value);
   // @@protoc_insertion_point(field_set:dsa.control.v1.SetTaskDensity.density_dpi)
+}
+
+// bool recreate = 3;
+inline void SetTaskDensity::clear_recreate() {
+  _impl_.recreate_ = false;
+}
+inline bool SetTaskDensity::_internal_recreate() const {
+  return _impl_.recreate_;
+}
+inline bool SetTaskDensity::recreate() const {
+  // @@protoc_insertion_point(field_get:dsa.control.v1.SetTaskDensity.recreate)
+  return _internal_recreate();
+}
+inline void SetTaskDensity::_internal_set_recreate(bool value) {
+  
+  _impl_.recreate_ = value;
+}
+inline void SetTaskDensity::set_recreate(bool value) {
+  _internal_set_recreate(value);
+  // @@protoc_insertion_point(field_set:dsa.control.v1.SetTaskDensity.recreate)
 }
 
 // -------------------------------------------------------------------

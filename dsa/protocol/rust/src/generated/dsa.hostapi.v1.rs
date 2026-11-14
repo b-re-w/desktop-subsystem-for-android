@@ -136,12 +136,17 @@ pub struct ResizeTask {
 }
 /// A task's window moved to a monitor of another scale: asks the caller's Android to draw
 /// the task at `density_dpi` (130 at a scale of 100%, where a dp is 0.819 of a host pixel).
+/// With `recreate`, the move has ended and Android recreates the task's top activity at the
+/// new density, restoring its saved state, even when the app says it handles a change of
+/// density itself (see the control protocol's SetTaskDensity).
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SetTaskDensity {
     #[prost(int32, tag = "1")]
     pub task_id: i32,
     #[prost(uint32, tag = "2")]
     pub density_dpi: u32,
+    #[prost(bool, tag = "3")]
+    pub recreate: bool,
 }
 /// A task's window draws its title bar over the top `height` pixels of the task: asks the
 /// caller's Android to give the task a top system bar inset of that height. 0 removes it.
