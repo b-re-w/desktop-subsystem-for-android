@@ -3159,3 +3159,31 @@ shell(uid 2000)로는 dev.14에서 전체 덤프(약 42 KB)가 된다. 실패는
 **결정.** 컴파일러 캐시를 Actions 캐시가 아니라 실행의 artifact(`framework-ccache-<android>-<arch>`, tar 파일 하나, 압축하지 않음)로 둔다(`.github/scripts/framework/ccache-artifact.sh`). artifact는 10 GB 캐시 한도에 들지 않고 보존 기간 동안 지워지지 않는다. 공개 저장소이므로 표준 러너와 그 저장 공간에 요금이 없다. 복원은 이 브랜치, 없으면 develop의 가장 최근 것이고, develop 실행은 저장한 뒤 그보다 오래된 develop의 것을 지운다. 크기 한도는 3 GB로 올린다(빌드 하나가 1.9 GB). 빌드는 `ccache --show-stats --verbose`로 밀어낸 수도 보인다. `out/`(14 GB)은 캐시하지 않는다: 크고, 캐시를 찾은 빌드에서 Soong 분석은 3분쯤이다. 행렬은 가장 새 Android, x86_64를 먼저 둔다. Development build는 네 작업을 기다리지 않고, develop의 가장 최근 Framework 실행 중 가장 새 Android x86_64 작업이 성공한 실행에서 그 artifact를 artifact API로 받는다(실행이 아직 도는 중에도). 배포는 지금처럼 네 작업이 모두 성공한 실행을 쓴다.
 
 **확인하지 못한 것.** 바뀐 워크플로로 돈 실행이 아직 없다. 다음 실행 둘에서 볼 것: 첫 실행은 artifact가 없으므로 android17 x86_64는 Actions 캐시에 남아 있으면 거기서 복원하고 나머지 셋은 처음부터 빌드한다. 두 번째 실행부터 넷 모두 "restoring framework-ccache-..."가 나오고, 적중이 90 % 넘고, 빌드 단계가 20분 안팎이어야 한다. artifact 올리기와 받기가 각각 몇 분인지, "Cleanups"가 0인지도 본다.
+
+## R46. 대화 상자가 입력 위치보다 58 px 아래에 그려지는 까닭: 캡션 바 인셋이 태스크의 모든 창에 닿는다 (FR-22, FR-3)
+
+**기준.** 2026-11-15 소유자 PC(DSA 0.2.4-dev, Android dev.20, 200% 모니터, 게스트 262 dpi)에서 Play 스토어의 대화 상자(`TYPE_APPLICATION`, gravity CENTER, wrap_content, `surfaceInsets=Rect(53,53-53,53)`, 활동과 같은 프리폼 태스크)를 그려진 자리에서 누를 수 없었다. `dumpsys window`의 태스크 프레임은 `[2107,0][3152,1296]`, 대화 상자는 `parent=[2107,58][3152,1296]`, `frame=[2225,259][3034,1094]`이고 `dumpsys input`의 터치 영역도 그 프레임이다. 창의 화면 갈무리에서 대화 상자는 프레임보다 58 px(제목 표시줄 띠의 높이) 아래, 창 픽셀 y=317..1147에 있다. x는 맞다. `adb shell input tap`으로 그려진 단추 자리(게스트 (2519,1060))는 아무 일도 없고, 58 px 위(2519,1002)는 "나중에"를 누른다. 이 조사는 코드와 dex만 읽었다. 기기는 만지지 않았다. 프레임워크 소스는 `android16-release`의 `InsetsSource`, `InsetsPolicy`, `WindowState`, `DecorView`와 `.scratch/caption-research/a16`의 것을, `services.jar`는 `.scratch/caption-statusbar/a16`의 Android 16 jar(`classes3.dex`)를 make-image.py의 dex 읽기 함수로 읽었다.
+
+### 본 것
+
+- hwcomposer와 호스트는 층을 SurfaceFlinger가 준 자리에 그린다. `compose_request.cpp`는 층마다 `displayFrame`을 태스크의 왼쪽 위로 옮길 뿐이고(`relativeTo`), `task_composer.cpp`는 `displayFrame`과 `sourceCrop`을 그대로 넘기며, gfxstream의 `CompositorVk::buildCompositionVk`도 `displayFrame`을 목표 크기로 나눠 그대로 놓는다. 호스트는 태스크마다 합성된 프레임 하나를 받으므로 층마다 다르게 옮길 곳이 없다.
+- 대화 상자의 표면은 SurfaceFlinger에서 프레임보다 53 px 큰 `[2172,206][3087,1147]`이다(표면 인셋). 갈무리에서 그려진 대화 상자의 아래 끝 1147은 이 표면의 아래 끝과 같고, 높이는 프레임(835 px)보다 5 px 짧은 830 px이다. 표면은 제자리에 있고, 앱이 표면 안에서 내용을 58 px 아래로 그려 넘친 5 px(58 - 53)가 잘린 것이다.
+- 에이전트는 태스크에 `statusBars`와 `captionBar` 소스를 준다(`AndroidTaskActions.setCaptionInset`, 같은 프레임, 높이 58 px). 상태 표시줄 소스는 창 프레임과 겹치는 만큼만 인셋이 되므로 대화 상자에는 0이다.
+- 캡션 바 소스는 겹침을 보지 않는다. `InsetsSource.calculateArbitraryInsets`는 type이 `captionBar()`이면 창이 어디에 있든 `Insets.of(0, frame.height(), 0, 0)`을 돌려준다(끌어 옮기는 동안 캡션의 위치가 창 프레임보다 늦게 바뀌는 문제를 피하려는 것, b/254128050). 그래서 태스크의 모든 창이 위쪽 58 px 캡션 바 인셋을 받는다.
+- 이것을 창에서 떼어 놓는 것이 없다. 이미지의 Android 16 `InsetsPolicy.enforceInsetsPolicyForTarget`(dex)에는 전체 화면이 아닌 창에서 캡션 바 소스를 지우는 반복(`!attrs.isFullscreen() || attrs.getFitInsetsTypes() != 0`, 예전 소스에 있던 것)이 없다. 그 메서드가 부르는 것은 차례로 `removeSource`, `systemBars`, `getSourceProviders`, `overridesFrame`, `isFloating`, `captionBar`, `ime`, `InsetsState.set`뿐이다. 떠 있는 창 모드에서 남기는 유형은 원래 `captionBar()`와 IME이고, R30에서 `systemBars()`로 넓혔다. 넓히기 전에도 캡션 바 소스는 대화 상자에 닿았으므로, 이 문제는 R30이 아니라 캡션 바 소스를 준 때부터 있었다.
+- `DecorView.onApplyWindowInsets`는 `FLAG_LAYOUT_IN_SCREEN`이 없고 높이가 `WRAP_CONTENT`인 창(대화 상자)에서 `getSystemWindowInsetTop()`(캡션 바 포함)을 `mFloatingInsets.top`으로 잡고 소비한다. `onMeasure`는 높이 한도에서 그만큼 빼고(`mApplyFloatingVerticalInsets`), `onLayout`은 루트 뷰를 `offsetTopAndBottom(mFloatingInsets.top)`으로 58 px 내린다. 그리기는 루트 RenderNode의 위치를 따르지만, 터치는 ViewRootImpl이 창 좌표 그대로 루트 뷰에 주므로 루트 자신의 위치만큼 옮겨지지 않는다. 그래서 그림은 58 px 아래, 단추의 터치 자리는 그대로다. 너비가 `WRAP_CONTENT`인 대화 상자는 `mFloatingInsets.left`에도 `getSystemWindowInsetTop()`이 들어가 오른쪽으로도 58 px 밀린다(AOSP의 코드 그대로). 위쪽 시스템 인셋이 프레임과 겹치지 않는 폰에서는 이 값이 0이라 드러나지 않는다.
+- 닿는 창: 태스크 안의 PhoneWindow 창 중 `FLAG_LAYOUT_IN_SCREEN` 없는 wrap_content 창. `Dialog`, `AlertDialog`, 날짜와 시간 선택 대화 상자, 컨텍스트 메뉴(`MenuDialogHelper`가 AlertDialog로 띄운다)가 그렇다. 기본 창(MATCH_PARENT)은 원래 띠 아래에 놓이고 싶어 하므로 맞다. `PopupWindow`(드롭다운, 스피너, 팝업 메뉴)는 DecorView가 아니라 `PopupDecorView`를 쓰고 `FLAG_LAYOUT_IN_SCREEN`을 기본으로 켜므로 이 오프셋이 없다. 토스트와 IME 창은 태스크 밖에 있다. 제목 표시줄 띠가 없으면(전체 화면, 높이 0) 소스가 없으므로 문제도 없다. 배율과는 상관없이 늘 띠의 높이만큼 어긋난다.
+
+### 고칠 수 있는 곳
+
+hwcomposer와 호스트 합성기는 틀리지 않았으므로 거기서 옮기면 안 된다. 앱이 표면 안에서 내용을 옮긴 것이라, 합성기가 대화 상자 층을 58 px 올리면 `FLAG_LAYOUT_IN_SCREEN`을 켠 대화 상자나 PopupWindow처럼 바르게 그린 창이 거꾸로 어긋나고, 잘린 아래 5 px도 돌아오지 않는다. 고칠 곳은 캡션 바 소스가 어느 창에 닿느냐다.
+
+1. 이미지의 창 관리자(`services.jar`): `enforceInsetsPolicyForTarget`에서 전체 화면이 아닌 창(`!attrs.isFullscreen()`)의 캡션 바 소스를 지운다. Android가 예전에 같은 까닭으로 두었던 규칙이다. 기본 창은 캡션 바 인셋(`statusBars()`, `systemBars()`, `captionBar()`)을 지금처럼 받고, 대화 상자에는 겹치지 않는 상태 표시줄 소스만 남아 위쪽 인셋이 0이 된다. SPEC의 약속은 그대로다. 비용: 지금의 dex 편집(`edit_dex`)은 같은 크기의 명령 안에서 바꾸기만 하므로 새 코드를 넣지 못한다. 넣으려면 셋 중 하나가 든다. 이미지 빌드에 smali/baksmali나 d8 같은 새 도구를 들이기(새 도구라 소유자 승인), `edit_dex`가 코드 항목을 옮기고 dex의 맵과 오프셋을 다시 쓰게 넓히기(크고, 실기 없이 맞추기 어렵다), Framework 빌드가 `services.jar`를 소스에서 패치해 빌드하기(지금은 네이티브 라이브러리만 빌드한다. 자바 프레임워크를 더하면 빌드가 크게 는다). 어느 것이든 Android 16과 17 모두 맞춰야 한다.
+2. 에이전트만: 캡션 바 소스는 앱이 제목 표시줄을 직접 그리는 태스크에만 주고(그 앱은 캡션 바 인셋과 경계 사각형이 있어야 한다), 나머지 태스크에는 상태 표시줄 소스만 준다. 이미지는 바뀌지 않고 대부분의 앱에서 대화 상자가 바로잡힌다. 비용: 그 태스크의 앱은 `getInsets(captionBar())`로 0을 받는다(폰과 같다). SPEC FR-22가 위쪽 인셋을 `captionBar()`로도 준다고 약속하므로 그 약속을 바꾸는 일이고, 제목 표시줄을 직접 그리는 앱(Chrome의 탭 줄 같은)의 대화 상자는 여전히 어긋난다.
+
+1이 약속을 지키며 모든 경우를 고친다. 무엇으로 할지는 소유자의 결정이다(새 도구 또는 프레임워크 소스 빌드, 아니면 SPEC 변경).
+
+### 확인하지 못한 것
+
+- Android 17의 `services.jar`와 `DecorView`. 소유자 PC의 이미지는 Android 17인데 dex는 Android 16 것만 읽었다. R30에서 두 버전의 `enforceInsetsPolicyForTarget` 소스가 같은 꼴임을 보았다.
+- 기기에서 대화 상자의 `mFloatingInsets`나 루트 뷰의 위치를 직접 보지 않았다. `adb shell dumpsys activity top`으로 대화 상자 창의 `InsetsController` 상태에 `captionBar` 소스가 있는지, 뷰 계층에서 DecorView의 `top`이 58인지 보면 확인된다.
