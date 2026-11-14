@@ -81,6 +81,11 @@ mkdir -p "$out"
     "$here/device_remake_test.cpp" -o "$out/device_remake_test"
 "$out/device_remake_test"
 
+# Which GPUs get linear RGB ColorBuffers, so an app's clears reach every reader (patch 0035).
+"$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -I"$here/../include" \
+    "$here/color_buffer_tiling_test.cpp" -o "$out/color_buffer_tiling_test"
+"$out/color_buffer_tiling_test"
+
 # The upstream headers are not ours to warn about.
 upstream=(
     -isystem "$scratch/gfxstream/guest/OpenglSystemCommon"

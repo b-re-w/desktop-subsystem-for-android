@@ -1,0 +1,230 @@
+Subject: Make an RGB ColorBuffer linear on a GPU that keeps an app's fast clears per device
+
+On an Intel Core i3-1005G1 (UHD Graphics, device 0x8A56, driver 31.0.101.2134, Vulkan
+"Intel-0.404.2134", the last driver Intel ships for Ice Lake) every app window showed its new
+frame's text and icons over parts of earlier frames: the Settings search bar twice, 205 px
+apart (where it stood before a scroll), a collapsed toolbar's title over the list, and in Clock
+blue blocks around the drawing of a black screen. `adb screencap` showed the same, so the
+ColorBuffer's memory held it, not the task window. Rows are never sheared or shifted sideways,
+which rules out a row pitch mismatch; whole blocks keep an earlier frame. That is a fast clear:
+the app clears its window buffer through an image on its own VkDevice, the driver marks the
+cleared blocks in that image's compression state instead of writing memory, and the renderer's
+copy into the task window, screencap's readback and SurfaceFlinger, which read the same memory
+through images on other devices, take it as it lies. The same build on Intel Arc (101.9150)
+and an NVIDIA RTX 4050 is right.
+
+Now on Intel's Gen9 to Gen11 GPUs (dsa_color_buffer_tiling.h lists them by PCI device ID), an
+RGB ColorBuffer is linear whenever the device can draw into, sample, copy and blit it linear
+with the same uses an optimal one has, at its size and with exported memory. A linear image has
+no compression state, so every clear reaches memory. The renderer says once per format which
+tiling it chose. Every other GPU keeps optimal ColorBuffers.
+
+Every image the guest makes on a ColorBuffer's memory takes the ColorBuffer's tiling: an
+AHardwareBuffer's through 0032's colorBufferTiling, now told the size, and a window buffer's
+(VkNativeBufferANDROID), which upstream left at the guest's optimal even for a host-visible,
+linear ColorBuffer. A linear window buffer image is also made at the ColorBuffer's size, since
+a linear image's row pitch follows its width and a narrower image would read every row from
+the wrong place.
+
+diff --git a/host/vulkan/VkAndroidNativeBuffer.cpp b/host/vulkan/VkAndroidNativeBuffer.cpp
+--- a/host/vulkan/VkAndroidNativeBuffer.cpp
++++ b/host/vulkan/VkAndroidNativeBuffer.cpp
+@@ -23,6 +23,7 @@
+ #include "VulkanDispatch.h"
+ #include "cereal/common/goldfish_vk_deepcopy.h"
+ #include "cereal/common/goldfish_vk_extension_structs.h"
++#include "dsa_color_buffer_tiling.h"
+ #include "gfxstream/host/BackendCallbacks.h"
+ #include "gfxstream/host/Tracing.h"
+ #include "goldfish_vk_private_defs.h"
+@@ -220,6 +221,19 @@ std::unique_ptr<AndroidNativeBufferInfo> AndroidNativeBufferInfo::create(
+ 
+         // Update create flags to match the color buffer imported
+         createImageCi.flags = importedColorBufferInfo.imageCreateInfoShallow.flags;
++        // And its tiling: the image reads the ColorBuffer's memory as the ColorBuffer's own
++        // image lays it out, and some ColorBuffers are linear (VkEmulation::colorBufferTiling)
++        // while a guest asks for optimal. A linear image also takes the ColorBuffer's size,
++        // since its row pitch follows its width (dsa_color_buffer_tiling.h); the guest's own
++        // extent stays in mExtent.
++        const VkImageCreateInfo& colorBufferCi = importedColorBufferInfo.imageCreateInfoShallow;
++        createImageCi.tiling = colorBufferCi.tiling;
++        const dsa::ImageSize size = dsa::imageSizeOnColorBuffer(
++            createImageCi.tiling == VK_IMAGE_TILING_LINEAR,
++            {createImageCi.extent.width, createImageCi.extent.height},
++            {colorBufferCi.extent.width, colorBufferCi.extent.height});
++        createImageCi.extent.width = size.width;
++        createImageCi.extent.height = size.height;
+ 
+         const auto& importedColorBufferMemoryInfo = importedColorBufferInfo.memory;
+ 
+diff --git a/host/vulkan/VkCommonOperations.cpp b/host/vulkan/VkCommonOperations.cpp
+--- a/host/vulkan/VkCommonOperations.cpp
++++ b/host/vulkan/VkCommonOperations.cpp
+@@ -29,6 +29,7 @@
+ #include <unordered_set>
+ 
+ #include "VkDecoderGlobalState.h"
++#include "dsa_color_buffer_tiling.h"
+ #include "dsa_copy_bands.h"
+ #include "VkEmulatedPhysicalDeviceMemory.h"
+ #include "VkFormatUtils.h"
+@@ -3279,7 +3280,7 @@ bool VkEmulation::createVkColorBufferLocked(uint32_t width, uint32_t height, GLe
+ 
+     VkImageTiling tiling = (infoPtr->memoryProperty & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+                                ? VK_IMAGE_TILING_LINEAR
+-                               : colorBufferTiling(vkFormat);
++                               : colorBufferTiling(vkFormat, infoPtr->width, infoPtr->height);
+     std::unique_ptr<VkImageCreateInfo> imageCi = generateColorBufferVkImageCreateInfoLocked(
+         vkFormat, infoPtr->width, infoPtr->height, tiling);
+     // pNext will be filled later.
+@@ -3542,7 +3543,90 @@ bool VkEmulation::supportsYuvColorBuffer(FrameworkFormat frameworkFormat) const
+     return sampled && written;
+ }
+ 
+-VkImageTiling VkEmulation::colorBufferTiling(VkFormat format) const {
++VkImageTiling VkEmulation::rgbColorBufferTiling(VkFormat format, uint32_t width,
++                                                uint32_t height) const {
++    // An app clears and draws its window buffer through an image on its own VkDevice, and the
++    // renderer's copy into the task window, screencap's readback and SurfaceFlinger read the
++    // same memory through images on other devices. Intel's driver for its Gen9 to Gen11 GPUs
++    // (UHD Graphics 0x8A56 on 31.0.101.2134, the last driver for Ice Lake) kept the app's
++    // fast clears in the app's image: every window showed its new frame's text and icons over
++    // parts of earlier frames, in every app, and `adb screencap` showed the same. A linear
++    // image has no compression state, so its clears are written to memory.
++    const VkPhysicalDeviceProperties& props = mDeviceInfo.physdevProps;
++    if (!dsa::rgbColorBuffersAreLinear(props.vendorID, props.deviceID) ||
++        gfxstream::vk::formatIsDepthOrStencil(format) ||
++        format == VK_FORMAT_G8_B8R8_2PLANE_422_UNORM ||
++        format == VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM ||
++        format == VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16) {
++        return VK_IMAGE_TILING_OPTIMAL;
++    }
++    // Every use an optimal ColorBuffer of this format has, a linear one must have too, at this
++    // size and with the external memory every ColorBuffer is made with where the device
++    // exports memory: the guest made its images for an optimal one, and a ColorBuffer or an
++    // image the device cannot make would fail the app's window.
++    constexpr VkFormatFeatureFlags kUses =
++        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
++        VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT |
++        VK_FORMAT_FEATURE_BLIT_SRC_BIT;
++    bool known = false;
++    VkFormatFeatureFlags optimalFeatures = 0;
++    VkFormatFeatureFlags linearFeatures = 0;
++    VkImageUsageFlags linearUsage = 0;
++    for (const auto& supportInfo : mImageSupportInfo) {
++        if (supportInfo.format != format || supportInfo.type != VK_IMAGE_TYPE_2D) {
++            continue;
++        }
++        if (!known) {
++            const VkFormatProperties& features = supportInfo.formatProps2.formatProperties;
++            optimalFeatures = features.optimalTilingFeatures & kUses;
++            linearFeatures = features.linearTilingFeatures & kUses;
++            known = true;
++        }
++        const VkExtent3D& maxExtent =
++            supportInfo.imageFormatProps2.imageFormatProperties.maxExtent;
++        if (supportInfo.tiling != VK_IMAGE_TILING_LINEAR || !supportInfo.supported ||
++            (mDeviceInfo.supportsExternalMemoryExport && !supportInfo.supportsExternalMemory) ||
++            maxExtent.width < width || maxExtent.height < height) {
++            continue;
++        }
++        linearUsage |= supportInfo.usageFlags;
++    }
++    VkImageUsageFlags neededUsage = 0;
++    if (optimalFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
++        neededUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
++    }
++    if (optimalFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
++        neededUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
++    }
++    if (optimalFeatures & (VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
++        neededUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
++    }
++    if (optimalFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) {
++        neededUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
++    }
++    const bool linear = known && (linearFeatures & optimalFeatures) == optimalFeatures &&
++                        (linearUsage & neededUsage) == neededUsage;
++    static std::mutex sLogLock;
++    static std::unordered_set<int> sLogged;
++    std::lock_guard<std::mutex> logLock(sLogLock);
++    if (sLogged.insert(static_cast<int>(format)).second) {
++        if (linear) {
++            INFO("RGB ColorBuffers of %s are linear on this GPU (vendor 0x%04x, device 0x%04x): "
++                 "its driver keeps an app's fast clears where the renderer and other apps do not "
++                 "see them, and a linear image writes every clear to memory.",
++                 string_VkFormat(format), props.vendorID, props.deviceID);
++        } else {
++            WARN("RGB ColorBuffers of %s stay optimal on this GPU (vendor 0x%04x, device "
++                 "0x%04x), which cannot draw into, sample, copy and export them linear at "
++                 "%ux%u: app windows may show parts of earlier frames where an app cleared.",
++                 string_VkFormat(format), props.vendorID, props.deviceID, width, height);
++        }
++    }
++    return linear ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
++}
++
++VkImageTiling VkEmulation::colorBufferTiling(VkFormat format, uint32_t width,
++                                             uint32_t height) const {
+     // A YUV ColorBuffer holds what a guest CPU wrote (a video's pictures, a camera's
+     // frames): the host copies the planes in, and the guest samples them through an image of
+     // its own on the same memory, made on another VkDevice. A driver that compresses an
+@@ -3555,7 +3639,7 @@ VkImageTiling VkEmulation::colorBufferTiling(VkFormat format) const {
+     // image is never compressed, so every reader sees the planes as written.
+     if (format != VK_FORMAT_G8_B8R8_2PLANE_420_UNORM &&
+         format != VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM) {
+-        return VK_IMAGE_TILING_OPTIMAL;
++        return rgbColorBufferTiling(format, width, height);
+     }
+     // Sampled through the 4:2:0 conversion the ColorBuffer's view and the guest use, written
+     // and read back by copies, as a 2D linear image with the external memory every
+diff --git a/host/vulkan/VkCommonOperations.h b/host/vulkan/VkCommonOperations.h
+--- a/host/vulkan/VkCommonOperations.h
++++ b/host/vulkan/VkCommonOperations.h
+@@ -258,8 +258,12 @@ class VkEmulation {
+     // The tiling of a device-local ColorBuffer of this format, and of every image a guest
+     // binds to its memory, which must be made the same way. Linear for an 8-bit 4:2:0 YUV
+     // format the device samples, copies and exports in linear tiling, so no driver keeps its
+-    // pictures compressed; optimal otherwise.
+-    VkImageTiling colorBufferTiling(VkFormat format) const;
++    // pictures compressed. On GPUs whose driver keeps an optimal image's fast clears where an
++    // image on another device does not see them (dsa_color_buffer_tiling.h), an RGB
++    // ColorBuffer is linear too, where the device can make it so at `width` x `height`.
++    // Optimal otherwise.
++    VkImageTiling colorBufferTiling(VkFormat format, uint32_t width, uint32_t height) const;
++    VkImageTiling rgbColorBufferTiling(VkFormat format, uint32_t width, uint32_t height) const;
+ 
+     bool createVkColorBuffer(uint32_t width, uint32_t height, GLenum format,
+                              FrameworkFormat frameworkFormat, uint32_t colorBufferHandle,
+diff --git a/host/vulkan/VkDecoderGlobalState.cpp b/host/vulkan/VkDecoderGlobalState.cpp
+--- a/host/vulkan/VkDecoderGlobalState.cpp
++++ b/host/vulkan/VkDecoderGlobalState.cpp
+@@ -8057,10 +8057,13 @@ class VkDecoderGlobalState::Impl {
+                 // parameters.
+                 if (imageCreateInfo.tiling == VK_IMAGE_TILING_OPTIMAL) {
+                     // A device-local ColorBuffer of a YUV format may be linear, so that no
+-                    // driver keeps what the host copies into it compressed; the image that
+-                    // reads it must be made the same way, or it reads the planes in another
+-                    // layout. A guest asks for optimal, which it cannot tell apart.
+-                    imageCreateInfo.tiling = m_vkEmulation->colorBufferTiling(resolvedFormat);
++                    // driver keeps what the host copies into it compressed, and so may an RGB
++                    // one, on a GPU whose driver keeps an app's fast clears per device; the
++                    // image that reads it must be made the same way, or it reads the memory in
++                    // another layout. A guest asks for optimal, which it cannot tell apart.
++                    imageCreateInfo.tiling = m_vkEmulation->colorBufferTiling(
++                        resolvedFormat, imageCreateInfo.extent.width,
++                        imageCreateInfo.extent.height);
+                 }
+                 colorBufferVkImageCi = m_vkEmulation->generateColorBufferVkImageCreateInfo(
+                     resolvedFormat, imageCreateInfo.extent.width, imageCreateInfo.extent.height,
+@@ -8083,6 +8086,10 @@ class VkDecoderGlobalState::Impl {
+             if (!colorBufferVkImageCi) {
+                 continue;
+             }
++            // An image on a ColorBuffer's memory reads it as the ColorBuffer's own image lays
++            // it out, so it takes that image's tiling: a guest asks for optimal, and some
++            // ColorBuffers are linear (VkEmulation::colorBufferTiling).
++            imageCreateInfo.tiling = colorBufferVkImageCi->tiling;
+             imageCreateInfo.format = resolvedFormat;
+             if (imageCreateInfo.flags & (~colorBufferVkImageCi->flags)) {
+                 ERR("The VkImageCreateInfo to import %s contains unsupported VkImageCreateFlags. "
