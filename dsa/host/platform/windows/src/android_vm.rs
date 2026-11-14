@@ -84,6 +84,12 @@ pub struct AndroidVmLauncher {
     /// The service's maker of direct-mapped system disks, while the host's direct-mapped mode
     /// is on: each boot maps the read-only disks as persistent memory where it can.
     direct_mapped: Option<Arc<DirectMappedImages>>,
+    /// The section the running VM shares with the window manager for decoded video pictures,
+    /// held while the VM runs (see `crate::picture_region`).
+    picture_section: Option<crate::picture_region::PictureSection>,
+    /// Where that memory is in the running VM, as HCS said once it started, for the guest's
+    /// control daemon.
+    shared_memory: Vec<dsa_protocol::control::GuestSharedMemory>,
 }
 
 /// How the boot `config` describes maps its read-only disks in the host's direct-mapped mode:
@@ -301,6 +307,75 @@ impl AndroidVmLauncher {
             networking: None,
             direct_mapped: None,
             user_root: None,
+            picture_section: None,
+            shared_memory: Vec::new(),
+        }
+    }
+
+    /// Makes the section the VM `config` describes shares for decoded pictures, with its
+    /// header. A section that cannot be made is left out of this boot, which then sends every
+    /// picture through the video port; the reason is logged.
+    fn make_picture_section(&mut self, config: &mut AndroidVmConfig) {
+        self.picture_section = None;
+        let Some(region) = config.picture_region.clone() else {
+            return;
+        };
+        let Some(user) = config.socket_sids.first() else {
+            config.picture_region = None;
+            return;
+        };
+        let sddl = crate::picture_region::section_sddl(user);
+        match crate::picture_region::PictureSection::create(
+            &region.section_name,
+            &sddl,
+            region.length,
+        ) {
+            Ok(section) => self.picture_section = Some(section),
+            Err(why) => {
+                eprintln!(
+                    "{}: decoded video pictures go through the video port this boot: the memory \
+                     shared for them could not be made ({why})",
+                    self.id
+                );
+                config.picture_region = None;
+            }
+        }
+    }
+
+    /// Asks the running VM where the picture section is, for the guest's control daemon.
+    fn find_picture_region(&mut self, system: &ComputeSystem, config: &AndroidVmConfig) {
+        self.shared_memory.clear();
+        let Some(region) = &config.picture_region else {
+            return;
+        };
+        use crate::picture_region::{guest_address_from_properties, properties_query};
+        match system.properties(&properties_query(), CALL_TIMEOUT) {
+            Ok(document) => match guest_address_from_properties(&document, &region.section_name) {
+                Some(address) => {
+                    eprintln!(
+                        "{}: decoded video pictures go through {} MiB of shared memory, which \
+                         HCS places at {address:#x} in the VM",
+                        self.id,
+                        region.length >> 20
+                    );
+                    self.shared_memory
+                        .push(dsa_protocol::control::GuestSharedMemory {
+                            name: dsa_host_core::video_slots::REGION_NAME.into(),
+                            guest_physical_address: address,
+                            length: region.length,
+                        });
+                }
+                None => eprintln!(
+                    "{}: decoded video pictures go through the video port this boot: HCS did not \
+                     say where the shared memory is ({document})",
+                    self.id
+                ),
+            },
+            Err(why) => eprintln!(
+                "{}: decoded video pictures go through the video port this boot: HCS did not say \
+                 where the shared memory is ({why})",
+                self.id
+            ),
         }
     }
 
@@ -485,6 +560,7 @@ impl AndroidVmLauncher {
             .runtime_id(CALL_TIMEOUT)
             .map_err(|e| format!("the Android VM started but its ID could not be read: {e}"))?;
         *self.vm_id.lock().unwrap_or_else(|e| e.into_inner()) = Some(vm_id);
+        self.find_picture_region(&system, config);
         self.system = Some(Arc::new(system));
         self.memory_base = Some(u64::from(config.memory_mb));
         Ok(())
@@ -591,7 +667,25 @@ impl GuestLauncher for AndroidVmLauncher {
         if let Some(networking) = &mut self.networking {
             config.network_adapter = networking.attach(&self.id);
         }
-        let started = self.create_and_start(&config, &boot);
+        self.make_picture_section(&mut config);
+        let mut started = self.create_and_start(&config, &boot);
+        // A Windows build whose HCS does not take the shared memory region refuses the whole
+        // VM: Android then starts without it, and its pictures go through the video port.
+        let refused = started
+            .as_ref()
+            .err()
+            .filter(|_| config.picture_region.is_some())
+            .cloned();
+        if let Some(why) = refused {
+            eprintln!(
+                "{}: Android did not start with memory shared for decoded video pictures ({why}); \
+                 it starts without it",
+                self.id
+            );
+            config.picture_region = None;
+            self.picture_section = None;
+            started = self.create_and_start(&config, &boot);
+        }
         // A VM that did not come up leaves no network behind, whether or not the session
         // stops it afterwards.
         if started.is_err() {
@@ -631,6 +725,10 @@ impl GuestLauncher for AndroidVmLauncher {
         self.system = None;
         self.memory_base = None;
         *self.vm_id.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        // The VM no longer maps the picture section; it goes once the window manager lets
+        // its view go too.
+        self.shared_memory.clear();
+        self.picture_section = None;
         // The VM is gone, so its end of the console pipe closes and the rest is read.
         self.end_console(CONSOLE_DRAIN);
         // Its network goes with it.
@@ -655,6 +753,10 @@ impl GuestLauncher for AndroidVmLauncher {
 
     fn vm_id(&self) -> Option<String> {
         self.runtime_id().ok().map(|g| g.to_string())
+    }
+
+    fn shared_memory(&self) -> Vec<dsa_protocol::control::GuestSharedMemory> {
+        self.shared_memory.clone()
     }
 
     fn prerequisite(&mut self) -> Option<String> {

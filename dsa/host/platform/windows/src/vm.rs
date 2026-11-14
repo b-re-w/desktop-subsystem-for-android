@@ -22,6 +22,8 @@
 //!   persistent memory instead, mapped from their files, so the guest maps their files rather
 //!   than caching them (see [`DirectMapped`]);
 //! - Hyper-V sockets limited to SYSTEM and the user the VM belongs to;
+//! - a region of memory the window manager shares with the guest for decoded video pictures,
+//!   which the guest reads but cannot write (see `crate::picture_region`);
 //! - the guest's console on the first serial port (COM1 on x86_64, a PL011 UART on ARM64),
 //!   which HCS connects to a named pipe the host serves, as WSL does for its debug console.
 //!   A Linux guest prints there from the first instruction (`earlycon`), so a boot that fails
@@ -146,6 +148,11 @@ pub struct AndroidVmConfig {
     /// attached as virtual persistent memory instead of SCSI disks, so the guest maps their
     /// files rather than caching them. `None` attaches them as disks.
     pub direct_mapped: Option<DirectMapped>,
+    /// The section the VM shares with the window manager for decoded video pictures, attached
+    /// as a shared memory region the guest reads but cannot write (see
+    /// `crate::picture_region`). `None` attaches none, and every picture goes through the
+    /// video port.
+    pub picture_region: Option<crate::picture_region::PictureRegion>,
 }
 
 /// How a direct-mapped boot attaches the read-only disks (see
@@ -567,6 +574,9 @@ impl AndroidVmConfig {
         if let Some(adapter) = &self.network_adapter {
             devices["NetworkAdapters"] = json!({});
             devices["NetworkAdapters"][NETWORK_ADAPTER_NAME] = adapter.to_hcs();
+        }
+        if let Some(region) = &self.picture_region {
+            devices["SharedMemory"] = region.to_hcs();
         }
         let mut memory = json!({
             "SizeInMB": memory_mb,

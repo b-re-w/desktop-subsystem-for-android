@@ -81,9 +81,11 @@ mod system {
         Codec, CodecSupport, DecoderReport, Packet, Picture, VideoDecoder, VideoDecoders,
     };
     use dsa_host_core::video_layout::{
-        chroma_start_row, mapped_chroma_row, picture_from_surface_area, rows_from_length,
-        staging_rows, stream_frame_size, visible_area, Area, Size, StreamSizes, SurfaceFormat,
+        chroma_start_row, mapped_chroma_row, picture_from_surface_area, picture_into,
+        picture_stride, rows_from_length, staging_rows, stream_frame_size, visible_area, Area,
+        Size, StreamSizes, SurfaceFormat,
     };
+    use dsa_host_core::video_slots::{PictureSlots, StreamSlots};
     use windows::core::{Interface, GUID};
     use windows::Win32::Foundation::{HMODULE, VARIANT_TRUE};
     use windows::Win32::Graphics::Direct3D::{
@@ -545,6 +547,9 @@ mod system {
         staging: Option<Staging>,
         /// What the reads back took since the stream's numbers were last logged.
         report: DecoderReport,
+        /// The slots of the memory shared with the guest, when the stream's pictures go there:
+        /// a picture read back is written straight into one.
+        slots: Option<Arc<StreamSlots>>,
     }
 
     // SAFETY: the transform and the device are free threaded (the device is made
@@ -606,7 +611,44 @@ mod system {
                 sample_size: info.cbSize,
                 staging: None,
                 report: DecoderReport::default(),
+                slots: None,
             })
+        }
+
+        /// Copies the picture in `area` of a mapped surface out: into a slot of the shared
+        /// memory when the stream has one free, so the picture is copied once on its way to
+        /// the guest, else into memory of its own.
+        fn copy_out(
+            &self,
+            id: u64,
+            bytes: &[u8],
+            format: SurfaceFormat,
+            pitch: usize,
+            chroma: usize,
+            area: Area,
+        ) -> Option<Picture> {
+            if let Some(slots) = &self.slots {
+                let stride = picture_stride(area.width);
+                if let Some(len) = Picture::nv12_len(area.width, area.height, stride) {
+                    if let Some(slot) = slots.take(len) {
+                        let written = slots.write(&slot, |out| {
+                            picture_into(out, bytes, format, pitch, chroma, area)
+                        });
+                        if written {
+                            return Some(Picture {
+                                id,
+                                width: area.width,
+                                height: area.height,
+                                stride,
+                                nv12: Vec::new(),
+                                slot: Some(slot),
+                            });
+                        }
+                        slots.give_back(slot.number);
+                    }
+                }
+            }
+            picture_from_surface_area(id, bytes, format, pitch, chroma, area)
         }
 
         fn input_sample(&self, packet: &Packet) -> Result<IMFSample, String> {
@@ -806,7 +848,7 @@ mod system {
                     None
                 } else {
                     let bytes = std::slice::from_raw_parts(mapped.pData as *const u8, len);
-                    picture_from_surface_area(id, bytes, format, pitch, chroma, area)
+                    self.copy_out(id, bytes, format, pitch, chroma, area)
                 };
                 context.Unmap(&staging, 0);
                 self.report.surface = Some(format!(
@@ -863,7 +905,7 @@ mod system {
                     let rows = chroma_start_row(surface_rows, coded_rows, bottom);
                     let len = pitch * (rows + rows.div_ceil(2));
                     let bytes = std::slice::from_raw_parts(data, len);
-                    let picture = picture_from_surface_area(id, bytes, format, pitch, rows, area);
+                    let picture = self.copy_out(id, bytes, format, pitch, rows, area);
                     let _ = two_d.Unlock2D();
                     self.report.surface = Some(format!(
                         "read through Media Foundation's lock, pitch {pitch}, chroma at row \
@@ -889,7 +931,7 @@ mod system {
                     bottom,
                 );
                 let bytes = std::slice::from_raw_parts(data, len as usize);
-                let picture = picture_from_surface_area(id, bytes, format, pitch, rows, area);
+                let picture = self.copy_out(id, bytes, format, pitch, rows, area);
                 let _ = buffer.Unlock();
                 Ok(picture)
             }
@@ -961,6 +1003,10 @@ mod system {
         fn take_report(&mut self) -> DecoderReport {
             std::mem::take(&mut self.report)
         }
+
+        fn use_slots(&mut self, slots: Arc<StreamSlots>) {
+            self.slots = Some(slots);
+        }
     }
 
     /// The host's decoders: the formats whose Media Foundation decoder takes the GPU.
@@ -978,6 +1024,9 @@ mod system {
         opened: AtomicBool,
         /// Told once every decoder has closed and what they shared is gone.
         let_go: Box<dyn Fn() + Send + Sync>,
+        /// The memory shared with the guest for decoded pictures, while a stream uses it: the
+        /// streams of one view share its slots, and the view goes with the last of them.
+        picture_slots: Mutex<Weak<PictureSlots>>,
     }
 
     /// How long the probe may take before it is given up, and no format is offered.
@@ -1017,6 +1066,7 @@ mod system {
                 platform: Mutex::new(Weak::new()),
                 opened: AtomicBool::new(false),
                 let_go,
+                picture_slots: Mutex::new(Weak::new()),
             }
         }
 
@@ -1082,6 +1132,22 @@ mod system {
                 "video: the last decoder closed; its GPU device and Media Foundation were let go",
             );
             (self.let_go)();
+        }
+
+        /// The section the service made for this user's VM, mapped while a stream uses it.
+        fn picture_slots(&self) -> Result<Arc<PictureSlots>, String> {
+            let mut held = self.picture_slots.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(slots) = held.upgrade() {
+                return Ok(slots);
+            }
+            let user = crate::account::current_user_sid()?;
+            let name = crate::picture_region::section_name(&user);
+            let view = crate::picture_region::SectionView::open(&name).map_err(|e| {
+                format!("the memory shared with Android ({name}) cannot be opened: {e}")
+            })?;
+            let slots = PictureSlots::open(view)?;
+            *held = Arc::downgrade(&slots);
+            Ok(slots)
         }
     }
 }

@@ -385,6 +385,7 @@ mod toolbox {
             height: frame.height,
             stride: frame.stride,
             nv12: frame.nv12,
+            slot: None,
         })
     }
 

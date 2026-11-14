@@ -421,6 +421,17 @@ impl ComputeSystem {
         *exited
     }
 
+    /// The VM's properties document for the properties `query` asks for (an HCS properties
+    /// query, such as `{"PropertyTypes":["SharedMemoryRegion"]}`).
+    pub fn properties(&self, query: &str, timeout: Duration) -> Result<String, HcsError> {
+        self.system_operation(
+            "HcsGetComputeSystemProperties",
+            self.api.get_compute_system_properties,
+            Some(query),
+            timeout,
+        )
+    }
+
     /// The VM's runtime ID, which its Hyper-V sockets are addressed by.
     pub fn runtime_id(&self, timeout: Duration) -> Result<Guid, HcsError> {
         let properties = self.system_operation(

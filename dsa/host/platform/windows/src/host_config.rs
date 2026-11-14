@@ -302,6 +302,12 @@ pub struct HostConfig {
     /// the mode.
     #[serde(default)]
     pub direct_mapped_images: bool,
+    /// The size in MiB of the memory the VM shares with the window manager for decoded video
+    /// pictures (64 when absent, 0 for none). Decoded pictures go there instead of through the
+    /// video port, a copy each; the size is fixed when the VM is made, counts against the
+    /// system's commit limit, and takes memory only while video plays.
+    #[serde(default)]
+    pub video_shared_memory_mb: Option<u64>,
     /// The machine's DSA folder: the folder the configuration file is in, which `dsa-hostd`
     /// fills in when it reads the file. Not a key of the file.
     #[serde(skip)]
@@ -686,6 +692,11 @@ impl HostConfig {
         let files = self.image_files(None);
         let pstore_disk = Some(crate::paths::pstore_disk_beside(&data_disk));
         let addon_disk = Some(crate::paths::addon_disk_beside(&data_disk));
+        // The section is named after the user the VM belongs to, who may map it.
+        let picture_region = crate::picture_region::picture_region(
+            socket_sids.first().map(String::as_str),
+            self.video_shared_memory_mb,
+        );
         AndroidVmConfig {
             owner: format!("DSA ({vm_name})"),
             kernel: files.kernel,
@@ -708,6 +719,7 @@ impl HostConfig {
             fine_grained_memory: false,
             network_adapter: None,
             direct_mapped: None,
+            picture_region,
         }
     }
 
