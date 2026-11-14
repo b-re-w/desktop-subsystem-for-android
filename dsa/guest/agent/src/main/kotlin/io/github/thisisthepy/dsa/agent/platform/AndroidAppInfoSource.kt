@@ -1,6 +1,7 @@
 package io.github.thisisthepy.dsa.agent.platform
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
@@ -44,7 +45,15 @@ class AndroidAppInfoSource(
         } catch (e: PackageManager.NameNotFoundException) {
             return null
         }
-        val label = app.loadLabel(pm).toString().ifEmpty { packageName }
+        // The name a launcher shows, as the list of installed apps gives it, so the host never
+        // sees two names for one app: the launcher activity's label may differ from the app's
+        // own (the Play Store's activity is "Play Store", the app "Google Play Store").
+        val listedName = try {
+            launcherLabel(pm, packageName)
+        } catch (e: RuntimeException) {
+            null
+        }
+        val label = listedName ?: app.loadLabel(pm).toString().ifEmpty { packageName }
         var size = WINDOW_ICON_SIZE
         // The icon a launcher shows, which the Start menu shows too: the launcher activity's,
         // which may differ from the app's own, as an activity alias's often does.
@@ -97,6 +106,17 @@ internal fun launcherIconResource(pm: PackageManager, packageName: String): Int?
     // A match whose icon comes from another package cannot be loaded from this app's resources.
     if (resolved.resolvePackageName != null || resolved.activityInfo?.packageName != packageName) return null
     return resolved.iconResource.takeIf { it != 0 }
+}
+
+/**
+ * The label of [packageName]'s first launcher activity, as [AndroidLauncherApps] names the app
+ * in the list of installed apps; null when the app has no launcher activity or it has no label.
+ */
+internal fun launcherLabel(pm: PackageManager, packageName: String): String? {
+    val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(packageName)
+    val activity = pm.queryIntentActivities(launcher, PackageManager.ResolveInfoFlags.of(0))
+        .firstOrNull { it.activityInfo?.packageName == packageName } ?: return null
+    return activity.loadLabel(pm).toString().takeIf { it.isNotEmpty() }
 }
 
 /**

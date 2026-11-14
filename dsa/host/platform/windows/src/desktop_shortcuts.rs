@@ -49,9 +49,13 @@ pub fn creates_desktop_shortcut(args: &[String]) -> bool {
 /// Puts a shortcut to the app whose window program is `program` (this one, named after the
 /// app) on the user's desktop, as the app's jump list asks; returns its path.
 pub fn place_program_on_desktop(package: &str, program: &Path) -> Result<PathBuf, String> {
-    let label = program
-        .file_stem()
-        .map(|stem| stem.to_string_lossy().into_owned())
+    // The program keeps its first name when the app is renamed; its note has the app's name.
+    let label = crate::app_exe::program_label(program)
+        .or_else(|| {
+            program
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+        })
         .unwrap_or_else(|| package.to_string());
     let entry = MenuEntry {
         package: package.to_string(),
@@ -398,6 +402,45 @@ impl Desktop {
         made.shortcuts.insert(shortcut.id.clone(), path.clone());
         write_note(&self.note, &note)?;
         Ok(path)
+    }
+
+    /// Brings the shortcuts made for each app in `entries` in step with it: the app's own is
+    /// renamed after the app and runs its program as the Start menu's does, and each of its app
+    /// shortcuts runs the app's program, keeping its name, arguments and icon. A shortcut the
+    /// user removed from the desktop is not made again. Returns what went wrong, one sentence
+    /// each; the rest is done anyway.
+    pub fn keep_in_step(&self, entries: &[MenuEntry], shortcuts: &dyn Shortcuts) -> Vec<String> {
+        let mut problems = Vec::new();
+        let note = self.made();
+        let present = |path: &&PathBuf| {
+            is_shortcut_path(path) && path.parent() == Some(self.dir.as_path()) && path.exists()
+        };
+        for (package, made) in &note.apps {
+            let Some(entry) = entries.iter().find(|entry| &entry.package == package) else {
+                continue;
+            };
+            if made.app.as_ref().filter(present).is_some() {
+                if let Err(why) = self.place_app(entry, shortcuts) {
+                    problems.push(format!(
+                        "could not bring {package}'s desktop shortcut in step: {why}"
+                    ));
+                }
+            }
+            for path in made.shortcuts.values().filter(present) {
+                let Ok(link) = shortcuts.read(path) else {
+                    continue;
+                };
+                if let Some(fixed) = crate::start_menu::retargeted(&link, entry) {
+                    if let Err(why) = shortcuts.write(path, &fixed) {
+                        problems.push(format!(
+                            "could not point {} at {package}'s program: {why}",
+                            path.display()
+                        ));
+                    }
+                }
+            }
+        }
+        problems
     }
 
     /// Removes the shortcuts of every app that is not in `installed`. Returns what went wrong,
