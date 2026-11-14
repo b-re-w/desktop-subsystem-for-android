@@ -80,9 +80,15 @@ class HostRenderer {
     // connection.
     bool hostHasYuv();
     // Writes `packed` (layout.packedSize() bytes, dsa_cpu_upload.h) over the ColorBuffer and
-    // waits until the host has. False when the host refused it.
+    // waits until the host has. False when the host refused it. When `packed` is the staging
+    // memory stagingFor() gave, the host reads it in place and nothing crosses the stream.
     bool uploadColorBuffer(uint32_t colorBuffer, const dsa::UploadLayout& layout,
                            const uint8_t* packed);
+    // Memory of at least `bytes` the planes may be packed into: a staging grant of the
+    // graphics memory the host shares (dsa_graphics_memory.h), asked for on the process pipe
+    // and mapped; null when the host or the guest has none, and the planes then go through
+    // the stream.
+    uint8_t* stagingFor(size_t bytes);
     // A ColorBuffer of its own, opened for this process. 0 on failure.
     uint32_t createColorBuffer(uint32_t width, uint32_t height);
     void closeColorBuffer(uint32_t handle);

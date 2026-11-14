@@ -53,8 +53,11 @@ class SparePagesTests(unittest.TestCase):
         self.assertIn("    dsa::releaseSparePages(mUploadStaging.data(), mUploadStaging.size());", lines)
         hwc = HWC_UPLOAD.read_text(encoding="utf-8")
         self.assertIn('#include "dsa_spare_pages.h"', hwc)
-        self.assertLess(hwc.index("host.uploadColorBuffer(colorBuffer, layout, mStaging.data())"),
+        # Its own copy, when the planes went there rather than into the graphics memory the
+        # host shares (test_shared_graphics_memory_patch.py).
+        self.assertLess(hwc.index("host.uploadColorBuffer(colorBuffer, layout, packed)"),
                         hwc.index("dsa::releaseSparePages(mStaging.data(), mStaging.size())"))
+        self.assertIn("if (packed == mStaging.data()) {", hwc)
 
     def test_nfr1_the_hwcomposers_own_stream_hands_back_its_spare_pages_after_each_transfer(self):
         # The hwcomposer's vsock stream to the renderer carries the pictures a CPU wrote, so it
