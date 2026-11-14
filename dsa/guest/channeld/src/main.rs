@@ -376,7 +376,30 @@ mod daemon {
     /// (`dsa-memory.rc`): only init may write the driver's parameter.
     #[cfg(target_os = "android")]
     fn map_shared_memory(region: &dsa_protocol::control::GuestSharedMemory) {
-        use dsa_guest_channeld::shared_memory::{property_value, PROPERTY};
+        use dsa_guest_channeld::shared_memory::{
+            property_value, GraphicsRegions, GRAPHICS_PROPERTY, PROPERTY,
+        };
+        // The graphics memory comes as two regions, which the kernel takes in one value.
+        if GraphicsRegions::is_graphics(region) {
+            static GRAPHICS: std::sync::Mutex<Option<GraphicsRegions>> =
+                std::sync::Mutex::new(None);
+            let value = GRAPHICS
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .get_or_insert_with(GraphicsRegions::default)
+                .take(region);
+            if let Some(value) = value {
+                match set_property(GRAPHICS_PROPERTY, &value) {
+                    Ok(()) => say!("the host shares graphics memory: {value}"),
+                    Err(why) => {
+                        say!(
+                            "host-visible graphics memory comes through the graphics stream: {why}"
+                        )
+                    }
+                }
+            }
+            return;
+        }
         let Some(value) = property_value(region) else {
             say!(
                 "the host shares memory named {:?}, which this guest does not use",

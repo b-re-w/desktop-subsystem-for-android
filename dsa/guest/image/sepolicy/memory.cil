@@ -223,3 +223,18 @@
 ; init lets every user read the device (dsa-memory.rc); the rules above and codec2.cil decide
 ; which domain may open it.
 (allow vendor_init dsa_video_pictures_device (chr_file (getattr setattr)))
+
+; The graphics memory the host shares (dsa_graphics_memory in DSA's kernel, dsa-memory.rc).
+; dsa-channeld sets where its two regions are in vendor.dsa.graphics_memory (channeld.cil), and
+; init writes that to /sys/module/dsa_graphics_memory/parameters/graphics_memory, which only init
+; may write. The driver's device, /dev/dsa_graphics_memory, is labelled as the GPU is
+; (gpu_device, make-image.py), so every domain that may use the GPU may open it: each app's
+; Vulkan driver maps its own host-visible memory there, and the driver lets a file map only the
+; grants whose keys the host's renderer gave its process.
+(genfscon sysfs "/module/dsa_graphics_memory" (u object_r dsa_sysfs_shared_memory ((s0) (s0))))
+(type dsa_graphics_memory_prop)
+(roletype object_r dsa_graphics_memory_prop)
+(typeattributeset property_type (dsa_graphics_memory_prop))
+(typeattributeset vendor_property_type (dsa_graphics_memory_prop))
+(allow vendor_init dsa_graphics_memory_prop (file (read open getattr map)))
+(allow vendor_init gpu_device (chr_file (getattr setattr)))
