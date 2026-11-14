@@ -3379,6 +3379,23 @@ pub fn gpus_json() -> Value {
     }
 }
 
+/// The render GPU `dsa settings set render-gpu <value>` asks the service for: a keyword, or
+/// part of the name of a GPU `gpus` (what `dsa gpus --json` prints) lists. Anything else is
+/// refused before it reaches the service, with the names to choose from.
+pub fn render_gpu_choice(value: &str, gpus: &Value) -> Result<String, String> {
+    let names: Vec<String> = gpus["gpus"]
+        .as_array()
+        .map(|list| {
+            list.iter()
+                .filter_map(|gpu| gpu["name"].as_str())
+                .filter(|name| !name.trim().is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    dsa_host_core::settings::check_render_gpu_choice(value, &names)
+}
+
 fn describe_gpus(gpus: &Value) -> String {
     let list = gpus["gpus"].as_array().cloned().unwrap_or_default();
     if list.is_empty() {
@@ -3487,7 +3504,9 @@ fn settings(invocation: &Invocation, client: &mut HostApiClient) -> Result<Strin
     if let Some(change) = &invocation.change {
         let mut wanted = report.settings.clone();
         match change {
-            Change::RenderGpu(value) => wanted.render_gpu = value.clone(),
+            Change::RenderGpu(value) => {
+                wanted.render_gpu = render_gpu_choice(value, &gpus_json())?;
+            }
             Change::Freeze(on) => wanted.freeze = *on,
             Change::LinksInAndroid(on) => wanted.links_in_android = *on,
             Change::Clipboard(on) => wanted.clipboard = *on,

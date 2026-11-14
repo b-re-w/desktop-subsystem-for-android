@@ -360,6 +360,35 @@ pub fn normalise_render_gpu(value: &str) -> Result<String, String> {
     })
 }
 
+/// Checks a render GPU value a user asks for against the GPUs of this computer, the names
+/// `dsa gpus` lists, and writes it the way it is kept. A keyword (`display`, the automatic
+/// choice, `integrated` or `discrete`) is always taken. A name must be part of one of `gpus`,
+/// ignoring case, as the renderer matches it: a value no GPU has would leave the renderer to
+/// rank the GPUs itself while the settings still showed the value as chosen. An empty `gpus`
+/// means the platform cannot list its GPUs, so a name is kept as given.
+pub fn check_render_gpu_choice<S: AsRef<str>>(value: &str, gpus: &[S]) -> Result<String, String> {
+    let kept = normalise_render_gpu(value)?;
+    if matches!(kept.as_str(), "display" | "integrated" | "discrete") || gpus.is_empty() {
+        return Ok(kept);
+    }
+    let wanted = kept.to_lowercase();
+    if gpus
+        .iter()
+        .any(|gpu| gpu.as_ref().to_lowercase().contains(&wanted))
+    {
+        return Ok(kept);
+    }
+    let names = gpus
+        .iter()
+        .map(|gpu| format!("\"{}\"", gpu.as_ref()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(format!(
+        "no GPU of this computer has \"{kept}\" in its name; use display (the GPU that drives \
+         the primary monitor), integrated, discrete or part of one of these names: {names}"
+    ))
+}
+
 /// The name a user's files in the service's folder start with. The identity becomes a file
 /// name, so only the characters SIDs and Unix user IDs use are accepted.
 pub(crate) fn user_file_stem(user: &str) -> Result<String, String> {
@@ -1284,6 +1313,53 @@ mod tests {
     fn fr17_a_gpu_name_keeps_its_case() {
         assert_eq!(normalise_render_gpu(" RTX 4050 ").unwrap(), "RTX 4050");
         assert_eq!(normalise_render_gpu("INTEGRATED").unwrap(), "integrated");
+    }
+
+    #[test]
+    fn pr3_a_render_gpu_no_gpu_of_this_computer_has_is_rejected() {
+        // The GPUs `dsa gpus` listed on the reporter's laptop.
+        let gpus = ["Intel(R) UHD Graphics"];
+        let refused = check_render_gpu_choice("bogusvalue", &gpus).unwrap_err();
+        assert!(refused.contains("\"bogusvalue\""), "{refused}");
+        assert!(refused.contains("\"Intel(R) UHD Graphics\""), "{refused}");
+        assert!(refused.contains("display"), "{refused}");
+        assert!(check_render_gpu_choice("RTX", &gpus).is_err());
+        assert!(check_render_gpu_choice("  ", &gpus).is_err());
+    }
+
+    #[test]
+    fn pr3_a_render_gpu_keyword_or_part_of_a_listed_name_is_taken() {
+        let gpus = [
+            "Intel(R) Arc(TM) Graphics",
+            "NVIDIA GeForce RTX 4050 Laptop GPU",
+        ];
+        // The automatic choice and the other keywords are taken whatever the GPUs are.
+        assert_eq!(
+            check_render_gpu_choice("display", &gpus).unwrap(),
+            "display"
+        );
+        assert_eq!(
+            check_render_gpu_choice("Display", &gpus).unwrap(),
+            "display"
+        );
+        assert_eq!(
+            check_render_gpu_choice("INTEGRATED", &gpus).unwrap(),
+            "integrated"
+        );
+        assert_eq!(
+            check_render_gpu_choice("discrete", &gpus).unwrap(),
+            "discrete"
+        );
+        // A name matches ignoring case, as the renderer matches it, and keeps its case.
+        assert_eq!(
+            check_render_gpu_choice(" rtx 4050 ", &gpus).unwrap(),
+            "rtx 4050"
+        );
+        assert_eq!(check_render_gpu_choice("Arc", &gpus).unwrap(), "Arc");
+        // A platform that cannot list its GPUs keeps a name as given.
+        let none: [&str; 0] = [];
+        assert_eq!(check_render_gpu_choice("Arc", &none).unwrap(), "Arc");
+        assert!(check_render_gpu_choice("", &none).is_err());
     }
 
     #[test]
