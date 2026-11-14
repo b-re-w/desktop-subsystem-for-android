@@ -281,6 +281,26 @@ fn nfr2_the_guest_is_told_the_fault_cluster_and_compacts_only_for_whole_block_re
 }
 
 #[test]
+fn nfr1_the_guest_waits_a_second_before_it_reports_freed_pages() {
+    // A 4K video frees and allocates 11 MiB pictures 30 times a second; reported at once,
+    // the host took each back and faulted it in again, 20 GiB a minute. With the wait, what is
+    // freed and reused within it stays with the guest, at every reporting order.
+    for order in [0, 9] {
+        let mut vm = config();
+        vm.fine_grained_memory = order == 0;
+        vm.page_reporting_order = order;
+        for arch in [GuestArch::X86_64, GuestArch::Arm64] {
+            let cmdline = vm.full_kernel_cmdline_for(arch);
+            assert_eq!(
+                cmdline.matches("page_reporting.delay_ms=1000").count(),
+                1,
+                "{cmdline}"
+            );
+        }
+    }
+}
+
+#[test]
 fn nfr2_fine_grained_memory_is_only_used_on_builds_with_the_teardown_fix() {
     assert!(fine_grained_memory_supported(26100, 0));
     assert!(fine_grained_memory_supported(26300, 0));

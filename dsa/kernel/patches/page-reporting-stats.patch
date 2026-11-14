@@ -1,8 +1,8 @@
 diff --git a/mm/page_reporting.c b/mm/page_reporting.c
 --- a/mm/page_reporting.c
 +++ b/mm/page_reporting.c
-@@ -57,6 +57,9 @@
- #define PAGE_REPORTING_DELAY	0
+@@ -67,6 +67,9 @@
+ #define PAGE_REPORTING_DELAY	msecs_to_jiffies(page_reporting_delay_ms)
  static struct page_reporting_dev_info __rcu *pr_dev_info __read_mostly;
  
 +/* The pages reported to the host since boot (page_reporting.reported_total_kb). */

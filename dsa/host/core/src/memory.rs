@@ -952,6 +952,9 @@ pub const GUEST_COMPACTION_CMDLINE: &str = "androidboot.dsa.memory_compaction=on
 /// page it hands out, so they are reported again (`page_reporting.fault_cluster_order`, a
 /// parameter of DSA's kernel). Without it the host backs them again with their neighbour and
 /// the guest never offers them a second time.
+///
+/// Every pass waits [`PAGE_REPORTING_DELAY_MS`] (`page_reporting.delay_ms`, a parameter of
+/// DSA's kernel) after the free that asked for it.
 pub fn page_reporting_cmdline(order: u8, fault_cluster_order: u8) -> String {
     let mut words = format!("page_reporting.page_reporting_order={order}");
     if fault_cluster_order > 0 {
@@ -963,8 +966,29 @@ pub fn page_reporting_cmdline(order: u8, fault_cluster_order: u8) -> String {
         words.push(' ');
         words.push_str(GUEST_COMPACTION_CMDLINE);
     }
+    words.push_str(&format!(
+        " page_reporting.delay_ms={PAGE_REPORTING_DELAY_MS}"
+    ));
     words
 }
+
+/// How long the guest's free page reporting waits before each pass, in milliseconds.
+///
+/// With no wait, memory the guest frees and allocates again many times a second was reported
+/// every time, taken back by the host and faulted in again: a 4K video frees and allocates its
+/// pictures (11 MiB each, 30 a second, about 330 MiB a second) and on the owner's PC the guest
+/// reported 20 GiB a minute while one played and 6 GiB a minute after, 197 GB since boot taken
+/// back in again with a neighbour. A pass reports only what is free when it runs, so with one a
+/// second at most, a picture freed and allocated again between two passes is never reported,
+/// and what a pass can catch is bounded by what is free at that moment (a few pictures): some
+/// 2 GiB a minute at the most for the same video, a tenth.
+///
+/// What stays free still goes back: each pass takes a sixteenth of each order's free blocks
+/// (the kernel's budget), so a large free (an app closing, the idle reclaim's report of every
+/// free page) reaches the host in about 16 passes, 16 s, where it took well under a second
+/// without the wait and 32 s with upstream's two seconds. That is within the minute after an
+/// app closes in which the VM's memory must fall.
+pub const PAGE_REPORTING_DELAY_MS: u32 = 1000;
 
 /// The least memory the host's own system keeps when the VM is sized to the host, in MiB.
 pub const HOST_RESERVE_MIN_MB: u64 = 2048;
