@@ -1530,8 +1530,8 @@ msgstr "「システム (強制)」は、拡大率の変更に対応すると宣
 msgid "System (recommended for this app)"
 msgstr "システム (このアプリに推奨)"
 
-msgid "App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, and text stays sharp.\nIt is recreated once with its state kept, so it redraws briefly.\nSystem: DSA scales the window to the same physical size, and never recreates the app. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube, and App for every other app."
-msgstr "アプリ: ドラッグ中は DSA がウィンドウを拡大縮小します。離すとアプリが新しい拡大率で描き直し、文字はくっきりしたままです。\n状態を保ったまま 1 回作り直されるため、一瞬描き直されます。\nシステム: DSA がウィンドウを同じ物理サイズに拡大縮小し、アプリを作り直しません。文字が少しぼやけることがあります。\n「自動」では、YouTube のように実行中に拡大率が変わると崩れるアプリには「システム」を、それ以外のアプリには「アプリ」を使います。"
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "アプリ: ウィンドウが新しいモニターに着くとすぐ、アプリがそのモニターの拡大率で描き直すので、文字はくっきりしたままです。\nこれに対応すると示していないアプリは、状態を保ったまま作り直されるため、一瞬描き直されることがあります。\nシステム: DSA がウィンドウを同じ物理サイズに拡大縮小します。文字が少しぼやけることがあります。\n「自動」では、YouTube のように実行中に拡大率が変わると崩れるアプリには「システム」を、それ以外のアプリには、自分で対応すると示していれば「アプリ」を、示していなければ「システム」を使います。\n「自動」と「システム」はアプリを再起動しません。"
 
 msgid "Getting the update ready"
 msgstr "アップデートを準備しています"

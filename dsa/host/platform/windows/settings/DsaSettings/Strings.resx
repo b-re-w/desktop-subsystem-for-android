@@ -1717,9 +1717,10 @@ Applies the next time the app's window opens.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Who scales this app when its window moves to a monitor of another scale.
-• App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale and text stays sharp: Android recreates its screen once and keeps its state, so it redraws briefly.
-• System: the app keeps its scale and DSA scales its window to the same physical size. The app is never recreated. Text can look a little blurry.
-• Automatic: System for apps that break when their scale changes while they run, such as YouTube; App for every other app.</value>
+• App: the task takes the new monitor's scale at once when the window reaches it, and the app redraws at that scale, so text stays sharp. For an app that does not say it handles this, Android recreates its screen and keeps its state, so it may redraw briefly.
+• System: the app keeps its scale and DSA scales its window to the same physical size. Text can look a little blurry.
+• Automatic: System for apps that break when their scale changes while they run, such as YouTube; for any other app, App if it says it handles this, System if not.
+Automatic and System never restart the app.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Automatic (app)</value>

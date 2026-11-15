@@ -1717,9 +1717,10 @@ Se aplica la próxima vez que se abra la ventana de la app.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Quién escala esta aplicación cuando su ventana pasa a un monitor con otra escala.
-• Aplicación: DSA escala la ventana al arrastrarla. Al soltarla, la aplicación se redibuja un instante a la nueva escala y el texto queda nítido: Android recrea su pantalla una vez sin perder su estado.
-• Sistema: la aplicación mantiene su escala y DSA ajusta la ventana al mismo tamaño físico, sin recrearla. El texto puede perder nitidez.
-• Automático: Sistema para las aplicaciones que fallan si cambia su escala en ejecución, como YouTube; Aplicación para todas las demás.</value>
+• Aplicación: la aplicación adopta la escala del nuevo monitor en cuanto la ventana llega a él y se redibuja a esa escala, así el texto queda nítido. Si una aplicación no indica que lo gestiona, Android recrea su pantalla sin perder su estado, por lo que puede redibujarse un instante.
+• Sistema: la aplicación mantiene su escala y DSA ajusta la ventana al mismo tamaño físico. El texto puede perder nitidez.
+• Automático: Sistema para las aplicaciones que fallan si cambia su escala en ejecución, como YouTube; para cualquier otra, Aplicación si indica que lo gestiona, Sistema si no.
+Automático y Sistema nunca reinician la aplicación.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Automático (aplicación)</value>

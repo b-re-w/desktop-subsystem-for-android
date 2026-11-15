@@ -1530,8 +1530,8 @@ msgstr "“系统（强制）”会在不重启的情况下向应用提供新的
 msgid "System (recommended for this app)"
 msgstr "系统（推荐用于此应用）"
 
-msgid "App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, and text stays sharp.\nIt is recreated once with its state kept, so it redraws briefly.\nSystem: DSA scales the window to the same physical size, and never recreates the app. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube, and App for every other app."
-msgstr "应用：拖动窗口时由 DSA 缩放窗口。松开后，应用会以新的缩放比例重绘，文字保持清晰。\n应用会在保留状态的情况下重新创建一次，因此会短暂重绘。\n系统：DSA 将窗口缩放到相同的物理尺寸，绝不重新创建应用。文字可能略显模糊。\n“自动”会为运行中缩放比例变化就会出问题的应用（例如 YouTube）选择“系统”，为其他所有应用选择“应用”。"
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "应用：窗口到达新显示器时，应用立即采用该显示器的缩放比例并按此比例重绘，文字保持清晰。\n没有声明自行处理缩放变化的应用会在保留状态的情况下重新创建，因此可能会短暂重绘。\n系统：DSA 将窗口缩放到相同的物理尺寸。文字可能略显模糊。\n“自动”会为运行中缩放比例变化就会出问题的应用（例如 YouTube）选择“系统”；对其他应用，若其声明自行处理则选择“应用”，否则选择“系统”。\n“自动”和“系统”不会重启应用。"
 
 msgid "Getting the update ready"
 msgstr "正在准备更新"

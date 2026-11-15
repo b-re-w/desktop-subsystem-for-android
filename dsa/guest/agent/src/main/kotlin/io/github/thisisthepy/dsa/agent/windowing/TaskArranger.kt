@@ -66,18 +66,10 @@ class TaskArranger(
         var live: Boolean = false,
         /** Whether a size that ends the task's drag came in; a later live size keeps it. */
         var endsDrag: Boolean = false,
-        /** Whether the latest density ends a move, so the task's activity is to be recreated at it. */
-        var recreate: Boolean = false,
     )
-
-    /** A task whose activity is to be recreated once it draws at [densityDpi]. */
-    private class Recreate(val densityDpi: Int, var millisLeft: Long)
 
     private val pending = HashMap<Int, Pending>()
     private val wanted = HashMap<Int, Wanted>()
-
-    /** Tasks given a density that ended a move, until they are seen at it. */
-    private val recreating = HashMap<Int, Recreate>()
 
     /**
      * Tasks whose window the user is dragging, and the screen size their configuration keeps
@@ -106,11 +98,8 @@ class TaskArranger(
 
     private val lastResized = HashMap<Int, TaskBounds>()
 
-    /**
-     * Whether a change has been asked for and not yet seen to land, or is waiting its turn, or
-     * a task waits to be seen at a density whose activity is to be recreated at it.
-     */
-    val waiting: Boolean get() = pending.isNotEmpty() || wanted.isNotEmpty() || recreating.isNotEmpty()
+    /** Whether a change has been asked for and not yet seen to land, or is waiting its turn. */
+    val waiting: Boolean get() = pending.isNotEmpty() || wanted.isNotEmpty()
 
     /**
      * How soon the agent reads the tasks again while [waiting]: every frame while the user
@@ -130,19 +119,9 @@ class TaskArranger(
         if (!live && taskId in dragging) want.endsDrag = true
     }
 
-    /**
-     * The host asked for the task to draw at [densityDpi]: with [recreate], because its window's
-     * move ended, so once the task is seen at that density its top activity is recreated
-     * ([TaskActions.recreateActivities]). Android recreates an activity that does not say it
-     * handles a change of density on its own, so only one that says it does is asked for. The
-     * recreate waits for the density to land: an activity recreated before then would take
-     * the density afterwards as a change it handles itself, the half done layout the recreate is
-     * there to avoid.
-     */
-    fun setDensity(taskId: Int, densityDpi: Int, recreate: Boolean = false) {
-        val want = wanted.getOrPut(taskId) { Wanted() }
-        want.densityDpi = densityDpi
-        want.recreate = recreate
+    /** The host asked for the task to draw at [densityDpi]. */
+    fun setDensity(taskId: Int, densityDpi: Int) {
+        wanted.getOrPut(taskId) { Wanted() }.densityDpi = densityDpi
     }
 
     /**
@@ -165,7 +144,6 @@ class TaskArranger(
         wanted.keys.retainAll(current.keys)
         dragging.keys.retainAll(current.keys)
         densities.keys.retainAll(current.keys)
-        recreateLanded(apps)
 
         val size = try {
             displaySize().also { warnedNoDisplay = false }
@@ -204,46 +182,6 @@ class TaskArranger(
     /** [millis] have passed while a change was under way. */
     fun tick(millis: Long) {
         for (change in pending.values) change.millisLeft -= millis
-        for (recreate in recreating.values) recreate.millisLeft -= millis
-    }
-
-    /**
-     * Recreates the top activity of each task in [apps] now seen at the density a move that
-     * ended gave it, if that activity says it handles a change of density; Android recreated
-     * any other already. A task not seen at it within [giveUpMillis] keeps what it has.
-     */
-    private fun recreateLanded(apps: List<TaskSnapshot>) {
-        recreating.keys.retainAll(apps.map { it.taskId }.toSet())
-        for (task in apps) {
-            val recreate = recreating[task.taskId] ?: continue
-            if (task.densityDpi != recreate.densityDpi) {
-                if (recreate.millisLeft <= 0) {
-                    log.warn(
-                        "task ${task.taskId} did not take ${recreate.densityDpi} dpi; its activity is not recreated " +
-                            "and draws at ${task.densityDpi} dpi",
-                    )
-                    recreating.remove(task.taskId)
-                }
-                continue
-            }
-            recreating.remove(task.taskId)
-            val packageName = task.packageName
-            if (!task.handlesDensityChange || packageName == null) continue
-            val recreated = try {
-                actions.recreateActivities(task.taskId, packageName)
-            } catch (e: Exception) {
-                log.warn("recreating the activity of task ${task.taskId} failed", e)
-                false
-            }
-            if (recreated) {
-                log.info("recreating the activity of task ${task.taskId} ($packageName) at ${task.densityDpi} dpi")
-            } else {
-                log.warn(
-                    "could not recreate the activity of task ${task.taskId} ($packageName); " +
-                        "it redraws at ${task.densityDpi} dpi on its own",
-                )
-            }
-        }
     }
 
     private fun settle(current: Map<Int, TaskBounds>) {
@@ -319,10 +257,6 @@ class TaskArranger(
         if (outcome == ResizeOutcome.BOUNDS_ONLY && densityDpi != null && !warnedNoDensity) {
             log.warn("the framework cannot set a task's density; task $taskId draws at the display's density, not $densityDpi dpi")
             warnedNoDensity = true
-        }
-        val asked = want.densityDpi
-        if (want.recreate && asked != null && outcome == ResizeOutcome.APPLIED) {
-            recreating[taskId] = Recreate(asked, giveUpMillis)
         }
         stuck.remove(taskId)
         pending[taskId] = Pending(to, giveUpMillis, resize = true)

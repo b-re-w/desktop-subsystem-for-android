@@ -15,8 +15,9 @@ use crate::tasks::FullScreenRequest;
 
 /// The apps whose windows DSA scales the system way unless the user chose otherwise: apps that
 /// break when their density changes while they run, so that only restarting their process
-/// would repair them. [`DpiScaling::Auto`] is [`DpiScaling::System`] for these and
-/// [`DpiScaling::App`] for every other app. This is the only copy of the list: the window
+/// would repair them. [`DpiScaling::Auto`] is [`DpiScaling::System`] for these, and for every
+/// other app it follows what the app says of a change of density. This is the only copy of the
+/// list: the window
 /// manager, `dsa app-window` and, through it, the settings apps all read it from here.
 pub const SYSTEM_SCALED_BY_DEFAULT: &[&str] = &[
     // YouTube keeps values that depend on the density in its process. Moved to a monitor of
@@ -28,23 +29,21 @@ pub const SYSTEM_SCALED_BY_DEFAULT: &[&str] = &[
 ];
 
 /// How an app follows its window to a monitor of another scale, as a user chooses it, the way
-/// Windows lets a user choose who performs the high DPI scaling of a desktop program.
-/// [`DpiScaling::System`] never recreates the app's activity; the default recreates it once
-/// per move, when the move ends, except for the apps in [`SYSTEM_SCALED_BY_DEFAULT`].
+/// Windows lets a user choose who performs the high DPI scaling of a desktop program. The
+/// default and [`DpiScaling::System`] never restart the app.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum DpiScaling {
-    /// DSA's choice for the app ([`DpiScaling::default_for`]): [`DpiScaling::System`] for an
-    /// app in [`SYSTEM_SCALED_BY_DEFAULT`], [`DpiScaling::App`] for any other.
+    /// [`DpiScaling::System`] for an app in [`SYSTEM_SCALED_BY_DEFAULT`]
+    /// ([`DpiScaling::default_for`]); for any other, [`DpiScaling::App`] for an app whose
+    /// activity says it handles a change of density itself, [`DpiScaling::System`] for one
+    /// that does not.
     #[default]
     Auto,
     /// The task takes the new monitor's density, and the app redraws at it: its text stays
-    /// sharp. While the window is dragged it keeps its density and its window is scaled; when
-    /// the move ends, it takes the new density and Android recreates its activity once, which
-    /// restores its saved state (scroll position, typed text). That holds even for an app that
-    /// says it handles a change of density itself, because some such apps lay out only part
-    /// of their screen again. The app redraws briefly when it moves, as a Windows program does
-    /// with "application".
+    /// sharp. An app that does not say it handles a change of density is given it too: Android
+    /// recreates its activity, which restores its saved state (scroll position, typed text),
+    /// so it may redraw briefly when it moves, as a Windows program does with "application".
     App,
     /// The task keeps its density, and the window manager scales the window's picture to the
     /// new monitor, so the app keeps its size on the screen. Scaled up, text can look a little
@@ -97,12 +96,13 @@ impl DpiScaling {
     }
 
     /// What [`DpiScaling::Auto`] is for `package`: [`DpiScaling::System`] for an app in
-    /// [`SYSTEM_SCALED_BY_DEFAULT`], [`DpiScaling::App`] for any other. Never `Auto`.
+    /// [`SYSTEM_SCALED_BY_DEFAULT`], else [`DpiScaling::Auto`] itself, which follows what the
+    /// app's activity says of a change of density ([`DpiScaling::mode`]).
     pub fn default_for(package: &str) -> DpiScaling {
         if SYSTEM_SCALED_BY_DEFAULT.contains(&package) {
             DpiScaling::System
         } else {
-            DpiScaling::App
+            DpiScaling::Auto
         }
     }
 
@@ -114,26 +114,30 @@ impl DpiScaling {
         }
     }
 
-    /// What the window of a task of `package` does with this choice: what
-    /// [`DpiScaling::mode`] says of [`DpiScaling::resolved_for`].
-    pub fn mode_for(self, package: &str) -> ScalingMode {
-        self.resolved_for(package).mode()
+    /// What the window of a task of `package` does with this choice, for a task whose top
+    /// activity does (`handles_density_change`) or does not say it handles a change of
+    /// density itself: what [`DpiScaling::mode`] says of [`DpiScaling::resolved_for`].
+    pub fn mode_for(self, package: &str, handles_density_change: bool) -> ScalingMode {
+        self.resolved_for(package).mode(handles_density_change)
     }
 
-    /// What a task's window does with this choice, for an app outside
-    /// [`SYSTEM_SCALED_BY_DEFAULT`] ([`DpiScaling::mode_for`] takes the list into account).
+    /// What a task's window does with this choice, for a task whose top activity does
+    /// (`handles_density_change`) or does not say it handles a change of density itself, and
+    /// whose app is outside [`SYSTEM_SCALED_BY_DEFAULT`] ([`DpiScaling::mode_for`] takes the
+    /// list into account).
     ///
-    /// [`DpiScaling::Auto`] and [`DpiScaling::App`] give the task the new monitor's density
-    /// once its move ends, and the guest recreates its activity then, whether or not the app
-    /// says it handles a change of density: an app that says so can still draw a broken
-    /// layout at the new density, and one that does not is recreated by Android anyway.
-    /// [`DpiScaling::SystemForced`] works as [`DpiScaling::System`] does until the framework
-    /// change it needs is made.
-    pub fn mode(self) -> ScalingMode {
+    /// Android relaunches an activity that does not say it handles a change of density when
+    /// its density changes, and the default must never restart an app. So
+    /// [`DpiScaling::Auto`] gives another density only to an activity that says it handles
+    /// one. [`DpiScaling::App`] is the user's explicit choice to stay sharp at the cost of
+    /// that relaunch, so it gives the new density to any app. [`DpiScaling::SystemForced`]
+    /// works as [`DpiScaling::System`] does until the framework change it needs is made.
+    pub fn mode(self, handles_density_change: bool) -> ScalingMode {
         match self {
-            DpiScaling::Auto | DpiScaling::App => ScalingMode::App,
+            DpiScaling::App => ScalingMode::App,
+            DpiScaling::Auto if handles_density_change => ScalingMode::App,
             DpiScaling::SystemForced if DpiScaling::FORCED_AVAILABLE => ScalingMode::App,
-            DpiScaling::System | DpiScaling::SystemForced => ScalingMode::System,
+            DpiScaling::Auto | DpiScaling::System | DpiScaling::SystemForced => ScalingMode::System,
         }
     }
 
@@ -472,15 +476,18 @@ mod tests {
     }
 
     #[test]
-    fn fr4_the_default_and_app_take_the_density_system_keeps_it_and_forced_works_as_system_for_now()
-    {
-        // Both end a move at the new density, with the activity recreated once.
-        assert_eq!(DpiScaling::Auto.mode(), ScalingMode::App);
-        assert_eq!(DpiScaling::App.mode(), ScalingMode::App);
-        assert_eq!(DpiScaling::System.mode(), ScalingMode::System);
+    fn fr4_an_explicit_app_choice_always_takes_the_density_and_forced_works_as_system_for_now() {
+        assert_eq!(DpiScaling::Auto.mode(true), ScalingMode::App);
+        assert_eq!(DpiScaling::Auto.mode(false), ScalingMode::System);
+        assert_eq!(DpiScaling::App.mode(true), ScalingMode::App);
+        // The user chose to stay sharp: Android recreates the activity and restores its state.
+        assert_eq!(DpiScaling::App.mode(false), ScalingMode::App);
+        assert_eq!(DpiScaling::System.mode(false), ScalingMode::System);
+        assert_eq!(DpiScaling::System.mode(true), ScalingMode::System);
         // It needs a framework change that is not made yet.
         const { assert!(!DpiScaling::FORCED_AVAILABLE) };
-        assert_eq!(DpiScaling::SystemForced.mode(), ScalingMode::System);
+        assert_eq!(DpiScaling::SystemForced.mode(false), ScalingMode::System);
+        assert_eq!(DpiScaling::SystemForced.mode(true), ScalingMode::System);
     }
 
     #[test]
@@ -489,15 +496,24 @@ mod tests {
         assert!(SYSTEM_SCALED_BY_DEFAULT.contains(&youtube));
         assert_eq!(DpiScaling::default_for(youtube), DpiScaling::System);
         assert_eq!(DpiScaling::Auto.resolved_for(youtube), DpiScaling::System);
-        assert_eq!(DpiScaling::Auto.mode_for(youtube), ScalingMode::System);
-        // An app not on the list takes each monitor's density.
+        // Even though YouTube says it handles a change of density.
+        assert_eq!(
+            DpiScaling::Auto.mode_for(youtube, true),
+            ScalingMode::System
+        );
+        // An app not on the list scales its own way: it takes each monitor's density if it
+        // says it handles a change of density, and is scaled if not.
         assert_eq!(
             DpiScaling::default_for("com.example.notes"),
-            DpiScaling::App
+            DpiScaling::Auto
         );
         assert_eq!(
-            DpiScaling::Auto.mode_for("com.example.notes"),
+            DpiScaling::Auto.mode_for("com.example.notes", true),
             ScalingMode::App
+        );
+        assert_eq!(
+            DpiScaling::Auto.mode_for("com.example.notes", false),
+            ScalingMode::System
         );
         // Every entry is a package name, and none is there twice.
         for (i, package) in SYSTEM_SCALED_BY_DEFAULT.iter().enumerate() {
@@ -510,11 +526,14 @@ mod tests {
     fn fr4_the_users_choice_wins_over_the_built_in_list() {
         let youtube = "com.google.android.youtube";
         assert_eq!(DpiScaling::App.resolved_for(youtube), DpiScaling::App);
-        assert_eq!(DpiScaling::App.mode_for(youtube), ScalingMode::App);
-        assert_eq!(DpiScaling::System.mode_for(youtube), ScalingMode::System);
+        assert_eq!(DpiScaling::App.mode_for(youtube, true), ScalingMode::App);
         assert_eq!(
-            DpiScaling::SystemForced.mode_for(youtube),
-            DpiScaling::SystemForced.mode()
+            DpiScaling::System.mode_for(youtube, true),
+            ScalingMode::System
+        );
+        assert_eq!(
+            DpiScaling::SystemForced.mode_for(youtube, true),
+            DpiScaling::SystemForced.mode(true)
         );
         // The list changes only what auto means: a choice for another app stays as it is.
         for scaling in [

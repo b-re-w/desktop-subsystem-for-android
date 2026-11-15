@@ -3332,11 +3332,12 @@ impl Session {
             TaskRequest::SetDensity {
                 task_id,
                 density_dpi,
-                recreate,
             } => Body::SetTaskDensity(control::SetTaskDensity {
                 task_id,
                 density_dpi,
-                recreate,
+                // The task takes the density as Android gives it; the agent is never asked to
+                // recreate its activity on top of that.
+                recreate: false,
             }),
             TaskRequest::SetCaption {
                 task_id,

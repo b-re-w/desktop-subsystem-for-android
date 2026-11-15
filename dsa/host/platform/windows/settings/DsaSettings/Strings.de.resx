@@ -1717,9 +1717,10 @@ Gilt ab dem nächsten Öffnen des App-Fensters.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Wer diese App skaliert, wenn ihr Fenster auf einen Monitor mit anderer Skalierung wechselt.
-• App: DSA skaliert das Fenster beim Ziehen. Danach zeichnet die App in der neuen Skalierung, Text bleibt scharf: Android baut den Bildschirm einmal neu auf, behält den Zustand und zeichnet kurz neu.
-• System: Die App behält ihre Skalierung, und DSA skaliert ihr Fenster auf dieselbe physische Größe. Die App wird nie neu erstellt. Text kann etwas unscharf wirken.
-• Automatisch: System für Apps, die bei einer Skalierungsänderung zur Laufzeit fehlerhaft werden, etwa YouTube; App für alle anderen.</value>
+• App: Die App übernimmt die Skalierung des neuen Monitors sofort, wenn das Fenster ihn erreicht, und zeichnet in dieser Skalierung, Text bleibt scharf. Sagt eine App nicht, dass sie das selbst handhabt, baut Android ihren Bildschirm neu auf und behält den Zustand, daher kann sie kurz neu zeichnen.
+• System: Die App behält ihre Skalierung, und DSA skaliert ihr Fenster auf dieselbe physische Größe. Text kann etwas unscharf wirken.
+• Automatisch: System für Apps, die bei einer Skalierungsänderung zur Laufzeit fehlerhaft werden, etwa YouTube; für jede andere App App, wenn sie angibt, das selbst zu handhaben, sonst System.
+Automatisch und System starten die App nie neu.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Automatisch (App)</value>

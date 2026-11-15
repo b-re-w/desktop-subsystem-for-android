@@ -1384,9 +1384,8 @@ mod tests {
             bottom: 1365,
         };
         windows.apply(&TaskEvent::ImeCursor { task_id: 4, cursor });
-        // The user drags the window to the 125% monitor, and until the drag ends it shows the
-        // task at 164 per 130: the window hears the cursor where it now shows it.
-        windows.window_dragging(4, true, std::time::Instant::now());
+        // The window moves to the 125% monitor and shows the task at 164 per 130: the window
+        // hears the cursor where it now shows it.
         let (changes, _) = windows.window_dpi(4, 120);
         let shown = changes
             .iter()
