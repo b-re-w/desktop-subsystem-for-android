@@ -108,6 +108,21 @@ std::map<std::string, v1::Envelope> Cases() {
     task->mutable_bounds()->set_right(600);
     task->mutable_bounds()->set_bottom(400);
   }
+  {
+    v1::TaskUpdated* task = cases["task_updated_overlay"].mutable_task_updated();
+    task->set_task_id(0x40000001);
+    task->mutable_bounds()->set_left(158);
+    task->mutable_bounds()->set_top(82);
+    task->mutable_bounds()->set_right(666);
+    task->mutable_bounds()->set_bottom(220);
+    task->set_package_name("skplanet.musicmate");
+    task->set_label("FLO");
+    task->set_density_dpi(262);
+    task->set_max_width(3840);
+    task->set_max_height(3840);
+    task->mutable_overlay()->set_window_type(2038);
+    task->mutable_overlay()->set_touchable(true);
+  }
   cases["task_removed"].mutable_task_removed()->set_task_id(42);
   {
     v1::VideoCodecSupport* support = cases["video_capabilities"].mutable_video_capabilities()->add_codecs();

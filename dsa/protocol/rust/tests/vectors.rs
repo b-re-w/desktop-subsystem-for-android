@@ -201,6 +201,29 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             })),
         ),
         (
+            "task_updated_overlay",
+            wrap(Body::TaskUpdated(TaskUpdated {
+                task_id: 0x4000_0001,
+                bounds: Some(Rect {
+                    left: 158,
+                    top: 82,
+                    right: 666,
+                    bottom: 220,
+                }),
+                package_name: "skplanet.musicmate".into(),
+                label: "FLO".into(),
+                density_dpi: 262,
+                max_width: 3840,
+                max_height: 3840,
+                overlay: Some(dsa_protocol::control::OverlayWindow {
+                    window_type: 2038,
+                    focusable: false,
+                    touchable: true,
+                }),
+                ..TaskUpdated::default()
+            })),
+        ),
+        (
             "task_removed",
             wrap(Body::TaskRemoved(TaskRemoved { task_id: 42 })),
         ),
