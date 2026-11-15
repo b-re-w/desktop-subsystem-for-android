@@ -68,7 +68,7 @@ function Get-DsaProcesses {
         $_.ProcessName -like 'dsa-*' -or $_.ProcessName -eq 'vmmem' -or
             $(try { $_.Path -and $_.Path -like (Join-Path $apps '*') } catch { $false })
     } | ForEach-Object {
-        [ordered]@{
+        [pscustomobject][ordered]@{
             name = $_.ProcessName
             pid = $_.Id
             working_set_mib = Mib ($_.WorkingSet64 / 1KB)
@@ -94,15 +94,15 @@ function Measure-Step([string]$Step) {
     [ordered]@{
         step = $Step
         at = (Get-Date).ToString('s')
-        state = try { (Get-DsaJson status).state } catch { $null }
-        guest_total_mib = if ($guest) { Mib $guest.mem_total_kb } else { $null }
-        guest_free_mib = if ($guest) { Mib $guest.mem_free_kb } else { $null }
-        guest_available_mib = if ($guest) { Mib $guest.mem_available_kb } else { $null }
-        guest_pss_mib = if ($guest) { Mib $guest.total_pss_kb } else { $null }
-        guest_cached_mib = if ($guest) { Mib $guest.cached_kb } else { $null }
-        zram_used_mib = if ($guest) { Mib $guest.zram_used_kb } else { $null }
-        vm_beyond_guest_mib = if ($memory) { Mib $memory.vm_beyond_guest_kb } else { $null }
-        host_total_mib = if ($memory) { Mib $memory.host_total_kb } else { $null }
+        state = $(try { (Get-DsaJson status).state } catch { $null })
+        guest_total_mib = $(if ($guest) { Mib $guest.mem_total_kb } else { $null })
+        guest_free_mib = $(if ($guest) { Mib $guest.mem_free_kb } else { $null })
+        guest_available_mib = $(if ($guest) { Mib $guest.mem_available_kb } else { $null })
+        guest_pss_mib = $(if ($guest) { Mib $guest.total_pss_kb } else { $null })
+        guest_cached_mib = $(if ($guest) { Mib $guest.cached_kb } else { $null })
+        zram_used_mib = $(if ($guest) { Mib $guest.zram_used_kb } else { $null })
+        vm_beyond_guest_mib = $(if ($memory) { Mib $memory.vm_beyond_guest_kb } else { $null })
+        host_total_mib = $(if ($memory) { Mib $memory.host_total_kb } else { $null })
         host_by_role_mib = $byRole
         processes = @(Get-DsaProcesses)
         memory = $memory
@@ -176,7 +176,7 @@ $byProcess = foreach ($name in $names) {
     $row = [ordered]@{ process = $name }
     foreach ($r in $readings) {
         $sum = ($r.processes | Where-Object { $_.name -eq $name } | Measure-Object -Property working_set_mib -Sum).Sum
-        $row[$r.step] = if ($null -ne $sum) { [math]::Round($sum, 1) } else { $null }
+        $row[$r.step] = $(if ($null -ne $sum) { [math]::Round($sum, 1) } else { $null })
     }
     [pscustomobject]$row
 }
