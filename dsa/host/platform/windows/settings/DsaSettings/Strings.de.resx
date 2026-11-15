@@ -1713,7 +1713,7 @@ Gilt ab dem nächsten Öffnen des App-Fensters.</value>
     <value>Die Fenster von {0} folgen den neuen Einstellungen ab dem nächsten, das sich öffnet.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Skalierung auf einem anderen Monitor</value>
+    <value>Skalierung</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Wer diese App skaliert, wenn ihr Fenster auf einen Monitor mit anderer Skalierung wechselt.
@@ -1722,41 +1722,47 @@ Gilt ab dem nächsten Öffnen des App-Fensters.</value>
 • Automatisch: System für Apps, die bei einer Skalierungsänderung zur Laufzeit fehlerhaft werden, etwa YouTube; App für alle anderen.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Skalierung: automatisch</value>
+    <value>Automatisch (App)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Skalierung: System (für diese App empfohlen)</value>
+    <value>Automatisch (System, für diese App empfohlen)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Skalierung durch: App</value>
+    <value>App</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Skalierung durch: System</value>
+    <value>System</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Skalierung durch: System (erzwungen)</value>
+    <value>System (erzwungen)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Skalierung durch: System (erzwungen), noch nicht verfügbar</value>
+    <value>System (erzwungen), noch nicht verfügbar</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>System (erzwungen) gibt der App die neue Skalierung ohne Neustart, auch wenn sie nicht angibt, dies zu unterstützen.
 Noch nicht verfügbar: Es braucht eine Änderung am Android-Framework, die diesem Build fehlt. Bis dahin verhält es sich wie System.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Vollbild</value>
+    <value>Vollbildanforderung</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Wo diese App erscheint, wenn sie klar Vollbild anfordert, etwa per Vollbild-Schaltfläche im Videoplayer. F11 schaltet Vollbild immer um.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Leisten ausgeblendet</value>
+    <value>Wenn nur die Leisten ausgeblendet werden</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Wo diese App erscheint, wenn sie ihre Leisten ausblendet, ohne Vollbild anzufordern, wie ein Feed mit kurzen Videos.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Dem Standard folgen</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Fenstergröße beim Öffnen</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Dem Standard folgen (auf dem ganzen Bildschirm)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Dem Standard folgen (im Fenster)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>Auf dem ganzen Bildschirm</value>

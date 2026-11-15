@@ -24,7 +24,7 @@ DSA Settings ではそうした設定に盾のアイコンが付き、変更す�
 |---|---|---|
 | **General** (全般) | Android の状態、**Start**、**Stop**、**Freeze Android now**、最後に起きた問題、**Open my log folder**、**Refresh** | `dsa status`, `dsa start`, `dsa stop`, `dsa freeze` |
 | **Memory** (メモリ) | **Memory limit**、Android の VM のサイズ、各部分の使用量 | `memory-limit`, `dsa memory` |
-| **Apps** (アプリ) | インストール済みのアプリ: **Open**、**App info**、**Uninstall**、**Create desktop shortcut**。アプリごとに: **Resizable**、ウィンドウが開くときのサイズ、**Scaling on another monitor**、**Full screen**、**Bars hidden**、**Run as ARM**、**Root access**。**adb shell** の root 権限の行 | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
+| **Apps** (アプリ) | インストール済みのアプリ: **Open**、**App info**、**Uninstall**、**Create desktop shortcut**。アプリごとに: **Resizable**、ウィンドウが開くときのサイズ、**Scaling**、**Full screen request**、**When only the bars hide**、**Run as ARM**、**Root access**。**adb shell** の root 権限の行 | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
 | **Running in the background** (バックグラウンドで実行中) | ウィンドウなしで動いているアプリ: **Open**、**Stop**。停止する前に確認するかどうか | `dsa background`, `stop-without-asking` |
 | **Widgets** (ウィジェット) | デスクトップのウィジェットと **Add to desktop** | `dsa widgets` |
 | **Display & GPU** (ディスプレイと GPU) | **Render GPU**、**GPU of the primary monitor**、**App full screen**、**Apps that hide their bars**、**Turn off Windows touch gestures in DSA app windows** (Windows 11 のみ、既定でオン)、**Restart the window manager** | `render-gpu`, `dsa gpus`, `app-fullscreen`, `app-immersive`, `touch-gestures-off` |

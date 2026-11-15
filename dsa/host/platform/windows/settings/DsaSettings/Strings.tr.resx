@@ -1713,7 +1713,7 @@ Uygulamanın penceresi bir sonraki açılışında geçerli olur.</value>
     <value>{0} pencereleri, açılan bir sonraki pencereden itibaren yeni ayarları izler.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Başka bir monitörde ölçekleme</value>
+    <value>Ölçekleme</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Penceresi farklı ölçekli bir monitöre taşındığında bu uygulamayı kimin ölçekleyeceği.
@@ -1722,41 +1722,47 @@ Uygulamanın penceresi bir sonraki açılışında geçerli olur.</value>
 • Otomatik: YouTube gibi çalışırken ölçeği değişince bozulan uygulamalar için Sistem, diğer tüm uygulamalar için Uygulama.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Ölçekleme: otomatik</value>
+    <value>Otomatik (uygulama)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Ölçekleme: sistem (bu uygulama için önerilen)</value>
+    <value>Otomatik (sistem, bu uygulama için önerilen)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Ölçeklemeyi yapan: uygulama</value>
+    <value>Uygulama</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Ölçeklemeyi yapan: sistem</value>
+    <value>Sistem</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Ölçeklemeyi yapan: sistem (zorlanmış)</value>
+    <value>Sistem (zorunlu)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Ölçeklemeyi yapan: sistem (zorlanmış), henüz kullanılamıyor</value>
+    <value>Sistem (zorunlu), henüz kullanılamıyor</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>Sistem (zorlanmış), ölçek değişikliğini işlediğini belirtmese bile uygulamaya yeniden başlatmadan yeni ölçeği verir.
 Henüz kullanılamıyor: bu derlemede olmayan bir Android çerçeve değişikliği gerekiyor, bu yüzden şimdilik Sistem gibi çalışır.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Tam ekran</value>
+    <value>Tam ekran isteği</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Uygulama net bir tam ekran isteği yaptığında (ör. videonun tam ekran düğmesi) nerede görüneceği. F11 tam ekranı her zaman açıp kapatır.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Çubuklar gizli</value>
+    <value>Yalnızca çubuklar gizlendiğinde</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Bu uygulama, kısa video akışlarının yaptığı gibi tam ekran istemeden çubuklarını gizlediğinde nerede gösterileceği.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Varsayılanı izle</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Açılırken pencere boyutu</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Varsayılanı izle (tüm ekranda)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Varsayılanı izle (pencerenin içinde)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>Tüm ekranda</value>

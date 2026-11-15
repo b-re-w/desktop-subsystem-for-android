@@ -1713,7 +1713,7 @@ Mỗi ứng dụng có biểu tượng trong vùng thông báo của thanh tác 
     <value>Cửa sổ của {0} theo cài đặt mới từ cửa sổ được mở tiếp theo.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Co giãn trên màn hình khác</value>
+    <value>Co giãn</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Ai co giãn ứng dụng này khi cửa sổ của nó chuyển sang màn hình có tỷ lệ khác.
@@ -1722,41 +1722,47 @@ Mỗi ứng dụng có biểu tượng trong vùng thông báo của thanh tác 
 • Tự động: Hệ thống cho các ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, như YouTube; Ứng dụng cho mọi ứng dụng khác.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Co giãn: tự động</value>
+    <value>Tự động (ứng dụng)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Co giãn: hệ thống (khuyên dùng cho ứng dụng này)</value>
+    <value>Tự động (hệ thống, khuyên dùng cho ứng dụng này)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Thực hiện co giãn: ứng dụng</value>
+    <value>Ứng dụng</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Thực hiện co giãn: hệ thống</value>
+    <value>Hệ thống</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Thực hiện co giãn: hệ thống (bắt buộc)</value>
+    <value>Hệ thống (bắt buộc)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Thực hiện co giãn: hệ thống (bắt buộc), chưa khả dụng</value>
+    <value>Hệ thống (bắt buộc), chưa khả dụng</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>Hệ thống (bắt buộc) đưa tỷ lệ mới cho ứng dụng mà không khởi động lại nó, kể cả khi ứng dụng không báo là xử lý được.
 Chưa khả dụng: cần một thay đổi trong framework Android mà bản dựng này chưa có, nên hiện tại nó hoạt động như Hệ thống.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Toàn màn hình</value>
+    <value>Yêu cầu toàn màn hình</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Nơi ứng dụng hiển thị khi yêu cầu toàn màn hình rõ ràng, như nút toàn màn hình của trình phát video. F11 luôn bật/tắt toàn màn hình.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Ẩn thanh</value>
+    <value>Khi chỉ ẩn các thanh</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Nơi ứng dụng này hiển thị khi ẩn các thanh mà không yêu cầu toàn màn hình, như một luồng video ngắn.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Theo mặc định</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Kích thước cửa sổ khi mở</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Theo mặc định (trên toàn màn hình)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Theo mặc định (bên trong cửa sổ)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>Trên toàn màn hình</value>

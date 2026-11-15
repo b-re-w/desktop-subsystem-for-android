@@ -1713,7 +1713,7 @@ Applies the next time the app's window opens.</value>
     <value>{0}'s windows follow the new settings from the next one that opens.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Scaling on another monitor</value>
+    <value>Scaling</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Who scales this app when its window moves to a monitor of another scale.
@@ -1722,41 +1722,47 @@ Applies the next time the app's window opens.</value>
 • Automatic: System for apps that break when their scale changes while they run, such as YouTube; App for every other app.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Scaling: automatic</value>
+    <value>Automatic (app)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Scaling: system (recommended for this app)</value>
+    <value>Automatic (system, recommended for this app)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Scaling performed by: app</value>
+    <value>App</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Scaling performed by: system</value>
+    <value>System</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Scaling performed by: system (forced)</value>
+    <value>System (forced)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Scaling performed by: system (forced), not available yet</value>
+    <value>System (forced), not available yet</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>System (forced) gives the app the new scale without restarting it, even if it does not say it handles one.
 Not available yet: it needs an Android framework change this build lacks, so for now it works like System.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Full screen</value>
+    <value>Full screen request</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Bars hidden</value>
+    <value>When only the bars hide</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Follow the default</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Window size when it opens</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Follow the default (on the whole screen)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Follow the default (inside the window)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>On the whole screen</value>

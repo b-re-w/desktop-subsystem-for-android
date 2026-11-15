@@ -1713,7 +1713,7 @@ Berlaku saat jendela aplikasi dibuka berikutnya.</value>
     <value>Jendela {0} mengikuti pengaturan baru mulai dari jendela berikutnya yang dibuka.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Penskalaan di monitor lain</value>
+    <value>Penskalaan</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Siapa yang menskalakan aplikasi ini saat jendelanya berpindah ke monitor dengan skala lain.
@@ -1722,41 +1722,47 @@ Berlaku saat jendela aplikasi dibuka berikutnya.</value>
 • Otomatis: Sistem untuk aplikasi yang rusak saat skalanya berubah selagi berjalan, seperti YouTube; Aplikasi untuk semua aplikasi lain.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Penskalaan: otomatis</value>
+    <value>Otomatis (aplikasi)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Penskalaan: sistem (disarankan untuk aplikasi ini)</value>
+    <value>Otomatis (sistem, disarankan untuk aplikasi ini)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Penskalaan dilakukan oleh: aplikasi</value>
+    <value>Aplikasi</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Penskalaan dilakukan oleh: sistem</value>
+    <value>Sistem</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Penskalaan dilakukan oleh: sistem (dipaksa)</value>
+    <value>Sistem (paksa)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Penskalaan dilakukan oleh: sistem (dipaksa), belum tersedia</value>
+    <value>Sistem (paksa), belum tersedia</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>Sistem (dipaksa) memberikan skala baru ke aplikasi tanpa memulai ulangnya, meskipun aplikasi tidak menyatakan dapat menanganinya.
 Belum tersedia: fitur ini memerlukan perubahan framework Android yang tidak ada di build ini, jadi kini berfungsi seperti Sistem.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Layar penuh</value>
+    <value>Permintaan layar penuh</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Tempat aplikasi ini tampil saat jelas meminta layar penuh, seperti tombol layar penuh pemutar video. F11 selalu mengalihkan layar penuh.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Bilah disembunyikan</value>
+    <value>Saat hanya bilah disembunyikan</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Tempat aplikasi ini tampil saat menyembunyikan bilahnya tanpa meminta layar penuh, seperti feed video pendek.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Ikuti bawaan</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Ukuran jendela saat dibuka</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Ikuti bawaan (di seluruh layar)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Ikuti bawaan (di dalam jendela)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>Di seluruh layar</value>

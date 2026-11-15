@@ -34,6 +34,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
         General.Updating = () => ProgramUpdate.InProgress;
+        // Each app's "Follow the default" says where the Display page's choice takes it now.
+        Apps.Follow(Settings);
         // `--lang ko-KR` shows the app in another language than the user's display language,
         // for pictures of each language taken on one machine.
         var lang = Array.IndexOf(e.Args, "--lang");

@@ -113,7 +113,7 @@ Las aplicaciones la piden de dos maneras, y cada una tiene su propio valor prede
 
 Cambie los valores predeterminados en **App full screen** y **Apps that hide their bars** de
 la página **Display & GPU** (pantalla y GPU) de DSA Settings, o para una sola aplicación en
-**Full screen** y **Bars hidden** de la página **Apps**. La elección propia de una aplicación
+**Full screen request** y **When only the bars hide** de la página **Apps**. La elección propia de una aplicación
 tiene prioridad. F11 y **Full screen** en el menú de la ventana alternan en cualquier momento
 la pantalla completa en toda la pantalla, sea cual sea la configuración.
 
@@ -164,7 +164,7 @@ dsa app-window <package> --below-title-bar on   # off vuelve al valor predetermi
 Una aplicación se abre con la escala del monitor en el que se abre su ventana, desde su
 primer fotograma, así que no se vuelve a crear justo después de abrirse. Cuando mueve una
 ventana a un monitor con otra escala, la aplicación conserva su tamaño en la pantalla. Cada
-aplicación lo hace de una de estas formas, que usted elige en **Scaling on another monitor**
+aplicación lo hace de una de estas formas, que usted elige en **Scaling**
 (escala en otro monitor) de la página **Apps**, o con
 `dsa app-window <package> --dpi-scaling`:
 
@@ -173,7 +173,7 @@ aplicación lo hace de una de estas formas, que usted elige en **Scaling on anot
   ejecutan, y **App** para todas las demás. La lista contiene YouTube: mantiene el diseño de
   la escala con la que se inició, así que después de un movimiento sus pestañas inferiores y
   su minirreproductor quedarían mal hasta que se reinicie. La configuración muestra el valor
-  predeterminado de una aplicación así como **Scaling: system (recommended for this app)**.
+  predeterminado de una aplicación así como **Automatic (system, recommended for this app)**.
   Su propia elección para la aplicación tiene prioridad.
 - **App** (`app`): mientras arrastra la ventana, DSA la escala al nuevo monitor. Cuando la
   suelta, la aplicación se vuelve a dibujar con la escala del nuevo monitor y su texto sigue

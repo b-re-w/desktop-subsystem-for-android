@@ -113,7 +113,7 @@ défaut :
 
 Changez les valeurs par défaut sous **App full screen** et **Apps that hide their bars** sur
 la page **Display & GPU** (affichage et GPU) de DSA Settings, ou pour une seule application
-sous **Full screen** et **Bars hidden** sur la page **Apps**. Le choix propre à une
+sous **Full screen request** et **When only the bars hide** sur la page **Apps**. Le choix propre à une
 application passe en premier. F11 et **Full screen** dans le menu de la fenêtre basculent à
 tout moment le plein écran sur tout l'écran, quel que soit le réglage.
 
@@ -164,8 +164,7 @@ dsa app-window <package> --below-title-bar on   # off revient à la valeur par d
 Une application s'ouvre à l'échelle de l'écran sur lequel sa fenêtre s'ouvre, dès sa première
 image, donc elle n'est pas recréée juste après son ouverture. Quand vous déplacez une fenêtre
 vers un écran d'une autre échelle, l'application garde sa taille à l'écran. Chaque
-application le fait de l'une des manières suivantes, que vous choisissez sous **Scaling on
-another monitor** (mise à l'échelle sur un autre écran) sur la page **Apps**, ou avec
+application le fait de l'une des manières suivantes, que vous choisissez sous **Scaling** (mise à l'échelle sur un autre écran) sur la page **Apps**, ou avec
 `dsa app-window <package> --dpi-scaling` :
 
 - **Automatic** (`auto`, la valeur par défaut) : **System** pour les applications de la liste
@@ -173,7 +172,7 @@ another monitor** (mise à l'échelle sur un autre écran) sur la page **Apps**,
   **App** pour toutes les autres. La liste contient YouTube : il garde la disposition de
   l'échelle à laquelle il a démarré, donc après un déplacement ses onglets inférieurs et son
   mini-lecteur resteraient déréglés jusqu'à son redémarrage. DSA Settings affiche la valeur par
-  défaut d'une telle application comme **Scaling: system (recommended for this app)**. Votre
+  défaut d'une telle application comme **Automatic (system, recommended for this app)**. Votre
   propre choix pour l'application passe en premier.
 - **App** (`app`) : pendant que vous faites glisser la fenêtre, DSA la met à l'échelle du
   nouvel écran. Quand vous la relâchez, l'application se redessine à l'échelle du nouvel écran

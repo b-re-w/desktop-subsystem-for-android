@@ -92,8 +92,7 @@ Apps ask in two kinds of ways, and each kind has its own default:
 | Hiding the bars only | A feed of short videos | Inside the window |
 
 Change the defaults under **App full screen** and **Apps that hide their bars** on the
-**Display & GPU** page of DSA Settings, or for one app under **Full screen** and **Bars
-hidden** on the **Apps** page. An app's own choice comes first. F11 and **Full screen** in
+**Display & GPU** page of DSA Settings, or for one app under **Full screen request** and **When only the bars hide** on the **Apps** page. An app's own choice comes first. F11 and **Full screen** in
 the window menu switch full screen on the whole screen at any time, whatever the setting.
 
 From the command line:
@@ -139,14 +138,14 @@ dsa app-window <package> --below-title-bar on   # off goes back to the default
 An app opens at the scale of the monitor its window opens on, from its first frame, so it is
 not recreated right after it opens. When you move a window to a monitor of another scale,
 the app keeps its size on the screen. Each app does this one of these ways, which you pick
-under **Scaling on another monitor** on the **Apps** page, or with
+under **Scaling** on the **Apps** page, or with
 `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, the default): **System** for the apps on DSA's built-in list of apps
   that break when their scale changes while they run, and **App** for every other app. The
   list holds YouTube: it keeps its layout for the scale it started at, so after a move its
   bottom tabs and miniplayer would stay broken until it restarts. Settings shows such an
-  app's default as **Scaling: system (recommended for this app)**. Your own choice for the
+  app's default as **Automatic (system, recommended for this app)**. Your own choice for the
   app comes first.
 - **App** (`app`): the window keeps its size in pixels while you drag it and after you let go,
   and shows the app as it was drawn, so the app looks larger or smaller on the new monitor
