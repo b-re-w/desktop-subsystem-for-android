@@ -20,6 +20,7 @@ fn process(pid: u32, image: &str, account: &str, mib: u64) -> ProcessInfo {
         working_set_kb: mib * 1024,
         private_kb: mib * 512,
         shared_working_set_kb: 0,
+        private_working_set_kb: Some(mib * 256),
     }
 }
 
@@ -30,7 +31,7 @@ fn nfr1_the_vms_mapped_disk_pages_are_its_shared_working_set() {
     vmmem.shared_working_set_kb = 478 * 1024;
     let mut wm = process(20, WINDOW_MANAGER, USER, 60);
     wm.shared_working_set_kb = 30 * 1024;
-    let found = select(&[vmmem, wm], USER, Some(VM));
+    let found = select(&[vmmem, wm], USER, Some(VM), 0);
     assert_eq!(found[0].role, HostRole::Vm);
     assert_eq!(found[0].mapped_kb, 478 * 1024);
     assert_eq!(found[0].own_kb(), (1336 - 478) * 1024);
@@ -122,7 +123,7 @@ fn nfr1_the_processes_are_listed_vm_first_then_window_manager_then_app_windows()
         process(4, "vmmem", &format!("NT VIRTUAL MACHINE\\{VM}"), 2444),
         process(9, EXPLORER, USER, 100),
     ];
-    let found = select(&processes, USER, Some(VM));
+    let found = select(&processes, USER, Some(VM), 0);
     let order: Vec<(HostRole, u32)> = found.iter().map(|p| (p.role, p.pid)).collect();
     assert_eq!(
         order,
@@ -153,7 +154,7 @@ fn nfr5_the_renderers_memory_shows_under_its_own_process() {
         process(21, RENDERER, USER, 310),
         process(20, WINDOW_MANAGER, USER, 40),
     ];
-    let order: Vec<(HostRole, u32)> = select(&processes, USER, Some(VM))
+    let order: Vec<(HostRole, u32)> = select(&processes, USER, Some(VM), 0)
         .iter()
         .map(|p| (p.role, p.pid))
         .collect();
@@ -165,4 +166,70 @@ fn nfr5_the_renderers_memory_shows_under_its_own_process() {
             (HostRole::AppWindow, 30),
         ]
     );
+}
+
+#[test]
+fn nfr1_dsa_memory_lists_the_settings_app_and_the_service() {
+    const SETTINGS_APP: &str = r"C:\Program Files\DSA\settings\DsaSettings.exe";
+    const SERVICE: &str = r"C:\Program Files\DSA\dsa-hostd.exe";
+    // The service runs as SYSTEM, once for the machine, and is listed for every user.
+    let service = process(2, SERVICE, "S-1-5-18", 31);
+    assert_eq!(role_of(&service, USER, Some(VM)), Some(HostRole::Service));
+    assert_eq!(role_of(&service, OTHER_USER, None), Some(HostRole::Service));
+    // The settings app is the user's own.
+    assert_eq!(
+        role_of(&process(40, SETTINGS_APP, USER, 324), USER, Some(VM)),
+        Some(HostRole::Settings)
+    );
+    assert_eq!(
+        role_of(&process(41, SETTINGS_APP, OTHER_USER, 324), USER, Some(VM)),
+        None
+    );
+    let processes = [
+        service,
+        process(40, SETTINGS_APP, USER, 324),
+        process(30, CLOCK, USER, 53),
+        process(4, "vmmem", &format!("NT VIRTUAL MACHINE\\{VM}"), 2278),
+    ];
+    let order: Vec<HostRole> = select(&processes, USER, Some(VM), 0)
+        .iter()
+        .map(|p| p.role)
+        .collect();
+    assert_eq!(
+        order,
+        [
+            HostRole::Vm,
+            HostRole::AppWindow,
+            HostRole::Settings,
+            HostRole::Service
+        ]
+    );
+}
+
+#[test]
+fn nfr1_each_process_reports_its_private_working_set() {
+    let mut settings = process(40, r"C:\Program Files\DSA\DsaSettings.exe", USER, 324);
+    settings.private_working_set_kb = Some(250 * 1024);
+    let mut older = process(41, WINDOW_MANAGER, USER, 111);
+    older.private_working_set_kb = None;
+    let found = select(&[settings, older], USER, Some(VM), 0);
+    assert_eq!(found[0].role, HostRole::WindowManager);
+    assert_eq!(found[0].private_working_set_kb, None);
+    assert_eq!(found[1].private_working_set_kb, Some(250 * 1024));
+}
+
+#[test]
+fn nfr1_the_vms_shared_pages_split_into_sections_and_disk_files() {
+    // As in the audit: 2278 MiB resident, of which 115 MiB disk file pages; the sections
+    // have 256 MiB committed and the VM holds 200 MiB of them.
+    let mut vmmem = process(4, "vmmemDSA", &format!("NT VIRTUAL MACHINE\\{VM}"), 2278);
+    vmmem.shared_working_set_kb = (115 + 200) * 1024;
+    let found = select(&[vmmem.clone()], USER, Some(VM), 256 * 1024);
+    assert_eq!(found[0].section_kb, 200 * 1024);
+    assert_eq!(found[0].mapped_kb, 115 * 1024);
+    assert_eq!(found[0].own_kb(), (2278 - 315) * 1024);
+    // No section committed: every shared page is a disk file's, as before.
+    let found = select(&[vmmem], USER, Some(VM), 0);
+    assert_eq!(found[0].section_kb, 0);
+    assert_eq!(found[0].mapped_kb, 315 * 1024);
 }

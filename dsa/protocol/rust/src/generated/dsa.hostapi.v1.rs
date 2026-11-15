@@ -1821,12 +1821,18 @@ pub struct GuestMemory {
     pub reported_kb_per_minute: u64,
     #[prost(bool, tag = "32")]
     pub reported_rate_known: bool,
+    /// Memory hot-added while the guest ran that the host has since taken back, in KiB: the
+    /// guest's online memory blocks beyond the VM's size. 0 when none, or from a service that
+    /// does not count it.
+    #[prost(uint64, tag = "33")]
+    pub ballooned_kb: u64,
 }
 /// One host process that runs the caller's Android: its VM's memory process, the window
-/// manager, an app window.
+/// manager, the graphics renderer, an app window, the settings app, the service.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostProcessMemory {
-    /// What it is: "vm", "window manager" or "app window".
+    /// What it is: "vm", "window manager", "graphics renderer", "app window", "settings app" or
+    /// "service".
     #[prost(string, tag = "1")]
     pub role: ::prost::alloc::string::String,
     #[prost(uint32, tag = "2")]
@@ -1842,6 +1848,17 @@ pub struct HostProcessMemory {
     /// 0 for every other process, and from a service that does not count them.
     #[prost(uint64, tag = "5")]
     pub mapped_kb: u64,
+    /// Of working_set_kb, the pages no other process shares, in KiB, when
+    /// private_working_set_known is set: the figure Task Manager's Memory column shows.
+    #[prost(uint64, tag = "6")]
+    pub private_working_set_kb: u64,
+    #[prost(bool, tag = "7")]
+    pub private_working_set_known: bool,
+    /// Of working_set_kb, the VM's pages of the graphics and video sections it shares with the
+    /// renderer and the window manager, in KiB. Those processes count the same pages, so a total
+    /// leaves them out here. 0 for every other process.
+    #[prost(uint64, tag = "8")]
+    pub section_kb: u64,
 }
 /// The answer to GetMemory.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1849,7 +1866,8 @@ pub struct Memory {
     /// Absent until Android has sent its first report since it started.
     #[prost(message, optional, tag = "1")]
     pub guest: ::core::option::Option<GuestMemory>,
-    /// In the order: the VM, the window manager, the app windows.
+    /// In the order: the VM, the window manager, the graphics renderer, the app windows, the
+    /// settings app, the service.
     #[prost(message, repeated, tag = "2")]
     pub host: ::prost::alloc::vec::Vec<HostProcessMemory>,
 }

@@ -1681,12 +1681,17 @@ message GuestMemory {
   // the time between the two.
   uint64 reported_kb_per_minute = 31;
   bool reported_rate_known = 32;
+  // Memory hot-added while the guest ran that the host has since taken back, in KiB: the
+  // guest's online memory blocks beyond the VM's size. 0 when none, or from a service that
+  // does not count it.
+  uint64 ballooned_kb = 33;
 }
 
 // One host process that runs the caller's Android: its VM's memory process, the window
-// manager, an app window.
+// manager, the graphics renderer, an app window, the settings app, the service.
 message HostProcessMemory {
-  // What it is: "vm", "window manager" or "app window".
+  // What it is: "vm", "window manager", "graphics renderer", "app window", "settings app" or
+  // "service".
   string role = 1;
   uint32 pid = 2;
   // The memory of it resident in RAM now, in KiB.
@@ -1697,13 +1702,22 @@ message HostProcessMemory {
   // direct-mapped mode), in KiB: clean file pages the host drops without writing anything.
   // 0 for every other process, and from a service that does not count them.
   uint64 mapped_kb = 5;
+  // Of working_set_kb, the pages no other process shares, in KiB, when
+  // private_working_set_known is set: the figure Task Manager's Memory column shows.
+  uint64 private_working_set_kb = 6;
+  bool private_working_set_known = 7;
+  // Of working_set_kb, the VM's pages of the graphics and video sections it shares with the
+  // renderer and the window manager, in KiB. Those processes count the same pages, so a total
+  // leaves them out here. 0 for every other process.
+  uint64 section_kb = 8;
 }
 
 // The answer to GetMemory.
 message Memory {
   // Absent until Android has sent its first report since it started.
   GuestMemory guest = 1;
-  // In the order: the VM, the window manager, the app windows.
+  // In the order: the VM, the window manager, the graphics renderer, the app windows, the
+  // settings app, the service.
   repeated HostProcessMemory host = 2;
 }
 

@@ -30,7 +30,24 @@
     <SatelliteResourceLanguages>en;ko;ja;zh-CN;zh-TW;zh-Hans;zh-Hant;es;fr;de;pt-BR;ru;it;vi;id;tr</SatelliteResourceLanguages>
     <DebugType>embedded</DebugType>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- A smaller memory footprint for an app that is open now and then and mostly waits:
+         - ReadyToRun: the published assemblies carry precompiled code, so the JIT compiles
+           little at start and holds less code and JIT state in memory. It applies to publish
+           (the installer's build), not to a plain build.
+         - Workstation, non-concurrent GC: one heap and no background GC thread with its own
+           reserve. Its heap is small, so a blocking collection is a pause of milliseconds.
+         - TieredPGO off: no instrumented copies of hot methods and no profile data, which
+           buy a settings app nothing.
+         - GCConserveMemory (below): the GC compacts sooner rather than keep fragmented space. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
   </PropertyGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="WPF-UI" Version="3.0.5" />

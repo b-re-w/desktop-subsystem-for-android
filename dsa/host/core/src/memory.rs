@@ -100,6 +100,10 @@ pub struct GuestMemory {
     pub google_play: Option<GooglePlayMemory>,
     /// How free page reporting is doing; `None` when the guest could not read it.
     pub page_reporting: Option<PageReporting>,
+    /// Memory hot-added while the guest ran that the host has taken back since (the balloon):
+    /// the guest's online memory blocks beyond the VM's size, set by [`GuestMemory::given`].
+    /// The guest still counts those blocks as its own, but the VM holds none of it.
+    pub ballooned_kb: u64,
 }
 
 /// Free page reporting, in KiB, as the guest's kernel counts it.
@@ -166,6 +170,10 @@ pub enum HostRole {
     /// The graphics renderer process (`dsa-gfx`), which holds the guest's GPU resources.
     Renderer,
     AppWindow,
+    /// The settings app (`DsaSettings.exe` on Windows), while it is open.
+    Settings,
+    /// The service that runs the VM (`dsa-hostd`), shared by every user of the machine.
+    Service,
 }
 
 impl HostRole {
@@ -175,6 +183,8 @@ impl HostRole {
             HostRole::WindowManager => "window manager",
             HostRole::Renderer => "graphics renderer",
             HostRole::AppWindow => "app window",
+            HostRole::Settings => "settings app",
+            HostRole::Service => "service",
         }
     }
 
@@ -184,19 +194,23 @@ impl HostRole {
             HostRole::WindowManager,
             HostRole::Renderer,
             HostRole::AppWindow,
+            HostRole::Settings,
+            HostRole::Service,
         ]
         .into_iter()
         .find(|role| role.name() == name)
     }
 
     /// Where the role's processes go in a list: the VM, the window manager, the renderer,
-    /// then the app windows.
+    /// the app windows, the settings app, then the service.
     pub fn rank(self) -> u8 {
         match self {
             HostRole::Vm => 0,
             HostRole::WindowManager => 1,
             HostRole::Renderer => 2,
             HostRole::AppWindow => 3,
+            HostRole::Settings => 4,
+            HostRole::Service => 5,
         }
     }
 }
@@ -216,12 +230,23 @@ pub struct HostProcessMemory {
     /// when the guest next touches them, so they are not memory the VM holds for itself.
     /// 0 for every other process, and for a VM that maps no disk.
     pub mapped_kb: u64,
+    /// Of `working_set_kb`, the pages no other process shares: what Task Manager's "Memory"
+    /// column shows. `None` where the platform does not count it.
+    pub private_working_set_kb: Option<u64>,
+    /// Of `working_set_kb`, the VM's pages of the graphics and video sections it shares with
+    /// the renderer and the window manager. Those processes have the same pages in their
+    /// working sets, so counting them here too would count them twice. 0 for every other
+    /// process.
+    pub section_kb: u64,
 }
 
 impl HostProcessMemory {
-    /// What the process holds for itself: its working set without `mapped_kb`.
+    /// What the process holds for itself: its working set without `mapped_kb` and without
+    /// `section_kb`, which another process of the same Android counts.
     pub fn own_kb(&self) -> u64 {
-        self.working_set_kb.saturating_sub(self.mapped_kb)
+        self.working_set_kb
+            .saturating_sub(self.mapped_kb)
+            .saturating_sub(self.section_kb)
     }
 }
 
@@ -229,7 +254,8 @@ impl HostProcessMemory {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct MemorySnapshot {
     pub guest: Option<GuestMemoryReport>,
-    /// In the order: the VM, the window manager, the graphics renderer, the app windows.
+    /// In the order: the VM, the window manager, the graphics renderer, the app windows, the
+    /// settings app, the service.
     pub host: Vec<HostProcessMemory>,
 }
 
@@ -344,6 +370,7 @@ impl GuestMemory {
             swap_pss_kb: memory.google_play_swap_pss_kb,
         });
         GuestMemory {
+            ballooned_kb: 0,
             google_play,
             page_reporting: PageReporting::from_counts(
                 memory.free_reported_kb,
@@ -412,6 +439,7 @@ impl GuestMemory {
         let mut memory = self.clone();
         if let Some(vm_kb) = vm_mb.map(|mb| mb * 1024) {
             if memory.kernel.mem_online_kb > vm_kb {
+                memory.ballooned_kb = memory.kernel.mem_online_kb - vm_kb;
                 memory.kernel.mem_online_kb = vm_kb;
             }
         }
@@ -466,9 +494,25 @@ impl MemorySnapshot {
     }
 
     /// What the user's Android holds on the host for itself: every process's working set
-    /// without the mapped disk pages, which the host can drop at no cost.
+    /// without the mapped disk pages, which the host can drop at no cost, and without the
+    /// VM's section pages, which the renderer and the window manager count already.
     pub fn host_own_kb(&self) -> u64 {
         self.host.iter().map(HostProcessMemory::own_kb).sum()
+    }
+
+    /// Of [`host_total_kb`](Self::host_total_kb), the VM's pages of the graphics and video
+    /// sections ([`HostProcessMemory::section_kb`]).
+    pub fn host_section_kb(&self) -> u64 {
+        self.host.iter().map(|p| p.section_kb).sum()
+    }
+
+    /// Every process's private working set together: the sum of Task Manager's "Memory"
+    /// column. `None` when the platform counts none of them.
+    pub fn host_private_working_set_kb(&self) -> Option<u64> {
+        self.host
+            .iter()
+            .filter_map(|p| p.private_working_set_kb)
+            .reduce(|a, b| a + b)
     }
 
     fn role_total_kb(&self, role: HostRole) -> (u64, usize) {
@@ -492,6 +536,9 @@ impl MemorySnapshot {
         let guest = &self.guest.as_ref()?.memory;
         let (vm, count) = self.role_total_kb(HostRole::Vm);
         let vm = vm.saturating_sub(self.vm_mapped_kb());
+        // The sections are shared regions outside the guest's RAM, so the guest's use does not
+        // hold them either.
+        let vm = vm.saturating_sub(self.host_section_kb());
         let held = guest.used_kb() + guest.reserved_at_boot_kb().unwrap_or(0);
         (count > 0).then(|| vm.saturating_sub(held))
     }
@@ -511,15 +558,30 @@ impl MemorySnapshot {
         let (wm, _) = self.role_total_kb(HostRole::WindowManager);
         let (renderer, _) = self.role_total_kb(HostRole::Renderer);
         let (apps, app_count) = self.role_total_kb(HostRole::AppWindow);
+        let (settings, _) = self.role_total_kb(HostRole::Settings);
+        let (service, _) = self.role_total_kb(HostRole::Service);
         let mut line = format!(
             "memory: host {} MiB (vm {}, window manager {}, graphics renderer {}, {app_count} \
-             app windows {})",
+             app windows {}, settings app {}, service {})",
             mib(self.host_total_kb()),
             mib(vm),
             mib(wm),
             mib(renderer),
-            mib(apps)
+            mib(apps),
+            mib(settings),
+            mib(service)
         );
+        if let Some(private) = self.host_private_working_set_kb() {
+            line.push_str(&format!(", private working sets {} MiB", mib(private)));
+        }
+        let sections = self.host_section_kb();
+        if sections > 0 {
+            line.push_str(&format!(
+                "; {} MiB of the vm's are graphics and video section pages the renderer and the \
+                 window manager count too",
+                mib(sections)
+            ));
+        }
         let mapped = self.host_mapped_kb();
         if mapped > 0 {
             line.push_str(&format!(
@@ -612,6 +674,23 @@ impl fmt::Display for MemorySnapshot {
     /// details.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Host: {} MiB in all", mib(self.host_total_kb()))?;
+        if let Some(private) = self.host_private_working_set_kb() {
+            writeln!(
+                f,
+                "  {} MiB private working sets (what Task Manager's Memory column adds up to)",
+                mib(private)
+            )?;
+        }
+        let sections = self.host_section_kb();
+        if sections > 0 {
+            writeln!(
+                f,
+                "  {} MiB without the VM's {} MiB of graphics and video sections, which the \
+                 graphics renderer and the window manager count too",
+                mib(self.host_total_kb().saturating_sub(sections)),
+                mib(sections)
+            )?;
+        }
         let mapped = self.host_mapped_kb();
         if mapped > 0 {
             writeln!(
@@ -629,17 +708,23 @@ impl fmt::Display for MemorySnapshot {
         for p in &self.host {
             write!(
                 f,
-                "  {:<17} pid {:<6} {:>6} MiB resident, {:>6} MiB private",
+                "  {:<17} pid {:<6} {:>6} MiB resident, {:>6} MiB private working set, {:>6} MiB \
+                 committed",
                 p.role.name(),
                 p.pid,
                 mib(p.working_set_kb),
+                p.private_working_set_kb
+                    .map_or("?".to_string(), |kb| mib(kb).to_string()),
                 mib(p.private_kb)
             )?;
             if p.mapped_kb > 0 {
+                write!(f, ", {} MiB of it disk file pages", mib(p.mapped_kb))?;
+            }
+            if p.section_kb > 0 {
                 write!(
                     f,
-                    ", {} MiB of it mapped from the disk files",
-                    mib(p.mapped_kb)
+                    ", {} MiB of it graphics and video sections",
+                    mib(p.section_kb)
                 )?;
             }
             writeln!(f)?;
@@ -691,6 +776,13 @@ impl fmt::Display for MemorySnapshot {
                 mib(reserved),
                 mib(k.mem_online_kb),
                 mib(k.cma_total_kb)
+            )?;
+        }
+        if g.ballooned_kb > 0 {
+            writeln!(
+                f,
+                "  balloon {} MiB (memory added while Android ran that the host has taken back)",
+                mib(g.ballooned_kb)
             )?;
         }
         if let Some(beyond) = self.vm_beyond_guest_kb() {
@@ -750,6 +842,103 @@ impl fmt::Display for MemorySnapshot {
     }
 }
 
+/// The snapshot as one JSON object, as `dsa memory --json` prints it and the memory snapshot
+/// archive carries it. Sizes in KiB.
+pub fn snapshot_json(memory: &MemorySnapshot) -> serde_json::Value {
+    use serde_json::json;
+
+    fn share(share: &MemoryShare) -> serde_json::Value {
+        json!({
+            "resident_kb": share.resident_kb,
+            "compressed_kb": share.compressed_kb,
+            "swapped_out_kb": share.swapped_out_kb,
+            "total_kb": share.total_kb(),
+        })
+    }
+    let guest = memory.guest.as_ref().map(|report| {
+        let guest = &report.memory;
+        let google_play = guest
+            .google_play
+            .zip(guest.google_play_share())
+            .map(|(play, cost)| {
+                let mut value = share(&cost);
+                value["processes"] = json!(play.processes);
+                value["pss_kb"] = json!(play.pss_kb);
+                value["swap_pss_kb"] = json!(play.swap_pss_kb);
+                value
+            });
+        json!({
+            "mem_total_kb": guest.mem_total_kb,
+            "mem_free_kb": guest.mem_free_kb,
+            "mem_available_kb": guest.mem_available_kb,
+            "buffers_kb": guest.buffers_kb,
+            "cached_kb": guest.cached_kb,
+            "anon_pages_kb": guest.anon_pages_kb,
+            "shmem_kb": guest.shmem_kb,
+            "slab_reclaimable_kb": guest.slab_reclaimable_kb,
+            "swap_total_kb": guest.swap_total_kb,
+            "swap_free_kb": guest.swap_free_kb,
+            "zram_original_kb": guest.zram_original_kb,
+            "zram_used_kb": guest.zram_used_kb,
+            "total_pss_kb": guest.total_pss_kb,
+            "swap_pss_kb": guest.swap_pss_kb,
+            "apps": share(&guest.apps()),
+            "google_play": google_play,
+            "kernel": {
+                "slab_unreclaimable_kb": guest.kernel.slab_unreclaimable_kb,
+                "kernel_stack_kb": guest.kernel.kernel_stack_kb,
+                "page_tables_kb": guest.kernel.page_tables_kb,
+                "vmalloc_used_kb": guest.kernel.vmalloc_used_kb,
+                "percpu_kb": guest.kernel.percpu_kb,
+                "cma_total_kb": guest.kernel.cma_total_kb,
+                "hugetlb_kb": guest.kernel.hugetlb_kb,
+                "mem_online_kb": guest.kernel.mem_online_kb,
+                "unaccounted_kb": guest.unaccounted_kb(),
+                "reserved_at_boot_kb": guest.reserved_at_boot_kb(),
+            },
+            "page_reporting": guest.page_reporting.map(|r| json!({
+                "free_reported_kb": r.free_reported_kb,
+                "free_not_reported_kb": guest.free_not_reported_kb(),
+                "reported_total_kb": r.reported_total_kb,
+                "reported_kb_per_minute": r.reported_kb_per_minute,
+                "refaulted_total_kb": r.refaulted_total_kb,
+            })),
+            "ballooned_kb": guest.ballooned_kb,
+            "age_seconds": report.age.as_secs(),
+            "top_processes": guest.top_processes.iter().map(|p| {
+                let cost = guest.process_share(p);
+                json!({
+                    "pid": p.pid,
+                    "name": p.name,
+                    "pss_kb": p.pss_kb,
+                    "swap_pss_kb": p.swap_pss_kb,
+                    "google_play": p.google_play,
+                    "resident_kb": cost.resident_kb,
+                    "compressed_kb": cost.compressed_kb,
+                })
+            }).collect::<Vec<_>>(),
+        })
+    });
+    json!({
+        "guest": guest,
+        "host": memory.host.iter().map(|p| json!({
+            "role": p.role.name(),
+            "pid": p.pid,
+            "working_set_kb": p.working_set_kb,
+            "private_kb": p.private_kb,
+            "mapped_kb": p.mapped_kb,
+            "private_working_set_kb": p.private_working_set_kb,
+            "section_kb": p.section_kb,
+        })).collect::<Vec<_>>(),
+        "host_total_kb": memory.host_total_kb(),
+        "host_private_working_set_kb": memory.host_private_working_set_kb(),
+        "host_section_kb": memory.host_section_kb(),
+        "host_mapped_kb": memory.host_mapped_kb(),
+        "host_own_kb": memory.host_own_kb(),
+        "vm_beyond_guest_kb": memory.vm_beyond_guest_kb(),
+    })
+}
+
 /// The snapshot as the local API carries it.
 pub fn snapshot_to_wire(snapshot: &MemorySnapshot) -> types::Memory {
     types::Memory {
@@ -803,6 +992,7 @@ pub fn snapshot_to_wire(snapshot: &MemorySnapshot) -> types::Memory {
                 reported_rate_known: g
                     .page_reporting
                     .is_some_and(|r| r.reported_kb_per_minute.is_some()),
+                ballooned_kb: g.ballooned_kb,
             }
         }),
         host: snapshot
@@ -814,6 +1004,9 @@ pub fn snapshot_to_wire(snapshot: &MemorySnapshot) -> types::Memory {
                 working_set_kb: p.working_set_kb,
                 private_kb: p.private_kb,
                 mapped_kb: p.mapped_kb,
+                private_working_set_kb: p.private_working_set_kb.unwrap_or(0),
+                private_working_set_known: p.private_working_set_kb.is_some(),
+                section_kb: p.section_kb,
             })
             .collect(),
     }
@@ -867,6 +1060,7 @@ pub fn snapshot_from_wire(memory: types::Memory) -> MemorySnapshot {
                         .then_some(g.reported_kb_per_minute),
                     ..r
                 }),
+                ballooned_kb: g.ballooned_kb,
                 kernel: KernelMemory {
                     slab_unreclaimable_kb: g.slab_unreclaimable_kb,
                     kernel_stack_kb: g.kernel_stack_kb,
@@ -890,6 +1084,12 @@ pub fn snapshot_from_wire(memory: types::Memory) -> MemorySnapshot {
                     private_kb: p.private_kb,
                     // A service from before the field sends 0, as for a VM that maps nothing.
                     mapped_kb: p.mapped_kb.min(p.working_set_kb),
+                    private_working_set_kb: p
+                        .private_working_set_known
+                        .then_some(p.private_working_set_kb.min(p.working_set_kb)),
+                    section_kb: p
+                        .section_kb
+                        .min(p.working_set_kb.saturating_sub(p.mapped_kb)),
                 })
             })
             .collect(),
