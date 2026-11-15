@@ -148,8 +148,8 @@ dsa app-window <package> --below-title-bar on   # off kehrt zum Standard zurück
 
 ## Eine App auf einen Monitor mit anderer Skalierung verschieben
 
-Eine App öffnet ab dem ersten Frame mit der Skalierung des Monitors, auf dem sich ihr Fenster
-öffnet, damit sie nicht direkt nach dem Öffnen neu erstellt wird. Verschieben Sie ein Fenster
+Android startet mit der Skalierung Ihres Hauptmonitors, sodass Apps dort in der richtigen
+Größe öffnen. Verschieben Sie ein Fenster
 auf einen Monitor mit anderer Skalierung, behält die App ihre Größe auf dem Bildschirm. Jede App
 tut das auf eine dieser Arten, die Sie unter **Scaling** (Skalierung) auf der Seite **Apps** oder mit `dsa app-window <package> --dpi-scaling`
 wählen:

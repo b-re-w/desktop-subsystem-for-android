@@ -146,8 +146,8 @@ dsa app-window <package> --below-title-bar on   # off volta ao padrão
 
 ## Mover um app para um monitor com outra escala
 
-Um app abre na escala do monitor em que a janela dele abre, desde o primeiro quadro, então ele
-não é recriado logo depois de abrir. Quando você move uma janela para um monitor com outra
+O Android inicia na escala do seu monitor principal, então os apps abrem no tamanho certo
+nele. Quando você move uma janela para um monitor com outra
 escala, o app mantém o tamanho na tela. Cada app faz isso de uma destas formas, que você escolhe
 em **Scaling** (escala) na página **Apps**, ou com
 `dsa app-window <package> --dpi-scaling`:
