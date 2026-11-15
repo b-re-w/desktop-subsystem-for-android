@@ -54,6 +54,8 @@ fn snapshot(vm_mib: u64, guest_used_mib: u64) -> MemorySnapshot {
                 working_set_kb: mib(vm_mib),
                 private_kb: mib(vm_mib + 100),
                 mapped_kb: 0,
+                private_working_set_kb: None,
+                section_kb: 0,
             },
             HostProcessMemory {
                 role: HostRole::WindowManager,
@@ -61,6 +63,8 @@ fn snapshot(vm_mib: u64, guest_used_mib: u64) -> MemorySnapshot {
                 working_set_kb: mib(30),
                 private_kb: mib(20),
                 mapped_kb: 0,
+                private_working_set_kb: None,
+                section_kb: 0,
             },
             HostProcessMemory {
                 role: HostRole::AppWindow,
@@ -68,6 +72,8 @@ fn snapshot(vm_mib: u64, guest_used_mib: u64) -> MemorySnapshot {
                 working_set_kb: mib(40),
                 private_kb: mib(25),
                 mapped_kb: 0,
+                private_working_set_kb: None,
+                section_kb: 0,
             },
         ],
     }

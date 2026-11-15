@@ -6,7 +6,13 @@
 //! - The window manager (`dsa-wm.exe`), the graphics renderer it starts (`dsa-gfx.exe`, which
 //!   holds the guest's GPU resources) and the app window hosts (`dsa-app-window.exe`, and each
 //!   app's own copy under `%LOCALAPPDATA%\DSA\apps\`) run in the user's session, under the
-//!   user's own account.
+//!   user's own account, and so does the settings app (`DsaSettings.exe`) while it is open.
+//! - The service (`dsa-hostd.exe`) runs once for the machine, as SYSTEM, and is listed for
+//!   every user.
+//! - The VM's working set also holds the pages of the graphics and video sections it shares
+//!   with the renderer and the window manager. Those count the same pages, so the VM's share
+//!   of them is told apart: the sections' committed pages, read from the user's named
+//!   sections, bound it, and the rest of the VM's shared pages are the disk files it maps.
 //!
 //! The service runs as SYSTEM, which may open every one of them for a memory query. The
 //! rules that pick the processes are plain functions, tested on every platform; reading the
@@ -20,6 +26,10 @@ pub const WINDOW_MANAGER_EXE: &str = "dsa-wm.exe";
 pub const RENDERER_EXE: &str = "dsa-gfx.exe";
 /// The app window host as installed; each app runs a copy of it named after the app.
 pub const APP_WINDOW_EXE: &str = "dsa-app-window.exe";
+/// The settings app's program file.
+pub const SETTINGS_EXE: &str = "DsaSettings.exe";
+/// The service's program file.
+pub const SERVICE_EXE: &str = "dsa-hostd.exe";
 /// The account domain of every Hyper-V VM's processes.
 pub const VM_DOMAIN: &str = "NT VIRTUAL MACHINE";
 
@@ -38,6 +48,9 @@ pub struct ProcessInfo {
     /// keeps the guest's memory as private pages and maps no file but the disks it maps
     /// directly (virtual persistent memory), so for it these are those disks' file pages.
     pub shared_working_set_kb: u64,
+    /// The private working set (Task Manager's "Memory" column), `None` where Windows does
+    /// not count it (before Windows 10 1809).
+    pub private_working_set_kb: Option<u64>,
 }
 
 fn file_name(image: &str) -> &str {
@@ -61,6 +74,10 @@ pub fn role_of(process: &ProcessInfo, user_sid: &str, vm_id: Option<&str>) -> Op
             && account.trim_matches(['{', '}']).eq_ignore_ascii_case(vm_id);
         return matches.then_some(HostRole::Vm);
     }
+    // One service for the machine, whoever asks.
+    if name.eq_ignore_ascii_case(SERVICE_EXE) {
+        return Some(HostRole::Service);
+    }
     if !process.account.eq_ignore_ascii_case(user_sid) {
         return None;
     }
@@ -69,6 +86,9 @@ pub fn role_of(process: &ProcessInfo, user_sid: &str, vm_id: Option<&str>) -> Op
     }
     if name.eq_ignore_ascii_case(RENDERER_EXE) {
         return Some(HostRole::Renderer);
+    }
+    if name.eq_ignore_ascii_case(SETTINGS_EXE) {
+        return Some(HostRole::Settings);
     }
     let in_apps_folder = process
         .image
@@ -80,22 +100,28 @@ pub fn role_of(process: &ProcessInfo, user_sid: &str, vm_id: Option<&str>) -> Op
 }
 
 /// The processes of the user's Android among `processes`: the VM first, then the window
-/// manager, then the graphics renderer, then the app windows.
+/// manager, the graphics renderer, the app windows, the settings app and the service.
+/// `section_committed_kb` is what the user's graphics and video sections have committed
+/// ([`section_kb`]).
 pub fn select(
     processes: &[ProcessInfo],
     user_sid: &str,
     vm_id: Option<&str>,
+    section_committed_kb: u64,
 ) -> Vec<HostProcessMemory> {
     let mut found: Vec<HostProcessMemory> = processes
         .iter()
         .filter_map(|p| {
             let role = role_of(p, user_sid, vm_id)?;
+            let sections = section_kb(role, p, section_committed_kb);
             Some(HostProcessMemory {
                 role,
                 pid: p.pid,
                 working_set_kb: p.working_set_kb,
                 private_kb: p.private_kb,
-                mapped_kb: mapped_kb(role, p),
+                mapped_kb: mapped_kb(role, p).saturating_sub(sections),
+                private_working_set_kb: p.private_working_set_kb.map(|kb| kb.min(p.working_set_kb)),
+                section_kb: sections,
             })
         })
         .collect();
@@ -112,6 +138,28 @@ pub fn mapped_kb(role: HostRole, process: &ProcessInfo) -> u64 {
         HostRole::Vm => process.shared_working_set_kb.min(process.working_set_kb),
         _ => 0,
     }
+}
+
+/// The VM's pages of the graphics and video sections, in KiB: its shared working set, up to
+/// what the sections have committed. A section's page is resident only once committed, so
+/// the commit bounds what the VM can hold of them; whatever shared pages remain are the disk
+/// files it maps. 0 for every other process: the renderer's and the window manager's views
+/// of the sections are part of what they cost.
+pub fn section_kb(role: HostRole, process: &ProcessInfo, section_committed_kb: u64) -> u64 {
+    match role {
+        HostRole::Vm => mapped_kb(role, process).min(section_committed_kb),
+        _ => 0,
+    }
+}
+
+/// The names of the sections the VM of `user_sid` shares: the graphics data region, its
+/// grants table and the video pictures.
+pub fn section_names(user_sid: &str) -> [String; 3] {
+    [
+        crate::graphics_region::data_section_name(user_sid),
+        crate::graphics_region::grants_section_name(user_sid),
+        crate::picture_region::section_name(user_sid),
+    ]
 }
 
 /// The IDs of the processes of the VM `vm_id` (its `vmmem` process), from the system's
@@ -145,7 +193,13 @@ pub struct WindowsHostMemory;
 impl dsa_host_core::memory::HostMemory for WindowsHostMemory {
     fn processes(&self, user: &str, vm_id: Option<&str>) -> Vec<HostProcessMemory> {
         match system::processes() {
-            Ok(list) => select(&list, user, vm_id),
+            Ok(list) => {
+                let committed = section_names(user)
+                    .iter()
+                    .map(|name| system::section_committed_kb(name))
+                    .sum();
+                select(&list, user, vm_id, committed)
+            }
             Err(error) => {
                 eprintln!("memory: cannot list the host's processes: {error}");
                 Vec::new()
@@ -290,6 +344,7 @@ mod system {
             private_kb: private / 1024,
             shared_working_set_kb: private_working_set
                 .map_or(0, |own| working_set.saturating_sub(own) / 1024),
+            private_working_set_kb: private_working_set.map(|own| own / 1024),
         })
     }
 
@@ -338,6 +393,54 @@ mod system {
         let process = OwnedHandle(handle);
         let (working_set, _, own) = counters(&process)?;
         Some((working_set / 1024, working_set.saturating_sub(own?) / 1024))
+    }
+
+    /// What the section `name` has committed, in KiB; 0 when it does not exist (the VM is
+    /// not running, or the feature is off) or cannot be opened. A read-only view of the
+    /// section is mapped for the query and unmapped at once; it commits nothing. A section
+    /// made with `SEC_RESERVE` shows its committed pages as committed in every view.
+    pub fn section_committed_kb(name: &str) -> u64 {
+        use windows_sys::Win32::System::Memory::{
+            MapViewOfFile, OpenFileMappingW, UnmapViewOfFile, VirtualQuery, FILE_MAP_READ,
+            MEMORY_BASIC_INFORMATION, MEMORY_MAPPED_VIEW_ADDRESS, MEM_COMMIT,
+        };
+        let wide: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+        // SAFETY: a NUL-terminated name; the handle is closed by OwnedHandle.
+        let section = unsafe { OpenFileMappingW(FILE_MAP_READ, 0, wide.as_ptr()) };
+        if section.is_null() {
+            return 0;
+        }
+        let section = OwnedHandle(section);
+        // SAFETY: a read-only view of the whole section, unmapped below.
+        let view = unsafe { MapViewOfFile(section.0, FILE_MAP_READ, 0, 0, 0) };
+        if view.Value.is_null() {
+            return 0;
+        }
+        let base = view.Value as usize;
+        let mut at = base;
+        let mut committed = 0u64;
+        loop {
+            // SAFETY: plain data filled by the query.
+            let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+            // SAFETY: a query of this process's own address space.
+            let got = unsafe {
+                VirtualQuery(
+                    at as *const _,
+                    &mut info,
+                    std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+                )
+            };
+            if got == 0 || info.AllocationBase as usize != base || info.RegionSize == 0 {
+                break;
+            }
+            if info.State == MEM_COMMIT {
+                committed += info.RegionSize as u64;
+            }
+            at = info.BaseAddress as usize + info.RegionSize;
+        }
+        // SAFETY: the view mapped above, unmapped once.
+        unsafe { UnmapViewOfFile(MEMORY_MAPPED_VIEW_ADDRESS { Value: view.Value }) };
+        committed / 1024
     }
 
     /// Every process that may be one of a user's Android, measured.

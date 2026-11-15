@@ -314,6 +314,8 @@ fn host(role: HostRole, pid: u32, mib: u64) -> HostProcessMemory {
         working_set_kb: mib * MIB,
         private_kb: mib * MIB / 2,
         mapped_kb: 0,
+        private_working_set_kb: None,
+        section_kb: 0,
     }
 }
 
@@ -1210,4 +1212,55 @@ fn nfr5_the_renderers_memory_is_logged_under_its_own_process() {
     };
     assert!(renderer_line(Some(&uncounted)).contains("its GPU allocations: no count"));
     assert!(renderer_line(None).contains("not running or not answering"));
+}
+
+#[test]
+fn nfr2_the_balloon_is_the_online_memory_beyond_the_vms_size() {
+    let guest = GuestMemory {
+        kernel: dsa_host_core::memory::KernelMemory {
+            mem_online_kb: 4224 * MIB,
+            ..Default::default()
+        },
+        ..GuestMemory::default()
+    };
+    let given = guest.given(Some(3584));
+    assert_eq!(given.ballooned_kb, 640 * MIB);
+    assert_eq!(given.kernel.mem_online_kb, 3584 * MIB);
+    // No balloon when the VM is as big as the guest's blocks, or its size is unknown.
+    assert_eq!(guest.given(Some(4224)).ballooned_kb, 0);
+    assert_eq!(guest.given(None).ballooned_kb, 0);
+}
+
+#[test]
+fn nfr1_the_vms_section_pages_are_counted_once_and_survive_the_local_api() {
+    let mut vm = host(HostRole::Vm, 4, 2278);
+    vm.mapped_kb = 115 * MIB;
+    vm.section_kb = 200 * MIB;
+    vm.private_working_set_kb = Some(1963 * MIB);
+    let mut settings = host(HostRole::Settings, 40, 324);
+    settings.private_working_set_kb = Some(250 * MIB);
+    let snapshot = MemorySnapshot {
+        guest: Some(GuestMemoryReport {
+            memory: GuestMemory {
+                ballooned_kb: 640 * MIB,
+                ..GuestMemory::default()
+            },
+            age: Duration::from_secs(3),
+        }),
+        host: vec![vm, settings, host(HostRole::Service, 2, 31)],
+    };
+    assert_eq!(snapshot.host_section_kb(), 200 * MIB);
+    assert_eq!(snapshot.host_own_kb(), (2278 - 315 + 324 + 31) * MIB);
+    assert_eq!(snapshot.host_private_working_set_kb(), Some(2213 * MIB));
+    let back = snapshot_from_wire(snapshot_to_wire(&snapshot));
+    assert_eq!(back, snapshot);
+    let text = snapshot.to_string();
+    assert!(text.contains("settings app"), "{text}");
+    assert!(text.contains("service"), "{text}");
+    assert!(
+        text.contains("200 MiB of it graphics and video sections"),
+        "{text}"
+    );
+    assert!(text.contains("2213 MiB private working sets"), "{text}");
+    assert!(text.contains("balloon 640 MiB"), "{text}");
 }

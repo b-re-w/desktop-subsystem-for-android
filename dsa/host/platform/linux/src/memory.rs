@@ -83,6 +83,8 @@ pub fn process(pid: u32, role: HostRole) -> Option<HostProcessMemory> {
         working_set_kb,
         private_kb: private,
         mapped_kb,
+        private_working_set_kb: None,
+        section_kb: 0,
     })
 }
 

@@ -3324,6 +3324,13 @@ pub fn describe_settings(report: &SettingsReport) -> String {
 /// reported since boot, how fast it went back since the report before (`reported_kb_per_minute`,
 /// null for the first report), and the reported free memory the host took back in with a
 /// neighbour and the guest reported again.
+///
+/// Each host process has its private working set (`private_working_set_kb`, Task Manager's
+/// "Memory" column, null where the platform does not count it) and, for the VM, the pages of
+/// the graphics and video sections it shares with the renderer and the window manager
+/// (`section_kb`), apart from the disk file pages (`mapped_kb`). `host_own_kb` leaves both
+/// out, so nothing is counted twice. `ballooned_kb` is memory added while Android ran that
+/// the host has taken back.
 pub fn memory_json(memory: &MemorySnapshot) -> Value {
     fn share(share: &dsa_host_core::memory::MemoryShare) -> Value {
         json!({
@@ -3381,6 +3388,7 @@ pub fn memory_json(memory: &MemorySnapshot) -> Value {
                 "reported_kb_per_minute": r.reported_kb_per_minute,
                 "refaulted_total_kb": r.refaulted_total_kb,
             })),
+            "ballooned_kb": guest.ballooned_kb,
             "age_seconds": report.age.as_secs(),
             "top_processes": guest.top_processes.iter().map(|p| {
                 let cost = guest.process_share(p);
@@ -3404,8 +3412,12 @@ pub fn memory_json(memory: &MemorySnapshot) -> Value {
             "working_set_kb": p.working_set_kb,
             "private_kb": p.private_kb,
             "mapped_kb": p.mapped_kb,
+            "private_working_set_kb": p.private_working_set_kb,
+            "section_kb": p.section_kb,
         })).collect::<Vec<_>>(),
         "host_total_kb": memory.host_total_kb(),
+        "host_private_working_set_kb": memory.host_private_working_set_kb(),
+        "host_section_kb": memory.host_section_kb(),
         "host_mapped_kb": memory.host_mapped_kb(),
         "host_own_kb": memory.host_own_kb(),
         "vm_beyond_guest_kb": memory.vm_beyond_guest_kb(),
