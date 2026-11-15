@@ -70,6 +70,8 @@ struct Layer {
     int32_t transform = 0;
     int32_t z = 0;
     bool hasLuts = false;
+    // The buffer's Android Dataspace: a YUV buffer's matrix and range.
+    int32_t dataspace = 0;
 };
 
 class Display {

@@ -14,11 +14,17 @@
 
 #include "cpu_upload.h"
 #include "cpu_upload_policy.h"
+#include "dsa_shared_color_buffer.h"
 #include "log.h"
 
 namespace dsa::hwc {
 
 namespace {
+
+bool hostComposesLayer(const Layer& layer) {
+    return hostComposes(layer.buffer.format, layer.buffer.width, layer.buffer.height,
+                        layer.dataspace, hostComposesYuv());
+}
 
 // minigbm writes this into every handle it makes (cros_gralloc_helpers.h).
 constexpr uint32_t kCrosGrallocMagic = 0xABCDDCBA;
@@ -173,6 +179,9 @@ bool Display::applyLayerCommand(Layer& layer, const composer3::LayerCommand& c) 
     if (c.blendMode) {
         layer.blendMode = static_cast<int32_t>(c.blendMode->blendMode);
     }
+    if (c.dataspace) {
+        layer.dataspace = static_cast<int32_t>(c.dataspace->dataspace);
+    }
     if (c.color) {
         layer.color[0] = c.color->r;
         layer.color[1] = c.color->g;
@@ -221,8 +230,9 @@ std::vector<composer3::ChangedCompositionLayer> Display::validate() {
         Composition wanted = layer.composition;
         switch (layer.composition) {
             case Composition::DEVICE:
-                // A YUV buffer (a video's pictures) is one the host cannot compose.
-                if (layer.hasLuts || (layer.buffer.valid() && !hostComposes(layer.buffer.format))) {
+                // A YUV buffer (a video's pictures) the host composes only in a colour it
+                // shows right (hostComposes).
+                if (layer.hasLuts || (layer.buffer.valid() && !hostComposesLayer(layer))) {
                     wanted = Composition::CLIENT;
                 }
                 break;
@@ -233,7 +243,7 @@ std::vector<composer3::ChangedCompositionLayer> Display::validate() {
                 break;
             case Composition::CURSOR:
                 wanted = (layer.hasLuts ||
-                          (layer.buffer.valid() && !hostComposes(layer.buffer.format)))
+                          (layer.buffer.valid() && !hostComposesLayer(layer)))
                              ? Composition::CLIENT
                              : Composition::DEVICE;
                 break;
@@ -291,6 +301,15 @@ Frame Display::takeFrame() {
         out.alpha = layer.alpha;
         for (int i = 0; i < 4; ++i) {
             out.color[i] = static_cast<uint8_t>(std::clamp(layer.color[i], 0.0f, 1.0f) * 255.0f + 0.5f);
+        }
+        // A YUV buffer layer the host composes carries its colour description in the colour,
+        // which the host ignores for a buffer layer otherwise.
+        if (out.mode == ComposeMode::Device && !out.client && layer.buffer.valid() &&
+            dsa_shared_color_buffer_yuv_layout(layer.buffer.format) != 0) {
+            if (auto yuv = yuvColorOf(layer.dataspace, layer.buffer.height)) {
+                yuv->vuOrder = chromaVuOrder(layer.buffer.format);
+                encodeYuvColor(*yuv, out.color);
+            }
         }
         out.transform = layer.transform;
         frame.layers.push_back(std::move(out));

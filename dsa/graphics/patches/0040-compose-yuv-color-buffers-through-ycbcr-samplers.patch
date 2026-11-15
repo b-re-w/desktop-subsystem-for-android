@@ -1,0 +1,759 @@
+Subject: Compose the layers of YUV ColorBuffers through YCbCr samplers
+
+The compositor sampled RGB images only, so the hwcomposer handed every YUV layer (a video's
+pictures) back to SurfaceFlinger. SurfaceFlinger then kept a client target the size of the
+display (two 3840x3840 RGBA buffers, 112.5 MiB on the host) and drew the whole display on the
+GPU for every video frame.
+
+A YUV ColorBuffer (patch 0019) is now composed like any other layer. Its image is read
+through an image view and an immutable sampler that share a sampler YCbCr conversion made
+from the layer's matrix (BT.601, BT.709, BT.2020), range (full, limited) and chroma order
+(U, V or V, U), which the guest puts in the layer's colour: a buffer layer's colour is unused
+otherwise. A layer without that description is BT.601, limited range, U then V. Each
+conversion has its own descriptor set layout, pipeline layout and pipelines, made the first
+time a layer needs them; the views and descriptor sets live for one frame. A YCbCr sampler
+clamps to the edge, so a YUV layer's flip and rotation turn about the crop's centre.
+
+The host lists ANDROID_EMU_dsa_yuv_composition when it composes with Vulkan, makes YUV
+ColorBuffers and has sampler YCbCr conversion; a guest hands it YUV layers only then.
+
+diff --git a/host/FrameBuffer.cpp b/host/FrameBuffer.cpp
+index ce14151cb..520708b6e 100644
+--- a/host/FrameBuffer.cpp
++++ b/host/FrameBuffer.cpp
+@@ -1734,6 +1734,11 @@ bool FrameBuffer::supportsDsaYuvColorBuffers() {
+            m_emulationVk->supportsYuvColorBuffer(FRAMEWORK_FORMAT_NV12);
+ }
+ 
++bool FrameBuffer::supportsDsaYuvComposition() {
++    return m_useVulkanComposition && supportsDsaYuvColorBuffers() &&
++           m_emulationVk->supportsSamplerYcbcrConversion();
++}
++
+ bool FrameBuffer::updateColorBufferFromDsaPackedYuv(HandleType p_colorbuffer, const void* bytes,
+                                                     size_t size) {
+     AutoLock mutex(m_lock);
+diff --git a/host/FrameBuffer.h b/host/FrameBuffer.h
+index adaef252b..7f830fe52 100644
+--- a/host/FrameBuffer.h
++++ b/host/FrameBuffer.h
+@@ -322,6 +322,9 @@ class FrameBuffer : public android::base::EventNotificationSupport<FrameBufferCh
+     // Whether this host makes the YUV ColorBuffers DSA's guest asks for (both 4:2:0 layouts:
+     // three planes and two).
+     bool supportsDsaYuvColorBuffers();
++    // DSA: whether this host composes YUV ColorBuffers itself, through the Vulkan compositor's
++    // YCbCr samplers, so a guest hwcomposer may hand it a video's layers.
++    bool supportsDsaYuvComposition();
+     // Writes a YUV ColorBuffer whole from a guest's planes, packed one after the other in
+     // the plane order and size the ColorBuffer's image has: no row padding, the chroma
+     // planes at half width and height. False, and nothing written, when the ColorBuffer is
+diff --git a/host/RenderControl.cpp b/host/RenderControl.cpp
+index 33d121b72..f6ed52eab 100644
+--- a/host/RenderControl.cpp
++++ b/host/RenderControl.cpp
+@@ -202,6 +202,9 @@ static const char* kHostCompositionV2 = "ANDROID_EMU_host_composition_v2";
+ // lists the extension. Each upload is one rcUpdateColorBuffer of the planes packed one
+ // after the other: GL_LUMINANCE bytes, `width` of them, on one row.
+ static const char* kDsaYuvColorBuffers = "ANDROID_EMU_dsa_yuv_color_buffers";
++// DSA: the host composes YUV ColorBuffers' layers, reading the colour description a guest
++// puts in such a layer's colour (CompositorVk::yuvSamplingKey).
++static const char* kDsaYuvComposition = "ANDROID_EMU_dsa_yuv_composition";
+ static constexpr GLenum kDsaYuv420ThreePlane = 0x44534133;  // 'DSA3'
+ static constexpr GLenum kDsaYuv420TwoPlane = 0x44534132;    // 'DSA2'
+ static constexpr GLenum kDsaPackedYuvFormat = 0x1909;       // GL_LUMINANCE
+@@ -556,6 +559,11 @@ static EGLint rcGetGLString(EGLenum name, void* buffer, EGLint bufferSize) {
+         glStr += " ";
+     }
+ 
++    if (name == GL_EXTENSIONS && fb->supportsDsaYuvComposition()) {
++        glStr += kDsaYuvComposition;
++        glStr += " ";
++    }
++
+     // DSA: the guest may map its host-visible memory from the graphics memory shared with it,
+     // and send gralloc buffers' CPU uploads and read backs through staging grants there
+     // (dsa_graphics_memory.h).
+diff --git a/host/vulkan/CompositorVk.cpp b/host/vulkan/CompositorVk.cpp
+index 7617622fa..562f9981f 100644
+--- a/host/vulkan/CompositorVk.cpp
++++ b/host/vulkan/CompositorVk.cpp
+@@ -3,6 +3,7 @@
+ #include <string.h>
+ 
+ #include <cinttypes>
++#include <cmath>
+ #include <glm/gtc/matrix_transform.hpp>
+ #include <optional>
+ 
+@@ -175,6 +176,24 @@ CompositorVk::~CompositorVk() {
+         m_vk.vkFreeMemory(m_vkDevice, m_defaultImage.m_vkImageMemory, nullptr);
+     }
+     m_vk.vkDestroyDescriptorPool(m_vkDevice, m_vkDescriptorPool, nullptr);
++    for (PerFrameResources& frameResources : m_frameResources) {
++        releaseYuvFrameResources(&frameResources);
++    }
++    for (auto& [_, sampling] : m_yuvSamplings) {
++        for (auto& [__, pipeline] : sampling.pipelines) {
++            m_vk.vkDestroyPipeline(m_vkDevice, pipeline, nullptr);
++        }
++        m_vk.vkDestroyPipelineLayout(m_vkDevice, sampling.pipelineLayout, nullptr);
++        m_vk.vkDestroyDescriptorSetLayout(m_vkDevice, sampling.setLayout, nullptr);
++        m_vk.vkDestroySampler(m_vkDevice, sampling.sampler, nullptr);
++        // An entry that could not be made holds nothing, on a device that may lack the call.
++        if (sampling.conversion != VK_NULL_HANDLE) {
++            m_vk.vkDestroySamplerYcbcrConversion(m_vkDevice, sampling.conversion, nullptr);
++        }
++    }
++    if (m_yuvDescriptorPool != VK_NULL_HANDLE) {
++        m_vk.vkDestroyDescriptorPool(m_vkDevice, m_yuvDescriptorPool, nullptr);
++    }
+     if (m_uniformStorage.m_vkDeviceMemory != VK_NULL_HANDLE) {
+         m_vk.vkUnmapMemory(m_vkDevice, m_uniformStorage.m_vkDeviceMemory);
+     }
+@@ -197,7 +216,11 @@ CompositorVk::~CompositorVk() {
+     }
+ }
+ 
+-void CompositorVk::setUpGraphicsPipeline() {
++// DSA: one pipeline of the composition's shaders, with `pipelineLayout`, for `renderPass`.
++// The RGB layers' pipelines and the YUV layers' (whose layouts carry a YCbCr sampler) differ
++// only in those two.
++VkPipeline CompositorVk::createCompositionPipeline(VkPipelineLayout pipelineLayout,
++                                                   VkRenderPass renderPass) {
+     const std::vector<uint32_t> vertSpvBuff(CompositorVkShader::compositorVertexShader,
+                                             std::end(CompositorVkShader::compositorVertexShader));
+     const std::vector<uint32_t> fragSpvBuff(CompositorVkShader::compositorFragmentShader,
+@@ -298,6 +321,35 @@ void CompositorVk::setUpGraphicsPipeline() {
+         .pDynamicStates = dynamicStates,
+     };
+ 
++    VkGraphicsPipelineCreateInfo graphicsPipelineCi = {
++        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
++        .stageCount = static_cast<uint32_t>(std::size(shaderStageCis)),
++        .pStages = shaderStageCis,
++        .pVertexInputState = &vertexInputStateCi,
++        .pInputAssemblyState = &inputAssemblyStateCi,
++        .pViewportState = &viewportStateCi,
++        .pRasterizationState = &rasterizerStateCi,
++        .pMultisampleState = &multisampleStateCi,
++        .pDepthStencilState = nullptr,
++        .pColorBlendState = &colorBlendStateCi,
++        .pDynamicState = &dynamicStateCi,
++        .layout = pipelineLayout,
++        .renderPass = renderPass,
++        .subpass = 0,
++        .basePipelineHandle = VK_NULL_HANDLE,
++        .basePipelineIndex = -1,
++    };
++
++    VkPipeline pipeline = VK_NULL_HANDLE;
++    VK_CHECK(m_vk.vkCreateGraphicsPipelines(m_vkDevice, VK_NULL_HANDLE, 1, &graphicsPipelineCi,
++                                            nullptr, &pipeline));
++
++    m_vk.vkDestroyShaderModule(m_vkDevice, vertShaderMod, nullptr);
++    m_vk.vkDestroyShaderModule(m_vkDevice, fragShaderMod, nullptr);
++    return pipeline;
++}
++
++void CompositorVk::setUpGraphicsPipeline() {
+     const VkDescriptorSetLayoutBinding layoutBindings[2] = {
+         VkDescriptorSetLayoutBinding{
+             .binding = 0,
+@@ -380,25 +432,6 @@ void CompositorVk::setUpGraphicsPipeline() {
+         .pDependencies = &subpassDependency,
+     };
+ 
+-    VkGraphicsPipelineCreateInfo graphicsPipelineCi = {
+-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+-        .stageCount = static_cast<uint32_t>(std::size(shaderStageCis)),
+-        .pStages = shaderStageCis,
+-        .pVertexInputState = &vertexInputStateCi,
+-        .pInputAssemblyState = &inputAssemblyStateCi,
+-        .pViewportState = &viewportStateCi,
+-        .pRasterizationState = &rasterizerStateCi,
+-        .pMultisampleState = &multisampleStateCi,
+-        .pDepthStencilState = nullptr,
+-        .pColorBlendState = &colorBlendStateCi,
+-        .pDynamicState = &dynamicStateCi,
+-        .layout = m_vkPipelineLayout,
+-        .renderPass = VK_NULL_HANDLE,
+-        .subpass = 0,
+-        .basePipelineHandle = VK_NULL_HANDLE,
+-        .basePipelineIndex = -1,
+-    };
+-
+     const std::vector<VkFormat> kRenderTargetFormats = {
+         VK_FORMAT_R8G8B8A8_UNORM,
+         VK_FORMAT_B8G8R8A8_UNORM,
+@@ -409,20 +442,13 @@ void CompositorVk::setUpGraphicsPipeline() {
+         VkRenderPass renderPass = VK_NULL_HANDLE;
+         VK_CHECK(m_vk.vkCreateRenderPass(m_vkDevice, &renderPassCi, nullptr, &renderPass));
+ 
+-        graphicsPipelineCi.renderPass = renderPass;
+-
+-        VkPipeline pipeline = VK_NULL_HANDLE;
+-        VK_CHECK(m_vk.vkCreateGraphicsPipelines(m_vkDevice, VK_NULL_HANDLE, 1, &graphicsPipelineCi,
+-                                                nullptr, &pipeline));
++        VkPipeline pipeline = createCompositionPipeline(m_vkPipelineLayout, renderPass);
+ 
+         m_formatResources[renderTargetFormat] = PerFormatResources{
+             .m_vkRenderPass = renderPass,
+             .m_graphicsVkPipeline = pipeline,
+         };
+     }
+-
+-    m_vk.vkDestroyShaderModule(m_vkDevice, vertShaderMod, nullptr);
+-    m_vk.vkDestroyShaderModule(m_vkDevice, fragShaderMod, nullptr);
+ }
+ 
+ void CompositorVk::setUpVertexBuffers() {
+@@ -480,6 +506,26 @@ void CompositorVk::setUpDescriptorSets() {
+     VK_CHECK(
+         m_vk.vkCreateDescriptorPool(m_vkDevice, &descriptorPoolCi, nullptr, &m_vkDescriptorPool));
+ 
++    // DSA: the YUV layers' sets, made for each frame and freed with it. A combined image
++    // sampler of a multi-planar format may take up to one descriptor a plane.
++    const VkDescriptorPoolSize yuvPoolSizes[2] = {
++        VkDescriptorPoolSize{
++            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
++            .descriptorCount = 3 * descriptorsOfEachTypeTotal,
++        },
++        VkDescriptorPoolSize{
++            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
++            .descriptorCount = descriptorsOfEachTypeTotal,
++        }};
++    const VkDescriptorPoolCreateInfo yuvPoolCi = {
++        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
++        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
++        .maxSets = descriptorSetsTotal,
++        .poolSizeCount = static_cast<uint32_t>(std::size(yuvPoolSizes)),
++        .pPoolSizes = yuvPoolSizes,
++    };
++    VK_CHECK(m_vk.vkCreateDescriptorPool(m_vkDevice, &yuvPoolCi, nullptr, &m_yuvDescriptorPool));
++
+     const std::vector<VkDescriptorSetLayout> frameDescriptorSetLayouts(descriptorSetsPerFrame,
+                                                                        m_vkDescriptorSetLayout);
+     const VkDescriptorSetAllocateInfo frameDescriptorSetAllocInfo = {
+@@ -964,13 +1010,20 @@ void CompositorVk::buildCompositionVk(const CompositionRequest& compositionReque
+         uint32_t sourceImageWidth = 0;
+         uint32_t sourceImageHeight = 0;
+         const BorrowedImageInfoVk* sourceImage = nullptr;
++        uint64_t yuvKey = 0;
+ 
+         if (layer.props.composeMode == HWC2_COMPOSITION_SOLID_COLOR) {
+             sourceImageWidth = targetWidth;
+             sourceImageHeight = targetHeight;
+         } else {
+             sourceImage = getInfoOrAbort(layer.source);
+-            if (!canCompositeFrom(sourceImage->imageCreateInfo)) {
++            yuvKey = yuvSamplingKey(sourceImage->imageCreateInfo, layer.props.color);
++            if (yuvKey != 0) {
++                // A YUV image is read only through its conversion's sampler.
++                if (getOrCreateYuvSampling(yuvKey) == nullptr) {
++                    continue;
++                }
++            } else if (!canCompositeFrom(sourceImage->imageCreateInfo)) {
+                 continue;
+             }
+ 
+@@ -1038,6 +1091,27 @@ void CompositorVk::buildCompositionVk(const CompositionRequest& compositionReque
+                 break;
+         }
+ 
++        glm::mat4 texCoordTransform =
++            glm::translate(glm::mat4(1.0f),
++                           glm::vec3(texCoordTranslateX, texCoordTranslateY, 0.0f)) *
++            glm::scale(glm::mat4(1.0f), glm::vec3(texCoordScaleX, texCoordScaleY, 1.0f)) *
++            glm::rotate(glm::mat4(1.0f), texcoordRotation, glm::vec3(0.0f, 0.0f, 1.0f));
++        if (yuvKey != 0) {
++            // DSA: a YCbCr sampler clamps to the edge instead of repeating, so the flip and the
++            // rotation turn the crop about its centre and keep the coordinates inside it. For
++            // an uncropped layer that samples the same texels the repeating sampler did.
++            texCoordTransform =
++                glm::translate(glm::mat4(1.0f),
++                               glm::vec3(texCoordTranslateX, texCoordTranslateY, 0.0f)) *
++                glm::scale(glm::mat4(1.0f), glm::vec3(std::abs(texCoordScaleX),
++                                                      std::abs(texCoordScaleY), 1.0f)) *
++                glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.0f)) *
++                glm::scale(glm::mat4(1.0f), glm::vec3(texCoordScaleX < 0.0f ? -1.0f : 1.0f,
++                                                      texCoordScaleY < 0.0f ? -1.0f : 1.0f, 1.0f)) *
++                glm::rotate(glm::mat4(1.0f), texcoordRotation, glm::vec3(0.0f, 0.0f, 1.0f)) *
++                glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -0.5f, 0.0f));
++        }
++
+         DescriptorSetContents descriptorSetContents = {
+             .binding1 =
+                 {
+@@ -1045,12 +1119,7 @@ void CompositorVk::buildCompositionVk(const CompositionRequest& compositionReque
+                         glm::translate(glm::mat4(1.0f),
+                                        glm::vec3(posTranslateX, posTranslateY, 0.0f)) *
+                         glm::scale(glm::mat4(1.0f), glm::vec3(posScaleX, posScaleY, 1.0f)),
+-                    .texCoordTransform =
+-                        glm::translate(glm::mat4(1.0f),
+-                                       glm::vec3(texCoordTranslateX, texCoordTranslateY, 0.0f)) *
+-                        glm::scale(glm::mat4(1.0f),
+-                                   glm::vec3(texCoordScaleX, texCoordScaleY, 1.0f)) *
+-                        glm::rotate(glm::mat4(1.0f), texcoordRotation, glm::vec3(0.0f, 0.0f, 1.0f)),
++                    .texCoordTransform = texCoordTransform,
+                     .mode = glm::uvec4(static_cast<uint32_t>(layer.props.composeMode), 0, 0, 0),
+                     .alpha =
+                         glm::vec4(layer.props.alpha, layer.props.alpha, layer.props.alpha,
+@@ -1073,7 +1142,16 @@ void CompositorVk::buildCompositionVk(const CompositionRequest& compositionReque
+                     << "CompositorVk failed to find sourceImage.";
+             }
+             descriptorSetContents.binding0.sampledImageId = sourceImage->id;
+-            descriptorSetContents.binding0.sampledImageView = sourceImage->imageView;
++            // A YUV layer's set keeps the default image: its own view needs the YCbCr sampler,
++            // and it is drawn with a set of that sampler's layout instead (compose).
++            descriptorSetContents.binding0.sampledImageView =
++                yuvKey != 0 ? m_defaultImage.m_vkImageView : sourceImage->imageView;
++            descriptorSetContents.binding0.yuvKey = yuvKey;
++            if (yuvKey != 0) {
++                compositionVk->yuvLayers.push_back(
++                    {static_cast<uint32_t>(compositionVk->layersDescriptorSets.descriptorSets.size()),
++                     yuvKey, sourceImage});
++            }
+             compositionVk->layersSourceImages.emplace_back(sourceImage);
+         }
+ 
+@@ -1105,6 +1183,100 @@ CompositorVk::CompositionFinishedWaitable CompositorVk::compose(
+ 
+     updateDescriptorSetsIfChanged(compositionVk.layersDescriptorSets, frameResources);
+ 
++    // DSA: the YUV layers' views and sets. The ones this frame resource last drew with are
++    // done: its fence has signaled. The uniform buffer is the layer's own, written above.
++    releaseYuvFrameResources(frameResources);
++    const VkFormat targetFormat = compositionVk.targetImage->imageCreateInfo.format;
++    const uint32_t frameIndex = static_cast<uint32_t>(frameResources - m_frameResources.data());
++    std::unordered_map<uint32_t, std::pair<VkPipeline, std::pair<VkPipelineLayout, VkDescriptorSet>>>
++        yuvDraws;
++    for (const CompositionVk::YuvLayer& yuvLayer : compositionVk.yuvLayers) {
++        YuvSampling* sampling = getOrCreateYuvSampling(yuvLayer.key);
++        VkPipeline pipeline =
++            sampling != nullptr ? getOrCreateYuvPipeline(*sampling, targetFormat) : VK_NULL_HANDLE;
++        VkDescriptorSet set = VK_NULL_HANDLE;
++        VkImageView view = VK_NULL_HANDLE;
++        if (pipeline != VK_NULL_HANDLE) {
++            const VkSamplerYcbcrConversionInfo conversionInfo = {
++                .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
++                .conversion = sampling->conversion,
++            };
++            const VkImageViewCreateInfo viewCi = {
++                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
++                .pNext = &conversionInfo,
++                .image = yuvLayer.image->image,
++                .viewType = VK_IMAGE_VIEW_TYPE_2D,
++                .format = yuvLayer.image->imageCreateInfo.format,
++                .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
++                               VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
++                .subresourceRange =
++                    {
++                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
++                        .baseMipLevel = 0,
++                        .levelCount = 1,
++                        .baseArrayLayer = 0,
++                        .layerCount = 1,
++                    },
++            };
++            if (m_vk.vkCreateImageView(m_vkDevice, &viewCi, nullptr, &view) != VK_SUCCESS) {
++                view = VK_NULL_HANDLE;
++            }
++        }
++        if (view != VK_NULL_HANDLE) {
++            frameResources->m_yuvImageViews.push_back(view);
++            const VkDescriptorSetAllocateInfo allocInfo = {
++                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
++                .descriptorPool = m_yuvDescriptorPool,
++                .descriptorSetCount = 1,
++                .pSetLayouts = &sampling->setLayout,
++            };
++            if (m_vk.vkAllocateDescriptorSets(m_vkDevice, &allocInfo, &set) != VK_SUCCESS) {
++                set = VK_NULL_HANDLE;
++            }
++        }
++        if (set == VK_NULL_HANDLE) {
++            ERR("CompositorVk could not sample YUV ColorBuffer %u; its layer is left out",
++                yuvLayer.image->id);
++            yuvDraws[yuvLayer.layerIndex] = {VK_NULL_HANDLE, {VK_NULL_HANDLE, VK_NULL_HANDLE}};
++            continue;
++        }
++        frameResources->m_yuvDescriptorSets.push_back(set);
++        const VkDescriptorImageInfo imageInfo = {
++            .sampler = VK_NULL_HANDLE,
++            .imageView = view,
++            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
++        };
++        const VkDescriptorBufferInfo bufferInfo = {
++            .buffer = m_uniformStorage.m_vkBuffer,
++            .offset = (static_cast<VkDeviceSize>(frameIndex) * kMaxLayersPerFrame +
++                       yuvLayer.layerIndex) *
++                      m_uniformStorage.m_stride,
++            .range = sizeof(UniformBufferBinding),
++        };
++        const VkWriteDescriptorSet writes[2] = {
++            VkWriteDescriptorSet{
++                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
++                .dstSet = set,
++                .dstBinding = 0,
++                .dstArrayElement = 0,
++                .descriptorCount = 1,
++                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
++                .pImageInfo = &imageInfo,
++            },
++            VkWriteDescriptorSet{
++                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
++                .dstSet = set,
++                .dstBinding = 1,
++                .dstArrayElement = 0,
++                .descriptorCount = 1,
++                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
++                .pBufferInfo = &bufferInfo,
++            },
++        };
++        m_vk.vkUpdateDescriptorSets(m_vkDevice, 2, writes, 0, nullptr);
++        yuvDraws[yuvLayer.layerIndex] = {pipeline, {sampling->pipelineLayout, set}};
++    }
++
+     std::vector<VkImageMemoryBarrier> preCompositionQueueTransferBarriers;
+     std::vector<VkImageMemoryBarrier> preCompositionLayoutTransitionBarriers;
+     std::vector<VkImageMemoryBarrier> postCompositionLayoutTransitionBarriers;
+@@ -1191,6 +1363,7 @@ CompositorVk::CompositionFinishedWaitable CompositorVk::compose(
+     m_vk.vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+ 
+     m_vk.vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionVk.pipeline);
++    VkPipeline boundPipeline = compositionVk.pipeline;
+ 
+     const VkRect2D scissor = {
+         .offset =
+@@ -1227,9 +1400,25 @@ CompositorVk::CompositionFinishedWaitable CompositorVk::compose(
+                                               layerIndex);
+ 
+         VkDescriptorSet layerDescriptorSet = frameResources->m_layerDescriptorSets[layerIndex];
++        VkPipeline layerPipeline = compositionVk.pipeline;
++        VkPipelineLayout layerPipelineLayout = m_vkPipelineLayout;
++        auto yuvDraw = yuvDraws.find(layerIndex);
++        if (yuvDraw != yuvDraws.end()) {
++            layerPipeline = yuvDraw->second.first;
++            layerPipelineLayout = yuvDraw->second.second.first;
++            layerDescriptorSet = yuvDraw->second.second.second;
++            if (layerDescriptorSet == VK_NULL_HANDLE) {
++                m_debugUtilsHelper.cmdEndDebugLabel(commandBuffer);
++                continue;
++            }
++        }
++        if (layerPipeline != boundPipeline) {
++            m_vk.vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layerPipeline);
++            boundPipeline = layerPipeline;
++        }
+ 
+         m_vk.vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+-                                     m_vkPipelineLayout,
++                                     layerPipelineLayout,
+                                      /*firstSet=*/0,
+                                      /*descriptorSetCount=*/1, &layerDescriptorSet,
+                                      /*dynamicOffsetCount=*/0,
+@@ -1349,12 +1538,222 @@ CompositorVk::CompositionFinishedWaitable CompositorVk::compose(
+     return composeCompleteFuture;
+ }
+ 
++// DSA: the colour description a guest hwcomposer puts in a YUV buffer layer's colour, which
++// the compositor otherwise ignores for a buffer layer: red is the matrix (1 BT.601, 2 BT.709,
++// 3 BT.2020), green the range (1 full, 2 limited), blue 1 when the buffer's chroma planes are
++// in V, U order (YV12, NV21), and alpha this marker. A layer without it is BT.601, limited
++// range, in U, V order, as a video without a colour description usually is.
++namespace {
++constexpr uint8_t kDsaYuvColorMarker = 0x59;  // 'Y'
++constexpr uint64_t kYuvKeyModelShift = 32;
++constexpr uint64_t kYuvKeyRangeShift = 36;
++constexpr uint64_t kYuvKeySwapBit = 1ull << 40;
++constexpr uint64_t kYuvKeyLinearBit = 1ull << 41;
++}  // namespace
++
++uint64_t CompositorVk::yuvSamplingKey(const VkImageCreateInfo& image, const hwc_color_t& color) {
++    if (image.format != VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM &&
++        image.format != VK_FORMAT_G8_B8R8_2PLANE_420_UNORM) {
++        return 0;
++    }
++    uint64_t model = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601;
++    uint64_t range = VK_SAMPLER_YCBCR_RANGE_ITU_NARROW;
++    bool swap = false;
++    if (color.a == kDsaYuvColorMarker && color.r >= 1 && color.r <= 3 && color.g >= 1 &&
++        color.g <= 2 && color.b <= 1) {
++        model = color.r == 1   ? VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601
++                : color.r == 2 ? VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709
++                               : VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020;
++        range = color.g == 1 ? VK_SAMPLER_YCBCR_RANGE_ITU_FULL : VK_SAMPLER_YCBCR_RANGE_ITU_NARROW;
++        swap = color.b == 1;
++    }
++    return static_cast<uint64_t>(image.format) | (model << kYuvKeyModelShift) |
++           (range << kYuvKeyRangeShift) | (swap ? kYuvKeySwapBit : 0) |
++           (image.tiling == VK_IMAGE_TILING_LINEAR ? kYuvKeyLinearBit : 0);
++}
++
++CompositorVk::YuvSampling* CompositorVk::getOrCreateYuvSampling(uint64_t key) {
++    auto found = m_yuvSamplings.find(key);
++    if (found != m_yuvSamplings.end()) {
++        return found->second.conversion != VK_NULL_HANDLE ? &found->second : nullptr;
++    }
++    // A key that cannot be sampled stays in the map empty, so it is tried once.
++    YuvSampling& sampling = m_yuvSamplings[key];
++
++    const VkFormat format = static_cast<VkFormat>(key & 0xffffffffull);
++    const VkImageTiling tiling =
++        (key & kYuvKeyLinearBit) ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
++    const VkFormatFeatureFlags features = getFormatFeatures(format, tiling);
++    const bool midpoint = features & VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT;
++    const bool cosited = features & VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT;
++    if (!(features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) || (!midpoint && !cosited) ||
++        m_vk.vkCreateSamplerYcbcrConversion == nullptr) {
++        ERR("CompositorVk cannot sample %s with tiling %s through a YCbCr conversion "
++            "(features %s); its layers are left out",
++            string_VkFormat(format), string_VkImageTiling(tiling),
++            string_VkFormatFeatureFlags(features).c_str());
++        return nullptr;
++    }
++    // Video 4:2:0 chroma sits on the left luma column and between two luma rows.
++    const VkChromaLocation xChroma =
++        cosited ? VK_CHROMA_LOCATION_COSITED_EVEN : VK_CHROMA_LOCATION_MIDPOINT;
++    const VkChromaLocation yChroma =
++        midpoint ? VK_CHROMA_LOCATION_MIDPOINT : VK_CHROMA_LOCATION_COSITED_EVEN;
++    const bool linear =
++        (features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT) &&
++        (features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
++    const VkFilter chromaFilter = linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
++    // Without a separate reconstruction filter the sampler's filter must be the chroma's.
++    const VkFilter filter =
++        ((features &
++          VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT) &&
++         (features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
++            ? VK_FILTER_LINEAR
++            : chromaFilter;
++    // R is read as Cr and B as Cb. A buffer whose first chroma plane (or byte) is V has its
++    // R and B swapped.
++    const bool swap = key & kYuvKeySwapBit;
++    const VkSamplerYcbcrConversionCreateInfo conversionCi = {
++        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
++        .format = format,
++        .ycbcrModel = static_cast<VkSamplerYcbcrModelConversion>((key >> kYuvKeyModelShift) & 0xf),
++        .ycbcrRange = static_cast<VkSamplerYcbcrRange>((key >> kYuvKeyRangeShift) & 0xf),
++        .components = {swap ? VK_COMPONENT_SWIZZLE_B : VK_COMPONENT_SWIZZLE_IDENTITY,
++                       VK_COMPONENT_SWIZZLE_IDENTITY,
++                       swap ? VK_COMPONENT_SWIZZLE_R : VK_COMPONENT_SWIZZLE_IDENTITY,
++                       VK_COMPONENT_SWIZZLE_IDENTITY},
++        .xChromaOffset = xChroma,
++        .yChromaOffset = yChroma,
++        .chromaFilter = chromaFilter,
++        .forceExplicitReconstruction = VK_FALSE,
++    };
++    VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
++    if (m_vk.vkCreateSamplerYcbcrConversion(m_vkDevice, &conversionCi, nullptr, &conversion) !=
++        VK_SUCCESS) {
++        ERR("CompositorVk could not make a YCbCr conversion for %s; its layers are left out",
++            string_VkFormat(format));
++        return nullptr;
++    }
++    const VkSamplerYcbcrConversionInfo conversionInfo = {
++        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
++        .conversion = conversion,
++    };
++    const VkSamplerCreateInfo samplerCi = {
++        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
++        .pNext = &conversionInfo,
++        .magFilter = filter,
++        .minFilter = filter,
++        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
++        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
++        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
++        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
++        .mipLodBias = 0.0f,
++        .anisotropyEnable = VK_FALSE,
++        .maxAnisotropy = 1.0f,
++        .compareEnable = VK_FALSE,
++        .compareOp = VK_COMPARE_OP_ALWAYS,
++        .minLod = 0.0f,
++        .maxLod = 0.0f,
++        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
++        .unnormalizedCoordinates = VK_FALSE,
++    };
++    VkSampler sampler = VK_NULL_HANDLE;
++    if (m_vk.vkCreateSampler(m_vkDevice, &samplerCi, nullptr, &sampler) != VK_SUCCESS) {
++        m_vk.vkDestroySamplerYcbcrConversion(m_vkDevice, conversion, nullptr);
++        ERR("CompositorVk could not make a YCbCr sampler for %s; its layers are left out",
++            string_VkFormat(format));
++        return nullptr;
++    }
++    const VkDescriptorSetLayoutBinding bindings[2] = {
++        VkDescriptorSetLayoutBinding{
++            .binding = 0,
++            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
++            .descriptorCount = 1,
++            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
++            .pImmutableSamplers = &sampler,
++        },
++        VkDescriptorSetLayoutBinding{
++            .binding = 1,
++            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
++            .descriptorCount = 1,
++            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
++            .pImmutableSamplers = nullptr,
++        },
++    };
++    const VkDescriptorSetLayoutCreateInfo setLayoutCi = {
++        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
++        .bindingCount = static_cast<uint32_t>(std::size(bindings)),
++        .pBindings = bindings,
++    };
++    VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
++    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
++    if (m_vk.vkCreateDescriptorSetLayout(m_vkDevice, &setLayoutCi, nullptr, &setLayout) ==
++        VK_SUCCESS) {
++        const VkPipelineLayoutCreateInfo pipelineLayoutCi = {
++            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
++            .setLayoutCount = 1,
++            .pSetLayouts = &setLayout,
++            .pushConstantRangeCount = 0,
++        };
++        if (m_vk.vkCreatePipelineLayout(m_vkDevice, &pipelineLayoutCi, nullptr,
++                                        &pipelineLayout) != VK_SUCCESS) {
++            pipelineLayout = VK_NULL_HANDLE;
++        }
++    } else {
++        setLayout = VK_NULL_HANDLE;
++    }
++    if (pipelineLayout == VK_NULL_HANDLE) {
++        if (setLayout != VK_NULL_HANDLE) {
++            m_vk.vkDestroyDescriptorSetLayout(m_vkDevice, setLayout, nullptr);
++        }
++        m_vk.vkDestroySampler(m_vkDevice, sampler, nullptr);
++        m_vk.vkDestroySamplerYcbcrConversion(m_vkDevice, conversion, nullptr);
++        ERR("CompositorVk could not make a YCbCr layout for %s; its layers are left out",
++            string_VkFormat(format));
++        return nullptr;
++    }
++    sampling.conversion = conversion;
++    sampling.sampler = sampler;
++    sampling.setLayout = setLayout;
++    sampling.pipelineLayout = pipelineLayout;
++    return &sampling;
++}
++
++VkPipeline CompositorVk::getOrCreateYuvPipeline(YuvSampling& sampling, VkFormat targetFormat) {
++    auto found = sampling.pipelines.find(targetFormat);
++    if (found != sampling.pipelines.end()) {
++        return found->second;
++    }
++    auto formatResources = m_formatResources.find(targetFormat);
++    if (formatResources == m_formatResources.end()) {
++        return VK_NULL_HANDLE;
++    }
++    VkPipeline pipeline =
++        createCompositionPipeline(sampling.pipelineLayout, formatResources->second.m_vkRenderPass);
++    sampling.pipelines[targetFormat] = pipeline;
++    return pipeline;
++}
++
++void CompositorVk::releaseYuvFrameResources(PerFrameResources* frameResources) {
++    if (!frameResources->m_yuvDescriptorSets.empty()) {
++        m_vk.vkFreeDescriptorSets(m_vkDevice, m_yuvDescriptorPool,
++                                  static_cast<uint32_t>(frameResources->m_yuvDescriptorSets.size()),
++                                  frameResources->m_yuvDescriptorSets.data());
++        frameResources->m_yuvDescriptorSets.clear();
++    }
++    for (VkImageView view : frameResources->m_yuvImageViews) {
++        m_vk.vkDestroyImageView(m_vkDevice, view, nullptr);
++    }
++    frameResources->m_yuvImageViews.clear();
++}
++
+ void CompositorVk::onImageDestroyed(uint32_t imageId) { m_renderTargetCache.remove(imageId); }
+ 
+ bool operator==(const CompositorVkBase::DescriptorSetContents& lhs,
+                 const CompositorVkBase::DescriptorSetContents& rhs) {
+     return std::tie(lhs.binding0.sampledImageId,     //
+                     lhs.binding0.sampledImageView,   //
++                    lhs.binding0.yuvKey,             //
+                     lhs.binding1.mode,               //
+                     lhs.binding1.alpha,              //
+                     lhs.binding1.color,              //
+@@ -1363,6 +1762,7 @@ bool operator==(const CompositorVkBase::DescriptorSetContents& lhs,
+                      ==                              //
+            std::tie(rhs.binding0.sampledImageId,     //
+                     rhs.binding0.sampledImageView,   //
++                    rhs.binding0.yuvKey,             //
+                     rhs.binding1.mode,               //
+                     rhs.binding1.alpha,              //
+                     rhs.binding1.color,              //
+diff --git a/host/vulkan/CompositorVk.h b/host/vulkan/CompositorVk.h
+index b10aa64a7..940c4b166 100644
+--- a/host/vulkan/CompositorVk.h
++++ b/host/vulkan/CompositorVk.h
+@@ -59,6 +59,20 @@ struct CompositorVkBase : public vk_util::MultiCrtp<CompositorVkBase,         //
+     VkCommandPool m_vkCommandPool;
+     // TODO: create additional VkSampler-s for YCbCr layers.
+     VkSampler m_vkSampler;
++
++    // DSA: how a YUV layer is sampled. A YUV image is read through a sampler YCbCr conversion,
++    // which turns its planes into RGB with the layer's matrix, range and chroma order. Such a
++    // sampler must be immutable in its descriptor set layout, so each conversion has a layout,
++    // a pipeline layout and pipelines of its own. Made the first time a layer needs one.
++    struct YuvSampling {
++        VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
++        VkSampler sampler = VK_NULL_HANDLE;
++        VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
++        VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
++        std::unordered_map<VkFormat, VkPipeline> pipelines;
++    };
++    std::unordered_map<uint64_t, YuvSampling> m_yuvSamplings;
++    VkDescriptorPool m_yuvDescriptorPool = VK_NULL_HANDLE;
+     // Unused image that is solely used to occupy the sampled image binding
+     // when compositing a solid color layer.
+     struct DefaultImage {
+@@ -80,6 +94,9 @@ struct CompositorVkBase : public vk_util::MultiCrtp<CompositorVkBase,         //
+         // that the VkImageView is recycled across different images (b/322998473).
+         uint32_t sampledImageId = 0;
+         VkImageView sampledImageView = VK_NULL_HANDLE;
++        // DSA: nonzero for a YUV layer, which is drawn through the YCbCr sampling of this key
++        // (yuvSamplingKey) instead of this set's sampler and view.
++        uint64_t yuvKey = 0;
+     };
+ 
+     // Keep in sync with vulkan/Compositor.vert.
+@@ -115,6 +132,10 @@ struct CompositorVkBase : public vk_util::MultiCrtp<CompositorVkBase,         //
+         // buffer of part of each descriptor set for each layer.
+         std::vector<UniformBufferBinding*> m_layerUboStorages;
+         std::optional<FrameDescriptorSetsContents> m_vkDescriptorSetsContents;
++        // DSA: the YUV layers' image views and descriptor sets of the frame last drawn with
++        // these resources, freed once its fence has signaled, when they are taken again.
++        std::vector<VkImageView> m_yuvImageViews;
++        std::vector<VkDescriptorSet> m_yuvDescriptorSets;
+     };
+     std::vector<PerFrameResources> m_frameResources;
+     std::deque<std::shared_future<PerFrameResources*>> m_availableFrameResources;
+@@ -167,6 +188,13 @@ class CompositorVk : protected CompositorVkBase, public Compositor {
+                           uint32_t maxFramesInFlight, DebugUtilsHelper debugUtils);
+ 
+     void setUpGraphicsPipeline();
++    VkPipeline createCompositionPipeline(VkPipelineLayout pipelineLayout, VkRenderPass renderPass);
++    // DSA: the YCbCr sampling a layer of `image` needs, or 0 when the image is not YUV.
++    // `color` carries the layer's colour description (an unused field for a buffer layer).
++    uint64_t yuvSamplingKey(const VkImageCreateInfo& image, const hwc_color_t& color);
++    YuvSampling* getOrCreateYuvSampling(uint64_t key);
++    VkPipeline getOrCreateYuvPipeline(YuvSampling& sampling, VkFormat targetFormat);
++    void releaseYuvFrameResources(PerFrameResources* frameResources);
+     void setUpVertexBuffers();
+     void setUpSampler();
+     void setUpDescriptorSets();
+@@ -211,6 +239,13 @@ class CompositorVk : protected CompositorVkBase, public Compositor {
+         VkPipeline pipeline = VK_NULL_HANDLE;
+         std::vector<const BorrowedImageInfoVk*> layersSourceImages;
+         FrameDescriptorSetsContents layersDescriptorSets;
++        // DSA: the layers drawn through a YCbCr sampler, by their index in the sets above.
++        struct YuvLayer {
++            uint32_t layerIndex = 0;
++            uint64_t key = 0;
++            const BorrowedImageInfoVk* image = nullptr;
++        };
++        std::vector<YuvLayer> yuvLayers;
+     };
+     void buildCompositionVk(const CompositionRequest& compositionRequest,
+                             CompositionVk* compositionVk);

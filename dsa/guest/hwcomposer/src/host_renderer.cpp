@@ -12,6 +12,7 @@
 #include "dsa_shared_color_buffer.h"
 #include "gfxstream/guest/ChecksumCalculator.h"
 #include "host_stream.h"
+#include "cpu_upload_policy.h"
 #include "log.h"
 
 namespace dsa::hwc {
@@ -102,6 +103,8 @@ void HostRenderer::adopt(ConnectionPtr connection) {
     mConnection = std::move(connection);
     ++mGeneration;
     mHostYuv = -1;
+    // Until the new host says it composes YUV layers, SurfaceFlinger draws them.
+    setHostComposesYuv(false);
 }
 
 bool HostRenderer::hostHasYuv() {
@@ -112,6 +115,11 @@ bool HostRenderer::hostHasYuv() {
                        ? 1
                        : 0;
         HWC_LOGI("the host renderer %s YUV ColorBuffers", mHostYuv ? "makes" : "does not make");
+        const bool composes =
+            mHostYuv == 1 && rc->queryHostExtensions().find(DSA_YUV_COMPOSITION_EXTENSION) !=
+                                 std::string::npos;
+        setHostComposesYuv(composes);
+        HWC_LOGI("the host renderer %s video layers itself", composes ? "composes" : "does not compose");
     }
     return mHostYuv == 1;
 }
