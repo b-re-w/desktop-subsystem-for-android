@@ -27,6 +27,9 @@
     <SatelliteResourceLanguages>en;ko;ja;zh-CN;zh-TW;zh-Hans;zh-Hant;es;fr;de;pt-BR;ru;it;vi;id;tr</SatelliteResourceLanguages>
     <DebugType>embedded</DebugType>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- Precompiled like the settings app it is published beside, so the assemblies they
+         share stay ReadyToRun whichever is published last. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
 
   <ItemGroup>

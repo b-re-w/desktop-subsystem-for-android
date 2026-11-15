@@ -17,13 +17,12 @@ public partial class MemoryPage : Page
         DataContext = ViewModel;
         LimitSection.DataContext = App.Settings;
         _timer.Tick += async (_, _) => await ViewModel.RefreshAsync();
+        PollingTimers.Attach(this, _timer);
         Loaded += async (_, _) =>
         {
-            _timer.Start();
             await ViewModel.RefreshAsync();
             await App.Settings.LoadAsync();
         };
-        Unloaded += (_, _) => _timer.Stop();
     }
 
     private async void OnRefresh(object sender, RoutedEventArgs e) => await ViewModel.RefreshAsync();

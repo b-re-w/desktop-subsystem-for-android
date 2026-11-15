@@ -16,6 +16,8 @@
             </ResourceDictionary.MergedDictionaries>
 
             <BooleanToVisibilityConverter x:Key="Visible" />
+            <!-- App icons decoded at the size they are shown (IconImageConverter.cs). -->
+            <l:IconImageConverter x:Key="IconImage" />
 
             <!-- The Windows type ramp, as the Windows Settings app uses it: Segoe UI Variable
                  (Text for 14 px and smaller, Display for the page title), with Segoe UI where
