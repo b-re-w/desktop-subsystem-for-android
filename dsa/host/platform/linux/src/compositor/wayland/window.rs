@@ -330,9 +330,11 @@ impl State {
                 task_id,
                 app_drawn,
                 interactive,
+                below,
             } => {
                 if let Some(window) = self.windows.get_mut(task_id) {
                     window.title_bar.set_mode(*app_drawn, interactive.clone());
+                    window.title_bar.set_below(*below);
                 }
                 self.redraw(*task_id);
             }
@@ -573,6 +575,8 @@ impl Window {
     ) -> (CaptionLayout, &[u8]) {
         let layout = self.model.caption_layout();
         let dpi = self.model.dpi();
+        // An app that starts below the title bar has its band filled, whatever the frame shows.
+        let sample = self.title_bar.band_sample(sample, self.tone);
         self.shown_tone = shown_tone(self.tone, sample, self.title_bar.app_drawn, self.shown_tone);
         let tone = self.shown_tone.unwrap_or_default();
         let fill = sample.fill;

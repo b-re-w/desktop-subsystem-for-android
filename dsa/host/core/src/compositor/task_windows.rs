@@ -16,7 +16,8 @@ use super::window_sizing::{
     DENSITY_AT_BASE_DPI, SETTLE,
 };
 use crate::app_windows::{
-    full_screen_place, AppWindowSettings, FullScreenDefaults, FullScreenPlace,
+    below_title_bar_packages, full_screen_place, AppWindowSettings, FullScreenDefaults,
+    FullScreenPlace,
 };
 use crate::tasks::{Bounds, Task, TaskEvent, TaskOrientation, TaskRequest};
 
@@ -98,10 +99,15 @@ pub enum WindowChange {
     /// Whether the app draws its own title bar, and where its controls are in the band, in
     /// the window's client pixels (the task's at the window's scale). Comes with a window that
     /// opens for an app that draws its own, with every change, and with a new scale.
+    ///
+    /// `below` says the task's app starts below the title bar, as the user chose for the app:
+    /// the window paints its band itself, opaque, in the color the app's frame has there
+    /// ([`super::caption::below_title_bar_sample`]). Such a window is never `app_drawn`.
     CaptionMode {
         task_id: i32,
         app_drawn: bool,
         interactive: Vec<Bounds>,
+        below: bool,
     },
     /// Whether the task has somewhere to go back to, so the title bar shows a back arrow in
     /// the place of the app's icon. Comes with a window that opens past its first screen, and
@@ -157,20 +163,24 @@ fn tone_of(task: &Task) -> Option<CaptionTone> {
     reported_tone(task.status_bar, task.status_bar_color)
 }
 
-/// Whether `task`'s app draws its own title bar, and where its controls are in the band. The
-/// controls count only while it does.
-fn caption_mode_of(task: &Task) -> (bool, Vec<Bounds>) {
-    if task.transparent_caption {
-        (true, task.caption_interactive.clone())
+/// Whether `task`'s app draws its own title bar, where its controls are in the band, and
+/// whether the app starts below the title bar. The controls count only while it draws its
+/// own, and an app that starts below the title bar never does: the user's switch wins over
+/// the app's request, and the whole band is the window's.
+fn caption_mode_of(task: &Task) -> (bool, Vec<Bounds>, bool) {
+    if task.below_title_bar {
+        (false, Vec::new(), true)
+    } else if task.transparent_caption {
+        (true, task.caption_interactive.clone(), false)
     } else {
-        (false, Vec::new())
+        (false, Vec::new(), false)
     }
 }
 
 /// The change that tells `task`'s window whether its app draws its own title bar, with the
 /// app's controls in the window's pixels at `scale`.
 fn caption_mode_change(task: &Task, scale: Scale) -> WindowChange {
-    let (app_drawn, interactive) = caption_mode_of(task);
+    let (app_drawn, interactive, below) = caption_mode_of(task);
     WindowChange::CaptionMode {
         task_id: task.task_id,
         app_drawn,
@@ -178,6 +188,7 @@ fn caption_mode_change(task: &Task, scale: Scale) -> WindowChange {
             .into_iter()
             .map(|rect| to_window_rect(rect, scale))
             .collect(),
+        below,
     }
 }
 
@@ -187,7 +198,7 @@ fn caption_mode_change(task: &Task, scale: Scale) -> WindowChange {
 fn caption_changes(previous: Option<&Task>, task: &Task, scale: Scale) -> Vec<WindowChange> {
     let mut changes = Vec::new();
     let mode = caption_mode_of(task);
-    let was = previous.map_or((false, Vec::new()), caption_mode_of);
+    let was = previous.map_or((false, Vec::new(), false), caption_mode_of);
     if mode != was {
         changes.push(caption_mode_change(task, scale));
     }
@@ -277,6 +288,12 @@ pub struct TaskWindows {
     told_sizes: BTreeMap<i32, (TaskSize, Scale)>,
     /// The user's window settings for each app, by package.
     app_windows: BTreeMap<String, AppWindowSettings>,
+    /// Whether the user's window settings were read yet. Until then nothing is known of which
+    /// apps start below the title bar, and the guest is told nothing.
+    app_windows_known: bool,
+    /// The apps the guest was last told start below the title bar; `None` when it must be
+    /// told again.
+    told_below_title_bar: Option<Vec<String>>,
     /// Where every app without its own choice shows its full screen.
     fullscreen_defaults: FullScreenDefaults,
     /// Whether each task was last told to keep a clear full screen request inside its window.
@@ -401,6 +418,7 @@ impl TaskWindows {
             .iter()
             .map(|app| (app.package_name.clone(), app.clone()))
             .collect();
+        self.app_windows_known = true;
         self.retell_modes()
     }
 
@@ -1020,13 +1038,34 @@ impl TaskWindows {
     /// tick.
     pub fn reconfigures(&mut self, now: Instant) -> Vec<TaskRequest> {
         let banded: Vec<i32> = self.bands.keys().copied().collect();
-        let mut requests: Vec<TaskRequest> = banded
-            .into_iter()
-            .filter_map(|task_id| self.recaption(task_id))
-            .collect();
+        let mut requests: Vec<TaskRequest> = self.caption_compat().into_iter().collect();
+        requests.extend(
+            banded
+                .into_iter()
+                .filter_map(|task_id| self.recaption(task_id)),
+        );
         requests.extend(self.full_screen_requests());
         requests.extend(self.size_reconfigures(now));
         requests
+    }
+
+    /// The request that tells the guest which apps start below the title bar, when the user's
+    /// settings say another list than the guest was last told. The guest settles a task's
+    /// insets when the task starts, so it hears the list before any window asks for it; an
+    /// empty list is told too, since the guest may hold an older one.
+    fn caption_compat(&mut self) -> Option<TaskRequest> {
+        if !self.app_windows_known {
+            return None;
+        }
+        let apps: Vec<AppWindowSettings> = self.app_windows.values().cloned().collect();
+        let packages = below_title_bar_packages(&apps);
+        if self.told_below_title_bar.as_ref() == Some(&packages) {
+            return None;
+        }
+        self.told_below_title_bar = Some(packages.clone());
+        Some(TaskRequest::CaptionCompat {
+            below_title_bar: packages,
+        })
     }
 
     /// The caption inset again, when `task_id`'s window shows its task at another scale than
@@ -1123,6 +1162,8 @@ impl TaskWindows {
         self.cursors.clear();
         self.bands.clear();
         self.told_full_screen.clear();
+        // The service that comes back may have a guest that was never told.
+        self.told_below_title_bar = None;
         changes
     }
 
@@ -1154,6 +1195,8 @@ impl TaskWindows {
         self.cursors.retain(|task_id, _| present.contains(task_id));
         self.bands.retain(|task_id, _| present.contains(task_id));
         self.told_full_screen.clear();
+        // A new watch may be of an Android that started again and was never told.
+        self.told_below_title_bar = None;
         self.displays.clear();
         for event in current {
             changes.extend(self.apply(event));
@@ -1228,6 +1271,7 @@ mod tests {
         let opened_changes = windows.apply(&TaskEvent::Updated(drawing.clone()));
         assert!(opened_changes.contains(&WindowChange::CaptionMode {
             task_id: 1,
+            below: false,
             app_drawn: true,
             interactive: vec![tabs],
         }));
@@ -1242,6 +1286,7 @@ mod tests {
             .apply(&TaskEvent::Updated(drawing.clone()))
             .contains(&WindowChange::CaptionMode {
                 task_id: 1,
+                below: false,
                 app_drawn: true,
                 interactive: vec![wider],
             }));
@@ -1251,6 +1296,7 @@ mod tests {
             .apply(&TaskEvent::Updated(drawing))
             .contains(&WindowChange::CaptionMode {
                 task_id: 1,
+                below: false,
                 app_drawn: false,
                 interactive: Vec::new(),
             }));
@@ -1259,6 +1305,84 @@ mod tests {
             .apply(&updated(2, "Clock"))
             .iter()
             .all(|change| !matches!(change, WindowChange::CaptionMode { .. })));
+    }
+
+    #[test]
+    fn fr22_a_window_hears_that_its_task_starts_below_the_title_bar() {
+        let mut windows = TaskWindows::new();
+        let mut below = task(1, "Player", 720, 1280);
+        below.below_title_bar = true;
+        // The app also asks to draw its own title bar: the user's switch wins, so the window
+        // is not app drawn and the app has no controls in the band.
+        below.transparent_caption = true;
+        below.caption_interactive = vec![Bounds {
+            left: 40,
+            top: 0,
+            right: 400,
+            bottom: 31,
+        }];
+        let opened_changes = windows.apply(&TaskEvent::Updated(below.clone()));
+        assert!(opened_changes.contains(&WindowChange::CaptionMode {
+            task_id: 1,
+            app_drawn: false,
+            interactive: Vec::new(),
+            below: true,
+        }));
+        // Told once.
+        assert!(windows
+            .apply(&TaskEvent::Updated(below))
+            .iter()
+            .all(|change| !matches!(change, WindowChange::CaptionMode { .. })));
+        // A task under the unified title bar opens with the window's own title bar, unsaid.
+        assert!(windows
+            .apply(&updated(2, "Notes"))
+            .iter()
+            .all(|change| !matches!(change, WindowChange::CaptionMode { .. })));
+    }
+
+    #[test]
+    fn fr22_the_guest_is_told_which_apps_start_below_the_title_bar() {
+        let now = Instant::now();
+        let compat = |packages: &[&str]| TaskRequest::CaptionCompat {
+            below_title_bar: packages.iter().map(|package| package.to_string()).collect(),
+        };
+        let app = |package: &str, below: bool| AppWindowSettings {
+            package_name: package.into(),
+            fixed_size: true,
+            below_title_bar: below.then_some(true),
+            ..AppWindowSettings::default()
+        };
+        let mut windows = TaskWindows::new();
+        // Nothing is said before the user's settings were read.
+        assert!(windows.reconfigures(now).is_empty());
+        windows.set_app_windows(&[
+            app("com.example.player", true),
+            app("com.example.notes", false),
+        ]);
+        assert_eq!(
+            windows.reconfigures(now),
+            vec![compat(&["com.example.player"])]
+        );
+        // Told once, and again only when the list changes.
+        assert!(windows.reconfigures(now).is_empty());
+        windows.set_app_windows(&[
+            app("com.example.player", true),
+            app("com.example.notes", true),
+        ]);
+        assert_eq!(
+            windows.reconfigures(now),
+            vec![compat(&["com.example.notes", "com.example.player"])]
+        );
+        // An empty list is told too: the guest holds the one before.
+        windows.set_app_windows(&[]);
+        assert_eq!(windows.reconfigures(now), vec![compat(&[])]);
+        assert!(windows.reconfigures(now).is_empty());
+        // A new watch may be of an Android that started again, and a service that came back
+        // of a guest that never heard: both are told again.
+        windows.sync(&[]);
+        assert_eq!(windows.reconfigures(now), vec![compat(&[])]);
+        windows.reset();
+        assert_eq!(windows.reconfigures(now), vec![compat(&[])]);
     }
 
     #[test]
@@ -2498,15 +2622,20 @@ mod tests {
             ..task(1, "Notes", 720, 1280)
         };
         windows.apply(&TaskEvent::Updated(app.clone()));
-        // 400 x 300 dp at 320 dpi.
+        // 400 x 300 dp at 320 dpi. The guest also hears that no app starts below the title bar.
         assert_eq!(
             windows.reconfigures(Instant::now()),
-            vec![TaskRequest::Resize {
-                task_id: 1,
-                width: 800,
-                height: 600,
-                live: false,
-            }]
+            vec![
+                TaskRequest::CaptionCompat {
+                    below_title_bar: Vec::new(),
+                },
+                TaskRequest::Resize {
+                    task_id: 1,
+                    width: 800,
+                    height: 600,
+                    live: false,
+                }
+            ]
         );
         let changes = windows.apply(&TaskEvent::Updated(Task {
             density_dpi: 320,
@@ -2632,10 +2761,15 @@ mod tests {
         }]);
         assert_eq!(
             windows.reconfigures(now),
-            vec![TaskRequest::SetFullScreen {
-                task_id: 1,
-                in_window: true,
-            }]
+            vec![
+                TaskRequest::CaptionCompat {
+                    below_title_bar: Vec::new(),
+                },
+                TaskRequest::SetFullScreen {
+                    task_id: 1,
+                    in_window: true,
+                }
+            ]
         );
         // Told once.
         assert!(windows.reconfigures(now).is_empty());

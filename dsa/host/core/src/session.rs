@@ -620,6 +620,8 @@ enum Command {
     HostMemoryLow(bool),
     /// Which tasks have their window shown changed.
     TasksShown(Vec<i32>),
+    /// Which apps start below the title bar changed.
+    CaptionCompat(Vec<String>),
     /// The host's system settings or one of its game controllers changed.
     System(SystemInput),
     /// Freeze the guest after this long in Doze, or never.
@@ -1571,6 +1573,8 @@ impl Session {
             host_memory_pending: false,
             tasks_shown: None,
             tasks_shown_pending: false,
+            caption_compat: None,
+            caption_compat_pending: false,
             system_settings: None,
             gamepads: GamepadTable::new(),
             system_pending: false,
@@ -2554,6 +2558,15 @@ impl Session {
             .map_err(|_| SessionError::Gone)
     }
 
+    /// Says which apps start below the title bar, as the user chose for each. The session keeps
+    /// the latest word in every state; the guest is told now if it is up, and each time it
+    /// connects, so a task that starts has its insets settled before its first screen.
+    pub fn caption_compat(&self, below_title_bar: Vec<String>) -> Result<(), SessionError> {
+        self.commands
+            .send(Command::CaptionCompat(below_title_bar))
+            .map_err(|_| SessionError::Gone)
+    }
+
     /// Records the host's power, which the guest is told now if it is up, and each time its
     /// agent connects.
     pub fn set_power(&self, state: PowerState) {
@@ -3264,7 +3277,8 @@ impl Session {
     }
 
     /// Asks the guest to close, resize or rescale a task, or to launch an app. Needs an
-    /// active session, except for the words on shown windows and tasks, which are always taken.
+    /// active session, except for the words on shown windows and tasks and on the apps that
+    /// start below the title bar, which are always taken.
     pub fn request(&self, request: TaskRequest) -> Result<(), SessionError> {
         let body = match request {
             TaskRequest::WindowsShown { shown } => return self.windows_shown(shown),
@@ -3278,6 +3292,9 @@ impl Session {
                     monitor_width: placement.monitor_width,
                     monitor_height: placement.monitor_height,
                 })
+            }
+            TaskRequest::CaptionCompat { below_title_bar } => {
+                return self.caption_compat(below_title_bar)
             }
             TaskRequest::Launch { package_name } => Body::LaunchApp(control::LaunchApp {
                 package_name,
@@ -4396,6 +4413,11 @@ struct Worker {
     tasks_shown: Option<Vec<i32>>,
     /// Set when they changed while the guest was frozen, so it is told after the thaw.
     tasks_shown_pending: bool,
+    /// The apps that start below the title bar, as last recorded, once the window manager
+    /// has said.
+    caption_compat: Option<Vec<String>>,
+    /// Set when they changed while the guest was frozen, so it is told after the thaw.
+    caption_compat_pending: bool,
     /// The host's system settings, as last recorded.
     system_settings: Option<SystemSettings>,
     /// The host's game controllers that are connected, and the latest state of each.
@@ -4486,6 +4508,7 @@ impl Worker {
                         Ok(Command::Refresh(input)) => self.refresh_input(input),
                         Ok(Command::HostMemoryLow(low)) => self.set_host_memory_low(low),
                         Ok(Command::TasksShown(task_ids)) => self.set_tasks_shown(task_ids),
+                        Ok(Command::CaptionCompat(packages)) => self.set_caption_compat(packages),
                         Ok(Command::System(input)) => self.system_input(input),
                         Ok(Command::FreezeAfter(after)) => self.config.freeze_after = after,
                         Ok(Command::LinksInAndroid(on)) => self.set_links_in_android(on),
@@ -4520,6 +4543,7 @@ impl Worker {
                         Ok(Command::Refresh(input)) => self.refresh_input(input),
                         Ok(Command::HostMemoryLow(low)) => self.set_host_memory_low(low),
                         Ok(Command::TasksShown(task_ids)) => self.set_tasks_shown(task_ids),
+                        Ok(Command::CaptionCompat(packages)) => self.set_caption_compat(packages),
                         Ok(Command::System(input)) => self.system_input(input),
                         Ok(Command::FreezeAfter(after)) => self.config.freeze_after = after,
                         Ok(Command::LinksInAndroid(on)) => self.set_links_in_android(on),
@@ -4599,6 +4623,10 @@ impl Worker {
             }
             Command::TasksShown(task_ids) => {
                 self.set_tasks_shown(task_ids);
+                true
+            }
+            Command::CaptionCompat(packages) => {
+                self.set_caption_compat(packages);
                 true
             }
             Command::System(input) => {
@@ -5613,6 +5641,9 @@ impl Worker {
                 self.send_body(Body::TasksShown(control::TasksShown { task_ids }));
             }
         }
+        if std::mem::take(&mut self.caption_compat_pending) {
+            self.send_caption_compat();
+        }
         if std::mem::take(&mut self.system_pending) {
             self.replay_system_settings();
             self.replay_gamepads();
@@ -5783,6 +5814,31 @@ impl Worker {
             }
             SessionState::Frozen => self.host_memory_pending = true,
             _ => {}
+        }
+    }
+
+    /// Records which apps start below the title bar, and tells a guest that is up.
+    fn set_caption_compat(&mut self, below_title_bar: Vec<String>) {
+        if self.caption_compat.as_ref() == Some(&below_title_bar) {
+            return;
+        }
+        self.caption_compat = Some(below_title_bar);
+        match self.state() {
+            SessionState::Starting
+            | SessionState::Stalled
+            | SessionState::Active
+            | SessionState::Dozing => self.send_caption_compat(),
+            SessionState::Frozen => self.caption_compat_pending = true,
+            _ => {}
+        }
+    }
+
+    /// Tells the guest which apps start below the title bar, once the window manager has said.
+    fn send_caption_compat(&mut self) {
+        if let Some(below_title_bar) = self.caption_compat.clone() {
+            self.send_body(Body::CaptionCompat(control::CaptionCompat {
+                below_title_bar,
+            }));
         }
     }
 
@@ -6387,6 +6443,10 @@ impl Worker {
                             if let Some(task_ids) = self.tasks_shown.clone() {
                                 self.send_body(Body::TasksShown(control::TasksShown { task_ids }));
                             }
+                            // The agent starts every task under the unified title bar until
+                            // it is told which apps start below it.
+                            self.caption_compat_pending = false;
+                            self.send_caption_compat();
                             // A new boot's control daemon has no controller yet.
                             self.system_pending = false;
                             self.replay_gamepads();
@@ -6459,6 +6519,10 @@ impl Worker {
             }
             Command::TasksShown(task_ids) => {
                 self.set_tasks_shown(task_ids);
+                true
+            }
+            Command::CaptionCompat(packages) => {
+                self.set_caption_compat(packages);
                 true
             }
             Command::System(input) => {
@@ -6658,6 +6722,7 @@ impl Worker {
                         .collect(),
                     can_go_back: update.can_go_back,
                     handles_density_change: update.handles_density_change,
+                    below_title_bar: update.below_title_bar,
                 }));
             }
             Some(Body::TaskRemoved(removed)) => {
@@ -7019,6 +7084,7 @@ impl Worker {
             | Some(Body::ResizeTask(_))
             | Some(Body::SetTaskDensity(_))
             | Some(Body::LaunchPlacement(_))
+            | Some(Body::CaptionCompat(_))
             | Some(Body::SetTaskCaption(_))
             | Some(Body::SetTaskFullScreen(_))
             | Some(Body::PointerEvent(_))

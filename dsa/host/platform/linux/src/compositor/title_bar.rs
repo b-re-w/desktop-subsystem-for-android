@@ -16,9 +16,9 @@
 //! they are used as they come.
 
 use dsa_host_core::compositor::caption::{
-    band_sample, caption_icon, caption_tone, paint_title_bar, title_bar_hit, BackButton,
-    BandSample, CaptionLayout, CaptionPalette, CaptionState, CaptionTone, TitleBarContent,
-    TitleBarHit, TitleBarMode,
+    band_sample, below_title_bar_sample, caption_icon, caption_tone, paint_title_bar,
+    title_bar_hit, BackButton, BandSample, CaptionLayout, CaptionPalette, CaptionState,
+    CaptionTone, TitleBarContent, TitleBarHit, TitleBarMode,
 };
 use dsa_host_core::tasks::{AppInfo, Bounds, StatusBarAppearance};
 
@@ -211,6 +211,10 @@ pub struct TitleBar {
     pub back: bool,
     /// Where the pointer leaves the back arrow.
     pub back_state: BackButton,
+    /// Whether the app starts below the title bar, so the band is painted opaque in the color
+    /// the app's frame has there, and the color it is painted with now.
+    pub below: bool,
+    pub filled: Option<u32>,
 }
 
 impl TitleBar {
@@ -218,6 +222,31 @@ impl TitleBar {
     pub fn set_mode(&mut self, app_drawn: bool, interactive: Vec<Bounds>) {
         self.app_drawn = app_drawn;
         self.interactive = if app_drawn { interactive } else { Vec::new() };
+    }
+
+    /// The app starts below the title bar, or under the unified one. A window below the title
+    /// bar is never the app's to draw.
+    pub fn set_below(&mut self, below: bool) {
+        if self.below != below {
+            self.filled = None;
+        }
+        self.below = below;
+        if below {
+            self.app_drawn = false;
+            self.interactive.clear();
+        }
+    }
+
+    /// What the band shows for `sample`, read from the app's frame, while the app asks for
+    /// the tone `reported`: the sample itself, or, for an app that starts below the title
+    /// bar, the sample with the fill the band is painted with, which is remembered.
+    pub fn band_sample(&mut self, sample: BandSample, reported: Option<CaptionTone>) -> BandSample {
+        if !self.below {
+            return sample;
+        }
+        let sample = below_title_bar_sample(sample, reported, self.filled);
+        self.filled = sample.fill;
+        sample
     }
 
     /// The task can go back, or is at its first screen again.
@@ -558,6 +587,49 @@ mod tests {
         );
         let (left, _, _, _) = layout.icon_cell().unwrap();
         assert_eq!(bar.hit(&layout, left + 2, 16), TitleBarHit::SystemMenu);
+    }
+
+    #[test]
+    fn fr22_a_window_below_the_title_bar_fills_its_band_with_the_colour_the_app_painted_there() {
+        use dsa_host_core::compositor::caption::shown_tone;
+        let (width, height, band) = (64u32, 48u32, 8u32);
+        // A frame whose band is one grey and whose content below is dark.
+        let mut pixels = Vec::new();
+        for y in 0..height {
+            for _ in 0..width {
+                let pixel: [u8; 4] = if y < band {
+                    [0xE0, 0xE0, 0xE0, 0xff]
+                } else {
+                    [0x21, 0x21, 0x21, 0xff]
+                };
+                pixels.extend_from_slice(&pixel);
+            }
+        }
+        let sample = frame_band_sample(&pixels, width, height, band);
+        let mut bar = TitleBar::default();
+        // Under the unified title bar the app's own band shows through.
+        assert_eq!(bar.band_sample(sample, None).fill, None);
+        // Below the title bar the band is filled with the color the app's frame has there,
+        // and the window is never the app's to draw.
+        bar.set_mode(true, Vec::new());
+        bar.set_below(true);
+        assert!(!bar.app_drawn);
+        let filled = bar.band_sample(sample, None);
+        assert_eq!(filled.fill, Some(0xFFE0_E0E0));
+        assert_eq!(bar.filled, Some(0xFFE0_E0E0));
+        assert_eq!(
+            shown_tone(Some(CaptionTone::LightGlyphs), filled, false, None),
+            Some(CaptionTone::DarkGlyphs)
+        );
+        // A frame that could not be read keeps the fill.
+        assert_eq!(
+            bar.band_sample(BandSample::default(), None).fill,
+            Some(0xFFE0_E0E0)
+        );
+        // Back under the unified title bar nothing is filled, and nothing is remembered.
+        bar.set_below(false);
+        assert_eq!(bar.filled, None);
+        assert_eq!(bar.band_sample(sample, None).fill, None);
     }
 
     #[test]

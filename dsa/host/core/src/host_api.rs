@@ -1533,6 +1533,7 @@ fn task_to_wire(task: Task) -> types::Task {
             .collect(),
         can_go_back: task.can_go_back,
         handles_density_change: task.handles_density_change,
+        below_title_bar: task.below_title_bar,
     }
 }
 
@@ -1587,6 +1588,7 @@ fn task_from_wire(task: types::Task) -> Task {
             .collect(),
         can_go_back: task.can_go_back,
         handles_density_change: task.handles_density_change,
+        below_title_bar: task.below_title_bar,
     }
 }
 
@@ -5336,6 +5338,12 @@ impl HostApiService {
                     monitor_height: placement.monitor_height,
                 }),
             ),
+            Some(request::Body::SetCaptionCompat(compat)) => self.request(
+                peer,
+                TaskRequest::CaptionCompat {
+                    below_title_bar: compat.below_title_bar,
+                },
+            ),
             Some(request::Body::SetTaskCaption(caption)) => self.request(
                 peer,
                 TaskRequest::SetCaption {
@@ -5439,6 +5447,7 @@ impl HostApiService {
                         | request::Body::ResizeTask(_)
                         | request::Body::SetTaskDensity(_)
                         | request::Body::LaunchPlacement(_)
+                        | request::Body::SetCaptionCompat(_)
                         | request::Body::SetTaskCaption(_)
                         | request::Body::SetTaskFullScreen(_)
                         | request::Body::SetWindowsShown(_)
@@ -8053,6 +8062,13 @@ impl HostApiClient {
         }))
     }
 
+    /// Tells the caller's Android which apps start below the title bar.
+    pub fn set_caption_compat(&mut self, below_title_bar: &[String]) -> Result<(), ClientError> {
+        self.done(request::Body::SetCaptionCompat(types::SetCaptionCompat {
+            below_title_bar: below_title_bar.to_vec(),
+        }))
+    }
+
     /// Asks the caller's Android to give a task a top inset of `height` pixels, which its
     /// window's title bar covers.
     pub fn set_task_caption(
@@ -8113,6 +8129,9 @@ impl HostApiClient {
                 self.set_task_full_screen(*task_id, *in_window)
             }
             TaskRequest::PlaceLaunches(placement) => self.place_launches(placement),
+            TaskRequest::CaptionCompat { below_title_bar } => {
+                self.set_caption_compat(below_title_bar)
+            }
             TaskRequest::WindowsShown { shown } => self.set_windows_shown(*shown),
             TaskRequest::TasksShown { task_ids } => self.set_tasks_shown(task_ids),
             TaskRequest::StopApp { package_name } => self.stop_app(package_name),

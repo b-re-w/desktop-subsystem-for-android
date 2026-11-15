@@ -110,11 +110,13 @@ pub enum ToHost {
         resizable: bool,
     },
     /// Whether the app draws its own title bar, and where its controls are in the band, in
-    /// client pixels.
+    /// client pixels; or (`below`) that the app starts below the title bar, so the window
+    /// paints its band itself and the app draws nothing of its own there.
     CaptionMode {
         task_id: i32,
         app_drawn: bool,
         interactive: Vec<Bounds>,
+        below: bool,
     },
     /// Whether the title bar shows a back arrow in the place of the app's icon.
     CaptionBack {
@@ -674,10 +676,12 @@ impl WindowHosts {
                 task_id,
                 app_drawn,
                 interactive,
+                below,
             } => self.forward(ToHost::CaptionMode {
                 task_id: *task_id,
                 app_drawn: *app_drawn,
                 interactive: interactive.clone(),
+                below: *below,
             }),
             WindowChange::CaptionBack { task_id, back } => self.forward(ToHost::CaptionBack {
                 task_id: *task_id,
@@ -1115,10 +1119,12 @@ pub fn to_wire(message: &ToHost) -> Body {
             task_id,
             app_drawn,
             interactive,
+            below,
         } => {
             use dsa_protocol::window_host::types::{ClientRect, SetCaptionMode};
             Body::SetCaptionMode(SetCaptionMode {
                 task_id,
+                below,
                 app_drawn,
                 interactive: interactive
                     .iter()
@@ -1251,9 +1257,11 @@ pub fn to_host_from_wire(body: &Body) -> Option<ToHost> {
         }
         Body::SetCaptionMode(set) => ToHost::CaptionMode {
             task_id: set.task_id,
-            app_drawn: set.app_drawn,
+            // An app that starts below the title bar never draws its own.
+            app_drawn: set.app_drawn && !set.below,
+            below: set.below,
             // The controls count only while the app draws its own title bar.
-            interactive: if set.app_drawn {
+            interactive: if set.app_drawn && !set.below {
                 set.interactive
                     .iter()
                     .map(|area| Bounds {
@@ -2013,11 +2021,19 @@ mod tests {
                     right: 600,
                     bottom: 31,
                 }],
+                below: false,
             },
             ToHost::CaptionMode {
                 task_id: 10,
                 app_drawn: false,
                 interactive: Vec::new(),
+                below: false,
+            },
+            ToHost::CaptionMode {
+                task_id: 12,
+                app_drawn: false,
+                interactive: Vec::new(),
+                below: true,
             },
             ToHost::CaptionBack {
                 task_id: 11,

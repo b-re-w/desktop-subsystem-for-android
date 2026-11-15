@@ -27,6 +27,11 @@
 //!   while the task can go back) and an app that draws its own title bar, whose controls in
 //!   the band take the pointer.
 //!
+//! An app the user set to start below the title bar gives up that unified look: the guest
+//! gives it no top inset to handle, its content begins under the band, and the window paints
+//! the band opaque, in the color the app's own decor painted there
+//! ([`below_title_bar_sample`]).
+//!
 //! An app may ask to draw its own title bar, as on Android's desktop windows (a transparent
 //! caption bar background): its content then fills the band, as a browser puts its tabs
 //! there. The window draws only its caption buttons and the icon's cell over it, never the
@@ -82,10 +87,14 @@ pub fn caption_tone(appearance: StatusBarAppearance, status_bar_color: u32) -> C
 /// What a window read from the pixels of its app's frame under the title bar: the color to
 /// fill a band the app leaves empty ([`band_fill`]), how light the band is
 /// ([`band_luminance`]) and how far apart its darkest and lightest parts are
-/// ([`band_range`]). The default is a frame that could not be sampled.
+/// ([`band_range`]), and the band's own color when it is one color ([`band_color`]). The
+/// default is a frame that could not be sampled.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct BandSample {
     pub fill: Option<u32>,
+    /// The color of the band itself (0xAARRGGBB, opaque), when every sample of it is opaque
+    /// and alike; `None` over a band of more than one color.
+    pub band: Option<u32>,
     /// The band's mean relative luminance, in thousandths (0 black, 1000 white).
     pub luminance: Option<u16>,
     /// The relative luminance of the band's darkest and of its lightest sample, in
@@ -100,7 +109,77 @@ pub fn band_sample(band: &[u32], below: &[u32]) -> BandSample {
         fill: band_fill(band, below),
         luminance: band_luminance(band),
         range: band_range(band),
+        band: band_color(band),
     }
+}
+
+/// The color of a band whose samples (`band`, 0xAARRGGBB each) are all opaque and alike, made
+/// fully opaque: what the app's decor painted there, as the framework paints an app's status
+/// bar color, or its window background under a transparent one. `None` when the band has no
+/// samples, or more than one color (a picture, a gradient, a screen sliding in).
+pub fn band_color(band: &[u32]) -> Option<u32> {
+    let first = *band.first()?;
+    if first >> 24 < 0xF0 || !band.iter().all(|color| alike(*color, first)) {
+        return None;
+    }
+    Some(0xFF00_0000 | (first & 0x00FF_FFFF))
+}
+
+/// The surface colors a band takes when the app's frame gives it none: the title bar of a
+/// light and of a dark window.
+pub const LIGHT_SURFACE: u32 = 0xFFF3_F3F3;
+pub const DARK_SURFACE: u32 = 0xFF20_2020;
+
+/// What the window of an app that starts below the title bar takes from `sample`: the same
+/// sample with a fill, so the band is painted opaque and the glyphs take the tone of the
+/// fill ([`shown_tone`]). `reported` is the tone the app asked for, and `filled` the color
+/// the band is filled with now.
+///
+/// The guest gives such an app no top inset, so the app draws nothing of its own in the band;
+/// the guest still composes it, and the framework paints the app's status bar color there, or
+/// the window's background when that color is transparent. The fill is, in this order:
+///
+/// - the color just under the band, when the band is empty or black and the row under it is
+///   one color, as for any window ([`band_fill`]): an app with an old theme that paints no
+///   bar background still gets its toolbar's color;
+/// - the band's own color, when the band is one color ([`band_color`]);
+/// - the color it is filled with already, when the band has more than one color (a
+///   background that is a picture or a gradient, or a screen sliding in), so the band never
+///   flickers through a transition;
+/// - else a surface color: [`DARK_SURFACE`] when the app asked for light glyphs, or said
+///   nothing and the band is dark, and [`LIGHT_SURFACE`] otherwise.
+///
+/// A frame that could not be sampled at all leaves the band as it is: unfilled before the
+/// first frame, so a window never opens with a color that is not the app's.
+pub fn below_title_bar_sample(
+    sample: BandSample,
+    reported: Option<CaptionTone>,
+    filled: Option<u32>,
+) -> BandSample {
+    let surface = || {
+        let dark = match (reported, sample.luminance) {
+            (Some(tone), _) => tone == CaptionTone::LightGlyphs,
+            (None, Some(luminance)) => luminance < EQUAL_CONTRAST,
+            (None, None) => false,
+        };
+        if dark {
+            DARK_SURFACE
+        } else {
+            LIGHT_SURFACE
+        }
+    };
+    let fill = if sample == BandSample::default() {
+        filled
+    } else {
+        Some(
+            sample
+                .fill
+                .or(sample.band)
+                .or(filled)
+                .unwrap_or_else(surface),
+        )
+    };
+    BandSample { fill, ..sample }
 }
 
 /// The relative luminance of the darkest and of the lightest sample of `band` (0xAARRGGBB
@@ -1367,6 +1446,7 @@ mod tests {
             fill: None,
             luminance: Some(luminance),
             range: Some((luminance, luminance)),
+            band: None,
         };
         // The app's light glyphs stand until the whole bar is past the first bound.
         let mut shown = None;
@@ -1389,6 +1469,7 @@ mod tests {
             fill: None,
             luminance: Some(700),
             range: Some((60, 900)),
+            band: None,
         };
         assert_eq!(
             shown_tone(
@@ -1590,6 +1671,7 @@ mod tests {
             fill: None,
             luminance: Some(luminance),
             range: Some((luminance, luminance)),
+            band: None,
         };
         shown_tone(None, sample, false, shown)
     }
@@ -1651,6 +1733,7 @@ mod tests {
             fill: None,
             luminance: Some(150),
             range: Some((150, 150)),
+            band: None,
         };
         let shown = shown_tone(Some(CaptionTone::DarkGlyphs), middle, false, None);
         assert_eq!(shown, Some(CaptionTone::DarkGlyphs));
@@ -2211,6 +2294,121 @@ mod tests {
         );
         assert_eq!(bar_pixel(&image, &layout, 2, 2), [0xE5, 0x9B, 0x03, 0xFF]);
         assert_eq!(bar_pixel(&image, &layout, 799, 2), [0xE5, 0x9B, 0x03, 0xFF]);
+    }
+
+    #[test]
+    fn fr22_a_window_below_the_title_bar_fills_its_band_with_the_colour_the_app_painted_there() {
+        let light = Some(CaptionTone::LightGlyphs);
+        // The framework painted the app's status bar color across the band: a deep purple
+        // bar over a white screen. The band takes that color, opaque, and light glyphs.
+        let purple = band_sample(&[0xFF67_50A4; 8], &[0xFFFF_FFFF; 8]);
+        assert_eq!(purple.band, Some(0xFF67_50A4));
+        let below = below_title_bar_sample(purple, None, None);
+        assert_eq!(below.fill, Some(0xFF67_50A4));
+        assert_eq!(
+            shown_tone(None, below, false, None),
+            Some(CaptionTone::LightGlyphs)
+        );
+        // A light window background under a transparent status bar: the band is that
+        // background, with dark glyphs, even though the app asked for light ones.
+        let grey = band_sample(&[0xFFE0_E0E0; 8], &[0xFF21_2121; 8]);
+        let below = below_title_bar_sample(grey, light, Some(0xFF67_50A4));
+        assert_eq!(below.fill, Some(0xFFE0_E0E0));
+        assert_eq!(
+            shown_tone(light, below, false, light),
+            Some(CaptionTone::DarkGlyphs)
+        );
+        // A dark theme follows: the band of a dark app is its own dark color.
+        let dark = band_sample(&[0xFF12_1212; 8], &[0xFF12_1212; 8]);
+        let below = below_title_bar_sample(dark, None, Some(0xFFE0_E0E0));
+        assert_eq!(below.fill, Some(0xFF12_1212));
+        assert_eq!(
+            shown_tone(None, below, false, Some(CaptionTone::DarkGlyphs)),
+            Some(CaptionTone::LightGlyphs)
+        );
+        // An old theme paints no bar background: the band is empty or black over a toolbar of
+        // one color, and takes the toolbar's color, as under the unified title bar.
+        for empty in [0x0000_0000, 0xFF00_0000] {
+            let old = band_sample(&[empty; 8], &[0xFF3F_51B5; 8]);
+            assert_eq!(
+                below_title_bar_sample(old, None, None).fill,
+                Some(0xFF3F_51B5)
+            );
+        }
+        // The band is always opaque: a nearly opaque sample is made whole.
+        assert_eq!(band_color(&[0xF8AB_CDEF; 4]), Some(0xFFAB_CDEF));
+        // A window under the unified title bar is never filled this way.
+        assert_eq!(purple.fill, None);
+    }
+
+    #[test]
+    fn fr22_a_band_of_more_than_one_colour_keeps_its_fill_or_takes_the_surface_colour() {
+        // A screen sliding in: half the band is the old bar and half the new one.
+        let mixed = band_sample(
+            &[
+                0xFF67_50A4,
+                0xFF67_50A4,
+                0xFF67_50A4,
+                0xFF67_50A4,
+                0xFFE0_E0E0,
+                0xFFE0_E0E0,
+                0xFFE0_E0E0,
+                0xFFE0_E0E0,
+            ],
+            &[0xFFFF_FFFF; 8],
+        );
+        assert_eq!(mixed.band, None);
+        // The fill shown stays, so the band does not flicker through the transition.
+        assert_eq!(
+            below_title_bar_sample(mixed, None, Some(0xFF67_50A4)).fill,
+            Some(0xFF67_50A4)
+        );
+        // With nothing filled yet the band takes a surface color: the dark one for an app
+        // that asked for light glyphs, the light one for one that asked for dark glyphs.
+        assert_eq!(
+            below_title_bar_sample(mixed, Some(CaptionTone::LightGlyphs), None).fill,
+            Some(DARK_SURFACE)
+        );
+        assert_eq!(
+            below_title_bar_sample(mixed, Some(CaptionTone::DarkGlyphs), None).fill,
+            Some(LIGHT_SURFACE)
+        );
+        // An app that said nothing gets the surface its band is nearer to.
+        let dark_picture = band_sample(
+            &[0xFF10_1010, 0xFF30_2020, 0xFF20_3040, 0xFF05_0505],
+            &[0xFF10_1010, 0xFF80_8080, 0xFF10_1010, 0xFF10_1010],
+        );
+        assert_eq!(dark_picture.band, None);
+        assert_eq!(
+            below_title_bar_sample(dark_picture, None, None).fill,
+            Some(DARK_SURFACE)
+        );
+        let light_picture = band_sample(
+            &[0xFFF0_F0F0, 0xFFD0_E0F0, 0xFFFF_FFFF, 0xFFC0_C0C0],
+            &[0xFFF0_F0F0, 0xFF80_8080, 0xFFF0_F0F0, 0xFFF0_F0F0],
+        );
+        assert_eq!(
+            below_title_bar_sample(light_picture, None, None).fill,
+            Some(LIGHT_SURFACE)
+        );
+        // The surface's tone is the fill's, as for any filled band.
+        assert_eq!(
+            shown_tone(
+                None,
+                below_title_bar_sample(dark_picture, None, None),
+                false,
+                None
+            ),
+            Some(CaptionTone::LightGlyphs)
+        );
+        // Before the first frame nothing is known: the band is left as it is, and a fill
+        // shown already stays.
+        let unread = BandSample::default();
+        assert_eq!(below_title_bar_sample(unread, None, None).fill, None);
+        assert_eq!(
+            below_title_bar_sample(unread, None, Some(0xFF12_1212)).fill,
+            Some(0xFF12_1212)
+        );
     }
 
     #[test]

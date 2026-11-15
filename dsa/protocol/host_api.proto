@@ -243,6 +243,13 @@ message SetTaskCaption {
   uint32 end_width = 4;
 }
 
+// Tells the caller's Android which apps start below the title bar: the packages whose
+// AppWindowSettings.below_title_bar is on. The list replaces the one before, and counts for
+// the tasks that start after it.
+message SetCaptionCompat {
+  repeated string below_title_bar = 1;
+}
+
 // Where a task's window shows a clear full screen request of its app: asks the caller's
 // Android to keep a task that leaves freeform for fullscreen inside its window, at the bounds
 // it had (`in_window`), or to let it fill the screen.
@@ -1333,6 +1340,10 @@ message Task {
   bool handles_density_change = 26;
   // Which kind of full screen the task's app asks for, if any.
   FullScreenRequest fullscreen_request = 27;
+  // Whether the task's app starts below the title bar (AppWindowSettings.below_title_bar,
+  // as it was when the task started): the window paints its band itself, and the app's
+  // content begins under it.
+  bool below_title_bar = 40;
 }
 
 // How a task's app asks to fill the screen.
@@ -2840,6 +2851,11 @@ message AppWindowSettings {
   // app_immersive).
   FullScreenPlace fullscreen = 6;
   FullScreenPlace immersive = 7;
+  // Whether the app starts below the title bar: its windows give up the unified title bar,
+  // the app's content begins under the band and the app has no top inset to handle. For an
+  // app whose top bar is squeezed or hidden under the title bar. Off by default; it counts
+  // from the next time a window of the app opens.
+  bool below_title_bar = 8;
 }
 
 // Where a window shows an app that asks to fill the screen.
@@ -2996,6 +3012,7 @@ message Request {
     GetWidevine get_widevine = 701;
     RemoveWidevine remove_widevine = 702;
     LaunchPlacement launch_placement = 710;
+    SetCaptionCompat set_caption_compat = 715;
   }
 }
 
