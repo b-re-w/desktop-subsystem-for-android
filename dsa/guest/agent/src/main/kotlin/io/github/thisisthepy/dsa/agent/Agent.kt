@@ -871,6 +871,7 @@ class Agent(
      * frame waited for the scheduler's thread, for the resize trace.
      */
     private fun handleRequest(frame: ByteArray, queuedMillis: Double? = null): Boolean {
+        noteClosing(frame)
         val result = try {
             requests.handle(frame)
         } catch (e: Exception) {
@@ -1205,6 +1206,29 @@ class Agent(
             }
         }
         return true
+    }
+
+    /**
+     * When the host closes an app's last task window, has [closedApps] read what the app holds
+     * first: removing the task ends its processes, so read afterwards their memory would already
+     * be free and the close would seem to give nothing back.
+     */
+    private fun noteClosing(frame: ByteArray) {
+        val envelope = try {
+            Envelope.parseFrom(frame)
+        } catch (e: InvalidProtocolBufferException) {
+            return
+        }
+        if (envelope.bodyCase != Envelope.BodyCase.CLOSE_TASK) return
+        val taskId = envelope.closeTask.taskId
+        val packageName = reporter.reportedPackage(taskId) ?: return
+        val others = reporter.reported.any { it != taskId && reporter.reportedPackage(it) == packageName }
+        if (others || packageName == ownPackage) return
+        try {
+            closedApps.closing(packageName)
+        } catch (e: Exception) {
+            log.warn("could not read what $packageName holds before its window closes", e)
+        }
     }
 
     /**
