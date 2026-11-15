@@ -24,6 +24,13 @@ public sealed partial class SettingsViewModel
     public int AppImmersiveIndex =>
         IndexOf(_settings?.AppImmersive ?? FullScreenPlace.Window, FullScreenPlace.Window);
 
+    /// <summary>Where a clear full screen request shows now, for every app without its own choice.</summary>
+    public FullScreenPlace AppFullScreenDefault => AppFullScreenPlaces[AppFullScreenIndex];
+
+    /// <summary>Where an app hiding both its bars alone shows now, for every app without its own
+    /// choice.</summary>
+    public FullScreenPlace AppImmersiveDefault => AppFullScreenPlaces[AppImmersiveIndex];
+
     private static int IndexOf(FullScreenPlace place, FullScreenPlace builtin)
     {
         var index = AppFullScreenPlaces.ToList().IndexOf(place);

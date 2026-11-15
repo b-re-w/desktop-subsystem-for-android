@@ -1820,3 +1820,21 @@ msgstr "Priorità minima mostrata"
 
 msgid "Copied"
 msgstr "Copiato"
+
+msgid "When only the bars hide"
+msgstr "Quando nasconde solo le barre"
+
+msgid "Scaling"
+msgstr "Scala"
+
+msgid "Automatic (app)"
+msgstr "Automatico (app)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Automatico (sistema, consigliato per questa app)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Segui il valore predefinito (su tutto lo schermo)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Segui il valore predefinito (dentro la finestra)"

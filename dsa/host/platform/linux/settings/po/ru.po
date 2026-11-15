@@ -1820,3 +1820,21 @@ msgstr "Минимальный показываемый приоритет"
 
 msgid "Copied"
 msgstr "Скопировано"
+
+msgid "When only the bars hide"
+msgstr "Когда скрыты только панели"
+
+msgid "Scaling"
+msgstr "Масштабирование"
+
+msgid "Automatic (app)"
+msgstr "Автоматически (приложение)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Автоматически (система, рекомендуется для этого приложения)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Как по умолчанию (на весь экран)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Как по умолчанию (внутри окна)"

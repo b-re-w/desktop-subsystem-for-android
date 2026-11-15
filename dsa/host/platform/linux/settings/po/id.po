@@ -1820,3 +1820,21 @@ msgstr "Prioritas terendah yang ditampilkan"
 
 msgid "Copied"
 msgstr "Disalin"
+
+msgid "When only the bars hide"
+msgstr "Saat hanya bilah disembunyikan"
+
+msgid "Scaling"
+msgstr "Penskalaan"
+
+msgid "Automatic (app)"
+msgstr "Otomatis (aplikasi)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Otomatis (sistem, disarankan untuk aplikasi ini)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Ikuti bawaan (di seluruh layar)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Ikuti bawaan (di dalam jendela)"

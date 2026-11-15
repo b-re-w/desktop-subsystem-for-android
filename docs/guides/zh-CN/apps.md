@@ -100,7 +100,7 @@ DSA 只会更改或删除它自己创建的条目。
 可以在 DSA Settings 的 **Display & GPU**（显示与 GPU）页面上，
 通过 **App full screen**（应用全屏）和
 **Apps that hide their bars**（隐藏栏的应用）更改默认值；
-也可以在 **Apps** 页面上，通过 **Full screen** 和 **Bars hidden**（隐藏栏）
+也可以在 **Apps** 页面上，通过 **Full screen request**（全屏请求） 和 **When only the bars hide**（仅隐藏栏时）
 为单个应用设置。
 应用自己的选择优先。
 无论如何设置，F11 和窗口菜单中的 **Full screen**
@@ -148,7 +148,7 @@ dsa app-window <package> --below-title-bar on   # off 恢复默认值
 因此打开后不会马上被重新创建。
 当您把窗口移到缩放比例不同的显示器时，应用在屏幕上的大小保持不变。
 每个应用会采用以下方式之一，
-您可以在 **Apps** 页面的 **Scaling on another monitor**（在其他显示器上的缩放）中选择，
+您可以在 **Apps** 页面的 **Scaling**（缩放）中选择，
 或使用 `dsa app-window <package> --dpi-scaling`：
 
 - **Automatic**（自动，`auto`，默认值）：
@@ -157,7 +157,7 @@ dsa app-window <package> --below-title-bar on   # off 恢复默认值
   该列表中有 YouTube：它会保持启动时缩放比例下的布局，
   所以移动后，其底部选项卡和迷你播放器会一直错乱，直到重启为止。
   对于这类应用，Settings 会把默认值显示为
-  **Scaling: system (recommended for this app)**。
+  **Automatic (system, recommended for this app)**。
   您为该应用做出的选择优先。
 - **App**（应用，`app`）：拖动窗口时，DSA 会把它缩放到新的显示器。
   松开后，应用会以新显示器的缩放比例重新绘制，文字保持清晰：

@@ -247,8 +247,10 @@ public class AppWindowSettingsTests
         Assert.Equal(FullScreenPlace.Default, vm.FullScreenChoices[notes.ImmersiveIndex].Place);
         var reader = vm.Rows.Single(r => r.Package == "com.example.reader");
         Assert.Equal(FullScreenPlace.Window, vm.FullScreenChoices[reader.FullScreenIndex].Place);
-        Assert.Equal(new[] { "Apps_FullScreen_Default", "Apps_FullScreen_Screen", "Apps_FullScreen_Window" },
+        Assert.Equal(new[] { "Apps_FullScreen_DefaultScreen", "Apps_FullScreen_Screen", "Apps_FullScreen_Window" },
             vm.FullScreenChoices.Select(c => c.Label));
+        Assert.Equal(new[] { "Apps_FullScreen_DefaultWindow", "Apps_FullScreen_Screen", "Apps_FullScreen_Window" },
+            vm.ImmersiveChoices.Select(c => c.Label));
 
         var screen = vm.FullScreenChoices.ToList().FindIndex(c => c.Place == FullScreenPlace.Screen);
         await vm.SetImmersiveAsync("com.example.notes", screen);
@@ -258,6 +260,92 @@ public class AppWindowSettingsTests
         var calls = cli.Calls.Count;
         await vm.SetImmersiveAsync("com.example.notes", screen);
         Assert.Equal(calls, cli.Calls.Count);
+    }
+
+    [Fact]
+    public async Task Fr30_follow_the_default_says_where_the_default_shows_now()
+    {
+        var vm = Make(new FakeCli()
+            .Answer("apps list --json", List)
+            .Answer("app-window --json", "{\"apps\":[],\"defaults\":{\"fullscreen\":\"window\",\"immersive\":\"screen\"}}"));
+        // Before dsa says, the lists name DSA's own defaults.
+        Assert.Equal("Apps_FullScreen_DefaultScreen", vm.FullScreenChoices[0].Label);
+        Assert.Equal("Apps_FullScreen_DefaultWindow", vm.ImmersiveChoices[0].Label);
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.False(vm.HasError, vm.Error);
+        Assert.Equal(FullScreenPlace.Window, vm.DefaultFullScreen);
+        Assert.Equal(FullScreenPlace.Screen, vm.DefaultImmersive);
+        Assert.Equal("Apps_FullScreen_DefaultWindow", vm.FullScreenChoices[0].Label);
+        Assert.Equal("Apps_FullScreen_DefaultScreen", vm.ImmersiveChoices[0].Label);
+        // The other places read the same in both lists, in the order dsa takes them.
+        Assert.Equal(vm.FullScreenChoices.Skip(1), vm.ImmersiveChoices.Skip(1));
+        Assert.Equal(FullScreenPlaces.All, vm.ImmersiveChoices.Select(c => c.Place));
+
+        // A change on the Display page shows at once; the same choices again change nothing.
+        var changed = 0;
+        vm.PropertyChanged += (_, _) => changed++;
+        vm.FollowFullScreenDefaults(FullScreenPlace.Screen, FullScreenPlace.Window);
+        Assert.True(changed > 0);
+        Assert.Equal("Apps_FullScreen_DefaultScreen", vm.FullScreenChoices[0].Label);
+        Assert.Equal("Apps_FullScreen_DefaultWindow", vm.ImmersiveChoices[0].Label);
+        changed = 0;
+        vm.FollowFullScreenDefaults(FullScreenPlace.Screen, FullScreenPlace.Window);
+        Assert.Equal(0, changed);
+        // An app's own choice stays where it is in the list.
+        Assert.All(vm.Rows, row => Assert.Equal(0, row.FullScreenIndex));
+    }
+
+    [Fact]
+    public async Task Fr30_follow_the_default_follows_the_display_pages_choice()
+    {
+        const string Settings =
+            "{\"render_gpu\":\"display\",\"freeze\":false,\"program_updates\":true,\"image_updates\":true," +
+            "\"program_updates_available\":true,\"image_updates_available\":false,\"version\":\"0.0.9\"," +
+            "\"developer_mode\":false,\"adb_port\":58526,\"app_fullscreen\":\"screen\",\"app_immersive\":\"window\"}";
+        var cli = new FakeCli()
+            .Answer("settings --json", Settings)
+            .Fail("gpus --json", "dsa: no GPU list")
+            .Answer("settings set app-immersive screen --json", Settings.Replace("\"app_immersive\":\"window\"", "\"app_immersive\":\"screen\""));
+        var settings = new SettingsViewModel(new DsaService(cli), new KeyText());
+        var vm = Make(cli);
+        vm.Follow(settings);
+        await settings.LoadAsync();
+        Assert.Equal("Apps_FullScreen_DefaultWindow", vm.ImmersiveChoices[0].Label);
+        await settings.SetAppImmersiveAsync(0);
+        Assert.Equal(FullScreenPlace.Screen, settings.AppImmersiveDefault);
+        Assert.Equal("Apps_FullScreen_DefaultScreen", vm.ImmersiveChoices[0].Label);
+        Assert.Equal("Apps_FullScreen_DefaultScreen", vm.FullScreenChoices[0].Label);
+    }
+
+    [Theory]
+    [InlineData("Strings.resx", "Follow the default (on the whole screen)", "Follow the default (inside the window)")]
+    [InlineData("Strings.ko.resx", "기본값 따르기 (화면 전체로)", "기본값 따르기 (창 안에서)")]
+    public void Fr30_follow_the_default_reads_where_it_takes_the_app(string file, string screen, string window)
+    {
+        var vm = new AppsViewModel(new AppsService(new FakeCli()), TableText.Of(file));
+        Assert.Equal(screen, vm.FullScreenChoices[0].Label);
+        Assert.Equal(window, vm.ImmersiveChoices[0].Label);
+        vm.FollowFullScreenDefaults(FullScreenPlace.Window, FullScreenPlace.Screen);
+        Assert.Equal(window, vm.FullScreenChoices[0].Label);
+        Assert.Equal(screen, vm.ImmersiveChoices[0].Label);
+    }
+
+    [Theory]
+    [InlineData("Strings.resx", "Automatic (app)", "Automatic (system, recommended for this app)")]
+    [InlineData("Strings.ko.resx", "자동 (앱)", "자동 (시스템, 이 앱에 맞춤)")]
+    public async Task Fr4_automatic_scaling_says_what_it_does_for_each_app(string file, string app, string system)
+    {
+        var list = List.Replace("com.example.reader", "com.google.android.youtube");
+        var vm = new AppsViewModel(new AppsService(new FakeCli()
+            .Answer("apps list --json", list)
+            .Answer("app-window --json", "{\"apps\":[],\"system_scaled_by_default\":[\"com.google.android.youtube\"]}")),
+            TableText.Of(file));
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.False(vm.HasError, vm.Error);
+        Assert.Equal(app, vm.Rows.Single(r => r.Package == "com.example.notes").DpiScalingChoices![0].Label);
+        Assert.Equal(system, vm.Rows.Single(r => r.Package == "com.google.android.youtube").DpiScalingChoices![0].Label);
     }
 
     [Fact]

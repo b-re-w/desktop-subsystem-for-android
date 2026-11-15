@@ -100,7 +100,7 @@ Os apps pedem de dois tipos de forma, e cada tipo tem o próprio padrão:
 | Só esconder as barras | Um feed de vídeos curtos | Dentro da janela |
 
 Altere os padrões em **App full screen** e **Apps that hide their bars** na página **Display &
-GPU** das DSA Settings, ou para um único app em **Full screen** e **Bars hidden** na página
+GPU** das DSA Settings, ou para um único app em **Full screen request** e **When only the bars hide** na página
 **Apps**. A escolha do próprio app vem primeiro. O F11 e o item **Full screen** do menu da
 janela alternam a tela cheia na tela inteira a qualquer momento, seja qual for a configuração.
 
@@ -149,14 +149,14 @@ dsa app-window <package> --below-title-bar on   # off volta ao padrão
 Um app abre na escala do monitor em que a janela dele abre, desde o primeiro quadro, então ele
 não é recriado logo depois de abrir. Quando você move uma janela para um monitor com outra
 escala, o app mantém o tamanho na tela. Cada app faz isso de uma destas formas, que você escolhe
-em **Scaling on another monitor** (escala em outro monitor) na página **Apps**, ou com
+em **Scaling** (escala) na página **Apps**, ou com
 `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, o padrão): **System** para os apps da lista interna do DSA de apps que
   quebram quando a escala muda durante a execução, e **App** para todos os outros. A lista
   contém o YouTube: ele mantém o layout da escala em que iniciou, então, depois de uma mudança,
   as guias inferiores e o miniplayer ficariam quebrados até ele reiniciar. As DSA Settings mostram
-  o padrão de um app assim como **Scaling: system (recommended for this app)**. A sua própria
+  o padrão de um app assim como **Automatic (system, recommended for this app)**. A sua própria
   escolha para o app vem primeiro.
 - **App** (`app`): enquanto você arrasta a janela, o DSA a escala para o novo monitor. Quando
   você solta, o app é redesenhado na escala do novo monitor, e o texto continua nítido: o

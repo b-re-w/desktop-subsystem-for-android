@@ -5,6 +5,19 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:l="clr-namespace:Dsa.Settings">
+    <Page.Resources>
+        <!-- One of an app's options: its name above its control, as WinUI's header of a combo
+             box shows it, so two lists that offer the same places read as different settings. -->
+        <Style x:Key="AppOption" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,12,24,0" />
+            <Setter Property="MinWidth" Value="200" />
+        </Style>
+        <Style x:Key="AppOptionLabel" TargetType="TextBlock" BasedOn="{StaticResource CardTitle}">
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="MaxWidth" Value="320" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+    </Page.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -99,6 +112,7 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -137,81 +151,113 @@
                                                    ToolTipService.ShowOnDisabled="True"
                                                    ToolTip="{Binding UninstallTip, TargetNullValue={x:Null}}"
                                                    AutomationProperties.Name="{l:ItemName AppsUninstallButton.Content}" />
+                                    </WrapPanel>
+                                    <!-- The app's options, each with its name above it. They wrap into
+                                         as many lines as the window's width needs, so they stay readable
+                                         in a narrow window and at a large scale. Each control's name for
+                                         a screen reader is the label it sits under, with the app's name. -->
+                                    <WrapPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,4,0,0" HorizontalAlignment="Left">
                                         <!-- The app's windows: whether the user resizes them, and the size they open at. -->
-                                        <ui:ToggleSwitch Content="{l:Text AppsResizable.Content}" Tag="{Binding Package}"
-                                                         IsChecked="{Binding Resizable, Mode=OneWay}" Click="OnResizable"
-                                                         Margin="16,4,0,0" VerticalAlignment="Center"
-                                                         ToolTip="{l:Text AppsResizable.ToolTip}"
-                                                         AutomationProperties.Name="{l:ItemName AppsResizable.Content}" />
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsResizable.Content}" Style="{StaticResource AppOptionLabel}" />
+                                            <ui:ToggleSwitch Tag="{Binding Package}" HorizontalAlignment="Left"
+                                                             IsChecked="{Binding Resizable, Mode=OneWay}" Click="OnResizable"
+                                                             ToolTip="{l:Text AppsResizable.ToolTip}"
+                                                             AutomationProperties.Name="{l:ItemName AppsResizable.Content}" />
+                                        </StackPanel>
                                         <!-- For an app whose top bar is squeezed or hidden under the title
                                              bar: the app starts below the title bar. -->
-                                        <ui:ToggleSwitch Content="{l:Text AppsBelowTitleBar.Content}" Tag="{Binding Package}"
-                                                         IsChecked="{Binding BelowTitleBar, Mode=OneWay}" Click="OnBelowTitleBar"
-                                                         Margin="16,4,0,0" VerticalAlignment="Center"
-                                                         ToolTip="{l:Text AppsBelowTitleBar.ToolTip}"
-                                                         AutomationProperties.Name="{l:ItemName AppsBelowTitleBar.Content}" />
-                                        <ComboBox Tag="{Binding Package}" MinWidth="200" Margin="16,4,0,0" VerticalAlignment="Center"
-                                                  ItemsSource="{Binding DataContext.StartSizeChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                  DisplayMemberPath="Label"
-                                                  SelectedIndex="{Binding StartSizeIndex, Mode=OneWay}"
-                                                  SelectionChanged="OnStartSize"
-                                                  ToolTip="{l:Text AppsStartSize.ToolTip}"
-                                                  AutomationProperties.Name="{l:ItemName AppsStartSize.ToolTip}" />
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsBelowTitleBar.Content}" Style="{StaticResource AppOptionLabel}" />
+                                            <ui:ToggleSwitch Tag="{Binding Package}" HorizontalAlignment="Left"
+                                                             IsChecked="{Binding BelowTitleBar, Mode=OneWay}" Click="OnBelowTitleBar"
+                                                             ToolTip="{l:Text AppsBelowTitleBar.ToolTip}"
+                                                             AutomationProperties.Name="{l:ItemName AppsBelowTitleBar.Content}" />
+                                        </StackPanel>
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsStartSize.Name}" Style="{StaticResource AppOptionLabel}" />
+                                            <ComboBox Tag="{Binding Package}" MinWidth="200" HorizontalAlignment="Left"
+                                                      ItemsSource="{Binding DataContext.StartSizeChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedIndex="{Binding StartSizeIndex, Mode=OneWay}"
+                                                      SelectionChanged="OnStartSize"
+                                                      ToolTip="{l:Text AppsStartSize.ToolTip}"
+                                                      AutomationProperties.Name="{l:ItemName AppsStartSize.Name}"
+                                                      AutomationProperties.HelpText="{l:Text AppsStartSize.ToolTip}" />
+                                        </StackPanel>
                                         <!-- How the app's windows follow a monitor of another scale: the app
                                              redraws, or its window is scaled. Auto and System never restart the app.
-                                             Each row has its own list: Auto reads as System for an app on DSA's
-                                             built-in list of apps that break when their scale changes. -->
-                                        <ComboBox Tag="{Binding Package}" MinWidth="200" Margin="16,4,0,0" VerticalAlignment="Center"
-                                                  ItemsSource="{Binding DpiScalingChoices}"
-                                                  DisplayMemberPath="Label"
-                                                  SelectedIndex="{Binding DpiScalingIndex, Mode=OneWay}"
-                                                  SelectionChanged="OnDpiScaling"
-                                                  ToolTip="{Binding DpiScalingTip, TargetNullValue={l:Text AppsDpiScaling.ToolTip}}"
-                                                  AutomationProperties.Name="{l:ItemName AppsDpiScaling.Name}" />
+                                             Each row has its own list: Auto says what it does for this app, System
+                                             for an app on DSA's built-in list of apps that break when their scale
+                                             changes, App for any other. -->
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsDpiScaling.Name}" Style="{StaticResource AppOptionLabel}" />
+                                            <ComboBox Tag="{Binding Package}" MinWidth="200" HorizontalAlignment="Left"
+                                                      ItemsSource="{Binding DpiScalingChoices}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedIndex="{Binding DpiScalingIndex, Mode=OneWay}"
+                                                      SelectionChanged="OnDpiScaling"
+                                                      ToolTip="{Binding DpiScalingTip, TargetNullValue={l:Text AppsDpiScaling.ToolTip}}"
+                                                      AutomationProperties.Name="{l:ItemName AppsDpiScaling.Name}" />
+                                        </StackPanel>
                                         <!-- Where the app's full screen shows: a clear request (a video's
-                                             full screen button), and the app hiding both its bars alone. -->
-                                        <ComboBox Tag="{Binding Package}" MinWidth="200" Margin="16,4,0,0" VerticalAlignment="Center"
-                                                  ItemsSource="{Binding DataContext.FullScreenChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                  DisplayMemberPath="Label"
-                                                  SelectedIndex="{Binding FullScreenIndex, Mode=OneWay}"
-                                                  SelectionChanged="OnFullScreen"
-                                                  ToolTip="{l:Text AppsFullScreen.ToolTip}"
-                                                  AutomationProperties.Name="{l:ItemName AppsFullScreen.Name}" />
-                                        <ComboBox Tag="{Binding Package}" MinWidth="200" Margin="16,4,0,0" VerticalAlignment="Center"
-                                                  ItemsSource="{Binding DataContext.FullScreenChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                  DisplayMemberPath="Label"
-                                                  SelectedIndex="{Binding ImmersiveIndex, Mode=OneWay}"
-                                                  SelectionChanged="OnImmersive"
-                                                  ToolTip="{l:Text AppsImmersive.ToolTip}"
-                                                  AutomationProperties.Name="{l:ItemName AppsImmersive.Name}" />
+                                             full screen button), and the app hiding both its bars alone. Each
+                                             list's first item says where the Display page's choice takes it. -->
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsFullScreen.Name}" Style="{StaticResource AppOptionLabel}" />
+                                            <ComboBox Tag="{Binding Package}" MinWidth="200" HorizontalAlignment="Left"
+                                                      ItemsSource="{Binding DataContext.FullScreenChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedIndex="{Binding FullScreenIndex, Mode=OneWay}"
+                                                      SelectionChanged="OnFullScreen"
+                                                      ToolTip="{l:Text AppsFullScreen.ToolTip}"
+                                                      AutomationProperties.Name="{l:ItemName AppsFullScreen.Name}"
+                                                      AutomationProperties.HelpText="{l:Text AppsFullScreen.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsImmersive.Name}" Style="{StaticResource AppOptionLabel}" />
+                                            <ComboBox Tag="{Binding Package}" MinWidth="200" HorizontalAlignment="Left"
+                                                      ItemsSource="{Binding DataContext.ImmersiveChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedIndex="{Binding ImmersiveIndex, Mode=OneWay}"
+                                                      SelectionChanged="OnImmersive"
+                                                      ToolTip="{l:Text AppsImmersive.ToolTip}"
+                                                      AutomationProperties.Name="{l:ItemName AppsImmersive.Name}"
+                                                      AutomationProperties.HelpText="{l:Text AppsImmersive.ToolTip}" />
+                                        </StackPanel>
                                         <!-- Whether the app runs its ARM code through the translator. -->
-                                        <ui:ToggleSwitch Content="{l:Text AppsRunAsArm.Content}" Tag="{Binding Package}"
-                                                         IsChecked="{Binding RunAsArm, Mode=OneWay}" Click="OnRunAsArm"
-                                                         IsEnabled="{Binding CanRunAsArm}"
-                                                         Margin="16,4,0,0" VerticalAlignment="Center"
-                                                         ToolTipService.ShowOnDisabled="True"
-                                                         ToolTip="{Binding RunAsArmTip, TargetNullValue={x:Null}}"
-                                                         AutomationProperties.Name="{l:ItemName AppsRunAsArm.Content}" />
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsRunAsArm.Content}" Style="{StaticResource AppOptionLabel}" />
+                                            <ui:ToggleSwitch Tag="{Binding Package}" HorizontalAlignment="Left"
+                                                             IsChecked="{Binding RunAsArm, Mode=OneWay}" Click="OnRunAsArm"
+                                                             IsEnabled="{Binding CanRunAsArm}"
+                                                             ToolTipService.ShowOnDisabled="True"
+                                                             ToolTip="{Binding RunAsArmTip, TargetNullValue={x:Null}}"
+                                                             AutomationProperties.Name="{l:ItemName AppsRunAsArm.Content}" />
+                                        </StackPanel>
                                         <!-- How far the app may use root: not at all, asking an
                                              administrator each time, or without asking. -->
-                                        <ComboBox Tag="{Binding Package}" MinWidth="200" Margin="16,4,0,0" VerticalAlignment="Center"
-                                                  ItemsSource="{Binding DataContext.RootChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                  DisplayMemberPath="Label"
-                                                  SelectedIndex="{Binding RootIndex, Mode=OneWay}"
-                                                  IsEnabled="{Binding CanChangeRoot}"
-                                                  SelectionChanged="OnRoot"
-                                                  ToolTipService.ShowOnDisabled="True"
-                                                  ToolTip="{Binding RootTip, TargetNullValue={x:Null}}"
-                                                  AutomationProperties.Name="{l:ItemName AppsRoot.Name}" />
+                                        <StackPanel Style="{StaticResource AppOption}">
+                                            <TextBlock Text="{l:Text AppsRoot.Name}" Style="{StaticResource AppOptionLabel}" />
+                                            <ComboBox Tag="{Binding Package}" MinWidth="200" HorizontalAlignment="Left"
+                                                      ItemsSource="{Binding DataContext.RootChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedIndex="{Binding RootIndex, Mode=OneWay}"
+                                                      IsEnabled="{Binding CanChangeRoot}"
+                                                      SelectionChanged="OnRoot"
+                                                      ToolTipService.ShowOnDisabled="True"
+                                                      ToolTip="{Binding RootTip, TargetNullValue={x:Null}}"
+                                                      AutomationProperties.Name="{l:ItemName AppsRoot.Name}" />
+                                        </StackPanel>
                                     </WrapPanel>
-                                    <!-- Why the app cannot run as ARM, where the switch is. -->
-                                    <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding RunAsArmTip}"
-                                               Style="{StaticResource CardDescription}" HorizontalAlignment="Right"
-                                               TextWrapping="Wrap" Margin="0,4,0,0"
+                                    <!-- Why the app cannot run as ARM, below the options. -->
+                                    <TextBlock Grid.Row="3" Grid.ColumnSpan="3" Text="{Binding RunAsArmTip}"
+                                               Style="{StaticResource CardDescription}" HorizontalAlignment="Left"
+                                               TextWrapping="Wrap" Margin="0,8,0,0"
                                                Visibility="{Binding HasRunAsArmTip, Converter={StaticResource Visible}}" />
                                     <!-- Apps that share a user ID: which, and that root is one setting for them. -->
-                                    <TextBlock Grid.Row="3" Grid.ColumnSpan="3" Text="{Binding RootGroupNote}"
-                                               Style="{StaticResource CardDescription}" HorizontalAlignment="Right"
+                                    <TextBlock Grid.Row="4" Grid.ColumnSpan="3" Text="{Binding RootGroupNote}"
+                                               Style="{StaticResource CardDescription}" HorizontalAlignment="Left"
                                                TextWrapping="Wrap" Margin="0,4,0,0"
                                                Visibility="{Binding HasRootGroupNote, Converter={StaticResource Visible}}" />
                                 </Grid>

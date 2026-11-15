@@ -791,6 +791,20 @@ impl FullScreenPlace {
             .find(|place| place.code() == code)
             .unwrap_or(missing)
     }
+
+    /// This place as the choice for every app, which is a place itself: `builtin`, DSA's own
+    /// default, for [`FullScreenPlace::Default`].
+    pub fn or_builtin(self, builtin: FullScreenPlace) -> FullScreenPlace {
+        match self {
+            FullScreenPlace::Default => builtin,
+            place => place,
+        }
+    }
+}
+
+/// The choice for every app that `json` names; `builtin` for none.
+fn default_place(json: &Value, builtin: FullScreenPlace) -> FullScreenPlace {
+    FullScreenPlace::read_or(json.as_str().unwrap_or_default(), builtin).or_builtin(builtin)
 }
 
 /// The user's window settings for one app.
@@ -821,6 +835,11 @@ pub struct AppWindows {
     /// DSA's built-in list of apps that start below the title bar unless the user chose
     /// otherwise. Empty from a `dsa` that does not name it.
     pub below_title_bar_by_default: Vec<String>,
+    /// Where every app without its own choice shows a clear full screen request, and its bars
+    /// hidden alone: DSA's own defaults (the whole screen, inside the window) from a `dsa` that
+    /// does not name them.
+    pub default_fullscreen: FullScreenPlace,
+    pub default_immersive: FullScreenPlace,
 }
 
 impl AppWindow {
@@ -2246,6 +2265,14 @@ impl Client {
             system_forced_available: flag(&json, "system_forced_available", false),
             system_scaled_by_default: packages("system_scaled_by_default"),
             below_title_bar_by_default: packages("below_title_bar_by_default"),
+            default_fullscreen: default_place(
+                &json["defaults"]["fullscreen"],
+                FullScreenPlace::Screen,
+            ),
+            default_immersive: default_place(
+                &json["defaults"]["immersive"],
+                FullScreenPlace::Window,
+            ),
         })
     }
 

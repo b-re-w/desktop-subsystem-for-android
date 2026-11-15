@@ -1820,3 +1820,21 @@ msgstr "表示する最低の優先度"
 
 msgid "Copied"
 msgstr "コピーしました"
+
+msgid "When only the bars hide"
+msgstr "バーだけを隠すとき"
+
+msgid "Scaling"
+msgstr "拡大縮小"
+
+msgid "Automatic (app)"
+msgstr "自動 (アプリ)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "自動 (システム、このアプリに推奨)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "既定に従う (画面全体)"
+
+msgid "Follow the default (inside the window)"
+msgstr "既定に従う (ウィンドウ内)"

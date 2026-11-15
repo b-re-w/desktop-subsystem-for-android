@@ -149,12 +149,12 @@ fn fr4_youtube_scales_the_system_way_by_default() {
     let choices = view::dpi_scaling_choices_for(true, false);
     let scalings: Vec<DpiScaling> = choices.iter().map(|(_, s)| *s).collect();
     assert_eq!(scalings, DpiScaling::ALL);
-    assert_eq!(choices[0].0, "System (recommended for this app)");
+    assert_eq!(choices[0].0, "Automatic (system, recommended for this app)");
     assert_eq!(choices[1..], view::dpi_scaling_choices(false)[1..]);
-    // Any other app's automatic choice keeps its plain name.
+    // Any other app's automatic choice says it is App for it.
     assert_eq!(
         view::dpi_scaling_choices_for(false, false)[0].0,
-        "Automatic"
+        "Automatic (app)"
     );
     // A dsa that does not name the list has none.
     let fake = Fake::new(&[("app-window --json", json!({"apps": []}))]);

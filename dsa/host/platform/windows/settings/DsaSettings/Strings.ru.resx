@@ -1713,7 +1713,7 @@ Android запустит его только с пакетом трансляц�
     <value>Окна {0} будут следовать новым параметрам, начиная со следующего открытого окна.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Масштабирование на другом мониторе</value>
+    <value>Масштабирование</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Кто масштабирует это приложение, когда его окно переходит на монитор с другим масштабом.
@@ -1722,41 +1722,47 @@ Android запустит его только с пакетом трансляц�
 • Автоматически: «Система» для приложений, которые ломаются от смены масштаба на ходу, например YouTube; «Приложение» для остальных.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Масштабирование: автоматически</value>
+    <value>Автоматически (приложение)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Масштабирование: система (рекомендуется для этого приложения)</value>
+    <value>Автоматически (система, рекомендуется для этого приложения)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Масштабирует: приложение</value>
+    <value>Приложение</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Масштабирует: система</value>
+    <value>Система</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Масштабирует: система (принудительно)</value>
+    <value>Система (принудительно)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Масштабирует: система (принудительно), пока недоступно</value>
+    <value>Система (принудительно), пока недоступно</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>«Система (принудительно)» передаёт приложению новый масштаб без перезапуска, даже если оно не заявляет, что умеет его обрабатывать.
 Пока недоступно: нужно изменение фреймворка Android, которого нет в этой сборке, поэтому сейчас работает как «Система».</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Во весь экран</value>
+    <value>Запрос полного экрана</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Где показывается это приложение при явном запросе полного экрана, например кнопкой видеоплеера. F11 всегда переключает полный экран.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Панели скрыты</value>
+    <value>Когда скрыты только панели</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Где показывается это приложение, когда оно скрывает панели без запроса полного экрана, как лента коротких видео.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Как по умолчанию</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Размер окна при открытии</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Как по умолчанию (во весь экран)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Как по умолчанию (внутри окна)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>Во весь экран</value>

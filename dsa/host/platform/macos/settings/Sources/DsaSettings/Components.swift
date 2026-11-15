@@ -138,6 +138,24 @@ struct RowLabel: View {
     }
 }
 
+/// One of a list row's options: its name above its control, so two lists that offer the same
+/// choices read as different settings. The control keeps its own VoiceOver name, which says
+/// whose option it is, so the name above is not read twice.
+struct LabeledOption<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityHidden(true)
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 /// A short note in a page: a page's introduction, or what to know under a row. Every page
 /// draws its notes with this, so they all look the same and wrap inside the form's width.
 struct Note: View {
