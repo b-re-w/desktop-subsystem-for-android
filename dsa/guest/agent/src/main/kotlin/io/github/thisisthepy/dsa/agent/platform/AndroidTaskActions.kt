@@ -383,8 +383,24 @@ class AndroidTaskActions(
      * desktop windows give an app that draws its own title bar the places their caption draws
      * over (WindowDecoration's calculateBoundingRectsInsets); the app reads them with
      * WindowInsets.getBoundingRects(captionBar()). The status bar source carries none.
+     *
+     * With [opaque] the task's app starts below the band, as the user chose for it. The task
+     * then gets what the framework's desktop windowing gives an app that asked for no
+     * transparent caption (DesktopModeWindowDecoration.updateRelayoutParams): no status bar
+     * source, which a freeform window never has there, and a caption bar source that carries
+     * InsetsSource.FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR (with FLAG_FORCE_CONSUMING, for an
+     * app that hides the caption). DecorView.updateColorViews consumes such a caption inset
+     * for the app: the content root gets it as its top margin, the app is dispatched a top
+     * inset of 0, and the decor paints the app's status bar colour, or its window background,
+     * in the band. DecorView does not do so for a window that asks for a transparent caption
+     * bar background, which keeps its caption inset.
      */
-    override fun setCaptionInset(taskId: Int, frame: TaskBounds?, boundingRects: List<TaskBounds>): Boolean = try {
+    override fun setCaptionInset(
+        taskId: Int,
+        frame: TaskBounds?,
+        boundingRects: List<TaskBounds>,
+        opaque: Boolean,
+    ): Boolean = try {
         val token = taskToken(taskId)
         if (token == null) {
             false
@@ -394,7 +410,9 @@ class AndroidTaskActions(
             val transaction = transactionClass.getConstructor().newInstance()
             val types = listOf(WindowInsets.Type.statusBars(), WindowInsets.Type.captionBar())
             for ((index, type) in types.withIndex()) {
-                if (frame == null) {
+                // A task below the title bar has no status bar inset; one it was given while
+                // it was still expected under the unified title bar is taken away.
+                if (frame == null || (opaque && type == WindowInsets.Type.statusBars())) {
                     transactionClass.getMethod(
                         "removeInsetsSource",
                         tokenClass,
@@ -407,7 +425,8 @@ class AndroidTaskActions(
                         .takeIf { it.isNotEmpty() && type == WindowInsets.Type.captionBar() }
                         ?.map { Rect(it.left, it.top, it.right, it.bottom) }
                         ?.toTypedArray()
-                    addInsetsSource(transactionClass, transaction, token, index, type, frame, rects)
+                    val flags = if (opaque) FORCE_CONSUMING_CAPTION else 0
+                    addInsetsSource(transactionClass, transaction, token, index, type, frame, rects, flags)
                 }
             }
             commit(transactionClass, transaction)
@@ -426,7 +445,9 @@ class AndroidTaskActions(
     /**
      * WindowContainerTransaction.addInsetsSource in whichever form this framework has: with
      * bounding rectangles and flags (Android 15 and later), with bounding rectangles, or with
-     * the frame alone. [boundingRects] go where the form takes them; no flags are given.
+     * the frame alone. [boundingRects] and [flags] (InsetsSource's) go where the form takes
+     * them. A form without flags cannot make the framework consume an inset, so flags asked of
+     * it are refused rather than dropped: the caller then knows the task did not get them.
      */
     private fun addInsetsSource(
         transactionClass: Class<*>,
@@ -436,6 +457,7 @@ class AndroidTaskActions(
         type: Int,
         frame: TaskBounds,
         boundingRects: Array<Rect>?,
+        flags: Int = 0,
     ) {
         val methods = transactionClass.methods.filter { it.name == "addInsetsSource" }
         val form = InsetsSourceForm.choose(methods.map { m -> m.parameterTypes.map { it.typeName } })
@@ -449,8 +471,11 @@ class AndroidTaskActions(
             is InsetsSourceForm.Frame -> form.parameterCount
             is InsetsSourceForm.Size -> form.parameterCount
         }
+        if (flags != 0 && count < 7) {
+            throw NoSuchMethodException("WindowContainerTransaction.addInsetsSource with flags")
+        }
         val args: Array<Any?> = when (count) {
-            7 -> arrayOf(token, insetsOwner, index, type, area, boundingRects, 0)
+            7 -> arrayOf(token, insetsOwner, index, type, area, boundingRects, flags)
             6 -> arrayOf(token, insetsOwner, index, type, area, boundingRects)
             else -> arrayOf(token, insetsOwner, index, type, area)
         }
@@ -459,6 +484,16 @@ class AndroidTaskActions(
 
     /** The status bar heights read so far, by density. */
     private val statusBarHeights = HashMap<Int, Int>()
+
+    private companion object {
+        /**
+         * InsetsSource.FLAG_FORCE_CONSUMING (1 shl 2) and
+         * FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR (1 shl 4), the same in Android 16 and 17:
+         * the flags the framework's desktop windowing gives the caption source of an app that
+         * asked for no transparent caption. They are hidden constants, so they are named here.
+         */
+        const val FORCE_CONSUMING_CAPTION = (1 shl 2) or (1 shl 4)
+    }
 
     /**
      * Reads the framework's status_bar_height at [densityDpi], as an app drawing at that

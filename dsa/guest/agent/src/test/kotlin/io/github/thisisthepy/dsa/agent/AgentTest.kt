@@ -21,6 +21,7 @@ import io.github.thisisthepy.dsa.control.v1.PointerAction
 import io.github.thisisthepy.dsa.control.v1.PointerEvent
 import io.github.thisisthepy.dsa.control.v1.PointerTool
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -1219,6 +1220,76 @@ class AgentTest {
         scheduler.runDue()
         assertEquals(listOf("compose 한 1"), editor.calls)
         assertEquals(listOf(4), actions.focused.drop(focusedBefore))
+    }
+
+    private fun captionCompat(vararg packages: String) = Envelope.newBuilder()
+        .setCaptionCompat(
+            io.github.thisisthepy.dsa.control.v1.CaptionCompat.newBuilder().addAllBelowTitleBar(packages.toList()),
+        )
+        .build().toByteArray()
+
+    @Test
+    fun fr22_a_task_below_the_title_bar_gets_a_consumed_caption_inset_and_no_status_bar_inset() {
+        actions.statusBarHeights = mapOf(262 to 58)
+        started()
+        // The host says which apps start below the title bar before any of them runs.
+        daemon.deliver(captionCompat("com.example.player"))
+        scheduler.runDue()
+        tasks.change(
+            listOf(
+                appTask(1, densityDpi = 262).copy(packageName = "com.example.player", transparentCaption = true),
+                appTask(2, densityDpi = 262).copy(packageName = "com.example.notes"),
+            ),
+        )
+        scheduler.runDue()
+
+        // The player's task is given a band the framework consumes, as wide as the task, and
+        // the host is told it starts below the title bar and does not draw its own.
+        val player = taskUpdates().last { it.taskId == 1 }
+        assertTrue(player.belowTitleBar)
+        assertFalse(player.transparentCaption)
+        assertTrue(player.captionInteractiveList.isEmpty())
+        val given = actions.captionInsets.indexOfLast { it.first == 1 }
+        assertEquals(true, actions.captionOpaque[given])
+        val frame = actions.captionInsets[given].second!!
+        assertEquals(listOf(player.bounds.left, player.bounds.top, player.bounds.right), listOf(frame.left, frame.top, frame.right))
+        assertEquals(58, frame.bottom - frame.top)
+        // The other app's task stays under the unified title bar.
+        val notes = taskUpdates().last { it.taskId == 2 }
+        assertFalse(notes.belowTitleBar)
+        assertEquals(false, actions.captionOpaque[actions.captionInsets.indexOfLast { it.first == 2 }])
+    }
+
+    @Test
+    fun fr22_the_switch_is_settled_when_a_task_starts() {
+        actions.statusBarHeights = mapOf(262 to 58)
+        val first = appTask(1, densityDpi = 262).copy(packageName = "com.example.player")
+        tasks.running = listOf(first)
+        started()
+        assertFalse(taskUpdates().last { it.taskId == 1 }.belowTitleBar)
+
+        // The user turns the switch on while the app is open: its task keeps what it started
+        // with, since its screens have laid out for the insets they were given.
+        daemon.deliver(captionCompat("com.example.player"))
+        scheduler.runDue()
+        tasks.change(listOf(first.copy(label = "Player, another screen")))
+        scheduler.runDue()
+        assertFalse(taskUpdates().last { it.taskId == 1 }.belowTitleBar)
+        assertTrue(actions.captionOpaque.none { it })
+
+        // The next task of the app starts below the title bar.
+        val second = appTask(2, densityDpi = 262).copy(packageName = "com.example.player")
+        tasks.change(listOf(second))
+        scheduler.runDue()
+        assertTrue(taskUpdates().last { it.taskId == 2 }.belowTitleBar)
+        assertEquals(true, actions.captionOpaque[actions.captionInsets.indexOfLast { it.first == 2 }])
+
+        // Turned off again, that task stays as it started too.
+        daemon.deliver(captionCompat())
+        scheduler.runDue()
+        tasks.change(listOf(second.copy(label = "Player, another screen")))
+        scheduler.runDue()
+        assertTrue(taskUpdates().last { it.taskId == 2 }.belowTitleBar)
     }
 
     @Test

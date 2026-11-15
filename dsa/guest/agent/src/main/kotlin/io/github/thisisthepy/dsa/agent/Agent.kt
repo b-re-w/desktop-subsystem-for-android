@@ -104,6 +104,7 @@ import io.github.thisisthepy.dsa.agent.widgets.WidgetPlatform
 import io.github.thisisthepy.dsa.agent.widgets.WidgetStore
 import io.github.thisisthepy.dsa.agent.windowing.FreeformSetup
 import io.github.thisisthepy.dsa.agent.windowing.GestureExclusion
+import io.github.thisisthepy.dsa.agent.windowing.BelowTitleBar
 import io.github.thisisthepy.dsa.agent.windowing.CaptionInsets
 import io.github.thisisthepy.dsa.agent.windowing.TaskArranger
 import io.github.thisisthepy.dsa.agent.windowing.WindowingControl
@@ -470,6 +471,7 @@ class Agent(
     private val freeform = FreeformSetup(windowing, scheduler, log)
     private val arranger = TaskArranger(actions, windowing::displaySize, log)
     private val captions = CaptionInsets(actions, log)
+    private val belowTitleBar = BelowTitleBar()
     private val fullScreenHolds = FullScreenHolds()
     private val installed = InstalledAppReporter(ownPackage) { frame -> channel.send(frame) }
     private val shortcutReporter = ShortcutReporter(ownPackage) { frame -> channel.send(frame) }
@@ -926,6 +928,10 @@ class Agent(
                 fullScreenHolds.hostSays(result.taskId, result.inWindow)
                 requestRefresh()
             }
+            is RequestResult.CaptionCompat -> {
+                log.info("${result.belowTitleBar.size} apps start below the title bar")
+                belowTitleBar.hostSays(result.belowTitleBar)
+            }
             is RequestResult.Placement -> {
                 val placement = result.placement
                 log.info(
@@ -1271,6 +1277,8 @@ class Agent(
         trace.applied((System.nanoTime() - arranging) / 1_000_000.0)
         if (arranger.waiting) checkMoves()
         if (!channel.connected) return
+        // Whether a task starts below the title bar is settled when it is first seen here.
+        val below = belowTitleBar.tasks(running.associate { it.taskId to it.packageName })
         val placedTasks = running.map { task ->
             val placed = bounds[task.taskId]
             // A new task being given its window's monitor's density is reported at it, with
@@ -1278,6 +1286,11 @@ class Agent(
             val density = arranger.densityToReport(task.taskId, task.densityDpi)
             val dense = if (density == task.densityDpi) task else task.copy(densityDpi = density)
             val moved = if (placed == null || placed == task.bounds) dense else dense.copy(bounds = placed)
+            if (moved.taskId in below) {
+                // The user's switch wins over an app that asks to draw its own title bar: the
+                // whole band is the host's, and the app has no controls in it.
+                return@map moved.copy(belowTitleBar = true, transparentCaption = false, captionInteractive = emptyList())
+            }
             val controls = captions.controls(moved.taskId, moved.bounds, moved.transparentCaption, exclusion)
             if (controls.isEmpty()) moved else moved.copy(captionInteractive = controls)
         }
@@ -1292,6 +1305,7 @@ class Agent(
             told,
             placedTasks.filter { it.transparentCaption }.map { it.taskId }.toSet(),
             awaiting = titled.associate { it.taskId to it.densityDpi },
+            opaque = below,
         )
         // The overlays go with every report of the tasks: after a new connection, and with the
         // display's size once it is known.
