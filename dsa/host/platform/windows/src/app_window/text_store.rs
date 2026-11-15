@@ -13,9 +13,11 @@
 //! composition finished, a composition of what it shows now, and the selection.
 //!
 //! The agent describes the editor again after every change ([`ImeEditor`]). A description of
-//! a state the host's own events pass through on their way is stale and changes nothing; one
-//! the host's events never made (the user clicked elsewhere in the editor, or the app changed
-//! its text) becomes the document, and the framework is told what changed.
+//! a state the host's own events pass through on their way is stale and changes nothing, even
+//! when it comes several edits late, and so is one of such a state whose editor lost its
+//! composing span (input restarted on it); one the host's events never made (the user clicked
+//! elsewhere in the editor, the app changed its text, another editor took the focus) becomes
+//! the document, and the framework is told what changed.
 //!
 //! Offsets are UTF-16 code units, as both the framework and Android count them. Nothing here
 //! calls Windows, so every rule is tested without an input method.
@@ -145,6 +147,9 @@ pub struct TextStore {
     typed: TextInput,
     /// What the guest last said of its editor.
     described: Option<ImeEditor>,
+    /// Whether the guest described its editor as the host's events left it but without the
+    /// composing span, so the next events set the span again first.
+    reassert: bool,
 }
 
 impl TextStore {
@@ -158,6 +163,7 @@ impl TextStore {
             expected: VecDeque::new(),
             typed: TextInput::new(task_id),
             described: None,
+            reassert: false,
         }
     }
 
@@ -387,6 +393,18 @@ impl TextStore {
         if self.guest == document {
             return sent;
         }
+        if std::mem::take(&mut self.reassert) {
+            // The guest's editor may have lost its composing span: it is set again, so what
+            // follows replaces the composition rather than typing beside it.
+            if let Some((from, to)) = self.guest.composition {
+                let event = ImeEvent::SetComposingRegion {
+                    task_id: self.task_id,
+                    start: self.absolute(from),
+                    end: self.absolute(to),
+                };
+                self.send(event, &mut sent);
+            }
+        }
         let change = difference(&self.guest.units, &document.units);
         // A place in the document as the place in the guest's text it stands for: the
         // changed part maps to its own ends.
@@ -532,7 +550,20 @@ impl TextStore {
                 return told;
             }
         } else if self.expected.iter().any(|state| seen.agrees_with(state)) {
-            // A state the host's events pass through: the rest is on its way.
+            // A state the host's events pass through: the rest is on its way. Descriptions
+            // come late, several edits behind, and any of them may come after a later one
+            // was already seen, so every state still remembered counts.
+            return told;
+        } else if seen.echoes(&self.guest) {
+            // The guest's editor holds what the host's events made, without its composing
+            // span: input restarted on it, or its app set the same text again. That is the
+            // host's own text, so the composition goes on. The agent makes the text the
+            // composition again as input restarts, but whether it could is not known here,
+            // so the next edit says where the composition is before it replaces it.
+            self.reassert = self.guest.composition.is_some();
+            return told;
+        } else if self.expected.iter().any(|state| seen.echoes(state)) {
+            // The same, for a state the host's events passed through on the way.
             return told;
         }
         told.text = if seen.start == self.document.start {
@@ -562,6 +593,7 @@ impl TextStore {
         self.backwards = editor_backwards(self.described.as_ref());
         self.guest = seen;
         self.expected.clear();
+        self.reassert = false;
         told
     }
 
@@ -1066,6 +1098,280 @@ mod tests {
         assert_eq!(guest.text.composition, None);
         assert_eq!(guest.text.selection, (0, 0));
         assert!(store.flush().is_empty());
+    }
+
+    /// The guest's editor as the agent describes it.
+    fn description(text: &EditorText) -> ImeEditor {
+        ImeEditor {
+            kind: InputKind::Text,
+            text: String::from_utf16_lossy(&text.units),
+            text_start: text.start,
+            selection: (text.start + text.selection.0, text.start + text.selection.1),
+            composition: text
+                .composition
+                .map(|(from, to)| (text.start + from, text.start + to)),
+        }
+    }
+
+    /// A guest editor that applies each event as it arrives and describes itself after each,
+    /// as the agent does, and whose descriptions reach the host `lag` descriptions late: the
+    /// user types faster than the guest answers.
+    struct LateGuest {
+        guest: Guest,
+        lag: usize,
+        waiting: VecDeque<ImeEditor>,
+        told: Vec<Described>,
+    }
+
+    impl LateGuest {
+        fn new(lag: usize) -> LateGuest {
+            LateGuest {
+                guest: Guest::new(),
+                lag,
+                waiting: VecDeque::new(),
+                told: Vec::new(),
+            }
+        }
+
+        /// The events of one edit reach the guest, and the descriptions due by now the host.
+        fn take(&mut self, store: &mut TextStore, events: &[ImeEvent]) {
+            for event in events {
+                self.guest.text.apply(event);
+                self.waiting.push_back(description(&self.guest.text));
+            }
+            self.deliver(store, self.lag);
+        }
+
+        /// Something changes the guest's editor that the host did not send, described at once.
+        fn change(&mut self, store: &mut TextStore, change: impl FnOnce(&mut EditorText)) {
+            change(&mut self.guest.text);
+            self.waiting.push_back(description(&self.guest.text));
+            self.deliver(store, self.lag);
+        }
+
+        fn deliver(&mut self, store: &mut TextStore, keep: usize) {
+            while self.waiting.len() > keep {
+                let editor = self.waiting.pop_front().unwrap();
+                self.told.push(store.described_as(editor));
+            }
+        }
+
+        /// Every description still on its way reaches the host.
+        fn settle(&mut self, store: &mut TextStore) {
+            self.deliver(store, 0);
+        }
+
+        /// Whether the host was told nothing of any description: each was its own echo.
+        fn all_echoes(&self) -> bool {
+            self.told.iter().all(|told| *told == Described::default())
+        }
+    }
+
+    /// What a Korean input method does as each key is typed: what it commits, if anything, and
+    /// what it composes next, if anything.
+    type Steps = &'static [(Option<&'static str>, Option<&'static str>)];
+
+    /// How one step reaches the document: as the framework's edits, or through IMM32.
+    type Step = fn(&mut TextStore, (Option<&str>, Option<&str>));
+
+    /// 한글, jamo by jamo: ㅎ ㅏ ㄴ ㄱ ㅡ ㄹ, then Space.
+    const HANGUL: Steps = &[
+        (None, Some("ㅎ")),
+        (None, Some("하")),
+        (None, Some("한")),
+        (Some("한"), Some("ㄱ")),
+        (None, Some("그")),
+        (None, Some("글")),
+        (Some("글"), None),
+    ];
+
+    /// 안녕하세요, jamo by jamo, then Enter.
+    const ANNYEONG: Steps = &[
+        (None, Some("ㅇ")),
+        (None, Some("아")),
+        (None, Some("안")),
+        (Some("안"), Some("ㄴ")),
+        (None, Some("녀")),
+        (None, Some("녕")),
+        (Some("녕"), Some("ㅎ")),
+        (None, Some("하")),
+        (None, Some("핫")),
+        (Some("하"), Some("세")),
+        (None, Some("셍")),
+        (Some("세"), Some("요")),
+        (Some("요"), None),
+    ];
+
+    /// One step typed through the window's document: the framework edits its composition.
+    fn step_in_document(store: &mut TextStore, step: (Option<&str>, Option<&str>)) {
+        let (result, composition) = step;
+        let cursor = store.selection().1;
+        let (mut at, mut end) = store.composition().unwrap_or((cursor, cursor));
+        if let Some(result) = result {
+            store.replace(at, end, &units(result)).unwrap();
+            at += units(result).len() as u32;
+            end = at;
+            store.set_composition(None);
+        }
+        match composition {
+            Some(text) => {
+                store.set_composition(Some((at, end)));
+                composing(store, (at, end), text, (at, at + units(text).len() as u32));
+            }
+            None => {
+                store.set_composition(None);
+                store.set_selection(at, at, false).unwrap();
+            }
+        }
+    }
+
+    /// One step typed through IMM32, as the window hands each message to the document.
+    fn step_through_imm32(store: &mut TextStore, step: (Option<&str>, Option<&str>)) {
+        let (result, composition) = step;
+        if let Some(result) = result {
+            store.commit_outside(&units(result));
+        }
+        if let Some(text) = composition {
+            let text = units(text);
+            store.compose_outside(&text, text.len() as u32);
+        }
+    }
+
+    fn type_late(steps: Steps, lag: usize, step: Step) -> (TextStore, LateGuest) {
+        let mut store = TextStore::new(TASK);
+        store.described_as(described("", 0, (0, 0)));
+        let mut guest = LateGuest::new(lag);
+        for &one in steps {
+            step(&mut store, one);
+            let events = store.flush();
+            guest.take(&mut store, &events);
+        }
+        guest.settle(&mut store);
+        (store, guest)
+    }
+
+    #[test]
+    fn fr6_fast_korean_typing_whose_echoes_come_late_never_ends_a_composition_early() {
+        for (steps, typed) in [(HANGUL, "한글"), (ANNYEONG, "안녕하세요")] {
+            for lag in 0..8 {
+                for (path, step) in [
+                    ("the document", step_in_document as Step),
+                    ("IMM32", step_through_imm32 as Step),
+                ] {
+                    let (store, guest) = type_late(steps, lag, step);
+                    assert!(
+                        guest.all_echoes(),
+                        "{typed} through {path}, {lag} descriptions late: {:?}",
+                        guest.told
+                    );
+                    assert_eq!(
+                        guest.guest.shows(),
+                        typed,
+                        "{typed} through {path}, lag {lag}"
+                    );
+                    assert_eq!(store.text(0, 99), &units(typed)[..]);
+                    assert_eq!(guest.guest.text.composition, None);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fr6_a_composition_whose_editor_restarted_input_goes_on_in_the_same_syllable() {
+        for (path, step) in [
+            ("the document", step_in_document as Step),
+            ("IMM32", step_through_imm32 as Step),
+        ] {
+            let mut store = TextStore::new(TASK);
+            store.described_as(described("a", 0, (1, 1)));
+            let mut guest = LateGuest::new(0);
+            guest.guest.text = EditorText::of(&described("a", 0, (1, 1)));
+            for &one in &HANGUL[..2] {
+                step(&mut store, one);
+                let events = store.flush();
+                guest.take(&mut store, &events);
+            }
+            // Input restarts on the editor: the framework finishes its composition, which
+            // keeps 하 and loses the span, and the agent describes it so.
+            guest.change(&mut store, |text| text.composition = None);
+            assert!(guest.all_echoes(), "through {path}: {:?}", guest.told);
+            // ㄴ: 한 takes the place of 하, not a place beside it.
+            step(&mut store, HANGUL[2]);
+            let events = store.flush();
+            assert_eq!(events.first(), Some(&region(1, 2)), "through {path}");
+            guest.take(&mut store, &events);
+            assert_eq!(guest.guest.shows(), "a한", "through {path}");
+            assert_eq!(guest.guest.text.composition, Some((1, 2)));
+            // The rest of 한글 follows as ever.
+            for &one in &HANGUL[3..] {
+                step(&mut store, one);
+                let events = store.flush();
+                guest.take(&mut store, &events);
+            }
+            guest.settle(&mut store);
+            assert!(guest.all_echoes(), "through {path}: {:?}", guest.told);
+            assert_eq!(guest.guest.shows(), "a한글", "through {path}");
+        }
+    }
+
+    #[test]
+    fn fr6_a_click_elsewhere_ends_the_composition_even_with_echoes_still_on_their_way() {
+        for lag in 0..4 {
+            let mut store = TextStore::new(TASK);
+            store.described_as(described("ab", 0, (2, 2)));
+            let mut guest = LateGuest::new(lag);
+            guest.guest.text = EditorText::of(&described("ab", 0, (2, 2)));
+            for &one in &HANGUL[..3] {
+                step_through_imm32(&mut store, one);
+                let events = store.flush();
+                guest.take(&mut store, &events);
+            }
+            // The user clicks before "ab" while the echoes of 한 are still on their way.
+            guest.change(&mut store, |text| text.selection = (0, 0));
+            guest.settle(&mut store);
+            let ends: Vec<bool> = guest.told.iter().map(|t| t.ends_composition).collect();
+            assert_eq!(
+                ends.iter().filter(|end| **end).count(),
+                1,
+                "lag {lag}: {ends:?}"
+            );
+            assert_eq!(
+                ends.last(),
+                Some(&true),
+                "the click, and only the click, ends it"
+            );
+        }
+    }
+
+    #[test]
+    fn fr6_a_change_the_host_never_made_ends_the_composition_while_echoes_do_not() {
+        let mut store = TextStore::new(TASK);
+        store.described_as(described("", 0, (0, 0)));
+        let mut guest = LateGuest::new(2);
+        for &one in &ANNYEONG[..4] {
+            step_in_document(&mut store, one);
+            let events = store.flush();
+            guest.take(&mut store, &events);
+        }
+        assert!(guest.all_echoes(), "{:?}", guest.told);
+        // The app clears its search field while 안ㄴ is being typed.
+        guest.change(&mut store, |text| *text = EditorText::default());
+        guest.settle(&mut store);
+        assert!(guest.told.last().unwrap().ends_composition);
+        assert!(guest.told[..guest.told.len() - 1]
+            .iter()
+            .all(|told| !told.ends_composition));
+        // Another editor takes the focus while a composition is being typed.
+        let mut store = TextStore::new(TASK);
+        store.described_as(described("", 0, (0, 0)));
+        step_through_imm32(&mut store, ANNYEONG[0]);
+        store.flush();
+        let told = store.described_as(ImeEditor {
+            kind: InputKind::Search,
+            ..described("", 0, (0, 0))
+        });
+        assert!(told.kind);
+        assert!(told.ends_composition);
     }
 
     #[test]

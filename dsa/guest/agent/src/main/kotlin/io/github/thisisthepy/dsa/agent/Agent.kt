@@ -825,6 +825,16 @@ class Agent(
         }
     }
 
+    /**
+     * Input restarted on the focused editor, which is now [state]: a composition being typed
+     * there goes on. Called from any thread.
+     */
+    fun editorRestarted(state: io.github.thisisthepy.dsa.agent.input.EditorState) {
+        scheduler.post {
+            if (channel.connected) text.editorRestarted(state)
+        }
+    }
+
     private fun onConnected() {
         // The daemon tells the host from this that the guest's requests have someone to reach.
         channel.send(Envelope.newBuilder().setAgentConnected(AgentConnected.getDefaultInstance()).build().toByteArray())

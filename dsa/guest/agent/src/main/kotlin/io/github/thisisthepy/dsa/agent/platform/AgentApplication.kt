@@ -137,6 +137,7 @@ class AgentApplication : Application() {
         AgentApplication.agent = agent
         HostInputMethod.onCursor = { rect -> agent.cursorMoved(rect.left, rect.top, rect.right, rect.bottom) }
         HostInputMethod.onEditor = { state -> agent.editorChanged(state) }
+        HostInputMethod.onRestart = { state -> agent.editorRestarted(state) }
         agent.start()
         dragCatcher.start()
         io.github.thisisthepy.dsa.agent.gapps.GoogleAppsCompile(
