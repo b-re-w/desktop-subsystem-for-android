@@ -85,7 +85,7 @@ static void pr7_grants_are_whole_granules_after_the_release_slots() {
 // path; no region at all is refused too.
 static void pr7_an_allocation_the_region_cannot_hold_takes_the_copy_path() {
     dsa::GraphicsMemory none;
-    dsa::GrantRefusal why = dsa::GrantRefusal::None;
+    dsa::GrantRefusal why = dsa::GrantRefusal::NotRefused;
     EXPECT(!none.allocate(kGranule, 1, &why));
     EXPECT(why == dsa::GrantRefusal::NoRegion);
 
@@ -175,7 +175,7 @@ static void pr7_a_held_grant_is_not_handed_out_again_until_the_guest_lets_go() {
     memory.release(grant->offset);
     EXPECT(log.ranges.empty());
     EXPECT(memory.stats().heldBytes == grant->length);
-    dsa::GrantRefusal why = dsa::GrantRefusal::None;
+    dsa::GrantRefusal why = dsa::GrantRefusal::NotRefused;
     EXPECT(!memory.allocate(kGranule, 6, &why));
     EXPECT(why == dsa::GrantRefusal::Full);
     EXPECT(memory.reclaim() == 0);
@@ -399,7 +399,7 @@ static void pr7_a_grant_that_cannot_be_committed_takes_the_copy_path() {
     EXPECT(memory.reclaim() == 2 * kGranule);
 
     fake.refuse = true;
-    dsa::GrantRefusal why = dsa::GrantRefusal::None;
+    dsa::GrantRefusal why = dsa::GrantRefusal::NotRefused;
     EXPECT(!memory.allocate(4 * kGranule, 2, &why));
     EXPECT(why == dsa::GrantRefusal::CommitFailed);
     EXPECT(std::strstr(dsa::grantRefusalText(why), "commit") != nullptr);
@@ -460,7 +460,7 @@ static void pr7_a_region_that_cannot_be_committed_is_not_taken_over() {
     EXPECT(!attachCommitted(memory, region, &log, &fake, &failure));
     EXPECT(failure && std::strstr(failure, "committed") != nullptr);
     EXPECT(!memory.attached());
-    dsa::GrantRefusal why = dsa::GrantRefusal::None;
+    dsa::GrantRefusal why = dsa::GrantRefusal::NotRefused;
     EXPECT(!memory.allocate(kGranule, 1, &why));
     EXPECT(why == dsa::GrantRefusal::NoRegion);
 }
