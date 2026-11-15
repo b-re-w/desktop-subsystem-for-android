@@ -2985,11 +2985,38 @@ class GuestMemoryTests(unittest.TestCase):
         for line in [
             "ro.lmk.use_psi=true",
             "ro.lmk.use_minfree_levels=false",
-            "ro.lmk.swap_free_low_percentage=10",
+            "ro.lmk.swap_free_low_percentage=0",
             "ro.lmk.swap_util_max=90",
             "ro.lmk.thrashing_limit=30",
         ]:
             self.assertIn(line + "\n", props)
+
+    def test_nfr1_lmkd_kills_for_full_swap_only_with_free_memory_low(self):
+        # lmkd's swap-low kill with thrashing ignores free memory; 0 turns swap-low off, and
+        # what kills remain all need a breached watermark or a stalled guest.
+        props = make_image.edit_props("ro.debuggable=1\n")
+        self.assertIn("ro.lmk.swap_free_low_percentage=0\n", props)
+        self.assertIn("ro.lmk.swap_util_max=90\n", props)
+        self.assertNotIn("ro.lmk.swap_free_low_percentage=10\n", props)
+
+    def test_nfr1_memory_added_after_boot_gets_a_second_zram_device(self):
+        rc = (Path(make_image.__file__).with_name("dsa-memory.rc")).read_text()
+        self.assertIn("on property:vendor.dsa.memory.zram_extra=*", rc)
+        self.assertIn("    start dsa_zram_extra", rc)
+        self.assertIn("service dsa_zram_extra /vendor/bin/dsa-channeld --zram-extra", rc)
+        self.assertIn("    seclabel u:r:dsa_zram_extra:s0", rc)
+        self.assertIn("vendor.dsa.memory.zram_extra",
+                      make_image.WRITEBACK_PROPERTY_CONTEXTS)
+        policy = (Path(make_image.__file__).parent / "sepolicy" / "memory.cil").read_text()
+        for rule in [
+            "(allow init dsa_zram_extra (process (transition siginh rlimitinh)))",
+            "(allow dsa_zram_extra dsa_channeld_exec (file (entrypoint read getattr map execute open)))",
+            "(allow dsa_zram_extra self (capability (sys_admin)))",
+            "(allow dsa_zram_extra ram_device (blk_file (read write open getattr ioctl)))",
+            "(allow dsa_zram_extra sysfs_zram (file (read write open getattr)))",
+            "(allow dsa_zram_extra dsa_memory_prop (file (read open getattr map)))",
+        ]:
+            self.assertIn(rule, policy)
 
     def test_nfr2_vendor_init_may_drop_caches_compact_and_tune_swap_only(self):
         with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp)) as archive:
