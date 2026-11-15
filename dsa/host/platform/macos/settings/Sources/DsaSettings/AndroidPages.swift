@@ -96,82 +96,6 @@ struct AppRowView: View {
                 Text(row.size).foregroundStyle(.secondary).monospacedDigit()
             }
             HStack {
-                // The two switches are one group, so the row stays within the ten views a
-                // stack takes on every toolchain.
-                Group {
-                    Toggle(T("AppsResizable.Content"), isOn: Binding(
-                        get: { row.resizable },
-                        set: { value in Task { await vm.setResizable(row.package, value) } }))
-                        .toggleStyle(.checkbox)
-                        .help(T("AppsResizable.ToolTip"))
-                        .disabled(vm.isBusy)
-                        // Every row has these controls, so each one's name says whose it is.
-                        .accessibilityLabel(name("AppsResizable.Content"))
-                    // For an app whose top bar is squeezed or hidden under the title bar: the
-                    // app stays out of the title bar.
-                    Toggle(T("AppsBelowTitleBar.Content"), isOn: Binding(
-                        get: { row.belowTitleBar },
-                        set: { value in Task { await vm.setBelowTitleBar(row.package, value) } }))
-                        .toggleStyle(.checkbox)
-                        .help(T("AppsBelowTitleBar.ToolTip"))
-                        .disabled(vm.isBusy)
-                        .accessibilityLabel(name("AppsBelowTitleBar.Content"))
-                }
-                Picker(T("AppsStartSize.ToolTip"), selection: Binding(
-                    get: { row.startSizeIndex },
-                    set: { index in Task { await vm.setStartSize(row.package, index) } })) {
-                    if row.startSizeIndex < 0 {
-                        Text(vm.windowOf(row.package).startSizeArgument).tag(-1)
-                    }
-                    ForEach(Array(vm.startSizeChoices.enumerated()), id: \.offset) { item in
-                        Text(item.element.label).tag(item.offset)
-                    }
-                }
-                .labelsHidden()
-                .help(T("AppsStartSize.ToolTip"))
-                .accessibilityLabel(name("AppsStartSize.ToolTip"))
-                .frame(maxWidth: 260)
-                .disabled(vm.isBusy)
-                // How the app's windows follow a monitor of another scale: the app redraws, or
-                // its window is scaled. Auto and system never restart the app. Auto reads as
-                // system for an app on DSA's built-in list of apps that break when scaled.
-                Picker(T("AppsDpiScaling.Name"), selection: Binding(
-                    get: { row.dpiScalingIndex },
-                    set: { index in Task { await vm.setDpiScaling(row.package, index) } })) {
-                    ForEach(Array(row.dpiScalingChoices.enumerated()), id: \.offset) { item in
-                        Text(item.element.label).tag(item.offset)
-                    }
-                }
-                .labelsHidden()
-                .help(row.dpiScalingTip ?? T("AppsDpiScaling.ToolTip"))
-                .accessibilityLabel(name("AppsDpiScaling.Name"))
-                .frame(maxWidth: 300)
-                .disabled(vm.isBusy)
-                // Where the app's full screen shows: a clear request, and its bars hidden alone.
-                Picker(T("AppsFullScreen.Name"), selection: Binding(
-                    get: { row.fullScreenIndex },
-                    set: { index in Task { await vm.setFullScreen(row.package, immersive: false, index) } })) {
-                    ForEach(Array(vm.fullScreenChoices.enumerated()), id: \.offset) { item in
-                        Text(item.element).tag(item.offset)
-                    }
-                }
-                .labelsHidden()
-                .help(T("AppsFullScreen.ToolTip"))
-                .accessibilityLabel(name("AppsFullScreen.Name"))
-                .frame(maxWidth: 220)
-                .disabled(vm.isBusy)
-                Picker(T("AppsImmersive.Name"), selection: Binding(
-                    get: { row.immersiveIndex },
-                    set: { index in Task { await vm.setFullScreen(row.package, immersive: true, index) } })) {
-                    ForEach(Array(vm.fullScreenChoices.enumerated()), id: \.offset) { item in
-                        Text(item.element).tag(item.offset)
-                    }
-                }
-                .labelsHidden()
-                .help(T("AppsImmersive.ToolTip"))
-                .accessibilityLabel(name("AppsImmersive.Name"))
-                .frame(maxWidth: 220)
-                .disabled(vm.isBusy)
                 Spacer()
                 Button(T("AppsOpenButton.Content")) { Task { await vm.open(row.package) } }
                     .accessibilityLabel(name("AppsOpenButton.Content"))
@@ -186,36 +110,132 @@ struct AppRowView: View {
                     .accessibilityLabel(name("AppsUninstallButton.Content"))
             }
             .disabled(vm.isBusy)
-            // Whether the app runs its ARM code through the translator, and why not when it cannot.
-            HStack {
-                Toggle(T("AppsRunAsArm.Content"), isOn: Binding(
-                    get: { row.runAsArm },
-                    set: { value in Task { await vm.setRunAsArm(row.package, value, confirmErase: confirmErase) } }))
-                    .toggleStyle(.switch)
-                    .disabled(!row.canRunAsArm || vm.isBusy)
-                    .help(row.runAsArmTip ?? "")
-                    .accessibilityLabel(name("AppsRunAsArm.Content"))
-                if let tip = row.runAsArmTip {
-                    Note(text: tip)
+            // The app's options, each with its name above it, in as many columns as the window's
+            // width takes, so they stay readable in a narrow window and with large text.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 16, alignment: .topLeading)],
+                      alignment: .leading, spacing: 12) {
+                LabeledOption(title: T("AppsResizable.Content")) {
+                    Toggle(T("AppsResizable.Content"), isOn: Binding(
+                        get: { row.resizable },
+                        set: { value in Task { await vm.setResizable(row.package, value) } }))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .help(T("AppsResizable.ToolTip"))
+                        .disabled(vm.isBusy)
+                        // Every row has these controls, so each one's name says whose it is.
+                        .accessibilityLabel(name("AppsResizable.Content"))
+                }
+                // For an app whose top bar is squeezed or hidden under the title bar: the app
+                // stays out of the title bar.
+                LabeledOption(title: T("AppsBelowTitleBar.Content")) {
+                    Toggle(T("AppsBelowTitleBar.Content"), isOn: Binding(
+                        get: { row.belowTitleBar },
+                        set: { value in Task { await vm.setBelowTitleBar(row.package, value) } }))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .help(T("AppsBelowTitleBar.ToolTip"))
+                        .disabled(vm.isBusy)
+                        .accessibilityLabel(name("AppsBelowTitleBar.Content"))
+                }
+                LabeledOption(title: T("AppsStartSize.Name")) {
+                    Picker(T("AppsStartSize.Name"), selection: Binding(
+                        get: { row.startSizeIndex },
+                        set: { index in Task { await vm.setStartSize(row.package, index) } })) {
+                        if row.startSizeIndex < 0 {
+                            Text(vm.windowOf(row.package).startSizeArgument).tag(-1)
+                        }
+                        ForEach(Array(vm.startSizeChoices.enumerated()), id: \.offset) { item in
+                            Text(item.element.label).tag(item.offset)
+                        }
+                    }
+                    .labelsHidden()
+                    .help(T("AppsStartSize.ToolTip"))
+                    .accessibilityLabel(name("AppsStartSize.Name"))
+                    .frame(maxWidth: 260, alignment: .leading)
+                    .disabled(vm.isBusy)
+                }
+                // How the app's windows follow a monitor of another scale: the app redraws, or
+                // its window is scaled. Auto and system never restart the app. Auto says what it
+                // does for this app: system for an app on DSA's built-in list of apps that break
+                // when scaled, app for any other.
+                LabeledOption(title: T("AppsDpiScaling.Name")) {
+                    Picker(T("AppsDpiScaling.Name"), selection: Binding(
+                        get: { row.dpiScalingIndex },
+                        set: { index in Task { await vm.setDpiScaling(row.package, index) } })) {
+                        ForEach(Array(row.dpiScalingChoices.enumerated()), id: \.offset) { item in
+                            Text(item.element.label).tag(item.offset)
+                        }
+                    }
+                    .labelsHidden()
+                    .help(row.dpiScalingTip ?? T("AppsDpiScaling.ToolTip"))
+                    .accessibilityLabel(name("AppsDpiScaling.Name"))
+                    .frame(maxWidth: 300, alignment: .leading)
+                    .disabled(vm.isBusy)
+                }
+                // Where the app's full screen shows: a clear request, and its bars hidden alone.
+                // Each list's first item says where the choice for every app takes it now.
+                LabeledOption(title: T("AppsFullScreen.Name")) {
+                    Picker(T("AppsFullScreen.Name"), selection: Binding(
+                        get: { row.fullScreenIndex },
+                        set: { index in Task { await vm.setFullScreen(row.package, immersive: false, index) } })) {
+                        ForEach(Array(vm.fullScreenChoices.enumerated()), id: \.offset) { item in
+                            Text(item.element).tag(item.offset)
+                        }
+                    }
+                    .labelsHidden()
+                    .help(T("AppsFullScreen.ToolTip"))
+                    .accessibilityLabel(name("AppsFullScreen.Name"))
+                    .frame(maxWidth: 300, alignment: .leading)
+                    .disabled(vm.isBusy)
+                }
+                LabeledOption(title: T("AppsImmersive.Name")) {
+                    Picker(T("AppsImmersive.Name"), selection: Binding(
+                        get: { row.immersiveIndex },
+                        set: { index in Task { await vm.setFullScreen(row.package, immersive: true, index) } })) {
+                        ForEach(Array(vm.immersiveChoices.enumerated()), id: \.offset) { item in
+                            Text(item.element).tag(item.offset)
+                        }
+                    }
+                    .labelsHidden()
+                    .help(T("AppsImmersive.ToolTip"))
+                    .accessibilityLabel(name("AppsImmersive.Name"))
+                    .frame(maxWidth: 300, alignment: .leading)
+                    .disabled(vm.isBusy)
+                }
+                // Whether the app runs its ARM code through the translator.
+                LabeledOption(title: T("AppsRunAsArm.Content")) {
+                    Toggle(T("AppsRunAsArm.Content"), isOn: Binding(
+                        get: { row.runAsArm },
+                        set: { value in Task { await vm.setRunAsArm(row.package, value, confirmErase: confirmErase) } }))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .disabled(!row.canRunAsArm || vm.isBusy)
+                        .help(row.runAsArmTip ?? "")
+                        .accessibilityLabel(name("AppsRunAsArm.Content"))
                 }
                 // How far the app may use root: not at all, asking an administrator each time,
                 // or without asking.
-                Picker(T("AppsRoot.Name"), selection: Binding(
-                    get: { row.rootIndex },
-                    set: { index in Task { await vm.setRoot(row.package, index) } })) {
-                    if row.rootIndex < 0 {
-                        Text(T("AppsRoot.Name")).tag(-1)
+                LabeledOption(title: T("AppsRoot.Name")) {
+                    Picker(T("AppsRoot.Name"), selection: Binding(
+                        get: { row.rootIndex },
+                        set: { index in Task { await vm.setRoot(row.package, index) } })) {
+                        if row.rootIndex < 0 {
+                            Text(T("AppsRoot.Name")).tag(-1)
+                        }
+                        ForEach(Array(vm.rootChoices.enumerated()), id: \.offset) { item in
+                            Text(item.element.label).tag(item.offset)
+                        }
                     }
-                    ForEach(Array(vm.rootChoices.enumerated()), id: \.offset) { item in
-                        Text(item.element.label).tag(item.offset)
-                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 260, alignment: .leading)
+                    .disabled(!row.canChangeRoot || vm.isBusy)
+                    .help(row.rootTip ?? T("AppsRootNote.Text"))
+                    .accessibilityLabel(name("AppsRoot.Name"))
                 }
-                .labelsHidden()
-                .frame(maxWidth: 260)
-                .disabled(!row.canChangeRoot || vm.isBusy)
-                .help(row.rootTip ?? T("AppsRootNote.Text"))
-                .accessibilityLabel(name("AppsRoot.Name"))
-                Spacer()
+            }
+            // Why the app cannot run as ARM, below its switch.
+            if let tip = row.runAsArmTip {
+                Note(text: tip)
             }
             // Apps that share a user ID: which, and that root is one setting for them.
             if let note = row.rootGroupNote {

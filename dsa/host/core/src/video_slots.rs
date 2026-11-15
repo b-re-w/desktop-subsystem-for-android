@@ -520,22 +520,21 @@ impl StreamSlots {
 
 impl Drop for StreamSlots {
     fn drop(&mut self) {
-        let discard = {
-            let mut state = self.slots.state();
-            state.held.retain(|_, h| h.stream != self.stream);
-            state.streams = state.streams.saturating_sub(1);
-            if state.streams == 0 && state.touched_end > SLOTS_START {
-                let end = std::mem::take(&mut state.touched_end);
-                state.written.clear();
-                committed_runs(&state.committed, SLOTS_START, end)
-            } else {
-                Vec::new()
+        let mut state = self.slots.state();
+        state.held.retain(|_, h| h.stream != self.stream);
+        state.streams = state.streams.saturating_sub(1);
+        if state.streams == 0 && state.touched_end > SLOTS_START {
+            let end = std::mem::take(&mut state.touched_end);
+            state.written.clear();
+            // The last stream is gone: what the pictures touched goes back to the host. Only
+            // committed pages were written, and only they are given back; their commit stays.
+            // The lock is held throughout: a stream that opens meanwhile (an app that releases
+            // its decoder and makes another at once, as a player moving to a new surface does)
+            // takes and writes its first slot only after the discard, whose contents are
+            // undefined, so its first picture never reaches the guest as zeros.
+            for (offset, len) in committed_runs(&state.committed, SLOTS_START, end) {
+                self.slots.region.discard(offset, len);
             }
-        };
-        // The last stream is gone: what the pictures touched goes back to the host. Only
-        // committed pages were written, and only they are given back; their commit stays.
-        for (offset, len) in discard {
-            self.slots.region.discard(offset, len);
         }
     }
 }

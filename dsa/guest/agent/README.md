@@ -331,6 +331,15 @@ opens there asks for nothing. A task whose top activity does not say it handles 
 density is never asked for another one: its window shows it scaled instead, and its client
 size is the task's size at that scale.
 
+A new task starts at the density of its window's monitor, but an app's process keeps what it
+worked out at the density it started at: the display's, for a process a job or a broadcast
+started, or that of its last task, for one that stayed cached after its window closed. So just
+before the host starts an app (from its list, a shortcut or a notification), an app with no
+task whose background process started at another density has its background processes ended
+(`killBackgroundProcesses`), and starts in a new process at the new density. A process that
+holds an activity, runs a foreground service, or whose end would reach another app's process
+is kept, and the log says why (`LaunchDensities`).
+
 Text follows the same ratio as everything else, so body text of 16 sp is about 13 host
 pixels at 100%, near the host's own body text. Android scales text by its font scale, apart
 from everything else, and the host's `SystemSettings` carries a font scale of the host's text

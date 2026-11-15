@@ -86,7 +86,7 @@ fn fr30_an_apps_full_screen_choice_wins_over_the_default() {
     assert_eq!(notes.fullscreen, FullScreenPlace::Default);
     assert_eq!(view::full_screen_indexes(None), (0, 0));
     assert_eq!(view::full_screen_indexes(Some(video)), (2, 0));
-    let places: Vec<FullScreenPlace> = view::full_screen_choices()
+    let places: Vec<FullScreenPlace> = view::full_screen_choices(list.default_fullscreen)
         .into_iter()
         .map(|(_, place)| place)
         .collect();
@@ -101,6 +101,46 @@ fn fr30_an_apps_full_screen_choice_wins_over_the_default() {
     assert_eq!(
         fake.calls().last().unwrap(),
         "app-window com.example.video --fullscreen window --immersive screen --json"
+    );
+}
+
+#[test]
+fn fr30_follow_the_default_says_where_the_default_shows_now() {
+    let fake = Fake::new(&[(
+        "app-window --json",
+        json!({"apps": [], "defaults": {"fullscreen": "window", "immersive": "screen"}}),
+    )]);
+    let list = client(fake).app_window_list().unwrap();
+    assert_eq!(list.default_fullscreen, FullScreenPlace::Window);
+    assert_eq!(list.default_immersive, FullScreenPlace::Screen);
+    // Each of an app's two lists names where its own default takes the app.
+    let full = view::full_screen_choices(list.default_fullscreen);
+    let immersive = view::full_screen_choices(list.default_immersive);
+    assert_eq!(full[0].0, "Follow the default (inside the window)");
+    assert_eq!(immersive[0].0, "Follow the default (on the whole screen)");
+    assert_eq!(full[0].1, FullScreenPlace::Default);
+    // The other places read the same in both.
+    assert_eq!(full[1..], immersive[1..]);
+    assert_eq!(full[1].0, "On the whole screen");
+    assert_eq!(full[2].0, "Inside the window");
+
+    // A dsa that names no defaults has DSA's own: the whole screen, and inside the window.
+    let fake = Fake::new(&[("app-window --json", json!({"apps": []}))]);
+    let list = client(fake).app_window_list().unwrap();
+    assert_eq!(list.default_fullscreen, FullScreenPlace::Screen);
+    assert_eq!(list.default_immersive, FullScreenPlace::Window);
+    // A choice for every app is a place itself, never "default".
+    assert_eq!(
+        FullScreenPlace::Default.or_builtin(FullScreenPlace::Window),
+        FullScreenPlace::Window
+    );
+    assert_eq!(
+        FullScreenPlace::Screen.or_builtin(FullScreenPlace::Window),
+        FullScreenPlace::Screen
+    );
+    assert_eq!(
+        view::follow_default_label(FullScreenPlace::Default),
+        "Follow the default"
     );
 }
 

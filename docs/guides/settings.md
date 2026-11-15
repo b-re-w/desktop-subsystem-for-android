@@ -25,7 +25,7 @@ one. They are marked "(admin)" below.
 |---|---|---|
 | **General** | Android's state, **Start**, **Stop**, **Freeze Android now**, the last problem, **Open my log folder**, **Refresh** | `dsa status`, `dsa start`, `dsa stop`, `dsa freeze` |
 | **Memory** | **Memory limit**, the size of Android's VM, what each part uses | `memory-limit`, `dsa memory` |
-| **Apps** | Installed apps: **Open**, **App info**, **Uninstall**, **Create desktop shortcut**. For each app: **Resizable**, the size windows open at, **Scaling on another monitor**, **Full screen**, **Bars hidden**, **Run as ARM**, **Root access**. A row for **adb shell**'s root access | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
+| **Apps** | Installed apps: **Open**, **App info**, **Uninstall**, **Create desktop shortcut**. For each app: **Resizable**, the size windows open at, **Scaling**, **Full screen request**, **When only the bars hide**, **Run as ARM**, **Root access**. A row for **adb shell**'s root access | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
 | **Running in the background** | Apps running with no window: **Open**, **Stop**; whether to ask before stopping | `dsa background`, `stop-without-asking` |
 | **Widgets** | Widgets on your desktop, and **Add to desktop** | `dsa widgets` |
 | **Display & GPU** | **Render GPU**, **GPU of the primary monitor**, **App full screen**, **Apps that hide their bars**, **Turn off Windows touch gestures in DSA app windows** (Windows 11 only, on by default), **Restart the window manager** | `render-gpu`, `dsa gpus`, `app-fullscreen`, `app-immersive`, `touch-gestures-off` |

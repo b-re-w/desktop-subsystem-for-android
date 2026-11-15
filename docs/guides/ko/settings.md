@@ -22,7 +22,7 @@ dsa settings set <name> <value>     # 하나를 바꿉니다. 스위치는 on이
 |---|---|---|
 | **일반** | Android 상태, **시작**, **종료**, **지금 Android 일시 정지**, 마지막 문제, **내 로그 폴더 열기**, **새로 고침** | `dsa status`, `dsa start`, `dsa stop`, `dsa freeze` |
 | **메모리** | **메모리 한도**, Android VM의 크기, 부분별 사용량 | `memory-limit`, `dsa memory` |
-| **앱** | 설치된 앱: **열기**, **앱 정보**, **제거**, **바탕 화면 바로 가기 만들기**. 앱마다: **크기 조절**, 창이 열리는 크기, **다른 모니터에서의 크기 조정**, **전체 화면**, **막대 숨김**, **ARM으로 실행**, **루트 권한**. **adb 셸**의 루트 권한을 정하는 행 | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
+| **앱** | 설치된 앱: **열기**, **앱 정보**, **제거**, **바탕 화면 바로 가기 만들기**. 앱마다: **크기 조절**, 창이 열리는 크기, **배율**, **전체 화면 요청**, **막대만 숨길 때**, **ARM으로 실행**, **루트 권한**. **adb 셸**의 루트 권한을 정하는 행 | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
 | **백그라운드에서 실행 중** | 창 없이 실행 중인 앱: **열기**, **중지**, 중지 전에 물을지 여부 | `dsa background`, `stop-without-asking` |
 | **위젯** | 바탕 화면의 위젯, **바탕 화면에 추가** | `dsa widgets` |
 | **디스플레이 및 GPU** | **렌더링 GPU**, **주 모니터의 GPU**, **앱의 전체 화면**, **막대를 숨기는 앱**, **DSA 앱 창에서 Windows 터치 제스처 끄기**(Windows 11만, 기본값은 켬), **창 관리자 다시 시작** | `render-gpu`, `dsa gpus`, `app-fullscreen`, `app-immersive`, `touch-gestures-off` |

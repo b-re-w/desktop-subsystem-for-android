@@ -1713,7 +1713,7 @@ Android 的設定會顯示裝置名稱與晶片。型號名稱只顯示在這裡
     <value>{0} 的視窗會從下一個開啟的視窗起套用新設定。</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>在其他監視器上的縮放</value>
+    <value>縮放</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>此應用程式的視窗移到縮放比例不同的監視器時，由誰負責縮放。
@@ -1722,41 +1722,47 @@ Android 的設定會顯示裝置名稱與晶片。型號名稱只顯示在這裡
 • 自動：對執行中變更縮放比例就會出問題的應用程式 (例如 YouTube) 使用「系統」，其他應用程式使用「應用程式」。</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>縮放：自動</value>
+    <value>自動（應用程式）</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>縮放：系統 (建議用於此應用程式)</value>
+    <value>自動（系統，建議用於此應用程式）</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>縮放執行者：應用程式</value>
+    <value>應用程式</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>縮放執行者：系統</value>
+    <value>系統</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>縮放執行者：系統 (強制)</value>
+    <value>系統（強制）</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>縮放執行者：系統 (強制)，尚未提供</value>
+    <value>系統（強制），尚無法使用</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>「系統 (強制)」會在不重新啟動應用程式的情況下提供新的縮放比例，即使應用程式未表明能處理縮放變更。
 尚未提供：它需要此組建缺少的 Android 架構變更，因此目前的運作方式與「系統」相同。</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>全螢幕</value>
+    <value>全螢幕要求</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>此應用程式明確要求全螢幕時 (例如影片播放器的全螢幕按鈕) 要顯示在何處。F11 隨時都能切換全螢幕。</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>隱藏列</value>
+    <value>僅隱藏列時</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>此應用程式未要求全螢幕而只隱藏其列時 (例如短影片動態) 要顯示在何處。</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>依照預設值</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>開啟時的視窗大小</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>依照預設值（在整個螢幕上）</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>依照預設值（在視窗內）</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>在整個螢幕上</value>

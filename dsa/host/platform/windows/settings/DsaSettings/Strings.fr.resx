@@ -1713,7 +1713,7 @@ S'applique à la prochaine ouverture de la fenêtre de l'app.</value>
     <value>Les fenêtres de {0} suivent les nouveaux paramètres à partir de la prochaine qui s'ouvre.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Mise à l'échelle sur un autre écran</value>
+    <value>Mise à l'échelle</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Qui met cette application à l'échelle quand sa fenêtre passe sur un écran d'une autre échelle.
@@ -1722,41 +1722,47 @@ S'applique à la prochaine ouverture de la fenêtre de l'app.</value>
 • Automatique : Système pour les applications perturbées par un changement d'échelle en cours, comme YouTube ; Application pour les autres.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Mise à l'échelle : automatique</value>
+    <value>Automatique (application)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Mise à l'échelle : système (recommandé pour cette application)</value>
+    <value>Automatique (système, recommandé pour cette application)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Mise à l'échelle par : application</value>
+    <value>Application</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Mise à l'échelle par : système</value>
+    <value>Système</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Mise à l'échelle par : système (forcé)</value>
+    <value>Système (forcé)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Mise à l'échelle par : système (forcé), pas encore disponible</value>
+    <value>Système (forcé), pas encore disponible</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>Système (forcé) donne la nouvelle échelle à l'application sans la redémarrer, même si elle ne dit pas la gérer.
 Pas encore disponible : il faut une modification du framework Android absente de cette build ; d'ici là, il fonctionne comme Système.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Plein écran</value>
+    <value>Demande de plein écran</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Où s'affiche l'application si elle demande vraiment le plein écran, comme le bouton d'un lecteur vidéo. F11 bascule toujours le plein écran.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Barres masquées</value>
+    <value>Quand seules les barres sont masquées</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Où s'affiche cette application quand elle masque ses barres sans demander le plein écran, comme un fil de vidéos courtes.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Suivre le paramètre par défaut</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Taille de la fenêtre à l'ouverture</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Suivre le paramètre par défaut (sur tout l'écran)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Suivre le paramètre par défaut (dans la fenêtre)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>Sur tout l'écran</value>

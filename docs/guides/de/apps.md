@@ -101,8 +101,8 @@ Apps fordern es auf zwei Arten an, und jede Art hat ihren eigenen Standard:
 | Nur Ausblenden der Leisten | Ein Feed mit kurzen Videos | Im Fenster |
 
 Ändern Sie die Standards unter **App full screen** und **Apps that hide their bars** auf der
-Seite **Display & GPU** von DSA Settings, oder für eine einzelne App unter **Full screen** und
-**Bars hidden** auf der Seite **Apps**. Die eigene Wahl einer App hat Vorrang. F11 und **Full
+Seite **Display & GPU** von DSA Settings, oder für eine einzelne App unter **Full screen request** und
+**When only the bars hide** auf der Seite **Apps**. Die eigene Wahl einer App hat Vorrang. F11 und **Full
 screen** im Fenstermenü schalten jederzeit das Vollbild auf dem ganzen Bildschirm ein und aus,
 unabhängig von der Einstellung.
 
@@ -151,8 +151,7 @@ dsa app-window <package> --below-title-bar on   # off kehrt zum Standard zurück
 Eine App öffnet ab dem ersten Frame mit der Skalierung des Monitors, auf dem sich ihr Fenster
 öffnet, damit sie nicht direkt nach dem Öffnen neu erstellt wird. Verschieben Sie ein Fenster
 auf einen Monitor mit anderer Skalierung, behält die App ihre Größe auf dem Bildschirm. Jede App
-tut das auf eine dieser Arten, die Sie unter **Scaling on another monitor** (Skalierung auf
-einem anderen Monitor) auf der Seite **Apps** oder mit `dsa app-window <package> --dpi-scaling`
+tut das auf eine dieser Arten, die Sie unter **Scaling** (Skalierung) auf der Seite **Apps** oder mit `dsa app-window <package> --dpi-scaling`
 wählen:
 
 - **Automatic** (`auto`, der Standard): **System** für die Apps auf der eingebauten Liste von
@@ -160,7 +159,7 @@ wählen:
   **App** für jede andere App. Die Liste enthält YouTube: Es behält sein Layout für die
   Skalierung, mit der es gestartet ist, sodass seine unteren Registerkarten und der Miniplayer
   nach einem Verschieben bis zu einem Neustart fehlerhaft blieben. Die Einstellungen zeigen den
-  Standard einer solchen App als **Scaling: system (recommended for this app)**. Ihre eigene
+  Standard einer solchen App als **Automatic (system, recommended for this app)**. Ihre eigene
   Wahl für die App hat Vorrang.
 - **App** (`app`): Während Sie das Fenster ziehen, skaliert DSA es auf den neuen Monitor. Lassen
   Sie los, zeichnet sich die App in der Skalierung des neuen Monitors neu, und ihr Text bleibt

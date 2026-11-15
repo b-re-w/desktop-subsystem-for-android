@@ -133,9 +133,14 @@ class NotificationForwarder(
     /** Hears of every notification too, on the agent's thread: the apps that run in the background. */
     private val also: NoticeListener? = null,
     private val isConnected: () -> Boolean,
+    /** Runs with the notification's package just before a click on the host opens it. */
+    private val beforeOpen: (String) -> Unit = {},
 ) {
     /** The keys the host has, so a removal is sent only for what it was told of. */
     private val forwarded = mutableSetOf<String>()
+
+    /** The package of each notification the host was told of, by key. */
+    private val packages = HashMap<String, String>()
 
     /** Starts listening; [post] runs work on the agent's thread. */
     fun start(post: (() -> Unit) -> Unit) {
@@ -174,6 +179,7 @@ class NotificationForwarder(
     private fun resend() {
         if (!isConnected()) return
         forwarded.clear()
+        packages.clear()
         val active = try {
             source.active()
         } catch (e: Exception) {
@@ -218,11 +224,15 @@ class NotificationForwarder(
                     .setSemanticAction(action.semanticAction),
             )
         }
-        if (send(Envelope.newBuilder().setNotification(message).build().toByteArray())) forwarded += notice.key
+        if (send(Envelope.newBuilder().setNotification(message).build().toByteArray())) {
+            forwarded += notice.key
+            packages[notice.key] = notice.packageName
+        }
     }
 
     /** The notification is gone from the guest; it goes from the host too. */
     fun removed(key: String) {
+        packages.remove(key)
         if (!forwarded.remove(key)) return
         sendRemoved(key)
     }
@@ -234,7 +244,10 @@ class NotificationForwarder(
     /** Acts on the frame if it is the user's click, dismissal or chosen button on the host. */
     fun handle(envelope: Envelope): Boolean {
         when (envelope.bodyCase) {
-            Envelope.BodyCase.NOTIFICATION_CLICKED -> act(envelope.notificationClicked.key, "open") { source.open(it) }
+            Envelope.BodyCase.NOTIFICATION_CLICKED -> act(envelope.notificationClicked.key, "open") { key ->
+                packages[key]?.let(beforeOpen)
+                source.open(key)
+            }
             Envelope.BodyCase.NOTIFICATION_DISMISSED -> act(envelope.notificationDismissed.key, "cancel") { source.cancel(it) }
             Envelope.BodyCase.NOTIFICATION_BUTTON_CLICKED -> {
                 val chosen = envelope.notificationButtonClicked

@@ -98,8 +98,7 @@ Aplikasi meminta dengan dua jenis cara, dan masing-masing jenis memiliki bawaann
 | Hanya menyembunyikan bilah | Feed video pendek | Di dalam jendela |
 
 Ubah bawaannya di **App full screen** dan **Apps that hide their bars** pada halaman **Display
-& GPU** (tampilan & GPU) DSA Settings, atau untuk satu aplikasi di **Full screen** dan **Bars
-hidden** pada halaman **Apps**. Pilihan aplikasi itu sendiri didahulukan. F11 dan **Full
+& GPU** (tampilan & GPU) DSA Settings, atau untuk satu aplikasi di **Full screen request** dan **When only the bars hide** pada halaman **Apps**. Pilihan aplikasi itu sendiri didahulukan. F11 dan **Full
 screen** di menu jendela mengalihkan layar penuh di seluruh layar kapan saja, apa pun
 pengaturannya.
 
@@ -148,7 +147,7 @@ dsa app-window <package> --below-title-bar on   # off kembali ke bawaan
 Aplikasi terbuka dengan skala monitor tempat jendelanya dibuka, sejak frame pertamanya,
 sehingga aplikasi tidak dibuat ulang tepat setelah terbuka. Saat Anda memindahkan jendela ke
 monitor dengan skala lain, aplikasi mempertahankan ukurannya di layar. Setiap aplikasi
-melakukannya dengan salah satu cara berikut, yang Anda pilih di **Scaling on another monitor**
+melakukannya dengan salah satu cara berikut, yang Anda pilih di **Scaling**
 (penskalaan di monitor lain) pada halaman **Apps**, atau dengan
 `dsa app-window <package> --dpi-scaling`:
 
@@ -156,8 +155,8 @@ melakukannya dengan salah satu cara berikut, yang Anda pilih di **Scaling on ano
   berisi aplikasi yang rusak jika skalanya berubah saat berjalan, dan **App** untuk semua
   aplikasi lainnya. Daftar ini berisi YouTube: YouTube mempertahankan tata letaknya untuk skala
   saat ia dimulai, sehingga setelah dipindahkan, tab bawah dan miniplayer-nya akan tetap rusak
-  sampai dimulai ulang. Pengaturan menampilkan bawaan aplikasi seperti itu sebagai **Scaling:
-  system (recommended for this app)**. Pilihan Anda sendiri untuk aplikasi tersebut
+  sampai dimulai ulang. Pengaturan menampilkan bawaan aplikasi seperti itu sebagai **Automatic
+  (system, recommended for this app)**. Pilihan Anda sendiri untuk aplikasi tersebut
   didahulukan.
 - **App** (`app`): selama Anda menyeret jendela, DSA menskalakannya ke monitor baru. Saat Anda
   melepasnya, aplikasi menggambar ulang pada skala monitor baru, dan teksnya tetap tajam:

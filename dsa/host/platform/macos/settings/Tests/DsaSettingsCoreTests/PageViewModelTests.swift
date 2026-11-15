@@ -212,6 +212,42 @@ final class PageViewModelTests: XCTestCase {
         XCTAssertEqual(FullScreenPlace.allCases.map(\.rawValue), ["default", "screen", "window"])
     }
 
+    func test_fr30_follow_the_default_says_where_the_default_shows_now() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[],"defaults":{"fullscreen":"window","immersive":"screen"}}"#)
+        cli.answer("settings set app-fullscreen screen --json", #"{"app_fullscreen":"screen","app_immersive":"screen"}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        // Before dsa says, the lists name DSA's own defaults.
+        XCTAssertEqual(apps.fullScreenChoices.first, "Apps_FullScreen_DefaultScreen")
+        XCTAssertEqual(apps.immersiveChoices.first, "Apps_FullScreen_DefaultWindow")
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        // Each of an app's two lists names where its own default takes the app.
+        XCTAssertEqual(apps.fullScreenChoices,
+                       ["Apps_FullScreen_DefaultWindow", "Apps_FullScreen_Screen", "Apps_FullScreen_Window"])
+        XCTAssertEqual(apps.immersiveChoices,
+                       ["Apps_FullScreen_DefaultScreen", "Apps_FullScreen_Screen", "Apps_FullScreen_Window"])
+        // A change of the choice for every app shows in the lists at once.
+        await apps.setFullScreenDefault(immersive: false, 0)
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.fullScreenChoices.first, "Apps_FullScreen_DefaultScreen")
+        XCTAssertEqual(apps.immersiveChoices.first, "Apps_FullScreen_DefaultScreen")
+    }
+
+    func test_fr30_follow_the_default_reads_where_it_takes_the_app() throws {
+        let english = AppsViewModel(service: AppsService(cli: FakeCli()), text: try LanguageText("en"))
+        XCTAssertEqual(english.fullScreenChoices.first, "Follow the default (on the whole screen)")
+        XCTAssertEqual(english.immersiveChoices.first, "Follow the default (inside the window)")
+        XCTAssertEqual(english.dpiScalingChoices.first?.label, "Automatic (app)")
+        let korean = AppsViewModel(service: AppsService(cli: FakeCli()), text: try LanguageText("ko"))
+        XCTAssertEqual(korean.fullScreenChoices.first, "기본값 따르기 (화면 전체로)")
+        XCTAssertEqual(korean.immersiveChoices.first, "기본값 따르기 (창 안에서)")
+        XCTAssertEqual(korean.dpiScalingChoices.first?.label, "자동 (앱)")
+    }
+
     func test_fr30_the_below_title_bar_switch_is_read_and_changed() async {
         let cli = FakeCli()
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)

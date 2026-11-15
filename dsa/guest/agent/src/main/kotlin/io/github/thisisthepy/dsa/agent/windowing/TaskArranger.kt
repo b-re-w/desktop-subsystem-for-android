@@ -158,6 +158,13 @@ class TaskArranger(
     }
 
     /**
+     * The density a task the host starts now starts at: that of the monitor the host named last,
+     * while it is fresh; null when the host named none, or named it too long ago.
+     */
+    fun launchDensity(): Int? =
+        launchPlacement?.takeIf { nowMillis() - placedAt <= LAUNCH_PLACEMENT_MILLIS }?.densityDpi
+
+    /**
      * The density to report for task [taskId], which Android says draws at [read]: the density
      * of its window's monitor while a new task is on its way to it, else [read].
      */

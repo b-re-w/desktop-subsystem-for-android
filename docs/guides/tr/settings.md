@@ -24,7 +24,7 @@ değiştirdiğinizde yönetici onayı ister. Aşağıda "(admin)" ile işaretlen
 |---|---|---|
 | **General** | Android'in durumu, **Start**, **Stop**, **Freeze Android now**, son sorun, **Open my log folder**, **Refresh** | `dsa status`, `dsa start`, `dsa stop`, `dsa freeze` |
 | **Memory** | **Memory limit**, Android sanal makinesinin boyutu, her parçanın kullandığı | `memory-limit`, `dsa memory` |
-| **Apps** | Yüklü uygulamalar: **Open**, **App info**, **Uninstall**, **Create desktop shortcut**. Her uygulama için: **Resizable**, pencerelerin açıldığı boyut, **Scaling on another monitor**, **Full screen**, **Bars hidden**, **Run as ARM**, **Root access**. **adb shell**'in kök erişimi için bir satır | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
+| **Apps** | Yüklü uygulamalar: **Open**, **App info**, **Uninstall**, **Create desktop shortcut**. Her uygulama için: **Resizable**, pencerelerin açıldığı boyut, **Scaling**, **Full screen request**, **When only the bars hide**, **Run as ARM**, **Root access**. **adb shell**'in kök erişimi için bir satır | `dsa apps`, `dsa app-window`, `dsa apps run-as-arm`, `dsa apps root` |
 | **Running in the background** | Penceresi olmadan çalışan uygulamalar: **Open**, **Stop**; durdurmadan önce sorulup sorulmayacağı | `dsa background`, `stop-without-asking` |
 | **Widgets** | Masaüstünüzdeki pencere öğeleri ve **Add to desktop** | `dsa widgets` |
 | **Display & GPU** | **Render GPU**, **GPU of the primary monitor**, **App full screen**, **Apps that hide their bars**, **Turn off Windows touch gestures in DSA app windows** (yalnızca Windows 11, varsayılan olarak açık), **Restart the window manager** | `render-gpu`, `dsa gpus`, `app-fullscreen`, `app-immersive`, `touch-gestures-off` |

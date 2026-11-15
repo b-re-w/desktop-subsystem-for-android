@@ -1713,7 +1713,7 @@ Se aplica la próxima vez que se abra la ventana de la app.</value>
     <value>Las ventanas de {0} siguen la nueva configuración a partir de la próxima que se abra.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Escala en otro monitor</value>
+    <value>Escala</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Quién escala esta aplicación cuando su ventana pasa a un monitor con otra escala.
@@ -1722,41 +1722,47 @@ Se aplica la próxima vez que se abra la ventana de la app.</value>
 • Automático: Sistema para las aplicaciones que fallan si cambia su escala en ejecución, como YouTube; Aplicación para todas las demás.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Escala: automática</value>
+    <value>Automático (aplicación)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Escala: sistema (recomendado para esta aplicación)</value>
+    <value>Automático (sistema, recomendado para esta aplicación)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Escala realizada por: aplicación</value>
+    <value>Aplicación</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Escala realizada por: sistema</value>
+    <value>Sistema</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Escala realizada por: sistema (forzado)</value>
+    <value>Sistema (forzado)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Escala realizada por: sistema (forzado), aún no disponible</value>
+    <value>Sistema (forzado), aún no disponible</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>Sistema (forzado) da a la aplicación la nueva escala sin reiniciarla, aunque no indique que la admite.
 Aún no disponible: requiere un cambio en el framework de Android que esta compilación no tiene, así que por ahora funciona como Sistema.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Pantalla completa</value>
+    <value>Petición de pantalla completa</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Dónde va la pantalla completa que pide claramente esta aplicación, como el botón de un reproductor de vídeo. F11 siempre la alterna.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Barras ocultas</value>
+    <value>Al ocultar solo las barras</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Dónde se muestra esta aplicación cuando oculta sus barras sin pedir pantalla completa, como hace un feed de vídeos cortos.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Seguir la opción predeterminada</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Tamaño de la ventana al abrirse</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Seguir la opción predeterminada (en toda la pantalla)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Seguir la opción predeterminada (dentro de la ventana)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>En toda la pantalla</value>

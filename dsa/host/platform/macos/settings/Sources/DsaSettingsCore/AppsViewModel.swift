@@ -122,13 +122,20 @@ public enum FullScreenPlace: String, CaseIterable, Equatable, Sendable {
         code.flatMap(FullScreenPlace.init(rawValue:)) ?? missing
     }
 
-    /// The key of its name in the string catalog.
+    /// The key of its name in the string catalog. `standard` is named after the place the
+    /// default takes the app, as `followingKey` says; this is its name for DSA's own default.
     var textKey: String {
         switch self {
-        case .standard: return "Apps_FullScreen_Default"
+        case .standard: return FullScreenPlace.followingKey(.screen)
         case .screen: return "Apps_FullScreen_Screen"
         case .window: return "Apps_FullScreen_Window"
         }
+    }
+
+    /// The key of "Follow the default" while the choice for every app is `now`:
+    /// "Follow the default (inside the window)".
+    static func followingKey(_ now: FullScreenPlace) -> String {
+        now == .window ? "Apps_FullScreen_DefaultWindow" : "Apps_FullScreen_DefaultScreen"
     }
 }
 
@@ -215,57 +222,6 @@ public final class AppsService {
     /// it is not running.
     public func list() async throws -> [InstalledAppInfo] {
         try await service.runJson(["apps", "list"])["apps"].items.map(AppsService.readApp).filter { !$0.package.isEmpty }
-    }
-
-    /// The places the choice for every app offers: it is the default itself.
-    public static let defaultFullScreenPlaces: [FullScreenPlace] = [.screen, .window]
-
-    /// The names of `defaultFullScreenPlaces`.
-    public var defaultFullScreenChoices: [String] {
-        AppsViewModel.defaultFullScreenPlaces.map { text.get($0.textKey) }
-    }
-
-    /// Shows every app's clear full screen request (`immersive` false), or its bars hidden
-    /// alone, at `index` of `defaultFullScreenPlaces`, unless the app has its own choice.
-    public func setFullScreenDefault(immersive: Bool, _ index: Int) async {
-        let all = AppsViewModel.defaultFullScreenPlaces
-        guard all.indices.contains(index), index != (immersive ? immersiveDefaultIndex : fullScreenDefaultIndex) else {
-            return
-        }
-        await run(reload: false) {
-            try await service.setFullScreenDefault(immersive: immersive, all[index])
-            if immersive {
-                immersiveDefaultIndex = index
-            } else {
-                fullScreenDefaultIndex = index
-            }
-            return nil
-        }
-    }
-
-    /// Where an app's full screen can show: as the default for every app, on the whole screen,
-    /// or inside its window.
-    public var fullScreenChoices: [String] {
-        FullScreenPlace.allCases.map { text.get($0.textKey) }
-    }
-
-    /// Shows the app's clear full screen request (`immersive` false), or its bars hidden alone,
-    /// the way at `index` of `fullScreenChoices`. The windows open already follow it.
-    public func setFullScreen(_ package: String, immersive: Bool, _ index: Int) async {
-        let all = FullScreenPlace.allCases
-        guard all.indices.contains(index) else {
-            return
-        }
-        var wanted = windowOf(package)
-        if (immersive ? wanted.immersive : wanted.fullScreen) == all[index] {
-            return
-        }
-        if immersive {
-            wanted.immersive = all[index]
-        } else {
-            wanted.fullScreen = all[index]
-        }
-        await setWindow(wanted)
     }
 
     /// Opens the app in a window of its own.
@@ -858,10 +814,27 @@ public final class AppsViewModel: ObservableObject {
         }
     }
 
-    /// Where an app's full screen can show: as the default for every app, on the whole screen,
-    /// or inside its window.
+    /// Where an app's clear full screen request can show: as the default for every app, on the
+    /// whole screen, or inside its window. The first says where the choice for every app takes
+    /// it now: "Follow the default (on the whole screen)".
     public var fullScreenChoices: [String] {
-        FullScreenPlace.allCases.map { text.get($0.textKey) }
+        choices(following: fullScreenDefaultIndex, builtin: .screen)
+    }
+
+    /// Where an app hiding both its bars alone can show, in the order of `fullScreenChoices`.
+    /// The first says where the choice for every app takes it now.
+    public var immersiveChoices: [String] {
+        choices(following: immersiveDefaultIndex, builtin: .window)
+    }
+
+    /// The names of every full screen place, the first named after the place at `index` of
+    /// `defaultFullScreenPlaces`; `builtin`, DSA's own default, for an index out of it.
+    private func choices(following index: Int, builtin: FullScreenPlace) -> [String] {
+        let all = AppsViewModel.defaultFullScreenPlaces
+        let now = all.indices.contains(index) ? all[index] : builtin
+        return FullScreenPlace.allCases.map { place in
+            place == .standard ? text.get(FullScreenPlace.followingKey(now)) : text.get(place.textKey)
+        }
     }
 
     /// Shows the app's clear full screen request (`immersive` false), or its bars hidden alone,

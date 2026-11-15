@@ -84,7 +84,7 @@ DSA が変更や削除をするのは、自分で作った項目だけです。
 | バーを隠すだけ | ショート動画のフィード | ウィンドウ内に表示 |
 
 既定は DSA Settings の **Display & GPU** (ディスプレイと GPU) ページにある **App full screen** と **Apps that hide their bars** で変更できます。
-アプリごとには、**Apps** ページの **Full screen** と **Bars hidden** で変更できます。
+アプリごとには、**Apps** ページの **Full screen request** と **When only the bars hide** で変更できます。
 アプリ自身の選択が優先されます。
 F11 キーとウィンドウ メニューの **Full screen** では、設定にかかわらず、いつでも画面全体での全画面表示を切り替えられます。
 
@@ -132,12 +132,12 @@ dsa app-window <package> --below-title-bar on   # off で既定に戻す
 そのため、開いた直後に作り直されることはありません。
 拡大率の異なるモニターにウィンドウを移しても、アプリの画面上の大きさは変わりません。
 アプリごとに、次のどれかの方法でこれを行います。
-方法は **Apps** ページの **Scaling on another monitor** (別のモニターでの拡大縮小) か、`dsa app-window <package> --dpi-scaling` で選びます。
+方法は **Apps** ページの **Scaling** (拡大縮小) か、`dsa app-window <package> --dpi-scaling` で選びます。
 
 - **Automatic** (`auto`、既定): 実行中に拡大率が変わると表示が崩れるアプリを集めた DSA の組み込み一覧にあるアプリには **System**、それ以外のアプリには **App** を使います。
   一覧には YouTube が入っています。
   YouTube は起動したときの拡大率のレイアウトを保つので、移動した後は再起動するまで下部のタブとミニプレーヤーが崩れたままになるからです。
-  そのようなアプリの既定は、Settings に **Scaling: system (recommended for this app)** と表示されます。
+  そのようなアプリの既定は、Settings に **Automatic (system, recommended for this app)** と表示されます。
   そのアプリについてあなたが選んだ設定が優先されます。
 - **App** (`app`): ウィンドウをドラッグしている間は、DSA が新しいモニターに合わせてウィンドウを拡大縮小します。
   ドラッグを終えると、アプリは新しいモニターの拡大率で描き直し、文字はくっきりしたままです。
