@@ -65,7 +65,7 @@ use dsa_host_core::compositor::resize_latency::ResizeLatency;
 use dsa_host_core::compositor::splash;
 use dsa_host_core::compositor::visible_change::{self, area_around, Area, PressWatch, Verdict};
 use dsa_host_core::compositor::window_sizing::{
-    frame_placement, to_task_length, window_size_of, FramePlacement, Scale,
+    gap_fill, shown_frame_placement, to_task_length, window_size_of, FramePlacement, Scale,
 };
 use windows::core::{Interface, BOOL, PCWSTR};
 use windows::Win32::Foundation::{CloseHandle, E_FAIL, HANDLE, HMODULE, HWND, LUID, POINT};
@@ -82,7 +82,8 @@ use windows::Win32::Graphics::Direct3D11::{
 };
 use windows::Win32::Graphics::DirectComposition::{
     DCompositionCreateDevice, IDCompositionDevice, IDCompositionSurface, IDCompositionTarget,
-    IDCompositionVisual,
+    IDCompositionVisual, DCOMPOSITION_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+    DCOMPOSITION_BORDER_MODE_HARD,
 };
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_ALPHA_MODE_IGNORE, DXGI_ALPHA_MODE_PREMULTIPLIED, DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -467,7 +468,13 @@ type Newest = (ID3D11Texture2D, (u32, u32), (u32, u32));
 
 /// What a visual is committed for: the buffers' size, the frame's and where the window shows
 /// the frame.
-type Committed = ((u32, u32), (u32, u32), FramePlacement);
+type Committed = (
+    (u32, u32),
+    (u32, u32),
+    FramePlacement,
+    (u32, u32),
+    Option<u32>,
+);
 
 struct State {
     /// The devices everything below was made on, and their generation. A GPU reset removes
@@ -488,6 +495,18 @@ struct State {
     splash_surface: Option<(IDCompositionSurface, (u32, u32))>,
     /// What the splash is drawn from, while it is shown.
     splash_image: Option<SplashImage>,
+    /// The splash's background, kept after the splash goes: the fill's colour while the
+    /// frame's edge has not been read.
+    splash_background: Option<u32>,
+    /// The solid fill under the frame, its one pixel surface and the colour it holds.
+    fill: IDCompositionVisual,
+    fill_surface: Option<IDCompositionSurface>,
+    fill_colour: Option<u32>,
+    /// The window size the visual last saw, and the size of the frame it had then while no
+    /// frame of another size has come since: a frame of the new size is pending, and the
+    /// last frame is stretched to the window until it comes.
+    view_seen: (u32, u32),
+    pending_from: Option<(u32, u32)>,
     swapchain: Option<IDXGISwapChain2>,
     /// The size of the swapchain's buffers: the texture's, not a frame's.
     buffers: Option<(u32, u32)>,
@@ -691,9 +710,10 @@ const SUMMARY_EVERY: usize = 20;
 const CLAIM_WAIT: Duration = Duration::from_millis(100);
 
 /// A task window's DirectComposition target and its visuals: the frame's, the caption
-/// buttons' above it and the splash's under it.
+/// buttons' above it, the splash's under it and the solid fill under all of them.
 type Composition = (
     IDCompositionTarget,
+    IDCompositionVisual,
     IDCompositionVisual,
     IDCompositionVisual,
     IDCompositionVisual,
@@ -728,13 +748,24 @@ fn compose_window(devices: &Devices, hwnd: isize) -> Result<Composition, String>
             .map_err(|e| failed("creating a task window's splash visual", e))?;
         root.AddVisual(&splash, false, &visual)
             .map_err(|e| failed("adding a task window's splash visual", e))?;
+        // Under everything, a solid fill in the app's colour: what shows wherever the frame
+        // does not cover the window, so the desktop never shows through it.
+        let fill = dcomp
+            .CreateVisual()
+            .map_err(|e| failed("creating a task window's fill visual", e))?;
+        root.AddVisual(&fill, false, &splash)
+            .map_err(|e| failed("adding a task window's fill visual", e))?;
+        // One pixel stretched to the window: nearest, with hard edges, so it stays solid.
+        let _ = fill
+            .SetBitmapInterpolationMode(DCOMPOSITION_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
+        let _ = fill.SetBorderMode(DCOMPOSITION_BORDER_MODE_HARD);
         target
             .SetRoot(&root)
             .map_err(|e| failed("setting a task window's visual", e))?;
         dcomp
             .Commit()
             .map_err(|e| failed("committing a task window's visual", e))?;
-        Ok((target, visual, caption, splash))
+        Ok((target, visual, caption, splash, fill))
     }
 }
 
@@ -813,7 +844,7 @@ impl WindowPresenter {
         see_through: bool,
     ) -> Result<Arc<Self>, String> {
         let (devices, generation) = gpu.devices();
-        let (target, visual, caption, splash) = compose_window(&devices, hwnd)?;
+        let (target, visual, caption, splash, fill) = compose_window(&devices, hwnd)?;
         Ok(Arc::new(WindowPresenter {
             task_id,
             hwnd,
@@ -828,6 +859,12 @@ impl WindowPresenter {
                 splash,
                 splash_surface: None,
                 splash_image: None,
+                splash_background: None,
+                fill,
+                fill_surface: None,
+                fill_colour: None,
+                view_seen: view,
+                pending_from: None,
                 swapchain: None,
                 buffers: None,
                 buffer_count: 0,
@@ -1324,11 +1361,14 @@ impl WindowPresenter {
         state.devices = Arc::clone(&devices);
         state.generation = generation;
         match compose_window(&devices, self.hwnd) {
-            Ok((target, visual, caption, splash)) => {
+            Ok((target, visual, caption, splash, fill)) => {
                 state.target = Some(target);
                 state.visual = visual;
                 state.caption = caption;
                 state.splash = splash;
+                state.fill = fill;
+                state.fill_surface = None;
+                state.fill_colour = None;
                 note(
                     self.logger.as_deref(),
                     &format!(
@@ -2199,13 +2239,37 @@ impl WindowPresenter {
         };
         // A window that holds the size the desktop gave it (maximised, snapped, full screen)
         // shows a frame of another size in its middle; any other window has its frame's size.
-        let placement = frame_placement(
-            state.frame,
-            state.follow.view(),
-            state.scale,
-            state.follow.held(),
-        );
-        let wanted = (buffers, state.frame, placement);
+        // Until a frame of the window's new size comes, the last frame is stretched to fit the
+        // window (shown_frame_placement), in its middle, over the app's colour.
+        let view = state.follow.view();
+        if view != state.view_seen {
+            state.view_seen = view;
+            state.pending_from = Some(state.frame);
+        }
+        let pending = state.pending_from == Some(state.frame);
+        if !pending {
+            state.pending_from = None;
+        }
+        let placement =
+            shown_frame_placement(state.frame, view, state.scale, state.follow.held(), pending);
+        let colour = (!self.see_through).then(|| {
+            let theme = || splash::background(super::system_settings::read().dark_mode);
+            gap_fill(
+                state.band_sample.band,
+                state.band_sample.fill,
+                state.splash_background,
+                // The theme is read only when nothing of the app's is known.
+                match (
+                    state.band_sample.band,
+                    state.band_sample.fill,
+                    state.splash_background,
+                ) {
+                    (None, None, None) => theme(),
+                    _ => 0,
+                },
+            )
+        });
+        let wanted = (buffers, state.frame, placement, view, colour);
         if state.committed == Some(wanted) {
             return false;
         }
@@ -2229,6 +2293,11 @@ impl WindowPresenter {
         let dcomp = dcomp.lock().unwrap_or_else(|e| e.into_inner());
         // SAFETY: plain COM calls on objects this presenter owns.
         unsafe {
+            if let Some(colour) = colour {
+                if let Err(why) = self.fill_with(state, &devices, &dcomp, colour, view) {
+                    note(self.logger.as_deref(), &why);
+                }
+            }
             let _ = state.visual.SetTransform2(&matrix);
             if state.splash_surface.is_some() && state.first_frame.is_some() {
                 // The first frame is presented, and this commit shows it: the splash under it
@@ -2245,6 +2314,89 @@ impl WindowPresenter {
         true
     }
 
+    /// Fills the window's `view` pixels under the frame with `colour` (0xAARRGGBB, opaque):
+    /// one pixel, drawn again only when the colour changes, stretched to the window by its
+    /// visual's transform, so a resize costs no drawing and no frame of latency. Committed with
+    /// the frame's visual by the caller.
+    ///
+    /// # Safety
+    ///
+    /// The caller holds the state's lock and `dcomp`'s.
+    unsafe fn fill_with(
+        &self,
+        state: &mut State,
+        devices: &Devices,
+        dcomp: &IDCompositionDevice,
+        colour: u32,
+        view: (u32, u32),
+    ) -> Result<(), String> {
+        if state.fill_surface.is_none() {
+            let surface = dcomp
+                .CreateSurface(
+                    1,
+                    1,
+                    DXGI_FORMAT_B8G8R8A8_UNORM,
+                    DXGI_ALPHA_MODE_PREMULTIPLIED,
+                )
+                .map_err(|e| failed("creating a task window's fill surface", e))?;
+            state
+                .fill
+                .SetContent(&surface)
+                .map_err(|e| failed("showing a task window's fill", e))?;
+            state.fill_surface = Some(surface);
+            state.fill_colour = None;
+        }
+        if state.fill_colour != Some(colour) {
+            let Some(surface) = state.fill_surface.clone() else {
+                return Ok(());
+            };
+            let mut offset = POINT::default();
+            let texture: ID3D11Texture2D = surface
+                .BeginDraw(None, &mut offset)
+                .map_err(|e| failed("drawing a task window's fill", e))?;
+            let place = D3D11_BOX {
+                left: offset.x as u32,
+                top: offset.y as u32,
+                front: 0,
+                right: offset.x as u32 + 1,
+                bottom: offset.y as u32 + 1,
+                back: 1,
+            };
+            // Opaque, so premultiplied BGRA is the colour's own bytes.
+            let pixel = [
+                colour as u8,
+                (colour >> 8) as u8,
+                (colour >> 16) as u8,
+                0xFF,
+            ];
+            {
+                let context = devices.context.lock().unwrap_or_else(|e| e.into_inner());
+                context.UpdateSubresource(
+                    &texture,
+                    0,
+                    Some(&place as *const D3D11_BOX),
+                    pixel.as_ptr() as *const c_void,
+                    4,
+                    0,
+                );
+            }
+            surface
+                .EndDraw()
+                .map_err(|e| failed("drawing a task window's fill", e))?;
+            state.fill_colour = Some(colour);
+        }
+        let matrix = Matrix3x2 {
+            M11: view.0 as f32,
+            M12: 0.0,
+            M21: 0.0,
+            M22: view.1 as f32,
+            M31: 0.0,
+            M32: 0.0,
+        };
+        let _ = state.fill.SetTransform2(&matrix);
+        Ok(())
+    }
+
     /// Shows `image` as the window's splash until its first frame: the window never shows the
     /// desktop through it while the app starts. Returns once the compositor has taken it, so
     /// the window can be shown with it.
@@ -2253,6 +2405,7 @@ impl WindowPresenter {
         if state.closed || state.first_frame.is_some() {
             return;
         }
+        state.splash_background = Some(image.background);
         state.splash_image = Some(image);
         let view = state.asked;
         let drawn = self.draw_splash(&mut state, view);

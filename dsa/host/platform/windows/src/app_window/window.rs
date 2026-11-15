@@ -60,7 +60,7 @@ use dsa_host_core::compositor::window_mode::{
 };
 use dsa_host_core::compositor::window_sizing::{
     maximized_outer, maximized_position, min_client_size, rescaled_rect, size_is_held,
-    to_task_position, to_task_size, to_window_position, SizeProposal,
+    to_task_position, to_task_size, to_window_position, MoveLoop, SizeProposal,
 };
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::ime::ImeCursor;
@@ -87,8 +87,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     SWP_NOSIZE, SWP_NOZORDER, SW_SHOW, SW_SHOWNOACTIVATE, SW_SHOWNORMAL, WA_INACTIVE, WINDOWPOS,
     WINDOW_EX_STYLE, WINDOW_STYLE, WMSZ_BOTTOMLEFT, WMSZ_LEFT, WMSZ_TOP, WMSZ_TOPLEFT,
     WMSZ_TOPRIGHT, WM_ACTIVATE, WM_APP, WM_CLOSE, WM_DPICHANGED, WM_ENTERSIZEMOVE, WM_ERASEBKGND,
-    WM_EXITSIZEMOVE, WM_GETMINMAXINFO, WM_GETOBJECT, WM_NCCREATE, WM_NCDESTROY, WM_PAINT,
-    WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCOLORCHANGE, WM_THEMECHANGED, WM_TIMER,
+    WM_EXITSIZEMOVE, WM_GETMINMAXINFO, WM_GETOBJECT, WM_MOVING, WM_NCCREATE, WM_NCDESTROY,
+    WM_PAINT, WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCOLORCHANGE, WM_THEMECHANGED, WM_TIMER,
     WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING, WNDCLASSEXW, WS_EX_APPWINDOW,
     WS_EX_NOREDIRECTIONBITMAP, WS_OVERLAPPEDWINDOW,
 };
@@ -336,6 +336,9 @@ struct WindowData {
     /// Which edges the user drags (left, top), so a window that takes the size of a frame
     /// keeps the other edges where they are.
     drag_edges: Cell<(bool, bool)>,
+    /// Whether the move loop has moved the window or dragged an edge yet: only then is the
+    /// user dragging it.
+    move_loop: Cell<MoveLoop>,
     /// Whether the user is dragging one of the window's edges now.
     sizing: Cell<bool>,
     /// Whether the window holds the size the desktop gave it (maximised, snapped, full
@@ -806,18 +809,38 @@ unsafe extern "system" fn task_window_proc(
                 }
                 // WM_SIZING says when the drag is of an edge.
                 data.sizing.set(false);
-                (data.report)(FromHost::Dragging {
-                    task_id: data.task_id,
-                    dragging: message == WM_ENTERSIZEMOVE,
-                });
+                // A click on the title bar enters the loop whether or not it moves the window,
+                // as the first click of a double click does: the drag is reported only once
+                // the window moves (WM_MOVING) or an edge is dragged (WM_SIZING).
+                let mut move_loop = data.move_loop.get();
+                let report = if message == WM_ENTERSIZEMOVE {
+                    move_loop.entered();
+                    None
+                } else {
+                    move_loop.exited()
+                };
+                data.move_loop.set(move_loop);
+                if let Some(dragging) = report {
+                    (data.report)(FromHost::Dragging {
+                        task_id: data.task_id,
+                        dragging,
+                    });
+                }
             }
             0
+        }
+        WM_MOVING => {
+            if let Some(data) = window_data(hwnd) {
+                report_drag_started(data);
+            }
+            DefWindowProcW(hwnd, message, wparam, lparam)
         }
         WM_SIZING => {
             // Which edge the user drags, for when the window later takes the size of a frame.
             if let Some(data) = window_data(hwnd) {
                 let edge = wparam as u32;
                 data.sizing.set(true);
+                report_drag_started(data);
                 data.drag_edges.set((
                     matches!(edge, WMSZ_LEFT | WMSZ_TOPLEFT | WMSZ_BOTTOMLEFT),
                     matches!(edge, WMSZ_TOP | WMSZ_TOPLEFT | WMSZ_TOPRIGHT),
@@ -2178,6 +2201,7 @@ impl Ui {
                 self.setup.input.clone(),
             ),
             drag_edges: Cell::new((false, false)),
+            move_loop: Cell::new(MoveLoop::default()),
             sizing: Cell::new(false),
             held: Cell::new(false),
             ime_cursor: Cell::new(None),
@@ -2381,6 +2405,19 @@ impl ClosingWindow for ClosingTask {
         if let Some(presenter) = self.presenter.take() {
             presenter.release();
         }
+    }
+}
+
+/// The move loop moved the window or dragged an edge: the first time, the user's drag starts.
+fn report_drag_started(data: &WindowData) {
+    let mut move_loop = data.move_loop.get();
+    let started = move_loop.moved();
+    data.move_loop.set(move_loop);
+    if let Some(dragging) = started {
+        (data.report)(FromHost::Dragging {
+            task_id: data.task_id,
+            dragging,
+        });
     }
 }
 
