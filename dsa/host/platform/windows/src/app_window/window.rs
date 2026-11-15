@@ -979,8 +979,10 @@ unsafe extern "system" fn task_window_proc(
             result
         }
         WM_DPICHANGED => {
-            // The scale goes first, so the task gets its new density before the size that
-            // goes with it, which the resize below reports.
+            // The scale goes first, so the core shows the task at the new scale before the
+            // resize below reports the window's new size. A task that follows its monitor
+            // takes the monitor's density only when the move ends, at the size the window has
+            // then, so the window keeps that size.
             let dpi = (wparam & 0xffff) as u32;
             let data = window_data(hwnd);
             if let Some(data) = data {
