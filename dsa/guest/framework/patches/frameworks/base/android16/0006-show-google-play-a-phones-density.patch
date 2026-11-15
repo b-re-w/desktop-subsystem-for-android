@@ -1,0 +1,117 @@
+Subject: DisplayManagerService: show Google Play a phone's density, so it delivers xxhdpi splits
+
+Google Play delivers the density splits of an app that match the density the device reports in
+its device configuration, and the Play Store builds that from the default display's metrics
+(WindowManager.getDefaultDisplay().getMetrics(), which DisplayInfo.logicalDensityDpi gives). The
+DSA guest's display has the user's main monitor's density, 130 dpi at a scale of 100% and 262 at
+200%, far below a phone's, so Play delivered hdpi and xhdpi splits only. An image an app ships at
+a higher density alone never arrived, and Android drew the smaller one scaled up: FLO's 60 dp
+clean up button showed its 60 px xhdpi image at twice its size, blurred.
+
+getDisplayInfo now reports at least 480 dpi (xxhdpi) to a binder caller whose app id is the Play
+Store's (com.android.vending) or Play services' (com.google.android.gms), looked up through the
+package manager. Play then delivers the xxhdpi splits, which Android scales down to the density
+each app draws at. Nothing else changes: the display's size in pixels, the density every app's
+resources and windows take from the window manager's configuration (Play's own included, but
+for a context made with Context.createDisplayContext, which takes the display's metrics), what
+every other caller and system_server itself read, and a display already denser than 480 dpi.
+
+Applies to frameworks/base at 45034f0663f960d9ee5fb0a101a4732b71f6e2f4 (Android 16).
+---
+diff --git a/services/core/java/com/android/server/display/DisplayManagerService.java b/services/core/java/com/android/server/display/DisplayManagerService.java
+--- a/services/core/java/com/android/server/display/DisplayManagerService.java
++++ b/services/core/java/com/android/server/display/DisplayManagerService.java
+@@ -1539,6 +1539,82 @@ public final class DisplayManagerService extends SystemService {
+         return overriddenInfo;
+     }
+ 
++    // DSA: the apps that are shown a phone's density, and the density they are shown.
++    private static final String[] DSA_PLAY_PACKAGES =
++            {"com.android.vending", "com.google.android.gms"};
++    private static final int DSA_PLAY_DENSITY = android.util.DisplayMetrics.DENSITY_XXHIGH;
++    private static final long DSA_PLAY_APP_IDS_REFRESH_MILLIS = 10_000;
++    private volatile int[] mDsaPlayAppIds;
++    private volatile long mDsaPlayAppIdsTime;
++
++    /**
++     * DSA: the display as Google Play is shown it: at least xxhdpi (480 dpi), for the Play Store
++     * and Play services only.
++     *
++     * Play delivers the density splits of an app that match the density the device reports in
++     * its device configuration, and the Play Store builds that from the default display's
++     * metrics (Display.getMetrics, which is this DisplayInfo's logicalDensityDpi). A
++     * computer's monitor is far less dense than a phone (130 dpi at a scale of 100%, 262 at
++     * 200%), so Play delivered the hdpi and xhdpi splits only, and an image an app ships at a
++     * higher density alone never arrived: Android drew the app's smaller image scaled up,
++     * blurred, in a window the user can make as large as the monitor. Shown 480 dpi, Play
++     * delivers the xxhdpi splits, which Android scales down to the density the app draws at.
++     *
++     * Only the density this reports changes, and only for those two apps. The display's size
++     * in pixels stays. An app's resources and windows take their density from the window
++     * manager's configuration, not from here, so Play draws at the density every other app
++     * does, and the window manager itself, which reads the display in system_server, sees the
++     * display as it is. The one exception is a context made with Context.createDisplayContext,
++     * whose resources take the display's metrics: a Play window drawn through one would draw
++     * at 480 dpi. A display already denser than 480 dpi is reported as it is.
++     */
++    private DisplayInfo dsaShowPlayAPhoneDensity(DisplayInfo info, int callingUid) {
++        if (info == null || info.logicalDensityDpi >= DSA_PLAY_DENSITY
++                || UserHandle.getAppId(callingUid) < FIRST_APPLICATION_UID) {
++            return info;
++        }
++        final int appId = UserHandle.getAppId(callingUid);
++        for (int playAppId : dsaPlayAppIds()) {
++            if (playAppId == appId) {
++                final DisplayInfo shown = new DisplayInfo();
++                shown.copyFrom(info);
++                shown.logicalDensityDpi = DSA_PLAY_DENSITY;
++                return shown;
++            }
++        }
++        return info;
++    }
++
++    /**
++     * DSA: the app ids of the Play Store and Play services, looked up again every few seconds:
++     * the Google apps are installed after the first boot, and a call may come before the
++     * package manager is up.
++     */
++    private int[] dsaPlayAppIds() {
++        final long now = SystemClock.uptimeMillis();
++        final int[] known = mDsaPlayAppIds;
++        if (known != null && now - mDsaPlayAppIdsTime < DSA_PLAY_APP_IDS_REFRESH_MILLIS) {
++            return known;
++        }
++        final android.content.pm.PackageManagerInternal packages =
++                LocalServices.getService(android.content.pm.PackageManagerInternal.class);
++        if (packages == null) {
++            return new int[0];
++        }
++        final int[] found = new int[DSA_PLAY_PACKAGES.length];
++        int count = 0;
++        for (String packageName : DSA_PLAY_PACKAGES) {
++            final int uid = packages.getPackageUid(packageName, 0L, UserHandle.USER_SYSTEM);
++            if (uid >= 0) {
++                found[count++] = UserHandle.getAppId(uid);
++            }
++        }
++        final int[] appIds = Arrays.copyOf(found, count);
++        mDsaPlayAppIds = appIds;
++        mDsaPlayAppIdsTime = now;
++        return appIds;
++    }
++
+     private DisplayInfo getDisplayInfoInternal(int displayId, int callingUid) {
+         synchronized (mSyncRoot) {
+             final LogicalDisplay display = mLogicalDisplayMapper.getDisplayLocked(displayId);
+@@ -4865,7 +4941,9 @@ public final class DisplayManagerService extends SystemService {
+             final int callingUid = Binder.getCallingUid();
+             final long token = Binder.clearCallingIdentity();
+             try {
+-                return getDisplayInfoInternal(displayId, callingUid);
++                // DSA: Google Play is shown a phone's density (dsaShowPlayAPhoneDensity).
++                return dsaShowPlayAPhoneDensity(getDisplayInfoInternal(displayId, callingUid),
++                        callingUid);
+             } finally {
+                 Binder.restoreCallingIdentity(token);
+             }

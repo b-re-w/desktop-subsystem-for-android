@@ -310,6 +310,15 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
   `libandroid_runtime` answers their `ActivityManager.getMemoryInfo` (`totalMem`) with it.
   Every other app and Android itself see the VM's memory. Only init may write the list and only
   the daemon may set the property (`sepolicy/memory.cil`), which `check-image.py` checks.
+- Google Play sees a display of at least 480 dpi (xxhdpi). Play delivers the density splits of
+  an app that match the density the Play Store reads from the default display's metrics, and a
+  monitor is far less dense than a phone (130 dpi at 100%, 262 at 200%), so Play delivered
+  hdpi and xhdpi splits only and an image an app ships at a higher density alone never arrived.
+  The framework build's `services.jar` reports 480 dpi in `getDisplayInfo` to the Play Store and
+  Play services only (by their app ids). The display, the density every app draws at (Play
+  included) and what every other app reads stay as they are. An app installed before this keeps
+  the splits it has until it is installed again; whether a Play update replaces them is not
+  checked yet.
 - The add-on images a user installs (the Google apps, an ARM translation package, Widevine) are on the
   user's add-on disk, which the host builds, one per user, and attaches to the VM read only.
   Its one partition, `dsa_addons`, is an erofs file system holding each image as a plain,
