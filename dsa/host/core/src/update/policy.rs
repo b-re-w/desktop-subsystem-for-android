@@ -3,7 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::manifest::{ImageEntry, Manifest};
-use super::versions::{image_order, target_major, Channel};
+use super::program::ReleaseChannel;
+use super::versions::{channel_takes_image, image_order, target_major, Channel};
 
 /// The image a user runs now.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,13 +24,13 @@ impl InstalledImage {
     }
 
     /// Where the image stands among others, newest last ([`image_order`]).
-    pub fn order(&self) -> (u32, u64, u64) {
+    pub fn order(&self) -> (u32, u64, u64, u64) {
         image_order(self.android_major, self.build, &self.version)
     }
 }
 
 /// Where `entry` stands among other images, newest last ([`image_order`]).
-fn order_of(entry: &ImageEntry) -> (u32, u64, u64) {
+fn order_of(entry: &ImageEntry) -> (u32, u64, u64, u64) {
     image_order(entry.android_major, entry.build, &entry.version)
 }
 
@@ -121,10 +122,47 @@ pub fn decide_for(
     channel: Channel,
     older_allowed: bool,
 ) -> Decision {
+    decide_among(installed, manifest, failed, channel, older_allowed, None)
+}
+
+/// [`decide_for`] for a computer on the release channel `release`, which takes only the
+/// images that channel may have ([`channel_takes_image`]): a computer on the stable channel
+/// never moves to a pre-release (`-<n>.<m>`) or development (`-dev.<k>`) image, even when the
+/// list it read names one. The service's periodic check decides with this.
+pub fn decide_on_channel(
+    installed: &InstalledImage,
+    manifest: &Manifest,
+    failed: &[String],
+    channel: Channel,
+    older_allowed: bool,
+    release: ReleaseChannel,
+) -> Decision {
+    decide_among(
+        installed,
+        manifest,
+        failed,
+        channel,
+        older_allowed,
+        Some(release),
+    )
+}
+
+fn decide_among(
+    installed: &InstalledImage,
+    manifest: &Manifest,
+    failed: &[String],
+    channel: Channel,
+    older_allowed: bool,
+    release: Option<ReleaseChannel>,
+) -> Decision {
     let target = target_major(channel, &manifest.supported_majors);
     let newest = manifest
         .images
         .iter()
+        .filter(|image| match release {
+            Some(release) => channel_takes_image(release, &image.version),
+            None => true,
+        })
         .filter(|image| match channel {
             Channel::Latest => true,
             Channel::Major(_) => Some(image.android_major) == target,

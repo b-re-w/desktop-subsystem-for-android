@@ -9,6 +9,9 @@
 # arm64 package on an ARM64 Windows 11 runner. The arm64 package's kernel is named Image
 # (the arm64 kernel build's name for it) and its programs are built for
 # aarch64-pc-windows-msvc.
+#
+# It runs by hand (on its own or as a job of Checks), and on the release pull request into
+# main once the owner approves the run on the pull request page.
 
 name: Installer test
 
@@ -23,6 +26,12 @@ on:
   #     - "dsa/**"
   #     - ".github/workflows/test-installer.yml"
   #     - ".github/scripts/installer/**"
+  # On the release pull request into main, each update starts a run that waits for the
+  # owner: the "approval" job below uses the run-tests environment, whose required reviewer
+  # approves or rejects it on the pull request page. Nothing else runs until then, so
+  # Release sync updating that pull request on every push to develop takes no runner.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   # Checks (checks.yml) runs it as one of its jobs, with every other test, in one run.
   workflow_call:
@@ -30,18 +39,49 @@ on:
 concurrency:
   # A run in progress always finishes, and only the newest waiting run stays: GitHub keeps
   # one pending run per group, so a newer run replaces the one still waiting, and the newest
-  # tests everything the dropped ones held. The group is the workflow and the branch (or
-  # the pull request), never the run, so manual runs replace each other too. Called from
-  # Checks, github.workflow names Checks, so a Checks run neither waits on nor replaces a
-  # run started on its own.
-  group: test-installer-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # tests everything the dropped ones held. The group is the workflow and the branch, never
+  # the run, so manual runs replace each other too. Called from Checks, github.workflow
+  # names Checks, so a Checks run neither waits on nor replaces a run started on its own.
+  # A pull request run has a group of its own: a run waiting for approval counts as in
+  # progress, so a shared group would hold every newer run behind it. The "approval" job
+  # replaces the older waiting run instead.
+  group: test-installer-${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('run-{0}', github.run_id) || github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  # The release pull request's gate: on a pull request it uses the run-tests environment, so
+  # it waits until the owner approves the run on the pull request page ("Review
+  # deployments", then "Approve and deploy"), and every other job waits for it. Rejecting it
+  # skips the whole run. A newer update of the pull request cancels this job while it still
+  # waits, so only the newest run asks; once approved, the job has finished, nothing cancels
+  # it, and the run it started finishes. By hand and from Checks it has no environment and
+  # passes at once. It runs rather than being skipped there, because GitHub skips every job
+  # below a skipped one, even through a job that ran.
+  approval:
+    name: Wait for the owner to approve the run
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: ${{ github.event_name == 'pull_request' && 'run-tests' || '' }}
+    concurrency:
+      group: test-installer-approval-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Report the approval
+        env:
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [[ "$EVENT" == "pull_request" ]]; then
+            echo "The owner approved the tests for $SHA"
+          else
+            echo "Started by $EVENT, which needs no approval"
+          fi
+
   installer:
+    needs: approval
     name: Build, install and uninstall the installer (windows, ${{ matrix.version }}, ${{ matrix.arch }})
     # Server 2022 (build 20348) has the Windows 10 window manager, so setup shows its
     # solid background and square corners there; Server 2025 (build 26100) has the
@@ -1906,6 +1946,7 @@ jobs:
   # the settings app for win-arm64), must refuse to install there: its package and its
   # setup.exe both say no, and nothing is left behind.
   arm64-on-x64:
+    needs: approval
     name: fr27_the_arm64_package_installs_only_on_arm64_windows (windows, 2025)
     runs-on: windows-2025
     timeout-minutes: 40
@@ -1989,6 +2030,7 @@ jobs:
   # the newest kernel build that passed) and reads the arm64 lists, images-arm64.json and
   # program-arm64.json, so an ARM64 PC is never offered an x64 image or setup file.
   real-installer:
+    needs: approval
     name: Build the real installer (windows, ${{ matrix.runner }}, ${{ matrix.arch }})
     strategy:
       fail-fast: false

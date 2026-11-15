@@ -3497,6 +3497,7 @@ pub fn vulkan_json() -> Value {
             "loader_failure": found.failure,
             "compatibility_pack": pack.as_ref().map(|(root, _)| root.display().to_string()),
             "dozen_manifest": found.pack.as_ref().map(|pack| pack.manifest.display().to_string()),
+            "elevated": found.elevated,
             "auto": choice(VulkanDriverSetting::Auto),
             "native": choice(VulkanDriverSetting::Native),
             "dozen": choice(VulkanDriverSetting::Dozen),
@@ -3540,6 +3541,17 @@ pub fn describe_vulkan(vulkan: &Value) -> String {
         Some(root) => format!("Compatibility Pack: installed ({root})"),
         None => "Compatibility Pack: not installed".to_string(),
     });
+    if vulkan["elevated"].as_bool() == Some(true) {
+        // What this command sees is not what the renderer sees when the renderer runs
+        // unelevated, as it does when the service starts it.
+        lines.push(
+            "This command runs elevated (as an administrator): the Vulkan loader ignores \
+             VK_DRIVER_FILES, VK_ICD_FILENAMES and VK_ADD_DRIVER_FILES here, so the lines \
+             below are what an elevated process would get; run it without administrator rights \
+             to see what DSA's renderer gets"
+                .to_string(),
+        );
+    }
     for setting in ["auto", "native", "dozen"] {
         lines.push(format!(
             "vulkan-driver {setting}: {}",

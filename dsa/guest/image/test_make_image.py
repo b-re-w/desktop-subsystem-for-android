@@ -4849,6 +4849,48 @@ class CompiledSystemAppTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 make_image.as_development_build(spec, bad)
 
+    def test_fr15_the_image_revision_follows_the_channel(self):
+        spec = {"version": "17.0.0-16373615-9", "build_id": "16373615", "revision": 9}
+        arm = dict(spec, version="17.0.0-16373615-9-arm64")
+        label = make_image.next_revision_label
+        # After the stable -15: the stable -16, the pre-release -15.1, and a development
+        # build of that pre-release.
+        tags = ["android-17.0.0-16373615-14", "android-17.0.0-16373615-15", "v1.0.0",
+                "android-16.0.0-15581820-15"]
+        self.assertEqual(label(spec, tags, "stable"), "16")
+        self.assertEqual(label(spec, tags, "prerelease"), "15.1")
+        self.assertEqual(label(spec, tags, "development"), "15.1")
+        # Pre-releases count up m on the newest n; the stable after them is the next n.
+        tags += ["android-17.0.0-16373615-15.1", "android-17.0.0-16373615-15.2"]
+        self.assertEqual(label(spec, tags, "prerelease"), "15.3")
+        self.assertEqual(label(spec, tags, "stable"), "16")
+        tags += ["android-17.0.0-16373615-16"]
+        self.assertEqual(label(spec, tags, "prerelease"), "16.1")
+        # Each architecture counts its own.
+        self.assertEqual(label(arm, tags, "prerelease"), "9.1")
+        self.assertEqual(label(arm, tags + ["android-17.0.0-16373615-15.4-arm64"], "stable"), "16")
+        with self.assertRaises(ValueError):
+            label(spec, tags, "beta")
+
+        # The versions each revision names, and the build number, which carries n alone.
+        pre = make_image.revised(spec, "15.1")
+        self.assertEqual(pre["version"], "17.0.0-16373615-15.1")
+        self.assertEqual(pre["revision"], 15)
+        self.assertEqual(make_image.revised(arm, "15.2")["version"], "17.0.0-16373615-15.2-arm64")
+        self.assertEqual(make_image.revised(spec, "16")["version"], "17.0.0-16373615-16")
+        dev = make_image.as_development_build(pre, 12)
+        self.assertEqual(dev["version"], "17.0.0-16373615-15.1-dev.12")
+        self.assertEqual(dev["revision"], 15)
+        arm_dev = make_image.as_development_build(make_image.revised(arm, "15.1"), 12)
+        self.assertEqual(arm_dev["version"], "17.0.0-16373615-15.1-dev.12-arm64")
+        for bad in ("15.0", "15.x", "", "1.2.3", True):
+            with self.assertRaises(ValueError):
+                make_image.revised(spec, bad)
+
+        # The workflow asks for the revision of the run's image channel.
+        workflow = (Path(make_image.__file__).resolve().parents[3] / ".github/workflows/release-image.yml").read_text()
+        self.assertIn('--next-revision --channel "$IMAGE_CHANNEL"', workflow)
+
     def test_fr14_the_release_publishes_each_image_under_a_new_revision(self):
         workflow = (Path(make_image.__file__).resolve().parents[3] / ".github/workflows/release-image.yml").read_text()
         self.assertIn("make-image.py --major ${{ matrix.android }} --arch ${{ matrix.arch }} --next-revision", workflow)
@@ -8821,6 +8863,41 @@ class HostMemoryImageTests(unittest.TestCase):
             self.assertIn('std::string(kDir) + "total_kb"', patch)
             self.assertIn("caller % kPerUserRange", patch)
         self.assertIn(make_image.HOST_MEMORY_FRAMEWORK_FILE, make_image.FRAMEWORK_FILES)
+
+    def test_fr32_the_framework_shows_google_play_a_phones_density(self):
+        # Play delivers the density splits that match the density the Play Store reads from
+        # the default display's metrics. The patch shows the Play Store and Play services, and
+        # them only, a display of at least 480 dpi through getDisplayInfo, so Play delivers
+        # xxhdpi splits; the display, the window manager and every other app keep its density.
+        framework = self.HERE.parent / "framework"
+        framework_lock = make_image.framework_lock
+        added = re.compile(r"^\+(?!\+\+)(.*)$", re.MULTILINE)
+        for android in ("android16", "android17"):
+            path = framework / "patches" / "frameworks" / "base" / android / "0006-show-google-play-a-phones-density.patch"
+            patch = path.read_text()
+            # Only the services build applies a Java patch, and it builds services.jar, which
+            # holds DisplayManagerService.
+            self.assertEqual(framework_lock.patch_paths(path),
+                             ["services/core/java/com/android/server/display/DisplayManagerService.java"])
+            self.assertTrue(framework_lock.java_only(path))
+            code = "\n".join(added.findall(patch))
+            self.assertIn('{"com.android.vending", "com.google.android.gms"}', code)
+            self.assertIn("DSA_PLAY_DENSITY = android.util.DisplayMetrics.DENSITY_XXHIGH;", code)
+            # The binder call apps reach is the one that changes, with the caller's uid.
+            self.assertIn("return dsaShowPlayAPhoneDensity(getDisplayInfoInternal(displayId, callingUid),", code)
+            self.assertRegex(patch, r"\n-\s+return getDisplayInfoInternal\(displayId, callingUid\);\n")
+            # A display already as dense is reported as it is, and so is every caller that is
+            # not an app.
+            self.assertIn("info.logicalDensityDpi >= DSA_PLAY_DENSITY", code)
+            self.assertIn("UserHandle.getAppId(callingUid) < FIRST_APPLICATION_UID", code)
+            # The display's own info is copied, never changed in place: the logical display and
+            # the cache hand the same object to every caller.
+            self.assertIn("shown.copyFrom(info);", code)
+            self.assertIn("shown.logicalDensityDpi = DSA_PLAY_DENSITY;", code)
+            self.assertNotRegex(code, r"\binfo\.logicalDensityDpi\s*=[^=]")
+            # Only the density changes, not the size in pixels or the physical dpi.
+            self.assertEqual(re.findall(r"shown\.(\w+)\s*=[^=]", code), ["logicalDensityDpi"])
+            self.assertIn("packages.getPackageUid(packageName, 0L, UserHandle.USER_SYSTEM)", code)
 
 
 class HostCertificatesImageTests(KeyMintKeyImageTests):

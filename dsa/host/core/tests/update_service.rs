@@ -14,6 +14,7 @@ use dsa_host_core::session::{GuestLauncher, Session, SessionConfig, SessionState
 use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::update::manifest::{self, FileEntry, ImageEntry, Manifest, FORMAT};
 use dsa_host_core::update::policy::InstalledImage;
+use dsa_host_core::update::program::ReleaseChannel;
 use dsa_host_core::update::service::{
     check, check_reporting, next_image_check, Download, UpdateNotices, UpdatingAndroid,
 };
@@ -1101,6 +1102,7 @@ fn fr14_the_desktop_is_told_once_before_and_once_after_an_image_update() {
             &fetch,
             "mem://list.json",
             &trusted(),
+            ReleaseChannel::Stable,
             &android.notices,
             &mut |_: &Download| {},
         )
@@ -1148,6 +1150,7 @@ fn fr14_a_desktop_that_was_away_is_told_only_how_the_update_ended() {
         &server(&[16], &[("16.0.2", 16, 2)], &key()),
         "mem://list.json",
         &trusted(),
+        ReleaseChannel::Stable,
         &android.notices,
         &mut |_: &Download| {},
     )
@@ -1287,6 +1290,7 @@ fn download_new_image(store: &ImageStore, android: &UpdatingAndroid) {
         &server(&[16], &[("16.0.2", 16, 2)], &key()),
         "mem://list.json",
         &trusted(),
+        ReleaseChannel::Stable,
         &android.notices,
         &mut |_: &Download| {},
     )

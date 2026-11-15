@@ -1,12 +1,14 @@
 # Publishes DSA's GitHub Pages site. A Pages deployment replaces the whole site, so this one
 # workflow builds every part of it each time:
 #   /           the guidebook, docs/site/
+#   /guides     the user guides, docs/guides/, which the guidebook's docs view (docs.html)
+#               reads from the same site
 #   /apt, /rpm, /rpm-prerelease
 #               the signed Linux package repositories, when the signing key is set: the
 #               packages of a GitHub pre-release go to the pre-release channel only (the apt
 #               suite prerelease and rpm-prerelease/), the others to both channels
 #
-# It runs when the guidebook changes on main (the release sync brings it there), by hand, and
+# It runs when the guidebook or the guides change on main (the release sync brings it there), by hand, and
 # from "Linux repository release" after the packages of a version are attached to its
 # release. Like every release it publishes only from main or develop
 # (.github/scripts/release/release-branch-channel.sh); on any other branch or a tag it fails
@@ -23,6 +25,7 @@ on:
     branches: [main]
     paths:
       - docs/site/**
+      - docs/guides/**
       - .github/workflows/release-site.yml
   workflow_dispatch:
   workflow_call:
@@ -63,6 +66,10 @@ jobs:
         run: |
           mkdir -p .scratch/site
           cp -R docs/site/. .scratch/site/
+          # the guides, where docs.html looks for them first; it falls back to GitHub's raw
+          # files only when the site is previewed without them
+          mkdir -p .scratch/site/guides
+          cp -R docs/guides/. .scratch/site/guides/
           ls -l .scratch/site
 
       - name: Install the repository tools

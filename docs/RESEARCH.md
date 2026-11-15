@@ -3786,6 +3786,46 @@ SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운
 5. 고친 빌드에서: 125% 모니터에서 YouTube를 닫고 30초 안에 200% 모니터에서 다시 연다. `adb logcat -d -s DsaAgent | grep -E "ended the background processes of com.google.android.youtube|starts at .* in the process it has"`에 "ended the background processes ... started at 164 dpi"가 있고 시청 화면과 미니플레이어가 맞으면 고쳐진 것이다. "in the process it has"가 나오면 그 줄의 까닭(포그라운드 서비스 등)이 남긴 것이다.
 6. 공유 메모리 쪽: 같은 절차에서 `dsa-wm.log`의 `video:` 줄에 "in shared memory"가 있고 미니플레이어가 맞으면 그림 영역은 무관하다. 영역을 끄고(`video_shared_memory_mb` 0) 같은 증상이 나와도 무관하다.
 
+## R54. Play로 설치한 앱의 그림이 흐린 까닭: Play가 모니터 밀도에 맞는 낮은 밀도 분할만 내려 준다 (FR-4, FR-32)
+
+**기준.** 2026-11-15 소유자 PC의 DSA(Android 17)에서 디스패처가 adb로 읽은 값이다. FLO(`skplanet.musicmate`, `installerPackageName=com.android.vending`)의 `playlist_cleanup_btn`은 60 dp `ImageView`이고, 그 그림 `btn_clean_up.png`는 설치된 분할 가운데 `drawable-xhdpi-v4`에만 60x60 px로 있다. xhdpi에서 60 px는 30 dp이므로 Android는 이것을 두 배로 늘려 그리고, 단추가 흐리다. 게스트는 `ro.sf.lcd_density=262`, `wm density` 262이고, 태스크는 모니터마다 164나 262로 그린다(FR-4). Play가 준 밀도 분할은 `split_config.hdpi`, `split_config.tvdpi`, `split_config.xhdpi`이고 xxhdpi와 xxxhdpi는 없다. 아래 자료는 모두 공개 소스이고, 빌드나 실행으로 확인한 것은 없다.
+
+### Play가 기기의 밀도를 읽는 곳
+
+- Play는 앱 번들에서 기기마다 분할 APK를 만들어 내려 준다. 밀도 분할은 기기의 밀도 하나에 맞는 것을 고르고, 그 기준은 기기가 알린 device configuration(`DeviceConfigurationProto.screenDensity`)이다. Play 스토어는 이 값을 Play 서버에 올리고(`uploadDeviceConfig`), 받은 토큰을 이후 요청에 붙인다.
+- Play 스토어 6.0.5를 디컴파일한 공개 코드(`matrixxun/FMTech`의 `com/google/android/finsky/utils/PhoneDeviceConfigurationHelper.java`)는 `WindowManager`의 `getDefaultDisplay()`에서 `Display.getMetrics()`로 `DisplayMetrics`를 채우고, 그 `densityDpi`를 `DeviceConfigurationProto.screenDensity`에 넣는다. 만든 값은 필드에 한 번 캐시하고, 서버 토큰은 `FinskyPreferences.deviceConfigToken`에 둔다. 최신 Play 스토어의 코드는 난독화되어 있어 같은 줄을 확인하지 못했다. 이 연구는 그 경로가 바뀌지 않았다고 가정한다.
+- microG(Play 서비스와 Play 스토어를 다시 구현한 공개 프로젝트)는 같은 값을 앱 자신의 `context.getResources().getDisplayMetrics().densityDpi`에서 읽는다(`play-services-base/core/src/main/java/org/microg/gms/common/DeviceConfiguration.java`, 결제 쪽은 `vending-app/.../billing/core/Utils.kt`). 이것은 Google의 코드가 아니라 재구현이다.
+- AOSP(`frameworks/base` 94b4c163, Android 17)에서 `Display.getMetrics()`는 `DisplayInfo.getMetricsWithSize`를 거쳐 `densityDpi`를 `DisplayInfo.logicalDensityDpi`에서 가져온다(`core/java/android/view/DisplayInfo.java`). 앱의 `DisplayInfo`는 `DisplayManagerService`의 바인더 호출 `getDisplayInfo`가 호출한 앱의 uid로 준다. 이 호출은 이미 uid마다 다른 값(프레임 속도 재정의, `getDisplayInfoForOverrides`)을 준다. 반면 앱의 `Resources`는 밀도를 창 관리자가 보내는 `Configuration.densityDpi`에서 받는다. `ResourcesImpl.updateConfiguration`이 디스플레이 지표의 밀도를 설정의 밀도로 덮기 때문이다. 예외는 `Context.createDisplayContext`로 만든 컨텍스트다. `ResourcesManager.rebaseKeyForDisplay`가 그 디스플레이의 지표로 설정의 밀도를 채운다(`core/java/android/app/ResourcesManager.java`).
+- `ro.sf.lcd_density`는 `DisplayMetrics.DENSITY_DEVICE_STABLE`의 출처이고 SurfaceFlinger의 시작 밀도다. 시스템 속성은 uid마다 다르게 줄 수 없고, 바꾸면 Android 자신의 밀도가 바뀐다. 소유자 결정(Android 자신의 밀도는 바꾸지 않는다)에 어긋난다.
+- `<supports-screens>`와 `<compatible-screens>`는 Play의 필터다. 앱이 `compatible-screens`로 밀도를 나열하면 그 밖의 밀도인 기기에는 앱이 보이지 않는다. xxhdpi는 휴대폰에서 가장 흔한 밀도라, 이 필터에 걸려 앱이 사라질 위험은 지금의 262 dpi보다 오히려 작다.
+- Play가 모든 밀도 분할을 내려 주게 하는 공개 스위치는 없다. 분할 선택은 서버의 일이다.
+
+### 어느 분할이 골라지는가
+
+- bundletool의 `ScreenDensitySelector`(Play가 쓰는 공개 도구, Android의 리소스 선택 규칙을 따른다고 적혀 있다)는 기기 밀도 d가 두 밀도 l과 h 사이에 있으면 `(2l - d) * h > d^2`일 때 l을, 아니면 h를 고른다. 축소가 확대보다 두 배 낫다는 규칙이다. 경계는 hdpi(240)와 xhdpi(320) 사이가 263.3, xhdpi와 xxhdpi(480) 사이가 364.0, xxhdpi와 xxxhdpi(640) 사이가 526.0이다.
+- 262 dpi는 hdpi 쪽이다. 지금의 밀도로는 hdpi 분할이 온다. FLO에 xhdpi와 tvdpi(213) 분할도 있는 것은 Play가 본 밀도가 그동안 바뀌었다고 보면 맞는다. 213은 `ro.sf.lcd_density`가 없을 때 SurfaceFlinger의 기본값이고(`make-image.py`의 `DISPLAY_DPI` 설명), 1 dp = 1 DIP이던 2026-11-11 결정 이전에는 200%가 320 dpi였다. 그렇다면 Play는 이미 설치된 앱에도 새 밀도의 분할을 더하고, 옛 분할은 지우지 않는다. 이것은 남은 분할에 맞춘 설명이고, Play의 설치 기록으로 확인한 것은 아니다.
+- 옛 분할이 남는 것은 중요하다. Android도 같은 규칙으로 고르기 때문에, 262 dpi에서 xhdpi와 xxhdpi가 모두 있으면 xhdpi를 쓴다(d가 둘보다 작으면 작은 쪽). xxhdpi 분할을 더 받아도 hdpi와 xhdpi 분할이 남아 있으면 FLO의 단추는 그대로 흐리다. 앱을 지우고 다시 설치해야 xxhdpi만 남는다.
+
+### 정한 것
+
+- Play 스토어(`com.android.vending`)와 Play 서비스(`com.google.android.gms`)에만, `DisplayManagerService`의 바인더 `getDisplayInfo`가 `logicalDensityDpi`를 480(xxhdpi)으로 알린다. 패치는 `dsa/guest/framework/patches/frameworks/base/android16`과 `android17`의 `0006-show-google-play-a-phones-density.patch`이고, 프레임워크 빌드가 만드는 `services.jar`에 들어간다. 호출한 uid의 앱 ID를 패키지 관리자(`PackageManagerInternal.getPackageUid`)에서 찾은 두 앱의 것과 비교하고, 그 목록은 10초마다 다시 찾는다. Google 앱은 첫 부팅 뒤에 설치되고, 패키지 관리자가 서기 전에 호출이 올 수 있기 때문이다. 디스플레이의 정보는 복사한 뒤 바꾸고, 밀도 말고는 바꾸지 않는다(픽셀 크기, 물리 dpi는 그대로다). 디스플레이가 이미 480 dpi 이상이면 그대로 알린다.
+- 480을 고른 까닭: 364 이상이면 xxhdpi 분할만 오므로, 모니터 배율이 무엇이든(400%의 524 dpi까지) 결과가 같다. xxhdpi는 휴대폰의 주된 밀도라 앱 대부분이 이 밀도의 그림을 갖춘다. 640(xxxhdpi)은 내려받기가 더 크고, xxxhdpi 그림이 없는 앱에서는 어차피 xxhdpi 그림을 받는다.
+- 이 방법은 Play가 `Display.getMetrics()`로 밀도를 읽는다는 가정에 기댄다. Play가 `Resources`의 밀도를 읽는다면 효과가 없다. 그 경우의 다음 길은 Android의 앱별 해상도 배율(`CompatModePackages`의 `DOWNSCALED_INVERSE`와 `DOWNSCALE_xx` 호환 변경)이다. 그 길은 `Configuration`, `Resources`, `Display` 모두의 밀도를 올리지만, Play의 창을 두 배에서 3.3배 해상도로 그린 뒤 줄여 보이므로 그 창의 그래픽 메모리가 4배에서 11배가 된다. 그래서 먼저 시도하지 않았다.
+- 버린 길: `ro.sf.lcd_density`나 `wm density`를 올리는 것(Android 전체의 밀도가 바뀐다), Play 앱에 태스크 밀도를 높이는 것(Play의 화면이 커진다), 앱별 배율 공급자의 밀도만 따로 바꾸는 것(`CompatScale`의 `densityScaleFactor`, 같은 픽셀에서 dp가 커져 Play의 화면이 커진다).
+
+### 비용과 위험
+
+- 내려받기와 저장 공간: Play로 받는 앱의 밀도 분할이 hdpi에서 xxhdpi로 바뀐다. 비트맵 그림은 픽셀 수가 4배이므로, 그림이 많은 앱은 분할이 몇 MB 커진다. 벡터 그림과 코드는 그대로다. 크기는 재지 않았다.
+- 메모리: `Resources`는 그림을 앱이 그리는 밀도로 줄여 디코드하므로 디코드된 비트맵의 크기는 그대로다. 디코드하는 동안 원래 크기의 임시 버퍼를 쓰고 CPU를 조금 더 쓴다.
+- Play의 화면: Play 스토어와 Play 서비스가 `Display.getMetrics()`로 크기를 셈하는 곳이 있으면 그 값은 480 dpi 기준이다. 화면을 그리는 밀도는 그대로이고, `createDisplayContext`로 만든 컨텍스트에서 그리는 창만 480 dpi로 그려져 커진다. 그런 창이 있는지는 확인하지 못했다.
+- Play의 기기 호환성과 인증: 기기가 알리는 밀도가 바뀌면 Play의 앱 필터(`compatible-screens`)가 달라진다. xxhdpi에서는 걸러지는 앱이 줄 것으로 본다. Play Integrity와 기기 인증은 밀도를 판정 기준으로 쓴다고 알려진 바가 없다. DSA는 인증된 기기가 아니므로(FR-32) 판정은 지금과 같다고 보지만, 확인하지 못했다.
+- 이미 설치된 앱: 옛 분할이 남아 Android가 계속 낮은 밀도 그림을 고른다. 앱을 지우고 Play로 다시 설치해야 한다.
+
+### 확인하지 못한 것
+
+- 실기. 빌드하거나 실행하지 않았다. Play 스토어가 새 밀도를 읽는지, 캐시한 device configuration을 언제 다시 올리는지, 다시 설치한 FLO가 `split_config.xxhdpi.apk`만 받는지, 단추가 선명한지는 PC에서 본다.
+- Play 서비스(체크인)가 밀도를 어디서 읽는지. 두 앱 모두에 같은 값을 주므로 어느 쪽이 기준이어도 맞는다.
+
 ## R55. 앱 다섯 개를 연 DSA가 4~5 GiB를 쓰는 까닭: 같은 시점으로 다시 맞춘 메모리 내역 (NFR-1, NFR-2)
 
 **질문.** 소유자 PC에서 설정, FLO, YouTube, Play 스토어, Dragon Ball Legends(Unity 게임)를 열고 APKPure가 창 없이 떠 있을 때, 작업 관리자 기준 DSA가 5 GB 가까이 썼다. 그 메모리가 꼭 필요한지, 어디를 줄일 수 있는지 본다.

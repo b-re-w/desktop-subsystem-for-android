@@ -1,8 +1,12 @@
 # Publishes the Android images: builds the guest kernel, makes each image in
 # dsa/guest/image/inputs.json with the project's keys, publishes each one as the GitHub
-# release android-<version>, and publishes the signed release lists the service reads as
-# the release "images": images.json and images.json.sig for x86_64 hosts, and
-# images-arm64.json and images-arm64.json.sig for ARM64 hosts, whose image is 64-bit only. With an installer version it
+# release android-<version> (never GitHub's latest release, and a GitHub pre-release for a
+# pre-release image), and publishes the signed release lists the service reads as the
+# release "images": images.json and images.json.sig for x86_64 hosts, and
+# images-arm64.json and images-arm64.json.sig for ARM64 hosts, whose image is 64-bit only.
+# Those name stable images only, as every installed DSA reads them; images-prerelease.json
+# and images-prerelease-arm64.json name the stable and the pre-release images, and only
+# computers on the pre-release channel read them. With an installer version it
 # also publishes the installer as the release v<version>, and the signed program list the
 # service updates DSA itself from, in "images" too, and the ARM64 installer beside it with
 # its own program list.
@@ -24,6 +28,15 @@
 # its channel, so a computer starts on it. program.json and program-arm64.json, which the
 # services from before the channels read, keep naming the highest version published
 # (.github/scripts/release/publish-program-list.sh).
+#
+# The version says the channel, and the channel job refuses one that does not follow the
+# rules (.github/scripts/release/check-release-version.sh). DSA: a stable release moves only
+# major.minor and has patch 0 (1.0.0, then 1.1.0 or 2.0.0); a pre-release moves only the
+# patch (1.0.1, 1.0.2, ... until 1.1.0); a development build is X.Y.Z-dev.<run number>. An
+# image's last part is DSA's revision: stable -<n>, pre-release -<n>.<m>, development
+# -<n>.<m>-dev.<run number>, ordered -15 < -15.1-dev.k < -15.1 < -15.2 < -16
+# (dsa/guest/image/make-image.py --next-revision --channel). Images released alone go on the
+# channel input's channel.
 #
 # It runs only by hand. It needs these repository secrets:
 #   DSA_ANDROID_KEYS_1, _2    the Android key set from dsa/guest/image/make-keys.sh, split
@@ -56,8 +69,9 @@
 # nothing (no release, tag, image list, program list or channel) and keeps what it made as
 # workflow artifacts for three days: development-image and development-image-list (the image's
 # files, and the signed image list that names them), and development-installer (setup.exe).
-# Its image's version ends in -dev.<run number> and its installer's version is
-# <next release>-dev.<run number>, so neither is taken for a release.
+# Its image's version is the next pre-release revision with -dev.<run number> after it
+# (-<n>.<m>-dev.<run number>) and its installer's version is
+# <next pre-release>-dev.<run number>, so neither is taken for a release.
 # scripts/install-dev-build.ps1 installs them on a computer.
 
 name: Image release
@@ -66,7 +80,7 @@ on:
   workflow_dispatch:
     inputs:
       installer_version:
-        description: "Also publish the installer as this version (for example 0.1.0); empty for images only"
+        description: "Also publish the installer as this version: stable X.Y.0 (such as 1.1.0), pre-release X.Y.Z with Z above 0 (such as 1.0.1); empty for images only"
         required: false
         default: ""
       rebuild_images:
@@ -75,7 +89,7 @@ on:
         required: false
         default: true
       channel:
-        description: "The installer's release channel. Every version below 1.0, and every release from develop, is a pre-release; stable is refused for them"
+        description: "The release channel of the installer and the images (stable images -n, pre-release images -n.m). Every version below 1.0, and every release from develop, is a pre-release; stable is refused for them"
         type: choice
         options:
           - prerelease
@@ -152,40 +166,67 @@ jobs:
     timeout-minutes: 5
     outputs:
       channel: ${{ steps.channel.outputs.channel }}
+      image_channel: ${{ steps.channel.outputs.image_channel }}
       programs_exclude: ${{ steps.matrix.outputs.programs_exclude }}
       images_exclude: ${{ steps.matrix.outputs.images_exclude }}
     steps:
       - uses: actions/checkout@v4
+      # The channel also decides the images' revision: stable -<n>, pre-release -<n>.<m>,
+      # development -<n>.<m>-dev.<run number> (image_channel). An installer version follows
+      # the version rules of its channel (.github/scripts/release/check-release-version.sh):
+      # stable X.Y.0 above the newest stable, pre-release X.Y.Z with Z above 0 on the newest
+      # stable's X.Y and above every patch published on it.
       - id: channel
         env:
           REF: ${{ github.ref }}
           VERSION: ${{ inputs.installer_version }}
           REQUESTED: ${{ inputs.channel || 'prerelease' }}
           DEV_BUILD: ${{ inputs.dev_build }}
+          REPLACE: ${{ inputs.replace_release }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           # A development build publishes nothing, and is made from develop only, where the
           # work is integrated. Its installer goes on the pre-release channel, as every build
-          # from develop does.
+          # from develop does, and its version is <next pre-release>-dev.<run number>.
           if [[ "$DEV_BUILD" == true ]]; then
             branch="$(.github/scripts/release/release-branch-channel.sh "$REF")"
             if [[ "$branch" != develop ]]; then
               echo "::error::A Development build is made from develop only, not from $branch." >&2
               exit 1
             fi
+            if [[ -n "$VERSION" && ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$ ]]; then
+              echo "::error::A Development build's installer is <major>.<minor>.<patch>-dev.<run number>, not $VERSION." >&2
+              exit 1
+            fi
             echo "A Development build of develop${VERSION:+ with the installer $VERSION}; nothing is published"
             echo "channel=prerelease" >> "$GITHUB_OUTPUT"
+            echo "image_channel=development" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # A release publishes under DSA's name, so it runs in the official repository only.
           .github/scripts/release/official-repository.sh --require
           if [[ -z "$VERSION" ]]; then
             branch="$(.github/scripts/release/release-branch-channel.sh "$REF")"
-            echo "The images are released from $branch"
+            # Images released alone go on the channel asked for; develop releases
+            # pre-releases only.
+            image_channel="$REQUESTED"
+            if [[ "$branch" == develop && "$image_channel" == stable ]]; then
+              echo "::error::develop publishes pre-releases only; release the images from main to publish them on the stable channel, or choose prerelease." >&2
+              exit 1
+            fi
+            echo "The images are released from $branch on the $image_channel channel"
+            echo "image_channel=$image_channel" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           channel="$(.github/scripts/release/release-branch-channel.sh "$REF" "$VERSION" "$REQUESTED")"
+          # The releases published so far decide which versions may come next.
+          gh api --paginate "repos/$OFFICIAL_REPOSITORY/releases?per_page=100" --jq '.[].tag_name' > "$RUNNER_TEMP/tags.txt"
+          replace=()
+          [[ "$REPLACE" == true ]] && replace=(--replace)
+          .github/scripts/release/check-release-version.sh check "$VERSION" "$channel" "${replace[@]}" < "$RUNNER_TEMP/tags.txt"
           echo "DSA $VERSION is released from ${REF#refs/heads/} on the $channel channel"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "image_channel=$channel" >> "$GITHUB_OUTPUT"
 
       # A fork has none of the official secrets until its owner adds them; this names the
       # missing ones before an hour of building, instead of a build step failing on them.
@@ -613,6 +654,9 @@ jobs:
       framework_run_id: ${{ steps.framework.outputs.run_id }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The staleness check below compares the taken runs' commits with the history.
+          fetch-depth: 0
 
       - name: Find the Translator build run with the pinned packages
         id: translator
@@ -704,6 +748,34 @@ jobs:
           done
           echo "::error::No passing Framework build run on develop has ${wanted[*]}. Run the Framework build workflow, or release with framework off."
           exit 1
+
+      # The Framework and Translator builds run only by hand, so one can be forgotten after
+      # its lock or patches change. This warns, without failing, when the run taken was made
+      # from a commit older than the newest change to its inputs.
+      - name: Warn when a taken build is older than its inputs
+        if: ${{ !cancelled() && (steps.translator.outputs.run_id || steps.framework.outputs.run_id) }}
+        env:
+          TRANSLATOR_RUN: ${{ steps.translator.outputs.run_id }}
+          FRAMEWORK_RUN: ${{ steps.framework.outputs.run_id }}
+        run: |
+          check() {
+            local label="$1" run="$2" workflow="$3"; shift 3
+            [[ -n "$run" ]] || return 0
+            local built changed
+            built="$(gh api "repos/${{ github.repository }}/actions/runs/$run" --jq .head_sha)"
+            changed="$(git log -1 --format=%H HEAD -- "$@")"
+            [[ -n "$changed" ]] || return 0
+            if git cat-file -e "$built^{commit}" 2>/dev/null && git merge-base --is-ancestor "$changed" "$built"; then
+              return 0
+            fi
+            echo "::warning title=$label build may be stale::run $run was built from ${built:0:12}, but ${changed:0:12} changed $* after it. Run the $label build ($workflow) by hand and make this build again."
+            {
+              echo "## The $label build may be stale"
+              echo "Run $run was built from \`${built:0:12}\`; \`${changed:0:12}\` changed $* after it. Start the $label build by hand."
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+          check Translator "$TRANSLATOR_RUN" translator.yml dsa/guest/arm-translation/digitalis-lock.json
+          check Framework "$FRAMEWORK_RUN" framework.yml dsa/guest/framework/framework-lock.json dsa/guest/framework/patches
 
   image:
     name: ${{ inputs.dev_build && 'Make' || 'Make and publish' }} the guest image (ubuntu-latest, Android ${{ matrix.android }}, ${{ matrix.arch }})
@@ -914,16 +986,21 @@ jobs:
           uv run dsa/graphics/check-guest-driver.py --executable .scratch/gnss-hal/dsa-gnss .scratch/aosp-inputs/*/*target_files*.zip
 
       # Every image this workflow makes is new content (this commit's programs, framework and
-      # translator), so it gets a revision no release has: one past the highest published for
-      # its build and architecture. Reusing a version replaced a published image's files under
-      # the hosts that already had it, and they never saw it as an update.
+      # translator), so it gets a revision no release has. Reusing a version replaced a
+      # published image's files under the hosts that already had it, and they never saw it as
+      # an update. The channel decides its form: a stable image is -<n>, one past the highest
+      # n published for its build and architecture; a pre-release is -<n>.<m> on the newest
+      # n, one past its highest m; a development build is the next pre-release's -<n>.<m>,
+      # with -dev.<run number> after it.
       - name: Choose the image revision
         id: revision
+        env:
+          IMAGE_CHANNEL: ${{ needs.channel.outputs.image_channel }}
         run: |
           # The published releases: a Development build in a fork must be newer than them too,
           # or the installed DSA would not take its image.
           gh api --paginate "repos/$OFFICIAL_REPOSITORY/releases?per_page=100" --jq '.[].tag_name' > "$RUNNER_TEMP/tags.txt"
-          revision="$(uv run dsa/guest/image/make-image.py --major ${{ matrix.android }} --arch ${{ matrix.arch }} --next-revision < "$RUNNER_TEMP/tags.txt")"
+          revision="$(uv run dsa/guest/image/make-image.py --major ${{ matrix.android }} --arch ${{ matrix.arch }} --next-revision --channel "$IMAGE_CHANNEL" < "$RUNNER_TEMP/tags.txt")"
           echo "the image is revision $revision"
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
 
@@ -989,6 +1066,8 @@ jobs:
       - name: Publish the image
         id: publish
         if: ${{ !inputs.dev_build && github.repository == 'thisisthepy/desktop-subsystem-for-android' }}
+        env:
+          IMAGE_CHANNEL: ${{ needs.channel.outputs.image_channel }}
         run: |
           dir="$(echo dsa/target/image/*/)"
           version="$(jq -r .version "$dir/image.json")"
@@ -1017,7 +1096,11 @@ jobs:
           fi
           # The tag names the commit this run built; gh release create would reuse a stale one.
           .github/scripts/release/check-release-tag.sh "$tag" "$GITHUB_SHA"
-          gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" \
+          # An image release is never GitHub's latest release, which is the installer's; a
+          # pre-release image is published as a GitHub pre-release.
+          flags=(--latest=false)
+          [[ "$IMAGE_CHANNEL" == prerelease ]] && flags+=(--prerelease)
+          gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" "${flags[@]}" \
             --title "Android image $version" \
             --notes "Android image $version for Desktop Subsystem for Android. The service downloads it through the signed list in the release \"images\"."
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
@@ -1082,7 +1165,7 @@ jobs:
     name: Sign and ${{ inputs.dev_build && 'keep' || 'publish' }} the release list
     # A skipped job before the image (the arm64 kernel, which a development build does not
     # make) would skip this one too under the implicit success() check.
-    needs: image
+    needs: [channel, image]
     if: inputs.rebuild_images && !cancelled() && needs.image.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -1113,32 +1196,90 @@ jobs:
           merge-multiple: true
           path: entries
 
-      # One list per host architecture, so a host never picks an image it cannot boot:
-      # images.json (x86_64, the list existing hosts read) and images-arm64.json.
+      # One list per host architecture, so a host never picks an image it cannot boot, and
+      # per release channel, so a computer on the stable channel never gets a pre-release
+      # image:
+      #   images.json, images-arm64.json          stable images only: every installed DSA
+      #                                           reads these, the stable computers alone
+      #   images-prerelease.json,                 the stable images and the pre-release ones,
+      #   images-prerelease-arm64.json            which computers on the pre-release channel
+      #                                           read instead
+      # A stable release writes both lists of each architecture with its images. A pre-release
+      # writes the pre-release lists only, with its images and the published stable ones, and
+      # leaves the stable lists as they are. A development build writes images.json, which is
+      # kept as an artifact and never published.
       - name: Write the lists
         id: write
         env:
           # A development build made the x86_64 image only.
           ARCHES: ${{ inputs.dev_build && 'x86_64' || 'x86_64 arm64' }}
+          IMAGE_CHANNEL: ${{ needs.channel.outputs.image_channel }}
         run: |
-          # The supported versions are written once, in dsa/android-versions.json; an image
-          # of another version is a mistake in the inputs, not a version to offer.
+          mkdir -p .scratch/published-lists
           for arch in $ARCHES; do
-            list=images.json
-            [[ "$arch" == arm64 ]] && list=images-arm64.json
-            jq -n --slurpfile versions dsa/android-versions.json \
-              --slurpfile images <(jq -s . entries/*-"$arch".json) \
-              '{format: 1, supported_majors: ($versions[0].supported_majors | unique), images: $images[0]}' \
-              > "$list"
-            stray="$(jq '[.supported_majors as $s | .images[] | select(.android_major as $m | $s | index($m) | not) | .version]' "$list")"
-            if [[ "$stray" != "[]" ]]; then
-              echo "::error::$list has images of unsupported versions: $stray"
-              exit 1
-            fi
-            cat "$list"
+            suffix=""
+            [[ "$arch" == arm64 ]] && suffix="-arm64"
+            jq -s . entries/*-"$arch".json > ".scratch/run-$arch.json"
+            case "$IMAGE_CHANNEL" in
+              prerelease)
+                # The stable images already published go on the pre-release list beside this
+                # run's; the list job checks their signature before it signs the list.
+                stable_list=".scratch/published-lists/images$suffix.json"
+                if gh release download images --repo "$OFFICIAL_REPOSITORY" --pattern "images$suffix.json" \
+                     --dir .scratch/published-lists >/dev/null 2>&1; then
+                  gh release download images --repo "$OFFICIAL_REPOSITORY" --pattern "images$suffix.json.sig" \
+                    --dir .scratch/published-lists
+                  jq '.images' "$stable_list" > ".scratch/stable-$arch.json"
+                else
+                  echo "[]" > ".scratch/stable-$arch.json"
+                fi
+                jq -n --slurpfile stable ".scratch/stable-$arch.json" --slurpfile run ".scratch/run-$arch.json" \
+                  '$run[0] + [$stable[0][] | select(.version as $v | $run[0] | map(.version) | index($v) | not)]' \
+                  > ".scratch/images-$arch.json"
+                lists=("images-prerelease$suffix.json")
+                ;;
+              stable)
+                cp ".scratch/run-$arch.json" ".scratch/images-$arch.json"
+                lists=("images$suffix.json" "images-prerelease$suffix.json")
+                ;;
+              development)
+                cp ".scratch/run-$arch.json" ".scratch/images-$arch.json"
+                lists=("images$suffix.json")
+                ;;
+              *)
+                echo "::error::the image channel is stable, prerelease or development, not $IMAGE_CHANNEL"
+                exit 1
+                ;;
+            esac
+            for list in "${lists[@]}"; do
+              # The supported versions are written once, in dsa/android-versions.json; an image
+              # of another version is a mistake in the inputs, not a version to offer.
+              jq -n --slurpfile versions dsa/android-versions.json \
+                --slurpfile images ".scratch/images-$arch.json" \
+                '{format: 1, supported_majors: ($versions[0].supported_majors | unique), images: $images[0]}' \
+                > "$list"
+              stray="$(jq '[.supported_majors as $s | .images[] | select(.android_major as $m | $s | index($m) | not) | .version]' "$list")"
+              if [[ "$stray" != "[]" ]]; then
+                echo "::error::$list has images of unsupported versions: $stray"
+                exit 1
+              fi
+              cat "$list"
+            done
           done
+          # A published stable list names stable images only: a revision -<n>, never -<n>.<m>
+          # or -dev.<k>. Installed computers on the stable channel take what it names.
+          if [[ "$IMAGE_CHANNEL" != development ]]; then
+            for list in images.json images-arm64.json; do
+              [[ -f "$list" ]] || continue
+              unstable="$(jq '[.images[].version | select((split("-")[2] // "" | contains(".")) or contains("-dev."))]' "$list")"
+              if [[ "$unstable" != "[]" ]]; then
+                echo "::error::$list would name images that are not stable: $unstable"
+                exit 1
+              fi
+            done
+          fi
           # The installer's first screen names the newest Android the list supports.
-          echo "newest_major=$(jq '.supported_majors | max' images.json)" >> "$GITHUB_OUTPUT"
+          echo "newest_major=$(jq '.supported_majors | max' dsa/android-versions.json)" >> "$GITHUB_OUTPUT"
 
       - name: Sign and check the lists
         id: sign
@@ -1154,12 +1295,23 @@ jobs:
           umask 077
           key="$RUNNER_TEMP/release.key"
           printf '%s\n' "$SIGNING_KEY" > "$key"
-          lists=(../images.json)
-          [[ -f ../images-arm64.json ]] && lists+=(../images-arm64.json)
+          public="$(target/release/dsa-release public-key "$key")"
+          # The published stable lists a pre-release list takes its stable images from were
+          # signed with this key, or their images are not taken into a list it signs.
+          for published in ../.scratch/published-lists/images*.json; do
+            [[ -f "$published" ]] || continue
+            if ! target/release/dsa-release verify "$public" "$published"; then
+              rm -f "$key"
+              echo "::error::the published $(basename "$published") is not signed with DSA_RELEASE_SIGNING_KEY, so its images are not taken into the pre-release list" >&2
+              exit 1
+            fi
+          done
+          # Every list the step before wrote: images.json and images-arm64.json (stable),
+          # images-prerelease.json and images-prerelease-arm64.json.
+          lists=(../images*.json)
           for list in "${lists[@]}"; do
             target/release/dsa-release sign "$key" "$list"
           done
-          public="$(target/release/dsa-release public-key "$key")"
           rm -f "$key"
           for list in "${lists[@]}"; do
             target/release/dsa-release verify "$public" "$list"
@@ -1180,14 +1332,35 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+      # A stable release publishes all four lists; a pre-release the pre-release lists only, so
+      # the stable lists that installed stable computers read never name a pre-release image.
       - name: Publish the lists
         if: ${{ !inputs.dev_build && github.repository == 'thisisthepy/desktop-subsystem-for-android' }}
+        env:
+          IMAGE_CHANNEL: ${{ needs.channel.outputs.image_channel }}
         run: |
-          lists=(images.json images.json.sig images-arm64.json images-arm64.json.sig)
+          case "$IMAGE_CHANNEL" in
+            stable)
+              lists=(images.json images-arm64.json images-prerelease.json images-prerelease-arm64.json) ;;
+            prerelease)
+              lists=(images-prerelease.json images-prerelease-arm64.json) ;;
+            *)
+              echo "::error::the image channel $IMAGE_CHANNEL publishes no list" >&2
+              exit 1 ;;
+          esac
+          uploads=()
+          for list in "${lists[@]}"; do
+            [[ -f "$list" && -f "$list.sig" ]] || { echo "::error::$list was not written and signed" >&2; exit 1; }
+            uploads+=("$list" "$list.sig")
+          done
+          if [[ "$IMAGE_CHANNEL" == prerelease && -e images.json ]]; then
+            echo "::error::a pre-release wrote images.json, which installed stable computers read" >&2
+            exit 1
+          fi
           if gh release view images >/dev/null 2>&1; then
-            gh release upload images "${lists[@]}" --clobber
+            gh release upload images "${uploads[@]}" --clobber
           else
-            gh release create images "${lists[@]}" --target "$GITHUB_SHA" \
+            gh release create images "${uploads[@]}" --target "$GITHUB_SHA" --latest=false \
               --title "Android image list" \
               --notes "The signed list of Android images the Desktop Subsystem for Android service reads."
           fi
@@ -1207,6 +1380,7 @@ jobs:
       newest_major: ${{ steps.list.outputs.newest_major }}
     env:
       GH_TOKEN: ${{ github.token }}
+      CHANNEL: ${{ needs.channel.outputs.channel }}
     steps:
       - uses: actions/checkout@v4
 
@@ -1230,8 +1404,13 @@ jobs:
             exit 1
           fi
           # The official repository's list, which every installed DSA reads, also when this
-          # is a Development build in a fork.
+          # is a Development build in a fork. A pre-release takes its kernel from the
+          # pre-release list, which names the newest images, once one is published.
           gh release download images --repo "$OFFICIAL_REPOSITORY" --pattern 'images.json*' --dir ..
+          if [[ "$CHANNEL" == prerelease ]]; then
+            gh release download images --repo "$OFFICIAL_REPOSITORY" --pattern 'images-prerelease.json*' --dir .. \
+              || echo "no pre-release image list is published yet; the kernel comes from images.json"
+          fi
           cargo build -q --release -p dsa-host-core --bin dsa-release
           umask 077
           key="$RUNNER_TEMP/release.key"
@@ -1242,16 +1421,25 @@ jobs:
             echo "::error::The image list $OFFICIAL_REPOSITORY published is not signed by the DSA_RELEASE_SIGNING_KEY secret of ${GITHUB_REPOSITORY}. The installer trusts that key and reads that list, so it would take no image and no update; a fork needs the official repository's DSA_RELEASE_SIGNING_KEY." >&2
             exit 1
           fi
+          if [[ -f ../images-prerelease.json ]] && ! target/release/dsa-release verify "$public" ../images-prerelease.json; then
+            echo "::error::The pre-release image list $OFFICIAL_REPOSITORY published is not signed by the DSA_RELEASE_SIGNING_KEY secret of ${GITHUB_REPOSITORY}." >&2
+            exit 1
+          fi
           echo "public_key=$public" >> "$GITHUB_OUTPUT"
           echo "newest_major=$(jq '.supported_majors | max' ../images.json)" >> "$GITHUB_OUTPUT"
 
       # Every image carries the same kernel; the newest image's is taken and checked
-      # against the hash the signed list gives.
+      # against the hash the signed list gives: the newest by major, build and pre-release
+      # number (-<n>.<m>), from the pre-release list on the pre-release channel.
       - name: Take the kernel
         if: ${{ !inputs.rebuild_images }}
         run: |
-          read -r url sha < <(jq -r '.images | max_by([.android_major, .build])
-            | .files[] | select(.name == "bzImage") | "\(.url) \(.sha256)"' images.json)
+          list=images.json
+          [[ "$CHANNEL" == prerelease && -f images-prerelease.json ]] && list=images-prerelease.json
+          echo "the kernel comes from the newest image of $list"
+          read -r url sha < <(jq -r '.images
+            | max_by([.android_major, .build, ((.version | split("-")[2] // "" | split(".")[1] // "0") | tonumber? // 0)])
+            | .files[] | select(.name == "bzImage") | "\(.url) \(.sha256)"' "$list")
           if [[ -z "$url" ]]; then
             echo "::error::The newest published image has no bzImage." >&2
             exit 1
@@ -1557,12 +1745,23 @@ jobs:
             gh run download ${{ github.run_id }} --repo ${{ github.repository }} --name kernel-arm64 --dir $dir
             if ($LASTEXITCODE -ne 0) { throw "this run has no kernel-arm64 artifact" }
           } else {
-            gh release download images --repo ${{ github.repository }} --pattern 'images-arm64.json*' --dir $dir
-            if ($LASTEXITCODE -ne 0) { throw "there is no published arm64 image list" }
-            & dsa\target\release\dsa-release.exe verify $env:PUBLIC_KEY "$dir\images-arm64.json"
-            if ($LASTEXITCODE -ne 0) { throw "the published arm64 image list does not verify" }
-            $list = Get-Content -Raw "$dir\images-arm64.json" | ConvertFrom-Json
-            $newest = $list.images | Sort-Object android_major, build | Select-Object -Last 1
+            # A pre-release takes the kernel from the pre-release list, which names the newest
+            # images, once one is published.
+            $name = 'images-arm64.json'
+            if ($env:CHANNEL -eq 'prerelease') {
+              gh release download images --repo ${{ github.repository }} --pattern 'images-prerelease-arm64.json*' --dir $dir
+              if ($LASTEXITCODE -eq 0) { $name = 'images-prerelease-arm64.json' }
+            }
+            if ($name -eq 'images-arm64.json') {
+              gh release download images --repo ${{ github.repository }} --pattern 'images-arm64.json*' --dir $dir
+              if ($LASTEXITCODE -ne 0) { throw "there is no published arm64 image list" }
+            }
+            & dsa\target\release\dsa-release.exe verify $env:PUBLIC_KEY "$dir\$name"
+            if ($LASTEXITCODE -ne 0) { throw "the published $name does not verify" }
+            $list = Get-Content -Raw "$dir\$name" | ConvertFrom-Json
+            # Newest by major, build and pre-release number (-<n>.<m>).
+            $prerelease = { $m = (($_.version -split '-')[2] -split '\.')[1]; if ($m) { [int]$m } else { 0 } }
+            $newest = $list.images | Sort-Object android_major, build, $prerelease | Select-Object -Last 1
             $kernel = $newest.files | Where-Object name -eq 'Image'
             if (-not $kernel) { throw "the newest published arm64 image has no Image" }
             Invoke-WebRequest -Uri $kernel.url -OutFile "$dir\Image"

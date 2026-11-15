@@ -60,7 +60,7 @@ use dsa_host_core::compositor::window_mode::{
 };
 use dsa_host_core::compositor::window_sizing::{
     maximized_outer, maximized_position, min_client_size, rescaled_rect, size_is_held,
-    to_task_position, to_task_size, to_window_position, SizeProposal,
+    to_task_position, to_task_size, to_window_position, MoveLoop, SizeProposal,
 };
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::ime::ImeCursor;
@@ -87,8 +87,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     SWP_NOSIZE, SWP_NOZORDER, SW_SHOW, SW_SHOWNOACTIVATE, SW_SHOWNORMAL, WA_INACTIVE, WINDOWPOS,
     WINDOW_EX_STYLE, WINDOW_STYLE, WMSZ_BOTTOMLEFT, WMSZ_LEFT, WMSZ_TOP, WMSZ_TOPLEFT,
     WMSZ_TOPRIGHT, WM_ACTIVATE, WM_APP, WM_CLOSE, WM_DPICHANGED, WM_ENTERSIZEMOVE, WM_ERASEBKGND,
-    WM_EXITSIZEMOVE, WM_GETMINMAXINFO, WM_GETOBJECT, WM_NCCREATE, WM_NCDESTROY, WM_PAINT,
-    WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCOLORCHANGE, WM_THEMECHANGED, WM_TIMER,
+    WM_EXITSIZEMOVE, WM_GETMINMAXINFO, WM_GETOBJECT, WM_MOVING, WM_NCCREATE, WM_NCDESTROY,
+    WM_PAINT, WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCOLORCHANGE, WM_THEMECHANGED, WM_TIMER,
     WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING, WNDCLASSEXW, WS_EX_APPWINDOW,
     WS_EX_NOREDIRECTIONBITMAP, WS_OVERLAPPEDWINDOW,
 };
@@ -107,10 +107,15 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     WM_NCRBUTTONDOWN, WM_POINTERDOWN, WM_RBUTTONDOWN,
 };
 
-use crate::compositor::log::{input_trace, input_trace_on};
+use crate::compositor::log::{
+    input_trace, input_trace_on, trace_detailed, trace_move_ended, trace_moving, trace_place,
+};
 use crate::compositor::log::{note, CompositorLogger};
 use crate::compositor::present::{self, Gpu, WindowPresenter};
 use crate::compositor::window_marks;
+use std::fmt::Write as _;
+use windows_sys::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
+use windows_sys::Win32::UI::WindowsAndMessaging::IsWindowArranged;
 
 use super::accessibility::{AccessibilityWindow, ApiConnect, CaptionCells, WM_APP_ACCESSIBILITY};
 use super::caption::{task_frame, CaptionWindow};
@@ -336,6 +341,14 @@ struct WindowData {
     /// Which edges the user drags (left, top), so a window that takes the size of a frame
     /// keeps the other edges where they are.
     drag_edges: Cell<(bool, bool)>,
+    /// Whether the move loop has moved the window or dragged an edge yet: only then is the
+    /// user dragging it.
+    move_loop: Cell<MoveLoop>,
+    /// Whether the window is in its move or size loop, for the resize trace: plain moves
+    /// there are logged a few a second (`win.move_loop`), not each.
+    in_move_loop: Cell<bool>,
+    /// The window size the trace last logged, so a drag logs a change of size.
+    traced_size: Cell<(u32, u32)>,
     /// Whether the user is dragging one of the window's edges now.
     sizing: Cell<bool>,
     /// Whether the window holds the size the desktop gave it (maximised, snapped, full
@@ -806,18 +819,52 @@ unsafe extern "system" fn task_window_proc(
                 }
                 // WM_SIZING says when the drag is of an edge.
                 data.sizing.set(false);
-                (data.report)(FromHost::Dragging {
-                    task_id: data.task_id,
-                    dragging: message == WM_ENTERSIZEMOVE,
-                });
+                // A click on the title bar enters the loop whether or not it moves the window,
+                // as the first click of a double click does: the drag is reported only once
+                // the window moves (WM_MOVING) or an edge is dragged (WM_SIZING).
+                let mut move_loop = data.move_loop.get();
+                let report = if message == WM_ENTERSIZEMOVE {
+                    move_loop.entered();
+                    None
+                } else {
+                    move_loop.exited()
+                };
+                data.move_loop.set(move_loop);
+                let entered = message == WM_ENTERSIZEMOVE;
+                data.in_move_loop.set(entered);
+                if trace_detailed() {
+                    if !entered {
+                        trace_move_ended(data.logger.as_deref(), data.task_id);
+                    }
+                    let event = if entered { "enter" } else { "exit" };
+                    let detail = format!("event={event} {}", placement_words(hwnd));
+                    trace_window(data, "win.move_loop", window_rect(hwnd), &detail);
+                }
+                if let Some(dragging) = report {
+                    (data.report)(FromHost::Dragging {
+                        task_id: data.task_id,
+                        dragging,
+                    });
+                }
             }
             0
+        }
+        WM_MOVING => {
+            if let Some(data) = window_data(hwnd) {
+                report_drag_started(data);
+                if trace_detailed() {
+                    let (pos, size) = rect_parts(&*(lparam as *const RECT));
+                    trace_moving(data.logger.as_deref(), data.task_id, pos, size);
+                }
+            }
+            DefWindowProcW(hwnd, message, wparam, lparam)
         }
         WM_SIZING => {
             // Which edge the user drags, for when the window later takes the size of a frame.
             if let Some(data) = window_data(hwnd) {
                 let edge = wparam as u32;
                 data.sizing.set(true);
+                report_drag_started(data);
                 data.drag_edges.set((
                     matches!(edge, WMSZ_LEFT | WMSZ_TOPLEFT | WMSZ_BOTTOMLEFT),
                     matches!(edge, WMSZ_TOP | WMSZ_TOPLEFT | WMSZ_TOPRIGHT),
@@ -883,8 +930,20 @@ unsafe extern "system" fn task_window_proc(
             0
         }
         WM_WINDOWPOSCHANGING => {
+            // What Windows asks for, and each step below that changes it, for the trace.
+            let snap = |pos: &WINDOWPOS| (pos.x, pos.y, pos.cx, pos.cy, pos.flags);
+            let asked = snap(&*(lparam as *const WINDOWPOS));
+            let mut why: Vec<&str> = Vec::new();
             let result = DefWindowProcW(hwnd, message, wparam, lparam);
             let pos = &mut *(lparam as *mut WINDOWPOS);
+            let mut step = |pos: &WINDOWPOS, last: &mut (i32, i32, i32, i32, u32), word| {
+                if snap(pos) != *last {
+                    why.push(word);
+                    *last = snap(pos);
+                }
+            };
+            let mut last = asked;
+            step(pos, &mut last, "min_max");
             // A window fixed in size takes no size the user proposes (a snap, say); the sizes
             // it gives itself, for Android or for a change of mode, still apply.
             if let Some(data) = window_data(hwnd) {
@@ -894,6 +953,7 @@ unsafe extern "system" fn task_window_proc(
                     pos.flags |= SWP_NOSIZE;
                 }
             }
+            step(pos, &mut last, "fixed_size");
             // A maximised window's client area is its own monitor's work area, whatever size
             // was proposed, before the guest is asked for it below: never the whole monitor,
             // under the taskbar, and never a size measured on another monitor.
@@ -914,6 +974,7 @@ unsafe extern "system" fn task_window_proc(
                     pos.cy = height;
                 }
             }
+            step(pos, &mut last, "max_work_area");
             // DefWindowProc above has already kept the proposed size to WM_GETMINMAXINFO.
             if pos.flags & SWP_NOSIZE == 0 && IsIconic(hwnd) == 0 {
                 if let Some(data) = window_data(hwnd) {
@@ -926,6 +987,7 @@ unsafe extern "system" fn task_window_proc(
                     keep_to_frame(hwnd, data, pos);
                 }
             }
+            step(pos, &mut last, "keep_to_frame");
             // A maximised window fills its work area, and has its client area at the work
             // area's corner, whatever position was proposed. One smaller than the work area
             // is centred on it rather than left in its top left corner.
@@ -942,12 +1004,25 @@ unsafe extern "system" fn task_window_proc(
                     pos.y = maximized_position(work.top, work.bottom - work.top, pos.cy, top);
                 }
             }
+            step(pos, &mut last, "max_position");
+            if let Some(data) = window_data(hwnd).filter(|_| trace_detailed()) {
+                trace_pos_changing(hwnd, data, asked, snap(pos), &why);
+            }
             result
         }
         WM_WINDOWPOSCHANGED => {
             // Sends WM_SIZE, where the window takes a new size with its frame. A size it chose
             // and did not get no longer holds frames back.
             let result = DefWindowProcW(hwnd, message, wparam, lparam);
+            if let Some(data) = window_data(hwnd).filter(|_| trace_detailed()) {
+                let pos = &*(lparam as *const WINDOWPOS);
+                let rect = window_rect(hwnd);
+                let flags = pos.flags;
+                if placement_worth_tracing(data, flags, rect.1) {
+                    let detail = format!("{} {}", swp_words(flags), placement_words(hwnd));
+                    trace_window(data, "win.pos_changed", rect, &detail);
+                }
+            }
             if let Some(presenter) =
                 window_data(hwnd).and_then(|data| data.presenter.borrow().clone())
             {
@@ -956,8 +1031,10 @@ unsafe extern "system" fn task_window_proc(
             result
         }
         WM_DPICHANGED => {
-            // The scale goes first, so the task gets its new density before the size that
-            // goes with it, which the resize below reports.
+            // The scale goes first, so the core shows the task at the new scale before the
+            // resize below reports the window's new size. A task that follows its monitor
+            // takes the monitor's density only when the move ends, at the size the window has
+            // then, so the window keeps that size.
             let dpi = (wparam & 0xffff) as u32;
             let data = window_data(hwnd);
             if let Some(data) = data {
@@ -1025,14 +1102,26 @@ unsafe extern "system" fn task_window_proc(
                 data.self_sizing.set(true);
                 data.rescaling.set(true);
             }
-            SetWindowPos(
+            if let Some(data) = data {
+                let ((sx, sy), (sw, sh)) = rect_parts(suggested);
+                trace_window(
+                    data,
+                    "win.dpi_changed",
+                    window_rect(hwnd),
+                    &format!(
+                        "dpi={dpi} suggested={sx},{sy},{sw}x{sh} limit={}x{} held={held}",
+                        limit.0.min(99_999),
+                        limit.1.min(99_999)
+                    ),
+                );
+            }
+            set_pos_traced(
                 hwnd,
                 std::ptr::null_mut(),
-                x,
-                y,
-                width,
-                height,
+                (x, y, width, height),
                 SWP_NOZORDER | SWP_NOACTIVATE,
+                data,
+                "dpi_changed",
             );
             if let Some(data) = data {
                 data.rescaling.set(false);
@@ -1380,14 +1469,13 @@ unsafe fn take_kept_frame(hwnd: HWND, data: &WindowData) {
         }
     }
     data.following.set(true);
-    SetWindowPos(
+    set_pos_traced(
         hwnd,
         std::ptr::null_mut(),
-        x,
-        y,
-        width,
-        height,
+        (x, y, width, height),
         SWP_NOZORDER | SWP_NOACTIVATE,
+        Some(data),
+        "frame_arrived",
     );
     data.following.set(false);
 }
@@ -1660,13 +1748,182 @@ unsafe fn window_work_area(hwnd: HWND) -> Option<RECT> {
     (GetMonitorInfoW(monitor, &mut info) != 0).then_some(info.rcWork)
 }
 
+/// The placement changes the window's maximised, minimised or restored state. Windows sets it
+/// in WM_WINDOWPOSCHANGING and WM_WINDOWPOSCHANGED; windows-sys leaves it out.
+const SWP_STATECHANGED: u32 = 0x8000;
+
+/// `hwnd`'s window rectangle as position and size.
+unsafe fn window_rect(hwnd: HWND) -> ((i32, i32), (u32, u32)) {
+    let mut rect: RECT = std::mem::zeroed();
+    GetWindowRect(hwnd, &mut rect);
+    rect_parts(&rect)
+}
+
+fn rect_parts(rect: &RECT) -> ((i32, i32), (u32, u32)) {
+    (
+        (rect.left, rect.top),
+        (
+            (rect.right - rect.left).max(0) as u32,
+            (rect.bottom - rect.top).max(0) as u32,
+        ),
+    )
+}
+
+/// The `SWP_` flags of `flags` a placement trace cares about, as `flags=nomove|nosize`.
+fn swp_words(flags: u32) -> String {
+    let words: Vec<&str> = [
+        (SWP_NOMOVE, "nomove"),
+        (SWP_NOSIZE, "nosize"),
+        (SWP_FRAMECHANGED, "framechanged"),
+        (SWP_STATECHANGED, "statechanged"),
+    ]
+    .iter()
+    .filter(|(flag, _)| flags & flag != 0)
+    .map(|(_, word)| *word)
+    .collect();
+    if words.is_empty() {
+        "flags=-".to_string()
+    } else {
+        format!("flags={}", words.join("|"))
+    }
+}
+
+/// Logs a resize trace placement line for `hwnd`'s task.
+fn trace_window(
+    data: &WindowData,
+    stage: &'static str,
+    (pos, size): ((i32, i32), (u32, u32)),
+    detail: &str,
+) {
+    trace_place(
+        data.logger.as_deref(),
+        data.task_id,
+        stage,
+        pos,
+        size,
+        detail,
+    );
+}
+
+/// Whether a placement with `flags` that leaves the window `size` belongs in the trace: not
+/// a change of Z order or activation alone, and not a plain move during a drag, which
+/// `win.move_loop` already samples.
+unsafe fn placement_worth_tracing(data: &WindowData, flags: u32, size: (u32, u32)) -> bool {
+    if flags & (SWP_FRAMECHANGED | SWP_STATECHANGED) != 0 {
+        return true;
+    }
+    if flags & SWP_NOMOVE != 0 && flags & SWP_NOSIZE != 0 {
+        return false;
+    }
+    let resized = flags & SWP_NOSIZE == 0 && data.traced_size.replace(size) != size;
+    resized || !data.in_move_loop.get()
+}
+
+/// Logs `win.pos_changing`: the rectangle Windows `asked` for and, when DSA changed it,
+/// the one it lets through (`gave`) and the steps that changed it.
+unsafe fn trace_pos_changing(
+    hwnd: HWND,
+    data: &WindowData,
+    asked: (i32, i32, i32, i32, u32),
+    gave: (i32, i32, i32, i32, u32),
+    why: &[&str],
+) {
+    let (x, y, w, h, flags) = asked;
+    let size = (w.max(0) as u32, h.max(0) as u32);
+    // Z order or activation alone, or a plain move during a drag, says nothing new.
+    let plain = flags & (SWP_FRAMECHANGED | SWP_STATECHANGED) == 0;
+    let idle = flags & SWP_NOMOVE != 0 && flags & SWP_NOSIZE != 0;
+    let same_size = flags & SWP_NOSIZE != 0 || window_rect(hwnd).1 == size;
+    if plain && asked == gave && (idle || (data.in_move_loop.get() && same_size)) {
+        return;
+    }
+    let mut detail = swp_words(flags);
+    if asked != gave {
+        let (gx, gy, gw, gh, gflags) = gave;
+        let _ = write!(
+            detail,
+            " gave={gx},{gy},{gw}x{gh} gave_{} why={}",
+            swp_words(gflags),
+            why.join("+")
+        );
+    }
+    trace_window(data, "win.pos_changing", ((x, y), size), &detail);
+}
+
+/// Where `hwnd` is and in what state, for the `win.pos_changed` line: its visible frame,
+/// its monitor's origin and scale, and whether it is maximised, arranged (snapped) or
+/// restored.
+unsafe fn placement_words(hwnd: HWND) -> String {
+    let mut frame: RECT = std::mem::zeroed();
+    let framed = DwmGetWindowAttribute(
+        hwnd,
+        DWMWA_EXTENDED_FRAME_BOUNDS as u32,
+        &mut frame as *mut RECT as *mut _,
+        std::mem::size_of::<RECT>() as u32,
+    ) >= 0;
+    let visible = if framed {
+        let ((x, y), (w, h)) = rect_parts(&frame);
+        format!("vis={x},{y},{w}x{h}")
+    } else {
+        "vis=-".to_string()
+    };
+    let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    let mut info: MONITORINFO = std::mem::zeroed();
+    info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+    let screen = if GetMonitorInfoW(monitor, &mut info) != 0 {
+        let ((x, y), (w, h)) = rect_parts(&info.rcMonitor);
+        format!("mon={x},{y},{w}x{h}")
+    } else {
+        "mon=-".to_string()
+    };
+    let mut placement: WINDOWPLACEMENT = std::mem::zeroed();
+    placement.length = std::mem::size_of::<WINDOWPLACEMENT>() as u32;
+    let show = if GetWindowPlacement(hwnd, &mut placement) != 0 {
+        placement.showCmd as i32
+    } else {
+        -1
+    };
+    format!(
+        "{visible} {screen} dpi={} zoomed={} arranged={} show={show}",
+        GetDpiForWindow(hwnd),
+        IsZoomed(hwnd) != 0,
+        IsWindowArranged(hwnd) != 0,
+    )
+}
+
+/// `SetWindowPos` by DSA itself, with the window's rectangle before and after in the resize
+/// trace (`wm.set_pos`) and `why` it was placed.
+unsafe fn set_pos_traced(
+    hwnd: HWND,
+    after: HWND,
+    rect: (i32, i32, i32, i32),
+    flags: u32,
+    data: Option<&WindowData>,
+    why: &str,
+) {
+    let traced = data.filter(|_| trace_detailed());
+    let before = traced.map(|_| window_rect(hwnd));
+    SetWindowPos(hwnd, after, rect.0, rect.1, rect.2, rect.3, flags);
+    if let (Some(data), Some(((bx, by), (bw, bh)))) = (traced, before) {
+        let detail = format!(
+            "why={why} asked={},{},{}x{} {} before={bx},{by},{bw}x{bh}",
+            rect.0,
+            rect.1,
+            rect.2,
+            rect.3,
+            swp_words(flags)
+        );
+        trace_window(data, "wm.set_pos", window_rect(hwnd), &detail);
+    }
+}
+
 /// Sizes and places `hwnd` for itself, not as the user: a fixed-size window takes it too.
-unsafe fn place_self(hwnd: HWND, after: HWND, rect: (i32, i32, i32, i32), flags: u32) {
+unsafe fn place_self(hwnd: HWND, after: HWND, rect: (i32, i32, i32, i32), flags: u32, why: &str) {
     let data = window_data(hwnd);
     if let Some(data) = data {
         data.self_sizing.set(true);
     }
-    SetWindowPos(hwnd, after, rect.0, rect.1, rect.2, rect.3, flags);
+    set_pos_traced(hwnd, after, rect, flags, data, why);
     if let Some(data) = data {
         data.self_sizing.set(false);
     }
@@ -1754,14 +2011,20 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
             let style = (style & !WS_POPUP) | TASK_STYLE;
             SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
             let flags = keep | SWP_NOZORDER | SWP_FRAMECHANGED;
-            place_self(hwnd, std::ptr::null_mut(), (0, 0, 0, 0), flags);
+            place_self(
+                hwnd,
+                std::ptr::null_mut(),
+                (0, 0, 0, 0),
+                flags,
+                "mode_titled",
+            );
             // The title bar is back, and the app's top inset with it.
             data.caption.report_height(hwnd, &*data.report);
             data.caption
                 .repaint(hwnd, data.presenter.borrow().as_deref());
         }
         WindowMode::PictureInPicture => {
-            place_self(hwnd, HWND_NOTOPMOST, (0, 0, 0, 0), keep);
+            place_self(hwnd, HWND_NOTOPMOST, (0, 0, 0, 0), keep, "mode_untopmost");
         }
         // A task's window is never an overlay's (`super::overlay`).
         WindowMode::Normal | WindowMode::Overlay => {}
@@ -1770,8 +2033,19 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
         WindowMode::Normal | WindowMode::Overlay => {
             if let Some(placement) = data.restore.take() {
                 data.self_sizing.set(true);
+                let before = window_rect(hwnd);
                 SetWindowPlacement(hwnd, &placement);
                 data.self_sizing.set(false);
+                if trace_detailed() {
+                    let ((bx, by), (bw, bh)) = before;
+                    let ((nx, ny), (nw, nh)) = rect_parts(&placement.rcNormalPosition);
+                    let detail = format!(
+                        "why=mode_restore placement=1 normal={nx},{ny},{nw}x{nh} show={} \
+                         before={bx},{by},{bw}x{bh}",
+                        placement.showCmd
+                    );
+                    trace_window(data, "wm.set_pos", window_rect(hwnd), &detail);
+                }
             }
         }
         WindowMode::Fullscreen => {
@@ -1796,6 +2070,7 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
                     monitor.bottom - monitor.top,
                 ),
                 SWP_FRAMECHANGED | SWP_NOOWNERZORDER,
+                "mode_fullscreen",
             );
         }
         WindowMode::PictureInPicture => {
@@ -1817,7 +2092,7 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
             let x = (work.right - margin - outer_width).max(work.left);
             let y = (work.bottom - margin - outer_height).max(work.top);
             let rect = (x, y, outer_width, outer_height);
-            place_self(hwnd, HWND_TOPMOST, rect, SWP_NOACTIVATE);
+            place_self(hwnd, HWND_TOPMOST, rect, SWP_NOACTIVATE, "mode_pip");
         }
     }
 }
@@ -1873,6 +2148,7 @@ unsafe fn apply_size(hwnd: HWND, size: (u32, u32)) -> (u32, u32) {
                 std::ptr::null_mut(),
                 rect,
                 SWP_NOZORDER | SWP_NOACTIVATE,
+                "guest_size_fullscreen",
             );
             return client;
         }
@@ -1883,6 +2159,7 @@ unsafe fn apply_size(hwnd: HWND, size: (u32, u32)) -> (u32, u32) {
         std::ptr::null_mut(),
         (0, 0, outer_width, outer_height),
         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+        "guest_size",
     );
     client
 }
@@ -2178,6 +2455,9 @@ impl Ui {
                 self.setup.input.clone(),
             ),
             drag_edges: Cell::new((false, false)),
+            move_loop: Cell::new(MoveLoop::default()),
+            in_move_loop: Cell::new(false),
+            traced_size: Cell::new((0, 0)),
             sizing: Cell::new(false),
             held: Cell::new(false),
             ime_cursor: Cell::new(None),
@@ -2381,6 +2661,19 @@ impl ClosingWindow for ClosingTask {
         if let Some(presenter) = self.presenter.take() {
             presenter.release();
         }
+    }
+}
+
+/// The move loop moved the window or dragged an edge: the first time, the user's drag starts.
+fn report_drag_started(data: &WindowData) {
+    let mut move_loop = data.move_loop.get();
+    let started = move_loop.moved();
+    data.move_loop.set(move_loop);
+    if let Some(dragging) = started {
+        (data.report)(FromHost::Dragging {
+            task_id: data.task_id,
+            dragging,
+        });
     }
 }
 

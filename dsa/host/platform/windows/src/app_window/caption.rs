@@ -84,6 +84,7 @@ use dsa_host_core::compositor::caption::{
 };
 use dsa_host_core::compositor::caption_icon::{self, IconLook};
 use dsa_host_core::compositor::window_hosts::FromHost;
+use dsa_host_core::compositor::window_sizing::{maximize_command, MaximizeCommand};
 use dsa_host_core::input::InputEvent;
 use dsa_host_core::keys::{keycode, KeyAction, KeyEvent as GuestKey};
 use dsa_host_core::tasks::Bounds;
@@ -202,6 +203,15 @@ fn button_of(code: u32) -> Option<CaptionButton> {
         HTCLOSE => Some(CaptionButton::Close),
         _ => None,
     }
+}
+
+/// Whether a pointer move over the title bar part `code` goes on to Windows' default
+/// handling. Over the minimise and close buttons and the back arrow it does not, so Windows
+/// never hot-tracks a classic button there. Over the maximise button it does: Windows 11
+/// starts the Snap Layouts flyout from the default handling of that move, and the window has
+/// no classic caption left for it to draw over.
+fn move_goes_to_windows(code: u32) -> bool {
+    !matches!(code, HTMINBUTTON | HTCLOSE | HT_BACK)
 }
 
 /// The hit test code of what a point belongs to.
@@ -1087,11 +1097,10 @@ impl CaptionWindow {
                 if self.hover(button) | back_changed {
                     self.paint(hwnd, presenter);
                 }
-                // Over a button, Windows would draw its own; elsewhere it does the rest.
-                match button {
-                    Some(_) => Some(0),
-                    None if on_back => Some(0),
-                    None => Some(DefWindowProcW(hwnd, message, wparam, lparam)),
+                if move_goes_to_windows(wparam as u32) {
+                    Some(DefWindowProcW(hwnd, message, wparam, lparam))
+                } else {
+                    Some(0)
                 }
             }
             WM_NCMOUSELEAVE => {
@@ -1115,6 +1124,17 @@ impl CaptionWindow {
                 self.paint(hwnd, presenter);
                 Some(0)
             }
+            // A double click on the title bar maximises or restores the window the way the
+            // maximise button does, by the same posted command, rather than through the
+            // default handling, whose first click has already run a move loop.
+            WM_NCLBUTTONDBLCLK if wparam as u32 == HTCAPTION => {
+                let command = match maximize_command(IsZoomed(hwnd) != 0) {
+                    MaximizeCommand::Restore => SC_RESTORE,
+                    MaximizeCommand::Maximize => SC_MAXIMIZE,
+                };
+                PostMessageW(hwnd, WM_SYSCOMMAND, command as WPARAM, 0);
+                Some(0)
+            }
             WM_NCLBUTTONDOWN | WM_NCLBUTTONDBLCLK => match button_of(wparam as u32) {
                 Some(button) => {
                     self.pressed.set(Some(button));
@@ -1130,8 +1150,12 @@ impl CaptionWindow {
                     if pressed == Some(button) {
                         let command = match button {
                             CaptionButton::Minimize => SC_MINIMIZE,
-                            CaptionButton::Maximize if IsZoomed(hwnd) != 0 => SC_RESTORE,
-                            CaptionButton::Maximize => SC_MAXIMIZE,
+                            CaptionButton::Maximize => {
+                                match maximize_command(IsZoomed(hwnd) != 0) {
+                                    MaximizeCommand::Restore => SC_RESTORE,
+                                    MaximizeCommand::Maximize => SC_MAXIMIZE,
+                                }
+                            }
                             CaptionButton::Close => SC_CLOSE,
                         };
                         // Posted, as a click on Windows' own button does, so the window
@@ -1188,6 +1212,19 @@ impl CaptionWindow {
 mod tests {
     use super::*;
     use windows_sys::Win32::UI::WindowsAndMessaging::WS_OVERLAPPEDWINDOW;
+
+    #[test]
+    fn fr22_a_hover_on_the_maximise_button_reaches_windows_for_snap_layouts() {
+        assert!(move_goes_to_windows(HTMAXBUTTON), "the maximise button");
+        assert!(move_goes_to_windows(HTCAPTION), "the band");
+        assert!(!move_goes_to_windows(HTMINBUTTON), "the minimise button");
+        assert!(!move_goes_to_windows(HTCLOSE), "the close button");
+        assert!(!move_goes_to_windows(HT_BACK), "the back arrow");
+        assert_eq!(
+            code_of(CaptionHit::Button(CaptionButton::Maximize)),
+            HTMAXBUTTON
+        );
+    }
 
     #[test]
     fn fr22_a_hit_and_its_code_name_the_same_part_of_the_window() {

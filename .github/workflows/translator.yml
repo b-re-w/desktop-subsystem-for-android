@@ -9,7 +9,7 @@
 # against and the arm64 guest libraries that are plain AOSP builds from DSA's pinned images,
 # and builds only the files the package holds.
 #
-# It runs by hand, and when the lock changes on develop. Each version's compiler cache is
+# It runs only by hand (workflow_dispatch): start it after the lock changes. Each version's compiler cache is
 # kept between runs, also when a run fails or times out, so a run that stops partway makes
 # the next one shorter.
 
@@ -22,10 +22,13 @@ on:
         description: "Build only this version (android16 or android17); empty for every version in the lock"
         required: false
         default: ""
-  push:
-    branches: [develop]
-    paths:
-      - dsa/guest/arm-translation/digitalis-lock.json
+  # Paused by the owner's decision (2026-11-16): nothing on develop starts on a push, so a
+  # change to the lock needs a run started by hand. The Development build warns when the run
+  # it takes is older than the newest change to the lock. Uncomment to resume.
+  # push:
+  #   branches: [develop]
+  #   paths:
+  #     - dsa/guest/arm-translation/digitalis-lock.json
 
 concurrency:
   group: translator-${{ github.ref }}

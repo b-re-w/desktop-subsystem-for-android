@@ -112,6 +112,71 @@ data class EditorState(
 }
 
 /**
+ * An editor's text and selection as one read returned them, so both come from the same state
+ * of the editor. [text] starts [start] UTF-16 code units into the editor's whole text; the
+ * selection runs from [selectionStart] to [selectionEnd] in the whole text.
+ */
+data class EditorSnapshot(
+    val text: String,
+    val start: Int,
+    val selectionStart: Int,
+    val selectionEnd: Int,
+)
+
+/**
+ * The editor of [kind] in [owner] as [snapshot] shows it, for the editor's report that its
+ * selection runs from [selStart] to [selEnd] with the composition from [composeStart] to
+ * [composeEnd] (-1 for none). The text reaches [EditorState.REACH] past each end of the
+ * selection at most, and never splits a character there.
+ *
+ * The editor reports a state, and the text is read after it, so the editor may have moved on
+ * in between: the host's next composition reaches it while the report is on its way, which
+ * fast typing does at every syllable. Then the snapshot is a later state than the report, and
+ * the two together describe a state the editor never had, which the host can only take for a
+ * change of the user's. A report from a selection update is then dropped ([fromUpdate]: null),
+ * because the editor reports the later state next, with its composition. Any other report
+ * takes the snapshot's own selection and no composition.
+ */
+fun describedState(
+    kind: ImeInputKind,
+    owner: String,
+    selStart: Int,
+    selEnd: Int,
+    composeStart: Int,
+    composeEnd: Int,
+    snapshot: EditorSnapshot,
+    fromUpdate: Boolean,
+): EditorState? {
+    val from = minOf(selStart, selEnd)
+    val to = maxOf(selStart, selEnd)
+    val nowFrom = minOf(snapshot.selectionStart, snapshot.selectionEnd)
+    val nowTo = maxOf(snapshot.selectionStart, snapshot.selectionEnd)
+    val moved = nowFrom != from || nowTo != to
+    if (moved && fromUpdate) return null
+    val whole = snapshot.text
+    val localFrom = (nowFrom - snapshot.start).coerceIn(0, whole.length)
+    val localTo = (nowTo - snapshot.start).coerceIn(localFrom, whole.length)
+    var cutStart = (localFrom - EditorState.REACH).coerceAtLeast(0)
+    if (cutStart > 0 && Character.isLowSurrogate(whole[cutStart])) cutStart--
+    var cutEnd = (localTo + EditorState.REACH).coerceAtMost(whole.length)
+    if (cutEnd in 1 until whole.length && Character.isHighSurrogate(whole[cutEnd - 1])) cutEnd++
+    val text = whole.substring(cutStart, cutEnd)
+    val start = snapshot.start + cutStart
+    val end = start + text.length
+    val composing = !moved && composeStart in start..end && composeEnd in composeStart..end
+    return EditorState(
+        kind = kind,
+        text = text,
+        textStart = start,
+        selectionStart = if (moved) snapshot.selectionStart else selStart,
+        selectionEnd = if (moved) snapshot.selectionEnd else selEnd,
+        compositionStart = if (composing) composeStart else 0,
+        compositionEnd = if (composing) composeEnd else 0,
+        packageName = owner,
+    )
+}
+
+/**
  * The kind of text an editor takes, from its EditorInfo's input type and options, so the
  * host's input method offers the keys for it and keeps composition and prediction out of a
  * password.

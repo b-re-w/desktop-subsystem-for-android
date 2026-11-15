@@ -50,7 +50,7 @@ esac
 
 # The version a list names, from its "version" key.
 version_of() {
-    sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([0-9.]*\)".*/\1/p' "$1" | head -n 1
+    sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([0-9A-Za-z.-]*\)".*/\1/p' "$1" | head -n 1
 }
 
 # Whether version $1 is higher than version $2, comparing the numbers.
@@ -60,6 +60,19 @@ higher() {
 
 version="$(version_of "$dir/program.json")"
 [[ -n "$version" ]] || die "$dir/program.json names no version"
+[[ "$version" != *-dev.* ]] \
+    || die "$version is a development build, which is never published on a program list"
+[[ "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]] || die "the version $version is not dot-separated numbers"
+
+# The stable list names stable releases only: from 1.0 a stable release moves major.minor and
+# has patch 0, so a version with a patch above 0 is a pre-release. Installed computers on the
+# stable channel read this list alone.
+if [[ "$channel" == stable ]]; then
+    IFS=. read -r major _ patch _ <<<"$version"
+    if (( 10#$major >= 1 )) && [[ -n "${patch:-}" ]] && (( 10#$patch > 0 )); then
+        die "$version has patch $patch, so it is a pre-release; the stable program list names only X.Y.0 releases"
+    fi
+fi
 
 out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT

@@ -548,7 +548,21 @@ Like the render GPU, it takes effect when `dsa-wm` starts again. The choice reac
 renderer's process, through the Vulkan loader's environment variables (`VK_DRIVER_FILES`,
 `VK_LOADER_DRIVERS_DISABLE`); the computer's Vulkan setup is never changed. When the
 renderer's own environment already names the drivers (`VK_DRIVER_FILES`, as the tests do),
-those are taken as they are. On Dozen without `VK_EXT_external_memory_host` the renderer turns
+those are taken as they are.
+
+An elevated process (an administrator's elevated terminal, or SYSTEM) is different: the
+Khronos Vulkan loader ignores `VK_DRIVER_FILES`, `VK_ICD_FILENAMES`, `VK_ADD_DRIVER_FILES` and
+the layer paths there, and lists only the drivers registered with Windows. DSA reads the
+process's integrity level as the loader does, says so in the reason, and judges from what the
+loader lists. Dozen then cannot be added through the environment: it works in an elevated
+process only when the loader finds the pack's Dozen by itself (under
+`HKLM\SOFTWARE\Khronos\Vulkan\Drivers` or through the pack's package registration), and is
+picked by its device name, since the other drivers cannot be hidden. The service starts
+`dsa-wm` with the user's limited token, so the renderer it starts is not elevated; `dsa-hostd
+serve` run from an elevated terminal starts an elevated `dsa-wm` and renderer, and `dsa gpus`
+in an elevated terminal says it sees what an elevated process gets.
+
+On Dozen without `VK_EXT_external_memory_host` the renderer turns
 gfxstream's `VulkanAllocateHostMemory` off; tessellation, YCbCr conversion and descriptor
 indexing follow what the device reports, so the guest does not see them on Dozen.
 

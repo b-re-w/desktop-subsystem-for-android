@@ -869,11 +869,15 @@ fn check_for_updates(
             }
             updates.notices.set(notice);
         };
+        // The computer's release channel picks the image list (on the pre-release channel
+        // the pre-release list beside the stable one) and the images it may take: a computer
+        // on the stable channel never moves to a pre-release image.
         match check_alerting(
             &updates.store,
             &WinHttpFetch::default(),
             &settings.list_url,
             &keys,
+            store.machine().release_channel(),
             &updates.notices,
             &mut announce,
         ) {

@@ -7083,52 +7083,123 @@ def image_spec(images, major, arch=DEFAULT_ARCH):
 MAX_REVISION = 99
 
 
-def version_of(spec, revision):
-    """The version that names the image of the inputs.json entry `spec` at `revision`:
-    "17.0.0-16373615-10" for "17.0.0-16373615-9", "17.0.0-16373615-10-arm64" for an arm64 one."""
-    marker = f"-{spec['build_id']}-{spec.get('revision', 1)}"
+# DSA's revision of an image says the release channel it was made for:
+#   stable        -<n>              17.0.0-16373615-15
+#   pre-release   -<n>.<m>          17.0.0-16373615-15.1, made on the stable -15 and before -16
+#   development   -<n>.<m>-dev.<k>  17.0.0-16373615-15.1-dev.12, never published
+# The host orders them -15 < -15.1-dev.k < -15.1 < -15.2 < -16. The build number carries n
+# alone, so a host that does not know -<n>.<m> never takes a pre-release over its stable -<n>.
+CHANNELS = ("stable", "prerelease", "development")
+
+
+def revision_label(spec):
+    """The revision as the version writes it: "15" or "15.1"."""
+    return str(spec.get("revision_label", spec.get("revision", 1)))
+
+
+def version_parts(spec):
+    """What comes before and after the revision in `spec`'s version: ("17.0.0", "-arm64") for
+    "17.0.0-16373615-9-arm64"."""
+    marker = f"-{spec['build_id']}-{revision_label(spec)}"
     version = spec["version"]
     at = version.find(marker)
     rest = version[at + len(marker):] if at >= 0 else None
     if rest is None or not (rest == "" or rest.startswith("-")):
         raise ValueError(f"version {version} does not name build {spec['build_id']} "
-                         f"revision {spec.get('revision', 1)}")
-    return f"{version[:at]}-{spec['build_id']}-{revision}{rest}"
+                         f"revision {revision_label(spec)}")
+    return version[:at], rest
+
+
+def parse_revision(revision):
+    """(n, m) of a revision: 15 or "15" is (15, 0), "15.1" is (15, 1)."""
+    text = str(revision)
+    match = re.fullmatch(r"([0-9]+)(?:\.([0-9]+))?", text)
+    if isinstance(revision, bool) or not match:
+        raise ValueError(f"a revision is <n> or <n>.<m> in whole numbers, not {revision!r}")
+    n, m = int(match.group(1)), int(match.group(2) or 0)
+    if match.group(2) is not None and m < 1:
+        raise ValueError(f"a pre-release revision <n>.<m> has m from 1, not {revision!r}")
+    return n, m
+
+
+def version_of(spec, revision):
+    """The version that names the image of the inputs.json entry `spec` at `revision` (<n> or
+    <n>.<m>): "17.0.0-16373615-10" for "17.0.0-16373615-9" at 10, "17.0.0-16373615-10.1" at
+    "10.1", "17.0.0-16373615-10-arm64" for an arm64 one."""
+    head, rest = version_parts(spec)
+    return f"{head}-{spec['build_id']}-{revision}{rest}"
 
 
 def revised(spec, revision):
-    """The inputs.json entry `spec` as the image of `revision`, with the version that names it."""
-    if not 1 <= revision <= MAX_REVISION:
+    """The inputs.json entry `spec` as the image of `revision` (<n>, or <n>.<m> for a
+    pre-release), with the version that names it. The build number takes <n>."""
+    n, m = parse_revision(revision)
+    if not 1 <= n <= MAX_REVISION:
         raise ValueError(f"revision {revision} is outside 1 to {MAX_REVISION}: the image's build "
                          f"number is the AOSP build times 100 plus the revision")
-    if revision < spec.get("revision", 1):
+    if n < spec.get("revision", 1):
         raise ValueError(f"revision {revision} is lower than inputs.json's {spec.get('revision', 1)}")
-    return dict(spec, revision=revision, version=version_of(spec, revision))
+    label = f"{n}.{m}" if m else str(n)
+    return dict(spec, revision=n, revision_label=label, version=version_of(spec, label))
 
 
 def as_development_build(spec, number):
-    """The inputs.json entry `spec` as development build `number`: its version ends in
-    -dev.<number>, and its build number stays the revision's. The Development build workflow
-    makes such an image for testing on one computer and never publishes it; the host orders it
-    after the release before it and before the release of its own revision, and a newer
-    development build of the same revision after an older one."""
+    """The inputs.json entry `spec` as development build `number`: -dev.<number> follows its
+    revision (-<n>.<m>-dev.<number>), and its build number stays the revision's. The
+    Development build workflow makes such an image for testing on one computer and never
+    publishes it; the host orders it after the release before it and before the release of its
+    own revision, and a newer development build of the same revision after an older one."""
     if not isinstance(number, int) or isinstance(number, bool) or number < 1:
         raise ValueError(f"a development build number is a whole number from 1, not {number!r}")
-    return dict(spec, version=f"{spec['version']}-dev.{number}")
+    head, rest = version_parts(spec)
+    return dict(spec, version=f"{head}-{spec['build_id']}-{revision_label(spec)}-dev.{number}{rest}")
+
+
+def published_revisions(spec, tags):
+    """(n, m) of every image of `spec`'s build and architecture that the release tags name; m
+    is 0 for a stable image."""
+    head, rest = version_parts(spec)
+    pattern = re.compile(rf"android-{re.escape(head)}-{re.escape(str(spec['build_id']))}"
+                         rf"-([0-9]+)(?:\.([0-9]+))?{re.escape(rest)}")
+    found = []
+    for tag in tags:
+        match = pattern.fullmatch(tag.strip())
+        if match:
+            found.append((int(match.group(1)), int(match.group(2) or 0)))
+    return found
 
 
 def next_revision(spec, tags):
-    """The revision a new image of `spec` gets, given the release tags already published: one
-    past the highest published image of the same build and architecture, and never below
-    inputs.json's revision. A published image is never replaced: a host that has it would not
-    see the new one as an update, and installs that checked its hashes would fail."""
-    published = {f"android-{version_of(spec, r)}": r for r in range(1, MAX_REVISION + 1)}
-    highest = max((published[tag.strip()] for tag in tags if tag.strip() in published), default=0)
+    """The revision a new stable image of `spec` gets, given the release tags already
+    published: one past the highest n published for the same build and architecture (stable or
+    pre-release), and never below inputs.json's revision. A published image is never replaced:
+    a host that has it would not see the new one as an update, and installs that checked its
+    hashes would fail."""
+    highest = max((n for n, _ in published_revisions(spec, tags)), default=0)
     revision = max(spec.get("revision", 1), highest + 1)
     if revision > MAX_REVISION:
         raise ValueError(f"build {spec['build_id']} has used every revision up to {MAX_REVISION}; "
                          f"move inputs.json to a newer AOSP build")
     return revision
+
+
+def next_revision_label(spec, tags, channel):
+    """The revision a new image of `spec` on `channel` gets, as the version writes it. Stable:
+    next_revision, "16" after -15 and -15.2. Pre-release: <n>.<m> on the newest n published
+    (never below inputs.json's revision), one past its highest m, "15.3" after -15.2. A
+    development build takes the next pre-release's revision, and the Development build adds
+    -dev.<run number> after it."""
+    if channel not in CHANNELS:
+        raise ValueError(f"the channel is one of {', '.join(CHANNELS)}, not {channel}")
+    if channel == "stable":
+        return str(next_revision(spec, tags))
+    published = published_revisions(spec, tags)
+    n = max([spec.get("revision", 1)] + [pn for pn, _ in published])
+    if n > MAX_REVISION:
+        raise ValueError(f"build {spec['build_id']} has used every revision up to {MAX_REVISION}; "
+                         f"move inputs.json to a newer AOSP build")
+    m = max((pm for pn, pm in published if pn == n), default=0) + 1
+    return f"{n}.{m}"
 
 
 def kernel_name(arch):
@@ -7969,15 +8040,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--major", type=int, required=True)
     parser.add_argument("--keys", type=Path, help="the image signing keys (required to make an image)")
-    parser.add_argument("--revision", type=int,
-                        help="the image's revision, at least inputs.json's; the version that names "
-                             "the image follows it. The release workflow passes the next unpublished one")
+    parser.add_argument("--revision",
+                        help="the image's revision, <n> for a stable image or <n>.<m> for a "
+                             "pre-release, with n at least inputs.json's; the version that names the "
+                             "image follows it. The release workflow passes the next unpublished one")
     parser.add_argument("--next-revision", action="store_true",
-                        help="print the revision the next image of --major and --arch gets, given "
-                             "the release tags already published, one per line on standard input, "
-                             "and make nothing")
+                        help="print the revision the next image of --major and --arch on --channel "
+                             "gets, given the release tags already published, one per line on "
+                             "standard input, and make nothing")
+    parser.add_argument("--channel", choices=CHANNELS, default="stable",
+                        help="with --next-revision, the release channel the image is made for: "
+                             "stable (-<n>, the default), prerelease (-<n>.<m>) or development "
+                             "(the next pre-release's -<n>.<m>, which --dev-build follows)")
     parser.add_argument("--dev-build", type=int, metavar="N",
-                        help="make development build N: the version ends in -dev.N. The Development "
+                        help="make development build N: -dev.N follows the revision. The Development "
                              "build workflow passes its run number; such an image is never published")
     parser.add_argument("--inputs", type=Path, default=REPO / ".scratch/aosp-inputs")
     parser.add_argument("--out", type=Path, default=REPO / "dsa/target/image")
@@ -8043,7 +8119,7 @@ def main():
 
     spec = image_spec(json.loads((HERE / "inputs.json").read_text())["images"], args.major, args.arch)
     if args.next_revision:
-        print(next_revision(spec, sys.stdin.read().splitlines()))
+        print(next_revision_label(spec, sys.stdin.read().splitlines(), args.channel))
         return
     if args.keys is None:
         parser.error("--keys is required to make an image")
