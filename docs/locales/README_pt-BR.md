@@ -58,11 +58,12 @@ então informe o que você encontrar. Linux e macOS estão em andamento e não f
   escondem suas barras, como um feed de vídeos curtos, ficam na própria janela. Os dois
   comportamentos podem ser escolhidos nas DSA Settings, para todos os apps ou para cada um, e
   F11 sempre alterna a tela cheia.
-- Imagem nítida em todos os monitores. Um app abre na escala do monitor em que abre e, quando
-  você o move para um monitor com outra escala, ele é redesenhado na nova escala assim que você
-  solta a janela, ou o DSA escala a janela, conforme você escolher para cada app. Apps que
-  sabidamente quebram quando a escala muda durante a execução, como o YouTube, são escalados
-  pelo DSA por padrão.
+- Imagem nítida em todos os monitores. Quando você move um app para um monitor com outra
+  escala, ele é redesenhado na nova escala assim que a janela chega lá, ou o DSA escala a
+  janela, conforme você escolher para cada app. Por padrão, um app que diz tratar sozinho uma
+  mudança de escala é redesenhado, e o DSA escala todos os outros. Apps que sabidamente
+  quebram quando a escala muda durante a execução, como o YouTube, são escalados pelo DSA
+  por padrão.
 - O texto nos apps segue a configuração de tamanho do texto do Windows.
 - Mouse (com hover), toque com até dez dedos, caneta (pressão, borracha, botão lateral) e o
   teclado em qualquer layout.

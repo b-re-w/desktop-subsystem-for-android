@@ -57,10 +57,11 @@ apa yang Anda temukan. Linux dan macOS sedang dikerjakan dan belum dirilis (liha
   menyembunyikan bilahnya, seperti feed video pendek, tetap berada di jendelanya. Keduanya
   dapat dipilih di DSA Settings, untuk semua aplikasi atau per aplikasi, dan F11 selalu
   mengalihkan layar penuh.
-- Tampilan tajam di setiap monitor. Aplikasi terbuka dengan skala monitor tempat ia dibuka,
-  dan saat Anda memindahkannya ke monitor dengan skala lain, aplikasi menggambar ulang pada
-  skala baru setelah Anda melepasnya, atau DSA yang menskalakan jendelanya, sesuai pilihan
-  Anda untuk setiap aplikasi. Aplikasi yang diketahui rusak jika skalanya berubah saat
+- Tampilan tajam di setiap monitor. Saat Anda memindahkan aplikasi ke monitor dengan skala
+  lain, aplikasi menggambar ulang pada skala baru begitu jendelanya tiba di sana, atau DSA
+  yang menskalakan jendelanya, sesuai pilihan Anda untuk setiap aplikasi. Secara bawaan,
+  aplikasi yang menyatakan dapat menangani perubahan skala sendiri menggambar ulang, dan DSA
+  menskalakan aplikasi lainnya. Aplikasi yang diketahui rusak jika skalanya berubah saat
   berjalan, seperti YouTube, secara bawaan diskalakan oleh DSA.
 - Teks di aplikasi mengikuti pengaturan ukuran teks Windows.
 - Mouse (dengan hover), sentuhan hingga sepuluh jari, pena (tekanan, penghapus, tombol

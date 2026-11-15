@@ -61,10 +61,11 @@ desarrollo y no se han publicado (consulte [Plataformas compatibles](#plataforma
   feed de vídeos cortos, se quedan en su ventana. Ambos comportamientos se eligen en DSA
   Settings, para todas las aplicaciones o para cada una, y F11 siempre alterna la pantalla
   completa.
-- Imagen nítida en todos los monitores. Una aplicación se abre con la escala del monitor en
-  el que se abre y, cuando la mueve a un monitor con otra escala, se vuelve a dibujar con la
-  nueva escala en cuanto la suelta, o bien DSA escala su ventana, según lo que usted elija
-  para cada aplicación. Las aplicaciones que se sabe que fallan cuando su escala cambia
+- Imagen nítida en todos los monitores. Cuando mueve una aplicación a un monitor con otra
+  escala, se vuelve a dibujar con la nueva escala en cuanto su ventana llega allí, o bien DSA
+  escala su ventana, según lo que usted elija para cada aplicación. De forma predeterminada,
+  una aplicación que dice gestionar por sí misma un cambio de escala se vuelve a dibujar, y
+  DSA escala las demás. Las aplicaciones que se sabe que fallan cuando su escala cambia
   mientras se ejecutan, como YouTube, las escala DSA de forma predeterminada.
 - El texto de las aplicaciones sigue la configuración de tamaño del texto de Windows.
 - Ratón (con desplazamiento del puntero por encima), entrada táctil con hasta diez dedos,
