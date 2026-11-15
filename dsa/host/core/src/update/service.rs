@@ -11,11 +11,14 @@ use ed25519_dalek::VerifyingKey;
 
 use super::alerts::{AlertKind, Subject, UpdateAlert, UpdateAlerts};
 use super::manifest::{self, ImageEntry};
-use super::policy::{decide_for, Decision, InstalledImage};
+use super::policy::{decide_for, decide_on_channel, Decision, InstalledImage};
+use super::program::ReleaseChannel;
 use super::restart::ImageRestart;
 use super::store::{Fetch, ImageStore};
 use super::trial::{self, Boot, Outcome};
-use super::versions::{AndroidVersions, Channel, ChooseError, VersionReport};
+use super::versions::{
+    prerelease_image_list_url, AndroidVersions, Channel, ChooseError, VersionReport,
+};
 use super::UpdateError;
 use crate::accessibility::{AccessibilityWatch, ActionRequest};
 use crate::apk::{InstallOutcome, InstallPart, InstalledPackage};
@@ -165,6 +168,46 @@ pub fn check_reporting(
     keys: &[VerifyingKey],
     downloading: &mut dyn FnMut(&Download),
 ) -> Result<Option<String>, UpdateError> {
+    let (list, signature) = fetch_list(fetch, list_url)?;
+    apply_list(store, fetch, &list, &signature, keys, None, downloading)
+}
+
+/// [`check_reporting`] for a computer on the release channel `release`, as the service's
+/// periodic check runs it. `list_url` is the stable image list (`images.json`). On the
+/// pre-release channel the pre-release list beside it (`images-prerelease.json`) is read
+/// instead, which names the stable images too; while it cannot be fetched (no pre-release
+/// image was published yet) the stable list is read. Whatever list is read, only the images
+/// the channel takes are chosen ([`decide_on_channel`]), so a computer on the stable channel
+/// never moves to a pre-release or development image.
+pub fn check_on_channel(
+    store: &ImageStore,
+    fetch: &dyn Fetch,
+    list_url: &str,
+    keys: &[VerifyingKey],
+    release: ReleaseChannel,
+    downloading: &mut dyn FnMut(&Download),
+) -> Result<Option<String>, UpdateError> {
+    let prerelease = match release {
+        ReleaseChannel::Prerelease => prerelease_image_list_url(list_url),
+        ReleaseChannel::Stable => None,
+    };
+    let (list, signature) = match prerelease {
+        Some(url) => fetch_list(fetch, &url).or_else(|_| fetch_list(fetch, list_url))?,
+        None => fetch_list(fetch, list_url)?,
+    };
+    apply_list(
+        store,
+        fetch,
+        &list,
+        &signature,
+        keys,
+        Some(release),
+        downloading,
+    )
+}
+
+/// The release list at `list_url` and its signature at `list_url` + `.sig`.
+fn fetch_list(fetch: &dyn Fetch, list_url: &str) -> Result<(Vec<u8>, String), UpdateError> {
     let mut list = Vec::new();
     fetch
         .fetch(list_url, &mut list)
@@ -173,20 +216,44 @@ pub fn check_reporting(
     fetch
         .fetch(&format!("{list_url}.sig"), &mut signature)
         .map_err(|e| UpdateError::BadSignature(format!("fetching the signature: {e}")))?;
-    let signature = String::from_utf8_lossy(&signature);
-    let manifest = manifest::verify(&list, &signature, keys)?;
+    Ok((list, String::from_utf8_lossy(&signature).into_owned()))
+}
+
+/// Checks the signature of `list`, and downloads the image to move to, if there is one:
+/// among the images `release` takes, or among all of them without a channel.
+fn apply_list(
+    store: &ImageStore,
+    fetch: &dyn Fetch,
+    list: &[u8],
+    signature: &str,
+    keys: &[VerifyingKey],
+    release: Option<ReleaseChannel>,
+    downloading: &mut dyn FnMut(&Download),
+) -> Result<Option<String>, UpdateError> {
+    let manifest = manifest::verify(list, signature, keys)?;
     let moved_up = store.follow_supported(&manifest.supported_majors)?;
     let state = store.state()?;
     if state.on_trial {
         return Ok(moved_up);
     }
-    match decide_for(
-        &state.current,
-        &manifest,
-        &state.failed,
-        state.channel,
-        state.older_allowed,
-    ) {
+    let decision = match release {
+        Some(release) => decide_on_channel(
+            &state.current,
+            &manifest,
+            &state.failed,
+            state.channel,
+            state.older_allowed,
+            release,
+        ),
+        None => decide_for(
+            &state.current,
+            &manifest,
+            &state.failed,
+            state.channel,
+            state.older_allowed,
+        ),
+    };
+    match decision {
         Decision::UpToDate => Ok(moved_up),
         Decision::Unsupported(why) => Ok(Some(why)),
         Decision::Apply(image) => {
@@ -211,19 +278,21 @@ pub fn check_reporting(
     }
 }
 
-/// [`check_reporting`], and raises on `notices` the alert that an image is downloaded and
+/// [`check_on_channel`], and raises on `notices` the alert that an image is downloaded and
 /// waits for the next start, when the check put one in place. The service's periodic check
-/// runs this, so every user's desktop is told before the update is applied.
+/// runs this with the computer's release channel, so every user's desktop is told before the
+/// update is applied.
 pub fn check_alerting(
     store: &ImageStore,
     fetch: &dyn Fetch,
     list_url: &str,
     keys: &[VerifyingKey],
+    release: ReleaseChannel,
     notices: &UpdateNotices,
     downloading: &mut dyn FnMut(&Download),
 ) -> Result<Option<String>, UpdateError> {
     let before = store.state().ok().map(|state| state.current.version);
-    let news = check_reporting(store, fetch, list_url, keys, downloading)?;
+    let news = check_on_channel(store, fetch, list_url, keys, release, downloading)?;
     if let Ok(after) = store.state() {
         if after.on_trial && before.as_ref() != Some(&after.current.version) {
             notices.raise(UpdateAlert::new(

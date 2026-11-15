@@ -451,11 +451,15 @@ fn check_for_updates(
             }
             notices.set(download.notice());
         };
+        // The computer's release channel picks the image list (on the pre-release channel
+        // the pre-release list beside the stable one) and the images it may take: a computer
+        // on the stable channel never moves to a pre-release image.
         match check_alerting(
             &store,
             &CurlFetch,
             &update.list_url,
             &keys,
+            settings.machine().release_channel(),
             &notices,
             &mut announce,
         ) {
