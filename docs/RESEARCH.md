@@ -3509,30 +3509,50 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 - 안전 및 긴급 상황 화면에 남는 "무선 긴급 경보" 줄(`app_and_notif_cell_broadcast_settings`)은 셀 브로드캐스트 모듈의 설정을 이름으로 연다. 그 모듈이 이미지에 있는지, 눌렀을 때 열리는지는 기기에서 본다.
 - 최상위 "안전 및 긴급 상황" 줄 자체를 숨기려면 `config_show_emergency_settings`를 거짓으로 두면 된다. 화면에 남는 것이 있어 이번에는 바꾸지 않았다. 숨길지는 소유자가 정한다.
 
-## R50. 설정 하위 화면의 아래 여백: 소스와 APK에서는 여백을 만드는 곳을 찾지 못했다 (FR-22)
+## R50. 설정 하위 화면의 아래 여백: 첫 화면에 있는 16 dp가 하위 화면에는 없었다 (FR-22)
 
-**기준.** 2026-11-15 소유자가 PC(Android 17)에서 설정의 하위 화면(`SubSettings`, SettingsLib의 접히는 툴바 레이아웃) 아래에 빈 여백이 남는다고 알렸다. 첫 화면은 #760(아래 인셋 0)과 #767(Android의 프리폼 패딩 16 dp 유지) 뒤로 바르다. 기기는 만지지 않았다. 소스, 실제 APK, CI가 남긴 갈무리만 읽었다.
+**기준.** 2026-11-15 소유자가 PC(Android 17 `16373615`)에서 알린 것은 설정의 하위 화면에 첫 화면이 가진 아래 여백이 없다는 것이다. 이 절의 첫 판(PR #804)은 그 보고를 거꾸로 읽어 "하위 화면 아래에 빈 띠가 남는다"로 적고 띠를 만드는 곳을 찾았다. 그런 곳은 없었고, 없는 것이 바로 문제였다. 같은 날 소유자 PC에서 잰 값은 이렇다. 하위 화면 "접근성"(`com.android.settings/.SubSettings`), 창 1096x1142 px, 262 dpi, 목록을 끝까지 내린 상태에서 `content_frame`과 `recycler_view`가 창 아래 끝까지 닿고, 마지막 카드("텍스트 음성 변환 출력")의 둥근 아래 모서리가 창 끝에 붙는다. 첫 화면은 #760(아래 인셋 0)과 #767(Android의 프리폼 패딩 16 dp 유지) 뒤로 목록 끝에 16 dp가 남는다. 이번에도 기기는 만지지 않았다. 소스와 두 빌드의 실제 APK만 읽었다.
 
 ### 확인한 자료와 방법
-- R49와 같은 고정 커밋의 Settings와 SettingsLib 소스(16과 17).
-- 두 빌드의 실제 `Settings.apk`: 하위 화면이 쓰는 컴파일된 레이아웃의 속성, 그리고 모든 dex에서 `WindowInsets.Type`과 `WindowInsetsCompat.Type`의 유형을 읽는 메서드 전부(`.scratch/settings-subpages/probe.py`). 소스에 없는 androidx와 Material 코드도 여기서 본다.
-- Image test가 Android 16에서 남긴 디스플레이 화면의 `uiautomator dump`와 화면(`.scratch/fr34-fold/captures`, 2026-11-09, 아래 인셋이 없던 때).
+- R49와 같은 고정 커밋의 Settings와 SettingsLib 소스(16과 17). `.scratch/subpage-padding/fetch.py`로 받았다.
+- 두 빌드(15581820, 16373615)의 실제 `Settings.apk`와 `PermissionController.apk`, Android 16의 `SettingsIntelligence.apk`. `Settings.apk`는 target_files의 것과 크기와 CRC가 같음을 확인했다.
+- 모든 컴파일된 레이아웃에서 스크롤하는 뷰와 그 `paddingBottom`, `clipToPadding`을 뽑았다(`.scratch/subpage-padding/probe.py`). 아래 여백을 읽거나 목록의 패딩을 정하는 메서드는 dex를 풀어 읽었다(`dis.py`).
+- 고친 것은 두 빌드의 실제 APK에 적용해 보았다(`verify.py`, `write_edited.py`).
 
 ### 찾은 것
-- 하위 화면이 아래에 두는 것은 하나다. `SettingsBaseActivity.onCreate`(17은 119행, 16은 125행)가 부르는 `Utils.setupEdgeToEdge`(17 `Utils.java:1535-1551`, 16은 1538행부터)가 `android.R.id.content`를 `getInsets(systemBars() | ime() | displayCutout())`의 `bottom`만큼 채운다. 태스크에는 내비게이션 바 소스가 없고(#760), 게스트의 입력기는 창을 띄우지 않으며(`HostInputMethod`), 컷아웃도 없으므로 이 값은 0이다.
-- 첫 화면과 다른 점은 둘이다. 첫 화면(`SettingsHomepageActivity.setupEdgeToEdge`, 17은 390-411행)은 `ime()`를 보지 않는다. 그리고 `TopLevelSettings.setPaddingHorizontal`(263-274행)의 16 dp는 첫 화면의 목록에만 있다. 하위 화면에는 프리폼이나 캡션 바를 보고 여백을 더하는 코드가 없다. 실제 dex에서 `captionBar`를 읽는 Settings 코드는 `Utils.setupEdgeToEdge`(위쪽에만 쓴다)와 `TopLevelSettings.isRunningInFreeformWindow`뿐이다.
-- 레이아웃에도 없다. `settingslib_expressive_collapsing_toolbar_content_layout.xml`(60-64행)의 `content_frame`은 `match_parent`에 스크롤 동작만 있고, `settings_main_prefs.xml`의 버튼 막대와 `settingslib_expressive_floating_toolbar_layout.xml`은 `gone`이며, 컴파일된 `preference_recyclerview.xml`은 `paddingBottom` 0 dp에 `clipToPadding` 거짓이다. 16과 17이 같다.
-- 갈무리도 같다. 548 x 974 창의 디스플레이 화면에서 `content`는 `[0,0][548,974]`, `content_frame`과 `recycler_view`는 `[0,211][548,974]`로, 목록이 창 아래 끝에 닿는다.
-- DSA가 바꾼 것 하나가 하위 화면의 아래쪽에 닿는다. 높이 600 dp 이상인 창에서는 큰 제목을 펼쳐 연다(FR-34). 그때 `content_frame`은 창 높이에서 접힌 툴바만 뺀 높이라 아래 123 dp(179 dp - 56 dp)가 창 밖에 있고, 스크롤하면 제목이 먼저 접힌다. 목록이 창 높이와 비슷한 화면은 접힌 뒤 목록 아래에 그만큼까지 빈 곳이 남는다. 이것은 띠가 아니라 짧은 목록 뒤의 빈 화면이고 Android의 큰 제목 동작 그대로다. 소유자가 본 것이 이것인지는 모른다.
+- 하위 화면이 아래에 두는 것은 하나다. `SettingsBaseActivity.onCreate`가 부르는 `Utils.setupEdgeToEdge`(17 `Utils.java:1535-1552`)가 `android.R.id.content`를 `getInsets(systemBars() | ime() | displayCutout())`의 `bottom`만큼 채운다. 태스크에는 내비게이션 바 소스가 없고(#760), 게스트의 입력기는 창을 띄우지 않으며, 컷아웃도 없으므로 이 값은 0이다. 폰에서는 이 값이 목록 아래의 공간이 된다.
+- 16 dp는 첫 화면에만 있다. Android 17의 `TopLevelSettings.setPaddingHorizontal`(263-274행)이 `isRunningInFreeformWindow`일 때 목록의 아래 패딩을 `dashboard_padding_bottom`(16 dp)으로 둔다. 하위 화면에는 프리폼이나 캡션 바를 보고 여백을 더하는 코드가 없다. Android 16의 첫 화면에는 그 코드도 없다. `onCreateRecyclerView`가 `setPadding(mPaddingHorizontal, 0, mPaddingHorizontal, 0)`을 부르고, 그 빌드의 dex에서 `setPaddingHorizontal`을 부르는 곳은 없다. 곧 Android 16은 첫 화면도 창 끝에 붙는다.
+- 하위 화면의 종류와 각각이 아래 공간을 얻는 곳:
+  - 환경설정 화면(대부분): androidx.preference가 `PreferenceFragmentCompat`마다 `preference_recyclerview.xml`을 부풀린다. 컴파일된 레이아웃은 `paddingBottom` 0 dp에 `clipToPadding` 거짓이다. Settings에서 `onCreateRecyclerView`를 재정의하는 프래그먼트는 모두 먼저 super를 부른다(설정 마법사용 Glif 레이아웃만 예외다). 탭이 있는 화면(`ProfileSelectFragment`)도 탭마다 이 목록이다.
+  - Compose 화면(앱 목록, 앱 정보, 특별한 앱 접근 등, `SpaActivity`): SettingsLib의 스캐폴드 둘이 Material `Scaffold`의 `contentWindowInsets = WindowInsets.safeDrawing`에서 나온 아래 패딩을 화면에 넘긴다. `SettingsScaffold`는 `VerticalPaddingValues`로 감싸 넘기고 `RegularScaffold`가 열 끝의 `Spacer` 높이로 쓴다. `SearchScaffold`는 `paddingValues.calculateBottomPadding()`을 그대로 넘기고 `AppList`가 `LazyColumn`의 `contentPadding`으로 쓴다. 둘 다 스크롤되는 여백이다. `ManageApplications`는 목록 종류에 Compose 화면이 있으면 그리로 넘어간다(`getSpaDestination`).
+  - 자기 목록을 가진 화면: Compose로 넘어가지 않는 앱 목록(`manage_applications_apps.xml`, `RecyclerView`, `clipToPadding` 거짓, 패딩 없음), 개발자 옵션의 실행 중인 서비스(`running_processes_view.xml`, `ListView`)와 서비스 상세(`running_service_details.xml`, `NestedScrollView`, `clipToPadding` 거짓), 신뢰할 수 있는 자격 증명(`trusted_credential_list_container.xml`, `ListView`).
+  - 검색 결과: Android 16은 별도 앱 SettingsIntelligence의 `search_panel.xml`이고 목록(`list_results`)이 제 `dashboard_padding_bottom`을 아래 패딩으로 이미 가진다. Android 17 빌드에는 이 앱이 없다.
+  - 아래에 단추를 고정한 화면: 초기화(`main_clear.xml`)와 잠금 설정 같은 Glif 레이아웃, 기기 관리자 추가(`device_admin_add.xml`). 스크롤 영역이 단추 막대 위에서 끝나고 단추는 제 여백을 가진다. `settings_main_prefs.xml`의 단추 막대는 설정 마법사가 띄울 때만 보인다.
+  - 권한 화면(권한 관리자, 앱의 권한): PermissionController의 화면이고 같은 `preference_recyclerview.xml`(0 dp)을 쓴다.
+- 폰에서 이 자리는 스크롤되는 여백이 아니라 고정된 띠다. `setupEdgeToEdge`가 콘텐츠 뷰 자체를 채우기 때문이다. 같은 곳에 16 dp를 더하면 스크롤하는 동안 목록이 창 끝 16 dp 위에서 잘린다. 그래서 그 자리가 아니라 스크롤하는 뷰 안에 둔다.
 
-### 결정
-- 원인을 찾지 못했으므로 이미지를 바꾸지 않았다. 아래 인셋이 0인 창에서 하위 화면이 여백을 만드는 길이 소스와 APK에 없어서, 무엇을 고쳐도 근거 없는 편집이 된다.
-- Image test에 검사를 더했다. 디스플레이 화면의 목록(`recycler_view`)이 창 아래 끝에 닿지 않으면 실패하고, 떨어진 픽셀 수를 적는다(`dsa/host/platform/linux/tests/system_screens.rs`). 기기에서 여백이 생기면 이 검사와 갈무리가 원인을 좁힌다.
+### 고친 것
+모든 하위 화면이 목록을 끝까지 내렸을 때 마지막 항목과 창 아래 끝 사이에 첫 화면과 같은 16 dp(`SETTINGS_LIST_END_DP`)를 둔다. 스크롤하는 뷰의 패딩이고 그 뷰는 패딩에서 자르지 않으므로, 스크롤하는 동안 항목은 창 끝까지 그려진다. 전부 `make-image.py`가 `Settings.apk` 안에서 한다.
+- 컴파일된 레이아웃(`SETTINGS_LIST_END`): `preference_recyclerview.xml`의 `paddingBottom`을 16 dp로 바꾸고, `manage_applications_apps.xml`의 목록과 `running_service_details.xml`의 스크롤 뷰에 `paddingBottom` 16 dp를 더하고, 두 `ListView` 레이아웃에는 `paddingBottom` 16 dp와 `clipToPadding` 거짓을 더한다. 속성 이름이 파일에 없으면 문자열 풀과 리소스 맵에 이름을 넣고 뒤의 문자열 번호를 민다(`add_xml_attribute_name`).
+- Compose(`SETTINGS_CODE_LIST_END`): `VerticalPaddingValues.calculateBottomPadding`과 `SearchScaffoldKt`의 람다에서 `PaddingValues.calculateBottomPadding` 호출과 그 `move-result`를 `const/high16`(16.0f)으로 바꾼다. 메서드 크기를 지켜야 하는 dex 편집에는 "인셋 + 16"을 넣을 자리가 없어(7 코드 단위짜리 메서드에 3 단위가 더 든다) 상수로 둔다. 태스크의 아래 인셋은 어느 종류든 0이므로 결과는 같다. 람다의 이름은 빌드마다 다르므로(16은 `SearchScaffold$lambda$12`, 17은 `$r8$lambda$...`) 그 클래스에서 이 호출을 가진 메서드를 모두 고친다.
+- Android 16 첫 화면: `onCreateRecyclerView`의 `setPadding` 호출을 건너뛴다. 레이아웃의 16 dp가 남아 Android 17 첫 화면과 같아진다. Android 17의 첫 화면은 제 코드가 16 dp를 다시 정하므로 그대로다. 두 창 배치의 왼쪽 창(첫 화면)과 오른쪽 창(하위 화면)도 같은 코드와 레이아웃이라 따로 다루지 않았다.
+- PermissionController: 같은 레이아웃의 `paddingBottom`을 16 dp로 바꾼다(권한 APEX 안의 APK, 카드 모서리를 고치는 같은 길).
+- `check-image.py`는 이 레이아웃이나 스캐폴드 코드가 아예 없는 Settings, 그리고 고쳐지지 않은 Settings를 거부한다(`settings_list_end_problems`).
+- 두 빌드의 실제 APK에 적용해 보았다. Android 16은 여덟 곳(레이아웃 다섯, 메서드 셋), Android 17은 일곱 곳(첫 화면 메서드는 고칠 것이 없다)이 바뀌고, 두 번째 적용에서는 바뀌는 것이 없다. 바뀐 레이아웃은 더한 속성 말고는 모든 요소와 속성이 전과 같게 읽힌다. PermissionController도 두 빌드에서 같다.
+- 고치지 않은 것과 그 까닭: 검색 결과는 제 패딩이 있다. 단추를 아래에 고정한 화면은 스크롤 영역이 단추 위에서 끝나고 단추가 제 여백을 가지므로 그대로 둔다. Files(DocumentsUI)는 설정 화면이 아니다.
+
+### 큰 제목(FR-34)과의 관계
+높이 600 dp 이상인 창에서는 하위 화면이 큰 제목을 펼쳐 연다. 그때 `content_frame`은 창 높이에서 접힌 툴바만 뺀 높이라 아래 123 dp(179 dp - 56 dp)가 창 밖에 있고, 스크롤하면 제목이 먼저 접힌 뒤 목록이 움직인다. 16 dp는 목록 안의 패딩이므로 이 순서를 바꾸지 않는다. 제목이 접히면 목록의 아래 끝이 창 끝에 오고, 목록을 끝까지 내리면 마지막 항목이 그 16 dp 위에 선다. 목록이 창 높이와 비슷해 스스로 스크롤하지 않는 화면은 제목이 접힌 뒤 마지막 항목 아래에 16 dp보다 많이 남을 수 있다. 이것은 Android의 큰 제목 동작 그대로다.
+
+### Image test
+`dsa/host/platform/linux/tests/system_screens.rs`는 디스플레이 화면의 목록이 창 아래 끝에 닿는지만 보았다(#804). 이제 목록을 끝까지 내린 뒤에도 목록이 창 끝에 닿고(띠가 아니다), 마지막 행이 그 끝에서 16 dp 위에 있는지 본다(0도 아니고 띠도 아니다). 목록이 스크롤하지 않을 만큼 짧으면 16 dp 이상인지만 본다.
 
 ### 확인하지 못한 것
-- 소유자 PC에서 여백이 어느 화면, 어느 창 높이, 어느 뷰 아래에 있는지. `uiautomator dump`의 `content`, `content_frame`, `recycler_view` 경계와 `dumpsys activity top`의 그 창 인셋 소스(`type=navigationBars`, `type=ime`의 `visible`과 프레임)를 보면 인셋인지 레이아웃인지 갈린다.
-- 두 창 배치(창 너비 720 dp 이상에서의 액티비티 임베딩)와 Compose로 그리는 화면(SPA)은 기기에서 보지 못했다. 소스에서는 둘 다 아래 여백을 더하지 않는다.
-- 큰 제목을 펼쳐 여는 높은 창에서, 목록이 아니라 아래에 단추를 고정해 둔 화면(중첩 스크롤이 없는 화면)은 그 단추가 창 밖 123 dp 안에 놓일 수 있다. SettingsLib은 이 테마에서 제목을 끌어 접지 못하게 하므로(`CollapsingCoordinatorLayout`의 `canDrag`) 접을 방법이 없다. 그런 화면이 실제로 있는지는 기기에서 본다.
+- 기기. 이미지를 만들거나 실행하지 않았다. 고친 메서드를 ART가 받아들이는지는 이미지 빌드의 dex2oat(`--abort-on-hard-verifier-error`)가, 고친 레이아웃이 부풀려지는지는 Image test와 소유자 PC에서 처음 본다.
+- `system_screens.rs`는 리눅스에서만 빌드되므로 고친 검사를 여기서 컴파일하지 못했다.
+- Compose 화면의 16 dp는 소스와 dex로만 확인했다. 앱 목록, 앱 정보, 특별한 앱 접근 화면을 PC에서 끝까지 내려 본다.
+- 자기 레이아웃을 가진 화면은 APK의 레이아웃을 훑어 골랐다. 드물게 열리는 화면 가운데 스크롤하는 뷰가 창 끝까지 닿는데 위 목록에 없는 것이 남아 있을 수 있다(언어 순서 목록 `locale_order_list.xml`은 목록이 화면보다 길 때만 해당한다).
+- 창 높이가 큰 제목을 펼치는 화면에서, 아래에 단추를 고정해 둔 화면의 단추가 창 밖 123 dp 안에 놓일 수 있다는 것은 여전히 기기에서 보아야 한다(SettingsLib은 이 테마에서 제목을 끌어 접지 못하게 한다).
 
 ## R51. 높이가 고정된 앱 바가 위쪽 인셋에 눌리는 까닭, 그리고 밝은 띠 위의 밝은 글리프 (FR-22)
 

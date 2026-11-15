@@ -324,9 +324,6 @@ SETTINGS_CODE_WITHOUT_REMOVED_APPS = {
     "Lcom/android/settings/display/BrightnessLevelPreference;->onPreferenceClick": SETTINGS_BRIGHTNESS_DIALOG_STARTS,
     "Lcom/android/settings/BrightnessPreference;->onClick": SETTINGS_BRIGHTNESS_DIALOG_STARTS,
 }
-# Every edit of Settings' code.
-SETTINGS_CODE = {**SETTINGS_CODE_WITHOUT_BLUETOOTH, **SETTINGS_CODE_WITHOUT_REMOVED_APPS}
-
 # Android 17's Settings home page (TopLevelSettings.setPaddingHorizontal) pads its list's
 # bottom by dashboard_padding_bottom (16 dp) when isRunningInFreeformWindow, which asks
 # whether the window shows a caption bar. That padding stands in for the navigation bar inset
@@ -334,6 +331,46 @@ SETTINGS_CODE = {**SETTINGS_CODE_WITHOUT_BLUETOOTH, **SETTINGS_CODE_WITHOUT_REMO
 # edge. A DSA window has no navigation bar inset either, so Settings keeps that padding as
 # Android's desktop windows show it: nothing below edits the method.
 SETTINGS_FREEFORM_WINDOW = "Lcom/android/settings/homepage/TopLevelSettings;->isRunningInFreeformWindow"
+
+# The room every other Settings page keeps below its last row: the home page's, the value of
+# Android 17's dashboard_padding_bottom. Settings gives only its home list that padding. A
+# page opened from it takes the space below its list from the navigation bar inset alone
+# (Utils.setupEdgeToEdge pads the page's content by it, and a Compose page's scaffold hands it
+# to the page as its bottom padding). A task has no such inset, so the last card of every sub
+# page ended on the window's bottom edge, its rounded corners touching it, while the home page
+# did not. Each kind of page gets the home page's room at the end of what it scrolls, inside
+# the list, so rows still scroll to the window's edge and only the end of the list stops
+# short of it (SETTINGS_LIST_END for the pages laid out in XML, SETTINGS_CODE_LIST_END for
+# the others).
+SETTINGS_LIST_END_DP = 16
+_SPA = "Lcom/android/settingslib/spa"
+_COMPOSE_BOTTOM_PADDING = "Landroidx/compose/foundation/layout/PaddingValues;->calculateBottomPadding-D9Ej5fM"
+# - Settings' Compose pages (the app lists, an app's page, the special access pages) are laid
+#   out by two scaffolds of SettingsLib, which give a page the bottom of the window insets as
+#   the padding below what it scrolls: SettingsScaffold through VerticalPaddingValues (a
+#   spacer at the end of RegularScaffold's column), SearchScaffold straight from Material's
+#   Scaffold (the content padding of the app list). Both read it with
+#   PaddingValues.calculateBottomPadding, and both get the room instead: a task has no inset
+#   along its bottom edge of any kind (no navigation bar, no input method window, no cutout),
+#   so the room replaces a 0, and the methods have no code units to spare for a sum. The
+#   compiler names SearchScaffold's lambda as it likes, so every method of its class that
+#   reads the padding is edited.
+# - Android 16's home page (TopLevelSettings.onCreateRecyclerView) calls
+#   setPadding(mPaddingHorizontal, 0, mPaddingHorizontal, 0) on its list, and that build has
+#   no freeform padding of its own. Nothing in it sets mPaddingHorizontal, so the call only
+#   drops the padding the list's layout now has (SETTINGS_LIST_END): it is skipped, and the
+#   home list keeps the same room as on Android 17, whose method makes no such call.
+SETTINGS_CODE_LIST_END = {
+    f"{_SPA}/framework/compose/VerticalPaddingValues;->calculateBottomPadding-D9Ej5fM": (
+        "constant result", {"call": _COMPOSE_BOTTOM_PADDING, "float": float(SETTINGS_LIST_END_DP)}),
+    f"{_SPA}/widget/scaffold/SearchScaffoldKt;->*": (
+        "constant result", {"call": _COMPOSE_BOTTOM_PADDING, "float": float(SETTINGS_LIST_END_DP)}),
+    "Lcom/android/settings/homepage/TopLevelSettings;->onCreateRecyclerView": [
+        ("skip call", "Landroid/view/ViewGroup;->setPadding"),
+    ],
+}
+# Every edit of Settings' code.
+SETTINGS_CODE = {**SETTINGS_CODE_WITHOUT_BLUETOOTH, **SETTINGS_CODE_WITHOUT_REMOVED_APPS, **SETTINGS_CODE_LIST_END}
 
 # PermissionController lives in the permission APEX, which is unpacked, edited and packed
 # again before signing (see edit_permission_apex).
@@ -2298,12 +2335,150 @@ def xml_dimension_dp(dp):
     return dp << 8 | XML_COMPLEX_UNIT_DIP
 
 
+XML_TYPE_BOOLEAN = 0x12
+XML_START_NAMESPACE = 0x0100
+XML_END_NAMESPACE = 0x0101
+XML_CDATA = 0x0104
+ANDROID_PADDING_BOTTOM = 0x010100D9
+ANDROID_CLIP_TO_PADDING = 0x010100EB
+# The names of the framework attributes set_xml_dimensions may add to a file that names them
+# nowhere yet, by resource id.
+XML_ATTRIBUTE_NAMES = {ANDROID_PADDING_BOTTOM: "paddingBottom", ANDROID_CLIP_TO_PADDING: "clipToPadding"}
+
+
+def xml_value(value):
+    """An attribute value as compiled XML stores it, its type and its data: a whole number of
+    dp, or a boolean."""
+    if isinstance(value, bool):
+        return XML_TYPE_BOOLEAN, 0xFFFFFFFF if value else 0
+    return XML_TYPE_DIMENSION, xml_dimension_dp(value)
+
+
+def xml_value_text(value):
+    """An attribute value of set_xml_dimensions as a message names it."""
+    return str(value).lower() if isinstance(value, bool) else f"{value} dp"
+
+
+def add_xml_attribute_name(axml, attribute):
+    """Compiled XML that names one more framework attribute (by resource id, one of
+    XML_ATTRIBUTE_NAMES), for an element to carry. aapt2 keeps the attribute names at the head
+    of the string pool in resource id order, with their ids in the resource map beside them:
+    the name and the id go in at that place, and every string index from there on moves up by
+    one. A file that already names the attribute is returned as it is."""
+    file_type, file_header, _ = struct.unpack_from("<HHI", axml, 0)
+    if file_type != XML_FILE:
+        raise ValueError("not a compiled Android XML file")
+    chunks = []
+    offset = file_header
+    while offset < len(axml):
+        chunk_type, header_size, size = struct.unpack_from("<HHI", axml, offset)
+        chunks.append((chunk_type, header_size, offset, size))
+        offset += size
+    resource_map = next((c for c in chunks if c[0] == XML_RESOURCE_MAP), None)
+    if resource_map is None:
+        raise ValueError("the compiled XML has no framework attribute at all")
+    _, map_header, map_offset, map_size = resource_map
+    ids = list(struct.unpack_from(f"<{(map_size - map_header) // 4}I", axml, map_offset + map_header))
+    if attribute in ids:
+        return axml
+    if attribute not in XML_ATTRIBUTE_NAMES:
+        raise ValueError(f"the compiled XML names no attribute {attribute:#x}, and its name is not known to add")
+    text = XML_ATTRIBUTE_NAMES[attribute]
+    index = sum(1 for i in ids if i < attribute)
+
+    def moved(at, chunk):
+        (value,) = struct.unpack_from("<I", chunk, at)
+        if value != XML_NO_INDEX and value >= index:
+            struct.pack_into("<I", chunk, at, value + 1)
+
+    def moved_value(at, chunk):
+        # A typed value: its size, a zero, its type and its data, a string index for a string.
+        if chunk[at + 3] == XML_TYPE_STRING:
+            moved(at + 4, chunk)
+
+    out = [axml[:file_header]]
+    for chunk_type, header_size, offset, size in chunks:
+        chunk = bytearray(axml[offset:offset + size])
+        if chunk_type == XML_STRING_POOL:
+            _, _, _, count, style_count, flags, strings_start, _ = struct.unpack_from("<HHIIIIII", chunk, 0)
+            if style_count:
+                raise ValueError("the compiled XML's strings carry styles")
+            utf8 = flags & XML_UTF8
+            entries = []
+            for start in struct.unpack_from(f"<{count}I", chunk, header_size):
+                at = strings_start + start
+                if utf8:
+                    for _ in range(2):
+                        length = chunk[at]
+                        at += 1
+                        if length & 0x80:
+                            length = ((length & 0x7F) << 8) | chunk[at]
+                            at += 1
+                    entries.append(bytes(chunk[strings_start + start:at + length + 1]))
+                else:
+                    (length,) = struct.unpack_from("<H", chunk, at)
+                    at += 2
+                    if length & 0x8000:
+                        length = ((length & 0x7FFF) << 16) | struct.unpack_from("<H", chunk, at)[0]
+                        at += 2
+                    entries.append(bytes(chunk[strings_start + start:at + 2 * length + 2]))
+            if utf8:
+                encoded = text.encode("utf-8")
+                entries.insert(index, bytes([len(text), len(encoded)]) + encoded + b"\0")
+            else:
+                entries.insert(index, struct.pack("<H", len(text)) + text.encode("utf-16-le") + b"\0\0")
+            starts, data = [], b""
+            for entry in entries:
+                starts.append(len(data))
+                data += entry
+            data += bytes(-len(data) % 4)
+            new_start = header_size + 4 * len(entries)
+            # The pool is no longer in the order its sorted flag promises.
+            chunk = bytearray(struct.pack("<HHIIIIII", XML_STRING_POOL, header_size, new_start + len(data),
+                                          len(entries), 0, flags & ~1, new_start, 0)
+                              + bytes(chunk[28:header_size]) + struct.pack(f"<{len(starts)}I", *starts) + data)
+        elif chunk_type == XML_RESOURCE_MAP:
+            ids.insert(index, attribute)
+            chunk = bytearray(struct.pack("<HHI", XML_RESOURCE_MAP, header_size, header_size + 4 * len(ids))
+                              + bytes(chunk[8:header_size]) + struct.pack(f"<{len(ids)}I", *ids))
+        elif chunk_type in (XML_START_NAMESPACE, XML_END_NAMESPACE, XML_START_ELEMENT, XML_END_ELEMENT, XML_CDATA):
+            moved(12, chunk)  # the node's comment
+            moved(header_size, chunk)
+            if chunk_type == XML_CDATA:
+                moved_value(header_size + 4, chunk)
+            else:
+                moved(header_size + 4, chunk)
+            if chunk_type == XML_START_ELEMENT:
+                attribute_start, attribute_size, count = struct.unpack_from("<HHH", chunk, header_size + 8)
+                for i in range(count):
+                    at = header_size + attribute_start + i * attribute_size
+                    for field in (0, 4, 8):  # the attribute's namespace, name and text
+                        moved(at + field, chunk)
+                    moved_value(at + 12, chunk)
+        out.append(bytes(chunk))
+    result = b"".join(out)
+    return result[:4] + struct.pack("<I", len(result)) + result[8:]
+
+
+class _UnnamedAttribute(Exception):
+    """An element is to get an attribute the compiled XML names nowhere."""
+
+
 def set_xml_dimensions(axml, edits):
-    """Compiled XML with, for each (element, attribute, dp) in `edits`, that framework
-    attribute (by resource id, such as android:paddingBottom) of every `element` set to `dp`
-    dp, added in its place where the element lacks it. An added attribute's name must already
-    be in the file, as aapt2 keeps one name per attribute any element uses. Returns the new
-    file and the number of attributes it changed or added."""
+    """Compiled XML with, for each (element, attribute, value) in `edits`, that framework
+    attribute (by resource id, such as android:paddingBottom) of every `element` set to
+    `value` (a whole number of dp, or a boolean), added in its place where the element lacks
+    it. An attribute no element of the file uses yet gets its name added first (see
+    add_xml_attribute_name). Returns the new file and the number of attributes it changed or
+    added."""
+    while True:
+        try:
+            return _set_xml_attributes(axml, edits)
+        except _UnnamedAttribute as unnamed:
+            axml = add_xml_attribute_name(axml, unnamed.args[0])
+
+
+def _set_xml_attributes(axml, edits):
     file_type, file_header, _ = struct.unpack_from("<HHI", axml, 0)
     if file_type != XML_FILE:
         raise ValueError("not a compiled Android XML file")
@@ -2324,7 +2499,7 @@ def set_xml_dimensions(axml, edits):
             for element, attribute, dp in edits:
                 if strings[name] != element:
                     continue
-                value = xml_dimension_dp(dp)
+                kind, value = xml_value(dp)
                 first = header_size + attribute_start
                 ids = []
                 for i in range(count):
@@ -2332,18 +2507,20 @@ def set_xml_dimensions(axml, edits):
                     ids.append(resource_ids[attribute_name] if attribute_name < len(resource_ids) else None)
                 if attribute in ids:
                     at = first + ids.index(attribute) * attribute_size
-                    if struct.unpack_from("<BI", chunk, at + 15) == (XML_TYPE_DIMENSION, value):
+                    if struct.unpack_from("<BI", chunk, at + 15) == (kind, value):
                         continue
-                    struct.pack_into("<IHBBI", chunk, at + 8, XML_NO_INDEX, 8, 0, XML_TYPE_DIMENSION, value)
+                    struct.pack_into("<IHBBI", chunk, at + 8, XML_NO_INDEX, 8, 0, kind, value)
                     changed += 1
                     continue
-                if attribute not in resource_ids or ANDROID_NS not in strings:
-                    raise ValueError(f"the compiled XML names no attribute {attribute:#x} to add to {element}")
+                if ANDROID_NS not in strings:
+                    raise ValueError(f"the compiled XML names no framework attribute to add to {element}")
+                if attribute not in resource_ids:
+                    raise _UnnamedAttribute(attribute)
                 # aapt2 orders an element's attributes by resource id, and the framework reads
                 # them in step with the attributes a view asks for, which are in that order too.
                 position = sum(1 for i in ids if i is not None and i < attribute)
                 entry = struct.pack("<IIIHBBI", strings.index(ANDROID_NS), resource_ids.index(attribute),
-                                    XML_NO_INDEX, 8, 0, XML_TYPE_DIMENSION, value)
+                                    XML_NO_INDEX, 8, 0, kind, value)
                 at = first + position * attribute_size
                 chunk[at:at] = entry + bytes(attribute_size - len(entry))
                 count += 1
@@ -2657,17 +2834,24 @@ def edit_dex(dex, edits):
     `new` (Dalvik assembly, see assemble_dex) in n registers, padded with no-ops to the same
     size; or ("replace call", {"after": a, "old": o, "new": n}), which makes the first call to
     the static method o after the first call to a a call to n, which takes and returns the same
-    types (only the method the instruction names changes). Returns the new file and the
-    methods it changed. A method already edited, or not in this file, is not changed; one
-    whose code is neither `old` nor `new` is refused."""
+    types (only the method the instruction names changes); or ("constant result", {"call":
+    "Lclass;->method", "float": f}), which turns each call to that method, with the
+    move-result that keeps the number it returns, into loading the float f (one const/high16
+    holds) into the same register. "Lclass;->*" names every method of a class, for code whose
+    method names the compiler makes up (lambdas). Returns the new file and the methods it
+    changed. A method already edited, or not in this file, is not changed; one whose code is
+    neither `old` nor `new` is refused."""
     defined, refs = dex_methods(dex)
     out = bytearray(dex)
     changed = []
-    for method, kind, target in (
+    for pattern, kind, target in (
             (method, kind, target)
             for method, edit in edits.items()
             for kind, target in (edit if isinstance(edit, list) else [edit])):
-        for code_off, shorty in defined.get(method, []):
+        for method, code_off, shorty in (
+                [(name, code_off, shorty) for name, codes in defined.items() if name.startswith(pattern[:-1])
+                 for code_off, shorty in codes] if pattern.endswith("->*")
+                else [(pattern, code_off, shorty) for code_off, shorty in defined.get(pattern, [])]):
             registers, ins, outs, tries = struct.unpack_from("<4H", dex, code_off)
             insns = code_off + 16
             if kind in ("return false", "return true"):
@@ -2738,6 +2922,22 @@ def edit_dex(dex, edits):
                     raise ValueError(f"{method} calls {target['old']} other than as a static method")
                 struct.pack_into("<H", out, at + 2, new_index)
                 changed.append(method)
+            elif kind == "constant result":
+                (bits,) = struct.unpack("<I", struct.pack("<f", target["float"]))
+                if bits & 0xFFFF:
+                    raise ValueError(f"const/high16 does not hold {target['float']}")
+                instructions = list(dex_instructions(dex, code_off))
+                for (at, op), (result, following) in zip(instructions, instructions[1:] + [(None, None)]):
+                    if op not in DEX_INVOKES or refs[struct.unpack_from("<H", dex, at + 2)[0]] != target["call"]:
+                        continue
+                    if following != 0x0A:
+                        raise ValueError(f"{method} does not keep the number {target['call']} returns")
+                    # const/high16 over the call's first two code units, in the register the
+                    # move-result named; the call's third unit and the move-result become no-ops.
+                    units = DEX_INSTRUCTION_UNITS[op] + 1
+                    out[at:at + 2 * units] = (struct.pack("<HH", 0x15 | dex[result + 1] << 8, bits >> 16)
+                                              + bytes(2 * (units - 2)))
+                    changed.append(method)
             else:
                 raise ValueError(f"unknown dex edit {kind}")
     if changed:
@@ -2749,8 +2949,8 @@ def edit_dex(dex, edits):
 def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_attributes=None):
     """An APK with `code` edited in its dex files (see edit_dex), the preference elements
     whose controller `controllers` names removed from its compiled XML ({xml: [controller]}),
-    the dimensions `dimensions` names set in its compiled XML ({xml: [(element,
-    attribute, dp)]}, see set_xml_dimensions), and the attributes `theme_attributes` names
+    the dimensions and booleans `dimensions` names set in its compiled XML ({xml: [(element,
+    attribute, value)]}, see set_xml_dimensions), and the attributes `theme_attributes` names
     taken from the theme ({xml: [(element, attribute name)]}, see set_xml_theme_attributes).
     Prints each change; returns the APK as it was when nothing changed."""
     replacements = {}
@@ -2779,7 +2979,8 @@ def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_att
             edited, changed = set_xml_dimensions(replacements.get(xml) or apk.read(xml), edits)
             if changed:
                 for element, attribute, dp in edits:
-                    print(f"setting {element} attribute {attribute:#x} to {dp} dp in {name}:{xml}", flush=True)
+                    print(f"setting {element} attribute {attribute:#x} to {xml_value_text(dp)} in {name}:{xml}",
+                          flush=True)
                 replacements[xml] = edited
         for xml, edits in (theme_attributes or {}).items():
             if xml not in files:
@@ -2806,9 +3007,10 @@ def edit_settings_apk(data, name):
     without the calls into apps the image leaves out (SETTINGS_CODE_WITHOUT_REMOVED_APPS),
     and with its pages' large titles opening expanded or folded as the Settings overlay's theme
     says (SETTINGS_TITLE_EXPANDED). Its home list keeps Android's own freeform padding
-    (SETTINGS_FREEFORM_WINDOW)."""
-    return edit_apk(data, name, code=SETTINGS_CODE,
-                    controllers=SETTINGS_CONTROLLERS_WITHOUT_BLUETOOTH, theme_attributes=SETTINGS_TITLE_EXPANDED)
+    (SETTINGS_FREEFORM_WINDOW), and its other pages get the same room below their last row
+    (SETTINGS_LIST_END, SETTINGS_CODE_LIST_END)."""
+    return edit_apk(data, name, code=SETTINGS_CODE, controllers=SETTINGS_CONTROLLERS_WITHOUT_BLUETOOTH,
+                    dimensions=SETTINGS_LIST_END, theme_attributes=SETTINGS_TITLE_EXPANDED)
 
 
 # System apps that started at every boot to find they had nothing to do, and then stayed as
@@ -2972,14 +3174,14 @@ def image_services_jar(data):
 
 def edit_permission_controller_apk(data, name):
     """PermissionController.apk with its preference lists grouped in cards with Settings'
-    corners."""
+    corners, and with the room Settings' lists keep below their last row."""
     return edit_apk(data, name, dimensions=permission_controller_edits())
 
 
 def permission_controller_edits():
-    """The compiled XML edits PermissionController.apk gets: its cards. Its lists get no
-    bottom margin, as Settings' get none."""
-    return dict(PERMISSION_CONTROLLER_CARDS)
+    """The compiled XML edits PermissionController.apk gets: its cards, and the room below
+    the last row of its lists, as Settings' have it."""
+    return {**PERMISSION_CONTROLLER_CARDS, **PERMISSION_CONTROLLER_LIST_END}
 
 
 # Properties the vendor and odm build.prop files may not set. init reads those two files as
@@ -5009,9 +5211,9 @@ SETTINGS_OVERLAY_TARGET = "com.android.settings"
 SETTINGS_BACK_ICON = "settingslib_expressive_icon_back"
 SETTINGS_BACK_INSET_DP = 8
 # Settings' lists take the space below their last row from the navigation bar inset alone
-# (SettingsLib's EdgeToEdgeUtils pads the content view by it). A task has none, so they end on
-# the window's bottom edge like every app's, and the overlay leaves their layouts as they are:
-# a margin of Settings' own would be a band no other app has.
+# (Utils.setupEdgeToEdge pads the content view by it), and a task has none. The room they
+# keep there instead is set in Settings.apk itself (SETTINGS_LIST_END), not here: the overlay
+# leaves their layouts as they are.
 #
 # The overlay names what it replaces in a resource map (android:resourcesMap) instead of by
 # matching names. Only then does the framework rewrite the overlay layouts' references to
@@ -5270,6 +5472,46 @@ SETTINGS_TITLE_EXPANDED = {
     "res/layout-v36/settingslib_expressive_collapsing_toolbar_content_layout.xml": [(APP_BAR_LAYOUT, "expanded")],
     "res/layout-v36/settingslib_expressive_support_toolbar_layout.xml": [(APP_BAR_LAYOUT, "expanded")],
 }
+# The room below the last row of Settings' pages that are laid out in XML
+# (SETTINGS_LIST_END_DP), set in the compiled layouts of Settings.apk as the padding of the
+# view that scrolls, which does not clip to it:
+# - preference_recyclerview is the list of every preference page (androidx.preference
+#   inflates it for each PreferenceFragmentCompat, and Settings' fragments that make their own
+#   list call that first). It says paddingBottom 0dp and clipToPadding false itself.
+# - manage_applications_apps is the list of the app lists that are not Compose pages yet.
+# - running_processes_view (Developer options' Running services) and
+#   trusted_credential_list_container (Trusted credentials) are ListViews, which clip to their
+#   padding unless told otherwise.
+# - running_service_details (a running service's page) is a scroll view that already does
+#   not clip to its padding.
+# An overlay could replace only the first without copying a whole layout and naming each of
+# its ids. A page with buttons fixed below what it scrolls (the setup layouts, the device
+# admin page) is none of these: its buttons keep their own margins and stay where they are.
+RECYCLER_VIEW = "androidx.recyclerview.widget.RecyclerView"
+_LIST_END = (ANDROID_PADDING_BOTTOM, SETTINGS_LIST_END_DP)
+_LIST_VIEW_END = [("ListView", *_LIST_END), ("ListView", ANDROID_CLIP_TO_PADDING, False)]
+SETTINGS_LIST_END = {
+    "res/layout/preference_recyclerview.xml": [(RECYCLER_VIEW, *_LIST_END)],
+    "res/layout/manage_applications_apps.xml": [(RECYCLER_VIEW, *_LIST_END)],
+    "res/layout/running_processes_view.xml": _LIST_VIEW_END,
+    "res/layout/trusted_credential_list_container.xml": _LIST_VIEW_END,
+    "res/layout/running_service_details.xml": [("androidx.core.widget.NestedScrollView", *_LIST_END)],
+}
+# The permission pages Settings opens (the permission manager, an app's permissions) are
+# PermissionController's, with the same preference list and the same missing inset. Its
+# <overlayable> lets no overlay replace the layout, so the compiled one in its APK gets the
+# room (the APK is edited for its cards already, see PERMISSION_CONTROLLER_CARDS).
+PERMISSION_CONTROLLER_LIST_END = {
+    "res/layout/preference_recyclerview.xml": [(RECYCLER_VIEW, *_LIST_END)],
+}
+# What must be in Settings.apk for the room to be there: the layouts above, and the Compose
+# code SETTINGS_CODE_LIST_END edits. A build without one of them lays its pages out some
+# other way, which check-image.py must not take for a page that has the room.
+SETTINGS_LIST_END_CLASSES = [
+    f"{_SPA}/framework/compose/VerticalPaddingValues;->calculateBottomPadding-D9Ej5fM",
+    f"{_SPA}/widget/scaffold/SearchScaffoldKt;->SearchScaffold",
+]
+
 # PermissionController's lists are SettingsLib's, but the app declares <overlayable> and its
 # list backgrounds are not in it, so idmap2 refuses any overlay of them. Their compiled
 # drawables in the APK get the corners Settings' cards have instead: outer corners of
@@ -7226,7 +7468,7 @@ def apk_edits_left(apk, code=None, controllers=None, dimensions=None, theme_attr
                 left += [f"{xml}: {controller}" for controller in found]
         for xml, edits in (dimensions or {}).items():
             if xml in files and set_xml_dimensions(z.read(xml), edits)[1]:
-                left.append(f"{xml}: " + ", ".join(f"{element} {attribute:#x} not {dp} dp"
+                left.append(f"{xml}: " + ", ".join(f"{element} {attribute:#x} not {xml_value_text(dp)}"
                                                    for element, attribute, dp in edits))
         for xml, edits in (theme_attributes or {}).items():
             if xml in files and set_xml_theme_attributes(z.read(xml), edits)[1]:
@@ -7235,9 +7477,26 @@ def apk_edits_left(apk, code=None, controllers=None, dimensions=None, theme_attr
     return left
 
 
+def settings_list_end_problems(apk):
+    """What Settings.apk lacks of the room below the last row of its pages (SETTINGS_LIST_END,
+    SETTINGS_CODE_LIST_END): a layout or the Compose code that is not there at all, and what
+    is there as Settings was built."""
+    with zipfile.ZipFile(io.BytesIO(apk)) as z:
+        files = set(z.namelist())
+        defined = set()
+        for dex in sorted(f for f in files if re.fullmatch(r"classes\d*\.dex", f)):
+            content = z.read(dex)
+            if content[:4] == b"dex\n":
+                defined.update(dex_methods(content)[0])
+    problems = [f"{xml} is missing" for xml in SETTINGS_LIST_END if xml not in files]
+    problems += [f"{method} is missing" for method in SETTINGS_LIST_END_CLASSES if method not in defined]
+    return problems + apk_edits_left(apk, code=SETTINGS_CODE_LIST_END, dimensions=SETTINGS_LIST_END)
+
+
 def permission_controller_problems(signed, otatools, work, env):
     """What is wrong with PermissionController in a signed target_files: its lists without
-    their cards' corners, looked for in the permission APEX the image ships."""
+    their cards' corners or the room below their last row, looked for in the permission APEX
+    the image ships."""
     with zipfile.ZipFile(signed) as z:
         found = [n for n in PERMISSION_APEXES if n in z.namelist()]
         if not found:
@@ -7251,7 +7510,7 @@ def permission_controller_problems(signed, otatools, work, env):
         left = apk_edits_left(apk.read_bytes(), dimensions=permission_controller_edits())
         if left:
             problems.append(f"{found[0]}:{apk.relative_to(payload).as_posix()} still has {'; '.join(left)}, "
-                            "so its cards keep corners of their own")
+                            "so its lists keep corners of their own or end on the window's bottom edge")
     shutil.rmtree(folder, ignore_errors=True)
     return problems
 
