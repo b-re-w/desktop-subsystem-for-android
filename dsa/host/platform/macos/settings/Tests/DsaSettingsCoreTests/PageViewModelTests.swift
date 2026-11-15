@@ -212,6 +212,60 @@ final class PageViewModelTests: XCTestCase {
         XCTAssertEqual(FullScreenPlace.allCases.map(\.rawValue), ["default", "screen", "window"])
     }
 
+    func test_fr30_the_below_title_bar_switch_is_read_and_changed() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        // An entry from a dsa that does not name the switch reads as off.
+        cli.answer("app-window --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null}]}"#)
+        cli.answer("app-window org.example.notes --below-title-bar on --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null,"below_title_bar":true}]}"#)
+        cli.answer("app-window org.example.notes --below-title-bar off --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null,"below_title_bar":false}]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, false)
+
+        await apps.setBelowTitleBar("org.example.notes", true)
+        XCTAssertNil(apps.error)
+        XCTAssertTrue(cli.called("app-window org.example.notes --below-title-bar on --json"))
+        XCTAssertEqual(apps.message, "Apps_WindowChanged")
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, true)
+        // The app's other window settings stay as they were.
+        XCTAssertEqual(apps.rows.first?.resizable, false)
+        // Choosing what the app has already sends nothing.
+        let calls = cli.calls.count
+        await apps.setBelowTitleBar("org.example.notes", true)
+        XCTAssertEqual(cli.calls.count, calls)
+
+        await apps.setBelowTitleBar("org.example.notes", false)
+        XCTAssertNil(apps.error)
+        XCTAssertTrue(cli.called("app-window org.example.notes --below-title-bar off --json"))
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, false)
+    }
+
+    func test_fr30_changing_another_window_setting_never_sends_the_below_title_bar_switch() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[],"below_title_bar_by_default":["org.example.notes"]}"#)
+        cli.answer("app-window org.example.notes --fixed-size on --start-size auto --dpi-scaling auto --fullscreen default --immersive default --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null,"below_title_bar":true}]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        // An app on DSA's list, with no choice of the user's, shows as on.
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, true)
+        await apps.setResizable("org.example.notes", false)
+        XCTAssertNil(apps.error)
+        XCTAssertTrue(cli.called("app-window org.example.notes --fixed-size on --start-size auto --dpi-scaling auto --fullscreen default --immersive default --json"))
+        XCTAssertFalse(cli.calls.contains { $0.contains("--below-title-bar") })
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, true)
+    }
+
     func test_fr4_dpi_scaling_words_are_the_ones_dsa_takes() {
         XCTAssertEqual(DpiScaling.allCases.map(\.rawValue), ["auto", "app", "system", "system-forced"])
         XCTAssertEqual(DpiScaling.read(nil), .auto)
