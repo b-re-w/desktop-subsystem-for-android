@@ -132,6 +132,16 @@ dsa app-window <package> --dpi-scaling system   # 在其他显示器上如何缩
 dsa app-window <package> reset                  # 恢复默认值
 ```
 
+## 让应用从标题栏下方开始
+
+应用会一直绘制到窗口顶端，也就是标题栏下面。因此有些应用的顶部栏会被挤压，或有一部分被标题栏遮挡。对于这样的应用，
+请在 DSA Settings 的 **Apps** 页面打开 **Start below the title bar**（从标题栏下方开始）。应用的内容随后从标题栏下方开始，标题栏则采用应用在那里显示的颜色。
+默认关闭，下次打开该应用的窗口时生效。在命令行中：
+
+```
+dsa app-window <package> --below-title-bar on   # off 恢复默认值
+```
+
 ## 把应用移到缩放比例不同的显示器
 
 应用从第一帧起就以其窗口所在显示器的缩放比例打开，

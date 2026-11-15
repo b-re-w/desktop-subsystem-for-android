@@ -122,6 +122,18 @@ dsa app-window <package> --dpi-scaling system   # how it scales on another monit
 dsa app-window <package> reset                  # back to the defaults
 ```
 
+## Start an app below the title bar
+
+An app draws up to the top of its window, under the title bar. A few apps then squeeze their
+top bar or hide part of it under the title bar. For such an app, turn on **Start below the
+title bar** on the **Apps** page of DSA Settings. The app's content then starts below the title
+bar, and the title bar takes the color the app shows there. It is off by default, and applies
+the next time the app's window opens. From the command line:
+
+```
+dsa app-window <package> --below-title-bar on   # off goes back to the default
+```
+
 ## Move an app to a monitor of another scale
 
 An app opens at the scale of the monitor its window opens on, from its first frame, so it is

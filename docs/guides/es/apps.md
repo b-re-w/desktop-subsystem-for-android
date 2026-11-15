@@ -145,6 +145,20 @@ dsa app-window <package> --dpi-scaling system   # cómo se escala en otro monito
 dsa app-window <package> reset                  # vuelve a los valores predeterminados
 ```
 
+## Hacer que una aplicación empiece debajo de la barra de título
+
+Una aplicación dibuja hasta el borde superior de su ventana, bajo la barra de título. Algunas
+aplicaciones aplastan entonces su barra superior u ocultan parte de ella bajo la barra de
+título. Para una aplicación así, active **Start below the title bar** (empezar debajo de la barra de título) en la página
+**Apps** de DSA Settings. El contenido de la aplicación empieza entonces debajo de la barra de
+título, y la barra de título toma el color que la aplicación muestra ahí. Está desactivado de
+forma predeterminada y se aplica la próxima vez que se abra la ventana de la aplicación. Desde
+la línea de comandos:
+
+```
+dsa app-window <package> --below-title-bar on   # off vuelve al valor predeterminado
+```
+
 ## Mover una aplicación a un monitor con otra escala
 
 Una aplicación se abre con la escala del monitor en el que se abre su ventana, desde su
