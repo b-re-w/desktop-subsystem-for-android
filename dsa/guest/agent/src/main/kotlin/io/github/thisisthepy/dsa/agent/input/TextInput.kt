@@ -49,9 +49,18 @@ interface EditorConnection {
      */
     fun setComposingRegion(start: Int, end: Int): Boolean
 
+    /**
+     * Whether a composition shows in the editor: false when the input method has only the
+     * app's fallback connection, which takes a composition and shows it nowhere (see
+     * [EditorLink]).
+     */
+    val composesInline: Boolean
+        get() = true
+
     companion object {
         /** No editor, as before the input method starts. */
         val NONE = object : EditorConnection {
+            override val composesInline = false
             override fun setComposing(text: String, cursor: Int) = false
             override fun commit(text: String) = false
             override fun deleteSurrounding(before: Int, after: Int) = false
@@ -204,6 +213,18 @@ class TextInput(
     /** The task last given the focus because its editor had the input method. */
     private var focusedForEditor: Int? = null
 
+    /** The task a composition is being typed in, and how many updates it has had. */
+    private var composing: Pair<Int, Int>? = null
+
+    /**
+     * The composition that could not show because the input method had only the app's
+     * fallback connection: it goes into the editor once its own connection comes.
+     */
+    private var waiting: ImeComposition? = null
+
+    /** The task told it has no connection of its own, once for each time it lacks one. */
+    private var unconnected: Int? = null
+
     /**
      * The host sent the task input (a key, a press, text): the user is at its window. Tasks
      * the host was never told about are ignored.
@@ -212,15 +233,59 @@ class TextInput(
         if (isReported(taskId)) addressed = taskId
     }
 
-    /** Acts on a composition from the host. */
+    /**
+     * Acts on a composition from the host. The log hears when a composition begins and how
+     * it ends, not each key of it.
+     */
     fun handle(composition: ImeComposition) {
         val taskId = composition.taskId
         if (!reach(taskId)) return
         val text = composition.text
         val cursor = composition.cursor.coerceIn(0, text.length)
-        if (!editor().setComposing(text, cursor) && text.isNotEmpty()) {
-            log.warn("dropped a composition for task $taskId: no editor there takes text")
+        val target = editor()
+        val taken = target.setComposing(text, cursor)
+        if (text.isEmpty()) {
+            waiting = null
+            ended(taskId, "was removed")
+            return
         }
+        val (task, updates) = composing ?: (null to 0)
+        if (task != taskId) {
+            composing = taskId to 1
+            log.info(
+                when {
+                    !taken -> "a composition began in task $taskId, but no editor there takes text"
+                    target.composesInline -> "a composition began in task $taskId, inline in its editor"
+                    else -> "a composition began in task $taskId, which its editor cannot show yet"
+                },
+            )
+            if (!taken) log.warn("dropped a composition for task $taskId: no editor there takes text")
+        } else {
+            composing = taskId to updates + 1
+        }
+        if (taken && !target.composesInline) {
+            waiting = composition
+            if (unconnected != taskId) {
+                unconnected = taskId
+                log.warn(
+                    "the editor in task $taskId has no input connection of its own, only the app's " +
+                        "fallback, which shows no composition; asking for the task's focus so the " +
+                        "framework starts input on the editor",
+                )
+                if (!focus(taskId)) log.warn("could not give task $taskId the input focus its editor needs")
+            }
+        } else {
+            waiting = null
+            if (taken) unconnected = null
+        }
+    }
+
+    /** The composition in [taskId] ended as [how] says: one line for the log. */
+    private fun ended(taskId: Int, how: String) {
+        val (task, updates) = composing ?: return
+        if (task != taskId) return
+        composing = null
+        log.info("the composition in task $taskId $how after $updates updates")
     }
 
     /** Acts on committed text from the host. */
@@ -228,6 +293,8 @@ class TextInput(
         val taskId = commit.taskId
         if (!reach(taskId)) return
         val text = commit.text
+        waiting = null
+        ended(taskId, "was committed")
         if (text.isEmpty() || editor().commit(text)) return
         val typed = keys.keysFor(text)
         if (typed == null) {
@@ -282,6 +349,16 @@ class TextInput(
         } else if (state.kind != ImeInputKind.IME_INPUT_KIND_NONE && focusedForEditor != taskId) {
             focusedForEditor = taskId
             if (!focus(taskId)) log.warn("could not give task $taskId the input focus its editor has")
+        }
+        // The editor has its own connection now: the composition that could not show goes in.
+        val held = waiting
+        if (held != null && held.taskId == taskId && state.kind != ImeInputKind.IME_INPUT_KIND_NONE) {
+            val target = editor()
+            if (target.composesInline && target.setComposing(held.text, held.cursor.coerceIn(0, held.text.length))) {
+                waiting = null
+                unconnected = null
+                log.info("the composition in task $taskId went into its editor once the editor's own connection came")
+            }
         }
         if (lastEditor == taskId to state) return
         lastEditor = taskId to state

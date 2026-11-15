@@ -1793,6 +1793,45 @@ fn fr6_text_input_reaches_the_guest_as_one_message_per_change() {
 }
 
 #[test]
+fn fr6_every_composition_update_reaches_the_guest_in_order_then_its_commit_or_its_cancel() {
+    let (session, mut agent, _launcher) = active_session();
+    let compose = |text: &str| ImeEvent::Composition {
+        task_id: 7,
+        text: text.into(),
+        cursor: dsa_host_core::ime::utf16_len(text) as u32,
+    };
+    let commit = |text: &str| ImeEvent::Commit {
+        task_id: 7,
+        text: text.into(),
+    };
+    // G, K, S: ㅎ, 하, 한; R: 한 committed as ㄱ begins; then ㄱ dropped with Escape, and
+    // Enter after it.
+    let typed = [
+        compose("\u{314e}"),
+        compose("\u{d558}"),
+        compose("\u{d55c}"),
+        commit("\u{d55c}"),
+        compose("\u{3131}"),
+        compose(""),
+    ];
+    for event in &typed {
+        session.ime(event).expect("the text input is sent");
+    }
+    session
+        .key(&enter(7, KeyAction::Down))
+        .expect("the key is sent");
+    for expected in &typed {
+        let message = dsa_protocol::decode(&agent.recv(Some(WAIT)).unwrap()).unwrap();
+        assert_eq!(message.body, Some(expected.to_control()));
+    }
+    let message = dsa_protocol::decode(&agent.recv(Some(WAIT)).unwrap()).unwrap();
+    assert!(
+        matches!(message.body, Some(Body::KeyEvent(_))),
+        "the key comes after the text typed before it"
+    );
+}
+
+#[test]
 fn fr6_text_input_while_the_guest_is_not_running_says_so() {
     let (session, _connector) = session_with(FakeLauncher::default(), WAIT);
     assert_eq!(

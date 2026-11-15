@@ -8,8 +8,11 @@ import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import io.github.thisisthepy.dsa.agent.input.EditorCalls
 import io.github.thisisthepy.dsa.agent.input.EditorConnection
+import io.github.thisisthepy.dsa.agent.input.EditorLink
 import io.github.thisisthepy.dsa.agent.input.EditorState
+import io.github.thisisthepy.dsa.agent.input.LinkedEditor
 import io.github.thisisthepy.dsa.agent.input.inputKind
 
 /**
@@ -53,6 +56,17 @@ class HostInputMethod : InputMethodService() {
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        attribute?.let { info ->
+            val through = if (link()?.started != null) {
+                "the editor's own connection"
+            } else {
+                "only the app's fallback connection, in which no composition shows"
+            }
+            AndroidLog.info(
+                "input started in ${info.packageName}: inputType=0x${Integer.toHexString(info.inputType)} " +
+                    "imeOptions=0x${Integer.toHexString(info.imeOptions)} restarting=$restarting, through $through",
+            )
+        }
         // Where the cursor is now, and again whenever it moves.
         currentInputConnection?.requestCursorUpdates(
             InputConnection.CURSOR_UPDATE_IMMEDIATE or InputConnection.CURSOR_UPDATE_MONITOR,
@@ -74,6 +88,7 @@ class HostInputMethod : InputMethodService() {
     }
 
     override fun onFinishInput() {
+        AndroidLog.info("input finished in ${currentInputEditorInfo?.packageName}")
         super.onFinishInput()
         onEditor?.invoke(EditorState.NONE)
     }
@@ -140,6 +155,45 @@ class HostInputMethod : InputMethodService() {
         return currentInputConnection
     }
 
+    /**
+     * The connections to the focused editor that takes text: the one the framework started
+     * input with, which the input method's current connection is unless it falls back to its
+     * binding's (the app's fallback BaseInputConnection), and that fallback. Null when the
+     * focus is on no editor.
+     */
+    private fun link(): EditorLink? {
+        val info = currentInputEditorInfo ?: return null
+        if (info.inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_NULL) return null
+        val bound = currentInputBinding?.connection
+        val started = currentInputConnection?.takeIf { currentInputStarted && it !== bound }
+        return EditorLink(started?.let(::calls), bound?.let(::calls))
+    }
+
+    /** The calls on [ic], made once for each connection. */
+    private fun calls(ic: InputConnection): EditorCalls {
+        wrapped?.let { (connection, calls) -> if (connection === ic) return calls }
+        val calls = ConnectionCalls(ic)
+        wrapped = ic to calls
+        return calls
+    }
+
+    @Volatile
+    private var wrapped: Pair<InputConnection, EditorCalls>? = null
+
+    /** An editor's InputConnection, called as [LinkedEditor] asks. */
+    private class ConnectionCalls(private val ic: InputConnection) : EditorCalls {
+        override fun beginBatchEdit() = ic.beginBatchEdit()
+        override fun endBatchEdit() = ic.endBatchEdit()
+        override fun setComposingText(text: String, newCursorPosition: Int) = ic.setComposingText(text, newCursorPosition)
+        override fun finishComposingText() = ic.finishComposingText()
+        override fun commitText(text: String, newCursorPosition: Int) = ic.commitText(text, newCursorPosition)
+        override fun deleteSurroundingText(before: Int, after: Int) = ic.deleteSurroundingText(before, after)
+        override fun setSelection(start: Int, end: Int) = ic.setSelection(start, end)
+        override fun setComposingRegion(start: Int, end: Int) = ic.setComposingRegion(start, end)
+        override fun selectionEnd(): Int? =
+            ic.getExtractedText(ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionEnd }
+    }
+
     companion object {
         @Volatile
         private var current: HostInputMethod? = null
@@ -168,54 +222,7 @@ class HostInputMethod : InputMethodService() {
         var onEditor: ((EditorState) -> Unit)? = null
 
         /** The focused editor, through the input method; the agent calls it on its own thread. */
-        val connection: EditorConnection = object : EditorConnection {
-            override fun setComposing(text: String, cursor: Int): Boolean {
-                val ic = current?.editor() ?: return false
-                if (text.isEmpty()) {
-                    // Removes the composition and what it showed.
-                    ic.setComposingText("", 1)
-                    ic.finishComposingText()
-                    return true
-                }
-                ic.beginBatchEdit()
-                try {
-                    // 1 puts the cursor after the text, 0 before it; anywhere else is set after.
-                    ic.setComposingText(text, if (cursor == 0) 0 else 1)
-                    if (cursor in 1 until text.length) {
-                        val end = ic.getExtractedText(ExtractedTextRequest(), 0)
-                            ?.let { it.startOffset + it.selectionEnd }
-                        if (end != null) {
-                            val at = end - (text.length - cursor)
-                            ic.setSelection(at, at)
-                        }
-                    }
-                } finally {
-                    ic.endBatchEdit()
-                }
-                return true
-            }
-
-            override fun commit(text: String): Boolean {
-                val ic = current?.editor() ?: return false
-                return ic.commitText(text, 1)
-            }
-
-            override fun deleteSurrounding(before: Int, after: Int): Boolean {
-                val ic = current?.editor() ?: return false
-                return ic.deleteSurroundingText(before, after)
-            }
-
-            override fun setSelection(start: Int, end: Int): Boolean {
-                val ic = current?.editor() ?: return false
-                return ic.setSelection(start, end)
-            }
-
-            override fun setComposingRegion(start: Int, end: Int): Boolean {
-                val ic = current?.editor() ?: return false
-                // An empty region ends the composition with its text as it is.
-                return if (start == end) ic.finishComposingText() else ic.setComposingRegion(start, end)
-            }
-        }
+        val connection: EditorConnection = LinkedEditor { current?.link() }
 
         /**
          * The cursor's rectangle in display pixels: the insertion marker if the editor gives

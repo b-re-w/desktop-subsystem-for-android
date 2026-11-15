@@ -17,6 +17,9 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
+use std::sync::Arc;
+
+use crate::compositor::log::{input_trace, note, CompositorLogger};
 
 use dsa_host_core::ime::{ImeCursor, ImeEditor, ImeEvent, InputKind};
 use dsa_host_core::input::InputEvent;
@@ -117,6 +120,14 @@ fn cursor_on_screen(client: RECT, cursor: ImeCursor) -> RECT {
 
 /// One window's text input, shared by the window and the text store the framework holds.
 pub struct Shared {
+    task_id: i32,
+    logger: Option<Arc<CompositorLogger>>,
+    /// How many composition updates went to the guest since the composition began, for the
+    /// line the log gets when it ends.
+    sent: Cell<u32>,
+    /// Whether the framework has composed in the document, which tells the input method
+    /// composes there rather than through IMM32.
+    framework_composed: Cell<bool>,
     hwnd: Cell<isize>,
     store: RefCell<TextStore>,
     events: Sender<InputEvent>,
@@ -139,8 +150,16 @@ pub struct Shared {
 }
 
 impl Shared {
-    pub fn new(task_id: i32, events: Sender<InputEvent>) -> Rc<Shared> {
+    pub fn new(
+        task_id: i32,
+        events: Sender<InputEvent>,
+        logger: Option<Arc<CompositorLogger>>,
+    ) -> Rc<Shared> {
         Rc::new(Shared {
+            task_id,
+            logger,
+            sent: Cell::new(0),
+            framework_composed: Cell::new(false),
             hwnd: Cell::new(0),
             store: RefCell::new(TextStore::new(task_id)),
             events,
@@ -173,10 +192,115 @@ impl Shared {
             .is_ok_and(|composition| composition.is_some())
     }
 
+    /// A line for the window host's log.
+    pub fn note(&self, message: &str) {
+        note(
+            self.logger.as_deref(),
+            &format!("text input: task {}: {message}", self.task_id),
+        );
+    }
+
     fn send(&self, events: Vec<ImeEvent>) {
         for event in events {
+            // Each event on the input trace, by its size alone: what the user types stays out
+            // of the log.
+            let detail = match &event {
+                ImeEvent::Composition { text, cursor, .. } => {
+                    self.sent.set(self.sent.get().saturating_add(1));
+                    format!(
+                        "composition units={} cursor={cursor}",
+                        dsa_host_core::ime::utf16_len(text)
+                    )
+                }
+                ImeEvent::Commit { text, .. } => {
+                    format!("commit units={}", dsa_host_core::ime::utf16_len(text))
+                }
+                ImeEvent::DeleteSurrounding { before, after, .. } => {
+                    format!("delete before={before} after={after}")
+                }
+                ImeEvent::SetSelection { start, end, .. } => {
+                    format!("selection start={start} end={end}")
+                }
+                ImeEvent::SetComposingRegion { start, end, .. } => {
+                    format!("composing region start={start} end={end}")
+                }
+            };
+            input_trace("app.ime", self.task_id, &detail);
             // The sender ends only when the window host stops; input then has nowhere to go.
             let _ = self.events.send(InputEvent::Ime(event));
+        }
+    }
+
+    /// A composition began: the line the log gets for it, and a fresh count of what it sends.
+    fn composition_began(&self, how: &str) {
+        self.sent.set(0);
+        self.note(&format!("a composition began ({how})"));
+    }
+
+    /// A composition ended: the line the log gets for it, with how many of its updates went
+    /// to the guest. One that sent none never showed in the guest's editor.
+    fn composition_ended(&self, how: &str) {
+        let sent = self.sent.replace(0);
+        self.note(&format!(
+            "the composition ended ({how}); {sent} composition updates went to the guest"
+        ));
+    }
+
+    /// The input method composed or committed outside the document, through IMM32: `result`
+    /// is what it committed, and `composition` what it composes now, with its cursor. The
+    /// guest hears it as it would from an edit of the document, and the framework is told
+    /// what changed.
+    pub fn imm(&self, result: Option<&[u16]>, composition: Option<(&[u16], u32)>) {
+        let was = self.imm_composing();
+        let mut changes = Vec::new();
+        let events = match self.store.try_borrow_mut() {
+            Ok(mut store) => {
+                if let Some(result) = result {
+                    changes.push(store.commit_outside(result));
+                }
+                if let Some((text, cursor)) = composition {
+                    changes.push(store.compose_outside(text, cursor));
+                }
+                store.flush()
+            }
+            Err(_) => return,
+        };
+        let now = self.imm_composing();
+        if !was && now {
+            self.composition_began("through IMM32");
+        }
+        self.send(events);
+        if was && !now {
+            self.composition_ended("through IMM32");
+        }
+        if !self.locked(false) {
+            for change in changes {
+                self.tell_text(change);
+            }
+            self.tell_selection();
+        }
+    }
+
+    /// Whether the framework composes in the document: it is composing now, or has before.
+    pub fn composes_in_document(&self) -> bool {
+        self.framework_composed.get() || self.is_composing()
+    }
+
+    /// Whether the document holds a composition the input method gave through IMM32, with no
+    /// composition of the framework's.
+    pub fn imm_composing(&self) -> bool {
+        !self.is_composing()
+            && self
+                .store
+                .try_borrow()
+                .is_ok_and(|store| store.is_composing())
+    }
+
+    /// Sends the guest what the document changed outside a lock of the framework's: after the
+    /// window ended a composition, which the framework may end without an edit.
+    fn settle(&self) {
+        if !self.locked(false) {
+            self.edited();
         }
     }
 
@@ -931,6 +1055,9 @@ impl ITfContextOwnerCompositionSink_Impl for Store_Impl {
             let (_, end, _) = store.selection();
             store.set_composition(Some(extent.unwrap_or((end, end))));
         }
+        self.shared.framework_composed.set(true);
+        self.shared
+            .composition_began("in the window's text services document");
         Ok(true.into())
     }
 
@@ -959,6 +1086,8 @@ impl ITfContextOwnerCompositionSink_Impl for Store_Impl {
         if let Ok(mut store) = self.shared.store.try_borrow_mut() {
             store.set_composition(None);
         }
+        self.shared
+            .composition_ended("in the window's text services document");
         Ok(())
     }
 }
@@ -1156,20 +1285,55 @@ impl Document {
         }
     }
 
-    /// The guest described its editor.
-    pub fn described(&self, editor: ImeEditor) {
+    /// The window took the keyboard focus: its document takes the framework's focus, so the
+    /// input method composes in it. The framework moves its focus to the document associated
+    /// with a window as the window takes the focus, but a window focused before the
+    /// association, or a focus the framework missed, leaves another document focused; the
+    /// input method then composes outside the document, through IMM32, in a window of its own.
+    pub fn focus(&self) {
+        // SAFETY: the framework's own objects, on its thread.
+        unsafe {
+            let ours = self
+                .manager
+                .GetFocus()
+                .is_ok_and(|focused| focused == self.document);
+            if ours {
+                return;
+            }
+            match self.manager.SetFocus(&self.document) {
+                Ok(()) => self.shared.note(
+                    "the text services framework had not focused the window's document as \
+                     the window took the keyboard focus; it does now",
+                ),
+                Err(why) => self.shared.note(&format!(
+                    "the window's document could not take the text services framework's \
+                     focus ({why}); the input method composes outside it"
+                )),
+            }
+        }
+    }
+
+    /// The guest described its editor. Whether the description ended the composition, which
+    /// one the input method keeps outside the document (through IMM32) must drop as well.
+    pub fn described(&self, editor: ImeEditor) -> bool {
         let Some(mut told) = self.shared.describe(editor) else {
-            return;
+            return false;
         };
         let owed = self.shared.owed.take();
         told.kind |= owed.kind;
         told.ends_composition |= owed.ends_composition;
         if told.ends_composition {
+            self.shared
+                .note("the guest's editor changed under the composition, which ends");
             self.end_composition();
+            // The guest's editor ends its composition too, keeping its text, even when the
+            // input method ends its own without an edit.
+            self.shared.settle();
         }
         if told.kind {
             self.kind_changed();
         }
+        told.ends_composition
     }
 }
 

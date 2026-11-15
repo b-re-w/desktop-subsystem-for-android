@@ -273,6 +273,40 @@ impl TextStore {
         })
     }
 
+    /// The input method composed `text` outside the document, through IMM32, with its cursor
+    /// `cursor` UTF-16 code units from the start of `text`: it takes the place of the
+    /// composition, or of the selection when there is none, and is the composition now. An
+    /// empty `text` removes the composition. What changed, for the framework to be told.
+    pub fn compose_outside(&mut self, text: &[u16], cursor: u32) -> TextChange {
+        let (from, to) = self.document.composition.unwrap_or(self.document.selection);
+        let change = self.replace(from, to, text).unwrap_or(TextChange {
+            start: from,
+            old_end: from,
+            new_end: from,
+        });
+        let len = text.len() as u32;
+        self.document.composition = (len > 0).then_some((from, from + len));
+        let at = from + cursor.min(len);
+        self.document.selection = (at, at);
+        change
+    }
+
+    /// The input method committed `text` outside the document, through IMM32: it takes the
+    /// place of the composition, or of the selection, and the composition ends. What changed,
+    /// for the framework to be told.
+    pub fn commit_outside(&mut self, text: &[u16]) -> TextChange {
+        let (from, to) = self.document.composition.unwrap_or(self.document.selection);
+        let change = self.replace(from, to, text).unwrap_or(TextChange {
+            start: from,
+            old_end: from,
+            new_end: from,
+        });
+        self.document.composition = None;
+        let at = from + text.len() as u32;
+        self.document.selection = (at, at);
+        change
+    }
+
     /// The framework's composition now runs from `start` to `end`, or it has none.
     pub fn set_composition(&mut self, composition: Option<(u32, u32)>) {
         let len = self.len();
@@ -926,6 +960,112 @@ mod tests {
         assert_eq!(store.replace(2, 1, &[]), Err(OutOfRange));
         assert_eq!(store.set_selection(0, 3, false), Err(OutOfRange));
         assert_eq!(store.text(1, 99), &units("b")[..]);
+    }
+
+    #[test]
+    fn fr6_a_composition_the_input_method_gives_through_imm32_reaches_the_guest_in_order() {
+        // An input method that composes outside the document (the window's text services
+        // document is not the focused one), typing 한글 and a space.
+        let mut store = TextStore::new(TASK);
+        store.described_as(described("", 0, (0, 0)));
+        let mut guest = Guest {
+            text: EditorText::of(&described("", 0, (0, 0))),
+        };
+        let mut sent = Vec::new();
+        // G, K, S: ㅎ, 하, 한, each shown as it is typed.
+        for jamo in ["\u{314e}", "\u{d558}", "\u{d55c}"] {
+            store.compose_outside(&units(jamo), 1);
+            let events = store.flush();
+            guest.take(&events);
+            assert_eq!(guest.text.composition, Some((0, 1)), "{jamo} is composing");
+            sent.extend(events);
+        }
+        assert_eq!(guest.shows(), "\u{d55c}");
+        // R: 한 is committed and ㄱ begins, in one message.
+        store.commit_outside(&units("\u{d55c}"));
+        store.compose_outside(&units("\u{3131}"), 1);
+        let events = store.flush();
+        assert_eq!(events, vec![commit("\u{d55c}"), compose("\u{3131}", 1)]);
+        guest.take(&events);
+        sent.extend(events);
+        // M, F: 그, 글. Space: 글 is committed, and the space is typed after it.
+        for jamo in ["\u{adf8}", "\u{ae00}"] {
+            store.compose_outside(&units(jamo), 1);
+            let events = store.flush();
+            guest.take(&events);
+            sent.extend(events);
+        }
+        store.commit_outside(&units("\u{ae00}"));
+        store.commit_outside(&units(" "));
+        let events = store.flush();
+        guest.take(&events);
+        sent.extend(events);
+        assert_eq!(
+            sent,
+            vec![
+                compose("\u{314e}", 1),
+                compose("\u{d558}", 1),
+                compose("\u{d55c}", 1),
+                commit("\u{d55c}"),
+                compose("\u{3131}", 1),
+                compose("\u{adf8}", 1),
+                compose("\u{ae00}", 1),
+                commit("\u{ae00} "),
+            ]
+        );
+        assert_eq!(guest.shows(), "\u{d55c}\u{ae00} ");
+        assert_eq!(guest.text.composition, None);
+        assert_eq!(guest.text, store.guest);
+    }
+
+    #[test]
+    fn fr6_a_composition_canceled_through_imm32_is_removed_from_the_guest() {
+        let mut store = TextStore::new(TASK);
+        store.described_as(described("ab", 0, (2, 2)));
+        let mut guest = Guest {
+            text: EditorText::of(&described("ab", 0, (2, 2))),
+        };
+        store.compose_outside(&units("\u{d55c}"), 1);
+        guest.take(&store.flush());
+        assert_eq!(guest.shows(), "ab\u{d55c}");
+        // Escape: the input method empties its composition.
+        store.compose_outside(&[], 0);
+        let sent = store.flush();
+        assert_eq!(sent, vec![compose("", 0)]);
+        guest.take(&sent);
+        assert_eq!(guest.shows(), "ab");
+        assert_eq!(guest.text.composition, None);
+        assert_eq!(guest.text.selection, (2, 2));
+        assert!(!store.is_composing());
+    }
+
+    #[test]
+    fn fr6_a_click_elsewhere_while_composing_keeps_the_syllable_and_ends_its_composition() {
+        let mut store = TextStore::new(TASK);
+        store.described_as(described("ab", 0, (2, 2)));
+        let mut guest = Guest {
+            text: EditorText::of(&described("ab", 0, (2, 2))),
+        };
+        store.set_composition(Some((2, 2)));
+        composing(&mut store, (2, 2), "\u{d55c}", (2, 3));
+        guest.take(&store.flush());
+        // The user clicks before "ab" in the guest; its editor still shows the composing
+        // syllable as its composing region.
+        let clicked = ImeEditor {
+            composition: Some((2, 3)),
+            ..described("ab\u{d55c}", 0, (0, 0))
+        };
+        let told = store.described_as(clicked);
+        assert!(told.ends_composition);
+        // The input method's composition ends, and the guest's ends with it, its text kept
+        // and the cursor where the user clicked.
+        store.set_composition(None);
+        let sent = store.flush();
+        guest.take(&sent);
+        assert_eq!(guest.shows(), "ab\u{d55c}");
+        assert_eq!(guest.text.composition, None);
+        assert_eq!(guest.text.selection, (0, 0));
+        assert!(store.flush().is_empty());
     }
 
     #[test]

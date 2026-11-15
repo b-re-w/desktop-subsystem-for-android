@@ -2287,7 +2287,7 @@ impl Ui {
                 self.setup.drags.clone(),
             ),
             keys: KeyWindow::new(task_id, self.setup.input.clone()),
-            ime: ImeWindow::new(task_id, self.setup.input.clone()),
+            ime: ImeWindow::new(task_id, self.setup.input.clone(), self.setup.logger.clone()),
             accessibility: RefCell::new(AccessibilityWindow::new(
                 task_id,
                 size,
