@@ -111,11 +111,26 @@ fi
 grep -Fq 'uses: ./.github/workflows/release-image.yml' "$workflow" || fail "the Development build does not reuse the release's jobs"
 grep -Fq 'dev_build: true' "$workflow" || fail "the Development build does not ask for a development build"
 grep -Fq 'workflow_call:' "$release" || fail "the release workflow cannot be called"
-# Every publishing step of the release is off for a development build.
+# Every publishing step of the release is off for a development build and publishes only
+# from the official repository. The condition must require both, so it may join its terms
+# with && but never with ||, which could let either side through on its own.
 for step in 'name: Publish the image' 'name: Publish the lists'; do
-    grep -A3 -F "$step" "$release" | grep -Fq 'if: ${{ !inputs.dev_build }}' || fail "$step runs for a development build"
+    cond="$(grep -A3 -F "$step" "$release" | sed -n 's/^[[:space:]]*if:[[:space:]]*//p' | head -1)"
+    [[ -n "$cond" ]] || fail "$step has no condition, so it runs for a development build"
+    [[ "$cond" != *'||'* ]] || fail "$step has a condition with ||, which can let it publish: $cond"
+    [[ "$cond" =~ \!inputs\.dev_build ]] || fail "$step runs for a development build"
+    [[ "$cond" =~ github\.repository[[:space:]]*==[[:space:]]*\'thisisthepy/desktop-subsystem-for-android\' ]] \
+        || fail "$step publishes from a repository other than the official one"
 done
-grep -Fq "!cancelled() && !inputs.dev_build && inputs.installer_version != ''" "$release" \
-    || fail "the release installer, which publishes, runs for a development build"
+# The release installer job, which publishes, is held to the same: its condition (which may
+# span lines) is all && terms, rules out a development build and names the official repository.
+cond="$(sed -n '/^  installer:$/,/^    needs:/p' "$release" | sed -n '/^    if:/,/^    needs:/p' | grep -v '^    needs:' | tr '\n' ' ')"
+[[ -n "$cond" ]] || fail "the release installer has no condition"
+[[ "$cond" != *'!cancelled() ||'* && "$cond" =~ \!inputs\.dev_build[[:space:]]*\&\& ]] \
+    || fail "the release installer, which publishes, runs for a development build: $cond"
+[[ "$cond" =~ github\.repository[[:space:]]*==[[:space:]]*\'thisisthepy/desktop-subsystem-for-android\'[[:space:]]*\&\& ]] \
+    || fail "the release installer publishes from a repository other than the official one: $cond"
+[[ "$cond" =~ inputs\.installer_version[[:space:]]*!=[[:space:]]*\'\' ]] \
+    || fail "the release installer runs without an installer version: $cond"
 grep -Fq 'retention-days: 3' "$release" || fail "the development artifacts are kept longer than three days"
 echo "dev build plan: ok"
