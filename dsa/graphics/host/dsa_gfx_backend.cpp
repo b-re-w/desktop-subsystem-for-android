@@ -175,7 +175,7 @@ dsa::StagingReply answer_staging(uint64_t puid, uint64_t size,
     if (size == 0) {
         return reply;
     }
-    dsa::GrantRefusal why = dsa::GrantRefusal::None;
+    dsa::GrantRefusal why = dsa::GrantRefusal::NotRefused;
     auto grant = memory.allocate(size, puid, &why);
     if (!grant) {
         static dsa::GraphicsRefusalLog said;

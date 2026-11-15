@@ -143,7 +143,7 @@ struct GraphicsGrant {
 
 // Why an allocation did not get a grant, for the renderer's one log line each.
 enum class GrantRefusal {
-    None,
+    NotRefused,
     NoRegion,  // the renderer has no region (the service made none, or it is off)
     TooLarge,  // larger than the region
     Full,      // no run of free granules is long enough
@@ -152,7 +152,7 @@ enum class GrantRefusal {
 
 inline const char* grantRefusalText(GrantRefusal why) {
     switch (why) {
-        case GrantRefusal::None:
+        case GrantRefusal::NotRefused:
             return "none";
         case GrantRefusal::NoRegion:
             return "there is no graphics memory shared with the guest";
@@ -282,7 +282,7 @@ class GraphicsMemory {
                                           GrantRefusal* why = nullptr) {
         std::vector<Range> scrubs;
         std::optional<GraphicsGrant> grant;
-        GrantRefusal refusal = GrantRefusal::None;
+        GrantRefusal refusal = GrantRefusal::NotRefused;
         {
             std::lock_guard<std::mutex> lock(mMutex);
             grant = allocateLocked(size, owner, &refusal, &scrubs);
