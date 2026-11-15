@@ -114,8 +114,8 @@ use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
     AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, LaunchPlacement,
-    PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest,
-    TaskRequestError, TaskWatch,
+    OverlayWindow, PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation,
+    TaskRequest, TaskRequestError, TaskWatch,
 };
 use crate::touch_gestures::TouchGesturesState;
 use crate::update::alerts::{self as update_alerts, UpdateAlert};
@@ -1533,6 +1533,11 @@ fn task_to_wire(task: Task) -> types::Task {
             .collect(),
         can_go_back: task.can_go_back,
         handles_density_change: task.handles_density_change,
+        overlay: task.overlay.map(|overlay| types::OverlayWindow {
+            window_type: overlay.window_type,
+            focusable: overlay.focusable,
+            touchable: overlay.touchable,
+        }),
     }
 }
 
@@ -1587,6 +1592,11 @@ fn task_from_wire(task: types::Task) -> Task {
             .collect(),
         can_go_back: task.can_go_back,
         handles_density_change: task.handles_density_change,
+        overlay: task.overlay.map(|overlay| OverlayWindow {
+            window_type: overlay.window_type,
+            focusable: overlay.focusable,
+            touchable: overlay.touchable,
+        }),
     }
 }
 

@@ -162,8 +162,9 @@ use crate::root_elevation::{AppLevel, Level};
 use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
-    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, PinShortcutRequest,
-    StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest, TaskTable, TaskWatch,
+    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, OverlayWindow,
+    PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest,
+    TaskTable, TaskWatch,
 };
 use crate::widgets::{
     self, Placement, Widget, WidgetEvent, WidgetFrame, WidgetProvider, WidgetSize,
@@ -6658,6 +6659,11 @@ impl Worker {
                         .collect(),
                     can_go_back: update.can_go_back,
                     handles_density_change: update.handles_density_change,
+                    overlay: update.overlay.map(|overlay| OverlayWindow {
+                        window_type: overlay.window_type,
+                        focusable: overlay.focusable,
+                        touchable: overlay.touchable,
+                    }),
                 }));
             }
             Some(Body::TaskRemoved(removed)) => {

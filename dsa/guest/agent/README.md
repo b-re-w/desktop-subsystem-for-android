@@ -19,6 +19,26 @@ nothing. Its one activity is the guest's home, which draws nothing (see "The hom
 - **Task reports.** It sends `TaskUpdated` (task ID, bounds, package, label, focus) when an
   app task appears or any of those change, and `TaskRemoved` when the task ends. Only app
   tasks are reported: not its own, not home or recents, and not a task with no package.
+- **App overlay windows.** A window an app adds over other apps with the "display over other
+  apps" permission (floating lyrics, a chat head, a screen filter) is in no task, and the
+  window manager tells no app about another app's windows. The agent reads SurfaceFlinger's
+  own list of windows instead (`android.window.WindowInfosListener`, with the
+  `ACCESS_SURFACE_FLINGER` permission a platform-signed app is granted; nothing in the
+  framework is changed), which names each window's type, flags, owner and frame and comes
+  again whenever a window moves (`platform/AndroidOverlayWindows.kt`). The overlays among
+  them (`overlays/Overlays.kt`: `TYPE_APPLICATION_OVERLAY` and the older phone, system alert,
+  system overlay, priority phone and system error types, added by an app and on the screen)
+  are reported like tasks, in a `TaskUpdated` with `overlay` set: an ID from 0x40000000 up,
+  which a window keeps while it lives, the frame of its surface (its frame with its surface
+  insets, which is what the hwcomposer sees), its app, its title or its app's name, the
+  display's density and size, and whether it may take the focus and takes input.
+  `TaskRemoved` follows when its app removes or hides it or its process dies. The host shows
+  each in a borderless window of its own and sends that window's pointer, key and text input
+  with the overlay's ID; the agent injects the pointer input at the overlay's place and never
+  gives an overlay the focus as it gives a task (the window manager gives a focusable overlay
+  the focus itself). The host's requests about a task (close, size, density, title bar) are
+  refused for an overlay. A window an app adds without an input channel is listed with no
+  type and cannot be told from the app's own windows.
 - **Host requests.** `LaunchApp` starts the package's launcher activity as a new task in a
   freeform window (or brings its task to the front). `CloseTask` ends the task, but only a
   task the host was told about. `ResizeTask` gives a task its host window's client size,

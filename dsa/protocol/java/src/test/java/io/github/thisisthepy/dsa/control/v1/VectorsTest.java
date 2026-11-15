@@ -99,6 +99,17 @@ public final class VectorsTest {
                         .setTaskId(7)
                         .setBounds(Rect.newBuilder().setLeft(-40).setTop(-10).setRight(600).setBottom(400)))
                 .build());
+        cases.put("task_updated_overlay", Envelope.newBuilder()
+                .setTaskUpdated(TaskUpdated.newBuilder()
+                        .setTaskId(0x40000001)
+                        .setBounds(Rect.newBuilder().setLeft(158).setTop(82).setRight(666).setBottom(220))
+                        .setPackageName("skplanet.musicmate")
+                        .setLabel("FLO")
+                        .setDensityDpi(262)
+                        .setMaxWidth(3840)
+                        .setMaxHeight(3840)
+                        .setOverlay(OverlayWindow.newBuilder().setWindowType(2038).setTouchable(true)))
+                .build());
         cases.put("task_removed", Envelope.newBuilder()
                 .setTaskRemoved(TaskRemoved.newBuilder().setTaskId(42))
                 .build());

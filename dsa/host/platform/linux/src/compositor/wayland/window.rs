@@ -324,8 +324,21 @@ impl State {
                 let small = window.apply_mode(shown, work);
                 window.limits();
                 self.after_mode(*task_id);
-                self.picture_in_picture(*task_id, small);
+                if shown == WindowMode::Overlay {
+                    // An app overlay window floats above the others where its app has it; it
+                    // asks its app for no size.
+                    self.enter_overlay(*task_id);
+                } else {
+                    self.picture_in_picture(*task_id, small);
+                }
             }
+            WindowChange::Overlay {
+                task_id,
+                left,
+                top,
+                display,
+                ..
+            } => self.place_overlay(*task_id, *left, *top, *display),
             WindowChange::CaptionMode {
                 task_id,
                 app_drawn,
@@ -509,7 +522,9 @@ impl Window {
                 self.toplevel.set_fullscreen(None);
                 None
             }
-            WindowMode::Normal => {
+            // An overlay's window leaves its toplevel for a surface above the others
+            // (`enter_overlay`), at the size its app gave it.
+            WindowMode::Normal | WindowMode::Overlay => {
                 self.toplevel.unset_fullscreen();
                 None
             }

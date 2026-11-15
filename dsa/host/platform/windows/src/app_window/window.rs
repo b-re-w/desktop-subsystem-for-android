@@ -270,6 +270,11 @@ pub struct UiSetup {
     /// Asks whether an app drags out of a task window a press has left. `None` starts no
     /// drags on the host.
     pub drags: Option<DragStarter>,
+    /// The app's package, which the place of its overlay windows is remembered under.
+    pub package: String,
+    /// The folder the places of apps' overlay windows are remembered in. `None` remembers
+    /// none.
+    pub overlay_places: Option<std::path::PathBuf>,
 }
 
 /// Starts the UI thread. Returns once its message window exists.
@@ -546,6 +551,7 @@ fn run(setup: UiSetup, commands: Receiver<ToHost>, ready: Sender<Result<isize, S
             for task_id in open {
                 ui.close(task_id);
             }
+            super::overlay::close_all(&ui.setup);
             ui.publish();
         }
         tsf::end_thread();
@@ -1846,10 +1852,11 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
         WindowMode::PictureInPicture => {
             place_self(hwnd, HWND_NOTOPMOST, (0, 0, 0, 0), keep);
         }
-        WindowMode::Normal => {}
+        // A task's window is never an overlay's (`super::overlay`).
+        WindowMode::Normal | WindowMode::Overlay => {}
     }
     match mode {
-        WindowMode::Normal => {
+        WindowMode::Normal | WindowMode::Overlay => {
             if let Some(placement) = data.restore.take() {
                 data.self_sizing.set(true);
                 SetWindowPlacement(hwnd, &placement);
@@ -1976,6 +1983,14 @@ impl Ui {
 
     fn drain_commands(&mut self) {
         while let Ok(command) = self.commands.try_recv() {
+            // An app overlay window is a window of another kind (`super::overlay`): no title
+            // bar, no close button, above the others, placed where its app has it.
+            if command.task_id().is_some_and(super::overlay::is_overlay) {
+                let beside = self.open.values().next().copied();
+                // SAFETY: on the windows' thread.
+                unsafe { super::overlay::command(&self.setup, beside, command) };
+                continue;
+            }
             // SAFETY: plain Win32 calls on this thread's own windows.
             unsafe {
                 match command {
@@ -2117,6 +2132,9 @@ impl Ui {
                     // The window host's `WindowTasks` takes it, before it reaches this thread;
                     // the window itself shows the same.
                     ToHost::ShownTask { .. } => {}
+                    // Only an overlay's window is placed by its app, and those are taken
+                    // above.
+                    ToHost::Overlay { .. } => {}
                     ToHost::AppMenu { new_window } => {
                         // Every window of the app has the same menu, and the next ones too.
                         self.new_window = new_window;

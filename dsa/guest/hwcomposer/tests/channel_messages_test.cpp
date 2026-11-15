@@ -68,6 +68,23 @@ TEST(fr3_task_bounds_may_start_left_of_and_above_the_display) {
     }
 }
 
+TEST(fr41_task_updated_says_when_it_is_an_app_overlay_window) {
+    const std::vector<uint8_t> bytes = vector("task_updated_overlay");
+    const ChannelEvent event = decodeChannelFrame(bytes.data(), bytes.size());
+    const TaskUpdate* update = std::get_if<TaskUpdate>(&event);
+    EXPECT_TRUE(update != nullptr);
+    if (update) {
+        EXPECT_EQ(update->id, 0x40000001);
+        EXPECT_TRUE(update->bounds == (Rect{158, 82, 666, 220}));
+        EXPECT_TRUE(update->overlay);
+    }
+    // An app task is none.
+    const std::vector<uint8_t> task = vector("task_updated");
+    const ChannelEvent plain = decodeChannelFrame(task.data(), task.size());
+    const TaskUpdate* taskUpdate = std::get_if<TaskUpdate>(&plain);
+    EXPECT_TRUE(taskUpdate != nullptr && !taskUpdate->overlay);
+}
+
 TEST(fr3_task_removed_ends_the_task) {
     const std::vector<uint8_t> bytes = vector("task_removed");
     const ChannelEvent event = decodeChannelFrame(bytes.data(), bytes.size());

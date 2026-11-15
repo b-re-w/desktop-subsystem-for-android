@@ -20,6 +20,7 @@ use wayland_protocols_wlr::layer_shell::v1::client::{
 };
 
 use super::State;
+use dsa_host_core::compositor::overlay_windows::{first_place, kept_on, shown_size};
 use dsa_host_core::compositor::window_hosts::FromHost;
 
 /// The margin from the screen's corner, in logical units.
@@ -124,6 +125,95 @@ impl State {
             window.pip = Some(pip);
         }
         true
+    }
+
+    /// The window shows an app overlay window (floating lyrics, a chat head): it leaves its
+    /// toplevel for a surface that stays above the others and takes no keyboard focus, as a
+    /// picture-in-picture window does, placed where its app has the overlay
+    /// ([`Self::place_overlay`]) rather than in a corner. Without a layer shell it is an X11
+    /// window kept above, where the desktop puts it; without either it stays a toplevel.
+    /// Moving it by a handle and remembering its place are not here yet; on a desktop with a
+    /// layer shell it follows its app's moves.
+    pub(crate) fn enter_overlay(&mut self, task_id: i32) -> bool {
+        if self.windows.get(&task_id).is_some_and(|w| w.pip.is_some()) {
+            return true;
+        }
+        let Some(window) = self.windows.get(&task_id) else {
+            return false;
+        };
+        let size = window.model.shown;
+        let (width, height) = window.model.to_logical(size);
+        let pip = if let Some(shell) = &self.layer_shell {
+            let surface = self.compositor.create_surface(&self.qh, task_id);
+            let layer = shell.get_layer_surface(
+                &surface,
+                None,
+                Layer::Overlay,
+                "dsa-overlay".into(),
+                &self.qh,
+                task_id,
+            );
+            layer.set_size(width.max(1) as u32, height.max(1) as u32);
+            layer.set_anchor(Anchor::Top | Anchor::Left);
+            // A click in it never takes the keyboard from the window the user works in.
+            layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+            surface.commit();
+            Pip::Layer {
+                surface,
+                layer,
+                viewport: None,
+                configured: false,
+            }
+        } else if let Some(x11) = &mut self.x11 {
+            let title = window.model.title.clone();
+            if !x11.open(task_id, size, &title) {
+                return false;
+            }
+            Pip::X11
+        } else {
+            return false;
+        };
+        if let Some(window) = self.windows.get_mut(&task_id) {
+            window.unmap();
+            window.pip = Some(pip);
+        }
+        true
+    }
+
+    /// Puts an overlay's surface where its app has the overlay: `left`, `top` is the overlay's
+    /// top left corner on the guest's display, `display` the display's size. All of an app's
+    /// overlays share one plane ([`OverlayPlane`]), first put where the overlay lies on the
+    /// guest's display, and a move by the app moves the surface the same distance at its
+    /// scale. Only a layer surface can be placed.
+    pub(crate) fn place_overlay(&mut self, task_id: i32, left: i32, top: i32, display: (u32, u32)) {
+        let work = self.work_area();
+        let Some(window) = self.windows.get_mut(&task_id) else {
+            return;
+        };
+        let Some(Pip::Layer { surface, layer, .. }) = &window.pip else {
+            return;
+        };
+        // In the output's pixels, which the window's size and scale are in.
+        let output = window.model.scale.max(1) as i32;
+        let area = (0, 0, work.0 * output, work.1 * output);
+        let size = shown_size(window.model.shown, area);
+        let scale = window.model.frame_scale;
+        let task = window.model.task;
+        let plane = self
+            .overlay_planes
+            .entry(window.model.package.clone())
+            .or_default();
+        let wanted = plane.place((left, top), scale, || {
+            first_place((left, top), task, display, size, area)
+        });
+        let at = kept_on(wanted, size, area);
+        if at != wanted {
+            plane.moved_to((left, top), at);
+        }
+        let (width, height) = window.model.to_logical(size);
+        layer.set_size(width.max(1) as u32, height.max(1) as u32);
+        layer.set_margin(at.1 / output, 0, 0, at.0 / output);
+        surface.commit();
     }
 
     /// The task's window leaves picture-in-picture: its toplevel comes back.
