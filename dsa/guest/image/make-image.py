@@ -4979,6 +4979,47 @@ GRAPHICS_MEMORY_PROPERTY_CONTEXT = f"{GRAPHICS_MEMORY_PROPERTY} u:object_r:dsa_g
 # The driver's device, labelled as the GPU is: every process that draws with the GPU maps its own
 # host-visible memory from it, and the driver keeps each to the grants the host gave it.
 GRAPHICS_MEMORY_DEVICE_CONTEXT = "/dev/dsa_graphics_memory u:object_r:gpu_device:s0"
+# Text the guest Vulkan driver carries only when it has the two fixes app processes need: it
+# opens its own /proc/self/pagemap while the app is not dumpable (dsa_dirty_pages.h), and it says
+# why /dev/dsa_graphics_memory could not be opened (dsa_graphics_memory_device.h).
+VULKAN_DRIVER_PAGEMAP_TEXT = b"process made dumpable for the open"
+VULKAN_DRIVER_GRAPHICS_DEVICE_TEXT = b"/dev/dsa_graphics_memory could not be opened (No such device"
+
+
+def graphics_memory_access_problems(plat_sepolicy, vendor_file_contexts, vendor_property_contexts,
+                                    vulkan_driver):
+    """What keeps app processes from the two paths that take host-visible memory off the
+    graphics stream's hashing: the kernel's write protection of the driver's copies, and the
+    graphics memory the host shares. Each is a reason an app's driver would fall back."""
+    problems = []
+    # PAGEMAP_SCAN on the process's own pagemap: the platform allows only FIOCLEX and FIONCLEX
+    # on a domain's own /proc files.
+    for domain in ("appdomain", "system_server"):
+        if not re.search(r"\(allowx\s+" + domain + r"\s+self\s+\(\s*ioctl\s+file\s+\([^)]*\b0x6610\b",
+                         plat_sepolicy):
+            problems.append(f"the SELinux policy does not let {domain} ask PAGEMAP_SCAN of its own "
+                            "/proc/self/pagemap, so its Vulkan driver hashes every mapped copy at each "
+                            "submit")
+    if not re.search(r'\(genfscon\s+sysfs\s+"/module/dsa_graphics_memory"\s+\(u\s+object_r\s+'
+                     r"dsa_sysfs_shared_memory\b", plat_sepolicy):
+        problems.append("the SELinux policy does not label the graphics memory driver's parameter, so "
+                        "init may not tell the kernel where the host's graphics memory is")
+    if GRAPHICS_MEMORY_DEVICE_CONTEXT not in vendor_file_contexts.splitlines():
+        problems.append("vendor_file_contexts does not label /dev/dsa_graphics_memory gpu_device, so "
+                        "apps may not open it and their host-visible memory is copied through the stream")
+    if GRAPHICS_MEMORY_PROPERTY_CONTEXT not in vendor_property_contexts.splitlines():
+        problems.append(f"{GRAPHICS_MEMORY_PROPERTY} has no property context, so dsa-channeld cannot say "
+                        "where the host's graphics memory is")
+    if vulkan_driver is not None:
+        if VULKAN_DRIVER_PAGEMAP_TEXT not in vulkan_driver:
+            problems.append("the Vulkan driver cannot open /proc/self/pagemap in an app that is not "
+                            "dumpable (most apps), so those apps hash every mapped copy at each submit")
+        if VULKAN_DRIVER_GRAPHICS_DEVICE_TEXT not in vulkan_driver:
+            problems.append("the Vulkan driver predates the graphics memory fixes for apps (it does not "
+                            "say why /dev/dsa_graphics_memory could not be opened)")
+    return problems
+
+
 DNS_REDIRECT_SERVICE = "service dsa_dns_redirect /vendor/bin/dsa-channeld --dns-redirect"
 DNS_REDIRECT_TRIGGER = f"on property:{DNS_PROPERTY}=*"
 # Root elevation's su client. It is a system file, where an app's PATH and the kernel's su
