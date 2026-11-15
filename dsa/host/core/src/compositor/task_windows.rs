@@ -1034,12 +1034,13 @@ impl TaskWindows {
     /// that keeps the app the same size to the eye, when it opened on a monitor of another
     /// scale) and the density request.
     ///
-    /// A move the user is dragging asks for no density: the window shows its task scaled to
-    /// the monitor and hears the scale, and the end of the drag asks for the density
-    /// ([`Self::window_dragging`]). A move outside a drag asks for it at once, with the task's
-    /// activity recreated. The first report is no move: a task the guest could not start at
-    /// that monitor's density is asked for it without being recreated. A task whose user chose
-    /// the system way is never asked for another density: its window stays scaled.
+    /// A move never changes the window's size in pixels, nor its task's. A move the user is
+    /// dragging asks for no density: the window shows its task 1:1, and the end of the drag
+    /// asks for the density ([`Self::window_dragging`]). A move outside a drag asks for it at
+    /// once, with the task's activity recreated. The first report is no move: a task the guest
+    /// could not start at that monitor's density is asked for it without being recreated. A
+    /// task whose user chose the system way is never asked for another density, and its window
+    /// keeps the scale it opened at.
     pub fn window_dpi(&mut self, task_id: i32, dpi: u32) -> (Vec<WindowChange>, Vec<TaskRequest>) {
         // An overlay is never asked for a density: its window shows it at its monitor's scale.
         if let Some(changes) = self.overlay_dpi(task_id, dpi) {
@@ -1159,11 +1160,12 @@ impl TaskWindows {
     /// for while it is dragged are live; when a drag that resized the task ends, returns the
     /// request that reconfigures the task for its final size.
     ///
-    /// A drag that took the window onto a monitor of another scale showed the task scaled,
-    /// at the density it kept. Its end, the end of the move, first asks for the monitor's
-    /// density with the task's activity recreated, then for the window's size at that density:
-    /// once per move, however many monitors the drag crossed. A task whose user chose the
-    /// system way keeps its density and is asked for neither.
+    /// A drag that took the window onto a monitor of another scale showed the task 1:1, at
+    /// the density it kept, in a window that kept its size. Its end, the end of the move, first
+    /// asks for the monitor's density with the task's activity recreated, then for the window's
+    /// size, which the task has already: once per move, however many monitors the drag
+    /// crossed. The window keeps its size. A task whose user chose the system way keeps its
+    /// density and is asked for neither.
     pub fn window_dragging(
         &mut self,
         task_id: i32,
@@ -1234,7 +1236,7 @@ impl TaskWindows {
                 });
                 resized.push(*task_id);
             } else if sizing.scale() != scale {
-                // A window that waited for its task's new density in vain shows it 1:1.
+                // A window whose scale changed meanwhile hears it.
                 rescaled.push(*task_id);
             }
         }
@@ -1761,10 +1763,10 @@ mod tests {
         windows.window_dpi(1, 192);
         assert_eq!(windows.scale(1), (1, 1));
         assert_eq!(windows.window_caption(1, band), inset(1, 58));
-        // An app that keeps its density (130 dpi) is scaled by 262/130: the same band is 29 of
-        // its pixels, 35.7 dp, within one of its pixels of the title bar.
-        let (mut windows, _) = notes_at_100(DpiScaling::System);
-        windows.window_dpi(1, 192);
+        // An app that keeps its density (130 dpi), its window opened on the 200% monitor, is
+        // scaled by 262/130: the same band is 29 of its pixels, 35.7 dp, within one of its
+        // pixels of the title bar.
+        let (mut windows, _) = notes_opened_on(DpiScaling::System, 192);
         assert_eq!(windows.scale(1), (131, 65));
         assert_eq!(windows.window_caption(1, band), inset(1, 29));
     }
@@ -2223,6 +2225,17 @@ mod tests {
     /// A task window on a 100% monitor whose task draws at 130 dpi, as Android starts on a
     /// 100% main monitor, with the user's choice of `scaling` for its app.
     fn notes_at_100(scaling: DpiScaling) -> (TaskWindows, Task) {
+        let (mut windows, notes) = notes_unplaced(scaling);
+        let (changes, requests) = windows.window_dpi(1, 96);
+        assert!(requests.is_empty(), "it starts at its monitor's density");
+        assert!(changes.is_empty());
+        (windows, notes)
+    }
+
+    /// A task window whose task draws at 130 dpi, as Android starts on a 100% main monitor,
+    /// with the user's choice of `scaling` for its app, before the window says which monitor
+    /// it is on.
+    fn notes_unplaced(scaling: DpiScaling) -> (TaskWindows, Task) {
         let mut windows = TaskWindows::new();
         windows.set_app_windows(&[AppWindowSettings {
             package_name: "com.example.app1".into(),
@@ -2234,10 +2247,22 @@ mod tests {
         notes.max_width = 1920;
         notes.max_height = 1920;
         windows.apply(&TaskEvent::Updated(notes.clone()));
-        let (changes, requests) = windows.window_dpi(1, 96);
-        assert!(requests.is_empty(), "it starts at its monitor's density");
-        assert!(changes.is_empty());
         (windows, notes)
+    }
+
+    /// The same task window, opened on a monitor of `dpi`.
+    fn notes_opened_on(scaling: DpiScaling, dpi: u32) -> (TaskWindows, Task) {
+        let (mut windows, notes) = notes_unplaced(scaling);
+        windows.window_dpi(1, dpi);
+        (windows, notes)
+    }
+
+    /// Whether `changes` give the window another size or show its task at another scale.
+    fn resizes_or_rescales(changes: &[WindowChange]) -> bool {
+        changes.iter().any(|change| {
+            matches!(change, WindowChange::Resize { .. })
+                || matches!(change, WindowChange::TaskSize { scale, .. } if *scale != (1, 1))
+        })
     }
 
     fn asks_for_density(requests: &[TaskRequest]) -> bool {
@@ -2249,27 +2274,28 @@ mod tests {
     #[test]
     fn fr4_a_system_mode_task_is_never_recreated() {
         // The user chose the system way: the task keeps its density through any move, so its
-        // activity is never recreated, and its window is scaled.
+        // activity is never recreated, and its window keeps its size and its scale.
         let (mut windows, notes) = notes_at_100(DpiScaling::System);
         let now = Instant::now();
         let (changes, requests) = windows.window_dpi(1, 192);
         assert!(!asks_for_density(&requests), "no density for a move");
-        // 262 dpi there over the task's 130.
+        assert_eq!(windows.scale(1), (1, 1));
+        assert_eq!(changes, vec![]);
+        assert_eq!(windows.window_resized(1, (400, 300), now), vec![]);
+        // A drag onto the 125% monitor and its end ask for nothing either.
+        assert_eq!(windows.window_dragging(1, true, now), vec![]);
+        let (changes, requests) = windows.window_dpi(1, 120);
+        assert!(!asks_for_density(&requests));
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
+        assert!(!asks_for_density(&windows.window_dragging(1, false, now)));
+        assert_eq!(windows.scale(1), (1, 1));
+        windows.apply(&TaskEvent::Updated(notes.clone()));
+        assert_eq!(windows.scale(1), (1, 1));
+
+        // A window that opened on the 200% monitor shows the task at 262 dpi there over the
+        // task's 130, the size to the eye a task drawn there would be.
+        let (mut windows, notes) = notes_opened_on(DpiScaling::System, 192);
         assert_eq!(windows.scale(1), (131, 65));
-        assert_eq!(
-            changes,
-            vec![WindowChange::TaskSize {
-                task_id: 1,
-                width: 400,
-                height: 300,
-                max: Some((3870, 3870)),
-                min: None,
-                scale: (131, 65),
-            }]
-        );
-        // The desktop doubles the window to keep its size to the eye: the same physical size
-        // as a task drawn at the monitor's density, and the task keeps its own size, so nothing
-        // is asked of the guest at all.
         assert_eq!(windows.window_resized(1, (806, 605), now), vec![]);
         // A resize there asks for the task's pixels, not the window's.
         assert_eq!(
@@ -2320,21 +2346,13 @@ mod tests {
         // The guest's report of the task, at its old density, keeps the scale.
         windows.apply(&TaskEvent::Updated(notes.clone()));
         assert_eq!(windows.scale(1), (131, 65));
-        // Back on the 100% monitor, the window shows the task 1:1 again, still with no density.
+        // On the 100% monitor it keeps its scale and its size, still with no density.
         let (changes, requests) = windows.window_dpi(1, 96);
         assert!(!asks_for_density(&requests));
-        assert_eq!(windows.scale(1), (1, 1));
-        assert!(changes
-            .iter()
-            .any(|change| matches!(change, WindowChange::TaskSize { scale: (1, 1), .. })));
-        // A drag onto the 200% monitor and its end ask for nothing either.
-        assert_eq!(windows.window_dragging(1, true, now), vec![]);
-        let (_, requests) = windows.window_dpi(1, 192);
-        assert!(!asks_for_density(&requests));
-        assert!(!asks_for_density(&windows.window_dragging(1, false, now)));
         assert_eq!(windows.scale(1), (131, 65));
+        assert_eq!(changes, vec![]);
 
-        // System chosen for an app that does handle it: scaled the same way.
+        // System chosen for an app that does handle it: the same.
         let (mut windows, _) = notes_at_100(DpiScaling::System);
         windows.apply(&TaskEvent::Removed { task_id: 1 });
         let mut handles = task(1, "Notes", 400, 300);
@@ -2342,15 +2360,46 @@ mod tests {
         handles.handles_density_change = true;
         windows.apply(&TaskEvent::Updated(handles));
         windows.window_dpi(1, 96);
-        let (_, requests) = windows.window_dpi(1, 144);
+        let (changes, requests) = windows.window_dpi(1, 144);
         assert!(!asks_for_density(&requests));
-        assert_eq!(windows.scale(1), (98, 65));
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
 
         // Forced works as system until the framework change it needs is made.
         let (mut windows, _) = notes_at_100(DpiScaling::SystemForced);
-        let (_, requests) = windows.window_dpi(1, 192);
+        let (changes, requests) = windows.window_dpi(1, 192);
         assert!(!asks_for_density(&requests));
-        assert_eq!(windows.scale(1), (131, 65));
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
+    }
+
+    #[test]
+    fn fr4_a_system_scaled_window_keeps_its_pixel_size_across_monitors() {
+        // YouTube, scaled the system way by default, opened on a 125% monitor at its density
+        // (164 dpi), 1277x949 pixels, then dragged onto the 200% monitor and back.
+        let mut windows = TaskWindows::new();
+        let mut youtube = task(1, "YouTube", 1277, 949);
+        youtube.package_name = "com.google.android.youtube".into();
+        youtube.density_dpi = 164;
+        youtube.max_width = 2880;
+        youtube.max_height = 2880;
+        windows.apply(&TaskEvent::Updated(youtube.clone()));
+        let (changes, requests) = windows.window_dpi(1, 120);
+        assert!(requests.is_empty());
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
+        let now = Instant::now();
+        for dpi in [192, 120, 192] {
+            assert_eq!(windows.window_dragging(1, true, now), vec![]);
+            let (changes, requests) = windows.window_dpi(1, dpi);
+            assert!(!asks_for_density(&requests), "at {dpi}");
+            assert!(!resizes_or_rescales(&changes), "at {dpi}: {changes:?}");
+            assert_eq!(windows.scale(1), (1, 1));
+            // The window keeps its client size, so the task keeps its own.
+            assert_eq!(windows.window_resized(1, (1277, 949), now), vec![]);
+            assert_eq!(windows.window_dragging(1, false, now), vec![]);
+            let changes = windows.apply(&TaskEvent::Updated(youtube.clone()));
+            assert!(!resizes_or_rescales(&changes), "{changes:?}");
+            assert!(windows.tick(now + SETTLE * 2).is_empty());
+            assert_eq!(windows.task_size(1), Some((1277, 949)));
+        }
     }
 
     /// A YouTube window on a 100% monitor whose task draws at 130 dpi, with `settings` as the
@@ -2373,7 +2422,8 @@ mod tests {
     #[test]
     fn fr4_youtube_scales_the_system_way_by_default() {
         // With no choice of the user's, or with auto chosen, a move to a monitor of another
-        // scale gives YouTube no new density: it is scaled, and never recreated.
+        // scale gives YouTube no new density: it is never recreated, and its window keeps its
+        // size and shows it 1:1.
         let auto = AppWindowSettings {
             package_name: "com.google.android.youtube".into(),
             fixed_size: true,
@@ -2387,8 +2437,7 @@ mod tests {
             let (_, requests) = windows.window_dpi(1, 192);
             assert!(!asks_for_density(&requests));
             assert!(!asks_for_density(&windows.window_dragging(1, false, now)));
-            // 262 dpi there over the task's 130.
-            assert_eq!(windows.scale(1), (131, 65));
+            assert_eq!(windows.scale(1), (1, 1));
             // A move the desktop makes alone ends at once, and asks for nothing either.
             let (_, requests) = windows.window_dpi(1, 120);
             assert!(!asks_for_density(&requests));
@@ -2424,22 +2473,20 @@ mod tests {
             windows.apply(&TaskEvent::Updated(notes.clone()));
             let now = Instant::now();
             assert_eq!(windows.window_dragging(1, true, now), vec![]);
-            // The drag crosses a 125% monitor and ends on a 200% one.
+            // The drag crosses a 125% monitor and ends on a 200% one. The window keeps its
+            // pixels and shows the task 1:1 all the way.
             for dpi in [120, 192] {
                 let (changes, requests) = windows.window_dpi(1, dpi);
                 assert!(!asks_for_density(&requests), "{scaling:?} at {dpi}");
                 assert!(
-                    changes
-                        .iter()
-                        .any(|change| matches!(change, WindowChange::TaskSize { .. })),
-                    "the window hears the scale it shows the task at: {changes:?}"
+                    !resizes_or_rescales(&changes),
+                    "{scaling:?} at {dpi}: {changes:?}"
                 );
             }
-            assert_eq!(windows.scale(1), (131, 65), "{scaling:?}");
-            // The desktop keeps the window the same size to the eye: the task's own size at
-            // that scale, so nothing is asked during the drag.
-            assert_eq!(windows.window_resized(1, (806, 605), now), vec![]);
-            // The user lets go: the density, with the activity recreated, then the size at it.
+            assert_eq!(windows.scale(1), (1, 1), "{scaling:?}");
+            assert_eq!(windows.window_resized(1, (400, 300), now), vec![]);
+            // The user lets go: the density, with the activity recreated, at the size the task
+            // and its window have.
             assert_eq!(
                 windows.window_dragging(1, false, now),
                 vec![
@@ -2450,28 +2497,22 @@ mod tests {
                     },
                     TaskRequest::Resize {
                         task_id: 1,
-                        width: 806,
-                        height: 605,
+                        width: 400,
+                        height: 300,
                         live: false,
                     },
                 ],
                 "{scaling:?}"
             );
-            // The last frame stays on the window, scaled, until the guest reports the task at
-            // the new density; then the window shows it 1:1 and gives it its inset again.
-            assert_eq!(windows.scale(1), (131, 65));
+            // The guest reports the task at the new density and the same size: the window
+            // takes no size and no scale.
             let mut moved = notes.clone();
             moved.density_dpi = 262;
-            moved.bounds.right = moved.bounds.left + 806;
-            moved.bounds.bottom = moved.bounds.top + 605;
             let changes = windows.apply(&TaskEvent::Updated(moved));
             assert_eq!(windows.scale(1), (1, 1));
-            assert!(
-                changes
-                    .iter()
-                    .any(|change| matches!(change, WindowChange::TaskSize { scale: (1, 1), .. })),
-                "{changes:?}"
-            );
+            assert!(!resizes_or_rescales(&changes), "{changes:?}");
+            assert!(windows.tick(now + SETTLE * 2).is_empty());
+            assert_eq!(windows.task_size(1), Some((400, 300)));
             // Once per move.
             assert!(!asks_for_density(&windows.window_dragging(1, true, now)));
             assert!(!asks_for_density(&windows.window_dragging(1, false, now)));
@@ -2485,9 +2526,9 @@ mod tests {
         windows.window_dragging(1, true, now);
         let (_, requests) = windows.window_dpi(1, 192);
         assert!(!asks_for_density(&requests));
-        // Pointer input and the caption inset follow the scaled window, as for a task that
-        // keeps its density for good.
-        assert_eq!(windows.scale(1), (131, 65));
+        // The window shows the task 1:1, so pointer input and the caption inset are the
+        // window's pixels: the title bar the window draws at the new scale is the inset.
+        assert_eq!(windows.scale(1), (1, 1));
         assert_eq!(
             windows.window_caption(
                 1,
@@ -2499,12 +2540,12 @@ mod tests {
             ),
             vec![TaskRequest::SetCaption {
                 task_id: 1,
-                height: 32,
-                start_width: 48,
-                end_width: 137,
+                height: 64,
+                start_width: 96,
+                end_width: 276,
             }]
         );
-        // Dragged back to the 100% monitor before the end: 1:1, and nothing to recreate.
+        // Dragged back to the 100% monitor before the end: nothing to recreate.
         let (_, requests) = windows.window_dpi(1, 96);
         assert!(!asks_for_density(&requests));
         assert_eq!(windows.scale(1), (1, 1));
@@ -2512,42 +2553,121 @@ mod tests {
     }
 
     #[test]
+    fn fr4_a_window_dropped_on_another_scale_keeps_its_pixel_size() {
+        // FLO on the 200% monitor at its density (262 dpi), 882x1288 pixels, dragged by its
+        // title bar onto a 125% monitor and let go there.
+        let mut windows = TaskWindows::new();
+        let mut flo = task(1, "FLO", 882, 1288);
+        flo.density_dpi = 262;
+        flo.max_width = 2880;
+        flo.max_height = 2880;
+        windows.apply(&TaskEvent::Updated(flo.clone()));
+        let (changes, requests) = windows.window_dpi(1, 192);
+        assert!(requests.is_empty());
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
+        let band = |height| CaptionBand {
+            height,
+            start_width: 0,
+            end_width: 0,
+        };
+        windows.window_caption(1, band(93));
+        let now = Instant::now();
+        assert_eq!(windows.window_dragging(1, true, now), vec![]);
+        let (changes, requests) = windows.window_dpi(1, 120);
+        assert!(!asks_for_density(&requests));
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
+        // The title bar the window draws on the new monitor is the task's inset, in pixels.
+        assert_eq!(
+            windows.window_caption(1, band(58)),
+            vec![TaskRequest::SetCaption {
+                task_id: 1,
+                height: 58,
+                start_width: 0,
+                end_width: 0,
+            }]
+        );
+        assert_eq!(windows.window_resized(1, (882, 1288), now), vec![]);
+        // The drop: the new density, once, at the same pixel size.
+        assert_eq!(
+            windows.window_dragging(1, false, now),
+            vec![
+                TaskRequest::SetDensity {
+                    task_id: 1,
+                    density_dpi: 164,
+                    recreate: true,
+                },
+                TaskRequest::Resize {
+                    task_id: 1,
+                    width: 882,
+                    height: 1288,
+                    live: false,
+                },
+            ]
+        );
+        // A report on the way to the density, even of the task at its size in dp, resizes
+        // nothing; nor does the guest's report of the task at the new density.
+        let mut on_the_way = flo.clone();
+        on_the_way.bounds.right = on_the_way.bounds.left + 550;
+        on_the_way.bounds.bottom = on_the_way.bounds.top + 804;
+        let changes = windows.apply(&TaskEvent::Updated(on_the_way));
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
+        let mut moved = flo.clone();
+        moved.density_dpi = 164;
+        let changes = windows.apply(&TaskEvent::Updated(moved));
+        assert!(!resizes_or_rescales(&changes), "{changes:?}");
+        for later in [now + SETTLE, now + SETTLE * 3] {
+            assert!(!resizes_or_rescales(&windows.tick(later)));
+            assert!(!windows
+                .reconfigures(later)
+                .iter()
+                .any(|request| matches!(request, TaskRequest::Resize { .. })));
+        }
+        assert_eq!(windows.task_size(1), Some((882, 1288)));
+        assert_eq!(windows.scale(1), (1, 1));
+    }
+
+    #[test]
     fn fr6_on_a_monitor_of_another_scale_the_editors_cursor_is_where_the_window_shows_it() {
         // Notes keeps 130 dpi, the density of a monitor at 100%.
-        let (mut windows, notes) = notes_at_100(DpiScaling::System);
+        let (mut windows, notes) = notes_unplaced(DpiScaling::System);
         let cursor = crate::ime::ImeCursor {
             left: 100,
             top: 200,
             right: 102,
             bottom: 240,
         };
-        // At 100% the window shows the task 1:1, and the cursor where the task has it.
+        // Before the window says where it is, it shows the task 1:1, and the cursor where the
+        // task has it.
         assert_eq!(
             windows.apply(&TaskEvent::ImeCursor { task_id: 1, cursor }),
             vec![WindowChange::ImeCursor { task_id: 1, cursor }]
         );
-        // The window moves to a monitor at 125% (164 dpi). The guest does not move the cursor,
-        // but the window now shows it 164 window pixels per 130: the candidate window must
+        // The window opened on a monitor at 125% (164 dpi). The guest does not move the
+        // cursor, but the window shows it 164 window pixels per 130: the candidate window must
         // follow without waiting for the next keystroke.
+        let shown = WindowChange::ImeCursor {
+            task_id: 1,
+            cursor: crate::ime::ImeCursor {
+                left: 126,
+                top: 252,
+                right: 128,
+                bottom: 302,
+            },
+        };
         let (changes, _) = windows.window_dpi(1, 120);
         assert_eq!(windows.scale(1), (82, 65));
-        assert!(
-            changes.contains(&WindowChange::ImeCursor {
-                task_id: 1,
-                cursor: crate::ime::ImeCursor {
-                    left: 126,
-                    top: 252,
-                    right: 128,
-                    bottom: 302,
-                },
-            }),
-            "{changes:?}"
-        );
-        // Back at 100%, it is where the task has it again.
+        assert!(changes.contains(&shown), "{changes:?}");
+        // A move keeps the scale, so the cursor stays where the window shows it.
         let (changes, _) = windows.window_dpi(1, 96);
         assert!(
-            changes.contains(&WindowChange::ImeCursor { task_id: 1, cursor }),
+            !changes
+                .iter()
+                .any(|change| matches!(change, WindowChange::ImeCursor { .. })),
             "{changes:?}"
+        );
+        assert_eq!(
+            windows.apply(&TaskEvent::ImeCursor { task_id: 1, cursor }),
+            vec![shown]
         );
         // A window that closes forgets it: the task's next window hears of no cursor until the
         // guest reports one.
@@ -2565,10 +2685,10 @@ mod tests {
 
     #[test]
     fn fr22_a_window_at_a_new_scale_gives_its_task_the_caption_inset_in_the_tasks_pixels() {
-        let (mut windows, notes) = notes_at_100(DpiScaling::System);
+        let (mut windows, notes) = notes_unplaced(DpiScaling::System);
         let now = Instant::now();
-        // The window reports the title bar of a monitor at 125% before the move itself reaches
-        // the window manager: the inset is converted at the old scale, 1:1.
+        // The window reports the title bar of a monitor at 125% before the monitor it opened
+        // on reaches the window manager: the inset is converted at the old scale, 1:1.
         let band = CaptionBand {
             height: 50,
             start_width: 60,
@@ -2584,8 +2704,8 @@ mod tests {
             }]
         );
         assert_eq!(windows.reconfigures(now), vec![]);
-        // Then the move: the window shows the task at 164 per 130, and the same band is fewer
-        // of the task's pixels. The inset is given again without the band changing.
+        // Then the monitor: the window shows the task at 164 per 130, and the same band is
+        // fewer of the task's pixels. The inset is given again without the band changing.
         let (_, requests) = windows.window_dpi(1, 120);
         assert_eq!(windows.scale(1), (82, 65));
         assert_eq!(
@@ -2628,13 +2748,13 @@ mod tests {
     fn fr4_a_move_outside_a_drag_gives_the_new_density_at_once_with_the_activity_recreated() {
         // The desktop moved the window (a keyboard shortcut, a monitor whose scale changed):
         // the move has ended already, so the task gets the new density at once, whether its
-        // app says it handles one or not, and its window stays 1:1.
+        // app says it handles one or not, and its window stays 1:1 at its size.
         for handles in [true, false] {
             let (mut windows, mut notes) = notes_at_100(DpiScaling::Auto);
             notes.handles_density_change = handles;
             windows.apply(&TaskEvent::Updated(notes.clone()));
             let now = Instant::now();
-            let (_, requests) = windows.window_dpi(1, 192);
+            let (changes, requests) = windows.window_dpi(1, 192);
             assert_eq!(
                 requests,
                 vec![TaskRequest::SetDensity {
@@ -2643,22 +2763,13 @@ mod tests {
                     recreate: true
                 }]
             );
+            assert!(!resizes_or_rescales(&changes), "{changes:?}");
             assert_eq!(windows.scale(1), (1, 1));
-            // The desktop doubles the window, and the task takes the window's size.
-            assert_eq!(
-                windows.window_resized(1, (800, 600), now),
-                vec![TaskRequest::Resize {
-                    task_id: 1,
-                    width: 800,
-                    height: 600,
-                    live: true,
-                }]
-            );
+            // The window keeps its size, and so does the task.
+            assert_eq!(windows.window_resized(1, (400, 300), now), vec![]);
             // Another activity on top, which says otherwise about a change of density, changes
             // nothing: the next move gives the density again.
             notes.density_dpi = 262;
-            notes.bounds.right = notes.bounds.left + 800;
-            notes.bounds.bottom = notes.bounds.top + 600;
             notes.handles_density_change = !handles;
             windows.apply(&TaskEvent::Updated(notes));
             let (_, requests) = windows.window_dpi(1, 96);
