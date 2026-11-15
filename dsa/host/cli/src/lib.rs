@@ -16,7 +16,7 @@
 //! dsa tasks
 //! dsa settings [set <name> <value>]
 //! dsa settings device | set device.<field> <value> | reset device[.<field>]
-//! dsa memory
+//! dsa memory [snapshot -o <file.zip>]
 //! dsa gpus
 //! dsa widgets [list | add <provider> | remove <id> | watch]
 //! dsa apps [list | info <package> | uninstall <package> | settings [<package>] |
@@ -259,6 +259,14 @@
 //! system services' state, and the DSA logs of this computer that concern the user who runs
 //! it. It takes a minute or more; `summary.txt` in the archive says what could not be gathered.
 //!
+//! The archive also holds one moment's memory: `host/memory.json` (what `dsa memory --json`
+//! prints), taken as the request comes in, `host/memory.txt`, the latest memory lines of the
+//! window manager, the graphics renderer and the service (`host/memory-lines.txt`), the guest
+//! control daemon's kernel log lines (`host/channeld-kernel-log.txt`), Android's
+//! `/proc/meminfo` (`android/proc-meminfo.txt`), and `dumpsys meminfo` and the SurfaceFlinger
+//! buffers (`android/dumpsys.txt`). `dsa memory snapshot -o <file.zip>` saves the same archive,
+//! for a memory report.
+//!
 //! `dsa settings` shows the settings the service keeps: the GPU the window manager renders on
 //! (`render-gpu`: `display`, `integrated`, `discrete` or part of a GPU's name), whether
 //! Android may be frozen when idle (`freeze`), whether text copied on the host can be pasted in
@@ -462,7 +470,8 @@ use serde_json::{json, Value};
 pub const USAGE: &str = "usage: dsa <status [--no-start] | start | stop | freeze | update | \
      launch <package> [--wait-first-frame] | tap <package> <x> <y> | stop-app <package> | \
      install <file.apk> [--progress] | apk-info <file.apk> | open <file> | share <file> | \
-     tasks | settings [set <name> <value> | device | reset device[.<field>]] | memory | \
+     tasks | settings [set <name> <value> | device | reset device[.<field>]] | \
+     memory [snapshot -o <file.zip>] | \
      network | gpus | \
      widgets [list | add <provider> | settings <id> | remove <id> | watch] | \
      apps [list | info <package> | uninstall <package> | settings [<package>] | \
@@ -526,6 +535,8 @@ pub enum Command {
     Logcat,
     /// Save the diagnostics archive to [`Invocation::output`].
     LogsCollect,
+    /// Save one moment's memory, with the diagnostics archive, to [`Invocation::output`].
+    MemorySnapshot,
     /// Say whether ARM apps can run, and with which translation package.
     ArmTranslationStatus,
     /// Install the ARM translation package in the folder [`Invocation::file`].
@@ -1345,10 +1356,18 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                     .ok_or("-b needs the log buffers, such as main,system,crash")?;
                 buffers |= dsa_host_core::guest_log::LogFilter::parse_buffers(names)?;
             }
-            "-o" | "--output" if command == Some(Command::LogsCollect) => {
+            "snapshot" if command == Some(Command::Memory) => {
+                command = Some(Command::MemorySnapshot)
+            }
+            "-o" | "--output"
+                if matches!(
+                    command,
+                    Some(Command::LogsCollect | Command::MemorySnapshot)
+                ) =>
+            {
                 let path = args
                     .next()
-                    .ok_or("dsa logs collect -o needs the file to save the archive to")?;
+                    .ok_or("-o needs the file to save the archive to")?;
                 output = Some(std::path::PathBuf::from(path));
             }
             spec if command == Some(Command::Logcat) && !spec.starts_with('-') => {
@@ -1585,6 +1604,11 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
             } else {
                 "share"
             }
+        ));
+    }
+    if command == Command::MemorySnapshot && output.is_none() {
+        return Err(format!(
+            "dsa memory snapshot needs the file to save it to, such as -o memory.zip\n{USAGE}"
         ));
     }
     if command == Command::LogsCollect && output.is_none() {
@@ -3332,96 +3356,7 @@ pub fn describe_settings(report: &SettingsReport) -> String {
 /// out, so nothing is counted twice. `ballooned_kb` is memory added while Android ran that
 /// the host has taken back.
 pub fn memory_json(memory: &MemorySnapshot) -> Value {
-    fn share(share: &dsa_host_core::memory::MemoryShare) -> Value {
-        json!({
-            "resident_kb": share.resident_kb,
-            "compressed_kb": share.compressed_kb,
-            "swapped_out_kb": share.swapped_out_kb,
-            "total_kb": share.total_kb(),
-        })
-    }
-    let guest = memory.guest.as_ref().map(|report| {
-        let guest = &report.memory;
-        let google_play = guest
-            .google_play
-            .zip(guest.google_play_share())
-            .map(|(play, cost)| {
-                let mut value = share(&cost);
-                value["processes"] = json!(play.processes);
-                value["pss_kb"] = json!(play.pss_kb);
-                value["swap_pss_kb"] = json!(play.swap_pss_kb);
-                value
-            });
-        json!({
-            "mem_total_kb": guest.mem_total_kb,
-            "mem_free_kb": guest.mem_free_kb,
-            "mem_available_kb": guest.mem_available_kb,
-            "buffers_kb": guest.buffers_kb,
-            "cached_kb": guest.cached_kb,
-            "anon_pages_kb": guest.anon_pages_kb,
-            "shmem_kb": guest.shmem_kb,
-            "slab_reclaimable_kb": guest.slab_reclaimable_kb,
-            "swap_total_kb": guest.swap_total_kb,
-            "swap_free_kb": guest.swap_free_kb,
-            "zram_original_kb": guest.zram_original_kb,
-            "zram_used_kb": guest.zram_used_kb,
-            "total_pss_kb": guest.total_pss_kb,
-            "swap_pss_kb": guest.swap_pss_kb,
-            "apps": share(&guest.apps()),
-            "google_play": google_play,
-            "kernel": {
-                "slab_unreclaimable_kb": guest.kernel.slab_unreclaimable_kb,
-                "kernel_stack_kb": guest.kernel.kernel_stack_kb,
-                "page_tables_kb": guest.kernel.page_tables_kb,
-                "vmalloc_used_kb": guest.kernel.vmalloc_used_kb,
-                "percpu_kb": guest.kernel.percpu_kb,
-                "cma_total_kb": guest.kernel.cma_total_kb,
-                "hugetlb_kb": guest.kernel.hugetlb_kb,
-                "mem_online_kb": guest.kernel.mem_online_kb,
-                "unaccounted_kb": guest.unaccounted_kb(),
-                "reserved_at_boot_kb": guest.reserved_at_boot_kb(),
-            },
-            "page_reporting": guest.page_reporting.map(|r| json!({
-                "free_reported_kb": r.free_reported_kb,
-                "free_not_reported_kb": guest.free_not_reported_kb(),
-                "reported_total_kb": r.reported_total_kb,
-                "reported_kb_per_minute": r.reported_kb_per_minute,
-                "refaulted_total_kb": r.refaulted_total_kb,
-            })),
-            "ballooned_kb": guest.ballooned_kb,
-            "age_seconds": report.age.as_secs(),
-            "top_processes": guest.top_processes.iter().map(|p| {
-                let cost = guest.process_share(p);
-                json!({
-                    "pid": p.pid,
-                    "name": p.name,
-                    "pss_kb": p.pss_kb,
-                    "swap_pss_kb": p.swap_pss_kb,
-                    "google_play": p.google_play,
-                    "resident_kb": cost.resident_kb,
-                    "compressed_kb": cost.compressed_kb,
-                })
-            }).collect::<Vec<_>>(),
-        })
-    });
-    json!({
-        "guest": guest,
-        "host": memory.host.iter().map(|p| json!({
-            "role": p.role.name(),
-            "pid": p.pid,
-            "working_set_kb": p.working_set_kb,
-            "private_kb": p.private_kb,
-            "mapped_kb": p.mapped_kb,
-            "private_working_set_kb": p.private_working_set_kb,
-            "section_kb": p.section_kb,
-        })).collect::<Vec<_>>(),
-        "host_total_kb": memory.host_total_kb(),
-        "host_private_working_set_kb": memory.host_private_working_set_kb(),
-        "host_section_kb": memory.host_section_kb(),
-        "host_mapped_kb": memory.host_mapped_kb(),
-        "host_own_kb": memory.host_own_kb(),
-        "vm_beyond_guest_kb": memory.vm_beyond_guest_kb(),
-    })
+    dsa_host_core::memory::snapshot_json(memory)
 }
 
 /// This machine's GPUs, and which one drives the primary monitor.
@@ -5528,7 +5463,7 @@ pub fn run_with_starter(
             let mut out = stdout.lock();
             return logs::logcat(client, &filter, invocation.dump, invocation.json, &mut out);
         }
-        Command::LogsCollect => {
+        Command::LogsCollect | Command::MemorySnapshot => {
             let path = invocation.output.clone().unwrap_or_default();
             return logs::collect(client, &path);
         }

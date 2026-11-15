@@ -100,8 +100,15 @@ mod daemon {
     const PSTORE: &str = "/sys/fs/pstore";
 
     impl DiagnosticFiles for Pstore {
+        /// With pstore, the guest's `/proc/meminfo` as the archive is made, so the memory
+        /// snapshot has the kernel's own counts of the same moment.
         fn files(&self) -> Vec<(String, Result<Vec<u8>, String>)> {
-            files_in(std::path::Path::new(PSTORE), "android/pstore")
+            let mut files = files_in(std::path::Path::new(PSTORE), "android/pstore");
+            files.push((
+                "android/proc-meminfo.txt".to_string(),
+                std::fs::read("/proc/meminfo").map_err(|e| format!("/proc/meminfo: {e}")),
+            ));
+            files
         }
 
         /// Unlinking a pstore file erases its record from the pstore disk. Android's init

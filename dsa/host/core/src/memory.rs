@@ -842,6 +842,103 @@ impl fmt::Display for MemorySnapshot {
     }
 }
 
+/// The snapshot as one JSON object, as `dsa memory --json` prints it and the memory snapshot
+/// archive carries it. Sizes in KiB.
+pub fn snapshot_json(memory: &MemorySnapshot) -> serde_json::Value {
+    use serde_json::json;
+
+    fn share(share: &MemoryShare) -> serde_json::Value {
+        json!({
+            "resident_kb": share.resident_kb,
+            "compressed_kb": share.compressed_kb,
+            "swapped_out_kb": share.swapped_out_kb,
+            "total_kb": share.total_kb(),
+        })
+    }
+    let guest = memory.guest.as_ref().map(|report| {
+        let guest = &report.memory;
+        let google_play = guest
+            .google_play
+            .zip(guest.google_play_share())
+            .map(|(play, cost)| {
+                let mut value = share(&cost);
+                value["processes"] = json!(play.processes);
+                value["pss_kb"] = json!(play.pss_kb);
+                value["swap_pss_kb"] = json!(play.swap_pss_kb);
+                value
+            });
+        json!({
+            "mem_total_kb": guest.mem_total_kb,
+            "mem_free_kb": guest.mem_free_kb,
+            "mem_available_kb": guest.mem_available_kb,
+            "buffers_kb": guest.buffers_kb,
+            "cached_kb": guest.cached_kb,
+            "anon_pages_kb": guest.anon_pages_kb,
+            "shmem_kb": guest.shmem_kb,
+            "slab_reclaimable_kb": guest.slab_reclaimable_kb,
+            "swap_total_kb": guest.swap_total_kb,
+            "swap_free_kb": guest.swap_free_kb,
+            "zram_original_kb": guest.zram_original_kb,
+            "zram_used_kb": guest.zram_used_kb,
+            "total_pss_kb": guest.total_pss_kb,
+            "swap_pss_kb": guest.swap_pss_kb,
+            "apps": share(&guest.apps()),
+            "google_play": google_play,
+            "kernel": {
+                "slab_unreclaimable_kb": guest.kernel.slab_unreclaimable_kb,
+                "kernel_stack_kb": guest.kernel.kernel_stack_kb,
+                "page_tables_kb": guest.kernel.page_tables_kb,
+                "vmalloc_used_kb": guest.kernel.vmalloc_used_kb,
+                "percpu_kb": guest.kernel.percpu_kb,
+                "cma_total_kb": guest.kernel.cma_total_kb,
+                "hugetlb_kb": guest.kernel.hugetlb_kb,
+                "mem_online_kb": guest.kernel.mem_online_kb,
+                "unaccounted_kb": guest.unaccounted_kb(),
+                "reserved_at_boot_kb": guest.reserved_at_boot_kb(),
+            },
+            "page_reporting": guest.page_reporting.map(|r| json!({
+                "free_reported_kb": r.free_reported_kb,
+                "free_not_reported_kb": guest.free_not_reported_kb(),
+                "reported_total_kb": r.reported_total_kb,
+                "reported_kb_per_minute": r.reported_kb_per_minute,
+                "refaulted_total_kb": r.refaulted_total_kb,
+            })),
+            "ballooned_kb": guest.ballooned_kb,
+            "age_seconds": report.age.as_secs(),
+            "top_processes": guest.top_processes.iter().map(|p| {
+                let cost = guest.process_share(p);
+                json!({
+                    "pid": p.pid,
+                    "name": p.name,
+                    "pss_kb": p.pss_kb,
+                    "swap_pss_kb": p.swap_pss_kb,
+                    "google_play": p.google_play,
+                    "resident_kb": cost.resident_kb,
+                    "compressed_kb": cost.compressed_kb,
+                })
+            }).collect::<Vec<_>>(),
+        })
+    });
+    json!({
+        "guest": guest,
+        "host": memory.host.iter().map(|p| json!({
+            "role": p.role.name(),
+            "pid": p.pid,
+            "working_set_kb": p.working_set_kb,
+            "private_kb": p.private_kb,
+            "mapped_kb": p.mapped_kb,
+            "private_working_set_kb": p.private_working_set_kb,
+            "section_kb": p.section_kb,
+        })).collect::<Vec<_>>(),
+        "host_total_kb": memory.host_total_kb(),
+        "host_private_working_set_kb": memory.host_private_working_set_kb(),
+        "host_section_kb": memory.host_section_kb(),
+        "host_mapped_kb": memory.host_mapped_kb(),
+        "host_own_kb": memory.host_own_kb(),
+        "vm_beyond_guest_kb": memory.vm_beyond_guest_kb(),
+    })
+}
+
 /// The snapshot as the local API carries it.
 pub fn snapshot_to_wire(snapshot: &MemorySnapshot) -> types::Memory {
     types::Memory {

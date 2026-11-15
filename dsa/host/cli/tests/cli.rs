@@ -2008,6 +2008,17 @@ fn fr17_dsa_gpus_prints_a_list() {
 }
 
 #[test]
+fn nfr1_dsa_memory_snapshot_saves_one_moment_to_a_file() {
+    let snapshot = parse(&args("memory snapshot -o memory.zip")).unwrap();
+    assert_eq!(snapshot.command, Cmd::MemorySnapshot);
+    assert_eq!(
+        snapshot.output.as_deref(),
+        Some(std::path::Path::new("memory.zip"))
+    );
+    assert!(parse(&args("memory snapshot")).is_err());
+}
+
+#[test]
 fn nfr1_dsa_memory_is_parsed() {
     assert_eq!(parse(&args("memory")).unwrap().command, Cmd::Memory);
     assert_eq!(
