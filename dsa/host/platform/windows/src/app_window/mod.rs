@@ -23,6 +23,7 @@ pub mod keys;
 pub mod launch;
 pub mod live_icon;
 pub mod messages;
+pub mod overlay;
 pub mod pointer;
 pub mod screenshot;
 pub mod splash;
@@ -301,6 +302,9 @@ pub fn run(mut setup: HostSetup) -> Result<(), String> {
                 Arc::new(move |line: &str| note(log.as_deref(), line)),
             )
         }),
+        package: setup.package.clone(),
+        // Beside the apps' window programs, in the user's own DSA folder.
+        overlay_places: crate::paths::UserRoot::current().map(|root| root.apps()),
     })?;
 
     // This thread shows each frame, and the renderer waits for it.

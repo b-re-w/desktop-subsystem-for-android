@@ -339,6 +339,21 @@ after two minutes. `"keep_window_manager": false` turns this off.
   over a dark one, as the app tells Android; close turns red under the pointer. Under a high
   contrast theme the buttons take the theme's colors. The title and icon are not drawn in
   the window; the taskbar, Alt+Tab and the system menu show them.
+- An app's overlay window (a window an app adds over other apps in Android: floating lyrics,
+  a chat head) is a window of its own in the app's window program
+  (`src/app_window/overlay.rs`): no border, no title bar and no close button, above every
+  other window, in neither the taskbar nor Alt+Tab, and showing the desktop through what the
+  app left clear. It goes when its app removes it. A click in it goes to the app and leaves
+  the user's own window active, unless the overlay may take the focus in Android; the pointer
+  passes through an overlay that takes no input. Its size is the app's at the density of its
+  monitor, never more than the work area. While the pointer is over it, or a little after a
+  touch, a slim handle shows just outside its top edge; dragging the handle moves it to any
+  monitor. All of an app's overlays are placed with one translation of Android's display onto
+  the desktop: first where the overlay lies on Android's display, on the monitor of the app's
+  window or the pointer's, then moved by the app's own moves and the user's, which add up.
+  The user's choice is remembered for the app in `%LOCALAPPDATA%\DSA\apps\<package>.overlay.json`.
+  An overlay that covers Android's whole display (a screen filter) gets no window; Android
+  draws it over every app's window instead.
 - Each window measures how long it waits for a frame of its new size after a resize, and
   the log gets a summary (median, 95th percentile, longest, and how many took 100 ms or
   more) every 20 resizes and when the window closes. A window still waiting after 2

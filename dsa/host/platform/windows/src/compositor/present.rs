@@ -763,6 +763,9 @@ pub struct WindowPresenter {
     /// Wakes a screenshot waiting for the next frame.
     capture_done: Condvar,
     logger: Option<Arc<CompositorLogger>>,
+    /// Whether the frames' own transparency shows the desktop through the window, as in the
+    /// window of an app overlay window; a task's window is opaque.
+    see_through: bool,
 }
 
 // SAFETY: every COM object in the state is used under the state's lock, and the
@@ -779,6 +782,30 @@ impl WindowPresenter {
         hwnd: isize,
         view: (u32, u32),
         logger: Option<Arc<CompositorLogger>>,
+    ) -> Result<Arc<Self>, String> {
+        WindowPresenter::with_transparency(task_id, gpu, hwnd, view, logger, false)
+    }
+
+    /// As [`WindowPresenter::new`], for the window of an app overlay window: the frames keep
+    /// their own transparency (premultiplied alpha), so the desktop shows through wherever the
+    /// app drew nothing.
+    pub fn new_see_through(
+        task_id: i32,
+        gpu: Arc<Gpu>,
+        hwnd: isize,
+        view: (u32, u32),
+        logger: Option<Arc<CompositorLogger>>,
+    ) -> Result<Arc<Self>, String> {
+        WindowPresenter::with_transparency(task_id, gpu, hwnd, view, logger, true)
+    }
+
+    fn with_transparency(
+        task_id: i32,
+        gpu: Arc<Gpu>,
+        hwnd: isize,
+        view: (u32, u32),
+        logger: Option<Arc<CompositorLogger>>,
+        see_through: bool,
     ) -> Result<Arc<Self>, String> {
         let (devices, generation) = gpu.devices();
         let (target, visual, caption, splash) = compose_window(&devices, hwnd)?;
@@ -833,6 +860,7 @@ impl WindowPresenter {
             band_colour: Mutex::new(None),
             capture_done: Condvar::new(),
             logger,
+            see_through,
         }))
     }
 
@@ -2477,7 +2505,13 @@ impl WindowPresenter {
                         // transform does the scaling.
                         Scaling: DXGI_SCALING_STRETCH,
                         SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
-                        AlphaMode: DXGI_ALPHA_MODE_IGNORE,
+                        // Android's buffers are premultiplied, as the desktop's compositor
+                        // takes them.
+                        AlphaMode: if self.see_through {
+                            DXGI_ALPHA_MODE_PREMULTIPLIED
+                        } else {
+                            DXGI_ALPHA_MODE_IGNORE
+                        },
                         Flags: 0,
                     };
                     let swapchain = devices
