@@ -135,29 +135,24 @@ dsa app-window <package> --below-title-bar on   # off goes back to the default
 
 ## Move an app to a monitor of another scale
 
-An app opens at the scale of the monitor its window opens on, from its first frame, so it is
-not recreated right after it opens. When you move a window to a monitor of another scale,
-the app keeps its size on the screen. Each app does this one of these ways, which you pick
-under **Scaling** on the **Apps** page, or with
+Android starts at the scale of your main monitor, so apps open at the right size there. When
+you move a window to a monitor of another scale, the app keeps its size on the screen, and
+with **Automatic** and **System** it is never restarted. Each app does this one of these
+ways, which you pick under **Scaling** on the **Apps** page, or with
 `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, the default): **System** for the apps on DSA's built-in list of apps
-  that break when their scale changes while they run, and **App** for every other app. The
-  list holds YouTube: it keeps its layout for the scale it started at, so after a move its
-  bottom tabs and miniplayer would stay broken until it restarts. Settings shows such an
-  app's default as **Automatic (system, recommended for this app)**. Your own choice for the
-  app comes first.
-- **App** (`app`): the window keeps its size in pixels while you drag it and after you let go,
-  and shows the app as it was drawn, so the app looks larger or smaller on the new monitor
-  until you let go. When you let
-  go, the app redraws at the new monitor's scale, and its text stays sharp: Android recreates
-  its screen once and restores its state (scroll position, typed text), so it redraws briefly
-  after each move, as a Windows program does with "Application" scaling. This holds even for
-  an app that says it handles a change of scale itself, because some of those apps redraw
-  only part of their screen at the new scale.
-- **System** (`system`): the app keeps its scale, and its window keeps its size in pixels and
-  shows the app as it was drawn, so the app stays sharp and looks larger or smaller on a
-  monitor of another scale. The app is never recreated.
+  that break when their scale changes while they run. For any other app, **App** if it says
+  it handles a change of scale itself, **System** if not. The list holds YouTube: it keeps
+  its layout for the scale it started at, so after a move its bottom tabs and miniplayer
+  would stay broken until it restarts. Settings shows such an app's default as
+  **Automatic (system, recommended for this app)**. Your own choice for the app comes first.
+- **App** (`app`): the app redraws at the new monitor's scale, and its text stays sharp. For an
+  app that does not say it handles a change of scale, Android recreates its screen and
+  restores its state (scroll position, typed text), so it may redraw briefly when it moves,
+  as a Windows program does with "Application" scaling.
+- **System** (`system`): the app keeps its scale, and DSA scales its window to the new monitor.
+  Scaled up, text can look a little soft.
 - **System (forced)** (`system-forced`): the app is given the new scale without a restart,
   even if it does not say it handles one. Not available yet: it needs a change to Android
   that this version does not have, so until then it works like **System**.

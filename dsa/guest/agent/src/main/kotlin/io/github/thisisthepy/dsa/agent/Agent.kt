@@ -106,7 +106,6 @@ import io.github.thisisthepy.dsa.agent.windowing.FreeformSetup
 import io.github.thisisthepy.dsa.agent.windowing.GestureExclusion
 import io.github.thisisthepy.dsa.agent.windowing.BelowTitleBar
 import io.github.thisisthepy.dsa.agent.windowing.CaptionInsets
-import io.github.thisisthepy.dsa.agent.windowing.LaunchDensities
 import io.github.thisisthepy.dsa.agent.windowing.TaskArranger
 import io.github.thisisthepy.dsa.agent.windowing.WindowingControl
 import io.github.thisisthepy.dsa.agent.backup.BackupManagerPort
@@ -218,12 +217,6 @@ class Agent(
     appProcesses: AppProcesses = AppProcesses.NONE,
     /** The app processes for ending those that stay cached with no window; null ends none. */
     backgroundProcesses: BackgroundProcesses? = null,
-    /**
-     * The guest display's density, which an app process started for no activity has; 0 when
-     * unknown. An app the host starts on a monitor of another density gets a new process
-     * ([LaunchDensities]).
-     */
-    displayDensity: () -> Int = { 0 },
     widgetStore: WidgetStore = WidgetStore.memory(),
     accessibility: AccessibilitySource = AccessibilitySource.NONE,
     /** Where the accessibility trees of watched tasks are read, past the scheduler's thread. */
@@ -267,10 +260,7 @@ class Agent(
         intercept = ::interceptFrame,
     )
     private val reporter = TaskReporter(ownPackage, apps) { frame -> channel.send(frame) }
-    private val requests = HostRequests(ownPackage, actions, reporter::isReported, beforeLaunch = ::beforeLaunch)
-
-    /** Gives an app the host starts a new process when its own started at another density. */
-    private val launchDensities = backgroundProcesses?.let { LaunchDensities(it, displayDensity, log) }
+    private val requests = HostRequests(ownPackage, actions, reporter::isReported)
 
     /**
      * The apps' overlay windows (floating lyrics, a chat head), which are in no task: the host
@@ -377,7 +367,6 @@ class Agent(
         log,
         isConnected = { channel.connected },
         also = backgroundApps,
-        beforeOpen = ::beforeLaunch,
     )
     private val apkInstaller = ApkInstaller(
         packageInstaller,
@@ -836,6 +825,16 @@ class Agent(
         }
     }
 
+    /**
+     * Input restarted on the focused editor, which is now [state]: a composition being typed
+     * there goes on. Called from any thread.
+     */
+    fun editorRestarted(state: io.github.thisisthepy.dsa.agent.input.EditorState) {
+        scheduler.post {
+            if (channel.connected) text.editorRestarted(state)
+        }
+    }
+
     private fun onConnected() {
         // The daemon tells the host from this that the guest's requests have someone to reach.
         channel.send(Envelope.newBuilder().setAgentConnected(AgentConnected.getDefaultInstance()).build().toByteArray())
@@ -912,11 +911,8 @@ class Agent(
                 accessibilityExport.resizing(result.taskId)
             }
             is RequestResult.Density -> {
-                log.info(
-                    "task ${result.taskId} draws at ${result.densityDpi} dpi" +
-                        if (result.recreate) ", its window's move has ended" else "",
-                )
-                arranger.setDensity(result.taskId, result.densityDpi, result.recreate)
+                log.info("task ${result.taskId} draws at ${result.densityDpi} dpi")
+                arranger.setDensity(result.taskId, result.densityDpi)
                 accessibilityExport.resizing(result.taskId)
             }
             is RequestResult.Caption -> {
@@ -943,18 +939,6 @@ class Agent(
             is RequestResult.CaptionCompat -> {
                 log.info("${result.belowTitleBar.size} apps start below the title bar")
                 belowTitleBar.hostSays(result.belowTitleBar)
-            }
-            is RequestResult.Placement -> {
-                val placement = result.placement
-                log.info(
-                    if (placement == null) {
-                        "new tasks start at Android's own density"
-                    } else {
-                        "new tasks start at ${placement.densityDpi} dpi within " +
-                            "${placement.room.width}x${placement.room.height}"
-                    },
-                )
-                arranger.placeLaunches(placement)
             }
             is RequestResult.SizeRefused -> log.warn("did not resize task ${result.taskId}: ${result.reason}")
             is RequestResult.Malformed -> log.warn("dropped a frame: ${result.reason}")
@@ -1316,11 +1300,7 @@ class Agent(
         val below = belowTitleBar.tasks(running.associate { it.taskId to it.packageName })
         val placedTasks = running.map { task ->
             val placed = bounds[task.taskId]
-            // A new task being given its window's monitor's density is reported at it, with
-            // the bounds it is going to, so its window opens at that size 1:1.
-            val density = arranger.densityToReport(task.taskId, task.densityDpi)
-            val dense = if (density == task.densityDpi) task else task.copy(densityDpi = density)
-            val moved = if (placed == null || placed == task.bounds) dense else dense.copy(bounds = placed)
+            val moved = if (placed == null || placed == task.bounds) task else task.copy(bounds = placed)
             if (moved.taskId in below) {
                 // The user's switch wins over an app that asks to draw its own title bar: the
                 // whole band is the host's, and the app has no controls in it.
@@ -1355,25 +1335,9 @@ class Agent(
         closedApps.tasks(packages + overlays.packages)
         // Every task's app keeps its processes, a task the host was not told of included.
         cachedProcesses?.tasks(packages + overlays.packages + running.mapNotNull { it.packageName })
-        launchDensities?.tasks(
-            running.mapNotNull { task -> task.packageName?.let { it to task.densityDpi } }.toMap(),
-        )
         appSound.tasks(packages, reporter.focusedTask()?.let(reporter::reportedPackage))
         hiddenApps.tasks(reported.mapNotNull { taskId -> reporter.reportedPackage(taskId)?.let { taskId to it } }.toMap())
         usedAppsCompile.tasks(packages)
-    }
-
-    /**
-     * The host is about to start [packageName] (an app, its shortcut, or its notification): its
-     * background processes go first when they started at another density than the monitor the
-     * host named for it ([LaunchDensities]). Nothing here may stop the start.
-     */
-    private fun beforeLaunch(packageName: String) {
-        try {
-            launchDensities?.beforeLaunch(packageName, arranger.launchDensity())
-        } catch (e: Exception) {
-            log.warn("could not look at the processes of $packageName before it starts", e)
-        }
     }
 
     /**

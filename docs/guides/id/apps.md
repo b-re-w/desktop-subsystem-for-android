@@ -144,30 +144,28 @@ dsa app-window <package> --below-title-bar on   # off kembali ke bawaan
 
 ## Memindahkan aplikasi ke monitor dengan skala lain
 
-Aplikasi terbuka dengan skala monitor tempat jendelanya dibuka, sejak frame pertamanya,
-sehingga aplikasi tidak dibuat ulang tepat setelah terbuka. Saat Anda memindahkan jendela ke
-monitor dengan skala lain, aplikasi mempertahankan ukurannya di layar. Setiap aplikasi
+Android dimulai dengan skala monitor utama Anda, sehingga aplikasi terbuka dengan ukuran yang
+tepat di sana. Saat Anda memindahkan jendela ke
+monitor dengan skala lain, aplikasi mempertahankan ukurannya di layar, dan dengan **Automatic** dan **System** aplikasi tidak pernah dimulai ulang. Setiap aplikasi
 melakukannya dengan salah satu cara berikut, yang Anda pilih di **Scaling**
 (penskalaan di monitor lain) pada halaman **Apps**, atau dengan
 `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, bawaan): **System** untuk aplikasi yang ada di daftar bawaan DSA
-  berisi aplikasi yang rusak jika skalanya berubah saat berjalan, dan **App** untuk semua
-  aplikasi lainnya. Daftar ini berisi YouTube: YouTube mempertahankan tata letaknya untuk skala
+  berisi aplikasi yang rusak jika skalanya berubah saat berjalan. Untuk aplikasi lainnya,
+  **App** jika aplikasi menyatakan dapat menangani perubahan skala sendiri, dan **System**
+  jika tidak. Daftar ini berisi YouTube: YouTube mempertahankan tata letaknya untuk skala
   saat ia dimulai, sehingga setelah dipindahkan, tab bawah dan miniplayer-nya akan tetap rusak
   sampai dimulai ulang. Pengaturan menampilkan bawaan aplikasi seperti itu sebagai **Automatic
   (system, recommended for this app)**. Pilihan Anda sendiri untuk aplikasi tersebut
   didahulukan.
-- **App** (`app`): selama Anda menyeret jendela, DSA menskalakannya ke monitor baru. Saat Anda
-  melepasnya, aplikasi menggambar ulang pada skala monitor baru, dan teksnya tetap tajam:
-  Android membuat ulang layarnya sekali dan memulihkan statusnya (posisi gulir, teks yang
-  diketik), sehingga aplikasi menggambar ulang sebentar setelah setiap pemindahan, seperti
-  program Windows dengan penskalaan "Application". Hal ini berlaku bahkan untuk aplikasi yang
-  menyatakan dapat menangani perubahan skala sendiri, karena sebagian aplikasi itu hanya
-  menggambar ulang sebagian layarnya pada skala baru.
+- **App** (`app`): aplikasi menggambar ulang pada skala monitor baru begitu jendelanya tiba di
+  sana, dan teksnya tetap tajam. Untuk aplikasi yang tidak menyatakan dapat menangani
+  perubahan skala sendiri, Android membuat ulang layarnya dan memulihkan statusnya (posisi
+  gulir, teks yang diketik), sehingga aplikasi dapat menggambar ulang sebentar saat dipindahkan,
+  seperti program Windows dengan penskalaan "Application".
 - **System** (`system`): aplikasi mempertahankan skalanya, dan DSA menskalakan jendelanya ke
-  monitor baru. Aplikasi tidak pernah dibuat ulang. Jika diperbesar, teks dapat tampak sedikit
-  kabur.
+  monitor baru. Jika diperbesar, teks dapat tampak sedikit kabur.
 - **System (forced)** (`system-forced`): aplikasi diberi skala baru tanpa dimulai ulang,
   meskipun aplikasi tidak menyatakan dapat menanganinya. Belum tersedia: fitur ini memerlukan
   perubahan pada Android yang belum ada di versi ini, sehingga sampai saat itu ia bekerja

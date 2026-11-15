@@ -77,18 +77,19 @@ public static class RootLevels
 /// has now, and the service's words when it was not set.</summary>
 public sealed record RootReport(bool Done, string Level, string Message);
 
-/// <summary>How an app's window follows a move to a monitor of another scale. System never
-/// recreates the app.</summary>
+/// <summary>How an app's window follows a move to a monitor of another scale. Auto and System
+/// never restart the app.</summary>
 public enum DpiScaling
 {
-    /// <summary>App, for every app.</summary>
+    /// <summary>System for the apps on DSA's built-in list that break when their scale changes
+    /// while they run; for any other app, App if it says it handles a change of density
+    /// itself, System if not.</summary>
     Auto,
-    /// <summary>The window is scaled while it is dragged; when the move ends the app redraws at
-    /// the new monitor's scale, and Android recreates its screen once and restores its state,
-    /// even for an app that says it handles a change of density.</summary>
+    /// <summary>The app redraws at the new monitor's scale. Android recreates the screen of an
+    /// app that does not say it handles a change of density, and restores its state.</summary>
     App,
     /// <summary>The app keeps its scale and its window is scaled to the new monitor, at the
-    /// same physical size. The app is never recreated.</summary>
+    /// same physical size.</summary>
     System,
     /// <summary>The app gets the new scale without a restart even when it does not say it
     /// handles one. It needs a change to Android's framework; until a build has it, it works
@@ -563,9 +564,13 @@ public sealed record AppRow(
     string? RootTip = null,
     string? RootGroupNote = null,
     IReadOnlyList<DpiScalingChoice>? DpiScalingChoices = null,
-    bool BelowTitleBar = false)
+    bool BelowTitleBar = false,
+    bool IsExpanded = false)
 {
     public bool NoIcon => Icon is null;
+
+    /// <summary>Whether the page says why the app's root level cannot be chosen.</summary>
+    public bool HasRootTip => RootTip is not null;
 
     /// <summary>Whether the app shares its user ID with other apps, so the page says that
     /// their root level is one setting.</summary>
@@ -573,6 +578,18 @@ public sealed record AppRow(
 
     /// <summary>Whether the page says why the app cannot run as ARM.</summary>
     public bool HasRunAsArmTip => RunAsArmTip is not null;
+}
+
+/// <summary>The words of a setting on the page.</summary>
+public static class SettingText
+{
+    /// <summary>The first line of a text that says more over several lines: the line a setting
+    /// shows under its name, while the whole text stays its tool tip. A one-line text is itself.</summary>
+    public static string FirstLine(string text)
+    {
+        var end = text.IndexOfAny(new[] { '\r', '\n' });
+        return (end < 0 ? text : text[..end]).Trim();
+    }
 }
 
 /// <summary>A root level the Apps page offers: what the list shows, and the level.</summary>
@@ -593,6 +610,7 @@ public sealed class AppsViewModel : ObservableObject
     private FullScreenPlace _defaultImmersive = FullScreenPlace.Window;
     private string _search = "";
     private string? _highlighted;
+    private readonly HashSet<string> _expanded = new(StringComparer.Ordinal);
     private string? _error;
     private string? _message;
     private bool _busy;
@@ -651,6 +669,8 @@ public sealed class AppsViewModel : ObservableObject
     public void Highlight(string package)
     {
         _highlighted = package;
+        // The user came for this app's settings, so its card is open.
+        _expanded.Add(package);
         if (_search.Length > 0 && !Matches(package, _search.Trim()))
         {
             _search = "";
@@ -660,6 +680,22 @@ public sealed class AppsViewModel : ObservableObject
         Changed(nameof(Rows));
         Changed(nameof(HasNoMatches));
         Changed(nameof(Count));
+    }
+
+    /// <summary>Remembers whether the user opened or closed the card of
+    /// <paramref name="package"/>. Every change to an app reads the list again and the page
+    /// draws its cards anew, so without this a card closed under the user each time one of its
+    /// options changed. It changes no row, so the page does not draw the list again for it.</summary>
+    public void SetExpanded(string package, bool expanded)
+    {
+        if (expanded)
+        {
+            _expanded.Add(package);
+        }
+        else
+        {
+            _expanded.Remove(package);
+        }
     }
 
     /// <summary>Whether the app <paramref name="package"/> is among the apps the search
@@ -849,7 +885,8 @@ public sealed class AppsViewModel : ObservableObject
             RootTipOf(app.Root),
             RootGroupNoteOf(app),
             DpiScalingChoicesOf(app.Package),
-            WindowOf(app.Package).BelowTitleBar);
+            WindowOf(app.Package).BelowTitleBar,
+            _expanded.Contains(app.Package));
     }
 
     /// <summary>The root levels the page offers, in the order of <see cref="RootLevel"/>.</summary>

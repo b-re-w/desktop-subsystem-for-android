@@ -1915,8 +1915,7 @@ pub fn resize_and_density_reach_the_caller(make: MakeLocal<'_>) {
     let _service = RunningService::start(listener, androids.clone());
     let mut client = connect(&mut *connector);
     client.start().unwrap();
-    // The density a move that ended asks for carries the recreate to the caller's Android.
-    client.set_task_density(9, 320, true).expect("the density");
+    client.set_task_density(9, 320).expect("the density");
     // A step of a drag, and the resize that ends it.
     client
         .resize_task(9, 1280, 720, true)
@@ -1927,8 +1926,7 @@ pub fn resize_and_density_reach_the_caller(make: MakeLocal<'_>) {
         vec![
             TaskRequest::SetDensity {
                 task_id: 9,
-                density_dpi: 320,
-                recreate: true
+                density_dpi: 320
             },
             TaskRequest::Resize {
                 task_id: 9,

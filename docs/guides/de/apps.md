@@ -148,28 +148,27 @@ dsa app-window <package> --below-title-bar on   # off kehrt zum Standard zurück
 
 ## Eine App auf einen Monitor mit anderer Skalierung verschieben
 
-Eine App öffnet ab dem ersten Frame mit der Skalierung des Monitors, auf dem sich ihr Fenster
-öffnet, damit sie nicht direkt nach dem Öffnen neu erstellt wird. Verschieben Sie ein Fenster
-auf einen Monitor mit anderer Skalierung, behält die App ihre Größe auf dem Bildschirm. Jede App
+Android startet mit der Skalierung Ihres Hauptmonitors, sodass Apps dort in der richtigen
+Größe öffnen. Verschieben Sie ein Fenster
+auf einen Monitor mit anderer Skalierung, behält die App ihre Größe auf dem Bildschirm, und mit **Automatic** und **System** wird sie nie neu gestartet. Jede App
 tut das auf eine dieser Arten, die Sie unter **Scaling** (Skalierung) auf der Seite **Apps** oder mit `dsa app-window <package> --dpi-scaling`
 wählen:
 
 - **Automatic** (`auto`, der Standard): **System** für die Apps auf der eingebauten Liste von
-  DSA mit Apps, die fehlerhaft werden, wenn sich ihre Skalierung zur Laufzeit ändert, und
-  **App** für jede andere App. Die Liste enthält YouTube: Es behält sein Layout für die
+  DSA mit Apps, die fehlerhaft werden, wenn sich ihre Skalierung zur Laufzeit ändert. Für jede
+  andere App **App**, wenn sie angibt, eine Änderung der Skalierung selbst zu verarbeiten,
+  und **System**, wenn nicht. Die Liste enthält YouTube: Es behält sein Layout für die
   Skalierung, mit der es gestartet ist, sodass seine unteren Registerkarten und der Miniplayer
   nach einem Verschieben bis zu einem Neustart fehlerhaft blieben. Die Einstellungen zeigen den
   Standard einer solchen App als **Automatic (system, recommended for this app)**. Ihre eigene
   Wahl für die App hat Vorrang.
-- **App** (`app`): Während Sie das Fenster ziehen, skaliert DSA es auf den neuen Monitor. Lassen
-  Sie los, zeichnet sich die App in der Skalierung des neuen Monitors neu, und ihr Text bleibt
-  scharf: Android erstellt ihren Bildschirm einmal neu und stellt ihren Zustand wieder her
-  (Bildlaufposition, eingegebener Text). Sie zeichnet sich daher nach jedem Verschieben kurz neu,
-  wie ein Windows-Programm mit der Skalierung „Anwendung“. Das gilt sogar für eine App, die
-  angibt, eine Änderung der Skalierung selbst zu verarbeiten, weil manche dieser Apps nur einen
-  Teil ihres Bildschirms in der neuen Skalierung neu zeichnen.
+- **App** (`app`): Die App zeichnet sich in der Skalierung des neuen Monitors neu, sobald das
+  Fenster dort ankommt, und ihr Text bleibt scharf. Bei einer App, die nicht angibt, eine
+  Änderung der Skalierung selbst zu verarbeiten, erstellt Android ihren Bildschirm neu und
+  stellt ihren Zustand wieder her (Bildlaufposition, eingegebener Text). Sie kann sich daher
+  beim Verschieben kurz neu zeichnen, wie ein Windows-Programm mit der Skalierung „Anwendung“.
 - **System** (`system`): Die App behält ihre Skalierung, und DSA skaliert ihr Fenster auf den
-  neuen Monitor. Die App wird nie neu erstellt. Vergrößert kann Text etwas weich aussehen.
+  neuen Monitor. Vergrößert kann Text etwas weich aussehen.
 - **System (forced)** (`system-forced`): Die App erhält die neue Skalierung ohne Neustart, auch
   wenn sie nicht angibt, eine solche zu verarbeiten. Noch nicht verfügbar: Dafür ist eine
   Änderung an Android nötig, die diese Version nicht hat. Bis dahin verhält es sich wie

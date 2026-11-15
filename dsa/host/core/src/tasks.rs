@@ -387,26 +387,9 @@ pub struct TaskWatch {
     pub events: Receiver<TaskEvent>,
 }
 
-/// The monitor the window of the next task opens on, as the guest needs it to start that task
-/// at the monitor's density and size from its first frame: the density apps draw at there, the
-/// largest client area a window has there and the whole monitor, all in pixels (the guest's
-/// display pixels). A `density_dpi` of 0 names no monitor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct LaunchPlacement {
-    pub density_dpi: u32,
-    pub width: u32,
-    pub height: u32,
-    pub monitor_width: u32,
-    pub monitor_height: u32,
-}
-
 /// What the host asks of the guest about its tasks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskRequest {
-    /// The window of the next task the guest starts opens on this monitor: the guest starts
-    /// it at the monitor's density and size, so the app is never relaunched for a new density
-    /// right after it opens. Sent before a request that starts a task; the latest counts.
-    PlaceLaunches(LaunchPlacement),
     /// The apps whose tasks start below the title bar, as the user chose for each: the guest
     /// gives a task of one of them no status bar inset and a caption inset the framework
     /// consumes for the app. The list replaces the one before, and counts when a task starts.
@@ -436,15 +419,7 @@ pub enum TaskRequest {
         live: bool,
     },
     /// The task's window is on a monitor of another scale: the task draws at this density.
-    /// With `recreate`, the window's move has ended and the guest recreates the task's top
-    /// activity at the new density (restoring its saved state), even when the app says it
-    /// handles a change of density itself: some apps that say so lay out only part of their
-    /// screen again and leave the rest at the old density.
-    SetDensity {
-        task_id: i32,
-        density_dpi: u32,
-        recreate: bool,
-    },
+    SetDensity { task_id: i32, density_dpi: u32 },
     /// The task's window draws its title bar over the top `height` pixels of the task: the
     /// task gets a top system bar inset of that height. 0 removes it. `start_width` and
     /// `end_width` are how far the window's icon and its caption buttons reach into the band
@@ -484,13 +459,6 @@ impl TaskRequest {
     pub fn describe(&self) -> String {
         match self {
             TaskRequest::Close { task_id } => format!("end task {task_id}"),
-            TaskRequest::PlaceLaunches(placement) if placement.density_dpi == 0 => {
-                "start new tasks at Android's own density".into()
-            }
-            TaskRequest::PlaceLaunches(placement) => format!(
-                "start new tasks at {} dpi within {}x{}",
-                placement.density_dpi, placement.width, placement.height
-            ),
             TaskRequest::CaptionCompat { below_title_bar } => format!(
                 "start the tasks of {} apps below the title bar",
                 below_title_bar.len()
@@ -522,13 +490,7 @@ impl TaskRequest {
             TaskRequest::SetDensity {
                 task_id,
                 density_dpi,
-                recreate: false,
             } => format!("draw task {task_id} at {density_dpi} dpi"),
-            TaskRequest::SetDensity {
-                task_id,
-                density_dpi,
-                recreate: true,
-            } => format!("draw task {task_id} at {density_dpi} dpi and recreate its activity"),
             TaskRequest::SetCaption {
                 task_id, height, ..
             } => format!("give task {task_id} a title bar inset of {height} pixels"),
@@ -566,18 +528,6 @@ impl TaskRequest {
     }
 }
 
-/// Whether `request` has the guest start a task, whose window opens on the monitor the last
-/// [`TaskRequest::PlaceLaunches`] named.
-pub fn starts_a_task(request: &TaskRequest) -> bool {
-    matches!(
-        request,
-        TaskRequest::Launch { .. }
-            | TaskRequest::NewWindow { .. }
-            | TaskRequest::OpenAppSettings { .. }
-            | TaskRequest::LaunchShortcut { .. }
-    )
-}
-
 /// Folds a run of requests waiting to be sent into the ones still worth sending.
 ///
 /// Only a task's latest size and latest density count: while the user drags a window's
@@ -609,13 +559,6 @@ pub fn coalesce(requests: Vec<TaskRequest>) -> Vec<TaskRequest> {
                     TaskRequest::SetFullScreen { task_id: b, .. },
                 ) => a == b,
                 (TaskRequest::WindowsShown { .. }, TaskRequest::WindowsShown { .. }) => true,
-                // Only the latest monitor counts, but one that comes before a launch is for
-                // that launch, so it is kept unless another comes before the launch too.
-                (TaskRequest::PlaceLaunches(_), TaskRequest::PlaceLaunches(_)) => !requests
-                    [index + 1..]
-                    .iter()
-                    .take_while(|between| !matches!(between, TaskRequest::PlaceLaunches(_)))
-                    .any(starts_a_task),
                 (TaskRequest::TasksShown { .. }, TaskRequest::TasksShown { .. }) => true,
                 (TaskRequest::CaptionCompat { .. }, TaskRequest::CaptionCompat { .. }) => true,
                 _ => false,
@@ -1096,42 +1039,16 @@ mod tests {
     }
 
     #[test]
-    fn fr4_the_monitor_named_before_a_launch_stays_with_that_launch() {
-        let at = |density_dpi| {
-            TaskRequest::PlaceLaunches(LaunchPlacement {
-                density_dpi,
-                width: 1000,
-                height: 800,
-                monitor_width: 1200,
-                monitor_height: 900,
-            })
-        };
-        let launch = |name: &str| TaskRequest::Launch {
-            package_name: name.into(),
-        };
-        // Two in a row: only the latest counts. One before a launch is that launch's, and the
-        // next launch gets the one named before it.
-        assert_eq!(
-            coalesce(vec![at(130), at(164), launch("a"), at(262), launch("b")]),
-            vec![at(164), launch("a"), at(262), launch("b")]
-        );
-        assert!(starts_a_task(&launch("a")));
-        assert!(!starts_a_task(&at(130)));
-    }
-
-    #[test]
     fn fr4_a_density_and_its_size_keep_their_order() {
         let density = TaskRequest::SetDensity {
             task_id: 1,
             density_dpi: 320,
-            recreate: true,
         };
         let requests = vec![
             resize(1, 500),
             TaskRequest::SetDensity {
                 task_id: 1,
                 density_dpi: 240,
-                recreate: true,
             },
             density.clone(),
             resize(1, 1000),

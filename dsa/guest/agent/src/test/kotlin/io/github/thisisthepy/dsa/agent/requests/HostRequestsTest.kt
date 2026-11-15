@@ -32,8 +32,8 @@ class HostRequestsTest {
         .setResizeTask(ResizeTask.newBuilder().setTaskId(taskId).setWidth(width).setHeight(height).setLive(live))
         .build().toByteArray()
 
-    private fun density(taskId: Int, densityDpi: Int, recreate: Boolean = false) = Envelope.newBuilder()
-        .setSetTaskDensity(SetTaskDensity.newBuilder().setTaskId(taskId).setDensityDpi(densityDpi).setRecreate(recreate))
+    private fun density(taskId: Int, densityDpi: Int) = Envelope.newBuilder()
+        .setSetTaskDensity(SetTaskDensity.newBuilder().setTaskId(taskId).setDensityDpi(densityDpi))
         .build().toByteArray()
 
     private fun launchShortcut(packageName: String, shortcutId: String) = Envelope.newBuilder()
@@ -77,53 +77,11 @@ class HostRequestsTest {
     }
 
     @Test
-    fun fr4_the_apps_processes_are_looked_at_before_the_app_or_its_shortcut_starts() {
-        // An app's background process may be ended here so the app starts at its monitor's
-        // density in a new one; that must happen before the start, not after it.
-        val order = mutableListOf<String>()
-        val watched = object : TaskActions by actions {
-            override fun launchApp(packageName: String): Boolean {
-                order += "launch $packageName"
-                return actions.launchApp(packageName)
-            }
-
-            override fun launchShortcut(packageName: String, shortcutId: String): Boolean {
-                order += "shortcut $packageName"
-                return actions.launchShortcut(packageName, shortcutId)
-            }
-        }
-        val hooked = HostRequests(AGENT, watched, { it in reported }, beforeLaunch = { order += "before $it" })
-        actions.launchable = setOf("com.google.android.youtube")
-        actions.startableShortcuts = setOf("com.google.android.youtube" to "subscriptions")
-
-        assertEquals(RequestResult.Launched("com.google.android.youtube"), hooked.handle(launch("com.google.android.youtube")))
-        hooked.handle(launchShortcut("com.google.android.youtube", "subscriptions"))
-        hooked.handle(launch(AGENT))
-
-        assertEquals(
-            listOf(
-                "before com.google.android.youtube",
-                "launch com.google.android.youtube",
-                "before com.google.android.youtube",
-                "shortcut com.google.android.youtube",
-            ),
-            order,
-        )
-    }
-
-    @Test
     fun fr4_a_resize_and_a_density_for_a_reported_task_are_handed_back() {
         reported += 3
 
         assertEquals(RequestResult.Resize(3, Size(1280, 720)), requests.handle(resize(3, 1280, 720)))
         assertEquals(RequestResult.Density(3, 320), requests.handle(density(3, 320)))
-    }
-
-    @Test
-    fun fr4_a_density_from_a_move_that_ended_asks_for_the_activity_to_be_recreated() {
-        reported += 3
-
-        assertEquals(RequestResult.Density(3, 262, recreate = true), requests.handle(density(3, 262, recreate = true)))
     }
 
     private fun caption(taskId: Int, height: Int) = Envelope.newBuilder()

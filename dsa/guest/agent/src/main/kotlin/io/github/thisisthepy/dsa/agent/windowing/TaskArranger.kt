@@ -8,26 +8,8 @@ import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 import io.github.thisisthepy.dsa.agent.tasks.TaskSnapshot
 
 /**
- * The monitor the window of the next task the host starts opens on: apps draw at [densityDpi]
- * there, a window has a client area of at most [room] pixels, and the whole monitor is
- * [monitor] pixels.
- */
-data class NewTaskPlacement(val densityDpi: Int, val room: Size, val monitor: Size)
-
-/**
  * Keeps the guest's app tasks from overlapping, by moving them on the guest display, and
  * gives each task the size and density its host window asks for.
- *
- * A new task starts at the density of the monitor its window opens on, so that the app's first
- * frame is already right and Android never relaunches it for a new density right after it
- * opens. As soon as the agent sees a task it did not see before, it gives the task that density
- * and the size Android chose for it in density-independent pixels, at that density, in one
- * change: for an app whose process has to start, before its activity exists. The monitor is the
- * one the host named last ([placeLaunches]), when the host named it just before the task
- * appeared, which it does before every request that starts a task; otherwise (an app started
- * another app in a new task) it is the monitor of the task that had focus, whose window the new
- * one opens from. Until the task is seen at that density, it is reported at it
- * ([densityToReport]), so its window opens at its size 1:1.
  *
  * Android's freeform launch puts each new task at the same default place, so two apps
  * started one after the other cover each other exactly. Each time the agent reads the
@@ -73,24 +55,7 @@ class TaskArranger(
     private val displaySize: () -> Size,
     private val log: Log,
     private val giveUpMillis: Long = 2000,
-    /** Milliseconds on a monotonic clock. */
-    private val nowMillis: () -> Long = { System.nanoTime() / 1_000_000 },
 ) {
-    /** A new task being given the density of its window's monitor, until it is seen at it. */
-    private class Placing(val densityDpi: Int, var millisLeft: Long)
-
-    /** The monitor the host named last for the tasks it starts, and when. */
-    private var launchPlacement: NewTaskPlacement? = null
-    private var placedAt = 0L
-
-    /** The tasks seen so far; null until the first [arrange], whose tasks are not new. */
-    private var known: MutableSet<Int>? = null
-
-    /** The density of the task that had focus at the last [arrange]. */
-    private var parentDensity: Int? = null
-
-    private val placing = HashMap<Int, Placing>()
-
     private class Pending(val target: TaskBounds, var millisLeft: Long, val resize: Boolean)
 
     /** What the host last asked of a task and the arranger has not yet asked the framework. */
@@ -101,18 +66,10 @@ class TaskArranger(
         var live: Boolean = false,
         /** Whether a size that ends the task's drag came in; a later live size keeps it. */
         var endsDrag: Boolean = false,
-        /** Whether the latest density ends a move, so the task's activity is to be recreated at it. */
-        var recreate: Boolean = false,
     )
-
-    /** A task whose activity is to be recreated once it draws at [densityDpi]. */
-    private class Recreate(val densityDpi: Int, var millisLeft: Long)
 
     private val pending = HashMap<Int, Pending>()
     private val wanted = HashMap<Int, Wanted>()
-
-    /** Tasks given a density that ended a move, until they are seen at it. */
-    private val recreating = HashMap<Int, Recreate>()
 
     /**
      * Tasks whose window the user is dragging, and the screen size their configuration keeps
@@ -141,34 +98,8 @@ class TaskArranger(
 
     private val lastResized = HashMap<Int, TaskBounds>()
 
-    /**
-     * Whether a change has been asked for and not yet seen to land, or is waiting its turn, or
-     * a task waits to be seen at a density whose activity is to be recreated at it.
-     */
-    val waiting: Boolean
-        get() = pending.isNotEmpty() || wanted.isNotEmpty() || recreating.isNotEmpty() || placing.isNotEmpty()
-
-    /**
-     * The host named the monitor the window of the next task it starts opens on; null when it
-     * names none, and new tasks keep Android's own density unless they open from another task.
-     */
-    fun placeLaunches(placement: NewTaskPlacement?) {
-        launchPlacement = placement
-        placedAt = nowMillis()
-    }
-
-    /**
-     * The density a task the host starts now starts at: that of the monitor the host named last,
-     * while it is fresh; null when the host named none, or named it too long ago.
-     */
-    fun launchDensity(): Int? =
-        launchPlacement?.takeIf { nowMillis() - placedAt <= LAUNCH_PLACEMENT_MILLIS }?.densityDpi
-
-    /**
-     * The density to report for task [taskId], which Android says draws at [read]: the density
-     * of its window's monitor while a new task is on its way to it, else [read].
-     */
-    fun densityToReport(taskId: Int, read: Int): Int = placing[taskId]?.densityDpi ?: read
+    /** Whether a change has been asked for and not yet seen to land, or is waiting its turn. */
+    val waiting: Boolean get() = pending.isNotEmpty() || wanted.isNotEmpty()
 
     /**
      * How soon the agent reads the tasks again while [waiting]: every frame while the user
@@ -188,19 +119,9 @@ class TaskArranger(
         if (!live && taskId in dragging) want.endsDrag = true
     }
 
-    /**
-     * The host asked for the task to draw at [densityDpi]: with [recreate], because its window's
-     * move ended, so once the task is seen at that density its top activity is recreated
-     * ([TaskActions.recreateActivities]). Android recreates an activity that does not say it
-     * handles a change of density on its own, so only one that says it does is asked for. The
-     * recreate waits for the density to land: an activity recreated before then would take
-     * the density afterwards as a change it handles itself, the half done layout the recreate is
-     * there to avoid.
-     */
-    fun setDensity(taskId: Int, densityDpi: Int, recreate: Boolean = false) {
-        val want = wanted.getOrPut(taskId) { Wanted() }
-        want.densityDpi = densityDpi
-        want.recreate = recreate
+    /** The host asked for the task to draw at [densityDpi]. */
+    fun setDensity(taskId: Int, densityDpi: Int) {
+        wanted.getOrPut(taskId) { Wanted() }.densityDpi = densityDpi
     }
 
     /**
@@ -223,8 +144,6 @@ class TaskArranger(
         wanted.keys.retainAll(current.keys)
         dragging.keys.retainAll(current.keys)
         densities.keys.retainAll(current.keys)
-        recreateLanded(apps)
-        placeNew(apps)
 
         val size = try {
             displaySize().also { warnedNoDisplay = false }
@@ -263,117 +182,6 @@ class TaskArranger(
     /** [millis] have passed while a change was under way. */
     fun tick(millis: Long) {
         for (change in pending.values) change.millisLeft -= millis
-        for (recreate in recreating.values) recreate.millisLeft -= millis
-        for (place in placing.values) place.millisLeft -= millis
-    }
-
-    /**
-     * Gives each task in [apps] that was not there at the last [arrange] the density of the
-     * monitor its window opens on, and its size at that density, unless it has them.
-     */
-    private fun placeNew(apps: List<TaskSnapshot>) {
-        val ids = apps.map { it.taskId }.toSet()
-        placing.entries.removeAll { (taskId, place) ->
-            val task = apps.firstOrNull { it.taskId == taskId }
-            when {
-                task == null -> true
-                task.densityDpi == place.densityDpi -> true
-                place.millisLeft <= 0 -> {
-                    log.warn("task $taskId did not take ${place.densityDpi} dpi when it started; it draws at ${task.densityDpi} dpi")
-                    true
-                }
-                else -> false
-            }
-        }
-        val seen = known
-        if (seen == null) {
-            // The tasks there when the agent starts are not new: their windows exist already.
-            known = ids.toMutableSet()
-            parentDensity = focusedDensity(apps)
-            return
-        }
-        val hosts = launchPlacement?.takeIf { nowMillis() - placedAt <= LAUNCH_PLACEMENT_MILLIS }
-        for (task in apps) {
-            if (!seen.add(task.taskId)) continue
-            val densityDpi = hosts?.densityDpi ?: parentDensity ?: continue
-            place(task, densityDpi, hosts)
-        }
-        seen.retainAll(ids)
-        focusedDensity(apps)?.let { parentDensity = it }
-    }
-
-    /** The density the task that has focus draws at, or is on its way to. */
-    private fun focusedDensity(apps: List<TaskSnapshot>): Int? = apps.firstOrNull { it.focused }
-        ?.let { densityToReport(it.taskId, densities[it.taskId] ?: it.densityDpi) }
-        ?.takeIf { it > 0 }
-
-    /**
-     * Asks for [task] at [densityDpi] and at the size Android gave it in density-independent
-     * pixels, rescaled to that density: within the room the host's window has on the monitor
-     * ([monitor], when the host named it), or the whole monitor for an app that asks to fill the
-     * screen. Applied by [arrange] in one change with the density.
-     */
-    private fun place(task: TaskSnapshot, densityDpi: Int, monitor: NewTaskPlacement?) {
-        val from = task.densityDpi
-        val now = Size(task.bounds.right - task.bounds.left, task.bounds.bottom - task.bounds.top)
-        val size = when {
-            task.bounds.isEmpty() -> null
-            monitor != null && task.fullscreen -> monitor.monitor
-            from > 0 && from != densityDpi -> rescale(now, from, densityDpi).let { if (monitor != null) fitWithin(it, monitor.room) else it }
-            monitor != null -> fitWithin(now, monitor.room)
-            else -> now
-        }
-        val newDensity = from != densityDpi
-        if (!newDensity && (size == null || size == now)) return
-        val want = wanted.getOrPut(task.taskId) { Wanted() }
-        if (want.size == null && size != null && size != now) want.size = size
-        if (newDensity && want.densityDpi == null) {
-            want.densityDpi = densityDpi
-            placing[task.taskId] = Placing(densityDpi, giveUpMillis)
-        }
-        log.info(
-            "task ${task.taskId} (${task.packageName}) starts at $densityDpi dpi" +
-                (size?.let { ", ${it.width}x${it.height}" } ?: "") + ", the density of the monitor its window opens on",
-        )
-    }
-
-    /**
-     * Recreates the top activity of each task in [apps] now seen at the density a move that
-     * ended gave it, if that activity says it handles a change of density; Android recreated
-     * any other already. A task not seen at it within [giveUpMillis] keeps what it has.
-     */
-    private fun recreateLanded(apps: List<TaskSnapshot>) {
-        recreating.keys.retainAll(apps.map { it.taskId }.toSet())
-        for (task in apps) {
-            val recreate = recreating[task.taskId] ?: continue
-            if (task.densityDpi != recreate.densityDpi) {
-                if (recreate.millisLeft <= 0) {
-                    log.warn(
-                        "task ${task.taskId} did not take ${recreate.densityDpi} dpi; its activity is not recreated " +
-                            "and draws at ${task.densityDpi} dpi",
-                    )
-                    recreating.remove(task.taskId)
-                }
-                continue
-            }
-            recreating.remove(task.taskId)
-            val packageName = task.packageName
-            if (!task.handlesDensityChange || packageName == null) continue
-            val recreated = try {
-                actions.recreateActivities(task.taskId, packageName)
-            } catch (e: Exception) {
-                log.warn("recreating the activity of task ${task.taskId} failed", e)
-                false
-            }
-            if (recreated) {
-                log.info("recreating the activity of task ${task.taskId} ($packageName) at ${task.densityDpi} dpi")
-            } else {
-                log.warn(
-                    "could not recreate the activity of task ${task.taskId} ($packageName); " +
-                        "it redraws at ${task.densityDpi} dpi on its own",
-                )
-            }
-        }
     }
 
     private fun settle(current: Map<Int, TaskBounds>) {
@@ -441,8 +249,6 @@ class TaskArranger(
             log.warn("resizing task $taskId failed", e)
             ResizeOutcome.REFUSED
         }
-        // A new task the framework did not give its density to is reported at the one it has.
-        if (outcome != ResizeOutcome.APPLIED) placing.remove(taskId)
         if (outcome == ResizeOutcome.REFUSED) {
             log.warn("the framework refused to give task $taskId ${describe(to)}; it stays at ${describe(from)}")
             stuck[taskId] = from
@@ -451,10 +257,6 @@ class TaskArranger(
         if (outcome == ResizeOutcome.BOUNDS_ONLY && densityDpi != null && !warnedNoDensity) {
             log.warn("the framework cannot set a task's density; task $taskId draws at the display's density, not $densityDpi dpi")
             warnedNoDensity = true
-        }
-        val asked = want.densityDpi
-        if (want.recreate && asked != null && outcome == ResizeOutcome.APPLIED) {
-            recreating[taskId] = Recreate(asked, giveUpMillis)
         }
         stuck.remove(taskId)
         pending[taskId] = Pending(to, giveUpMillis, resize = true)
@@ -474,27 +276,6 @@ class TaskArranger(
 
         /** The longest a task's next size waits for its last one to land. */
         const val RESIZE_PATIENCE_MILLIS = 250L
-
-        /**
-         * How long after the host names a monitor a new task is taken to be one the host
-         * started: the host names it just before it asks for a task, and an app's process can
-         * take seconds to start on a busy guest.
-         */
-        const val LAUNCH_PLACEMENT_MILLIS = 10_000L
-
-        /** [size] drawn at density [from], at density [to]: the same size in dp. */
-        fun rescale(size: Size, from: Int, to: Int): Size {
-            if (from <= 0 || to <= 0 || from == to) return size
-            val at = { length: Int -> ((length.toLong() * to + from / 2) / from).toInt().coerceAtLeast(1) }
-            return Size(at(size.width), at(size.height))
-        }
-
-        /** [size], made smaller with the same shape until it fits [room]. */
-        fun fitWithin(size: Size, room: Size): Size {
-            if (size.width <= room.width && size.height <= room.height) return size
-            val scale = minOf(room.width.toDouble() / size.width, room.height.toDouble() / size.height)
-            return Size((size.width * scale).toInt().coerceAtLeast(1), (size.height * scale).toInt().coerceAtLeast(1))
-        }
 
         /**
          * [now] given [size], keeping its top left corner unless that would put it past the

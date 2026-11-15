@@ -706,19 +706,20 @@ impl App {
     }
 }
 
-/// How an app's window follows a move to a monitor of another scale. System never recreates
-/// the app.
+/// How an app's window follows a move to a monitor of another scale. Auto and System never
+/// restart the app.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DpiScaling {
-    /// App, for every app.
+    /// System for the apps on DSA's built-in list that break when their scale changes while they
+    /// run; for any other app, App if it says it handles a change of density itself, System if
+    /// not.
     #[default]
     Auto,
-    /// The window is scaled while it is dragged; when the move ends the app redraws at the new
-    /// monitor's scale, and Android recreates its screen once and restores its state, even for
-    /// an app that says it handles a change of density.
+    /// The app redraws at the new monitor's scale. Android recreates the screen of an app that
+    /// does not say it handles a change of density, and restores its state.
     App,
     /// The app keeps its scale and its window is scaled to the new monitor, at the same
-    /// physical size. The app is never recreated.
+    /// physical size.
     System,
     /// The app gets the new scale without a restart even when it does not say it handles one.
     /// It needs a change to Android's framework; until a build has it, it works like

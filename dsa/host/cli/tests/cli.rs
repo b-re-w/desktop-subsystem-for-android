@@ -872,46 +872,12 @@ fn fr3_dsa_launch_asks_the_users_android_to_start_the_app() {
     let output = dsa(&endpoint, "launch com.example.clock");
     assert!(output.status.success(), "{}", stderr(&output));
     assert_eq!(stdout(&output), "Launching com.example.clock");
-    // The monitor the window opens on may go first, so the app starts at its density.
-    let asked: Vec<TaskRequest> = androids
-        .of(&user)
-        .unwrap()
-        .requests
-        .lock()
-        .unwrap()
-        .iter()
-        .filter(|request| !matches!(request, TaskRequest::PlaceLaunches(_)))
-        .cloned()
-        .collect();
     assert_eq!(
-        asked,
+        *androids.of(&user).unwrap().requests.lock().unwrap(),
         vec![TaskRequest::Launch {
             package_name: "com.example.clock".into()
         }]
     );
-}
-
-#[test]
-fn fr4_dsa_launch_names_the_monitor_the_window_opens_on_before_it_starts_the_app() {
-    use dsa_host_core::tasks::TaskRequest;
-    let ((listener, _, user), endpoint) = local_pair();
-    let androids = Arc::new(FakeAndroids::default());
-    let _service = RunningService::start(listener, androids.clone());
-    assert!(dsa(&endpoint, "start").status.success());
-
-    assert!(dsa(&endpoint, "launch com.example.clock").status.success());
-    let requests = androids.of(&user).unwrap().requests.lock().unwrap().clone();
-    let launch = requests
-        .iter()
-        .position(|request| matches!(request, TaskRequest::Launch { .. }))
-        .expect("the launch");
-    // Where a session has a pointer and a monitor, the placement comes right before the launch.
-    if cfg!(windows) && launch > 0 {
-        assert!(matches!(
-            requests[launch - 1],
-            TaskRequest::PlaceLaunches(placement) if placement.density_dpi >= 130
-        ));
-    }
 }
 
 #[test]
@@ -3487,8 +3453,8 @@ fn fr30_dsa_app_window_changes_and_resets_an_apps_window_settings() {
     let output = dsa(&endpoint, "app-window com.example.notes");
     assert_eq!(
         stdout(&output).trim(),
-        "com.example.notes: resizable, opens at 400 x 700 dp, redraws at another monitor's \
-         scale once a move ends (the default)"
+        "com.example.notes: resizable, opens at 400 x 700 dp, scales its own way on another \
+         monitor"
     );
     let reset = json_of(&dsa(&endpoint, "app-window com.example.notes reset --json"));
     assert_eq!(reset["apps"][0]["start_size"], serde_json::Value::Null);
@@ -3640,8 +3606,8 @@ fn fr30_app_window_sets_and_shows_the_below_title_bar_switch() {
     let output = dsa(&endpoint, "app-window com.example.player");
     assert_eq!(
         stdout(&output).trim(),
-        "com.example.player: resizable, opens at the size Android gives it, redraws at another \
-         monitor's scale once a move ends (the default), starts below the title bar"
+        "com.example.player: resizable, opens at the size Android gives it, scales its own way \
+         on another monitor, starts below the title bar"
     );
     // Turned off again, the app is back at the defaults and has no entry.
     let off = json_of(&dsa(
@@ -3677,9 +3643,10 @@ fn fr4_dsa_app_window_shows_youtube_scales_the_system_way_by_default() {
          by DSA on another monitor (the default for this app, which breaks when its density \
          changes while it runs)"
     );
-    // Any other app's default is the app way.
+    // Any other app's default is its own way: the app way if it says it handles a change of
+    // density, the system way if not.
     let notes = json_of(&dsa(&endpoint, "app-window com.example.notes --json"));
-    assert_eq!(notes["apps"][0]["default_dpi_scaling"], "app");
+    assert_eq!(notes["apps"][0]["default_dpi_scaling"], "auto");
 }
 
 #[test]
@@ -3695,7 +3662,7 @@ fn fr4_the_users_choice_wins_over_the_built_in_list() {
     assert_eq!(
         stdout(&output).trim(),
         "com.google.android.youtube: resizable, opens at the size Android gives it, redraws at \
-         another monitor's scale once a move ends"
+         another monitor's scale"
     );
 }
 

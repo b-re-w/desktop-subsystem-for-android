@@ -331,15 +331,6 @@ opens there asks for nothing. A task whose top activity does not say it handles 
 density is never asked for another one: its window shows it scaled instead, and its client
 size is the task's size at that scale.
 
-A new task starts at the density of its window's monitor, but an app's process keeps what it
-worked out at the density it started at: the display's, for a process a job or a broadcast
-started, or that of its last task, for one that stayed cached after its window closed. So just
-before the host starts an app (from its list, a shortcut or a notification), an app with no
-task whose background process started at another density has its background processes ended
-(`killBackgroundProcesses`), and starts in a new process at the new density. A process that
-holds an activity, runs a foreground service, or whose end would reach another app's process
-is kept, and the log says why (`LaunchDensities`).
-
 Text follows the same ratio as everything else, so body text of 16 sp is about 13 host
 pixels at 100%, near the host's own body text. Android scales text by its font scale, apart
 from everything else, and the host's `SystemSettings` carries a font scale of the host's text
@@ -369,27 +360,10 @@ configuration, so tasks on the one display each draw at their own density. On a 
 without these calls the task still gets its size through `resizeTask`, draws at the
 display's density, and the agent logs it once.
 
-A `SetTaskDensity` with `recreate` set comes when the window's move has ended. Once the task
-is seen at the new density, the agent has Android recreate its top activity if that activity
-says it handles a change of density (`configChanges` includes `density`), through
-`IActivityManager.scheduleApplicationInfoChanged`: the app's shown activities are relaunched
-with their windows kept and their saved state restored, and the process goes on. Some apps
-that say they handle a density lay out only part of their screen again at the new one. An
-activity that does not say so is recreated by Android when its density changes, so the agent
-asks for nothing more. A task not seen at the density within two seconds is left as it is.
-
-**A new task starts on its window's monitor.** `LaunchPlacement` names the monitor the window
-of the next task opens on: its density, the largest client area a window has there, and the
-whole monitor. The host sends it before every request that starts a task. As soon as the
-agent sees a task it did not see before, it gives the task that density and the size Android
-chose for it in dp, at that density and within the room on the monitor (the whole monitor for
-an activity that asks to fill the screen), in the same one transaction. For an app whose
-process has to start, that happens before its activity exists, so its first frame is drawn at
-the monitor's density and Android never relaunches it for a new density right after it opens.
-A task that appears more than 10 seconds after the host named a monitor (an app started
-another app in a new task) gets the density of the task that had focus, whose window it opens
-from. Until the task is seen at its density it is reported at it, with the bounds it is going
-to, so the host opens its window at that size 1:1.
+The agent asks Android for nothing more than the density: an activity that says it handles
+a change of density (`configChanges` includes `density`) redraws at it, and Android
+recreates any other. `SetTaskDensity` still carries a `recreate` field on the wire; the host
+leaves it unset and the agent ignores it.
 
 **While the user drags.** A `ResizeTask` with `live` set is a step of a drag that has not
 ended. A new size changes the task's screen size in dp, and with it the orientation, the

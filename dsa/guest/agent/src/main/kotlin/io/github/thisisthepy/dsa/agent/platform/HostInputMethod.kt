@@ -11,8 +11,10 @@ import android.view.inputmethod.InputConnection
 import io.github.thisisthepy.dsa.agent.input.EditorCalls
 import io.github.thisisthepy.dsa.agent.input.EditorConnection
 import io.github.thisisthepy.dsa.agent.input.EditorLink
+import io.github.thisisthepy.dsa.agent.input.EditorSnapshot
 import io.github.thisisthepy.dsa.agent.input.EditorState
 import io.github.thisisthepy.dsa.agent.input.LinkedEditor
+import io.github.thisisthepy.dsa.agent.input.describedState
 import io.github.thisisthepy.dsa.agent.input.inputKind
 
 /**
@@ -71,8 +73,11 @@ class HostInputMethod : InputMethodService() {
         currentInputConnection?.requestCursorUpdates(
             InputConnection.CURSOR_UPDATE_IMMEDIATE or InputConnection.CURSOR_UPDATE_MONITOR,
         )
+        linked.inputStarted(restarting)
         val info = attribute ?: return
-        describe(info.initialSelStart, info.initialSelEnd, -1, -1)
+        // A restart on the same editor in the middle of a composition goes to the agent as
+        // one, so the composition the framework finished as the old connection closed goes on.
+        describe(info.initialSelStart, info.initialSelEnd, -1, -1, restarted = restarting)
     }
 
     override fun onUpdateSelection(
@@ -84,7 +89,7 @@ class HostInputMethod : InputMethodService() {
         candidatesEnd: Int,
     ) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
-        describe(newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        describe(newSelStart, newSelEnd, candidatesStart, candidatesEnd, fromUpdate = true)
     }
 
     override fun onFinishInput() {
@@ -98,8 +103,15 @@ class HostInputMethod : InputMethodService() {
      * selection from [selStart] to [selEnd] with the composition from [composeStart] to
      * [composeEnd] (-1 for none), as the editor reported them.
      */
-    private fun describe(selStart: Int, selEnd: Int, composeStart: Int, composeEnd: Int) {
-        val report = onEditor ?: return
+    private fun describe(
+        selStart: Int,
+        selEnd: Int,
+        composeStart: Int,
+        composeEnd: Int,
+        restarted: Boolean = false,
+        fromUpdate: Boolean = false,
+    ) {
+        val report = (if (restarted) onRestart else null) ?: onEditor ?: return
         val info = currentInputEditorInfo
         val ic = editor()
         if (info == null || ic == null) {
@@ -116,6 +128,34 @@ class HostInputMethod : InputMethodService() {
         }
         val from = minOf(selStart, selEnd)
         val to = maxOf(selStart, selEnd)
+        // The text around the selection and the selection itself, read at once, so the text
+        // never comes from a later state than the selection: the host's next composition can
+        // reach the editor between this report and the reads that follow it. An editor that
+        // has no offset for its surrounding text (one that leaves getSurroundingText to the
+        // interface's default, as Jetpack Compose's text fields do) is read whole instead,
+        // still in one call.
+        val snapshot = if (to - from <= EditorState.MAX_TEXT - 2 * EditorState.REACH) {
+            surrounding(ic) ?: extracted(ic)
+        } else {
+            null
+        }
+        if (snapshot != null) {
+            val state = describedState(
+                kind, owner, selStart, selEnd, composeStart, composeEnd, snapshot, fromUpdate,
+            )
+            if (state == null) {
+                AndroidLog.info(
+                    "an editor update in $owner was not described: the editor moved on to " +
+                        "${snapshot.selectionStart}..${snapshot.selectionEnd} from the reported " +
+                        "$selStart..$selEnd before its text was read, and describes that next",
+                )
+                return
+            }
+            report(state)
+            return
+        }
+        // Only an editor that offers neither read is read in parts, which may come from
+        // different states of it.
         val selected = if (to > from) ic.getSelectedText(0)?.toString() else ""
         val fits = selected != null && selected.length == to - from &&
             selected.length <= EditorState.MAX_TEXT - 2 * EditorState.REACH
@@ -140,6 +180,36 @@ class HostInputMethod : InputMethodService() {
                 compositionEnd = if (composing) composeEnd else 0,
                 packageName = owner,
             ),
+        )
+    }
+
+    /**
+     * The editor's text around the selection and the selection, from its own
+     * getSurroundingText; null when the editor gives no offset for it (the interface's default
+     * gives none) or no text.
+     */
+    private fun surrounding(ic: InputConnection): EditorSnapshot? {
+        val around = ic.getSurroundingText(EditorState.REACH, EditorState.REACH, 0)
+            ?.takeIf { it.offset >= 0 } ?: return null
+        return EditorSnapshot(
+            text = around.text.toString(),
+            start = around.offset,
+            selectionStart = around.offset + minOf(around.selectionStart, around.selectionEnd),
+            selectionEnd = around.offset + maxOf(around.selectionStart, around.selectionEnd),
+        )
+    }
+
+    /** The editor's whole text and selection, from one getExtractedText; null without them. */
+    private fun extracted(ic: InputConnection): EditorSnapshot? {
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0) ?: return null
+        val text = extracted.text?.toString() ?: return null
+        val start = extracted.startOffset
+        if (start < 0 || extracted.selectionStart < 0 || extracted.selectionEnd < 0) return null
+        return EditorSnapshot(
+            text = text,
+            start = start,
+            selectionStart = start + extracted.selectionStart,
+            selectionEnd = start + extracted.selectionEnd,
         )
     }
 
@@ -169,16 +239,21 @@ class HostInputMethod : InputMethodService() {
         return EditorLink(started?.let(::calls), bound?.let(::calls))
     }
 
-    /** The calls on [ic], made once for each connection. */
+    /**
+     * The calls on [ic], made once for each connection: the same calls for the same
+     * connection, so [LinkedEditor] tells a connection that input restarted with from the one
+     * it composed in. The started connection and the fallback both stay known.
+     */
     private fun calls(ic: InputConnection): EditorCalls {
-        wrapped?.let { (connection, calls) -> if (connection === ic) return calls }
+        val known = wrapped
+        known.firstOrNull { it.first === ic }?.let { return it.second }
         val calls = ConnectionCalls(ic)
-        wrapped = ic to calls
+        wrapped = (listOf(ic to calls) + known).take(2)
         return calls
     }
 
     @Volatile
-    private var wrapped: Pair<InputConnection, EditorCalls>? = null
+    private var wrapped: List<Pair<InputConnection, EditorCalls>> = emptyList()
 
     /** An editor's InputConnection, called as [LinkedEditor] asks. */
     private class ConnectionCalls(private val ic: InputConnection) : EditorCalls {
@@ -192,6 +267,8 @@ class HostInputMethod : InputMethodService() {
         override fun setComposingRegion(start: Int, end: Int) = ic.setComposingRegion(start, end)
         override fun selectionEnd(): Int? =
             ic.getExtractedText(ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionEnd }
+        override fun textBeforeCursor(length: Int): String? = ic.getTextBeforeCursor(length, 0)?.toString()
+        override fun textAfterCursor(length: Int): String? = ic.getTextAfterCursor(length, 0)?.toString()
     }
 
     companion object {
@@ -221,8 +298,17 @@ class HostInputMethod : InputMethodService() {
         @Volatile
         var onEditor: ((EditorState) -> Unit)? = null
 
+        /**
+         * Where the focused editor goes as input restarts on it, which may happen in the middle
+         * of a composition; called on the input method's thread. [onEditor] hears it without one.
+         */
+        @Volatile
+        var onRestart: ((EditorState) -> Unit)? = null
+
+        private val linked = LinkedEditor { current?.link() }
+
         /** The focused editor, through the input method; the agent calls it on its own thread. */
-        val connection: EditorConnection = LinkedEditor { current?.link() }
+        val connection: EditorConnection = linked
 
         /**
          * The cursor's rectangle in display pixels: the insertion marker if the editor gives

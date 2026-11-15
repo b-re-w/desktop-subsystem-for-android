@@ -1717,9 +1717,10 @@ S'applique à la prochaine ouverture de la fenêtre de l'app.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Qui met cette application à l'échelle quand sa fenêtre passe sur un écran d'une autre échelle.
-• Application : DSA étire la fenêtre pendant le glissement. Au relâchement, l'application se redessine à la nouvelle échelle, texte net : Android recrée son écran une fois en gardant son état, d'où un bref redessin.
-• Système : l'application garde son échelle et DSA ajuste sa fenêtre à la même taille physique. L'application n'est jamais recréée. Le texte peut sembler un peu flou.
-• Automatique : Système pour les applications perturbées par un changement d'échelle en cours, comme YouTube ; Application pour les autres.</value>
+• Application : l'application prend l'échelle du nouvel écran dès que la fenêtre l'atteint et se redessine à cette échelle, texte net. Pour une application qui n'indique pas gérer ce changement, Android recrée son écran en gardant son état, d'où un bref redessin possible.
+• Système : l'application garde son échelle et DSA ajuste sa fenêtre à la même taille physique. Le texte peut sembler un peu flou.
+• Automatique : Système pour les applications perturbées par un changement d'échelle en cours, comme YouTube ; pour toute autre application, Application si elle indique gérer ce changement, Système sinon.
+Automatique et Système ne redémarrent jamais l'application.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Automatique (application)</value>

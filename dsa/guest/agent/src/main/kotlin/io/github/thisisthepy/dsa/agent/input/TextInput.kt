@@ -57,6 +57,18 @@ interface EditorConnection {
     val composesInline: Boolean
         get() = true
 
+    /**
+     * Input restarted on the editor in the middle of a composition, and the framework finished
+     * the composition as the old connection closed, keeping its text. Makes that text the
+     * composition again, when the editor still holds it where it was composed. The composing
+     * region in the editor's whole text, or null when there is no composition to resume or the
+     * editor no longer holds it: then it changed, and the composition is over.
+     */
+    fun resumeComposition(): IntRange? = null
+
+    /** Input started on an editor: a new one, or the same one again when [restarting]. */
+    fun inputStarted(restarting: Boolean) {}
+
     companion object {
         /** No editor, as before the input method starts. */
         val NONE = object : EditorConnection {
@@ -97,6 +109,71 @@ data class EditorState(
         /** How far the text reaches on each side of the selection, where the editor's goes on. */
         const val REACH = 1024
     }
+}
+
+/**
+ * An editor's text and selection as one read returned them, so both come from the same state
+ * of the editor. [text] starts [start] UTF-16 code units into the editor's whole text; the
+ * selection runs from [selectionStart] to [selectionEnd] in the whole text.
+ */
+data class EditorSnapshot(
+    val text: String,
+    val start: Int,
+    val selectionStart: Int,
+    val selectionEnd: Int,
+)
+
+/**
+ * The editor of [kind] in [owner] as [snapshot] shows it, for the editor's report that its
+ * selection runs from [selStart] to [selEnd] with the composition from [composeStart] to
+ * [composeEnd] (-1 for none). The text reaches [EditorState.REACH] past each end of the
+ * selection at most, and never splits a character there.
+ *
+ * The editor reports a state, and the text is read after it, so the editor may have moved on
+ * in between: the host's next composition reaches it while the report is on its way, which
+ * fast typing does at every syllable. Then the snapshot is a later state than the report, and
+ * the two together describe a state the editor never had, which the host can only take for a
+ * change of the user's. A report from a selection update is then dropped ([fromUpdate]: null),
+ * because the editor reports the later state next, with its composition. Any other report
+ * takes the snapshot's own selection and no composition.
+ */
+fun describedState(
+    kind: ImeInputKind,
+    owner: String,
+    selStart: Int,
+    selEnd: Int,
+    composeStart: Int,
+    composeEnd: Int,
+    snapshot: EditorSnapshot,
+    fromUpdate: Boolean,
+): EditorState? {
+    val from = minOf(selStart, selEnd)
+    val to = maxOf(selStart, selEnd)
+    val nowFrom = minOf(snapshot.selectionStart, snapshot.selectionEnd)
+    val nowTo = maxOf(snapshot.selectionStart, snapshot.selectionEnd)
+    val moved = nowFrom != from || nowTo != to
+    if (moved && fromUpdate) return null
+    val whole = snapshot.text
+    val localFrom = (nowFrom - snapshot.start).coerceIn(0, whole.length)
+    val localTo = (nowTo - snapshot.start).coerceIn(localFrom, whole.length)
+    var cutStart = (localFrom - EditorState.REACH).coerceAtLeast(0)
+    if (cutStart > 0 && Character.isLowSurrogate(whole[cutStart])) cutStart--
+    var cutEnd = (localTo + EditorState.REACH).coerceAtMost(whole.length)
+    if (cutEnd in 1 until whole.length && Character.isHighSurrogate(whole[cutEnd - 1])) cutEnd++
+    val text = whole.substring(cutStart, cutEnd)
+    val start = snapshot.start + cutStart
+    val end = start + text.length
+    val composing = !moved && composeStart in start..end && composeEnd in composeStart..end
+    return EditorState(
+        kind = kind,
+        text = text,
+        textStart = start,
+        selectionStart = if (moved) snapshot.selectionStart else selStart,
+        selectionEnd = if (moved) snapshot.selectionEnd else selEnd,
+        compositionStart = if (composing) composeStart else 0,
+        compositionEnd = if (composing) composeEnd else 0,
+        packageName = owner,
+    )
 }
 
 /**
@@ -379,6 +456,38 @@ class TextInput(
                 .toByteArray(),
         )
     }
+
+    /**
+     * Input restarted on the focused editor, which is now [state]. Its app restarts input as it
+     * sets the editor's text or state, and the framework finishes the composition as the old
+     * connection closes, keeping its text. A composition still being typed in the editor's task
+     * goes on: its text becomes the composition again, and the host hears the editor with it,
+     * so neither side commits the syllable half made. Only when the editor no longer holds the
+     * text where it was composed did the editor really change; the composition is then over,
+     * and the host hears the editor as it is.
+     */
+    fun editorRestarted(state: EditorState) {
+        val (task, _) = composing ?: return editorChanged(state)
+        if (state.kind == ImeInputKind.IME_INPUT_KIND_NONE || editorTask(state.packageName) != task) {
+            return editorChanged(state)
+        }
+        val region = editor().resumeComposition()
+        if (region == null) {
+            waiting = null
+            ended(task, "ended as input restarted on an editor that no longer holds it,")
+            return editorChanged(state)
+        }
+        if (!resumeNoted) {
+            resumeNoted = true
+            log.info("input restarted in task $task in the middle of a composition, which goes on in its editor")
+        }
+        val end = region.last + 1
+        val within = region.first >= state.textStart && end <= state.textStart + state.text.length
+        editorChanged(if (within) state.copy(compositionStart = region.first, compositionEnd = end) else state)
+    }
+
+    /** Whether the log was told a composition went on as input restarted. */
+    private var resumeNoted = false
 
     /**
      * The focused editor's cursor is at these display pixels. The host hears where it is in

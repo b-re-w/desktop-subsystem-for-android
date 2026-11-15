@@ -145,27 +145,26 @@ dsa app-window <package> --below-title-bar on   # off varsayılana döner
 
 ## Bir uygulamayı başka ölçekteki bir monitöre taşıma
 
-Bir uygulama, penceresinin açıldığı monitörün ölçeğiyle ilk karesinden itibaren açılır, bu yüzden
-açıldıktan hemen sonra yeniden oluşturulmaz. Bir pencereyi başka ölçekteki bir monitöre
-taşıdığınızda uygulama ekrandaki boyutunu korur. Her uygulama bunu aşağıdaki yollardan biriyle
+Android ana monitörünüzün ölçeğiyle başlar, bu yüzden uygulamalar orada doğru boyutta açılır.
+Bir pencereyi başka ölçekteki bir monitöre
+taşıdığınızda uygulama ekrandaki boyutunu korur; **Automatic** ve **System** ile hiçbir zaman yeniden başlatılmaz. Her uygulama bunu aşağıdaki yollardan biriyle
 yapar; bunu **Apps** sayfasındaki **Scaling** altında veya
 `dsa app-window <package> --dpi-scaling` ile seçersiniz:
 
 - **Automatic** (`auto`, varsayılan): DSA'nın, çalışırken ölçeği değişince bozulan uygulamaları
-  içeren yerleşik listesindeki uygulamalar için **System**, diğer tüm uygulamalar için **App**.
+  içeren yerleşik listesindeki uygulamalar için **System**. Diğer uygulamalar için, ölçek
+  değişikliğini kendisinin işlediğini söylüyorsa **App**, söylemiyorsa **System**.
   Listede YouTube bulunur: başladığı ölçeğe göre düzenini korur, bu yüzden taşındıktan sonra alt
   sekmeleri ve mini oynatıcısı yeniden başlayana kadar bozuk kalırdı. Ayarlar, böyle bir uygulamanın
   varsayılanını **Automatic (system, recommended for this app)** olarak gösterir. Uygulama için kendi
   seçiminiz önce gelir.
-- **App** (`app`): pencereyi sürüklerken DSA onu yeni monitöre göre ölçekler. Bıraktığınızda
-  uygulama yeni monitörün ölçeğinde yeniden çizilir ve metni keskin kalır: Android ekranını bir kez
-  yeniden oluşturur ve durumunu (kaydırma konumu, yazılan metin) geri yükler. Bu yüzden her
-  taşımadan sonra, "Uygulama" ölçeklemesi kullanan bir Windows programında olduğu gibi kısa bir süre
-  yeniden çizilir. Bu, ölçek değişikliğini kendisinin işlediğini söyleyen bir uygulama için bile
-  geçerlidir, çünkü bu uygulamaların bazıları ekranlarının yalnızca bir kısmını yeni ölçekte yeniden
-  çizer.
+- **App** (`app`): uygulama, pencere yeni monitöre ulaşır ulaşmaz yeni monitörün ölçeğinde
+  yeniden çizilir ve metni keskin kalır. Ölçek değişikliğini kendisinin işlediğini söylemeyen
+  bir uygulamanın ekranını Android yeniden oluşturur ve durumunu (kaydırma konumu, yazılan
+  metin) geri yükler; bu yüzden taşırken, "Uygulama" ölçeklemesi kullanan bir Windows
+  programında olduğu gibi kısa bir süre yeniden çizilebilir.
 - **System** (`system`): uygulama ölçeğini korur ve DSA penceresini yeni monitöre göre ölçekler.
-  Uygulama hiçbir zaman yeniden oluşturulmaz. Büyütüldüğünde metin biraz yumuşak görünebilir.
+  Büyütüldüğünde metin biraz yumuşak görünebilir.
 - **System (forced)** (`system-forced`): uygulama, bunu işlediğini söylemese bile yeniden
   başlatılmadan yeni ölçeği alır. Henüz kullanılamaz: bu sürümde bulunmayan bir Android değişikliği
   gerektirir, bu yüzden o zamana kadar **System** gibi çalışır.

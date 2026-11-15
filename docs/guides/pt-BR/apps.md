@@ -146,26 +146,26 @@ dsa app-window <package> --below-title-bar on   # off volta ao padrão
 
 ## Mover um app para um monitor com outra escala
 
-Um app abre na escala do monitor em que a janela dele abre, desde o primeiro quadro, então ele
-não é recriado logo depois de abrir. Quando você move uma janela para um monitor com outra
-escala, o app mantém o tamanho na tela. Cada app faz isso de uma destas formas, que você escolhe
+O Android inicia na escala do seu monitor principal, então os apps abrem no tamanho certo
+nele. Quando você move uma janela para um monitor com outra
+escala, o app mantém o tamanho na tela, e com **Automatic** e **System** ele nunca é reiniciado. Cada app faz isso de uma destas formas, que você escolhe
 em **Scaling** (escala) na página **Apps**, ou com
 `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, o padrão): **System** para os apps da lista interna do DSA de apps que
-  quebram quando a escala muda durante a execução, e **App** para todos os outros. A lista
-  contém o YouTube: ele mantém o layout da escala em que iniciou, então, depois de uma mudança,
-  as guias inferiores e o miniplayer ficariam quebrados até ele reiniciar. As DSA Settings mostram
-  o padrão de um app assim como **Automatic (system, recommended for this app)**. A sua própria
-  escolha para o app vem primeiro.
-- **App** (`app`): enquanto você arrasta a janela, o DSA a escala para o novo monitor. Quando
-  você solta, o app é redesenhado na escala do novo monitor, e o texto continua nítido: o
-  Android recria a tela do app uma vez e restaura o estado dele (posição de rolagem, texto
-  digitado), então ele é redesenhado rapidamente depois de cada mudança, como um programa do
-  Windows faz com a escala "Aplicativo". Isso vale mesmo para um app que diz tratar sozinho uma
-  mudança de escala, porque alguns desses apps redesenham só parte da tela na nova escala.
+  quebram quando a escala muda durante a execução. Para qualquer outro app, **App** se ele diz
+  tratar sozinho uma mudança de escala, e **System** se não. A lista contém o YouTube: ele
+  mantém o layout da escala em que iniciou, então, depois de uma mudança, as guias inferiores
+  e o miniplayer ficariam quebrados até ele reiniciar. As DSA Settings mostram o padrão de um
+  app assim como **Automatic (system, recommended for this app)**. A sua própria escolha para
+  o app vem primeiro.
+- **App** (`app`): o app é redesenhado na escala do novo monitor assim que a janela chega lá, e
+  o texto continua nítido. Para um app que não diz tratar sozinho uma mudança de escala, o
+  Android recria a tela dele e restaura o estado (posição de rolagem, texto digitado), então
+  ele pode ser redesenhado rapidamente ao ser movido, como um programa do Windows faz com a
+  escala "Aplicativo".
 - **System** (`system`): o app mantém a escala, e o DSA escala a janela dele para o novo
-  monitor. O app nunca é recriado. Ampliado, o texto pode parecer um pouco borrado.
+  monitor. Ampliado, o texto pode parecer um pouco borrado.
 - **System (forced)** (`system-forced`): o app recebe a nova escala sem reiniciar, mesmo que não
   diga que a trata. Ainda não disponível: isso exige uma alteração no Android que esta versão
   não tem, então, até lá, funciona como **System**.

@@ -139,26 +139,24 @@ dsa app-window <package> --below-title-bar on   # off quay về mặc định
 
 ## Chuyển ứng dụng sang màn hình có tỷ lệ khác
 
-Ứng dụng mở ở tỷ lệ của màn hình nơi cửa sổ của nó mở, ngay từ khung hình đầu tiên, nên nó không
-bị tạo lại ngay sau khi mở. Khi bạn chuyển một cửa sổ sang màn hình có tỷ lệ khác, ứng dụng giữ
-nguyên kích thước trên màn hình. Mỗi ứng dụng làm việc này theo một trong các cách sau, do bạn
+Android khởi động ở tỷ lệ của màn hình chính, nên ứng dụng mở ở đúng kích thước trên màn hình
+đó. Khi bạn chuyển một cửa sổ sang màn hình có tỷ lệ khác, ứng dụng giữ nguyên kích thước trên màn hình, và với **Automatic** và **System** nó không bao giờ bị khởi động lại. Mỗi ứng dụng làm việc này theo một trong các cách sau, do bạn
 chọn trong **Scaling** (co giãn) trên trang **Apps**, hoặc
 bằng `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, mặc định): **System** cho các ứng dụng có trong danh sách tích hợp sẵn
-  của DSA gồm những ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, và **App** cho mọi ứng dụng
-  khác. Danh sách này có YouTube: nó giữ bố cục theo tỷ lệ lúc khởi động, nên sau khi chuyển màn
+  của DSA gồm những ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy. Với mọi ứng dụng khác,
+  **App** nếu ứng dụng tự nhận là xử lý được thay đổi tỷ lệ, **System** nếu không. Danh sách
+  này có YouTube: nó giữ bố cục theo tỷ lệ lúc khởi động, nên sau khi chuyển màn
   hình, các thẻ dưới cùng và trình phát thu nhỏ của nó sẽ bị lỗi cho đến khi khởi động lại. Cài
   đặt hiển thị mặc định của ứng dụng như vậy là **Automatic (system, recommended for this app)**.
   Lựa chọn riêng của bạn cho ứng dụng được ưu tiên.
-- **App** (`app`): khi bạn kéo cửa sổ, DSA co giãn nó theo màn hình mới. Khi bạn thả ra, ứng dụng
-  vẽ lại ở tỷ lệ của màn hình mới, và chữ vẫn sắc nét: Android tạo lại màn hình của ứng dụng một
-  lần và khôi phục trạng thái (vị trí cuộn, văn bản đã gõ), nên ứng dụng vẽ lại trong chốc lát
-  sau mỗi lần chuyển, giống như một chương trình Windows với chế độ co giãn "Application". Điều
-  này đúng cả với ứng dụng tự nhận là xử lý được thay đổi tỷ lệ, vì một số ứng dụng đó chỉ vẽ lại
-  một phần màn hình ở tỷ lệ mới.
+- **App** (`app`): ứng dụng vẽ lại ở tỷ lệ của màn hình mới ngay khi cửa sổ đến đó, và chữ vẫn
+  sắc nét. Với ứng dụng không nói là xử lý được thay đổi tỷ lệ, Android tạo lại màn hình của
+  ứng dụng và khôi phục trạng thái (vị trí cuộn, văn bản đã gõ), nên ứng dụng có thể vẽ lại
+  trong chốc lát khi chuyển, giống như một chương trình Windows với chế độ co giãn "Application".
 - **System** (`system`): ứng dụng giữ nguyên tỷ lệ, và DSA co giãn cửa sổ của nó theo màn hình
-  mới. Ứng dụng không bao giờ bị tạo lại. Khi phóng to, chữ có thể trông hơi mờ.
+  mới. Khi phóng to, chữ có thể trông hơi mờ.
 - **System (forced)** (`system-forced`): ứng dụng nhận tỷ lệ mới mà không khởi động lại, kể cả khi
   nó không nói là xử lý được. Chưa có: nó cần một thay đổi trong Android mà phiên bản này chưa
   có, nên cho đến lúc đó nó hoạt động như **System**.

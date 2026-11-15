@@ -8,8 +8,10 @@
 //! composition, the commit, the selection or the reconverted range it made. The Microsoft
 //! Korean IME composes there, the touch keyboard takes its layout from the editor's input
 //! scope, and dictation (Win+H), handwriting and the emoji panel type into it. The window
-//! gives its document the framework's focus each time it takes the keyboard focus, rather than
-//! trusting the framework to notice.
+//! gives its document the framework's focus whenever it has the keyboard focus and nothing is
+//! being composed, rather than trusting the framework to notice: as it takes the keyboard
+//! focus, after its input context is activated, as the guest's editor changes, and once a
+//! composition outside the document ends.
 //!
 //! An input method that composes outside the document all the same (the framework had another
 //! document focused, or an input method of the older kind) does it through IMM32: the window
@@ -42,13 +44,27 @@ use windows_sys::Win32::UI::Input::Ime::{
     ImmSetCandidateWindow, CANDIDATEFORM, CFS_EXCLUDE, CPS_CANCEL, CPS_COMPLETE, GCS_COMPSTR,
     GCS_CURSORPOS, GCS_RESULTSTR, HIMC, ISC_SHOWUICOMPOSITIONWINDOW, NI_COMPOSITIONSTR,
 };
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::GetFocus;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    DefWindowProcW, WM_CHAR, WM_IME_COMPOSITION, WM_IME_ENDCOMPOSITION, WM_IME_SETCONTEXT,
-    WM_IME_STARTCOMPOSITION, WM_KILLFOCUS, WM_SETFOCUS,
+    DefWindowProcW, PostMessageW, RegisterWindowMessageW, WM_CHAR, WM_IME_COMPOSITION,
+    WM_IME_ENDCOMPOSITION, WM_IME_SETCONTEXT, WM_IME_STARTCOMPOSITION, WM_KILLFOCUS, WM_SETFOCUS,
 };
 
-use super::tsf::{Document, Shared};
+use super::tsf::{Document, FrameworkFocus, Shared};
 use crate::compositor::log::CompositorLogger;
+
+/// The message a window posts itself to give its document the framework's focus once the
+/// message it handles now is done: the input context's activation and the input method's own
+/// handling of a composition's end run after the window's handler returns, and either may
+/// leave the framework's focus elsewhere.
+fn refocus_message() -> u32 {
+    static MESSAGE: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    *MESSAGE.get_or_init(|| {
+        let name: Vec<u16> = "DSA.TextInput.Refocus\0".encode_utf16().collect();
+        // SAFETY: a NUL-terminated name that lives for the call.
+        unsafe { RegisterWindowMessageW(name.as_ptr()) }
+    })
+}
 
 /// What one `WM_IME_COMPOSITION` says, read from the window's input context: the text the
 /// input method committed, and the composition it holds now with its cursor. A message that
@@ -92,6 +108,23 @@ impl ImmChange {
             composition,
         }
     }
+}
+
+/// Whether IMM32's composition messages are the echo of the framework's own composition in
+/// the window's document, which Windows keeps, rather than a composition of the input
+/// method's outside it, which the guest's editor must show: not while a composition taken
+/// through IMM32 goes on (`imm_composing`), always while the framework composes in the
+/// document (`framework_composing`), and otherwise only when the framework composed in it
+/// before (`composed_before`) and its focus is still on it. With the focus elsewhere, the
+/// input method composes outside the document, whatever it did before.
+pub fn imm32_is_echo(
+    imm_composing: bool,
+    framework_composing: bool,
+    composed_before: bool,
+    focus: Option<FrameworkFocus>,
+) -> bool {
+    !imm_composing
+        && (framework_composing || (composed_before && focus == Some(FrameworkFocus::Ours)))
 }
 
 /// The input context of a window, released when dropped.
@@ -203,10 +236,7 @@ impl ImeWindow {
             *slot = Some(document);
         }
         // A window that has the keyboard focus already never sees it arrive.
-        // SAFETY: plain Win32 on the window's own thread.
-        if unsafe { windows_sys::Win32::UI::Input::KeyboardAndMouse::GetFocus() } == hwnd {
-            self.focus_document();
-        }
+        self.take_framework_focus("as the window opened");
         Ok(())
     }
 
@@ -266,14 +296,61 @@ impl ImeWindow {
                 }
             }
         }
+        // Input may have restarted in the guest on another editor; the next composition goes
+        // through the document all the same.
+        self.refocus_later();
     }
 
-    fn focus_document(&self) {
+    /// Where the framework's focus is now; `None` when the window has no framework.
+    fn framework_focus(&self) -> Option<FrameworkFocus> {
+        self.document
+            .try_borrow()
+            .ok()?
+            .as_ref()
+            .map(Document::focus_state)
+    }
+
+    /// Gives the window's document the framework's focus, when the window has the keyboard
+    /// focus and nothing is being composed: moving the framework's focus in the middle of a
+    /// composition would end it. `when` says when, for the log.
+    fn take_framework_focus(&self, when: &str) {
+        let hwnd = self.hwnd.get() as HWND;
+        // SAFETY: plain Win32 on the window's own thread.
+        if hwnd.is_null() || unsafe { GetFocus() } != hwnd {
+            return;
+        }
+        if self.imm_composing.get() || self.shared.is_composing() {
+            return;
+        }
         if let Ok(document) = self.document.try_borrow() {
             if let Some(document) = document.as_ref() {
-                document.focus();
+                document.focus(when);
             }
         }
+    }
+
+    /// Gives the document the framework's focus once the message handled now is done.
+    fn refocus_later(&self) {
+        let hwnd = self.hwnd.get() as HWND;
+        let message = refocus_message();
+        if !hwnd.is_null() && message != 0 {
+            // SAFETY: a message to the window's own queue.
+            unsafe { PostMessageW(hwnd, message, 0, 0) };
+        }
+    }
+
+    /// Whether the IMM32 messages that come now are the echo of a composition of the
+    /// framework's in the document, which Windows keeps, rather than a composition of the
+    /// input method's outside the document: the framework composes in the document now, or
+    /// has before and still focuses it. A composition taken through IMM32 is followed to its
+    /// end.
+    fn framework_echo(&self) -> bool {
+        imm32_is_echo(
+            self.imm_composing.get(),
+            self.shared.is_composing(),
+            self.shared.composes_in_document(),
+            self.framework_focus(),
+        )
     }
 
     /// Ends a composition, typed as it stands, as the window loses the focus.
@@ -306,13 +383,19 @@ impl ImeWindow {
         wparam: WPARAM,
         lparam: LPARAM,
     ) -> Option<LRESULT> {
+        if message != 0 && message == refocus_message() {
+            self.take_framework_focus("once nothing was being composed");
+            return Some(0);
+        }
         match message {
             WM_CHAR => {
                 self.shared.typed(wparam as u16);
                 Some(0)
             }
             WM_SETFOCUS => {
-                self.focus_document();
+                self.take_framework_focus("as the window took the keyboard focus");
+                // The input context's activation that follows may move it again.
+                self.refocus_later();
                 None
             }
             WM_KILLFOCUS => {
@@ -323,26 +406,40 @@ impl ImeWindow {
             }
             // The guest's editor shows the composition, so the input method draws none of
             // its own; its candidate list still shows.
-            WM_IME_SETCONTEXT => Some(DefWindowProcW(
-                hwnd,
-                message,
-                wparam,
-                lparam & !(ISC_SHOWUICOMPOSITIONWINDOW as LPARAM),
-            )),
+            WM_IME_SETCONTEXT => {
+                let result = DefWindowProcW(
+                    hwnd,
+                    message,
+                    wparam,
+                    lparam & !(ISC_SHOWUICOMPOSITIONWINDOW as LPARAM),
+                );
+                // Activating the window's input context can give the framework's focus to
+                // the document IMM32 keeps for it, after the window took the keyboard focus.
+                if wparam != 0 {
+                    self.refocus_later();
+                }
+                Some(result)
+            }
             // A composition of the framework's own goes through the document; these come
-            // only for one outside it. Once the framework has composed in the document, any
-            // that still come are its echo, which Windows keeps.
+            // only for one outside it. Any that come while the framework composes in the
+            // document, or while it focuses the document it composed in before, are its
+            // echo, which Windows keeps.
             WM_IME_STARTCOMPOSITION | WM_IME_COMPOSITION | WM_IME_ENDCOMPOSITION
-                if self.shared.composes_in_document() =>
+                if self.framework_echo() =>
             {
                 None
             }
             WM_IME_STARTCOMPOSITION => {
                 if !self.imm_noted.replace(true) {
-                    self.shared.note(
-                        "the input method composes through IMM32, outside the window's text \
-                         services document; the guest's editor takes that composition",
-                    );
+                    let focus = self
+                        .framework_focus()
+                        .map_or("no text services framework", FrameworkFocus::describe);
+                    self.shared.note(&format!(
+                        "the input method composes through IMM32 in this window, outside the \
+                         window's text services document, as the framework's focus is on \
+                         {focus}; the guest's editor takes that composition, and the document \
+                         takes the framework's focus again once it ends"
+                    ));
                 }
                 self.imm_composing.set(true);
                 if let (Some(context), Some(cursor)) = (Context::of(hwnd), self.shared.cursor()) {
@@ -375,6 +472,9 @@ impl ImeWindow {
                     let nothing: &[u16] = &[];
                     self.shared.imm(None, Some((nothing, 0)));
                 }
+                // The next composition goes through the document, which takes the
+                // framework's focus now that nothing is being composed outside it.
+                self.refocus_later();
                 Some(0)
             }
             _ => None,
@@ -408,6 +508,23 @@ mod tests {
         let change = ImmChange::read(GCS_COMPSTR, |_| Some(units("\u{d558}")), || None);
         assert_eq!(change.result, None);
         assert_eq!(change.composition, Some((units("\u{d558}"), 1)));
+    }
+
+    #[test]
+    fn fr6_imm32_compositions_reach_the_guest_whenever_the_document_lacks_the_framework_focus() {
+        use FrameworkFocus::{Another, Nothing, Ours};
+        // The framework composed in the document before, but another document has its focus
+        // now (the window's input context took it): the input method composes outside the
+        // document, and the guest's editor must show it.
+        assert!(!imm32_is_echo(false, false, true, Some(Another)));
+        assert!(!imm32_is_echo(false, false, true, Some(Nothing)));
+        assert!(!imm32_is_echo(false, false, false, Some(Ours)));
+        assert!(!imm32_is_echo(false, false, true, None));
+        // With the focus on the document it composed in, what comes is its echo.
+        assert!(imm32_is_echo(false, false, true, Some(Ours)));
+        assert!(imm32_is_echo(false, true, false, Some(Another)));
+        // A composition taken through IMM32 is followed to its end.
+        assert!(!imm32_is_echo(true, false, true, Some(Ours)));
     }
 
     #[test]
