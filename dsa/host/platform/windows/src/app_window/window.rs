@@ -488,7 +488,11 @@ fn register_class(
     Ok(())
 }
 
+/// The devices this process's windows draw with, for the give-back when a window is minimized.
+static WINDOW_GPU: std::sync::OnceLock<Option<Arc<Gpu>>> = std::sync::OnceLock::new();
+
 fn run(setup: UiSetup, commands: Receiver<ToHost>, ready: Sender<Result<isize, String>>) {
+    let _ = WINDOW_GPU.set(setup.gpu.clone());
     // SAFETY: plain Win32 calls on this thread's own windows.
     unsafe {
         // Sizes are in real pixels on every monitor; a window that moves to a monitor of
@@ -783,7 +787,9 @@ unsafe extern "system" fn task_window_proc(
                         shown: !minimized,
                     });
                     if minimized {
-                        crate::compositor::trim::empty_working_set();
+                        crate::compositor::trim::give_back_minimized(
+                            WINDOW_GPU.get().and_then(|gpu| gpu.as_deref()),
+                        );
                     }
                 }
             }

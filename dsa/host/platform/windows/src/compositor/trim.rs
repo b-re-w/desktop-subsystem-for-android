@@ -92,6 +92,20 @@ pub fn empty_working_set() {
     }
 }
 
+/// Gives back what a window host holds for a window that was just minimized: the GPU
+/// driver's spare memory for `gpu` (the swapchain let go when the window hid), the free memory
+/// of every heap, and then the working set. Emptying the working set alone only pages memory
+/// out: it stays committed and private to the process. The driver's trim and the heap
+/// decommit are what take private commit down, by what the window's frames and their staging
+/// left behind.
+pub fn give_back_minimized(gpu: Option<&Gpu>) {
+    if let Some(gpu) = gpu {
+        gpu.trim();
+    }
+    committed::compact_heaps();
+    empty_working_set();
+}
+
 /// What the give-back said of the video pictures shared with the guest: mapped memory, which
 /// the working set counts and the private commit does not. Empty while no video has played.
 fn pictures_line(pictures: PicturesGivenBack) -> String {
