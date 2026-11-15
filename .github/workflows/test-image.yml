@@ -74,7 +74,7 @@ on:
   # On the release pull request into main, each update starts a run that waits for the
   # owner: the "approval" job below uses the run-tests environment, whose required reviewer
   # approves or rejects it on the pull request page. Nothing else runs until then, so
-  # Release sync updating that pull request (run by hand) takes no runner.
+  # Release sync updating that pull request on every push to develop takes no runner.
   pull_request:
     branches: [main]
   workflow_dispatch:
