@@ -485,16 +485,6 @@ class AndroidTaskActions(
     /** The status bar heights read so far, by density. */
     private val statusBarHeights = HashMap<Int, Int>()
 
-    private companion object {
-        /**
-         * InsetsSource.FLAG_FORCE_CONSUMING (1 shl 2) and
-         * FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR (1 shl 4), the same in Android 16 and 17:
-         * the flags the framework's desktop windowing gives the caption source of an app that
-         * asked for no transparent caption. They are hidden constants, so they are named here.
-         */
-        const val FORCE_CONSUMING_CAPTION = (1 shl 2) or (1 shl 4)
-    }
-
     /**
      * Reads the framework's status_bar_height at [densityDpi], as an app drawing at that
      * density reads it: the system configuration with only its density changed. The image's
@@ -601,6 +591,12 @@ class AndroidTaskActions(
         const val RESIZE_MODE_PRESERVE_WINDOW = 1
 
         const val MAX_TASKS = 1000
+
+        // InsetsSource.FLAG_FORCE_CONSUMING (1 shl 2) and
+        // FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR (1 shl 4), the same in Android 16 and 17:
+        // the flags the framework's desktop windowing gives the caption source of an app that
+        // asked for no transparent caption. The SDK hides them.
+        const val FORCE_CONSUMING_CAPTION = (1 shl 2) or (1 shl 4)
 
         // Settings.ACTION_MANAGE_USER_ASPECT_RATIO_SETTINGS, which the SDK hides. Settings of
         // Android 16 and 17 answers it with the package as data (UserAspectRatioAppActivity).
