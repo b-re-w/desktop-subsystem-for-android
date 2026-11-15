@@ -123,6 +123,8 @@ class TaskComposer {
         bool posted = false;
         // The host has been told this task's frames go to `display`.
         bool announced = false;
+        // For an overlay: the log has said that the host composes it.
+        bool composedLogged = false;
         // Two ColorBuffers, so the host can show one while the next is composed.
         uint32_t targets[2] = {0, 0};
         int next = 0;

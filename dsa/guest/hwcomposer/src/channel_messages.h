@@ -15,10 +15,12 @@
 
 namespace dsa::hwc {
 
-// The agent reported a task, or its new bounds.
+// The agent reported a task, or its new bounds. With `overlay`, it is an app overlay window
+// (TaskUpdated.overlay), whose bounds are the frame of its surface.
 struct TaskUpdate {
     int32_t id = 0;
     Rect bounds;
+    bool overlay = false;
 };
 
 // The agent reported that a task ended.

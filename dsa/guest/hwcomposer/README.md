@@ -81,6 +81,34 @@ layers, and anything that straddles a window's edge. Sending it would put pixels
 belong to no window, or to another one, into a host window. A popup that reaches outside
 its window is left out for the same reason.
 
+## App overlay windows
+
+An app overlay window (a window an app adds over other apps with the "display over other
+apps" permission: floating lyrics, a chat head) is in no task. The agent reports each one as
+it reports a task, in a `TaskUpdated` with `overlay` set, with the frame of the overlay's
+surface as its bounds and an ID from 0x40000000 up, which no task has. The hwcomposer gives
+it a host display of its own and announces it with `TaskFrames`, and the host shows it in a
+borderless window that floats above the others.
+
+- An overlay's layers are found before the tasks' (`assignLayersToTasks`), because an overlay
+  floats over the tasks and would otherwise be drawn into the window of the task under it.
+  The layers whose frame is exactly the overlay's are its surface. A layer above that surface
+  and inside it is the overlay's too. A task's layer under the overlay stays the task's.
+- While its app moves it, the agent's report is a frame behind: the overlay then takes the
+  layer of its own size nearest to where it was, which is no task's and no other overlay's
+  surface, and is composed from where that layer is.
+- The host composes into a target it first clears to opaque black, which would put a black
+  box around floating lyrics. So an overlay of one 8-bit RGBA layer that shows the whole of a
+  buffer of its own size, unscaled, unturned and at full alpha, is not composed: the app's own
+  buffer, which still has the transparency the app drew, is posted as the overlay's frame
+  (`showsOwnBuffer`). Any other overlay is composed and is opaque where nothing is drawn; the
+  log says which way each overlay goes.
+- An overlay that covers the whole display (a screen filter, a dimmer) gets no frames of its
+  own, so the host can open no window for it: that window would cover the user's desktop. Its
+  layers, the topmost display-wide ones above every layer of an app task, at most one for each
+  such overlay, are composed over every app task's frame instead (`Layout::screen`), as it
+  covers every app on a phone's screen.
+
 SurfaceFlinger composes some layers itself (client composition). For a task with such
 layers, the part of the client target their frames cover is composed where the task's
 lowest client layer sits.
