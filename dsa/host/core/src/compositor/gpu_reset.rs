@@ -381,6 +381,21 @@ impl GpuResetWindows {
             },
             // Made here, by window ID already.
             shown @ WindowChange::ShownTask { .. } => shown,
+            WindowChange::Overlay {
+                task_id,
+                left,
+                top,
+                display,
+                focusable,
+                touchable,
+            } => WindowChange::Overlay {
+                task_id: window(task_id),
+                left,
+                top,
+                display,
+                focusable,
+                touchable,
+            },
         }
     }
 }

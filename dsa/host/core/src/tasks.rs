@@ -78,7 +78,32 @@ pub struct Task {
     /// Whether the task's top activity says it handles a change of density itself, so
     /// Android redraws it at a new density instead of relaunching it.
     pub handles_density_change: bool,
+    /// Set when this is not an app task but an app overlay window, which the guest reports the
+    /// same way ([`OverlayWindow`]).
+    pub overlay: Option<OverlayWindow>,
 }
+
+/// An app overlay window: a window an app adds over other apps with Android's "display over
+/// other apps" permission, such as floating lyrics, a chat head or a screen filter. The guest
+/// reports it as a [`Task`] with [`Task::overlay`] set: `task_id` is the overlay's ID (never a
+/// task's: overlays are numbered from [`OVERLAY_ID_BASE`]), `bounds` the frame of its surface
+/// on the guest's display, `density_dpi` the display's density and `max_width` by
+/// `max_height` the display's size. The host shows it in a borderless window of its own that
+/// stays above the others ([`crate::compositor::overlay_windows`]), and never closes, resizes
+/// or reconfigures it: all of that is its app's.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub struct OverlayWindow {
+    /// The window's type in Android (`WindowManager.LayoutParams.type`): 2038 for
+    /// `TYPE_APPLICATION_OVERLAY`.
+    pub window_type: i32,
+    /// Whether the window may take the keyboard focus.
+    pub focusable: bool,
+    /// Whether the window takes pointer input.
+    pub touchable: bool,
+}
+
+/// The first ID the guest gives an app overlay window. Android's task IDs stay far below it.
+pub const OVERLAY_ID_BASE: i32 = 0x4000_0000;
 
 /// The orientation a task's top activity asks for.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -132,6 +157,26 @@ impl Task {
     /// Whether the task's app asks to fill the screen, in either way.
     pub fn asks_for_full_screen(&self) -> bool {
         self.fullscreen_request != FullScreenRequest::None
+    }
+
+    /// Whether this is an app overlay window rather than an app task.
+    pub fn is_overlay(&self) -> bool {
+        self.overlay.is_some()
+    }
+
+    /// Whether this is an overlay that covers the guest's whole display, as a screen filter or
+    /// a dimmer does. Such an overlay gets no window: on the user's desktop it would cover
+    /// everything, and take every click if it takes input. The guest draws it over every app's
+    /// window instead, as it covers every app on a phone's screen. An overlay whose display
+    /// the guest did not size is not taken for one.
+    pub fn covers_display(&self) -> bool {
+        self.is_overlay()
+            && self.max_width > 0
+            && self.max_height > 0
+            && self.bounds.left <= 0
+            && self.bounds.top <= 0
+            && i64::from(self.bounds.right) >= i64::from(self.max_width)
+            && i64::from(self.bounds.bottom) >= i64::from(self.max_height)
     }
 }
 

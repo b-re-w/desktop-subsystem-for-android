@@ -12,8 +12,8 @@ use std::time::Instant;
 use super::caption::{reported_tone, CaptionBand, CaptionTone};
 use super::window_mode::WindowMode;
 use super::window_sizing::{
-    to_task_length, to_window_rect, Scale, ScalingMode, WindowSizing, BASE_DENSITY,
-    DENSITY_AT_BASE_DPI, SETTLE,
+    density_for_dpi, scale_between, to_task_length, to_window_rect, to_window_size, Scale,
+    ScalingMode, WindowSizing, BASE_DENSITY, DENSITY_AT_BASE_DPI, SETTLE,
 };
 use crate::app_windows::{
     full_screen_place, AppWindowSettings, FullScreenDefaults, FullScreenPlace,
@@ -112,6 +112,107 @@ pub enum WindowChange {
     /// its ID; what it sends Android itself goes to the task it shows. The task rules never make
     /// it; it comes from [`super::gpu_reset::GpuResetWindows`], by window ID.
     ShownTask { task_id: i32, shown_task_id: i32 },
+    /// Where the app has the overlay the window shows (the top left corner of its surface on
+    /// the guest's display, and the display's size), and whether the overlay may take the
+    /// keyboard focus and takes pointer input. Comes with a window that opens for an app
+    /// overlay window, after its [`WindowChange::Mode`], and with every change, as when the
+    /// app moves the overlay. The window host places the window from it
+    /// ([`super::overlay_windows`]).
+    Overlay {
+        task_id: i32,
+        left: i32,
+        top: i32,
+        display: (u32, u32),
+        focusable: bool,
+        touchable: bool,
+    },
+}
+
+/// An app overlay window the guest reported, and its window.
+#[derive(Debug, Clone)]
+struct Overlay {
+    /// The overlay as the guest last described it.
+    task: Task,
+    /// Whether it has a window: not one that covers the guest's whole display.
+    window: bool,
+    /// The DPI of the monitor its window reported; 0 until it has.
+    dpi: u32,
+}
+
+impl Overlay {
+    /// How large the window shows each of the overlay's pixels: the overlay is drawn at the
+    /// guest display's density, and shown the size it would be at its monitor's.
+    fn scale(&self) -> Scale {
+        if self.dpi == 0 || self.task.density_dpi == 0 {
+            return (1, 1);
+        }
+        scale_between(density_for_dpi(self.dpi), self.task.density_dpi)
+    }
+
+    /// The window's client size: the overlay's size at its scale.
+    fn window_size(&self) -> (u32, u32) {
+        to_window_size(window_size(&self.task.bounds), self.scale())
+    }
+
+    /// The change that tells the window where the overlay is and what it takes.
+    fn place(&self) -> WindowChange {
+        let overlay = self.task.overlay.unwrap_or_default();
+        WindowChange::Overlay {
+            task_id: self.task.task_id,
+            left: self.task.bounds.left,
+            top: self.task.bounds.top,
+            display: (self.task.max_width, self.task.max_height),
+            focusable: overlay.focusable,
+            touchable: overlay.touchable,
+        }
+    }
+
+    /// The changes that give the window its size and its scale.
+    fn size_changes(&self) -> Vec<WindowChange> {
+        let (width, height) = self.window_size();
+        let (task_width, task_height) = window_size(&self.task.bounds);
+        vec![
+            WindowChange::Resize {
+                task_id: self.task.task_id,
+                width,
+                height,
+            },
+            WindowChange::TaskSize {
+                task_id: self.task.task_id,
+                width: task_width,
+                height: task_height,
+                max: None,
+                min: None,
+                scale: self.scale(),
+            },
+        ]
+    }
+
+    /// Everything a window that opens for the overlay must do.
+    fn open_changes(&self) -> Vec<WindowChange> {
+        let (width, height) = self.window_size();
+        let mut changes = vec![
+            WindowChange::Open {
+                task_id: self.task.task_id,
+                package_name: self.task.package_name.clone(),
+                title: window_title(&self.task),
+                width,
+                height,
+                // An overlay never opens active: it takes the focus only by the user's click.
+                focused: false,
+            },
+            WindowChange::Mode {
+                task_id: self.task.task_id,
+                mode: WindowMode::Overlay,
+                resizable: false,
+            },
+            self.place(),
+        ];
+        if self.scale() != (1, 1) {
+            changes.extend(self.size_changes());
+        }
+        changes
+    }
 }
 
 /// The title of a task's window: its label, else its package, else its ID.
@@ -295,6 +396,10 @@ pub struct TaskWindows {
     bands: BTreeMap<i32, (CaptionBand, Scale, bool)>,
     /// What the window manager logs, until it takes it ([`TaskWindows::take_notes`]).
     notes: Vec<String>,
+    /// The app overlay windows the guest reported. They are kept apart from the tasks: none
+    /// of what the host asks of a task (a size, a density, a title bar, an end) is ever asked
+    /// of an overlay, whose app alone moves, sizes and removes it.
+    overlays: BTreeMap<i32, Overlay>,
 }
 
 /// `size` as `WxH`, or "none" when there is no limit.
@@ -357,9 +462,79 @@ impl TaskWindows {
 
     /// Whether the task has a window now.
     pub fn has_window(&self, task_id: i32) -> bool {
-        self.tasks.contains_key(&task_id)
-            && !self.closing.contains(&task_id)
-            && !self.pending.contains_key(&task_id)
+        self.has_overlay_window(task_id)
+            || (self.tasks.contains_key(&task_id)
+                && !self.closing.contains(&task_id)
+                && !self.pending.contains_key(&task_id))
+    }
+
+    /// Whether `task_id` is an app overlay window that has a window.
+    pub fn has_overlay_window(&self, task_id: i32) -> bool {
+        self.overlays
+            .get(&task_id)
+            .is_some_and(|overlay| overlay.window)
+    }
+
+    /// Whether `task_id` is an app overlay window, with a window or not.
+    pub fn is_overlay(&self, task_id: i32) -> bool {
+        self.overlays.contains_key(&task_id)
+    }
+
+    /// The guest described an app overlay window: it opens a window of its own, follows where
+    /// its app has it and what size its app gives it, and closes when it comes to cover the
+    /// guest's whole display.
+    fn overlay_updated(&mut self, task: &Task) -> Vec<WindowChange> {
+        let task_id = task.task_id;
+        let shows = !task.covers_display();
+        let previous = self.overlays.get(&task_id).cloned();
+        let had_window = previous.as_ref().is_some_and(|overlay| overlay.window);
+        let now = Overlay {
+            task: task.clone(),
+            window: shows,
+            dpi: previous
+                .as_ref()
+                .filter(|_| had_window && shows)
+                .map_or(0, |overlay| overlay.dpi),
+        };
+        self.overlays.insert(task_id, now.clone());
+        match (previous.filter(|_| had_window), shows) {
+            (None, false) => Vec::new(),
+            (Some(_), false) => {
+                // It covers the display now: the guest draws it over the apps' windows.
+                self.displays.remove(&task_id);
+                vec![WindowChange::Close { task_id }]
+            }
+            (None, true) => now.open_changes(),
+            (Some(previous), true) => {
+                let mut changes = Vec::new();
+                let title = window_title(task);
+                if window_title(&previous.task) != title {
+                    changes.push(WindowChange::Retitle { task_id, title });
+                }
+                if previous.window_size() != now.window_size()
+                    || previous.scale() != now.scale()
+                    || window_size(&previous.task.bounds) != window_size(&task.bounds)
+                {
+                    changes.extend(now.size_changes());
+                }
+                if previous.place() != now.place() {
+                    changes.push(now.place());
+                }
+                changes
+            }
+        }
+    }
+
+    /// The window of the overlay `task_id` is on a monitor of `dpi`: it shows the overlay the
+    /// size its app meant it to be there. `None` when `task_id` is no overlay with a window.
+    fn overlay_dpi(&mut self, task_id: i32, dpi: u32) -> Option<Vec<WindowChange>> {
+        let overlay = self.overlays.get_mut(&task_id).filter(|o| o.window)?;
+        let before = (overlay.window_size(), overlay.scale());
+        overlay.dpi = dpi;
+        if before == (overlay.window_size(), overlay.scale()) {
+            return Some(Vec::new());
+        }
+        Some(overlay.size_changes())
     }
 
     /// The package of the task's root activity, while the task is known.
@@ -383,7 +558,8 @@ impl TaskWindows {
         packages
     }
 
-    /// The tasks that have a window, in task ID order.
+    /// The tasks that have a window, in task ID order, then the app overlay windows that have
+    /// one: an overlay that is shown keeps Android awake as a task's window does.
     pub fn windows(&self) -> Vec<i32> {
         self.tasks
             .keys()
@@ -391,6 +567,12 @@ impl TaskWindows {
             .filter(|task_id| {
                 !self.closing.contains(task_id) && !self.pending.contains_key(task_id)
             })
+            .chain(
+                self.overlays
+                    .iter()
+                    .filter(|(_, overlay)| overlay.window)
+                    .map(|(task_id, _)| *task_id),
+            )
             .collect()
     }
 
@@ -445,6 +627,9 @@ impl TaskWindows {
 
     /// The scale `task_id`'s window shows its task at.
     fn scale_of(&self, task_id: i32) -> Scale {
+        if let Some(overlay) = self.overlays.get(&task_id) {
+            return overlay.scale();
+        }
         self.sizes.get(&task_id).map_or((1, 1), WindowSizing::scale)
     }
 
@@ -515,6 +700,17 @@ impl TaskWindows {
     /// Records a change to the guest's tasks, and returns what the windows must do.
     pub fn apply(&mut self, event: &TaskEvent) -> Vec<WindowChange> {
         match event {
+            TaskEvent::Updated(task) if task.is_overlay() => self.overlay_updated(task),
+            TaskEvent::Removed { task_id } if self.overlays.contains_key(task_id) => {
+                self.displays.remove(task_id);
+                self.cursors.remove(task_id);
+                match self.overlays.remove(task_id) {
+                    Some(overlay) if overlay.window => {
+                        vec![WindowChange::Close { task_id: *task_id }]
+                    }
+                    _ => Vec::new(),
+                }
+            }
             // An app's name and icon belong to its program, not to a window, and the installed
             // apps to the start menu.
             TaskEvent::App(_) | TaskEvent::Installed(_) => Vec::new(),
@@ -718,7 +914,8 @@ impl TaskWindows {
     /// the task, and from now on the task has no window, even if the guest describes it
     /// again before it ends. `None` when the task has no window.
     pub fn user_closed(&mut self, task_id: i32) -> Option<TaskRequest> {
-        if !self.has_window(task_id) {
+        // An overlay has no close button, and the host never ends one: its app does.
+        if !self.has_window(task_id) || self.is_overlay(task_id) {
             return None;
         }
         self.closing.insert(task_id);
@@ -729,6 +926,11 @@ impl TaskWindows {
     /// and the task goes on: its window opens again, as it first opened, with everything the
     /// new window has to be told. Nothing for a task that has no window.
     pub fn reopen(&mut self, task_id: i32) -> Vec<WindowChange> {
+        if let Some(overlay) = self.overlays.get_mut(&task_id).filter(|o| o.window) {
+            // The new window says which monitor it is on.
+            overlay.dpi = 0;
+            return overlay.open_changes();
+        }
         if !self.has_window(task_id) {
             return Vec::new();
         }
@@ -821,6 +1023,10 @@ impl TaskWindows {
     /// that monitor's density is asked for it without being recreated. A task whose user chose
     /// the system way is never asked for another density: its window stays scaled.
     pub fn window_dpi(&mut self, task_id: i32, dpi: u32) -> (Vec<WindowChange>, Vec<TaskRequest>) {
+        // An overlay is never asked for a density: its window shows it at its monitor's scale.
+        if let Some(changes) = self.overlay_dpi(task_id, dpi) {
+            return (changes, Vec::new());
+        }
         if !self.has_window(task_id) {
             return (Vec::new(), Vec::new());
         }
@@ -852,7 +1058,8 @@ impl TaskWindows {
     /// pixels and the inset in the task's, so a window that shows its task at another scale
     /// later gives it the inset again ([`Self::reconfigures`]).
     pub fn window_caption(&mut self, task_id: i32, band: CaptionBand) -> Vec<TaskRequest> {
-        if !self.has_window(task_id) {
+        // An overlay's window has no title bar, and an overlay takes no inset.
+        if !self.has_window(task_id) || self.is_overlay(task_id) {
             return Vec::new();
         }
         let scale = self.scale_of(task_id);
@@ -866,6 +1073,15 @@ impl TaskWindows {
     /// must hear: the scale it shows a task at that keeps its density. `None` when the task
     /// has no window.
     pub fn window_opened(&mut self, task_id: i32, dpi: u32) -> Option<WindowOpened> {
+        if let Some(changes) = self.overlay_dpi(task_id, dpi) {
+            let size = self.overlays.get(&task_id)?.window_size();
+            // The size is returned; the window still has to hear its scale.
+            let changes = changes
+                .into_iter()
+                .filter(|change| !matches!(change, WindowChange::Resize { .. }))
+                .collect();
+            return Some((size, Vec::new(), changes));
+        }
         if !self.has_window(task_id) {
             return None;
         }
@@ -904,6 +1120,9 @@ impl TaskWindows {
         task_id: i32,
         dpi: u32,
     ) -> (Vec<WindowChange>, Vec<TaskRequest>) {
+        if let Some(changes) = self.overlay_dpi(task_id, dpi) {
+            return (changes, Vec::new());
+        }
         if !self.has_window(task_id) {
             return (Vec::new(), Vec::new());
         }
@@ -1123,6 +1342,7 @@ impl TaskWindows {
         self.cursors.clear();
         self.bands.clear();
         self.told_full_screen.clear();
+        self.overlays.clear();
         changes
     }
 
@@ -1153,6 +1373,7 @@ impl TaskWindows {
             .retain(|task_id, _| present.contains(task_id));
         self.cursors.retain(|task_id, _| present.contains(task_id));
         self.bands.retain(|task_id, _| present.contains(task_id));
+        self.overlays.retain(|task_id, _| present.contains(task_id));
         self.told_full_screen.clear();
         self.displays.clear();
         for event in current {
@@ -2692,5 +2913,314 @@ mod tests {
                 resizable: true,
             }]
         );
+    }
+
+    use crate::tasks::{OverlayWindow, OVERLAY_ID_BASE};
+
+    const LYRICS: i32 = OVERLAY_ID_BASE + 1;
+
+    /// Floating lyrics at (`left`, `top`) of a 3840 pixel display drawn at 262 dpi.
+    fn lyrics(left: i32, top: i32, width: i32, height: i32) -> Task {
+        Task {
+            task_id: LYRICS,
+            bounds: Bounds {
+                left,
+                top,
+                right: left + width,
+                bottom: top + height,
+            },
+            package_name: "skplanet.musicmate".into(),
+            label: "FLO".into(),
+            density_dpi: 262,
+            max_width: 3840,
+            max_height: 3840,
+            overlay: Some(OverlayWindow {
+                window_type: 2038,
+                focusable: false,
+                touchable: true,
+            }),
+            ..Task::default()
+        }
+    }
+
+    fn placed(left: i32, top: i32, focusable: bool, touchable: bool) -> WindowChange {
+        WindowChange::Overlay {
+            task_id: LYRICS,
+            left,
+            top,
+            display: (3840, 3840),
+            focusable,
+            touchable,
+        }
+    }
+
+    #[test]
+    fn fr41_an_overlay_opens_a_window_of_its_own() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&updated(1, "Player"));
+        assert_eq!(
+            windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138))),
+            vec![
+                WindowChange::Open {
+                    task_id: LYRICS,
+                    package_name: "skplanet.musicmate".into(),
+                    title: "FLO".into(),
+                    width: 508,
+                    height: 138,
+                    focused: false,
+                },
+                WindowChange::Mode {
+                    task_id: LYRICS,
+                    mode: WindowMode::Overlay,
+                    resizable: false,
+                },
+                placed(158, 82, false, true),
+            ]
+        );
+        assert!(windows.has_window(LYRICS));
+        assert!(windows.has_overlay_window(LYRICS));
+        // It is shown, so Android stays awake for it, but it is no app to open again.
+        assert_eq!(windows.windows(), vec![1, LYRICS]);
+        assert_eq!(windows.window_packages(), vec!["com.example.app1"]);
+        // Its frames reach its window like a task's.
+        windows.apply(&frames(LYRICS, 4));
+        assert_eq!(windows.task_for_display(4), Some(LYRICS));
+    }
+
+    #[test]
+    fn fr41_an_overlay_window_follows_where_its_app_moves_it() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        // The same report again changes nothing.
+        assert!(windows
+            .apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)))
+            .is_empty());
+        // The app drags it: only its place is news.
+        assert_eq!(
+            windows.apply(&TaskEvent::Updated(lyrics(258, 122, 508, 138))),
+            vec![placed(258, 122, false, true)]
+        );
+    }
+
+    #[test]
+    fn fr41_an_overlay_window_takes_the_size_its_app_gives_it() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        assert_eq!(
+            windows.apply(&TaskEvent::Updated(lyrics(158, 82, 700, 300))),
+            vec![
+                WindowChange::Resize {
+                    task_id: LYRICS,
+                    width: 700,
+                    height: 300,
+                },
+                WindowChange::TaskSize {
+                    task_id: LYRICS,
+                    width: 700,
+                    height: 300,
+                    max: None,
+                    min: None,
+                    scale: (1, 1),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn fr41_an_overlay_is_shown_at_the_density_of_its_monitor() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        // On the monitor Android's display takes its density from (200%), pixel for pixel.
+        assert_eq!(windows.window_dpi(LYRICS, 192), (Vec::new(), Vec::new()));
+        // Moved to a 125% monitor (164 dpi): the same size to the eye, and the guest is asked
+        // for nothing.
+        let (changes, requests) = windows.window_dpi_changed(LYRICS, 120);
+        assert!(requests.is_empty());
+        assert_eq!(
+            changes,
+            vec![
+                WindowChange::Resize {
+                    task_id: LYRICS,
+                    width: 318,
+                    height: 86,
+                },
+                WindowChange::TaskSize {
+                    task_id: LYRICS,
+                    width: 508,
+                    height: 138,
+                    max: None,
+                    min: None,
+                    scale: (82, 131),
+                },
+            ]
+        );
+        assert_eq!(windows.scale(LYRICS), (82, 131));
+    }
+
+    #[test]
+    fn fr41_the_host_never_closes_resizes_or_reconfigures_an_overlay() {
+        let mut windows = TaskWindows::new();
+        let now = Instant::now();
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        // No close button: a close its window reports anyway ends nothing.
+        assert_eq!(windows.user_closed(LYRICS), None);
+        assert!(windows.has_window(LYRICS));
+        assert!(windows.window_resized(LYRICS, (300, 300), now).is_empty());
+        assert!(windows
+            .window_caption(
+                LYRICS,
+                CaptionBand {
+                    height: 32,
+                    start_width: 40,
+                    end_width: 138,
+                }
+            )
+            .is_empty());
+        assert!(windows.window_dragging(LYRICS, true, now).is_empty());
+        assert!(windows.window_dragging(LYRICS, false, now).is_empty());
+        assert!(windows.reconfigures(now).is_empty());
+        assert!(windows.tick(now + SETTLE * 2).is_empty());
+    }
+
+    #[test]
+    fn fr41_an_overlay_window_goes_when_the_app_removes_it_or_android_stops() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        windows.apply(&frames(LYRICS, 4));
+        assert_eq!(
+            windows.apply(&TaskEvent::Removed { task_id: LYRICS }),
+            vec![WindowChange::Close { task_id: LYRICS }]
+        );
+        assert!(!windows.has_window(LYRICS));
+        assert_eq!(windows.task_for_display(4), None);
+        // The service went away with Android: every overlay's window closes too.
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        assert_eq!(
+            windows.reset(),
+            vec![WindowChange::Close { task_id: LYRICS }]
+        );
+        assert!(!windows.is_overlay(LYRICS));
+        // And one a new watch no longer lists.
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        assert_eq!(
+            windows.sync(&[]),
+            vec![WindowChange::Close { task_id: LYRICS }]
+        );
+    }
+
+    #[test]
+    fn fr41_a_full_display_overlay_gets_no_window() {
+        let mut windows = TaskWindows::new();
+        // A screen filter: the whole 3840 by 3840 display, taking no input.
+        let filter = Task {
+            overlay: Some(OverlayWindow {
+                window_type: 2038,
+                focusable: false,
+                touchable: false,
+            }),
+            ..lyrics(0, 0, 3840, 3840)
+        };
+        assert!(filter.covers_display());
+        assert!(windows
+            .apply(&TaskEvent::Updated(filter.clone()))
+            .is_empty());
+        assert!(!windows.has_window(LYRICS));
+        assert!(windows.windows().is_empty());
+        // Nor one that takes input, which would take every click on the desktop.
+        let wall = lyrics(-10, -10, 3900, 3900);
+        assert!(wall.covers_display());
+        assert!(windows.apply(&TaskEvent::Updated(wall)).is_empty());
+        // Whatever the hwcomposer says of its frames, they reach no window.
+        windows.apply(&frames(LYRICS, 4));
+        assert_eq!(windows.task_for_display(4), None);
+        // Once its app makes it smaller it is a window like any other overlay, and when it
+        // grows over the display again the window closes.
+        assert_eq!(
+            windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)))[0],
+            WindowChange::Open {
+                task_id: LYRICS,
+                package_name: "skplanet.musicmate".into(),
+                title: "FLO".into(),
+                width: 508,
+                height: 138,
+                focused: false,
+            }
+        );
+        assert_eq!(
+            windows.apply(&TaskEvent::Updated(filter)),
+            vec![WindowChange::Close { task_id: LYRICS }]
+        );
+        assert!(windows
+            .apply(&TaskEvent::Removed { task_id: LYRICS })
+            .is_empty());
+        // A display-wide bar, or an overlay on a display of unknown size, is no such overlay.
+        assert!(!lyrics(0, 0, 3840, 200).covers_display());
+        let no_display = Task {
+            max_width: 0,
+            max_height: 0,
+            ..lyrics(0, 0, 3840, 3840)
+        };
+        assert!(!no_display.covers_display());
+        assert!(!task(1, "Player", 3840, 3840).covers_display());
+    }
+
+    #[test]
+    fn fr41_an_overlay_never_opens_focused_and_says_whether_it_may_take_the_focus() {
+        let mut windows = TaskWindows::new();
+        // Even one the guest calls focused opens without taking the user's focus.
+        let focused = Task {
+            focused: true,
+            ..lyrics(158, 82, 508, 138)
+        };
+        let changes = windows.apply(&TaskEvent::Updated(focused));
+        assert!(matches!(
+            changes[0],
+            WindowChange::Open { focused: false, .. }
+        ));
+        assert_eq!(changes[2], placed(158, 82, false, true));
+        // The app makes it focusable (a chat head opening its text field): the window hears.
+        let chat = Task {
+            overlay: Some(OverlayWindow {
+                window_type: 2038,
+                focusable: true,
+                touchable: true,
+            }),
+            ..lyrics(158, 82, 508, 138)
+        };
+        assert_eq!(
+            windows.apply(&TaskEvent::Updated(chat)),
+            vec![placed(158, 82, true, true)]
+        );
+    }
+
+    #[test]
+    fn fr41_several_overlays_each_have_a_window() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        let second = Task {
+            task_id: LYRICS + 1,
+            package_name: "com.example.chat".into(),
+            ..lyrics(3000, 500, 160, 160)
+        };
+        let changes = windows.apply(&TaskEvent::Updated(second));
+        assert!(matches!(
+            &changes[0],
+            WindowChange::Open { task_id, package_name, .. }
+                if *task_id == LYRICS + 1 && package_name == "com.example.chat"
+        ));
+        assert_eq!(windows.windows(), vec![LYRICS, LYRICS + 1]);
+        // One going leaves the other.
+        windows.apply(&TaskEvent::Removed { task_id: LYRICS });
+        assert_eq!(windows.windows(), vec![LYRICS + 1]);
+    }
+
+    #[test]
+    fn fr41_an_overlay_window_that_crashed_opens_again() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&TaskEvent::Updated(lyrics(158, 82, 508, 138)));
+        windows.window_dpi(LYRICS, 120);
+        let again = windows.reopen(LYRICS);
+        assert!(matches!(again[0], WindowChange::Open { width: 508, .. }));
+        assert_eq!(again[2], placed(158, 82, false, true));
     }
 }

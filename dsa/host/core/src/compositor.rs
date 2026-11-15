@@ -25,6 +25,7 @@ pub mod frame_buffers;
 pub mod frame_follow;
 pub mod frame_stall;
 pub mod gpu_reset;
+pub mod overlay_windows;
 pub mod present_watch;
 pub mod program_exit;
 pub mod resize_latency;
