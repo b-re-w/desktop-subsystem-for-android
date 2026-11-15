@@ -669,6 +669,8 @@ jobs:
           VK_ICD_FILENAMES: ${{ env.DZN_ICD }}
           VK_DRIVER_FILES: ${{ env.DZN_ICD }}
           VK_LOADER_DEBUG: error,warn
+          # The only device here is Dozen over WARP, so the GPU asked for by name is the WARP adapter.
+          DSA_TEST_GPU_NAME: Microsoft Basic Render Driver
         run: |
           uv run dsa/graphics/host/test_host_renderer.py
 
