@@ -47,17 +47,24 @@ struct LayerPlacement {
     Rect frame;
 };
 
-// A task the agent reported: its ID and its window's bounds on the display.
+// A task the agent reported: its ID and its window's bounds on the display. An app overlay
+// window (a window an app adds over other apps, such as floating lyrics) is reported the same
+// way, with `overlay` set and the frame of its surface as its bounds: the host shows it in a
+// window of its own too.
 struct Task {
     int32_t id = 0;
     Rect bounds;
+    bool overlay = false;
 };
 
 // The layers of one task, bottom to top.
 struct TaskLayers {
     int32_t task = 0;
+    // Where the layers are composed from: the task's bounds, or, for an overlay whose app is
+    // moving it, the frame its surface has in this frame.
     Rect bounds;
     std::vector<int64_t> layers;
+    bool overlay = false;
 };
 
 struct Layout {
@@ -65,7 +72,15 @@ struct Layout {
     std::vector<TaskLayers> tasks;
     // Layers no task contains, bottom to top. They are never sent to the host.
     std::vector<int64_t> unassigned;
+    // The layers of overlays that cover the whole display (a screen filter, a dimmer), bottom
+    // to top. They get no window of their own, which would cover the user's desktop; they are
+    // composed over every app task instead, as they cover every app on a phone's screen. They
+    // are listed in `unassigned` too.
+    std::vector<int64_t> screen;
 };
+
+// Whether an overlay with these bounds covers the whole display.
+bool coversDisplay(const Rect& bounds, const Rect& display);
 
 // Splits the display's layers among the tasks.
 //
@@ -80,6 +95,18 @@ struct Layout {
 //   2. otherwise the task of the nearest layer below it that one of those tasks owns: a
 //      task's layers are adjacent in z order, so a popup sits just above its window;
 //   3. otherwise the smallest of those tasks, then the lowest task ID.
+//
+// An overlay's layers are found first, because an overlay floats over the tasks and would
+// otherwise be drawn into the window of the task under it:
+//   - the layers whose frame is exactly the overlay's (both clipped to the display) are its
+//     own surface;
+//   - when none is, its app is moving it and the agent's report is a frame behind: the layer
+//     of the overlay's size nearest to where it was, which is the surface of no task and of
+//     no other overlay, is taken, and the overlay is composed from that layer's frame;
+//   - a layer inside the overlay's frame and above its surface goes to it by rule 2.
+// An overlay that covers the display takes no layer this way (see Layout::screen): its layers
+// are the topmost display-wide ones above every layer of an app task, at most one for each
+// such overlay.
 Layout assignLayersToTasks(const std::vector<LayerPlacement>& layers,
                            const std::vector<Task>& tasks, const Rect& display);
 
@@ -87,7 +114,7 @@ Layout assignLayersToTasks(const std::vector<LayerPlacement>& layers,
 class TaskRegistry {
    public:
     // Records a task, or its new bounds. Returns whether anything changed.
-    bool update(int32_t id, const Rect& bounds);
+    bool update(int32_t id, const Rect& bounds, bool overlay = false);
     // Forgets a task. Returns whether it was known.
     bool remove(int32_t id);
     void clear() { mTasks.clear(); }
@@ -95,8 +122,34 @@ class TaskRegistry {
     std::vector<Task> tasks() const;
 
    private:
-    std::map<int32_t, Rect> mTasks;
+    std::map<int32_t, Task> mTasks;
 };
+
+// What the hwcomposer needs to know of an overlay's one layer to tell whether the host can
+// show the layer's own buffer as the overlay's frame, without composing it.
+struct OverlaySurface {
+    Rect frame;
+    // The layer shows a buffer the host can read as it is: 8-bit RGBA, not composed by
+    // SurfaceFlinger.
+    bool rgbaBuffer = false;
+    int64_t bufferWidth = 0;
+    int64_t bufferHeight = 0;
+    // The part of the buffer the layer shows.
+    float cropLeft = 0;
+    float cropTop = 0;
+    float cropRight = 0;
+    float cropBottom = 0;
+    float alpha = 1.0f;
+    int32_t transform = 0;
+};
+
+// Whether an overlay whose layers are `layers` is shown from its layer's own buffer. The host
+// composes into a target it first clears to opaque black, which would put a black box around
+// floating lyrics; the app's own buffer still has the transparency the app drew. So an
+// overlay of one layer that shows the whole of an RGBA buffer of its own size, unscaled,
+// unturned and at full alpha, is posted as it is. Any other overlay is composed, and is
+// opaque where nothing is drawn.
+bool showsOwnBuffer(const Rect& bounds, const std::vector<OverlaySurface>& layers);
 
 // One layer of a task, as far as telling whether its app has drawn at the task's size goes.
 struct LayerFill {

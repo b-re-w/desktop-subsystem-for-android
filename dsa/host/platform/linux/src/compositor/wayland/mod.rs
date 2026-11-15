@@ -188,6 +188,9 @@ pub struct State {
     pub(crate) widgets: widgets::Widgets,
     /// The session's interface language, for the window menu's words.
     pub(crate) language: dsa_host_core::ui_language::UiLanguage,
+    /// Where each app's overlay windows lie on the desktop, by package.
+    pub(crate) overlay_planes:
+        HashMap<String, dsa_host_core::compositor::overlay_windows::OverlayPlane>,
 }
 
 /// The connection to the desktop and everything shown on it.
@@ -296,6 +299,7 @@ impl Desktop {
             menu: None,
             widgets,
             language,
+            overlay_planes: HashMap::new(),
         };
         if let Some(seat) = seat {
             state.seat_ready(seat);

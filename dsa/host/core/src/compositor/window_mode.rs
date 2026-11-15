@@ -26,6 +26,11 @@ pub enum WindowMode {
     Fullscreen,
     /// A small window that stays above the others.
     PictureInPicture,
+    /// The window shows an app overlay window, not a task: no border, no title bar and no
+    /// close button, above the others, see-through where the app drew nothing, and placed by
+    /// [`super::overlay_windows`]. Only a window that opened for an overlay has it, and it
+    /// never leaves it.
+    Overlay,
 }
 
 impl WindowMode {

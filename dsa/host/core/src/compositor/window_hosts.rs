@@ -128,6 +128,17 @@ pub enum ToHost {
         task_id: i32,
         shown_task_id: i32,
     },
+    /// Where the app has the overlay the window shows, and what the overlay takes: its top
+    /// left corner on the guest's display, the display's size, and whether it may take the
+    /// keyboard focus and takes pointer input. For a window in [`WindowMode::Overlay`] only.
+    Overlay {
+        task_id: i32,
+        left: i32,
+        top: i32,
+        display: (u32, u32),
+        focusable: bool,
+        touchable: bool,
+    },
     /// What every window of the app offers in its system menu: New window only when the app
     /// supports several windows. It is about the app, not one window, so it names no task.
     AppMenu {
@@ -224,6 +235,7 @@ impl ToHost {
             | ToHost::CaptionMode { task_id, .. }
             | ToHost::CaptionBack { task_id, .. }
             | ToHost::ShownTask { task_id, .. }
+            | ToHost::Overlay { task_id, .. }
             | ToHost::Close { task_id } => *task_id,
         })
     }
@@ -690,6 +702,21 @@ impl WindowHosts {
                 task_id: *task_id,
                 shown_task_id: *shown_task_id,
             }),
+            WindowChange::Overlay {
+                task_id,
+                left,
+                top,
+                display,
+                focusable,
+                touchable,
+            } => self.forward(ToHost::Overlay {
+                task_id: *task_id,
+                left: *left,
+                top: *top,
+                display: *display,
+                focusable: *focusable,
+                touchable: *touchable,
+            }),
         }
     }
 
@@ -1104,6 +1131,7 @@ pub fn to_wire(message: &ToHost) -> Body {
                 WindowMode::Normal => WireMode::Normal,
                 WindowMode::Fullscreen => WireMode::Fullscreen,
                 WindowMode::PictureInPicture => WireMode::PictureInPicture,
+                WindowMode::Overlay => WireMode::Overlay,
             };
             Body::SetWindowMode(SetWindowMode {
                 task_id,
@@ -1140,6 +1168,22 @@ pub fn to_wire(message: &ToHost) -> Body {
         } => Body::SetShownTask(dsa_protocol::window_host::types::SetShownTask {
             task_id,
             shown_task_id,
+        }),
+        ToHost::Overlay {
+            task_id,
+            left,
+            top,
+            display: (display_width, display_height),
+            focusable,
+            touchable,
+        } => Body::SetOverlay(dsa_protocol::window_host::types::SetOverlay {
+            task_id,
+            left,
+            top,
+            display_width,
+            display_height,
+            focusable,
+            touchable,
         }),
         ToHost::AppMenu { new_window } => {
             Body::AppMenu(dsa_protocol::window_host::types::AppMenu { new_window })
@@ -1244,6 +1288,7 @@ pub fn to_host_from_wire(body: &Body) -> Option<ToHost> {
                 mode: match set.mode() {
                     WireMode::Fullscreen => WindowMode::Fullscreen,
                     WireMode::PictureInPicture => WindowMode::PictureInPicture,
+                    WireMode::Overlay => WindowMode::Overlay,
                     WireMode::Normal => WindowMode::Normal,
                 },
                 resizable: set.resizable,
@@ -1274,6 +1319,14 @@ pub fn to_host_from_wire(body: &Body) -> Option<ToHost> {
         Body::SetShownTask(set) => ToHost::ShownTask {
             task_id: set.task_id,
             shown_task_id: set.shown_task_id,
+        },
+        Body::SetOverlay(set) => ToHost::Overlay {
+            task_id: set.task_id,
+            left: set.left,
+            top: set.top,
+            display: (set.display_width, set.display_height),
+            focusable: set.focusable,
+            touchable: set.touchable,
         },
         Body::AppMenu(menu) => ToHost::AppMenu {
             new_window: menu.new_window,
@@ -1953,6 +2006,19 @@ mod tests {
                 height: 20,
             },
             ToHost::Close { task_id: 4 },
+            ToHost::Mode {
+                task_id: 0x4000_0001,
+                mode: WindowMode::Overlay,
+                resizable: false,
+            },
+            ToHost::Overlay {
+                task_id: 0x4000_0001,
+                left: 158,
+                top: -82,
+                display: (3840, 3840),
+                focusable: true,
+                touchable: false,
+            },
             ToHost::TaskSize {
                 task_id: 5,
                 width: 600,

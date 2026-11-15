@@ -64,6 +64,7 @@ class AgentApplication : Application() {
             editor = { HostInputMethod.connection },
             editorFocused = { HostInputMethod.editorFocused },
             gestureExclusion = AndroidGestureExclusion(log),
+            overlayWindows = AndroidOverlayWindows(log),
             unhandledKeys = AndroidUnhandledKeys(this, log),
             textKeys = AndroidTextKeys(),
             inputMethods = AndroidInputMethodSetup(this),

@@ -3582,3 +3582,30 @@ SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운
 - MX Player의 레이아웃 자체. `toolbar_activity_layout`의 `layout_height`와 `fitsSystemWindows`는 APK를 풀어야 보인다. 같은 화면을 Android 16 폰이나 에뮬레이터에서 열어 눌리는지 보면 앱의 문제인지 바로 갈린다.
 - 실기에서의 B. 테스트는 가짜 표본으로 한 것이다. 설정 화면에서 글리프가 어두워지는지, 첫 화면으로 돌아가면 다시 밝아지는지, FLO 플레이어 화면이 흰 글리프를 지키는지 PC에서 본다.
 - 리눅스 호스트의 GPU 경로가 마지막 프레임의 띠를 읽는지는 보지 않았다.
+
+## R52. 앱 오버레이 창이 호스트에 보이지 않은 까닭과 창 하나씩으로 내보내는 길 (FR-41)
+
+조사일 2026-11-15. 대상은 프레임워크 잠금(`dsa/guest/framework/framework-lock.json`)의 android16(`frameworks/base` `45034f06`, `frameworks/native` `fcbde2bc`)과 android17(`frameworks/base` `94b4c163`, `frameworks/native` `ae266dcb`), gfxstream `d047a572`다. 소스를 읽어 확인했고, 기기에서 확인해야 할 것은 맨 아래에 따로 적는다.
+
+**증상.** FLO(`skplanet.musicmate`)의 떠 있는 가사는 `TYPE_APPLICATION_OVERLAY` 창으로 디스플레이 0에 생기고 표면도 있지만(`mHasSurface=true`), 어느 호스트 창에도 보이지 않았다. hwcomposer는 레이어를 태스크의 경계로 나누는데, 오버레이는 어느 태스크에도 속하지 않아 태스크 밖에 있으면 버려지고 태스크 안에 겹치면 그 태스크의 창에 그려졌다.
+
+**창을 알아내는 길.**
+- 창 관리자는 다른 앱의, 태스크에 속하지 않는 창을 어떤 앱에도 알려 주지 않는다. `DisplayAreaOrganizer`의 기능(`WindowedMagnification`, `HideDisplayCutout`, `OneHanded`, `AppZoomOut`)은 창 종류의 층을 통째로 묶어, 오버레이 하나를 떼어 주지 않는다. `SurfaceControl.mirrorSurface`는 대상의 핸들이 필요한데 얻을 길이 없다. `IWindowManager.mirrorDisplay`는 디스플레이 전체를 준다. 모두 창 하나의 표면을 주지 않으므로 쓰지 않는다.
+- SurfaceFlinger는 표면이 있는 모든 창을 입력 디스패처를 위해 목록으로 낸다. `android.window.WindowInfosListener`(숨겨진 API)가 그 목록을 받고, 등록은 `ACCESS_SURFACE_FLINGER` 권한으로 된다(`SurfaceComposerAIDL::addWindowInfosListener`가 system, graphics uid와 이 권한을 받는다). 이 권한은 `signature` 보호 수준이라 플랫폼 서명인 에이전트가 받는다. 두 버전에서 클래스와 JNI가 같다.
+- 목록의 `InputWindowHandle`에는 창 관리자가 넣은 `layoutParamsType`, `layoutParamsFlags`, `ownerUid`, `ownerPid`, `packageName`, `name`(정체 해시와 창 제목), `frame`, `surfaceInset`, `inputConfig`, `alpha`, 창 토큰이 SurfaceFlinger에서 올 때도 채워진다(`android_hardware_input_InputWindowHandle.cpp`의 `fromWindowInfo`). 배열은 앞에서 뒤 순서다. 기하가 바뀌면(`updateViewLayout`) 목록 전체가 다시 온다.
+- `frame`은 표면 인셋을 뺀 창의 프레임이고(`LayerSnapshotBuilder`의 `getInputBounds`), 디스플레이의 물리 좌표다. 게스트 디스플레이는 돌지 않으므로 논리 좌표와 같다. hwcomposer가 보는 레이어의 프레임은 표면이므로, 에이전트가 `surfaceInset`을 더해 알린다.
+- `FLAG_NOT_TOUCHABLE` 창도 목록에 나온다(`inputConfig`에 `NOT_TOUCHABLE`). 숨은 창은 `NOT_VISIBLE`로 남거나 목록에서 빠진다(`skip_invisible_windows_in_input` 플래그에 따라). 둘 다 숨은 것으로 다룬다.
+- 리스너는 바인더 스레드에서 불리고, SurfaceFlinger는 리스너가 돌아올 때까지 다음 목록을 미룬다(`WindowInfosListenerInvoker`). 그래서 에이전트는 목록을 베껴 두기만 하고 바로 돌아간다.
+- 함정: 입력 채널 없이 올린 창(`INPUT_FEATURE_NO_INPUT_CHANNEL`)은 `populateOverlayInputInfo`가 종류를 `TYPE_APPLICATION`으로, 토큰을 없이 채운다. 이런 창은 오버레이로 알아볼 수 없다. 일반 앱은 이 값을 쓸 수 없다(숨겨진 필드).
+- 옛 종류(`TYPE_PHONE` 등)는 안드로이드 8 이상을 대상으로 하는 앱에서는 `INTERNAL_SYSTEM_WINDOW` 없이 거부된다(`PhoneWindowManager.checkAddPermission`). 다른 종류로 바뀌어 들어오는 것이 아니므로, 옛 앱이 올린 것만 그 종류 그대로 온다. 모든 오버레이 종류는 앱 창보다 위, 입력기보다 아래 층이다(`getWindowLayerFromTypeLw`).
+
+**레이어를 내보내는 길.** composer3 HAL은 레이어마다 프레임, z, 버퍼, 합성 방식만 받는다. 이름과 창 종류는 오지 않는다(`LayerCommand.aidl`). 그래서 hwcomposer는 에이전트가 알린 프레임으로 레이어를 찾는다. 오버레이의 프레임과 정확히 같은 레이어가 그 표면이고, 앱이 옮기는 중이라 보고가 한 프레임 늦으면 같은 크기의 가장 가까운 레이어를 잡는다.
+
+**투명도.** gfxstream의 `CompositorVk::compose`는 대상을 `{0, 0, 0, 1}`(불투명한 검정)로 지우고 레이어를 섞는다. 그래서 합성한 프레임의 알파는 언제나 1이고, 떠 있는 가사는 검은 상자에 담긴다. 지우는 색을 투명으로 바꾸면 프레임의 알파를 그대로 쓰는 호스트의 태스크 창이 비칠 수 있어 바꾸지 않았다. 대신 오버레이가 8비트 RGBA 레이어 하나이면 합성하지 않고 앱의 버퍼(공유 ColorBuffer)를 그대로 그 디스플레이의 프레임으로 올린다. 앱의 버퍼는 앱이 그린 알파(미리 곱한 값)를 그대로 가진다. Windows의 창은 그 프레임을 `DXGI_ALPHA_MODE_PREMULTIPLIED` 스왑체인으로 보인다.
+
+**결정.** 프레임워크와 `services.jar`를 고치지 않는다. 에이전트가 창 목록에서 오버레이를 찾아 태스크와 같은 메시지로 알리고(`TaskUpdated.overlay`, ID는 0x40000000부터), hwcomposer가 레이어를 따로 내보내고, 호스트가 오버레이마다 창을 연다. 디스플레이 전체를 덮는 오버레이는 창 없이 모든 앱 태스크의 프레임 위에 합성한다.
+
+**기기에서 아직 확인하지 않은 것.** 이 조사는 소스 읽기다. 다음은 실제 이미지와 PC에서 확인해야 한다.
+- 에이전트의 SELinux 도메인에서 리스너 등록이 되는지.
+- 앱의 버퍼를 그대로 올렸을 때 렌더러의 복사가 앱이 그 버퍼를 다시 쓰기 전에 끝나는지(찢어짐이 없는지).
+- `WS_EX_NOREDIRECTIONBITMAP` 창에 `WS_EX_LAYERED | WS_EX_TRANSPARENT`를 더했을 때 그림이 그대로 보이고 포인터가 통과하는지.

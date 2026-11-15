@@ -517,9 +517,27 @@ fn handle(message: ToHost) {
             resizable,
         } => STATE.with(|state| {
             if let Some(window) = state.borrow_mut().windows.get_mut(&task_id) {
+                if mode == WindowMode::Overlay {
+                    // An app overlay window: borderless, above the others, and never resized
+                    // by the user or sent to full screen.
+                    window.set_overlay();
+                    return;
+                }
                 window.set_resizable(resizable);
                 window.set_picture_in_picture(mode == WindowMode::PictureInPicture);
                 window.set_full_screen(mode == WindowMode::Fullscreen);
+            }
+        }),
+        ToHost::Overlay {
+            task_id,
+            left,
+            top,
+            display,
+            touchable,
+            ..
+        } => STATE.with(|state| {
+            if let Some(window) = state.borrow_mut().windows.get_mut(&task_id) {
+                window.place_overlay((left, top), display, touchable);
             }
         }),
         ToHost::CaptionMode {

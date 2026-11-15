@@ -1413,6 +1413,7 @@ impl Manager {
                         | ToHost::CaptionMode { .. }
                         | ToHost::CaptionBack { .. }
                         | ToHost::ShownTask { .. }
+                        | ToHost::Overlay { .. }
                         | ToHost::Mode { .. } => {}
                     }
                     link.send(to_wire(&message));
