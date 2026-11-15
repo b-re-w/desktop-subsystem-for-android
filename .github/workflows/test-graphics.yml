@@ -411,8 +411,7 @@ jobs:
           }
           $jsonObj | ConvertTo-Json | Set-Content -Path $jsonPath -Encoding utf8
 
-          New-Item -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Force | Out-Null
-          New-ItemProperty -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Name $jsonPath -Value 0 -PropertyType DWord -Force | Out-Null
+          & "$env:GITHUB_WORKSPACE/.github/scripts/graphics/register-vulkan-driver.ps1" -Manifest $jsonPath
 
       - name: Run host renderer smoke test on software Vulkan
         shell: pwsh
@@ -625,12 +624,7 @@ jobs:
               ICD = [ordered]@{ api_version = "1.2.0"; library_path = $dll }
               file_format_version = "1.0.1"
           } | ConvertTo-Json | Set-Content -Path $env:DZN_ICD -Encoding utf8
-          # The runner's processes run elevated, and the Vulkan loader then ignores
-          # VK_DRIVER_FILES and VK_ICD_FILENAMES ("Loader is running with elevated permissions");
-          # it lists only the drivers in the registry. The steps below still set both, since
-          # DSA reads them to take the named drivers as they are.
-          New-Item -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Force | Out-Null
-          New-ItemProperty -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Name $env:DZN_ICD -Value 0 -PropertyType DWord -Force | Out-Null
+          & "$env:GITHUB_WORKSPACE/.github/scripts/graphics/register-vulkan-driver.ps1" -Manifest $env:DZN_ICD
           Write-Host "Dozen at $dll, dxil.dll from $($dxil.FullName)"
           Get-ChildItem -Recurse .scratch/dzn | ForEach-Object { Write-Host "  $($_.FullName) ($($_.Length) bytes)" }
           Get-Content $env:DZN_ICD | Write-Host
