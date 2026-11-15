@@ -506,6 +506,14 @@ jobs:
         run: |
           cargo test -p dsa-host-windows --test renderer_process -- --nocapture
 
+      - name: Keep the window manager's and renderer's logs from the renderer process test
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renderer-process-logs-${{ matrix.artifact }}
+          path: ${{ runner.temp }}\dsa-renderer-*
+          if-no-files-found: ignore
+
       - name: Keep the host renderer library and headers
         uses: actions/upload-artifact@v4
         with:

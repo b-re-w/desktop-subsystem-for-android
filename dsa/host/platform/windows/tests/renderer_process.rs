@@ -17,7 +17,7 @@
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -68,7 +68,11 @@ fn read_within(stream: &mut Box<dyn BridgeStream>, buf: &mut [u8], what: &str) {
     let read = stream.read_exact(buf);
     let _ = done.send(());
     if timer.join().unwrap() {
-        panic!("{what}: no answer within {} s", WAIT.as_secs());
+        panic!(
+            "{what}: no answer within {} s\nwindow manager log (with the renderer's notes):\n{}",
+            WAIT.as_secs(),
+            window_manager_log()
+        );
     }
     read.unwrap_or_else(|error| panic!("{what}: {error}"));
 }
@@ -148,8 +152,20 @@ fn log_file(name: &str) -> (PathBuf, Arc<CompositorLogger>) {
         .join(format!("dsa-renderer-{name}-{}", std::process::id()))
         .join("dsa-wm.log");
     let _ = std::fs::remove_file(&path);
+    let _ = LOG.set(path.clone());
     let logger = Arc::new(CompositorLogger::open(&path).unwrap());
     (path, logger)
+}
+
+/// The log of the window manager this test program plays, once a test has opened it.
+static LOG: OnceLock<PathBuf> = OnceLock::new();
+
+/// What the window manager wrote so far, including what the renderer sent it. Printed when a
+/// step gets no answer, so the reason is in the test's output.
+fn window_manager_log() -> String {
+    LOG.get()
+        .and_then(|path| std::fs::read_to_string(path).ok())
+        .unwrap_or_else(|| "(none)".into())
 }
 
 /// The window manager under test: the renderer client, its supervisor and the VM slot.
