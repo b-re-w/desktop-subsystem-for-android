@@ -559,6 +559,14 @@ To publish a remade image of the same build, after a fix to how images are made,
 orders images of one Android version, is the build number times 100 plus the revision, so
 the service treats the remade image as newer and moves to it.
 
+The release workflow chooses the revision itself, from the images already published and
+the release channel: a stable image is `-<n>` (`17.0.0-16373615-15`), one past the highest
+`n` published; a pre-release is `-<n>.<m>` (`17.0.0-16373615-15.1`) on the newest `n`, one
+past its highest `m`; a development build is the next pre-release's `-<n>.<m>` with
+`-dev.<run number>` after it (`make-image.py --next-revision --channel`). The service orders
+them `-15` < `-15.1-dev.k` < `-15.1` < `-15.2` < `-16`. The build number carries `n` alone,
+and only computers on the pre-release channel read the list that names pre-release images.
+
 ## Releasing
 
 The Image release workflow (`.github/workflows/release-image.yml`, run by hand) makes
