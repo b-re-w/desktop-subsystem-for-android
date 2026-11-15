@@ -69,6 +69,20 @@ class HiddenAppsTest {
     )
 
     @Test
+    fun nfr1_an_app_going_out_of_sight_is_logged_once_for_each_spell() {
+        apps.tasks(mapOf(3 to NOTES, 5 to MUSIC))
+        apps.shown(setOf(3))
+        apps.tasks(mapOf(3 to NOTES, 5 to MUSIC))
+        apps.shown(setOf(3))
+        val line = "info: $MUSIC is out of the user's sight (the host says none of its windows can be seen); " +
+            "it is trimmed after 10 s unless it plays audio or runs a foreground service"
+        assertEquals(log.lines.toString(), 1, log.lines.count { it == line })
+        apps.shown(setOf(3, 5))
+        apps.shown(setOf(3))
+        assertEquals(2, log.lines.count { it == line })
+    }
+
+    @Test
     fun nfr1_a_hidden_app_is_trimmed_then_compacted_once() {
         apps.tasks(mapOf(3 to NOTES, 5 to MUSIC))
         apps.shown(setOf(3, 5))
