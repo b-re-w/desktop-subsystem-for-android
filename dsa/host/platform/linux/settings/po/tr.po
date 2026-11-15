@@ -1820,3 +1820,21 @@ msgstr "Gösterilen en düşük öncelik"
 
 msgid "Copied"
 msgstr "Kopyalandı"
+
+msgid "When only the bars hide"
+msgstr "Yalnızca çubuklar gizlendiğinde"
+
+msgid "Scaling"
+msgstr "Ölçekleme"
+
+msgid "Automatic (app)"
+msgstr "Otomatik (uygulama)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Otomatik (sistem, bu uygulama için önerilen)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Varsayılanı izle (tüm ekranda)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Varsayılanı izle (pencerenin içinde)"

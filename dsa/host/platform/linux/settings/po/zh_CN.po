@@ -1820,3 +1820,21 @@ msgstr "显示的最低优先级"
 
 msgid "Copied"
 msgstr "已复制"
+
+msgid "When only the bars hide"
+msgstr "仅隐藏栏时"
+
+msgid "Scaling"
+msgstr "缩放"
+
+msgid "Automatic (app)"
+msgstr "自动（应用）"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "自动（系统，推荐用于此应用）"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "跟随默认设置（整个屏幕）"
+
+msgid "Follow the default (inside the window)"
+msgstr "跟随默认设置（在窗口内）"

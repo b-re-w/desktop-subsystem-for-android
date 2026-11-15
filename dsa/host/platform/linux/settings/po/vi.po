@@ -1820,3 +1820,21 @@ msgstr "Mức ưu tiên thấp nhất được hiển thị"
 
 msgid "Copied"
 msgstr "Đã sao chép"
+
+msgid "When only the bars hide"
+msgstr "Khi chỉ ẩn các thanh"
+
+msgid "Scaling"
+msgstr "Co giãn"
+
+msgid "Automatic (app)"
+msgstr "Tự động (ứng dụng)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Tự động (hệ thống, khuyên dùng cho ứng dụng này)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Theo mặc định (trên cả màn hình)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Theo mặc định (trong cửa sổ)"

@@ -547,9 +547,10 @@ pub fn dpi_scaling_choices(system_forced_available: bool) -> Vec<(String, DpiSca
     dpi_scaling_choices_for(false, system_forced_available)
 }
 
-/// [`dpi_scaling_choices`] for one app: when DSA scales it the System way unless the user
-/// chose otherwise (`system_scaled_by_default`, from DSA's built-in list of apps that break
-/// when their density changes while they run), the automatic choice says so.
+/// [`dpi_scaling_choices`] for one app. The automatic choice says what it does for the app:
+/// System when DSA scales it that way unless the user chose otherwise
+/// (`system_scaled_by_default`, from DSA's built-in list of apps that break when their density
+/// changes while they run), App for any other app.
 pub fn dpi_scaling_choices_for(
     system_scaled_by_default: bool,
     system_forced_available: bool,
@@ -559,9 +560,9 @@ pub fn dpi_scaling_choices_for(
         .map(|scaling| {
             let label = match scaling {
                 DpiScaling::Auto if system_scaled_by_default => {
-                    tr("System (recommended for this app)")
+                    tr("Automatic (system, recommended for this app)")
                 }
-                DpiScaling::Auto => tr("Automatic"),
+                DpiScaling::Auto => tr("Automatic (app)"),
                 DpiScaling::App => tr("App"),
                 DpiScaling::System => tr("System"),
                 DpiScaling::SystemForced if system_forced_available => tr("System (forced)"),
@@ -593,12 +594,26 @@ pub fn dpi_scaling_subtitle(window: Option<&AppWindow>, system_forced_available:
 }
 
 /// Where an app's full screen can show, in the order of [`FullScreenPlace::ALL`]: as the
-/// default for every app, on the whole screen, or inside the window.
-pub fn full_screen_choices() -> Vec<(String, FullScreenPlace)> {
+/// default for every app, on the whole screen, or inside the window. The first says where
+/// the default for every app (`default`) takes it now, so an app's two lists, which offer the
+/// same places, show what each one does for the app.
+pub fn full_screen_choices(default: FullScreenPlace) -> Vec<(String, FullScreenPlace)> {
     FullScreenPlace::ALL
         .into_iter()
-        .map(|place| (full_screen_label(place), place))
+        .map(|place| match place {
+            FullScreenPlace::Default => (follow_default_label(default), place),
+            _ => (full_screen_label(place), place),
+        })
         .collect()
+}
+
+/// What "Follow the default" is called while the default for every app is `default`.
+pub fn follow_default_label(default: FullScreenPlace) -> String {
+    match default {
+        FullScreenPlace::Screen => tr("Follow the default (on the whole screen)"),
+        FullScreenPlace::Window => tr("Follow the default (inside the window)"),
+        FullScreenPlace::Default => tr("Follow the default"),
+    }
 }
 
 /// What a full screen place is called.

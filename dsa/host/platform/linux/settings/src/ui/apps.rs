@@ -15,8 +15,13 @@ use crate::view;
 
 /// Where every app without its own choice shows its full screen: a clear request on the whole
 /// screen by default, and its bars hidden alone inside its window. Each app's own choice, in
-/// its row below, wins over them.
-fn app_full_screen(ctx: &Shared, page: &Rc<Page>) -> adw::PreferencesGroup {
+/// its row below, wins over them. `follow` hears each choice as it is read and changed, so the
+/// rows' "Follow the default" says where it takes the app.
+fn app_full_screen(
+    ctx: &Shared,
+    page: &Rc<Page>,
+    follow: Rc<dyn Fn(FullScreenPlace, FullScreenPlace)>,
+) -> adw::PreferencesGroup {
     let all = group(
         &tr("App full screen"),
         Some(&tr(
@@ -28,7 +33,7 @@ fn app_full_screen(ctx: &Shared, page: &Rc<Page>) -> adw::PreferencesGroup {
         .map(view::full_screen_label)
         .collect();
     let combo = |title: &str, subtitle: &str, immersive: bool| {
-        let (ctx, page) = (ctx.clone(), page.clone());
+        let (ctx, page, follow) = (ctx.clone(), page.clone(), follow.clone());
         Combo::new(title, subtitle, move |index| {
             let Some(place) = view::DEFAULT_FULL_SCREEN_PLACES
                 .get(index as usize)
@@ -36,7 +41,7 @@ fn app_full_screen(ctx: &Shared, page: &Rc<Page>) -> adw::PreferencesGroup {
             else {
                 return;
             };
-            let page = page.clone();
+            let (page, follow) = (page.clone(), follow.clone());
             request(
                 &ctx,
                 move |c| {
@@ -46,7 +51,12 @@ fn app_full_screen(ctx: &Shared, page: &Rc<Page>) -> adw::PreferencesGroup {
                         c.set_app_fullscreen(place)
                     }
                 },
-                move |r| page.show_failure(&tr("The setting was not changed"), r.as_ref().err()),
+                move |r| {
+                    page.show_failure(&tr("The setting was not changed"), r.as_ref().err());
+                    if let Ok(settings) = r {
+                        follow(settings.app_fullscreen, settings.app_immersive);
+                    }
+                },
             );
         })
     };
@@ -76,10 +86,35 @@ fn app_full_screen(ctx: &Shared, page: &Rc<Page>) -> adw::PreferencesGroup {
                     &labels,
                     view::default_full_screen_index(settings.app_immersive) as u32,
                 );
+                follow(settings.app_fullscreen, settings.app_immersive);
             }
         },
     );
     all
+}
+
+/// The full screen lists of the rows on the page, a clear request's and the bars hidden
+/// alone's, so a change of the choice for every app names itself in each row at once.
+type FollowingRows = Rc<RefCell<Vec<(Combo, Combo)>>>;
+
+/// The names of an app's full screen list while the choice for every app is `default`.
+fn full_screen_labels(default: FullScreenPlace) -> Vec<String> {
+    view::full_screen_choices(default)
+        .into_iter()
+        .map(|(label, _)| label)
+        .collect()
+}
+
+/// Names `defaults` in every row's lists, each keeping the choice it shows.
+fn relabel_following(following: &FollowingRows, defaults: (FullScreenPlace, FullScreenPlace)) {
+    let (full, immersive) = (
+        full_screen_labels(defaults.0),
+        full_screen_labels(defaults.1),
+    );
+    for (full_combo, immersive_combo) in following.borrow().iter() {
+        full_combo.set(&full, full_combo.row.selected());
+        immersive_combo.set(&immersive, immersive_combo.row.selected());
+    }
 }
 
 /// A callback set once its page is built, called to draw or reload that page again.
@@ -116,7 +151,30 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         });
     }
 
-    page.add(&app_full_screen(ctx, &page));
+    // Where the choice for every app takes a clear full screen request and the bars hidden
+    // alone now; DSA's own defaults until the service says.
+    let defaults: Rc<Cell<(FullScreenPlace, FullScreenPlace)>> = Rc::new(Cell::new((
+        FullScreenPlace::Screen,
+        FullScreenPlace::Window,
+    )));
+    let following: FollowingRows = Rc::default();
+    let follow: Rc<dyn Fn(FullScreenPlace, FullScreenPlace)> = {
+        let (defaults, following) = (defaults.clone(), following.clone());
+        Rc::new(
+            move |fullscreen: FullScreenPlace, immersive: FullScreenPlace| {
+                let now = (
+                    fullscreen.or_builtin(FullScreenPlace::Screen),
+                    immersive.or_builtin(FullScreenPlace::Window),
+                );
+                if defaults.get() == now {
+                    return;
+                }
+                defaults.set(now);
+                relabel_following(&following, now);
+            },
+        )
+    };
+    page.add(&app_full_screen(ctx, &page, follow));
 
     let installed = group(&tr("Installed apps"), None);
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
@@ -158,8 +216,10 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let forced = forced.clone();
         let scaled = scaled.clone();
         let below = below.clone();
+        let (defaults, following) = (defaults.clone(), following.clone());
         *render.borrow_mut() = Some(Rc::new(move || {
             rows.clear();
+            following.borrow_mut().clear();
             let all = apps.borrow();
             let Some(all) = all.as_ref() else { return };
             let query = search.text().to_string();
@@ -191,6 +251,8 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                     forced.get(),
                     scaled.borrow().contains(&app.package),
                     below.borrow().contains(&app.package),
+                    defaults.get(),
+                    &following,
                     reload.clone(),
                 );
                 // The app App info was opened for: its row opens and comes into view, once.
@@ -213,10 +275,11 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let forced = forced.clone();
         let scaled = scaled.clone();
         let below = below.clone();
+        let defaults = defaults.clone();
         *reload.borrow_mut() = Some(Rc::new(move || {
             let (page, apps, render) = (page.clone(), apps.clone(), render.clone());
             let (windows, forced, scaled) = (windows.clone(), forced.clone(), scaled.clone());
-            let below = below.clone();
+            let (below, defaults) = (below.clone(), defaults.clone());
             request(
                 &ctx,
                 |c| Ok((c.apps()?, c.app_window_list().unwrap_or_default())),
@@ -230,6 +293,16 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                         forced.set(settings.system_forced_available);
                         *scaled.borrow_mut() = settings.system_scaled_by_default;
                         *below.borrow_mut() = settings.below_title_bar_by_default;
+                        // The rows are made again below, with these in their lists. A list
+                        // that could not be read names no defaults, and the settings' stay.
+                        if settings.default_fullscreen != FullScreenPlace::Default {
+                            defaults.set((
+                                settings.default_fullscreen,
+                                settings
+                                    .default_immersive
+                                    .or_builtin(FullScreenPlace::Window),
+                            ));
+                        }
                         *windows.borrow_mut() = settings
                             .apps
                             .into_iter()
@@ -270,6 +343,8 @@ fn app_row(
     system_forced_available: bool,
     system_scaled_by_default: bool,
     below_title_bar_by_default: bool,
+    defaults: (FullScreenPlace, FullScreenPlace),
+    following: &FollowingRows,
     reload: Hook,
 ) -> adw::ExpanderRow {
     let row = expander_row(&app.label, &view::app_detail(app));
@@ -472,13 +547,13 @@ fn app_row(
     size.set(&labels, index as u32);
     row.add_row(&size.row);
     // Auto and System never restart the app; System (forced) is marked while Android cannot do it,
-    // and Auto reads as System for an app on DSA's built-in list.
+    // and Auto says what it does for the app: System on DSA's built-in list, App otherwise.
     let dpi_choices =
         view::dpi_scaling_choices_for(system_scaled_by_default, system_forced_available);
     let dpi = {
         let state = state.clone();
         Combo::new(
-            &tr("Scaling on another monitor"),
+            &tr("Scaling"),
             &view::dpi_scaling_subtitle(window.as_ref(), system_forced_available),
             move |index| {
                 if let Some(scaling) = DpiScaling::ALL.get(index as usize) {
@@ -530,14 +605,11 @@ fn app_row(
             );
         })
     };
-    let place_labels: Vec<String> = view::full_screen_choices()
-        .into_iter()
-        .map(|(label, _)| label)
-        .collect();
+    // Each list's "Follow the default" says where the choice for every app takes the app.
     let full = {
         let (places, save) = (places.clone(), save_places.clone());
         Combo::new(
-            &tr("Full screen"),
+            &tr("Full screen request"),
             &tr("Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."),
             move |index| {
                 if let Some(place) = FullScreenPlace::ALL.get(index as usize) {
@@ -549,12 +621,12 @@ fn app_row(
             },
         )
     };
-    full.set(&place_labels, full_index as u32);
+    full.set(&full_screen_labels(defaults.0), full_index as u32);
     row.add_row(&full.row);
     let immersive = {
         let (places, save) = (places.clone(), save_places.clone());
         Combo::new(
-            &tr("Bars hidden"),
+            &tr("When only the bars hide"),
             &tr("Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."),
             move |index| {
                 if let Some(place) = FullScreenPlace::ALL.get(index as usize) {
@@ -566,8 +638,9 @@ fn app_row(
             },
         )
     };
-    immersive.set(&place_labels, immersive_index as u32);
+    immersive.set(&full_screen_labels(defaults.1), immersive_index as u32);
     row.add_row(&immersive.row);
+    following.borrow_mut().push((full, immersive));
 
     // Whether the app runs its ARM code through the translator.
     let arm = view::run_as_arm_view(app);

@@ -1824,3 +1824,21 @@ msgstr "표시할 최소 우선순위"
 
 msgid "Copied"
 msgstr "복사했습니다"
+
+msgid "When only the bars hide"
+msgstr "막대만 숨길 때"
+
+msgid "Scaling"
+msgstr "배율"
+
+msgid "Automatic (app)"
+msgstr "자동 (앱)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "자동 (시스템, 이 앱에 맞춤)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "기본값 따르기 (화면 전체로)"
+
+msgid "Follow the default (inside the window)"
+msgstr "기본값 따르기 (창 안에서)"
