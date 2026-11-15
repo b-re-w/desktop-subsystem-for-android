@@ -1,5 +1,5 @@
 # The fast quality gate. Runs by hand (on its own or as a job of Checks), and on the release
-# pull request into main.
+# pull request into main once the owner approves the run on the pull request page.
 #
 # The repository checks (the planning documents are present on develop, no em dashes,
 # README files do not link documents that main does not have, the release sync script
@@ -16,16 +16,12 @@ on:
   # not take the runners the Development and Framework builds wait for. Uncomment to resume.
   # push:
   #   branches: [develop]
-  # On the release pull request into main it runs only when someone adds the label
-  # "run-tests" on the pull request page. Release sync updates that pull request on every
-  # push to develop, and running on each update queued a run per push.
+  # On the release pull request into main, each update starts a run that waits for the
+  # owner: the "approval" job below uses the run-tests environment, whose required reviewer
+  # approves or rejects it on the pull request page. Nothing else runs until then, so
+  # Release sync updating that pull request on every push to develop takes no runner.
   pull_request:
     branches: [main]
-    types: [labeled]
-  # On the release pull request into main it runs once, when the owner approves it, so
-  # Release sync's update of that pull request on every push to develop queues nothing.
-  pull_request_review:
-    types: [submitted]
   workflow_dispatch:
   # Checks (checks.yml) runs it as one of its jobs, with every other test, in one run.
   workflow_call:
@@ -33,11 +29,13 @@ on:
 concurrency:
   # A run in progress always finishes, and only the newest waiting run stays: GitHub keeps
   # one pending run per group, so a newer run replaces the one still waiting, and the newest
-  # tests everything the dropped ones held. The group is the workflow and the branch (or
-  # the pull request), never the run, so manual runs replace each other too. Called from
-  # Checks, github.workflow names Checks, so a Checks run neither waits on nor replaces a
-  # run started on its own.
-  group: test-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # tests everything the dropped ones held. The group is the workflow and the branch, never
+  # the run, so manual runs replace each other too. Called from Checks, github.workflow
+  # names Checks, so a Checks run neither waits on nor replaces a run started on its own.
+  # A pull request run has a group of its own: a run waiting for approval counts as in
+  # progress, so a shared group would hold every newer run behind it. The "approval" job
+  # replaces the older waiting run instead.
+  group: test-${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('run-{0}', github.run_id) || github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -49,12 +47,40 @@ env:
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
 
 jobs:
+  # The release pull request's gate: on a pull request it uses the run-tests environment, so
+  # it waits until the owner approves the run on the pull request page ("Review
+  # deployments", then "Approve and deploy"), and every other job waits for it. Rejecting it
+  # skips the whole run. A newer update of the pull request cancels this job while it still
+  # waits, so only the newest run asks; once approved, the job has finished, nothing cancels
+  # it, and the run it started finishes. By hand and from Checks it has no environment and
+  # passes at once. It runs rather than being skipped there, because GitHub skips every job
+  # below a skipped one, even through a job that ran.
+  approval:
+    name: Wait for the owner to approve the run
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: ${{ github.event_name == 'pull_request' && 'run-tests' || '' }}
+    concurrency:
+      group: test-approval-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Report the approval
+        env:
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [[ "$EVENT" == "pull_request" ]]; then
+            echo "The owner approved the tests for $SHA"
+          else
+            echo "Started by $EVENT, which needs no approval"
+          fi
+
   # Which parts a pull request touches, so each job below runs only when its part changed.
   # A change to this workflow, or a run by hand, runs every job. A pull request that only
   # touches documents runs just the repository checks. A skipped job counts as passed, and
   # "Report the test result" always reports, so a skipped job never holds a merge back.
   changes:
-    if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review' || github.event.label.name == 'run-tests') || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
+    needs: approval
     name: Find the parts that changed
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -135,7 +161,7 @@ jobs:
   # and as rendered now. Each takes a minute or less on the same setup, so they share a
   # runner; the icons are checked even when a repository rule failed.
   repository:
-    if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review' || github.event.label.name == 'run-tests') || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
+    needs: approval
     name: Check the repository rules and the brand icons
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -887,7 +913,8 @@ jobs:
   # the large compiler caches of the builds that run least often, the slowest to build again.
   caches:
     name: Delete superseded and stale caches
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/develop') && (github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main'))
+    needs: approval
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -906,9 +933,9 @@ jobs:
   # when every job passed or was skipped because its part did not change.
   result:
     name: Report the test result
-    if: always() && (github.event_name != 'pull_request' || github.event.label.name == 'run-tests')
+    if: always() && needs.approval.result == 'success'
     needs:
-      [changes, repository, rust, macos-host, linux-host, linux-settings, linux-vm, agent, protocol, settings-app, guest-rules]
+      [approval, changes, repository, rust, macos-host, linux-host, linux-settings, linux-vm, agent, protocol, settings-app, guest-rules]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
