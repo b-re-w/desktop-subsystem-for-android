@@ -482,6 +482,17 @@ body.is-light .feature-links{border-top-color:var(--ln)}
   .section-text .card.inflow{display:block!important;opacity:1;transform:none;pointer-events:auto;margin:8px -8px -8px;font-size:13px;line-height:1.6}
   .card.inflow pre{white-space:pre;overflow-x:auto;scrollbar-width:thin;padding-right:24px}
   .card.inflow h3{flex-wrap:wrap;gap:4px 12px}
+  /* a chapter cell is a grid whose items default to their min-content width, so one long code
+     line or label used to widen the whole cell past the screen; the items now take the cell's
+     width and long words wrap, and only the code scrolls, inside its own box */
+  .section-text{grid-template-columns:minmax(0,1fr);min-width:0}
+  .section-text>*{min-width:0;max-width:100%}
+  .eyebrow{flex-wrap:wrap;row-gap:4px;overflow-wrap:anywhere}
+  .section-text h2,.section-text p,.feature-links a,.card.inflow h3,.card.inflow p{overflow-wrap:anywhere}
+  html[lang="ko"] .section-text p{word-break:keep-all}
+  .card.inflow pre{-webkit-overflow-scrolling:touch;scrollbar-color:var(--mut) transparent}
+  .card.inflow pre::-webkit-scrollbar{height:4px}
+  .card.inflow pre::-webkit-scrollbar-thumb{background:var(--mut);border-radius:2px}
 }
 
 /* the hero's action row is a band of its own, closed by a rule under it; the first button is
