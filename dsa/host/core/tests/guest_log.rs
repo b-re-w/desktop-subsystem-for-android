@@ -727,3 +727,75 @@ fn fr21_the_local_api_saves_the_diagnostics_as_one_zip() {
     assert_eq!(names, ["android/logcat.txt", "summary.txt"]);
     stop.store(true, Ordering::Relaxed);
 }
+
+#[test]
+fn nfr1_the_memory_snapshot_keeps_the_latest_memory_lines_and_channelds_kernel_lines() {
+    use dsa_host_core::diagnostics::{latest_lines, memory_files};
+    let lines = latest_lines(
+        b"a memory 1\nb other\nc Memory 2\nd memory 3\n",
+        |l| l.to_ascii_lowercase().contains("memory"),
+        2,
+    );
+    assert_eq!(lines, ["c Memory 2", "d memory 3"]);
+
+    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("memory-files-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let wm = dir.join("dsa-wm.log");
+    std::fs::write(
+        &wm,
+        "wm: memory: private 147 MiB\nwm: a window opened\nrenderer: memory by owner 692 MiB\n",
+    )
+    .unwrap();
+    let console = dir.join("console.log");
+    std::fs::write(
+        &console,
+        "[  1.0] init: started\n[  2.0] dsa-channeld: reclaim: trimmed 120 MiB\n",
+    )
+    .unwrap();
+    let hostd = dir.join("dsa-hostd.log");
+    std::fs::write(
+        &hostd,
+        "S-1-5-21-1: memory: host 4433 MiB\nS-1-5-21-2: memory: host 900 MiB\n",
+    )
+    .unwrap();
+    let files = memory_files(&[
+        HostFile {
+            name: "host/dsa-wm.log".into(),
+            path: wm,
+            only_user: None,
+        },
+        HostFile {
+            name: "host/android-console.log".into(),
+            path: console,
+            only_user: None,
+        },
+        HostFile {
+            name: "host/dsa-hostd.log".into(),
+            path: hostd,
+            only_user: Some("S-1-5-21-1".into()),
+        },
+        HostFile {
+            name: "host/missing.log".into(),
+            path: dir.join("missing.log"),
+            only_user: None,
+        },
+    ]);
+    let text = |name: &str| {
+        let (_, data) = files.iter().find(|(n, _)| n == name).unwrap();
+        String::from_utf8(data.clone()).unwrap()
+    };
+    let memory = text("host/memory-lines.txt");
+    assert!(memory.contains("== host/dsa-wm.log"), "{memory}");
+    assert!(memory.contains("wm: memory: private 147 MiB"), "{memory}");
+    assert!(
+        memory.contains("renderer: memory by owner 692 MiB"),
+        "{memory}"
+    );
+    assert!(!memory.contains("a window opened"), "{memory}");
+    // Another user's lines never go in.
+    assert!(memory.contains("host 4433 MiB"), "{memory}");
+    assert!(!memory.contains("host 900 MiB"), "{memory}");
+    let channeld = text("host/channeld-kernel-log.txt");
+    assert_eq!(channeld, "[  2.0] dsa-channeld: reclaim: trimmed 120 MiB\n");
+}

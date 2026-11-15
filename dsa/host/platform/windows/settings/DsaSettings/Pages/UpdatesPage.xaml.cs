@@ -35,21 +35,15 @@ public partial class UpdatesPage : Page
         UpdateNowButton.DataContext = ViewModel;
         _androidTimer.Tick += async (_, _) => await Android.RefreshAsync();
         _programTimer.Tick += async (_, _) => await ProgramUpdate.PollAsync();
+        PollingTimers.Attach(this, _androidTimer, _programTimer);
         Loaded += async (_, _) =>
         {
             ProgramUpdate.CameBack += OnServiceBack;
-            _androidTimer.Start();
-            _programTimer.Start();
             await ProgramUpdate.PollAsync();
             await Task.WhenAll(ViewModel.LoadAsync(), Android.LoadAsync());
             await ShowNoticeAsync();
         };
-        Unloaded += (_, _) =>
-        {
-            ProgramUpdate.CameBack -= OnServiceBack;
-            _androidTimer.Stop();
-            _programTimer.Stop();
-        };
+        Unloaded += (_, _) => ProgramUpdate.CameBack -= OnServiceBack;
     }
 
     private async Task ShowNoticeAsync()

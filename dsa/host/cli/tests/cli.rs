@@ -1870,6 +1870,8 @@ fn fr17_dsa_memory_json_carries_the_guest_breakdown_and_the_host_processes() {
             working_set_kb: 900_000,
             private_kb: 880_000,
             mapped_kb: 300_000,
+            private_working_set_kb: Some(700_000),
+            section_kb: 0,
         }],
     });
     assert_eq!(json["guest"]["mem_total_kb"], 4 * 1024 * 1024);
@@ -1882,6 +1884,57 @@ fn fr17_dsa_memory_json_carries_the_guest_breakdown_and_the_host_processes() {
     assert_eq!(json["host"][0]["mapped_kb"], 300_000);
     assert_eq!(json["host_mapped_kb"], 300_000);
     assert_eq!(json["host_own_kb"], 600_000);
+}
+
+#[test]
+fn nfr1_dsa_memory_json_has_private_working_sets_sections_and_the_balloon() {
+    use dsa_host_core::memory::{
+        GuestMemory, GuestMemoryReport, HostProcessMemory, HostRole, MemorySnapshot,
+    };
+    let process = |role, pid, working_set_kb, private_working_set_kb, mapped_kb, section_kb| {
+        HostProcessMemory {
+            role,
+            pid,
+            working_set_kb,
+            private_kb: working_set_kb,
+            mapped_kb,
+            private_working_set_kb,
+            section_kb,
+        }
+    };
+    let json = dsa_cli::memory_json(&MemorySnapshot {
+        guest: Some(GuestMemoryReport {
+            memory: GuestMemory {
+                ballooned_kb: 640 * 1024,
+                ..GuestMemory::default()
+            },
+            age: Duration::from_secs(1),
+        }),
+        host: vec![
+            process(
+                HostRole::Vm,
+                4,
+                2278 * 1024,
+                Some(1963 * 1024),
+                115 * 1024,
+                200 * 1024,
+            ),
+            process(HostRole::Settings, 40, 324 * 1024, Some(250 * 1024), 0, 0),
+            process(HostRole::Service, 2, 31 * 1024, None, 0, 0),
+        ],
+    });
+    assert_eq!(json["guest"]["ballooned_kb"], 640 * 1024);
+    assert_eq!(json["host"][1]["role"], "settings app");
+    assert_eq!(json["host"][2]["role"], "service");
+    assert_eq!(json["host"][0]["section_kb"], 200 * 1024);
+    assert_eq!(json["host"][0]["private_working_set_kb"], 1963 * 1024);
+    assert!(json["host"][2]["private_working_set_kb"].is_null());
+    assert_eq!(json["host_total_kb"], (2278 + 324 + 31) * 1024);
+    assert_eq!(json["host_private_working_set_kb"], (1963 + 250) * 1024);
+    assert_eq!(json["host_section_kb"], 200 * 1024);
+    assert_eq!(json["host_mapped_kb"], 115 * 1024);
+    // The sections and the disk file pages are left out of what the processes hold.
+    assert_eq!(json["host_own_kb"], (2278 - 315 + 324 + 31) * 1024);
 }
 
 #[test]
@@ -1952,6 +2005,17 @@ fn fr17_dsa_gpus_prints_a_list() {
         .unwrap();
     let gpus = json_of(&output);
     assert!(gpus["gpus"].is_array());
+}
+
+#[test]
+fn nfr1_dsa_memory_snapshot_saves_one_moment_to_a_file() {
+    let snapshot = parse(&args("memory snapshot -o memory.zip")).unwrap();
+    assert_eq!(snapshot.command, Cmd::MemorySnapshot);
+    assert_eq!(
+        snapshot.output.as_deref(),
+        Some(std::path::Path::new("memory.zip"))
+    );
+    assert!(parse(&args("memory snapshot")).is_err());
 }
 
 #[test]

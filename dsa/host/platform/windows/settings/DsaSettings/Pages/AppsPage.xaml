@@ -122,7 +122,7 @@
                                                 <ui:SymbolIcon Symbol="Apps24" FontSize="24"
                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                Visibility="{Binding NoIcon, Converter={StaticResource Visible}}" />
-                                                <Image Source="{Binding Icon, TargetNullValue={x:Null}}" Stretch="Uniform"
+                                                <Image Source="{Binding Icon, Converter={StaticResource IconImage}, ConverterParameter=32}" Stretch="Uniform"
                                                        RenderOptions.BitmapScalingMode="HighQuality" />
                                             </Grid>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">

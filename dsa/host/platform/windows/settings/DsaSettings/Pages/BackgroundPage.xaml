@@ -38,7 +38,7 @@
                                 <ui:CardControl.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Border Width="40" Height="40" Margin="0,0,12,0">
-                                            <Image Source="{Binding Icon, TargetNullValue={x:Null}}" Stretch="Uniform" />
+                                            <Image Source="{Binding Icon, Converter={StaticResource IconImage}, ConverterParameter=40}" Stretch="Uniform" />
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Label}" Style="{StaticResource CardTitle}" />
