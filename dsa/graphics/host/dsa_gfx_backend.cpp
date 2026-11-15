@@ -433,19 +433,28 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
         return -2;
     }
 
-    uint64_t puid = dsa_gfx_on_process_create();
-    dsa_gfx_memory_process_started();
-
+    /* The process gets its ID before anything else happens on its behalf. The guest's driver
+     * waits for this answer with nothing else to go on, so nothing the renderer does for the
+     * process (registering it with the FrameBuffer) may stand in front of it. The ID comes from
+     * a counter and needs no lock. The guest uses it only on a command stream it opens after
+     * reading it, and that stream looks the process up when its first call arrives, after the
+     * registration below. */
+    const uint64_t puid = s_next_puid.fetch_add(1, std::memory_order_relaxed);
     size_t sent = 0;
     while (sent < sizeof(puid)) {
         int n = write_cb(user_data, reinterpret_cast<const char*>(&puid) + sent, sizeof(puid) - sent);
         if (n <= 0) {
-            dsa_gfx_on_process_destroy(puid);
-            dsa_gfx_memory_process_ended();
             return -3;
         }
         sent += static_cast<size_t>(n);
     }
+    {
+        const auto& renderer = android_getOpenglesRenderer();
+        if (renderer) {
+            renderer->onGuestGraphicsProcessCreate(puid);
+        }
+    }
+    dsa_gfx_memory_process_started();
 
     /* Keep the connection until the client disconnects. A client that knows the renderer
      * shares graphics memory (kGraphicsMemoryExtension) may ask for a staging grant on it;
