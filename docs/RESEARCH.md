@@ -3500,7 +3500,7 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 ### 고친 것
 - Settings 오버레이가 `bool/config_show_emergency_gesture_settings`를 거짓으로 둔다(`SETTINGS_OVERLAY_BOOLEANS`). 두 빌드의 `Settings.apk` 리소스 표에 이 이름이 있다. 없는 빌드에서는 오버레이를 만들지 않고 멈춘다.
 - 항목 뒤의 코드도 막는다(`SETTINGS_CODE_WITHOUT_REMOVED_APPS`, dex 편집). `getEmergencyGestureEnabled`와 `getEmergencyGestureSoundEnabled`는 바로 거짓을 돌려주고, `onStart`의 `registerContentObserver` 호출은 건너뛴다. 전화가 없는 게스트에서 긴급 제스처는 꺼져 있는 것이 맞는 답이다.
-- 밝기 수준: 세 메서드의 대화 상자 시작 호출을 건너뛴다. 줄은 남아 밝기를 보이고, 눌러도 아무것도 시작하지 않는다. 모니터 밝기는 호스트의 것이다.
+- 밝기 수준: 세 메서드의 대화 상자 시작 호출을 건너뛴다. 눌러도 아무것도 시작하지 않는다. 이 편집만으로는 아무 일도 하지 않는 줄이 남았으므로, 아래 "밝기 줄 숨기기"에서 줄 자체를 뺀다(2026-11-15 소유자 결정). 세 편집은 그 코드에 다른 길로 닿을 때를 막으려고 그대로 둔다.
 - `check-image.py`는 오버레이의 값이 거짓이 아니거나 없는 이미지, 위 코드가 남은 이미지를 거부한다. 두 빌드의 실제 `Settings.apk`에 편집을 적용해 여섯 메서드가 모두 바뀌고 두 번째 적용에서는 바뀌는 것이 없음을 보았다.
 
 ### 확인하지 못한 것
@@ -3508,6 +3508,28 @@ Dozen과 네이티브 Vulkan을 같은 기기에서 견준 공개 측정은 찾�
 - 감사는 소스로만 했고 모든 화면을 컨트롤러마다 따라가지는 않았다. 따라가지 않은 곳: 네트워크의 SIM과 인터넷 화면, 앱, 알림, 배터리, 저장소, 위치, 계정, 보안의 생체 인식 컨트롤러, NFC와 UWB와 Thread 컨트롤러, 진동, 날짜와 시간, 초기화 옵션, 블루투스 밖의 개발자 옵션. Android 16은 긴급, 밝기, 제공자 호출 목록만 17과 맞춰 보았다.
 - 안전 및 긴급 상황 화면에 남는 "무선 긴급 경보" 줄(`app_and_notif_cell_broadcast_settings`)은 셀 브로드캐스트 모듈의 설정을 이름으로 연다. 그 모듈이 이미지에 있는지, 눌렀을 때 열리는지는 기기에서 본다.
 - 최상위 "안전 및 긴급 상황" 줄 자체를 숨기려면 `config_show_emergency_settings`를 거짓으로 두면 된다. 화면에 남는 것이 있어 이번에는 바꾸지 않았다. 숨길지는 소유자가 정한다.
+
+### 밝기 줄 숨기기 (2026-11-15)
+소유자는 디스플레이 화면의 "밝기 수준" 줄을 아예 보이지 않게 하기로 했다. PC에서 화면 밝기는 호스트(Windows, macOS, Linux)의 것이다. 같은 화면에 있는 다른 밝기 줄도 갈 곳이 없으면 함께 숨긴다. 기기는 만지지 않았다. 소스는 위와 같은 고정 커밋과 cuttlefish(`device/google/cuttlefish`, 16은 `4d368849`, 17은 `283645aa`)에서 `.scratch/settings-brightness/fetch.py`로 받았고, 두 빌드의 실제 `Settings.apk`와 `framework-res.apk`를 읽었다.
+
+찾은 것:
+- 디스플레이 화면(`DisplaySettings`, `res/xml/display_settings.xml`)의 첫 범주 `category_brightness`("밝기")에는 줄이 셋 있다. "밝기 수준"(`RestrictedPreference`, 키가 문자열 리소스라 XML에 글자 키가 없다), "자동 밝기"(`AutoBrightnessPreferenceController`), "HDR 밝기"(`HdrBrightnessPreferenceController`). 16과 17의 이 범주는 같다.
+- 두 빌드 모두 이 화면을 코드로도 만든다. `DisplayScreen.isFlagEnabled`가 두 빌드의 dex에서 상수 참이다(`catalystDisplaySettingsScreen`). `hasCompleteHierarchy()`가 거짓이라 "하이브리드"다. Settings는 XML을 부풀리고, `PreferenceScreenBindingHelper.bindRecursively`(17 379-427행)가 코드의 메타데이터를 XML에 있는 키에만 붙인다. XML에 없는 키는 위젯을 만들지 않고 "Metadata not bound"만 남긴다(`PreferenceBindingPlaceholder`만 예외). 계층에 있는 키의 컨트롤러는 `DashboardFragment.removeControllersForHybridMode`(16 412-432행)가 뺀다.
+- 그래서 "밝기 수준" 줄을 실제로 그리는 것은 두 빌드 모두 `BrightnessLevelPreference`(메타데이터)다. 표시 여부는 `PreferenceBinding.bind`의 `isVisible = isAvailable(context) != false`(16 103행, 17 112행)가 정한다. 17의 `isAvailable`은 `display.isInternal`이면 참이고(`BrightnessLevelExtensions.kt`), 16의 `BrightnessLevelPreference`는 `PreferenceAvailabilityProvider`가 아니어서 늘 보인다. XML 컨트롤러 `BrightnessLevelPreferenceController.getAvailabilityStatus`도 16은 `AVAILABLE` 상수, 17은 같은 `isInternal`이다. 이 줄을 끄는 리소스(설정 값)는 어느 빌드에도 없다.
+- "자동 밝기"는 프레임워크 값 `config_automatic_brightness_available`이 정한다(16 컨트롤러, 17 `AutoBrightnessExtensions.kt`). framework-res의 값은 거짓이지만 cuttlefish의 오버레이(`shared/overlays/core/res/values/config.xml:22`)가 참으로 둔다. 그래서 이 줄은 보였다. 17은 `catalystScreenBrightnessMode`가 상수 참이라 `AutoBrightnessScreen`이, 16은 상수 거짓이라 XML 컨트롤러가 그린다. 이 기능은 빛 센서 값으로 Android의 밝기 수준을 정한다. 게스트에는 호스트가 가진 빛 센서가 전달될 수 있지만(`dsa-sensors`), 게스트 디스플레이는 Android에 밝기 조절을 알리지 않고 호스트에 밝기를 넘기지도 않는다. 켜도 화면에 보이는 것은 없다.
+- "HDR 밝기"는 디스플레이가 HDR이고 HDR/SDR 비율을 알릴 때만 보인다(`HdrBrightnessUtils`). 태스크의 디스플레이는 HDR을 알리지 않으므로 지금도 보이지 않는다.
+- 범주는 안의 줄이 모두 숨어도 제목을 그린다. 줄마다 사용 가능 여부로 숨기면 "밝기" 제목만 빈 채로 남는다.
+
+고친 것:
+- `Settings.apk`의 컴파일된 `display_settings.xml`에서 `category_brightness` 범주를 안의 세 줄과 함께 뺀다(`SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS`, `remove_xml_elements`로 키를 찾는다). 하이브리드 화면은 XML에 있는 것만 그리므로 코드의 밝기 메타데이터도 함께 사라진다. XML에서 만들던 자동 밝기와 HDR 컨트롤러는 만들어지지 않고, `DisplaySettings`가 코드에서 만드는 `BrightnessLevelPreferenceController`는 하이브리드에서는 빠지고 XML만 쓰는 경우에도 보일 줄을 찾지 못한다. Settings의 검색 색인도 이 XML을 읽으므로 세 줄을 싣지 않는다.
+- 프레임워크 오버레이가 `config_automatic_brightness_available`을 거짓으로 둔다(`FRAMEWORK_OVERLAY_BOOLEANS`). 기기에 자동 밝기가 없다는 참인 답이다. 디스플레이 전원 컨트롤러는 자동 밝기 컨트롤러를 만들지 않아 그 일로 빛 센서를 듣지 않고, 검색이나 인텐트로 열리는 자동 밝기 화면(`AutoBrightnessSettings`)의 스위치도 사용할 수 없음이 되어 검색에서 빠진다.
+- `check-image.py`는 디스플레이 화면에 범주가 남았거나 `display_settings.xml`이 없는 Settings(`settings_brightness_problems`), 그리고 그 값이 참이거나 없는 프레임워크 오버레이(`adaptive_brightness_overlay_problems`)를 거부한다.
+- 두 빌드(15581820, 16373615)의 실제 `Settings.apk`에 모든 Settings 편집을 적용해 보았다(`.scratch/settings-brightness/verify_brightness.py`). 두 빌드 모두 범주가 빠지고(요소 30개에서 26개), 범주 밖의 요소와 속성은 전과 같게 읽히며, 두 번째 적용에서는 바뀌는 것이 없다. #804의 dex 편집과 #811의 하단 여백 편집도 함께 모두 적용되어 남은 것이 없다. 프레임워크 오버레이가 바꾸는 이름은 두 빌드의 framework-res에 모두 있다.
+
+확인하지 못한 것:
+- 기기. 이미지를 만들거나 실행하지 않았다. 디스플레이 화면이 다음 범주(`category_lock_display`)부터 그려지는지, 하이브리드 바인딩이 경고만 남기고 끝나는지는 이미지에서 처음 본다.
+- 프레임워크 오버레이의 거짓이 cuttlefish의 참을 이기는지. cuttlefish의 값은 framework-res에 들어 있지 않으므로 런타임 오버레이로 온다. DSA 오버레이의 우선순위는 100이다. 기기에서 `cmd overlay lookup`으로 본다.
+- HDR 밝기 줄도 범주와 함께 빠진다. 지금은 보이지 않는 줄이지만, 호스트가 HDR 디스플레이를 게스트에 알리게 되면 다시 생각한다.
 
 ## R50. 설정 하위 화면의 아래 여백: 첫 화면에 있는 16 dp가 하위 화면에는 없었다 (FR-22)
 
