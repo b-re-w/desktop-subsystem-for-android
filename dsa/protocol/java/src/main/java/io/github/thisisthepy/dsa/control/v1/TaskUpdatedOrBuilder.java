@@ -310,4 +310,31 @@ public interface TaskUpdatedOrBuilder extends
    * @return The fullscreenRequest.
    */
   io.github.thisisthepy.dsa.control.v1.FullScreenRequest getFullscreenRequest();
+
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   * @return Whether the overlay field is set.
+   */
+  boolean hasOverlay();
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   * @return The overlay.
+   */
+  io.github.thisisthepy.dsa.control.v1.OverlayWindow getOverlay();
 }
