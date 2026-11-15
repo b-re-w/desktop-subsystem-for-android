@@ -7,7 +7,8 @@
 //! port is attached to their adb server by itself, file sharing
 //! (which of their host folders their Android shows in its shared storage), and whether the
 //! host's own touch gestures are off while one of their task windows is in front, and whether
-//! their Android restarts by itself into an Android image the service downloaded. The others are the
+//! their Android restarts by itself into an Android image the service downloaded, and whether their
+//! Android trusts the root certificates added to the computer. The others are the
 //! machine's, shared by every user: whether the service updates DSA itself, whether it takes
 //! pre-releases of DSA as well as stable releases, whether it downloads new Android images,
 //! and whether DSA's processes write the input trace and the per-stage resize trace to their
@@ -29,7 +30,11 @@
 //!                              "shared_folders": ["Documents", "Pictures"],
 //!                              "advanced_networking": false,
 //!                              "touch_gestures_off": true,
-//!                              "image_auto_restart": true}
+//!                              "image_auto_restart": true,
+//!                              "host_certificates": true,
+//!                              "vulkan_driver": "auto",
+//!                              "app_full_screen": {"fullscreen": "screen",
+//!                                                    "immersive": "window"}}
 //! <dir>/users/<user>.app-windows.json
 //!                             the user's window settings for each app
 //! <dir>/users/<user>.arm-translation.json
@@ -38,6 +43,8 @@
 //!                             the translator the user's latest boot of Android was told to use
 //! <dir>/users/<user>.gapps.json
 //!                             the build of Google's apps the user installed, if any
+//! <dir>/users/<user>.widevine.json
+//!                             the Widevine module the user installed, if any
 //! ```
 //!
 //! A missing file means the defaults. A user who has never saved settings starts from what
@@ -55,11 +62,12 @@ use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 
-use crate::app_windows::AppWindowSettings;
+use crate::app_windows::{AppWindowSettings, FullScreenDefaults};
 use crate::arm_translation::{Package, Translator};
 use crate::file_share;
 use crate::gapps::GappsPackage;
 use crate::update::program::ReleaseChannel;
+use crate::widevine::WidevinePackage;
 
 /// The longest render GPU value accepted, in characters.
 const MAX_RENDER_GPU: usize = 128;
@@ -129,15 +137,27 @@ pub struct Settings {
     /// downloaded: at once while no app window is open, else after asking, or once every
     /// window is closed. On by default; off, a downloaded image waits for the next start.
     pub image_auto_restart: bool,
+    /// Whether the user's Android trusts, as system certificates, the root certificates a user
+    /// or an administrator added to the computer. On by default; it applies at once.
+    pub host_certificates: bool,
     /// Whether apps may elevate to root through the host's administrator approval. The
     /// machine's, shared by every user; off by default. It takes effect from the next start
     /// of Android.
     pub root_elevation: bool,
+    /// Where the windows of every app without its own choice show a clear full screen
+    /// request and an app hiding both its bars alone: the whole screen and inside the window
+    /// by default. The user's own; it applies at once.
+    pub app_full_screen: FullScreenDefaults,
+    /// Which Vulkan implementation the user's graphics renderer uses: `auto` (the default),
+    /// `native` or `dozen` ([`normalise_vulkan_driver`]). The user's own; the window manager
+    /// reads it when it starts.
+    pub vulkan_driver: String,
 }
 
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
+            vulkan_driver: auto(),
             render_gpu: "display".into(),
             freeze: false,
             links_in_android: false,
@@ -158,7 +178,9 @@ impl Default for Settings {
             shared_folders: file_share::all_folders(),
             touch_gestures_off: true,
             image_auto_restart: true,
+            host_certificates: true,
             root_elevation: false,
+            app_full_screen: FullScreenDefaults::default(),
         }
     }
 }
@@ -212,6 +234,29 @@ fn display() -> String {
     "display".into()
 }
 
+fn auto() -> String {
+    VULKAN_DRIVERS[0].into()
+}
+
+/// The values of the Vulkan driver setting: `auto` (a native Vulkan driver, and Dozen,
+/// Vulkan on Direct3D 12, only when no native driver works), `native` (never Dozen) and
+/// `dozen` (only Dozen, to test and compare). The first is the default.
+pub const VULKAN_DRIVERS: [&str; 3] = ["auto", "native", "dozen"];
+
+/// Checks a Vulkan driver value and writes it the way it is kept, in lower case. Anything but
+/// [`VULKAN_DRIVERS`] is refused, with the values to choose from.
+pub fn normalise_vulkan_driver(value: &str) -> Result<String, String> {
+    let lower = value.trim().to_ascii_lowercase();
+    if VULKAN_DRIVERS.contains(&lower.as_str()) {
+        return Ok(lower);
+    }
+    Err(format!(
+        "the Vulkan driver {:?} is not one DSA knows; use auto (a native Vulkan driver, and \
+         Dozen only when none works), native (never Dozen) or dozen (only Dozen)",
+        value.trim()
+    ))
+}
+
 fn default_adb_port() -> u16 {
     DEFAULT_ADB_PORT
 }
@@ -259,11 +304,18 @@ pub struct UserSettings {
     pub touch_gestures_off: bool,
     #[serde(default = "yes")]
     pub image_auto_restart: bool,
+    #[serde(default = "yes")]
+    pub host_certificates: bool,
+    #[serde(default)]
+    pub app_full_screen: FullScreenDefaults,
+    #[serde(default = "auto")]
+    pub vulkan_driver: String,
 }
 
 impl Default for UserSettings {
     fn default() -> UserSettings {
         UserSettings {
+            vulkan_driver: auto(),
             render_gpu: display(),
             freeze: false,
             links_in_android: false,
@@ -279,6 +331,8 @@ impl Default for UserSettings {
             advanced_networking: false,
             touch_gestures_off: true,
             image_auto_restart: true,
+            host_certificates: true,
+            app_full_screen: FullScreenDefaults::default(),
         }
     }
 }
@@ -307,6 +361,11 @@ impl UserSettings {
             advanced_networking: settings.advanced_networking,
             touch_gestures_off: settings.touch_gestures_off,
             image_auto_restart: settings.image_auto_restart,
+            host_certificates: settings.host_certificates,
+            app_full_screen: settings.app_full_screen.resolved(),
+            // Checked by the caller; a value that does not check is kept as the default.
+            vulkan_driver: normalise_vulkan_driver(&settings.vulkan_driver)
+                .unwrap_or_else(|_| auto()),
         }
     }
 }
@@ -334,6 +393,35 @@ pub fn normalise_render_gpu(value: &str) -> Result<String, String> {
         "display" | "integrated" | "discrete" => lower,
         _ => trimmed.to_string(),
     })
+}
+
+/// Checks a render GPU value a user asks for against the GPUs of this computer, the names
+/// `dsa gpus` lists, and writes it the way it is kept. A keyword (`display`, the automatic
+/// choice, `integrated` or `discrete`) is always taken. A name must be part of one of `gpus`,
+/// ignoring case, as the renderer matches it: a value no GPU has would leave the renderer to
+/// rank the GPUs itself while the settings still showed the value as chosen. An empty `gpus`
+/// means the platform cannot list its GPUs, so a name is kept as given.
+pub fn check_render_gpu_choice<S: AsRef<str>>(value: &str, gpus: &[S]) -> Result<String, String> {
+    let kept = normalise_render_gpu(value)?;
+    if matches!(kept.as_str(), "display" | "integrated" | "discrete") || gpus.is_empty() {
+        return Ok(kept);
+    }
+    let wanted = kept.to_lowercase();
+    if gpus
+        .iter()
+        .any(|gpu| gpu.as_ref().to_lowercase().contains(&wanted))
+    {
+        return Ok(kept);
+    }
+    let names = gpus
+        .iter()
+        .map(|gpu| format!("\"{}\"", gpu.as_ref()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(format!(
+        "no GPU of this computer has \"{kept}\" in its name; use display (the GPU that drives \
+         the primary monitor), integrated, discrete or part of one of these names: {names}"
+    ))
 }
 
 /// The name a user's files in the service's folder start with. The identity becomes a file
@@ -402,6 +490,16 @@ pub trait SettingsStore: Send + Sync {
     fn set_gapps(&self, user: &str, package: Option<&GappsPackage>) -> Result<(), String> {
         let _ = (user, package);
         Err("this service keeps no Google apps".into())
+    }
+    /// The Widevine module `user` has installed, if any.
+    fn widevine(&self, user: &str) -> Result<Option<WidevinePackage>, String> {
+        let _ = user;
+        Ok(None)
+    }
+    /// Records the Widevine module `user` has installed, or that there is none.
+    fn set_widevine(&self, user: &str, package: Option<&WidevinePackage>) -> Result<(), String> {
+        let _ = (user, package);
+        Err("this service keeps no Widevine module".into())
     }
     /// The root elevation level of each of `user`'s apps that has one other than off, by
     /// package name. Apps the user has not set are off and are not listed.
@@ -510,6 +608,13 @@ impl FileSettings {
             .join(format!("{}.gapps.json", user_file_stem(user)?)))
     }
 
+    fn widevine_file(&self, user: &str) -> Result<PathBuf, String> {
+        Ok(self
+            .dir
+            .join("users")
+            .join(format!("{}.widevine.json", user_file_stem(user)?)))
+    }
+
     fn root_apps_file(&self, user: &str) -> Result<PathBuf, String> {
         Ok(self
             .dir
@@ -607,6 +712,10 @@ fn combine(mine: UserSettings, machine: MachineSettings) -> Settings {
             .unwrap_or_else(|_| file_share::known_folders(&mine.shared_folders)),
         touch_gestures_off: mine.touch_gestures_off,
         image_auto_restart: mine.image_auto_restart,
+        host_certificates: mine.host_certificates,
+        app_full_screen: mine.app_full_screen.resolved(),
+        // A value a later release no longer knows reads as the default.
+        vulkan_driver: normalise_vulkan_driver(&mine.vulkan_driver).unwrap_or_else(|_| auto()),
     }
 }
 
@@ -632,6 +741,7 @@ impl SettingsStore for FileSettings {
 
     fn set(&self, user: &str, settings: &Settings) -> Result<Settings, String> {
         let render_gpu = normalise_render_gpu(&settings.render_gpu)?;
+        let vulkan_driver = normalise_vulkan_driver(&settings.vulkan_driver)?;
         let shared_folders = file_share::normalise_folders(&settings.shared_folders)?;
         let user_file = self.user_file(user)?;
         let _held = self.lock.lock().unwrap_or_else(|e| e.into_inner());
@@ -642,6 +752,7 @@ impl SettingsStore for FileSettings {
         write_json(&self.machine_file(), &machine_part(settings))?;
         Ok(Settings {
             render_gpu,
+            vulkan_driver,
             adb_port: normalise_adb_port(settings.adb_port),
             shared_folders,
             ..settings.clone()
@@ -737,6 +848,25 @@ impl SettingsStore for FileSettings {
         }
     }
 
+    fn widevine(&self, user: &str) -> Result<Option<WidevinePackage>, String> {
+        let file = self.widevine_file(user)?;
+        let _held = self.lock.lock().unwrap_or_else(|e| e.into_inner());
+        read_json(&file)
+    }
+
+    fn set_widevine(&self, user: &str, package: Option<&WidevinePackage>) -> Result<(), String> {
+        let file = self.widevine_file(user)?;
+        let _held = self.lock.lock().unwrap_or_else(|e| e.into_inner());
+        match package {
+            Some(package) => write_json(&file, package),
+            None => match std::fs::remove_file(&file) {
+                Ok(()) => Ok(()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(e) => Err(format!("removing {}: {e}", file.display())),
+            },
+        }
+    }
+
     fn root_apps(&self, user: &str) -> Result<Vec<RootApp>, String> {
         let file = self.root_apps_file(user)?;
         let _held = self.lock.lock().unwrap_or_else(|e| e.into_inner());
@@ -747,14 +877,7 @@ impl SettingsStore for FileSettings {
         let file = self.root_apps_file(user)?;
         let _held = self.lock.lock().unwrap_or_else(|e| e.into_inner());
         let mut apps = read_json::<Vec<RootApp>>(&file)?.unwrap_or_default();
-        apps.retain(|app| app.package != package);
-        if level != crate::root_elevation::default_level(package).code() {
-            apps.push(RootApp {
-                package: package.to_string(),
-                level: level.to_string(),
-            });
-        }
-        apps.sort_by(|a, b| a.package.cmp(&b.package));
+        update_root_apps(&mut apps, package, level);
         if apps.is_empty() {
             match std::fs::remove_file(&file) {
                 Ok(()) => Ok(()),
@@ -767,6 +890,23 @@ impl SettingsStore for FileSettings {
     }
 }
 
+/// Sets `package`'s level among `apps`. The adb shell item is kept only while it differs from
+/// its default (ask). An app's level is kept even when it is off: apps that share an Android
+/// user ID are one group, and one of them set to off keeps the whole group off, which an app
+/// merely left at the default does not.
+fn update_root_apps(apps: &mut Vec<RootApp>, package: &str, level: &str) {
+    apps.retain(|app| app.package != package);
+    if !crate::root_elevation::is_adb_shell(package)
+        || level != crate::root_elevation::default_level(package).code()
+    {
+        apps.push(RootApp {
+            package: package.to_string(),
+            level: level.to_string(),
+        });
+    }
+    apps.sort_by(|a, b| a.package.cmp(&b.package));
+}
+
 /// Settings kept in memory, for tests and for a service that keeps no folder.
 #[derive(Default)]
 pub struct MemorySettings {
@@ -776,6 +916,7 @@ pub struct MemorySettings {
     arm_translation_boot: Mutex<std::collections::HashMap<String, Translator>>,
     app_windows: Mutex<std::collections::HashMap<String, Vec<AppWindowSettings>>>,
     gapps: Mutex<std::collections::HashMap<String, GappsPackage>>,
+    widevine: Mutex<std::collections::HashMap<String, WidevinePackage>>,
     root_apps: Mutex<std::collections::HashMap<String, Vec<RootApp>>>,
 }
 
@@ -793,6 +934,7 @@ impl SettingsStore for MemorySettings {
 
     fn set(&self, user: &str, settings: &Settings) -> Result<Settings, String> {
         let render_gpu = normalise_render_gpu(&settings.render_gpu)?;
+        let vulkan_driver = normalise_vulkan_driver(&settings.vulkan_driver)?;
         let shared_folders = file_share::normalise_folders(&settings.shared_folders)?;
         self.users.lock().unwrap_or_else(|e| e.into_inner()).insert(
             user.to_string(),
@@ -801,6 +943,7 @@ impl SettingsStore for MemorySettings {
         *self.machine.lock().unwrap_or_else(|e| e.into_inner()) = machine_part(settings);
         Ok(Settings {
             render_gpu,
+            vulkan_driver,
             adb_port: normalise_adb_port(settings.adb_port),
             shared_folders,
             ..settings.clone()
@@ -898,6 +1041,24 @@ impl SettingsStore for MemorySettings {
         Ok(())
     }
 
+    fn widevine(&self, user: &str) -> Result<Option<WidevinePackage>, String> {
+        Ok(self
+            .widevine
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(user)
+            .cloned())
+    }
+
+    fn set_widevine(&self, user: &str, package: Option<&WidevinePackage>) -> Result<(), String> {
+        let mut packages = self.widevine.lock().unwrap_or_else(|e| e.into_inner());
+        match package {
+            Some(package) => packages.insert(user.to_string(), package.clone()),
+            None => packages.remove(user),
+        };
+        Ok(())
+    }
+
     fn root_apps(&self, user: &str) -> Result<Vec<RootApp>, String> {
         Ok(self
             .root_apps
@@ -911,14 +1072,7 @@ impl SettingsStore for MemorySettings {
     fn set_root_app(&self, user: &str, package: &str, level: &str) -> Result<(), String> {
         let mut all = self.root_apps.lock().unwrap_or_else(|e| e.into_inner());
         let apps = all.entry(user.to_string()).or_default();
-        apps.retain(|app| app.package != package);
-        if level != crate::root_elevation::default_level(package).code() {
-            apps.push(RootApp {
-                package: package.to_string(),
-                level: level.to_string(),
-            });
-        }
-        apps.sort_by(|a, b| a.package.cmp(&b.package));
+        update_root_apps(apps, package, level);
         Ok(())
     }
 }
@@ -1012,11 +1166,15 @@ mod tests {
                     shared_folders: vec!["Pictures".into()],
                     touch_gestures_off: false,
                     image_auto_restart: true,
+                    host_certificates: true,
                     root_elevation: false,
+                    app_full_screen: crate::app_windows::FullScreenDefaults::default(),
+                    vulkan_driver: " Dozen ".into(),
                 },
             )
             .unwrap();
         assert_eq!(saved.render_gpu, "discrete");
+        assert_eq!(saved.vulkan_driver, "dozen");
 
         let again = FileSettings::new(&dir);
         let mine = again.get("S-1-5-21-1-2-3-1001").unwrap();
@@ -1032,6 +1190,70 @@ mod tests {
         assert!(!theirs.program_updates);
         assert!(!again.machine().program_updates);
         assert!(theirs.prerelease_updates, "the channel is the machine's");
+        assert_eq!(mine.vulkan_driver, "dozen");
+        assert_eq!(
+            theirs.vulkan_driver, "auto",
+            "the Vulkan driver is the user's own"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn pr3_the_vulkan_driver_is_auto_native_or_dozen_and_nothing_else() {
+        assert_eq!(Settings::default().vulkan_driver, "auto");
+        assert_eq!(UserSettings::default().vulkan_driver, "auto");
+        assert_eq!(normalise_vulkan_driver(" Native ").unwrap(), "native");
+        assert_eq!(normalise_vulkan_driver("DOZEN").unwrap(), "dozen");
+        assert_eq!(normalise_vulkan_driver("auto").unwrap(), "auto");
+        for bad in ["", "swiftshader", "dzn", "warp"] {
+            let refused = normalise_vulkan_driver(bad).unwrap_err();
+            assert!(
+                refused.contains("auto") && refused.contains("dozen"),
+                "{refused}"
+            );
+        }
+    }
+
+    #[test]
+    fn pr3_an_invalid_vulkan_driver_changes_nothing() {
+        let dir = scratch("invalid-vulkan");
+        let store = FileSettings::new(&dir);
+        let error = store
+            .set(
+                "uid:1000",
+                &Settings {
+                    vulkan_driver: "lavapipe".into(),
+                    ..Settings::default()
+                },
+            )
+            .unwrap_err();
+        assert!(error.contains("Vulkan driver"), "{error}");
+        assert!(!dir.exists(), "nothing was written");
+        let memory = MemorySettings::default();
+        assert!(memory
+            .set(
+                "uid:1000",
+                &Settings {
+                    vulkan_driver: "lavapipe".into(),
+                    ..Settings::default()
+                }
+            )
+            .is_err());
+        assert_eq!(memory.get("uid:1000").unwrap().vulkan_driver, "auto");
+    }
+
+    #[test]
+    fn pr3_a_settings_file_without_the_vulkan_driver_reads_as_auto() {
+        let dir = scratch("vulkan-missing");
+        std::fs::create_dir_all(dir.join("users")).unwrap();
+        std::fs::write(
+            dir.join("users").join("uid_1000.json"),
+            r#"{"render_gpu": "display", "vulkan_driver": "something-newer"}"#,
+        )
+        .unwrap();
+        let store = FileSettings::new(&dir);
+        assert_eq!(store.get("uid:1000").unwrap().vulkan_driver, "auto");
+        assert_eq!(store.get("uid:1001").unwrap().vulkan_driver, "auto");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -1201,6 +1423,53 @@ mod tests {
     }
 
     #[test]
+    fn pr3_a_render_gpu_no_gpu_of_this_computer_has_is_rejected() {
+        // The GPUs `dsa gpus` listed on the reporter's laptop.
+        let gpus = ["Intel(R) UHD Graphics"];
+        let refused = check_render_gpu_choice("bogusvalue", &gpus).unwrap_err();
+        assert!(refused.contains("\"bogusvalue\""), "{refused}");
+        assert!(refused.contains("\"Intel(R) UHD Graphics\""), "{refused}");
+        assert!(refused.contains("display"), "{refused}");
+        assert!(check_render_gpu_choice("RTX", &gpus).is_err());
+        assert!(check_render_gpu_choice("  ", &gpus).is_err());
+    }
+
+    #[test]
+    fn pr3_a_render_gpu_keyword_or_part_of_a_listed_name_is_taken() {
+        let gpus = [
+            "Intel(R) Arc(TM) Graphics",
+            "NVIDIA GeForce RTX 4050 Laptop GPU",
+        ];
+        // The automatic choice and the other keywords are taken whatever the GPUs are.
+        assert_eq!(
+            check_render_gpu_choice("display", &gpus).unwrap(),
+            "display"
+        );
+        assert_eq!(
+            check_render_gpu_choice("Display", &gpus).unwrap(),
+            "display"
+        );
+        assert_eq!(
+            check_render_gpu_choice("INTEGRATED", &gpus).unwrap(),
+            "integrated"
+        );
+        assert_eq!(
+            check_render_gpu_choice("discrete", &gpus).unwrap(),
+            "discrete"
+        );
+        // A name matches ignoring case, as the renderer matches it, and keeps its case.
+        assert_eq!(
+            check_render_gpu_choice(" rtx 4050 ", &gpus).unwrap(),
+            "rtx 4050"
+        );
+        assert_eq!(check_render_gpu_choice("Arc", &gpus).unwrap(), "Arc");
+        // A platform that cannot list its GPUs keeps a name as given.
+        let none: [&str; 0] = [];
+        assert_eq!(check_render_gpu_choice("Arc", &none).unwrap(), "Arc");
+        assert!(check_render_gpu_choice("", &none).is_err());
+    }
+
+    #[test]
     fn fr17_a_user_without_settings_keeps_the_gpu_chosen_before() {
         let dir = scratch("previous");
         let store = FileSettings::new(&dir).with_previous_render_gpu(Box::new(|user| {
@@ -1316,6 +1585,33 @@ mod tests {
     }
 
     #[test]
+    fn fr28_host_certificates_are_trusted_by_default_and_kept_per_user() {
+        let dir = scratch("host-certificates");
+        let store = FileSettings::new(&dir);
+        assert!(store.get("uid:1000").unwrap().host_certificates);
+        let saved = store
+            .set(
+                "uid:1000",
+                &Settings {
+                    host_certificates: false,
+                    ..Settings::default()
+                },
+            )
+            .unwrap();
+        assert!(!saved.host_certificates);
+        let again = FileSettings::new(&dir);
+        assert!(!again.get("uid:1000").unwrap().host_certificates);
+        assert!(
+            again.get("uid:1001").unwrap().host_certificates,
+            "the user's own"
+        );
+        // A file kept by a release without the setting reads as on.
+        std::fs::write(dir.join("users").join("uid_1002.json"), "{}").unwrap();
+        assert!(again.get("uid:1002").unwrap().host_certificates);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn fr5_touch_gestures_off_is_on_by_default_and_kept_per_user() {
         let dir = scratch("touch-gestures");
         let store = FileSettings::new(&dir);
@@ -1336,6 +1632,55 @@ mod tests {
             again.get("uid:1001").unwrap().touch_gestures_off,
             "the user's own"
         );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fr30_the_full_screen_defaults_are_kept_per_user() {
+        use crate::app_windows::FullScreenPlace;
+        let dir = scratch("app-full-screen");
+        let store = FileSettings::new(&dir);
+        assert_eq!(
+            store.get("uid:1000").unwrap().app_full_screen,
+            FullScreenDefaults::default()
+        );
+        let chosen = FullScreenDefaults {
+            fullscreen: FullScreenPlace::Window,
+            immersive: FullScreenPlace::Screen,
+        };
+        let saved = store
+            .set(
+                "uid:1000",
+                &Settings {
+                    app_full_screen: chosen,
+                    ..Settings::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(saved.app_full_screen, chosen);
+        let again = FileSettings::new(&dir);
+        assert_eq!(again.get("uid:1000").unwrap().app_full_screen, chosen);
+        assert_eq!(
+            again.get("uid:1001").unwrap().app_full_screen,
+            FullScreenDefaults::default(),
+            "the user's own"
+        );
+        // A part left to the default is kept as DSA's default for it.
+        let unset = store
+            .set(
+                "uid:1000",
+                &Settings {
+                    app_full_screen: FullScreenDefaults {
+                        fullscreen: FullScreenPlace::Default,
+                        immersive: FullScreenPlace::Default,
+                    },
+                    ..Settings::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(unset.app_full_screen, FullScreenDefaults::default());
+        let old: UserSettings = serde_json::from_str(r#"{"clipboard": false}"#).unwrap();
+        assert_eq!(old.app_full_screen, FullScreenDefaults::default());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -1459,6 +1804,31 @@ mod tests {
         assert_eq!(again.gapps("uid:1000").unwrap(), None);
         // Removing what is not there is not an error.
         again.set_gapps("uid:1000", None).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fr37_the_widevine_module_a_user_installed_is_kept_per_user() {
+        let dir = scratch("widevine");
+        let store = FileSettings::new(&dir);
+        assert_eq!(store.widevine("uid:1000").unwrap(), None);
+        let package = WidevinePackage {
+            apex: "com.google.android.widevine.apex".into(),
+            version: "BE2A.250530.026.F3 (API 36, r7)".into(),
+            android_major: 16,
+            abi: "x86_64".into(),
+            source: "https://dl.google.com/android/repository/sys-img/google_apis/x.zip".into(),
+            size: 4096,
+            sha256: "0".repeat(64),
+            license: "android-sdk-license".into(),
+        };
+        store.set_widevine("uid:1000", Some(&package)).unwrap();
+        let again = FileSettings::new(&dir);
+        assert_eq!(again.widevine("uid:1000").unwrap(), Some(package));
+        assert_eq!(again.widevine("uid:1001").unwrap(), None);
+        again.set_widevine("uid:1000", None).unwrap();
+        assert_eq!(again.widevine("uid:1000").unwrap(), None);
+        again.set_widevine("uid:1000", None).unwrap();
         let _ = std::fs::remove_dir_all(&dir);
     }
 

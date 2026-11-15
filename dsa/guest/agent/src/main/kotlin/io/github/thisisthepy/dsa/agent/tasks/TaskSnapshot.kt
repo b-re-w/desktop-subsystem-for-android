@@ -43,16 +43,23 @@ data class TaskSnapshot(
     val minWidth: Int = 0,
     val minHeight: Int = 0,
     /**
-     * What the task's app told the system about its status bar's icons, which the host's
-     * caption buttons follow.
+     * What the task's app tells the system about its status bar's icons now, which the host's
+     * caption buttons follow: filled in by the agent from the window manager's live reports
+     * ([SystemBarAppearances]); unknown while the app has expressed nothing.
      */
     val statusBar: StatusBarAppearance = StatusBarAppearance.UNKNOWN,
     /** The status bar color the app set, as ARGB; 0 when it set none. */
     val statusBarColor: Int = 0,
     /** The orientation the task's top activity is locked to, which the host's window keeps. */
     val orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
-    /** Whether the task's app asked to fill the screen: it left the freeform windowing mode. */
-    val fullscreen: Boolean = false,
+    /** Which kind of full screen the task's app asks for, if any ([fullScreenRequest]). */
+    val fullscreenRequest: FullScreenRequest = FullScreenRequest.NONE,
+    /**
+     * Whether the task is in the fullscreen windowing mode: its app left freeform for it. The
+     * host is not told it; the agent keeps such a task in its window when the host says so
+     * ([FullScreenHolds]).
+     */
+    val leftFreeform: Boolean = false,
     /** Whether the task's app went into picture-in-picture. */
     val pictureInPicture: Boolean = false,
     /**
@@ -60,8 +67,22 @@ data class TaskSnapshot(
      * background), as apps do on Android's own desktop windows.
      */
     val transparentCaption: Boolean = false,
-    /** Whether the task is past its first activity, so Back has somewhere to go. */
+    /**
+     * Whether the task's app starts below the title bar, as the host's user chose for the app:
+     * filled in by the agent ([io.github.thisisthepy.dsa.agent.windowing.BelowTitleBar]). Such
+     * a task is never reported with [transparentCaption]: the band is the host's.
+     */
+    val belowTitleBar: Boolean = false,
+    /**
+     * Whether Back in the task lands on a screen the user saw, so the host draws the back
+     * arrow: filled in by the agent from [stack] ([BackStacks]).
+     */
     val canGoBack: Boolean = false,
+    /**
+     * The task's activities as far as Back is concerned; null for a task whose Back the agent
+     * never offers (a widget's setup), which keeps [canGoBack] as it is.
+     */
+    val stack: TaskStack? = null,
     /**
      * Whether the task's top activity says it handles a change of density itself (its
      * manifest's configChanges include density), so Android redraws it at a new density
@@ -82,7 +103,29 @@ data class TaskSnapshot(
      * [transparentCaption] is set.
      */
     val captionInteractive: List<TaskBounds> = emptyList(),
-)
+) {
+    /** Whether the task's app asks to fill the screen, in either way. */
+    val fullscreen: Boolean get() = fullscreenRequest != FullScreenRequest.NONE
+}
+
+/**
+ * How a task's app asks to fill the screen. The host shows each kind as the user's setting
+ * for it says: on the whole screen or inside the window.
+ */
+enum class FullScreenRequest {
+    /** It does not. */
+    NONE,
+
+    /**
+     * A clear request: the task left freeform for the fullscreen windowing mode, its top
+     * activity's theme sets android:windowFullscreen, or it hides both system bars while it
+     * asks for landscape.
+     */
+    EXPLICIT,
+
+    /** It hides both system bars and asks for no landscape orientation (immersive mode). */
+    BARS_HIDDEN,
+}
 
 /**
  * Whether an app asked to fill the screen by hiding its bars (immersive mode): the window
@@ -182,14 +225,45 @@ fun restartedByFontScale(tasks: List<TaskSnapshot>): List<String> =
 
 /**
  * Whether a task's app asked to fill the screen, in any of the ways an app asks: its task left
- * the freeform windowing mode for fullscreen ([fullscreenMode]), it hides both its status and
- * navigation bars ([requestedVisibleTypes], see [hidesBothSystemBars]), or its top activity's
- * theme sets android:windowFullscreen ([fullscreenTheme]). The theme is read from the app's
- * manifest before any of its code runs, so a task that asks this way is known to fill the
- * screen from the moment it is created, before its activity has a window.
+ * the freeform windowing mode for fullscreen ([fullscreenMode]), its top activity's theme sets
+ * android:windowFullscreen ([fullscreenTheme]), or it hides both its status and navigation
+ * bars ([requestedVisibleTypes], see [hidesBothSystemBars]) while it asks for landscape
+ * ([orientation]). The theme is read from the app's manifest before any of its code runs, so
+ * a task that asks this way is known to fill the screen from the moment it is created, before
+ * its activity has a window.
+ *
+ * Hiding both bars alone does not count. A phone app hides them to fill the screen it is in,
+ * which in a window is the window: YouTube's Shorts feed does on every visit, and turning its
+ * window into a monitor-filling one without a title bar (and without minimize) took away the
+ * window the user had. A video player's or a game's full screen button on a phone hides the
+ * bars and turns the phone on its side, so the two together are the request.
  */
-fun asksForFullScreen(fullscreenMode: Boolean, requestedVisibleTypes: Int?, fullscreenTheme: Boolean): Boolean =
-    fullscreenMode || fullscreenTheme || hidesBothSystemBars(requestedVisibleTypes)
+fun asksForFullScreen(
+    fullscreenMode: Boolean,
+    requestedVisibleTypes: Int?,
+    fullscreenTheme: Boolean,
+    orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
+): Boolean =
+    fullScreenRequest(fullscreenMode, requestedVisibleTypes, fullscreenTheme, orientation) ==
+        FullScreenRequest.EXPLICIT
+
+/**
+ * Which kind of full screen a task's app asks for: [FullScreenRequest.EXPLICIT] in the ways
+ * [asksForFullScreen] counts, [FullScreenRequest.BARS_HIDDEN] when it hides both its bars
+ * without landscape, which the agent reports apart so the host can keep it inside its window
+ * (the default) or fill the screen with it, as the user chose.
+ */
+fun fullScreenRequest(
+    fullscreenMode: Boolean,
+    requestedVisibleTypes: Int?,
+    fullscreenTheme: Boolean,
+    orientation: TaskOrientation = TaskOrientation.UNSPECIFIED,
+): FullScreenRequest = when {
+    fullscreenMode || fullscreenTheme -> FullScreenRequest.EXPLICIT
+    !hidesBothSystemBars(requestedVisibleTypes) -> FullScreenRequest.NONE
+    orientation == TaskOrientation.LANDSCAPE -> FullScreenRequest.EXPLICIT
+    else -> FullScreenRequest.BARS_HIDDEN
+}
 
 /**
  * The bounds the agent starts an app at, on a display of [displayWidth] by [displayHeight]

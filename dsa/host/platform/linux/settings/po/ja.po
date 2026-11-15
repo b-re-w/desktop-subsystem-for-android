@@ -1,0 +1,1840 @@
+# Japanese translation of DSA Settings for Linux.
+# This file is distributed under the same licence as Desktop Subsystem for Android.
+msgid ""
+msgstr ""
+"Project-Id-Version: dsa-settings\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "The dsa command could not be started. Reinstall DSA."
+msgstr "dsa コマンドを起動できませんでした。DSA を再インストールしてください。"
+
+msgid "The DSA service is not running."
+msgstr "DSA サービスが実行されていません。"
+
+msgid "The DSA service could not do this."
+msgstr "DSA サービスはこの操作を実行できませんでした。"
+
+msgid "The answer of the dsa command could not be read. Reinstall DSA."
+msgstr "dsa コマンドの応答を読み取れませんでした。DSA を再インストールしてください。"
+
+msgid "The setting was not changed, because an administrator's permission was not given."
+msgstr "管理者の権限が得られなかったため、設定は変更されませんでした。"
+
+msgid "Unknown"
+msgstr "不明"
+
+msgid "Stopped"
+msgstr "停止"
+
+msgid "Starting"
+msgstr "起動中"
+
+msgid "Running"
+msgstr "実行中"
+
+msgid "Dozing (idle)"
+msgstr "Doze (アイドル)"
+
+msgid "Frozen"
+msgstr "フリーズ中"
+
+msgid "Stopping"
+msgstr "停止中"
+
+msgid "Not ready"
+msgstr "準備ができていません"
+
+msgid "Virtual machine (crosvm)"
+msgstr "仮想マシン (crosvm)"
+
+msgid "Window manager"
+msgstr "ウィンドウマネージャー"
+
+msgid "Graphics renderer"
+msgstr "グラフィックスレンダラー"
+
+msgid "App window"
+msgstr "アプリウィンドウ"
+
+msgid "Process {0}, {1} private"
+msgstr "プロセス {0}、プライベート {1}"
+
+msgid "Apps and system"
+msgstr "アプリとシステム"
+
+msgid "{0} in memory, {1} compressed"
+msgstr "メモリ上 {0}、圧縮 {1}"
+
+msgid "Google Play services"
+msgstr "Google Play 開発者サービス"
+
+msgid "The Google apps you installed, {0} processes: {1}"
+msgstr "インストールした Google アプリ、{0} 個のプロセス: {1}"
+
+msgid "unknown"
+msgstr "不明"
+
+msgid "Cache"
+msgstr "キャッシュ"
+
+msgid "File contents kept in memory. Android drops them when it needs the memory."
+msgstr "メモリに保持されたファイルの内容です。メモリが必要になると Android が解放します。"
+
+msgid "Kernel caches"
+msgstr "カーネルキャッシュ"
+
+msgid "Kernel caches the kernel can free on demand."
+msgstr "カーネルが必要に応じて解放できるキャッシュです。"
+
+msgid "Shared memory"
+msgstr "共有メモリ"
+
+msgid "Compressed memory"
+msgstr "圧縮メモリ"
+
+msgid "Holds {0} of pages, compressed"
+msgstr "{0} 分のページを圧縮して保持しています"
+
+msgid "Free"
+msgstr "空き"
+
+msgid "Kernel objects"
+msgstr "カーネルオブジェクト"
+
+msgid "Memory the kernel keeps for its own data and cannot reclaim"
+msgstr "カーネルが自身のデータ用に確保し、回収できないメモリ"
+
+msgid "Thread stacks"
+msgstr "スレッドスタック"
+
+msgid "Page tables"
+msgstr "ページテーブル"
+
+msgid "Kernel mappings (vmalloc)"
+msgstr "カーネルマッピング (vmalloc)"
+
+msgid "Per-CPU data"
+msgstr "CPU ごとのデータ"
+
+msgid "Drivers"
+msgstr "ドライバー"
+
+msgid "What no counter names, such as GPU and DMA buffers"
+msgstr "GPU や DMA バッファーなど、どのカウンターにも表れないメモリ"
+
+msgid "Reserved at boot"
+msgstr "起動時に予約"
+
+msgid "Kernel code, page structures and buffers, of {0} given; contiguous area {1}"
+msgstr "割り当てられた {0} のうち、カーネルコード、ページ構造体、バッファー。連続領域 {1}"
+
+msgid "Process {0}"
+msgstr "プロセス {0}"
+
+msgid "Process {0}, Google Play services"
+msgstr "プロセス {0}、Google Play 開発者サービス"
+
+msgid "Automatic"
+msgstr "自動"
+
+msgid "The GPU of the primary monitor (recommended)"
+msgstr "プライマリモニターの GPU (推奨)"
+
+msgid "Integrated GPU"
+msgstr "内蔵 GPU"
+
+msgid "Discrete GPU (for example, for games)"
+msgstr "ディスクリート GPU (ゲーム向けなど)"
+
+msgid "Always the newest (now Android {0})"
+msgstr "常に最新 (現在は Android {0})"
+
+msgid "Android {0}"
+msgstr "Android {0}"
+
+msgid "{0} of {1} apps"
+msgstr "{1} 個中 {0} 個のアプリ"
+
+msgid "{0} apps"
+msgstr "{0} 個のアプリ"
+
+msgid "Version {0}"
+msgstr "バージョン {0}"
+
+msgid "Part of Android"
+msgstr "Android の一部"
+
+msgid "Opens at the size Android chooses"
+msgstr "Android が選んだサイズで開きます"
+
+msgid "Phone, portrait ({0} × {1})"
+msgstr "スマートフォン、縦向き ({0} × {1})"
+
+msgid "Phone, landscape ({0} × {1})"
+msgstr "スマートフォン、横向き ({0} × {1})"
+
+msgid "Tablet, portrait ({0} × {1})"
+msgstr "タブレット、縦向き ({0} × {1})"
+
+msgid "Tablet, landscape ({0} × {1})"
+msgstr "タブレット、横向き ({0} × {1})"
+
+msgid "it is no longer installed"
+msgstr "もうインストールされていません"
+
+msgid "it is part of Android"
+msgstr "Android の一部です"
+
+msgid "Android does not allow it, because the app is a device administrator or a policy keeps it"
+msgstr "アプリがデバイス管理アプリであるか、ポリシーで保持されているため、Android が許可しません"
+
+msgid "Android could not uninstall it"
+msgstr "Android がアンインストールできませんでした"
+
+msgid "it is an Android App Bundle, made to be uploaded to an app store. Get the app as an APK, or as an .xapk, .apks or .apkm bundle."
+msgstr "アプリストア提出用の Android App Bundle です。APK か .xapk、.apks、.apkm のバンドルで入手してください。"
+
+msgid "the bundle is encrypted, so its APKs cannot be read. Get the app as an APK, or as a newer bundle."
+msgstr "バンドルが暗号化されているため、APK を読み取れません。APK か、より新しいバンドルで入手してください。"
+
+msgid "a split APK of the bundle is signed with another key than its base APK, so Android would refuse it."
+msgstr "バンドル内の分割 APK がベース APK と異なる鍵で署名されているため、Android は拒否します。"
+
+msgid "the bundle is not one app that Android can install."
+msgstr "このバンドルは、Android がインストールできる 1 つのアプリではありません。"
+
+msgid "the app has no 64-bit code that DSA's Android runs: x86_64, or arm64-v8a through ARM translation. Get one of those builds."
+msgstr "アプリに DSA で動く 64 ビットコード (x86_64 か、ARM 変換経由の arm64-v8a) がありません。どちらかのビルドを入手してください。"
+
+msgid "the app has only ARM code (arm64-v8a), and ARM translation is off. Turn it on under ARM apps, restart Android and install it again."
+msgstr "ARM コード (arm64-v8a) のみのアプリで、ARM 変換がオフです。「ARM アプリ」でオンにし、Android を再起動して再インストールしてください。"
+
+msgid "the app does not run on this Android: it needs another processor type, a newer Android version or a feature this device does not have."
+msgstr "この Android では動かないアプリです。別のプロセッサー、新しい Android バージョン、またはこのデバイスにない機能が必要です。"
+
+msgid "the app is installed already, signed with another key. Uninstall it in Android first."
+msgstr "別の鍵で署名された同じアプリがすでにインストールされています。先に Android でアンインストールしてください。"
+
+msgid "the file is not a signed APK that Android can read."
+msgstr "Android が読み取れる署名済みの APK ファイルではありません。"
+
+msgid "Android has no room for the app."
+msgstr "Android にアプリをインストールする空き容量がありません。"
+
+msgid "a newer version of the app is installed. Uninstall it in Android first."
+msgstr "より新しいバージョンのアプリがインストールされています。先に Android でアンインストールしてください。"
+
+msgid "a policy of this Android does not allow the app."
+msgstr "この Android のポリシーでアプリが許可されていません。"
+
+msgid "Android did not install the app."
+msgstr "Android はアプリをインストールしませんでした。"
+
+msgid "Not supported: no ARM translation package is installed."
+msgstr "非対応: ARM 変換パッケージがインストールされていません。"
+
+msgid "Not supported: {0} {1} is installed but turned off."
+msgstr "非対応: {0} {1} はインストールされていますが、オフになっています。"
+
+msgid "Not supported: {0} {1} is turned off."
+msgstr "非対応: {0} {1} がオフになっています。"
+
+msgid "Supported by {0} {1} ({2}), the translator that comes with this Android."
+msgstr "この Android に付属する変換ツール、{0} {1} ({2}) で対応しています。"
+
+msgid "{0} {1} ({2}) comes with this Android. It is used unless you install another translator.\nGoing back to it removes the package that replaced it, from the next start of Android."
+msgstr "{0} {1} ({2}) はこの Android に付属しています。ほかの変換ツールをインストールしない限り、これが使われます。\nこれに戻すと、置き換えたパッケージが次回の Android 起動時から削除されます。"
+
+msgid "Use the default translator"
+msgstr "既定の変換ツールを使用"
+
+msgid "Use"
+msgstr "使用"
+
+msgid "licence not given"
+msgstr "ライセンスの記載なし"
+
+msgid "Supported by {0} {1} ({2})."
+msgstr "{0} {1} ({2}) で対応しています。"
+
+msgid "Android installs apps for: {0}"
+msgstr "Android がアプリをインストールする対象: {0}"
+
+msgid "Android is not running, so what it supports now is not known."
+msgstr "Android が実行されていないため、現在の対応状況はわかりません。"
+
+msgid "Connected through this computer (NAT). Android apps see it as Wi-Fi, with no data charges."
+msgstr "このコンピューターを経由して接続しています (NAT)。Android アプリからは、通信料のかからない Wi-Fi として見えます。"
+
+msgid "Connected to this computer's network as a device of its own (advanced networking)."
+msgstr "このコンピューターのネットワークに独立したデバイスとして接続しています (高度なネットワーク)。"
+
+msgid "Android is not running, so it has no network yet."
+msgstr "Android が実行されていないため、まだネットワークはありません。"
+
+msgid "The DSA service does not report the network. Update DSA to see it."
+msgstr "DSA サービスがネットワークの情報を返しません。表示するには DSA をアップデートしてください。"
+
+msgid "None"
+msgstr "なし"
+
+msgid "Manufacturer"
+msgstr "メーカー"
+
+msgid "Brand"
+msgstr "ブランド"
+
+msgid "Model"
+msgstr "モデル"
+
+msgid "Device"
+msgstr "デバイス"
+
+msgid "Product name"
+msgstr "製品名"
+
+msgid "Form factor"
+msgstr "フォームファクター"
+
+msgid "Release"
+msgstr "リリース"
+
+msgid "Build ID"
+msgstr "ビルド ID"
+
+msgid "Incremental version"
+msgstr "インクリメンタルバージョン"
+
+msgid "Build type"
+msgstr "ビルドの種類"
+
+msgid "Tags"
+msgstr "タグ"
+
+msgid "Whole fingerprint"
+msgstr "フィンガープリント全体"
+
+msgid "Verbose"
+msgstr "詳細"
+
+msgid "Debug"
+msgstr "デバッグ"
+
+msgid "Info"
+msgstr "情報"
+
+msgid "Warning"
+msgstr "警告"
+
+msgid "Error"
+msgstr "エラー"
+
+msgid "Fatal"
+msgstr "致命的"
+
+msgid "Paused. {0} new lines are waiting."
+msgstr "一時停止中です。新しい行が {0} 行待機しています。"
+
+msgid "General"
+msgstr "全般"
+
+msgid "Memory"
+msgstr "メモリ"
+
+msgid "Apps"
+msgstr "アプリ"
+
+msgid "Running in the background"
+msgstr "バックグラウンドで実行中"
+
+msgid "Widgets"
+msgstr "ウィジェット"
+
+msgid "Display and GPU"
+msgstr "ディスプレイと GPU"
+
+msgid "Android version"
+msgstr "Android のバージョン"
+
+msgid "Updates"
+msgstr "アップデート"
+
+msgid "Device identity"
+msgstr "デバイス ID"
+
+msgid "Network"
+msgstr "ネットワーク"
+
+msgid "Advanced"
+msgstr "詳細設定"
+
+msgid "Android log"
+msgstr "Android ログ"
+
+msgid "About"
+msgstr "情報"
+
+msgid "The Android apps on this computer. Open them, change them in App info, or uninstall the ones you installed.\nAndroid starts when you open this page."
+msgstr "このコンピューターの Android アプリです。開く、「アプリ情報」で変更、自分でインストールしたアプリのアンインストールができます。\nこのページを開くと Android が起動します。"
+
+msgid "Manage apps"
+msgstr "アプリの管理"
+
+msgid "Open the list of apps in Android's own settings"
+msgstr "Android の設定でアプリの一覧を開きます"
+
+msgid "The apps could not be read or changed"
+msgstr "アプリを読み取りまたは変更できませんでした"
+
+msgid "Installed apps"
+msgstr "インストール済みのアプリ"
+
+msgid "Search apps"
+msgstr "アプリを検索"
+
+msgid "Refresh"
+msgstr "更新"
+
+msgid "No app is installed in Android yet. Open an APK file to install one."
+msgstr "Android にはまだアプリがインストールされていません。APK ファイルを開くとインストールできます。"
+
+msgid "No app matches your search."
+msgstr "検索に一致するアプリはありません。"
+
+msgid "Open"
+msgstr "開く"
+
+msgid "Package"
+msgstr "パッケージ"
+
+msgid "Installed"
+msgstr "インストール済み"
+
+msgid "App info"
+msgstr "アプリ情報"
+
+msgid "Permissions, storage and notifications, in Android's settings"
+msgstr "Android の設定の権限、ストレージ、通知"
+
+msgid "Desktop shortcut"
+msgstr "デスクトップのショートカット"
+
+msgid "A shortcut on the desktop that opens the app"
+msgstr "アプリを開くデスクトップ上のショートカット"
+
+msgid "Create desktop shortcut"
+msgstr "デスクトップにショートカットを作成"
+
+msgid "The desktop shortcut could not be made"
+msgstr "デスクトップのショートカットを作成できませんでした"
+
+msgid "{0} is on the desktop."
+msgstr "{0} をデスクトップに置きました。"
+
+msgid "{0}'s windows follow the new settings from the next one that opens."
+msgstr "{0} のウィンドウは、次に開くウィンドウから新しい設定に従います。"
+
+msgid "Resizable"
+msgstr "サイズ変更可能"
+
+msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
+msgstr "このアプリのウィンドウのサイズ変更や最大化を許可するかどうかです。オフにすると、各ウィンドウは開いたときのサイズのままになります。"
+
+msgid "Start below the title bar"
+msgstr "タイトルバーの下から開始"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "上部のバーがタイトルバーに押しつぶされたり隠れたりするアプリのための設定です。\nアプリはタイトルバーの後ろに描画せず、その下から始まります。\n次にアプリのウィンドウを開いたときから適用されます。"
+
+msgid "Window size when it opens"
+msgstr "開くときのウィンドウサイズ"
+
+msgid "The size this app's windows open at"
+msgstr "このアプリのウィンドウが開くときのサイズ"
+
+msgid "Uninstall"
+msgstr "アンインストール"
+
+msgid "This app is part of Android and cannot be uninstalled."
+msgstr "このアプリは Android の一部のため、アンインストールできません。"
+
+msgid "Uninstall {0}?"
+msgstr "{0} をアンインストールしますか？"
+
+msgid "{0} and its data will be removed from Android. This cannot be undone."
+msgstr "{0} とそのデータが Android から削除されます。この操作は元に戻せません。"
+
+msgid "{0} is uninstalled."
+msgstr "{0} をアンインストールしました。"
+
+msgid "Not uninstalled"
+msgstr "アンインストールされませんでした"
+
+msgid "{0} was not uninstalled: {1} ({2})"
+msgstr "{0} はアンインストールされませんでした: {1} ({2})"
+
+msgid "These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used."
+msgstr "これらの Android アプリは、音楽の再生、ファイルのダウンロード、VPN の維持などのために、ウィンドウを閉じた後も実行を続けます。\nそれぞれトップバーにもインジケーターがあります。\nアプリを停止すると、実行中の処理が終わり、使っていたメモリが解放されます。"
+
+msgid "Stopping apps"
+msgstr "アプリの停止"
+
+msgid "Ask before stopping an app from its indicator"
+msgstr "インジケーターからアプリを停止する前に確認する"
+
+msgid "Turn this back on if you chose not to be asked again."
+msgstr "今後確認しないように選んだ場合は、ここでオンに戻せます。"
+
+msgid "The setting was not changed"
+msgstr "設定は変更されませんでした"
+
+msgid "The apps that run in the background could not be read or changed"
+msgstr "バックグラウンドで実行中のアプリを読み取りまたは変更できませんでした"
+
+msgid "No app runs in the background."
+msgstr "バックグラウンドで実行中のアプリはありません。"
+
+msgid "Playing {0}"
+msgstr "再生中: {0}"
+
+msgid "Paused: {0}"
+msgstr "一時停止中: {0}"
+
+msgid "Stop"
+msgstr "停止"
+
+msgid "{0} was stopped."
+msgstr "{0} を停止しました。"
+
+msgid "On your desktop"
+msgstr "デスクトップ上"
+
+msgid "Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page."
+msgstr "Android アプリが提供するウィジェットをデスクトップに置けます。ウィジェットごとに、ほかのウィンドウの下に専用のウィンドウが作られます。\nウィジェットを長押しすると編集できます。ドラッグで移動し、ハンドルをドラッグしてサイズを変えます。\nウィジェットを右クリックすると、設定、サイズ、「削除」が表示されます。このページを開くと Android が起動します。"
+
+msgid "Widgets your apps offer"
+msgstr "アプリが提供するウィジェット"
+
+msgid "Widgets could not be read or changed"
+msgstr "ウィジェットを読み取りまたは変更できませんでした"
+
+msgid "No widget is on your desktop yet."
+msgstr "デスクトップにはまだウィジェットがありません。"
+
+msgid "No app in Android offers a widget."
+msgstr "ウィジェットを提供する Android アプリはありません。"
+
+msgid "At {0}, {1}, {2} × {3}"
+msgstr "位置 {0}, {1}、サイズ {2} × {3}"
+
+msgid "Remove"
+msgstr "削除"
+
+msgid "{0} was removed from your desktop."
+msgstr "{0} をデスクトップから削除しました。"
+
+msgid "asks you to set it up"
+msgstr "配置時に設定を求めます"
+
+msgid "Add to desktop"
+msgstr "デスクトップに追加"
+
+msgid "{0} is on your desktop."
+msgstr "{0} をデスクトップに置きました。"
+
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgid "The folder could not be opened"
+msgstr "フォルダーを開けませんでした"
+
+msgid "{0} does not exist yet, or you may not open it."
+msgstr "{0} はまだ存在しないか、開く権限がありません。"
+
+msgid "Android sends its log only while this page is open, and nothing is written to disk.\nSave diagnostics gathers what a problem report needs into one zip file."
+msgstr "Android はこのページが開いている間だけログを送信し、ディスクには何も書き込みません。\n「診断情報を保存」で、問題の報告に必要な情報を 1 つの zip ファイルにまとめます。"
+
+msgid "Filter by tag or text"
+msgstr "タグまたはテキストで絞り込み"
+
+msgid "Pause"
+msgstr "一時停止"
+
+msgid "Save diagnostics"
+msgstr "診断情報を保存"
+
+msgid "The log cannot be read"
+msgstr "ログを読み取れません"
+
+msgid "Gathering the diagnostics. This takes a minute or more."
+msgstr "診断情報を収集しています。1 分以上かかります。"
+
+msgid "Saved the diagnostics to {0}."
+msgstr "診断情報を {0} に保存しました。"
+
+msgid "DSA Settings"
+msgstr "DSA 設定"
+
+msgid "Not installed"
+msgstr "インストールされませんでした"
+
+msgid "Only APK files and split APK bundles can be installed: {0}"
+msgstr "インストールできるのは APK ファイルと分割 APK バンドルだけです: {0}"
+
+msgid "Installing {0} in Android…"
+msgstr "{0} を Android にインストールしています…"
+
+msgid "{0} is installed ({1}). Open it from the app grid."
+msgstr "{0} をインストールしました ({1})。アプリ一覧から開けます。"
+
+msgid "{0} was not installed: {1} ({2})"
+msgstr "{0} はインストールされませんでした: {1} ({2})"
+
+msgid "{0} did not reach Android. {1}"
+msgstr "{0} は Android に届きませんでした。{1}"
+
+msgid "State"
+msgstr "状態"
+
+msgid "Desktop Subsystem for Android™ runs Android in its own lightweight virtual machine and shows each app in its own window."
+msgstr "Desktop Subsystem for Android™ は Android を専用の軽量仮想マシンで実行し、アプリをそれぞれ専用のウィンドウで表示します。"
+
+msgid "Android"
+msgstr "Android"
+
+msgid "Start"
+msgstr "起動"
+
+msgid "Android is not ready"
+msgstr "Android の準備ができていません"
+
+msgid "Last stopped"
+msgstr "前回の停止"
+
+msgid "Update"
+msgstr "アップデート"
+
+msgid "More"
+msgstr "その他"
+
+msgid "Freeze Android now"
+msgstr "今すぐ Android をフリーズ"
+
+msgid "Stops every process in Android until you open one of its windows again. Notifications, alarms and widgets stop with it."
+msgstr "Android のウィンドウをもう一度開くまで、Android のすべてのプロセスを停止します。通知、アラーム、ウィジェットも止まります。"
+
+msgid "Freeze"
+msgstr "フリーズ"
+
+msgid "Open my log folder"
+msgstr "自分のログフォルダーを開く"
+
+msgid "The logs of the window manager and the app windows, for reporting a problem."
+msgstr "ウィンドウマネージャーとアプリウィンドウのログです。問題の報告に使います。"
+
+msgid "Open the service's log folder (administrators)"
+msgstr "サービスのログフォルダーを開く (管理者)"
+
+msgid "The logs of the DSA service and of Android itself."
+msgstr "DSA サービスと Android 自体のログです。"
+
+msgid "Ask the DSA service for the state again."
+msgstr "DSA サービスに状態をもう一度問い合わせます。"
+
+msgid "Something went wrong"
+msgstr "問題が発生しました"
+
+msgid "On this computer"
+msgstr "このコンピューター上"
+
+msgid "In use on this computer"
+msgstr "このコンピューターで使用中"
+
+msgid "The RAM the virtual machine, the window manager and the app windows hold now."
+msgstr "仮想マシン、ウィンドウマネージャー、アプリウィンドウが現在使用している RAM です。"
+
+msgid "Android's VM now"
+msgstr "現在の Android の VM"
+
+msgid "The memory the VM holds on this computer, and how much of it Android uses"
+msgstr "VM がこのコンピューターで確保しているメモリと、そのうち Android が使用している量"
+
+msgid "Inside Android"
+msgstr "Android の内部"
+
+msgid "Available to Android"
+msgstr "Android が使用可能"
+
+msgid "Android's kernel"
+msgstr "Android のカーネル"
+
+msgid "Largest processes"
+msgstr "メモリ使用量の多いプロセス"
+
+msgid "Memory limit"
+msgstr "メモリの上限"
+
+msgid "The most memory Android may grow to. Android takes only what it needs and returns the rest at once.\nAutomatic sets no fixed limit: up to this computer's memory less what Linux keeps.\nTakes effect the next time Android starts."
+msgstr "Android が使えるメモリの最大量です。Android は必要な分だけ使い、残りはすぐに返します。\n「自動」では固定の上限はなく、このコンピューターのメモリから Linux が確保する分を除いた量まで使えます。\n次回の Android 起動時に反映されます。"
+
+msgid "The memory could not be measured"
+msgstr "メモリを計測できませんでした"
+
+msgid "{0}: used by Android {1}, free, not yet returned {2}"
+msgstr "{0}: Android が使用 {1}、空きだが未返却 {2}"
+
+msgid "Android is not running, so it takes no memory on this computer."
+msgstr "Android が実行されていないため、このコンピューターのメモリを使っていません。"
+
+msgid "No report yet. Android reports how it uses its memory a few minutes after it starts."
+msgstr "まだ報告がありません。Android は起動して数分後に、メモリの使用状況を報告します。"
+
+msgid "Reported {0} seconds ago"
+msgstr "{0} 秒前に報告"
+
+msgid "{0} available of {1}"
+msgstr "{1} 中 {0} 使用可能"
+
+msgid "Render GPU"
+msgstr "レンダリング GPU"
+
+msgid "The GPU that draws Android apps.\nThe default, the primary monitor's GPU, keeps frames on one GPU and lets a laptop's discrete GPU sleep."
+msgstr "Android アプリを描画する GPU です。\n既定のプライマリモニターの GPU では、フレームが 1 つの GPU にとどまり、ノート PC のディスクリート GPU を休ませられます。"
+
+msgid "A new render GPU takes effect when the window manager starts again: at the next sign-in, or when you restart it below."
+msgstr "新しいレンダリング GPU は、ウィンドウマネージャーの再起動時に反映されます。次回のログイン時か、下で再起動したときです。"
+
+msgid "GPU of the primary monitor"
+msgstr "プライマリモニターの GPU"
+
+msgid "What the default choice renders on now."
+msgstr "既定の選択で現在描画に使われている GPU です。"
+
+msgid "Restart the window manager"
+msgstr "ウィンドウマネージャーを再起動"
+
+msgid "Open Android app windows close and come back."
+msgstr "開いている Android アプリのウィンドウはいったん閉じて、再び開きます。"
+
+msgid "Restart"
+msgstr "再起動"
+
+msgid "Restart the window manager?"
+msgstr "ウィンドウマネージャーを再起動しますか？"
+
+msgid "The windows of Android apps close for a moment. Android and its apps keep running."
+msgstr "Android アプリのウィンドウが一時的に閉じます。Android とそのアプリは実行を続けます。"
+
+msgid "The window manager could not be restarted"
+msgstr "ウィンドウマネージャーを再起動できませんでした"
+
+msgid "Chosen by the window manager when it starts"
+msgstr "ウィンドウマネージャーの起動時に選択"
+
+msgid "Running now"
+msgstr "現在実行中"
+
+msgid "Build"
+msgstr "ビルド"
+
+msgid "Security patch level"
+msgstr "セキュリティパッチレベル"
+
+msgid "Changing the Android version"
+msgstr "Android のバージョンの変更"
+
+msgid "Every user of this computer runs the same Android version, so changing it needs an administrator.\nThe chosen version keeps getting security updates.\nWhen its support ends, DSA moves to the next version and keeps your apps."
+msgstr "このコンピューターのすべてのユーザーが同じ Android バージョンを使うため、変更には管理者が必要です。\n選んだバージョンには、引き続きセキュリティアップデートが届きます。\nサポートが終了すると、DSA はアプリをそのままに次のバージョンへ移行します。"
+
+msgid "Version to use"
+msgstr "使用するバージョン"
+
+msgid "DSA supports the latest two Android versions. Some apps run on only one of them."
+msgstr "DSA は最新の 2 つの Android バージョンに対応しています。一部のアプリは、そのどちらか一方でしか動きません。"
+
+msgid "Change"
+msgstr "変更"
+
+msgid "Android {0} is chosen. It is downloaded now and used the next time Android starts."
+msgstr "Android {0} を選択しました。今すぐダウンロードされ、次回の Android 起動時から使われます。"
+
+msgid "Supported versions: Android {0}"
+msgstr "対応バージョン: Android {0}"
+
+msgid "Move to a newer Android?"
+msgstr "新しい Android に移行しますか？"
+
+msgid "Android {0} is downloaded and used the next time Android starts.\n\nYour apps and their data move along. Moving back later erases the data."
+msgstr "Android {0} がダウンロードされ、次回の Android 起動時から使われます。\n\nアプリとそのデータも一緒に移行します。後で元に戻すと、データは消去されます。"
+
+msgid "Erase Android data to move to an older version?"
+msgstr "古いバージョンに移行するため、Android のデータを消去しますか？"
+
+msgid "Android {0} is older than the Android {1} that runs now. Android cannot read data a newer version wrote.\n\nMoving erases the Android data of every user of this computer:\n• every app they installed\n• the accounts they signed in to\n• the data of every app\n\nEach user's Android then starts as it was first installed. DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Android {0} は、現在実行中の Android {1} より古いバージョンです。Android は新しいバージョンが書き込んだデータを読み取れません。\n\n移行すると、このコンピューターのすべてのユーザーの Android データが消去されます:\n• インストールしたすべてのアプリ\n• ログインしたアカウント\n• すべてのアプリのデータ\n\n各ユーザーの Android は、最初にインストールしたときの状態で起動します。DSA の設定は残ります。\n\nこの操作は元に戻せません。"
+
+msgid "Erase data and change"
+msgstr "データを消去して変更"
+
+msgid "New versions of DSA come through the system's package manager and software center, with the other updates.\nInstalling DSA added its signed package repository."
+msgstr "DSA の新しいバージョンは、ほかのアップデートと一緒に、システムのパッケージマネージャーとソフトウェアセンターから届きます。\nDSA のインストール時に、署名付きのパッケージリポジトリが追加されました。"
+
+msgid "Open software updates"
+msgstr "ソフトウェアのアップデートを開く"
+
+msgid "Shows the updates the system has for DSA and the other installed programs."
+msgstr "DSA とほかのインストール済みプログラムについて、システムにあるアップデートを表示します。"
+
+msgid "No software center was found"
+msgstr "ソフトウェアセンターが見つかりませんでした"
+
+msgid "Update DSA with the system's package manager, such as apt or dnf."
+msgstr "apt や dnf など、システムのパッケージマネージャーで DSA をアップデートしてください。"
+
+msgid "Android image"
+msgstr "Android イメージ"
+
+msgid "This setting applies to every user of this computer, so changing it asks for an administrator's permission."
+msgstr "この設定はこのコンピューターのすべてのユーザーに適用されるため、変更するには管理者の権限が求められます。"
+
+msgid "The newest supported version (now Android {0})"
+msgstr "対応する最新バージョン (現在は Android {0})"
+
+msgid "Android {0} and its security updates"
+msgstr "Android {0} とそのセキュリティアップデート"
+
+msgid "No Android update is waiting. DSA checks every day, and restarts Android into an update once no app window is open."
+msgstr "保留中の Android アップデートはありません。DSA は毎日確認し、アプリのウィンドウがすべて閉じたら Android を再起動して適用します。"
+
+msgid "Android {0} is downloaded. Restart Android to use it now."
+msgstr "Android {0} をダウンロードしました。今すぐ使うには Android を再起動してください。"
+
+msgid "Restart now"
+msgstr "今すぐ再起動"
+
+msgid "Restart Android now?"
+msgstr "今すぐ Android を再起動しますか？"
+
+msgid "Android restarts into Android {0}.\n\nIts app windows close. Open the apps again once it has started."
+msgstr "Android は Android {0} で再起動します。\n\nアプリのウィンドウは閉じます。起動が終わったら、アプリをもう一度開いてください。"
+
+msgid "Restart Android into updates by itself"
+msgstr "アップデートのため Android を自動で再起動"
+
+msgid "On by default. With no app window open, Android restarts into a downloaded update at once.\nWith windows open, DSA asks first or waits until you close them.\nOff, an update is used the next time you start Android."
+msgstr "既定ではオンです。アプリのウィンドウが開いていなければ、Android はダウンロードしたアップデートですぐに再起動します。\nウィンドウが開いている場合は、DSA が先に確認するか、ウィンドウを閉じるまで待ちます。\nオフにすると、次に Android を起動したときにアップデートが使われます。"
+
+msgid "Version it follows"
+msgstr "追従するバージョン"
+
+msgid "Android update"
+msgstr "Android のアップデート"
+
+msgid "Check now"
+msgstr "今すぐ確認"
+
+msgid "Device specifications"
+msgstr "デバイスの仕様"
+
+msgid "What Android reports"
+msgstr "Android が報告する情報"
+
+msgid "Not reported"
+msgstr "報告なし"
+
+msgid "Get pre-release versions"
+msgstr "プレリリース版を受け取る"
+
+msgid "Also install versions that are still being finished. Every release before 1.0 is a pre-release.\nThe package manager then reads DSA's pre-release repository.\nTurning this off never moves DSA back: it waits for a stable release newer than the one installed."
+msgstr "まだ仕上げ中のバージョンもインストールします。1.0 より前のリリースはすべてプレリリースです。\nその場合、パッケージマネージャーは DSA のプレリリースリポジトリを読み込みます。\nオフにしても DSA が前のバージョンに戻ることはなく、インストール済みより新しい安定版のリリースを待ちます。"
+
+msgid "This installation does not follow a release channel."
+msgstr "このインストールはリリースチャンネルに従っていません。"
+
+msgid "Update the Android image automatically"
+msgstr "Android イメージを自動的にアップデート"
+
+msgid "Download signed security updates and new versions of Android.\nThey apply when Android restarts, as the Android update settings above say."
+msgstr "署名付きのセキュリティアップデートと Android の新しいバージョンをダウンロードします。\n上の Android アップデートの設定に従い、Android の再起動時に適用されます。"
+
+msgid "This installation does not offer image updates."
+msgstr "このインストールではイメージのアップデートは提供されません。"
+
+msgid "Desktop Subsystem for Android™"
+msgstr "Desktop Subsystem for Android™"
+
+msgid "Thisisthepy"
+msgstr "Thisisthepy"
+
+msgid "DSA Settings version"
+msgstr "DSA 設定のバージョン"
+
+msgid "DSA service version"
+msgstr "DSA サービスのバージョン"
+
+msgid "Android image version"
+msgstr "Android イメージのバージョン"
+
+msgid "The Android image the next start boots. Image updates change it."
+msgstr "次回の起動で使われる Android イメージです。イメージのアップデートで変わります。"
+
+msgid "Licences"
+msgstr "ライセンス"
+
+msgid "DSA is licensed under the Apache License 2.0. Open the licences of every component it ships."
+msgstr "DSA は Apache License 2.0 でライセンスされています。同梱するすべてのコンポーネントのライセンスを開きます。"
+
+msgid "Source code"
+msgstr "ソースコード"
+
+msgid "Desktop Subsystem for Android is an independent open source project.\nIt is not affiliated with, endorsed by or sponsored by Microsoft or Google."
+msgstr "Desktop Subsystem for Android は独立したオープンソースプロジェクトです。\nMicrosoft や Google とは提携しておらず、承認や後援も受けていません。"
+
+msgid "Android is a trademark of Google LLC."
+msgstr "Android は Google LLC の商標です。"
+
+msgid "The names and build fingerprint Android reports to apps. Leave a box empty to keep the value shown.\nChanges apply from the next start of Android."
+msgstr "Android がアプリに報告する名前とビルドのフィンガープリントです。表示中の値のままにするには、欄を空にしておきます。\n変更は次回の Android 起動時から適用されます。"
+
+msgid "Apps may notice"
+msgstr "アプリに検出される可能性があります"
+
+msgid "Changing the model or the fingerprint can change how apps behave.\nSome check the device before they run, and payment and integrity checks may fail."
+msgstr "モデルやフィンガープリントを変更すると、アプリの動作が変わることがあります。\n実行前にデバイスを確認するアプリもあり、支払いや整合性のチェックが失敗することがあります。"
+
+msgid "Build fingerprint"
+msgstr "ビルドのフィンガープリント"
+
+msgid "Fingerprint from the next start"
+msgstr "次回の起動からのフィンガープリント"
+
+msgid "Restart Android now"
+msgstr "今すぐ Android を再起動"
+
+msgid "Reset to defaults"
+msgstr "既定値に戻す"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Saved. Android uses it from its next start."
+msgstr "保存しました。次回の起動から Android で使われます。"
+
+msgid "Saved. Restart Android to use it now."
+msgstr "保存しました。今すぐ使うには Android を再起動してください。"
+
+msgid "Reset the device identity?"
+msgstr "デバイス ID をリセットしますか？"
+
+msgid "Every value goes back to its default: this computer's, or DSA's own where the computer does not say.\n\nIt applies from the next start of Android."
+msgstr "すべての値が既定値に戻ります。既定値はこのコンピューターの値で、コンピューターが示さないものは DSA 独自の値です。\n\n次回の Android 起動時から適用されます。"
+
+msgid "Back to the defaults. Android uses them from its next start."
+msgstr "既定値に戻しました。次回の起動から Android で使われます。"
+
+msgid "Back to the defaults. Restart Android to use them now."
+msgstr "既定値に戻しました。今すぐ使うには Android を再起動してください。"
+
+msgid "Android started again with this identity."
+msgstr "Android がこの ID で再起動しました。"
+
+msgid "Android's network"
+msgstr "Android のネットワーク"
+
+msgid "Connection"
+msgstr "接続"
+
+msgid "Address"
+msgstr "アドレス"
+
+msgid "DNS"
+msgstr "DNS"
+
+msgid "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps."
+msgstr "このコンピューターのリゾルバーが応答するため、hosts ファイル、VPN、DNS フィルターが Android アプリにも適用されます。"
+
+msgid "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}"
+msgstr "このコンピューターのリゾルバーが応答しないため、Android はネットワークの DNS サーバーに問い合わせます: {0}"
+
+msgid "Gateway"
+msgstr "ゲートウェイ"
+
+msgid "Advanced networking is not in use"
+msgstr "高度なネットワークは使用されていません"
+
+msgid "Restart Android to apply"
+msgstr "適用するには Android を再起動してください"
+
+msgid "The change applies the next time Android starts. Stop Android on the General page, then open an app."
+msgstr "変更は次回の Android 起動時に適用されます。「全般」ページで Android を停止してから、アプリを開いてください。"
+
+msgid "Advanced networking"
+msgstr "高度なネットワーク"
+
+msgid "Off by default. When on, Android joins this computer's network as a device of its own.\nOther devices on the network and Android apps can then reach each other directly.\nPrograms on this computer can always reach a server in Android at the address above."
+msgstr "既定ではオフです。オンにすると、Android はこのコンピューターのネットワークに独立したデバイスとして参加します。\nネットワーク上のほかのデバイスと Android アプリが、互いに直接通信できるようになります。\nこのコンピューター上のプログラムからは、いつでも上のアドレスで Android 内のサーバーに接続できます。"
+
+msgid "Trusted certificates"
+msgstr "信頼する証明書"
+
+msgid "Root certificates you or an administrator added to this computer, such as a company's or a security program's.\nThe system's own certificates are not listed: Android has its own."
+msgstr "あなたまたは管理者がこのコンピューターに追加したルート証明書です。会社やセキュリティソフトの証明書などがあります。\nシステム自体の証明書は表示されません。Android には独自の証明書があります。"
+
+msgid "Trust certificates added to this computer"
+msgstr "このコンピューターに追加された証明書を信頼"
+
+msgid "On by default. Android apps trust the certificates listed below as they trust Android's own.\nSites and servers this computer trusts then open in Android too. The change applies at once."
+msgstr "既定ではオンです。Android アプリは、下の証明書を Android 自体の証明書と同じように信頼します。\nこのコンピューターが信頼するサイトやサーバーが、Android でも開けるようになります。変更はすぐに適用されます。"
+
+msgid "This computer's trusted root certificates"
+msgstr "このコンピューターの信頼されたルート証明書"
+
+msgid "This computer's group policy"
+msgstr "このコンピューターのグループポリシー"
+
+msgid "This computer's enterprise certificates"
+msgstr "このコンピューターのエンタープライズ証明書"
+
+msgid "Your trusted root certificates"
+msgstr "あなたの信頼されたルート証明書"
+
+msgid "Your group policy"
+msgstr "あなたのグループポリシー"
+
+msgid "This computer's administrator trust settings"
+msgstr "このコンピューターの管理者の信頼設定"
+
+msgid "Added to the system's certificate store"
+msgstr "システムの証明書ストアに追加済み"
+
+msgid "SHA-256 {0}"
+msgstr "SHA-256 {0}"
+
+msgid "A certificate without a name"
+msgstr "名前のない証明書"
+
+msgid "Issued by {0}"
+msgstr "発行者: {0}"
+
+msgid "No added root certificates were found on this computer."
+msgstr "このコンピューターに追加されたルート証明書は見つかりませんでした。"
+
+msgid "Files"
+msgstr "ファイル"
+
+msgid "Send files to Android apps"
+msgstr "Android アプリにファイルを送る"
+
+msgid "To send a file to an Android app, drag it from the file manager onto the app's window. An APK you drop is installed."
+msgstr "Android アプリにファイルを送るには、ファイルマネージャーからアプリのウィンドウにドラッグします。ドロップした APK はインストールされます。"
+
+msgid "Share folders with Android"
+msgstr "Android とフォルダーを共有"
+
+msgid "On by default. The folders chosen below show in Android's shared storage, for Android apps to open and save files.\nApps need Android's storage permission, and can do only what your own account may do."
+msgstr "既定ではオンです。下で選んだフォルダーが Android の共有ストレージに表示され、Android アプリでファイルを開いたり保存したりできます。\nアプリには Android のストレージ権限が必要で、あなたのアカウントに許されている操作しかできません。"
+
+msgid "Shared folders"
+msgstr "共有フォルダー"
+
+msgid "A folder you clear is taken away from Android at once."
+msgstr "選択を外したフォルダーは、すぐに Android から外されます。"
+
+msgid "Android files"
+msgstr "Android のファイル"
+
+msgid "Opens Android's shared storage in the file manager: the files Android apps saved, such as photos.\nAndroid starts if it is not running. DSA Files in the app grid does the same."
+msgstr "Android の共有ストレージをファイルマネージャーで開きます。写真など、Android アプリが保存したファイルがあります。\nAndroid が実行されていない場合は起動します。アプリ一覧の DSA Files でも同じことができます。"
+
+msgid "Open web links in Android apps"
+msgstr "Web リンクを Android アプリで開く"
+
+msgid "Off by default: a web link you tap in an Android app opens in your default browser on this computer.\nOn, it opens in an Android app, as on a phone.\nA link an installed app has verified as its own opens in that app either way."
+msgstr "既定ではオフです。Android アプリでタップした Web リンクは、このコンピューターの既定のブラウザーで開きます。\nオンにすると、スマートフォンと同じように Android アプリで開きます。\nインストール済みのアプリが自分のものとして確認したリンクは、どちらの場合もそのアプリで開きます。"
+
+msgid "ARM apps"
+msgstr "ARM アプリ"
+
+msgid "Run apps built only for ARM"
+msgstr "ARM 専用のアプリを実行"
+
+msgid "Many Android apps have code only for ARM processors. They run here only through an ARM translator.\nAndroid uses its own open source translator, unless you install another (dsa arm-translation install) or Google's.\nOff, Android uses no translator at all. Changes apply from the next start of Android.\nOnly 64-bit ARM apps (arm64-v8a) can run."
+msgstr "多くの Android アプリには ARM プロセッサー用のコードしかありません。ここでは ARM 変換ツールを通してのみ動きます。\n別の変換ツール (dsa arm-translation install) か Google のものを入れない限り、Android 独自のオープンソース変換ツールを使います。\nオフにすると変換ツールは一切使われません。変更は次回の Android 起動時から適用されます。\n実行できるのは 64 ビット ARM アプリ (arm64-v8a) だけです。"
+
+msgid "Status"
+msgstr "状態"
+
+msgid "Android started before this change. Stop and start Android for ARM apps to follow it."
+msgstr "Android はこの変更の前に起動しました。ARM アプリに反映するには、Android を停止してから起動してください。"
+
+msgid "Remove the ARM translation package"
+msgstr "ARM 変換パッケージを削除"
+
+msgid "Deletes the package from your add-on disk. ARM apps you installed stay, but do not run after Android restarts."
+msgstr "アドオンディスクからパッケージを削除します。インストールした ARM アプリは残りますが、Android の再起動後は動きません。"
+
+msgid "Developer"
+msgstr "開発者"
+
+msgid "Developer mode"
+msgstr "開発者モード"
+
+msgid "Off by default. When on, adb on this computer connects to Android without asking in Android.\nThe port is reachable only from this computer. Turn it off when you are done."
+msgstr "既定ではオフです。オンにすると、このコンピューターの adb は Android 側の確認なしで Android に接続します。\nポートにはこのコンピューターからしか接続できません。使い終わったらオフにしてください。"
+
+msgid "Connect adb automatically"
+msgstr "adb を自動的に接続"
+
+msgid "On by default. While developer mode is on, Android shows in adb devices and Android Studio without adb connect.\nAfter adb disconnect, it stays off until the adb server restarts."
+msgstr "既定ではオンです。開発者モードがオンの間、adb connect なしで Android が adb devices と Android Studio に表示されます。\nadb disconnect の後は、adb サーバーが再起動するまでオフのままです。"
+
+msgid "Automatic connection"
+msgstr "自動接続"
+
+msgid "Not connecting: developer mode or automatic connection is off."
+msgstr "接続しません: 開発者モードまたは自動接続がオフです。"
+
+msgid "Waiting for adb: Android connects when adb starts on this computer."
+msgstr "adb を待機中: このコンピューターで adb が起動すると Android が接続します。"
+
+msgid "Waiting for Android: it connects once Android is running."
+msgstr "Android を待機中: Android が実行されると接続します。"
+
+msgid "Connected: adb lists Android."
+msgstr "接続済み: adb に Android が表示されています。"
+
+msgid "Disconnected with adb disconnect. Android connects again when the adb server restarts."
+msgstr "adb disconnect で切断しました。adb サーバーが再起動すると、Android は再び接続します。"
+
+msgid "Connect adb"
+msgstr "adb の接続"
+
+msgid "While developer mode is on and Android is running, run this command:"
+msgstr "開発者モードがオンで Android が実行中のときに、次のコマンドを実行します:"
+
+msgid "Port"
+msgstr "ポート"
+
+msgid "Share the clipboard with Android"
+msgstr "Android とクリップボードを共有"
+
+msgid "On by default: text copied on this computer can be pasted in Android apps, and the other way round.\nImages stay where they were copied."
+msgstr "既定ではオンです。このコンピューターでコピーしたテキストを Android アプリに貼り付けられ、その逆もできます。\n画像はコピーした側にとどまります。"
+
+msgid "Freeze Android when idle"
+msgstr "アイドル時に Android をフリーズ"
+
+msgid "Off by default: an idle Android dozes and still receives notifications.\nFrozen, it uses no CPU but receives nothing until you open an app."
+msgstr "既定ではオフです。アイドル状態の Android は Doze に入り、通知を受け取り続けます。\nフリーズすると CPU を使いませんが、アプリを開くまで何も受け取りません。"
+
+msgid "Diagnostics"
+msgstr "診断"
+
+msgid "The traces make the DSA logs below grow, so turn them on only to report a problem.\nThey apply to every user of this computer, so changing them asks for an administrator's permission."
+msgstr "トレースを有効にすると下の DSA ログが大きくなるため、問題を報告するときだけオンにしてください。\nこのコンピューターのすべてのユーザーに適用されるため、変更するには管理者の権限が求められます。"
+
+msgid "Input trace"
+msgstr "入力のトレース"
+
+msgid "Every DSA process records when each touch, click and key reaches it, to measure the delay to the picture.\nOff by default."
+msgstr "すべての DSA プロセスが、タッチ、クリック、キー入力が届いた時刻を記録し、画面に反映されるまでの遅延を測ります。\n既定ではオフです。"
+
+msgid "Resize trace"
+msgstr "サイズ変更のトレース"
+
+msgid "Every DSA process records each stage of each window resize, to find where it is slow or flickers.\nOff by default."
+msgstr "すべての DSA プロセスが、ウィンドウのサイズ変更の各段階を記録し、遅い箇所やちらつく箇所を見つけます。\n既定ではオフです。"
+
+msgid "Logs"
+msgstr "ログ"
+
+msgid "The logs of your window manager and app windows."
+msgstr "あなたのウィンドウマネージャーとアプリウィンドウのログです。"
+
+msgid "Command line"
+msgstr "コマンドライン"
+
+msgid "The dsa command"
+msgstr "dsa コマンド"
+
+msgid "dsa status"
+msgstr "dsa status"
+
+msgid "dsa settings"
+msgstr "dsa settings"
+
+msgid "dsa memory"
+msgstr "dsa memory"
+
+msgid "Everything on these pages is also available from a terminal."
+msgstr "これらのページの内容はすべて、ターミナルからも利用できます。"
+
+msgid "Reset"
+msgstr "リセット"
+
+msgid "Reset Android's data"
+msgstr "Android のデータをリセット"
+
+msgid "Erases every app you installed, your accounts and every app's data. Android starts as it was first installed.\nThe Android image and these settings stay."
+msgstr "インストールしたすべてのアプリ、アカウント、すべてのアプリのデータを消去します。Android は最初にインストールしたときの状態で起動します。\nAndroid イメージとこれらの設定は残ります。"
+
+msgid "Reset Android's data?"
+msgstr "Android のデータをリセットしますか？"
+
+msgid "This erases from Android:\n• every app you installed\n• the accounts you signed in to\n• the data of every app\n\nAndroid stops now. Its next start is as it was first installed.\n\nThe Android image and DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Android から次のものが消去されます:\n• インストールしたすべてのアプリ\n• ログインしたアカウント\n• すべてのアプリのデータ\n\nAndroid は今すぐ停止します。次回は最初にインストールしたときの状態で起動します。\n\nAndroid イメージと DSA の設定は残ります。\n\nこの操作は元に戻せません。"
+
+msgid "Android's data was reset"
+msgstr "Android のデータをリセットしました"
+
+msgid "The next app you open starts Android as it was first installed."
+msgstr "次にアプリを開くと、最初にインストールしたときの状態で Android が起動します。"
+
+msgid "Documents"
+msgstr "ドキュメント"
+
+msgid "Downloads"
+msgstr "ダウンロード"
+
+msgid "Pictures"
+msgstr "画像"
+
+msgid "Music"
+msgstr "音楽"
+
+msgid "Videos"
+msgstr "ビデオ"
+
+msgid "Desktop"
+msgstr "デスクトップ"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Copy"
+msgstr "コピー"
+
+msgid "Google Play"
+msgstr "Google Play"
+
+msgid "Google Play services and the Play Store are not part of DSA.\nWhen you ask, DSA downloads LiteGapps Core, a public package of Google's apps, and installs it in your Android.\nWithout it, the rest of DSA works as before."
+msgstr "Google Play 開発者サービスと Play ストアは DSA に含まれていません。\nリクエストすると、DSA は Google アプリの公開パッケージである LiteGapps Core をダウンロードし、Android にインストールします。\nなくても、DSA のほかの機能はこれまでどおり動きます。"
+
+msgid "LiteGapps {0} {1} for Android {2} ({3})"
+msgstr "Android {2} 向け LiteGapps {0} {1} ({3})"
+
+msgid "Installed: {0}. Restart Android to start using it."
+msgstr "インストール済み: {0}。使い始めるには Android を再起動してください。"
+
+msgid "Removed. The Google apps stay in Android until it restarts."
+msgstr "削除しました。Google アプリは Android の再起動まで残ります。"
+
+msgid "Installed: {0}."
+msgstr "インストール済み: {0}。"
+
+msgid "{0} was installed by an older DSA and is no longer used, so Android starts without Google's apps. Install Google Play again."
+msgstr "{0} は以前の DSA のもので使われなくなったため、Android は Google アプリなしで起動します。Google Play を再インストールしてください。"
+
+msgid "Not installed."
+msgstr "インストールされていません。"
+
+msgid "Downloaded from the LiteGapps project: {0}"
+msgstr "LiteGapps プロジェクトからダウンロード: {0}"
+
+msgid "Downloading and installing Google Play. This can take several minutes."
+msgstr "Google Play をダウンロードしてインストールしています。数分かかることがあります。"
+
+msgid "Enter this number on Google's registration page."
+msgstr "この番号を Google の登録ページに入力してください。"
+
+msgid "It shows here once Google Play is installed and Android has started."
+msgstr "Google Play をインストールして Android を起動すると、ここに表示されます。"
+
+msgid "Android started before this change. Stop and start Android for Google Play to follow it."
+msgstr "Android はこの変更の前に起動しました。Google Play に反映するには、Android を停止してから起動してください。"
+
+msgid "Install Google Play"
+msgstr "Google Play をインストール"
+
+msgid "Downloads LiteGapps Core for your Android version (about 120 to 260 MB) from the LiteGapps project, checks it and installs it.\nAndroid starts if it is not running. Google Play is there from the next start of Android."
+msgstr "Android バージョンに合う LiteGapps Core (約 120 ～ 260 MB) を LiteGapps プロジェクトから入手し、検証してインストールします。\nAndroid が実行されていない場合は起動します。Google Play は次回の Android 起動時から使えます。"
+
+msgid "Install"
+msgstr "インストール"
+
+msgid "Remove Google Play"
+msgstr "Google Play を削除"
+
+msgid "Deletes Google's apps from your add-on disk. They are gone from the next start of Android."
+msgstr "アドオンディスクから Google アプリを削除します。次回の Android 起動時からなくなります。"
+
+msgid "Google's terms"
+msgstr "Google の利用規約"
+
+msgid "Google's ARM translator"
+msgstr "Google の ARM 変換ツール"
+
+msgid "Installs the ARM translator from the Android emulator image Google offers for this Android version.\nDownloads about 2 GB from Google, under Google's Android SDK License, and keeps only the translator.\nNothing is downloaded until you agree. DSA does not include or pass on Google's translator.\nA package built from another translator, such as Digitalis, does the same job."
+msgstr "Google がこの Android バージョン向けに提供する Android エミュレーターのイメージから、ARM 変換ツールをインストールします。\nGoogle の Android SDK ライセンスに基づいて Google から約 2 GB をダウンロードし、変換ツールだけを残します。\n同意するまで何もダウンロードされません。DSA は Google の変換ツールを同梱も再配布もしません。\nDigitalis など別の変換ツールから作ったパッケージでも、同じことができます。"
+
+msgid "Get"
+msgstr "入手"
+
+msgid "Android SDK License"
+msgstr "Android SDK ライセンス"
+
+msgid "Google's terms for the emulator image the translator comes from."
+msgstr "変換ツールの取り出し元となるエミュレーターイメージに関する Google の利用規約です。"
+
+msgid "Get Google's ARM translator?"
+msgstr "Google の ARM 変換ツールを入手しますか？"
+
+msgid "Accept and download"
+msgstr "同意してダウンロード"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its ARM translator.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nThe translator is Google's software. DSA does not ship or pass it on.\n\nThe translator works from the next start of Android."
+msgstr "DSA は、この Android バージョン向けの Google の Android エミュレーターイメージをダウンロードし、ARM 変換ツールだけを取り出します。\n\n• 入手元: Google の SDK リポジトリ ({0})\n• サイズ: 約 2 GB、使用後に削除\n• ライセンス: Android SDK ライセンス ({1})。ダウンロードすると、その条項に同意したことになります。\n\n変換ツールは Google のソフトウェアです。DSA はこれを同梱も再配布もしません。\n\n変換ツールは次回の Android 起動時から動作します。"
+
+msgid "Downloading about 2 GB from Google and taking out the translator. It takes minutes."
+msgstr "Google から約 2 GB をダウンロードし、変換ツールを取り出しています。数分かかります。"
+
+msgid "Google's apps belong to Google and follow Google's terms.\nDSA does not distribute them: it downloads the public LiteGapps package when you ask."
+msgstr "Google アプリは Google に帰属し、Google の利用規約に従います。\nDSA はこれらを配布しません。リクエストに応じて、公開されている LiteGapps パッケージをダウンロードします。"
+
+msgid "Register this device with Google"
+msgstr "このデバイスを Google に登録"
+
+msgid "Google has not certified this Android, so Google may refuse to sign you in until you register it.\nOpen Google's registration page, sign in with your Google account and enter the Android ID below."
+msgstr "Google がこの Android を認定していないため、登録するまで Google がログインを拒否することがあります。\nGoogle の登録ページを開き、Google アカウントでログインして、下の Android ID を入力してください。"
+
+msgid "Android ID"
+msgstr "Android ID"
+
+msgid "Google Play was not installed"
+msgstr "Google Play はインストールされませんでした"
+
+msgid "Google Play was not removed"
+msgstr "Google Play は削除されませんでした"
+
+msgid "Where Google Play stands could not be read"
+msgstr "Google Play の状態を読み取れませんでした"
+
+msgid "The page could not be opened"
+msgstr "ページを開けませんでした"
+
+msgid "Runs the app's ARM code through the translator. Off runs its x86_64 code."
+msgstr "アプリの ARM コードを変換ツールで実行します。オフにすると x86_64 コードを実行します。"
+
+msgid "Apps that are part of Android run as Android installed them."
+msgstr "Android の一部であるアプリは、Android がインストールしたとおりに実行されます。"
+
+msgid "No APK of this app on the device holds its ARM code."
+msgstr "このアプリの ARM コードを含む APK がデバイス上にありません。"
+
+msgid "ARM translation is not on. Turn it on under ARM apps and restart Android."
+msgstr "ARM 変換がオンになっていません。「ARM アプリ」でオンにし、Android を再起動してください。"
+
+msgid "This app has only ARM code, so it always runs as ARM."
+msgstr "このアプリには ARM コードしかないため、常に ARM として実行されます。"
+
+msgid "This version of DSA cannot say whether the app can run as ARM."
+msgstr "このバージョンの DSA では、アプリを ARM として実行できるかどうかわかりません。"
+
+msgid "{0} runs as ARM now."
+msgstr "{0} は ARM として実行されるようになりました。"
+
+msgid "{0} runs its x86_64 code now."
+msgstr "{0} は x86_64 コードで実行されるようになりました。"
+
+msgid "its APKs on the device hold no code for that"
+msgstr "デバイス上の APK にそのためのコードがありません"
+
+msgid "ARM translation is not on"
+msgstr "ARM 変換がオンになっていません"
+
+msgid "Android refused"
+msgstr "Android に拒否されました"
+
+msgid "{0} was not installed again: {1} ({2})"
+msgstr "{0} は再インストールされませんでした: {1} ({2})"
+
+msgid "Run as ARM"
+msgstr "ARM として実行"
+
+msgid "Erase {0}'s data?"
+msgstr "{0} のデータを消去しますか？"
+
+msgid "Android cannot change how {0} runs and keep its data.\n\nInstalling it again erases its data: sign-ins, settings and files it keeps for itself."
+msgstr "Android は、データを残したまま {0} の実行方法を変更できません。\n\n再インストールすると、ログイン情報、設定、アプリが保存しているファイルなどのデータが消去されます。"
+
+msgid "Erase and install again"
+msgstr "消去して再インストール"
+
+msgid "Not installed again"
+msgstr "再インストールされませんでした"
+
+msgid "Default: from this computer"
+msgstr "既定: このコンピューターから"
+
+msgid "Default: DSA's value"
+msgstr "既定: DSA の値"
+
+msgid "This computer does not say; Android keeps its own."
+msgstr "このコンピューターが示さないため、Android 独自の値を使います。"
+
+msgid "From this computer"
+msgstr "このコンピューターから"
+
+msgid "These follow this computer and are read again each time Android starts.\nAndroid's Settings shows the device name and the chip.\nThe model name shows only here, as Android's Settings has no place for it."
+msgstr "これらはこのコンピューターに従い、Android が起動するたびに読み直されます。\nデバイス名とチップは Android の設定に表示されます。\nモデル名は Android の設定に表示する場所がないため、ここにだけ表示されます。"
+
+msgid "Model name"
+msgstr "モデル名"
+
+msgid "Device name"
+msgstr "デバイス名"
+
+msgid "Chip manufacturer"
+msgstr "チップのメーカー"
+
+msgid "Chip model"
+msgstr "チップのモデル"
+
+msgid "Root access"
+msgstr "root 権限"
+
+msgid "Not allowed"
+msgstr "許可しない"
+
+msgid "Ask each time"
+msgstr "毎回確認"
+
+msgid "Remember (no asking)"
+msgstr "記憶する (確認しない)"
+
+msgid "Not available"
+msgstr "利用不可"
+
+msgid "Not changed"
+msgstr "変更なし"
+
+msgid "Not allowed hides su from the app.\nAsk each time asks an administrator for each request, then not again for 15 minutes.\nRemember approves without asking. Choosing it needs an administrator's approval."
+msgstr "「許可しない」では、アプリから su が見えなくなります。\n「毎回確認」では、要求ごとに管理者に確認し、その後 15 分間は確認しません。\n「記憶する」では確認せずに承認します。これを選ぶには管理者の承認が必要です。"
+
+msgid "Shares its user ID with {0}, so Android cannot tell them apart.\nTheir root access is one setting: a change here applies to all of them.\nIf any of them is set to Not allowed, none of them can use su."
+msgstr "{0} とユーザー ID を共有しているため、Android はこれらを区別できません。\nroot 権限は 1 つの設定なので、ここで変更するとすべてに適用されます。\nいずれかが「許可しない」になっていると、どれも su を使えません。"
+
+msgid "Root access is off for this computer. An administrator turns it on under Advanced."
+msgstr "このコンピューターでは root 権限がオフです。管理者が「詳細設定」でオンにします。"
+
+msgid "This version of DSA cannot say how far the app may use root."
+msgstr "このバージョンの DSA では、アプリが root をどこまで使えるかわかりません。"
+
+msgid "The root level of {0} was not changed: {1}"
+msgstr "{0} の root レベルは変更されませんでした: {1}"
+
+msgid "{0} cannot use root any more. su disappears for it from the next start of Android."
+msgstr "{0} は root を使えなくなりました。次回の Android 起動時から、このアプリには su が表示されません。"
+
+msgid "{0} now uses su without asking. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} は確認なしで su を使うようになりました。以前 su が見えなかった場合は、次回の Android 起動時から見えるようになります。"
+
+msgid "{0} now asks an administrator each time it uses su. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} は su を使うたびに管理者に確認するようになりました。以前 su が見えなかった場合は、次回の Android 起動時から見えるようになります。"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command: {0}"
+msgstr "各要求は、アプリ、時刻、承認されたかどうか、コマンドとともにサービスログに記録されます: {0}"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command."
+msgstr "各要求は、アプリ、時刻、承認されたかどうか、コマンドとともにサービスログに記録されます。"
+
+msgid "Root access is off for this computer, so no app can use su.\nAn administrator turns it on under Advanced. Then you choose each app's level here."
+msgstr "このコンピューターでは root 権限がオフのため、どのアプリも su を使えません。\n管理者が「詳細設定」でオンにすると、ここでアプリごとのレベルを選べます。"
+
+msgid "This applies to every user of this computer, so changing it asks for an administrator's permission.\nChoose each app's level under Apps."
+msgstr "このコンピューターのすべてのユーザーに適用されるため、変更するには管理者の権限が求められます。\nアプリごとのレベルは「アプリ」で選びます。"
+
+msgid "Let Android apps ask for root"
+msgstr "Android アプリに root 権限の要求を許可"
+
+msgid "Off by default. An app you allow under Apps can run commands as root once an administrator approves, as with sudo.\nThe Android image, its build properties and SELinux stay as they are."
+msgstr "既定ではオフです。「アプリ」で許可したアプリは、sudo と同じように、管理者が承認すると root としてコマンドを実行できます。\nAndroid イメージ、ビルドプロパティ、SELinux はそのままです。"
+
+msgid "Root access changes from the next start of Android. Stop Android on the General page, then open an app."
+msgstr "root 権限の変更は次回の Android 起動時から適用されます。「全般」ページで Android を停止してから、アプリを開いてください。"
+
+msgid "Where requests are recorded"
+msgstr "要求が記録される場所"
+
+msgid "Follow the default"
+msgstr "既定に従う"
+
+msgid "On the whole screen"
+msgstr "画面全体"
+
+msgid "Inside the window"
+msgstr "ウィンドウ内"
+
+msgid "Full screen"
+msgstr "全画面表示"
+
+msgid "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+msgstr "動画プレーヤーの全画面ボタンなど、このアプリが明確に全画面を要求したときの表示先です。F11 キーで常に全画面を切り替えられます。"
+
+msgid "Bars hidden"
+msgstr "バーを非表示"
+
+msgid "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+msgstr "ショート動画のフィードのように、このアプリが全画面表示を要求せずにバーを隠したときの表示先です。"
+
+msgid "{0}'s windows follow the new settings now."
+msgstr "{0} のウィンドウは、今から新しい設定に従います。"
+
+msgid "App full screen"
+msgstr "アプリの全画面表示"
+
+msgid "On the whole screen, the title bar appears when the pointer reaches the top edge."
+msgstr "画面全体に表示しているときは、ポインターが画面の上端に来るとタイトルバーが表示されます。"
+
+msgid "Full screen request"
+msgstr "全画面表示の要求"
+
+msgid "Where an app's full screen request shows, such as a video's full screen button."
+msgstr "動画の全画面ボタンなど、アプリが全画面表示を要求したときの表示先です。"
+
+msgid "Where an app shows when it only hides its bars, as a feed of short videos does."
+msgstr "ショート動画のフィードのように、アプリがバーを隠すだけのときの表示先です。"
+
+msgid "Scaling on another monitor"
+msgstr "別のモニターでの拡大縮小"
+
+msgid "App"
+msgstr "アプリ"
+
+msgid "System"
+msgstr "システム"
+
+msgid "System (forced)"
+msgstr "システム (強制)"
+
+msgid "System (forced), not available yet"
+msgstr "システム (強制)、まだ利用できません"
+
+msgid "System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System."
+msgstr "「システム (強制)」は、拡大率の変更に対応すると宣言していないアプリにも、再起動なしで新しい拡大率を渡します。\nこのビルドには必要な Android の変更がないため、まだ利用できません。それまでは「システム」と同じように動作します。"
+
+msgid "System (recommended for this app)"
+msgstr "システム (このアプリに推奨)"
+
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "アプリ: ウィンドウが新しいモニターに着くとすぐ、アプリがそのモニターの拡大率で描き直すので、文字はくっきりしたままです。\nこれに対応すると示していないアプリは、状態を保ったまま作り直されるため、一瞬描き直されることがあります。\nシステム: DSA がウィンドウを同じ物理サイズに拡大縮小します。文字が少しぼやけることがあります。\n「自動」では、YouTube のように実行中に拡大率が変わると崩れるアプリには「システム」を、それ以外のアプリには、自分で対応すると示していれば「アプリ」を、示していなければ「システム」を使います。\n「自動」と「システム」はアプリを再起動しません。"
+
+msgid "Getting the update ready"
+msgstr "アップデートを準備しています"
+
+msgid "Downloading DSA {0}"
+msgstr "DSA {0} をダウンロードしています"
+
+msgid "Stopping Android to install DSA {0}"
+msgstr "DSA {0} をインストールするため、Android を停止しています"
+
+msgid "Installing DSA {0}"
+msgstr "DSA {0} をインストールしています"
+
+msgid "DSA is restarting to finish the update"
+msgstr "アップデートを完了するため、DSA を再起動しています"
+
+msgid "Do not close DSA or start Android apps until the update is done."
+msgstr "アップデートが終わるまで、DSA を閉じたり Android アプリを起動したりしないでください。"
+
+msgid "Updated to {0}"
+msgstr "{0} にアップデートしました"
+
+msgid "DSA has not come back after the update to {0}. If it does not start soon, restart the computer."
+msgstr "{0} へのアップデート後、DSA が再開していません。すぐに起動しない場合は、コンピューターを再起動してください。"
+
+msgid "Updating to {0} failed. The version before it is still installed."
+msgstr "{0} へのアップデートに失敗しました。以前のバージョンがそのままインストールされています。"
+
+msgid "Updating DSA"
+msgstr "DSA をアップデート中"
+
+msgid "Update of DSA"
+msgstr "DSA のアップデート"
+
+msgid "Backup"
+msgstr "バックアップ"
+
+msgid "DSA keeps an encrypted backup of your Android apps' data in a folder of your home folder.\nThe apps and their data can come back after Android's data is reset, or on another computer.\nThe key that opens it is kept in your keyring."
+msgstr "DSA は、Android アプリのデータを暗号化して、ホームフォルダー内のフォルダーにバックアップします。\nAndroid のデータをリセットした後や別のコンピューターで、アプリとそのデータを復元できます。\nバックアップを開くキーはキーリングに保管されます。"
+
+msgid "Folder"
+msgstr "フォルダー"
+
+msgid "Backups are unavailable"
+msgstr "バックアップを利用できません"
+
+msgid "Last backup"
+msgstr "前回のバックアップ"
+
+msgid "In the backup"
+msgstr "バックアップの内容"
+
+msgid "Last restore"
+msgstr "前回の復元"
+
+msgid "Last problem"
+msgstr "前回の問題"
+
+msgid "Back up now"
+msgstr "今すぐバックアップ"
+
+msgid "Has Android back up the data of every app into the folder now. Android starts if it is not running."
+msgstr "Android に、すべてのアプリのデータを今すぐフォルダーへバックアップさせます。Android が実行されていない場合は起動します。"
+
+msgid "Back up"
+msgstr "バックアップ"
+
+msgid "Restore"
+msgstr "復元"
+
+msgid "Installs the apps of the backup that Android does not have, then replaces every app's data with the backup's."
+msgstr "Android にないバックアップ内のアプリをインストールしてから、すべてのアプリのデータをバックアップのデータで置き換えます。"
+
+msgid "Show recovery key"
+msgstr "回復キーを表示"
+
+msgid "The key that opens the backup anywhere else. Write it down and keep it safe."
+msgstr "ほかの場所でバックアップを開くためのキーです。書き留めて安全に保管してください。"
+
+msgid "Show"
+msgstr "表示"
+
+msgid "Use a recovery key"
+msgstr "回復キーを使用"
+
+msgid "Opens a backup folder brought from another computer, or kept from before this computer's keyring was reset."
+msgstr "別のコンピューターから持ち込んだバックアップフォルダーや、このコンピューターのキーリングのリセット前からあるフォルダーを開きます。"
+
+msgid "Enter"
+msgstr "入力"
+
+msgid "The backup was not restored"
+msgstr "バックアップは復元されませんでした"
+
+msgid "The apps were not backed up"
+msgstr "アプリはバックアップされませんでした"
+
+msgid "Restore from the backup?"
+msgstr "バックアップから復元しますか？"
+
+msgid "The recovery key could not be shown"
+msgstr "回復キーを表示できませんでした"
+
+msgid "The recovery key is kept. The backup folder is read with it."
+msgstr "回復キーを保管しました。バックアップフォルダーはこのキーで読み取られます。"
+
+msgid "The recovery key was not used"
+msgstr "回復キーは使用されませんでした"
+
+msgid "Where the backup stands could not be read"
+msgstr "バックアップの状態を読み取れませんでした"
+
+msgid "Recovery key"
+msgstr "回復キー"
+
+msgid "Enter the recovery key of the backup folder, as it was written down.\n\nSpaces, dashes and capitals do not matter.\n\nA key that does not open the folder is refused, and the key kept now stays."
+msgstr "書き留めたとおりに、バックアップフォルダーの回復キーを入力してください。\n\nスペース、ダッシュ、大文字と小文字の違いは問いません。\n\nフォルダーを開けないキーは拒否され、現在保管しているキーはそのまま残ります。"
+
+msgid "Never"
+msgstr "なし"
+
+msgid "No apps yet"
+msgstr "まだアプリはありません"
+
+msgid "{0} apps, {1}"
+msgstr "{0} 個のアプリ、{1}"
+
+msgid "Backing up every app. Android starts if it is not running. This can take a while."
+msgstr "すべてのアプリをバックアップしています。Android が実行されていない場合は起動します。時間がかかることがあります。"
+
+msgid "Restoring apps and their data from the backup. Android starts if it is not running. This can take a while."
+msgstr "バックアップからアプリとそのデータを復元しています。Android が実行されていない場合は起動します。時間がかかることがあります。"
+
+msgid "Apps restored: {0}. Apps installed first: {1}."
+msgstr "復元したアプリ: {0}。先にインストールしたアプリ: {1}。"
+
+msgid "Apps restored: {0}. Apps installed first: {1}. Apps that could not be restored: {2}."
+msgstr "復元したアプリ: {0}。先にインストールしたアプリ: {1}。復元できなかったアプリ: {2}。"
+
+msgid "Apps backed up: {0}."
+msgstr "バックアップしたアプリ: {0}。"
+
+msgid "Apps backed up: {0}. Apps that could not be backed up: {1}."
+msgstr "バックアップしたアプリ: {0}。バックアップできなかったアプリ: {1}。"
+
+msgid "Apps in the backup that Android does not have are installed.\n\nThe data of every app in the backup is replaced with the backup's. What those apps saved since the backup is lost.\n\nAndroid starts if it is not running."
+msgstr "バックアップにあって Android にないアプリがインストールされます。\n\nバックアップ内のすべてのアプリのデータを、バックアップのデータで置き換えます。それ以降にアプリが保存した内容は失われます。\n\nAndroid が実行されていない場合は起動します。"
+
+msgid "Write this key down and keep it somewhere safe, away from this computer.\n\nAnyone with it can read the backup.\n\nWithout it, the backup cannot be opened on another computer or after this computer's keyring is lost."
+msgstr "このキーを書き留め、このコンピューターから離れた安全な場所に保管してください。\n\nこのキーがあれば、誰でもバックアップを読み取れます。\n\nこのキーがないと、別のコンピューターや、このコンピューターのキーリングを失った後では、バックアップを開けません。"
+
+msgid "Enter the recovery key."
+msgstr "回復キーを入力してください。"
+
+msgid "The key was not used: {0}"
+msgstr "キーは使用されませんでした: {0}"
+
+msgid "Keeps an encrypted second copy of your Android apps' user data on this computer.\nIt can be restored after a data reset or on another computer. Off until you turn it on."
+msgstr "Android アプリのユーザーデータの暗号化された 2 つ目のコピーを、このコンピューターに保管します。\nデータのリセット後や別のコンピューターで復元できます。オンにするまではオフです。"
+
+msgid "Earlier backups of {0} apps ({1}) are still kept in your DSA Backup folder."
+msgstr "{0} 個のアプリの以前のバックアップ ({1}) が、DSA Backup フォルダーにまだ残っています。"
+
+msgid "The backups of {0} apps ({1}) are still kept on this computer.\n\nDelete them and their key as well, or keep them for a later restore?"
+msgstr "{0} 個のアプリのバックアップ ({1}) が、このコンピューターにまだ残っています。\n\nバックアップとそのキーも削除しますか？それとも後で復元できるように残しますか？"
+
+msgid "Backup is on. Android backs up its apps' data to this computer from now on."
+msgstr "バックアップがオンになりました。今後、Android はアプリのデータをこのコンピューターにバックアップします。"
+
+msgid "Backup is off, and the backups and their key were deleted."
+msgstr "バックアップがオフになり、バックアップとそのキーは削除されました。"
+
+msgid "Backup is off. The backups made so far are kept."
+msgstr "バックアップがオフになりました。これまでのバックアップは残っています。"
+
+msgid "Android's keys get their protection the first time Android starts."
+msgstr "Android のキーは、Android の初回起動時に保護されます。"
+
+msgid "Sealed by this computer's TPM.\nA copy of Android's disk cannot open the apps' keys or Android's encrypted storage anywhere else."
+msgstr "このコンピューターの TPM で封印されています。\nAndroid のディスクをコピーしても、ほかの場所ではアプリのキーや Android の暗号化ストレージを開けません。"
+
+msgid "Kept by your keyring only, because this computer has no TPM 2.0 that can be used.\nOnce one works, DSA seals the keys with it."
+msgstr "このコンピューターに使用できる TPM 2.0 がないため、キーリングだけで保管しています。\n使用できるようになると、DSA はキーを TPM で封印します。"
+
+msgid "Protected by {0}."
+msgstr "{0} で保護されています。"
+
+msgid "Why not the TPM: {0}"
+msgstr "TPM を使わない理由: {0}"
+
+msgid "Back up apps' data to this computer"
+msgstr "アプリのデータをこのコンピューターにバックアップ"
+
+msgid "Protection of Android's keys"
+msgstr "Android のキーの保護"
+
+msgid "Android's keys"
+msgstr "Android のキー"
+
+msgid "Why not the TPM"
+msgstr "TPM を使わない理由"
+
+msgid "Android's keys could not be opened"
+msgstr "Android のキーを開けませんでした"
+
+msgid "Backup was not turned on"
+msgstr "バックアップはオンになりませんでした"
+
+msgid "Backup was not turned off"
+msgstr "バックアップはオフになりませんでした"
+
+msgid "Turn off backup?"
+msgstr "バックアップをオフにしますか？"
+
+msgid "Keep them"
+msgstr "残す"
+
+msgid "Delete backups"
+msgstr "バックアップを削除"
+
+msgid "Protected content"
+msgstr "保護されたコンテンツ"
+
+msgid "Widevine lets streaming apps play protected video.\nDSA does not include or pass on Widevine. When you ask, your computer takes it unchanged from Google's emulator image."
+msgstr "Widevine により、ストリーミングアプリで保護された動画を再生できます。\nDSA は Widevine を同梱も再配布もしません。要求すると、コンピューターが Google のエミュレーターイメージからそのまま取り出します。"
+
+msgid "Android started before this change. Stop and start Android for Widevine to follow it."
+msgstr "Android はこの変更の前に起動しました。Widevine に反映するには、Android を停止してから起動してください。"
+
+msgid "Standard definition only"
+msgstr "標準画質のみ"
+
+msgid "Widevine here is security level L3, so streaming services send standard definition (SD) at most.\nTo watch in high definition, use this computer's own browser or app."
+msgstr "ここでの Widevine はセキュリティレベル L3 のため、ストリーミングサービスから届くのは最大でも標準画質 (SD) です。\n高画質で見るには、このコンピューター自体のブラウザーやアプリを使ってください。"
+
+msgid "Get Widevine"
+msgstr "Widevine を入手"
+
+msgid "Downloads about 2 GB from Google, under Google's Android SDK License, and keeps only Widevine.\nNothing is downloaded until you agree. Widevine is there from the next start of Android."
+msgstr "Google の Android SDK ライセンスに基づいて Google から約 2 GB をダウンロードし、Widevine だけを残します。\n同意するまで何もダウンロードされません。Widevine は次回の Android 起動時から使えます。"
+
+msgid "Remove Widevine"
+msgstr "Widevine を削除"
+
+msgid "Removes the module and the device certificates it kept, from the next start of Android."
+msgstr "次回の Android 起動時から、モジュールと、モジュールが保存したデバイス証明書を削除します。"
+
+msgid "Widevine is Google's software and follows Google's terms. DSA does not distribute it."
+msgstr "Widevine は Google のソフトウェアで、Google の利用規約に従います。DSA はこれを配布しません。"
+
+msgid "Get Widevine from Google?"
+msgstr "Google から Widevine を入手しますか？"
+
+msgid "Widevine was not installed"
+msgstr "Widevine はインストールされませんでした"
+
+msgid "Widevine was not removed"
+msgstr "Widevine は削除されませんでした"
+
+msgid "Where Widevine stands could not be read"
+msgstr "Widevine の状態を読み取れませんでした"
+
+msgid "Google's image {0} for Android {1} ({2})"
+msgstr "Android {1} ({2}) 向けの Google のイメージ {0}"
+
+msgid "Removed. Widevine stays in Android until it restarts."
+msgstr "削除しました。Widevine は Android の再起動まで残ります。"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its Widevine module, unchanged.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nWidevine is Google's software. DSA does not ship or pass it on.\n\nWidevine here is security level L3, so streaming services send standard definition (SD) at most.\n\nWidevine works from the next start of Android."
+msgstr "DSA は、この Android バージョン用の Google のエミュレーターイメージをダウンロードし、Widevine モジュールだけをそのまま取り出します。\n\n• 入手元: Google の SDK リポジトリ ({0})\n• サイズ: 約 2 GB、使用後に削除\n• ライセンス: Android SDK ライセンス ({1})。ダウンロードすると、その条項に同意したことになります。\n\nWidevine は Google のソフトウェアです。DSA はこれを同梱も再配布もしません。\n\nここでの Widevine はセキュリティレベル L3 のため、ストリーミングサービスから届くのは最大でも標準画質 (SD) です。\n\nWidevine は次回の Android 起動時から動作します。"
+
+msgid "Downloading about 2 GB from Google and taking out Widevine. It takes minutes."
+msgstr "Google から約 2 GB をダウンロードし、Widevine を取り出しています。数分かかります。"
+
+msgid "{0}, {1}"
+msgstr "{0}、{1}"
+
+msgid "{0}, {1}, {2}: {3}"
+msgstr "{0}、{1}、{2}: {3}"
+
+msgid "{0} records dropped"
+msgstr "{0} 件の記録が欠落しました"
+
+msgid "Lowest priority shown"
+msgstr "表示する最低の優先度"
+
+msgid "Copied"
+msgstr "コピーしました"
+
+msgid "When only the bars hide"
+msgstr "バーだけを隠すとき"
+
+msgid "Scaling"
+msgstr "拡大縮小"
+
+msgid "Automatic (app)"
+msgstr "自動 (アプリ)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "自動 (システム、このアプリに推奨)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "既定に従う (画面全体)"
+
+msgid "Follow the default (inside the window)"
+msgstr "既定に従う (ウィンドウ内)"

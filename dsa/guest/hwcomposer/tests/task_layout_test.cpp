@@ -609,4 +609,222 @@ TEST(fr3_content_stays_attached_until_the_window_is_gone_as_its_task_ends) {
     EXPECT_TRUE(!leavesLastFrameUndrawn({background}, /*hasFrame=*/false));
 }
 
+TEST(nfr1_a_task_without_layers_lets_go_of_its_buffers_only_after_a_while) {
+    // Minimized at t = 10 s: its two buffers stay through a moment without layers (an
+    // activity being replaced) and go once it has had none for the delay.
+    EXPECT_TRUE(!releaseDue(10'000, 10'000, 2'000));
+    EXPECT_TRUE(!releaseDue(10'000, 11'999, 2'000));
+    EXPECT_TRUE(releaseDue(10'000, 12'000, 2'000));
+    EXPECT_TRUE(releaseDue(10'000, 600'000, 2'000));
+    // A task that has a layer keeps them, however long it has been shown.
+    EXPECT_TRUE(!releaseDue(0, 600'000, 2'000));
+}
+
+TEST(nfr1_the_client_target_is_let_go_after_a_while_without_client_composition) {
+    // SurfaceFlinger last composed a video's pictures itself at t = 10 s: the client target
+    // stays through a pause between such frames, and goes once there has been none for the
+    // delay.
+    EXPECT_TRUE(clientTargetHeld(10'000, 10'000, 2'000));
+    EXPECT_TRUE(clientTargetHeld(10'000, 11'999, 2'000));
+    EXPECT_TRUE(!clientTargetHeld(10'000, 12'000, 2'000));
+    EXPECT_TRUE(!clientTargetHeld(10'000, 600'000, 2'000));
+    // Never composed by SurfaceFlinger, or already let go: nothing to hold.
+    EXPECT_TRUE(!clientTargetHeld(0, 600'000, 2'000));
+}
+
+TEST(nfr1_a_client_frame_asks_for_the_frame_that_frees_the_client_target) {
+    ClientTargetUse use(2'000);
+    // Nothing composed by SurfaceFlinger yet: nothing held, no frame owed.
+    EXPECT_TRUE(!use.held(1'000));
+    EXPECT_TRUE(!use.refreshAt());
+    EXPECT_TRUE(!use.letGo(1'000));
+
+    // A client frame at t = 10 s, which the host may not have seen (it was reconnecting): it
+    // holds SurfaceFlinger's buffers all the same, so the frame at the end of the delay is owed.
+    use.presented(true, 10'000);
+    // Frames without client composition after it change nothing.
+    use.presented(false, 10'500);
+    EXPECT_TRUE(use.held(10'500));
+    EXPECT_TRUE(use.refreshAt() && *use.refreshAt() == 12'000);
+    EXPECT_TRUE(!use.letGo(11'999));
+
+    // The owed frame lets go once, and owes nothing more.
+    const std::optional<int64_t> since = use.letGo(12'000);
+    EXPECT_TRUE(since && *since == 2'000);
+    EXPECT_TRUE(!use.held(12'000));
+    EXPECT_TRUE(!use.refreshAt());
+    EXPECT_TRUE(!use.letGo(20'000));
+
+    // The next client frame starts over.
+    use.presented(true, 30'000);
+    EXPECT_TRUE(use.refreshAt() && *use.refreshAt() == 32'000);
+}
+
+namespace {
+
+// An app overlay window: reported like a task, with the frame of its surface.
+Task overlay(int32_t id, const Rect& frame) { return Task{id, frame, true}; }
+
+constexpr int32_t kLyrics = 0x40000001;
+constexpr int32_t kFilter = 0x40000002;
+
+}  // namespace
+
+TEST(fr41_an_overlays_layer_goes_to_the_overlay_not_to_the_task_under_it) {
+    // Floating lyrics over a player's window.
+    const Rect lyrics{158, 82, 666, 220};
+    const std::vector<Task> tasks{{1, {100, 0, 900, 700}}, overlay(kLyrics, lyrics)};
+    const std::vector<LayerPlacement> layers{
+        {10, 1, {100, 0, 900, 700}},
+        {11, 2, {300, 300, 500, 400}},
+        {30, 9, lyrics},
+    };
+    const Layout layout = assignLayersToTasks(layers, tasks, kDisplay);
+    EXPECT_EQ(layersOf(layout, 1), (std::vector<int64_t>{10, 11}));
+    EXPECT_EQ(layersOf(layout, kLyrics), (std::vector<int64_t>{30}));
+    EXPECT_TRUE(layout.unassigned.empty());
+    for (const TaskLayers& t : layout.tasks) {
+        EXPECT_TRUE(t.overlay == (t.task == kLyrics));
+    }
+}
+
+TEST(fr41_an_overlay_outside_every_task_has_a_frame_of_its_own) {
+    const Rect lyrics{1300, 82, 1808, 220};
+    const std::vector<Task> tasks{{1, {100, 0, 900, 700}}, overlay(kLyrics, lyrics)};
+    const std::vector<LayerPlacement> layers{{10, 1, {100, 0, 900, 700}}, {30, 9, lyrics}};
+    const Layout layout = assignLayersToTasks(layers, tasks, kDisplay);
+    EXPECT_EQ(layersOf(layout, kLyrics), (std::vector<int64_t>{30}));
+    EXPECT_TRUE(layout.unassigned.empty());
+}
+
+TEST(fr41_a_tasks_layer_under_an_overlay_stays_the_tasks) {
+    // A popup of the task lies inside the overlay's frame, below the overlay.
+    const Rect lyrics{200, 100, 800, 400};
+    const std::vector<Task> tasks{{1, {100, 0, 900, 700}}, overlay(kLyrics, lyrics)};
+    const std::vector<LayerPlacement> layers{
+        {10, 1, {100, 0, 900, 700}},
+        {11, 2, {300, 200, 500, 300}},
+        {30, 9, lyrics},
+        {31, 10, {300, 200, 500, 300}},
+    };
+    const Layout layout = assignLayersToTasks(layers, tasks, kDisplay);
+    EXPECT_EQ(layersOf(layout, 1), (std::vector<int64_t>{10, 11}));
+    // What lies above the overlay's surface inside it is the overlay's.
+    EXPECT_EQ(layersOf(layout, kLyrics), (std::vector<int64_t>{30, 31}));
+}
+
+TEST(fr41_an_overlay_its_app_is_moving_keeps_its_layer) {
+    // The app dragged it 40 pixels on; the agent's report is still a frame behind.
+    const Rect reported{158, 82, 666, 220};
+    const Rect now{198, 122, 706, 260};
+    const std::vector<Task> tasks{{1, {100, 0, 900, 700}}, overlay(kLyrics, reported)};
+    const std::vector<LayerPlacement> layers{{10, 1, {100, 0, 900, 700}}, {30, 9, now}};
+    const Layout layout = assignLayersToTasks(layers, tasks, kDisplay);
+    EXPECT_EQ(layersOf(layout, 1), (std::vector<int64_t>{10}));
+    EXPECT_EQ(layersOf(layout, kLyrics), (std::vector<int64_t>{30}));
+    for (const TaskLayers& t : layout.tasks) {
+        if (t.task == kLyrics) {
+            // Composed from where its surface is, so the picture is whole.
+            EXPECT_TRUE(t.bounds == now);
+        }
+    }
+}
+
+TEST(fr41_a_moving_overlay_never_takes_a_tasks_own_surface) {
+    // A task of exactly the overlay's size: its surface is not the overlay's.
+    const std::vector<Task> tasks{{1, {100, 100, 608, 238}}, overlay(kLyrics, {900, 82, 1408, 220})};
+    const std::vector<LayerPlacement> layers{{10, 1, {100, 100, 608, 238}}};
+    const Layout layout = assignLayersToTasks(layers, tasks, kDisplay);
+    EXPECT_EQ(layersOf(layout, 1), (std::vector<int64_t>{10}));
+    EXPECT_TRUE(!hasTask(layout, kLyrics));
+}
+
+TEST(fr41_two_overlays_each_get_their_own_layer) {
+    const Rect ball{50, 50, 150, 150};
+    const Rect panel{150, 50, 550, 450};
+    const std::vector<Task> tasks{overlay(kLyrics, ball), overlay(kLyrics + 5, panel)};
+    const std::vector<LayerPlacement> layers{{30, 9, ball}, {31, 10, panel}};
+    const Layout layout = assignLayersToTasks(layers, tasks, kDisplay);
+    EXPECT_EQ(layersOf(layout, kLyrics), (std::vector<int64_t>{30}));
+    EXPECT_EQ(layersOf(layout, kLyrics + 5), (std::vector<int64_t>{31}));
+}
+
+TEST(fr41_an_overlay_that_covers_the_display_is_composed_over_every_task) {
+    const std::vector<Task> tasks{
+        {1, {100, 100, 900, 700}}, {2, {1000, 100, 1800, 700}}, overlay(kFilter, kDisplay)};
+    const std::vector<LayerPlacement> layers{
+        {1, 0, kDisplay},  // the home activity, under the tasks
+        {10, 1, {100, 100, 900, 700}},
+        {20, 2, {1000, 100, 1800, 700}},
+        {40, 9, kDisplay},  // the filter
+    };
+    const Layout layout = assignLayersToTasks(layers, tasks, kDisplay);
+    // It gets no frames of its own, so the host can open no window for it.
+    EXPECT_TRUE(!hasTask(layout, kFilter));
+    EXPECT_EQ(layout.screen, (std::vector<int64_t>{40}));
+    EXPECT_EQ(layersOf(layout, 1), (std::vector<int64_t>{10}));
+    EXPECT_EQ(layersOf(layout, 2), (std::vector<int64_t>{20}));
+    EXPECT_TRUE(coversDisplay({-10, -10, 2000, 1200}, kDisplay));
+    EXPECT_TRUE(!coversDisplay({0, 0, 1920, 1079}, kDisplay));
+}
+
+TEST(fr41_a_display_wide_layer_is_composed_over_tasks_only_for_a_reported_overlay) {
+    const std::vector<Task> tasks{{1, {100, 100, 900, 700}}};
+    const std::vector<LayerPlacement> layers{
+        {1, 0, kDisplay}, {10, 1, {100, 100, 900, 700}}, {40, 9, kDisplay}};
+    // No overlay reported: a display-wide layer is nobody's, as before.
+    EXPECT_TRUE(assignLayersToTasks(layers, tasks, kDisplay).screen.empty());
+    // One reported, but its layer is gone: the layer under the tasks is never taken for it.
+    const std::vector<Task> withFilter{{1, {100, 100, 900, 700}}, overlay(kFilter, kDisplay)};
+    const std::vector<LayerPlacement> under{{1, 0, kDisplay}, {10, 1, {100, 100, 900, 700}}};
+    EXPECT_TRUE(assignLayersToTasks(under, withFilter, kDisplay).screen.empty());
+}
+
+TEST(fr41_an_overlay_of_one_rgba_layer_is_shown_from_its_own_buffer) {
+    const Rect lyrics{158, 82, 666, 220};
+    OverlaySurface whole;
+    whole.frame = lyrics;
+    whole.rgbaBuffer = true;
+    whole.bufferWidth = 508;
+    whole.bufferHeight = 138;
+    whole.cropRight = 508;
+    whole.cropBottom = 138;
+    EXPECT_TRUE(showsOwnBuffer(lyrics, {whole}));
+
+    // Anything the host would have to compose is composed: two layers, another format or a
+    // layer SurfaceFlinger draws, a scaled or cropped buffer, a turned or faded layer.
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {whole, whole}));
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {}));
+    OverlaySurface other = whole;
+    other.rgbaBuffer = false;
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {other}));
+    other = whole;
+    other.bufferWidth = 1016;
+    other.cropRight = 1016;
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {other}));
+    other = whole;
+    other.cropLeft = 10;
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {other}));
+    other = whole;
+    other.transform = 4;
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {other}));
+    other = whole;
+    other.alpha = 0.5f;
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {other}));
+    other = whole;
+    other.frame = {158, 82, 600, 220};
+    EXPECT_TRUE(!showsOwnBuffer(lyrics, {other}));
+}
+
+TEST(fr41_the_registry_keeps_whether_a_task_is_an_overlay) {
+    TaskRegistry registry;
+    EXPECT_TRUE(registry.update(kLyrics, {158, 82, 666, 220}, true));
+    EXPECT_TRUE(!registry.update(kLyrics, {158, 82, 666, 220}, true));
+    EXPECT_TRUE(registry.update(1, {0, 0, 400, 300}));
+    const std::vector<Task> tasks = registry.tasks();
+    EXPECT_EQ(tasks.size(), static_cast<size_t>(2));
+    EXPECT_TRUE(!tasks[0].overlay && tasks[0].id == 1);
+    EXPECT_TRUE(tasks[1].overlay && tasks[1].id == kLyrics);
+}
+
 int main() { return ::dsa::test::runAll(); }

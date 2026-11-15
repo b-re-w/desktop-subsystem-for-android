@@ -28,6 +28,10 @@ nothing else.
    compose has finished, the hwcomposer makes the ColorBuffer the task display's current
    one (`rcSetDisplayColorBuffer`), which is when the host copies it into the window. Two
    ColorBuffers per task alternate, so the host can show one while the next is composed.
+   A task that has had no layer for 2 s (its window minimized, its app in the background)
+   lets go of both, since its window shows its own copy of the last frame; the next frame
+   makes them again. The hwcomposer asks SurfaceFlinger for a frame when they are due, as
+   nothing else changes on the display then.
 
 `presentDisplay` does not wait for the host. It hands the frame to a thread of its own,
 which composes and posts it, and waits only until the frame before has gone out. That is
@@ -77,6 +81,34 @@ layers, and anything that straddles a window's edge. Sending it would put pixels
 belong to no window, or to another one, into a host window. A popup that reaches outside
 its window is left out for the same reason.
 
+## App overlay windows
+
+An app overlay window (a window an app adds over other apps with the "display over other
+apps" permission: floating lyrics, a chat head) is in no task. The agent reports each one as
+it reports a task, in a `TaskUpdated` with `overlay` set, with the frame of the overlay's
+surface as its bounds and an ID from 0x40000000 up, which no task has. The hwcomposer gives
+it a host display of its own and announces it with `TaskFrames`, and the host shows it in a
+borderless window that floats above the others.
+
+- An overlay's layers are found before the tasks' (`assignLayersToTasks`), because an overlay
+  floats over the tasks and would otherwise be drawn into the window of the task under it.
+  The layers whose frame is exactly the overlay's are its surface. A layer above that surface
+  and inside it is the overlay's too. A task's layer under the overlay stays the task's.
+- While its app moves it, the agent's report is a frame behind: the overlay then takes the
+  layer of its own size nearest to where it was, which is no task's and no other overlay's
+  surface, and is composed from where that layer is.
+- The host composes into a target it first clears to opaque black, which would put a black
+  box around floating lyrics. So an overlay of one 8-bit RGBA layer that shows the whole of a
+  buffer of its own size, unscaled, unturned and at full alpha, is not composed: the app's own
+  buffer, which still has the transparency the app drew, is posted as the overlay's frame
+  (`showsOwnBuffer`). Any other overlay is composed and is opaque where nothing is drawn; the
+  log says which way each overlay goes.
+- An overlay that covers the whole display (a screen filter, a dimmer) gets no frames of its
+  own, so the host can open no window for it: that window would cover the user's desktop. Its
+  layers, the topmost display-wide ones above every layer of an app task, at most one for each
+  such overlay, are composed over every app task's frame instead (`Layout::screen`), as it
+  covers every app on a phone's screen.
+
 SurfaceFlinger composes some layers itself (client composition). For a task with such
 layers, the part of the client target their frames cover is composed where the task's
 lowest client layer sits.
@@ -109,32 +141,64 @@ the driver binds the buffer's VkImage, made in that format, to the ColorBuffer's
 SurfaceFlinger can no longer show the buffer, and the host frees whatever a process still
 holds when the process dies.
 
+## Buffers a CPU writes
+
+Without virtio-gpu, nothing moves what a CPU writes into a gralloc buffer to its host
+ColorBuffer: a video decoder's pictures, a camera's frames and a layer an app draws in
+software stayed in the guest's memory, and a video played its sound over a green picture.
+So the hwcomposer copies them up (`src/cpu_upload.*`, with the rules in
+`dsa/graphics/include/dsa_cpu_upload.h`):
+
+- A buffer whose usage says a CPU writes it and the GPU does not draw it keeps its
+  descriptors when SurfaceFlinger first sends it.
+- At each validate, before SurfaceFlinger draws its client layers, each such layer's planes
+  are read through a gralloc CPU lock and sent with `rcUpdateColorBuffer`. The lock needs the
+  buffer imported from its handle (`AHardwareBuffer_createFromHandle`, cloning it, with the
+  method number in `dsa/graphics/include/dsa_hardware_buffer_import.h`): a wrong method is
+  refused before the mapper sees the buffer, and nothing is copied up. SurfaceFlinger's own
+  graphics driver leaves these copies to the hwcomposer, so a failed copy shows a video as
+  green. A failure is logged at its first, then once in 600 with its count. A layer whose
+  buffer changed holds a new picture and is copied; a buffer seen again is copied only when
+  a fingerprint of every eighth row of its planes changed. A buffer the GPU draws is never
+  copied. The bytes copied each second are logged at debug level.
+- A YUV buffer gets a YUV ColorBuffer from a host that lists
+  `ANDROID_EMU_dsa_yuv_color_buffers` (`dsa/graphics/patches/0019-*.patch`), and its planes
+  go up packed as the host's image lays them out. The host's compositor samples RGB images
+  only, so a YUV layer is composed by SurfaceFlinger (`CLIENT`), from the same ColorBuffer.
+
+The guest Vulkan driver does the same in the other processes that sample such a buffer, a
+`PixelCopy` or a `TextureView` among them (`dsa/graphics/patches/guest/mesa/0008-*.patch`).
+
 ## Display
 
 The display's size and density come from the kernel command line. `make-image.py` writes
 these defaults into `image.json`, and the host replaces the width and height with a square as
 long as the user's longest monitor when it starts the VM, and the density with the density of
-a window on the user's main monitor (144 at a scale of 150%). SurfaceFlinger, and so every
+a window on the user's main monitor (196 at a scale of 150%). SurfaceFlinger, and so every
 app, starts at that same density (`androidboot.lcd_density`, which the host sets beside it):
 
 | Property | Default |
 |---|---|
 | `androidboot.dsa.display_width` | 1920 |
 | `androidboot.dsa.display_height` | 1080 |
-| `androidboot.dsa.display_dpi` | 96 |
+| `androidboot.dsa.display_dpi` | 130 |
 | `androidboot.dsa.display_refresh_rate` | 60 |
 
 The display offers one configuration per refresh rate (60, 75, 90, 100, 120, 144, 165 and
 240 Hz, `src/refresh_rates.h`), all the same size and in one group, so SurfaceFlinger moves
 between them seamlessly. `display_refresh_rate` is only the rate it starts at. The host
 chooses the rate while Android runs: the user's fastest monitor, at most 60 Hz while the
-host's battery saver is on. It sends that rate to the agent (`DisplayRefresh`), which holds
+host's battery saver is on or while the user drags a window to a new size. It sends that rate to the agent (`DisplayRefresh`), which holds
 the framework's refresh rate range at it, and SurfaceFlinger then sets the matching
 configuration, whose period the vsync clock takes from its next tick.
 
 A window cannot be larger than this display. A task's ColorBuffers follow the task's own
 size in steps (`taskBufferSize`), so a large display costs nothing per window. Only the client
-target has the display's size, and only once SurfaceFlinger composes something itself.
+target has the display's size, and only while SurfaceFlinger composes something itself (a
+video's YUV pictures). Two seconds after the last such frame the hwcomposer lets go of the
+client target's ColorBuffers and asks for a frame, on which SurfaceFlinger (with DSA's
+framework patch, `dsa/guest/framework/patches/frameworks/native`) gives its own buffers back
+too. The next frame that needs them allocates them again.
 
 ## Build and test
 
@@ -152,8 +216,9 @@ the NDK's libc++ is not the platform's. `dsa/graphics/check-guest-driver.py --ex
 checks every import resolves against the image.
 
 `test.sh` runs the task rules (`tests/task_layout_test.cpp`) and the channel messages
-against the protocol vectors (`tests/channel_messages_test.cpp`), and the present
-pipeline (`tests/frame_pipeline_test.cpp`) on the build machine. It
+against the protocol vectors (`tests/channel_messages_test.cpp`), the present
+pipeline (`tests/frame_pipeline_test.cpp`) and which layers are copied up and composed where
+(`tests/cpu_upload_policy_test.cpp`) on the build machine. It
 needs a C++17 compiler and protobuf-lite 3.21 (Debian: `libprotobuf-dev`).
 
 The composer is DSA's own code, written after ranchu's hwc3
@@ -169,6 +234,7 @@ composition paths (DRM, guest composition) do not apply to a VM without a displa
 | `src/compose_request.*` | The `ComposeDevice_v2` request renderControl's `rcCompose` takes |
 | `src/channel_messages.*` | `TaskUpdated`, `TaskRemoved` and `TaskFrames`, through the generated codec |
 | `src/task_composer.*` | Per-task composition and posting, display lifetimes, shared ColorBuffers |
+| `src/cpu_upload.*`, `src/cpu_upload_policy.*` | Copying what a CPU wrote into a layer's buffer up to the host, and which layers the host composes |
 | `src/frame_pipeline.*` | The thread a frame goes to the host on, one frame in flight |
 | `src/host_renderer.*`, `src/host_stream.*` | renderControl over vsock to the host renderer |
 | `src/channel_client.*` | The binder client of `dsa-channeld` |

@@ -39,8 +39,6 @@ public partial class UninstallAppWindow : Window
         Title = App.Text.Get("UninstallWindow_Caption");
         CaptionTitle.Text = Title;
         ProgressDetail.Text = App.Text.Get("UninstallWindow_BusyDetail");
-        CloseButton.Content = App.Text.Get("UninstallWindow_Close");
-        System.Windows.Automation.AutomationProperties.SetName(CaptionClose, App.Text.Get("UninstallWindow_Close"));
         Marquee(ProgressMarquee);
         _vm.PropertyChanged += (_, _) => Render();
         Render();
@@ -116,7 +114,20 @@ public partial class UninstallAppWindow : Window
         CaptionClose.IsEnabled = page != UninstallPage.Progress;
         CloseButton.IsDefault = true;
         CloseButton.IsCancel = true;
+
+        // The result replaces the progress without moving the focus, so a screen reader is
+        // told how it ended, once, and the focus goes to the button that closes the window.
+        if (page != _told && page is UninstallPage.Done or UninstallPage.Failed)
+        {
+            _told = page;
+            Announce.Say(this, AccessibleText.Notice(App.Text, _vm.ResultTitle, _vm.ResultText),
+                important: page == UninstallPage.Failed);
+            Dispatcher.InvokeAsync(() => CloseButton.Focus(), System.Windows.Threading.DispatcherPriority.Input);
+        }
     }
+
+    /// <summary>The result page a screen reader was last told about.</summary>
+    private UninstallPage? _told;
 
     /// <summary>The app's icon, or DSA's logo without one.</summary>
     private static ImageSource IconImage(byte[]? png)

@@ -25,9 +25,9 @@ public partial class AppsPage : Page
         };
     }
 
-    /// <summary>Brings the row of the app a task window's App info named into view and gives its
-    /// first button the keyboard focus, once the list has laid it out, so the user lands on the
-    /// app's settings and a screen reader reads its name.</summary>
+    /// <summary>Brings the card of the app a task window's App info named into view, open, and
+    /// gives its header the keyboard focus, once the list has laid it out, so the user lands on
+    /// the app's settings and a screen reader reads its name.</summary>
     private void ShowHighlighted()
     {
         if (ViewModel.Highlighted is not { } package)
@@ -67,11 +67,37 @@ public partial class AppsPage : Page
         return null;
     }
 
+    /// <summary>Remembers that the user opened an app's card, so it is still open when the list
+    /// is drawn again after a change.</summary>
+    private void OnCardExpanded(object sender, RoutedEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, sender) && PackageOf(sender) is { } package)
+        {
+            ViewModel.SetExpanded(package, true);
+        }
+    }
+
+    private void OnCardCollapsed(object sender, RoutedEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, sender) && PackageOf(sender) is { } package)
+        {
+            ViewModel.SetExpanded(package, false);
+        }
+    }
+
     private async void OnResizable(object sender, RoutedEventArgs e)
     {
         if (sender is ToggleButton { Tag: string package } toggle)
         {
             await ViewModel.SetResizableAsync(package, toggle.IsChecked == true);
+        }
+    }
+
+    private async void OnBelowTitleBar(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleButton { Tag: string package } toggle)
+        {
+            await ViewModel.SetBelowTitleBarAsync(package, toggle.IsChecked == true);
         }
     }
 
@@ -108,6 +134,27 @@ public partial class AppsPage : Page
         }
     }
 
+    private async void OnFullScreen(object sender, SelectionChangedEventArgs e)
+    {
+        // As with the start size, only a choice the user makes counts, not the list filling in.
+        var chosen = e.RemovedItems.Count > 0 || sender is ComboBox { IsDropDownOpen: true }
+            || sender is ComboBox { IsKeyboardFocusWithin: true };
+        if (sender is ComboBox { Tag: string package, SelectedIndex: >= 0 } box && chosen)
+        {
+            await ViewModel.SetFullScreenAsync(package, box.SelectedIndex);
+        }
+    }
+
+    private async void OnImmersive(object sender, SelectionChangedEventArgs e)
+    {
+        var chosen = e.RemovedItems.Count > 0 || sender is ComboBox { IsDropDownOpen: true }
+            || sender is ComboBox { IsKeyboardFocusWithin: true };
+        if (sender is ComboBox { Tag: string package, SelectedIndex: >= 0 } box && chosen)
+        {
+            await ViewModel.SetImmersiveAsync(package, box.SelectedIndex);
+        }
+    }
+
     private async void OnRoot(object sender, SelectionChangedEventArgs e)
     {
         // As with the start size, only a choice the user makes counts, not the list filling in.
@@ -139,6 +186,14 @@ public partial class AppsPage : Page
         if (PackageOf(sender) is { } package)
         {
             await ViewModel.InfoAsync(package);
+        }
+    }
+
+    private async void OnDesktopShortcut(object sender, RoutedEventArgs e)
+    {
+        if (PackageOf(sender) is { } package)
+        {
+            await ViewModel.CreateDesktopShortcutAsync(package);
         }
     }
 

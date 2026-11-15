@@ -26,6 +26,27 @@ final class PageViewModelTests: XCTestCase {
         XCTAssertEqual(settings?.uninstallTip, "Apps_SystemTip")
     }
 
+    func test_fr30_an_apps_option_card_opens_for_app_info_and_stays_as_the_user_left_it() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app),\#(system)]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        // Every card starts closed.
+        XCTAssertTrue(apps.expanded.isEmpty)
+        // App Info of a task window finds the app and opens its card.
+        apps.show("org.example.notes")
+        XCTAssertEqual(apps.search, "org.example.notes")
+        XCTAssertEqual(apps.rows.map(\.package), ["org.example.notes"])
+        XCTAssertEqual(apps.expanded, ["org.example.notes"])
+        // Reading the list again after a change keeps it open; closing it is kept too.
+        await apps.refresh()
+        XCTAssertEqual(apps.expanded, ["org.example.notes"])
+        apps.setExpanded("org.example.notes", false)
+        apps.setExpanded("com.android.settings", true)
+        await apps.refresh()
+        XCTAssertEqual(apps.expanded, ["com.android.settings"])
+    }
+
     func test_fr17_an_uninstall_android_refuses_says_why() async {
         let cli = FakeCli()
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
@@ -98,7 +119,7 @@ final class PageViewModelTests: XCTestCase {
         let cli = FakeCli()
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
         cli.answer("app-window --json", #"{"apps":[]}"#)
-        cli.answer("app-window org.example.notes --fixed-size off --start-size 412x915 --dpi-scaling auto --json",
+        cli.answer("app-window org.example.notes --fixed-size off --start-size 412x915 --dpi-scaling auto --fullscreen default --immersive default --json",
                    #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":[412,915]}]}"#)
         let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
         await apps.refresh()
@@ -114,7 +135,7 @@ final class PageViewModelTests: XCTestCase {
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
         cli.answer("app-window --json",
                    #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"dpi_scaling":"system"}],"system_forced_available":false}"#)
-        cli.answer("app-window org.example.notes --fixed-size off --start-size auto --dpi-scaling app --json",
+        cli.answer("app-window org.example.notes --fixed-size off --start-size auto --dpi-scaling app --fullscreen default --immersive default --json",
                    #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"dpi_scaling":"app"}]}"#)
         let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
         await apps.refresh()
@@ -152,6 +173,156 @@ final class PageViewModelTests: XCTestCase {
         XCTAssertEqual(apps.rows.first?.dpiScalingTip, "Apps_DpiScaling_SystemForcedTip")
     }
 
+    func test_fr4_youtube_scales_the_system_way_by_default() async {
+        let youtube = app.replacingOccurrences(of: "org.example.notes", with: "com.google.android.youtube")
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(youtube),\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[],"system_scaled_by_default":["com.google.android.youtube"]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        // YouTube, with no choice of the user's, shows its automatic choice as System for it.
+        let row = apps.rows.first { $0.package == "com.google.android.youtube" }
+        XCTAssertEqual(row.map { $0.dpiScalingChoices[$0.dpiScalingIndex].scaling }, .auto)
+        XCTAssertEqual(row.map { $0.dpiScalingChoices[$0.dpiScalingIndex].label }, "Apps_DpiScaling_AutoSystem")
+        // Any other app's automatic choice keeps its plain name, and the rest read the same.
+        let notes = apps.rows.first { $0.package == "org.example.notes" }
+        XCTAssertEqual(notes?.dpiScalingChoices.first?.label, "Apps_DpiScaling_Auto")
+        XCTAssertEqual(notes.map { Array($0.dpiScalingChoices.dropFirst()) },
+                       row.map { Array($0.dpiScalingChoices.dropFirst()) })
+    }
+
+    func test_fr4_the_users_choice_wins_over_the_built_in_list() async {
+        let youtube = app.replacingOccurrences(of: "org.example.notes", with: "com.google.android.youtube")
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(youtube)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[{"package":"com.google.android.youtube","dpi_scaling":"app"}],"system_scaled_by_default":["com.google.android.youtube"]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first.map { $0.dpiScalingChoices[$0.dpiScalingIndex].scaling }, .app)
+    }
+
+    func test_fr30_an_apps_full_screen_choice_wins_over_the_default() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"fullscreen":"window"}],"defaults":{"fullscreen":"screen","immersive":"window"}}"#)
+        cli.answer("app-window org.example.notes --fixed-size off --start-size auto --dpi-scaling auto --fullscreen window --immersive screen --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":false,"start_size":null,"fullscreen":"window","immersive":"screen"}]}"#)
+        cli.answer("settings set app-immersive screen --json", #"{"app_fullscreen":"screen","app_immersive":"screen"}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first?.fullScreenIndex, FullScreenPlace.allCases.firstIndex(of: .window))
+        XCTAssertEqual(apps.rows.first?.immersiveIndex, 0)
+        XCTAssertEqual(apps.fullScreenDefaultIndex, 0)
+        XCTAssertEqual(apps.immersiveDefaultIndex, 1)
+        await apps.setFullScreen("org.example.notes", immersive: true, FullScreenPlace.allCases.firstIndex(of: .screen) ?? -1)
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first?.immersiveIndex, FullScreenPlace.allCases.firstIndex(of: .screen))
+        // The choice for every app is a setting of its own.
+        await apps.setFullScreenDefault(immersive: true, 0)
+        XCTAssertTrue(cli.called("settings set app-immersive screen --json"))
+        XCTAssertEqual(apps.immersiveDefaultIndex, 0)
+        XCTAssertEqual(FullScreenPlace.allCases.map(\.rawValue), ["default", "screen", "window"])
+    }
+
+    func test_fr30_follow_the_default_says_where_the_default_shows_now() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[],"defaults":{"fullscreen":"window","immersive":"screen"}}"#)
+        cli.answer("settings set app-fullscreen screen --json", #"{"app_fullscreen":"screen","app_immersive":"screen"}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        // Before dsa says, the lists name DSA's own defaults.
+        XCTAssertEqual(apps.fullScreenChoices.first, "Apps_FullScreen_DefaultScreen")
+        XCTAssertEqual(apps.immersiveChoices.first, "Apps_FullScreen_DefaultWindow")
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        // Each of an app's two lists names where its own default takes the app.
+        XCTAssertEqual(apps.fullScreenChoices,
+                       ["Apps_FullScreen_DefaultWindow", "Apps_FullScreen_Screen", "Apps_FullScreen_Window"])
+        XCTAssertEqual(apps.immersiveChoices,
+                       ["Apps_FullScreen_DefaultScreen", "Apps_FullScreen_Screen", "Apps_FullScreen_Window"])
+        // A change of the choice for every app shows in the lists at once.
+        await apps.setFullScreenDefault(immersive: false, 0)
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.fullScreenChoices.first, "Apps_FullScreen_DefaultScreen")
+        XCTAssertEqual(apps.immersiveChoices.first, "Apps_FullScreen_DefaultScreen")
+    }
+
+    func test_fr30_follow_the_default_reads_where_it_takes_the_app() throws {
+        let english = AppsViewModel(service: AppsService(cli: FakeCli()), text: try LanguageText("en"))
+        XCTAssertEqual(english.fullScreenChoices.first, "Follow the default (on the whole screen)")
+        XCTAssertEqual(english.immersiveChoices.first, "Follow the default (inside the window)")
+        XCTAssertEqual(english.dpiScalingChoices.first?.label, "Automatic (app)")
+        let korean = AppsViewModel(service: AppsService(cli: FakeCli()), text: try LanguageText("ko"))
+        XCTAssertEqual(korean.fullScreenChoices.first, "기본값 따르기 (화면 전체로)")
+        XCTAssertEqual(korean.immersiveChoices.first, "기본값 따르기 (창 안에서)")
+        XCTAssertEqual(korean.dpiScalingChoices.first?.label, "자동 (앱)")
+    }
+
+    func test_fr30_the_below_title_bar_switch_is_read_and_changed() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        // An entry from a dsa that does not name the switch reads as off.
+        cli.answer("app-window --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null}]}"#)
+        cli.answer("app-window org.example.notes --below-title-bar on --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null,"below_title_bar":true}]}"#)
+        cli.answer("app-window org.example.notes --below-title-bar off --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null,"below_title_bar":false}]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, false)
+
+        await apps.setBelowTitleBar("org.example.notes", true)
+        XCTAssertNil(apps.error)
+        XCTAssertTrue(cli.called("app-window org.example.notes --below-title-bar on --json"))
+        XCTAssertEqual(apps.message, "Apps_WindowChanged")
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, true)
+        // The app's other window settings stay as they were.
+        XCTAssertEqual(apps.rows.first?.resizable, false)
+        // Choosing what the app has already sends nothing.
+        let calls = cli.calls.count
+        await apps.setBelowTitleBar("org.example.notes", true)
+        XCTAssertEqual(cli.calls.count, calls)
+
+        await apps.setBelowTitleBar("org.example.notes", false)
+        XCTAssertNil(apps.error)
+        XCTAssertTrue(cli.called("app-window org.example.notes --below-title-bar off --json"))
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, false)
+    }
+
+    func test_fr30_changing_another_window_setting_never_sends_the_below_title_bar_switch() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)
+        cli.answer("app-window --json",
+                   #"{"apps":[],"below_title_bar_by_default":["org.example.notes"]}"#)
+        cli.answer("app-window org.example.notes --fixed-size on --start-size auto --dpi-scaling auto --fullscreen default --immersive default --json",
+                   #"{"apps":[{"package":"org.example.notes","fixed_size":true,"start_size":null,"below_title_bar":true}]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        await apps.loadWindowSettings()
+        XCTAssertNil(apps.error)
+        // An app on DSA's list, with no choice of the user's, shows as on.
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, true)
+        await apps.setResizable("org.example.notes", false)
+        XCTAssertNil(apps.error)
+        XCTAssertTrue(cli.called("app-window org.example.notes --fixed-size on --start-size auto --dpi-scaling auto --fullscreen default --immersive default --json"))
+        XCTAssertFalse(cli.calls.contains { $0.contains("--below-title-bar") })
+        XCTAssertEqual(apps.rows.first?.belowTitleBar, true)
+    }
+
     func test_fr4_dpi_scaling_words_are_the_ones_dsa_takes() {
         XCTAssertEqual(DpiScaling.allCases.map(\.rawValue), ["auto", "app", "system", "system-forced"])
         XCTAssertEqual(DpiScaling.read(nil), .auto)
@@ -176,6 +347,27 @@ final class PageViewModelTests: XCTestCase {
         try? await widgets.watchOnce()
         XCTAssertEqual(widgets.placed.map(\.id), [1])
         XCTAssertEqual(widgets.offers.count, 1)
+    }
+
+    func test_fr12_a_widget_without_a_preview_shows_its_apps_icon() async {
+        let cli = FakeCli()
+        let icon = Data([0x89, 0x50, 0x4E, 0x47])
+        let preview = Data([0x89, 0x50, 0x4E, 0x47, 0x01])
+        cli.answer("widgets list --json", """
+            {"providers":[\
+            {"provider":"org.example/.Clock","package":"org.example","label":"Clock","preview_png":"\(preview.base64EncodedString())","default_width_dp":180,"default_height_dp":110},\
+            {"provider":"org.notes/.Notes","package":"org.notes","label":"Notes","default_width_dp":110,"default_height_dp":40}\
+            ],"widgets":[]}
+            """)
+        cli.answer("apps list --json", #"{"apps":[{"package":"org.notes","label":"Notes","icon_png":"\#(icon.base64EncodedString())"}]}"#)
+        let widgets = WidgetsViewModel(service: DsaService(cli: cli), text: KeyText(), stream: cli)
+        await widgets.refresh()
+        // The widget's own preview first; its app's icon for one that has none.
+        XCTAssertEqual(widgets.offers.map(\.preview), [preview, icon])
+        XCTAssertEqual(widgets.offers.map(\.app), ["org.example", "org.notes"])
+        // The icons are read once, not on every refresh.
+        await widgets.refresh()
+        XCTAssertEqual(cli.calls.filter { $0.first == "apps" }.count, 1)
     }
 
     func test_fr17_background_apps_show_what_they_play() async {

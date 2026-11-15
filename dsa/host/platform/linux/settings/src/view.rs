@@ -6,9 +6,10 @@ use std::collections::VecDeque;
 use crate::api::{Failure, Problem};
 use crate::i18n::{tr, trf};
 use crate::model::{
-    AdbAutoConnectState, AndroidVersion, App, AppWindow, ArmTranslation, DpiScaling, Gapps,
-    GappsState, GuestMemory, HostRole, Memory, MemoryShare, Network, NetworkMode, Outcome,
-    ProgramUpdateAnswer, ProgramUpdatePhase, State, Status, ALL_FOLDERS,
+    AdbAutoConnectState, AndroidVersion, App, AppWindow, ArmTranslation, Backup, BackupJob,
+    DnsResolver, DpiScaling, FullScreenPlace, Gapps, GappsState, GuestMemory, HostRole,
+    ImportedCertificate, KeyProtection, KeyProtectionShown, Memory, MemoryShare, Network,
+    NetworkMode, Outcome, ProgramUpdateAnswer, ProgramUpdatePhase, State, Status, ALL_FOLDERS,
 };
 
 /// The dsa commands the Advanced page's command line group shows, each on its own row with a
@@ -137,9 +138,20 @@ pub fn host_rows(memory: &Memory) -> Vec<MemoryRow> {
                 "Process {0}, {1} private",
                 &[&p.pid.to_string(), &size_kb(p.private_kb)],
             );
-            row(label, detail, p.working_set_kb)
+            row(label, detail, p.own_kb())
         })
         .collect()
+}
+
+/// What the user's Android holds on the host for itself: every process's working set without
+/// the pages of the disk files the VM maps directly, which the host drops without writing.
+pub fn host_own_kb(memory: &Memory) -> u64 {
+    let mapped: u64 = memory
+        .host
+        .iter()
+        .map(|p| p.mapped_kb.min(p.working_set_kb))
+        .sum();
+    memory.host_total_kb.saturating_sub(mapped)
 }
 
 /// Android's breakdown: the apps and the system, the caches, the kernel's reclaimable caches,
@@ -257,14 +269,15 @@ pub fn process_rows(guest: &GuestMemory) -> Vec<MemoryRow> {
         .collect()
 }
 
-/// What the VM holds on the host now, or `None` without a VM.
+/// What the VM holds on the host now for itself (without the pages of the disk files it maps
+/// directly), or `None` without a VM.
 pub fn vm_size_kb(memory: &Memory) -> Option<u64> {
     let vm: Vec<_> = memory
         .host
         .iter()
         .filter(|p| p.role == HostRole::Vm)
         .collect();
-    (!vm.is_empty()).then(|| vm.iter().map(|p| p.working_set_kb).sum())
+    (!vm.is_empty()).then(|| vm.iter().map(|p| p.own_kb()).sum())
 }
 
 /// How full the guest's memory is, from 0 to 1.
@@ -429,19 +442,59 @@ pub fn android_move(info: &AndroidVersion, choice: &AndroidChoice) -> AndroidMov
 }
 
 /// The apps a search matches, by name: the query is matched against the label and the
-/// package, ignoring case.
+/// package, ignoring case. Apps that share a user ID are one group: the group is shown
+/// together, in the place of its first app by name, when any of its apps matches.
 pub fn filter_apps<'a>(apps: &'a [App], query: &str) -> Vec<&'a App> {
     let query = query.trim().to_lowercase();
+    let matches = |a: &App| {
+        query.is_empty()
+            || a.label.to_lowercase().contains(&query)
+            || a.package.to_lowercase().contains(&query)
+    };
     let mut shown: Vec<&App> = apps
         .iter()
-        .filter(|a| {
-            query.is_empty()
-                || a.label.to_lowercase().contains(&query)
-                || a.package.to_lowercase().contains(&query)
-        })
+        .filter(|a| matches(a) || shared_with(a, apps).into_iter().any(matches))
         .collect();
-    shown.sort_by_key(|a| a.label.to_lowercase());
+    shown.sort_by_key(|a| {
+        let first = std::iter::once(*a)
+            .chain(shared_with(a, apps))
+            .map(|member| member.label.to_lowercase())
+            .min()
+            .unwrap_or_default();
+        (first, a.shared_user_id.clone(), a.label.to_lowercase())
+    });
     shown
+}
+
+/// The other apps that share `app`'s user ID among `apps`, by name.
+pub fn shared_with<'a>(app: &App, apps: &'a [App]) -> Vec<&'a App> {
+    if app.shared_user_id.is_empty() {
+        return Vec::new();
+    }
+    let mut others: Vec<&App> = apps
+        .iter()
+        .filter(|other| other.shared_user_id == app.shared_user_id && other.package != app.package)
+        .collect();
+    others.sort_by_key(|other| other.label.to_lowercase());
+    others
+}
+
+/// What the Apps page says under an app's root level when it shares its user ID with other
+/// apps; `None` for an app with a user ID of its own.
+pub fn root_group_note(app: &App, apps: &[App]) -> Option<String> {
+    let others = shared_with(app, apps);
+    if others.is_empty() {
+        return None;
+    }
+    let names = others
+        .iter()
+        .map(|other| other.label.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    Some(trf(
+        "Shares its user ID with {0}, so Android cannot tell them apart.\nTheir root access is one setting: a change here applies to all of them.\nIf any of them is set to Not allowed, none of them can use su.",
+        &[&names],
+    ))
 }
 
 pub fn apps_count(total: usize, shown: usize, searching: bool) -> String {
@@ -491,11 +544,25 @@ pub fn start_size_index(window: Option<&AppWindow>) -> Option<usize> {
 /// [`DpiScaling::ALL`]. System (forced) is stored and can be chosen, but while Android cannot
 /// do it (`system_forced_available` is false), its label says it is not available yet.
 pub fn dpi_scaling_choices(system_forced_available: bool) -> Vec<(String, DpiScaling)> {
+    dpi_scaling_choices_for(false, system_forced_available)
+}
+
+/// [`dpi_scaling_choices`] for one app. The automatic choice says what it does for the app:
+/// System when DSA scales it that way unless the user chose otherwise
+/// (`system_scaled_by_default`, from DSA's built-in list of apps that break when their density
+/// changes while they run), App for any other app.
+pub fn dpi_scaling_choices_for(
+    system_scaled_by_default: bool,
+    system_forced_available: bool,
+) -> Vec<(String, DpiScaling)> {
     DpiScaling::ALL
         .into_iter()
         .map(|scaling| {
             let label = match scaling {
-                DpiScaling::Auto => tr("Automatic"),
+                DpiScaling::Auto if system_scaled_by_default => {
+                    tr("Automatic (system, recommended for this app)")
+                }
+                DpiScaling::Auto => tr("Automatic (app)"),
                 DpiScaling::App => tr("App"),
                 DpiScaling::System => tr("System"),
                 DpiScaling::SystemForced if system_forced_available => tr("System (forced)"),
@@ -517,13 +584,87 @@ pub fn dpi_scaling_index(window: Option<&AppWindow>) -> usize {
 
 /// What the scaling row says under its title: why System (forced) works like System for now,
 /// while it is the app's choice and not available; otherwise what the choices do.
+/// The first line of a text that says more over several lines: the line an option's row shows
+/// under its name, as the Windows and macOS pages do, while the whole text stays its tool tip.
+/// A one-line text is itself.
+pub fn first_line(text: &str) -> String {
+    text.lines().next().unwrap_or_default().trim().to_string()
+}
+
 pub fn dpi_scaling_subtitle(window: Option<&AppWindow>, system_forced_available: bool) -> String {
     let scaling = window.map(|w| w.dpi_scaling).unwrap_or_default();
     if scaling == DpiScaling::SystemForced && !system_forced_available {
-        tr("System (forced) gives the app the new scale without restarting it, even if it does not say it handles one. It is not available yet: it needs a change to Android's framework that this build does not have, so until then it works like System.")
+        tr("System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System.")
     } else {
-        tr("App: the app redraws at the new scale, and text stays sharp; for an app that does not say it handles this, Android recreates its screen and restores its state, so it may redraw briefly when it moves. System: the app keeps its scale and DSA scales its window to the same physical size; text can look a little blurry. Automatic picks App for apps that say they handle it, and System for the others. Automatic and System never restart the app.")
+        tr("App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app.")
     }
+}
+
+/// Where an app's full screen can show, in the order of [`FullScreenPlace::ALL`]: as the
+/// default for every app, on the whole screen, or inside the window. The first says where
+/// the default for every app (`default`) takes it now, so an app's two lists, which offer the
+/// same places, show what each one does for the app.
+pub fn full_screen_choices(default: FullScreenPlace) -> Vec<(String, FullScreenPlace)> {
+    FullScreenPlace::ALL
+        .into_iter()
+        .map(|place| match place {
+            FullScreenPlace::Default => (follow_default_label(default), place),
+            _ => (full_screen_label(place), place),
+        })
+        .collect()
+}
+
+/// What "Follow the default" is called while the default for every app is `default`.
+pub fn follow_default_label(default: FullScreenPlace) -> String {
+    match default {
+        FullScreenPlace::Screen => tr("Follow the default (on the whole screen)"),
+        FullScreenPlace::Window => tr("Follow the default (inside the window)"),
+        FullScreenPlace::Default => tr("Follow the default"),
+    }
+}
+
+/// What a full screen place is called.
+pub fn full_screen_label(place: FullScreenPlace) -> String {
+    match place {
+        FullScreenPlace::Default => tr("Follow the default"),
+        FullScreenPlace::Screen => tr("On the whole screen"),
+        FullScreenPlace::Window => tr("Inside the window"),
+    }
+}
+
+/// The places the choice for every app offers: it is the default itself.
+pub const DEFAULT_FULL_SCREEN_PLACES: [FullScreenPlace; 2] =
+    [FullScreenPlace::Screen, FullScreenPlace::Window];
+
+/// Where `place` is among [`DEFAULT_FULL_SCREEN_PLACES`]; the first for a place it does not
+/// offer.
+pub fn default_full_screen_index(place: FullScreenPlace) -> usize {
+    DEFAULT_FULL_SCREEN_PLACES
+        .iter()
+        .position(|p| *p == place)
+        .unwrap_or(0)
+}
+
+/// Where an app's choices for a clear full screen request and for its bars hidden alone are
+/// among [`full_screen_choices`].
+pub fn full_screen_indexes(window: Option<&AppWindow>) -> (usize, usize) {
+    let index = |place: FullScreenPlace| {
+        FullScreenPlace::ALL
+            .iter()
+            .position(|p| *p == place)
+            .unwrap_or(0)
+    };
+    match window {
+        Some(window) => (index(window.fullscreen), index(window.immersive)),
+        None => (0, 0),
+    }
+}
+
+/// Whether an app's "Start below the title bar" switch shows on: the app's own setting, or,
+/// for an app the user chose nothing for, whether it is on DSA's built-in list of apps that
+/// start below the title bar (`by_default`).
+pub fn starts_below_title_bar(window: Option<&AppWindow>, by_default: bool) -> bool {
+    window.map_or(by_default, |window| window.below_title_bar)
 }
 
 /// What an app's "Run as ARM" switch shows: whether it is on, whether it can be changed, and
@@ -622,7 +763,7 @@ pub struct RootView {
 pub fn root_view(app: &App) -> RootView {
     let index = ROOT_LEVELS.iter().position(|level| *level == app.root);
     let subtitle = match (index, app.root.as_str()) {
-        (Some(_), _) => tr("Not allowed hides su from the app. Ask each time asks an administrator for each request, then not again for 15 minutes. Remember approves without asking, and choosing it needs an administrator's approval."),
+        (Some(_), _) => tr("Not allowed hides su from the app.\nAsk each time asks an administrator for each request, then not again for 15 minutes.\nRemember approves without asking. Choosing it needs an administrator's approval."),
         (None, "unavailable") => {
             tr("Root access is off for this computer. An administrator turns it on under Advanced.")
         }
@@ -660,7 +801,7 @@ pub fn root_next(label: &str, outcome: &Outcome) -> Result<String, String> {
             &[label],
         ),
         _ => trf(
-            "{0} now asks an administrator of this computer each time it uses su. If it could not see su before, it sees it from the next start of Android.",
+            "{0} now asks an administrator each time it uses su. If it could not see su before, it sees it from the next start of Android.",
             &[label],
         ),
     })
@@ -708,6 +849,8 @@ pub fn install_reason(status: &str) -> String {
         "encrypted-bundle" => "the bundle is encrypted, so its APKs cannot be read. Get the app as an APK, or as a newer bundle.",
         "split-signature-mismatch" => "a split APK of the bundle is signed with another key than its base APK, so Android would refuse it.",
         "invalid-bundle" => "the bundle is not one app that Android can install.",
+        "unsupported-abi" => "the app has no 64-bit code that DSA's Android runs: x86_64, or arm64-v8a through ARM translation. Get one of those builds.",
+        "translation-off" => "the app has only ARM code (arm64-v8a), and ARM translation is off. Turn it on under ARM apps, restart Android and install it again.",
         _ => "Android did not install the app.",
     })
 }
@@ -755,7 +898,7 @@ pub fn arm_default_text(arm: &ArmTranslation) -> Option<String> {
         license.clone()
     };
     Some(trf(
-        "{0} {1} ({2}) comes with this Android and is used unless you install another translator. Going back to it removes the package installed in its place, from the next start of Android.",
+        "{0} {1} ({2}) comes with this Android. It is used unless you install another translator.\nGoing back to it removes the package that replaced it, from the next start of Android.",
         &[name, version, &license],
     ))
 }
@@ -777,7 +920,7 @@ pub fn arm_abis(arm: &ArmTranslation) -> String {
 /// from, and the terms the user accepts.
 pub fn arm_google_notice() -> String {
     trf(
-        "DSA downloads the Android emulator image for this Android version from Google's SDK repository ({0}) and takes out only its ARM translator. The translator is Google's software, offered under the Android SDK License ({1}); by downloading it you accept those terms. DSA does not ship or pass it on. The image is about 2 GB and is deleted afterwards. The translator works from the next start of Android.",
+        "DSA downloads Google's Android emulator image for this Android version and takes out only its ARM translator.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nThe translator is Google's software. DSA does not ship or pass it on.\n\nThe translator works from the next start of Android.",
         &[
             crate::model::GOOGLE_ARM_SOURCE,
             crate::model::GOOGLE_ARM_TERMS_URL,
@@ -844,6 +987,185 @@ pub fn gapps_device_id(gapps: &Gapps) -> String {
     }
 }
 
+/// What the protected content item says of the module and whether Android uses it.
+pub fn widevine_status(widevine: &crate::model::Widevine) -> String {
+    use crate::model::WidevineState;
+    let package = match &widevine.package {
+        Some(p) => trf(
+            "Google's image {0} for Android {1} ({2})",
+            &[&p.version, &p.android_major.to_string(), &p.abi],
+        ),
+        None => String::new(),
+    };
+    match widevine.state() {
+        WidevineState::RestartPending if widevine.package.is_some() => trf(
+            "Installed: {0}. Restart Android to start using it.",
+            &[&package],
+        ),
+        WidevineState::RestartPending => {
+            tr("Removed. Widevine stays in Android until it restarts.")
+        }
+        WidevineState::Installed if widevine.package.is_some() => {
+            trf("Installed: {0}.", &[&package])
+        }
+        _ => tr("Not installed."),
+    }
+}
+
+/// What the confirmation says before Google's image is downloaded for Widevine: where it comes
+/// from, and the terms the user accepts.
+pub fn widevine_notice() -> String {
+    trf(
+        "DSA downloads Google's Android emulator image for this Android version and takes out only its Widevine module, unchanged.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nWidevine is Google's software. DSA does not ship or pass it on.\n\nWidevine here is security level L3, so streaming services send standard definition (SD) at most.\n\nWidevine works from the next start of Android.",
+        &[
+            crate::model::WIDEVINE_SOURCE,
+            crate::model::WIDEVINE_TERMS_URL,
+        ],
+    )
+}
+
+/// What the protected content item always says: L3 is standard definition at most, and where
+/// to watch in high definition.
+pub fn widevine_quality() -> String {
+    tr("Widevine here is security level L3, so streaming services send standard definition (SD) at most.\nTo watch in high definition, use this computer's own browser or app.")
+}
+
+/// What the protected content item says while the module is taken from Google's image.
+pub fn widevine_busy_text() -> String {
+    tr("Downloading about 2 GB from Google and taking out Widevine. It takes minutes.")
+}
+
+/// When something last happened to the backup, in local time through `local` (which takes
+/// milliseconds since 1970), or "Never".
+pub fn backup_when(unix_ms: Option<i64>, local: impl Fn(i64) -> String) -> String {
+    match unix_ms {
+        Some(ms) => local(ms),
+        None => tr("Never"),
+    }
+}
+
+/// What the backup holds: how many apps, and how much of their data.
+pub fn backup_contents(backup: &Backup) -> String {
+    if backup.packages == 0 {
+        return tr("No apps yet");
+    }
+    trf(
+        "{0} apps, {1}",
+        &[&backup.packages.to_string(), &size_bytes(backup.size)],
+    )
+}
+
+/// What the backup section says while `job` runs; empty for a request that ends at once.
+pub fn backup_busy_text(job: BackupJob) -> String {
+    match job {
+        BackupJob::BackUp => tr(
+            "Backing up every app. Android starts if it is not running. This can take a while.",
+        ),
+        BackupJob::Restore => tr(
+            "Restoring apps and their data from the backup. Android starts if it is not running. This can take a while.",
+        ),
+        BackupJob::Read | BackupJob::ShowKey | BackupJob::ImportKey | BackupJob::Switch => {
+            String::new()
+        }
+    }
+}
+
+/// What the backup switch says under its title: what backup keeps, and while it is off, what
+/// earlier backups are still kept.
+pub fn backup_switch_subtitle(backup: Option<&Backup>) -> String {
+    let what = tr("Keeps an encrypted second copy of your Android apps' user data on this computer.\nIt can be restored after a data reset or on another computer. Off until you turn it on.");
+    match backup {
+        Some(backup) if !backup.enabled && backup.has_backups_kept() => format!(
+            "{what}\n{}",
+            trf(
+                "Earlier backups of {0} apps ({1}) are still kept in your DSA Backup folder.",
+                &[&backup.packages.to_string(), &size_bytes(backup.size)],
+            )
+        ),
+        _ => what,
+    }
+}
+
+/// What the question says when backup is turned off while backups are kept.
+pub fn backup_delete_question(backup: &Backup) -> String {
+    trf(
+        "The backups of {0} apps ({1}) are still kept on this computer.\n\nDelete them and their key as well, or keep them for a later restore?",
+        &[&backup.packages.to_string(), &size_bytes(backup.size)],
+    )
+}
+
+/// What turning backup on or off did.
+pub fn backup_switched(on: bool, deleted: bool) -> String {
+    match (on, deleted) {
+        (true, _) => {
+            tr("Backup is on. Android backs up its apps' data to this computer from now on.")
+        }
+        (false, true) => tr("Backup is off, and the backups and their key were deleted."),
+        (false, false) => tr("Backup is off. The backups made so far are kept."),
+    }
+}
+
+/// What protects Android's keys on this computer.
+pub fn key_protection_text(key: &KeyProtection) -> String {
+    match key.shown() {
+        KeyProtectionShown::NotYet => {
+            tr("Android's keys get their protection the first time Android starts.")
+        }
+        KeyProtectionShown::Tpm => tr("Sealed by this computer's TPM.\nA copy of Android's disk cannot open the apps' keys or Android's encrypted storage anywhere else."),
+        KeyProtectionShown::Keyring => tr("Kept by your keyring only, because this computer has no TPM 2.0 that can be used.\nOnce one works, DSA seals the keys with it."),
+        KeyProtectionShown::Other => trf("Protected by {0}.", &[&key.description]),
+    }
+}
+
+/// Why no TPM seals Android's keys, when none does.
+pub fn key_protection_reason(key: &KeyProtection) -> Option<String> {
+    key.shown_reason()
+        .map(|reason| trf("Why not the TPM: {0}", &[reason]))
+}
+
+/// How a backup or a restore ended, from the report it answered with.
+pub fn backup_result(job: BackupJob, backup: &Backup) -> String {
+    let (ok, failed, installed) = (
+        backup.succeeded.to_string(),
+        backup.failed.to_string(),
+        backup.installed.to_string(),
+    );
+    match (job, backup.failed) {
+        (BackupJob::Restore, 0) => trf(
+            "Apps restored: {0}. Apps installed first: {1}.",
+            &[&ok, &installed],
+        ),
+        (BackupJob::Restore, _) => trf(
+            "Apps restored: {0}. Apps installed first: {1}. Apps that could not be restored: {2}.",
+            &[&ok, &installed, &failed],
+        ),
+        (_, 0) => trf("Apps backed up: {0}.", &[&ok]),
+        (_, _) => trf(
+            "Apps backed up: {0}. Apps that could not be backed up: {1}.",
+            &[&ok, &failed],
+        ),
+    }
+}
+
+/// What the question before a restore says: what it installs and what it replaces.
+pub fn backup_restore_warning() -> String {
+    tr("Apps in the backup that Android does not have are installed.\n\nThe data of every app in the backup is replaced with the backup's. What those apps saved since the backup is lost.\n\nAndroid starts if it is not running.")
+}
+
+/// What the recovery key dialog says under its title.
+pub fn backup_key_advice() -> String {
+    tr("Write this key down and keep it somewhere safe, away from this computer.\n\nAnyone with it can read the backup.\n\nWithout it, the backup cannot be opened on another computer or after this computer's keyring is lost.")
+}
+
+/// Why a recovery key was not used, from the service's reason; empty is no key at all.
+pub fn backup_key_refusal(reason: &str) -> String {
+    if reason.is_empty() {
+        tr("Enter the recovery key.")
+    } else {
+        trf("The key was not used: {0}", &[reason])
+    }
+}
+
 /// A shared folder's name in the user's language.
 pub fn folder_label(folder: &str) -> String {
     tr(folder)
@@ -877,6 +1199,26 @@ pub fn network_mode_text(network: Option<&Network>) -> String {
     })
 }
 
+/// Who answers Android's DNS queries: this computer's resolver, or, when that does not answer,
+/// the network's DNS servers. A service that does not say shows the servers.
+pub fn network_dns_text(network: Option<&Network>) -> String {
+    let servers = list_or_none(
+        network
+            .map(|n| n.dns_servers.as_slice())
+            .unwrap_or_default(),
+    );
+    match network.map(|n| n.dns_resolver) {
+        Some(DnsResolver::Host) => tr(
+            "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps.",
+        ),
+        Some(DnsResolver::Network) => trf(
+            "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}",
+            &[servers.as_str()],
+        ),
+        _ => servers,
+    }
+}
+
 /// A list of addresses, or "None".
 pub fn list_or_none(items: &[String]) -> String {
     if items.is_empty() {
@@ -894,6 +1236,54 @@ pub fn network_restart_needed(advanced_setting: bool, network: Option<&Network>)
         Some(NetworkMode::Advanced) => !advanced_setting,
         _ => false,
     }
+}
+
+/// Where an added root certificate was found, in the user's language. A source this app does
+/// not know, from a newer service, is shown as the service names it.
+pub fn certificate_source_label(source: &str) -> String {
+    match source {
+        "machine" => tr("This computer's trusted root certificates"),
+        "machine_group_policy" => tr("This computer's group policy"),
+        "machine_enterprise" => tr("This computer's enterprise certificates"),
+        "user" => tr("Your trusted root certificates"),
+        "user_group_policy" => tr("Your group policy"),
+        "admin" => tr("This computer's administrator trust settings"),
+        "system" => tr("Added to the system's certificate store"),
+        other => other.to_string(),
+    }
+}
+
+/// The title of an added root certificate's row: who it is for, or its fingerprint when the
+/// service could not read a name.
+pub fn certificate_title(certificate: &ImportedCertificate) -> String {
+    if !certificate.subject.is_empty() {
+        certificate.subject.clone()
+    } else if !certificate.sha256.is_empty() {
+        trf("SHA-256 {0}", &[&certificate.sha256])
+    } else {
+        tr("A certificate without a name")
+    }
+}
+
+/// What an added root certificate's row says under its title: who signed it, where it was
+/// found, and the file or store, each on its own line.
+pub fn certificate_detail(certificate: &ImportedCertificate) -> String {
+    let mut lines = Vec::new();
+    if !certificate.issuer.is_empty() {
+        lines.push(trf("Issued by {0}", &[&certificate.issuer]));
+    }
+    if !certificate.source.is_empty() {
+        lines.push(certificate_source_label(&certificate.source));
+    }
+    if !certificate.location.is_empty() {
+        lines.push(certificate.location.clone());
+    }
+    lines.join("\n")
+}
+
+/// What the list of added root certificates says when it has none.
+pub fn certificates_empty_text() -> String {
+    tr("No added root certificates were found on this computer.")
 }
 
 /// The fingerprint Android reports from its next start, from the values on the page: the
@@ -1081,6 +1471,30 @@ pub fn log_copy_text(shown: &[crate::model::LogLine], selected: &[usize]) -> Str
         .map(|&i| shown[i].text())
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// A log line as a screen reader reads its row: the time, the priority as a word, the tag and
+/// the message. The row shows them in columns, and its letters and numbers read as noise. A
+/// record that stands for dropped records says how many.
+pub fn log_line_spoken(line: &crate::model::LogLine) -> String {
+    if line.dropped > 0 {
+        return trf("{0} records dropped", &[&line.dropped.to_string()]);
+    }
+    let level = if LOG_PRIORITIES.contains(&line.priority.as_str()) {
+        priority_label(&line.priority)
+    } else {
+        line.priority.clone()
+    };
+    trf(
+        "{0}, {1}, {2}: {3}",
+        &[&line.time, &level, &line.tag, &line.message],
+    )
+}
+
+/// The name a screen reader says for a control repeated in every row of a list: what it does
+/// and whose row it is in, such as "Open, Notes". "Open" alone does not say whose.
+pub fn item_name(action: &str, item: &str) -> String {
+    trf("{0}, {1}", &[action, item])
 }
 
 /// The user's DSA logs: the window manager's and the app windows'.

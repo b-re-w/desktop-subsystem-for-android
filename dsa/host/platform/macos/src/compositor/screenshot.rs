@@ -9,12 +9,15 @@
 //! The file is named as macOS names its own screenshots: "Screenshot 2026-11-08 at
 //! 2.30.22 PM.png" (with the narrow no-break space macOS puts before AM or PM) or, with a
 //! 24-hour clock, "Screenshot 2026-11-08 at 14.30.22.png"; in Korean "스크린샷 2026-11-08
-//! 오후 2.30.22.png". A second screenshot in the same second gets " (2)" before the
+//! 오후 2.30.22.png", in German "Bildschirmfoto 2026-11-08 um 14.30.22.png", each language with
+//! its own words as macOS has them. A second screenshot in the same second gets " (2)" before the
 //! extension, the next " (3)", and so on, so no file is ever written over.
 //!
 //! Encoding and saving run on a thread of their own, so the window keeps answering.
 
 use std::path::{Path, PathBuf};
+
+use dsa_host_core::ui_language::UiLanguage;
 
 /// A screenshot: `width` by `height` opaque pixels as RGBA rows, top row first.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,6 +57,14 @@ pub fn app_content(pixels: &[u8], stride: usize, content: (u32, u32), band: u32)
     })
 }
 
+/// The rows of a task's frame that a band of `band` client pixels covers in a window that
+/// shows the frame at `frame_scale` (window pixels per task pixels). The frame read back is
+/// the task's, in its own pixels, so a task that keeps its density on a display of another
+/// scale has fewer or more rows under the band than the band has pixels.
+pub fn band_rows(band: u32, frame_scale: (u32, u32)) -> u32 {
+    dsa_host_core::compositor::window_sizing::to_task_length(band, frame_scale)
+}
+
 /// A local date and time, to the second.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LocalTime {
@@ -65,30 +76,107 @@ pub struct LocalTime {
     pub second: u16,
 }
 
+/// Where a 12-hour clock's morning or afternoon word goes, and what stands between it and
+/// the time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Period {
+    /// Before the time: "오후 2.30.22", "午後2.30.22".
+    Before(&'static str),
+    /// After the time: "2.30.22 PM".
+    After(&'static str),
+}
+
+/// How macOS words a screenshot's file name in one language.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ShotWords {
+    /// The name before the date, with the space after it where the language has one.
+    name: &'static str,
+    /// The word between the date and the time ("at "), empty where there is none.
+    at: &'static str,
+    /// Morning and afternoon on a 12-hour clock.
+    am: &'static str,
+    pm: &'static str,
+    period: Period,
+}
+
+/// The words of a screenshot's file name in `lang`, as macOS names its own screenshots.
+fn shot_words(lang: UiLanguage) -> ShotWords {
+    // The narrow no-break space macOS puts between a time and AM or PM.
+    const NNBSP: &str = "\u{202f}";
+    let words = |name, at, am, pm, period| ShotWords {
+        name,
+        at,
+        am,
+        pm,
+        period,
+    };
+    match lang {
+        UiLanguage::English => words("Screenshot ", "at ", "AM", "PM", Period::After(NNBSP)),
+        UiLanguage::Korean => words("스크린샷 ", "", "오전", "오후", Period::Before(" ")),
+        UiLanguage::Japanese => words(
+            "スクリーンショット ",
+            "",
+            "午前",
+            "午後",
+            Period::Before(""),
+        ),
+        UiLanguage::ChineseSimplified => words("截屏", "", "上午", "下午", Period::Before("")),
+        UiLanguage::ChineseTraditional => words("截圖 ", "", "上午", "下午", Period::Before("")),
+        UiLanguage::Spanish => words(
+            "Captura de pantalla ",
+            "a las ",
+            "a.\u{a0}m.",
+            "p.\u{a0}m.",
+            Period::After(NNBSP),
+        ),
+        UiLanguage::French => words(
+            "Capture d\u{2019}écran ",
+            "à ",
+            "AM",
+            "PM",
+            Period::After(NNBSP),
+        ),
+        UiLanguage::German => words("Bildschirmfoto ", "um ", "AM", "PM", Period::After(NNBSP)),
+        UiLanguage::PortugueseBrazil => {
+            words("Captura de Tela ", "às ", "AM", "PM", Period::After(NNBSP))
+        }
+        UiLanguage::Russian => words("Снимок экрана ", "в ", "AM", "PM", Period::After(NNBSP)),
+        UiLanguage::Italian => words("Istantanea ", "alle ", "AM", "PM", Period::After(NNBSP)),
+        UiLanguage::Vietnamese => words("Ảnh màn hình ", "lúc ", "SA", "CH", Period::After(NNBSP)),
+        UiLanguage::Indonesian => words(
+            "Cuplikan Layar ",
+            "pukul ",
+            "AM",
+            "PM",
+            Period::After(NNBSP),
+        ),
+        UiLanguage::Turkish => words("Ekran Resmi ", "", "ÖÖ", "ÖS", Period::Before(" ")),
+    }
+}
+
 /// The file name of the `copy`th screenshot taken at `time` (1 for the first), as macOS
-/// names its own in the user's language and clock.
-pub fn file_name(korean: bool, twenty_four_hour: bool, time: &LocalTime, copy: u32) -> String {
+/// names its own in the user's language `lang` and clock.
+pub fn file_name(lang: UiLanguage, twenty_four_hour: bool, time: &LocalTime, copy: u32) -> String {
     let date = format!("{:04}-{:02}-{:02}", time.year, time.month, time.day);
     let (minute, second) = (time.minute, time.second);
     let twelve = match time.hour % 12 {
         0 => 12,
         hour => hour,
     };
-    let afternoon = time.hour >= 12;
-    let stem = match (korean, twenty_four_hour) {
-        (false, true) => format!(
-            "Screenshot {date} at {:02}.{minute:02}.{second:02}",
-            time.hour
-        ),
-        (false, false) => format!(
-            "Screenshot {date} at {twelve}.{minute:02}.{second:02}\u{202f}{}",
-            if afternoon { "PM" } else { "AM" }
-        ),
-        (true, true) => format!("스크린샷 {date} {:02}.{minute:02}.{second:02}", time.hour),
-        (true, false) => format!(
-            "스크린샷 {date} {} {twelve}.{minute:02}.{second:02}",
-            if afternoon { "오후" } else { "오전" }
-        ),
+    let words = shot_words(lang);
+    let (name, at) = (words.name, words.at);
+    let half = if time.hour >= 12 { words.pm } else { words.am };
+    let stem = if twenty_four_hour {
+        format!("{name}{date} {at}{:02}.{minute:02}.{second:02}", time.hour)
+    } else {
+        match words.period {
+            Period::Before(gap) => {
+                format!("{name}{date} {at}{half}{gap}{twelve}.{minute:02}.{second:02}")
+            }
+            Period::After(gap) => {
+                format!("{name}{date} {at}{twelve}.{minute:02}.{second:02}{gap}{half}")
+            }
+        }
     };
     if copy <= 1 {
         format!("{stem}.png")
@@ -100,14 +188,14 @@ pub fn file_name(korean: bool, twenty_four_hour: bool, time: &LocalTime, copy: u
 /// The first path in `folder` named for a screenshot at `time` that `exists` says is free.
 pub fn free_path(
     folder: &Path,
-    korean: bool,
+    lang: UiLanguage,
     twenty_four_hour: bool,
     time: &LocalTime,
     exists: impl Fn(&Path) -> bool,
 ) -> PathBuf {
     let mut copy = 1;
     loop {
-        let path = folder.join(file_name(korean, twenty_four_hour, time, copy));
+        let path = folder.join(file_name(lang, twenty_four_hour, time, copy));
         if !exists(&path) || copy >= 10_000 {
             return path;
         }
@@ -149,9 +237,9 @@ mod mac {
     use objc2::runtime::AnyObject;
 
     use super::{free_path, screenshot_folder, LocalTime, Shot};
-    use crate::compositor::title_bar::is_korean;
     use crate::devices::settings::is_24_hour;
     use crate::objc::{bytes_of, class, ns_data, ns_string, on_main, string_of};
+    use dsa_host_core::ui_language::UiLanguage;
 
     /// `NSBitmapImageFileTypePNG`.
     const FILE_TYPE_PNG: usize = 4;
@@ -181,29 +269,24 @@ mod mac {
                 eprintln!("dsa-app-window: the screenshot is not on the pasteboard: {why}");
             }
         });
-        let (korean, twenty_four_hour, location) = unsafe { preferences() };
+        let (lang, twenty_four_hour, location) = unsafe { preferences() };
         let home = std::env::var_os("HOME")
             .map(PathBuf::from)
             .ok_or("the home folder is not known")?;
         let folder = screenshot_folder(location.as_deref(), &home, Path::is_dir);
         std::fs::create_dir_all(&folder)
             .map_err(|e| format!("could not make {}: {e}", folder.display()))?;
-        let path = free_path(&folder, korean, twenty_four_hour, &local_now(), |p| {
+        let path = free_path(&folder, lang, twenty_four_hour, &local_now(), |p| {
             p.exists()
         });
         std::fs::write(&path, &png).map_err(|e| format!("could not save {}: {e}", path.display()))
     }
 
     /// The user's language, clock and screenshot folder setting.
-    unsafe fn preferences() -> (bool, bool, Option<String>) {
-        let mut korean = false;
+    unsafe fn preferences() -> (UiLanguage, bool, Option<String>) {
+        let lang = crate::ui_language::current();
         let mut twenty_four_hour = false;
         if let Ok(locale_class) = class(c"NSLocale") {
-            let languages: *mut AnyObject = msg_send![locale_class, preferredLanguages];
-            if !languages.is_null() {
-                let first: *mut AnyObject = msg_send![languages, firstObject];
-                korean = is_korean(&string_of(first));
-            }
             let locale: *mut AnyObject = msg_send![locale_class, autoupdatingCurrentLocale];
             if let Ok(formatter) = class(c"NSDateFormatter") {
                 let format: *mut AnyObject = msg_send![
@@ -229,7 +312,7 @@ mod mac {
                 }
             }
         }
-        (korean, twenty_four_hour, location)
+        (lang, twenty_four_hour, location)
     }
 
     fn local_now() -> LocalTime {
@@ -355,35 +438,106 @@ mod tests {
     }
 
     #[test]
+    fn fr22_a_screenshot_of_a_window_at_another_scale_leaves_out_the_bands_rows_of_the_frame() {
+        use dsa_host_core::compositor::window_sizing::{density_for_dpi, scale_between};
+        // 1:1, the band's pixels are the frame's rows.
+        assert_eq!(band_rows(40, (1, 1)), 40);
+        // A task kept at 130 dpi (100%) shown at 164 dpi (125%): 40 client pixels of band are
+        // 32 rows of the frame.
+        let kept = scale_between(density_for_dpi(120), density_for_dpi(96));
+        assert_eq!(kept, (82, 65));
+        assert_eq!(band_rows(40, kept), 32);
+        // A task kept at a Retina display's density shown on a display at 1x: 28 client
+        // pixels are 56 rows.
+        let retina_on_1x = scale_between(density_for_dpi(96), density_for_dpi(192));
+        assert_eq!(band_rows(28, retina_on_1x), 56);
+        // And the screenshot cuts those rows: a 2x6 frame with a band of 4 pixels at 2 window
+        // pixels per task pixel keeps its bottom 4 rows.
+        let stride = 8;
+        let pixels = vec![0u8; stride * 6];
+        let shot = app_content(&pixels, stride, (2, 6), band_rows(4, (2, 1))).unwrap();
+        assert_eq!(shot.height, 4);
+    }
+
+    #[test]
     fn fr22_a_screenshot_is_named_as_macos_names_its_own() {
+        use UiLanguage::{English, Korean};
         assert_eq!(
-            file_name(false, false, &TIME, 1),
+            file_name(English, false, &TIME, 1),
             "Screenshot 2026-11-08 at 2.30.02\u{202f}PM.png"
         );
         assert_eq!(
-            file_name(false, true, &TIME, 1),
+            file_name(English, true, &TIME, 1),
             "Screenshot 2026-11-08 at 14.30.02.png"
         );
         assert_eq!(
-            file_name(true, false, &TIME, 1),
+            file_name(Korean, false, &TIME, 1),
             "스크린샷 2026-11-08 오후 2.30.02.png"
         );
         assert_eq!(
-            file_name(true, true, &TIME, 2),
+            file_name(Korean, true, &TIME, 2),
             "스크린샷 2026-11-08 14.30.02 (2).png"
         );
         let midnight = LocalTime { hour: 0, ..TIME };
         assert_eq!(
-            file_name(false, false, &midnight, 1),
+            file_name(English, false, &midnight, 1),
             "Screenshot 2026-11-08 at 12.30.02\u{202f}AM.png"
         );
+        assert_eq!(
+            file_name(UiLanguage::German, true, &TIME, 1),
+            "Bildschirmfoto 2026-11-08 um 14.30.02.png"
+        );
+        assert_eq!(
+            file_name(UiLanguage::Japanese, false, &TIME, 1),
+            "スクリーンショット 2026-11-08 午後2.30.02.png"
+        );
+        assert_eq!(
+            file_name(UiLanguage::ChineseSimplified, true, &TIME, 1),
+            "截屏2026-11-08 14.30.02.png"
+        );
+    }
+
+    #[test]
+    fn fr17_a_screenshot_is_named_in_every_language_with_its_own_wording() {
+        let morning = LocalTime { hour: 9, ..TIME };
+        let mut names = std::collections::HashSet::new();
+        for lang in UiLanguage::ALL {
+            for twenty_four_hour in [false, true] {
+                let name = file_name(lang, twenty_four_hour, &TIME, 1);
+                assert!(name.ends_with(".png"), "{lang:?}: {name}");
+                assert!(name.contains("2026-11-08"), "{lang:?}: {name}");
+                let time = if twenty_four_hour {
+                    "14.30.02"
+                } else {
+                    "2.30.02"
+                };
+                assert!(name.contains(time), "{lang:?}: {name}");
+                // Nothing a Mac folder cannot hold or that reads as a path.
+                assert!(!name.contains(['/', ':']), "{lang:?}: {name}");
+                assert!(!crate::ui_language::has_em_dash(&name), "{lang:?}: {name}");
+                assert_eq!(
+                    file_name(lang, twenty_four_hour, &TIME, 3),
+                    name.replace(".png", " (3).png"),
+                    "{lang:?}"
+                );
+                names.insert(name);
+            }
+            // A 12-hour clock tells the morning from the afternoon.
+            assert_ne!(
+                file_name(lang, false, &morning, 1).replace('9', "2"),
+                file_name(lang, false, &TIME, 1),
+                "{lang:?}"
+            );
+        }
+        // Each language names its screenshots in its own words.
+        assert_eq!(names.len(), UiLanguage::ALL.len() * 2);
     }
 
     #[test]
     fn fr22_a_second_screenshot_in_the_same_second_writes_over_nothing() {
         let folder = Path::new("/Users/me/Desktop");
-        let taken = folder.join(file_name(false, true, &TIME, 1));
-        let path = free_path(folder, false, true, &TIME, |p| p == taken);
+        let taken = folder.join(file_name(UiLanguage::English, true, &TIME, 1));
+        let path = free_path(folder, UiLanguage::English, true, &TIME, |p| p == taken);
         assert_eq!(
             path,
             folder.join("Screenshot 2026-11-08 at 14.30.02 (2).png")

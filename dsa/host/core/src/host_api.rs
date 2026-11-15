@@ -67,12 +67,16 @@ use dsa_transport::{Connection, Connector, TransportError};
 pub use dsa_protocol::host_api::types::AppRootStatus;
 
 use crate::accessibility::{
-    AccessibilityWatch, ActionRequest, ActionResult, GuestAccessibility, TreeUpdate,
+    AccessibilityTarget, AccessibilityWatch, ActionRequest, ActionResult, Announcement,
+    GuestAccessibility, TreeUpdate,
 };
 use crate::adb_discovery::AutoConnectState;
 use crate::addon_disk::{Addon, AddonDisk};
 use crate::apk::{self, InstallOutcome, InstallPart, InstalledPackage};
-use crate::app_windows::{self, AppWindowSettings};
+use crate::app_audio::{self as app_audio, AppAudioStream, AppAudioWatch, VolumeChange};
+use crate::app_windows::{
+    self, AppWindowSettings, AppWindows, FullScreenDefaults, FullScreenPlace,
+};
 use crate::apps::{self, UninstallOutcome};
 use crate::arm_translation::{self, GuestArmTranslation, Package, Source, Translator};
 use crate::background::{
@@ -89,6 +93,7 @@ use crate::files::{self, FileAction, FileTransfer};
 use crate::gamepads::{GamepadEvent, GamepadInfo, GamepadRumble, GamepadState};
 use crate::gapps::{self, GappsPackage, GuestGapps};
 use crate::geocode::{self, GeocodeOutcome, GeocodeQuery};
+use crate::graphics_state::GraphicsState;
 use crate::guest_log::{DiagnosticsEvent, LogDumpEvent, LogEntry, LogFilter, LogWatch};
 use crate::ime::{ImeCursor, ImeEditor, ImeEvent};
 use crate::input::{InputEvent, PointerEvent};
@@ -98,7 +103,9 @@ use crate::memory::{
     snapshot_from_wire, snapshot_to_wire, GuestMemoryReport, HostMemory, MemorySnapshot,
 };
 use crate::native_abi::{self, NativeLibraries, RunAsArmOutcome};
-use crate::notifications::{self, Notification, NotificationAction, NotificationEvent};
+use crate::notifications::{
+    self, Notification, NotificationAction, NotificationButton, NotificationEvent,
+};
 use crate::print::{self, PrintEvent, PrintJob, PrintOutcome, PrintSettings};
 use crate::resize_trace::{self, detail_requested, ResizeTrace, DETAIL_ENV};
 use crate::session::{BackgroundRequest, Session, SessionError, SessionState};
@@ -106,16 +113,25 @@ use crate::settings::{Settings, SettingsStore};
 use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
-    AppInfo, AppSettingsPage, Bounds, StatusBarAppearance, Task, TaskEvent, TaskOrientation,
-    TaskRequest, TaskRequestError, TaskWatch,
+    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, OverlayWindow,
+    PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest,
+    TaskRequestError, TaskWatch,
 };
 use crate::touch_gestures::TouchGesturesState;
 use crate::update::alerts::{self as update_alerts, UpdateAlert};
+use crate::widevine::{self, WidevinePackage, WidevineStatus};
 use crate::widgets::{
     self, MemoryWidgetPlacements, Placement, Widget, WidgetError, WidgetEvent, WidgetFrame,
     WidgetPlacements, WidgetProvider, WidgetSize,
 };
 use dsa_protocol::control;
+
+use crate::backup::{BackupReport, BackupService};
+use crate::passkeys::{CeremonyResult, PasskeyEvent};
+use crate::session::{KeyMintKeyState, RestoreOutcome};
+
+mod host_services;
+pub use host_services::{BackupOutcome, PasskeyCeremonyWatch};
 
 /// How long the service waits for Android to say whether a package is installed.
 const PACKAGE_QUERY_WAIT: Duration = Duration::from_secs(10);
@@ -264,6 +280,12 @@ pub trait UserAndroid: Send + Sync {
     fn adb_auto_connect_state(&self) -> AutoConnectState {
         AutoConnectState::Off
     }
+    /// Whether this host's resolver answers this Android's DNS queries now: `Some(false)` when
+    /// Android runs but asks its network's DNS servers itself, `None` when it cannot be said
+    /// (Android is not running, or this host does not answer DNS queries at all).
+    fn dns_answered_by_host(&self) -> Option<bool> {
+        None
+    }
     /// Sends a file to this Android, which asks the user which app opens or takes it.
     fn open_file(&self, file: &FileTransfer) -> Result<(), TaskRequestError> {
         let _ = file;
@@ -275,6 +297,16 @@ pub trait UserAndroid: Send + Sync {
     /// while `on`, as the user's file sharing setting says.
     fn share_folders(&self, on: bool, folders: Vec<String>) {
         let _ = (on, folders);
+    }
+    /// Lets this Android trust the root certificates a user or an administrator added to the
+    /// computer (`on`), or takes them away, as the user's setting says.
+    fn trust_host_certificates(&self, on: bool) {
+        let _ = on;
+    }
+    /// The root certificates added to the computer that this Android is given while the user's
+    /// setting is on. Empty when this Android reads no trust store.
+    fn host_certificates(&self) -> Vec<crate::host_certificates::ImportedCertificate> {
+        Vec::new()
     }
     /// Sets the user's root elevation settings: the computer's switch and the apps with a
     /// level other than off. The running Android is told at once (see
@@ -349,9 +381,69 @@ pub trait UserAndroid: Send + Sync {
     fn watch_location(&self) -> Option<Receiver<Wanted>> {
         None
     }
+    /// The user's app data backup the host keeps, if this Android has one. It answers while
+    /// Android is stopped too.
+    fn backup(&self) -> Option<Arc<BackupService>> {
+        None
+    }
+    /// Has this Android back up every app now, and waits until it has.
+    fn backup_now(&self) -> Result<control::BackupRunResult, TaskRequestError> {
+        Err(TaskRequestError::Failed(
+            "this Android keeps no backups on the host".into(),
+        ))
+    }
+    /// Installs the apps of the backup this Android does not have, then restores every app's
+    /// data from the backup.
+    fn restore_backup(&self) -> Result<RestoreOutcome, TaskRequestError> {
+        Err(TaskRequestError::Failed(
+            "this Android keeps no backups on the host".into(),
+        ))
+    }
+    /// Turns this Android's backup on or off, telling Android at once; off with
+    /// `delete_backups`, removes the backups made so far and their key.
+    fn set_backup(&self, on: bool, delete_backups: bool) -> Result<BackupReport, TaskRequestError> {
+        let _ = (on, delete_backups);
+        Err(TaskRequestError::Failed(
+            "this Android keeps no backups on the host".into(),
+        ))
+    }
+    /// How this Android's KeyMint root key is protected on the host. `None` when its KeyMint
+    /// takes no root key from the host.
+    fn keymint_key_state(&self) -> Option<KeyMintKeyState> {
+        None
+    }
+    /// This Android's data was reset: its KeyMint root key goes, and the next start makes a
+    /// new one.
+    fn forget_keymint_root_key(&self) {}
+    /// The passkey ceremonies of this Android from now on. `None` when it uses no passkeys of
+    /// the host.
+    fn watch_passkeys(&self) -> Option<Receiver<PasskeyEvent>> {
+        None
+    }
+    /// Tells this Android what became of a passkey ceremony.
+    fn passkey_result(&self, id: u64, result: CeremonyResult) -> Result<(), TaskRequestError> {
+        let _ = (id, result);
+        Err(TaskRequestError::Failed(
+            "this Android uses no passkeys of the host".into(),
+        ))
+    }
     /// What the host's location service reported, for this Android while it wants a location.
     fn host_location(&self, event: LocationEvent) {
         let _ = event;
+    }
+    /// Serves this Android's speech and spelling from now on. `None` when it takes none from
+    /// the host.
+    fn serve_language(&self) -> Option<crate::language::relay::Served> {
+        None
+    }
+    /// An answer of client `server`'s for this Android's speech and spelling.
+    fn language_answer(&self, server: u64, envelope: control::Envelope) -> Result<(), String> {
+        let _ = (server, envelope);
+        Err("this Android takes no speech or spelling from the host".into())
+    }
+    /// Client `server` no longer serves this Android's speech and spelling.
+    fn language_server_gone(&self, server: u64) {
+        let _ = server;
     }
     /// The user's host system settings, which this Android follows: its time zone, languages,
     /// regional format, theme and accent color.
@@ -383,6 +475,18 @@ pub trait UserAndroid: Send + Sync {
             "this Android does not report the apps that run in the background".into(),
         ))
     }
+    /// Which app each output of this Android's sound plays and its volume, now and every list
+    /// after it. `None` when it says nothing of its outputs.
+    fn watch_app_audio(&self) -> Option<AppAudioWatch> {
+        None
+    }
+    /// Gives this Android the volume the user set for one of its apps on the host.
+    fn set_app_volume(&self, change: &VolumeChange) -> Result<(), TaskRequestError> {
+        let _ = change;
+        Err(TaskRequestError::Failed(
+            "this Android takes no app volumes from the host".into(),
+        ))
+    }
     /// The widgets this Android hosts now and every change to them. `None` when it hosts none.
     fn watch_widgets(&self) -> Option<crate::session::WidgetWatch> {
         None
@@ -408,6 +512,14 @@ pub trait UserAndroid: Send + Sync {
     fn remove_widget(&self, widget_id: i32) -> Result<(), TaskRequestError> {
         let _ = widget_id;
         Err(TaskRequestError::Failed(
+            "this Android does not host widgets".into(),
+        ))
+    }
+    /// Opens a placed widget's setup again and waits for the user to finish it (Ok) or leave
+    /// it (Refused, with the reason).
+    fn reconfigure_widget(&self, widget_id: i32) -> Result<(), WidgetError> {
+        let _ = widget_id;
+        Err(WidgetError::Refused(
             "this Android does not host widgets".into(),
         ))
     }
@@ -607,6 +719,25 @@ pub trait UserAndroid: Send + Sync {
         let _ = (task_id, action);
         Err(TaskRequestError::Failed(
             "this Android does not export its accessibility tree".into(),
+        ))
+    }
+    /// Watches the accessibility tree of the desktop widget `widget_id`; Android reads the
+    /// widget's nodes while any watch of it lasts. `None` when this Android does not export
+    /// its widgets' trees.
+    fn watch_widget_accessibility(&self, widget_id: i32) -> Option<AccessibilityWatch> {
+        let _ = widget_id;
+        None
+    }
+    /// Asks this Android to do an action on a node of a desktop widget; the answer arrives on
+    /// the widget's watches.
+    fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), TaskRequestError> {
+        let _ = (widget_id, action);
+        Err(TaskRequestError::Failed(
+            "this Android does not export its widgets' accessibility trees".into(),
         ))
     }
     /// Reads this Android's log: the records the host holds that pass `filter`, then each new
@@ -817,6 +948,15 @@ impl UserAndroid for Session {
     fn host_location(&self, event: LocationEvent) {
         Session::host_location(self, event)
     }
+    fn serve_language(&self) -> Option<crate::language::relay::Served> {
+        Some(Session::serve_language(self))
+    }
+    fn language_answer(&self, server: u64, envelope: control::Envelope) -> Result<(), String> {
+        Session::language_answer(self, server, envelope)
+    }
+    fn language_server_gone(&self, server: u64) {
+        Session::language_server_gone(self, server)
+    }
     fn set_system_settings(&self, settings: SystemSettings) {
         Session::set_system_settings(self, settings)
     }
@@ -838,6 +978,9 @@ impl UserAndroid for Session {
     fn adb_auto_connect_state(&self) -> AutoConnectState {
         Session::adb_auto_connect_state(self)
     }
+    fn dns_answered_by_host(&self) -> Option<bool> {
+        Session::dns_answered_by_host(self)
+    }
     fn watch_links(&self) -> Option<Receiver<String>> {
         Some(Session::watch_links(self))
     }
@@ -846,6 +989,12 @@ impl UserAndroid for Session {
     }
     fn share_folders(&self, on: bool, folders: Vec<String>) {
         Session::share_folders(self, on, folders)
+    }
+    fn trust_host_certificates(&self, on: bool) {
+        Session::trust_host_certificates(self, on)
+    }
+    fn host_certificates(&self) -> Vec<crate::host_certificates::ImportedCertificate> {
+        Session::host_certificates(self)
     }
     fn set_root_elevation_config(&self, on: bool, apps: Vec<crate::root_elevation::AppLevel>) {
         Session::set_root_elevation_config(self, on, apps)
@@ -871,11 +1020,42 @@ impl UserAndroid for Session {
     fn print_result(&self, job_id: u32, outcome: &PrintOutcome) -> Result<(), TaskRequestError> {
         Session::print_result(self, job_id, outcome).map_err(request_error)
     }
+    fn backup(&self) -> Option<Arc<BackupService>> {
+        Session::backup(self)
+    }
+    fn backup_now(&self) -> Result<control::BackupRunResult, TaskRequestError> {
+        Session::backup_now(self).map_err(request_error)
+    }
+    fn restore_backup(&self) -> Result<RestoreOutcome, TaskRequestError> {
+        Session::restore_backup(self).map_err(request_error)
+    }
+    fn set_backup(&self, on: bool, delete_backups: bool) -> Result<BackupReport, TaskRequestError> {
+        Session::set_backup(self, on, delete_backups).map_err(request_error)
+    }
+    fn keymint_key_state(&self) -> Option<KeyMintKeyState> {
+        Session::keymint_key_state(self)
+    }
+    fn forget_keymint_root_key(&self) {
+        Session::forget_keymint_root_key(self)
+    }
+    fn watch_passkeys(&self) -> Option<Receiver<PasskeyEvent>> {
+        Session::watch_passkeys(self)
+    }
+    fn passkey_result(&self, id: u64, result: CeremonyResult) -> Result<(), TaskRequestError> {
+        Session::passkey_result(self, id, result).map_err(TaskRequestError::Failed)
+    }
     fn watch_widgets(&self) -> Option<crate::session::WidgetWatch> {
         Some(Session::watch_widgets(self))
     }
     fn watch_background(&self) -> Option<BackgroundWatch> {
         Some(Session::watch_background(self))
+    }
+    fn watch_app_audio(&self) -> Option<AppAudioWatch> {
+        Some(Session::watch_app_audio(self))
+    }
+    fn set_app_volume(&self, change: &VolumeChange) -> Result<(), TaskRequestError> {
+        Session::set_app_volume(self, change);
+        Ok(())
     }
     fn background_apps(&self) -> (Vec<BackgroundApp>, Vec<MediaSession>) {
         Session::background_apps(self)
@@ -894,6 +1074,9 @@ impl UserAndroid for Session {
     }
     fn remove_widget(&self, widget_id: i32) -> Result<(), TaskRequestError> {
         Session::remove_widget(self, widget_id).map_err(request_error)
+    }
+    fn reconfigure_widget(&self, widget_id: i32) -> Result<(), WidgetError> {
+        Session::reconfigure_widget(self, widget_id, WIDGET_ADD_WAIT).map_err(widget_error)
     }
     fn resize_widget(&self, widget_id: i32, size: WidgetSize) -> Result<(), TaskRequestError> {
         Session::resize_widget(self, widget_id, size).map_err(request_error)
@@ -957,6 +1140,11 @@ impl UserAndroid for Session {
         let image = match addon {
             Addon::Gapps => control::AddonImage::Gapps,
             Addon::ArmTranslation => control::AddonImage::ArmTranslation,
+            Addon::Widevine => {
+                return Err(InstallError::Refused(
+                    "no DSA kept the Widevine module on Android's disk".into(),
+                ))
+            }
         };
         Session::read_addon_image(self, image, offset, length)
             .map(|part| AddonImagePart {
@@ -1002,6 +1190,16 @@ impl UserAndroid for Session {
         action: &ActionRequest,
     ) -> Result<(), TaskRequestError> {
         Session::accessibility_action(self, task_id, action).map_err(request_error)
+    }
+    fn watch_widget_accessibility(&self, widget_id: i32) -> Option<AccessibilityWatch> {
+        Some(Session::watch_widget_accessibility(self, widget_id))
+    }
+    fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), TaskRequestError> {
+        Session::widget_accessibility_action(self, widget_id, action).map_err(request_error)
     }
 }
 
@@ -1286,6 +1484,12 @@ fn to_wire(state: SessionState) -> types::SessionState {
 }
 
 fn task_to_wire(task: Task) -> types::Task {
+    let fullscreen = task.asks_for_full_screen();
+    let fullscreen_request = match task.fullscreen_request {
+        FullScreenRequest::None => types::FullScreenRequest::None,
+        FullScreenRequest::Explicit => types::FullScreenRequest::Explicit,
+        FullScreenRequest::BarsHidden => types::FullScreenRequest::BarsHidden,
+    } as i32;
     types::Task {
         task_id: task.task_id,
         bounds: Some(types::Rect {
@@ -1313,7 +1517,8 @@ fn task_to_wire(task: Task) -> types::Task {
             TaskOrientation::Portrait => types::TaskOrientation::Portrait,
             TaskOrientation::Landscape => types::TaskOrientation::Landscape,
         } as i32,
-        fullscreen: task.fullscreen,
+        fullscreen,
+        fullscreen_request,
         picture_in_picture: task.picture_in_picture,
         transparent_caption: task.transparent_caption,
         caption_interactive: task
@@ -1328,6 +1533,12 @@ fn task_to_wire(task: Task) -> types::Task {
             .collect(),
         can_go_back: task.can_go_back,
         handles_density_change: task.handles_density_change,
+        overlay: task.overlay.map(|overlay| types::OverlayWindow {
+            window_type: overlay.window_type,
+            focusable: overlay.focusable,
+            touchable: overlay.touchable,
+        }),
+        below_title_bar: task.below_title_bar,
     }
 }
 
@@ -1343,6 +1554,11 @@ fn task_from_wire(task: types::Task) -> Task {
         types::TaskOrientation::Landscape => TaskOrientation::Landscape,
     };
     let bounds = task.bounds.unwrap_or_default();
+    let fullscreen_request = match task.fullscreen_request() {
+        types::FullScreenRequest::Explicit => FullScreenRequest::Explicit,
+        types::FullScreenRequest::BarsHidden => FullScreenRequest::BarsHidden,
+        types::FullScreenRequest::None => FullScreenRequest::None,
+    };
     Task {
         task_id: task.task_id,
         bounds: Bounds {
@@ -1362,7 +1578,7 @@ fn task_from_wire(task: types::Task) -> Task {
         status_bar,
         status_bar_color: task.status_bar_color,
         orientation,
-        fullscreen: task.fullscreen,
+        fullscreen_request,
         picture_in_picture: task.picture_in_picture,
         transparent_caption: task.transparent_caption,
         caption_interactive: task
@@ -1377,6 +1593,12 @@ fn task_from_wire(task: types::Task) -> Task {
             .collect(),
         can_go_back: task.can_go_back,
         handles_density_change: task.handles_density_change,
+        overlay: task.overlay.map(|overlay| OverlayWindow {
+            window_type: overlay.window_type,
+            focusable: overlay.focusable,
+            touchable: overlay.touchable,
+        }),
+        below_title_bar: task.below_title_bar,
     }
 }
 
@@ -1454,7 +1676,53 @@ fn app_to_wire(app: AppInfo) -> types::AppInfo {
         caption_icon_png: app.caption_icon_png,
         multiple_windows: app.multiple_windows,
         root: app.root,
+        shortcuts: app.shortcuts.into_iter().map(shortcut_to_wire).collect(),
+        shared_user_id: app.shared_user_id,
     }
+}
+
+fn shortcut_to_wire(shortcut: AppShortcut) -> types::AppShortcut {
+    types::AppShortcut {
+        id: shortcut.id,
+        short_label: shortcut.short_label,
+        long_label: shortcut.long_label,
+        icon_png: shortcut.icon_png,
+        rank: shortcut.rank,
+        manifest: shortcut.manifest,
+        dynamic: shortcut.dynamic,
+        pinned: shortcut.pinned,
+    }
+}
+
+fn shortcut_from_wire(shortcut: types::AppShortcut) -> AppShortcut {
+    AppShortcut {
+        id: shortcut.id,
+        short_label: shortcut.short_label,
+        long_label: shortcut.long_label,
+        icon_png: shortcut.icon_png,
+        rank: shortcut.rank,
+        manifest: shortcut.manifest,
+        dynamic: shortcut.dynamic,
+        pinned: shortcut.pinned,
+    }
+}
+
+fn pin_request_to_wire(request: PinShortcutRequest) -> types::PinShortcutRequest {
+    types::PinShortcutRequest {
+        request_id: request.request_id,
+        package_name: request.package_name,
+        app_label: request.app_label,
+        shortcut: Some(shortcut_to_wire(request.shortcut)),
+    }
+}
+
+fn pin_request_from_wire(request: types::PinShortcutRequest) -> Option<PinShortcutRequest> {
+    Some(PinShortcutRequest {
+        request_id: request.request_id,
+        package_name: request.package_name,
+        app_label: request.app_label,
+        shortcut: shortcut_from_wire(request.shortcut?),
+    })
 }
 
 fn app_from_wire(app: types::AppInfo) -> AppInfo {
@@ -1475,6 +1743,8 @@ fn app_from_wire(app: types::AppInfo) -> AppInfo {
         caption_icon_png: app.caption_icon_png,
         multiple_windows: app.multiple_windows,
         root: app.root,
+        shortcuts: app.shortcuts.into_iter().map(shortcut_from_wire).collect(),
+        shared_user_id: app.shared_user_id,
     }
 }
 
@@ -1502,6 +1772,7 @@ fn event_to_wire(event: TaskEvent) -> types::TaskEvent {
             }),
         }),
         TaskEvent::ImeEditor { task_id, editor } => Event::ImeEditor(editor.to_wire(task_id)),
+        TaskEvent::PinShortcut(request) => Event::PinShortcut(pin_request_to_wire(request)),
     };
     types::TaskEvent { body: Some(body) }
 }
@@ -1536,6 +1807,7 @@ fn event_from_wire(event: types::TaskEvent) -> Option<TaskEvent> {
             let (task_id, editor) = ImeEditor::from_wire(&editor).ok()?;
             TaskEvent::ImeEditor { task_id, editor }
         }
+        Event::PinShortcut(request) => TaskEvent::PinShortcut(pin_request_from_wire(request)?),
     })
 }
 
@@ -1557,7 +1829,8 @@ fn tasks_to_wire(events: Vec<TaskEvent>) -> types::Tasks {
             TaskEvent::Installed(apps) => tasks.installed = Some(installed_to_wire(Some(apps))),
             TaskEvent::Removed { .. }
             | TaskEvent::ImeCursor { .. }
-            | TaskEvent::ImeEditor { .. } => {}
+            | TaskEvent::ImeEditor { .. }
+            | TaskEvent::PinShortcut(_) => {}
         }
     }
     tasks
@@ -1609,6 +1882,77 @@ const WATCH_POLL: Duration = Duration::from_millis(100);
 /// How long a connection that carries the clipboard waits for the client before it looks
 /// for text from Android again.
 const CLIPBOARD_POLL: Duration = Duration::from_millis(50);
+
+/// How long a connection that serves speech and spelling waits for the client's answers
+/// before it passes on the Android's next requests: a spelling request waits at most this.
+const LANGUAGE_POLL: Duration = Duration::from_millis(10);
+
+/// Carries the speech and spelling of `android` between it and the client on `connection`,
+/// until either goes away.
+fn carry_language(
+    connection: &mut dyn Connection,
+    peer: &Peer,
+    android: &dyn UserAndroid,
+    served: &crate::language::relay::Served,
+) {
+    loop {
+        loop {
+            match served.requests.try_recv() {
+                Ok(request) => {
+                    let frame = Body::LanguageServiceFrame(types::LanguageServiceFrame {
+                        control: dsa_protocol::encode(&request),
+                    });
+                    if send(connection, frame).is_err() {
+                        return;
+                    }
+                }
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => {
+                    connection.close();
+                    return;
+                }
+            }
+        }
+        let frame = match connection.recv(Some(LANGUAGE_POLL)) {
+            Ok(frame) => frame,
+            Err(TransportError::Timeout) => continue,
+            Err(_) => return,
+        };
+        let carried = match decode(&frame) {
+            Ok(Envelope {
+                body: Some(Body::LanguageServiceFrame(frame)),
+            }) => dsa_protocol::decode(&frame.control).map_err(|e| e.to_string()),
+            Ok(_) => {
+                eprintln!(
+                    "local API: a client of {} sent something other than speech or spelling on a \
+                     connection that serves them; closing its connection",
+                    peer.user
+                );
+                connection.close();
+                return;
+            }
+            Err(error) => Err(error.to_string()),
+        };
+        match carried {
+            Ok(envelope) => {
+                if let Err(why) = android.language_answer(served.id, envelope) {
+                    eprintln!(
+                        "local API: a client of {} sent what Android did not ask for ({why}); \
+                         closing its connection",
+                        peer.user
+                    );
+                    connection.close();
+                    return;
+                }
+            }
+            Err(why) => eprintln!(
+                "local API: a client of {} sent an unreadable frame on a connection that serves \
+                 speech and spelling ({why}); dropping it",
+                peer.user
+            ),
+        }
+    }
+}
 
 /// How long the service waits for the next piece of an APK a client sends. A client reads the
 /// file as it sends it, so a gap this long means it is stuck or gone.
@@ -1687,10 +2031,16 @@ pub struct SettingsReport {
     /// Whether the caller's window manager can turn the host's touch gestures off, as it last
     /// told the service. Unknown until it has, and from a service that does not report it.
     pub touch_gestures: TouchGesturesState,
+    /// What the caller's graphics renderer runs on, as their window manager last told the
+    /// service. Unknown until it has, and from a service that does not report it.
+    pub graphics: GraphicsState,
     /// How far `adb shell` may elevate to root: "off", "ask" or "remember" while developer
     /// mode is on, "unavailable" while root elevation is off, and empty while developer mode is
     /// off (adb is closed) or from a service that does not report it.
     pub adb_shell_root: String,
+    /// The root certificates added to the computer that the caller's Android is given while
+    /// `settings.host_certificates` is on. Empty from a service that does not report them.
+    pub imported_certificates: Vec<crate::host_certificates::ImportedCertificate>,
 }
 
 /// How a user's Android reaches the network.
@@ -1704,6 +2054,9 @@ pub struct NetworkStatus {
     pub gateway: String,
     /// Why the network is not what the settings ask for, if it is not.
     pub problem: Option<String>,
+    /// Who answers the guest's DNS queries: [`NetworkStatus::DNS_HOST`],
+    /// [`NetworkStatus::DNS_NETWORK`], or empty when nobody can say yet.
+    pub dns_resolver: String,
 }
 
 impl NetworkStatus {
@@ -1713,6 +2066,11 @@ impl NetworkStatus {
     pub const ADVANCED: &'static str = "advanced";
     /// No network, because Android is not running.
     pub const OFF: &'static str = "off";
+    /// The host's resolver answers the guest's names, so the host's hosts file, VPN and DNS
+    /// filters apply to Android's apps.
+    pub const DNS_HOST: &'static str = "host";
+    /// The host's resolver does not answer, so Android asks `dns_servers` itself.
+    pub const DNS_NETWORK: &'static str = "network";
 
     pub fn off() -> NetworkStatus {
         NetworkStatus {
@@ -1728,6 +2086,7 @@ impl NetworkStatus {
             dns_servers: self.dns_servers.clone(),
             gateway: self.gateway.clone(),
             problem: self.problem.clone().unwrap_or_default(),
+            dns_resolver: self.dns_resolver.clone(),
         }
     }
 
@@ -1738,6 +2097,7 @@ impl NetworkStatus {
             dns_servers: status.dns_servers,
             gateway: status.gateway,
             problem: Some(status.problem).filter(|p| !p.is_empty()),
+            dns_resolver: status.dns_resolver,
         }
     }
 }
@@ -1958,6 +2318,54 @@ fn gapps_progress_from_wire(progress: &types::GappsProgress) -> Option<gapps::Pr
     })
 }
 
+fn widevine_package_to_wire(package: &WidevinePackage) -> types::WidevinePackage {
+    types::WidevinePackage {
+        apex: package.apex.clone(),
+        version: package.version.clone(),
+        android_major: package.android_major,
+        abi: package.abi.clone(),
+        source: package.source.clone(),
+        size: package.size,
+        sha256: (0..package.sha256.len() / 2)
+            .filter_map(|i| u8::from_str_radix(package.sha256.get(i * 2..i * 2 + 2)?, 16).ok())
+            .collect(),
+        license: package.license.clone(),
+    }
+}
+
+fn widevine_package_from_wire(package: types::WidevinePackage) -> WidevinePackage {
+    WidevinePackage {
+        apex: package.apex,
+        version: package.version,
+        android_major: package.android_major,
+        abi: package.abi,
+        source: package.source,
+        size: package.size,
+        sha256: package.sha256.iter().map(|b| format!("{b:02x}")).collect(),
+        license: package.license,
+    }
+}
+
+fn widevine_to_wire(status: &WidevineStatus) -> types::Widevine {
+    types::Widevine {
+        package: status.package.as_ref().map(widevine_package_to_wire),
+        on_disk: status.on_disk,
+        running: status.running,
+        active: status.active,
+        restart_needed: status.restart_needed,
+    }
+}
+
+fn widevine_from_wire(status: types::Widevine) -> WidevineStatus {
+    WidevineStatus {
+        package: status.package.map(widevine_package_from_wire),
+        on_disk: status.on_disk,
+        running: status.running,
+        active: status.active,
+        restart_needed: status.restart_needed,
+    }
+}
+
 fn package_to_wire(package: &Package) -> types::ArmTranslationPackage {
     types::ArmTranslationPackage {
         name: package.name.clone(),
@@ -2023,6 +2431,8 @@ pub struct HostApiService {
     default_arm_translation: Option<DefaultArmTranslationSource>,
     /// What each user's window manager last said about the host's touch gestures, by user.
     touch_gestures: Mutex<HashMap<String, TouchGesturesState>>,
+    /// What each user's window manager last said its graphics renderer runs on, by user.
+    graphics: Mutex<HashMap<String, GraphicsState>>,
 }
 
 /// Says what the build of the image a user's Android starts from is, by user.
@@ -2067,6 +2477,7 @@ impl HostApiService {
             addon_change: Mutex::new(()),
             default_arm_translation: None,
             touch_gestures: Mutex::new(HashMap::new()),
+            graphics: Mutex::new(HashMap::new()),
         }
     }
 
@@ -2323,8 +2734,14 @@ impl HostApiService {
             if let Some(request::Body::WatchPrintJobs(_)) = request.body {
                 return self.watch_print_jobs(connection, &peer, request.id);
             }
+            if let Some(request::Body::WatchPasskeys(_)) = request.body {
+                return self.watch_passkeys(connection, &peer, request.id);
+            }
             if let Some(request::Body::WatchLocation(_)) = request.body {
                 return self.watch_location(connection, &peer, request.id);
+            }
+            if let Some(request::Body::ServeLanguageServices(_)) = request.body {
+                return self.serve_language(connection, &peer, request.id);
             }
             if let Some(request::Body::WatchGeocoding(_)) = request.body {
                 return self.watch_geocoding(connection, &peer, request.id);
@@ -2337,6 +2754,9 @@ impl HostApiService {
             }
             if let Some(request::Body::WatchBackgroundApps(_)) = request.body {
                 return self.watch_background(connection, &peer, request.id);
+            }
+            if let Some(request::Body::WatchAppAudio(_)) = request.body {
+                return self.watch_app_audio(connection, &peer, request.id);
             }
             if let Some(request::Body::InstallApk(install)) = &request.body {
                 return self.install_apk(connection, &peer, request.id, install.clone());
@@ -2352,11 +2772,15 @@ impl HostApiService {
             if let Some(request::Body::InstallGapps(_)) = &request.body {
                 return self.install_gapps(connection, &peer, request.id);
             }
+            if let Some(request::Body::InstallWidevine(install)) = &request.body {
+                return self.install_widevine(connection, &peer, request.id, install.clone());
+            }
             if let Some(request::Body::WatchLinks(_)) = request.body {
                 return self.watch_links(connection, &peer, request.id);
             }
             if let Some(request::Body::WatchAccessibility(watch)) = &request.body {
-                return self.watch_accessibility(connection, &peer, request.id, watch.task_id);
+                let target = AccessibilityTarget::of(watch.task_id, watch.widget_id);
+                return self.watch_accessibility(connection, &peer, request.id, target);
             }
             if let Some(request::Body::OpenFile(open)) = &request.body {
                 return self.open_file(connection, &peer, request.id, open.clone());
@@ -2439,24 +2863,34 @@ impl HostApiService {
     /// Answers a WatchAccessibility request, then sends the task's tree and the answers to the
     /// client's actions as they come from the caller's Android, and passes each action the
     /// client sends to it, until the client goes away. Closing the connection ends the watch,
-    /// so Android stops reading the task's tree once no client watches it. A client that sends
-    /// anything but an action is disconnected.
+    /// so Android stops reading the task's tree once no client watches it. A client may also
+    /// say whether a screen reader listens (AccessibilityListening); one that sends anything
+    /// else is disconnected. A desktop widget's tree (`target` a widget) is watched the same
+    /// way.
     fn watch_accessibility(
         &self,
         mut connection: Box<dyn Connection>,
         peer: &Peer,
         id: u64,
-        task_id: i32,
+        target: AccessibilityTarget,
     ) {
         let watch = match self.androids.android(&peer.user) {
             Err(why) => Err(error(ErrorCode::Unavailable, why)),
-            Ok(android) => match android.watch_accessibility(task_id) {
-                Some(watch) => Ok((android, watch)),
-                None => Err(error(
-                    ErrorCode::Unavailable,
-                    "this Android does not export its accessibility tree".into(),
-                )),
-            },
+            Ok(android) => {
+                let watch = match target {
+                    AccessibilityTarget::Task(task_id) => android.watch_accessibility(task_id),
+                    AccessibilityTarget::Widget(widget_id) => {
+                        android.watch_widget_accessibility(widget_id)
+                    }
+                };
+                match watch {
+                    Some(watch) => Ok((android, watch)),
+                    None => Err(error(
+                        ErrorCode::Unavailable,
+                        "this Android does not export its accessibility tree".into(),
+                    )),
+                }
+            }
         };
         let (android, watch) = match watch {
             Ok(watch) => watch,
@@ -2487,6 +2921,9 @@ impl HostApiService {
                     Ok(GuestAccessibility::ActionResult(result)) => {
                         Body::AccessibilityActionResult(result.to_host_api())
                     }
+                    Ok(GuestAccessibility::Announcement(announcement)) => {
+                        Body::AccessibilityAnnouncement(announcement.to_host_api())
+                    }
                     Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Disconnected) => {
                         connection.close();
@@ -2506,12 +2943,26 @@ impl HostApiService {
                 Ok(Envelope {
                     body: Some(Body::AccessibilityAction(action)),
                 }) => ActionRequest::from_host_api(action),
+                Ok(Envelope {
+                    body: Some(Body::AccessibilityListening(listening)),
+                }) => {
+                    watch.set_listening(listening.listening);
+                    continue;
+                }
                 _ => Err("something other than an action arrived".to_string()),
             };
             match action {
                 Ok(action) => {
                     let request_id = action.request_id;
-                    if let Err(error) = android.accessibility_action(task_id, &action) {
+                    let sent = match target {
+                        AccessibilityTarget::Task(task_id) => {
+                            android.accessibility_action(task_id, &action)
+                        }
+                        AccessibilityTarget::Widget(widget_id) => {
+                            android.widget_accessibility_action(widget_id, &action)
+                        }
+                    };
+                    if let Err(error) = sent {
                         let why = match error {
                             TaskRequestError::NotRunning(why) | TaskRequestError::Failed(why) => {
                                 why
@@ -2533,8 +2984,8 @@ impl HostApiService {
                 }
                 Err(why) => {
                     eprintln!(
-                        "local API: a client of {} broke the accessibility watch of task \
-                         {task_id} ({why}); closing its connection",
+                        "local API: a client of {} broke the accessibility watch of \
+                         {target} ({why}); closing its connection",
                         peer.user
                     );
                     connection.close();
@@ -3121,6 +3572,44 @@ impl HostApiService {
         }
     }
 
+    /// Answers a ServeLanguageServices request, then passes the speech and spelling requests
+    /// of the client's Android to it and its answers to the Android, until the client goes
+    /// away. What it had not answered then fails in the Android. A frame that cannot be read is
+    /// dropped; one that is no answer closes the connection.
+    fn serve_language(&self, mut connection: Box<dyn Connection>, peer: &Peer, id: u64) {
+        let served = match self.androids.android(&peer.user) {
+            Err(why) => Err(error(ErrorCode::Unavailable, why)),
+            Ok(android) => match android.serve_language() {
+                Some(served) => Ok((android, served)),
+                None => Err(error(
+                    ErrorCode::Unavailable,
+                    "this Android takes no speech or spelling from the host".into(),
+                )),
+            },
+        };
+        let (android, served) = match served {
+            Ok(served) => served,
+            Err(body) => {
+                let _ = send(
+                    &mut *connection,
+                    Body::Response(Response {
+                        id,
+                        body: Some(body),
+                    }),
+                );
+                return;
+            }
+        };
+        let answer = Response {
+            id,
+            body: Some(response::Body::Done(types::Done {})),
+        };
+        if send(&mut *connection, Body::Response(answer)).is_ok() {
+            carry_language(&mut *connection, peer, &*android, &served);
+        }
+        android.language_server_gone(served.id);
+    }
+
     /// Answers a WatchNotifications request, then passes the notifications of the client's
     /// Android to it until the client goes away. The client sends nothing more: anything it
     /// sends closes the connection, except a frame that cannot be read, which is dropped.
@@ -3526,7 +4015,9 @@ impl HostApiService {
         })
     }
 
-    /// The widget with its placement: the one kept for it, else a new one, which is kept.
+    /// The widget with its placement: the one kept for it, brought up to date with what the
+    /// widget allows and needs now ([`widgets::refreshed_placement`]), else a new one. Either
+    /// is kept.
     fn placed(
         &self,
         user: &str,
@@ -3535,7 +4026,25 @@ impl HostApiService {
         kept: &mut std::collections::BTreeMap<i32, Placement>,
     ) -> Widget {
         let placement = match kept.get(&widget_id) {
-            Some(placement) => *placement,
+            Some(placement) => {
+                let refreshed = widgets::refreshed_placement(&provider, *placement);
+                if refreshed != *placement {
+                    eprintln!(
+                        "widgets: widget {widget_id} ({}) goes from {}x{} dp to {}x{} dp, as \
+                         it allows and needs now",
+                        provider.provider,
+                        placement.width_dp,
+                        placement.height_dp,
+                        refreshed.width_dp,
+                        refreshed.height_dp
+                    );
+                    if let Err(why) = self.placements.set(user, widget_id, refreshed) {
+                        eprintln!("widgets: the size of widget {widget_id} is not kept: {why}");
+                    }
+                    kept.insert(widget_id, refreshed);
+                }
+                refreshed
+            }
             None => {
                 let others: Vec<Placement> = kept.values().copied().collect();
                 let placement = widgets::default_placement(&provider, &others);
@@ -3750,10 +4259,25 @@ impl HostApiService {
         }
     }
 
+    /// The packages that share `package`'s Android user ID in `user`'s Android, `package`
+    /// first, as the guest last listed its installed apps. Just `package` for an app with a
+    /// user ID of its own, or when the list is not known.
+    fn shared_user_group(&self, user: &str, package: &str) -> Vec<String> {
+        let installed = self
+            .androids
+            .android(user)
+            .ok()
+            .and_then(|android| android.watch_tasks())
+            .and_then(|watch| installed_of(watch.current))
+            .unwrap_or_default();
+        crate::root_elevation::shared_user_group(&installed, package)
+    }
+
     /// Sets how far one app may elevate to root. The feature must be on. Moving an app to
     /// "remember" needs an administrator: a caller who is not one gets the administrator
     /// prompt in their own session. A change clears that app's grace, and the running Android
-    /// is sent the new config at once.
+    /// is sent the new config at once. Apps that share an Android user ID are one group, so
+    /// the level is set for every app of the group.
     fn set_app_root(&self, peer: &Peer, set: types::SetAppRoot) -> response::Body {
         use crate::root_elevation::Level;
         if !apk::valid_package_name(&set.package_name) {
@@ -3784,19 +4308,13 @@ impl HostApiService {
                 "root elevation is off for this computer; turn it on first",
             );
         }
-        let current = store
-            .root_apps(&peer.user)
-            .ok()
-            .and_then(|apps| {
-                apps.into_iter()
-                    .find(|a| a.package == set.package_name)
-                    .map(|a| a.level)
-            })
-            .unwrap_or_else(|| {
-                crate::root_elevation::default_level(&set.package_name)
-                    .code()
-                    .to_string()
-            });
+        let group = self.shared_user_group(&peer.user, &set.package_name);
+        let current = crate::root_elevation::group_level(
+            &store.root_apps(&peer.user).unwrap_or_default(),
+            &group,
+        )
+        .code()
+        .to_string();
         if level.change_needs_admin() && !peer.administrator && current != level.code() {
             // The caller is not an administrator, so one is asked in the caller's own session,
             // through the prompt the app's su calls use. Running the command elevated would
@@ -3820,7 +4338,10 @@ impl HostApiService {
                 );
             }
         }
-        match store.set_root_app(&peer.user, &set.package_name, level.code()) {
+        let stored = group
+            .iter()
+            .try_for_each(|member| store.set_root_app(&peer.user, member, level.code()));
+        match stored {
             Ok(()) => {
                 // The running Android follows the new level at once: the guest's su guard
                 // shows su to the app, or hides it, from this message on.
@@ -3830,7 +4351,7 @@ impl HostApiService {
                 eprintln!(
                     "local API: {} set the root level of {} to {}",
                     peer.user,
-                    set.package_name,
+                    group.join(", "),
                     level.code()
                 );
                 app_root(types::AppRootStatus::Success, level.code(), "")
@@ -3860,7 +4381,8 @@ impl HostApiService {
             .to_string()
     }
     /// Fills each listed app's `root` with its level: "unavailable" when the feature is off
-    /// for the computer, otherwise the per-app level ("off", "ask" or "remember").
+    /// for the computer, otherwise the level ("off", "ask" or "remember") of the app, or of
+    /// its group when it shares an Android user ID with other apps.
     fn fill_app_root(&self, user: &str, installed: &mut types::InstalledApps) {
         let Some((store, _facts)) = &self.settings else {
             return;
@@ -3872,12 +4394,25 @@ impl HostApiService {
             return;
         }
         let levels = store.root_apps(user).unwrap_or_default();
-        for app in &mut installed.apps {
-            app.root = levels
-                .iter()
-                .find(|a| a.package == app.package_name)
-                .map(|a| a.level.clone())
-                .unwrap_or_else(|| "off".to_string());
+        let groups: Vec<Vec<String>> = installed
+            .apps
+            .iter()
+            .map(|app| {
+                if app.shared_user_id.is_empty() {
+                    return vec![app.package_name.clone()];
+                }
+                installed
+                    .apps
+                    .iter()
+                    .filter(|other| other.shared_user_id == app.shared_user_id)
+                    .map(|other| other.package_name.clone())
+                    .collect()
+            })
+            .collect();
+        for (app, group) in installed.apps.iter_mut().zip(groups) {
+            app.root = crate::root_elevation::group_level(&levels, &group)
+                .code()
+                .to_string();
         }
     }
 
@@ -4044,6 +4579,53 @@ impl HostApiService {
         }
     }
 
+    fn reconfigure_widget(&self, peer: &Peer, widget_id: i32) -> response::Body {
+        let android = match self.androids.android(&peer.user) {
+            Ok(android) => android,
+            Err(why) => return error(ErrorCode::Unavailable, why),
+        };
+        let Some(provider) = android
+            .widgets()
+            .into_iter()
+            .find(|(id, _)| *id == widget_id)
+            .map(|(_, provider)| provider)
+        else {
+            return error(
+                ErrorCode::UnknownRequest,
+                format!("there is no widget {widget_id}"),
+            );
+        };
+        if !provider.reconfigurable {
+            return error(
+                ErrorCode::WidgetRefused,
+                format!(
+                    "the widget {widget_id} ({}) cannot be set up again; its app offers no settings for it",
+                    provider.provider
+                ),
+            );
+        }
+        eprintln!(
+            "widgets: {} opens the settings of widget {widget_id} ({})",
+            peer.user, provider.provider
+        );
+        if let Err(why) = android.reconfigure_widget(widget_id) {
+            return match why {
+                WidgetError::NotRunning(why) => error(ErrorCode::NotRunning, why),
+                WidgetError::Refused(why) => error(ErrorCode::WidgetRefused, why),
+            };
+        }
+        let provider = android
+            .widgets()
+            .into_iter()
+            .find(|(id, _)| *id == widget_id)
+            .map(|(_, provider)| provider)
+            .unwrap_or(provider);
+        let mut kept = self.placements_of(&peer.user);
+        response::Body::Widget(widget_to_wire(
+            self.placed(&peer.user, widget_id, provider, &mut kept),
+        ))
+    }
+
     fn place_widget(&self, peer: &Peer, place: types::PlaceWidget) -> response::Body {
         let android = match self.androids.android(&peer.user) {
             Ok(android) => android,
@@ -4062,12 +4644,20 @@ impl HostApiService {
         };
         let asked = place.placement.unwrap_or_default();
         let (width_dp, height_dp) = widgets::clamp_size(&provider, asked.width_dp, asked.height_dp);
-        let placement = Placement {
-            x: asked.x,
-            y: asked.y,
-            width_dp,
-            height_dp,
-        };
+        let kept = self
+            .placements_of(&peer.user)
+            .get(&place.widget_id)
+            .copied();
+        let placement = widgets::reported_placement(
+            kept,
+            Placement {
+                x: asked.x,
+                y: asked.y,
+                width_dp,
+                height_dp,
+                resized: false,
+            },
+        );
         if let Err(why) = self.placements.set(&peer.user, place.widget_id, placement) {
             eprintln!(
                 "widgets: the place of widget {} is not kept: {why}",
@@ -4150,16 +4740,52 @@ impl HostApiService {
         let action = match types::NotificationAction::try_from(act.action) {
             Ok(types::NotificationAction::Open) => NotificationAction::Open { key: act.key },
             Ok(types::NotificationAction::Dismiss) => NotificationAction::Dismiss { key: act.key },
+            Ok(types::NotificationAction::Button) => {
+                if act.reply_text.chars().count() > notifications::MAX_REPLY_CHARS {
+                    return error(
+                        ErrorCode::UnknownRequest,
+                        format!(
+                            "a reply to a notification is at most {} characters",
+                            notifications::MAX_REPLY_CHARS
+                        ),
+                    );
+                }
+                if act.button as usize >= notifications::MAX_BUTTONS {
+                    return error(
+                        ErrorCode::UnknownRequest,
+                        format!(
+                            "a notification has at most {} buttons, so there is no button {}",
+                            notifications::MAX_BUTTONS,
+                            act.button
+                        ),
+                    );
+                }
+                NotificationAction::Button {
+                    key: act.key,
+                    button: act.button,
+                    title: act
+                        .button_title
+                        .chars()
+                        .take(notifications::MAX_LINE_CHARS)
+                        .collect(),
+                    reply: act.reply_text,
+                }
+            }
             _ => {
                 return error(
                     ErrorCode::UnknownRequest,
-                    "the action on a notification is to open it or to dismiss it".into(),
+                    "the action on a notification is to open it, to dismiss it or to choose one \
+                     of its buttons"
+                        .into(),
                 )
             }
         };
         // An update alert is the host's alone: its desktop opens the update settings on a
-        // click, and Android has nothing to open or dismiss.
-        if update_alerts::is_update_key(action.key()) {
+        // click, and Android has nothing to open or dismiss. So is a notice that Android was
+        // restarted to recover its graphics.
+        if update_alerts::is_update_key(action.key())
+            || crate::compositor::frame_stall::is_recovery_key(action.key())
+        {
             return response::Body::Done(types::Done {});
         }
         let android = match self.androids.android(&peer.user) {
@@ -4258,6 +4884,82 @@ impl HostApiService {
                     );
                 }
             }
+        }
+    }
+
+    /// Answers a WatchAppAudio request with the outputs of the caller's Android's sound now,
+    /// then passes every new list until the client goes away. The client sends nothing more:
+    /// anything it sends closes the connection, except a frame that cannot be read, which is
+    /// dropped.
+    fn watch_app_audio(&self, mut connection: Box<dyn Connection>, peer: &Peer, id: u64) {
+        let watched = match self.androids.android(&peer.user) {
+            Err(why) => Err(error(ErrorCode::Unavailable, why)),
+            Ok(android) => android.watch_app_audio().ok_or_else(|| {
+                error(
+                    ErrorCode::Unavailable,
+                    "this Android says nothing of its apps' sound".into(),
+                )
+            }),
+        };
+        let watch = match watched {
+            Ok(watch) => watch,
+            Err(body) => {
+                let _ = send(
+                    &mut *connection,
+                    Body::Response(Response {
+                        id,
+                        body: Some(body),
+                    }),
+                );
+                return;
+            }
+        };
+        let answer = Response {
+            id,
+            body: Some(response::Body::AppAudio(app_audio::streams_to_host_api(
+                &watch.streams,
+            ))),
+        };
+        if send(&mut *connection, Body::Response(answer)).is_err() {
+            return;
+        }
+        loop {
+            loop {
+                match watch.events.try_recv() {
+                    Ok(streams) => {
+                        let list = Body::AppAudio(app_audio::streams_to_host_api(&streams));
+                        if send(&mut *connection, list).is_err() {
+                            return;
+                        }
+                    }
+                    Err(TryRecvError::Empty) => break,
+                    Err(TryRecvError::Disconnected) => {
+                        connection.close();
+                        return;
+                    }
+                }
+            }
+            if !self.one_way_watch_continues(&mut *connection, peer, "watches its apps' sound") {
+                return;
+            }
+        }
+    }
+
+    /// Gives the caller's Android the volume the user set for one of its apps on the host.
+    fn set_app_volume(&self, peer: &Peer, set: types::SetAppVolume) -> response::Body {
+        let change = match VolumeChange::from_host_api(set) {
+            Ok(change) => change,
+            Err(why) => return error(ErrorCode::UnknownRequest, why),
+        };
+        let android = match self.androids.android(&peer.user) {
+            Ok(android) => android,
+            Err(why) => return error(ErrorCode::Unavailable, why),
+        };
+        match android.set_app_volume(&change) {
+            Ok(()) => response::Body::Done(types::Done {}),
+            // The app went with its Android; there is nothing to set.
+            Err(TaskRequestError::NotRunning(_)) => response::Body::Done(types::Done {}),
+            Err(TaskRequestError::Failed(why)) => error(ErrorCode::Unavailable, why),
         }
     }
 
@@ -4409,12 +5111,28 @@ impl HostApiService {
         }
         // x86_64 first: arm64-v8a only when the APK's x86_64 libraries leave out some of its
         // arm64 ones and the running Android translates ARM code. Android is asked only then.
+        // An APK with arm64-v8a code only is refused while it does not, with that reason.
         let libraries = NativeLibraries::from_wire(&install.native_libraries);
-        let abi = native_abi::choose(&libraries, || {
+        let abi = match native_abi::install_abi(&libraries, || {
             android
                 .arm_translation()
-                .is_some_and(|guest| native_abi::translates_arm64(&guest.abilist))
-        });
+                .filter(|guest| !guest.abilist.is_empty())
+                .map(|guest| native_abi::translates_arm64(&guest.abilist))
+        }) {
+            Ok(abi) => abi,
+            Err(why) => {
+                eprintln!(
+                    "install: refused {} from {}: {why}",
+                    install.name, peer.user
+                );
+                answer(
+                    &mut *connection,
+                    error(ErrorCode::InstallRefused, why.to_string()),
+                );
+                connection.close();
+                return;
+            }
+        };
         answer(&mut *connection, response::Body::Done(types::Done {}));
         eprintln!(
             "install: {} asked to install {} ({} bytes){}",
@@ -4469,6 +5187,22 @@ impl HostApiService {
                 }
             }
             Some(request::Body::ResetData(_)) => self.reset_data(peer),
+            Some(request::Body::BackupNow(_)) => self.backup_now(peer),
+            Some(request::Body::GetBackup(_)) => self.get_backup(peer),
+            Some(request::Body::RestoreBackup(_)) => self.restore_backup(peer),
+            Some(request::Body::GetBackupRecoveryKey(_)) => self.backup_recovery_key(peer),
+            Some(request::Body::SetBackupRecoveryKey(set)) => {
+                self.set_backup_recovery_key(peer, &set.key)
+            }
+            Some(request::Body::SetBackup(set)) => self.set_backup(peer, &set),
+            Some(request::Body::GetKeyProtection(_)) => self.key_protection(peer),
+            Some(request::Body::ReportPasskeyCeremony(report)) => {
+                self.report_passkey_ceremony(peer, report)
+            }
+            Some(request::Body::WatchPasskeys(_)) => error(
+                ErrorCode::UnknownRequest,
+                "passkey ceremonies are watched on a connection of their own".into(),
+            ),
             Some(request::Body::GetAndroidVersions(_)) => self.android_versions(peer, None),
             Some(request::Body::UseAndroidVersion(chosen)) => {
                 self.android_versions(peer, Some(chosen))
@@ -4568,6 +5302,20 @@ impl HostApiService {
                     package_name: stop.package_name,
                 },
             ),
+            Some(request::Body::LaunchShortcut(launch)) => self.request(
+                peer,
+                TaskRequest::LaunchShortcut {
+                    package_name: launch.package_name,
+                    shortcut_id: launch.shortcut_id,
+                },
+            ),
+            Some(request::Body::AnswerPinShortcut(answer)) => self.request(
+                peer,
+                TaskRequest::AnswerPinShortcut {
+                    request_id: answer.request_id,
+                    accepted: answer.accepted,
+                },
+            ),
             Some(request::Body::ResizeTask(resize)) => {
                 let started = Instant::now();
                 let answer = self.request(
@@ -4589,6 +5337,20 @@ impl HostApiService {
                     density_dpi: density.density_dpi,
                 },
             ),
+            // The message stays in the protocol so that its field number is never reused, but
+            // the guest no longer takes a monitor for the tasks it starts: a task starts at
+            // Android's own density and size, and its window gives it its monitor's density
+            // once it opens.
+            Some(request::Body::LaunchPlacement(_)) => error(
+                ErrorCode::UnknownRequest,
+                "tasks start at Android's own density; this host takes no launch placement".into(),
+            ),
+            Some(request::Body::SetCaptionCompat(compat)) => self.request(
+                peer,
+                TaskRequest::CaptionCompat {
+                    below_title_bar: compat.below_title_bar,
+                },
+            ),
             Some(request::Body::SetTaskCaption(caption)) => self.request(
                 peer,
                 TaskRequest::SetCaption {
@@ -4598,16 +5360,46 @@ impl HostApiService {
                     end_width: caption.end_width,
                 },
             ),
+            Some(request::Body::SetTaskFullScreen(full)) => self.request(
+                peer,
+                TaskRequest::SetFullScreen {
+                    task_id: full.task_id,
+                    in_window: full.in_window,
+                },
+            ),
             Some(request::Body::SetWindowsShown(shown)) => {
                 self.request(peer, TaskRequest::WindowsShown { shown: shown.shown })
             }
+            Some(request::Body::SetTasksShown(shown)) => self.request(
+                peer,
+                TaskRequest::TasksShown {
+                    task_ids: shown.task_ids,
+                },
+            ),
             Some(request::Body::ReportTouchGestures(report)) => {
                 self.report_touch_gestures(peer, report)
+            }
+            Some(request::Body::ReportGraphics(report)) => self.report_graphics(peer, report),
+            // An Android with nothing to draw on would boot to empty windows and say nothing
+            // of why; the caller learns what to install instead.
+            Some(request::Body::StartSession(_))
+                if self.graphics_of(&peer.user).refuses_start().is_some() =>
+            {
+                let why = self
+                    .graphics_of(&peer.user)
+                    .refuses_start()
+                    .unwrap_or_default();
+                eprintln!(
+                    "local API: not starting the Android of {}: {why}",
+                    peer.user
+                );
+                error(ErrorCode::Unavailable, why)
             }
             Some(request::Body::ActOnNotification(act)) => self.act_on_notification(peer, act),
             Some(request::Body::ReportPrintJob(report)) => self.report_print_job(peer, report),
             Some(request::Body::ReportGeocode(report)) => self.report_geocode(peer, report),
             Some(request::Body::ReportShare(report)) => self.report_share(peer, report),
+            Some(request::Body::SetAppVolume(set)) => self.set_app_volume(peer, set),
             Some(request::Body::ListBackgroundApps(_)) => self.list_background(peer),
             Some(request::Body::ActOnBackgroundApp(act)) => self.act_on_background(peer, act),
             Some(request::Body::ControlMedia(control)) => self.control_media(peer, control),
@@ -4616,12 +5408,17 @@ impl HostApiService {
             Some(request::Body::RemoveArmTranslation(_)) => self.remove_arm_translation(peer),
             Some(request::Body::GetGapps(_)) => self.get_gapps(peer),
             Some(request::Body::RemoveGapps(_)) => self.remove_gapps(peer),
+            Some(request::Body::GetWidevine(_)) => self.get_widevine(peer),
+            Some(request::Body::RemoveWidevine(_)) => self.remove_widevine(peer),
             Some(request::Body::GetPackage(get)) => self.package_state(peer, &get.package_name),
             Some(request::Body::DragOut(out)) => self.drag_out(peer, out),
             Some(request::Body::ReadDrag(read)) => self.read_drag(peer, read),
             Some(request::Body::EndDrag(end)) => self.end_drag(peer, end),
             Some(request::Body::AddWidget(add)) => self.add_widget(peer, add),
             Some(request::Body::RemoveWidget(remove)) => self.remove_widget(peer, remove.widget_id),
+            Some(request::Body::ReconfigureWidget(reconfigure)) => {
+                self.reconfigure_widget(peer, reconfigure.widget_id)
+            }
             Some(request::Body::ListWidgets(_)) => self.list_widgets(peer),
             Some(request::Body::PlaceWidget(place)) => self.place_widget(peer, place),
             Some(request::Body::WidgetPointer(pointer)) => self.widget_pointer(peer, pointer),
@@ -4656,8 +5453,12 @@ impl HostApiService {
                         | request::Body::LaunchApp(_)
                         | request::Body::ResizeTask(_)
                         | request::Body::SetTaskDensity(_)
+                        | request::Body::LaunchPlacement(_)
+                        | request::Body::SetCaptionCompat(_)
                         | request::Body::SetTaskCaption(_)
+                        | request::Body::SetTaskFullScreen(_)
                         | request::Body::SetWindowsShown(_)
+                        | request::Body::SetTasksShown(_)
                         | request::Body::FreezeSession(_)
                         | request::Body::GetSettings(_)
                         | request::Body::SetSettings(_)
@@ -4673,6 +5474,9 @@ impl HostApiService {
                         | request::Body::InstallGapps(_)
                         | request::Body::GetGapps(_)
                         | request::Body::RemoveGapps(_)
+                        | request::Body::InstallWidevine(_)
+                        | request::Body::GetWidevine(_)
+                        | request::Body::RemoveWidevine(_)
                         | request::Body::WatchLinks(_)
                         | request::Body::OpenFile(_)
                         | request::Body::WatchNotifications(_)
@@ -4690,6 +5494,7 @@ impl HostApiService {
                         | request::Body::EndDrag(_)
                         | request::Body::AddWidget(_)
                         | request::Body::RemoveWidget(_)
+                        | request::Body::ReconfigureWidget(_)
                         | request::Body::ListWidgets(_)
                         | request::Body::WatchWidgets(_)
                         | request::Body::PlaceWidget(_)
@@ -4698,7 +5503,10 @@ impl HostApiService {
                         | request::Body::WatchLog(_)
                         | request::Body::CollectDiagnostics(_)
                         | request::Body::StopApp(_)
+                        | request::Body::LaunchShortcut(_)
+                        | request::Body::AnswerPinShortcut(_)
                         | request::Body::WatchLocation(_)
+                        | request::Body::ServeLanguageServices(_)
                         | request::Body::SetSystemSettings(_)
                         | request::Body::WatchGamepads(_)
                         | request::Body::ListAppWindowSettings(_)
@@ -4709,11 +5517,23 @@ impl HostApiService {
                         | request::Body::RestartForUpdate(_)
                         | request::Body::SetRunAsArm(_)
                         | request::Body::SetAppRoot(_)
+                        | request::Body::BackupNow(_)
+                        | request::Body::GetBackup(_)
+                        | request::Body::RestoreBackup(_)
+                        | request::Body::GetBackupRecoveryKey(_)
+                        | request::Body::SetBackupRecoveryKey(_)
+                        | request::Body::SetBackup(_)
+                        | request::Body::GetKeyProtection(_)
+                        | request::Body::WatchPasskeys(_)
+                        | request::Body::ReportPasskeyCeremony(_)
                         | request::Body::ReportTouchGestures(_)
+                        | request::Body::ReportGraphics(_)
                         | request::Body::WatchGeocoding(_)
                         | request::Body::ReportGeocode(_)
                         | request::Body::WatchShares(_)
-                        | request::Body::ReportShare(_) => unreachable!("answered above"),
+                        | request::Body::ReportShare(_)
+                        | request::Body::WatchAppAudio(_)
+                        | request::Body::SetAppVolume(_) => unreachable!("answered above"),
                     }
                     status(android.as_ref())
                 }
@@ -4732,13 +5552,18 @@ impl HostApiService {
     fn trace_resize(&self, resize: &types::ResizeTask, started: Instant) {
         let now = Instant::now();
         let size = (resize.width, resize.height);
-        let detail = format!(
+        let mut detail = format!(
             "live={} took={}",
             resize.live,
             resize_trace::millis(now.saturating_duration_since(started))
         );
         let wall = resize_trace::wall_now();
         let mut trace = self.resize_trace.lock().unwrap_or_else(|e| e.into_inner());
+        if resize.live {
+            trace.live_sent(resize.task_id, size, now);
+        } else if let Some(since) = trace.since_live(resize.task_id, size, now) {
+            detail.push_str(&format!(" since_live={}", resize_trace::millis(since)));
+        }
         let line = if trace.detailed() {
             trace.stage(
                 resize.task_id,
@@ -4937,6 +5762,8 @@ impl HostApiService {
         let removed = match addon {
             Addon::Gapps => android.remove_gapps().map(|_| ()),
             Addon::ArmTranslation => android.remove_arm_translation().map(|_| ()),
+            // No DSA ever kept the Widevine module in /data.
+            Addon::Widevine => return None,
         };
         match removed {
             Ok(()) => Some(()),
@@ -4949,6 +5776,171 @@ impl HostApiService {
                 None
             }
         }
+    }
+
+    /// The Android major version the caller runs, or 0 when this service does not know it.
+    fn guest_android_major(&self) -> u32 {
+        self.versions
+            .as_ref()
+            .and_then(|versions| versions.report().ok())
+            .map(|report| report.android_major)
+            .unwrap_or(0)
+    }
+
+    /// Where Widevine stands for `peer`: the module they installed, whether their add-on disk
+    /// holds it for the next start, and whether their running Android was started with it.
+    fn widevine_status(
+        &self,
+        peer: &Peer,
+        store: &dyn SettingsStore,
+    ) -> Result<WidevineStatus, String> {
+        let package = store.widevine(&peer.user)?;
+        let disk = self.addon_disk(&peer.user).ok();
+        let on_disk = disk
+            .as_ref()
+            .is_some_and(|disk| disk.holds(Addon::Widevine));
+        let running = self
+            .androids
+            .android(&peer.user)
+            .ok()
+            .is_some_and(|android| {
+                matches!(
+                    android.state(),
+                    SessionState::Active | SessionState::Dozing | SessionState::Frozen
+                )
+            });
+        let attached = disk
+            .as_ref()
+            .is_some_and(|disk| disk.attached().contains(&Addon::Widevine));
+        Ok(WidevineStatus::new(package, on_disk, running, attached))
+    }
+
+    fn widevine_answer(&self, peer: &Peer, store: &dyn SettingsStore) -> response::Body {
+        match self.widevine_status(peer, store) {
+            Ok(status) => response::Body::Widevine(widevine_to_wire(&status)),
+            Err(why) => error(ErrorCode::Unavailable, why),
+        }
+    }
+
+    fn get_widevine(&self, peer: &Peer) -> response::Body {
+        let Some((store, _)) = &self.settings else {
+            return Self::no_settings();
+        };
+        self.widevine_answer(peer, &**store)
+    }
+
+    /// Removes the caller's Widevine module: from their add-on disk and their settings, so
+    /// Android's next start goes without it and removes the device certificates it kept.
+    fn remove_widevine(&self, peer: &Peer) -> response::Body {
+        let Some((store, _)) = &self.settings else {
+            return Self::no_settings();
+        };
+        let _change = self.addon_change.lock().unwrap_or_else(|e| e.into_inner());
+        if let Ok(disk) = self.addon_disk(&peer.user) {
+            if let Err(why) = disk.remove(Addon::Widevine) {
+                return error(ErrorCode::Unavailable, why);
+            }
+        }
+        if let Err(why) = store.set_widevine(&peer.user, None) {
+            return error(ErrorCode::Unavailable, why);
+        }
+        eprintln!("widevine: {} removed Widevine", peer.user);
+        self.widevine_answer(peer, &**store)
+    }
+
+    /// Answers an InstallWidevine request: refuses a module whose description does not fit the
+    /// caller's Android, else takes the APEX the client sends after Done, checks it is
+    /// Widevine's as described, and puts it, unchanged, on the caller's add-on disk. Once it is
+    /// there the module is recorded with the caller's settings, and the service answers again
+    /// with where Widevine stands. The connection ends with the install. Android need not run:
+    /// the module is used from its next start.
+    fn install_widevine(
+        &self,
+        mut connection: Box<dyn Connection>,
+        peer: &Peer,
+        id: u64,
+        install: types::InstallWidevine,
+    ) {
+        let answer = |connection: &mut dyn Connection, body: response::Body| {
+            let _ = send(
+                connection,
+                Body::Response(Response {
+                    id,
+                    body: Some(body),
+                }),
+            );
+        };
+        let refuse = |mut connection: Box<dyn Connection>, body: response::Body| {
+            answer(&mut *connection, body);
+            connection.close();
+        };
+        let Some((store, _)) = &self.settings else {
+            return refuse(connection, Self::no_settings());
+        };
+        let major = self.guest_android_major();
+        let package = install
+            .package
+            .map(widevine_package_from_wire)
+            .ok_or_else(|| "the request does not describe the module".to_string())
+            .and_then(|package| {
+                package
+                    .check(major, widevine::guest_abi())
+                    .map(|()| package)
+            });
+        let package = match package {
+            Ok(package) => package,
+            Err(why) => {
+                eprintln!("widevine: refused a module from {}: {why}", peer.user);
+                return refuse(connection, error(ErrorCode::InstallRefused, why));
+            }
+        };
+        let disk = match self.addon_disk(&peer.user) {
+            Ok(disk) => disk,
+            Err(why) => return refuse(connection, error(ErrorCode::Unavailable, why)),
+        };
+        answer(&mut *connection, response::Body::Done(types::Done {}));
+        eprintln!(
+            "widevine: {} is installing Widevine from {} ({} bytes)",
+            peer.user, package.version, package.size
+        );
+        let mut content = ApkChunks {
+            connection: &mut *connection,
+            user: &peer.user,
+            left: package.size,
+            piece: Vec::new(),
+            at: 0,
+        };
+        let mut apex = Vec::with_capacity(package.size as usize);
+        let received = content
+            .read_to_end(&mut apex)
+            .map_err(|e| format!("the module did not arrive whole: {e}"))
+            .and_then(|_| widevine::check_apex(&apex, &package))
+            .and_then(|()| widevine::image(apex, &package));
+        let image = match received {
+            Ok(image) => image,
+            Err(why) => {
+                eprintln!("widevine: refused the module from {}: {why}", peer.user);
+                answer(&mut *connection, error(ErrorCode::InstallRefused, why));
+                return connection.close();
+            }
+        };
+        let _change = self.addon_change.lock().unwrap_or_else(|e| e.into_inner());
+        let digest = <sha2::Sha256 as sha2::Digest>::digest(&image);
+        let installed = disk.install(
+            Addon::Widevine,
+            image.len() as u64,
+            Some(digest.as_slice()),
+            &mut &image[..],
+        );
+        let body = match installed {
+            Ok(()) => match store.set_widevine(&peer.user, Some(&package)) {
+                Ok(()) => self.widevine_answer(peer, &**store),
+                Err(why) => error(ErrorCode::Unavailable, why),
+            },
+            Err(why) => error(ErrorCode::InstallRefused, why),
+        };
+        answer(&mut *connection, body);
+        connection.close();
     }
 
     /// Answers an InstallArmTranslation request: refuses a package whose description is not
@@ -5577,8 +6569,15 @@ impl HostApiService {
             );
             apps = replaced;
         }
+        // Every app without its own choice follows the user's, so a window manager reads both
+        // in one answer.
+        let defaults = store
+            .get(&peer.user)
+            .map(|settings| settings.app_full_screen)
+            .unwrap_or_default();
         response::Body::AppWindowSettings(types::AppWindowSettingsList {
             apps: apps.iter().map(AppWindowSettings::to_wire).collect(),
+            defaults: Some(defaults.to_wire()),
         })
     }
 
@@ -5731,10 +6730,72 @@ impl HostApiService {
                 wire.adb_auto_connect_state = self.adb_auto_connect_now(&peer.user);
                 wire.adb_shell_root = self.adb_shell_root_now(&peer.user, &settings);
                 self.touch_gestures_now(&peer.user, &mut wire);
+                self.graphics_now(&peer.user, &mut wire);
+                wire.imported_certificates = self.host_certificates_now(&peer.user);
                 response::Body::Settings(wire)
             }
             Err(why) => error(ErrorCode::Unavailable, why),
         }
+    }
+
+    /// What the caller's window manager last said its graphics renderer runs on, into `wire`.
+    fn graphics_now(&self, user: &str, wire: &mut types::Settings) {
+        let state = self.graphics_of(user);
+        wire.graphics_state = state.as_str().to_string();
+        wire.graphics_detail = state.detail().to_string();
+    }
+
+    /// What the window manager of `user` last said its graphics renderer runs on.
+    fn graphics_of(&self, user: &str) -> GraphicsState {
+        self.graphics
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(user)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Keeps what the caller's window manager says its graphics renderer runs on: for the
+    /// settings it reports next, and to keep an Android with nothing to draw on from starting.
+    fn report_graphics(&self, peer: &Peer, report: types::ReportGraphics) -> response::Body {
+        let state = GraphicsState::from_wire(&report.state, &report.detail);
+        let mut reports = self.graphics.lock().unwrap_or_else(|e| e.into_inner());
+        if reports.get(&peer.user) != Some(&state) {
+            eprintln!(
+                "local API: the graphics renderer of {} runs on {}: {}",
+                peer.user,
+                match &state {
+                    GraphicsState::Unknown => "something it does not say",
+                    GraphicsState::Native(_) => "a native Vulkan driver",
+                    GraphicsState::Layered(_) => "Dozen (Vulkan on Direct3D 12)",
+                    GraphicsState::LayeredOnCpu(_) =>
+                        "Dozen on the software Direct3D 12 device (the CPU draws)",
+                    GraphicsState::Unavailable(_) => "nothing: it found no Vulkan it can use",
+                },
+                state.detail()
+            );
+        }
+        reports.insert(peer.user.clone(), state);
+        response::Body::Done(types::Done {})
+    }
+
+    /// The root certificates added to the computer that the caller's Android is given, as its
+    /// session last read them; none when it has no Android.
+    fn host_certificates_now(&self, user: &str) -> Vec<types::ImportedCertificate> {
+        self.androids
+            .android(user)
+            .map(|android| android.host_certificates())
+            .unwrap_or_default()
+            .into_iter()
+            .map(|certificate| types::ImportedCertificate {
+                subject: certificate.subject,
+                issuer: certificate.issuer,
+                source: certificate.source,
+                location: certificate.location,
+                sha256: certificate.sha256,
+                not_after: certificate.not_after,
+            })
+            .collect()
     }
 
     /// What the caller's window manager last said about the host's touch gestures, into
@@ -5795,10 +6856,22 @@ impl HostApiService {
     }
 
     /// The caller's network as the platform reports it, or "off" when it cannot say (no
-    /// Android is running, so there is no network yet).
+    /// Android is running, so there is no network yet), with who answers its DNS queries.
     fn network_now(&self, user: &str, settings: &Settings) -> Option<types::NetworkStatus> {
         let source = self.network.as_ref()?;
-        let status = source(user, settings).unwrap_or_else(NetworkStatus::off);
+        let mut status = source(user, settings).unwrap_or_else(NetworkStatus::off);
+        if status.mode != NetworkStatus::OFF && status.dns_resolver.is_empty() {
+            let answered = self
+                .androids
+                .android(user)
+                .ok()
+                .and_then(|android| android.dns_answered_by_host());
+            status.dns_resolver = match answered {
+                Some(true) => NetworkStatus::DNS_HOST.into(),
+                Some(false) => NetworkStatus::DNS_NETWORK.into(),
+                None => String::new(),
+            };
+        }
         Some(status.to_wire())
     }
 
@@ -5833,6 +6906,17 @@ impl HostApiService {
             advanced_networking: wanted.advanced_networking,
             touch_gestures_off: wanted.touch_gestures_off,
             image_auto_restart: wanted.image_auto_restart,
+            host_certificates: wanted.host_certificates,
+            app_full_screen: app_full_screen_from_wire(wanted.app_fullscreen, wanted.app_immersive),
+            // A client older than the setting sends none, which keeps what the user chose.
+            vulkan_driver: if wanted.vulkan_driver.trim().is_empty() {
+                store
+                    .get(&peer.user)
+                    .map(|current| current.vulkan_driver)
+                    .unwrap_or_else(|_| crate::settings::VULKAN_DRIVERS[0].to_string())
+            } else {
+                wanted.vulkan_driver
+            },
             adb_port: match u16::try_from(wanted.adb_port) {
                 Ok(port) => port,
                 Err(_) => {
@@ -5893,6 +6977,7 @@ impl HostApiService {
                     android.share_folders(settings.file_sharing, settings.shared_folders.clone());
                     android.adb_auto_connect(settings.adb_auto_connect);
                     android.image_auto_restart(settings.image_auto_restart);
+                    android.trust_host_certificates(settings.host_certificates);
                     crate::root_elevation::apply(android.as_ref(), store.as_ref(), &peer.user);
                     if let Err(why) =
                         android.developer_mode(settings.developer_mode, settings.adb_port)
@@ -5909,13 +6994,16 @@ impl HostApiService {
                         ResizeTrace::new(settings.resize_trace, Instant::now());
                 }
                 eprintln!(
-                    "local API: {} changed the settings: render GPU {}, freeze {}, clipboard \
+                    "local API: {} changed the settings: render GPU {}, Vulkan driver {}, \
+                     freeze {}, clipboard \
                      {}, links in Android {}, program updates {} ({} channel), image updates \
                      {}, input trace {}, resize trace {}, developer mode {} (adb port {}, \
                      auto-connect {}), file sharing {} ({}), advanced networking {}, touch \
-                     gestures off in task windows {}, image auto-restart {}",
+                     gestures off in task windows {}, image auto-restart {}, host certificates {}, \
+                     app full screen on the {} (bars hidden alone: on the {})",
                     peer.user,
                     settings.render_gpu,
+                    settings.vulkan_driver,
                     on_off(settings.freeze),
                     on_off(settings.clipboard),
                     on_off(settings.links_in_android),
@@ -5933,7 +7021,10 @@ impl HostApiService {
                     settings.shared_folders.join(", "),
                     on_off(settings.advanced_networking),
                     on_off(settings.touch_gestures_off),
-                    on_off(settings.image_auto_restart)
+                    on_off(settings.image_auto_restart),
+                    on_off(settings.host_certificates),
+                    settings.app_full_screen.fullscreen.name(),
+                    settings.app_full_screen.immersive.name()
                 );
                 if settings.root_elevation != machine.root_elevation {
                     // The switch is the computer's, so every user's Android follows it. The
@@ -5965,11 +7056,23 @@ impl HostApiService {
                 wire.adb_auto_connect_state = self.adb_auto_connect_now(&peer.user);
                 wire.adb_shell_root = self.adb_shell_root_now(&peer.user, &settings);
                 self.touch_gestures_now(&peer.user, &mut wire);
+                self.graphics_now(&peer.user, &mut wire);
+                wire.imported_certificates = self.host_certificates_now(&peer.user);
                 response::Body::Settings(wire)
             }
             Err(why) => error(ErrorCode::InvalidSetting, why),
         }
     }
+}
+
+/// The full screen choices for every app a local API message carries; a part left to the
+/// default is DSA's default for it.
+fn app_full_screen_from_wire(fullscreen: i32, immersive: i32) -> FullScreenDefaults {
+    FullScreenDefaults {
+        fullscreen: FullScreenPlace::from_wire(fullscreen),
+        immersive: FullScreenPlace::from_wire(immersive),
+    }
+    .resolved()
 }
 
 fn on_off(value: bool) -> &'static str {
@@ -6015,8 +7118,15 @@ fn settings_to_wire(settings: &Settings, facts: &ServiceFacts) -> types::Setting
         advanced_networking: settings.advanced_networking,
         touch_gestures_off: settings.touch_gestures_off,
         image_auto_restart: settings.image_auto_restart,
+        host_certificates: settings.host_certificates,
+        app_fullscreen: settings.app_full_screen.resolved().fullscreen.to_wire(),
+        app_immersive: settings.app_full_screen.resolved().immersive.to_wire(),
+        imported_certificates: Vec::new(),
         touch_gestures_state: String::new(),
         touch_gestures_problem: String::new(),
+        vulkan_driver: settings.vulkan_driver.clone(),
+        graphics_state: String::new(),
+        graphics_detail: String::new(),
         adb_shell_root: String::new(),
         network: None,
         program_updates_available: facts.program_updates_available,
@@ -6054,6 +7164,14 @@ fn settings_from_wire(settings: types::Settings) -> SettingsReport {
             advanced_networking: settings.advanced_networking,
             touch_gestures_off: settings.touch_gestures_off,
             image_auto_restart: settings.image_auto_restart,
+            host_certificates: settings.host_certificates,
+            app_full_screen: app_full_screen_from_wire(
+                settings.app_fullscreen,
+                settings.app_immersive,
+            ),
+            // An older service sends none: its renderer chooses as `auto` does.
+            vulkan_driver: crate::settings::normalise_vulkan_driver(&settings.vulkan_driver)
+                .unwrap_or_else(|_| crate::settings::VULKAN_DRIVERS[0].to_string()),
         },
         facts: ServiceFacts {
             version: settings.version,
@@ -6069,7 +7187,22 @@ fn settings_from_wire(settings: types::Settings) -> SettingsReport {
             &settings.touch_gestures_state,
             &settings.touch_gestures_problem,
         ),
+        graphics: GraphicsState::from_wire(&settings.graphics_state, &settings.graphics_detail),
         adb_shell_root: settings.adb_shell_root,
+        imported_certificates: settings
+            .imported_certificates
+            .into_iter()
+            .map(
+                |certificate| crate::host_certificates::ImportedCertificate {
+                    subject: certificate.subject,
+                    issuer: certificate.issuer,
+                    source: certificate.source,
+                    location: certificate.location,
+                    sha256: certificate.sha256,
+                    not_after: certificate.not_after,
+                },
+            )
+            .collect(),
     }
 }
 
@@ -6290,6 +7423,14 @@ impl HostApiClient {
         }))
     }
 
+    /// Says which tasks of the caller's Android have their window shown: open and not
+    /// minimized.
+    pub fn set_tasks_shown(&mut self, task_ids: &[i32]) -> Result<(), ClientError> {
+        self.done(request::Body::SetTasksShown(types::SetTasksShown {
+            task_ids: task_ids.to_vec(),
+        }))
+    }
+
     /// Tells the service whether the caller's window manager can turn the host's touch
     /// gestures off, which the settings then report.
     pub fn report_touch_gestures(&mut self, state: &TouchGesturesState) -> Result<(), ClientError> {
@@ -6299,6 +7440,15 @@ impl HostApiClient {
                 problem: state.problem().to_string(),
             },
         ))
+    }
+
+    /// Tells the service what the caller's graphics renderer runs on, which the settings then
+    /// report; while it is unavailable the service does not start the caller's Android.
+    pub fn report_graphics(&mut self, state: &GraphicsState) -> Result<(), ClientError> {
+        self.done(request::Body::ReportGraphics(types::ReportGraphics {
+            state: state.as_str().to_string(),
+            detail: state.detail().to_string(),
+        }))
     }
 
     /// Asks the service to install the newest version of DSA now. Downloading it can take
@@ -6553,6 +7703,75 @@ impl HostApiClient {
         }
     }
 
+    /// Where Widevine stands for the caller.
+    pub fn widevine(&mut self) -> Result<WidevineStatus, ClientError> {
+        let body = request::Body::GetWidevine(types::GetWidevine {});
+        match self.exchange(body, self.timeout)? {
+            response::Body::Widevine(status) => Ok(widevine_from_wire(status)),
+            _ => Err(ClientError::Malformed(
+                "expected where Widevine stands".into(),
+            )),
+        }
+    }
+
+    /// Removes the caller's Widevine module; Android goes without it from its next start.
+    pub fn remove_widevine(&mut self) -> Result<WidevineStatus, ClientError> {
+        let body = request::Body::RemoveWidevine(types::RemoveWidevine {});
+        match self.exchange(body, INSTALL_ANSWER_WAIT)? {
+            response::Body::Widevine(status) => Ok(widevine_from_wire(status)),
+            _ => Err(ClientError::Malformed(
+                "expected where Widevine stands".into(),
+            )),
+        }
+    }
+
+    /// Installs the Widevine module `package` for the caller: its APEX, `package.size` bytes
+    /// read from `content`, goes on the caller's add-on disk, from which Android uses it from
+    /// its next start. The connection ends with the install, so the client is used up.
+    pub fn install_widevine(
+        mut self,
+        package: &WidevinePackage,
+        content: &mut dyn Read,
+    ) -> Result<WidevineStatus, ClientError> {
+        let id = self.next_id;
+        let body = request::Body::InstallWidevine(types::InstallWidevine {
+            package: Some(widevine_package_to_wire(package)),
+        });
+        match self.exchange(body, self.timeout)? {
+            response::Body::Done(_) => {}
+            _ => {
+                return Err(ClientError::Malformed(
+                    "expected the answer that the module is taken".into(),
+                ))
+            }
+        }
+        let mut left = package.size;
+        let mut piece = vec![0u8; apk::LOCAL_CHUNK_BYTES];
+        while left > 0 {
+            let length = left.min(piece.len() as u64) as usize;
+            if let Err(error) = content.read_exact(&mut piece[..length]) {
+                self.connection.close();
+                return Err(ClientError::Service {
+                    code: ErrorCode::InstallRefused,
+                    detail: format!("the module could not be read: {error}"),
+                });
+            }
+            let chunk = Body::ApkChunk(types::ApkChunk {
+                data: piece[..length].to_vec(),
+            });
+            if send(&mut *self.connection, chunk).is_err() {
+                break;
+            }
+            left -= length as u64;
+        }
+        match self.answer(id, INSTALL_ANSWER_WAIT)? {
+            response::Body::Widevine(status) => Ok(widevine_from_wire(status)),
+            _ => Err(ClientError::Malformed(
+                "expected where Widevine stands".into(),
+            )),
+        }
+    }
+
     /// Removes the caller's Google apps; Android goes without them from its next start.
     pub fn remove_gapps(&mut self) -> Result<GappsStatus, ClientError> {
         let body = request::Body::RemoveGapps(types::RemoveGapps {});
@@ -6696,7 +7915,10 @@ impl HostApiClient {
 
     /// Sets how far one app may elevate to root: "off", "ask" or "remember".
     /// Returns the level as it stands now and a message. Moving an app to "remember" needs
-    /// the caller to be an administrator, as turning the whole feature on does.
+    /// the caller to be an administrator, as turning the whole feature on does. A caller who is
+    /// not one waits for an administrator to answer the host's prompt, which may stay open for
+    /// minutes while a screen reader reads it out, so the answer is awaited at least as long
+    /// as su would wait for it.
     pub fn set_app_root(
         &mut self,
         package: &str,
@@ -6707,7 +7929,7 @@ impl HostApiClient {
                 package_name: package.to_string(),
                 level: level.to_string(),
             }),
-            self.timeout,
+            self.timeout.max(crate::root_elevation::ANSWER_TIMEOUT),
         )? {
             response::Body::AppRootResult(result) => Ok(result),
             _ => Err(ClientError::Malformed(
@@ -6825,6 +8047,15 @@ impl HostApiClient {
         self.done(request::Body::SetTaskDensity(types::SetTaskDensity {
             task_id,
             density_dpi,
+            // Never set: Android redraws or recreates the task at a new density on its own.
+            recreate: false,
+        }))
+    }
+
+    /// Tells the caller's Android which apps start below the title bar.
+    pub fn set_caption_compat(&mut self, below_title_bar: &[String]) -> Result<(), ClientError> {
+        self.done(request::Body::SetCaptionCompat(types::SetCaptionCompat {
+            below_title_bar: below_title_bar.to_vec(),
         }))
     }
 
@@ -6842,6 +8073,19 @@ impl HostApiClient {
             height,
             start_width,
             end_width,
+        }))
+    }
+
+    /// Asks the caller's Android to keep a task that leaves freeform for fullscreen inside its
+    /// window (`in_window`), or to let it fill the screen.
+    pub fn set_task_full_screen(
+        &mut self,
+        task_id: i32,
+        in_window: bool,
+    ) -> Result<(), ClientError> {
+        self.done(request::Body::SetTaskFullScreen(types::SetTaskFullScreen {
+            task_id,
+            in_window,
         }))
     }
 
@@ -6870,9 +8114,50 @@ impl HostApiClient {
                 start_width,
                 end_width,
             } => self.set_task_caption(*task_id, *height, *start_width, *end_width),
+            TaskRequest::SetFullScreen { task_id, in_window } => {
+                self.set_task_full_screen(*task_id, *in_window)
+            }
+            TaskRequest::CaptionCompat { below_title_bar } => {
+                self.set_caption_compat(below_title_bar)
+            }
             TaskRequest::WindowsShown { shown } => self.set_windows_shown(*shown),
+            TaskRequest::TasksShown { task_ids } => self.set_tasks_shown(task_ids),
             TaskRequest::StopApp { package_name } => self.stop_app(package_name),
+            TaskRequest::LaunchShortcut {
+                package_name,
+                shortcut_id,
+            } => self.launch_shortcut(package_name, shortcut_id),
+            TaskRequest::AnswerPinShortcut {
+                request_id,
+                accepted,
+            } => self.answer_pin_shortcut(*request_id, *accepted),
         }
+    }
+
+    /// Asks the caller's Android to start one of an app's shortcuts in a task of its own, as
+    /// its jump list task or desktop shortcut does.
+    pub fn launch_shortcut(
+        &mut self,
+        package_name: &str,
+        shortcut_id: &str,
+    ) -> Result<(), ClientError> {
+        self.done(request::Body::LaunchShortcut(types::LaunchShortcut {
+            package_name: package_name.into(),
+            shortcut_id: shortcut_id.into(),
+        }))
+    }
+
+    /// Gives the caller's Android the user's answer to an app's request to put a shortcut on
+    /// the desktop.
+    pub fn answer_pin_shortcut(
+        &mut self,
+        request_id: u32,
+        accepted: bool,
+    ) -> Result<(), ClientError> {
+        self.done(request::Body::AnswerPinShortcut(types::AnswerPinShortcut {
+            request_id,
+            accepted,
+        }))
     }
 
     /// Watches the app tasks of the caller's Android. The connection carries nothing else
@@ -6976,6 +8261,23 @@ impl HostApiClient {
         }
     }
 
+    /// Serves the speech and spelling of the caller's Android: the client hears each request
+    /// of its text-to-speech engine, speech recognition service and spell checker, and sends
+    /// the answers. The connection carries nothing else from here on, so the client is used up.
+    pub fn serve_language_services(mut self) -> Result<LanguageServiceStream, ClientError> {
+        match self.exchange(
+            request::Body::ServeLanguageServices(types::ServeLanguageServices {}),
+            self.timeout,
+        )? {
+            response::Body::Done(_) => Ok(LanguageServiceStream {
+                connection: self.connection,
+            }),
+            _ => Err(ClientError::Malformed(
+                "expected the answer that speech and spelling are served".into(),
+            )),
+        }
+    }
+
     /// Gives the caller's Android the system settings of the caller's host session.
     pub fn set_system_settings(&mut self, settings: &SystemSettings) -> Result<(), ClientError> {
         self.done(request::Body::SetSystemSettings(types::SetSystemSettings {
@@ -7001,8 +8303,22 @@ impl HostApiClient {
 
     /// The caller's window settings for every app that has any.
     pub fn app_window_settings(&mut self) -> Result<Vec<AppWindowSettings>, ClientError> {
+        Ok(self.app_windows()?.apps)
+    }
+
+    /// The caller's window settings for every app that has any, with the full screen choices
+    /// every app without its own follows: what a window manager reads.
+    pub fn app_windows(&mut self) -> Result<AppWindows, ClientError> {
         let body = request::Body::ListAppWindowSettings(types::ListAppWindowSettings {});
-        app_windows_report(self.exchange(body, self.timeout)?)
+        match self.exchange(body, self.timeout)? {
+            response::Body::AppWindowSettings(list) => Ok(AppWindows {
+                apps: list.apps.iter().map(AppWindowSettings::from_wire).collect(),
+                defaults: FullScreenDefaults::from_wire(list.defaults.as_ref()),
+            }),
+            _ => Err(ClientError::Malformed(
+                "expected the window settings of apps".into(),
+            )),
+        }
     }
 
     /// Replaces the caller's window settings for one app, and returns every app's as they are
@@ -7141,11 +8457,32 @@ impl HostApiClient {
     /// to actions arrive on the stream, which also sends the actions. The caller's Android
     /// reads the tree until the stream is dropped. The connection carries nothing else from
     /// here on, so the client is used up.
-    pub fn watch_accessibility(mut self, task_id: i32) -> Result<AccessibilityStream, ClientError> {
-        match self.exchange(
-            request::Body::WatchAccessibility(types::WatchAccessibility { task_id }),
-            self.timeout,
-        )? {
+    pub fn watch_accessibility(self, task_id: i32) -> Result<AccessibilityStream, ClientError> {
+        self.watch_tree(types::WatchAccessibility {
+            task_id,
+            widget_id: 0,
+        })
+    }
+
+    /// Watches the accessibility tree of the caller's desktop widget `widget_id`: the nodes
+    /// of the widget's own views, with bounds in pixels of its image. Otherwise the same as
+    /// [`HostApiClient::watch_accessibility`]: the caller's Android reads the widget's nodes
+    /// until the stream is dropped, and the client is used up.
+    pub fn watch_widget_accessibility(
+        self,
+        widget_id: i32,
+    ) -> Result<AccessibilityStream, ClientError> {
+        self.watch_tree(types::WatchAccessibility {
+            task_id: 0,
+            widget_id,
+        })
+    }
+
+    fn watch_tree(
+        mut self,
+        watch: types::WatchAccessibility,
+    ) -> Result<AccessibilityStream, ClientError> {
+        match self.exchange(request::Body::WatchAccessibility(watch), self.timeout)? {
             response::Body::Done(_) => Ok(AccessibilityStream {
                 connection: self.connection,
             }),
@@ -7214,14 +8551,31 @@ impl HostApiClient {
 
     /// Passes what the user did with a notification on the host to the caller's Android.
     pub fn act_on_notification(&mut self, action: &NotificationAction) -> Result<(), ClientError> {
-        let (key, kind) = match action {
-            NotificationAction::Open { key } => (key, types::NotificationAction::Open),
-            NotificationAction::Dismiss { key } => (key, types::NotificationAction::Dismiss),
+        let act = match action {
+            NotificationAction::Open { key } => types::ActOnNotification {
+                key: key.clone(),
+                action: types::NotificationAction::Open as i32,
+                ..Default::default()
+            },
+            NotificationAction::Dismiss { key } => types::ActOnNotification {
+                key: key.clone(),
+                action: types::NotificationAction::Dismiss as i32,
+                ..Default::default()
+            },
+            NotificationAction::Button {
+                key,
+                button,
+                title,
+                reply,
+            } => types::ActOnNotification {
+                key: key.clone(),
+                action: types::NotificationAction::Button as i32,
+                button: *button,
+                button_title: title.clone(),
+                reply_text: reply.clone(),
+            },
         };
-        self.done(request::Body::ActOnNotification(types::ActOnNotification {
-            key: key.clone(),
-            action: kind as i32,
-        }))
+        self.done(request::Body::ActOnNotification(act))
     }
 
     /// Watches the print jobs of the caller's Android. The connection carries nothing else
@@ -7324,6 +8678,28 @@ impl HostApiClient {
         outcome: &ShareOutcome,
     ) -> Result<(), ClientError> {
         self.done(request::Body::ReportShare(outcome.to_host_api(share_id)))
+    }
+
+    /// Watches which app each output of the caller's Android's sound plays and its volume. The
+    /// connection carries nothing else from here on, so the client is used up.
+    pub fn watch_app_audio(mut self) -> Result<AppAudioStream, ClientError> {
+        match self.exchange(
+            request::Body::WatchAppAudio(types::WatchAppAudio {}),
+            self.timeout,
+        )? {
+            response::Body::AppAudio(list) => Ok(AppAudioStream {
+                streams: app_audio::streams_from_host_api(list),
+                connection: self.connection,
+            }),
+            _ => Err(ClientError::Malformed(
+                "expected the outputs of Android's sound".into(),
+            )),
+        }
+    }
+
+    /// Gives the caller's Android the volume the user set for one of its apps on the host.
+    pub fn set_app_volume(&mut self, change: &VolumeChange) -> Result<(), ClientError> {
+        self.done(request::Body::SetAppVolume(change.to_host_api()))
     }
 
     /// Watches the apps that run in the background in the caller's Android. The connection
@@ -7506,6 +8882,25 @@ impl HostApiClient {
         self.done(request::Body::RemoveWidget(types::RemoveWidget {
             widget_id,
         }))
+    }
+
+    /// Opens the setup of a placed widget again, as its app's window, and returns the widget
+    /// once the user finishes it, waiting at most `timeout`. A setup the user leaves, or a
+    /// widget that cannot be set up again, is an error with the reason.
+    pub fn reconfigure_widget(
+        &mut self,
+        widget_id: i32,
+        timeout: Duration,
+    ) -> Result<Widget, ClientError> {
+        match self.exchange(
+            request::Body::ReconfigureWidget(types::ReconfigureWidget { widget_id }),
+            timeout,
+        )? {
+            response::Body::Widget(widget) => Ok(widget_from_wire(widget)),
+            _ => Err(ClientError::Malformed(
+                "expected the widget set up again".into(),
+            )),
+        }
     }
 
     /// The widgets placed on the caller's desktop, and how many places the service keeps.
@@ -7849,6 +9244,44 @@ fn app_windows_report(body: response::Body) -> Result<Vec<AppWindowSettings>, Cl
     }
 }
 
+/// A connection that serves the speech and spelling of the caller's Android, from
+/// [`HostApiClient::serve_language_services`].
+pub struct LanguageServiceStream {
+    connection: Box<dyn Connection>,
+}
+
+impl LanguageServiceStream {
+    /// The Android's next request, waiting at most `timeout`. `Ok(None)` means none came in
+    /// time; an error means the connection has ended.
+    pub fn next(&mut self, timeout: Duration) -> Result<Option<control::Envelope>, ClientError> {
+        let frame = match self.connection.recv(Some(timeout)) {
+            Ok(frame) => frame,
+            Err(TransportError::Timeout) => return Ok(None),
+            Err(error) => return Err(ClientError::Transport(error)),
+        };
+        match decode(&frame) {
+            Ok(Envelope {
+                body: Some(Body::LanguageServiceFrame(frame)),
+            }) => dsa_protocol::decode(&frame.control)
+                .map(Some)
+                .map_err(|error| ClientError::Malformed(error.to_string())),
+            Ok(_) => Err(ClientError::Malformed(
+                "expected a speech or spelling request".into(),
+            )),
+            Err(error) => Err(ClientError::Malformed(error.to_string())),
+        }
+    }
+
+    /// Sends an answer to the Android. Nothing is awaited. An error means the connection has
+    /// ended, and a new one is needed.
+    pub fn send(&mut self, answer: &control::Envelope) -> Result<(), ClientError> {
+        let frame = Body::LanguageServiceFrame(types::LanguageServiceFrame {
+            control: dsa_protocol::encode(answer),
+        });
+        send(&mut *self.connection, frame).map_err(ClientError::Transport)
+    }
+}
+
 /// A connection that carries the location between the host and the caller's Android, from
 /// [`HostApiClient::watch_location`].
 pub struct LocationStream {
@@ -7960,6 +9393,11 @@ impl AccessibilityStream {
             }) => Ok(Some(GuestAccessibility::ActionResult(
                 ActionResult::from_host_api(result),
             ))),
+            Ok(Envelope {
+                body: Some(Body::AccessibilityAnnouncement(announcement)),
+            }) => Ok(Some(GuestAccessibility::Announcement(
+                Announcement::from_host_api(announcement),
+            ))),
             Ok(_) => Err(ClientError::Malformed(
                 "expected an accessibility tree".into(),
             )),
@@ -7972,6 +9410,16 @@ impl AccessibilityStream {
         send(
             &mut *self.connection,
             Body::AccessibilityAction(action.to_host_api()),
+        )
+        .map_err(ClientError::Transport)
+    }
+
+    /// Says whether a screen reader (or another client that follows the focus) listens for
+    /// the window's events: while one does, Android sends the task's focus at once.
+    pub fn set_listening(&mut self, listening: bool) -> Result<(), ClientError> {
+        send(
+            &mut *self.connection,
+            Body::AccessibilityListening(types::AccessibilityListening { listening }),
         )
         .map_err(ClientError::Transport)
     }
@@ -8078,6 +9526,18 @@ impl NotificationStream {
                 high_priority: n.high_priority,
                 clearable: n.clearable,
                 when_millis: n.when_millis,
+                buttons: n
+                    .buttons
+                    .into_iter()
+                    .map(|b| NotificationButton {
+                        title: b.title,
+                        reply: b.reply,
+                        reply_label: b.reply_label,
+                        reply_choices: b.reply_choices,
+                        reply_choices_only: b.reply_choices_only,
+                        semantic_action: b.semantic_action,
+                    })
+                    .collect(),
             }))),
             Ok(Envelope {
                 body: Some(Body::NotificationRemoved(removed)),
@@ -8157,6 +9617,7 @@ fn provider_to_wire(provider: &WidgetProvider) -> types::WidgetProvider {
         resize_mode: provider.resize_mode,
         needs_configuration: provider.needs_configuration,
         app_label: provider.app_label.clone(),
+        reconfigurable: provider.reconfigurable,
     }
 }
 
@@ -8175,6 +9636,7 @@ fn provider_from_wire(provider: types::WidgetProvider) -> WidgetProvider {
         resize_mode: provider.resize_mode,
         needs_configuration: provider.needs_configuration,
         app_label: provider.app_label,
+        reconfigurable: provider.reconfigurable,
     }
 }
 
@@ -8205,6 +9667,7 @@ fn widget_from_wire(widget: types::Widget) -> Widget {
             y: placement.y,
             width_dp: placement.width_dp,
             height_dp: placement.height_dp,
+            resized: false,
         },
     }
 }
@@ -8457,6 +9920,18 @@ fn notification_to_wire(event: NotificationEvent) -> Body {
             high_priority: n.high_priority,
             clearable: n.clearable,
             when_millis: n.when_millis,
+            buttons: n
+                .buttons
+                .into_iter()
+                .map(|b| types::NotificationButton {
+                    title: b.title,
+                    reply: b.reply,
+                    reply_label: b.reply_label,
+                    reply_choices: b.reply_choices,
+                    reply_choices_only: b.reply_choices_only,
+                    semantic_action: b.semantic_action,
+                })
+                .collect(),
         }),
         NotificationEvent::Removed { key } => {
             Body::NotificationRemoved(types::NotificationRemoved { key })

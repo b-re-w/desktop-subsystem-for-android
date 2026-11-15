@@ -392,6 +392,23 @@ fn nfr2_the_memory_page_counts_zram_compressed_and_google_play_services_apart() 
 }
 
 #[test]
+fn nfr1_the_memory_page_leaves_out_the_disk_pages_the_vm_maps() {
+    let memory = Memory::read(&json!({
+        "host": [
+            { "role": "vm", "pid": 10, "working_set_kb": 1368064, "private_kb": 1000000,
+              "mapped_kb": 489472 },
+            { "role": "window manager", "pid": 11, "working_set_kb": 40960, "private_kb": 30000 }
+        ],
+        "host_total_kb": 1409024
+    }));
+    assert_eq!(memory.host[0].mapped_kb, 489472);
+    assert_eq!(view::vm_size_kb(&memory), Some(1368064 - 489472));
+    assert_eq!(view::host_own_kb(&memory), 1409024 - 489472);
+    // A service that does not count them sends none.
+    assert_eq!(memory.host[1].mapped_kb, 0);
+}
+
+#[test]
 fn fr17_the_memory_page_shows_the_vm_and_the_guest_breakdown() {
     let memory = Memory::read(&json!({
         "host": [
@@ -622,7 +639,8 @@ fn fr17_the_log_page_filters_pauses_and_keeps_the_newest_lines() {
 }
 
 /// Every string literal the pages show: one with a letter that has a space or starts with a
-/// capital, and is not a format string or a name in capitals.
+/// capital, and is not a format string or a name in capitals. A `\n` in a literal is the line
+/// break it stands for; a literal with any other escape is not read.
 fn shown_strings() -> Vec<String> {
     let src = crate_dir().join("src");
     let mut files = vec![src.join("view.rs"), src.join("pages.rs")];
@@ -643,6 +661,8 @@ fn shown_strings() -> Vec<String> {
             parts.next();
             while let Some(literal) = parts.next() {
                 parts.next();
+                let literal = literal.replace("\\n", "\n");
+                let literal = literal.as_str();
                 let shown = literal.chars().any(|c| c.is_ascii_alphabetic())
                     && literal.chars().count() >= 2
                     && !literal.starts_with('-')
@@ -687,6 +707,24 @@ fn catalogue(path: &Path) -> BTreeMap<String, String> {
     entries
 }
 
+/// The translations the app installs, as `po/LINGUAS` lists them: Korean, then the other
+/// interface languages, each in `po/<language>.po`. English is the text in the code.
+const CATALOGS: [&str; 13] = [
+    "ko", "ja", "zh_CN", "zh_TW", "es", "fr", "de", "pt_BR", "ru", "it", "vi", "id", "tr",
+];
+
+/// Every installed translation, by its language.
+fn catalogues() -> Vec<(&'static str, BTreeMap<String, String>)> {
+    CATALOGS
+        .iter()
+        .map(|language| {
+            let path = crate_dir().join(format!("po/{language}.po"));
+            assert!(path.is_file(), "po/{language}.po is missing");
+            (*language, catalogue(&path))
+        })
+        .collect()
+}
+
 fn placeholders(text: &str) -> Vec<String> {
     let mut found: Vec<String> = (0..10)
         .map(|i| format!("{{{i}}}"))
@@ -728,11 +766,25 @@ fn fr17_automatic_memory_limit_names_no_fixed_size() {
     }
     assert!(english.contains("no fixed limit"), "{english}");
     assert!(korean.contains("고정된 한도가 없"), "{korean}");
+    // Every other translation says the same: no size, and what Linux keeps.
+    for (language, catalogue) in catalogues() {
+        let text = catalogue
+            .get(english)
+            .unwrap_or_else(|| panic!("po/{language}.po has no translation of {english:?}"));
+        assert!(
+            !names_a_size(text),
+            "{language}: this names a size, which reads as a limit on Automatic: {text}"
+        );
+        assert!(
+            text.contains("Linux"),
+            "{language}: this should say that Automatic stops at the computer's memory less \
+             what Linux keeps: {text}"
+        );
+    }
 }
 
 #[test]
-fn fr17_every_string_is_translated_into_korean() {
-    let ko = catalogue(&crate_dir().join("po/ko.po"));
+fn fr17_every_string_is_translated_into_every_interface_language() {
     let mut wanted = shown_strings();
     wanted.extend(Page::ALL.iter().map(|p| p.title().to_string()));
     wanted.extend(
@@ -741,23 +793,211 @@ fn fr17_every_string_is_translated_into_korean() {
             .map(|f| f.to_string()),
     );
     wanted.push("OK".into());
+    let ko = catalogue(&crate_dir().join("po/ko.po"));
     let mut missing = Vec::new();
-    for text in &wanted {
-        match ko.get(text) {
-            Some(korean) if !korean.is_empty() => assert_eq!(
-                placeholders(text),
-                placeholders(korean),
-                "the Korean of {text:?} has other placeholders"
-            ),
-            _ => missing.push(text.clone()),
+    for (language, catalogue) in catalogues() {
+        // What the app shows, and every entry Korean has, so no catalogue falls behind.
+        let entries = wanted.iter().chain(ko.keys().filter(|id| !id.is_empty()));
+        for text in entries {
+            match catalogue.get(text) {
+                Some(translated) if !translated.trim().is_empty() => {
+                    assert_eq!(
+                        placeholders(text),
+                        placeholders(translated),
+                        "the {language} of {text:?} has other placeholders: {translated:?}"
+                    );
+                    assert!(
+                        !translated.contains(char::from_u32(0x2014).unwrap()),
+                        "the {language} of {text:?} has an em dash: {translated:?}"
+                    );
+                }
+                _ => missing.push(format!("{language}: {text:?}")),
+            }
+        }
+    }
+    missing.sort();
+    missing.dedup();
+    assert!(
+        missing.is_empty(),
+        "these have no translation:\n{}",
+        missing.join("\n")
+    );
+    let linguas = std::fs::read_to_string(crate_dir().join("po/LINGUAS")).unwrap();
+    let listed: Vec<&str> = linguas
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .collect();
+    assert_eq!(listed, CATALOGS, "po/LINGUAS lists other languages");
+}
+
+/// The most columns one paragraph (the text between two line breaks) of a shown string may
+/// take, in English and in every translation alike. A longer one is a wall of text in a row
+/// or a dialog.
+const PARAGRAPH_COLUMNS: usize = 140;
+
+/// How many columns `text` takes on screen: an East Asian wide character, such as a Hangul
+/// syllable, a kana or a Chinese character, takes two and every other character one. A
+/// placeholder counts as written.
+fn columns(text: &str) -> usize {
+    text.chars()
+        .map(|c| match u32::from(c) {
+            0x1100..=0x115F
+            | 0x2E80..=0xA4CF
+            | 0xAC00..=0xD7A3
+            | 0xF900..=0xFAFF
+            | 0xFF00..=0xFF60 => 2,
+            _ => 1,
+        })
+        .sum()
+}
+
+/// The paragraphs of `text` that take more than [`PARAGRAPH_COLUMNS`].
+fn long_paragraphs(text: &str) -> Vec<(usize, String)> {
+    text.split('\n')
+        .map(|paragraph| (columns(paragraph), paragraph.to_string()))
+        .filter(|(width, _)| *width > PARAGRAPH_COLUMNS)
+        .collect()
+}
+
+#[test]
+fn fr17_no_paragraph_of_a_shown_string_is_too_long() {
+    let ko = catalogue(&crate_dir().join("po/ko.po"));
+    let mut english: Vec<String> = ko.keys().filter(|id| !id.is_empty()).cloned().collect();
+    english.extend(shown_strings());
+    let mut too_long = Vec::new();
+    for text in &english {
+        for (width, paragraph) in long_paragraphs(text) {
+            too_long.push(format!("English, {width} columns: {paragraph}"));
+        }
+    }
+    for (language, catalogue) in catalogues() {
+        for (id, translated) in &catalogue {
+            if id.is_empty() {
+                continue;
+            }
+            for (width, paragraph) in long_paragraphs(translated) {
+                too_long.push(format!("{language}, {width} columns: {paragraph}"));
+            }
         }
     }
     assert!(
-        missing.is_empty(),
-        "po/ko.po has no Korean for {missing:#?}"
+        too_long.is_empty(),
+        "these paragraphs take more than {PARAGRAPH_COLUMNS} columns; break them into short \
+         paragraphs or lines:\n{}",
+        too_long.join("\n")
     );
-    let linguas = std::fs::read_to_string(crate_dir().join("po/LINGUAS")).unwrap();
-    assert!(linguas.lines().any(|l| l.trim() == "ko"));
+}
+
+#[test]
+fn fr17_every_translation_has_the_paragraphs_of_the_english() {
+    let breaks = |text: &str| text.matches('\n').count();
+    let blank_lines = |text: &str| text.matches("\n\n").count();
+    let bullets = |text: &str| text.lines().filter(|l| l.starts_with("• ")).count();
+    let mut differ = Vec::new();
+    for (language, catalogue) in catalogues() {
+        for (english, translated) in &catalogue {
+            if english.is_empty() {
+                continue;
+            }
+            if translated.is_empty()
+                || breaks(english) != breaks(translated)
+                || blank_lines(english) != blank_lines(translated)
+                || bullets(english) != bullets(translated)
+            {
+                differ.push(format!("{language}: {english:?}\n  {translated:?}"));
+            }
+        }
+    }
+    assert!(
+        differ.is_empty(),
+        "these translations do not break into the same paragraphs, lines and list items as \
+         the English:\n{}",
+        differ.join("\n")
+    );
+}
+
+/// The page files: the ones that build a settings page, or a part of one, from groups and
+/// rows. The log page is a list of log lines, not of settings rows, and lays itself out.
+fn page_sources() -> Vec<(String, String)> {
+    let ui = crate_dir().join("src/ui");
+    let mut pages: Vec<(String, String)> = std::fs::read_dir(&ui)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.file_name().is_some_and(|n| n != "common.rs"))
+        .map(|p| {
+            let name = p.file_name().unwrap().to_string_lossy().into_owned();
+            (name, std::fs::read_to_string(&p).unwrap())
+        })
+        .filter(|(_, code)| code.contains("Page::new()") || code.contains("&Rc<Page>"))
+        .collect();
+    pages.sort();
+    pages
+}
+
+#[test]
+fn fr17_pages_take_their_rows_and_spacing_from_the_shared_helpers() {
+    let pages = page_sources();
+    assert!(
+        ["apps.rs", "backup.rs", "status.rs", "system.rs"]
+            .iter()
+            .all(|name| pages.iter().any(|(page, _)| page == name)),
+        "the settings pages were not found: {:?}",
+        pages.iter().map(|(name, _)| name).collect::<Vec<_>>()
+    );
+    // The rows a page may not build itself: common.rs makes each of them, so every row has the
+    // same title handling and the spacing libadwaita gives it.
+    let rows = [
+        "adw::ActionRow::",
+        "adw::SwitchRow::",
+        "adw::ComboRow::",
+        "adw::EntryRow::",
+        "adw::ExpanderRow::",
+        "adw::SpinRow::",
+        "adw::PasswordEntryRow::",
+        "adw::ButtonRow::",
+    ];
+    // What sets a widget's own spacing around it or inside it.
+    let spacing = [
+        "set_margin_",
+        ".margin_top(",
+        ".margin_bottom(",
+        ".margin_start(",
+        ".margin_end(",
+        "padding",
+    ];
+    let mut found = Vec::new();
+    for (name, code) in &pages {
+        for (number, line) in code.lines().enumerate() {
+            if line.trim_start().starts_with("//") {
+                continue;
+            }
+            for mark in rows.iter().chain(spacing.iter()) {
+                if line.contains(mark) {
+                    found.push(format!("{name}:{}: {}", number + 1, line.trim()));
+                }
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "a page builds a row or sets spacing itself; use the helpers in src/ui/common.rs:\n{}",
+        found.join("\n")
+    );
+    let common = std::fs::read_to_string(crate_dir().join("src/ui/common.rs")).unwrap();
+    for helper in [
+        "pub fn action_row(",
+        "pub fn property_row(",
+        "pub fn value_row(",
+        "pub fn button_row(",
+        "pub fn link_row(",
+        "pub fn command_row(",
+        "pub fn entry_row(",
+        "pub fn expander_row(",
+        "pub fn heading_block(",
+    ] {
+        assert!(common.contains(helper), "src/ui/common.rs has no {helper}");
+    }
 }
 
 #[test]
@@ -767,6 +1007,29 @@ fn fr17_text_never_names_another_platform() {
             assert!(!text.contains(mark), "{text:?} names {mark}");
         }
     }
+}
+
+/// The locale names a desktop entry carries a translation under, for each catalogue's
+/// language: its own, and the regions that read it, since a desktop looks a key up by
+/// language and region and then by language alone (Hong Kong and Macao read Traditional
+/// Chinese, Singapore Simplified, every Portuguese region Brazilian Portuguese).
+fn desktop_locale_keys() -> Vec<&'static str> {
+    let mut keys = Vec::new();
+    for language in CATALOGS {
+        keys.push(language);
+        keys.extend(match language {
+            "zh_CN" => &["zh_SG"][..],
+            "zh_TW" => &["zh_HK", "zh_MO"][..],
+            "pt_BR" => &["pt"][..],
+            _ => &[][..],
+        });
+    }
+    keys
+}
+
+/// The languages an AppStream file carries a translation in: the catalogues' own.
+fn appstream_languages() -> [&'static str; 13] {
+    CATALOGS
 }
 
 #[test]
@@ -786,6 +1049,42 @@ fn fr17_the_desktop_entry_appstream_and_icons_are_there() {
         assert!(desktop.contains(key), "the desktop entry has no {key}");
     }
     let metainfo = std::fs::read_to_string(data.join(format!("{id}.metainfo.xml"))).unwrap();
+    // The launcher and the software center name the app in every interface language, under
+    // the locale names desktops look up, and keep the product name as it is.
+    for key in desktop_locale_keys() {
+        for field in ["Name", "Comment", "Keywords"] {
+            let line = desktop
+                .lines()
+                .find(|line| line.starts_with(&format!("{field}[{key}]=")))
+                .unwrap_or_else(|| panic!("the desktop entry has no {field}[{key}]"));
+            let value = &line[field.len() + key.len() + 3..];
+            assert!(!value.trim().is_empty(), "{field}[{key}] is empty");
+            assert!(
+                !value.contains(char::from_u32(0x2014).unwrap()),
+                "{field}[{key}] has an em dash"
+            );
+        }
+        let name = desktop
+            .lines()
+            .find_map(|line| line.strip_prefix(&format!("Name[{key}]=")))
+            .unwrap();
+        assert!(
+            name.contains("DSA"),
+            "Name[{key}] does not name DSA: {name}"
+        );
+    }
+    for lang in appstream_languages() {
+        for tag in ["name", "summary", "p"] {
+            assert!(
+                metainfo.contains(&format!("<{tag} xml:lang=\"{lang}\">")),
+                "the AppStream entry has no {tag} in {lang}"
+            );
+        }
+    }
+    assert!(
+        !metainfo.contains(char::from_u32(0x2014).unwrap()),
+        "the AppStream entry has an em dash"
+    );
     assert!(metainfo.contains(&format!("<id>{id}</id>")));
     assert!(metainfo.contains(&format!(
         "<launchable type=\"desktop-id\">{id}.desktop</launchable>"
@@ -819,6 +1118,8 @@ fn fr11_a_bundle_refused_before_android_sees_it_says_its_reason() {
         "encrypted-bundle",
         "split-signature-mismatch",
         "invalid-bundle",
+        "unsupported-abi",
+        "translation-off",
     ] {
         assert_ne!(view::install_reason(code), fallback, "{code}");
     }

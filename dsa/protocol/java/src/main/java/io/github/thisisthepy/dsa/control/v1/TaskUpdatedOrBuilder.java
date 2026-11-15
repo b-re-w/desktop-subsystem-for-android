@@ -189,8 +189,8 @@ public interface TaskUpdatedOrBuilder extends
 
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -287,4 +287,68 @@ public interface TaskUpdatedOrBuilder extends
    * @return The handlesDensityChange.
    */
   boolean getHandlesDensityChange();
+
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The enum numeric value on the wire for fullscreenRequest.
+   */
+  int getFullscreenRequestValue();
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The fullscreenRequest.
+   */
+  io.github.thisisthepy.dsa.control.v1.FullScreenRequest getFullscreenRequest();
+
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   * @return Whether the overlay field is set.
+   */
+  boolean hasOverlay();
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   * @return The overlay.
+   */
+  io.github.thisisthepy.dsa.control.v1.OverlayWindow getOverlay();
+
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   * @return The belowTitleBar.
+   */
+  boolean getBelowTitleBar();
 }

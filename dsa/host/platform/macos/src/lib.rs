@@ -27,8 +27,15 @@
 //!   Android follows.
 //! - [`wm`]: the window manager (`dsa-wm`): the renderer, the guest's graphics streams, and
 //!   one window host per app, each given its tasks' frames.
+//! - [`ui_language`]: which of DSA's languages the host's own words are in, from the user's
+//!   preferred languages.
 //! - [`root_approval`]: the administrator dialog an Android app's root request waits for,
 //!   through Authorization Services.
+//! - [`keychain`], [`secure_enclave`] and `host_services`: the app data backup in `~/DSA Backup`,
+//!   the passkey check and KeyMint's root key: the backup key in the user's login keychain, the
+//!   KeyMint root key sealed by the Secure Enclave first.
+//! - `host_certificates`: the root certificates the administrator's and the user's trust
+//!   settings added, which the user's Android trusts beside its own.
 //!
 //! What can be checked anywhere (the kernel command line, the disk formats, the
 //! configuration, the launchd agent, key tables, sizes, bundle layouts, value conversions) is
@@ -42,10 +49,13 @@ pub mod devices;
 pub mod display_power;
 pub mod host_config;
 pub mod input;
+pub mod keychain;
 pub mod launchd;
 pub mod power;
 pub mod root_approval;
+pub mod secure_enclave;
 pub mod shell;
+pub mod ui_language;
 pub mod user_disk;
 /// The image's VHDX disks read into raw images, shared with the Linux host.
 pub use dsa_host_unix::vhdx;
@@ -72,9 +82,15 @@ pub mod fetch;
 #[cfg(target_os = "macos")]
 pub mod gfx;
 #[cfg(target_os = "macos")]
+pub mod host_certificates;
+#[cfg(target_os = "macos")]
 pub mod host_memory;
 #[cfg(target_os = "macos")]
+pub mod host_services;
+#[cfg(target_os = "macos")]
 pub mod objc;
+#[cfg(target_os = "macos")]
+pub mod security;
 #[cfg(target_os = "macos")]
 pub mod service;
 #[cfg(target_os = "macos")]

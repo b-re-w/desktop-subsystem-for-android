@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_target_name">Поделиться на ПК</string>
+    <string name="share_unavailable">ПК недоступен, поэтому поделиться через него нельзя.</string>
+    <string name="share_failed">Не удалось поделиться на ПК: %1$s</string>
+</resources>

@@ -1,0 +1,1840 @@
+# Turkish translation of DSA Settings for Linux.
+# This file is distributed under the same licence as Desktop Subsystem for Android.
+msgid ""
+msgstr ""
+"Project-Id-Version: dsa-settings\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "The dsa command could not be started. Reinstall DSA."
+msgstr "dsa komutu başlatılamadı. DSA'yı yeniden yükleyin."
+
+msgid "The DSA service is not running."
+msgstr "DSA hizmeti çalışmıyor."
+
+msgid "The DSA service could not do this."
+msgstr "DSA hizmeti bu işlemi yapamadı."
+
+msgid "The answer of the dsa command could not be read. Reinstall DSA."
+msgstr "dsa komutunun yanıtı okunamadı. DSA'yı yeniden yükleyin."
+
+msgid "The setting was not changed, because an administrator's permission was not given."
+msgstr "Yönetici izni verilmediği için ayar değiştirilmedi."
+
+msgid "Unknown"
+msgstr "Bilinmiyor"
+
+msgid "Stopped"
+msgstr "Durduruldu"
+
+msgid "Starting"
+msgstr "Başlatılıyor"
+
+msgid "Running"
+msgstr "Çalışıyor"
+
+msgid "Dozing (idle)"
+msgstr "Doze (boşta)"
+
+msgid "Frozen"
+msgstr "Donduruldu"
+
+msgid "Stopping"
+msgstr "Durduruluyor"
+
+msgid "Not ready"
+msgstr "Hazır değil"
+
+msgid "Virtual machine (crosvm)"
+msgstr "Sanal makine (crosvm)"
+
+msgid "Window manager"
+msgstr "Pencere yöneticisi"
+
+msgid "Graphics renderer"
+msgstr "Grafik işleyici"
+
+msgid "App window"
+msgstr "Uygulama penceresi"
+
+msgid "Process {0}, {1} private"
+msgstr "İşlem {0}, {1} özel"
+
+msgid "Apps and system"
+msgstr "Uygulamalar ve sistem"
+
+msgid "{0} in memory, {1} compressed"
+msgstr "Bellekte {0}, sıkıştırılmış {1}"
+
+msgid "Google Play services"
+msgstr "Google Play hizmetleri"
+
+msgid "The Google apps you installed, {0} processes: {1}"
+msgstr "Yüklediğiniz Google uygulamaları, {0} işlem: {1}"
+
+msgid "unknown"
+msgstr "bilinmiyor"
+
+msgid "Cache"
+msgstr "Önbellek"
+
+msgid "File contents kept in memory. Android drops them when it needs the memory."
+msgstr "Bellekte tutulan dosya içerikleri. Android belleğe ihtiyaç duyduğunda bunları boşaltır."
+
+msgid "Kernel caches"
+msgstr "Çekirdek önbellekleri"
+
+msgid "Kernel caches the kernel can free on demand."
+msgstr "Çekirdeğin gerektiğinde boşaltabildiği önbellekler."
+
+msgid "Shared memory"
+msgstr "Paylaşılan bellek"
+
+msgid "Compressed memory"
+msgstr "Sıkıştırılmış bellek"
+
+msgid "Holds {0} of pages, compressed"
+msgstr "{0} sayfa verisini sıkıştırılmış olarak tutar"
+
+msgid "Free"
+msgstr "Boş"
+
+msgid "Kernel objects"
+msgstr "Çekirdek nesneleri"
+
+msgid "Memory the kernel keeps for its own data and cannot reclaim"
+msgstr "Çekirdeğin kendi verileri için ayırdığı ve geri alamadığı bellek"
+
+msgid "Thread stacks"
+msgstr "İş parçacığı yığınları"
+
+msgid "Page tables"
+msgstr "Sayfa tabloları"
+
+msgid "Kernel mappings (vmalloc)"
+msgstr "Çekirdek eşlemeleri (vmalloc)"
+
+msgid "Per-CPU data"
+msgstr "CPU başına veriler"
+
+msgid "Drivers"
+msgstr "Sürücüler"
+
+msgid "What no counter names, such as GPU and DMA buffers"
+msgstr "GPU ve DMA arabellekleri gibi hiçbir sayacın adlandırmadığı bellek"
+
+msgid "Reserved at boot"
+msgstr "Önyüklemede ayrılan"
+
+msgid "Kernel code, page structures and buffers, of {0} given; contiguous area {1}"
+msgstr "Verilen {0} içinden çekirdek kodu, sayfa yapıları ve arabellekler; bitişik alan {1}"
+
+msgid "Process {0}"
+msgstr "İşlem {0}"
+
+msgid "Process {0}, Google Play services"
+msgstr "İşlem {0}, Google Play hizmetleri"
+
+msgid "Automatic"
+msgstr "Otomatik"
+
+msgid "The GPU of the primary monitor (recommended)"
+msgstr "Birincil monitörün GPU'su (önerilen)"
+
+msgid "Integrated GPU"
+msgstr "Tümleşik GPU"
+
+msgid "Discrete GPU (for example, for games)"
+msgstr "Harici GPU (örneğin oyunlar için)"
+
+msgid "Always the newest (now Android {0})"
+msgstr "Her zaman en yenisi (şu an Android {0})"
+
+msgid "Android {0}"
+msgstr "Android {0}"
+
+msgid "{0} of {1} apps"
+msgstr "{0} / {1} uygulama"
+
+msgid "{0} apps"
+msgstr "{0} uygulama"
+
+msgid "Version {0}"
+msgstr "Sürüm {0}"
+
+msgid "Part of Android"
+msgstr "Android'in parçası"
+
+msgid "Opens at the size Android chooses"
+msgstr "Android'in seçtiği boyutta açılır"
+
+msgid "Phone, portrait ({0} × {1})"
+msgstr "Telefon, dikey ({0} × {1})"
+
+msgid "Phone, landscape ({0} × {1})"
+msgstr "Telefon, yatay ({0} × {1})"
+
+msgid "Tablet, portrait ({0} × {1})"
+msgstr "Tablet, dikey ({0} × {1})"
+
+msgid "Tablet, landscape ({0} × {1})"
+msgstr "Tablet, yatay ({0} × {1})"
+
+msgid "it is no longer installed"
+msgstr "artık yüklü değil"
+
+msgid "it is part of Android"
+msgstr "Android'in bir parçası"
+
+msgid "Android does not allow it, because the app is a device administrator or a policy keeps it"
+msgstr "Uygulama bir cihaz yöneticisi olduğu veya bir ilke onu tuttuğu için Android buna izin vermiyor"
+
+msgid "Android could not uninstall it"
+msgstr "Android uygulamayı kaldıramadı"
+
+msgid "it is an Android App Bundle, made to be uploaded to an app store. Get the app as an APK, or as an .xapk, .apks or .apkm bundle."
+msgstr "bu, uygulama mağazası için yapılmış bir Android App Bundle. Uygulamayı APK ya da .xapk, .apks veya .apkm paketi olarak edinin."
+
+msgid "the bundle is encrypted, so its APKs cannot be read. Get the app as an APK, or as a newer bundle."
+msgstr "paket şifreli olduğu için APK'leri okunamıyor. Uygulamayı APK olarak ya da daha yeni bir paket olarak edinin."
+
+msgid "a split APK of the bundle is signed with another key than its base APK, so Android would refuse it."
+msgstr "paketteki bölünmüş bir APK, temel APK'den farklı bir anahtarla imzalanmış, bu yüzden Android onu reddeder."
+
+msgid "the bundle is not one app that Android can install."
+msgstr "paket, Android'in yükleyebileceği tek bir uygulama değil."
+
+msgid "the app has no 64-bit code that DSA's Android runs: x86_64, or arm64-v8a through ARM translation. Get one of those builds."
+msgstr "uygulamada DSA'nın Android'inin çalıştırdığı 64 bit kod yok: x86_64 veya ARM çevirisiyle arm64-v8a. Bu derlemelerden birini edinin."
+
+msgid "the app has only ARM code (arm64-v8a), and ARM translation is off. Turn it on under ARM apps, restart Android and install it again."
+msgstr "uygulamada yalnızca ARM kodu (arm64-v8a) var, ARM çevirisi kapalı. ARM uygulamaları bölümünde açın, Android'i yeniden başlatıp yükleyin."
+
+msgid "the app does not run on this Android: it needs another processor type, a newer Android version or a feature this device does not have."
+msgstr "uygulama bu Android'de çalışmıyor: başka bir işlemci türü, daha yeni bir Android sürümü ya da bu cihazda olmayan bir özellik gerekiyor."
+
+msgid "the app is installed already, signed with another key. Uninstall it in Android first."
+msgstr "uygulama başka bir anahtarla imzalanmış olarak zaten yüklü. Önce Android'de kaldırın."
+
+msgid "the file is not a signed APK that Android can read."
+msgstr "dosya, Android'in okuyabileceği imzalı bir APK değil."
+
+msgid "Android has no room for the app."
+msgstr "Android'de uygulama için yer yok."
+
+msgid "a newer version of the app is installed. Uninstall it in Android first."
+msgstr "uygulamanın daha yeni bir sürümü yüklü. Önce Android'de kaldırın."
+
+msgid "a policy of this Android does not allow the app."
+msgstr "bu Android'in bir ilkesi uygulamaya izin vermiyor."
+
+msgid "Android did not install the app."
+msgstr "Android uygulamayı yüklemedi."
+
+msgid "Not supported: no ARM translation package is installed."
+msgstr "Desteklenmiyor: yüklü bir ARM çeviri paketi yok."
+
+msgid "Not supported: {0} {1} is installed but turned off."
+msgstr "Desteklenmiyor: {0} {1} yüklü ama kapalı."
+
+msgid "Not supported: {0} {1} is turned off."
+msgstr "Desteklenmiyor: {0} {1} kapalı."
+
+msgid "Supported by {0} {1} ({2}), the translator that comes with this Android."
+msgstr "{0} {1} ({2}) ile destekleniyor. Bu, Android ile birlikte gelen çevirmendir."
+
+msgid "{0} {1} ({2}) comes with this Android. It is used unless you install another translator.\nGoing back to it removes the package that replaced it, from the next start of Android."
+msgstr "{0} {1} ({2}) bu Android ile birlikte gelir. Başka bir çevirmen yüklemediğiniz sürece kullanılır.\nOna geri dönmek, yerine geçen paketi Android'in bir sonraki başlatılmasından itibaren kaldırır."
+
+msgid "Use the default translator"
+msgstr "Varsayılan çevirmeni kullan"
+
+msgid "Use"
+msgstr "Kullan"
+
+msgid "licence not given"
+msgstr "lisans belirtilmemiş"
+
+msgid "Supported by {0} {1} ({2})."
+msgstr "{0} {1} ({2}) ile destekleniyor."
+
+msgid "Android installs apps for: {0}"
+msgstr "Android uygulamaları şunlar için yükler: {0}"
+
+msgid "Android is not running, so what it supports now is not known."
+msgstr "Android çalışmıyor, bu yüzden şu anda neyi desteklediği bilinmiyor."
+
+msgid "Connected through this computer (NAT). Android apps see it as Wi-Fi, with no data charges."
+msgstr "Bu bilgisayar üzerinden bağlı (NAT). Android uygulamaları bunu veri ücreti olmayan Wi-Fi olarak görür."
+
+msgid "Connected to this computer's network as a device of its own (advanced networking)."
+msgstr "Bu bilgisayarın ağına ayrı bir cihaz olarak bağlı (gelişmiş ağ)."
+
+msgid "Android is not running, so it has no network yet."
+msgstr "Android çalışmıyor, bu yüzden henüz ağı yok."
+
+msgid "The DSA service does not report the network. Update DSA to see it."
+msgstr "DSA hizmeti ağı bildirmiyor. Görmek için DSA'yı güncelleyin."
+
+msgid "None"
+msgstr "Yok"
+
+msgid "Manufacturer"
+msgstr "Üretici"
+
+msgid "Brand"
+msgstr "Marka"
+
+msgid "Model"
+msgstr "Model"
+
+msgid "Device"
+msgstr "Cihaz"
+
+msgid "Product name"
+msgstr "Ürün adı"
+
+msgid "Form factor"
+msgstr "Biçim faktörü"
+
+msgid "Release"
+msgstr "Sürüm"
+
+msgid "Build ID"
+msgstr "Derleme kimliği"
+
+msgid "Incremental version"
+msgstr "Artımlı sürüm"
+
+msgid "Build type"
+msgstr "Derleme türü"
+
+msgid "Tags"
+msgstr "Etiketler"
+
+msgid "Whole fingerprint"
+msgstr "Parmak izinin tamamı"
+
+msgid "Verbose"
+msgstr "Ayrıntılı"
+
+msgid "Debug"
+msgstr "Hata ayıklama"
+
+msgid "Info"
+msgstr "Bilgi"
+
+msgid "Warning"
+msgstr "Uyarı"
+
+msgid "Error"
+msgstr "Hata"
+
+msgid "Fatal"
+msgstr "Ölümcül"
+
+msgid "Paused. {0} new lines are waiting."
+msgstr "Duraklatıldı. {0} yeni satır bekliyor."
+
+msgid "General"
+msgstr "Genel"
+
+msgid "Memory"
+msgstr "Bellek"
+
+msgid "Apps"
+msgstr "Uygulamalar"
+
+msgid "Running in the background"
+msgstr "Arka planda çalışanlar"
+
+msgid "Widgets"
+msgstr "Widget'lar"
+
+msgid "Display and GPU"
+msgstr "Ekran ve GPU"
+
+msgid "Android version"
+msgstr "Android sürümü"
+
+msgid "Updates"
+msgstr "Güncellemeler"
+
+msgid "Device identity"
+msgstr "Cihaz kimliği"
+
+msgid "Network"
+msgstr "Ağ"
+
+msgid "Advanced"
+msgstr "Gelişmiş"
+
+msgid "Android log"
+msgstr "Android günlüğü"
+
+msgid "About"
+msgstr "Hakkında"
+
+msgid "The Android apps on this computer. Open them, change them in App info, or uninstall the ones you installed.\nAndroid starts when you open this page."
+msgstr "Bu bilgisayardaki Android uygulamaları. Açın, Uygulama bilgisi bölümünde değiştirin ya da yüklediklerinizi kaldırın.\nBu sayfayı açtığınızda Android başlar."
+
+msgid "Manage apps"
+msgstr "Uygulamaları yönet"
+
+msgid "Open the list of apps in Android's own settings"
+msgstr "Android'in kendi ayarlarındaki uygulama listesini açar"
+
+msgid "The apps could not be read or changed"
+msgstr "Uygulamalar okunamadı veya değiştirilemedi"
+
+msgid "Installed apps"
+msgstr "Yüklü uygulamalar"
+
+msgid "Search apps"
+msgstr "Uygulamalarda ara"
+
+msgid "Refresh"
+msgstr "Yenile"
+
+msgid "No app is installed in Android yet. Open an APK file to install one."
+msgstr "Android'de henüz yüklü uygulama yok. Yüklemek için bir APK dosyası açın."
+
+msgid "No app matches your search."
+msgstr "Aramanızla eşleşen uygulama yok."
+
+msgid "Open"
+msgstr "Aç"
+
+msgid "Package"
+msgstr "Paket"
+
+msgid "Installed"
+msgstr "Yüklendi"
+
+msgid "App info"
+msgstr "Uygulama bilgisi"
+
+msgid "Permissions, storage and notifications, in Android's settings"
+msgstr "Android ayarlarında izinler, depolama ve bildirimler"
+
+msgid "Desktop shortcut"
+msgstr "Masaüstü kısayolu"
+
+msgid "A shortcut on the desktop that opens the app"
+msgstr "Masaüstünde uygulamayı açan bir kısayol"
+
+msgid "Create desktop shortcut"
+msgstr "Masaüstü kısayolu oluştur"
+
+msgid "The desktop shortcut could not be made"
+msgstr "Masaüstü kısayolu oluşturulamadı"
+
+msgid "{0} is on the desktop."
+msgstr "{0} masaüstünde."
+
+msgid "{0}'s windows follow the new settings from the next one that opens."
+msgstr "{0} uygulamasının pencereleri, bir sonraki açılan pencereden itibaren yeni ayarları izler."
+
+msgid "Resizable"
+msgstr "Yeniden boyutlandırılabilir"
+
+msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
+msgstr "Bu uygulamanın pencerelerinin yeniden boyutlandırılıp büyütülebilmesi. Kapalıyken her pencere açıldığı boyutta kalır."
+
+msgid "Start below the title bar"
+msgstr "Başlık çubuğunun altından başlat"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Üst çubuğu başlık çubuğunun altında sıkışan veya gizlenen uygulamalar içindir.\nUygulama, başlık çubuğunun arkasına çizmek yerine onun altından başlar.\nUygulamanın penceresi bir sonraki açılışında geçerli olur."
+
+msgid "Window size when it opens"
+msgstr "Açılırken pencere boyutu"
+
+msgid "The size this app's windows open at"
+msgstr "Bu uygulamanın pencerelerinin açıldığı boyut"
+
+msgid "Uninstall"
+msgstr "Kaldır"
+
+msgid "This app is part of Android and cannot be uninstalled."
+msgstr "Bu uygulama Android'in parçasıdır ve kaldırılamaz."
+
+msgid "Uninstall {0}?"
+msgstr "{0} kaldırılsın mı?"
+
+msgid "{0} and its data will be removed from Android. This cannot be undone."
+msgstr "{0} ve verileri Android'den kaldırılacak. Bu işlem geri alınamaz."
+
+msgid "{0} is uninstalled."
+msgstr "{0} kaldırıldı."
+
+msgid "Not uninstalled"
+msgstr "Kaldırılmadı"
+
+msgid "{0} was not uninstalled: {1} ({2})"
+msgstr "{0} kaldırılmadı: {1} ({2})"
+
+msgid "These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used."
+msgstr "Bu Android uygulamaları müzik çalmak, dosya indirmek, VPN'i açık tutmak veya başka işler için pencereleri kapandıktan sonra da çalışır.\nHer birinin üst çubukta bir göstergesi de vardır.\nBir uygulamayı durdurmak yaptığı işi sonlandırır ve kullandığı belleği boşaltır."
+
+msgid "Stopping apps"
+msgstr "Uygulamaları durdurma"
+
+msgid "Ask before stopping an app from its indicator"
+msgstr "Göstergesinden bir uygulamayı durdurmadan önce sor"
+
+msgid "Turn this back on if you chose not to be asked again."
+msgstr "Bir daha sorulmamasını seçtiyseniz bunu yeniden açın."
+
+msgid "The setting was not changed"
+msgstr "Ayar değiştirilmedi"
+
+msgid "The apps that run in the background could not be read or changed"
+msgstr "Arka planda çalışan uygulamalar okunamadı veya değiştirilemedi"
+
+msgid "No app runs in the background."
+msgstr "Arka planda çalışan uygulama yok."
+
+msgid "Playing {0}"
+msgstr "Oynatılıyor: {0}"
+
+msgid "Paused: {0}"
+msgstr "Duraklatıldı: {0}"
+
+msgid "Stop"
+msgstr "Durdur"
+
+msgid "{0} was stopped."
+msgstr "{0} durduruldu."
+
+msgid "On your desktop"
+msgstr "Masaüstünüzde"
+
+msgid "Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page."
+msgstr "Android uygulamalarınızın sunduğu widget'ları masaüstünüze yerleştirin. Her widget, diğer pencerelerin altında kendi penceresini alır.\nBir widget'ı düzenlemek için basılı tutun: taşımak için sürükleyin, yeniden boyutlandırmak için tutamaçlarını sürükleyin.\nAyarları, boyutları ve Kaldır için bir widget'a sağ tıklayın. Bu sayfayı açtığınızda Android başlar."
+
+msgid "Widgets your apps offer"
+msgstr "Uygulamalarınızın sunduğu widget'lar"
+
+msgid "Widgets could not be read or changed"
+msgstr "Widget'lar okunamadı veya değiştirilemedi"
+
+msgid "No widget is on your desktop yet."
+msgstr "Masaüstünüzde henüz widget yok."
+
+msgid "No app in Android offers a widget."
+msgstr "Android'deki hiçbir uygulama widget sunmuyor."
+
+msgid "At {0}, {1}, {2} × {3}"
+msgstr "Konum {0}, {1}, boyut {2} × {3}"
+
+msgid "Remove"
+msgstr "Kaldır"
+
+msgid "{0} was removed from your desktop."
+msgstr "{0} masaüstünüzden kaldırıldı."
+
+msgid "asks you to set it up"
+msgstr "kurulum yapmanızı ister"
+
+msgid "Add to desktop"
+msgstr "Masaüstüne ekle"
+
+msgid "{0} is on your desktop."
+msgstr "{0} masaüstünüzde."
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "The folder could not be opened"
+msgstr "Klasör açılamadı"
+
+msgid "{0} does not exist yet, or you may not open it."
+msgstr "{0} henüz yok ya da açma izniniz yok."
+
+msgid "Android sends its log only while this page is open, and nothing is written to disk.\nSave diagnostics gathers what a problem report needs into one zip file."
+msgstr "Android günlüğünü yalnızca bu sayfa açıkken gönderir ve diske hiçbir şey yazılmaz.\nTanılama bilgilerini kaydet, bir sorun raporunun ihtiyaç duyduğu her şeyi tek bir zip dosyasında toplar."
+
+msgid "Filter by tag or text"
+msgstr "Etikete veya metne göre süz"
+
+msgid "Pause"
+msgstr "Duraklat"
+
+msgid "Save diagnostics"
+msgstr "Tanılama bilgilerini kaydet"
+
+msgid "The log cannot be read"
+msgstr "Günlük okunamıyor"
+
+msgid "Gathering the diagnostics. This takes a minute or more."
+msgstr "Tanılama bilgileri toplanıyor. Bu bir dakika veya daha uzun sürer."
+
+msgid "Saved the diagnostics to {0}."
+msgstr "Tanılama bilgileri {0} konumuna kaydedildi."
+
+msgid "DSA Settings"
+msgstr "DSA Ayarları"
+
+msgid "Not installed"
+msgstr "Yüklenmedi"
+
+msgid "Only APK files and split APK bundles can be installed: {0}"
+msgstr "Yalnızca APK dosyaları ve bölünmüş APK paketleri yüklenebilir: {0}"
+
+msgid "Installing {0} in Android…"
+msgstr "{0}, Android'e yükleniyor…"
+
+msgid "{0} is installed ({1}). Open it from the app grid."
+msgstr "{0} yüklendi ({1}). Uygulama ızgarasından açın."
+
+msgid "{0} was not installed: {1} ({2})"
+msgstr "{0} yüklenmedi: {1} ({2})"
+
+msgid "{0} did not reach Android. {1}"
+msgstr "{0} Android'e ulaşmadı. {1}"
+
+msgid "State"
+msgstr "Durum"
+
+msgid "Desktop Subsystem for Android™ runs Android in its own lightweight virtual machine and shows each app in its own window."
+msgstr "Desktop Subsystem for Android™, Android'i kendine ait hafif bir sanal makinede çalıştırır ve her uygulamayı kendi penceresinde gösterir."
+
+msgid "Android"
+msgstr "Android"
+
+msgid "Start"
+msgstr "Başlat"
+
+msgid "Android is not ready"
+msgstr "Android hazır değil"
+
+msgid "Last stopped"
+msgstr "Son durma nedeni"
+
+msgid "Update"
+msgstr "Güncelle"
+
+msgid "More"
+msgstr "Daha fazla"
+
+msgid "Freeze Android now"
+msgstr "Android'i şimdi dondur"
+
+msgid "Stops every process in Android until you open one of its windows again. Notifications, alarms and widgets stop with it."
+msgstr "Pencerelerinden birini yeniden açana kadar Android'deki her işlemi durdurur. Bildirimler, alarmlar ve widget'lar da durur."
+
+msgid "Freeze"
+msgstr "Dondur"
+
+msgid "Open my log folder"
+msgstr "Günlük klasörümü aç"
+
+msgid "The logs of the window manager and the app windows, for reporting a problem."
+msgstr "Bir sorunu bildirmek için pencere yöneticisinin ve uygulama pencerelerinin günlükleri."
+
+msgid "Open the service's log folder (administrators)"
+msgstr "Hizmetin günlük klasörünü aç (yöneticiler)"
+
+msgid "The logs of the DSA service and of Android itself."
+msgstr "DSA hizmetinin ve Android'in kendi günlükleri."
+
+msgid "Ask the DSA service for the state again."
+msgstr "DSA hizmetinden durumu yeniden iste."
+
+msgid "Something went wrong"
+msgstr "Bir sorun oluştu"
+
+msgid "On this computer"
+msgstr "Bu bilgisayarda"
+
+msgid "In use on this computer"
+msgstr "Bu bilgisayarda kullanımda"
+
+msgid "The RAM the virtual machine, the window manager and the app windows hold now."
+msgstr "Sanal makinenin, pencere yöneticisinin ve uygulama pencerelerinin şu anda tuttuğu RAM."
+
+msgid "Android's VM now"
+msgstr "Şu anki Android VM'si"
+
+msgid "The memory the VM holds on this computer, and how much of it Android uses"
+msgstr "VM'nin bu bilgisayarda tuttuğu bellek ve bunun ne kadarını Android'in kullandığı"
+
+msgid "Inside Android"
+msgstr "Android'in içinde"
+
+msgid "Available to Android"
+msgstr "Android'in kullanabileceği"
+
+msgid "Android's kernel"
+msgstr "Android'in çekirdeği"
+
+msgid "Largest processes"
+msgstr "En büyük işlemler"
+
+msgid "Memory limit"
+msgstr "Bellek sınırı"
+
+msgid "The most memory Android may grow to. Android takes only what it needs and returns the rest at once.\nAutomatic sets no fixed limit: up to this computer's memory less what Linux keeps.\nTakes effect the next time Android starts."
+msgstr "Android'in büyüyebileceği en fazla bellek. Android yalnızca ihtiyacı kadarını alır ve gerisini hemen geri verir.\nOtomatik, sabit bir sınır koymaz: en fazla bu bilgisayarın belleği eksi Linux'un ayırdığı kısım.\nAndroid bir sonraki başladığında geçerli olur."
+
+msgid "The memory could not be measured"
+msgstr "Bellek ölçülemedi"
+
+msgid "{0}: used by Android {1}, free, not yet returned {2}"
+msgstr "{0}: Android'in kullandığı {1}, boş ama henüz geri verilmemiş {2}"
+
+msgid "Android is not running, so it takes no memory on this computer."
+msgstr "Android çalışmıyor, bu yüzden bu bilgisayarda bellek kullanmıyor."
+
+msgid "No report yet. Android reports how it uses its memory a few minutes after it starts."
+msgstr "Henüz rapor yok. Android, başladıktan birkaç dakika sonra belleğini nasıl kullandığını bildirir."
+
+msgid "Reported {0} seconds ago"
+msgstr "{0} saniye önce bildirildi"
+
+msgid "{0} available of {1}"
+msgstr "{1} içinden {0} kullanılabilir"
+
+msgid "Render GPU"
+msgstr "İşleme GPU'su"
+
+msgid "The GPU that draws Android apps.\nThe default, the primary monitor's GPU, keeps frames on one GPU and lets a laptop's discrete GPU sleep."
+msgstr "Android uygulamalarını çizen GPU.\nVarsayılan olan birincil monitörün GPU'su, kareleri tek GPU'da tutar ve dizüstü bilgisayarın harici GPU'sunun uyumasını sağlar."
+
+msgid "A new render GPU takes effect when the window manager starts again: at the next sign-in, or when you restart it below."
+msgstr "Yeni işleme GPU'su pencere yöneticisi yeniden başlayınca geçerli olur: sonraki oturum açışta ya da aşağıdan yeniden başlattığınızda."
+
+msgid "GPU of the primary monitor"
+msgstr "Birincil monitörün GPU'su"
+
+msgid "What the default choice renders on now."
+msgstr "Varsayılan seçeneğin şu anda işlediği GPU."
+
+msgid "Restart the window manager"
+msgstr "Pencere yöneticisini yeniden başlat"
+
+msgid "Open Android app windows close and come back."
+msgstr "Açık Android uygulama pencereleri kapanıp geri gelir."
+
+msgid "Restart"
+msgstr "Yeniden başlat"
+
+msgid "Restart the window manager?"
+msgstr "Pencere yöneticisi yeniden başlatılsın mı?"
+
+msgid "The windows of Android apps close for a moment. Android and its apps keep running."
+msgstr "Android uygulamalarının pencereleri bir anlığına kapanır. Android ve uygulamaları çalışmaya devam eder."
+
+msgid "The window manager could not be restarted"
+msgstr "Pencere yöneticisi yeniden başlatılamadı"
+
+msgid "Chosen by the window manager when it starts"
+msgstr "Pencere yöneticisi başlarken seçer"
+
+msgid "Running now"
+msgstr "Şu anda çalışan"
+
+msgid "Build"
+msgstr "Derleme"
+
+msgid "Security patch level"
+msgstr "Güvenlik yaması düzeyi"
+
+msgid "Changing the Android version"
+msgstr "Android sürümünü değiştirme"
+
+msgid "Every user of this computer runs the same Android version, so changing it needs an administrator.\nThe chosen version keeps getting security updates.\nWhen its support ends, DSA moves to the next version and keeps your apps."
+msgstr "Bu bilgisayarın tüm kullanıcıları aynı Android sürümünü çalıştırır, bu yüzden değiştirmek için yönetici gerekir.\nSeçilen sürüm güvenlik güncellemeleri almaya devam eder.\nDesteği sona erdiğinde DSA sonraki sürüme geçer ve uygulamalarınızı korur."
+
+msgid "Version to use"
+msgstr "Kullanılacak sürüm"
+
+msgid "DSA supports the latest two Android versions. Some apps run on only one of them."
+msgstr "DSA en son iki Android sürümünü destekler. Bazı uygulamalar bunlardan yalnızca birinde çalışır."
+
+msgid "Change"
+msgstr "Değiştir"
+
+msgid "Android {0} is chosen. It is downloaded now and used the next time Android starts."
+msgstr "Android {0} seçildi. Şimdi indiriliyor ve Android bir sonraki başladığında kullanılacak."
+
+msgid "Supported versions: Android {0}"
+msgstr "Desteklenen sürümler: Android {0}"
+
+msgid "Move to a newer Android?"
+msgstr "Daha yeni bir Android'e geçilsin mi?"
+
+msgid "Android {0} is downloaded and used the next time Android starts.\n\nYour apps and their data move along. Moving back later erases the data."
+msgstr "Android {0} indirilir ve Android bir sonraki başladığında kullanılır.\n\nUygulamalarınız ve verileri de taşınır. Daha sonra geri dönmek verileri siler."
+
+msgid "Erase Android data to move to an older version?"
+msgstr "Daha eski bir sürüme geçmek için Android verileri silinsin mi?"
+
+msgid "Android {0} is older than the Android {1} that runs now. Android cannot read data a newer version wrote.\n\nMoving erases the Android data of every user of this computer:\n• every app they installed\n• the accounts they signed in to\n• the data of every app\n\nEach user's Android then starts as it was first installed. DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Android {0}, şu anda çalışan Android {1} sürümünden daha eski. Android, daha yeni bir sürümün yazdığı verileri okuyamaz.\n\nGeçiş, bu bilgisayardaki her kullanıcının Android verilerini siler:\n• yükledikleri her uygulama\n• oturum açtıkları hesaplar\n• her uygulamanın verileri\n\nArdından her kullanıcının Android'i ilk yüklendiği gibi başlar. DSA'nın ayarları korunur.\n\nBu işlem geri alınamaz."
+
+msgid "Erase data and change"
+msgstr "Verileri sil ve değiştir"
+
+msgid "New versions of DSA come through the system's package manager and software center, with the other updates.\nInstalling DSA added its signed package repository."
+msgstr "DSA'nın yeni sürümleri, diğer güncellemelerle birlikte sistemin paket yöneticisi ve yazılım merkezi üzerinden gelir.\nDSA yüklenirken imzalı paket deposu da eklendi."
+
+msgid "Open software updates"
+msgstr "Yazılım güncellemelerini aç"
+
+msgid "Shows the updates the system has for DSA and the other installed programs."
+msgstr "Sistemin DSA ve diğer yüklü programlar için sunduğu güncellemeleri gösterir."
+
+msgid "No software center was found"
+msgstr "Yazılım merkezi bulunamadı"
+
+msgid "Update DSA with the system's package manager, such as apt or dnf."
+msgstr "DSA'yı apt veya dnf gibi sistemin paket yöneticisiyle güncelleyin."
+
+msgid "Android image"
+msgstr "Android görüntüsü"
+
+msgid "This setting applies to every user of this computer, so changing it asks for an administrator's permission."
+msgstr "Bu ayar bu bilgisayarın tüm kullanıcılarına uygulanır, bu yüzden değiştirmek yönetici izni ister."
+
+msgid "The newest supported version (now Android {0})"
+msgstr "Desteklenen en yeni sürüm (şu an Android {0})"
+
+msgid "Android {0} and its security updates"
+msgstr "Android {0} ve güvenlik güncellemeleri"
+
+msgid "No Android update is waiting. DSA checks every day, and restarts Android into an update once no app window is open."
+msgstr "Bekleyen Android güncellemesi yok. DSA her gün denetler; açık uygulama penceresi kalmayınca Android'i güncellemeyle yeniden başlatır."
+
+msgid "Android {0} is downloaded. Restart Android to use it now."
+msgstr "Android {0} indirildi. Şimdi kullanmak için Android'i yeniden başlatın."
+
+msgid "Restart now"
+msgstr "Şimdi yeniden başlat"
+
+msgid "Restart Android now?"
+msgstr "Android şimdi yeniden başlatılsın mı?"
+
+msgid "Android restarts into Android {0}.\n\nIts app windows close. Open the apps again once it has started."
+msgstr "Android, Android {0} ile yeniden başlar.\n\nUygulama pencereleri kapanır. Başladıktan sonra uygulamaları yeniden açın."
+
+msgid "Restart Android into updates by itself"
+msgstr "Güncellemeler için Android'i kendiliğinden yeniden başlat"
+
+msgid "On by default. With no app window open, Android restarts into a downloaded update at once.\nWith windows open, DSA asks first or waits until you close them.\nOff, an update is used the next time you start Android."
+msgstr "Varsayılan olarak açık. Açık uygulama penceresi yokken Android indirilen bir güncellemeyle hemen yeniden başlar.\nPencereler açıkken DSA önce sorar ya da siz kapatana kadar bekler.\nKapalıyken güncelleme, Android'i bir sonraki başlatışınızda kullanılır."
+
+msgid "Version it follows"
+msgstr "İzlediği sürüm"
+
+msgid "Android update"
+msgstr "Android güncellemesi"
+
+msgid "Check now"
+msgstr "Şimdi denetle"
+
+msgid "Device specifications"
+msgstr "Cihaz özellikleri"
+
+msgid "What Android reports"
+msgstr "Android'in bildirdikleri"
+
+msgid "Not reported"
+msgstr "Bildirilmedi"
+
+msgid "Get pre-release versions"
+msgstr "Ön sürümleri al"
+
+msgid "Also install versions that are still being finished. Every release before 1.0 is a pre-release.\nThe package manager then reads DSA's pre-release repository.\nTurning this off never moves DSA back: it waits for a stable release newer than the one installed."
+msgstr "Henüz tamamlanmakta olan sürümleri de yükler. 1.0'dan önceki her sürüm bir ön sürümdür.\nPaket yöneticisi bu durumda DSA'nın ön sürüm deposunu okur.\nBunu kapatmak DSA'yı asla geri götürmez: yüklü olandan daha yeni bir kararlı sürümü bekler."
+
+msgid "This installation does not follow a release channel."
+msgstr "Bu kurulum bir sürüm kanalını izlemiyor."
+
+msgid "Update the Android image automatically"
+msgstr "Android görüntüsünü otomatik olarak güncelle"
+
+msgid "Download signed security updates and new versions of Android.\nThey apply when Android restarts, as the Android update settings above say."
+msgstr "İmzalı güvenlik güncellemelerini ve Android'in yeni sürümlerini indir.\nBunlar, yukarıdaki Android güncelleme ayarlarına göre Android yeniden başladığında uygulanır."
+
+msgid "This installation does not offer image updates."
+msgstr "Bu kurulum görüntü güncellemeleri sunmuyor."
+
+msgid "Desktop Subsystem for Android™"
+msgstr "Desktop Subsystem for Android™"
+
+msgid "Thisisthepy"
+msgstr "Thisisthepy"
+
+msgid "DSA Settings version"
+msgstr "DSA Ayarları sürümü"
+
+msgid "DSA service version"
+msgstr "DSA hizmeti sürümü"
+
+msgid "Android image version"
+msgstr "Android görüntüsü sürümü"
+
+msgid "The Android image the next start boots. Image updates change it."
+msgstr "Bir sonraki başlatmada önyüklenecek Android görüntüsü. Görüntü güncellemeleri bunu değiştirir."
+
+msgid "Licences"
+msgstr "Lisanslar"
+
+msgid "DSA is licensed under the Apache License 2.0. Open the licences of every component it ships."
+msgstr "DSA, Apache License 2.0 ile lisanslanmıştır. Birlikte gelen tüm bileşenlerin lisanslarını açar."
+
+msgid "Source code"
+msgstr "Kaynak kodu"
+
+msgid "Desktop Subsystem for Android is an independent open source project.\nIt is not affiliated with, endorsed by or sponsored by Microsoft or Google."
+msgstr "Desktop Subsystem for Android bağımsız bir açık kaynak projesidir.\nMicrosoft veya Google ile bağlantılı değildir, onlar tarafından onaylanmamış veya desteklenmemektedir."
+
+msgid "Android is a trademark of Google LLC."
+msgstr "Android, Google LLC'nin ticari markasıdır."
+
+msgid "The names and build fingerprint Android reports to apps. Leave a box empty to keep the value shown.\nChanges apply from the next start of Android."
+msgstr "Android'in uygulamalara bildirdiği adlar ve derleme parmak izi. Gösterilen değeri korumak için kutuyu boş bırakın.\nDeğişiklikler Android'in bir sonraki başlatılmasından itibaren uygulanır."
+
+msgid "Apps may notice"
+msgstr "Uygulamalar fark edebilir"
+
+msgid "Changing the model or the fingerprint can change how apps behave.\nSome check the device before they run, and payment and integrity checks may fail."
+msgstr "Modeli veya parmak izini değiştirmek uygulamaların davranışını değiştirebilir.\nBazıları çalışmadan önce cihazı denetler; ödeme ve bütünlük denetimleri başarısız olabilir."
+
+msgid "Build fingerprint"
+msgstr "Derleme parmak izi"
+
+msgid "Fingerprint from the next start"
+msgstr "Bir sonraki başlatmadan itibaren parmak izi"
+
+msgid "Restart Android now"
+msgstr "Android'i şimdi yeniden başlat"
+
+msgid "Reset to defaults"
+msgstr "Varsayılanlara sıfırla"
+
+msgid "Save"
+msgstr "Kaydet"
+
+msgid "Saved. Android uses it from its next start."
+msgstr "Kaydedildi. Android bunu bir sonraki başlatmada kullanır."
+
+msgid "Saved. Restart Android to use it now."
+msgstr "Kaydedildi. Şimdi kullanmak için Android'i yeniden başlatın."
+
+msgid "Reset the device identity?"
+msgstr "Cihaz kimliği sıfırlansın mı?"
+
+msgid "Every value goes back to its default: this computer's, or DSA's own where the computer does not say.\n\nIt applies from the next start of Android."
+msgstr "Her değer varsayılanına döner: bu bilgisayarınki ya da bilgisayarın belirtmediği yerde DSA'nın kendi değeri.\n\nAndroid'in bir sonraki başlatılmasından itibaren uygulanır."
+
+msgid "Back to the defaults. Android uses them from its next start."
+msgstr "Varsayılanlara dönüldü. Android bunları bir sonraki başlatmada kullanır."
+
+msgid "Back to the defaults. Restart Android to use them now."
+msgstr "Varsayılanlara dönüldü. Şimdi kullanmak için Android'i yeniden başlatın."
+
+msgid "Android started again with this identity."
+msgstr "Android bu kimlikle yeniden başladı."
+
+msgid "Android's network"
+msgstr "Android'in ağı"
+
+msgid "Connection"
+msgstr "Bağlantı"
+
+msgid "Address"
+msgstr "Adres"
+
+msgid "DNS"
+msgstr "DNS"
+
+msgid "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps."
+msgstr "Bu bilgisayarın çözümleyicisi yanıtlar, bu yüzden hosts dosyası, VPN ve DNS filtreleri Android uygulamalarına da uygulanır."
+
+msgid "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}"
+msgstr "Bu bilgisayarın çözümleyicisi yanıt vermiyor, bu yüzden Android ağın DNS sunucularına soruyor: {0}"
+
+msgid "Gateway"
+msgstr "Ağ geçidi"
+
+msgid "Advanced networking is not in use"
+msgstr "Gelişmiş ağ kullanılmıyor"
+
+msgid "Restart Android to apply"
+msgstr "Uygulamak için Android'i yeniden başlatın"
+
+msgid "The change applies the next time Android starts. Stop Android on the General page, then open an app."
+msgstr "Değişiklik Android bir sonraki başladığında uygulanır. Genel sayfasında Android'i durdurun, ardından bir uygulama açın."
+
+msgid "Advanced networking"
+msgstr "Gelişmiş ağ"
+
+msgid "Off by default. When on, Android joins this computer's network as a device of its own.\nOther devices on the network and Android apps can then reach each other directly.\nPrograms on this computer can always reach a server in Android at the address above."
+msgstr "Varsayılan olarak kapalı. Açıkken Android, bu bilgisayarın ağına ayrı bir cihaz olarak katılır.\nBöylece ağdaki diğer cihazlar ve Android uygulamaları birbirine doğrudan erişebilir.\nBu bilgisayardaki programlar, Android'deki bir sunucuya her zaman yukarıdaki adresten erişebilir."
+
+msgid "Trusted certificates"
+msgstr "Güvenilen sertifikalar"
+
+msgid "Root certificates you or an administrator added to this computer, such as a company's or a security program's.\nThe system's own certificates are not listed: Android has its own."
+msgstr "Sizin veya bir yöneticinin bu bilgisayara eklediği kök sertifikalar, örneğin bir şirketin veya bir güvenlik programının.\nSistemin kendi sertifikaları listelenmez: Android'in kendi sertifikaları vardır."
+
+msgid "Trust certificates added to this computer"
+msgstr "Bu bilgisayara eklenen sertifikalara güven"
+
+msgid "On by default. Android apps trust the certificates listed below as they trust Android's own.\nSites and servers this computer trusts then open in Android too. The change applies at once."
+msgstr "Varsayılan olarak açık. Android uygulamaları aşağıdaki sertifikalara Android'in kendi sertifikaları gibi güvenir.\nBöylece bu bilgisayarın güvendiği siteler ve sunucular Android'de de açılır. Değişiklik hemen uygulanır."
+
+msgid "This computer's trusted root certificates"
+msgstr "Bu bilgisayarın güvenilen kök sertifikaları"
+
+msgid "This computer's group policy"
+msgstr "Bu bilgisayarın grup ilkesi"
+
+msgid "This computer's enterprise certificates"
+msgstr "Bu bilgisayarın kurumsal sertifikaları"
+
+msgid "Your trusted root certificates"
+msgstr "Güvenilen kök sertifikalarınız"
+
+msgid "Your group policy"
+msgstr "Grup ilkeniz"
+
+msgid "This computer's administrator trust settings"
+msgstr "Bu bilgisayarın yönetici güven ayarları"
+
+msgid "Added to the system's certificate store"
+msgstr "Sistemin sertifika deposuna eklendi"
+
+msgid "SHA-256 {0}"
+msgstr "SHA-256 {0}"
+
+msgid "A certificate without a name"
+msgstr "Adı olmayan bir sertifika"
+
+msgid "Issued by {0}"
+msgstr "Veren: {0}"
+
+msgid "No added root certificates were found on this computer."
+msgstr "Bu bilgisayarda eklenmiş kök sertifika bulunamadı."
+
+msgid "Files"
+msgstr "Dosyalar"
+
+msgid "Send files to Android apps"
+msgstr "Android uygulamalarına dosya gönder"
+
+msgid "To send a file to an Android app, drag it from the file manager onto the app's window. An APK you drop is installed."
+msgstr "Bir Android uygulamasına dosya göndermek için onu dosya yöneticisinden uygulamanın penceresine sürükleyin. Bıraktığınız APK yüklenir."
+
+msgid "Share folders with Android"
+msgstr "Klasörleri Android ile paylaş"
+
+msgid "On by default. The folders chosen below show in Android's shared storage, for Android apps to open and save files.\nApps need Android's storage permission, and can do only what your own account may do."
+msgstr "Varsayılan olarak açık. Aşağıda seçilen klasörler Android'in paylaşılan depolamasında görünür; uygulamalar orada dosya açıp kaydeder.\nUygulamaların Android'in depolama iznine ihtiyacı vardır ve yalnızca kendi hesabınızın yapabildiklerini yapabilirler."
+
+msgid "Shared folders"
+msgstr "Paylaşılan klasörler"
+
+msgid "A folder you clear is taken away from Android at once."
+msgstr "İşaretini kaldırdığınız klasör Android'den hemen kaldırılır."
+
+msgid "Android files"
+msgstr "Android dosyaları"
+
+msgid "Opens Android's shared storage in the file manager: the files Android apps saved, such as photos.\nAndroid starts if it is not running. DSA Files in the app grid does the same."
+msgstr "Android'in paylaşılan depolamasını dosya yöneticisinde açar: fotoğraflar gibi Android uygulamalarının kaydettiği dosyalar.\nAndroid çalışmıyorsa başlar. Uygulama ızgarasındaki DSA Files da aynısını yapar."
+
+msgid "Open web links in Android apps"
+msgstr "Web bağlantılarını Android uygulamalarında aç"
+
+msgid "Off by default: a web link you tap in an Android app opens in your default browser on this computer.\nOn, it opens in an Android app, as on a phone.\nA link an installed app has verified as its own opens in that app either way."
+msgstr "Varsayılan olarak kapalı: bir Android uygulamasında dokunduğunuz web bağlantısı bu bilgisayardaki varsayılan tarayıcınızda açılır.\nAçıkken, telefondaki gibi bir Android uygulamasında açılır.\nYüklü bir uygulamanın kendine ait olarak doğruladığı bağlantı her iki durumda da o uygulamada açılır."
+
+msgid "ARM apps"
+msgstr "ARM uygulamaları"
+
+msgid "Run apps built only for ARM"
+msgstr "Yalnızca ARM için derlenmiş uygulamaları çalıştır"
+
+msgid "Many Android apps have code only for ARM processors. They run here only through an ARM translator.\nAndroid uses its own open source translator, unless you install another (dsa arm-translation install) or Google's.\nOff, Android uses no translator at all. Changes apply from the next start of Android.\nOnly 64-bit ARM apps (arm64-v8a) can run."
+msgstr "Birçok Android uygulamasında yalnızca ARM işlemciler için kod bulunur. Bunlar burada yalnızca bir ARM çevirmeniyle çalışır.\nAndroid, siz başka bir çevirmen (dsa arm-translation install) veya Google'ınkini yüklemedikçe kendi açık kaynak çevirmenini kullanır.\nKapalıyken Android hiç çevirmen kullanmaz. Değişiklikler Android'in bir sonraki başlatılmasından itibaren uygulanır.\nYalnızca 64 bit ARM uygulamaları (arm64-v8a) çalışabilir."
+
+msgid "Status"
+msgstr "Durum"
+
+msgid "Android started before this change. Stop and start Android for ARM apps to follow it."
+msgstr "Android bu değişiklikten önce başladı. ARM uygulamalarının buna uyması için Android'i durdurup yeniden başlatın."
+
+msgid "Remove the ARM translation package"
+msgstr "ARM çeviri paketini kaldır"
+
+msgid "Deletes the package from your add-on disk. ARM apps you installed stay, but do not run after Android restarts."
+msgstr "Paketi eklenti diskinizden siler. Yüklediğiniz ARM uygulamaları kalır, ancak Android yeniden başladıktan sonra çalışmaz."
+
+msgid "Developer"
+msgstr "Geliştirici"
+
+msgid "Developer mode"
+msgstr "Geliştirici modu"
+
+msgid "Off by default. When on, adb on this computer connects to Android without asking in Android.\nThe port is reachable only from this computer. Turn it off when you are done."
+msgstr "Varsayılan olarak kapalı. Açıkken bu bilgisayardaki adb, Android'de sormadan Android'e bağlanır.\nBağlantı noktasına yalnızca bu bilgisayardan erişilebilir. İşiniz bitince kapatın."
+
+msgid "Connect adb automatically"
+msgstr "adb'yi otomatik bağla"
+
+msgid "On by default. While developer mode is on, Android shows in adb devices and Android Studio without adb connect.\nAfter adb disconnect, it stays off until the adb server restarts."
+msgstr "Varsayılan olarak açık. Geliştirici modu açıkken Android, adb connect olmadan adb devices ve Android Studio'da görünür.\nadb disconnect sonrasında adb sunucusu yeniden başlayana kadar kapalı kalır."
+
+msgid "Automatic connection"
+msgstr "Otomatik bağlantı"
+
+msgid "Not connecting: developer mode or automatic connection is off."
+msgstr "Bağlanmıyor: geliştirici modu veya otomatik bağlantı kapalı."
+
+msgid "Waiting for adb: Android connects when adb starts on this computer."
+msgstr "adb bekleniyor: Android, bu bilgisayarda adb başladığında bağlanır."
+
+msgid "Waiting for Android: it connects once Android is running."
+msgstr "Android bekleniyor: Android çalışır çalışmaz bağlanır."
+
+msgid "Connected: adb lists Android."
+msgstr "Bağlı: adb, Android'i listeliyor."
+
+msgid "Disconnected with adb disconnect. Android connects again when the adb server restarts."
+msgstr "adb disconnect ile bağlantı kesildi. Android, adb sunucusu yeniden başladığında tekrar bağlanır."
+
+msgid "Connect adb"
+msgstr "adb'yi bağla"
+
+msgid "While developer mode is on and Android is running, run this command:"
+msgstr "Geliştirici modu açıkken ve Android çalışırken şu komutu çalıştırın:"
+
+msgid "Port"
+msgstr "Bağlantı noktası"
+
+msgid "Share the clipboard with Android"
+msgstr "Panoyu Android ile paylaş"
+
+msgid "On by default: text copied on this computer can be pasted in Android apps, and the other way round.\nImages stay where they were copied."
+msgstr "Varsayılan olarak açık: bu bilgisayarda kopyalanan metin Android uygulamalarına yapıştırılabilir, tersi de geçerlidir.\nGörüntüler kopyalandıkları yerde kalır."
+
+msgid "Freeze Android when idle"
+msgstr "Boştayken Android'i dondur"
+
+msgid "Off by default: an idle Android dozes and still receives notifications.\nFrozen, it uses no CPU but receives nothing until you open an app."
+msgstr "Varsayılan olarak kapalı: boştaki Android Doze moduna girer ve bildirim almaya devam eder.\nDondurulduğunda CPU kullanmaz, ancak siz bir uygulama açana kadar hiçbir şey almaz."
+
+msgid "Diagnostics"
+msgstr "Tanılama"
+
+msgid "The traces make the DSA logs below grow, so turn them on only to report a problem.\nThey apply to every user of this computer, so changing them asks for an administrator's permission."
+msgstr "İzlemeler aşağıdaki DSA günlüklerini büyütür, bu yüzden onları yalnızca bir sorunu bildirmek için açın.\nBu bilgisayarın tüm kullanıcılarına uygulanırlar, bu yüzden değiştirmek yönetici izni ister."
+
+msgid "Input trace"
+msgstr "Giriş izleme"
+
+msgid "Every DSA process records when each touch, click and key reaches it, to measure the delay to the picture.\nOff by default."
+msgstr "Görüntüye kadar olan gecikmeyi ölçmek için her DSA işlemi her dokunma, tıklama ve tuşun kendisine ne zaman ulaştığını kaydeder.\nVarsayılan olarak kapalı."
+
+msgid "Resize trace"
+msgstr "Yeniden boyutlandırma izleme"
+
+msgid "Every DSA process records each stage of each window resize, to find where it is slow or flickers.\nOff by default."
+msgstr "Nerede yavaşladığını veya titrediğini bulmak için her DSA işlemi, her pencere yeniden boyutlandırmasının her aşamasını kaydeder.\nVarsayılan olarak kapalı."
+
+msgid "Logs"
+msgstr "Günlükler"
+
+msgid "The logs of your window manager and app windows."
+msgstr "Pencere yöneticinizin ve uygulama pencerelerinizin günlükleri."
+
+msgid "Command line"
+msgstr "Komut satırı"
+
+msgid "The dsa command"
+msgstr "dsa komutu"
+
+msgid "dsa status"
+msgstr "dsa status"
+
+msgid "dsa settings"
+msgstr "dsa settings"
+
+msgid "dsa memory"
+msgstr "dsa memory"
+
+msgid "Everything on these pages is also available from a terminal."
+msgstr "Bu sayfalardaki her şey bir terminalden de kullanılabilir."
+
+msgid "Reset"
+msgstr "Sıfırla"
+
+msgid "Reset Android's data"
+msgstr "Android'in verilerini sıfırla"
+
+msgid "Erases every app you installed, your accounts and every app's data. Android starts as it was first installed.\nThe Android image and these settings stay."
+msgstr "Yüklediğiniz her uygulamayı, hesaplarınızı ve her uygulamanın verilerini siler. Android ilk yüklendiği gibi başlar.\nAndroid görüntüsü ve bu ayarlar korunur."
+
+msgid "Reset Android's data?"
+msgstr "Android'in verileri sıfırlansın mı?"
+
+msgid "This erases from Android:\n• every app you installed\n• the accounts you signed in to\n• the data of every app\n\nAndroid stops now. Its next start is as it was first installed.\n\nThe Android image and DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Bu işlem Android'den şunları siler:\n• yüklediğiniz her uygulama\n• oturum açtığınız hesaplar\n• her uygulamanın verileri\n\nAndroid şimdi durur. Bir sonraki başlatılışında ilk yüklendiği gibi olur.\n\nAndroid görüntüsü ve DSA'nın ayarları korunur.\n\nBu işlem geri alınamaz."
+
+msgid "Android's data was reset"
+msgstr "Android'in verileri sıfırlandı"
+
+msgid "The next app you open starts Android as it was first installed."
+msgstr "Açacağınız bir sonraki uygulama, Android'i ilk yüklendiği gibi başlatır."
+
+msgid "Documents"
+msgstr "Belgeler"
+
+msgid "Downloads"
+msgstr "İndirilenler"
+
+msgid "Pictures"
+msgstr "Resimler"
+
+msgid "Music"
+msgstr "Müzik"
+
+msgid "Videos"
+msgstr "Videolar"
+
+msgid "Desktop"
+msgstr "Masaüstü"
+
+msgid "OK"
+msgstr "Tamam"
+
+msgid "Copy"
+msgstr "Kopyala"
+
+msgid "Google Play"
+msgstr "Google Play"
+
+msgid "Google Play services and the Play Store are not part of DSA.\nWhen you ask, DSA downloads LiteGapps Core, a public package of Google's apps, and installs it in your Android.\nWithout it, the rest of DSA works as before."
+msgstr "Google Play hizmetleri ve Play Store, DSA'nın parçası değildir.\nİstediğinizde DSA, Google uygulamalarının herkese açık bir paketi olan LiteGapps Core'u indirir ve Android'inize yükler.\nBu paket olmadan da DSA'nın geri kalanı eskisi gibi çalışır."
+
+msgid "LiteGapps {0} {1} for Android {2} ({3})"
+msgstr "Android {2} için LiteGapps {0} {1} ({3})"
+
+msgid "Installed: {0}. Restart Android to start using it."
+msgstr "Yüklendi: {0}. Kullanmaya başlamak için Android'i yeniden başlatın."
+
+msgid "Removed. The Google apps stay in Android until it restarts."
+msgstr "Kaldırıldı. Google uygulamaları, Android yeniden başlayana kadar Android'de kalır."
+
+msgid "Installed: {0}."
+msgstr "Yüklendi: {0}."
+
+msgid "{0} was installed by an older DSA and is no longer used, so Android starts without Google's apps. Install Google Play again."
+msgstr "{0} eski bir DSA sürümünce yüklendi, artık kullanılmıyor; Android Google uygulamaları olmadan başlar. Google Play'i yeniden yükleyin."
+
+msgid "Not installed."
+msgstr "Yüklü değil."
+
+msgid "Downloaded from the LiteGapps project: {0}"
+msgstr "LiteGapps projesinden indirildi: {0}"
+
+msgid "Downloading and installing Google Play. This can take several minutes."
+msgstr "Google Play indiriliyor ve yükleniyor. Bu işlem birkaç dakika sürebilir."
+
+msgid "Enter this number on Google's registration page."
+msgstr "Bu numarayı Google'ın kayıt sayfasına girin."
+
+msgid "It shows here once Google Play is installed and Android has started."
+msgstr "Google Play yüklenip Android başladığında burada görünür."
+
+msgid "Android started before this change. Stop and start Android for Google Play to follow it."
+msgstr "Android bu değişiklikten önce başladı. Google Play'in buna uyması için Android'i durdurup yeniden başlatın."
+
+msgid "Install Google Play"
+msgstr "Google Play'i yükle"
+
+msgid "Downloads LiteGapps Core for your Android version (about 120 to 260 MB) from the LiteGapps project, checks it and installs it.\nAndroid starts if it is not running. Google Play is there from the next start of Android."
+msgstr "Android sürümünüz için LiteGapps Core'u (yaklaşık 120 ila 260 MB) LiteGapps projesinden indirir, denetler ve yükler.\nAndroid çalışmıyorsa başlar. Google Play, Android'in bir sonraki başlatılmasından itibaren hazırdır."
+
+msgid "Install"
+msgstr "Yükle"
+
+msgid "Remove Google Play"
+msgstr "Google Play'i kaldır"
+
+msgid "Deletes Google's apps from your add-on disk. They are gone from the next start of Android."
+msgstr "Google'ın uygulamalarını eklenti diskinizden siler. Android'in bir sonraki başlatılmasından itibaren yok olurlar."
+
+msgid "Google's terms"
+msgstr "Google'ın koşulları"
+
+msgid "Google's ARM translator"
+msgstr "Google'ın ARM çevirmeni"
+
+msgid "Installs the ARM translator from the Android emulator image Google offers for this Android version.\nDownloads about 2 GB from Google, under Google's Android SDK License, and keeps only the translator.\nNothing is downloaded until you agree. DSA does not include or pass on Google's translator.\nA package built from another translator, such as Digitalis, does the same job."
+msgstr "ARM çevirmenini, Google'ın bu Android sürümü için sunduğu Android öykünücü görüntüsünden yükler.\nGoogle'dan, Google'ın Android SDK Lisansı kapsamında yaklaşık 2 GB indirir ve yalnızca çevirmeni tutar.\nSiz kabul edene kadar hiçbir şey indirilmez. DSA, Google'ın çevirmenini içermez veya başkalarına aktarmaz.\nDigitalis gibi başka bir çevirmenden derlenmiş bir paket de aynı işi görür."
+
+msgid "Get"
+msgstr "Al"
+
+msgid "Android SDK License"
+msgstr "Android SDK Lisansı"
+
+msgid "Google's terms for the emulator image the translator comes from."
+msgstr "Çevirmenin alındığı öykünücü görüntüsü için Google'ın koşulları."
+
+msgid "Get Google's ARM translator?"
+msgstr "Google'ın ARM çevirmeni alınsın mı?"
+
+msgid "Accept and download"
+msgstr "Kabul et ve indir"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its ARM translator.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nThe translator is Google's software. DSA does not ship or pass it on.\n\nThe translator works from the next start of Android."
+msgstr "DSA, bu Android sürümü için Google'ın Android öykünücü görüntüsünü indirir ve yalnızca ARM çevirmenini çıkarır.\n\n• Kaynak: Google'ın SDK deposu ({0})\n• Boyut: yaklaşık 2 GB, sonra silinir\n• Lisans: Android SDK Lisansı ({1}). İndirerek koşullarını kabul etmiş olursunuz.\n\nÇevirmen Google'ın yazılımıdır. DSA onu dağıtmaz veya başkalarına aktarmaz.\n\nÇevirmen, Android'in bir sonraki başlatılmasından itibaren çalışır."
+
+msgid "Downloading about 2 GB from Google and taking out the translator. It takes minutes."
+msgstr "Google'dan yaklaşık 2 GB indiriliyor ve çevirmen çıkarılıyor. Birkaç dakika sürer."
+
+msgid "Google's apps belong to Google and follow Google's terms.\nDSA does not distribute them: it downloads the public LiteGapps package when you ask."
+msgstr "Google'ın uygulamaları Google'a aittir ve Google'ın koşullarına tabidir.\nDSA bunları dağıtmaz: istediğinizde herkese açık LiteGapps paketini indirir."
+
+msgid "Register this device with Google"
+msgstr "Bu cihazı Google'a kaydet"
+
+msgid "Google has not certified this Android, so Google may refuse to sign you in until you register it.\nOpen Google's registration page, sign in with your Google account and enter the Android ID below."
+msgstr "Google bu Android'i onaylamadı, bu yüzden siz onu kaydedene kadar Google oturum açmanızı reddedebilir.\nGoogle'ın kayıt sayfasını açın, Google hesabınızla oturum açın ve aşağıdaki Android ID'yi girin."
+
+msgid "Android ID"
+msgstr "Android ID"
+
+msgid "Google Play was not installed"
+msgstr "Google Play yüklenmedi"
+
+msgid "Google Play was not removed"
+msgstr "Google Play kaldırılmadı"
+
+msgid "Where Google Play stands could not be read"
+msgstr "Google Play'in durumu okunamadı"
+
+msgid "The page could not be opened"
+msgstr "Sayfa açılamadı"
+
+msgid "Runs the app's ARM code through the translator. Off runs its x86_64 code."
+msgstr "Uygulamanın ARM kodunu çevirmen üzerinden çalıştırır. Kapalıyken x86_64 kodunu çalıştırır."
+
+msgid "Apps that are part of Android run as Android installed them."
+msgstr "Android'in parçası olan uygulamalar, Android'in yüklediği şekilde çalışır."
+
+msgid "No APK of this app on the device holds its ARM code."
+msgstr "Cihazdaki bu uygulamaya ait hiçbir APK, ARM kodunu içermiyor."
+
+msgid "ARM translation is not on. Turn it on under ARM apps and restart Android."
+msgstr "ARM çevirisi açık değil. ARM uygulamaları bölümünde açın ve Android'i yeniden başlatın."
+
+msgid "This app has only ARM code, so it always runs as ARM."
+msgstr "Bu uygulamada yalnızca ARM kodu var, bu yüzden her zaman ARM olarak çalışır."
+
+msgid "This version of DSA cannot say whether the app can run as ARM."
+msgstr "DSA'nın bu sürümü, uygulamanın ARM olarak çalışıp çalışamayacağını söyleyemiyor."
+
+msgid "{0} runs as ARM now."
+msgstr "{0} artık ARM olarak çalışıyor."
+
+msgid "{0} runs its x86_64 code now."
+msgstr "{0} artık x86_64 kodunu çalıştırıyor."
+
+msgid "its APKs on the device hold no code for that"
+msgstr "cihazdaki APK'lerinde bunun için kod yok"
+
+msgid "ARM translation is not on"
+msgstr "ARM çevirisi açık değil"
+
+msgid "Android refused"
+msgstr "Android reddetti"
+
+msgid "{0} was not installed again: {1} ({2})"
+msgstr "{0} yeniden yüklenmedi: {1} ({2})"
+
+msgid "Run as ARM"
+msgstr "ARM olarak çalıştır"
+
+msgid "Erase {0}'s data?"
+msgstr "{0} uygulamasının verileri silinsin mi?"
+
+msgid "Android cannot change how {0} runs and keep its data.\n\nInstalling it again erases its data: sign-ins, settings and files it keeps for itself."
+msgstr "Android, {0} uygulamasının çalışma şeklini verilerini koruyarak değiştiremez.\n\nYeniden yüklemek verilerini siler: oturum açmalar, ayarlar ve kendisi için tuttuğu dosyalar."
+
+msgid "Erase and install again"
+msgstr "Sil ve yeniden yükle"
+
+msgid "Not installed again"
+msgstr "Yeniden yüklenmedi"
+
+msgid "Default: from this computer"
+msgstr "Varsayılan: bu bilgisayardan"
+
+msgid "Default: DSA's value"
+msgstr "Varsayılan: DSA'nın değeri"
+
+msgid "This computer does not say; Android keeps its own."
+msgstr "Bu bilgisayar belirtmiyor; Android kendi değerini korur."
+
+msgid "From this computer"
+msgstr "Bu bilgisayardan"
+
+msgid "These follow this computer and are read again each time Android starts.\nAndroid's Settings shows the device name and the chip.\nThe model name shows only here, as Android's Settings has no place for it."
+msgstr "Bunlar bu bilgisayarı izler ve Android her başladığında yeniden okunur.\nAndroid'in Ayarlar uygulaması cihaz adını ve yongayı gösterir.\nModel adı yalnızca burada görünür, çünkü Android'in Ayarlar uygulamasında bunun için bir yer yok."
+
+msgid "Model name"
+msgstr "Model adı"
+
+msgid "Device name"
+msgstr "Cihaz adı"
+
+msgid "Chip manufacturer"
+msgstr "Yonga üreticisi"
+
+msgid "Chip model"
+msgstr "Yonga modeli"
+
+msgid "Root access"
+msgstr "Kök erişimi"
+
+msgid "Not allowed"
+msgstr "İzin verilmiyor"
+
+msgid "Ask each time"
+msgstr "Her seferinde sor"
+
+msgid "Remember (no asking)"
+msgstr "Hatırla (sorma)"
+
+msgid "Not available"
+msgstr "Kullanılamıyor"
+
+msgid "Not changed"
+msgstr "Değiştirilmedi"
+
+msgid "Not allowed hides su from the app.\nAsk each time asks an administrator for each request, then not again for 15 minutes.\nRemember approves without asking. Choosing it needs an administrator's approval."
+msgstr "İzin verilmiyor, su'yu uygulamadan gizler.\nHer seferinde sor, her istek için bir yöneticiye sorar, ardından 15 dakika boyunca yeniden sormaz.\nHatırla, sormadan onaylar. Bunu seçmek için yönetici onayı gerekir."
+
+msgid "Shares its user ID with {0}, so Android cannot tell them apart.\nTheir root access is one setting: a change here applies to all of them.\nIf any of them is set to Not allowed, none of them can use su."
+msgstr "Kullanıcı kimliğini {0} ile paylaşır, bu yüzden Android bunları birbirinden ayıramaz.\nKök erişimleri tek bir ayardır: burada yapılan değişiklik hepsine uygulanır.\nHerhangi biri İzin verilmiyor olarak ayarlanmışsa hiçbiri su kullanamaz."
+
+msgid "Root access is off for this computer. An administrator turns it on under Advanced."
+msgstr "Kök erişimi bu bilgisayar için kapalı. Bir yönetici bunu Gelişmiş bölümünde açar."
+
+msgid "This version of DSA cannot say how far the app may use root."
+msgstr "DSA'nın bu sürümü, uygulamanın kökü ne ölçüde kullanabileceğini söyleyemiyor."
+
+msgid "The root level of {0} was not changed: {1}"
+msgstr "{0} uygulamasının kök düzeyi değiştirilmedi: {1}"
+
+msgid "{0} cannot use root any more. su disappears for it from the next start of Android."
+msgstr "{0} artık kök kullanamaz. su, Android'in bir sonraki başlatılmasından itibaren onun için görünmez."
+
+msgid "{0} now uses su without asking. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} artık su'yu sormadan kullanıyor. Önceden su görünmüyorsa, sonraki Android başlangıcında görünür."
+
+msgid "{0} now asks an administrator each time it uses su. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} artık su'yu her kullandığında bir yöneticiye sorar. Önceden su görünmüyorsa, sonraki Android başlangıcında görünür."
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command: {0}"
+msgstr "Her istek uygulama, saat, onaylanıp onaylanmadığı ve komutla birlikte hizmet günlüğüne kaydedilir: {0}"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command."
+msgstr "Her istek uygulama, saat, onaylanıp onaylanmadığı ve komutla birlikte hizmet günlüğüne kaydedilir."
+
+msgid "Root access is off for this computer, so no app can use su.\nAn administrator turns it on under Advanced. Then you choose each app's level here."
+msgstr "Kök erişimi bu bilgisayar için kapalı, bu yüzden hiçbir uygulama su kullanamaz.\nBir yönetici bunu Gelişmiş bölümünde açar. Ardından her uygulamanın düzeyini burada seçersiniz."
+
+msgid "This applies to every user of this computer, so changing it asks for an administrator's permission.\nChoose each app's level under Apps."
+msgstr "Bu ayar bu bilgisayarın tüm kullanıcılarına uygulanır, bu yüzden değiştirmek yönetici izni ister.\nHer uygulamanın düzeyini Uygulamalar bölümünde seçin."
+
+msgid "Let Android apps ask for root"
+msgstr "Android uygulamalarının kök erişimi istemesine izin ver"
+
+msgid "Off by default. An app you allow under Apps can run commands as root once an administrator approves, as with sudo.\nThe Android image, its build properties and SELinux stay as they are."
+msgstr "Varsayılan olarak kapalı. Uygulamalar bölümünde izin verilen uygulama, yönetici onaylayınca sudo'daki gibi kök olarak komut çalıştırır.\nAndroid görüntüsü, derleme özellikleri ve SELinux olduğu gibi kalır."
+
+msgid "Root access changes from the next start of Android. Stop Android on the General page, then open an app."
+msgstr "Kök erişimi Android'in sonraki başlatılışında değişir. Genel sayfasında Android'i durdurun, ardından bir uygulama açın."
+
+msgid "Where requests are recorded"
+msgstr "İsteklerin kaydedildiği yer"
+
+msgid "Follow the default"
+msgstr "Varsayılanı izle"
+
+msgid "On the whole screen"
+msgstr "Tüm ekranda"
+
+msgid "Inside the window"
+msgstr "Pencerenin içinde"
+
+msgid "Full screen"
+msgstr "Tam ekran"
+
+msgid "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+msgstr "Bu uygulama, video oynatıcının tam ekran düğmesi gibi açık bir tam ekran isteğinde nerede görünür. F11 tam ekranı hep açıp kapatır."
+
+msgid "Bars hidden"
+msgstr "Çubuklar gizli"
+
+msgid "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+msgstr "Bu uygulama, kısa video akışlarının yaptığı gibi tam ekran istemeden çubuklarını gizlediğinde nerede görünür."
+
+msgid "{0}'s windows follow the new settings now."
+msgstr "{0} uygulamasının pencereleri artık yeni ayarları izliyor."
+
+msgid "App full screen"
+msgstr "Uygulama tam ekranı"
+
+msgid "On the whole screen, the title bar appears when the pointer reaches the top edge."
+msgstr "Tüm ekrandayken, işaretçi üst kenara ulaştığında başlık çubuğu görünür."
+
+msgid "Full screen request"
+msgstr "Tam ekran isteği"
+
+msgid "Where an app's full screen request shows, such as a video's full screen button."
+msgstr "Bir uygulamanın tam ekran isteğinin (örneğin bir videonun tam ekran düğmesi) nerede görüneceği."
+
+msgid "Where an app shows when it only hides its bars, as a feed of short videos does."
+msgstr "Bir uygulamanın, kısa video akışlarının yaptığı gibi yalnızca çubuklarını gizlediğinde nerede görüneceği."
+
+msgid "Scaling on another monitor"
+msgstr "Başka bir monitörde ölçekleme"
+
+msgid "App"
+msgstr "Uygulama"
+
+msgid "System"
+msgstr "Sistem"
+
+msgid "System (forced)"
+msgstr "Sistem (zorunlu)"
+
+msgid "System (forced), not available yet"
+msgstr "Sistem (zorunlu), henüz kullanılamıyor"
+
+msgid "System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System."
+msgstr "Sistem (zorunlu), uygulama ölçek değişikliğini işlediğini belirtmese bile ona yeni ölçeği yeniden başlatmadan verir.\nHenüz kullanılamıyor: bu derlemede gereken Android değişikliği yok. O zamana kadar Sistem gibi çalışır."
+
+msgid "System (recommended for this app)"
+msgstr "Sistem (bu uygulama için önerilen)"
+
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "Uygulama: pencere yeni monitöre ulaşır ulaşmaz uygulama o monitörün ölçeğini alır ve o ölçekte yeniden çizer, böylece metin keskin kalır.\nBunu işlediğini belirtmeyen bir uygulama durumu korunarak yeniden oluşturulur, bu yüzden kısa bir süre yeniden çizilebilir.\nSistem: DSA pencereyi aynı fiziksel boyuta ölçekler. Metin biraz bulanık görünebilir.\nOtomatik, YouTube gibi çalışırken ölçeği değişince bozulan uygulamalar için Sistem'i seçer; diğer uygulamalarda bunu işlediğini belirtiyorsa Uygulama'yı, belirtmiyorsa Sistem'i seçer.\nOtomatik ve Sistem uygulamayı hiçbir zaman yeniden başlatmaz."
+
+msgid "Getting the update ready"
+msgstr "Güncelleme hazırlanıyor"
+
+msgid "Downloading DSA {0}"
+msgstr "DSA {0} indiriliyor"
+
+msgid "Stopping Android to install DSA {0}"
+msgstr "DSA {0} yüklemek için Android durduruluyor"
+
+msgid "Installing DSA {0}"
+msgstr "DSA {0} yükleniyor"
+
+msgid "DSA is restarting to finish the update"
+msgstr "Güncellemeyi tamamlamak için DSA yeniden başlatılıyor"
+
+msgid "Do not close DSA or start Android apps until the update is done."
+msgstr "Güncelleme bitene kadar DSA'yı kapatmayın veya Android uygulamalarını başlatmayın."
+
+msgid "Updated to {0}"
+msgstr "{0} sürümüne güncellendi"
+
+msgid "DSA has not come back after the update to {0}. If it does not start soon, restart the computer."
+msgstr "DSA, {0} sürümüne güncellemeden sonra geri gelmedi. Yakında başlamazsa bilgisayarı yeniden başlatın."
+
+msgid "Updating to {0} failed. The version before it is still installed."
+msgstr "{0} sürümüne güncelleme başarısız oldu. Önceki sürüm hâlâ yüklü."
+
+msgid "Updating DSA"
+msgstr "DSA güncelleniyor"
+
+msgid "Update of DSA"
+msgstr "DSA güncellemesi"
+
+msgid "Backup"
+msgstr "Yedekleme"
+
+msgid "DSA keeps an encrypted backup of your Android apps' data in a folder of your home folder.\nThe apps and their data can come back after Android's data is reset, or on another computer.\nThe key that opens it is kept in your keyring."
+msgstr "DSA, Android uygulamalarınızın verilerinin şifreli bir yedeğini ana klasörünüzdeki bir klasörde tutar.\nUygulamalar ve verileri, Android'in verileri sıfırlandıktan sonra veya başka bir bilgisayarda geri gelebilir.\nOnu açan anahtar anahtarlığınızda tutulur."
+
+msgid "Folder"
+msgstr "Klasör"
+
+msgid "Backups are unavailable"
+msgstr "Yedeklemeler kullanılamıyor"
+
+msgid "Last backup"
+msgstr "Son yedekleme"
+
+msgid "In the backup"
+msgstr "Yedekte bulunanlar"
+
+msgid "Last restore"
+msgstr "Son geri yükleme"
+
+msgid "Last problem"
+msgstr "Son sorun"
+
+msgid "Back up now"
+msgstr "Şimdi yedekle"
+
+msgid "Has Android back up the data of every app into the folder now. Android starts if it is not running."
+msgstr "Android'in tüm uygulamaların verilerini şimdi klasöre yedeklemesini sağlar. Android çalışmıyorsa başlar."
+
+msgid "Back up"
+msgstr "Yedekle"
+
+msgid "Restore"
+msgstr "Geri yükle"
+
+msgid "Installs the apps of the backup that Android does not have, then replaces every app's data with the backup's."
+msgstr "Yedekteki uygulamalardan Android'de olmayanları yükler, ardından her uygulamanın verilerini yedektekiyle değiştirir."
+
+msgid "Show recovery key"
+msgstr "Kurtarma anahtarını göster"
+
+msgid "The key that opens the backup anywhere else. Write it down and keep it safe."
+msgstr "Yedeği başka herhangi bir yerde açan anahtar. Bunu yazın ve güvenli bir yerde saklayın."
+
+msgid "Show"
+msgstr "Göster"
+
+msgid "Use a recovery key"
+msgstr "Kurtarma anahtarı kullan"
+
+msgid "Opens a backup folder brought from another computer, or kept from before this computer's keyring was reset."
+msgstr "Başka bir bilgisayardan getirilen ya da bu bilgisayarın anahtarlığı sıfırlanmadan önceden kalan bir yedek klasörünü açar."
+
+msgid "Enter"
+msgstr "Gir"
+
+msgid "The backup was not restored"
+msgstr "Yedek geri yüklenmedi"
+
+msgid "The apps were not backed up"
+msgstr "Uygulamalar yedeklenmedi"
+
+msgid "Restore from the backup?"
+msgstr "Yedekten geri yüklensin mi?"
+
+msgid "The recovery key could not be shown"
+msgstr "Kurtarma anahtarı gösterilemedi"
+
+msgid "The recovery key is kept. The backup folder is read with it."
+msgstr "Kurtarma anahtarı saklandı. Yedek klasörü onunla okunuyor."
+
+msgid "The recovery key was not used"
+msgstr "Kurtarma anahtarı kullanılmadı"
+
+msgid "Where the backup stands could not be read"
+msgstr "Yedeğin durumu okunamadı"
+
+msgid "Recovery key"
+msgstr "Kurtarma anahtarı"
+
+msgid "Enter the recovery key of the backup folder, as it was written down.\n\nSpaces, dashes and capitals do not matter.\n\nA key that does not open the folder is refused, and the key kept now stays."
+msgstr "Yedek klasörünün kurtarma anahtarını yazıldığı gibi girin.\n\nBoşluklar, tireler ve büyük harfler önemli değildir.\n\nKlasörü açmayan bir anahtar reddedilir ve şu an saklanan anahtar korunur."
+
+msgid "Never"
+msgstr "Hiçbir zaman"
+
+msgid "No apps yet"
+msgstr "Henüz uygulama yok"
+
+msgid "{0} apps, {1}"
+msgstr "{0} uygulama, {1}"
+
+msgid "Backing up every app. Android starts if it is not running. This can take a while."
+msgstr "Tüm uygulamalar yedekleniyor. Android çalışmıyorsa başlar. Bu biraz sürebilir."
+
+msgid "Restoring apps and their data from the backup. Android starts if it is not running. This can take a while."
+msgstr "Uygulamalar ve verileri yedekten geri yükleniyor. Android çalışmıyorsa başlar. Bu biraz sürebilir."
+
+msgid "Apps restored: {0}. Apps installed first: {1}."
+msgstr "Geri yüklenen uygulamalar: {0}. Önce yüklenen uygulamalar: {1}."
+
+msgid "Apps restored: {0}. Apps installed first: {1}. Apps that could not be restored: {2}."
+msgstr "Geri yüklenen uygulamalar: {0}. Önce yüklenen uygulamalar: {1}. Geri yüklenemeyen uygulamalar: {2}."
+
+msgid "Apps backed up: {0}."
+msgstr "Yedeklenen uygulamalar: {0}."
+
+msgid "Apps backed up: {0}. Apps that could not be backed up: {1}."
+msgstr "Yedeklenen uygulamalar: {0}. Yedeklenemeyen uygulamalar: {1}."
+
+msgid "Apps in the backup that Android does not have are installed.\n\nThe data of every app in the backup is replaced with the backup's. What those apps saved since the backup is lost.\n\nAndroid starts if it is not running."
+msgstr "Yedekte olup Android'de olmayan uygulamalar yüklenir.\n\nYedekteki her uygulamanın verileri yedektekiyle değiştirilir. Bu uygulamaların yedeklemeden bu yana kaydettikleri kaybolur.\n\nAndroid çalışmıyorsa başlar."
+
+msgid "Write this key down and keep it somewhere safe, away from this computer.\n\nAnyone with it can read the backup.\n\nWithout it, the backup cannot be opened on another computer or after this computer's keyring is lost."
+msgstr "Bu anahtarı yazın ve bu bilgisayardan uzakta, güvenli bir yerde saklayın.\n\nAnahtara sahip olan herkes yedeği okuyabilir.\n\nAnahtar olmadan yedek başka bir bilgisayarda veya bu bilgisayarın anahtarlığı kaybolduktan sonra açılamaz."
+
+msgid "Enter the recovery key."
+msgstr "Kurtarma anahtarını girin."
+
+msgid "The key was not used: {0}"
+msgstr "Anahtar kullanılmadı: {0}"
+
+msgid "Keeps an encrypted second copy of your Android apps' user data on this computer.\nIt can be restored after a data reset or on another computer. Off until you turn it on."
+msgstr "Android uygulamalarınızın kullanıcı verilerinin şifreli ikinci bir kopyasını bu bilgisayarda tutar.\nVeriler sıfırlandıktan sonra veya başka bir bilgisayarda geri yüklenebilir. Siz açana kadar kapalıdır."
+
+msgid "Earlier backups of {0} apps ({1}) are still kept in your DSA Backup folder."
+msgstr "{0} uygulamanın önceki yedekleri ({1}) DSA Backup klasörünüzde hâlâ duruyor."
+
+msgid "The backups of {0} apps ({1}) are still kept on this computer.\n\nDelete them and their key as well, or keep them for a later restore?"
+msgstr "{0} uygulamanın yedekleri ({1}) bu bilgisayarda hâlâ duruyor.\n\nBunlar ve anahtarları da silinsin mi, yoksa daha sonra geri yüklemek için saklansın mı?"
+
+msgid "Backup is on. Android backs up its apps' data to this computer from now on."
+msgstr "Yedekleme açık. Android bundan sonra uygulamalarının verilerini bu bilgisayara yedekler."
+
+msgid "Backup is off, and the backups and their key were deleted."
+msgstr "Yedekleme kapalı; yedekler ve anahtarları silindi."
+
+msgid "Backup is off. The backups made so far are kept."
+msgstr "Yedekleme kapalı. Şimdiye kadar alınan yedekler saklanıyor."
+
+msgid "Android's keys get their protection the first time Android starts."
+msgstr "Android'in anahtarları, Android ilk başladığında korumalarını alır."
+
+msgid "Sealed by this computer's TPM.\nA copy of Android's disk cannot open the apps' keys or Android's encrypted storage anywhere else."
+msgstr "Bu bilgisayarın TPM'i ile mühürlendi.\nAndroid diskinin bir kopyası, uygulamaların anahtarlarını veya Android'in şifreli depolamasını başka hiçbir yerde açamaz."
+
+msgid "Kept by your keyring only, because this computer has no TPM 2.0 that can be used.\nOnce one works, DSA seals the keys with it."
+msgstr "Bu bilgisayarda kullanılabilecek bir TPM 2.0 olmadığı için yalnızca anahtarlığınızda tutuluyor.\nBiri çalıştığında DSA anahtarları onunla mühürler."
+
+msgid "Protected by {0}."
+msgstr "{0} ile korunuyor."
+
+msgid "Why not the TPM: {0}"
+msgstr "Neden TPM değil: {0}"
+
+msgid "Back up apps' data to this computer"
+msgstr "Uygulama verilerini bu bilgisayara yedekle"
+
+msgid "Protection of Android's keys"
+msgstr "Android'in anahtarlarının korunması"
+
+msgid "Android's keys"
+msgstr "Android'in anahtarları"
+
+msgid "Why not the TPM"
+msgstr "Neden TPM değil"
+
+msgid "Android's keys could not be opened"
+msgstr "Android'in anahtarları açılamadı"
+
+msgid "Backup was not turned on"
+msgstr "Yedekleme açılmadı"
+
+msgid "Backup was not turned off"
+msgstr "Yedekleme kapatılmadı"
+
+msgid "Turn off backup?"
+msgstr "Yedekleme kapatılsın mı?"
+
+msgid "Keep them"
+msgstr "Sakla"
+
+msgid "Delete backups"
+msgstr "Yedekleri sil"
+
+msgid "Protected content"
+msgstr "Korumalı içerik"
+
+msgid "Widevine lets streaming apps play protected video.\nDSA does not include or pass on Widevine. When you ask, your computer takes it unchanged from Google's emulator image."
+msgstr "Widevine, akış uygulamalarının korumalı video oynatmasını sağlar.\nDSA, Widevine'ı içermez veya aktarmaz. İstediğinizde bilgisayarınız onu Google'ın öykünücü görüntüsünden değiştirmeden alır."
+
+msgid "Android started before this change. Stop and start Android for Widevine to follow it."
+msgstr "Android bu değişiklikten önce başladı. Widevine'ın buna uyması için Android'i durdurup yeniden başlatın."
+
+msgid "Standard definition only"
+msgstr "Yalnızca standart çözünürlük"
+
+msgid "Widevine here is security level L3, so streaming services send standard definition (SD) at most.\nTo watch in high definition, use this computer's own browser or app."
+msgstr "Buradaki Widevine güvenlik düzeyi L3'tür, bu yüzden akış hizmetleri en fazla standart çözünürlük (SD) gönderir.\nYüksek çözünürlükte izlemek için bu bilgisayarın kendi tarayıcısını veya uygulamasını kullanın."
+
+msgid "Get Widevine"
+msgstr "Widevine'ı al"
+
+msgid "Downloads about 2 GB from Google, under Google's Android SDK License, and keeps only Widevine.\nNothing is downloaded until you agree. Widevine is there from the next start of Android."
+msgstr "Google'dan, Google'ın Android SDK Lisansı kapsamında yaklaşık 2 GB indirir ve yalnızca Widevine'ı tutar.\nSiz kabul edene kadar hiçbir şey indirilmez. Widevine, Android'in bir sonraki başlatılmasından itibaren hazırdır."
+
+msgid "Remove Widevine"
+msgstr "Widevine'ı kaldır"
+
+msgid "Removes the module and the device certificates it kept, from the next start of Android."
+msgstr "Android'in bir sonraki başlatılmasından itibaren modülü ve tuttuğu cihaz sertifikalarını kaldırır."
+
+msgid "Widevine is Google's software and follows Google's terms. DSA does not distribute it."
+msgstr "Widevine, Google'ın yazılımıdır ve Google'ın koşullarına tabidir. DSA onu dağıtmaz."
+
+msgid "Get Widevine from Google?"
+msgstr "Widevine Google'dan alınsın mı?"
+
+msgid "Widevine was not installed"
+msgstr "Widevine yüklenmedi"
+
+msgid "Widevine was not removed"
+msgstr "Widevine kaldırılmadı"
+
+msgid "Where Widevine stands could not be read"
+msgstr "Widevine'ın durumu okunamadı"
+
+msgid "Google's image {0} for Android {1} ({2})"
+msgstr "Android {1} ({2}) için Google'ın {0} görüntüsü"
+
+msgid "Removed. Widevine stays in Android until it restarts."
+msgstr "Kaldırıldı. Widevine, Android yeniden başlayana kadar Android'de kalır."
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its Widevine module, unchanged.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nWidevine is Google's software. DSA does not ship or pass it on.\n\nWidevine here is security level L3, so streaming services send standard definition (SD) at most.\n\nWidevine works from the next start of Android."
+msgstr "DSA, bu Android sürümü için Google'ın Android öykünücü görüntüsünü indirir ve yalnızca Widevine modülünü değiştirmeden çıkarır.\n\n• Kaynak: Google'ın SDK deposu ({0})\n• Boyut: yaklaşık 2 GB, sonra silinir\n• Lisans: Android SDK Lisansı ({1}). İndirerek koşullarını kabul etmiş olursunuz.\n\nWidevine, Google'ın yazılımıdır. DSA onu dağıtmaz veya başkalarına aktarmaz.\n\nBuradaki Widevine güvenlik düzeyi L3'tür, bu yüzden akış hizmetleri en fazla standart çözünürlük (SD) gönderir.\n\nWidevine, Android'in bir sonraki başlatılmasından itibaren çalışır."
+
+msgid "Downloading about 2 GB from Google and taking out Widevine. It takes minutes."
+msgstr "Google'dan yaklaşık 2 GB indiriliyor ve Widevine çıkarılıyor. Birkaç dakika sürer."
+
+msgid "{0}, {1}"
+msgstr "{0}, {1}"
+
+msgid "{0}, {1}, {2}: {3}"
+msgstr "{0}, {1}, {2}: {3}"
+
+msgid "{0} records dropped"
+msgstr "{0} kayıt atlandı"
+
+msgid "Lowest priority shown"
+msgstr "Gösterilen en düşük öncelik"
+
+msgid "Copied"
+msgstr "Kopyalandı"
+
+msgid "When only the bars hide"
+msgstr "Yalnızca çubuklar gizlendiğinde"
+
+msgid "Scaling"
+msgstr "Ölçekleme"
+
+msgid "Automatic (app)"
+msgstr "Otomatik (uygulama)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Otomatik (sistem, bu uygulama için önerilen)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Varsayılanı izle (tüm ekranda)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Varsayılanı izle (pencerenin içinde)"

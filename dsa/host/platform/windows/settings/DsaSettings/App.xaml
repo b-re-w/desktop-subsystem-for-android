@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+    xmlns:l="clr-namespace:Dsa.Settings"
     ShutdownMode="OnLastWindowClose">
     <Application.Resources>
         <ResourceDictionary>
@@ -42,6 +43,10 @@
             <sys:Double x:Key="PageMaxWidth">1000</sys:Double>
             <Thickness x:Key="PageHeaderMargin">36,16,36,20</Thickness>
             <Thickness x:Key="PageContentMargin">36,0,36,24</Thickness>
+            <!-- The 4 px between two cards, or a card and a notice bar. Every card, expander and
+                 notice bar takes it from its style, never from the page, so no card in a section
+                 sits further from its neighbours than the others. -->
+            <Thickness x:Key="CardSpacing">0,0,0,4</Thickness>
             <Style x:Key="PageHeader" TargetType="Grid">
                 <Setter Property="Margin" Value="{DynamicResource PageHeaderMargin}" />
                 <Setter Property="MaxWidth" Value="{StaticResource PageMaxWidth}" />
@@ -58,6 +63,9 @@
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <!-- A screen reader lists the page's headings and jumps between them: the page
+                     title is the first level, each section header the second. -->
+                <Setter Property="AutomationProperties.HeadingLevel" Value="Level1" />
             </Style>
             <Style x:Key="SectionHeader" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{DynamicResource StrongTextFont}" />
@@ -66,6 +74,7 @@
                 <Setter Property="LineHeight" Value="20" />
                 <Setter Property="Margin" Value="1,30,0,6" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
             </Style>
             <!-- No colour of its own: it takes the card's, which turns grey when the card is
                  disabled, as a WinUI settings card's header does. -->
@@ -124,6 +133,10 @@
                 <Setter Property="Margin" Value="1,6,0,0" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
             </Style>
+            <!-- A note that introduces what follows it, 12 px above the first card or bar. -->
+            <Style x:Key="PageIntro" TargetType="TextBlock" BasedOn="{StaticResource Note}">
+                <Setter Property="Margin" Value="1,6,0,12" />
+            </Style>
 
             <!-- WinUI's text box and combo box are 32 px high: the library's are 36 to 38 px.
                  These keys are the ones the library's templates read. -->
@@ -140,8 +153,8 @@
                  {StaticResource {x:Type ...}}. Inside this dictionary a style's own type is its own
                  key, and a style based on that key loses the library's setters: ui:Button fell
                  back to the default Win32 button template. The library names no style for
-                 ui:InfoBar, so the info bar style below sets every property itself, and each
-                 page sets the info bars' 4 px margin itself. -->
+                 ui:InfoBar, so the info bar style below sets every property itself, its margin
+                 included. -->
 
             <!-- Pop-ups do not inherit the window's font. -->
             <Style TargetType="ToolTip" BasedOn="{StaticResource DefaultToolTipStyle}">
@@ -225,6 +238,7 @@
                  right. A card that is not a button does not light up under the pointer or when
                  pressed; the library's card does both. -->
             <Style TargetType="ui:CardControl" BasedOn="{StaticResource DefaultUiCardControlStyle}">
+                <Setter Property="Margin" Value="{StaticResource CardSpacing}" />
                 <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
@@ -284,6 +298,7 @@
             <!-- A clickable settings card: the same layout, and a 13 px chevron 14 px after the
                  header in place of the library's 16 px one 4 px after it. -->
             <Style TargetType="ui:CardAction" BasedOn="{StaticResource DefaultUiCardActionStyle}">
+                <Setter Property="Margin" Value="{StaticResource CardSpacing}" />
                 <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
@@ -348,6 +363,11 @@
                 </Setter>
             </Style>
 
+            <!-- A card that opens to show more: the library's, with the cards' spacing. -->
+            <Style TargetType="ui:CardExpander" BasedOn="{StaticResource DefaultUiCardExpanderStyle}">
+                <Setter Property="Margin" Value="{StaticResource CardSpacing}" />
+            </Style>
+
             <!-- Several controls in one card (a button beside a switch, a progress ring beside a
                  button), in a row against the card's right edge. A row left at Stretch fills
                  the card's 120 px control box from the left, so a switch alone in it stopped
@@ -366,6 +386,7 @@
                  of theirs. The rest is the library's (WPF UI, MIT licence, Leszek Pomianowski
                  and WPF UI contributors). -->
             <Style TargetType="ui:InfoBar">
+                <Setter Property="Margin" Value="{StaticResource CardSpacing}" />
                 <Setter Property="Background">
                     <Setter.Value>
                         <SolidColorBrush Color="{DynamicResource ControlFillColorDefault}" />
@@ -386,6 +407,8 @@
                 <Setter Property="KeyboardNavigation.IsTabStop" Value="False" />
                 <Setter Property="SnapsToDevicePixels" Value="True" />
                 <Setter Property="OverridesDefaultStyle" Value="True" />
+                <!-- A screen reader hears the bar when it opens and when its words change. -->
+                <Setter Property="l:Announce.Changes" Value="True" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ui:InfoBar">
@@ -413,6 +436,7 @@
                                         </WrapPanel>
                                         <Border Grid.Column="2" Margin="12,-2,0,0" VerticalAlignment="Top">
                                             <ui:Button x:Name="CloseButton" MinWidth="0" Padding="4" Background="Transparent" BorderThickness="0"
+                                                       AutomationProperties.Name="{l:Text A11y_Close}"
                                                        Command="{Binding Path=TemplateButtonCommand, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}">
                                                 <ui:Button.Icon>
                                                     <ui:SymbolIcon Symbol="Dismiss24" />
@@ -457,6 +481,13 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
+                <!-- A closed bar takes no room: collapsing only its template left its margin,
+                     so two closed bars between two cards put 12 px between them instead of 4. -->
+                <Style.Triggers>
+                    <Trigger Property="IsOpen" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
             <!-- A toggle switch as the Windows Settings app shows it: "On" or "Off" to the left

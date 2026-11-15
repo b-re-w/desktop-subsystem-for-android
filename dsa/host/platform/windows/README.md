@@ -233,21 +233,31 @@ after two minutes. `"keep_window_manager": false` turns this off.
   frames, decoded with WIC, with what the widget leaves clear see-through. Until the first
   frame comes, or when a frame has nothing in it, it shows a mostly opaque dark card with
   rounded corners, so a widget is never an invisible hole on the desktop. While the pointer
-  is over a widget, a small round "More" button fades in at its top right corner, inside
-  its rounded corners. Clicking it, or right-clicking the widget, opens the widget's menu:
-  Resize, with the sizes the widget allows, and Remove (in Korean when that is the display
-  language). The menu is a Windows 11 menu drawn by the window manager, with rounded
-  corners, the acrylic backdrop (a solid fill on Windows 10 or with transparency effects
-  off), the light or dark theme, icons and full keyboard use, and UI Automation reads it as
-  a menu. Dragging the More button moves the widget, and so does pressing anywhere on it,
-  holding still for half a second and then dragging; a press that moves sooner stays the
-  widget's own, so its lists scroll and its buttons work. Dragging its edges resizes it.
-  When the user lets go, the service remembers the placement (per user, beside the user's
-  settings, as `users/<user>.widgets.json`) and tells Android the window's size, which the
-  widget draws at. Presses, moves and releases inside the widget go to Android. The widgets
-  come from the settings app's Widgets
-  page, which shows changes made elsewhere through `dsa widgets watch`, or
-  `dsa widgets list|add <provider>|remove <id>`. The
+  is over a widget, a small "More" button fades in at its top right corner, inside its
+  rounded corners: a 24 px rounded square of dark grey at 85% with three light dots, the
+  same in light and dark themes, which takes presses in a 32 px square for touch. Clicking it, or right-clicking the widget, opens the widget's menu:
+  Widget settings, for a widget whose app lets it be set up again, Resize, with the sizes
+  the widget allows, and Remove (in the display language, in any of the fourteen languages
+  DSA's interface is translated into, else English). The menu is
+  a Windows 11 menu drawn by the window manager, with rounded corners, the acrylic backdrop
+  (a solid fill on Windows 10 or with transparency effects off), the light or dark theme,
+  icons and full keyboard use, and UI Automation reads it as a menu. Widget settings opens
+  the widget's setup again as the app's window, and the widget shows what the user chose
+  once they finish. A long press edits the widget as Android's home screen does: a finger
+  or a pen held on it, or the left mouse button held for half a second without moving past
+  the drag threshold. Android's press is cancelled then, so a long press never also clicks.
+  The widget lifts a little over a soft shadow, with an accent border and a handle on each
+  edge it may be resized along; dragging moves it, letting go opens its menu under it, the
+  handles resize it within the widget's minimum and maximum, and Esc, a click anywhere else
+  or the end of a move or a resize ends the edit. A press that moves sooner stays the
+  widget's own, so its lists scroll and its buttons work. Dragging the More button also
+  moves the widget, and dragging its edges resizes it. When the user lets go, the service
+  remembers the placement (per user, beside the user's settings, as
+  `users/<user>.widgets.json`) and tells Android the window's size, which the widget draws
+  at. Until the user resizes a widget, its window follows the widget's default size as
+  Android grows it to hold the widget's content; once they do, it keeps their size. Presses, moves and releases inside the widget go to Android. The widgets come from the
+  settings app's Widgets page, which shows changes made elsewhere through
+  `dsa widgets watch`, or `dsa widgets list|add <provider>|settings <id>|remove <id>`. The
   window manager starts at sign-in and starts Android then, so the first app opened after
   the computer starts does not wait for a boot and remembered widgets come back.
 - It owns no window. Each Android app task shows in a window of the app's own window
@@ -256,7 +266,8 @@ after two minutes. `"keep_window_manager": false` turns this off.
   task, titled by the task's label and sized by the task's size in Android, and to close
   it when the task ends. Closing a window asks Android to end its task.
 - The graphics renderer runs in a process of its own, `dsa-gfx.exe`, which Task Manager
-  shows as "Graphics renderer for Android" ("Android용 그래픽 렌더러" on a Korean desktop).
+  shows as "Graphics renderer for Android" ("Android용 그래픽 렌더러" on a Korean desktop,
+  and in the display language in each of DSA's interface languages).
   `dsa-wm` starts it from beside itself and tells it which VM to take streams from. The
   renderer accepts the guest's graphics streams on Hyper-V sockets, ports 5566 and 5567, and
   hands them to `gfxstream_backend.dll`, which is installed beside it. It copies each task's
@@ -275,11 +286,13 @@ after two minutes. `"keep_window_manager": false` turns this off.
   other display, such as Android's whole screen, are dropped, so no window shows more
   than one app.
 - One Android pixel is one pixel of the window, so frames are shown 1:1 and stay sharp
-  at any monitor scale. Each task draws at the density of its window's monitor: 96 dpi at
-  100%, 144 at 150%, 192 at 200%, since an Android dp is 1/160 inch and a Windows pixel
-  at 100% 1/96 inch. Android scales text on its own, so its font scale is 160/96 times
-  the Windows text size (Accessibility > Text size), and text keeps the size of Windows'
-  text. A change to the text size reaches Android at once. Android restarts an app that
+  at any monitor scale. Each task draws at the density of its window's monitor: 130 dpi at
+  100%, 164 at 125%, 196 at 150%, 262 at 200%. Android's desktop dp is 48 dp for 10.4 mm
+  (1/117.23 inch) and a Windows pixel at 100% 1/96 inch, so the density is 131 times the
+  scale, rounded to an even number, and a dp is 0.819 of a Windows pixel: Android's
+  buttons, sized for a finger, come out the size of Windows' own. Text follows the same
+  ratio, so Android's font scale is the Windows text size (Accessibility > Text size)
+  alone, 1 at 100%, and body text of 16 sp is about 13 pixels at 100%. A change to the text size reaches Android at once. Android restarts an app that
   does not say it handles a change of font scale, so while such an app is open the new
   scale waits, and it applies as soon as none is. A window that opens on, or moves to, a
   monitor of another scale asks Android for that density, and then for the size that
@@ -298,7 +311,7 @@ after two minutes. `"keep_window_manager": false` turns this off.
   see the user's monitors from session 0, so the window manager and the app windows record
   them in `%LOCALAPPDATA%\DSA\monitors.txt`, and the main monitor's DPI beside it in
   `monitor-density.txt`: Android starts at the density a window on the main monitor gives its
-  task (96 dpi at 100%, 144 at 150%), so an app that opens there is not relaunched for a
+  task (130 dpi at 100%, 196 at 150%), so an app that opens there is not relaunched for a
   change of density right after it starts. A monitor longer than the display, or one
   attached after Android started, caps its windows at the display's size, and a maximised
   window is centred on the screen, until the next start of Android. If Android gives the
@@ -326,6 +339,25 @@ after two minutes. `"keep_window_manager": false` turns this off.
   over a dark one, as the app tells Android; close turns red under the pointer. Under a high
   contrast theme the buttons take the theme's colors. The title and icon are not drawn in
   the window; the taskbar, Alt+Tab and the system menu show them.
+- An app's overlay window (a window an app adds over other apps in Android: floating lyrics,
+  a chat head) is a window of its own in the app's window program
+  (`src/app_window/overlay.rs`): no border, no title bar and no close button, above every
+  other window, in neither the taskbar nor Alt+Tab, and showing the desktop through what the
+  app left clear. It goes when its app removes it. A click in it goes to the app and leaves
+  the user's own window active, unless the overlay may take the focus in Android; the pointer
+  passes through an overlay that takes no input. Its size is the app's at the density of its
+  monitor, never more than the work area. DSA adds nothing to move it by: it moves the way its
+  app lets the user move it, by a drag inside the overlay. All of an app's overlays are placed
+  with one translation of Android's display onto the desktop: first where the overlay lies on
+  Android's display, on the monitor of the app's window or the pointer's, then moved by the
+  app's own moves. Android keeps an overlay inside its display, which covers only part of one
+  monitor, so while the user presses an overlay and its app drags it along with the pointer,
+  the window follows the pointer itself, onto any monitor and at that monitor's density; the
+  app keeps hearing the pointer as the press found it. Where a drag left the overlay is
+  remembered for the app in `%LOCALAPPDATA%\DSA\apps\<package>.overlay.json`, and the window
+  opens on that monitor the next time.
+  An overlay that covers Android's whole display (a screen filter) gets no window; Android
+  draws it over every app's window instead.
 - Each window measures how long it waits for a frame of its new size after a resize, and
   the log gets a summary (median, 95th percentile, longest, and how many took 100 ms or
   more) every 20 resizes and when the window closes. A window still waiting after 2
@@ -493,6 +525,49 @@ rendering on Intel(R) Arc(TM) Graphics (LUID 00000000:00019bec), the GPU asked f
 
 When nothing matches, the second line says that the renderer ranked the GPUs itself, and
 why.
+
+### Choosing the Vulkan driver
+
+The renderer runs on a GPU's own Vulkan driver. A GPU without one (Intel Haswell and
+Broadwell, older Snapdragons, GPU partitions of virtual machines, a PC without a GPU) can
+render through Dozen, Mesa's Vulkan on Direct3D 12, from Microsoft's "OpenCL, OpenGL, and
+Vulkan Compatibility Pack" (`winget install Microsoft.OpenCLGLVulkanCompatibilityPack`, or
+the Microsoft Store). DSA ships neither Dozen nor the DXIL validator (`dxil.dll`) it needs,
+because the validator is not open source; the pack carries both and Microsoft updates it.
+
+`dsa settings set vulkan-driver <value>`, or "Vulkan driver" in DSA Settings (Display & GPU),
+chooses:
+
+- `auto` (the default): a native driver when any GPU has one, and Dozen only when none does.
+  Where the Vulkan loader lists the pack's Dozen beside a native driver of the same GPU, the
+  native one is used and Dozen is hidden from the renderer.
+- `native`: never Dozen.
+- `dozen`: only the pack's Dozen, to test it and compare it with the native driver.
+
+Like the render GPU, it takes effect when `dsa-wm` starts again. The choice reaches only the
+renderer's process, through the Vulkan loader's environment variables (`VK_DRIVER_FILES`,
+`VK_LOADER_DRIVERS_DISABLE`); the computer's Vulkan setup is never changed. When the
+renderer's own environment already names the drivers (`VK_DRIVER_FILES`, as the tests do),
+those are taken as they are. On Dozen without `VK_EXT_external_memory_host` the renderer turns
+gfxstream's `VulkanAllocateHostMemory` off; tessellation, YCbCr conversion and descriptor
+indexing follow what the device reports, so the guest does not see them on Dozen.
+
+The log says which and why, once for each renderer that starts:
+
+```text
+Vulkan: Vulkan driver setting auto: rendering on Microsoft Direct3D12 (Intel(R) HD Graphics 5500) (LUID 00000000:0000d3a1) through Dozen (Vulkan on Direct3D 12): no GPU has a native Vulkan driver
+```
+
+`dsa gpus` lists the Vulkan devices, whether each is a native driver or Dozen, whether the
+pack is installed, and what each setting would render on.
+
+Two cases are told to the user as DSA's own notifications. With no Vulkan to render on (no
+native driver, and the pack is not installed), the notice says how to install the pack, and
+the window manager tells the service, which then does not start Android: it would boot with
+nothing to draw on. `dsa start` answers with the same reason. Where no GPU has a Direct3D 12
+driver either (Intel disabled Direct3D 12 on Haswell), Dozen runs on WARP, Windows' software
+Direct3D 12 device, so the CPU draws everything: apps work and games are slow. That is said
+once, and again only after the renderer ran on a GPU in between.
 
 `dsa launch <package>` starts an app in a window of its own, and `dsa tasks` lists the
 tasks that have one.
@@ -739,6 +814,41 @@ What keeps the number small:
 - `dsa-wm` empties its working set 30 seconds after the last task window closes, and logs
   how much it held. Memory it touches again comes back by itself.
 
+### Direct-mapped read-only disks
+
+Off by default, while its saving is measured: `"direct_mapped_images": true` in
+`dsa-hostd.json` (read when the service starts). Each boot then attaches the image's system
+disk and the user's add-on disk as Hyper-V virtual persistent memory instead of SCSI disks.
+The guest mounts the read-only partitions with DAX: it maps each file from the host's mapping
+of the image instead of reading it into a page cache of its own, on top of Windows' file cache
+of the same file. The pages the VM maps are clean file pages, which Windows can drop and read
+again; the guest keeps page structs for the mapped disks, about 1.6% of their size.
+
+- It works on x86_64 PCs only (Hyper-V on ARM64 boots with the disks on SCSI), and only for an
+  image whose `image.json` describes the mode's system disk (`direct_mapped.system_disk`); any
+  other boot attaches the disks as before, with a line in the service's log saying why.
+- The published images compress their read-only partitions, which keeps each download under
+  GitHub's 2 GiB a file, and only a file stored whole can be mapped. So after an image is
+  installed or downloaded and checked, the service makes the disk the mode maps itself, on the
+  PC: a copy of `system.vhdx` with every erofs partition uncompressed, as a fixed VHD, in
+  `%ProgramData%\DSA\direct-mapped\<version>.vhd`. It runs in the background at Windows'
+  lowest priority, resumes where a stopped run left off, and logs its progress, its time and
+  its size. Until the copy is made and checked, Android boots with the image's own disk on
+  SCSI, verified by dm-verity as without the mode. The copy of an image that was replaced is
+  removed.
+- The copy is checked, not trusted: the image build makes the same copy and records its
+  SHA-256 in `image.json`, which the signed release list covers, and the service compares the
+  copy with it before the first boot uses it, and again each time the service starts. A copy
+  that does not match is removed and made again. Only SYSTEM writes the folder; administrators
+  may read and delete, and the VMs read, so a VM opens it read only.
+- A mapped partition cannot be checked by dm-verity in the guest, so the host's check stands
+  in for it. `odm` stays as the image has it, with dm-verity, so the guest still checks the
+  verified boot data (vbmeta and the boot images) as in a normal boot. The guest marks its
+  persistent memory disks read only.
+- About 2.3 GB more on the disk for an Android 17 image (the copy beside the 1.8 GB
+  `system.vhdx`), and a few tens of seconds to a few minutes to make on a laptop SSD; the log
+  says how long it took.
+
 ## DSA Settings
 
 `settings/` is the settings app, a WPF app in C# with WPF UI (MIT), an open source
@@ -751,7 +861,8 @@ links in Android apps instead of the default browser, off by default, developer 
 its adb address, the input and resize trace switches, which only an administrator changes,
 and the log folders) and
 About, built from cards, with Mica behind the window where Windows has it. It follows the
-system's theme, accent colour and language (English and Korean). The Windows App SDK and
+system's theme, accent colour and language (any of the fourteen languages DSA's interface is
+translated into, else English). The Windows App SDK and
 WinUI 3 are not used, because their runtime's licence is not open source.
 
 It changes nothing itself. It runs `dsa` with `--json` (`dsa status`, `dsa settings`,

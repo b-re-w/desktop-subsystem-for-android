@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -115,6 +116,9 @@ class LockTests(unittest.TestCase):
             self.assertIn("external/protobuf", [p["path"] for p in version["projects"]])
         build = (REPO / ".github/scripts/framework/build.sh").read_text()
         self.assertIn('cp -r "$here/device/hosttools" "$device/"', build)
+        # With external/sqlite in the tree (libandroid_runtime needs it) its libsqlite is the
+        # real one, and the stand-in would define the module twice.
+        self.assertIn('if [[ ! -e "$top/external/sqlite/dist/Android.bp" ]]; then', build)
 
     def test_nfr5_modules_soong_analyses_find_their_sources_and_licenses(self):
         # Errors that missing dependencies do not excuse stopped the second and third Framework
@@ -209,6 +213,10 @@ class LockTests(unittest.TestCase):
             found = framework_lock.patch_files(version["android"])
             self.assertTrue(found, version["android"])
             for project, patch in found:
+                # A patch to Java sources only is for the services build, whose tree takes every
+                # project whole (ServicesTests).
+                if framework_lock.java_only(patch):
+                    continue
                 cone = projects[project].get("cone")
                 for path in patched_paths(patch):
                     if cone is not None:
@@ -225,6 +233,65 @@ class LockTests(unittest.TestCase):
                            ("frameworks/native", "opengl/libs"),
                            ("frameworks/base", "libs/hwui")]:
                 self.assertIn(wanted, changed, android)
+
+    def test_nfr1_both_versions_free_the_client_target_when_nothing_is_composed_into_it(self):
+        # The client target is the display's size (63 MiB at 2880x2880). FramebufferSurface
+        # gives its buffers back after a while without client composition, and RenderSurface
+        # drops its textures of them, or the memory would stay held.
+        for android in ("android16", "android17"):
+            added = {}
+            for project, patch in framework_lock.patch_files(android):
+                if project != "frameworks/native":
+                    continue
+                path = None
+                for line in patch.read_text().splitlines():
+                    if line.startswith("+++ b/"):
+                        path = line[len("+++ b/"):]
+                    elif line.startswith("+") and path:
+                        added.setdefault(path, []).append(line[1:])
+            def adds(path, text):
+                return any(text in line for line in added.get(path, []))
+            fbs = "services/surfaceflinger/DisplayHardware/FramebufferSurface.cpp"
+            self.assertTrue(adds("services/surfaceflinger/CompositionEngine/include/compositionengine/"
+                                 "DisplaySurface.h", "virtual bool takeBuffersReleased()"), android)
+            self.assertTrue(adds("services/surfaceflinger/CompositionEngine/src/RenderSurface.cpp",
+                                 "mTextureCache.clear();"), android)
+            self.assertTrue(adds(fbs, "discardFreeBuffers("), android)
+            self.assertTrue(adds(fbs, "kReleaseIdleBuffersAfter"), android)
+            self.assertTrue(adds("services/surfaceflinger/DisplayHardware/FramebufferSurface.h",
+                                 "kReleaseIdleBuffersAfter = 1'000'000'000"), android)
+
+    def test_nfr1_android17_frees_the_client_target_whichever_framebuffer_surface_it_picks(self):
+        # Android 17 picks FramebufferSurface or LegacyFramebufferSurface by the
+        # wb_framebuffersurface2 flag, and the build DSA ships takes the legacy one. A release
+        # only in FramebufferSurface never ran there: the client target stayed held, and its
+        # "buffers are freed" line never appeared.
+        added = {}
+        for project, patch in framework_lock.patch_files("android17"):
+            if project != "frameworks/native":
+                continue
+            path = None
+            for line in patch.read_text().splitlines():
+                if line.startswith("+++ b/"):
+                    path = line[len("+++ b/"):]
+                elif line.startswith("+") and path:
+                    added.setdefault(path, []).append(line[1:])
+
+        def adds(path, text):
+            return any(text in line for line in added.get(path, []))
+
+        for name in ("FramebufferSurface", "LegacyFramebufferSurface"):
+            source = f"services/surfaceflinger/DisplayHardware/{name}.cpp"
+            header = f"services/surfaceflinger/DisplayHardware/{name}.h"
+            self.assertTrue(adds(header, "bool takeBuffersReleased() override;"), name)
+            self.assertTrue(adds(header, "kReleaseIdleBuffersAfter = 1'000'000'000"), name)
+            self.assertTrue(adds(source, f"bool {name}::takeBuffersReleased()"), name)
+            self.assertTrue(adds(source, "discardFreeBuffers("), name)
+            self.assertTrue(adds(source, "its buffers are freed"), name)
+        # The legacy class tells HWC about each slot's buffer only once; after the discard the
+        # slots hold new buffers, which must go to HWC whole.
+        self.assertTrue(adds("services/surfaceflinger/DisplayHardware/LegacyFramebufferSurface.cpp",
+                             "id = UINT64_MAX;"))
 
     def test_nfr5_each_patch_adds_the_tested_recovery_policy_unchanged(self):
         # The policy the renderers follow is the one test_device_loss_recovery.cpp tests.
@@ -433,6 +500,48 @@ class NinjaInputsTests(unittest.TestCase):
             self.assertNotIn("cone", legacy)
             self.assertNotIn("patterns", legacy)
 
+    def test_fr32_what_libandroid_runtime_links_is_fetched(self):
+        # Framework build 43377022889 passed the analysis and the input check, then stopped in
+        # ninja on libraries libandroid_runtime links: headers beside sources the cones left out
+        # (libnetd_client's and libandroid_net's NetdClient.h, libmeminfo's include, perfetto's
+        # JNIHelp.h, libbpf's libelf.h, contexthub_data_flow's chre/platform/atomic_ref.h), a
+        # HIDL interface's dependency (camera.device@3.2 on camera.common@1.0), a project
+        # libtflite_static includes by path (external/gemmlowp), and aconfig declarations
+        # whose flag files were not fetched ("production library contains no production
+        # flags", or the file named as missing). libtflite_static's own sources, which that
+        # run never reached, include TensorFlow's core, TSL and third_party headers.
+        both = {
+            "external/elfutils": ["bionic-fixup", "include", "lib", "libelf"],
+            "external/perfetto": ["src/android_sdk/nativehelper"],
+            "external/tensorflow": ["tensorflow/core/kernels", "tensorflow/core/lib/bfloat16",
+                                    "tensorflow/core/lib/random", "tensorflow/core/platform",
+                                    "tensorflow/core/public", "tensorflow/lite",
+                                    "tensorflow/tsl/platform", "third_party/eigen3",
+                                    "third_party/fft2d"],
+            "frameworks/base": ["core/java/android/database/sqlite", "core/java/android/permission",
+                                "core/java/android/window/flags"],
+            "hardware/interfaces": ["camera/common/1.0", "camera/device/3.2"],
+            "system/memory/libmeminfo": ["include"],
+            "system/netd": ["client", "include"],
+        }
+        only = {
+            "android16": {},
+            "android17": {
+                "frameworks/base": ["core/java/android/tracing"],
+                "system/chre": ["platform/include", "platform/shared/public_std_atomic_ref",
+                                "variant/googletest/include", "variant/include"],
+            },
+        }
+        for version in framework_lock.load()["versions"]:
+            projects = {p["path"]: p for p in version["projects"]}
+            for wanted in (both, only[version["android"]]):
+                for path, folders in wanted.items():
+                    for folder in folders:
+                        self.assertIn(folder, projects[path]["cone"], f"{version['android']} {path}")
+            gemmlowp = projects["external/gemmlowp"]
+            self.assertNotIn("cone", gemmlowp)
+            self.assertNotIn("patterns", gemmlowp)
+
     def test_nfr5_boringssls_go_build_tools_are_fetched(self):
         # bssl_inject_hash and the Go packages it uses, which the fifth run stopped on.
         lock = framework_lock.load()
@@ -521,23 +630,30 @@ class CollectTests(unittest.TestCase):
 
     def _product(self, root, machine):
         product = root / "product"
-        for installed in framework_lock.OUTPUTS.values():
+        for installed in {**framework_lock.OUTPUTS, **framework_lock.KEYMINT_OUTPUTS}.values():
             (product / installed).parent.mkdir(parents=True, exist_ok=True)
             (product / installed).write_bytes(self._elf(machine, installed.encode()))
         return product
+
+    def _tree(self, root):
+        top = root / "tree"
+        for path in framework_lock.KEYMINT_SOURCES.values():
+            (top / path).parent.mkdir(parents=True, exist_ok=True)
+            (top / path).write_text(f"<manifest>{path}</manifest>\n")
+        return top
 
     def test_nfr5_collect_takes_the_three_files_and_describes_them_for_the_image(self):
         version = framework_lock.version_entry(framework_lock.load(), "android17")
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             out = root / "out"
-            description = collect.collect(version, "arm64", self._product(root, 183), out)
+            description = collect.collect(version, "arm64", self._product(root, 183), out, top=self._tree(root))
             written = json.loads((out / "framework.json").read_text())
             self.assertEqual(written, description)
             self.assertEqual(written["build_id"], "16373615")
             self.assertEqual(written["arch"], "arm64")
             self.assertEqual(written["version"], framework_lock.build_version(version))
-            self.assertEqual(sorted(written["files"]), sorted(framework_lock.OUTPUTS))
+            self.assertEqual(sorted(written["files"]), sorted(list(framework_lock.OUTPUTS) + framework_lock.KEYMINT_FILES))
             for name, entry in written["files"].items():
                 data = (out / name).read_bytes()
                 self.assertEqual(entry, {"size": len(data), "sha256": hashlib.sha256(data).hexdigest()})
@@ -547,7 +663,719 @@ class CollectTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             with self.assertRaisesRegex(SystemExit, "not x86_64"):
-                collect.collect(version, "x86_64", self._product(root, 183), root / "out")
+                collect.collect(version, "x86_64", self._product(root, 183), root / "out", top=self._tree(root))
+
+    def test_fr36_collect_takes_the_keymint_from_the_build_and_its_fragments_from_the_tree(self):
+        version = framework_lock.version_entry(framework_lock.load(), "android16")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            out = root / "out"
+            top = self._tree(root)
+            description = collect.collect(version, "x86_64", self._product(root, 62), out, top=top)
+            for name, path in framework_lock.KEYMINT_SOURCES.items():
+                self.assertEqual((out / name).read_bytes(), (top / path).read_bytes())
+            self.assertIn(framework_lock.KEYMINT_BINARY, description["files"])
+            self.assertIn("VENDOR/lib64/libssl.so", description["files"])
+            # Without the tree there are no fragments, and without them no image can declare it.
+            with self.assertRaisesRegex(SystemExit, "give --top"):
+                collect.collect(version, "x86_64", self._product(root, 62), root / "out2")
+            (top / framework_lock.KEYMINT_SOURCES[
+                "VENDOR/etc/vintf/manifest/android.hardware.security.secureclock-service.xml"]).unlink()
+            with self.assertRaisesRegex(SystemExit, "secureclock-service.xml"):
+                collect.collect(version, "x86_64", self._product(root, 62), root / "out3", top=top)
+            # A build that did not make the KeyMint is not collected.
+            (root / "product" / framework_lock.KEYMINT_OUTPUTS[framework_lock.KEYMINT_BINARY]).unlink()
+            with self.assertRaisesRegex(SystemExit, "did not make vendor/bin/hw/dsa-keymint"):
+                collect.collect(version, "x86_64", root / "product", root / "out4", top=self._tree(root))
+
+
+INSETS_POLICY = "services/core/java/com/android/server/wm/InsetsPolicy.java"
+
+
+def added_lines(patch):
+    return [line[1:] for line in Path(patch).read_text().splitlines()
+            if line.startswith("+") and not line.startswith("+++")]
+
+
+def removed_lines(patch):
+    return [line[1:] for line in Path(patch).read_text().splitlines()
+            if line.startswith("-") and not line.startswith("---")]
+
+
+class ServicesTests(unittest.TestCase):
+    """services.jar, built from the published build's source with DSA's patches to the window
+    manager (a dialog gets no caption bar inset), the package manager and the WebView service."""
+
+    def _patches_to(self, android, path):
+        return [patch for project, patch in framework_lock.patch_files(android)
+                if project == "frameworks/base" and path in framework_lock.patch_paths(patch)]
+
+    def test_fr22_a_dialog_gets_no_caption_inset(self):
+        for android in ("android16", "android17"):
+            patches = self._patches_to(android, INSETS_POLICY)
+            self.assertEqual(len(patches), 1, android)
+            added = "\n".join(added_lines(patches[0]))
+            # A window smaller than its parent, or one laid out below the band, loses the caption
+            # bar source; the task's full-size edge-to-edge window keeps it.
+            self.assertIn("if (!attrs.isFullscreen() || (attrs.getFitInsetsTypes()", added, android)
+            self.assertIn("& (Type.captionBar() | Type.statusBars())) != 0) {", added, android)
+            self.assertIn("                    state.removeSourceAt(i);", patches[0].read_text(), android)
+            # Not behind a flag the published build turns on.
+            self.assertNotIn("relativeInsets()", added, android)
+            self.assertIn(f"Applies to frameworks/base at {self._commit(android)}", patches[0].read_text())
+
+    def test_fr22_a_freeform_window_keeps_its_status_bar_inset_in_the_source(self):
+        # The dex edit of the published jar (SERVICES_INSETS_CODE), ported to the source.
+        for android in ("android16", "android17"):
+            patch = self._patches_to(android, INSETS_POLICY)[0]
+            self.assertIn("            int types = WindowInsets.Type.captionBar();", removed_lines(patch), android)
+            self.assertIn("            int types = WindowInsets.Type.systemBars();", added_lines(patch), android)
+
+    def test_fr22_the_other_services_dex_edits_are_ported_to_the_source(self):
+        for android in ("android16", "android17"):
+            abi = self._patches_to(android, "services/core/java/com/android/server/pm/PackageAbiHelperImpl.java")
+            self.assertEqual(len(abi), 1, android)
+            self.assertIn("        return Build.SUPPORTED_64_BIT_ABIS;", added_lines(abi[0]))
+            webview = self._patches_to(android, "services/core/java/com/android/server/webkit/SystemImpl.java")
+            self.assertEqual(len(webview), 1, android)
+            self.assertIn("        WebViewZygote.getProcess();", removed_lines(webview[0]))
+            self.assertFalse(any("getProcess()" in line and not line.strip().startswith("//")
+                                 for line in added_lines(webview[0])))
+
+    def _commit(self, android):
+        version = framework_lock.version_entry(framework_lock.load(), android)
+        return next(p["commit"] for p in version["projects"] if p["path"] == "frameworks/base")
+
+    def test_fr22_the_native_build_leaves_the_java_patches_to_the_services_build(self):
+        for android in ("android16", "android17"):
+            java = [p for _, p in framework_lock.patch_files(android) if framework_lock.java_only(p)]
+            self.assertEqual(len(java), 3, android)
+            native = [p for _, p in framework_lock.patch_files(android) if not framework_lock.java_only(p)]
+            self.assertTrue(native, android)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "patches/frameworks/base/android17"
+            folder.mkdir(parents=True)
+            (folder / "0001-native.patch").write_text(
+                "diff --git a/libs/hwui/a.txt b/libs/hwui/a.txt\n--- a/libs/hwui/a.txt\n+++ b/libs/hwui/a.txt\n"
+                "@@ -1 +1 @@\n-one\n+two\n")
+            (folder / "0002-java.patch").write_text(
+                "diff --git a/services/A.java b/services/A.java\n--- a/services/A.java\n+++ b/services/A.java\n"
+                "@@ -1 +1 @@\n-class A {}\n+final class A {}\n")
+            tree = root / "tree"
+            (tree / "frameworks/base/libs/hwui").mkdir(parents=True)
+            (tree / "frameworks/base/libs/hwui/a.txt").write_text("one\n")
+            done = apply_patches.apply_patches("android17", tree, patches=root / "patches", native=True)
+            self.assertEqual([name for _, name, _ in done], ["0001-native.patch"])
+            # The services tree has the file and takes both.
+            (tree / "frameworks/base/libs/hwui/a.txt").write_text("one\n")
+            (tree / "frameworks/base/services").mkdir()
+            (tree / "frameworks/base/services/A.java").write_text("class A {}\n")
+            done = apply_patches.apply_patches("android17", tree, patches=root / "patches")
+            self.assertEqual([name for _, name, _ in done], ["0001-native.patch", "0002-java.patch"])
+
+    def _manifest(self):
+        return (
+            "<manifest>"
+            f'<project path="build/make" name="platform/build" revision="{COMMIT}" groups="pdk">'
+            '<linkfile src="core" dest="build/core"/><copyfile src="root.mk" dest="Makefile"/></project>'
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/clang/host/linux-x86" name="platform/prebuilts/clang/host/linux-x86" '
+            f'revision="{COMMIT}" groups="pdk,linux"/>'
+            f'<project path="prebuilts/clang/host/darwin-x86" name="platform/prebuilts/clang/host/darwin-x86" '
+            f'revision="{COMMIT}" groups="pdk,darwin"/>'
+            f'<project path="device/google/unsynced" name="device/google/unsynced" revision="{COMMIT}" '
+            'groups="device,notdefault"/>'
+            "</manifest>"
+        ).encode()
+
+    def test_fr22_the_services_tree_is_every_project_the_manifest_syncs_by_default(self):
+        manifest = self._manifest().replace(
+            b"</manifest>",
+            f'<project path="prebuilts/vndk/v34" name="platform/prebuilts/vndk/v34" revision="{COMMIT}"/>'
+            "</manifest>".encode())
+        version = {
+            "android": "android17", "android_major": 17, "build_id": "1", "release": "cp2a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()},
+            "projects": [{"path": "prebuilts/clang/host/linux-x86", "url": GOOGLESOURCE_CLANG,
+                          "commit": COMMIT, "cone": ["soong", "{clang}"]}],
+        }
+        tree = framework_lock.services_lock(version, manifest)
+        self.assertEqual(tree["kind"], framework_lock.KIND)
+        (entry,) = tree["versions"]
+        self.assertEqual(entry["release"], "cp2a")
+        projects = {p["path"]: p for p in entry["projects"]}
+        self.assertEqual(sorted(projects), ["build/make", "frameworks/base", "prebuilts/clang/host/linux-x86"])
+        self.assertNotIn("cone", projects["frameworks/base"])
+        self.assertEqual(projects["prebuilts/clang/host/linux-x86"]["cone"], ["soong", "{clang}"])
+        self.assertEqual(projects["build/make"]["linkfiles"], [{"src": "core", "dest": "build/core"}])
+        self.assertEqual(projects["build/make"]["copyfiles"], [{"src": "root.mk", "dest": "Makefile"}])
+        self.assertEqual(projects["frameworks/base"]["url"],
+                         "https://android.googlesource.com/platform/frameworks/base")
+        with self.assertRaisesRegex(framework_lock.LockError, "SHA-256 differs"):
+            framework_lock.services_lock(version, manifest + b" ")
+
+    def test_fr22_the_services_tree_takes_android_17s_rust_toolchain_in_part(self):
+        # Android 17 keeps its Rust toolchains in prebuilts/rust-toolchain/linux-x86, which the
+        # native lock takes in part, and only build files in prebuilts/rust, which it does not name.
+        manifest = (
+            "<manifest>"
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/rust" name="platform/prebuilts/rust" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/rust-toolchain/linux-x86" '
+            f'name="platform/prebuilts/rust-toolchain/linux-x86" revision="{COMMIT}"/>'
+            "</manifest>"
+        ).encode()
+        version = {
+            "android": "android17", "android_major": 17, "build_id": "1", "release": "cp2a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()},
+            "projects": [{"path": "prebuilts/rust-toolchain/linux-x86", "url": GOOGLESOURCE_CLANG,
+                          "commit": COMMIT, "cone": ["{rust}"]}],
+        }
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        projects = {p["path"]: p for p in entry["projects"]}
+        self.assertEqual(projects["prebuilts/rust-toolchain/linux-x86"]["cone"], ["{rust}"])
+        self.assertNotIn("cone", projects["prebuilts/rust"])
+
+    def test_fr22_the_services_build_takes_the_published_product_and_no_dexpreopt(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('lunch "$product-$release-userdebug"', script)
+        self.assertIn("export WITH_DEXPREOPT=false", script)
+        self.assertNotIn("--native", script)
+        self.assertIn("--native", (REPO / ".github/scripts/framework/build.sh").read_text())
+        self.assertEqual(framework_lock.JAVA_OUTPUTS,
+                         {"SYSTEM/framework/services.jar": "system/framework/services.jar"})
+
+    def test_fr22_the_services_tree_leaves_out_what_only_native_builds_read(self):
+        # Run 43616908714 ran out of disk: the whole tree was 80 GB of the runner's 145.
+        manifest = (
+            "<manifest>"
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/abi-dumps/platform" name="platform/prebuilts/abi-dumps/platform" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/vndk/v33" name="platform/prebuilts/vndk/v33" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/qemu-kernel" name="platform/prebuilts/qemu-kernel" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/android-emulator" name="platform/prebuilts/android-emulator" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/sdk" name="platform/prebuilts/sdk" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/vndkfoo" name="platform/prebuilts/vndkfoo" revision="{COMMIT}"/>'
+            "</manifest>"
+        ).encode()
+        version = {
+            "android": "android16", "android_major": 16, "build_id": "1", "release": "bp4a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()}, "projects": [],
+        }
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        # The Java build's own prebuilts stay; a path is left out only below a skipped folder.
+        self.assertEqual([p["path"] for p in entry["projects"]],
+                         ["frameworks/base", "prebuilts/sdk", "prebuilts/vndkfoo"])
+        for path in framework_lock.REQUIRED:
+            self.assertFalse(framework_lock.services_skipped(path), path)
+
+    def test_fr22_the_services_build_makes_the_dex_jar_not_the_install_path(self):
+        # Installing services.jar also built its JNI, native and Rust dependencies (12163 steps,
+        # rustc out of disk in run 43616908714). The build makes the file the install copies.
+        dex = "out/soong/.intermediates/frameworks/base/services/services/android_common/dex/services.jar"
+        query = (
+            "out/target/product/vsoc_x86_64_only/system/framework/services.jar:\n"
+            "  input: g.android.Cp\n"
+            f"    {dex}\n"
+            "    | out/host/linux-x86/bin/cp_helper\n"
+            "    || out/target/product/vsoc_x86_64_only/system/lib64/libandroid_servers.so\n"
+            "  validations:\n"
+            "    out/soong/.intermediates/check.txt\n"
+            "  outputs:\n"
+            "    out/target/product/vsoc_x86_64_only/system/framework/services.jar.installed\n")
+        self.assertEqual(framework_lock.install_source(query), dex)
+        with self.assertRaisesRegex(framework_lock.LockError, "not a copy"):
+            framework_lock.install_source(query.replace("g.android.Cp", "g.java.dexpreopt"))
+        with self.assertRaisesRegex(framework_lock.LockError, "not of one jar"):
+            framework_lock.install_source(query.replace(f"    {dex}\n", f"    {dex}\n    a.jar\n"))
+        with self.assertRaisesRegex(framework_lock.LockError, "no rule"):
+            framework_lock.install_source("services.jar:\n  outputs:\n")
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('build "the analysis of the tree" nothing', script)
+        self.assertIn('-t query "$product_out/$installed"', script)
+        self.assertIn("framework_lock.py\" install-source", script)
+        self.assertIn('build "the services.jar build" "${jars[@]}"', script)
+        self.assertIn('cp "${jars[$i]}" "$out/${names[$i]}"', script)
+        self.assertNotIn('m -j"$(nproc)" "${targets[@]}"', script)
+        # The analysis swap goes back to the disk before the Java build.
+        self.assertLess(script.index('build "the analysis of the tree"'), script.index('sudo swapoff "$DSA_ANALYSIS_SWAP"'))
+        self.assertLess(script.index('sudo rm -f "$DSA_ANALYSIS_SWAP"'), script.index('build "the services.jar build"'))
+
+    def test_fr22_a_services_build_failure_says_whether_disk_memory_or_time(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        for cause in ("ran out of time", "ran out of disk", "ran out of memory"):
+            self.assertIn(f"$what {cause}", script)
+        self.assertIn('timeout --signal=TERM --kill-after=120 "$left"', script)
+        self.assertIn('minutes="${DSA_BUILD_MINUTES:-280}"', script)
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        step = job[job.index("- name: Build services.jar"):job.index("- name: Keep services.jar")]
+        step_limit = int(re.search(r"timeout-minutes: (\d+)", step).group(1))
+        budget = int(re.search(r"DSA_BUILD_MINUTES: (\d+)", step).group(1))
+        job_limit = int(re.search(r"timeout-minutes: (\d+)", job).group(1))
+        # The script stops itself before the step's limit, and the step before the job's (360
+        # minutes on a standard runner), leaving room for the fetch.
+        self.assertLess(budget + 10, step_limit)
+        self.assertLessEqual(step_limit + 45, job_limit)
+        self.assertLessEqual(job_limit, 360)
+
+    def test_fr22_the_services_job_fits_a_standard_runner(self):
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        self.assertIn("runs-on: ubuntu-24.04\n", job)
+        self.assertIn(".github/scripts/translator/free-disk.sh dsa-services --deep", job)
+        self.assertIn('echo "DSA_ANALYSIS_SWAP=$swap_dir/dsa-swap-services" >> "$GITHUB_ENV"', job)
+        self.assertEqual(job.count("df -h / /mnt"), 3)
+        free_disk = (REPO / ".github/scripts/translator/free-disk.sh").read_text()
+        self.assertIn('if [[ "$deep" == --deep ]]; then', free_disk)
+        self.assertIn("/usr/lib/llvm-*", free_disk)
+        # The other builds keep the plain cleanup.
+        self.assertIn("run: .github/scripts/translator/free-disk.sh dsa-framework\n",
+                      workflow[workflow.index("  native:\n"):workflow.index("  services:\n")])
+        self.assertNotIn("--deep", workflow[workflow.index("  framework:\n"):])
+
+    def test_fr22_the_services_build_leaves_the_runner_room(self):
+        # android17's services job lost its runner 50 minutes into the build (run 43637660922).
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('jobs="${DSA_SERVICES_JOBS:-2}"', script)
+        self.assertIn('--make-mode --skip-soong-tests -j"$jobs"', script)
+        self.assertNotIn('-j"$(nproc)"', script)
+        self.assertIn("export NINJA_HIGHMEM_NUM_JOBS=1", script)
+        self.assertIn("export GOMEMLIMIT=", script)
+        self.assertIn("choom -n 1000 -- nice -n 19 ionice -c 2 -n 7", script)
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        self.assertIn("DSA_SERVICES_JOBS: 2", job)
+        guard = job[job.index("- name: Keep the runner responsive under memory pressure"):
+                    job.index("- name: Install the build tools")]
+        self.assertIn("/sys/module/zswap/parameters", guard)
+        self.assertIn('echo -1000 | sudo tee "/proc/$pid/oom_score_adj"', guard)
+        # Before the fetch and the build, which it protects the runner from.
+        self.assertLess(job.index("Keep the runner responsive"), job.index("- name: Build services.jar"))
+
+    def test_fr22_the_services_analysis_is_not_incremental(self):
+        # android17's analysis never finished on a standard runner (run 43644988414): its
+        # release configuration turns Soong's incremental analysis on, which keeps every
+        # module's providers and ninja statements a second time for a later analysis this build
+        # never runs.
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn("export SOONG_INCREMENTAL_ANALYSIS=false", script)
+        # Before the build system reads it, and so for the analysis and the build alike: a
+        # second run with another setting would analyse the tree again.
+        self.assertLess(script.index("export SOONG_INCREMENTAL_ANALYSIS=false"), script.index('lunch "$product'))
+        self.assertEqual(script.count("export SOONG_INCREMENTAL_ANALYSIS="), 1)
+        self.assertIn('grep -q -- "--incremental-build-actions" "$bootstrap"', script)
+
+    SOONG_GO = (
+        "package build\n\nimport (\n\t\"fmt\"\n\t\"os\"\n)\n\n"
+        "func (pb PrimaryBuilderFactory) primaryBuilderInvocation(config Config) bootstrap.PrimaryBuilderInvocation {\n"
+        "\tcommonArgs := make([]string, 0, 0)\n"
+        "\tinvocationEnv := make(map[string]string)\n"
+        "\tif pb.debugPort != \"\" {\n"
+        "\t\tinvocationEnv[\"GODEBUG\"] = \"asyncpreemptoff=1\"\n"
+        "\t}\n"
+        "\tif profileCpu := os.Getenv(\"SOONG_PROFILE_CPU\"); profileCpu != \"\" {\n"
+        "\t}\n"
+        "\treturn bootstrap.PrimaryBuilderInvocation{Env: invocationEnv}\n"
+        "}\n"
+    )
+
+    def test_fr22_the_go_memory_limit_reaches_the_analysis(self):
+        # soong_ui starts soong_build with `env -i $env`, so the exported GOMEMLIMIT stopped at
+        # soong_ui; the failed run's log shows the command with nothing between `env -i` and
+        # the builder.
+        changed = framework_lock.soong_memory_limit(self.SOONG_GO)
+        lines = changed.splitlines()
+        made = lines.index("\tinvocationEnv := make(map[string]string)")
+        self.assertEqual(lines[made + 2:made + 5], [
+            '\tif limit := os.Getenv("GOMEMLIMIT"); limit != "" {',
+            '\t\tinvocationEnv["GOMEMLIMIT"] = limit',
+            "\t}",
+        ])
+        # Nothing else changes, and nothing is lost.
+        self.assertEqual(changed.replace(framework_lock.SOONG_MEMORY_LIMIT, ""), self.SOONG_GO)
+        # One variable only: the rule writes the map in Go's map order, and a command that
+        # differs between the analysis and the build makes ninja analyse the tree twice.
+        self.assertEqual(framework_lock.SOONG_MEMORY_LIMIT.count("invocationEnv["), 1)
+        # Applying it twice changes nothing more.
+        self.assertEqual(framework_lock.soong_memory_limit(changed), changed)
+        # A source this was not written against stops the build rather than run without a limit.
+        with self.assertRaisesRegex(framework_lock.LockError, "GOMEMLIMIT cannot be handed on"):
+            framework_lock.soong_memory_limit(self.SOONG_GO.replace("invocationEnv := make", "env := make"))
+        with self.assertRaisesRegex(framework_lock.LockError, "GOMEMLIMIT cannot be handed on"):
+            framework_lock.soong_memory_limit(self.SOONG_GO.replace('\t"os"\n', ""))
+        with self.assertRaisesRegex(framework_lock.LockError, "GOMEMLIMIT cannot be handed on"):
+            framework_lock.soong_memory_limit(self.SOONG_GO + framework_lock.SOONG_INVOCATION_ENV)
+
+    def test_fr22_the_services_build_hands_the_memory_limit_on_before_it_starts(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        change = 'framework_lock.py" soong-memory-limit "$top/' + framework_lock.SOONG_UI_SOURCE + '"'
+        self.assertIn(change, script)
+        # soong_ui is compiled from the tree when the first build step starts.
+        self.assertLess(script.index(change), script.index('build "the analysis of the tree"'))
+        self.assertIn('grep -q "GOMEMLIMIT=$GOMEMLIMIT" "$bootstrap"', script)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "soong.go"
+            source.write_text(self.SOONG_GO)
+            run = [sys.executable, str(HERE / "framework_lock.py"), "soong-memory-limit", str(source)]
+            subprocess.run(run, check=True, capture_output=True)
+            self.assertIn(framework_lock.SOONG_MEMORY_LIMIT, source.read_text())
+            source.write_text("package build\n")
+            failed = subprocess.run(run, capture_output=True, text=True)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertIn("GOMEMLIMIT cannot be handed on", failed.stderr)
+            self.assertEqual(source.read_text(), "package build\n")
+
+    def test_fr22_the_services_build_says_what_it_has_of_the_runner_every_minute(self):
+        # The run that lost its runner printed nothing for 58 minutes, so nothing said whether
+        # the memory or the disk had run out.
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        for source in ("/proc/meminfo", '"/proc/pressure/$what"', 'df -BM --output=avail "$top"',
+                       "ps -eo rss=,pid=,comm= --sort=-rss", "VmSwap"):
+            self.assertIn(source, script)
+        self.assertIn('local every="${DSA_ROOM_SECONDS:-60}"', script)
+        # It starts before the analysis and ends with the script, however that ends.
+        self.assertLess(script.index("watch_room &\n"), script.index('build "the analysis of the tree"'))
+        self.assertIn("trap 'kill \"$watcher\" 2>/dev/null || true' EXIT", script)
+        # It runs outside the build's lowest priority, which is given to soong_ui alone.
+        self.assertNotIn("nice -n 19 watch_room", script)
+
+    def test_fr22_an_analysis_that_does_not_fit_is_stopped_while_the_runner_answers(self):
+        script = (REPO / ".github/scripts/framework/build-services.sh").read_text()
+        self.assertIn('analysis_minutes="${DSA_ANALYSIS_MINUTES:-45}"', script)
+        self.assertIn('step_minutes="$analysis_minutes"\nbuild "the analysis of the tree" nothing\nstep_minutes=0\n',
+                      script)
+        self.assertIn("$what ran out of time: it was stopped after $stopped_after", script)
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        job = workflow[workflow.index("  services:\n"):workflow.index("  framework:\n")]
+        bound = int(re.search(r"DSA_ANALYSIS_MINUTES: (\d+)", job).group(1))
+        # Longer than android16's 9 minutes several times over, and sooner than the 50 and 58
+        # minutes after which GitHub gave the two android17 runs up.
+        self.assertGreaterEqual(bound, 30)
+        self.assertLess(bound, 50)
+        self.assertLess(bound, int(re.search(r"DSA_BUILD_MINUTES: (\d+)", job).group(1)))
+
+    def test_fr22_the_services_tree_takes_one_version_of_the_musl_rust_toolchain(self):
+        # 6 GB for three versions, of the 17 GB the fetch leaves android17 (run 43644988414).
+        musl = "prebuilts/rust-toolchain/linux-musl-x86"
+        manifest = (
+            "<manifest>"
+            f'<project path="frameworks/base" name="platform/frameworks/base" revision="{COMMIT}"/>'
+            f'<project path="prebuilts/rust-toolchain/linux-x86" '
+            f'name="platform/prebuilts/rust-toolchain/linux-x86" revision="{COMMIT}"/>'
+            f'<project path="{musl}" name="platform/{musl}" revision="{COMMIT}"/>'
+            "</manifest>"
+        ).encode()
+        version = {
+            "android": "android17", "android_major": 17, "build_id": "1", "release": "cp2a",
+            "manifest": {"url": "", "sha256": hashlib.sha256(manifest).hexdigest()},
+            "projects": [{"path": "prebuilts/rust-toolchain/linux-x86", "url": GOOGLESOURCE_CLANG,
+                          "commit": COMMIT, "cone": ["{rust}"]}],
+        }
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        projects = {p["path"]: p for p in entry["projects"]}
+        # Still fetched, with its build file (a cone keeps the files of the project's root), so
+        # the analysis reads what it read before.
+        self.assertEqual(projects[musl]["cone"], ["{rust}"])
+        self.assertEqual(projects[musl]["url"], "https://android.googlesource.com/platform/" + musl)
+        self.assertFalse(framework_lock.services_skipped(musl))
+        # Without a native lock that says which part, it is taken whole, as before.
+        version["projects"] = []
+        (entry,) = framework_lock.services_lock(version, manifest)["versions"]
+        self.assertNotIn("cone", {p["path"]: p for p in entry["projects"]}[musl])
+        # The real lock says which part for Android 17, and Android 16's manifest has no such
+        # project, so its tree is the one that already builds.
+        lock = framework_lock.load()
+        native = {p["path"]: p for p in framework_lock.version_entry(lock, "android17")["projects"]}
+        self.assertEqual(native[framework_lock.SERVICES_TREE_CONES_LIKE[musl]]["cone"], ["{rust}"])
+
+    def test_fr22_the_framework_artifact_carries_services_jar_from_the_services_build(self):
+        workflow = (REPO / ".github/workflows/framework.yml").read_text()
+        self.assertIn("build-services.sh", workflow)
+        self.assertIn("framework_lock.py services-lock", workflow)
+        native = workflow[workflow.index("  native:\n"):workflow.index("  services:\n")]
+        pack = workflow[workflow.index("  framework:\n"):]
+        # The native builds start with the services builds, not after them.
+        self.assertIn("    needs: versions\n", native)
+        self.assertNotIn("--services", native)
+        self.assertIn("name: framework-native-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}",
+                      native)
+        # Only the job after both keeps the artifact the image release takes.
+        self.assertNotIn("name: framework-${{ matrix.android }}", native)
+        self.assertIn("needs: [versions, native, services]", pack)
+        self.assertIn("if: ${{ !cancelled() && needs.versions.result == 'success' }}", pack)
+        self.assertIn('--add-services "$RUNNER_TEMP/services" --out "$out"', pack)
+        self.assertLess(pack.index("- name: Check the native build kept its files"),
+                        pack.index("- name: Keep the framework files"))
+
+    def test_fr22_services_jar_added_later_makes_the_same_folder(self):
+        version = framework_lock.version_entry(framework_lock.load(), "android17")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            collect_tests = CollectTests()
+            services = root / "services"
+            jar = services / framework_lock.SERVICES_JAR
+            jar.parent.mkdir(parents=True)
+            with zipfile.ZipFile(jar, "w", zipfile.ZIP_DEFLATED) as z:
+                z.writestr("classes.dex", b"dex\n035\0" + bytes(100))
+            product, top = collect_tests._product(root, 62), collect_tests._tree(root)
+            sources, patches = {"projects": 1}, {"patches": 2}
+            collect.collect(version, "x86_64", product, root / "once", sources, patches, top, services)
+            collect.collect(version, "x86_64", product, root / "later", sources, patches, top)
+            description = collect.add_services(root / "later", services)
+            self.assertIn(framework_lock.SERVICES_JAR, description["files"])
+            for name in [collect.MANIFEST, *framework_lock.OUTPUTS, framework_lock.SERVICES_JAR]:
+                self.assertEqual((root / "later" / name).read_bytes(), (root / "once" / name).read_bytes(), name)
+            with self.assertRaisesRegex(SystemExit, "already holds"):
+                collect.add_services(root / "later", services)
+            with self.assertRaisesRegex(SystemExit, "has no framework.json"):
+                collect.add_services(root / "empty", services)
+
+    def test_fr22_collect_takes_services_jar_from_the_services_build(self):
+        version = framework_lock.version_entry(framework_lock.load(), "android17")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            collect_tests = CollectTests()
+            services = root / "services"
+            jar = services / framework_lock.SERVICES_JAR
+            jar.parent.mkdir(parents=True)
+            with zipfile.ZipFile(jar, "w", zipfile.ZIP_DEFLATED) as z:
+                z.writestr("classes.dex", b"dex\n035\0" + bytes(100))
+            description = collect.collect(version, "x86_64", collect_tests._product(root, 62), root / "out",
+                                          top=collect_tests._tree(root), services=services)
+            self.assertIn(framework_lock.SERVICES_JAR, description["files"])
+            self.assertEqual((root / "out" / framework_lock.SERVICES_JAR).read_bytes(), jar.read_bytes())
+            # Without the services build's folder there is no services.jar, as before.
+            description = collect.collect(version, "x86_64", root / "product", root / "out2", top=root / "tree")
+            self.assertNotIn(framework_lock.SERVICES_JAR, description["files"])
+            jar.write_bytes(b"not a jar")
+            with self.assertRaisesRegex(SystemExit, "not a jar with dex code"):
+                collect.collect(version, "x86_64", root / "product", root / "out3", top=root / "tree",
+                                services=services)
+
+
+GOOGLESOURCE_CLANG = "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86"
+
+
+class KeyMintLockTests(unittest.TestCase):
+    """What the Framework build needs to build DSA's KeyMint, and the patches that make it take
+    the root key of key blobs from the host."""
+
+    HOST_KEY = "security/keymint/aidl/default/ta/host_key.rs"
+
+    def _patch(self, project, android):
+        found = [patch for p, patch in framework_lock.patch_files(android) if p == project]
+        self.assertEqual(len(found), 1, f"{android} {project}")
+        return found[0].read_text()
+
+    def test_fr36_the_build_makes_the_keymint_the_image_takes(self):
+        outputs = subprocess.run([sys.executable, "-I", str(HERE / "framework_lock.py"), "outputs"],
+                                 capture_output=True, text=True, check=True).stdout.split()
+        self.assertEqual(outputs, list(framework_lock.OUTPUTS.values()) + list(framework_lock.KEYMINT_OUTPUTS.values()))
+        self.assertIn("vendor/bin/hw/dsa-keymint", outputs)
+        # The image's vendor partition has no libssl, which the Rust openssl crate links.
+        self.assertIn("vendor/lib64/libssl.so", outputs)
+        for board in ("x86_64", "arm64"):
+            config = (REPO / ".github/scripts/framework/device" / board / "BoardConfig.mk").read_text()
+            self.assertRegex(config, r"(?m)^TARGET_COPY_OUT_VENDOR := vendor$", board)
+
+    def test_fr36_the_lock_fetches_what_the_keymint_is_built_from(self):
+        crates = ["ciborium", "ciborium-io", "ciborium-ll", "coset", "der", "der_derive", "const-oid", "spki",
+                  "pkcs1", "pkcs8", "sec1", "x509-cert", "flagset", "zeroize", "zeroize_derive", "enumn", "hex",
+                  "half", "foreign-types", "foreign-types-shared", "openssl-macros", "android_logger", "log",
+                  "libc", "nix", "regex", "zerocopy", "downcast-rs", "thiserror",
+                  # The AIDL Rust backend gives every generated interface crate libasync_trait,
+                  # for its async traits. Without it the first KeyMint Framework build stopped on
+                  # the KeyMint, RKP, secure clock and shared secret interface crates.
+                  "async-trait"]
+        for version in framework_lock.load()["versions"]:
+            projects = {p["path"]: p for p in version["projects"]}
+            for whole in ("system/keymint", "external/rust/crates/openssl"):
+                self.assertNotIn("cone", projects[whole], f"{version['android']} {whole}")
+                self.assertNotIn("patterns", projects[whole], f"{version['android']} {whole}")
+            for folder in ("security/keymint/aidl", "security/rkp/aidl", "security/secureclock/aidl",
+                           "security/sharedsecret/aidl"):
+                self.assertIn(folder, projects["hardware/interfaces"]["cone"], version["android"])
+            self.assertIn("src/rust/bssl-sys", projects["external/boringssl"]["cone"], version["android"])
+            self.assertIn("libs/binder", projects["frameworks/native"]["cone"], version["android"])
+            for crate in crates:
+                self.assertIn("crates/" + crate, projects["external/rust/android-crates-io"]["cone"],
+                              f"{version['android']} {crate}")
+
+    def test_fr36_both_versions_take_the_root_key_from_the_host(self):
+        sources = set()
+        for android in ("android16", "android17"):
+            patch = self._patch("hardware/interfaces", android)
+            match = re.search(r"^\+\+\+ b/" + re.escape(self.HOST_KEY) + r"\n@@ [^\n]+\n((?:\+[^\n]*\n)+)", patch, re.M)
+            self.assertIsNotNone(match, android)
+            source = "".join(line[1:] + "\n" for line in match.group(1).splitlines())
+            sources.add(source)
+            self.assertIn('pub const HOST_KEY_FILE: &str = "/dev/dsa_keymint/root_key";', source)
+            self.assertIn('pub const HOST_KEK_CONTEXT: &[u8] = b"dsa-host-root-key-v1";', source)
+            self.assertIn("Duration::from_secs(30)", source)
+            self.assertIn("fn kek_context_is_outdated", source)
+            # The TA is built with it, and the image's binary is built on its own, with its Rust
+            # crates linked in; the APEX the tree cannot build goes.
+            self.assertIn("+        Box::new(host_key::HostKeys::new());", patch)
+            self.assertRegex(patch, r'\+rust_binary \{\n\+    name: "dsa-keymint",\n\+    relative_install_path: "hw",'
+                                    r'\n\+    vendor: true,')
+            binary = patch[patch.index('+    name: "dsa-keymint",'):]
+            self.assertIn("+    prefer_rlib: true,", binary[:binary.index("+}")])
+            self.assertIn('-    name: "com.android.hardware.keymint.rust_nonsecure",', patch)
+        # One implementation for both versions.
+        self.assertEqual(len(sources), 1)
+
+    def test_fr36_android16_gets_the_ta_hook_android17_has(self):
+        # Android 17's system/keymint asks the device whether a blob's KEK context is outdated
+        # and answers KEY_REQUIRES_UPGRADE for it; Android 16's does not, so DSA's patch brings
+        # the same code there.
+        patch = self._patch("system/keymint", "android16")
+        for text in ("+    fn kek_context_is_outdated(&self, _kek_context: &[u8]) -> Result<bool, Error> {",
+                     '+            return Err(km_err!(KeyRequiresUpgrade, "KEK context outdated, request upgrade"));',
+                     "+                Ok(result) => (result.keyblob, result.kek_context_is_outdated),"):
+            self.assertIn(text, patch)
+        self.assertFalse([p for p, _ in framework_lock.patch_files("android17") if p == "system/keymint"])
+
+
+class WorkflowTests(unittest.TestCase):
+    """How the Framework build keeps its compiler caches and how the image release finds its
+    files: the build is two hours cold and twenty minutes warm, and a development build waits
+    on it."""
+
+    def setUp(self):
+        self.framework = (REPO / ".github/workflows/framework.yml").read_text(encoding="utf-8")
+        self.release = (REPO / ".github/workflows/release-image.yml").read_text(encoding="utf-8")
+        self.build = (REPO / ".github/scripts/framework/build.sh").read_text(encoding="utf-8")
+
+    def _step(self, text, name):
+        start = text.index(f"- name: {name}\n")
+        end = text.find("\n      - ", start + 1)
+        return text[start:end if end != -1 else len(text)]
+
+    def test_nfr5_a_development_build_waits_only_for_the_job_it_takes_files_from(self):
+        find = self._step(self.release, "Find the Framework build run with the pinned files")
+        dev = find[find.index('if [[ "$DEV_BUILD" == true ]]'):find.index("wanted=()")]
+        # The newest supported Android's x86_64 files, from the job framework.yml names so.
+        self.assertIn('android="android$(jq \'.supported_majors | max\' dsa/android-versions.json)"', dev)
+        self.assertIn('name="framework-$android-x86_64-', dev)
+        # The job that keeps the artifact once services.jar has joined the native files.
+        self.assertIn('job="Pack the framework files (ubuntu-24.04, $android, x86_64)"', dev)
+        pack = self.framework[self.framework.index("  framework:\n"):]
+        self.assertIn("name: Pack the framework files (ubuntu-24.04, ${{ matrix.android }}, ${{ matrix.arch }})",
+                      pack)
+        self.assertIn("name: framework-${{ matrix.android }}-${{ matrix.arch }}-${{ steps.pins.outputs.version }}",
+                      pack)
+        # Its job's conclusion, not the run's: the run may still be going or have failed.
+        self.assertIn('[[ "$conclusion" == success ]] || continue', dev)
+        self.assertNotIn("--status success", dev)
+        # A release still takes every version and architecture from one passing run.
+        release = find[find.index("wanted=()"):]
+        self.assertIn("--status success", release)
+        self.assertIn("for arch in x86_64 arm64; do", release)
+
+    def test_nfr5_the_image_downloads_the_framework_while_its_run_still_goes(self):
+        download = self._step(self.release, "Download the patched framework")
+        self.assertNotIn('gh run download "', download)
+        self.assertIn("/actions/artifacts/$id/zip", download)
+
+    def test_nfr5_the_newest_android_and_x86_64_build_first(self):
+        self.assertIn("sort_by(ltrimstr(\"android\") | tonumber) | reverse", self.framework)
+        self.assertIn("arches='[\"x86_64\",\"arm64\"]'", self.framework)
+
+    def test_nfr5_the_compiler_cache_is_kept_as_an_artifact_and_restored_before_the_build(self):
+        steps = [line.strip()[len("- name: "):] for line in self.framework.splitlines()
+                 if line.strip().startswith("- name: ")]
+        order = ["Restore the compiler cache", "Build SurfaceFlinger, libhwui, libEGL and the KeyMint",
+                 "Pack the compiler cache", "Keep the compiler cache", "Delete the compiler caches it replaces"]
+        self.assertEqual([s for s in steps if s in order], order)
+        keep = self._step(self.framework, "Keep the compiler cache")
+        self.assertIn("uses: actions/upload-artifact@v4", keep)
+        self.assertIn("name: framework-ccache-${{ matrix.android }}-${{ matrix.arch }}\n", keep)
+        self.assertIn("compression-level: 0", keep)
+        # Nothing is saved to the Actions cache any more, where GitHub evicted it.
+        self.assertNotIn("actions/cache/save", self.framework)
+        # An empty cache from a build that never ran must not replace a full one.
+        self.assertIn("steps.build.outcome", self._step(self.framework, "Pack the compiler cache"))
+
+    def test_nfr5_the_build_reports_its_compiler_cache_hits(self):
+        self.assertIn("ccache --zero-stats", self.build)
+        self.assertIn("ccache --show-stats --verbose", self.build)
+        self.assertIn("-o max_size=3G", self.build)
+
+
+@unittest.skipIf(sys.platform == "win32", "runs the shell script with a fake gh and curl")
+class CcacheArtifactTests(unittest.TestCase):
+    SCRIPT = REPO / ".github/scripts/framework/ccache-artifact.sh"
+
+    def _run(self, root, listing, *args, branch="feat/x"):
+        root = Path(root)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(exist_ok=True)
+        (root / "listing.tsv").write_text(listing)
+        log = root / "calls.log"
+        # gh prints the listing as the script's own jq would; curl hands out a zip holding
+        # ccache.tar with one file, named after the artifact it was asked for.
+        (bin_dir / "gh").write_text(
+            "#!/bin/sh\n"
+            f'echo "gh $*" >> "{log}"\n'
+            'case "$*" in *DELETE*) exit 0 ;; esac\n'
+            f'cat "{root}/listing.tsv"\n')
+        (bin_dir / "curl").write_text(
+            "#!/bin/sh\n"
+            f'echo "curl $*" >> "{log}"\n'
+            'out=""; prev=""; url=""\n'
+            'for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; url="$a"; done\n'
+            'id="$(echo "$url" | sed -E \'s#.*/artifacts/([0-9]+)/zip#\\1#\')"\n'
+            f'w="{root}/pack-$id"; mkdir -p "$w/c"; echo "$id" > "$w/c/from"\n'
+            'tar -C "$w/c" -cf "$w/ccache.tar" . && (cd "$w" && zip -q "$out" ccache.tar)\n')
+        for tool in ("gh", "curl"):
+            (bin_dir / tool).chmod(0o755)
+        env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", GH_TOKEN="t",
+                   GITHUB_REPOSITORY="o/r", GITHUB_REF_NAME=branch, GITHUB_OUTPUT=str(root / "out"))
+        env.pop("GITHUB_HEAD_REF", None)
+        result = subprocess.run(["bash", str(self.SCRIPT), *args], env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = log.read_text() if log.exists() else ""
+        out = (root / "out").read_text() if (root / "out").exists() else ""
+        return calls, out
+
+    LISTING = ("30\t300\tdevelop\t2026-11-14T09:00:00Z\n"
+               "20\t200\tfeat/x\t2026-11-13T09:00:00Z\n"
+               "10\t100\tdevelop\t2026-11-12T09:00:00Z\n")
+
+    @unittest.skipUnless(subprocess.run(["sh", "-c", "command -v zip unzip"], capture_output=True).returncode == 0,
+                         "needs zip and unzip")
+    def test_nfr5_a_branch_restores_its_own_cache_before_develops(self):
+        with tempfile.TemporaryDirectory() as root:
+            cache = Path(root, "ccache")
+            _, out = self._run(root, self.LISTING, "restore", "framework-ccache-android17-x86_64",
+                               str(cache), str(Path(root, "dl")))
+            self.assertIn("found=true", out)
+            self.assertEqual((cache / "from").read_text().strip(), "20")
+
+    @unittest.skipUnless(subprocess.run(["sh", "-c", "command -v zip unzip"], capture_output=True).returncode == 0,
+                         "needs zip and unzip")
+    def test_nfr5_develop_restores_its_newest_cache_whatever_lock_made_it(self):
+        with tempfile.TemporaryDirectory() as root:
+            cache = Path(root, "ccache")
+            _, out = self._run(root, self.LISTING, "restore", "framework-ccache-android17-x86_64",
+                               str(cache), str(Path(root, "dl")), branch="develop")
+            self.assertIn("found=true", out)
+            self.assertEqual((cache / "from").read_text().strip(), "30")
+
+    def test_nfr5_no_cache_to_restore_is_a_cold_build_not_a_failure(self):
+        with tempfile.TemporaryDirectory() as root:
+            calls, out = self._run(root, "", "restore", "framework-ccache-android17-x86_64",
+                                   str(Path(root, "ccache")), str(Path(root, "dl")))
+            self.assertIn("found=false", out)
+            self.assertNotIn("curl", calls)
+
+    def test_nfr5_only_develops_older_caches_are_deleted(self):
+        with tempfile.TemporaryDirectory() as root:
+            calls, _ = self._run(root, self.LISTING, "prune", "framework-ccache-android17-x86_64", "30")
+            deleted = [line for line in calls.splitlines() if "DELETE" in line]
+            self.assertEqual(deleted, ["gh api -X DELETE repos/o/r/actions/artifacts/10"])
 
 
 if __name__ == "__main__":

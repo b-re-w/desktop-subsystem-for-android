@@ -491,6 +491,8 @@ impl Bus {
                 interface::EDITABLE_TEXT => {
                     self.editable_text(shared, header, message, object, member)
                 }
+                interface::TABLE => self.table(shared, header, message, object, member),
+                interface::TABLE_CELL => self.table_cell(shared, header, object, member),
                 _ => Err(Fault::UnknownMethod),
             };
             match answer {
@@ -714,8 +716,40 @@ impl Bus {
                 };
                 self.ok(header, &piece)
             }
-            "GetNSelections" => self.ok(header, &(0i32,)),
-            "GetSelection" => self.ok(header, &(0i32, 0i32)),
+            // Android has one selection, and a cursor is a selection of nothing.
+            "GetNSelections" => {
+                let some = shared
+                    .lock()
+                    .selection(object)
+                    .is_some_and(|(start, end)| start != end);
+                self.ok(header, &(i32::from(some),))
+            }
+            "GetSelection" => {
+                let _: i32 = args(message)?;
+                let (start, end) = shared.lock().selection(object).unwrap_or((0, 0));
+                self.ok(header, &(start.min(end), start.max(end)))
+            }
+            "SetSelection" | "AddSelection" => {
+                let (start, end) = if member == "AddSelection" {
+                    args::<(i32, i32)>(message)?
+                } else {
+                    let (_, start, end): (i32, i32, i32) = args(message)?;
+                    (start, end)
+                };
+                let done = shared.lock().select_text(object, start, end).is_ok();
+                self.ok(header, &(done,))
+            }
+            "SetCaretOffset" => {
+                let offset: i32 = args(message)?;
+                let done = shared.lock().select_text(object, offset, offset).is_ok();
+                self.ok(header, &(done,))
+            }
+            "RemoveSelection" => {
+                let _: i32 = args(message)?;
+                let (_, end) = shared.lock().selection(object).unwrap_or((0, 0));
+                let done = shared.lock().select_text(object, end, end).is_ok();
+                self.ok(header, &(done,))
+            }
             "GetCharacterExtents" | "GetRangeExtents" => self.ok(header, &rect),
             "GetOffsetAtPoint" => self.ok(header, &(-1i32,)),
             "GetAttributeRun" | "GetAttributes" => {
@@ -726,8 +760,92 @@ impl Bus {
                 let attributes: HashMap<String, String> = HashMap::new();
                 self.ok(header, &(attributes,))
             }
-            "SetCaretOffset" | "AddSelection" | "RemoveSelection" | "SetSelection" => {
-                self.ok(header, &(false,))
+            _ => Err(Fault::UnknownMethod),
+        }
+    }
+
+    /// A list or a grid, as AT-SPI's Table: its size and its items on the screen.
+    fn table(
+        &self,
+        shared: &Shared,
+        header: &Header<'_>,
+        message: &Message,
+        object: Object,
+        member: &str,
+    ) -> Answer {
+        let (rows, columns) = shared.lock().table(object).unwrap_or((0, 1));
+        match member {
+            "GetAccessibleAt" => {
+                let (row, column): (i32, i32) = args(message)?;
+                let cell = shared.lock().table_cell_at(object, row, column);
+                self.ok(header, &(self.maybe(cell),))
+            }
+            "GetIndexAt" => {
+                let (row, column): (i32, i32) = args(message)?;
+                self.ok(header, &(row * columns + column,))
+            }
+            "GetRowAtIndex" => {
+                let index: i32 = args(message)?;
+                self.ok(header, &(index / columns.max(1),))
+            }
+            "GetColumnAtIndex" => {
+                let index: i32 = args(message)?;
+                self.ok(header, &(index % columns.max(1),))
+            }
+            "GetRowExtentAt" | "GetColumnExtentAt" => {
+                let (row, column): (i32, i32) = args(message)?;
+                let span = {
+                    let access = shared.lock();
+                    access
+                        .table_cell_at(object, row, column)
+                        .and_then(|cell| access.table_cell(cell))
+                }
+                .map_or(1, |(_, _, row_span, column_span, _)| {
+                    if member == "GetRowExtentAt" {
+                        row_span
+                    } else {
+                        column_span
+                    }
+                });
+                self.ok(header, &(span,))
+            }
+            "GetRowDescription" | "GetColumnDescription" => self.ok(header, &("",)),
+            "GetRowHeader" | "GetColumnHeader" => self.ok(header, &(self.null(),)),
+            "GetSelectedRows" | "GetSelectedColumns" => {
+                let none: Vec<i32> = Vec::new();
+                self.ok(header, &(none,))
+            }
+            "IsRowSelected" | "IsColumnSelected" | "IsSelected" => self.ok(header, &(false,)),
+            "AddRowSelection"
+            | "AddColumnSelection"
+            | "RemoveRowSelection"
+            | "RemoveColumnSelection" => self.ok(header, &(false,)),
+            "GetRowColumnExtentsAtIndex" => {
+                let index: i32 = args(message)?;
+                let (row, column) = (index / columns.max(1), index % columns.max(1));
+                self.ok(header, &(row < rows, row, column, 1i32, 1i32, false))
+            }
+            _ => Err(Fault::UnknownMethod),
+        }
+    }
+
+    /// An item of a list or a grid, as AT-SPI's TableCell: where it is.
+    fn table_cell(
+        &self,
+        shared: &Shared,
+        header: &Header<'_>,
+        object: Object,
+        member: &str,
+    ) -> Answer {
+        let (row, column, row_span, column_span, _) = shared
+            .lock()
+            .table_cell(object)
+            .unwrap_or((0, 0, 1, 1, None));
+        match member {
+            "GetRowColumnSpan" => self.ok(header, &(row, column, row_span, column_span)),
+            "GetRowHeaderCells" | "GetColumnHeaderCells" => {
+                let none: Vec<Reference> = Vec::new();
+                self.ok(header, &(none,))
             }
             _ => Err(Fault::UnknownMethod),
         }
@@ -809,6 +927,15 @@ impl Bus {
                         "Text",
                     ],
                     interface::TEXT => &["CharacterCount", "CaretOffset"],
+                    interface::TABLE => &[
+                        "NRows",
+                        "NColumns",
+                        "NSelectedRows",
+                        "NSelectedColumns",
+                        "Caption",
+                        "Summary",
+                    ],
+                    interface::TABLE_CELL => &["ColumnSpan", "RowSpan", "Position", "Table"],
                     _ => &[],
                 };
                 let all: HashMap<&str, Value<'static>> = names
@@ -832,12 +959,10 @@ impl Bus {
                     (interface::VALUE, "CurrentValue") => {
                         let value =
                             f64::try_from(value).map_err(|e| Fault::InvalidArgs(e.to_string()))?;
-                        let action = shared.lock().value_action(object, value);
-                        if let Some(action) = action {
-                            shared
-                                .request(object, action, String::new())
-                                .map_err(Fault::Failed)?;
-                        }
+                        shared
+                            .lock()
+                            .set_value(object, value)
+                            .map_err(Fault::Failed)?;
                         self.ok(header, &())
                     }
                     _ => Err(Fault::InvalidArgs(format!("{iface}.{name} cannot be set"))),
@@ -898,11 +1023,33 @@ impl Bus {
             (interface::TEXT, "CharacterCount") => {
                 Value::from(text::length(&access.text(object).unwrap_or_default()))
             }
-            (interface::TEXT, "CaretOffset") => {
-                // Android does not say where the caret is; a focused field has it at its end.
-                let focused = access.states(object).contains(state::FOCUSED);
-                let length = text::length(&access.text(object).unwrap_or_default());
-                Value::from(if focused { length } else { 0 })
+            (interface::TEXT, "CaretOffset") => match access.selection(object) {
+                // The caret is where the selection ends.
+                Some((_, end)) => Value::from(end),
+                // Without a selection from Android, a focused field has it at its end.
+                None => {
+                    let focused = access.states(object).contains(state::FOCUSED);
+                    let length = text::length(&access.text(object).unwrap_or_default());
+                    Value::from(if focused { length } else { 0 })
+                }
+            },
+            (interface::TABLE, "NRows") => Value::from(access.table(object)?.0),
+            (interface::TABLE, "NColumns") => Value::from(access.table(object)?.1),
+            (interface::TABLE, "NSelectedRows") | (interface::TABLE, "NSelectedColumns") => {
+                Value::from(0i32)
+            }
+            (interface::TABLE, "Caption") | (interface::TABLE, "Summary") => {
+                Value::from(self.null())
+            }
+            (interface::TABLE_CELL, "RowSpan") => Value::from(access.table_cell(object)?.2),
+            (interface::TABLE_CELL, "ColumnSpan") => Value::from(access.table_cell(object)?.3),
+            (interface::TABLE_CELL, "Position") => {
+                let (row, column, ..) = access.table_cell(object)?;
+                Value::from((row, column))
+            }
+            (interface::TABLE_CELL, "Table") => {
+                let table = access.table_cell(object)?.4;
+                Value::from(self.maybe(table))
             }
             _ => return None,
         };
@@ -921,6 +1068,20 @@ impl Bus {
             i32,
             Value<'static>,
         ) = match event {
+            // AT-SPI's politeness: 1 polite, 2 assertive.
+            Event::Announcement {
+                object,
+                text,
+                assertive,
+            } => (
+                *object,
+                EVENT_OBJECT,
+                "Announcement",
+                String::new(),
+                if *assertive { 2 } else { 1 },
+                0,
+                Value::from(text.clone()),
+            ),
             Event::ChildAdded {
                 parent,
                 index,
@@ -1063,7 +1224,7 @@ impl EventSink for BusSink {
 }
 
 fn locale_of(access: &Access) -> String {
-    if access.korean() { "ko_KR" } else { "en_US" }.to_string()
+    crate::interface_language::posix_locale(access.language()).to_string()
 }
 
 fn locale(shared: &Shared) -> String {

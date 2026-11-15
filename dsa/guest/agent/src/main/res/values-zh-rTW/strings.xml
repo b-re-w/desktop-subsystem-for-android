@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_target_name">在電腦上分享</string>
+    <string name="share_unavailable">無法連線到電腦，因此無法在電腦上分享。</string>
+    <string name="share_failed">電腦無法分享此內容：%1$s</string>
+</resources>

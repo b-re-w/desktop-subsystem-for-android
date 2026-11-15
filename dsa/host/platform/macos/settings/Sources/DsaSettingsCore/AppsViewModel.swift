@@ -69,6 +69,9 @@ public struct InstalledAppInfo: Equatable, Sendable {
     /// `unavailable` while root elevation is off for the Mac. Empty from a dsa that does not
     /// say.
     public var root = ""
+    /// The user ID the app shares with other apps (`android:sharedUserId`); empty for an app
+    /// with a user ID of its own, and from a dsa that does not say.
+    public var sharedUserId = ""
 
     public var totalBytes: UInt64 { appBytes + dataBytes + cacheBytes }
 }
@@ -76,7 +79,9 @@ public struct InstalledAppInfo: Equatable, Sendable {
 /// How an app's window follows a move to a monitor of another scale. `auto` and `system` never
 /// restart the app.
 public enum DpiScaling: String, CaseIterable, Equatable, Sendable {
-    /// App for apps that say they handle a change of density themselves, System for the others.
+    /// System for the apps on DSA's built-in list that break when their scale changes while they
+    /// run; for any other app, App if it says it handles a change of density itself, System if
+    /// not.
     case auto
     /// The app redraws at the new monitor's scale. Android recreates the screen of an app that
     /// does not say it handles a change of density, and restores its state.
@@ -104,6 +109,37 @@ public enum DpiScaling: String, CaseIterable, Equatable, Sendable {
     }
 }
 
+/// Where a window shows an app that asks to fill the screen.
+public enum FullScreenPlace: String, CaseIterable, Equatable, Sendable {
+    /// For one app, as the choice for every app says; for every app, DSA's own default.
+    case standard = "default"
+    /// On the whole screen: the window fills its monitor, and its title bar shows at the top.
+    case screen
+    /// Inside the window: it keeps its size and its title bar.
+    case window
+
+    /// The choice `dsa` names; anything else, or nothing, is `missing`.
+    public static func read(_ code: String?, missing: FullScreenPlace = .standard) -> FullScreenPlace {
+        code.flatMap(FullScreenPlace.init(rawValue:)) ?? missing
+    }
+
+    /// The key of its name in the string catalog. `standard` is named after the place the
+    /// default takes the app, as `followingKey` says; this is its name for DSA's own default.
+    var textKey: String {
+        switch self {
+        case .standard: return FullScreenPlace.followingKey(.screen)
+        case .screen: return "Apps_FullScreen_Screen"
+        case .window: return "Apps_FullScreen_Window"
+        }
+    }
+
+    /// The key of "Follow the default" while the choice for every app is `now`:
+    /// "Follow the default (inside the window)".
+    static func followingKey(_ now: FullScreenPlace) -> String {
+        now == .window ? "Apps_FullScreen_DefaultWindow" : "Apps_FullScreen_DefaultScreen"
+    }
+}
+
 /// A scaling choice the Apps page offers: what the list shows, the choice, and whether it does
 /// what it says yet.
 public struct DpiScalingChoice: Equatable, Hashable, Sendable {
@@ -121,6 +157,12 @@ public struct AppWindowSetting: Equatable, Sendable {
     public var startWidth: Int?
     public var startHeight: Int?
     public var dpiScaling: DpiScaling = .auto
+    /// Where the app shows a clear full screen request, and its bars hidden alone.
+    public var fullScreen: FullScreenPlace = .standard
+    public var immersive: FullScreenPlace = .standard
+    /// Whether the app starts below the title bar instead of drawing into it. Off from a dsa
+    /// that does not name it.
+    public var belowTitleBar = false
 
     public static func standard(_ package: String) -> AppWindowSetting {
         AppWindowSetting(package: package, fixedSize: false, startWidth: nil, startHeight: nil)
@@ -173,7 +215,8 @@ public final class AppsService {
             versionCode: app.int64("version_code"), firstInstallMs: app.uint("first_install_time_ms"),
             lastUpdateMs: app.uint("last_update_time_ms"), systemApp: app.bool("system_app"),
             appBytes: app.uint("app_bytes"), dataBytes: app.uint("data_bytes"), cacheBytes: app.uint("cache_bytes"),
-            iconPng: app.base64("icon_png"), runAsArm: readRunAsArm(app), root: app.string("root"))
+            iconPng: app.base64("icon_png"), runAsArm: readRunAsArm(app), root: app.string("root"),
+            sharedUserId: app.string("shared_user_id"))
     }
 
     /// Every app installed in Android, with its size read again; Android is started first when
@@ -184,6 +227,12 @@ public final class AppsService {
 
     /// Opens the app in a window of its own.
     public func open(_ package: String) async throws { _ = try await service.runText(["launch", package]) }
+
+    /// Puts a shortcut to `package` on the Desktop, which opens the app as Launchpad does and
+    /// goes when the app is uninstalled.
+    public func desktopShortcut(_ package: String) async throws {
+        _ = try await service.runJson(["apps", "desktop-shortcut", package])
+    }
 
     /// Opens Android's own settings of `package` (its permissions, storage and notifications),
     /// or Android's list of every app when it is nil.
@@ -207,7 +256,10 @@ public final class AppsService {
             }
             settings[package] = AppWindowSetting(package: package, fixedSize: app.bool("fixed_size"),
                                                  startWidth: width, startHeight: height,
-                                                 dpiScaling: DpiScaling.read(app["dpi_scaling"].string))
+                                                 dpiScaling: DpiScaling.read(app["dpi_scaling"].string),
+                                                 fullScreen: FullScreenPlace.read(app["fullscreen"].string),
+                                                 immersive: FullScreenPlace.read(app["immersive"].string),
+                                                 belowTitleBar: app.bool("below_title_bar"))
         }
         return settings
     }
@@ -217,21 +269,60 @@ public final class AppsService {
         try await windowSettingsList().apps
     }
 
-    /// The user's window settings for every app that has any, by package, and whether this
-    /// build of Android scales an app the System (forced) way yet. A dsa that does not say
-    /// counts as one whose Android cannot.
-    public func windowSettingsList() async throws -> (apps: [String: AppWindowSetting], systemForcedAvailable: Bool) {
+    /// The user's window settings for every app that has any, by package, whether this build
+    /// of Android scales an app the System (forced) way yet, and the apps whose automatic choice
+    /// is System: DSA's built-in list of apps that break when their density changes while they
+    /// run. A dsa that does not say counts as one whose Android cannot, and with no such list.
+    /// `belowTitleBarByDefault` is the apps that start below the title bar unless the user
+    /// chose otherwise; none from a dsa that does not name the list.
+    public func windowSettingsList() async throws
+        -> (apps: [String: AppWindowSetting], systemForcedAvailable: Bool, systemScaledByDefault: Set<String>,
+            belowTitleBarByDefault: Set<String>) {
         let json = try await service.runJson(["app-window"])
-        return (AppsService.readWindowSettings(json), json.bool("system_forced_available"))
+        let listed = Set(json["system_scaled_by_default"].items.compactMap(\.string).filter { !$0.isEmpty })
+        let below = Set(json["below_title_bar_by_default"].items.compactMap(\.string).filter { !$0.isEmpty })
+        return (AppsService.readWindowSettings(json), json.bool("system_forced_available"), listed, below)
+    }
+
+    /// Starts `package` below the title bar (`on`) or lets it draw into it, and returns the
+    /// app's window settings as the service now has them. Its other window settings stay as
+    /// they are.
+    public func setBelowTitleBar(_ package: String, _ on: Bool) async throws -> AppWindowSetting {
+        let json = try await service.runJson(["app-window", package, "--below-title-bar", on ? "on" : "off"])
+        if let now = AppsService.readWindowSettings(json)[package] {
+            return now
+        }
+        var plain = AppWindowSetting.standard(package)
+        plain.belowTitleBar = on
+        return plain
+    }
+
+    /// Where every app without its own choice shows a clear full screen request and its bars
+    /// hidden alone, as `dsa app-window` reports them; DSA's defaults from a dsa that does not.
+    public func fullScreenDefaults() async throws -> (fullScreen: FullScreenPlace, immersive: FullScreenPlace) {
+        let json = try await service.runJson(["app-window"])
+        let defaults = json["defaults"]
+        return (FullScreenPlace.read(defaults["fullscreen"].string, missing: .screen),
+                FullScreenPlace.read(defaults["immersive"].string, missing: .window))
+    }
+
+    /// Sets where every app without its own choice shows a clear full screen request
+    /// (`immersive` false) or its bars hidden alone.
+    public func setFullScreenDefault(immersive: Bool, _ place: FullScreenPlace) async throws {
+        _ = try await service.runJson(["settings", "set", immersive ? "app-immersive" : "app-fullscreen", place.rawValue])
     }
 
     /// Replaces the window settings of one app, and returns them as the service now has them.
+    /// Whether the app starts below the title bar is not sent, so an app the user never chose
+    /// for keeps following DSA's own list; `setBelowTitleBar` changes it.
     public func setWindowSetting(_ setting: AppWindowSetting) async throws -> AppWindowSetting {
         let json = try await service.runJson([
             "app-window", setting.package,
             "--fixed-size", setting.fixedSize ? "on" : "off",
             "--start-size", setting.startSizeArgument,
             "--dpi-scaling", setting.dpiScaling.rawValue,
+            "--fullscreen", setting.fullScreen.rawValue,
+            "--immersive", setting.immersive.rawValue,
         ])
         return AppsService.readWindowSettings(json)[setting.package] ?? .standard(setting.package)
     }
@@ -298,10 +389,18 @@ public struct AppRow: Equatable, Identifiable, Sendable {
     public var resizable: Bool
     /// Where the app's start size is among the choices; -1 for a size set another way.
     public var startSizeIndex: Int
+    /// Whether the app starts below the title bar instead of drawing into it.
+    public var belowTitleBar = false
     /// Where the app's scaling choice is among `dpiScalingChoices`, and, while it is System
     /// (forced) and not available yet, why it works like System, in the user's language.
     public var dpiScalingIndex = 0
     public var dpiScalingTip: String?
+    /// The scaling choices for this app: `dpiScalingChoices`, with the automatic one named
+    /// System for an app on DSA's built-in list of apps that break when their density changes.
+    public var dpiScalingChoices: [DpiScalingChoice] = []
+    /// Where the app's full screen choices are among `fullScreenChoices`.
+    public var fullScreenIndex = 0
+    public var immersiveIndex = 0
     /// Whether the app runs its ARM code through the translator, whether that can be changed,
     /// and if not, why, in the user's language.
     public var runAsArm = false
@@ -312,6 +411,9 @@ public struct AppRow: Equatable, Identifiable, Sendable {
     public var rootIndex = -1
     public var canChangeRoot = false
     public var rootTip: String?
+    /// For an app that shares its user ID with other apps: which apps, and that their root
+    /// level is one setting, in the user's language; nil for an app with a user ID of its own.
+    public var rootGroupNote: String?
 
     public var id: String { package }
 }
@@ -333,8 +435,20 @@ public final class AppsViewModel: ObservableObject {
     @Published public private(set) var windows: [String: AppWindowSetting] = [:]
     /// Whether this build of Android scales an app the System (forced) way yet.
     @Published public private(set) var systemForcedAvailable = false
+    /// The apps DSA scales the System way unless the user chose otherwise, because they break
+    /// when their density changes while they run.
+    @Published public private(set) var systemScaledByDefault: Set<String> = []
+    /// The apps DSA starts below the title bar unless the user chose otherwise.
+    @Published public private(set) var belowTitleBarByDefault: Set<String> = []
+    /// Where every app without its own choice shows a clear full screen request and its bars
+    /// hidden alone, as indexes of `defaultFullScreenPlaces`.
+    @Published public private(set) var fullScreenDefaultIndex = 0
+    @Published public private(set) var immersiveDefaultIndex = 1
     /// What the user typed to find an app: matched against its name and package.
     @Published public var search = ""
+    /// The apps whose card the user opened on the page. Each card is closed until then, and
+    /// stays as the user left it while the list is read again after a change.
+    @Published public private(set) var expanded: Set<String> = []
     @Published public private(set) var error: String?
     @Published public private(set) var message: String?
     @Published public private(set) var isBusy = false
@@ -342,6 +456,22 @@ public final class AppsViewModel: ObservableObject {
     public init(service: AppsService, text: TextSource) {
         self.service = service
         self.text = text
+    }
+
+    /// Opens or closes the card of `package`.
+    public func setExpanded(_ package: String, _ open: Bool) {
+        if open {
+            expanded.insert(package)
+        } else {
+            expanded.remove(package)
+        }
+    }
+
+    /// The page at the app `package`, as App Info in a task window's Window menu opens it: the
+    /// search finds the app, so its card is the one in view, and the card is open.
+    public func show(_ package: String) {
+        search = package
+        expanded.insert(package)
     }
 
     public var hasNoApps: Bool { apps?.isEmpty == true }
@@ -378,16 +508,43 @@ public final class AppsViewModel: ObservableObject {
     /// The apps the search matches, by name.
     public var rows: [AppRow] {
         let query = search.trimmingCharacters(in: .whitespaces)
+        func found(_ app: InstalledAppInfo) -> Bool {
+            query.isEmpty || app.label.localizedCaseInsensitiveContains(query)
+                || app.package.range(of: query, options: .caseInsensitive) != nil
+        }
+        // Apps that share a user ID are one group: listed together, in the place of the
+        // group's first app by name, and all shown when a search finds one of them.
+        func groupName(_ app: InstalledAppInfo) -> String {
+            ([app] + sharedWith(app)).map(AppsViewModel.name)
+                .min { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending } ?? AppsViewModel.name(app)
+        }
         return (apps ?? [])
-            .filter {
-                query.isEmpty || $0.label.localizedCaseInsensitiveContains(query)
-                    || $0.package.range(of: query, options: .caseInsensitive) != nil
-            }
-            .sorted {
-                ($0.label.isEmpty ? $0.package : $0.label)
-                    .localizedCaseInsensitiveCompare($1.label.isEmpty ? $1.package : $1.label) == .orderedAscending
+            .filter { found($0) || sharedWith($0).contains(where: found) }
+            .sorted { a, b in
+                let order = groupName(a).localizedCaseInsensitiveCompare(groupName(b))
+                if order != .orderedSame { return order == .orderedAscending }
+                if a.sharedUserId != b.sharedUserId { return a.sharedUserId < b.sharedUserId }
+                return AppsViewModel.name(a).localizedCaseInsensitiveCompare(AppsViewModel.name(b)) == .orderedAscending
             }
             .map(row)
+    }
+
+    /// The name the page shows for `app`: its label, or its package when it has none.
+    private static func name(_ app: InstalledAppInfo) -> String { app.label.isEmpty ? app.package : app.label }
+
+    /// The other apps that share `app`'s user ID, by name.
+    private func sharedWith(_ app: InstalledAppInfo) -> [InstalledAppInfo] {
+        guard !app.sharedUserId.isEmpty else { return [] }
+        return (apps ?? [])
+            .filter { $0.sharedUserId == app.sharedUserId && $0.package != app.package }
+            .sorted { AppsViewModel.name($0).localizedCaseInsensitiveCompare(AppsViewModel.name($1)) == .orderedAscending }
+    }
+
+    /// What the page says under an app's root level when it shares its user ID with other
+    /// apps; nil for an app with a user ID of its own.
+    public func rootGroupNote(_ app: InstalledAppInfo) -> String? {
+        let others = sharedWith(app).map(AppsViewModel.name)
+        return others.isEmpty ? nil : text.format("Apps_RootGroup", others.joined(separator: ", "))
     }
 
     /// The start sizes the page offers: Android's own, then phone and tablet sizes, in
@@ -419,6 +576,23 @@ public final class AppsViewModel: ObservableObject {
         }
     }
 
+    /// The scaling choices for `package`: those of `dpiScalingChoices`, with the automatic one
+    /// named System for an app on DSA's built-in list of apps that break when their density
+    /// changes while they run.
+    public func dpiScalingChoices(for package: String) -> [DpiScalingChoice] {
+        let choices = dpiScalingChoices
+        guard systemScaledByDefault.contains(package) else {
+            return choices
+        }
+        return choices.map { choice in
+            var named = choice
+            if choice.scaling == .auto {
+                named.label = text.get("Apps_DpiScaling_AutoSystem")
+            }
+            return named
+        }
+    }
+
     /// Why System (forced) works like System for now, while it is the app's choice and not
     /// available; otherwise nil.
     public func dpiScalingTip(_ setting: AppWindowSetting) -> String? {
@@ -426,8 +600,16 @@ public final class AppsViewModel: ObservableObject {
             ? text.get("Apps_DpiScaling_SystemForcedTip") : nil
     }
 
+    /// The window settings of an app the user chose nothing for: plain, and below the title
+    /// bar when the app is on DSA's built-in list.
+    private func standardOf(_ package: String) -> AppWindowSetting {
+        var setting = AppWindowSetting.standard(package)
+        setting.belowTitleBar = belowTitleBarByDefault.contains(package)
+        return setting
+    }
+
     /// The window settings of `package`.
-    public func windowOf(_ package: String) -> AppWindowSetting { windows[package] ?? .standard(package) }
+    public func windowOf(_ package: String) -> AppWindowSetting { windows[package] ?? standardOf(package) }
 
     private func startSizeIndex(_ setting: AppWindowSetting) -> Int {
         startSizeChoices.firstIndex { $0.width == setting.startWidth && $0.height == setting.startHeight } ?? -1
@@ -451,12 +633,16 @@ public final class AppsViewModel: ObservableObject {
             icon: app.iconPng.isEmpty ? nil : app.iconPng, canUninstall: !app.systemApp, isSystem: app.systemApp,
             uninstallTip: app.systemApp ? text.get("Apps_SystemTip") : nil,
             resizable: !window.fixedSize, startSizeIndex: startSizeIndex(window),
+            belowTitleBar: window.belowTitleBar,
             dpiScalingIndex: DpiScaling.allCases.firstIndex(of: window.dpiScaling) ?? 0,
             dpiScalingTip: dpiScalingTip(window),
+            dpiScalingChoices: dpiScalingChoices(for: app.package),
+            fullScreenIndex: FullScreenPlace.allCases.firstIndex(of: window.fullScreen) ?? 0,
+            immersiveIndex: FullScreenPlace.allCases.firstIndex(of: window.immersive) ?? 0,
             runAsArm: app.runAsArm.on, canRunAsArm: app.runAsArm.available,
             runAsArmTip: runAsArmTip(app.runAsArm),
             rootIndex: RootLevel.read(app.root)?.index ?? -1, canChangeRoot: RootLevel.read(app.root) != nil,
-            rootTip: rootTip(app.root))
+            rootTip: rootTip(app.root), rootGroupNote: rootGroupNote(app))
     }
 
     /// Why the "Run as ARM" switch cannot be changed, in the user's language; nil when it can.
@@ -539,18 +725,31 @@ public final class AppsViewModel: ObservableObject {
                 let list = try await service.windowSettingsList()
                 windows = list.apps
                 systemForcedAvailable = list.systemForcedAvailable
+                systemScaledByDefault = list.systemScaledByDefault
+                belowTitleBarByDefault = list.belowTitleBarByDefault
+                let defaults = try await service.fullScreenDefaults()
+                fullScreenDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.fullScreen) ?? 0
+                immersiveDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.immersive) ?? 1
             } catch let failed as DsaError where failed.problem == .refused {
                 windows = [:]
                 systemForcedAvailable = false
+                systemScaledByDefault = []
+                belowTitleBarByDefault = []
             }
             return nil
         }
     }
 
     private func setWindow(_ wanted: AppWindowSetting) async {
+        await changeWindow { try await service.setWindowSetting(wanted) }
+    }
+
+    /// Makes a change to one app's window settings, keeps what the service has now, and says
+    /// that the app's windows follow it.
+    private func changeWindow(_ change: () async throws -> AppWindowSetting) async {
         await run(reload: false) {
-            let now = try await service.setWindowSetting(wanted)
-            if now == .standard(now.package) {
+            let now = try await change()
+            if now == standardOf(now.package) {
                 windows.removeValue(forKey: now.package)
             } else {
                 windows[now.package] = now
@@ -567,6 +766,16 @@ public final class AppsViewModel: ObservableObject {
         }
         wanted.fixedSize = !resizable
         await setWindow(wanted)
+    }
+
+    /// Starts the app below the title bar, or lets it draw into it: for an app whose top bar is
+    /// squeezed or hidden under the title bar. The app's window follows it the next time it
+    /// opens. Choosing what the app has already sends nothing.
+    public func setBelowTitleBar(_ package: String, _ on: Bool) async {
+        if windowOf(package).belowTitleBar == on {
+            return
+        }
+        await changeWindow { try await service.setBelowTitleBar(package, on) }
     }
 
     /// Opens the app's windows at the start size at `index` of `startSizeChoices`.
@@ -599,6 +808,74 @@ public final class AppsViewModel: ObservableObject {
         await setWindow(wanted)
     }
 
+    /// The places the choice for every app offers: it is the default itself.
+    public static let defaultFullScreenPlaces: [FullScreenPlace] = [.screen, .window]
+
+    /// The names of `defaultFullScreenPlaces`.
+    public var defaultFullScreenChoices: [String] {
+        AppsViewModel.defaultFullScreenPlaces.map { text.get($0.textKey) }
+    }
+
+    /// Shows every app's clear full screen request (`immersive` false), or its bars hidden
+    /// alone, at `index` of `defaultFullScreenPlaces`, unless the app has its own choice.
+    public func setFullScreenDefault(immersive: Bool, _ index: Int) async {
+        let all = AppsViewModel.defaultFullScreenPlaces
+        guard all.indices.contains(index), index != (immersive ? immersiveDefaultIndex : fullScreenDefaultIndex) else {
+            return
+        }
+        await run(reload: false) {
+            try await service.setFullScreenDefault(immersive: immersive, all[index])
+            if immersive {
+                immersiveDefaultIndex = index
+            } else {
+                fullScreenDefaultIndex = index
+            }
+            return nil
+        }
+    }
+
+    /// Where an app's clear full screen request can show: as the default for every app, on the
+    /// whole screen, or inside its window. The first says where the choice for every app takes
+    /// it now: "Follow the default (on the whole screen)".
+    public var fullScreenChoices: [String] {
+        choices(following: fullScreenDefaultIndex, builtin: .screen)
+    }
+
+    /// Where an app hiding both its bars alone can show, in the order of `fullScreenChoices`.
+    /// The first says where the choice for every app takes it now.
+    public var immersiveChoices: [String] {
+        choices(following: immersiveDefaultIndex, builtin: .window)
+    }
+
+    /// The names of every full screen place, the first named after the place at `index` of
+    /// `defaultFullScreenPlaces`; `builtin`, DSA's own default, for an index out of it.
+    private func choices(following index: Int, builtin: FullScreenPlace) -> [String] {
+        let all = AppsViewModel.defaultFullScreenPlaces
+        let now = all.indices.contains(index) ? all[index] : builtin
+        return FullScreenPlace.allCases.map { place in
+            place == .standard ? text.get(FullScreenPlace.followingKey(now)) : text.get(place.textKey)
+        }
+    }
+
+    /// Shows the app's clear full screen request (`immersive` false), or its bars hidden alone,
+    /// the way at `index` of `fullScreenChoices`. The windows open already follow it.
+    public func setFullScreen(_ package: String, immersive: Bool, _ index: Int) async {
+        let all = FullScreenPlace.allCases
+        guard all.indices.contains(index) else {
+            return
+        }
+        var wanted = windowOf(package)
+        if (immersive ? wanted.immersive : wanted.fullScreen) == all[index] {
+            return
+        }
+        if immersive {
+            wanted.immersive = all[index]
+        } else {
+            wanted.fullScreen = all[index]
+        }
+        await setWindow(wanted)
+    }
+
     /// Opens the app in a window of its own.
     public func open(_ package: String) async {
         await run(reload: false) {
@@ -612,6 +889,14 @@ public final class AppsViewModel: ObservableObject {
         await run(reload: false) {
             try await service.openSettings(package)
             return nil
+        }
+    }
+
+    /// Puts a shortcut to the app on the Desktop, and says so.
+    public func desktopShortcut(_ package: String) async {
+        await run(reload: false) {
+            try await service.desktopShortcut(package)
+            return text.format("Apps_DesktopShortcutMade", labelOf(package))
         }
     }
 

@@ -24,6 +24,8 @@ public  final class AccessibilityNode extends
     viewId_ = "";
     actions_ = emptyIntList();
     stateDescription_ = "";
+    url_ = "";
+    paneTitle_ = "";
   }
   public static final int ID_FIELD_NUMBER = 1;
   private int id_;
@@ -1152,6 +1154,543 @@ public  final class AccessibilityNode extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     stateDescription_ = value.toStringUtf8();
+    
+  }
+
+  public static final int ACCESSIBILITY_FOCUSED_FIELD_NUMBER = 24;
+  private boolean accessibilityFocused_;
+  /**
+   * <pre>
+   * Whether the node has the accessibility focus, which a screen reader's cursor follows.
+   * </pre>
+   *
+   * <code>bool accessibility_focused = 24;</code>
+   * @return The accessibilityFocused.
+   */
+  @java.lang.Override
+  public boolean getAccessibilityFocused() {
+    return accessibilityFocused_;
+  }
+  /**
+   * <pre>
+   * Whether the node has the accessibility focus, which a screen reader's cursor follows.
+   * </pre>
+   *
+   * <code>bool accessibility_focused = 24;</code>
+   * @param value The accessibilityFocused to set.
+   */
+  private void setAccessibilityFocused(boolean value) {
+    
+    accessibilityFocused_ = value;
+  }
+  /**
+   * <pre>
+   * Whether the node has the accessibility focus, which a screen reader's cursor follows.
+   * </pre>
+   *
+   * <code>bool accessibility_focused = 24;</code>
+   */
+  private void clearAccessibilityFocused() {
+    
+    accessibilityFocused_ = false;
+  }
+
+  public static final int TEXT_SELECTION_START_FIELD_NUMBER = 25;
+  private int textSelectionStart_;
+  /**
+   * <pre>
+   * Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+   * of its text; equal for a cursor. Set only while has_text_selection is.
+   * </pre>
+   *
+   * <code>int32 text_selection_start = 25;</code>
+   * @return The textSelectionStart.
+   */
+  @java.lang.Override
+  public int getTextSelectionStart() {
+    return textSelectionStart_;
+  }
+  /**
+   * <pre>
+   * Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+   * of its text; equal for a cursor. Set only while has_text_selection is.
+   * </pre>
+   *
+   * <code>int32 text_selection_start = 25;</code>
+   * @param value The textSelectionStart to set.
+   */
+  private void setTextSelectionStart(int value) {
+    
+    textSelectionStart_ = value;
+  }
+  /**
+   * <pre>
+   * Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+   * of its text; equal for a cursor. Set only while has_text_selection is.
+   * </pre>
+   *
+   * <code>int32 text_selection_start = 25;</code>
+   */
+  private void clearTextSelectionStart() {
+    
+    textSelectionStart_ = 0;
+  }
+
+  public static final int TEXT_SELECTION_END_FIELD_NUMBER = 26;
+  private int textSelectionEnd_;
+  /**
+   * <code>int32 text_selection_end = 26;</code>
+   * @return The textSelectionEnd.
+   */
+  @java.lang.Override
+  public int getTextSelectionEnd() {
+    return textSelectionEnd_;
+  }
+  /**
+   * <code>int32 text_selection_end = 26;</code>
+   * @param value The textSelectionEnd to set.
+   */
+  private void setTextSelectionEnd(int value) {
+    
+    textSelectionEnd_ = value;
+  }
+  /**
+   * <code>int32 text_selection_end = 26;</code>
+   */
+  private void clearTextSelectionEnd() {
+    
+    textSelectionEnd_ = 0;
+  }
+
+  public static final int HAS_TEXT_SELECTION_FIELD_NUMBER = 27;
+  private boolean hasTextSelection_;
+  /**
+   * <code>bool has_text_selection = 27;</code>
+   * @return The hasTextSelection.
+   */
+  @java.lang.Override
+  public boolean getHasTextSelection() {
+    return hasTextSelection_;
+  }
+  /**
+   * <code>bool has_text_selection = 27;</code>
+   * @param value The hasTextSelection to set.
+   */
+  private void setHasTextSelection(boolean value) {
+    
+    hasTextSelection_ = value;
+  }
+  /**
+   * <code>bool has_text_selection = 27;</code>
+   */
+  private void clearHasTextSelection() {
+    
+    hasTextSelection_ = false;
+  }
+
+  public static final int HEADING_LEVEL_FIELD_NUMBER = 28;
+  private int headingLevel_;
+  /**
+   * <pre>
+   * A heading's level, 1 to 9, or 0 when the app does not say.
+   * </pre>
+   *
+   * <code>uint32 heading_level = 28;</code>
+   * @return The headingLevel.
+   */
+  @java.lang.Override
+  public int getHeadingLevel() {
+    return headingLevel_;
+  }
+  /**
+   * <pre>
+   * A heading's level, 1 to 9, or 0 when the app does not say.
+   * </pre>
+   *
+   * <code>uint32 heading_level = 28;</code>
+   * @param value The headingLevel to set.
+   */
+  private void setHeadingLevel(int value) {
+    
+    headingLevel_ = value;
+  }
+  /**
+   * <pre>
+   * A heading's level, 1 to 9, or 0 when the app does not say.
+   * </pre>
+   *
+   * <code>uint32 heading_level = 28;</code>
+   */
+  private void clearHeadingLevel() {
+    
+    headingLevel_ = 0;
+  }
+
+  public static final int LINK_FIELD_NUMBER = 29;
+  private boolean link_;
+  /**
+   * <pre>
+   * A link, with where it goes when the app says.
+   * </pre>
+   *
+   * <code>bool link = 29;</code>
+   * @return The link.
+   */
+  @java.lang.Override
+  public boolean getLink() {
+    return link_;
+  }
+  /**
+   * <pre>
+   * A link, with where it goes when the app says.
+   * </pre>
+   *
+   * <code>bool link = 29;</code>
+   * @param value The link to set.
+   */
+  private void setLink(boolean value) {
+    
+    link_ = value;
+  }
+  /**
+   * <pre>
+   * A link, with where it goes when the app says.
+   * </pre>
+   *
+   * <code>bool link = 29;</code>
+   */
+  private void clearLink() {
+    
+    link_ = false;
+  }
+
+  public static final int URL_FIELD_NUMBER = 30;
+  private java.lang.String url_;
+  /**
+   * <code>string url = 30;</code>
+   * @return The url.
+   */
+  @java.lang.Override
+  public java.lang.String getUrl() {
+    return url_;
+  }
+  /**
+   * <code>string url = 30;</code>
+   * @return The bytes for url.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getUrlBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(url_);
+  }
+  /**
+   * <code>string url = 30;</code>
+   * @param value The url to set.
+   */
+  private void setUrl(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+  
+    url_ = value;
+  }
+  /**
+   * <code>string url = 30;</code>
+   */
+  private void clearUrl() {
+    
+    url_ = getDefaultInstance().getUrl();
+  }
+  /**
+   * <code>string url = 30;</code>
+   * @param value The bytes for url to set.
+   */
+  private void setUrlBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    url_ = value.toStringUtf8();
+    
+  }
+
+  public static final int COLLECTION_FIELD_NUMBER = 31;
+  private io.github.thisisthepy.dsa.control.v1.NodeCollection collection_;
+  /**
+   * <pre>
+   * Set for a list or a grid, and for an item of one.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+   */
+  @java.lang.Override
+  public boolean hasCollection() {
+    return collection_ != null;
+  }
+  /**
+   * <pre>
+   * Set for a list or a grid, and for an item of one.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.NodeCollection getCollection() {
+    return collection_ == null ? io.github.thisisthepy.dsa.control.v1.NodeCollection.getDefaultInstance() : collection_;
+  }
+  /**
+   * <pre>
+   * Set for a list or a grid, and for an item of one.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+   */
+  private void setCollection(io.github.thisisthepy.dsa.control.v1.NodeCollection value) {
+    value.getClass();
+  collection_ = value;
+    
+    }
+  /**
+   * <pre>
+   * Set for a list or a grid, and for an item of one.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+   */
+  @java.lang.SuppressWarnings({"ReferenceEquality"})
+  private void mergeCollection(io.github.thisisthepy.dsa.control.v1.NodeCollection value) {
+    value.getClass();
+  if (collection_ != null &&
+        collection_ != io.github.thisisthepy.dsa.control.v1.NodeCollection.getDefaultInstance()) {
+      collection_ =
+        io.github.thisisthepy.dsa.control.v1.NodeCollection.newBuilder(collection_).mergeFrom(value).buildPartial();
+    } else {
+      collection_ = value;
+    }
+    
+  }
+  /**
+   * <pre>
+   * Set for a list or a grid, and for an item of one.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+   */
+  private void clearCollection() {  collection_ = null;
+    
+  }
+
+  public static final int COLLECTION_ITEM_FIELD_NUMBER = 32;
+  private io.github.thisisthepy.dsa.control.v1.NodeCollectionItem collectionItem_;
+  /**
+   * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+   */
+  @java.lang.Override
+  public boolean hasCollectionItem() {
+    return collectionItem_ != null;
+  }
+  /**
+   * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.NodeCollectionItem getCollectionItem() {
+    return collectionItem_ == null ? io.github.thisisthepy.dsa.control.v1.NodeCollectionItem.getDefaultInstance() : collectionItem_;
+  }
+  /**
+   * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+   */
+  private void setCollectionItem(io.github.thisisthepy.dsa.control.v1.NodeCollectionItem value) {
+    value.getClass();
+  collectionItem_ = value;
+    
+    }
+  /**
+   * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+   */
+  @java.lang.SuppressWarnings({"ReferenceEquality"})
+  private void mergeCollectionItem(io.github.thisisthepy.dsa.control.v1.NodeCollectionItem value) {
+    value.getClass();
+  if (collectionItem_ != null &&
+        collectionItem_ != io.github.thisisthepy.dsa.control.v1.NodeCollectionItem.getDefaultInstance()) {
+      collectionItem_ =
+        io.github.thisisthepy.dsa.control.v1.NodeCollectionItem.newBuilder(collectionItem_).mergeFrom(value).buildPartial();
+    } else {
+      collectionItem_ = value;
+    }
+    
+  }
+  /**
+   * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+   */
+  private void clearCollectionItem() {  collectionItem_ = null;
+    
+  }
+
+  public static final int LIVE_REGION_FIELD_NUMBER = 33;
+  private int liveRegion_;
+  /**
+   * <pre>
+   * How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+   * </pre>
+   *
+   * <code>int32 live_region = 33;</code>
+   * @return The liveRegion.
+   */
+  @java.lang.Override
+  public int getLiveRegion() {
+    return liveRegion_;
+  }
+  /**
+   * <pre>
+   * How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+   * </pre>
+   *
+   * <code>int32 live_region = 33;</code>
+   * @param value The liveRegion to set.
+   */
+  private void setLiveRegion(int value) {
+    
+    liveRegion_ = value;
+  }
+  /**
+   * <pre>
+   * How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+   * </pre>
+   *
+   * <code>int32 live_region = 33;</code>
+   */
+  private void clearLiveRegion() {
+    
+    liveRegion_ = 0;
+  }
+
+  public static final int PANE_TITLE_FIELD_NUMBER = 34;
+  private java.lang.String paneTitle_;
+  /**
+   * <pre>
+   * The title of the pane the node is, when the app names one (a screen of an activity).
+   * </pre>
+   *
+   * <code>string pane_title = 34;</code>
+   * @return The paneTitle.
+   */
+  @java.lang.Override
+  public java.lang.String getPaneTitle() {
+    return paneTitle_;
+  }
+  /**
+   * <pre>
+   * The title of the pane the node is, when the app names one (a screen of an activity).
+   * </pre>
+   *
+   * <code>string pane_title = 34;</code>
+   * @return The bytes for paneTitle.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPaneTitleBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(paneTitle_);
+  }
+  /**
+   * <pre>
+   * The title of the pane the node is, when the app names one (a screen of an activity).
+   * </pre>
+   *
+   * <code>string pane_title = 34;</code>
+   * @param value The paneTitle to set.
+   */
+  private void setPaneTitle(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+  
+    paneTitle_ = value;
+  }
+  /**
+   * <pre>
+   * The title of the pane the node is, when the app names one (a screen of an activity).
+   * </pre>
+   *
+   * <code>string pane_title = 34;</code>
+   */
+  private void clearPaneTitle() {
+    
+    paneTitle_ = getDefaultInstance().getPaneTitle();
+  }
+  /**
+   * <pre>
+   * The title of the pane the node is, when the app names one (a screen of an activity).
+   * </pre>
+   *
+   * <code>string pane_title = 34;</code>
+   * @param value The bytes for paneTitle to set.
+   */
+  private void setPaneTitleBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    paneTitle_ = value.toStringUtf8();
+    
+  }
+
+  public static final int WINDOW_FIELD_NUMBER = 35;
+  private io.github.thisisthepy.dsa.control.v1.NodeWindow window_;
+  /**
+   * <pre>
+   * Set for a top-level node: the window it is the root of.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+   */
+  @java.lang.Override
+  public boolean hasWindow() {
+    return window_ != null;
+  }
+  /**
+   * <pre>
+   * Set for a top-level node: the window it is the root of.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.NodeWindow getWindow() {
+    return window_ == null ? io.github.thisisthepy.dsa.control.v1.NodeWindow.getDefaultInstance() : window_;
+  }
+  /**
+   * <pre>
+   * Set for a top-level node: the window it is the root of.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+   */
+  private void setWindow(io.github.thisisthepy.dsa.control.v1.NodeWindow value) {
+    value.getClass();
+  window_ = value;
+    
+    }
+  /**
+   * <pre>
+   * Set for a top-level node: the window it is the root of.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+   */
+  @java.lang.SuppressWarnings({"ReferenceEquality"})
+  private void mergeWindow(io.github.thisisthepy.dsa.control.v1.NodeWindow value) {
+    value.getClass();
+  if (window_ != null &&
+        window_ != io.github.thisisthepy.dsa.control.v1.NodeWindow.getDefaultInstance()) {
+      window_ =
+        io.github.thisisthepy.dsa.control.v1.NodeWindow.newBuilder(window_).mergeFrom(value).buildPartial();
+    } else {
+      window_ = value;
+    }
+    
+  }
+  /**
+   * <pre>
+   * Set for a top-level node: the window it is the root of.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+   */
+  private void clearWindow() {  window_ = null;
     
   }
 
@@ -2417,6 +2956,572 @@ public  final class AccessibilityNode extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Whether the node has the accessibility focus, which a screen reader's cursor follows.
+     * </pre>
+     *
+     * <code>bool accessibility_focused = 24;</code>
+     * @return The accessibilityFocused.
+     */
+    @java.lang.Override
+    public boolean getAccessibilityFocused() {
+      return instance.getAccessibilityFocused();
+    }
+    /**
+     * <pre>
+     * Whether the node has the accessibility focus, which a screen reader's cursor follows.
+     * </pre>
+     *
+     * <code>bool accessibility_focused = 24;</code>
+     * @param value The accessibilityFocused to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessibilityFocused(boolean value) {
+      copyOnWrite();
+      instance.setAccessibilityFocused(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Whether the node has the accessibility focus, which a screen reader's cursor follows.
+     * </pre>
+     *
+     * <code>bool accessibility_focused = 24;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAccessibilityFocused() {
+      copyOnWrite();
+      instance.clearAccessibilityFocused();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+     * of its text; equal for a cursor. Set only while has_text_selection is.
+     * </pre>
+     *
+     * <code>int32 text_selection_start = 25;</code>
+     * @return The textSelectionStart.
+     */
+    @java.lang.Override
+    public int getTextSelectionStart() {
+      return instance.getTextSelectionStart();
+    }
+    /**
+     * <pre>
+     * Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+     * of its text; equal for a cursor. Set only while has_text_selection is.
+     * </pre>
+     *
+     * <code>int32 text_selection_start = 25;</code>
+     * @param value The textSelectionStart to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTextSelectionStart(int value) {
+      copyOnWrite();
+      instance.setTextSelectionStart(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Where an editable node's selection starts and ends, in characters (UTF-16 code units)
+     * of its text; equal for a cursor. Set only while has_text_selection is.
+     * </pre>
+     *
+     * <code>int32 text_selection_start = 25;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTextSelectionStart() {
+      copyOnWrite();
+      instance.clearTextSelectionStart();
+      return this;
+    }
+
+    /**
+     * <code>int32 text_selection_end = 26;</code>
+     * @return The textSelectionEnd.
+     */
+    @java.lang.Override
+    public int getTextSelectionEnd() {
+      return instance.getTextSelectionEnd();
+    }
+    /**
+     * <code>int32 text_selection_end = 26;</code>
+     * @param value The textSelectionEnd to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTextSelectionEnd(int value) {
+      copyOnWrite();
+      instance.setTextSelectionEnd(value);
+      return this;
+    }
+    /**
+     * <code>int32 text_selection_end = 26;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTextSelectionEnd() {
+      copyOnWrite();
+      instance.clearTextSelectionEnd();
+      return this;
+    }
+
+    /**
+     * <code>bool has_text_selection = 27;</code>
+     * @return The hasTextSelection.
+     */
+    @java.lang.Override
+    public boolean getHasTextSelection() {
+      return instance.getHasTextSelection();
+    }
+    /**
+     * <code>bool has_text_selection = 27;</code>
+     * @param value The hasTextSelection to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHasTextSelection(boolean value) {
+      copyOnWrite();
+      instance.setHasTextSelection(value);
+      return this;
+    }
+    /**
+     * <code>bool has_text_selection = 27;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHasTextSelection() {
+      copyOnWrite();
+      instance.clearHasTextSelection();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * A heading's level, 1 to 9, or 0 when the app does not say.
+     * </pre>
+     *
+     * <code>uint32 heading_level = 28;</code>
+     * @return The headingLevel.
+     */
+    @java.lang.Override
+    public int getHeadingLevel() {
+      return instance.getHeadingLevel();
+    }
+    /**
+     * <pre>
+     * A heading's level, 1 to 9, or 0 when the app does not say.
+     * </pre>
+     *
+     * <code>uint32 heading_level = 28;</code>
+     * @param value The headingLevel to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHeadingLevel(int value) {
+      copyOnWrite();
+      instance.setHeadingLevel(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A heading's level, 1 to 9, or 0 when the app does not say.
+     * </pre>
+     *
+     * <code>uint32 heading_level = 28;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHeadingLevel() {
+      copyOnWrite();
+      instance.clearHeadingLevel();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * A link, with where it goes when the app says.
+     * </pre>
+     *
+     * <code>bool link = 29;</code>
+     * @return The link.
+     */
+    @java.lang.Override
+    public boolean getLink() {
+      return instance.getLink();
+    }
+    /**
+     * <pre>
+     * A link, with where it goes when the app says.
+     * </pre>
+     *
+     * <code>bool link = 29;</code>
+     * @param value The link to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLink(boolean value) {
+      copyOnWrite();
+      instance.setLink(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A link, with where it goes when the app says.
+     * </pre>
+     *
+     * <code>bool link = 29;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLink() {
+      copyOnWrite();
+      instance.clearLink();
+      return this;
+    }
+
+    /**
+     * <code>string url = 30;</code>
+     * @return The url.
+     */
+    @java.lang.Override
+    public java.lang.String getUrl() {
+      return instance.getUrl();
+    }
+    /**
+     * <code>string url = 30;</code>
+     * @return The bytes for url.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getUrlBytes() {
+      return instance.getUrlBytes();
+    }
+    /**
+     * <code>string url = 30;</code>
+     * @param value The url to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUrl(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setUrl(value);
+      return this;
+    }
+    /**
+     * <code>string url = 30;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUrl() {
+      copyOnWrite();
+      instance.clearUrl();
+      return this;
+    }
+    /**
+     * <code>string url = 30;</code>
+     * @param value The bytes for url to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUrlBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setUrlBytes(value);
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Set for a list or a grid, and for an item of one.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+     */
+    @java.lang.Override
+    public boolean hasCollection() {
+      return instance.hasCollection();
+    }
+    /**
+     * <pre>
+     * Set for a list or a grid, and for an item of one.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.NodeCollection getCollection() {
+      return instance.getCollection();
+    }
+    /**
+     * <pre>
+     * Set for a list or a grid, and for an item of one.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+     */
+    public Builder setCollection(io.github.thisisthepy.dsa.control.v1.NodeCollection value) {
+      copyOnWrite();
+      instance.setCollection(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * Set for a list or a grid, and for an item of one.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+     */
+    public Builder setCollection(
+        io.github.thisisthepy.dsa.control.v1.NodeCollection.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCollection(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Set for a list or a grid, and for an item of one.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+     */
+    public Builder mergeCollection(io.github.thisisthepy.dsa.control.v1.NodeCollection value) {
+      copyOnWrite();
+      instance.mergeCollection(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Set for a list or a grid, and for an item of one.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeCollection collection = 31;</code>
+     */
+    public Builder clearCollection() {  copyOnWrite();
+      instance.clearCollection();
+      return this;
+    }
+
+    /**
+     * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+     */
+    @java.lang.Override
+    public boolean hasCollectionItem() {
+      return instance.hasCollectionItem();
+    }
+    /**
+     * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.NodeCollectionItem getCollectionItem() {
+      return instance.getCollectionItem();
+    }
+    /**
+     * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+     */
+    public Builder setCollectionItem(io.github.thisisthepy.dsa.control.v1.NodeCollectionItem value) {
+      copyOnWrite();
+      instance.setCollectionItem(value);
+      return this;
+      }
+    /**
+     * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+     */
+    public Builder setCollectionItem(
+        io.github.thisisthepy.dsa.control.v1.NodeCollectionItem.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCollectionItem(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+     */
+    public Builder mergeCollectionItem(io.github.thisisthepy.dsa.control.v1.NodeCollectionItem value) {
+      copyOnWrite();
+      instance.mergeCollectionItem(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.NodeCollectionItem collection_item = 32;</code>
+     */
+    public Builder clearCollectionItem() {  copyOnWrite();
+      instance.clearCollectionItem();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+     * </pre>
+     *
+     * <code>int32 live_region = 33;</code>
+     * @return The liveRegion.
+     */
+    @java.lang.Override
+    public int getLiveRegion() {
+      return instance.getLiveRegion();
+    }
+    /**
+     * <pre>
+     * How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+     * </pre>
+     *
+     * <code>int32 live_region = 33;</code>
+     * @param value The liveRegion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLiveRegion(int value) {
+      copyOnWrite();
+      instance.setLiveRegion(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * How a change of the node is announced: 0 not at all, 1 politely, 2 at once.
+     * </pre>
+     *
+     * <code>int32 live_region = 33;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLiveRegion() {
+      copyOnWrite();
+      instance.clearLiveRegion();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The title of the pane the node is, when the app names one (a screen of an activity).
+     * </pre>
+     *
+     * <code>string pane_title = 34;</code>
+     * @return The paneTitle.
+     */
+    @java.lang.Override
+    public java.lang.String getPaneTitle() {
+      return instance.getPaneTitle();
+    }
+    /**
+     * <pre>
+     * The title of the pane the node is, when the app names one (a screen of an activity).
+     * </pre>
+     *
+     * <code>string pane_title = 34;</code>
+     * @return The bytes for paneTitle.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPaneTitleBytes() {
+      return instance.getPaneTitleBytes();
+    }
+    /**
+     * <pre>
+     * The title of the pane the node is, when the app names one (a screen of an activity).
+     * </pre>
+     *
+     * <code>string pane_title = 34;</code>
+     * @param value The paneTitle to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPaneTitle(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setPaneTitle(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The title of the pane the node is, when the app names one (a screen of an activity).
+     * </pre>
+     *
+     * <code>string pane_title = 34;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPaneTitle() {
+      copyOnWrite();
+      instance.clearPaneTitle();
+      return this;
+    }
+    /**
+     * <pre>
+     * The title of the pane the node is, when the app names one (a screen of an activity).
+     * </pre>
+     *
+     * <code>string pane_title = 34;</code>
+     * @param value The bytes for paneTitle to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPaneTitleBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setPaneTitleBytes(value);
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Set for a top-level node: the window it is the root of.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+     */
+    @java.lang.Override
+    public boolean hasWindow() {
+      return instance.hasWindow();
+    }
+    /**
+     * <pre>
+     * Set for a top-level node: the window it is the root of.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.NodeWindow getWindow() {
+      return instance.getWindow();
+    }
+    /**
+     * <pre>
+     * Set for a top-level node: the window it is the root of.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+     */
+    public Builder setWindow(io.github.thisisthepy.dsa.control.v1.NodeWindow value) {
+      copyOnWrite();
+      instance.setWindow(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * Set for a top-level node: the window it is the root of.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+     */
+    public Builder setWindow(
+        io.github.thisisthepy.dsa.control.v1.NodeWindow.Builder builderForValue) {
+      copyOnWrite();
+      instance.setWindow(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Set for a top-level node: the window it is the root of.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+     */
+    public Builder mergeWindow(io.github.thisisthepy.dsa.control.v1.NodeWindow value) {
+      copyOnWrite();
+      instance.mergeWindow(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Set for a top-level node: the window it is the root of.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.NodeWindow window = 35;</code>
+     */
+    public Builder clearWindow() {  copyOnWrite();
+      instance.clearWindow();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.AccessibilityNode)
   }
   @java.lang.Override
@@ -2456,12 +3561,25 @@ public  final class AccessibilityNode extends
             "range_",
             "actions_",
             "stateDescription_",
+            "accessibilityFocused_",
+            "textSelectionStart_",
+            "textSelectionEnd_",
+            "hasTextSelection_",
+            "headingLevel_",
+            "link_",
+            "url_",
+            "collection_",
+            "collectionItem_",
+            "liveRegion_",
+            "paneTitle_",
+            "window_",
           };
           java.lang.String info =
-              "\u0000\u0017\u0000\u0000\u0001\u0017\u0017\u0000\u0002\u0000\u0001\u000b\u0002+\u0003" +
-              "\u0208\u0004\u0208\u0005\u0208\u0006\u0208\u0007\u0208\b\t\t\u0007\n\u0007\u000b" +
-              "\u0007\f\u0007\r\u0007\u000e\u0007\u000f\u0007\u0010\u0007\u0011\u0007\u0012\u0007" +
-              "\u0013\u0007\u0014\u0007\u0015\t\u0016,\u0017\u0208";
+              "\u0000#\u0000\u0000\u0001##\u0000\u0002\u0000\u0001\u000b\u0002+\u0003\u0208\u0004" +
+              "\u0208\u0005\u0208\u0006\u0208\u0007\u0208\b\t\t\u0007\n\u0007\u000b\u0007\f\u0007" +
+              "\r\u0007\u000e\u0007\u000f\u0007\u0010\u0007\u0011\u0007\u0012\u0007\u0013\u0007" +
+              "\u0014\u0007\u0015\t\u0016,\u0017\u0208\u0018\u0007\u0019\u0004\u001a\u0004\u001b" +
+              "\u0007\u001c\u000b\u001d\u0007\u001e\u0208\u001f\t \t!\u0004\"\u0208#\t";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

@@ -42,7 +42,7 @@
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
             </Button>
             <Image x:Name="CaptionIcon" Width="16" Height="16" Margin="12,0,10,0" VerticalAlignment="Center"
-                   RenderOptions.BitmapScalingMode="HighQuality" />
+                   RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.AutomationId="CaptionIcon" />
             <TextBlock x:Name="CaptionTitle" FontSize="12" LineHeight="16"
                        LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
         </DockPanel>
@@ -51,8 +51,8 @@
         <StackPanel Grid.Row="1" Margin="24,16,24,24">
             <!-- Hero: the logo and what is being installed. -->
             <DockPanel x:Name="Hero" Height="72">
-                <Image Source="pack://application:,,,/assets/logo.png" Width="72" Height="72"
-                       RenderOptions.BitmapScalingMode="HighQuality">
+                <Image x:Name="HeroLogo" Source="pack://application:,,,/assets/logo.png" Width="72" Height="72"
+                       RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.AutomationId="HeroLogo">
                     <Image.Effect>
                         <DropShadowEffect BlurRadius="6" ShadowDepth="2" Direction="270" Opacity="0.16" Color="Black" />
                     </Image.Effect>
@@ -149,7 +149,9 @@
                           Stroke="{DynamicResource AccentText}" Data="M3.5,8.5 L6.5,11.5 L12.5,4.5" />
                 </Grid>
                 <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                    <TextBlock x:Name="ResultTitle" Style="{StaticResource BodyStrong}" AutomationProperties.AutomationId="ResultTitle" />
+                    <!-- A live region: when setup ends, a screen reader is told how it went. -->
+                    <TextBlock x:Name="ResultTitle" Style="{StaticResource BodyStrong}" AutomationProperties.AutomationId="ResultTitle"
+                               AutomationProperties.LiveSetting="Assertive" />
                     <TextBlock x:Name="ResultText" Style="{StaticResource Body}" Foreground="{DynamicResource TextSecondary}" />
                     <TextBlock x:Name="ResultRestart" Style="{StaticResource Body}" Margin="0,8,0,0" Visibility="Collapsed" />
                 </StackPanel>

@@ -19,6 +19,9 @@ import org.junit.Test
 /** An editor that keeps its text as an input method would see it change. */
 class FakeEditor : EditorConnection {
     var takesText = true
+    var inline = true
+    override val composesInline: Boolean
+        get() = inline
     var text = StringBuilder()
     var composing: IntRange? = null
     var cursor = 0
@@ -71,6 +74,23 @@ class FakeEditor : EditorConnection {
         composing = if (start == end) null else start until end
         return true
     }
+
+    /** The composing span the framework finished as input restarted, while the editor still holds its text. */
+    var finished: IntRange? = null
+
+    /** Input restarts on the editor: the framework finishes its composition, keeping the text. */
+    fun restart() {
+        finished = composing
+        composing = null
+    }
+
+    override fun resumeComposition(): IntRange? {
+        calls += "resume"
+        val region = finished ?: return null
+        finished = null
+        composing = region
+        return region
+    }
 }
 
 class TextInputTest {
@@ -96,7 +116,10 @@ class TextInputTest {
         focusedTask = { focusedTasks.firstOrNull() },
         send = { sent += it },
         log = log,
+        reportedTasks = { reported.sorted() },
+        packageOf = { taskId -> packages[taskId] },
     )
+    private val packages = mutableMapOf(7 to "org.example.notes", 8 to "com.spotify.music")
 
     private fun compose(text: String, cursor: Int = text.length, taskId: Int = 7) = input.handle(
         ImeComposition.newBuilder().setTaskId(taskId).setText(text).setCursor(cursor).build(),
@@ -275,5 +298,173 @@ class TextInputTest {
         focusedTasks.clear()
         input.cursorMoved(1f, 2f, 3f, 4f)
         assertTrue(sent.isEmpty())
+    }
+
+    /** A search field's editor, as the input method describes it, in the app [packageName]. */
+    private fun searchField(packageName: String, text: String = "") =
+        EditorState(ImeInputKind.IME_INPUT_KIND_SEARCH, text, 0, text.length, text.length, 0, 0, packageName)
+
+    @Test
+    fun fr6_a_focused_editor_in_a_freeform_task_reaches_the_host_ime() {
+        // As on Android 17 with every task freeform: the window manager names no focused task
+        // on any display, while Spotify's search field has the input method.
+        focusedTasks.clear()
+        input.editorChanged(searchField("com.spotify.music"))
+        input.cursorMoved(140f, 90f, 141f, 120f)
+
+        val messages = sent.map(::decode)
+        val editor = messages.single { it.hasImeEditor() }.imeEditor
+        assertEquals(8, editor.taskId)
+        assertEquals(ImeInputKind.IME_INPUT_KIND_SEARCH, editor.kind)
+        val cursor = messages.single { it.hasImeCursor() }.imeCursor
+        assertEquals(8, cursor.taskId)
+        assertEquals(listOf(40, 40, 41, 70), cursor.cursor.let { listOf(it.left, it.top, it.right, it.bottom) })
+        // The task is given the focus its editor has, once, however often the editor changes.
+        input.editorChanged(searchField("com.spotify.music", "a"))
+        assertEquals(listOf(8), focusRequests)
+    }
+
+    @Test
+    fun fr6_korean_composes_inline_while_the_guest_names_no_focused_task() {
+        focusedTasks.clear()
+        input.editorChanged(searchField("com.spotify.music"))
+        focusRequests.clear()
+
+        compose("ㅎ", taskId = 8)
+        compose("하", taskId = 8)
+        compose("한", taskId = 8)
+        commit("한", taskId = 8)
+
+        assertEquals("한", editor.text.toString())
+        assertEquals(listOf("compose ㅎ 1", "compose 하 1", "compose 한 1", "commit 한"), editor.calls)
+        // Its editor has the input method already: no keystroke moves the task to the front.
+        assertTrue(focusRequests.isEmpty())
+    }
+
+    @Test
+    fun fr6_the_editor_goes_to_the_task_the_host_typed_in_among_an_apps_tasks() {
+        focusedTasks.clear()
+        reported += 9
+        packages[9] = "com.spotify.music"
+        input.addressed(9)
+
+        input.editorChanged(searchField("com.spotify.music"))
+
+        assertEquals(9, sent.map(::decode).single { it.hasImeEditor() }.imeEditor.taskId)
+    }
+
+    @Test
+    fun fr6_the_editor_of_an_app_with_no_task_goes_to_the_task_the_host_typed_in() {
+        focusedTasks.clear()
+        input.addressed(8)
+
+        input.editorChanged(searchField("com.example.dialog"))
+        // The editor ends: the host hears it for the task that had it.
+        input.editorChanged(EditorState.NONE)
+
+        val editors = sent.map(::decode).filter { it.hasImeEditor() }.map { it.imeEditor }
+        assertEquals(listOf(8, 8), editors.map { it.taskId })
+        assertEquals(ImeInputKind.IME_INPUT_KIND_NONE, editors.last().kind)
+    }
+
+    @Test
+    fun fr6_a_composition_is_logged_once_as_it_begins_and_once_as_it_ends() {
+        compose("ㅎ")
+        compose("하")
+        compose("한")
+        commit("한")
+        compose("ㄱ")
+        compose("")
+        val info = log.lines.filter { it.startsWith("info:") }
+        assertEquals(
+            listOf(
+                "info: a composition began in task 7, inline in its editor",
+                "info: the composition in task 7 was committed after 3 updates",
+                "info: a composition began in task 7, inline in its editor",
+                "info: the composition in task 7 was removed after 1 updates",
+            ),
+            info,
+        )
+    }
+
+    @Test
+    fun fr6_a_composition_its_editor_cannot_show_asks_for_the_focus_once_and_goes_in_once_it_can() {
+        // The input method has only the app's fallback connection.
+        editor.inline = false
+        compose("ㅎ")
+        compose("하")
+        assertEquals(listOf(7), focusRequests)
+        assertEquals(1, log.lines.count { "no input connection of its own" in it })
+        // The framework starts input on the editor with its own connection.
+        editor.inline = true
+        input.editorChanged(searchField("org.example.notes"))
+        assertEquals("compose 하 1", editor.calls.last())
+        assertTrue(log.lines.any { "went into its editor" in it })
+        compose("한")
+        commit("한")
+        assertEquals("한", editor.text.toString())
+    }
+
+    @Test
+    fun fr6_input_restarting_in_the_middle_of_a_syllable_keeps_composing_it() {
+        compose("ㅎ")
+        compose("하")
+        // The app restarts input on its search field as it sets the field's text.
+        editor.restart()
+        input.editorRestarted(searchField("org.example.notes", "하"))
+        assertEquals(0 until 1, editor.composing)
+        // The host hears the editor with the composition it still has, as its own update left it.
+        val described = decode(sent.last()).imeEditor
+        assertEquals(listOf(0, 1), listOf(described.compositionStart, described.compositionEnd))
+        compose("한")
+        commit("한")
+        assertEquals("한", editor.text.toString())
+        assertTrue(editor.calls.none { it.startsWith("commit") && it != "commit 한" })
+        assertEquals(
+            listOf(
+                "info: a composition began in task 7, inline in its editor",
+                "info: input restarted in task 7 in the middle of a composition, which goes on in its editor",
+                "info: the composition in task 7 was committed after 3 updates",
+            ),
+            log.lines.filter { it.startsWith("info:") },
+        )
+    }
+
+    @Test
+    fun fr6_input_restarting_on_an_editor_that_changed_ends_the_composition_without_a_commit() {
+        compose("ㅎ")
+        compose("하")
+        // The app replaced the field's text as it restarted input.
+        editor.restart()
+        editor.finished = null
+        editor.text = StringBuilder("x")
+        editor.cursor = 1
+        input.editorRestarted(searchField("org.example.notes", "x"))
+        assertTrue(editor.calls.none { it.startsWith("commit") })
+        assertTrue(
+            log.lines.any {
+                "the composition in task 7 ended as input restarted on an editor that no longer holds it, after 2 updates" in it
+            },
+        )
+        assertEquals("x", decode(sent.last()).imeEditor.text)
+        // What the host composes next is a composition of its own, at the cursor.
+        compose("ㄴ")
+        assertEquals("xㄴ", editor.text.toString())
+        assertEquals(2, log.lines.count { "a composition began in task 7" in it })
+    }
+
+    @Test
+    fun fr6_input_restarting_with_nothing_composed_only_describes_the_editor() {
+        input.editorRestarted(searchField("org.example.notes", "a"))
+        assertEquals("a", decode(sent.single()).imeEditor.text)
+        assertTrue(editor.calls.isEmpty())
+    }
+
+    @Test
+    fun fr6_an_editor_in_the_focused_task_asks_for_no_focus() {
+        input.editorChanged(searchField("org.example.notes"))
+
+        assertEquals(7, sent.map(::decode).single { it.hasImeEditor() }.imeEditor.taskId)
+        assertTrue(focusRequests.isEmpty())
     }
 }

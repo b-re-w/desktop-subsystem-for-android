@@ -8,8 +8,8 @@
 //! turns into pixels.
 
 use dsa_host_core::compositor::caption::{scaled, CaptionBand, CaptionLayout};
-use dsa_host_core::compositor::window_mode::{ModeState, WindowMode};
-use dsa_host_core::compositor::window_sizing::BASE_DPI;
+use dsa_host_core::compositor::window_mode::{caption_revealed, ModeState, WindowMode};
+use dsa_host_core::compositor::window_sizing::{to_task_length, window_size_of, BASE_DPI};
 use dsa_host_core::input::WindowGeometry;
 
 /// The title bar's height at 100%, in pixels: the height of a caption with its top border
@@ -67,6 +67,8 @@ pub struct Toplevel {
     proposed: Option<(u32, u32)>,
     /// The title bar height last told to the guest.
     caption_told: Option<CaptionBand>,
+    /// Whether a full screen window shows its title bar now: the pointer came to the top edge.
+    revealed: bool,
 }
 
 impl Toplevel {
@@ -86,6 +88,7 @@ impl Toplevel {
             states: States::default(),
             proposed: None,
             caption_told: None,
+            revealed: false,
         }
     }
 
@@ -117,13 +120,46 @@ impl Toplevel {
         WindowGeometry {
             client: self.shown,
             task: self.task,
+            scale: self.frame_scale,
         }
     }
 
-    /// Whether the window draws its title bar: an ordinary window does; a full screen or
-    /// picture-in-picture one shows only the app.
+    /// Whether the window draws its title bar: an ordinary window does; a picture-in-picture
+    /// one shows only the app, and a full screen one only while the pointer is at the top edge
+    /// ([`Self::pointer_at`]), so its minimize and close stay in reach.
     pub fn has_caption(&self) -> bool {
-        self.mode.effective() == WindowMode::Normal
+        match self.mode.effective() {
+            WindowMode::Normal => true,
+            WindowMode::Fullscreen => self.revealed,
+            // An app overlay window shows only what its app drew.
+            WindowMode::PictureInPicture | WindowMode::Overlay => false,
+        }
+    }
+
+    /// The window changed mode: a full screen title bar starts hidden again.
+    pub fn mode_changed(&mut self) {
+        self.revealed = false;
+    }
+
+    /// Whether the window fills its monitor now.
+    pub fn is_full_screen(&self) -> bool {
+        self.mode.effective() == WindowMode::Fullscreen
+    }
+
+    /// The pointer is at `y` pixels from the window's top, or left it (`None`). Returns
+    /// whether a full screen window's title bar came out or went away, so the window draws
+    /// again.
+    pub fn pointer_at(&mut self, y: Option<f64>) -> bool {
+        let now = self.is_full_screen()
+            && caption_revealed(
+                self.revealed,
+                y.map(|y| y.floor() as i32),
+                scaled(CAPTION_AT_100, self.dpi()),
+                self.dpi(),
+            );
+        let changed = self.revealed != now;
+        self.revealed = now;
+        changed
     }
 
     /// The title bar's height in pixels; 0 when the window has none.
@@ -133,6 +169,13 @@ impl Toplevel {
         } else {
             0
         }
+    }
+
+    /// The rows of the task's frame the title bar covers: [`Self::caption_height`] in the
+    /// task's pixels, as the window shows the frame at its frame scale. A frame read back
+    /// (a screenshot, the band's sample) is in the task's pixels, not the window's.
+    pub fn caption_rows_in_frame(&self) -> u32 {
+        to_task_length(self.caption_height(), self.frame_scale)
     }
 
     /// The title bar's layout over the frame shown now. A maximized or full screen window,
@@ -151,7 +194,13 @@ impl Toplevel {
     /// ends, which an app drawing its own title bar keeps clear. A window with no title bar
     /// has an empty band.
     pub fn caption_change(&mut self) -> Option<CaptionBand> {
-        let height = self.caption_height();
+        // A full screen window's title bar shows over the app only for a moment, so the app
+        // is given no band for it.
+        let height = if self.mode.effective() == WindowMode::Normal {
+            self.caption_height()
+        } else {
+            0
+        };
         let band = if height == 0 {
             CaptionBand::default()
         } else {
@@ -215,6 +264,15 @@ impl Toplevel {
     pub fn frame_shown(&mut self, size: (u32, u32)) {
         self.shown = size;
     }
+
+    /// The pixels a frame of `frame` task pixels fills at the window's frame scale. A frame
+    /// of the task size the window's size, or the size the desktop last proposed, was turned
+    /// into is that size exactly, though rounding it back at the scale can land a pixel off.
+    pub fn frame_in_window(&self, frame: (u32, u32)) -> (u32, u32) {
+        let mut views = vec![self.shown];
+        views.extend(self.proposed);
+        window_size_of(frame, self.frame_scale, &views)
+    }
 }
 
 #[cfg(test)]
@@ -223,6 +281,25 @@ mod tests {
 
     fn window() -> Toplevel {
         Toplevel::new(7, "com.example", "Example", (400, 600))
+    }
+
+    #[test]
+    fn fr4_a_scaled_frame_of_the_proposed_size_fills_exactly_that_size() {
+        use dsa_host_core::compositor::window_sizing::{to_task_size, to_window_size};
+        let mut window = window();
+        // A task kept at 130 dpi on a 200% output: 262 window pixels per 130 task pixels.
+        window.frame_scale = (131, 65);
+        let states = States::default();
+        window.configure((1009, 700), states);
+        let asked = to_task_size((1009, 700), window.frame_scale);
+        assert_eq!(asked, (501, 347));
+        assert_eq!(to_window_size(asked, window.frame_scale), (1010, 699));
+        // The frame drawn at the size asked for fills the size proposed, not a pixel off it.
+        assert_eq!(window.frame_in_window(asked), (1009, 700));
+        window.frame_shown(window.frame_in_window(asked));
+        assert_eq!(window.shown, (1009, 700));
+        // Another frame fills its own size at the scale.
+        assert_eq!(window.frame_in_window((500, 347)), (1008, 699));
     }
 
     #[test]
@@ -330,6 +407,49 @@ mod tests {
         window.mode.toggle_fullscreen();
         assert_eq!(window.caption_height(), 0);
         assert_eq!(window.caption_change(), Some(CaptionBand::default()));
+    }
+
+    #[test]
+    fn fr30_the_caption_appears_at_the_top_edge_in_full_screen() {
+        let mut window = window();
+        // An ordinary window's title bar does not come and go.
+        assert!(!window.pointer_at(Some(0.0)));
+        assert!(window.has_caption());
+        window.mode.toggle_fullscreen();
+        window.mode_changed();
+        assert!(!window.has_caption());
+        assert_eq!(window.caption_change(), Some(CaptionBand::default()));
+        // The top edge brings it out, with its buttons, and the app is given no band for it.
+        assert!(!window.pointer_at(Some(300.0)));
+        assert!(window.pointer_at(Some(0.0)));
+        assert!(window.has_caption());
+        assert_eq!(window.caption_height(), 32);
+        assert_eq!(window.caption_change(), None);
+        // It stays while the pointer is over the band and goes below it or out of the window.
+        assert!(!window.pointer_at(Some(20.0)));
+        assert!(window.pointer_at(Some(40.0)));
+        assert!(!window.has_caption());
+        window.pointer_at(Some(0.0));
+        assert!(window.pointer_at(None));
+    }
+
+    #[test]
+    fn fr22_a_screenshot_of_a_window_at_another_scale_leaves_out_the_bands_rows_of_the_frame() {
+        use dsa_host_core::compositor::window_sizing::{density_for_dpi, scale_between};
+        let mut window = window();
+        assert_eq!(window.caption_rows_in_frame(), 32);
+        // A task kept at 100% (130 dpi) shown at 125% (164 dpi): the 32 window pixels of the
+        // band cover 25 rows of the task's frame, not 32.
+        window.frame_scale = scale_between(density_for_dpi(120), density_for_dpi(96));
+        assert_eq!(window.frame_scale, (82, 65));
+        assert_eq!(window.caption_height(), 32);
+        assert_eq!(window.caption_rows_in_frame(), 25);
+        // At 200% a task kept at 100% is shown at 262 per 130: 64 window pixels, 32 rows.
+        window.rescale(2);
+        window.frame_scale = scale_between(density_for_dpi(192), density_for_dpi(96));
+        assert_eq!(window.caption_rows_in_frame(), 32);
+        window.mode.toggle_fullscreen();
+        assert_eq!(window.caption_rows_in_frame(), 0);
     }
 
     #[test]

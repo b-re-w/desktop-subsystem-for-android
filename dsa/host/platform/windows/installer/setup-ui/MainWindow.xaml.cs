@@ -6,6 +6,7 @@ namespace Dsa.Setup
     using System.Linq;
     using System.Windows;
     using System.Windows.Automation;
+    using System.Windows.Automation.Peers;
     using System.Windows.Controls;
     using System.Windows.Documents;
     using System.Windows.Interop;
@@ -32,6 +33,10 @@ namespace Dsa.Setup
         {
             this.app = app;
             this.InitializeComponent();
+            // The window's language picks the font WPF falls back to for the characters Segoe UI
+            // lacks: Yu Gothic for Japanese, Microsoft YaHei or JhengHei for Chinese, Malgun
+            // Gothic for Korean, so each draws in its own forms.
+            this.Language = System.Windows.Markup.XmlLanguage.GetLanguage(Text.Language.Tag);
             this.dark = Palette.IsDark();
             Palette.Apply(this, this.dark);
             if (!Palette.HasMica)
@@ -66,20 +71,19 @@ namespace Dsa.Setup
         {
             this.FillLocation();
             this.Show(Screen.Install);
-            this.InstallButton.Focus();
         }
 
         internal void ShowMaintenance()
         {
             this.MaintenanceLocation.Text = string.Format(Text.InstalledLocation, this.app.GetFolder(InstallFolder));
             this.Show(Screen.Maintenance);
-            this.RepairButton.Focus();
         }
 
         internal void ShowNewer()
         {
             this.SetResult(Badge.Info, Text.NewerHeader, Text.NewerText, false);
             this.Show(Screen.Result, close: true);
+            this.Announce(ScreenReader.Announcement(Text.NewerHeader, Text.NewerText));
         }
 
         internal void ShowHelp()
@@ -94,6 +98,8 @@ namespace Dsa.Setup
                 : action == LaunchAction.Repair ? Text.ProgressRepair
                 : action == LaunchAction.Layout ? Text.ProgressLayout
                 : Text.ProgressInstall;
+            // The bar is named for what it measures, so a screen reader says "Installing, 40".
+            AutomationProperties.SetName(this.Progress, this.ProgressTitle.Text);
             this.Progress.Value = 0;
             this.ProgressPercent.Text = "0%";
             this.ProgressDetail.Text = Text.ProgressPreparing;
@@ -123,24 +129,31 @@ namespace Dsa.Setup
 
         internal void ShowSuccess(LaunchAction action, bool restart)
         {
+            string title;
+            string text;
             switch (action)
             {
                 case LaunchAction.Uninstall:
-                    this.SetResult(Badge.Success, Text.SuccessUninstall, Text.SuccessUninstallText, restart);
+                    title = Text.SuccessUninstall;
+                    text = Text.SuccessUninstallText;
                     break;
                 case LaunchAction.Repair:
-                    this.SetResult(Badge.Success, Text.SuccessRepair, Text.SuccessInstallTextBundledImage, restart);
+                    title = Text.SuccessRepair;
+                    text = Text.SuccessInstallTextBundledImage;
                     break;
                 case LaunchAction.Layout:
-                    this.SetResult(Badge.Success, Text.SuccessLayout, string.Format(Text.SuccessLayoutText, this.app.LayoutDirectory), restart);
+                    title = Text.SuccessLayout;
+                    text = string.Format(Text.SuccessLayoutText, this.app.LayoutDirectory);
                     break;
                 default:
-                    this.SetResult(Badge.Success, Text.SuccessInstall,
-                        this.app.BundledImage ? Text.SuccessInstallTextBundledImage : Text.SuccessInstallText, restart);
+                    title = Text.SuccessInstall;
+                    text = this.app.BundledImage ? Text.SuccessInstallTextBundledImage : Text.SuccessInstallText;
                     break;
             }
 
+            this.SetResult(Badge.Success, title, text, restart);
             this.Show(Screen.Result, done: !restart, close: restart, restart: restart);
+            this.Announce(ScreenReader.Announcement(title, text, restart ? Text.RestartText : null));
         }
 
         internal void ShowFailure(LaunchAction action, string message, bool cancelled, bool restart)
@@ -148,9 +161,11 @@ namespace Dsa.Setup
             var title = action == LaunchAction.Uninstall ? Text.FailureUninstall : Text.FailureInstall;
             this.SetResult(Badge.Error, title, null, restart);
             var text = this.ResultText.Inlines;
+            string announcement;
             if (cancelled)
             {
                 text.Add(new Run(Text.FailureCancelled));
+                announcement = ScreenReader.Announcement(title, Text.FailureCancelled, restart ? Text.RestartText : null);
             }
             else
             {
@@ -163,9 +178,80 @@ namespace Dsa.Setup
                 text.Add(new Run(Text.FailureLogBefore));
                 text.Add(this.Link(Text.FailureLogLink, this.app.OpenLog));
                 text.Add(new Run(Text.FailureLogAfter));
+                announcement = ScreenReader.Announcement(title, message,
+                    Text.FailureLogBefore + Text.FailureLogLink + Text.FailureLogAfter, restart ? Text.RestartText : null);
             }
 
             this.Show(Screen.Result, close: true, restart: restart);
+            this.Announce(announcement);
+        }
+
+        /// <summary>
+        /// Tells a screen reader how setup went, once the result screen is laid out. A UI
+        /// Automation notification where the .NET Framework has one (4.8 and later); on 4.7.2 the
+        /// result title is a live region, which is told that it changed.
+        /// </summary>
+        private void Announce(string words)
+        {
+            this.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                var peer = UIElementAutomationPeer.FromElement(this.ResultTitle)
+                    ?? UIElementAutomationPeer.CreatePeerForElement(this.ResultTitle);
+                if (peer == null || RaiseNotification(peer, words))
+                {
+                    return;
+                }
+
+                AutomationProperties.SetName(this.ResultTitle, words);
+                peer.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+            }));
+        }
+
+        /// <summary>
+        /// Raises a UI Automation notification with the words. The method came in .NET Framework
+        /// 4.8, after the 4.7.2 this window is built for, so it is looked up on the framework it
+        /// runs on. False when that framework has none.
+        /// </summary>
+        private static bool RaiseNotification(AutomationPeer peer, string words)
+        {
+            var method = typeof(AutomationPeer).GetMethod("RaiseNotificationEvent");
+            var parameters = method?.GetParameters();
+            if (parameters == null || parameters.Length != 4 || !parameters[0].ParameterType.IsEnum || !parameters[1].ParameterType.IsEnum)
+            {
+                return false;
+            }
+
+            try
+            {
+                var kind = Enum.Parse(parameters[0].ParameterType, "ActionCompleted");
+                var processing = Enum.Parse(parameters[1].ParameterType, "ImportantMostRecent");
+                method.Invoke(peer, new object[] { kind, processing, words, "DsaSetupResult" });
+                return true;
+            }
+            catch (Exception e) when (e is ArgumentException || e is System.Reflection.TargetInvocationException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Moves the keyboard focus to the new screen's first control, so that a keyboard or
+        /// screen reader user is not left on a button the screen has just hidden.
+        /// </summary>
+        private void FocusFirstControl(Screen screen)
+        {
+            var fields = screen == Screen.Options ? new UIElement[] { this.ProgramFolderBox } : new UIElement[0];
+            var first = ScreenReader.FirstControl<UIElement>(
+                fields,
+                this.Footer.Children.OfType<Button>(),
+                c => c.Visibility == Visibility.Visible && c.IsEnabled,
+                c => c is Button button && button.IsDefault);
+            if (first != null)
+            {
+                // The focus scope keeps it too, so the window gives it back when it is activated.
+                System.Windows.Input.FocusManager.SetFocusedElement(this, first);
+                first.Focus();
+            }
         }
 
         private void Show(Screen screen, bool done = false, bool close = false, bool restart = false)
@@ -211,6 +297,7 @@ namespace Dsa.Setup
             }
 
             this.screen = screen;
+            this.FocusFirstControl(screen);
         }
 
         private enum Badge
@@ -288,6 +375,16 @@ namespace Dsa.Setup
             this.DoneButton.Content = Text.DoneButton;
             AutomationProperties.SetName(this.CaptionMinimize, Text.Minimize);
             AutomationProperties.SetName(this.CaptionClose, Text.CloseButton);
+            // The logo is an image to a screen reader; it says whose it is.
+            AutomationProperties.SetName(this.CaptionIcon, Text.Logo);
+            AutomationProperties.SetName(this.HeroLogo, Text.Logo);
+            // The two Browse buttons and Change keep the words they show, which voice control
+            // users say; their help says which folder each one picks.
+            AutomationProperties.SetHelpText(this.ChangeButton, Text.LocationHeader);
+            AutomationProperties.SetHelpText(this.BrowseProgram, Text.BrowseProgramTitle);
+            AutomationProperties.SetHelpText(this.BrowseData, Text.BrowseDataTitle);
+            // The progress bar's name until a task names it for what it measures.
+            AutomationProperties.SetName(this.Progress, Text.ProgressInstall);
         }
 
         private void FillLocation()
@@ -490,8 +587,8 @@ namespace Dsa.Setup
         {
             this.ProgramFolderBox.Text = this.app.GetFolder(InstallFolder);
             this.DataFolderBox.Text = this.app.GetFolder(DataFolder);
+            // Showing the screen puts the focus in its first field.
             this.Show(Screen.Options);
-            this.ProgramFolderBox.Focus();
             this.ProgramFolderBox.SelectAll();
         }
 

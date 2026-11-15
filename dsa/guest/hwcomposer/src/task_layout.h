@@ -47,17 +47,24 @@ struct LayerPlacement {
     Rect frame;
 };
 
-// A task the agent reported: its ID and its window's bounds on the display.
+// A task the agent reported: its ID and its window's bounds on the display. An app overlay
+// window (a window an app adds over other apps, such as floating lyrics) is reported the same
+// way, with `overlay` set and the frame of its surface as its bounds: the host shows it in a
+// window of its own too.
 struct Task {
     int32_t id = 0;
     Rect bounds;
+    bool overlay = false;
 };
 
 // The layers of one task, bottom to top.
 struct TaskLayers {
     int32_t task = 0;
+    // Where the layers are composed from: the task's bounds, or, for an overlay whose app is
+    // moving it, the frame its surface has in this frame.
     Rect bounds;
     std::vector<int64_t> layers;
+    bool overlay = false;
 };
 
 struct Layout {
@@ -65,7 +72,15 @@ struct Layout {
     std::vector<TaskLayers> tasks;
     // Layers no task contains, bottom to top. They are never sent to the host.
     std::vector<int64_t> unassigned;
+    // The layers of overlays that cover the whole display (a screen filter, a dimmer), bottom
+    // to top. They get no window of their own, which would cover the user's desktop; they are
+    // composed over every app task instead, as they cover every app on a phone's screen. They
+    // are listed in `unassigned` too.
+    std::vector<int64_t> screen;
 };
+
+// Whether an overlay with these bounds covers the whole display.
+bool coversDisplay(const Rect& bounds, const Rect& display);
 
 // Splits the display's layers among the tasks.
 //
@@ -80,6 +95,18 @@ struct Layout {
 //   2. otherwise the task of the nearest layer below it that one of those tasks owns: a
 //      task's layers are adjacent in z order, so a popup sits just above its window;
 //   3. otherwise the smallest of those tasks, then the lowest task ID.
+//
+// An overlay's layers are found first, because an overlay floats over the tasks and would
+// otherwise be drawn into the window of the task under it:
+//   - the layers whose frame is exactly the overlay's (both clipped to the display) are its
+//     own surface;
+//   - when none is, its app is moving it and the agent's report is a frame behind: the layer
+//     of the overlay's size nearest to where it was, which is the surface of no task and of
+//     no other overlay, is taken, and the overlay is composed from that layer's frame;
+//   - a layer inside the overlay's frame and above its surface goes to it by rule 2.
+// An overlay that covers the display takes no layer this way (see Layout::screen): its layers
+// are the topmost display-wide ones above every layer of an app task, at most one for each
+// such overlay.
 Layout assignLayersToTasks(const std::vector<LayerPlacement>& layers,
                            const std::vector<Task>& tasks, const Rect& display);
 
@@ -87,7 +114,7 @@ Layout assignLayersToTasks(const std::vector<LayerPlacement>& layers,
 class TaskRegistry {
    public:
     // Records a task, or its new bounds. Returns whether anything changed.
-    bool update(int32_t id, const Rect& bounds);
+    bool update(int32_t id, const Rect& bounds, bool overlay = false);
     // Forgets a task. Returns whether it was known.
     bool remove(int32_t id);
     void clear() { mTasks.clear(); }
@@ -95,8 +122,34 @@ class TaskRegistry {
     std::vector<Task> tasks() const;
 
    private:
-    std::map<int32_t, Rect> mTasks;
+    std::map<int32_t, Task> mTasks;
 };
+
+// What the hwcomposer needs to know of an overlay's one layer to tell whether the host can
+// show the layer's own buffer as the overlay's frame, without composing it.
+struct OverlaySurface {
+    Rect frame;
+    // The layer shows a buffer the host can read as it is: 8-bit RGBA, not composed by
+    // SurfaceFlinger.
+    bool rgbaBuffer = false;
+    int64_t bufferWidth = 0;
+    int64_t bufferHeight = 0;
+    // The part of the buffer the layer shows.
+    float cropLeft = 0;
+    float cropTop = 0;
+    float cropRight = 0;
+    float cropBottom = 0;
+    float alpha = 1.0f;
+    int32_t transform = 0;
+};
+
+// Whether an overlay whose layers are `layers` is shown from its layer's own buffer. The host
+// composes into a target it first clears to opaque black, which would put a black box around
+// floating lyrics; the app's own buffer still has the transparency the app drew. So an
+// overlay of one layer that shows the whole of an RGBA buffer of its own size, unscaled,
+// unturned and at full alpha, is posted as it is. Any other overlay is composed, and is
+// opaque where nothing is drawn.
+bool showsOwnBuffer(const Rect& bounds, const std::vector<OverlaySurface>& layers);
 
 // One layer of a task, as far as telling whether its app has drawn at the task's size goes.
 struct LayerFill {
@@ -137,6 +190,47 @@ bool leavesLastFrame(bool layerMissing, bool hasFrame);
 // empty the window just before it closes, and the window would close as an empty frame. A task
 // with an earlier frame keeps that one, which its window then closes with; a first frame goes.
 bool leavesLastFrameUndrawn(const std::vector<LayerFill>& layers, bool hasFrame);
+
+// Whether a task that has had no layer since `withoutLayersSinceMs` (steady clock; 0 while it
+// has one) lets go of its host ColorBuffers at `nowMs`: once that has lasted `delayMs`. A
+// minimized window, or one whose app is in the background, has no layer, and its window shows
+// its own copy of the last frame.
+bool releaseDue(int64_t withoutLayersSinceMs, int64_t nowMs, int64_t delayMs);
+
+// Whether this process keeps its hold on the client target's host ColorBuffers at `nowMs`,
+// when SurfaceFlinger last composed something itself at `lastClientFrameMs` (steady clock; 0
+// for not since they were let go). The client target is as large as the display (two buffers
+// of 2880x2880 are 63 MiB), and SurfaceFlinger composes into it only while some layer needs it
+// (a video's YUV pictures), so it is kept for `delayMs` after the last such frame and let go
+// after that. SurfaceFlinger lets go of its own buffers on the frame that follows.
+bool clientTargetHeld(int64_t lastClientFrameMs, int64_t nowMs, int64_t delayMs);
+
+// When SurfaceFlinger last composed into the client target, and when the frame that lets go of
+// it is due. SurfaceFlinger frees its own buffers only on a frame without client composition
+// that comes a while after the last one with it, and it presents nothing while the screen is
+// still, so a frame is asked for once `delayMs` is up.
+class ClientTargetUse {
+   public:
+    explicit ClientTargetUse(int64_t delayMs) : mDelayMs(delayMs) {}
+
+    // Every frame SurfaceFlinger presents, whether or not it reaches the host: one composed
+    // while the host was away holds SurfaceFlinger's buffers all the same, and the frame asked
+    // for after the delay is what frees them.
+    void presented(bool clientLayer, int64_t nowMs);
+    // Whether the client target's host ColorBuffers are kept at `nowMs` (clientTargetHeld).
+    bool held(int64_t nowMs) const { return clientTargetHeld(mLastMs, nowMs, mDelayMs); }
+    // When the frame that lets go of the client target is due (steady clock milliseconds), if
+    // it is still held.
+    std::optional<int64_t> refreshAt() const;
+    // At the first frame once the delay is up: how long it has been since the last client
+    // frame, and the client target counts as let go from then on. Nothing otherwise.
+    std::optional<int64_t> letGo(int64_t nowMs);
+
+   private:
+    int64_t mDelayMs;
+    // The last frame with a client layer; 0 for none since the client target was let go.
+    int64_t mLastMs = 0;
+};
 
 // Whether a task's frame goes to the host, after the task's size changed.
 //

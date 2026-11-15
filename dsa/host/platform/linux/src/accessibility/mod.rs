@@ -3,7 +3,7 @@
 //!
 //! The compositor's windows are one AT-SPI application. Each window is a frame whose children
 //! are its title bar's buttons (Back while the title bar shows the back arrow, then Minimize,
-//! Maximize or Restore, and Close, named in the user's first preferred language) and the
+//! Maximize or Restore, and Close, named in the session's interface language) and the
 //! task's accessibility nodes, with their roles, names, values, states and places. A node's
 //! default action, focus, scrolling and new text go to the node's accessibility action in
 //! Android; a button's action does what a click on it does.
@@ -36,13 +36,13 @@ pub fn start(
     log: watch::Log,
 ) -> std::sync::Arc<watch::Shared> {
     use dsa_host_core::accessibility::PRESENCE_GRACE;
-    use objects::{prefers_korean, Access};
+    use objects::Access;
     use std::sync::Arc;
     use watch::Shared;
 
-    let korean = prefers_korean(|name| std::env::var(name).ok());
+    let language = crate::interface_language::ui_language();
     let shared = Shared::new(
-        Access::new(korean, PRESENCE_GRACE),
+        Access::new(language, PRESENCE_GRACE),
         Some(connect),
         commands,
         log,

@@ -15,6 +15,7 @@ use std::time::{Duration, SystemTime};
 
 use dsa_host_core::bootconfig;
 use dsa_host_core::device_identity::{append_overlay, ramdisk_overlay};
+use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::session::{GuestLauncher, GuestStall, MemoryResizer};
 use dsa_protocol::auth::{bootconfig_entry, BootSecret};
 
@@ -59,6 +60,9 @@ pub struct AndroidVmLauncher {
     console_report: Option<String>,
     /// Where each boot's initrd, with its secret, is written while the VM starts.
     boot_dir: PathBuf,
+    /// The user's own folder the Android disk is in, when it is in one: its folders are held
+    /// and the disk checked while the VM is let into it (see `crate::safe_fs`).
+    user_root: Option<PathBuf>,
     /// Says what the VM cannot run without and is missing, and tries to provide it.
     prerequisite: Option<Prerequisite>,
     /// The disk the running VM boots from, for what a stalled boot tells the user to do.
@@ -77,6 +81,64 @@ pub struct AndroidVmLauncher {
     /// The VM's network, made at each start and removed at each stop. Without it the VM has
     /// no network adapter.
     networking: Option<crate::hcn::VmNetworking>,
+    /// The service's maker of direct-mapped system disks, while the host's direct-mapped mode
+    /// is on: each boot maps the read-only disks as persistent memory where it can.
+    direct_mapped: Option<Arc<DirectMappedImages>>,
+    /// The section the running VM shares with the window manager for decoded video pictures,
+    /// held while the VM runs (see `crate::picture_region`).
+    picture_section: Option<crate::picture_region::PictureSection>,
+    /// The sections the running VM shares with the renderer for graphics memory, held while
+    /// the VM runs (see `crate::graphics_region`).
+    graphics_sections: Option<crate::graphics_region::GraphicsSections>,
+    /// Where that memory is in the running VM, as HCS said once it started, for the guest's
+    /// control daemon.
+    shared_memory: Vec<dsa_protocol::control::GuestSharedMemory>,
+}
+
+/// How the boot `config` describes maps its read-only disks in the host's direct-mapped mode:
+/// the system disk as the uncompressed copy `images` made of the image's and checked, and the
+/// add-on disk, brought to the layout the mode maps, while there is one. An error says why
+/// this boot cannot, and the boot then attaches its disks as SCSI disks, the image's own system
+/// disk verified by dm-verity as outside the mode: a host other than x86_64, an image from
+/// before the mode, or a copy that is not made and checked yet (being made in the background).
+pub fn direct_mapped_disks(
+    config: &AndroidVmConfig,
+    images: &DirectMappedImages,
+) -> Result<crate::vm::DirectMapped, String> {
+    if GuestArch::HOST != GuestArch::X86_64 {
+        return Err("the direct-mapped mode is for x86_64 hosts only".into());
+    }
+    let system = config
+        .system_image
+        .as_ref()
+        .ok_or("the image has no separate system disk to map")?;
+    let (version, dir) =
+        crate::pmem_disk::image_of(system).ok_or("the image's folder cannot be named")?;
+    let (ready, support) = images.boot_disk(&version, &dir)?;
+    let (system_disk, system_bytes) = (ready.path, ready.disk_bytes);
+    let addon_bytes = match &config.addon_disk {
+        None => None,
+        Some(path) => {
+            let disk = dsa_host_core::addon_disk::AddonDisk::new(
+                path,
+                dsa_host_core::addon_disk::Format::Vhd,
+            );
+            match disk.bring_to_mappable_layout() {
+                Ok(()) if disk.is_mappable() => crate::pmem_disk::fixed_vhd_disk_bytes(path).ok(),
+                Ok(()) => None,
+                Err(why) => {
+                    eprintln!("direct-mapped: {why}; the add-on disk stays on SCSI");
+                    None
+                }
+            }
+        }
+    };
+    Ok(crate::vm::DirectMapped {
+        system_disk,
+        system_bytes,
+        addon_bytes,
+        support,
+    })
 }
 
 /// Supplies more bootconfig lines (`key = "value"`) for each boot of the VM configured so.
@@ -246,7 +308,173 @@ impl AndroidVmLauncher {
             bootconfig: None,
             boot_properties: None,
             networking: None,
+            direct_mapped: None,
+            user_root: None,
+            picture_section: None,
+            graphics_sections: None,
+            shared_memory: Vec::new(),
         }
+    }
+
+    /// Makes the sections the VM `config` describes shares for graphics memory, with the grants
+    /// table's header. Sections that cannot be made are left out of this boot, which then sends
+    /// every host-visible byte through the graphics stream; the reason is logged.
+    fn make_graphics_sections(&mut self, config: &mut AndroidVmConfig) {
+        self.graphics_sections = None;
+        let Some(region) = config.graphics_region.clone() else {
+            return;
+        };
+        let Some(user) = config.socket_sids.first() else {
+            config.graphics_region = None;
+            return;
+        };
+        let sddl = crate::picture_region::section_sddl(user);
+        match crate::graphics_region::GraphicsSections::create(&region, &sddl) {
+            Ok(sections) => self.graphics_sections = Some(sections),
+            Err(why) => {
+                eprintln!(
+                    "{}: host-visible graphics memory goes through the graphics stream this boot: \
+                     the memory shared for it could not be made ({why})",
+                    self.id
+                );
+                config.graphics_region = None;
+            }
+        }
+    }
+
+    /// Asks the running VM where the graphics sections are, for the guest's control daemon,
+    /// which hears of both or of neither.
+    fn find_graphics_region(&mut self, system: &ComputeSystem, config: &AndroidVmConfig) {
+        let Some(region) = &config.graphics_region else {
+            return;
+        };
+        use crate::picture_region::{guest_address_from_properties, properties_query};
+        let found = system
+            .properties(&properties_query(), CALL_TIMEOUT)
+            .map(|document| {
+                (
+                    guest_address_from_properties(&document, &region.data_section),
+                    guest_address_from_properties(&document, &region.grants_section),
+                    document,
+                )
+            });
+        match found {
+            Ok((Some(data), Some(grants), _)) => {
+                eprintln!(
+                    "{}: host-visible graphics memory goes through {} MiB of shared memory, which \
+                     HCS places at {data:#x} in the VM (its grants at {grants:#x})",
+                    self.id,
+                    region.data_length >> 20
+                );
+                self.shared_memory
+                    .push(dsa_protocol::control::GuestSharedMemory {
+                        name: dsa_host_core::graphics_memory::GRANTS_NAME.into(),
+                        guest_physical_address: grants,
+                        length: region.grants_length,
+                    });
+                self.shared_memory
+                    .push(dsa_protocol::control::GuestSharedMemory {
+                        name: dsa_host_core::graphics_memory::DATA_NAME.into(),
+                        guest_physical_address: data,
+                        length: region.data_length,
+                    });
+            }
+            Ok((_, _, document)) => eprintln!(
+                "{}: host-visible graphics memory goes through the graphics stream this boot: HCS \
+                 did not say where the shared memory is ({document})",
+                self.id
+            ),
+            Err(why) => eprintln!(
+                "{}: host-visible graphics memory goes through the graphics stream this boot: HCS \
+                 did not say where the shared memory is ({why})",
+                self.id
+            ),
+        }
+    }
+
+    /// Makes the section the VM `config` describes shares for decoded pictures, with its
+    /// header. A section that cannot be made is left out of this boot, which then sends every
+    /// picture through the video port; the reason is logged.
+    fn make_picture_section(&mut self, config: &mut AndroidVmConfig) {
+        self.picture_section = None;
+        let Some(region) = config.picture_region.clone() else {
+            return;
+        };
+        let Some(user) = config.socket_sids.first() else {
+            config.picture_region = None;
+            return;
+        };
+        let sddl = crate::picture_region::section_sddl(user);
+        match crate::picture_region::PictureSection::create(
+            &region.section_name,
+            &sddl,
+            region.length,
+        ) {
+            Ok(section) => self.picture_section = Some(section),
+            Err(why) => {
+                eprintln!(
+                    "{}: decoded video pictures go through the video port this boot: the memory \
+                     shared for them could not be made ({why})",
+                    self.id
+                );
+                config.picture_region = None;
+            }
+        }
+    }
+
+    /// Asks the running VM where the picture section is, for the guest's control daemon.
+    fn find_picture_region(&mut self, system: &ComputeSystem, config: &AndroidVmConfig) {
+        self.shared_memory.clear();
+        let Some(region) = &config.picture_region else {
+            return;
+        };
+        use crate::picture_region::{guest_address_from_properties, properties_query};
+        match system.properties(&properties_query(), CALL_TIMEOUT) {
+            Ok(document) => match guest_address_from_properties(&document, &region.section_name) {
+                Some(address) => {
+                    eprintln!(
+                        "{}: decoded video pictures go through {} MiB of shared memory, which \
+                         HCS places at {address:#x} in the VM",
+                        self.id,
+                        region.length >> 20
+                    );
+                    self.shared_memory
+                        .push(dsa_protocol::control::GuestSharedMemory {
+                            name: dsa_host_core::video_slots::REGION_NAME.into(),
+                            guest_physical_address: address,
+                            length: region.length,
+                        });
+                }
+                None => eprintln!(
+                    "{}: decoded video pictures go through the video port this boot: HCS did not \
+                     say where the shared memory is ({document})",
+                    self.id
+                ),
+            },
+            Err(why) => eprintln!(
+                "{}: decoded video pictures go through the video port this boot: HCS did not say \
+                 where the shared memory is ({why})",
+                self.id
+            ),
+        }
+    }
+
+    /// Maps the read-only disks (the uncompressed copy of the system disk `images` makes, and
+    /// the add-on disk while there is one) as virtual persistent memory at each boot where the
+    /// host and the image can, so the guest maps their files instead of caching them (see
+    /// [`direct_mapped_disks`]). Without it, every boot attaches them as SCSI disks.
+    pub fn with_direct_mapped(
+        mut self,
+        images: Option<Arc<DirectMappedImages>>,
+    ) -> AndroidVmLauncher {
+        self.direct_mapped = images;
+        self
+    }
+
+    /// Says the Android disk is in the user's own folder `root`, which the user can change.
+    pub fn with_user_root(mut self, root: Option<PathBuf>) -> AndroidVmLauncher {
+        self.user_root = root;
+        self
     }
 
     /// Gives each boot a network adapter on the network `networking` makes for it.
@@ -324,6 +552,19 @@ impl AndroidVmLauncher {
         let (Some(pipe), Some(path)) = (&config.console_pipe, &self.console_log) else {
             return None;
         };
+        if let Some(root) = self
+            .user_root
+            .as_deref()
+            .filter(|root| crate::safe_fs::is_below(path, root))
+        {
+            let old = crate::console_log::old_copy_path(path);
+            if let Err(why) = crate::safe_fs::guard_files(root, &[path, &old]) {
+                let why = format!("the Android console is not kept for this boot: {why}");
+                eprintln!("{}: {why}", self.id);
+                self.console_report = Some(why);
+                return None;
+            }
+        }
         let header = boot_header(
             SystemTime::now(),
             config.image_version.as_deref(),
@@ -372,11 +613,16 @@ impl AndroidVmLauncher {
         let system =
             ComputeSystem::create(&self.id, &document, CALL_TIMEOUT).map_err(|e| e.to_string())?;
         // The VM opens its disk when it starts. A disk in the user's profile admits only the
-        // user, SYSTEM and administrators, so the VM is let in to that one file first.
+        // user, SYSTEM and administrators, so the VM is let in to that one file first. The
+        // direct-mapped system disk is not: its folder lets every VM read it and none write it.
         let mut access = vec![config.data_disk.clone()];
         access.extend(boot.vm_access());
         access.extend(config.pstore_disk.iter().cloned());
         access.extend(config.addon_disk.iter().cloned());
+        // Changing a file's access list as SYSTEM, in a folder its user can change, only on
+        // the very file checked: the folders are held until the VM has it open.
+        let _guard =
+            crate::service::guard_android_disk(self.user_root.as_deref(), &config.data_disk)?;
         for path in &access {
             grant_vm_access(&self.id, path).map_err(|e| {
                 format!(
@@ -394,6 +640,9 @@ impl AndroidVmLauncher {
             .runtime_id(CALL_TIMEOUT)
             .map_err(|e| format!("the Android VM started but its ID could not be read: {e}"))?;
         *self.vm_id.lock().unwrap_or_else(|e| e.into_inner()) = Some(vm_id);
+        self.find_picture_region(&system, config);
+        // After the pictures', which starts the list afresh.
+        self.find_graphics_region(&system, config);
         self.system = Some(Arc::new(system));
         self.memory_base = Some(u64::from(config.memory_mb));
         Ok(())
@@ -438,18 +687,40 @@ impl GuestLauncher for AndroidVmLauncher {
                 config.addon_disk = None;
             }
         }
+        if let Some(images) = &self.direct_mapped {
+            match direct_mapped_disks(&config, images) {
+                Ok(mapped) => config.direct_mapped = Some(mapped),
+                Err(why) => eprintln!(
+                    "{}: {why}; Android starts with its disks on SCSI this time",
+                    self.id
+                ),
+            }
+        }
         // Removed on every way out of this function: by then the VM has read them or will
         // never run.
-        let more = self
+        let mut more = self
             .bootconfig
             .as_mut()
             .map(|source| source(&config))
             .unwrap_or_default();
+        if let Some(mapped) = &config.direct_mapped {
+            // The add-on images come from their own partitions on the persistent memory, while
+            // the add-on disk is mapped; the system's from the image's table for the mode.
+            if mapped.addon_bytes.is_some() {
+                more = dsa_host_core::addon_disk::direct_mapped_bootconfig(&more);
+            } else {
+                more.push_str(dsa_host_core::addon_disk::DIRECT_MAPPED_BOOTCONFIG);
+            }
+        }
         let properties = self
             .boot_properties
             .as_mut()
             .and_then(|properties| properties(&config));
         config.kernel_cmdline = format!("{} {}", config.kernel_cmdline, bootconfig::CMDLINE_FLAG);
+        // Before the console's header, which records the kernel command line: fine-grained
+        // memory tells the guest's kernel the host's fault cluster.
+        config.fine_grained_memory =
+            windows_build().is_some_and(|(build, ubr)| fine_grained_memory_supported(build, ubr));
         // The console is kept from here, so a boot whose files cannot be prepared is still
         // in the log with its reason.
         config.console_pipe = self.begin_console(&config);
@@ -467,8 +738,6 @@ impl GuestLauncher for AndroidVmLauncher {
         {
             config.hosting_process_name_suffix = Some(HOSTING_PROCESS_NAME_SUFFIX.into());
         }
-        config.fine_grained_memory =
-            windows_build().is_some_and(|(build, ubr)| fine_grained_memory_supported(build, ubr));
         // The guest kernel's last log of the boot before is on this disk; one that is missing
         // or damaged is made again, empty, and Android starts either way.
         if let Some(pstore) = &config.pstore_disk {
@@ -480,7 +749,42 @@ impl GuestLauncher for AndroidVmLauncher {
         if let Some(networking) = &mut self.networking {
             config.network_adapter = networking.attach(&self.id);
         }
-        let started = self.create_and_start(&config, &boot);
+        self.make_picture_section(&mut config);
+        self.make_graphics_sections(&mut config);
+        let mut started = self.create_and_start(&config, &boot);
+        // A Windows build whose HCS does not take the shared memory regions refuses the whole
+        // VM: Android then starts without the graphics regions first, then without any, and
+        // what they would carry goes through the sockets.
+        let refused = started
+            .as_ref()
+            .err()
+            .filter(|_| config.graphics_region.is_some())
+            .cloned();
+        if let Some(why) = refused {
+            eprintln!(
+                "{}: Android did not start with memory shared for graphics ({why}); it starts \
+                 without it",
+                self.id
+            );
+            config.graphics_region = None;
+            self.graphics_sections = None;
+            started = self.create_and_start(&config, &boot);
+        }
+        let refused = started
+            .as_ref()
+            .err()
+            .filter(|_| config.picture_region.is_some())
+            .cloned();
+        if let Some(why) = refused {
+            eprintln!(
+                "{}: Android did not start with memory shared for decoded video pictures ({why}); \
+                 it starts without it",
+                self.id
+            );
+            config.picture_region = None;
+            self.picture_section = None;
+            started = self.create_and_start(&config, &boot);
+        }
         // A VM that did not come up leaves no network behind, whether or not the session
         // stops it afterwards.
         if started.is_err() {
@@ -520,6 +824,11 @@ impl GuestLauncher for AndroidVmLauncher {
         self.system = None;
         self.memory_base = None;
         *self.vm_id.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        // The VM no longer maps the picture section; it goes once the window manager lets
+        // its view go too.
+        self.shared_memory.clear();
+        self.picture_section = None;
+        self.graphics_sections = None;
         // The VM is gone, so its end of the console pipe closes and the rest is read.
         self.end_console(CONSOLE_DRAIN);
         // Its network goes with it.
@@ -544,6 +853,10 @@ impl GuestLauncher for AndroidVmLauncher {
 
     fn vm_id(&self) -> Option<String> {
         self.runtime_id().ok().map(|g| g.to_string())
+    }
+
+    fn shared_memory(&self) -> Vec<dsa_protocol::control::GuestSharedMemory> {
+        self.shared_memory.clone()
     }
 
     fn prerequisite(&mut self) -> Option<String> {

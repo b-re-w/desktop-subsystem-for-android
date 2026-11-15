@@ -25,4 +25,19 @@
   <ItemGroup>
     <ProjectReference Include="..\DsaSettings.Core\DsaSettings.Core.csproj" />
   </ItemGroup>
+
+  <!-- What the APK Installer's window and the setup window tell a screen reader, and where
+       their keyboard focus goes. Both are Windows apps, and setup is for .NET Framework, so
+       neither is referenced: their plain helpers are compiled in here, the way the apps compile
+       them. -->
+  <ItemGroup>
+    <Compile Include="..\DsaApkInstaller\ScreenReader.cs" Link="Linked\ApkInstallerScreenReader.cs" />
+    <Compile Include="..\..\installer\setup-ui\ScreenReader.cs" Link="Linked\SetupScreenReader.cs" />
+  </ItemGroup>
+
+  <!-- The setup window's words, read in every language. They use only the interface language
+       resolver of DsaSettings.Core, which setup compiles in the same way. -->
+  <ItemGroup>
+    <Compile Include="..\..\installer\setup-ui\Text.cs" Link="Linked\SetupText.cs" />
+  </ItemGroup>
 </Project>

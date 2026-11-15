@@ -20,6 +20,33 @@
 //! A toast the user dismisses (`UserCanceled`) is dismissed in Android too; the service
 //! leaves a notification its app made one the user cannot dismiss.
 //!
+//! The notification's action buttons ("Reply", "Mark as read") are the toast's buttons, so a
+//! person who uses the keyboard or a screen reader acts on it from the notification centre
+//! (Windows+N, then Tab), as Windows' own apps' toasts are acted on. Choosing one runs that
+//! action in Android. The two kinds of button reach this program in different ways, because
+//! a protocol launch carries no text:
+//!
+//! - A button that takes no reply launches the protocol, as a click does ([`button_uri`]):
+//!   Windows starts `dsa-wm.exe --notification <uri>`, which asks the service to run the
+//!   action. It works for as long as the toast is in the notification centre, whatever
+//!   happened to the window manager since.
+//! - A button that takes a reply sits beside a text field (`<input type="text">`), or beside
+//!   the app's choices (`<input type="selection">`) when the app takes nothing else. Windows
+//!   hands the text only to a program it activates: either a COM server named in the
+//!   AppUserModelID's registration (`CustomActivator`), which Windows starts with the text,
+//!   or the program that showed the toast, through the toast's `Activated` event, whose
+//!   `ToastActivatedEventArgs.UserInput` holds each field's value. The second is used: the
+//!   button is `activationType="foreground"`, its `arguments` name the notification and the
+//!   button ([`reply_uri`]), and the window manager, which keeps every toast it shows,
+//!   reads the reply from the event ([`reply_activation`]) and passes it to the service as
+//!   it passes a dismissal. An unpackaged program gets that event for its own toasts with no
+//!   registration beyond the AppUserModelID it already writes, so nothing more is
+//!   installed. The cost is that a reply needs the window manager that showed the toast:
+//!   one written into a toast left over from a window manager that has since ended does not
+//!   reach Android. The window manager runs for as long as the user is signed in, and the
+//!   service sends a notification again whenever the app changes it, which replaces the
+//!   toast with one the running window manager keeps, so that is the rare case.
+//!
 //! The same watch carries DSA's own news about updates: that an update of Android or of DSA
 //! is ready, was applied, or failed. Those toasts are DSA's ([`DSA_APP_ID`], under the
 //! settings app's logo), one per kind of update, so the news that an update was applied
@@ -28,17 +55,19 @@
 //! restarts into a downloaded image has two buttons: [Restart now] launches this program with
 //! [`restart_uri`], which asks the service to restart, and [Later] only closes the toast.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use dsa_host_core::compositor::frame_stall::is_recovery_key;
 use dsa_host_core::host_api::HostApiClient;
 use dsa_host_core::native_abi::in_user_language;
 use dsa_host_core::notifications::{Notification, NotificationAction, NotificationEvent};
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::update::alerts::{buttons_of, is_update_key, thread_of, RESTART_NOW};
 use dsa_transport::Connector;
 use sha2::{Digest, Sha256};
@@ -145,29 +174,120 @@ pub fn restart_uri(key: &str) -> String {
     format!("{PROTOCOL}:restart?key={}", percent_encode(key))
 }
 
-/// The verb and the key a launched URI names, or `None` for a URI that is not one of ours or
-/// is damaged.
-fn verb_and_key(uri: &str) -> Option<(String, String)> {
+/// The URI the action button at place `button`, titled `title`, of the notification with
+/// `key` launches: a button that takes no reply.
+pub fn button_uri(key: &str, button: usize, title: &str) -> String {
+    format!(
+        "{PROTOCOL}:button?key={}&button={button}&title={}",
+        percent_encode(key),
+        percent_encode(title)
+    )
+}
+
+/// The arguments of the action button at place `button`, titled `title`, of the notification
+/// with `key`, for a button that takes a reply. Windows hands them, with the reply, to the
+/// toast's `Activated` event ([`reply_activation`]).
+pub fn reply_uri(key: &str, button: usize, title: &str) -> String {
+    format!(
+        "{PROTOCOL}:reply?key={}&button={button}&title={}",
+        percent_encode(key),
+        percent_encode(title)
+    )
+}
+
+/// The id of the reply field beside the button at place `button`, which names its value in
+/// the toast's user input.
+pub fn reply_input_id(button: usize) -> String {
+    format!("reply{button}")
+}
+
+/// One of our URIs, taken apart.
+struct Launched {
+    verb: String,
+    key: String,
+    /// The button's place and title, for a button's URI.
+    button: Option<(u32, String)>,
+}
+
+/// The parts a launched URI names, or `None` for a URI that is not one of ours or is damaged.
+fn launched(uri: &str) -> Option<Launched> {
     let rest = uri.trim().trim_matches('"').strip_prefix(PROTOCOL)?;
     let rest = rest.strip_prefix(':')?;
     let rest = rest.trim_start_matches('/');
     let (verb, query) = rest.split_once('?')?;
-    let key = query
-        .split('&')
-        .find_map(|pair| pair.strip_prefix("key="))
-        .and_then(percent_decode)?;
+    let value = |name: &str| {
+        query
+            .split('&')
+            .find_map(|pair| pair.strip_prefix(name)?.strip_prefix('='))
+            .map(percent_decode)
+    };
+    let key = value("key")??;
     if !dsa_host_core::notifications::valid_key(&key) {
         return None;
     }
-    Some((verb.trim_end_matches('/').to_string(), key))
+    let button = match (value("button"), value("title")) {
+        (Some(button), Some(title)) => {
+            let button: u32 = button?.parse().ok()?;
+            if button as usize >= dsa_host_core::notifications::MAX_BUTTONS {
+                return None;
+            }
+            Some((button, title?))
+        }
+        _ => None,
+    };
+    Some(Launched {
+        verb: verb.trim_end_matches('/').to_string(),
+        key,
+        button,
+    })
 }
 
-/// What a launched URI asks for, or `None` for a URI that is not one of ours or is damaged.
+/// The verb and the key a launched URI names, or `None` for a URI that is not one of ours or
+/// is damaged.
+fn verb_and_key(uri: &str) -> Option<(String, String)> {
+    launched(uri).map(|launched| (launched.verb, launched.key))
+}
+
+/// What a launched URI asks for, or `None` for a URI that is not one of ours or is damaged. A
+/// reply button's URI asks for its action with no reply; the reply comes only through
+/// [`reply_activation`].
 pub fn parse_activation(uri: &str) -> Option<NotificationAction> {
-    match verb_and_key(uri)? {
-        (verb, key) if verb == "open" => Some(NotificationAction::Open { key }),
+    let launched = launched(uri)?;
+    match (launched.verb.as_str(), launched.button) {
+        ("open", _) => Some(NotificationAction::Open { key: launched.key }),
+        ("button" | "reply", Some((button, title))) => Some(NotificationAction::Button {
+            key: launched.key,
+            button,
+            title,
+            reply: String::new(),
+        }),
         _ => None,
     }
+}
+
+/// What a reply button asks for, from the toast's `Activated` event: its `arguments`, and the
+/// value of each field the user filled in (`user_input`, by the field's id). `None` when the
+/// arguments are not a reply button's, or when the user sent nothing; an empty reply does
+/// nothing, as Android's own reply field does not send one.
+pub fn reply_activation(
+    arguments: &str,
+    user_input: impl Fn(&str) -> Option<String>,
+) -> Option<NotificationAction> {
+    let launched = launched(arguments)?;
+    if launched.verb != "reply" {
+        return None;
+    }
+    let (button, title) = launched.button?;
+    let reply = user_input(&reply_input_id(button as usize))?;
+    if reply.trim().is_empty() {
+        return None;
+    }
+    Some(NotificationAction::Button {
+        key: launched.key,
+        button,
+        title,
+        reply: dsa_host_core::notifications::cut_reply(reply),
+    })
 }
 
 /// Whether a launched URI is the [Restart now] button of DSA's question about a downloaded
@@ -176,18 +296,9 @@ pub fn is_restart(uri: &str) -> bool {
     verb_and_key(uri).is_some_and(|(verb, key)| verb == "restart" && is_update_key(&key))
 }
 
-/// Whether the user reads Windows in Korean.
-fn user_reads_korean() -> bool {
-    #[cfg(windows)]
-    {
-        // SAFETY: reads the user's display language.
-        let language = unsafe { windows_sys::Win32::Globalization::GetUserDefaultUILanguage() };
-        crate::compositor::widget_menu::is_korean(language)
-    }
-    #[cfg(not(windows))]
-    {
-        false
-    }
+/// The interface language the user reads Windows in, as DSA shows its own words.
+pub fn user_language() -> UiLanguage {
+    crate::ui_language::user_language()
 }
 
 /// The toast's XML for `notification`, with its icon at `icon` when it has one. A
@@ -217,7 +328,7 @@ pub fn toast_xml(notification: &Notification, icon: Option<&Path>) -> String {
     // DSA's question whether Android restarts into a downloaded image: [Restart now] launches
     // this program to ask the service, and [Later] only closes the toast.
     let mut actions = String::new();
-    for button in buttons_of(&notification.key, user_reads_korean()) {
+    for button in buttons_of(&notification.key, user_language()) {
         let action = if button.action == RESTART_NOW {
             format!(
                 "<action content=\"{}\" arguments=\"{}\" activationType=\"protocol\"/>",
@@ -232,13 +343,79 @@ pub fn toast_xml(notification: &Notification, icon: Option<&Path>) -> String {
         };
         actions.push_str(&action);
     }
+    let (inputs, buttons) = button_xml(notification);
+    actions.push_str(&buttons);
     if !actions.is_empty() {
-        actions = format!("<actions>{actions}</actions>");
+        actions = format!("<actions>{inputs}{actions}</actions>");
     }
     format!(
         "<toast launch=\"{}\" activationType=\"protocol\"><visual><binding template=\"ToastGeneric\">{lines}</binding></visual>{actions}{audio}</toast>",
         xml(&activation_uri(&notification.key))
     )
+}
+
+/// The fields and the buttons of the notification's action buttons, as a toast's `<input>`
+/// and `<action>` elements. A button with no title is left out, since Windows shows a button
+/// only by its words; the others keep their places in the notification, which their URIs
+/// name. A button that takes a reply gets its field beside it (`hint-inputId`): a text field
+/// that shows the app's label while empty, or, when the app takes only its own choices, a
+/// list of them with the first chosen.
+fn button_xml(notification: &Notification) -> (String, String) {
+    let mut inputs = String::new();
+    let mut buttons = String::new();
+    for (place, button) in notification
+        .buttons
+        .iter()
+        .enumerate()
+        .take(dsa_host_core::notifications::MAX_BUTTONS)
+    {
+        if button.title.trim().is_empty() {
+            continue;
+        }
+        if !button.reply {
+            buttons.push_str(&format!(
+                "<action content=\"{}\" arguments=\"{}\" activationType=\"protocol\"/>",
+                xml(&button.title),
+                xml(&button_uri(&notification.key, place, &button.title))
+            ));
+            continue;
+        }
+        let id = reply_input_id(place);
+        if button.reply_choices_only && !button.reply_choices.is_empty() {
+            let choices: String = button
+                .reply_choices
+                .iter()
+                .map(|choice| {
+                    format!(
+                        "<selection id=\"{}\" content=\"{}\"/>",
+                        xml(choice),
+                        xml(choice)
+                    )
+                })
+                .collect();
+            inputs.push_str(&format!(
+                "<input id=\"{id}\" type=\"selection\" title=\"{}\" defaultInput=\"{}\">{choices}</input>",
+                xml(&button.reply_label),
+                xml(&button.reply_choices[0])
+            ));
+        } else {
+            let label = if button.reply_label.trim().is_empty() {
+                &button.title
+            } else {
+                &button.reply_label
+            };
+            inputs.push_str(&format!(
+                "<input id=\"{id}\" type=\"text\" placeHolderContent=\"{}\"/>",
+                xml(label)
+            ));
+        }
+        buttons.push_str(&format!(
+            "<action content=\"{}\" arguments=\"{}\" activationType=\"foreground\" hint-inputId=\"{id}\"/>",
+            xml(&button.title),
+            xml(&reply_uri(&notification.key, place, &button.title))
+        ));
+    }
+    (inputs, buttons)
 }
 
 /// Whether the notification goes to the notification centre without popping up or making a
@@ -269,6 +446,17 @@ pub fn default_icon_dir() -> Option<PathBuf> {
     crate::paths::UserRoot::current().map(|root| root.notifications())
 }
 
+/// DSA's own news that the window manager raises itself, such as the notice that Android is
+/// restarted because its graphics did not recover from a GPU reset. The notifications' thread
+/// shows each as it shows the news about updates: under DSA's own name and logo.
+pub type DsaNews = Arc<Mutex<VecDeque<Notification>>>;
+
+/// The place DSA's own news with `key` is shown in, or `None` for an app's notification: one
+/// per kind of update, so the newer replaces the older, and one per notice about a recovery.
+pub fn dsa_thread(key: &str) -> Option<String> {
+    thread_of(key).or_else(|| is_recovery_key(key).then(|| key.to_string()))
+}
+
 /// One toast to show.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Toast {
@@ -287,9 +475,11 @@ pub struct Toast {
 /// Shows and removes toasts. The window manager's is Windows' notification platform
 /// ([`WindowsToasts`]); a test's records what it is asked.
 pub trait Toasts {
-    /// Shows the toast, replacing the one with its tag. A toast the user dismisses is
-    /// reported on `dismissed` with its notification's key.
-    fn show(&mut self, toast: &Toast, dismissed: Sender<String>) -> Result<(), String>;
+    /// Shows the toast, replacing the one with its tag. What the user does with it that
+    /// reaches this program rather than a launched one is reported on `acted`: a dismissal
+    /// ([`NotificationAction::Dismiss`]), and a reply sent with one of its buttons
+    /// ([`NotificationAction::Button`]).
+    fn show(&mut self, toast: &Toast, acted: Sender<NotificationAction>) -> Result<(), String>;
     /// Removes the toast `tag` of `app_id`.
     fn remove(&mut self, app_id: &str, tag: &str) -> Result<(), String>;
 }
@@ -302,23 +492,43 @@ struct Shown {
 }
 
 /// Shows the notifications of the user's Android until `stop`, reconnecting to the service
-/// whenever the connection ends. Dismissals are passed back through new connections made
-/// with `connector`.
+/// whenever the connection ends. Dismissals and replies are passed back through new
+/// connections made with `connector`.
 pub fn sync(
     mut connector: Box<dyn Connector>,
     toasts: &mut dyn Toasts,
     icon_dir: Option<PathBuf>,
+    news: DsaNews,
     stop: Arc<AtomicBool>,
     logger: Option<Arc<CompositorLogger>>,
 ) {
-    let (dismissed_tx, dismissed) = mpsc::channel();
+    let (acted_tx, acted) = mpsc::channel();
     let mut shown: HashMap<String, Shown> = HashMap::new();
     let mut last_error = String::new();
     if let Some(dir) = &icon_dir {
         // Icons of an earlier run's toasts; those toasts no longer act on anything.
         let _ = std::fs::remove_dir_all(dir);
     }
+    // DSA's own news needs no connection to the service, so it shows while there is none.
+    let show_news = |toasts: &mut dyn Toasts, shown: &mut HashMap<String, Shown>| {
+        let waiting: Vec<Notification> = news
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .drain(..)
+            .collect();
+        for notification in waiting {
+            apply(
+                NotificationEvent::Posted(notification),
+                toasts,
+                shown,
+                icon_dir.as_deref(),
+                &acted_tx,
+                logger.as_deref(),
+            );
+        }
+    };
     while !stop.load(Ordering::Relaxed) {
+        show_news(toasts, &mut shown);
         let stream = HostApiClient::connect(&mut *connector, BUILD, ANSWER)
             .and_then(|client| client.watch_notifications());
         let mut stream = match stream {
@@ -338,14 +548,15 @@ pub fn sync(
         };
         last_error.clear();
         while !stop.load(Ordering::Relaxed) {
-            dismissals(&mut *connector, &dismissed, logger.as_deref());
+            show_news(toasts, &mut shown);
+            user_actions(&mut *connector, &acted, logger.as_deref());
             match stream.next(POLL) {
                 Ok(Some(event)) => apply(
                     event,
                     toasts,
                     &mut shown,
                     icon_dir.as_deref(),
-                    &dismissed_tx,
+                    &acted_tx,
                     logger.as_deref(),
                 ),
                 Ok(None) => {}
@@ -361,25 +572,25 @@ pub fn sync(
     }
 }
 
-/// Passes the dismissals the user made to the service.
-fn dismissals(
+/// Passes the dismissals and the replies the user made to the service.
+fn user_actions(
     connector: &mut dyn Connector,
-    dismissed: &Receiver<String>,
+    acted: &Receiver<NotificationAction>,
     logger: Option<&CompositorLogger>,
 ) {
-    while let Ok(key) = dismissed.try_recv() {
-        // DSA's own news is not Android's to dismiss.
-        if is_update_key(&key) {
+    while let Ok(action) = acted.try_recv() {
+        // DSA's own news is not Android's to act on.
+        if is_update_key(action.key()) || is_recovery_key(action.key()) {
             continue;
         }
-        let result = HostApiClient::connect(connector, BUILD, ANSWER).and_then(|mut client| {
-            client.act_on_notification(&NotificationAction::Dismiss { key })
-        });
+        let result = HostApiClient::connect(connector, BUILD, ANSWER)
+            .and_then(|mut client| client.act_on_notification(&action));
         if let Err(error) = result {
-            note(
-                logger,
-                &format!("a dismissed notification did not reach Android: {error}"),
-            );
+            let what = match action {
+                NotificationAction::Button { .. } => "a reply to a notification",
+                _ => "a dismissed notification",
+            };
+            note(logger, &format!("{what} did not reach Android: {error}"));
         }
     }
 }
@@ -390,13 +601,13 @@ fn apply(
     toasts: &mut dyn Toasts,
     shown: &mut HashMap<String, Shown>,
     icon_dir: Option<&Path>,
-    dismissed: &Sender<String>,
+    acted: &Sender<NotificationAction>,
     logger: Option<&CompositorLogger>,
 ) {
     match event {
         NotificationEvent::Posted(notification) => {
-            let notification = in_user_language(notification, user_reads_korean());
-            let ours = thread_of(&notification.key);
+            let notification = in_user_language(notification, user_language());
+            let ours = dsa_thread(&notification.key);
             let (app_id, tag, icon_png) = match &ours {
                 Some(thread) => (DSA_APP_ID.to_string(), tag_of(thread), DSA_LOGO_PNG),
                 None => (
@@ -420,7 +631,7 @@ fn apply(
                 quiet: quiet(&notification),
                 key: notification.key.clone(),
             };
-            if let Err(why) = toasts.show(&toast, dismissed.clone()) {
+            if let Err(why) = toasts.show(&toast, acted.clone()) {
                 note(
                     logger,
                     &format!(
@@ -466,8 +677,9 @@ fn write_icon(dir: &Path, tag: &str, png: &[u8]) -> Option<PathBuf> {
     Some(path)
 }
 
-/// Handles `dsa-wm --notification <uri>`, which Windows runs when a toast is clicked: passes
-/// the click to the service through `connector`. Returns what went wrong, if anything.
+/// Handles `dsa-wm --notification <uri>`, which Windows runs when a toast, or one of its
+/// buttons that takes no reply, is clicked: passes the click to the service through
+/// `connector`. Returns what went wrong, if anything.
 pub fn activate(uri: &str, connector: &mut dyn Connector) -> Result<(), String> {
     // [Restart now] on DSA's question: the service restarts Android into the new image.
     if is_restart(uri) {
@@ -493,8 +705,12 @@ pub fn activate(uri: &str, connector: &mut dyn Connector) -> Result<(), String> 
     if is_update_key(action.key()) {
         return match action {
             NotificationAction::Open { .. } => open_update_settings(),
-            NotificationAction::Dismiss { .. } => Ok(()),
+            NotificationAction::Dismiss { .. } | NotificationAction::Button { .. } => Ok(()),
         };
+    }
+    // A notice about a recovery says what DSA did; a click only closes it.
+    if is_recovery_key(action.key()) {
+        return Ok(());
     }
     let mut client = HostApiClient::connect(connector, "dsa-wm notification click", ANSWER)
         .map_err(|e| e.to_string())?;
@@ -608,13 +824,13 @@ impl Default for WindowsToasts {
 }
 
 impl Toasts for WindowsToasts {
-    fn show(&mut self, wanted: &Toast, dismissed: Sender<String>) -> Result<(), String> {
-        use windows::core::HSTRING;
+    fn show(&mut self, wanted: &Toast, acted: Sender<NotificationAction>) -> Result<(), String> {
+        use windows::core::{IInspectable, Interface, HSTRING};
         use windows::Data::Xml::Dom::XmlDocument;
-        use windows::Foundation::TypedEventHandler;
+        use windows::Foundation::{IPropertyValue, TypedEventHandler};
         use windows::UI::Notifications::{
-            ToastDismissalReason, ToastDismissedEventArgs, ToastNotification,
-            ToastNotificationManager,
+            ToastActivatedEventArgs, ToastDismissalReason, ToastDismissedEventArgs,
+            ToastNotification, ToastNotificationManager,
         };
 
         let Toast {
@@ -651,6 +867,7 @@ impl Toasts for WindowsToasts {
                 .map_err(|e| fail("quieting the toast", e))?;
         }
         let key = key.clone();
+        let dismissed = acted.clone();
         toast
             .Dismissed(&TypedEventHandler::<
                 ToastNotification,
@@ -658,11 +875,35 @@ impl Toasts for WindowsToasts {
             >::new(move |_, args| {
                 if let Some(args) = args.as_ref() {
                     if args.Reason()? == ToastDismissalReason::UserCanceled {
-                        let _ = dismissed.send(key.clone());
+                        let _ = dismissed.send(NotificationAction::Dismiss { key: key.clone() });
                     }
                 }
                 Ok(())
             }))
+            .map_err(|e| fail("following the toast", e))?;
+        // A reply button is activated in this process (`activationType="foreground"`), with
+        // what the user wrote in the toast's user input. A click on the toast, or on a button
+        // that takes no reply, launches the protocol instead and is not handled here.
+        toast
+            .Activated(&TypedEventHandler::<ToastNotification, IInspectable>::new(
+                move |_, args| {
+                    let Some(args) = args.as_ref() else {
+                        return Ok(());
+                    };
+                    let args: ToastActivatedEventArgs = args.cast()?;
+                    let arguments = args.Arguments()?.to_string();
+                    let input = args.UserInput()?;
+                    let value = |id: &str| -> Option<String> {
+                        let value = input.Lookup(&HSTRING::from(id)).ok()?;
+                        let text = value.cast::<IPropertyValue>().ok()?.GetString().ok()?;
+                        Some(text.to_string())
+                    };
+                    if let Some(action) = reply_activation(&arguments, value) {
+                        let _ = acted.send(action);
+                    }
+                    Ok(())
+                },
+            ))
             .map_err(|e| fail("following the toast", e))?;
         let notifier =
             ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(app_id.as_str()))
@@ -707,10 +948,141 @@ mod tests {
             high_priority: true,
             clearable: true,
             when_millis: 0,
+            buttons: Vec::new(),
         }
     }
 
     const KEY: &str = "0|com.example.chat|1|null|10100";
+
+    fn chat_with_buttons() -> Notification {
+        use dsa_host_core::notifications::NotificationButton;
+        Notification {
+            buttons: vec![
+                NotificationButton {
+                    title: "Reply".into(),
+                    reply: true,
+                    reply_label: "Reply to \"Ann\" & co".into(),
+                    semantic_action: 1,
+                    ..Default::default()
+                },
+                NotificationButton {
+                    title: "Mark <read>".into(),
+                    semantic_action: 2,
+                    ..Default::default()
+                },
+                // Icon only: Windows shows a button by its words, so it is left out.
+                NotificationButton::default(),
+                NotificationButton {
+                    title: "Answer".into(),
+                    reply: true,
+                    reply_choices: vec!["Yes".into(), "No & never".into()],
+                    reply_choices_only: true,
+                    ..Default::default()
+                },
+            ],
+            ..chat(KEY)
+        }
+    }
+
+    #[test]
+    fn fr18_toast_has_a_button_per_action_and_a_reply_input() {
+        let xml = toast_xml(&chat_with_buttons(), None);
+        assert!(xml.contains("<actions>"), "{xml}");
+        // The fields come before the buttons, as Windows reads them.
+        let actions = &xml[xml.find("<actions>").unwrap()..];
+        assert!(actions.find("<input").unwrap() < actions.find("<action ").unwrap());
+        // A reply: a text field with the app's label, and its button beside it, activated in
+        // this process.
+        assert!(
+            xml.contains(
+                "<input id=\"reply0\" type=\"text\" placeHolderContent=\"Reply to &quot;Ann&quot; &amp; co\"/>"
+            ),
+            "{xml}"
+        );
+        assert!(
+            xml.contains(&format!(
+                "<action content=\"Reply\" arguments=\"{}\" activationType=\"foreground\" hint-inputId=\"reply0\"/>",
+                super::xml(&reply_uri(KEY, 0, "Reply"))
+            )),
+            "{xml}"
+        );
+        // A button that takes no reply launches the protocol.
+        assert!(
+            xml.contains(&format!(
+                "<action content=\"Mark &lt;read&gt;\" arguments=\"{}\" activationType=\"protocol\"/>",
+                super::xml(&button_uri(KEY, 1, "Mark <read>"))
+            )),
+            "{xml}"
+        );
+        // The button with no words is left out; the one after it keeps its place.
+        assert_eq!(xml.matches("<action ").count(), 3, "{xml}");
+        assert!(xml.contains("hint-inputId=\"reply3\""), "{xml}");
+        // Choices only: a list of them, the first chosen.
+        assert!(
+            xml.contains(
+                "<input id=\"reply3\" type=\"selection\" title=\"\" defaultInput=\"Yes\"><selection id=\"Yes\" content=\"Yes\"/><selection id=\"No &amp; never\" content=\"No &amp; never\"/></input>"
+            ),
+            "{xml}"
+        );
+        // A notification with no buttons has no actions.
+        assert!(!toast_xml(&chat(KEY), None).contains("<actions>"));
+    }
+
+    #[test]
+    fn fr18_action_activation_uri_round_trips() {
+        let korean = "0|com.example|1|\u{c548}\u{b155}|10100";
+        for (key, place, title) in [
+            (KEY, 0usize, "Mark as read"),
+            (korean, 4, "\u{c77d}\u{c74c} & <done>"),
+        ] {
+            let expected = Some(NotificationAction::Button {
+                key: key.into(),
+                button: place as u32,
+                title: title.into(),
+                reply: String::new(),
+            });
+            let uri = button_uri(key, place, title);
+            assert!(!uri.contains('|') && !uri.contains(' '), "{uri}");
+            assert_eq!(parse_activation(&uri), expected);
+            assert_eq!(parse_activation(&format!("\"{uri}\"")), expected);
+            // A reply button launched as a protocol still runs, with no reply.
+            assert_eq!(parse_activation(&reply_uri(key, place, title)), expected);
+        }
+        // A reply comes from the toast's user input, by the field beside the button.
+        let arguments = reply_uri(KEY, 0, "Reply");
+        let input = |id: &str| (id == "reply0").then(|| "see you \u{c548}\u{b155}".to_string());
+        assert_eq!(
+            reply_activation(&arguments, input),
+            Some(NotificationAction::Button {
+                key: KEY.into(),
+                button: 0,
+                title: "Reply".into(),
+                reply: "see you \u{c548}\u{b155}".into(),
+            })
+        );
+        // Nothing for an empty reply, a field that is not there, or a button that takes none.
+        assert_eq!(reply_activation(&arguments, |_| Some("  ".into())), None);
+        assert_eq!(reply_activation(&arguments, |_| None), None);
+        assert_eq!(
+            reply_activation(&button_uri(KEY, 0, "Reply"), |_| Some("hi".into())),
+            None
+        );
+    }
+
+    #[test]
+    fn nfr5_a_button_uri_that_is_damaged_is_refused() {
+        for uri in [
+            "io.github.thisisthepy.dsa-notification:button?key=a",
+            "io.github.thisisthepy.dsa-notification:button?key=a&button=1",
+            "io.github.thisisthepy.dsa-notification:button?key=a&button=x&title=t",
+            "io.github.thisisthepy.dsa-notification:button?key=a&button=-1&title=t",
+            "io.github.thisisthepy.dsa-notification:button?key=a&button=5&title=t",
+            "io.github.thisisthepy.dsa-notification:button?key=a&button=1&title=%zz",
+            "io.github.thisisthepy.dsa-notification:button?button=1&title=t",
+        ] {
+            assert_eq!(parse_activation(uri), None, "{uri}");
+        }
+    }
 
     #[test]
     fn fr25_the_offer_to_run_an_app_as_arm_is_shown_in_the_users_language() {
@@ -720,13 +1092,13 @@ mod tests {
             title: "Game could not start".into(),
             ..chat(KEY)
         };
-        let korean = in_user_language(offer.clone(), true);
+        let korean = in_user_language(offer.clone(), UiLanguage::Korean);
         assert_eq!(korean.title, "Game을(를) 시작하지 못했습니다");
         assert!(korean.text.contains("ARM"), "{}", korean.text);
-        let english = in_user_language(offer, false);
+        let english = in_user_language(offer, UiLanguage::English);
         assert_eq!(english.title, "Game could not start");
         // A notification of an app is shown as the app wrote it.
-        assert_eq!(in_user_language(chat(KEY), true), chat(KEY));
+        assert_eq!(in_user_language(chat(KEY), UiLanguage::Korean), chat(KEY));
         // A click on the offer reaches the service, which installs the app again.
         let key = Notice::Offer.key("com.example.game");
         assert_eq!(
@@ -821,14 +1193,14 @@ mod tests {
     struct Recorded {
         shown: Vec<(String, String, bool)>,
         removed: Vec<(String, String)>,
-        dismiss: Vec<(String, Sender<String>)>,
+        acted: Vec<(String, Sender<NotificationAction>)>,
     }
 
     impl Toasts for Recorded {
-        fn show(&mut self, toast: &Toast, dismissed: Sender<String>) -> Result<(), String> {
+        fn show(&mut self, toast: &Toast, acted: Sender<NotificationAction>) -> Result<(), String> {
             self.shown
                 .push((toast.app_id.clone(), toast.tag.clone(), toast.quiet));
-            self.dismiss.push((toast.key.clone(), dismissed));
+            self.acted.push((toast.key.clone(), acted));
             Ok(())
         }
         fn remove(&mut self, app_id: &str, tag: &str) -> Result<(), String> {
@@ -922,11 +1294,39 @@ mod tests {
     }
 
     #[test]
+    fn nfr5_the_notice_that_android_restarts_for_its_graphics_is_dsas_own_toast() {
+        use dsa_host_core::compositor::frame_stall::Notice;
+        let dir = std::env::temp_dir().join(format!("dsa-recovery-toasts-{}", std::process::id()));
+        let mut toasts = Recorded::default();
+        let mut shown = HashMap::new();
+        let (tx, _rx) = mpsc::channel();
+        let notice = Notice::Restarting.notification(UiLanguage::English);
+        apply(
+            NotificationEvent::Posted(notice.clone()),
+            &mut toasts,
+            &mut shown,
+            Some(&dir),
+            &tx,
+            None,
+        );
+        assert_eq!(
+            toasts.shown,
+            vec![(DSA_APP_ID.to_string(), tag_of(&notice.key), false)],
+            "under DSA's own ID, never an app's"
+        );
+        assert!(dir.join(format!("{}.png", tag_of(&notice.key))).exists());
+        // A click goes nowhere: Android has nothing to open.
+        let action = parse_activation(&activation_uri(&notice.key)).unwrap();
+        assert!(is_recovery_key(action.key()));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
     fn fr14_the_question_to_restart_has_restart_now_and_later_buttons() {
         use dsa_host_core::update::alerts::{AlertKind, Subject, UpdateAlert};
         let asked = in_user_language(
             UpdateAlert::new(Subject::Android, AlertKind::Restart, "16.0.3").notification(),
-            false,
+            UiLanguage::English,
         );
         let xml = toast_xml(&asked, None);
         assert!(xml.contains("<actions>"), "{xml}");

@@ -17,6 +17,9 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
+use std::sync::Arc;
+
+use crate::compositor::log::{input_trace, note, CompositorLogger};
 
 use dsa_host_core::ime::{ImeCursor, ImeEditor, ImeEvent, InputKind};
 use dsa_host_core::input::InputEvent;
@@ -101,8 +104,30 @@ struct Sink {
     mask: u32,
 }
 
+/// Where the input method's windows go on the screen: beside `cursor`, which the window
+/// manager gives in the window's client pixels (the task's at the scale the window shows the
+/// task at), in the client area `client` on the screen, whose corner may be at negative
+/// coordinates on a monitor left of or above the main one. A cursor of no width is one pixel
+/// wide, so the candidate list has something to stand beside.
+fn cursor_on_screen(client: RECT, cursor: ImeCursor) -> RECT {
+    RECT {
+        left: client.left + cursor.left,
+        top: client.top + cursor.top,
+        right: client.left + cursor.right.max(cursor.left + 1),
+        bottom: client.top + cursor.bottom,
+    }
+}
+
 /// One window's text input, shared by the window and the text store the framework holds.
 pub struct Shared {
+    task_id: i32,
+    logger: Option<Arc<CompositorLogger>>,
+    /// How many composition updates went to the guest since the composition began, for the
+    /// line the log gets when it ends.
+    sent: Cell<u32>,
+    /// Whether the framework has composed in the document, which tells the input method
+    /// composes there rather than through IMM32.
+    framework_composed: Cell<bool>,
     hwnd: Cell<isize>,
     store: RefCell<TextStore>,
     events: Sender<InputEvent>,
@@ -125,8 +150,16 @@ pub struct Shared {
 }
 
 impl Shared {
-    pub fn new(task_id: i32, events: Sender<InputEvent>) -> Rc<Shared> {
+    pub fn new(
+        task_id: i32,
+        events: Sender<InputEvent>,
+        logger: Option<Arc<CompositorLogger>>,
+    ) -> Rc<Shared> {
         Rc::new(Shared {
+            task_id,
+            logger,
+            sent: Cell::new(0),
+            framework_composed: Cell::new(false),
             hwnd: Cell::new(0),
             store: RefCell::new(TextStore::new(task_id)),
             events,
@@ -159,10 +192,115 @@ impl Shared {
             .is_ok_and(|composition| composition.is_some())
     }
 
+    /// A line for the window host's log.
+    pub fn note(&self, message: &str) {
+        note(
+            self.logger.as_deref(),
+            &format!("text input: task {}: {message}", self.task_id),
+        );
+    }
+
     fn send(&self, events: Vec<ImeEvent>) {
         for event in events {
+            // Each event on the input trace, by its size alone: what the user types stays out
+            // of the log.
+            let detail = match &event {
+                ImeEvent::Composition { text, cursor, .. } => {
+                    self.sent.set(self.sent.get().saturating_add(1));
+                    format!(
+                        "composition units={} cursor={cursor}",
+                        dsa_host_core::ime::utf16_len(text)
+                    )
+                }
+                ImeEvent::Commit { text, .. } => {
+                    format!("commit units={}", dsa_host_core::ime::utf16_len(text))
+                }
+                ImeEvent::DeleteSurrounding { before, after, .. } => {
+                    format!("delete before={before} after={after}")
+                }
+                ImeEvent::SetSelection { start, end, .. } => {
+                    format!("selection start={start} end={end}")
+                }
+                ImeEvent::SetComposingRegion { start, end, .. } => {
+                    format!("composing region start={start} end={end}")
+                }
+            };
+            input_trace("app.ime", self.task_id, &detail);
             // The sender ends only when the window host stops; input then has nowhere to go.
             let _ = self.events.send(InputEvent::Ime(event));
+        }
+    }
+
+    /// A composition began: the line the log gets for it, and a fresh count of what it sends.
+    fn composition_began(&self, how: &str) {
+        self.sent.set(0);
+        self.note(&format!("a composition began ({how})"));
+    }
+
+    /// A composition ended: the line the log gets for it, with how many of its updates went
+    /// to the guest. One that sent none never showed in the guest's editor.
+    fn composition_ended(&self, how: &str) {
+        let sent = self.sent.replace(0);
+        self.note(&format!(
+            "the composition ended ({how}); {sent} composition updates went to the guest"
+        ));
+    }
+
+    /// The input method composed or committed outside the document, through IMM32: `result`
+    /// is what it committed, and `composition` what it composes now, with its cursor. The
+    /// guest hears it as it would from an edit of the document, and the framework is told
+    /// what changed.
+    pub fn imm(&self, result: Option<&[u16]>, composition: Option<(&[u16], u32)>) {
+        let was = self.imm_composing();
+        let mut changes = Vec::new();
+        let events = match self.store.try_borrow_mut() {
+            Ok(mut store) => {
+                if let Some(result) = result {
+                    changes.push(store.commit_outside(result));
+                }
+                if let Some((text, cursor)) = composition {
+                    changes.push(store.compose_outside(text, cursor));
+                }
+                store.flush()
+            }
+            Err(_) => return,
+        };
+        let now = self.imm_composing();
+        if !was && now {
+            self.composition_began("through IMM32");
+        }
+        self.send(events);
+        if was && !now {
+            self.composition_ended("through IMM32");
+        }
+        if !self.locked(false) {
+            for change in changes {
+                self.tell_text(change);
+            }
+            self.tell_selection();
+        }
+    }
+
+    /// Whether the framework composes in the document: it is composing now, or has before.
+    pub fn composes_in_document(&self) -> bool {
+        self.framework_composed.get() || self.is_composing()
+    }
+
+    /// Whether the document holds a composition the input method gave through IMM32, with no
+    /// composition of the framework's.
+    pub fn imm_composing(&self) -> bool {
+        !self.is_composing()
+            && self
+                .store
+                .try_borrow()
+                .is_ok_and(|store| store.is_composing())
+    }
+
+    /// Sends the guest what the document changed outside a lock of the framework's: after the
+    /// window ended a composition, which the framework may end without an edit.
+    fn settle(&self) {
+        if !self.locked(false) {
+            self.edited();
         }
     }
 
@@ -870,12 +1008,7 @@ impl ITextStoreACP_Impl for Store_Impl {
             .ok_or_else(|| error(TS_E_NOLAYOUT))?;
         // SAFETY: the framework's out pointers.
         unsafe {
-            *prc = RECT {
-                left: client.left + cursor.left,
-                top: client.top + cursor.top,
-                right: client.left + cursor.right.max(cursor.left + 1),
-                bottom: client.top + cursor.bottom,
-            };
+            *prc = cursor_on_screen(client, cursor);
             if !pfclipped.is_null() {
                 *pfclipped = false.into();
             }
@@ -922,6 +1055,14 @@ impl ITfContextOwnerCompositionSink_Impl for Store_Impl {
             let (_, end, _) = store.selection();
             store.set_composition(Some(extent.unwrap_or((end, end))));
         }
+        if !self.shared.framework_composed.replace(true) {
+            self.shared.note(
+                "the input method composes in the window's text services document in this \
+                 window",
+            );
+        }
+        self.shared
+            .composition_began("in the window's text services document");
         Ok(true.into())
     }
 
@@ -950,6 +1091,8 @@ impl ITfContextOwnerCompositionSink_Impl for Store_Impl {
         if let Ok(mut store) = self.shared.store.try_borrow_mut() {
             store.set_composition(None);
         }
+        self.shared
+            .composition_ended("in the window's text services document");
         Ok(())
     }
 }
@@ -1026,6 +1169,28 @@ fn text_change(change: TextChange) -> TS_TEXTCHANGE {
     }
 }
 
+/// Where the text services framework's focus is on the window thread.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameworkFocus {
+    /// On the window's document: the input method composes in it.
+    Ours,
+    /// On another document, such as the one IMM32 keeps for the window's input context.
+    Another,
+    /// On no document.
+    Nothing,
+}
+
+impl FrameworkFocus {
+    /// The focus, for the log.
+    pub fn describe(self) -> &'static str {
+        match self {
+            FrameworkFocus::Ours => "the window's document",
+            FrameworkFocus::Another => "another document",
+            FrameworkFocus::Nothing => "no document",
+        }
+    }
+}
+
 /// One window's document manager, associated with the window, and the context on it that
 /// holds the window's text store.
 pub struct Document {
@@ -1035,6 +1200,10 @@ pub struct Document {
     document: ITfDocumentMgr,
     context: RefCell<Option<ITfContext>>,
     shared: Rc<Shared>,
+    /// Whether the log was told the document took back the framework's focus.
+    refocused: Cell<bool>,
+    /// Whether the log was told the document could not take the framework's focus.
+    refusal_noted: Cell<bool>,
 }
 
 impl Document {
@@ -1060,6 +1229,8 @@ impl Document {
             document,
             context: RefCell::new(None),
             shared: Rc::clone(shared),
+            refocused: Cell::new(false),
+            refusal_noted: Cell::new(false),
         };
         attached.push_context()?;
         // SAFETY: as above; the document the framework had for the window, if any, goes.
@@ -1122,13 +1293,17 @@ impl Document {
             eprintln!("text input: {why}");
         }
         // SAFETY: as above; refocusing the document makes the framework take the new context.
+        // A window with the keyboard focus gets it whether or not the framework had focused
+        // its document: input restarting on another editor changes the kind, and the next
+        // composition must not go through IMM32 for want of the framework's focus.
         unsafe {
-            if self
-                .manager
-                .GetFocus()
-                .is_ok_and(|focused| focused == self.document)
-            {
+            let ours = self.focus_state() == FrameworkFocus::Ours;
+            if ours {
                 let _ = self.manager.SetFocus(&self.document);
+            } else if windows_sys::Win32::UI::Input::KeyboardAndMouse::GetFocus() as isize
+                == self.hwnd
+            {
+                self.focus("as the guest's editor changed its kind");
             }
         }
     }
@@ -1147,20 +1322,74 @@ impl Document {
         }
     }
 
-    /// The guest described its editor.
-    pub fn described(&self, editor: ImeEditor) {
-        let Some(mut told) = self.shared.describe(editor) else {
+    /// Where the framework's focus is: on this document, on another, or on none.
+    pub fn focus_state(&self) -> FrameworkFocus {
+        // SAFETY: the framework's own objects, on its thread.
+        match unsafe { self.manager.GetFocus() } {
+            Ok(focused) if focused == self.document => FrameworkFocus::Ours,
+            Ok(_) => FrameworkFocus::Another,
+            Err(_) => FrameworkFocus::Nothing,
+        }
+    }
+
+    /// The window has the keyboard focus: its document takes the framework's focus, so the
+    /// input method composes in it. The framework moves its focus to the document associated
+    /// with a window as the window takes the focus, but a window focused before the
+    /// association, a focus the framework missed, or the window's input context taking the
+    /// framework's focus for IMM32 as it is activated, leaves another document focused; the
+    /// input method then composes outside the document, through IMM32. `when` says when it
+    /// was found, for the log.
+    pub fn focus(&self, when: &str) {
+        let before = self.focus_state();
+        if before == FrameworkFocus::Ours {
             return;
+        }
+        // SAFETY: the framework's own objects, on its thread.
+        let taken = unsafe { self.manager.SetFocus(&self.document) };
+        // Once per window and outcome: something that keeps taking the focus away would
+        // otherwise fill the log at every key.
+        let first = match &taken {
+            Ok(()) => !self.refocused.replace(true),
+            Err(_) => !self.refusal_noted.replace(true),
+        };
+        if !first {
+            return;
+        }
+        match taken {
+            Ok(()) => self.shared.note(&format!(
+                "the text services framework's focus was on {} {when}, while the window had \
+                 the keyboard focus; the window's document has it now (logged once per window)",
+                before.describe()
+            )),
+            Err(why) => self.shared.note(&format!(
+                "the window's document could not take the text services framework's focus \
+                 {when} ({why}); the input method composes outside it, through IMM32 (logged \
+                 once per window)"
+            )),
+        }
+    }
+
+    /// The guest described its editor. Whether the description ended the composition, which
+    /// one the input method keeps outside the document (through IMM32) must drop as well.
+    pub fn described(&self, editor: ImeEditor) -> bool {
+        let Some(mut told) = self.shared.describe(editor) else {
+            return false;
         };
         let owed = self.shared.owed.take();
         told.kind |= owed.kind;
         told.ends_composition |= owed.ends_composition;
         if told.ends_composition {
+            self.shared
+                .note("the guest's editor changed under the composition, which ends");
             self.end_composition();
+            // The guest's editor ends its composition too, keeping its text, even when the
+            // input method ends its own without an edit.
+            self.shared.settle();
         }
         if told.kind {
             self.kind_changed();
         }
+        told.ends_composition
     }
 }
 
@@ -1174,5 +1403,67 @@ impl Drop for Document {
             );
             let _ = self.document.Pop(TF_POPF_ALL);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dsa_host_core::compositor::task_windows::TaskWindows;
+    use dsa_host_core::compositor::task_windows::WindowChange;
+    use dsa_host_core::tasks::{Task, TaskEvent};
+
+    /// The candidate list of a task kept at the density of a main monitor at 100% (130 dpi),
+    /// whose window is on a monitor at 125% (164 dpi) left of and above the main one.
+    #[test]
+    fn fr6_on_a_monitor_of_another_scale_the_candidate_list_stands_beside_the_cursor_shown() {
+        let mut windows = TaskWindows::new();
+        windows.apply(&TaskEvent::Updated(Task {
+            task_id: 4,
+            package_name: "com.example.notes".into(),
+            label: "Notes".into(),
+            density_dpi: 130,
+            bounds: dsa_host_core::tasks::Bounds {
+                left: 0,
+                top: 0,
+                right: 810,
+                bottom: 1661,
+            },
+            ..Task::default()
+        }));
+        windows.window_dpi(4, 96);
+        // The editor's cursor, 650 by 1300 task pixels in.
+        let cursor = ImeCursor {
+            left: 650,
+            top: 1300,
+            right: 652,
+            bottom: 1365,
+        };
+        windows.apply(&TaskEvent::ImeCursor { task_id: 4, cursor });
+        // The window moves to the 125% monitor and shows the task at 164 per 130: the window
+        // hears the cursor where it now shows it.
+        let (changes, _) = windows.window_dpi(4, 120);
+        let shown = changes
+            .iter()
+            .find_map(|change| match change {
+                WindowChange::ImeCursor { cursor, .. } => Some(*cursor),
+                _ => None,
+            })
+            .expect("the cursor again at the new scale");
+        assert_eq!((shown.left, shown.top), (820, 1640));
+        // The client area's top left is at (-2900, -880) on the screen.
+        let client = RECT {
+            left: -2900,
+            top: -880,
+            right: -2900 + 1022,
+            bottom: -880 + 2095,
+        };
+        let rect = cursor_on_screen(client, shown);
+        assert_eq!((rect.left, rect.top), (-2080, 760));
+        assert_eq!(rect.bottom - rect.top, 82);
+        assert!(rect.right > rect.left);
+        // At 1:1 it would have stood 170 pixels left of and 340 above the cursor shown.
+        let unscaled = cursor_on_screen(client, cursor);
+        assert_eq!((unscaled.left, unscaled.top), (-2250, 420));
     }
 }

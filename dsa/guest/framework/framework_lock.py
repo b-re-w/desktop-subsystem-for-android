@@ -1,9 +1,12 @@
 """Reads and checks framework-lock.json, the pins the patched framework build is made from.
 
-The build makes SurfaceFlinger, libhwui and libEGL with DSA's GPU device loss recovery (the
-patches in patches/<project>/<android>/) and the image takes them in place of the published
-build's own (make-image.py --framework). Their neighbours in the image stay the published ones,
-so each must be built from the exact source of the build the image is made from.
+The build makes SurfaceFlinger, libhwui and libEGL with DSA's GPU device loss recovery,
+libandroid_runtime, whose Process.getTotalMemory gives Google Play the computer's memory, and
+DSA's KeyMint, whose root key of key blobs comes from the DSA host (the patches in
+patches/<project>/<android>/). The image takes the first four in place of the published build's
+own, and installs the KeyMint in place of the build's KeyMint APEX (make-image.py --framework).
+Their neighbours in the image stay the published ones, so each must be built from the exact
+source of the build the image is made from.
 
 The lock holds one entry per Android version DSA ships an image of (android16, android17). Each
 entry names that published build (build_id and target, the ones dsa/guest/image/inputs.json
@@ -22,7 +25,23 @@ a project fetched in part) and fetched by .github/scripts/translator/fetch-sourc
                                                    fails unless every pinned commit is the one
                                                    the build's manifest names
     framework_lock.py outputs                      where the build installs the files the image
-                                                   takes, one per line
+                                                   takes (the framework's, then the KeyMint's),
+                                                   one per line
+    framework_lock.py java-outputs                 services.jar's target_files name and where
+                                                   the services build installs it, one pair per
+                                                   line
+    framework_lock.py services-lock <android> <manifest.xml> <out.json>
+                                                   writes the lock of the services build's tree:
+                                                   every project the manifest syncs by default
+                                                   but SERVICES_TREE_SKIPPED
+    framework_lock.py install-source               reads `ninja -t query <install path>` and
+                                                   prints the jar the install path copies
+    framework_lock.py soong-memory-limit <soong.go>
+                                                   changes soong_ui's source in the services
+                                                   tree so that GOMEMLIMIT reaches soong_build
+
+services.jar, with DSA's window manager, package manager and WebView service, is built in a tree
+of its own (SERVICES_JAR): the Java framework needs most of the platform.
 """
 
 import hashlib
@@ -49,15 +68,98 @@ OUTPUTS = {
     "SYSTEM/bin/surfaceflinger": "system/bin/surfaceflinger",
     "SYSTEM/lib64/libhwui.so": "system/lib64/libhwui.so",
     "SYSTEM/lib64/libEGL.so": "system/lib64/libEGL.so",
+    # The framework's JNI library, whose Process.getTotalMemory gives the apps the guest names
+    # (Google Play) the computer's memory as ActivityManager's totalMem.
+    "SYSTEM/lib64/libandroid_runtime.so": "system/lib64/libandroid_runtime.so",
 }
+
+# DSA's KeyMint: the nonsecure KeyMint service whose TA takes the root key of key blobs from the
+# DSA host (the patches in patches/hardware/interfaces, and in patches/system/keymint for
+# Android 16, which lacks the TA's hook for moving blobs to a new root key). The image installs
+# these as vendor files in place of the com.android.hardware.keymint APEX, which it then does
+# not select. The binary links its Rust crates in; libssl, which the Rust openssl crate links, is
+# the one shared library it needs that the published vendor partition does not carry.
+KEYMINT_BINARY = "VENDOR/bin/hw/dsa-keymint"
+KEYMINT_OUTPUTS = {
+    KEYMINT_BINARY: "vendor/bin/hw/dsa-keymint",
+    "VENDOR/lib64/libssl.so": "vendor/lib64/libssl.so",
+}
+# What the APEX carries beside its binary, taken as the tree has it: the VINTF fragments that
+# declare the KeyMint, remotely provisioned component, secure clock and shared secret instances,
+# and the hardware_keystore feature.
+KEYMINT_DIR = "hardware/interfaces/security/keymint/aidl/default"
+KEYMINT_SOURCES = {
+    "VENDOR/etc/vintf/manifest/android.hardware.security.keymint-service.xml":
+        f"{KEYMINT_DIR}/android.hardware.security.keymint-service.xml",
+    "VENDOR/etc/vintf/manifest/android.hardware.security.secureclock-service.xml":
+        f"{KEYMINT_DIR}/android.hardware.security.secureclock-service.xml",
+    "VENDOR/etc/vintf/manifest/android.hardware.security.sharedsecret-service.xml":
+        f"{KEYMINT_DIR}/android.hardware.security.sharedsecret-service.xml",
+    "VENDOR/etc/permissions/android.hardware.hardware_keystore.xml":
+        f"{KEYMINT_DIR}/android.hardware.hardware_keystore.xml",
+}
+KEYMINT_FILES = list(KEYMINT_OUTPUTS) + list(KEYMINT_SOURCES)
+
+# The window manager, package manager and WebView service with DSA's changes (the patches to
+# frameworks/base/services in patches/frameworks/base/<android>/): services.jar, which the image
+# takes in place of the published build's. The Java framework reaches across most of the
+# platform's projects, so it is not built in the reduced tree the native files are built in, but
+# in a tree of every project the build's manifest syncs by default (services_lock), with the
+# build's own product (the version's target) and release configuration. A dex file is the same
+# for every architecture, so one services.jar, built with the x86_64 target, serves the images of
+# both. The native build applies no patch that changes Java sources only (java_only), as it
+# builds none.
+SERVICES_JAR = "SYSTEM/framework/services.jar"
+JAVA_OUTPUTS = {SERVICES_JAR: "system/framework/services.jar"}
+# The projects the services tree takes in part, as the native tree takes them: each holds every
+# toolchain version the platform ever used, and the build reads only the ones the lock names.
+# Android 17 keeps its Rust toolchains in prebuilts/rust-toolchain/linux-x86 and leaves only
+# Soong's build files in prebuilts/rust, so the native lock names a cone for the first only; a
+# project here that the native lock does not name at all is taken whole.
+SERVICES_TREE_CONES = ["prebuilts/clang/host/linux-x86", "prebuilts/rust",
+                       "prebuilts/rust-toolchain/linux-x86"]
+# A project the services tree takes in the part the native lock takes another: Android 17's
+# Rust toolchains for musl hosts are laid out as the ones for glibc hosts are (a build file and
+# one folder per version, 6 GB for three versions), and the native lock does not name them.
+# Taking the build's version alone leaves the analysis every build file and the disk 4 GB more,
+# of the 17 GB the fetch leaves it on a standard runner.
+SERVICES_TREE_CONES_LIKE = {
+    "prebuilts/rust-toolchain/linux-musl-x86": "prebuilts/rust-toolchain/linux-x86",
+}
+# Projects the services tree leaves out although the manifest syncs them: prebuilt native
+# libraries and their ABI dumps (the build skips ABI checks) and emulator kernels and binaries,
+# which only native builds and other devices read. Nothing on the way from the Java sources to
+# services.jar's dex reads them, and the build allows missing dependencies, so the modules they
+# define may go missing. The product's configuration checks only that each VNDK version it names
+# has a build file, so the workflow puts an empty one in each. Together they are
+# several gigabytes of the tree, which only just fits a standard runner's disk. A path ending in
+# "/" leaves out every project below it.
+SERVICES_TREE_SKIPPED = ["prebuilts/abi-dumps/", "prebuilts/vndk/", "prebuilts/qemu-kernel",
+                         "prebuilts/android-emulator"]
+# Where build/soong/ui/build/soong.go starts the environment soong_build runs with, and what
+# soong_memory_limit adds below it. The line is the same in Android 16 and 17.
+SOONG_UI_SOURCE = "build/soong/ui/build/soong.go"
+SOONG_INVOCATION_ENV = "\tinvocationEnv := make(map[string]string)\n"
+SOONG_MEMORY_LIMIT = (
+    "\t// DSA: soong_build starts with an empty environment, so its Go memory limit is handed on.\n"
+    '\tif limit := os.Getenv("GOMEMLIMIT"); limit != "" {\n'
+    '\t\tinvocationEnv["GOMEMLIMIT"] = limit\n'
+    "\t}\n"
+)
+# Projects in a manifest group repo leaves out of a default sync on Linux.
+UNSYNCED_GROUPS = {"notdefault", "platform-darwin", "darwin"}
 
 # Projects every version fetches: the build system, and the projects the patches change.
 REQUIRED = ["build/make", "build/soong", "build/release", "build/blueprint",
-            "frameworks/native", "frameworks/base"]
+            "frameworks/native", "frameworks/base", "hardware/interfaces", "system/keymint",
+            "external/rust/crates/openssl", "external/boringssl"]
 # The folders of a project fetched in part that the patches and the targets need.
 REQUIRED_FOLDERS = {
-    "frameworks/native": ["libs/renderengine", "services/surfaceflinger", "opengl"],
-    "frameworks/base": ["libs/hwui"],
+    "frameworks/native": ["libs/renderengine", "services/surfaceflinger", "opengl", "libs/binder/rust"],
+    "frameworks/base": ["libs/hwui", "core/jni"],
+    "hardware/interfaces": ["security/keymint/aidl", "security/rkp/aidl", "security/secureclock/aidl",
+                            "security/sharedsecret/aidl"],
+    "external/boringssl": ["src/rust/bssl-sys"],
 }
 
 BUILD_ID = re.compile(r"^[0-9]+$")
@@ -170,6 +272,78 @@ def patch_files(android, patches=PATCHES):
     return found
 
 
+def patch_paths(patch):
+    """The files a patch changes, from its diff headers, relative to its project."""
+    paths = []
+    for line in Path(patch).read_text().splitlines():
+        for prefix in ("--- a/", "+++ b/"):
+            if line.startswith(prefix) and line[len(prefix):] not in paths:
+                paths.append(line[len(prefix):])
+    return paths
+
+
+def java_only(patch):
+    """Whether a patch changes Java sources only: it then changes nothing the native build makes,
+    which builds no Java, and only the services build applies it."""
+    paths = patch_paths(patch)
+    return bool(paths) and all(p.endswith(".java") for p in paths)
+
+
+def manifest_projects(text):
+    """Every project of a build manifest a default repo sync on Linux takes, as lock entries:
+    path, repository, commit, and the manifest's linkfile and copyfile entries."""
+    root = ElementTree.fromstring(text)
+    projects = []
+    for project in root.iter("project"):
+        groups = {g.strip() for g in (project.get("groups") or "").split(",") if g.strip()}
+        if groups & UNSYNCED_GROUPS and not groups & {"linux", "platform-linux"}:
+            continue
+        name = project.get("name")
+        entry = {"path": project.get("path") or name, "url": GOOGLESOURCE + name,
+                 "commit": project.get("revision")}
+        for kind in ("linkfile", "copyfile"):
+            found = [{"src": e.get("src"), "dest": e.get("dest")} for e in project.findall(kind)]
+            if found:
+                entry[kind + "s"] = found
+        projects.append(entry)
+    return projects
+
+
+def services_skipped(path):
+    """Whether the services tree leaves out the project at `path` (SERVICES_TREE_SKIPPED)."""
+    return any(path.startswith(skip) if skip.endswith("/") else path == skip
+               for skip in SERVICES_TREE_SKIPPED)
+
+
+def services_lock(version, text):
+    """The lock the services build fetches its tree by: `version` with every project its
+    manifest (`text`, the one it pins by SHA-256) syncs by default but SERVICES_TREE_SKIPPED, each
+    at the manifest's commit, and the toolchain prebuilts (SERVICES_TREE_CONES, and
+    SERVICES_TREE_CONES_LIKE as the project each names) taken in part as `version` takes them."""
+    data = text.encode() if isinstance(text, str) else text
+    if hashlib.sha256(data).hexdigest() != version["manifest"]["sha256"]:
+        raise LockError(f"the manifest is not the one {version['android']} pins (SHA-256 differs)")
+    native = {p["path"]: p for p in version["projects"]}
+    projects = []
+    for project in manifest_projects(data):
+        if services_skipped(project["path"]):
+            continue
+        like = SERVICES_TREE_CONES_LIKE.get(project["path"], project["path"])
+        if (project["path"] in SERVICES_TREE_CONES or like != project["path"]) and like in native:
+            if "cone" not in native[like]:
+                raise LockError(f"{version['android']} does not say which part of {like} to take")
+            project["cone"] = list(native[like]["cone"])
+        projects.append(project)
+    tree = {key: value for key, value in version.items() if key != "projects"}
+    tree["projects"] = sorted(projects, key=lambda p: p["path"])
+    return {
+        "comment": f"Every project build {version['build_id']}'s manifest syncs by default but the "
+                   "ones only native builds read, for the services build (framework_lock.py services-lock).",
+        "kind": KIND,
+        "versions": [tree],
+    }
+
+
 def build_version(version, patches=PATCHES):
     """The version of what the build makes for one Android version: the Android major and the
     first 12 hex digits of a hash over the pins and every patch, so that any change to either
@@ -212,14 +386,83 @@ def manifest_problems(version, text):
     return problems
 
 
+def install_source(query):
+    """The file an install path is a copy of, from what `ninja -t query <install path>` prints:
+    the one explicit input of its rule, which must copy a jar. The services build builds that
+    file, the module's own dex jar, so that installing it does not also build what the module
+    requires."""
+    rule, inputs, section = None, [], None
+    for line in query.splitlines():
+        if line.startswith("  ") and not line.startswith("    "):
+            key, _, value = line.strip().partition(":")
+            section = key
+            if key == "input":
+                rule = value.strip()
+        elif section == "input" and line.startswith("    "):
+            path = line.strip()
+            if not path.startswith("|"):
+                inputs.append(path)
+    if rule is None:
+        raise LockError("ninja names no rule that makes the install path")
+    if not re.search(r"cp|copy|install", rule, re.IGNORECASE):
+        raise LockError(f"the install path is made by {rule}, which is not a copy, so the module's "
+                        "own output cannot stand in for it")
+    if len(inputs) != 1 or not inputs[0].endswith(".jar"):
+        raise LockError(f"the install path is a copy of {', '.join(inputs) or 'nothing'}, not of one jar")
+    return inputs[0]
+
+
+def soong_memory_limit(text):
+    """soong_ui's ui/build/soong.go (`text`), changed to hand GOMEMLIMIT on to soong_build.
+
+    soong_ui starts soong_build, the analysis of every Android.bp, through a ninja rule that
+    clears the environment (`env -i $env "$BUILDER"`), where $env holds only what soong.go puts
+    in invocationEnv. So a GOMEMLIMIT exported to the build never reaches the one process it is
+    meant for, and that process's heap grows to twice what is live before Go collects it. The
+    change copies the variable into invocationEnv. Only this one: the rule writes the map in
+    Go's map order, and a command that differed between two runs would make ninja analyse the
+    tree again.
+
+    Raises LockError when the file is not the one this was written against. A file already
+    changed comes back as it is."""
+    if SOONG_MEMORY_LIMIT in text:
+        return text
+    if text.count(SOONG_INVOCATION_ENV) != 1 or '\t"os"\n' not in text:
+        raise LockError("soong.go does not make soong_build's environment where it did "
+                        f"({SOONG_INVOCATION_ENV.strip()!r}, once, with os imported), so "
+                        "GOMEMLIMIT cannot be handed on to the analysis")
+    return text.replace(SOONG_INVOCATION_ENV, SOONG_INVOCATION_ENV + SOONG_MEMORY_LIMIT)
+
+
 def main(argv):
+    if argv[1:] == ["install-source"]:
+        try:
+            print(install_source(sys.stdin.read()))
+        except LockError as error:
+            raise SystemExit(str(error))
+        return
+    if len(argv) == 3 and argv[1] == "soong-memory-limit":
+        path = Path(argv[2])
+        try:
+            path.write_text(soong_memory_limit(path.read_text()))
+        except LockError as error:
+            raise SystemExit(str(error))
+        print(f"{path}: soong_build takes GOMEMLIMIT from the build's environment")
+        return
     lock = load()
     if argv[1:] == ["versions"]:
         print(json.dumps([v["android"] for v in lock["versions"]]))
     elif len(argv) == 3 and argv[1] == "version":
         print(build_version(version_entry(lock, argv[2])))
     elif argv[1:] == ["outputs"]:
-        print("\n".join(OUTPUTS.values()))
+        print("\n".join(list(OUTPUTS.values()) + list(KEYMINT_OUTPUTS.values())))
+    elif argv[1:] == ["java-outputs"]:
+        print("\n".join(f"{name} {installed}" for name, installed in JAVA_OUTPUTS.items()))
+    elif len(argv) == 5 and argv[1] == "services-lock":
+        tree = services_lock(version_entry(lock, argv[2]), Path(argv[3]).read_bytes())
+        check(tree)
+        Path(argv[4]).write_text(json.dumps(tree, indent=2) + "\n")
+        print(f"{argv[2]}: {len(tree['versions'][0]['projects'])} projects for the services build")
     elif len(argv) == 4 and argv[1] == "check-manifest":
         problems = manifest_problems(version_entry(lock, argv[2]), Path(argv[3]).read_bytes())
         for problem in problems:
@@ -228,8 +471,10 @@ def main(argv):
             raise SystemExit(1)
         print(f"{argv[2]}: every pinned commit is the published build's")
     else:
-        raise SystemExit("usage: framework_lock.py versions | version <android> | outputs | "
-                         "check-manifest <android> <manifest.xml>")
+        raise SystemExit("usage: framework_lock.py versions | version <android> | outputs | java-outputs | "
+                         "check-manifest <android> <manifest.xml> | "
+                         "services-lock <android> <manifest.xml> <out.json> | install-source | "
+                         "soong-memory-limit <soong.go>")
 
 
 if __name__ == "__main__":

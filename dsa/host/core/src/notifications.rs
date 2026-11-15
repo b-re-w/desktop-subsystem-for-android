@@ -3,7 +3,10 @@
 //! The guest's agent forwards each notification a person would see, with its key. The host
 //! shows it in its own notification centre, replaces it when a notification with the same key
 //! comes again, and removes it when the guest says it is gone. What the user does with it on
-//! the host goes back to the guest by key: a click opens it, a dismissal cancels it.
+//! the host goes back to the guest by key: a click opens it, a dismissal cancels it, and a
+//! choice of one of its action buttons runs that action in the guest, with the reply the user
+//! wrote when the button takes one. So a person who uses a keyboard or a screen reader acts on
+//! a notification from the host's notification centre, as they would in Android's shade.
 //!
 //! A notification from the guest is checked before it goes on ([`checked`]): one without a
 //! key, or with a key, text or icon past the limits here, is cut down or dropped, so a bad
@@ -31,6 +34,36 @@ pub const MAX_TEXT_CHARS: usize = 4096;
 /// side, which takes far less; a larger icon is left out and the notification still shows.
 pub const MAX_ICON_BYTES: usize = 64 * 1024;
 
+/// The most action buttons the host keeps of one notification. Android shows three; a Windows
+/// toast takes five. The rest are left out, so the buttons kept keep their places.
+pub const MAX_BUTTONS: usize = 5;
+
+/// The most replies a button offers to pick from that the host keeps.
+pub const MAX_CHOICES: usize = 5;
+
+/// The longest reply the host passes to the guest, in characters.
+pub const MAX_REPLY_CHARS: usize = 4096;
+
+/// One action button of a notification ("Reply", "Mark as read").
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct NotificationButton {
+    pub title: String,
+    /// Whether it takes a reply the user writes or picks.
+    pub reply: bool,
+    /// The words the reply field shows while it is empty; empty for none.
+    pub reply_label: String,
+    /// The replies offered to pick from; empty for none.
+    pub reply_choices: Vec<String>,
+    /// True when the reply must be one of `reply_choices`.
+    pub reply_choices_only: bool,
+    /// What it does, as Android numbers it (1 reply, 2 mark as read, 4 delete, ...); 0 for
+    /// none said.
+    pub semantic_action: i32,
+}
+
+/// Android's number for an action that deletes what the notification is about.
+pub const SEMANTIC_ACTION_DELETE: i32 = 4;
+
 /// One notification of the guest.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Notification {
@@ -48,6 +81,8 @@ pub struct Notification {
     /// Whether the user may dismiss it.
     pub clearable: bool,
     pub when_millis: i64,
+    /// Its action buttons, in the app's order, at most [`MAX_BUTTONS`].
+    pub buttons: Vec<NotificationButton>,
 }
 
 /// A change to the guest's notifications, as a watcher hears it.
@@ -66,14 +101,52 @@ pub enum NotificationAction {
     Open { key: String },
     /// Dismissed it: the guest cancels it, unless it may not be dismissed.
     Dismiss { key: String },
+    /// Chose its action button at place `button` in [`Notification::buttons`], whose title
+    /// is `title`, with the reply the user wrote or picked (empty for a button that takes
+    /// none): the guest runs that action.
+    Button {
+        key: String,
+        button: u32,
+        title: String,
+        reply: String,
+    },
 }
 
 impl NotificationAction {
     pub fn key(&self) -> &str {
         match self {
-            NotificationAction::Open { key } | NotificationAction::Dismiss { key } => key,
+            NotificationAction::Open { key }
+            | NotificationAction::Dismiss { key }
+            | NotificationAction::Button { key, .. } => key,
         }
     }
+}
+
+/// The buttons the guest sent, cut to the limits here. Only the first [`MAX_BUTTONS`] are
+/// kept, so every one kept keeps its place, which is how the guest finds it again.
+fn checked_buttons(buttons: Vec<control::NotificationButton>) -> Vec<NotificationButton> {
+    buttons
+        .into_iter()
+        .take(MAX_BUTTONS)
+        .map(|button| NotificationButton {
+            title: cut(button.title, MAX_LINE_CHARS),
+            reply: button.reply,
+            reply_label: cut(button.reply_label, MAX_LINE_CHARS),
+            reply_choices: button
+                .reply_choices
+                .into_iter()
+                .take(MAX_CHOICES)
+                .map(|choice| cut(choice, MAX_LINE_CHARS))
+                .collect(),
+            reply_choices_only: button.reply_choices_only,
+            semantic_action: button.semantic_action,
+        })
+        .collect()
+}
+
+/// A reply cut to [`MAX_REPLY_CHARS`].
+pub fn cut_reply(reply: String) -> String {
+    cut(reply, MAX_REPLY_CHARS)
 }
 
 fn cut(text: String, chars: usize) -> String {
@@ -127,6 +200,7 @@ pub fn checked(message: control::GuestNotification) -> Result<Notification, Stri
         high_priority: message.high_priority,
         clearable: message.clearable,
         when_millis: message.when_millis,
+        buttons: checked_buttons(message.buttons),
     })
 }
 
@@ -324,5 +398,43 @@ mod tests {
         assert!(big.icon_png.is_empty());
         assert_eq!(big.title.chars().count(), MAX_LINE_CHARS);
         assert_eq!(big.importance, 5);
+    }
+
+    #[test]
+    fn fr18_buttons_past_the_limits_are_cut_and_the_kept_ones_keep_their_places() {
+        let button = |title: &str| control::NotificationButton {
+            title: title.into(),
+            ..Default::default()
+        };
+        let mut buttons: Vec<_> = (0..MAX_BUTTONS + 2)
+            .map(|i| button(&format!("b{i}")))
+            .collect();
+        buttons[1] = control::NotificationButton {
+            title: "r".repeat(MAX_LINE_CHARS + 5),
+            reply: true,
+            reply_label: "Reply to Ann".into(),
+            reply_choices: (0..MAX_CHOICES + 3).map(|i| format!("c{i}")).collect(),
+            reply_choices_only: true,
+            semantic_action: 1,
+        };
+        let kept = checked(control::GuestNotification {
+            key: "0|com.example.chat|1|null|10100".into(),
+            buttons,
+            ..Default::default()
+        })
+        .expect("kept");
+        assert_eq!(kept.buttons.len(), MAX_BUTTONS);
+        assert_eq!(kept.buttons[0].title, "b0");
+        assert_eq!(kept.buttons[2].title, "b2");
+        let reply = &kept.buttons[1];
+        assert_eq!(reply.title.chars().count(), MAX_LINE_CHARS);
+        assert!(reply.reply && reply.reply_choices_only);
+        assert_eq!(reply.reply_label, "Reply to Ann");
+        assert_eq!(reply.reply_choices.len(), MAX_CHOICES);
+        assert_eq!(reply.semantic_action, 1);
+        assert_eq!(
+            cut_reply("x".repeat(MAX_REPLY_CHARS + 1)).len(),
+            MAX_REPLY_CHARS
+        );
     }
 }

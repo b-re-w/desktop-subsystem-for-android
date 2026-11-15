@@ -7,11 +7,16 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use dsa_host_core::root_approval::PromptAnswer;
+use dsa_host_core::root_approval::{ApprovalRequest, PromptAnswer, Purpose};
+use dsa_host_core::tasks::AppInfo;
 use dsa_host_windows::root_approval::{
-    answer_of_exit, approval_arguments, exit, helper_mode, is_pipe_name, pipe_name,
-    wait_for_answer, HelperMode, PromptProcess, APPROVAL_ARGUMENT, APPROVED_ARGUMENT, RECEIVED,
+    answer_of_exit, approval_arguments, confirm_text, confirm_text_for, confirm_words, exit,
+    helper_mode, is_pipe_name, pipe_name, prompt_program, screen_reader_of_exit, time_limit_text,
+    time_words, wait_for_answer, AskedWords, HelperMode, PromptProcess, APPROVAL_ARGUMENT,
+    APPROVED_ARGUMENT, RECEIVED, SCREEN_READER_ARGUMENT, SHARED_PROGRAM_KEY, SHELL_PROGRAM_KEY,
+    SYSTEM_PROGRAM_KEY,
 };
+use dsa_host_windows::ui_language::{assert_translation, UiLanguage};
 use dsa_transport::local::{self, Peer};
 
 /// A window program that ends with `code` after `after`, or runs until it is ended.
@@ -190,16 +195,54 @@ fn fr35_a_program_that_ends_without_an_approval_never_approves() {
 fn fr35_the_window_program_reads_what_the_service_asks() {
     let pipe = secret();
     assert!(is_pipe_name(&pipe));
-    let line = approval_arguments(&pipe, "Backup \"Pro\"", "sh -c 'echo hi'");
+    let words = AskedWords {
+        label: "Backup \"Pro\"".into(),
+        detail: "com.example.backup".into(),
+        command: "sh -c 'echo hi'".into(),
+        language: UiLanguage::Korean,
+        seconds: 55,
+    };
+    let line = approval_arguments(&pipe, &words);
     let args: Vec<String> = line.split(' ').map(str::to_string).collect();
     assert_eq!(
         helper_mode(&args),
         Some(HelperMode::Ask {
             pipe: pipe.clone(),
-            label: "Backup \"Pro\"".into(),
-            command: "sh -c 'echo hi'".into(),
+            words: words.clone(),
         })
     );
+    // An empty line still leaves every other flag its value.
+    let bare = AskedWords {
+        detail: String::new(),
+        language: UiLanguage::English,
+        ..words.clone()
+    };
+    let args: Vec<String> = approval_arguments(&pipe, &bare)
+        .split(' ')
+        .map(str::to_string)
+        .collect();
+    assert_eq!(
+        helper_mode(&args),
+        Some(HelperMode::Ask {
+            pipe: pipe.clone(),
+            words: bare,
+        })
+    );
+    // Every language reaches the program as it was asked in.
+    for language in UiLanguage::ALL {
+        let asked = AskedWords {
+            language,
+            ..words.clone()
+        };
+        let args: Vec<String> = approval_arguments(&pipe, &asked)
+            .split(' ')
+            .map(str::to_string)
+            .collect();
+        let Some(HelperMode::Ask { words: read, .. }) = helper_mode(&args) else {
+            panic!("the program was not asked to approve in {language:?}");
+        };
+        assert_eq!(read.language, language);
+    }
     let elevated = vec![APPROVED_ARGUMENT.to_string(), pipe.clone()];
     assert_eq!(
         helper_mode(&elevated),
@@ -214,5 +257,224 @@ fn fr35_the_window_program_reads_what_the_service_asks() {
     assert_eq!(
         helper_mode(&["--package".into(), "com.example".into()]),
         None
+    );
+}
+
+fn su_from(package: &str, uid: u32, label: &str, icon: &[u8]) -> ApprovalRequest {
+    ApprovalRequest {
+        request_id: 1,
+        app: AppInfo {
+            package_name: package.into(),
+            label: label.into(),
+            icon_png: icon.to_vec(),
+            ..Default::default()
+        },
+        uid,
+        command: vec!["id".into()],
+        interactive: false,
+        purpose: Purpose::Run,
+        shared_apps: Vec::new(),
+        language: "ko-KR".into(),
+    }
+}
+
+#[test]
+fn fr35_the_root_prompt_names_an_app_by_its_label_and_icon() {
+    let icon = [0x89, b'P', b'N', b'G', 7];
+    let request = su_from("com.example.backup", 10_200, "백업", &icon);
+    // The app's own window program: its label is the name UAC shows, its icon the icon.
+    let (folder, app) = prompt_program(&request);
+    assert_eq!(folder, "com.example.backup");
+    assert_eq!(app.label, "백업");
+    assert_eq!(app.icon_png, icon);
+    let words = AskedWords::of(&request);
+    assert_eq!(words.label, "백업");
+    assert_eq!(words.detail, "com.example.backup");
+    assert_eq!(words.language, UiLanguage::Korean);
+    // With UAC off, the program's own dialog has the name, then the package under it.
+    let shown = confirm_text(&words.label, &words.detail, &words.command, words.language);
+    assert_eq!(shown.caption, "백업: 관리자 승인");
+    assert!(
+        shown
+            .text
+            .starts_with("백업\ncom.example.backup\n\nAndroid에서 다음을 루트 권한으로"),
+        "{}",
+        shown.text
+    );
+    let english = confirm_text("Backup", "com.example.backup", "id", UiLanguage::English);
+    assert!(english
+        .text
+        .starts_with("Backup\ncom.example.backup\n\nwants to run this"));
+}
+
+#[test]
+fn fr17_the_root_prompt_speaks_every_language() {
+    let english = confirm_words(UiLanguage::English);
+    for language in UiLanguage::ALL {
+        let words = confirm_words(language);
+        for (what, en, text) in [
+            ("the unnamed app", english.unnamed, words.unnamed),
+            ("the caption", english.caption, words.caption),
+            ("the text", english.text, words.text),
+            ("the time limit", english.time_limit, words.time_limit),
+        ] {
+            assert_translation(language, what, en, text);
+        }
+        // The dialog names who asks, the package and the command, and says how long it has.
+        let shown = confirm_text_for(&AskedWords {
+            label: "Backup".into(),
+            detail: "com.example.backup".into(),
+            command: "id -u".into(),
+            language,
+            seconds: 90,
+        });
+        assert!(shown.caption.contains("Backup"), "{language:?}");
+        assert!(
+            shown.text.starts_with("Backup\ncom.example.backup"),
+            "{language:?}"
+        );
+        assert!(shown.text.contains("id -u"), "{language:?}");
+        assert!(shown.text.contains("90"), "{language:?}: {}", shown.text);
+        assert!(!shown.text.contains('{'), "{language:?}: {}", shown.text);
+        assert!(shown.text.contains("Desktop Subsystem for Android"));
+        let unnamed = confirm_text(" ", "", "id", language);
+        assert!(unnamed.caption.contains("Android"), "{language:?}");
+        for seconds in [1, 2, 5, 21, 60, 120, 300] {
+            let time = time_words(seconds, language);
+            let limit = time_limit_text(seconds, language).unwrap();
+            assert!(limit.contains(&time), "{language:?}: {limit}");
+            assert!(!limit.contains('{'), "{language:?}: {limit}");
+        }
+    }
+    assert_eq!(time_words(1, UiLanguage::English), "1 second");
+    assert_eq!(time_words(120, UiLanguage::German), "2 Minuten");
+    assert_eq!(time_words(60, UiLanguage::Russian), "1 минуты");
+    assert_eq!(time_words(21, UiLanguage::Russian), "21 секунды");
+    assert_eq!(time_words(300, UiLanguage::Russian), "5 минут");
+    assert_eq!(time_words(11, UiLanguage::Russian), "11 секунд");
+}
+
+#[test]
+fn fr35_the_root_prompt_names_the_adb_shell_as_the_adb_shell() {
+    let request = su_from("com.android.shell", 2000, "Shell", &[]);
+    let (folder, app) = prompt_program(&request);
+    // A program of its own, never the folder of an Android package.
+    assert_eq!(folder, SHELL_PROGRAM_KEY);
+    assert_eq!(app.package_name, SHELL_PROGRAM_KEY);
+    assert_eq!(app.label, "adb 셸");
+    // A generic terminal icon the host draws, in place of DSA's own.
+    assert_eq!(&app.icon_png[1..4], b"PNG");
+    let words = AskedWords::of(&request);
+    assert_eq!(words.detail, "com.android.shell (uid 2000)");
+
+    let mut english = request.clone();
+    english.language = "en-US".into();
+    assert_eq!(prompt_program(&english).1.label, "adb shell");
+
+    let system = su_from("android", 1000, "Android System", &[]);
+    let (folder, app) = prompt_program(&system);
+    assert_eq!(folder, SYSTEM_PROGRAM_KEY);
+    assert_eq!(app.label, "Android 시스템");
+    assert_ne!(app.icon_png, prompt_program(&request).1.icon_png);
+}
+
+#[test]
+fn fr35_the_root_prompt_names_a_shared_user_id_by_its_apps() {
+    let icon = [0x89, b'P', b'N', b'G', 3];
+    let mut request = su_from("com.shared.one, com.shared.two", 10_150, "", &[]);
+    request.shared_apps = vec![
+        AppInfo {
+            package_name: "com.shared.one".into(),
+            label: "하나".into(),
+            ..Default::default()
+        },
+        AppInfo {
+            package_name: "com.shared.two".into(),
+            label: "둘".into(),
+            icon_png: icon.to_vec(),
+            ..Default::default()
+        },
+    ];
+    let (folder, app) = prompt_program(&request);
+    assert_eq!(folder, SHARED_PROGRAM_KEY);
+    assert_eq!(app.label, "하나, 둘");
+    assert_eq!(app.icon_png, icon);
+}
+
+#[test]
+fn fr18_the_window_program_answers_whether_a_screen_reader_runs() {
+    // The service asks the window program in the user's session, and reads the answer from
+    // its exit code.
+    assert_eq!(
+        helper_mode(&[SCREEN_READER_ARGUMENT.to_string()]),
+        Some(HelperMode::ScreenReader)
+    );
+    assert!(screen_reader_of_exit(exit::SCREEN_READER_RUNNING));
+    assert!(!screen_reader_of_exit(exit::NO_SCREEN_READER));
+    // A program that failed, or one too old to know the question, says no: the prompt keeps
+    // its usual time rather than not opening.
+    for code in [exit::FAILED, exit::BAD_ARGUMENTS, exit::APPROVED, 77] {
+        assert!(!screen_reader_of_exit(code), "code {code}");
+    }
+    // The answers are not taken for an approval's.
+    assert!(matches!(
+        answer_of_exit(exit::SCREEN_READER_RUNNING),
+        PromptAnswer::Unavailable(_)
+    ));
+}
+
+#[test]
+fn fr18_the_own_dialog_says_how_long_it_has_once_without_a_countdown() {
+    let request = su_from("com.example.backup", 10_200, "Backup", &[]);
+    let mut english = request.clone();
+    english.language = "en-US".into();
+    // The time the prompt has goes to the program, longer while a screen reader runs.
+    let words = AskedWords::of(&english).within(Duration::from_secs(300));
+    assert_eq!(words.seconds, 300);
+    let args: Vec<String> = approval_arguments(&secret(), &words)
+        .split(' ')
+        .map(str::to_string)
+        .collect();
+    let Some(HelperMode::Ask { words: read, .. }) = helper_mode(&args) else {
+        panic!("the program was not asked to approve");
+    };
+    assert_eq!(read.seconds, 300);
+    // The dialog's text says it once, at its end, after what is asked.
+    let shown = confirm_text_for(&read);
+    assert!(shown
+        .text
+        .starts_with(&confirm_text(&read.label, &read.detail, &read.command, read.language).text));
+    assert!(
+        shown
+            .text
+            .ends_with("If nobody answers within 5 minutes, the request is refused."),
+        "{}",
+        shown.text
+    );
+    let korean = confirm_text_for(&AskedWords::of(&request).within(Duration::from_secs(55)));
+    assert!(
+        korean
+            .text
+            .ends_with("55초 안에 답하지 않으면 요청은 거부됩니다."),
+        "{}",
+        korean.text
+    );
+    assert_eq!(
+        time_limit_text(60, UiLanguage::English).as_deref(),
+        Some("If nobody answers within 1 minute, the request is refused.")
+    );
+    assert_eq!(
+        time_limit_text(300, UiLanguage::Korean).as_deref(),
+        Some("5분 안에 답하지 않으면 요청은 거부됩니다.")
+    );
+    // A program started by an older service, which gives no time, says nothing about it.
+    assert_eq!(time_limit_text(0, UiLanguage::English), None);
+    let untimed = AskedWords {
+        seconds: 0,
+        ..read.clone()
+    };
+    assert_eq!(
+        confirm_text_for(&untimed),
+        confirm_text(&read.label, &read.detail, &read.command, read.language)
     );
 }

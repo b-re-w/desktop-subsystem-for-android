@@ -30,6 +30,13 @@ interface TaskActions {
     fun launchNewWindow(packageName: String): Boolean = false
 
     /**
+     * Starts the shortcut [shortcutId] of [packageName] as a task in its own freeform window,
+     * as a launcher does (LauncherApps.startShortcut). False when the app has no such shortcut,
+     * it is turned off, or the framework refused.
+     */
+    fun launchShortcut(packageName: String, shortcutId: String): Boolean = false
+
+    /**
      * Opens Android Settings' [page] of [packageName], or the list of every installed app when
      * it is null, as a new task in its own freeform window. A Settings without that page opens
      * the app's info instead. False when the framework refused.
@@ -83,8 +90,30 @@ interface TaskActions {
      * inset carries [boundingRects] (relative to [frame]) as the places in it the host draws
      * over, for an app that draws its own title bar; none otherwise. False when the framework
      * has no way to give a task an inset, or refused.
+     *
+     * With [opaque] the task's app starts below the band instead: the task gets no status bar
+     * inset, and the caption bar inset is one the framework consumes for the app, which then
+     * has no top inset to handle.
      */
-    fun setCaptionInset(taskId: Int, frame: TaskBounds?, boundingRects: List<TaskBounds> = emptyList()): Boolean
+    fun setCaptionInset(
+        taskId: Int,
+        frame: TaskBounds?,
+        boundingRects: List<TaskBounds> = emptyList(),
+        opaque: Boolean = false,
+    ): Boolean
+
+    /**
+     * Puts the task in the freeform windowing mode at [freeformBounds], or, with null, in the
+     * fullscreen windowing mode. False when the framework lacks the call or refused.
+     */
+    fun setWindowingMode(taskId: Int, freeformBounds: TaskBounds?): Boolean = false
+
+    /**
+     * The status bar's height, in pixels, that an app drawing at [densityDpi] reads from the
+     * framework's resources. The image sets it to the host window's title bar at the monitor
+     * scale that density belongs to. 0 when it cannot be read.
+     */
+    fun statusBarHeight(densityDpi: Int): Int = 0
 }
 
 /** Which of Android Settings' pages of an app to open. */
@@ -119,6 +148,12 @@ sealed interface RequestResult {
     /** The app started, or came to the front; [newWindow] when it started another task. */
     data class Launched(val packageName: String, val newWindow: Boolean = false) : RequestResult
     data class LaunchFailed(val packageName: String, val reason: String) : RequestResult
+
+    /**
+     * The shortcut [shortcutId] of [packageName] started; or, with [appInstead], the shortcut
+     * could not start and the app started in its place.
+     */
+    data class ShortcutLaunched(val packageName: String, val shortcutId: String, val appInstead: Boolean = false) : RequestResult
     /** Android's [page] of [packageName] opened; null for the list of every app. */
     data class SettingsOpened(val packageName: String?, val page: SettingsPage = SettingsPage.DETAILS) : RequestResult
     data class SettingsFailed(val packageName: String?, val reason: String) : RequestResult
@@ -141,6 +176,15 @@ sealed interface RequestResult {
      */
     data class Caption(val taskId: Int, val height: Int, val startWidth: Int = 0, val endWidth: Int = 0) : RequestResult
 
+    /**
+     * Where the host's window for the task shows a clear full screen request of its app:
+     * inside the window ([inWindow]), or on the whole screen.
+     */
+    data class FullScreen(val taskId: Int, val inWindow: Boolean) : RequestResult
+
+    /** The apps whose tasks start below the title bar, as the host's user chose for each. */
+    data class CaptionCompat(val belowTitleBar: Set<String>) : RequestResult
+
     /** A resize or density for a task the host was never told about. */
     data class SizeRefused(val taskId: Int, val reason: String) : RequestResult
 
@@ -155,7 +199,8 @@ sealed interface RequestResult {
  * Turns the frames the channel delivers into actions on the guest's tasks.
  *
  * LaunchApp starts an app, or with new_window another task of an app that supports several
- * windows; OpenAppSettings opens one of Android's settings pages of an app; CloseTask ends a task, but only one the host was told about, so
+ * windows; LaunchShortcut starts one of an app's shortcuts, or the app when the shortcut cannot
+ * start; OpenAppSettings opens one of Android's settings pages of an app; CloseTask ends a task, but only one the host was told about, so
  * the host cannot end the agent's own task or anything else that has no window. ResizeTask
  * and SetTaskDensity are checked the same way and handed back for the agent to apply with
  * the rest of the task layout, and so is SetTaskCaption, the height of the host's title bar
@@ -176,6 +221,8 @@ class HostRequests(
         }
         return when (envelope.bodyCase) {
             Envelope.BodyCase.LAUNCH_APP -> launch(envelope.launchApp.packageName, envelope.launchApp.newWindow)
+            Envelope.BodyCase.LAUNCH_SHORTCUT ->
+                launchShortcut(envelope.launchShortcut.packageName, envelope.launchShortcut.shortcutId)
             Envelope.BodyCase.OPEN_APP_SETTINGS ->
                 settings(envelope.openAppSettings.packageName, pageOf(envelope.openAppSettings.page))
             Envelope.BodyCase.CLOSE_TASK -> close(envelope.closeTask.taskId)
@@ -184,12 +231,21 @@ class HostRequests(
             }
             Envelope.BodyCase.SET_TASK_DENSITY ->
                 density(envelope.setTaskDensity.taskId, envelope.setTaskDensity.densityDpi)
+            Envelope.BodyCase.CAPTION_COMPAT ->
+                RequestResult.CaptionCompat(envelope.captionCompat.belowTitleBarList.filter { it.isNotEmpty() }.toSet())
             Envelope.BodyCase.SET_TASK_CAPTION -> caption(
                 envelope.setTaskCaption.taskId,
                 envelope.setTaskCaption.height,
                 envelope.setTaskCaption.startWidth,
                 envelope.setTaskCaption.endWidth,
             )
+            Envelope.BodyCase.SET_TASK_FULL_SCREEN -> envelope.setTaskFullScreen.let {
+                if (reported(it.taskId)) {
+                    RequestResult.FullScreen(it.taskId, it.inWindow)
+                } else {
+                    RequestResult.SizeRefused(it.taskId, "the host was never told about this task")
+                }
+            }
             Envelope.BodyCase.BODY_NOT_SET, null -> RequestResult.Malformed("the frame carries no message")
             else -> RequestResult.NotForTheAgent(envelope.bodyCase)
         }
@@ -208,6 +264,18 @@ class HostRequests(
             }
         actions.launchApp(packageName) -> RequestResult.Launched(packageName)
         else -> RequestResult.LaunchFailed(packageName, "the package has no launcher activity, or the framework refused to start it")
+    }
+
+    // A shortcut that is gone or turned off still opens its app, as a launcher's stale
+    // shortcut does, so the user's click is never lost.
+    private fun launchShortcut(packageName: String, shortcutId: String): RequestResult = when {
+        !PACKAGE_NAME.matches(packageName) ->
+            RequestResult.Malformed("LaunchShortcut names ${packageName.take(80).ifEmpty { "no package" }}, which is not a package name")
+        shortcutId.isEmpty() -> RequestResult.Malformed("LaunchShortcut names no shortcut of $packageName")
+        packageName == ownPackage -> RequestResult.LaunchFailed(packageName, "the agent has no shortcuts to start")
+        actions.launchShortcut(packageName, shortcutId) -> RequestResult.ShortcutLaunched(packageName, shortcutId)
+        actions.launchApp(packageName) -> RequestResult.ShortcutLaunched(packageName, shortcutId, appInstead = true)
+        else -> RequestResult.LaunchFailed(packageName, "neither the shortcut $shortcutId nor the app could be started")
     }
 
     // A page this build does not know opens the app's info, the page every Settings has.

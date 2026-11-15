@@ -13,14 +13,30 @@
 //! message is checked and nothing the peer sends can take the host down: a bad stream is an
 //! error on that connection only.
 //!
+//! After the decoder opens, after every flush and after a packet it failed on, it takes
+//! packets only from a key frame on ([`crate::video_keyframe`]): a packet before one refers to
+//! pictures the decoder does not hold, and its picture would be green. Such a packet gets a
+//! [`VideoFrame`] with no picture (no size, no planes, not the end of the stream), so its work
+//! in the guest ends at once.
+//!
+//! Where the host shares memory with the guest ([`crate::video_slots`]), a stream whose guest
+//! maps the same region gets its pictures there instead of in the messages: each
+//! [`VideoFrame`] then names a slot of the region, and the guest gives the slot back once it
+//! has copied the picture. Before it decodes a packet, the host waits for the guest to give
+//! back slots while the stream holds nearly all it may; a picture that finds no slot (the
+//! region is full, or the guest is slow) goes in its message as before. A stream whose guest
+//! maps no region, or another one, sends every picture in its message, and the reason is
+//! logged once.
+//!
 //! Nothing here names a host operating system API. The platform supplies the decoder through
 //! [`VideoDecoders`].
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use dsa_protocol::control::envelope::Body;
 use dsa_protocol::control::{
@@ -29,7 +45,10 @@ use dsa_protocol::control::{
 };
 use dsa_protocol::handshake::{host_accept_open, local_hello};
 use dsa_protocol::{decode, encode};
-use dsa_transport::{Connection, Listener, TransportError};
+use dsa_transport::{Connection, FrameSender, Listener, TransportError};
+
+use crate::video_keyframe::{Admit, KeyframeGate, MAX_SKIPPED};
+use crate::video_slots::{PictureSlots, Slot, StreamSlots, SLOTS_PER_STREAM};
 
 /// The vsock port the guest's codec HAL connects to.
 pub const VIDEO_PORT: u32 = 5569;
@@ -120,7 +139,11 @@ pub struct Picture {
     pub width: u32,
     pub height: u32,
     pub stride: u32,
+    /// The picture's bytes, unless it is in `slot`.
     pub nv12: Vec<u8>,
+    /// The slot of the shared picture region the decoder wrote the picture into, when the
+    /// stream has one ([`VideoDecoder::use_slots`]); `nv12` is empty then.
+    pub slot: Option<Slot>,
 }
 
 impl Picture {
@@ -134,6 +157,18 @@ impl Picture {
     }
 }
 
+/// What a decoder did on its own since it was last asked, for the stream's log line.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct DecoderReport {
+    /// Time spent copying pictures out of the decoder's surfaces into memory.
+    pub readback: Duration,
+    /// How many pictures that was.
+    pub readbacks: u32,
+    /// How the last picture's surface was laid out (its size, row pitch and where its chroma
+    /// was read from), when the decoder can say.
+    pub surface: Option<String>,
+}
+
 /// One decoder session on the host's hardware.
 pub trait VideoDecoder: Send {
     /// Takes one packet and returns the pictures that are ready now, in presentation order.
@@ -142,6 +177,31 @@ pub trait VideoDecoder: Send {
     fn drain(&mut self) -> Result<Vec<Picture>, String>;
     /// Drops every packet and picture held, as for a seek.
     fn flush(&mut self);
+    /// What the decoder did since the last call, and resets it. A decoder with nothing of its
+    /// own to say reports nothing.
+    fn take_report(&mut self) -> DecoderReport {
+        DecoderReport::default()
+    }
+    /// The stream's pictures may go into slots of the shared picture region: a decoder that
+    /// can write a picture straight into a slot ([`StreamSlots::take`], [`StreamSlots::write`])
+    /// returns it with [`Picture::slot`] set and no bytes, which saves a copy. A decoder that
+    /// cannot ignores this, and its pictures are copied into slots for it.
+    fn use_slots(&mut self, slots: Arc<StreamSlots>) {
+        let _ = slots;
+    }
+    /// No packet has come for a while ([`IDLE_AFTER`]): the video is paused, or its app
+    /// stopped without releasing the codec. The decoder lets go of what its next picture can
+    /// make again (buffers sized for the stream's pictures, the spare memory its device keeps)
+    /// and says what that was, for the log; `None` when it let go of nothing. The stream goes
+    /// on as before when the next packet comes.
+    fn idle(&mut self) -> Option<String> {
+        None
+    }
+    /// The stream has ended and the decoder is about to be dropped: it lets go of everything it
+    /// holds now, in the order its platform needs, and says what that was, for the log.
+    fn release(&mut self) -> Option<String> {
+        None
+    }
 }
 
 /// The host's video decoders.
@@ -151,6 +211,64 @@ pub trait VideoDecoders: Send + Sync {
     /// Opens a decoder for `codec`, for a stream of about `width` by `height` (0 when not
     /// known).
     fn open(&self, codec: Codec, width: u32, height: u32) -> Result<Box<dyn VideoDecoder>, String>;
+    /// Every connection has ended and every decoder is closed. A platform whose decoders
+    /// share a device or a media library lets it go here, since nothing uses it until the
+    /// guest opens a decoder again: a host that kept them would hold the memory a video
+    /// played with for as long as it runs. Called by [`serve`] each time the last running
+    /// connection ends; a decoder may open again at any moment after.
+    fn all_closed(&self) {}
+    /// The slots of the memory this host shares with the guest for decoded pictures, mapped
+    /// now; asked when a guest that maps such a region opens a decoder. An error says why
+    /// there are none (the host shares no memory with this guest, or cannot map it), and the
+    /// stream's pictures then go in their messages.
+    fn picture_slots(&self) -> Result<Arc<PictureSlots>, String> {
+        Err("this host shares no memory with the guest".into())
+    }
+    /// One stream's decoder has been released and dropped, whether or not others still run.
+    /// A platform whose decoders share a device gives back what that one decoder left there
+    /// (the driver's spare memory, the heap's free blocks): waiting for the last decoder kept a
+    /// 4K stream's memory for as long as any other video, however small, was open.
+    fn decoder_closed(&self) {}
+}
+
+/// How long a stream goes without a packet before its decoder is told it is idle
+/// ([`VideoDecoder::idle`]). Long enough that a stream that is only slow (a live stream
+/// buffering) keeps its buffers, short enough that a paused video or an app that stopped
+/// without releasing its codec gives its memory back before anyone looks.
+pub const IDLE_AFTER: Duration = Duration::from_secs(10);
+
+/// The log line for a stream that ended: its format and largest picture, how many pictures it
+/// gave, why it ended, and what was let go with its decoder (`freed`, as the decoder said).
+pub fn stream_end_line(
+    codec: Codec,
+    largest: Option<(u32, u32)>,
+    pictures: u64,
+    end: &VideoEnd,
+    freed: Option<&str>,
+) -> String {
+    let size = largest
+        .map(|(w, h)| format!(" {w}x{h}"))
+        .unwrap_or_default();
+    let why = match end {
+        VideoEnd::Closed => "the guest closed it".to_string(),
+        VideoEnd::Failed(why) => why.clone(),
+    };
+    // What waited to go to the guest is freed with the connection.
+    let in_flight = largest
+        .and_then(|(w, h)| Picture::nv12_len(w, h, w))
+        .map(|bytes| {
+            format!(
+                ", up to {PICTURES_IN_FLIGHT} pictures in flight ({:.1} MiB)",
+                (bytes * PICTURES_IN_FLIGHT) as f64 / (1024.0 * 1024.0)
+            )
+        })
+        .unwrap_or_default();
+    let freed = freed.map(|f| format!(", {f}")).unwrap_or_default();
+    format!(
+        "video: the {}{size} stream ended after {pictures} pictures ({why}); let go of its \
+         decoder{in_flight}{freed}",
+        codec.name()
+    )
 }
 
 /// Why a connection ended.
@@ -167,6 +285,7 @@ fn send(connection: &mut dyn Connection, body: Body) -> Result<(), TransportErro
 }
 
 fn frame_of(picture: Picture, frame_index: u64, timestamp_us: i64) -> VideoFrame {
+    let (slot, slot_offset) = picture.slot.map_or((0, 0), |s| (s.number, s.offset));
     VideoFrame {
         frame_index,
         timestamp_us,
@@ -175,6 +294,26 @@ fn frame_of(picture: Picture, frame_index: u64, timestamp_us: i64) -> VideoFrame
         stride: picture.stride,
         nv12: picture.nv12,
         end_of_stream: false,
+        slot,
+        slot_offset,
+    }
+}
+
+/// Why the last stream sent its pictures in its messages, as last logged: the reason is
+/// logged when it changes, not for every stream.
+static COPY_REASON: Mutex<Option<String>> = Mutex::new(None);
+
+fn log_copy_reason(log: &dyn Fn(&str), why: Option<&str>) {
+    let mut last = COPY_REASON.lock().unwrap_or_else(|e| e.into_inner());
+    if last.as_deref() == why {
+        return;
+    }
+    *last = why.map(str::to_string);
+    match why {
+        Some(why) => log(&format!(
+            "video: pictures go to the guest in their messages, a copy each: {why}"
+        )),
+        None => log("video: pictures go to the guest through shared memory"),
     }
 }
 
@@ -214,30 +353,436 @@ impl Pending {
 /// picture whose packet is unknown (it was flushed) is dropped.
 fn send_pictures(
     connection: &mut dyn Connection,
+    outgoing: &mut Outgoing,
     pending: &mut Pending,
+    slots: Option<&StreamSlots>,
     pictures: Vec<Picture>,
 ) -> Result<(), TransportError> {
-    for picture in pictures {
+    for mut picture in pictures {
+        // A picture that is not sent gives its slot back at once.
+        let drop_slot = |picture: &Picture| {
+            if let (Some(slot), Some(slots)) = (picture.slot, slots) {
+                slots.give_back(slot.number);
+            }
+        };
         let Some((frame_index, timestamp_us)) = pending.take(picture.id) else {
+            drop_slot(&picture);
+            outgoing.stats().dropped(Instant::now(), true);
             continue;
         };
         let expected = Picture::nv12_len(picture.width, picture.height, picture.stride);
-        if expected != Some(picture.nv12.len()) {
+        let has = match picture.slot {
+            Some(slot) => slots.is_some().then_some(slot.len),
+            None => Some(picture.nv12.len()),
+        };
+        if expected.is_none() || expected != has {
+            drop_slot(&picture);
+            outgoing.stats().dropped(Instant::now(), false);
             continue;
         }
-        send(
-            connection,
-            Body::VideoFrame(frame_of(picture, frame_index, timestamp_us)),
-        )?;
+        // A picture the decoder left in memory goes into a slot here, when one is free.
+        if let (None, Some(slots)) = (picture.slot, slots) {
+            if let Some(slot) = slots.take(picture.nv12.len()) {
+                let nv12 = std::mem::take(&mut picture.nv12);
+                if slots.write(&slot, |bytes| {
+                    bytes.copy_from_slice(&nv12);
+                    true
+                }) {
+                    picture.slot = Some(slot);
+                } else {
+                    slots.give_back(slot.number);
+                    picture.nv12 = nv12;
+                }
+            }
+        }
+        let size = (picture.width, picture.height);
+        match (picture.slot, slots) {
+            (Some(slot), Some(slots)) => {
+                slots.lend(&slot);
+                outgoing.send_small(
+                    connection,
+                    Body::VideoFrame(frame_of(picture, frame_index, timestamp_us)),
+                )?;
+                outgoing.stats().in_slot(Instant::now(), size);
+            }
+            _ => {
+                let waited = outgoing.send(
+                    connection,
+                    Body::VideoFrame(frame_of(picture, frame_index, timestamp_us)),
+                )?;
+                outgoing.stats().handed_on(Instant::now(), size, waited);
+            }
+        }
     }
     Ok(())
 }
 
+/// How often a stream's numbers go to the log while it plays.
+pub const STATS_INTERVAL: Duration = Duration::from_secs(5);
+
+/// The pictures that may wait, encoded, for the guest to take them while the decoder goes on
+/// with the next packets. The guest takes a picture only once its app's surface has a buffer
+/// for it; with nothing waiting here, the decoder stood still for as long, and a stream whose
+/// buffers came back unevenly played at the pace of its slowest picture. Each waiting picture
+/// is one decoded frame in memory (345 KiB at 640x360, 13.5 MiB at 4096x2304), so they are few.
+pub const PICTURES_IN_FLIGHT: usize = 3;
+
+/// One stream's numbers over a few seconds: how many packets came in and pictures went out,
+/// and where the time went. Written to the log every [`STATS_INTERVAL`], so a stream that
+/// plays slowly says which stage holds it up.
+#[derive(Debug, Default, Clone)]
+pub struct StreamStats {
+    started: Option<Instant>,
+    packets: u32,
+    decoded: u32,
+    handed_on: u32,
+    sent: u32,
+    flushed: u32,
+    malformed: u32,
+    before_keyframe: u32,
+    decode: Duration,
+    readback: Duration,
+    readbacks: u32,
+    waited: Duration,
+    send: Duration,
+    /// Pictures that went in slots of the shared region, not in their messages.
+    in_slots: u32,
+    /// Time spent before a packet waiting for the guest to give slots back.
+    slot_wait: Duration,
+    size: Option<(u32, u32)>,
+    surface: Option<String>,
+    /// Over the whole stream, kept across reports: the pictures handed on, and the largest.
+    total_handed_on: u64,
+    largest: Option<(u32, u32)>,
+}
+
+impl StreamStats {
+    /// The pictures handed on to the guest since the stream began.
+    pub fn total_handed_on(&self) -> u64 {
+        self.total_handed_on
+    }
+
+    /// The largest picture the stream gave, by area.
+    pub fn largest(&self) -> Option<(u32, u32)> {
+        self.largest
+    }
+
+    fn begin(&mut self, now: Instant) {
+        if self.started.is_none() {
+            self.started = Some(now);
+        }
+    }
+
+    /// A packet was decoded in `took` (the decoder's copies out of its surfaces included),
+    /// giving `pictures` pictures.
+    pub fn decoded(&mut self, now: Instant, took: Duration, pictures: u32) {
+        self.begin(now);
+        self.packets += 1;
+        self.decoded += pictures;
+        self.decode += took;
+    }
+
+    /// What the decoder said of its own stages.
+    pub fn decoder(&mut self, report: DecoderReport) {
+        self.readback += report.readback;
+        self.readbacks += report.readbacks;
+        if report.surface.is_some() {
+            self.surface = report.surface;
+        }
+    }
+
+    /// A picture of `size` was handed on to go to the guest, after waiting `waited` for room
+    /// among the pictures in flight (the guest not taking the ones before).
+    pub fn handed_on(&mut self, now: Instant, size: (u32, u32), waited: Duration) {
+        self.begin(now);
+        self.handed_on += 1;
+        self.waited += waited;
+        self.went_out(size);
+    }
+
+    /// A picture of `size` went to the guest in a slot of the shared region: only its slot's
+    /// number crossed the connection.
+    pub fn in_slot(&mut self, now: Instant, size: (u32, u32)) {
+        self.begin(now);
+        self.in_slots += 1;
+        self.went_out(size);
+    }
+
+    /// Over the whole stream: one more picture, of `size`.
+    fn went_out(&mut self, size: (u32, u32)) {
+        self.total_handed_on += 1;
+        self.size = Some(size);
+        let area = |(w, h): (u32, u32)| u64::from(w) * u64::from(h);
+        if self
+            .largest
+            .is_none_or(|largest| area(size) > area(largest))
+        {
+            self.largest = Some(size);
+        }
+    }
+
+    /// Before a packet, the host waited `took` for the guest to give slots back.
+    pub fn waited_for_slots(&mut self, took: Duration) {
+        self.slot_wait += took;
+    }
+
+    /// A picture's message reached the guest's socket in `took`.
+    pub fn sent(&mut self, took: Duration) {
+        self.sent += 1;
+        self.send += took;
+    }
+
+    /// A picture was dropped: its packet was flushed, or it is not the size it says.
+    pub fn dropped(&mut self, now: Instant, flushed: bool) {
+        self.begin(now);
+        if flushed {
+            self.flushed += 1;
+        } else {
+            self.malformed += 1;
+        }
+    }
+
+    /// A packet was not decoded: it refers to pictures the decoder does not have, since it
+    /// came after a flush, the stream's start or a failed packet and before a key frame (see
+    /// [`crate::video_keyframe`]). Its picture would have been green.
+    pub fn before_keyframe(&mut self, now: Instant) {
+        self.begin(now);
+        self.packets += 1;
+        self.before_keyframe += 1;
+    }
+
+    /// The log line for the numbers so far, once [`STATS_INTERVAL`] has passed since they
+    /// began, and a new count from then. `None` before then, and while nothing has happened.
+    pub fn report(&mut self, now: Instant, codec: Codec) -> Option<String> {
+        let started = self.started?;
+        let span = now.checked_duration_since(started)?;
+        if span < STATS_INTERVAL {
+            return None;
+        }
+        let seconds = span.as_secs_f64();
+        let average = |total: Duration, count: u32| {
+            if count == 0 {
+                0.0
+            } else {
+                total.as_secs_f64() * 1000.0 / f64::from(count)
+            }
+        };
+        let size = self
+            .size
+            .map(|(w, h)| format!(" {w}x{h}"))
+            .unwrap_or_default();
+        let surface = self
+            .surface
+            .as_ref()
+            .map(|s| format!("; surface {s}"))
+            .unwrap_or_default();
+        // The stages of a picture sent in its message, while any was: with every picture in
+        // shared memory there is no per-picture send and no wait for room among those in flight.
+        let copied = if self.handed_on > 0 || self.in_slots == 0 {
+            format!(
+                ", waiting for the guest to take a picture {:.2}, send {:.2}",
+                average(self.waited, self.handed_on),
+                average(self.send, self.sent),
+            )
+        } else {
+            String::new()
+        };
+        let shared = if self.in_slots > 0 {
+            format!(
+                "; {} in shared memory ({:.1}/s), {} in messages, waiting for the guest to give \
+                 slots back {:.2} ms a packet",
+                self.in_slots,
+                f64::from(self.in_slots) / seconds,
+                self.handed_on,
+                average(self.slot_wait, self.packets),
+            )
+        } else {
+            String::new()
+        };
+        let line = format!(
+            "video: {}{size} over {seconds:.1} s: {} packets, {} pictures decoded ({:.1}/s), {} \
+             handed on ({:.1}/s), {} dropped ({} flushed, {} malformed, {} before a key \
+             frame); average ms: decode {:.2} (copy out of the GPU {:.2}){copied}{shared}{surface}",
+            codec.name(),
+            self.packets,
+            self.decoded,
+            f64::from(self.decoded) / seconds,
+            self.handed_on + self.in_slots,
+            f64::from(self.handed_on + self.in_slots) / seconds,
+            self.flushed + self.malformed + self.before_keyframe,
+            self.flushed,
+            self.malformed,
+            self.before_keyframe,
+            average(self.decode, self.packets),
+            average(self.readback, self.readbacks),
+        );
+        *self = StreamStats {
+            started: Some(now),
+            size: self.size,
+            surface: self.surface.take(),
+            total_handed_on: self.total_handed_on,
+            largest: self.largest,
+            ..StreamStats::default()
+        };
+        Some(line)
+    }
+}
+
+/// Where the messages to the guest go: straight to the connection, or, when the connection
+/// can send from a second handle, to a thread of their own through [`PICTURES_IN_FLIGHT`]
+/// places, so the decoder goes on while the guest takes the pictures before. Every message
+/// goes the same way, so they reach the guest in the order they were made.
+struct Outgoing {
+    /// Each message, and whether its send is counted among the pictures' (see
+    /// [`StreamStats::sent`]).
+    queue: Option<SyncSender<(Vec<u8>, bool)>>,
+    thread: Option<thread::JoinHandle<()>>,
+    failed: Arc<Mutex<Option<TransportError>>>,
+    stats: Arc<Mutex<StreamStats>>,
+}
+
+impl Outgoing {
+    fn start(connection: &dyn Connection, stats: Arc<Mutex<StreamStats>>) -> Outgoing {
+        let failed = Arc::new(Mutex::new(None));
+        let mut outgoing = Outgoing {
+            queue: None,
+            thread: None,
+            failed: Arc::clone(&failed),
+            stats: Arc::clone(&stats),
+        };
+        let Some(sender) = connection.try_clone_sender() else {
+            return outgoing;
+        };
+        let (queue, waiting) = sync_channel::<(Vec<u8>, bool)>(PICTURES_IN_FLIGHT);
+        let spawned = thread::Builder::new()
+            .name("dsa-video-send".into())
+            .spawn(move || Outgoing::run(sender, waiting, failed, stats));
+        if let Ok(thread) = spawned {
+            outgoing.queue = Some(queue);
+            outgoing.thread = Some(thread);
+        }
+        outgoing
+    }
+
+    fn run(
+        mut sender: Box<dyn FrameSender>,
+        waiting: Receiver<(Vec<u8>, bool)>,
+        failed: Arc<Mutex<Option<TransportError>>>,
+        stats: Arc<Mutex<StreamStats>>,
+    ) {
+        for (frame, counted) in waiting {
+            let started = Instant::now();
+            if let Err(error) = sender.send(&frame) {
+                *failed.lock().unwrap_or_else(|e| e.into_inner()) = Some(error);
+                return;
+            }
+            let took = started.elapsed();
+            if counted {
+                stats.lock().unwrap_or_else(|e| e.into_inner()).sent(took);
+            }
+        }
+    }
+
+    fn stats(&self) -> std::sync::MutexGuard<'_, StreamStats> {
+        self.stats.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// The error the sending thread stopped on, if it has.
+    fn failure(&self) -> Option<TransportError> {
+        self.failed
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
+    /// Sends `body`, after the messages before it; a message waits for room among those in
+    /// flight. Returns how long it waited for that room.
+    fn send(
+        &mut self,
+        connection: &mut dyn Connection,
+        body: Body,
+    ) -> Result<Duration, TransportError> {
+        self.send_counted(connection, body, true)
+    }
+
+    /// As [`send`](Self::send), for a picture whose message carries only its slot: its send is
+    /// not one of the pictures' sends the stream's numbers average.
+    fn send_small(
+        &mut self,
+        connection: &mut dyn Connection,
+        body: Body,
+    ) -> Result<Duration, TransportError> {
+        self.send_counted(connection, body, false)
+    }
+
+    fn send_counted(
+        &mut self,
+        connection: &mut dyn Connection,
+        body: Body,
+        counted: bool,
+    ) -> Result<Duration, TransportError> {
+        let frame = encode(&Envelope { body: Some(body) });
+        let Some(queue) = &self.queue else {
+            let started = Instant::now();
+            connection.send(&frame)?;
+            let took = started.elapsed();
+            if counted {
+                self.stats().sent(took);
+            }
+            return Ok(Duration::ZERO);
+        };
+        if let Some(error) = self.failure() {
+            return Err(error);
+        }
+        let started = Instant::now();
+        if queue.send((frame, counted)).is_err() {
+            return Err(self.failure().unwrap_or(TransportError::Closed));
+        }
+        Ok(started.elapsed())
+    }
+
+    /// Ends the sending thread. The stream has ended (the guest closed it, or it failed), so
+    /// what still waits has no one to go to: the connection is closed first, which also ends
+    /// a send blocked on a guest that stopped reading.
+    fn finish(&mut self, connection: &mut dyn Connection) {
+        self.queue = None;
+        if let Some(thread) = self.thread.take() {
+            connection.close();
+            let _ = thread.join();
+        }
+    }
+}
+
 /// Runs one connection on the video port to its end. `build` names this host in its Hello.
 pub fn serve_connection(
+    connection: Box<dyn Connection>,
+    decoders: &dyn VideoDecoders,
+    build: &str,
+) -> VideoEnd {
+    serve_connection_logged(connection, decoders, build, &|_: &str| {})
+}
+
+/// As [`serve_connection`], with `log` taking the stream's numbers every [`STATS_INTERVAL`]
+/// while it plays (see [`StreamStats`]).
+pub fn serve_connection_logged(
+    connection: Box<dyn Connection>,
+    decoders: &dyn VideoDecoders,
+    build: &str,
+    log: &dyn Fn(&str),
+) -> VideoEnd {
+    serve_connection_idle(connection, decoders, build, log, IDLE_AFTER)
+}
+
+/// As [`serve_connection_logged`], with the decoder told it is idle once no packet has come
+/// for `idle_after` ([`IDLE_AFTER`] in the host). When the stream ends its decoder is released
+/// ([`VideoDecoder::release`]) and dropped, the platform hears it
+/// ([`VideoDecoders::decoder_closed`]), and one line says what was let go.
+pub fn serve_connection_idle(
     mut connection: Box<dyn Connection>,
     decoders: &dyn VideoDecoders,
     build: &str,
+    log: &dyn Fn(&str),
+    idle_after: Duration,
 ) -> VideoEnd {
     let local = local_hello(Role::Host, build);
     let accepted = host_accept_open(connection.as_mut(), &local, Role::GuestVideo, OPEN_TIMEOUT);
@@ -274,6 +819,7 @@ pub fn serve_connection(
             Body::VideoDecoderOpened(VideoDecoderOpened {
                 ok: false,
                 error: why.clone(),
+                shared_pictures: false,
             }),
         );
         connection.close();
@@ -306,24 +852,170 @@ pub fn serve_connection(
         Ok(decoder) => decoder,
         Err(why) => return refuse(connection.as_mut(), why),
     };
+    let slots = match shared_slots(decoders, open.picture_region_id) {
+        Ok(slots) => {
+            log_copy_reason(log, None);
+            let slots = Arc::new(slots.stream());
+            decoder.use_slots(Arc::clone(&slots));
+            Some(slots)
+        }
+        Err(why) => {
+            log_copy_reason(log, Some(&why));
+            None
+        }
+    };
     if let Err(error) = send(
         connection.as_mut(),
         Body::VideoDecoderOpened(VideoDecoderOpened {
             ok: true,
             error: String::new(),
+            shared_pictures: slots.is_some(),
         }),
     ) {
         return VideoEnd::Failed(format!("the answer did not go out: {error}"));
     }
 
+    let stats = Arc::new(Mutex::new(StreamStats::default()));
+    let mut outgoing = Outgoing::start(connection.as_ref(), Arc::clone(&stats));
+    let end = run_stream(
+        connection.as_mut(),
+        decoder.as_mut(),
+        codec,
+        &mut outgoing,
+        slots.as_deref(),
+        log,
+        idle_after,
+    );
+    outgoing.finish(connection.as_mut());
+    // Everything the stream held goes now: the pictures that waited with the connection, then
+    // the decoder's own buffers, then the stream's slots, which all come back (the decoder
+    // holds them too), then what its platform kept for it.
+    drop(outgoing);
+    let freed = decoder.release();
+    drop(decoder);
+    drop(slots);
+    decoders.decoder_closed();
+    let (largest, pictures) = {
+        let stats = stats.lock().unwrap_or_else(|e| e.into_inner());
+        (stats.largest(), stats.total_handed_on())
+    };
+    log(&stream_end_line(
+        codec,
+        largest,
+        pictures,
+        &end,
+        freed.as_deref(),
+    ));
+    end
+}
+
+/// The region a guest that maps the one with id `guest_id` (0 for none) shares with this
+/// host, or why it shares none.
+fn shared_slots(decoders: &dyn VideoDecoders, guest_id: u64) -> Result<Arc<PictureSlots>, String> {
+    if guest_id == 0 {
+        return Err(
+            "the guest maps no shared picture region (its kernel has none, or has not been \
+             told where it is)"
+                .into(),
+        );
+    }
+    let slots = decoders.picture_slots()?;
+    if slots.id() != guest_id {
+        return Err(format!(
+            "the guest maps another shared picture region (id {guest_id:x}, this host's is {:x})",
+            slots.id()
+        ));
+    }
+    Ok(slots)
+}
+
+/// Before a packet is decoded, waits up to [`SLOT_WAIT`] for the guest to give slots back
+/// while the stream holds so many that its next pictures would find none. Every other message
+/// that comes meanwhile waits in `backlog`, in order.
+fn wait_for_slots(
+    connection: &mut dyn Connection,
+    slots: &StreamSlots,
+    backlog: &mut VecDeque<Vec<u8>>,
+) -> Result<Duration, TransportError> {
+    let started = Instant::now();
+    let deadline = started + SLOT_WAIT;
+    while slots.held() + FREE_SLOTS_BEFORE_A_PACKET > SLOTS_PER_STREAM {
+        let now = Instant::now();
+        if now >= deadline {
+            break;
+        }
+        match connection.recv(Some(deadline - now)) {
+            Ok(frame) => match decode(&frame).ok().and_then(|e| e.body) {
+                Some(Body::VideoSlotReturned(returned)) => {
+                    slots.give_back(returned.slot);
+                }
+                _ => backlog.push_back(frame),
+            },
+            Err(TransportError::Timeout) => break,
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(started.elapsed())
+}
+
+/// How long a packet waits for the guest to give slots back before it is decoded anyway; its
+/// pictures then go in their messages if no slot is free.
+pub const SLOT_WAIT: Duration = Duration::from_millis(200);
+
+/// The slots a stream keeps free before it decodes a packet: a packet gives one picture, and
+/// sometimes two (a decoder that held one back).
+const FREE_SLOTS_BEFORE_A_PACKET: usize = 2;
+
+/// Packets in and pictures out, until the guest closes the connection or it fails.
+fn run_stream(
+    connection: &mut dyn Connection,
+    decoder: &mut dyn VideoDecoder,
+    codec: Codec,
+    outgoing: &mut Outgoing,
+    slots: Option<&StreamSlots>,
+    log: &dyn Fn(&str),
+    idle_after: Duration,
+) -> VideoEnd {
     let mut pending = Pending::default();
+    let mut gate = KeyframeGate::new(codec);
+    // Messages that came while the stream waited for slots, to be taken in order.
+    let mut backlog: VecDeque<Vec<u8>> = VecDeque::new();
+    // The decoder was told the stream is idle, and nothing has come since.
+    let mut idle = false;
     loop {
-        let frame = match connection.recv(None) {
-            Ok(frame) => frame,
+        let received = match backlog.pop_front() {
+            Some(frame) => Ok(frame),
+            None => connection.recv((!idle).then_some(idle_after)),
+        };
+        let frame = match received {
+            Ok(frame) => {
+                idle = false;
+                frame
+            }
+            Err(TransportError::Timeout) if !idle => {
+                idle = true;
+                if let Some(freed) = decoder.idle() {
+                    log(&format!(
+                        "video: the {} stream has had no packet for {idle_after:?}; let go of \
+                         {freed}",
+                        codec.name(),
+                    ));
+                }
+                continue;
+            }
             Err(TransportError::Closed) => return VideoEnd::Closed,
             Err(error) => return VideoEnd::Failed(format!("the connection failed: {error}")),
         };
+        if let Some(error) = outgoing.failure() {
+            return VideoEnd::Failed(format!("a message to the guest did not go out: {error}"));
+        }
         let sent = match decode(&frame).ok().and_then(|e| e.body) {
+            Some(Body::VideoSlotReturned(returned)) => {
+                if let Some(slots) = slots {
+                    slots.give_back(returned.slot);
+                }
+                Ok(())
+            }
             Some(Body::VideoPacket(packet)) => {
                 if packet.data.len() > MAX_PACKET_BYTES {
                     return VideoEnd::Failed(format!(
@@ -331,31 +1023,83 @@ pub fn serve_connection(
                         packet.data.len()
                     ));
                 }
+                if let Some(slots) = slots.filter(|_| !packet.data.is_empty()) {
+                    match wait_for_slots(connection, slots, &mut backlog) {
+                        Ok(waited) => outgoing.stats().waited_for_slots(waited),
+                        Err(TransportError::Closed) => return VideoEnd::Closed,
+                        Err(error) => {
+                            return VideoEnd::Failed(format!("the connection failed: {error}"))
+                        }
+                    }
+                }
                 let mut result = Ok(());
-                if !packet.data.is_empty() {
+                let admit = if packet.data.is_empty() {
+                    Admit::Decode
+                } else if packet.codec_config {
+                    gate.configuration(&packet.data);
+                    Admit::Decode
+                } else {
+                    gate.admit(&packet.data)
+                };
+                if admit == Admit::GaveUp {
+                    log(&format!(
+                        "video: {} stream: no key frame came in {MAX_SKIPPED} packets; decoding \
+                         on without one",
+                        codec.name()
+                    ));
+                }
+                if admit == Admit::Skip {
+                    // The packet's work in the guest ends with no picture, rather than waiting
+                    // for one that never comes.
+                    outgoing.stats().before_keyframe(Instant::now());
+                    let none = VideoFrame {
+                        frame_index: packet.frame_index,
+                        timestamp_us: packet.timestamp_us,
+                        ..VideoFrame::default()
+                    };
+                    result = outgoing.send(connection, Body::VideoFrame(none)).map(drop);
+                } else if !packet.data.is_empty() {
                     let id = pending.add(packet.frame_index, packet.timestamp_us);
+                    let started = Instant::now();
                     let decoded = decoder.decode(Packet {
                         id,
                         data: packet.data,
                         codec_config: packet.codec_config,
                         timestamp_us: packet.timestamp_us,
                     });
+                    let took = started.elapsed();
+                    {
+                        let mut stats = outgoing.stats();
+                        let count = decoded.as_ref().map_or(0, |p| p.len() as u32);
+                        stats.decoded(Instant::now(), took, count);
+                        stats.decoder(decoder.take_report());
+                    }
                     result = match decoded {
-                        Ok(pictures) => send_pictures(connection.as_mut(), &mut pending, pictures),
-                        Err(why) => send(
-                            connection.as_mut(),
-                            Body::VideoError(VideoError { error: why }),
-                        ),
+                        Ok(pictures) => {
+                            send_pictures(connection, outgoing, &mut pending, slots, pictures)
+                        }
+                        Err(why) => {
+                            // What the decoder failed on may be a picture the next ones refer
+                            // to: they would decode into garbage.
+                            gate.rearm();
+                            outgoing
+                                .send(connection, Body::VideoError(VideoError { error: why }))
+                                .map(drop)
+                        }
                     };
                 }
                 if result.is_ok() && packet.end_of_stream {
+                    // A drained decoder starts again from a key frame.
+                    gate.rearm();
                     result = match decoder.drain() {
-                        Ok(pictures) => send_pictures(connection.as_mut(), &mut pending, pictures),
-                        Err(why) => send(
-                            connection.as_mut(),
-                            Body::VideoError(VideoError { error: why }),
-                        ),
+                        Ok(pictures) => {
+                            send_pictures(connection, outgoing, &mut pending, slots, pictures)
+                        }
+                        Err(why) => outgoing
+                            .send(connection, Body::VideoError(VideoError { error: why }))
+                            .map(drop),
                     };
+                    outgoing.stats().decoder(decoder.take_report());
                 }
                 if result.is_ok() && packet.end_of_stream {
                     pending.clear();
@@ -365,14 +1109,17 @@ pub fn serve_connection(
                         end_of_stream: true,
                         ..VideoFrame::default()
                     };
-                    result = send(connection.as_mut(), Body::VideoFrame(end));
+                    result = outgoing.send(connection, Body::VideoFrame(end)).map(drop);
                 }
                 result
             }
             Some(Body::VideoFlush(_)) => {
                 decoder.flush();
                 pending.clear();
-                send(connection.as_mut(), Body::VideoFlushed(VideoFlushed {}))
+                gate.rearm();
+                outgoing
+                    .send(connection, Body::VideoFlushed(VideoFlushed {}))
+                    .map(drop)
             }
             _ => {
                 let why = "the guest sent a message the video port does not take";
@@ -382,12 +1129,17 @@ pub fn serve_connection(
         if let Err(error) = sent {
             return VideoEnd::Failed(format!("a message to the guest did not go out: {error}"));
         }
+        if let Some(line) = outgoing.stats().report(Instant::now(), codec) {
+            log(&line);
+        }
     }
 }
 
 /// Accepts connections on `listener` until `stop` is set, and runs each on a thread of its
 /// own, at most [`MAX_DECODERS`] at once. `log` takes a line for each connection that ends on
 /// an error. A listener that fails (the guest's VM went away) is tried again a second later.
+/// Each time the last running connection ends, its decoder already closed, `decoders` hears
+/// it ([`VideoDecoders::all_closed`]).
 pub fn serve(
     mut listener: Box<dyn Listener>,
     decoders: Arc<dyn VideoDecoders>,
@@ -425,11 +1177,19 @@ pub fn serve(
         let spawned = thread::Builder::new()
             .name("dsa-video".into())
             .spawn(move || {
-                let end = serve_connection(connection, decoders.as_ref(), &build);
+                let end = serve_connection_logged(
+                    connection,
+                    decoders.as_ref(),
+                    &build,
+                    &|line: &str| log(line),
+                );
                 if let VideoEnd::Failed(why) = end {
                     log(&format!("video: a decoder ended: {why}"));
                 }
-                counter.fetch_sub(1, Ordering::SeqCst);
+                // The connection's decoder was dropped when serve_connection returned.
+                if counter.fetch_sub(1, Ordering::SeqCst) == 1 {
+                    decoders.all_closed();
+                }
             });
         if spawned.is_err() {
             running.fetch_sub(1, Ordering::SeqCst);

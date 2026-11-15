@@ -123,7 +123,7 @@ impl State {
     fn menu_entries(&self, task_id: i32, dpi: u32) -> Option<(MenuLayout, Vec<Option<Coverage>>)> {
         let text = self.text.as_ref()?;
         let window = self.windows.get(&task_id)?;
-        let words = menu_text(self.korean);
+        let words = menu_text(self.language);
         let maximized = window.model.states.maximized && window.pip.is_none();
         let entries = items(maximized, window.model.resizable, window.multiple_windows);
         let px = f64::from(dsa_host_core::compositor::caption::scaled(TEXT_AT_100, dpi));
@@ -264,6 +264,12 @@ impl State {
 
     /// Input on the X11 window menu, or Alt+Space in an X11 picture-in-picture window.
     pub fn x11_menu_input(&mut self, input: MenuInput) {
+        // The menu's X11 window shows a widget's menu too, on a desktop where widgets are
+        // X11 windows.
+        if self.widget_menu_is_x11() {
+            self.x11_widget_menu_input(input);
+            return;
+        }
         let serial = self.serial;
         match input {
             MenuInput::Open { task_id } => self.open_x11_menu(task_id),
@@ -458,6 +464,11 @@ impl State {
             self.screenshot(task_id, serial);
         }
         self.close_menu();
+        // Full screen goes on and off as F11 does, whichever window shows the task.
+        if work(item) == WindowWork::FullScreen {
+            self.toggle_fullscreen(task_id);
+            return;
+        }
         if let Some(origin) = x11_origin {
             self.x11_menu_work(task_id, work(item), origin);
             return;
@@ -479,7 +490,7 @@ impl State {
             WindowWork::DesktopMenu => {
                 self.desktop_window_menu_at(task_id, serial, desktop_menu_point(place));
             }
-            WindowWork::Screenshot | WindowWork::Nothing => {}
+            WindowWork::Screenshot | WindowWork::Nothing | WindowWork::FullScreen => {}
             WindowWork::Android(action) => {
                 self.report(FromHost::MenuChosen { task_id, action });
             }
@@ -513,7 +524,7 @@ impl State {
                 self.report(FromHost::MenuChosen { task_id, action });
                 Ok(())
             }
-            WindowWork::Screenshot | WindowWork::Nothing => Ok(()),
+            WindowWork::Screenshot | WindowWork::Nothing | WindowWork::FullScreen => Ok(()),
         };
         if let Err(why) = failed {
             log(&format!(
@@ -565,7 +576,9 @@ impl State {
         let Some(window) = self.windows.get(&task_id) else {
             return;
         };
-        let band = window.model.caption_height();
+        // The frame is the task's, in its pixels: the band covers fewer or more of its rows
+        // when the window shows it at another scale.
+        let band = window.model.caption_rows_in_frame();
         // A GPU frame is read back from under the band only; a frame in memory has it all.
         let last_gpu = window.last_gpu;
         let frame = match last_gpu {
@@ -597,7 +610,7 @@ impl State {
             png: OnceLock::new(),
         });
         self.set_clipboard_shot(Arc::clone(&shot), serial);
-        let prefix = menu_text(self.korean).screenshot_file;
+        let prefix = menu_text(self.language).screenshot_file;
         let spawned = std::thread::Builder::new()
             .name("dsa-screenshot".into())
             .spawn(move || match screenshot::save(shot.png(), prefix) {

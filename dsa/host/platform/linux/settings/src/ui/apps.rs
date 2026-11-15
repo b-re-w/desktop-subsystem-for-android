@@ -1,15 +1,121 @@
 //! The pages about the apps in Android: Apps, Running in the background, and Widgets.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::time::Duration;
 
 use adw::prelude::*;
+use gtk::glib;
 
 use super::common::*;
 use crate::i18n::{tr, trf};
-use crate::model::{App, AppWindow, DpiScaling};
+use crate::model::{App, AppWindow, DpiScaling, FullScreenPlace};
 use crate::view;
+
+/// Where every app without its own choice shows its full screen: a clear request on the whole
+/// screen by default, and its bars hidden alone inside its window. Each app's own choice, in
+/// its row below, wins over them. `follow` hears each choice as it is read and changed, so the
+/// rows' "Follow the default" says where it takes the app.
+fn app_full_screen(
+    ctx: &Shared,
+    page: &Rc<Page>,
+    follow: Rc<dyn Fn(FullScreenPlace, FullScreenPlace)>,
+) -> adw::PreferencesGroup {
+    let all = group(
+        &tr("App full screen"),
+        Some(&tr(
+            "On the whole screen, the title bar appears when the pointer reaches the top edge.",
+        )),
+    );
+    let labels: Vec<String> = view::DEFAULT_FULL_SCREEN_PLACES
+        .into_iter()
+        .map(view::full_screen_label)
+        .collect();
+    let combo = |title: &str, subtitle: &str, immersive: bool| {
+        let (ctx, page, follow) = (ctx.clone(), page.clone(), follow.clone());
+        Combo::new(title, subtitle, move |index| {
+            let Some(place) = view::DEFAULT_FULL_SCREEN_PLACES
+                .get(index as usize)
+                .copied()
+            else {
+                return;
+            };
+            let (page, follow) = (page.clone(), follow.clone());
+            request(
+                &ctx,
+                move |c| {
+                    if immersive {
+                        c.set_app_immersive(place)
+                    } else {
+                        c.set_app_fullscreen(place)
+                    }
+                },
+                move |r| {
+                    page.show_failure(&tr("The setting was not changed"), r.as_ref().err());
+                    if let Ok(settings) = r {
+                        follow(settings.app_fullscreen, settings.app_immersive);
+                    }
+                },
+            );
+        })
+    };
+    let fullscreen = combo(
+        &tr("Full screen request"),
+        &tr("Where an app's full screen request shows, such as a video's full screen button."),
+        false,
+    );
+    let immersive = combo(
+        &tr("Bars hidden"),
+        &tr("Where an app shows when it only hides its bars, as a feed of short videos does."),
+        true,
+    );
+    all.add(&fullscreen.row);
+    all.add(&immersive.row);
+    let (fullscreen, immersive) = (Rc::new(fullscreen), Rc::new(immersive));
+    request(
+        ctx,
+        |c| c.settings(),
+        move |r| {
+            if let Ok(settings) = r {
+                fullscreen.set(
+                    &labels,
+                    view::default_full_screen_index(settings.app_fullscreen) as u32,
+                );
+                immersive.set(
+                    &labels,
+                    view::default_full_screen_index(settings.app_immersive) as u32,
+                );
+                follow(settings.app_fullscreen, settings.app_immersive);
+            }
+        },
+    );
+    all
+}
+
+/// The full screen lists of the rows on the page, a clear request's and the bars hidden
+/// alone's, so a change of the choice for every app names itself in each row at once.
+type FollowingRows = Rc<RefCell<Vec<(Combo, Combo)>>>;
+
+/// The names of an app's full screen list while the choice for every app is `default`.
+fn full_screen_labels(default: FullScreenPlace) -> Vec<String> {
+    view::full_screen_choices(default)
+        .into_iter()
+        .map(|(label, _)| label)
+        .collect()
+}
+
+/// Names `defaults` in every row's lists, each keeping the choice it shows.
+fn relabel_following(following: &FollowingRows, defaults: (FullScreenPlace, FullScreenPlace)) {
+    let (full, immersive) = (
+        full_screen_labels(defaults.0),
+        full_screen_labels(defaults.1),
+    );
+    for (full_combo, immersive_combo) in following.borrow().iter() {
+        full_combo.set(&full, full_combo.row.selected());
+        immersive_combo.set(&immersive, immersive_combo.row.selected());
+    }
+}
 
 /// A callback set once its page is built, called to draw or reload that page again.
 type Hook = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
@@ -20,7 +126,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
 
     let manage = group(
         "",
-        Some(&tr("The Android apps installed on this computer. Open an app, change its permissions, storage and notifications in App info, or uninstall an app you installed. Android starts when you open this page.")),
+        Some(&tr("The Android apps on this computer. Open them, change them in App info, or uninstall the ones you installed.\nAndroid starts when you open this page.")),
     );
     let manage_row = link_row(
         &tr("Manage apps"),
@@ -45,15 +151,40 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         });
     }
 
+    // Where the choice for every app takes a clear full screen request and the bars hidden
+    // alone now; DSA's own defaults until the service says.
+    let defaults: Rc<Cell<(FullScreenPlace, FullScreenPlace)>> = Rc::new(Cell::new((
+        FullScreenPlace::Screen,
+        FullScreenPlace::Window,
+    )));
+    let following: FollowingRows = Rc::default();
+    let follow: Rc<dyn Fn(FullScreenPlace, FullScreenPlace)> = {
+        let (defaults, following) = (defaults.clone(), following.clone());
+        Rc::new(
+            move |fullscreen: FullScreenPlace, immersive: FullScreenPlace| {
+                let now = (
+                    fullscreen.or_builtin(FullScreenPlace::Screen),
+                    immersive.or_builtin(FullScreenPlace::Window),
+                );
+                if defaults.get() == now {
+                    return;
+                }
+                defaults.set(now);
+                relabel_following(&following, now);
+            },
+        )
+    };
+    page.add(&app_full_screen(ctx, &page, follow));
+
     let installed = group(&tr("Installed apps"), None);
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     let search = gtk::SearchEntry::builder()
         .placeholder_text(tr("Search apps"))
         .valign(gtk::Align::Center)
         .build();
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    // A placeholder is not a name: a screen reader says it only while the box is empty.
+    accessible_name(&search, &tr("Search apps"));
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     header.append(&search);
     header.append(&refresh);
     installed.set_header_suffix(Some(&header));
@@ -64,6 +195,13 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
     let windows: Rc<RefCell<HashMap<String, AppWindow>>> = Rc::default();
     // Whether Android scales an app the System (forced) way yet.
     let forced: Rc<Cell<bool>> = Rc::default();
+    // The apps DSA scales the System way unless the user chose otherwise.
+    let scaled: Rc<RefCell<Vec<String>>> = Rc::default();
+    // The apps DSA starts below the title bar unless the user chose otherwise.
+    let below: Rc<RefCell<Vec<String>>> = Rc::default();
+    // The apps whose rows the user opened. The list is made again after every change and on
+    // every search, so without this a row closed under the user each time it was read again.
+    let expanded: Rc<RefCell<HashSet<String>>> = Rc::default();
 
     // Builds the list again from what is known, as the search says.
     let render: Hook = Rc::default();
@@ -79,8 +217,13 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let search = search.clone();
         let reload = reload.clone();
         let forced = forced.clone();
+        let scaled = scaled.clone();
+        let below = below.clone();
+        let expanded = expanded.clone();
+        let (defaults, following) = (defaults.clone(), following.clone());
         *render.borrow_mut() = Some(Rc::new(move || {
             rows.clear();
+            following.borrow_mut().clear();
             let all = apps.borrow();
             let Some(all) = all.as_ref() else { return };
             let query = search.text().to_string();
@@ -98,11 +241,38 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                 rows.note(&tr("No app matches your search."));
             }
             if view::root_unavailable(all) {
-                rows.note(&tr("Root access is off for this computer, so no app can use su. An administrator turns it on under Advanced, and then you choose each app's level here."));
+                rows.note(&tr("Root access is off for this computer, so no app can use su.\nAn administrator turns it on under Advanced. Then you choose each app's level here."));
             }
             for app in shown {
                 let window = windows.borrow().get(&app.package).cloned();
-                let row = app_row(&ctx, &page, app, window, forced.get(), reload.clone());
+                let group_note = view::root_group_note(app, all);
+                let row = app_row(
+                    &ctx,
+                    &page,
+                    app,
+                    group_note,
+                    window,
+                    forced.get(),
+                    scaled.borrow().contains(&app.package),
+                    below.borrow().contains(&app.package),
+                    defaults.get(),
+                    &following,
+                    reload.clone(),
+                );
+                // A row the user opened stays open, and opening or closing it is remembered.
+                if expanded.borrow().contains(&app.package) {
+                    row.set_expanded(true);
+                }
+                {
+                    let (expanded, package) = (expanded.clone(), app.package.clone());
+                    row.connect_expanded_notify(move |row| {
+                        if row.is_expanded() {
+                            expanded.borrow_mut().insert(package.clone());
+                        } else {
+                            expanded.borrow_mut().remove(&package);
+                        }
+                    });
+                }
                 // The app App info was opened for: its row opens and comes into view, once.
                 let focused = ctx.focus_app.borrow().as_deref() == Some(app.package.as_str());
                 if focused {
@@ -121,9 +291,13 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let (ctx, page, apps, windows) = (ctx.clone(), page.clone(), apps.clone(), windows.clone());
         let render = render.clone();
         let forced = forced.clone();
+        let scaled = scaled.clone();
+        let below = below.clone();
+        let defaults = defaults.clone();
         *reload.borrow_mut() = Some(Rc::new(move || {
             let (page, apps, render) = (page.clone(), apps.clone(), render.clone());
-            let (windows, forced) = (windows.clone(), forced.clone());
+            let (windows, forced, scaled) = (windows.clone(), forced.clone(), scaled.clone());
+            let (below, defaults) = (below.clone(), defaults.clone());
             request(
                 &ctx,
                 |c| Ok((c.apps()?, c.app_window_list().unwrap_or_default())),
@@ -135,6 +309,18 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                     if let Ok((list, settings)) = r {
                         *apps.borrow_mut() = Some(list);
                         forced.set(settings.system_forced_available);
+                        *scaled.borrow_mut() = settings.system_scaled_by_default;
+                        *below.borrow_mut() = settings.below_title_bar_by_default;
+                        // The rows are made again below, with these in their lists. A list
+                        // that could not be read names no defaults, and the settings' stay.
+                        if settings.default_fullscreen != FullScreenPlace::Default {
+                            defaults.set((
+                                settings.default_fullscreen,
+                                settings
+                                    .default_immersive
+                                    .or_builtin(FullScreenPlace::Window),
+                            ));
+                        }
                         *windows.borrow_mut() = settings
                             .apps
                             .into_iter()
@@ -165,22 +351,24 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
     page.root.clone().upcast()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn app_row(
     ctx: &Shared,
     page: &Rc<Page>,
     app: &App,
+    group_note: Option<String>,
     window: Option<AppWindow>,
     system_forced_available: bool,
+    system_scaled_by_default: bool,
+    below_title_bar_by_default: bool,
+    defaults: (FullScreenPlace, FullScreenPlace),
+    following: &FollowingRows,
     reload: Hook,
 ) -> adw::ExpanderRow {
-    let row = adw::ExpanderRow::builder()
-        .title(app.label.as_str())
-        .subtitle(view::app_detail(app))
-        .use_markup(false)
-        .build();
+    let row = expander_row(&app.label, &view::app_detail(app));
     row.add_prefix(&png_image(&app.icon_png, "application-x-executable", 32));
 
-    let open = button(&tr("Open"));
+    let open = item_button(&tr("Open"), &app.label);
     row.add_suffix(&open);
     {
         let (ctx, page, package) = (ctx.clone(), page.clone(), app.package.clone());
@@ -235,6 +423,34 @@ fn app_row(
         });
     }
 
+    let (desktop_row, desktop) = button_row(
+        &tr("Desktop shortcut"),
+        &tr("A shortcut on the desktop that opens the app"),
+        &tr("Create desktop shortcut"),
+    );
+    row.add_row(&desktop_row);
+    {
+        let (ctx, page, package) = (ctx.clone(), page.clone(), app.package.clone());
+        let label = app.label.clone();
+        desktop.connect_clicked(move |_| {
+            let (page, package, ctx2) = (page.clone(), package.clone(), ctx.clone());
+            let label = label.clone();
+            request(
+                &ctx,
+                move |c| c.desktop_shortcut(&package),
+                move |r| {
+                    page.show_failure(
+                        &tr("The desktop shortcut could not be made"),
+                        r.as_ref().err(),
+                    );
+                    if r.is_ok() {
+                        ctx2.toast(&trf("{0} is on the desktop.", &[&label]));
+                    }
+                },
+            );
+        });
+    }
+
     // The window settings: whether the windows can be resized, their start size, and how they
     // follow a monitor of another scale.
     let fixed = window.as_ref().is_some_and(|w| w.fixed_size);
@@ -284,6 +500,48 @@ fn app_row(
     };
     resizable.set(!fixed);
     row.add_row(&resizable.row);
+    // For an app whose top bar is squeezed or hidden under the title bar. It is sent on its
+    // own, so an app the user chose nothing for keeps following DSA's built-in list. The row
+    // shows the first line of its explanation, and the whole of it as its tool tip.
+    let below_tip = tr("For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens.");
+    let below_title_bar = {
+        let (ctx, page, package, label) = (
+            ctx.clone(),
+            page.clone(),
+            app.package.clone(),
+            app.label.clone(),
+        );
+        Switch::new(
+            &tr("Start below the title bar"),
+            &view::first_line(&below_tip),
+            move |on| {
+                let (page, package, ctx2) = (page.clone(), package.clone(), ctx.clone());
+                let label = label.clone();
+                request(
+                    &ctx,
+                    move |c| c.set_app_below_title_bar(&package, on),
+                    move |r| {
+                        page.show_failure(
+                            &tr("The apps could not be read or changed"),
+                            r.as_ref().err(),
+                        );
+                        if r.is_ok() {
+                            ctx2.toast(&trf(
+                                "{0}'s windows follow the new settings from the next one that opens.",
+                                &[&label],
+                            ));
+                        }
+                    },
+                );
+            },
+        )
+    };
+    below_title_bar.set(view::starts_below_title_bar(
+        window.as_ref(),
+        below_title_bar_by_default,
+    ));
+    below_title_bar.row.set_tooltip_text(Some(&below_tip));
+    row.add_row(&below_title_bar.row);
     let choices = view::start_size_choices();
     let size = {
         let (state, save) = (state.clone(), save.clone());
@@ -309,26 +567,100 @@ fn app_row(
     };
     size.set(&labels, index as u32);
     row.add_row(&size.row);
-    // Auto and System never restart the app; System (forced) is marked while Android cannot do it.
-    let dpi_choices = view::dpi_scaling_choices(system_forced_available);
+    // Auto and System never restart the app; System (forced) is marked while Android cannot do it,
+    // and Auto says what it does for the app: System on DSA's built-in list, App otherwise.
+    let dpi_choices =
+        view::dpi_scaling_choices_for(system_scaled_by_default, system_forced_available);
+    // The first line of the explanation under the name, the whole of it as the tool tip.
+    let dpi_tip = view::dpi_scaling_subtitle(window.as_ref(), system_forced_available);
     let dpi = {
         let state = state.clone();
+        Combo::new(&tr("Scaling"), &view::first_line(&dpi_tip), move |index| {
+            if let Some(scaling) = DpiScaling::ALL.get(index as usize) {
+                if state.borrow().2 != *scaling {
+                    state.borrow_mut().2 = *scaling;
+                    save();
+                }
+            }
+        })
+    };
+    let dpi_labels: Vec<String> = dpi_choices.into_iter().map(|(label, _)| label).collect();
+    dpi.set(&dpi_labels, view::dpi_scaling_index(window.as_ref()) as u32);
+    dpi.row.set_tooltip_text(Some(&dpi_tip));
+    row.add_row(&dpi.row);
+
+    // Where the app's full screen shows: a clear request, and its bars hidden alone.
+    let (full_index, immersive_index) = view::full_screen_indexes(window.as_ref());
+    let places = Rc::new(RefCell::new((
+        FullScreenPlace::ALL[full_index],
+        FullScreenPlace::ALL[immersive_index],
+    )));
+    let save_places = {
+        let (ctx, page, package, places) = (
+            ctx.clone(),
+            page.clone(),
+            app.package.clone(),
+            places.clone(),
+        );
+        let label = app.label.clone();
+        Rc::new(move || {
+            let (fullscreen, immersive) = *places.borrow();
+            let (page, package, ctx2) = (page.clone(), package.clone(), ctx.clone());
+            let label = label.clone();
+            request(
+                &ctx,
+                move |c| c.set_app_full_screen(&package, fullscreen, immersive),
+                move |r| {
+                    page.show_failure(
+                        &tr("The apps could not be read or changed"),
+                        r.as_ref().err(),
+                    );
+                    if r.is_ok() {
+                        ctx2.toast(&trf(
+                            "{0}'s windows follow the new settings now.",
+                            &[&label],
+                        ));
+                    }
+                },
+            );
+        })
+    };
+    // Each list's "Follow the default" says where the choice for every app takes the app.
+    let full = {
+        let (places, save) = (places.clone(), save_places.clone());
         Combo::new(
-            &tr("Scaling on another monitor"),
-            &view::dpi_scaling_subtitle(window.as_ref(), system_forced_available),
+            &tr("Full screen request"),
+            &tr("Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."),
             move |index| {
-                if let Some(scaling) = DpiScaling::ALL.get(index as usize) {
-                    if state.borrow().2 != *scaling {
-                        state.borrow_mut().2 = *scaling;
+                if let Some(place) = FullScreenPlace::ALL.get(index as usize) {
+                    if places.borrow().0 != *place {
+                        places.borrow_mut().0 = *place;
                         save();
                     }
                 }
             },
         )
     };
-    let dpi_labels: Vec<String> = dpi_choices.into_iter().map(|(label, _)| label).collect();
-    dpi.set(&dpi_labels, view::dpi_scaling_index(window.as_ref()) as u32);
-    row.add_row(&dpi.row);
+    full.set(&full_screen_labels(defaults.0), full_index as u32);
+    row.add_row(&full.row);
+    let immersive = {
+        let (places, save) = (places.clone(), save_places.clone());
+        Combo::new(
+            &tr("When only the bars hide"),
+            &tr("Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."),
+            move |index| {
+                if let Some(place) = FullScreenPlace::ALL.get(index as usize) {
+                    if places.borrow().1 != *place {
+                        places.borrow_mut().1 = *place;
+                        save();
+                    }
+                }
+            },
+        )
+    };
+    immersive.set(&full_screen_labels(defaults.1), immersive_index as u32);
+    row.add_row(&immersive.row);
+    following.borrow_mut().push((full, immersive));
 
     // Whether the app runs its ARM code through the translator.
     let arm = view::run_as_arm_view(app);
@@ -351,6 +683,15 @@ fn app_row(
     // How far the app may use root: not at all, asking an administrator each time, or without
     // asking.
     let root = view::root_view(app);
+    // Apps that share a user ID are one group for root: the row says so, and with which apps.
+    let root_subtitle = match &group_note {
+        Some(note) => format!(
+            "{}
+{note}",
+            root.subtitle
+        ),
+        None => root.subtitle.clone(),
+    };
     let root_level = {
         let (ctx, page, package, label) = (
             ctx.clone(),
@@ -360,7 +701,7 @@ fn app_row(
         );
         let reload = reload.clone();
         let current = app.root.clone();
-        Combo::new(&tr("Root access"), &root.subtitle, move |index| {
+        Combo::new(&tr("Root access"), &root_subtitle, move |index| {
             let Some(level) = view::ROOT_LEVELS.get(index as usize) else {
                 return;
             };
@@ -512,7 +853,7 @@ fn switch_abi(
                             &ctx2,
                             &trf("Erase {0}'s data?", &[&label]),
                             &trf(
-                                "Android cannot change how {0} runs and keep its data. Installing it again erases its data: sign-ins, settings and files it keeps for itself.",
+                                "Android cannot change how {0} runs and keep its data.\n\nInstalling it again erases its data: sign-ins, settings and files it keeps for itself.",
                                 &[&label],
                             ),
                             &tr("Erase and install again"),
@@ -540,11 +881,9 @@ pub fn background(ctx: &Shared) -> gtk::Widget {
     let page = Rc::new(Page::new());
     let intro = group(
         &tr("Apps"),
-        Some(&tr("These Android apps keep running after their windows close, because they play music, download files, keep a VPN on or do other work in the background. Each also has an indicator in the top bar. Stopping an app ends what it is doing and frees the memory it used.")),
+        Some(&tr("These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used.")),
     );
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     intro.set_header_suffix(Some(&refresh));
     let rows = Rows::new(intro);
     page.add(&rows.group);
@@ -603,8 +942,8 @@ pub fn background(ctx: &Shared) -> gtk::Widget {
                         };
                         let row = action_row(&app.label, &detail);
                         row.add_prefix(&png_image(&app.icon_png, "application-x-executable", 32));
-                        let open = button(&tr("Open"));
-                        let stop = button(&tr("Stop"));
+                        let open = item_button(&tr("Open"), &app.label);
+                        let stop = item_button(&tr("Stop"), &app.label);
                         stop.add_css_class("destructive-action");
                         row.add_suffix(&open);
                         row.add_suffix(&stop);
@@ -677,16 +1016,32 @@ fn media_title(title: &str, artist: &str) -> String {
     }
 }
 
-/// The widgets on the desktop and the ones the apps offer.
+/// A widget's preview, else its app's icon (which the compositor keeps in the icon theme
+/// beside the app's launcher entry), else a generic one.
+fn offer_image(offer: &crate::model::WidgetOffer) -> gtk::Image {
+    if !offer.preview_png.is_empty() {
+        return png_image(&offer.preview_png, "view-grid-symbolic", 48);
+    }
+    let icon = crate::model::app_icon_name(&offer.package);
+    let themed = gtk::gdk::Display::default()
+        .is_some_and(|display| gtk::IconTheme::for_display(&display).has_icon(&icon));
+    png_image(&[], if themed { &icon } else { "view-grid-symbolic" }, 48)
+}
+
+/// How long the watch of the placed widgets waits before it starts again after it ended, as
+/// it does when Android stops.
+const WIDGETS_RETRY: Duration = Duration::from_secs(5);
+
+/// The widgets on the desktop and the ones the apps offer. While the page is shown it watches
+/// the placed widgets, so one placed, moved, resized or removed elsewhere (its own menu on the
+/// desktop, `dsa`) shows here at once.
 pub fn widgets(ctx: &Shared) -> gtk::Widget {
     let page = Rc::new(Page::new());
     let placed = group(
         &tr("On your desktop"),
-        Some(&tr("Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own. Drag the band along its top to move it, and its edges to resize it. Right-click a widget to resize or remove it. Android starts when you open this page.")),
+        Some(&tr("Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page.")),
     );
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
-    refresh.set_tooltip_text(Some(&tr("Refresh")));
-    refresh.add_css_class("flat");
+    let refresh = icon_button("view-refresh-symbolic", &tr("Refresh"));
     placed.set_header_suffix(Some(&refresh));
     let placed = Rows::new(placed);
     page.add(&placed.group);
@@ -744,7 +1099,7 @@ pub fn widgets(ctx: &Shared) -> gtk::Widget {
                             ],
                         );
                         let row = action_row(&widget.label, &format!("{} · {detail}", widget.app));
-                        let remove = button(&tr("Remove"));
+                        let remove = item_button(&tr("Remove"), &widget.label);
                         row.add_suffix(&remove);
                         let (ctx, id) = (ctx2.clone(), widget.id);
                         let done = trf("{0} was removed from your desktop.", &[&widget.label]);
@@ -766,8 +1121,8 @@ pub fn widgets(ctx: &Shared) -> gtk::Widget {
                             detail.push(tr("asks you to set it up"));
                         }
                         let row = action_row(&offer.label, &detail.join(" · "));
-                        row.add_prefix(&png_image(&offer.preview_png, "view-grid-symbolic", 48));
-                        let add = button(&tr("Add to desktop"));
+                        row.add_prefix(&offer_image(offer));
+                        let add = item_button(&tr("Add to desktop"), &offer.label);
                         row.add_suffix(&add);
                         let (ctx, provider) = (ctx2.clone(), offer.provider.clone());
                         let done = trf("{0} is on your desktop.", &[&offer.label]);
@@ -792,5 +1147,100 @@ pub fn widgets(ctx: &Shared) -> gtk::Widget {
         refresh.connect_clicked(move |_| again());
         reload_now();
     }
+    watch_widgets(&page.root, reload);
     page.root.clone().upcast()
+}
+
+/// The watch of the placed widgets while `root` is shown: each change reported reads the page
+/// again, and a watch that ends starts again after [`WIDGETS_RETRY`].
+fn watch_widgets(root: &gtk::Box, reload: Hook) {
+    type Watching = Option<(
+        std::process::Child,
+        std::sync::mpsc::Receiver<Result<String, crate::api::Failure>>,
+    )>;
+    let watching: Rc<RefCell<Watching>> = Rc::default();
+    let retry_at: Rc<Cell<Option<std::time::Instant>>> = Rc::default();
+    let start = {
+        let watching = watching.clone();
+        Rc::new(move || {
+            if watching.borrow().is_some() {
+                return;
+            }
+            let (sender, lines) = std::sync::mpsc::channel();
+            let args: Vec<String> = crate::model::WIDGETS_WATCH
+                .iter()
+                .map(|arg| arg.to_string())
+                .collect();
+            if let Ok(child) = crate::api::spawn_lines(&args, sender) {
+                *watching.borrow_mut() = Some((child, lines));
+            }
+        })
+    };
+    let stop = {
+        let watching = watching.clone();
+        Rc::new(move || {
+            if let Some((mut child, _)) = watching.borrow_mut().take() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        })
+    };
+    {
+        let start = start.clone();
+        root.connect_map(move |_| start());
+    }
+    {
+        let stop = stop.clone();
+        root.connect_unmap(move |_| stop());
+    }
+    let root_weak = root.downgrade();
+    glib::timeout_add_local(Duration::from_millis(500), move || {
+        let Some(root) = root_weak.upgrade() else {
+            stop();
+            return glib::ControlFlow::Break;
+        };
+        let mut changed = false;
+        let mut ended = false;
+        if let Some((_, lines)) = watching.borrow().as_ref() {
+            loop {
+                match lines.try_recv() {
+                    // The first line lists the widgets the page has just read.
+                    Ok(Ok(line)) => {
+                        changed |= matches!(
+                            crate::model::WidgetChange::read(&line),
+                            Some(
+                                crate::model::WidgetChange::Placed(_)
+                                    | crate::model::WidgetChange::Removed(_)
+                            )
+                        )
+                    }
+                    Ok(Err(_)) => {}
+                    Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                        ended = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if ended {
+            stop();
+            retry_at.set(Some(std::time::Instant::now() + WIDGETS_RETRY));
+        }
+        if root.is_mapped() && watching.borrow().is_none() {
+            match retry_at.get() {
+                Some(at) if std::time::Instant::now() < at => {}
+                _ => {
+                    retry_at.set(None);
+                    start();
+                }
+            }
+        }
+        if changed {
+            if let Some(reload) = reload.borrow().clone() {
+                reload();
+            }
+        }
+        glib::ControlFlow::Continue
+    });
 }

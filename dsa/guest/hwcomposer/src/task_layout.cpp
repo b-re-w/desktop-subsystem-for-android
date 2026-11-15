@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <set>
 
 namespace dsa::hwc {
@@ -28,6 +29,10 @@ Rect Rect::relativeTo(const Rect& origin) const {
                 bottom - origin.top};
 }
 
+bool coversDisplay(const Rect& bounds, const Rect& display) {
+    return !display.empty() && bounds.intersect(display) == display;
+}
+
 Layout assignLayersToTasks(const std::vector<LayerPlacement>& layers,
                            const std::vector<Task>& tasks, const Rect& display) {
     std::vector<LayerPlacement> ordered = layers;
@@ -36,18 +41,90 @@ Layout assignLayersToTasks(const std::vector<LayerPlacement>& layers,
                          return a.z != b.z ? a.z < b.z : a.layer < b.layer;
                      });
 
-    std::vector<Task> sortedTasks = tasks;
+    // An overlay that covers the display has no window, so it is no candidate for any layer.
+    std::vector<Task> sortedTasks;
+    size_t screenOverlays = 0;
+    for (const Task& task : tasks) {
+        if (task.overlay && coversDisplay(task.bounds, display)) {
+            ++screenOverlays;
+        } else {
+            sortedTasks.push_back(task);
+        }
+    }
     std::sort(sortedTasks.begin(), sortedTasks.end(),
               [](const Task& a, const Task& b) { return a.id < b.id; });
 
     // The task each layer went to, in z order; nullopt for a layer no task contains.
     std::vector<std::optional<int32_t>> owner(ordered.size());
 
+    // The overlays' own surfaces first. `composedFrom` is where each overlay's layers are this
+    // frame: its bounds, or its surface's frame while the agent's report is a frame behind.
+    std::map<int32_t, Rect> composedFrom;
+    for (const Task& overlay : sortedTasks) {
+        if (!overlay.overlay) {
+            continue;
+        }
+        const Rect wanted = overlay.bounds.intersect(display);
+        for (size_t i = 0; i < ordered.size(); ++i) {
+            if (!owner[i] && !wanted.empty() && ordered[i].frame.intersect(display) == wanted) {
+                owner[i] = overlay.id;
+                composedFrom[overlay.id] = overlay.bounds;
+            }
+        }
+    }
+    for (const Task& overlay : sortedTasks) {
+        if (!overlay.overlay || composedFrom.count(overlay.id)) {
+            continue;
+        }
+        // Its app is moving it: the layer of its size that is nobody else's surface, nearest
+        // to where the agent last saw it.
+        std::optional<size_t> nearest;
+        int64_t nearestDistance = 0;
+        for (size_t i = 0; i < ordered.size(); ++i) {
+            const Rect frame = ordered[i].frame.intersect(display);
+            if (owner[i] || frame.width() != overlay.bounds.width() ||
+                frame.height() != overlay.bounds.height()) {
+                continue;
+            }
+            bool taskSurface = false;
+            for (const Task& task : sortedTasks) {
+                taskSurface = taskSurface || (task.id != overlay.id && task.bounds == frame);
+            }
+            if (taskSurface) {
+                continue;
+            }
+            const int64_t distance =
+                std::llabs(static_cast<int64_t>(frame.left) - overlay.bounds.left) +
+                std::llabs(static_cast<int64_t>(frame.top) - overlay.bounds.top);
+            if (!nearest || distance < nearestDistance) {
+                nearest = i;
+                nearestDistance = distance;
+            }
+        }
+        if (nearest) {
+            owner[*nearest] = overlay.id;
+            composedFrom[overlay.id] = ordered[*nearest].frame.intersect(display);
+        }
+    }
+
     for (size_t i = 0; i < ordered.size(); ++i) {
+        if (owner[i]) {
+            continue;
+        }
         const Rect frame = ordered[i].frame.intersect(display);
         std::vector<const Task*> candidates;
         for (const Task& task : sortedTasks) {
-            if (task.bounds.contains(frame)) {
+            if (task.overlay) {
+                // Only above its own surface, and inside where that surface is now.
+                auto from = composedFrom.find(task.id);
+                bool above = false;
+                for (size_t below = 0; below < i && !above; ++below) {
+                    above = owner[below] && *owner[below] == task.id;
+                }
+                if (from != composedFrom.end() && above && from->second.contains(frame)) {
+                    candidates.push_back(&task);
+                }
+            } else if (task.bounds.contains(frame)) {
                 candidates.push_back(&task);
             }
         }
@@ -107,17 +184,51 @@ Layout assignLayersToTasks(const std::vector<LayerPlacement>& layers,
         }
         if (used) {
             index[task.id] = layout.tasks.size();
-            layout.tasks.push_back(TaskLayers{task.id, task.bounds, {}});
+            auto from = composedFrom.find(task.id);
+            const Rect bounds = from != composedFrom.end() ? from->second : task.bounds;
+            layout.tasks.push_back(TaskLayers{task.id, bounds, {}, task.overlay});
         }
     }
+    // The highest layer an app task owns: an overlay that covers the display lies above it.
+    std::optional<size_t> topOfTasks;
     for (size_t i = 0; i < ordered.size(); ++i) {
         if (owner[i]) {
+            const TaskLayers& taken = layout.tasks[index[*owner[i]]];
             layout.tasks[index[*owner[i]]].layers.push_back(ordered[i].layer);
+            if (!taken.overlay) {
+                topOfTasks = i;
+            }
         } else {
             layout.unassigned.push_back(ordered[i].layer);
         }
     }
+    if (screenOverlays > 0 && topOfTasks) {
+        // From the top down, so a display-wide layer under the tasks (the home activity, a
+        // wallpaper) is never taken for one.
+        std::vector<int64_t> found;
+        for (size_t i = ordered.size(); i-- > *topOfTasks + 1 && found.size() < screenOverlays;) {
+            if (!owner[i] && ordered[i].frame.intersect(display) == display) {
+                found.push_back(ordered[i].layer);
+            }
+        }
+        layout.screen.assign(found.rbegin(), found.rend());
+    }
     return layout;
+}
+
+bool showsOwnBuffer(const Rect& bounds, const std::vector<OverlaySurface>& layers) {
+    if (layers.size() != 1) {
+        return false;
+    }
+    const OverlaySurface& layer = layers.front();
+    const auto about = [](float value, int64_t whole) {
+        return std::abs(static_cast<double>(value) - static_cast<double>(whole)) <= 0.5;
+    };
+    return layer.rgbaBuffer && layer.frame == bounds && layer.transform == 0 &&
+           layer.alpha >= 1.0f && layer.bufferWidth == bounds.width() &&
+           layer.bufferHeight == bounds.height() && about(layer.cropLeft, 0) &&
+           about(layer.cropTop, 0) && about(layer.cropRight, layer.bufferWidth) &&
+           about(layer.cropBottom, layer.bufferHeight);
 }
 
 namespace {
@@ -188,6 +299,36 @@ bool leavesLastFrameUndrawn(const std::vector<LayerFill>& layers, bool hasFrame)
     return true;
 }
 
+bool releaseDue(int64_t withoutLayersSinceMs, int64_t nowMs, int64_t delayMs) {
+    return withoutLayersSinceMs > 0 && nowMs - withoutLayersSinceMs >= delayMs;
+}
+
+bool clientTargetHeld(int64_t lastClientFrameMs, int64_t nowMs, int64_t delayMs) {
+    return lastClientFrameMs > 0 && !releaseDue(lastClientFrameMs, nowMs, delayMs);
+}
+
+void ClientTargetUse::presented(bool clientLayer, int64_t nowMs) {
+    if (clientLayer) {
+        mLastMs = std::max<int64_t>(nowMs, 1);
+    }
+}
+
+std::optional<int64_t> ClientTargetUse::refreshAt() const {
+    if (mLastMs == 0) {
+        return std::nullopt;
+    }
+    return mLastMs + mDelayMs;
+}
+
+std::optional<int64_t> ClientTargetUse::letGo(int64_t nowMs) {
+    if (mLastMs == 0 || held(nowMs)) {
+        return std::nullopt;
+    }
+    const int64_t since = nowMs - mLastMs;
+    mLastMs = 0;
+    return since;
+}
+
 ResizeGate::Decision ResizeGate::decide(int32_t task, int64_t postedWidth, int64_t postedHeight,
                                         const Rect& bounds, bool drawn, int64_t nowMs,
                                         uint64_t geometry) {
@@ -248,12 +389,12 @@ std::optional<int64_t> ResizeGate::nextDeadline() const {
     return first;
 }
 
-bool TaskRegistry::update(int32_t id, const Rect& bounds) {
+bool TaskRegistry::update(int32_t id, const Rect& bounds, bool overlay) {
     auto it = mTasks.find(id);
-    if (it != mTasks.end() && it->second == bounds) {
+    if (it != mTasks.end() && it->second.bounds == bounds && it->second.overlay == overlay) {
         return false;
     }
-    mTasks[id] = bounds;
+    mTasks[id] = Task{id, bounds, overlay};
     return true;
 }
 
@@ -262,8 +403,8 @@ bool TaskRegistry::remove(int32_t id) { return mTasks.erase(id) != 0; }
 std::vector<Task> TaskRegistry::tasks() const {
     std::vector<Task> out;
     out.reserve(mTasks.size());
-    for (const auto& [id, bounds] : mTasks) {
-        out.push_back(Task{id, bounds});
+    for (const auto& [id, task] : mTasks) {
+        out.push_back(task);
     }
     return out;
 }

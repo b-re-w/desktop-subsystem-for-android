@@ -175,6 +175,44 @@ public  final class AccessibilityActionResult extends
     
   }
 
+  public static final int WIDGET_ID_FIELD_NUMBER = 5;
+  private int widgetId_;
+  /**
+   * <pre>
+   * The widget the action was for, as the action named it; 0 for a task's.
+   * </pre>
+   *
+   * <code>int32 widget_id = 5;</code>
+   * @return The widgetId.
+   */
+  @java.lang.Override
+  public int getWidgetId() {
+    return widgetId_;
+  }
+  /**
+   * <pre>
+   * The widget the action was for, as the action named it; 0 for a task's.
+   * </pre>
+   *
+   * <code>int32 widget_id = 5;</code>
+   * @param value The widgetId to set.
+   */
+  private void setWidgetId(int value) {
+    
+    widgetId_ = value;
+  }
+  /**
+   * <pre>
+   * The widget the action was for, as the action named it; 0 for a task's.
+   * </pre>
+   *
+   * <code>int32 widget_id = 5;</code>
+   */
+  private void clearWidgetId() {
+    
+    widgetId_ = 0;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.AccessibilityActionResult parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -439,6 +477,46 @@ public  final class AccessibilityActionResult extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The widget the action was for, as the action named it; 0 for a task's.
+     * </pre>
+     *
+     * <code>int32 widget_id = 5;</code>
+     * @return The widgetId.
+     */
+    @java.lang.Override
+    public int getWidgetId() {
+      return instance.getWidgetId();
+    }
+    /**
+     * <pre>
+     * The widget the action was for, as the action named it; 0 for a task's.
+     * </pre>
+     *
+     * <code>int32 widget_id = 5;</code>
+     * @param value The widgetId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWidgetId(int value) {
+      copyOnWrite();
+      instance.setWidgetId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The widget the action was for, as the action named it; 0 for a task's.
+     * </pre>
+     *
+     * <code>int32 widget_id = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWidgetId() {
+      copyOnWrite();
+      instance.clearWidgetId();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.AccessibilityActionResult)
   }
   @java.lang.Override
@@ -459,10 +537,11 @@ public  final class AccessibilityActionResult extends
             "requestId_",
             "done_",
             "error_",
+            "widgetId_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0004\u0002\u000b" +
-              "\u0003\u0007\u0004\u0208";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0004\u0002\u000b" +
+              "\u0003\u0007\u0004\u0208\u0005\u0004";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

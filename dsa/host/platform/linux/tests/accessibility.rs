@@ -8,18 +8,20 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dsa_host_core::accessibility::{
-    ActionRequest, Node, NodeAction, NodeRange, NodeStates, TreeUpdate,
+    ActionRequest, Collection, CollectionItem, Node, NodeAction, NodeRange, NodeStates, TreeUpdate,
 };
 use dsa_host_core::tasks::Bounds;
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_linux::accessibility::atspi::{coord, role, role_name, state};
 use dsa_host_linux::accessibility::objects::{
-    back_name, button_name, interface, prefers_korean, window_facts, Access, Event, Object,
-    TitleAction, TitleButton, TitleCommand, WindowEvent, WindowFacts,
+    action_names, back_name, button_name, interface, window_facts, Access, Event, Object,
+    TitleAction, TitleButton, TitleCommand, WindowEvent, WindowFacts, NODE_ACTIONS,
 };
 use dsa_host_linux::accessibility::text::{self, Unit};
 use dsa_host_linux::accessibility::watch::{ApiConnect, Shared};
 use dsa_host_linux::compositor::title_bar::TitleBar;
 use dsa_host_linux::compositor::toplevel::Toplevel;
+use dsa_host_linux::interface_language::{posix_locale, ui_language_in};
 use dsa_transport::{Connection, Connector, TransportError};
 
 const TASK: i32 = 7;
@@ -97,6 +99,7 @@ fn settings_screen(epoch: u32) -> TreeUpdate {
         ],
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -109,6 +112,7 @@ fn change(epoch: u32, nodes: Vec<Node>) -> TreeUpdate {
         nodes,
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -126,7 +130,7 @@ fn facts_of(model: &Toplevel, back: bool) -> WindowFacts {
 }
 
 fn settings(scale: u32) -> Access {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     access.sync(TASK, facts_of(&model(scale), false));
     access.apply(TASK, settings_screen(1)).unwrap();
     access
@@ -341,6 +345,93 @@ fn fr18_a_settings_screen_reads_as_list_items_with_names_and_places() {
 }
 
 #[test]
+fn fr18_text_selection_lists_and_sliders_reach_atspi_as_on_windows() {
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
+    access.sync(TASK, facts_of(&model(1), false));
+    // A field whose selection Android counts in UTF-16: "😀" is two units, one character.
+    let field = Node {
+        states: NodeStates {
+            enabled: true,
+            editable: true,
+            ..NodeStates::default()
+        },
+        actions: vec![NodeAction::SetText, NodeAction::SetSelection],
+        selection: Some((2, 4)),
+        ..node(2, &[], "android.widget.EditText", "😀abc")
+    };
+    let item = |id: u32, row: i32| Node {
+        collection_item: Some(CollectionItem {
+            row,
+            row_span: 1,
+            column: 0,
+            column_span: 1,
+            heading: false,
+        }),
+        ..node(id, &[], "android.widget.TextView", "row")
+    };
+    let list = Node {
+        collection: Some(Collection {
+            rows: 40,
+            columns: 0,
+            hierarchical: false,
+        }),
+        ..node(3, &[4, 5], "androidx.recyclerview.widget.RecyclerView", "")
+    };
+    let slider = Node {
+        range: Some(NodeRange {
+            min: 0.0,
+            max: 100.0,
+            current: 40.0,
+        }),
+        actions: vec![NodeAction::SetProgress],
+        ..node(6, &[], "android.widget.SeekBar", "")
+    };
+    access
+        .apply(
+            TASK,
+            TreeUpdate {
+                task_id: TASK,
+                epoch: 1,
+                full: true,
+                roots: vec![1],
+                nodes: vec![
+                    node(1, &[2, 3, 6], "android.widget.LinearLayout", ""),
+                    field,
+                    list,
+                    item(4, 7),
+                    item(5, 8),
+                    slider,
+                ],
+                ..TreeUpdate::default()
+            },
+        )
+        .unwrap();
+    let (actions, requests) = mpsc::channel();
+    access.attach_actions(TASK, actions);
+    // The selection in characters, and a new one sent back in UTF-16.
+    assert_eq!(access.selection(at(1, 2)), Some((1, 3)));
+    access.select_text(at(1, 2), 1, 1).unwrap();
+    let selected = requests.try_recv().unwrap();
+    assert_eq!(selected.action, NodeAction::SetSelection);
+    assert_eq!(selected.selection, (2, 2));
+    // The list is a table of 40 rows, an item a cell that says where it is.
+    assert!(access.interfaces(at(1, 3)).contains(&interface::TABLE));
+    assert!(access.interfaces(at(1, 4)).contains(&interface::TABLE_CELL));
+    assert_eq!(access.table(at(1, 3)), Some((40, 1)));
+    assert_eq!(access.table_cell_at(at(1, 3), 8, 0), Some(at(1, 5)));
+    let (row, column, _, _, table) = access.table_cell(at(1, 4)).unwrap();
+    assert_eq!((row, column, table), (7, 0, Some(at(1, 3))));
+    let attributes = access.attributes(at(1, 4));
+    assert!(attributes.contains(&("posinset".to_string(), "8".to_string())));
+    assert!(attributes.contains(&("setsize".to_string(), "40".to_string())));
+    // A slider that takes a value gets it at once.
+    access.set_value(at(1, 6), 75.0).unwrap();
+    let value = requests.try_recv().unwrap();
+    assert_eq!(value.action, NodeAction::SetProgress);
+    assert_eq!(value.progress, 75.0);
+}
+
+#[test]
 fn fr18_places_are_in_the_windows_logical_pixels() {
     let access = settings(2);
     let frame = Object::Window(TASK);
@@ -375,6 +466,81 @@ fn fr18_places_are_in_the_windows_logical_pixels() {
     assert!(!access.contains(at(1, 3), 10, 50, coord::SCREEN));
 }
 
+/// Settings kept at the density of a monitor at 100% (130 dpi) and shown on one at 125%
+/// (164 dpi): its window shows each of the task's 400 by 600 pixels at 164 per 130.
+fn settings_at_125_percent_kept_at_100() -> (Toplevel, Access) {
+    use dsa_host_core::compositor::window_sizing::{
+        density_for_dpi, scale_between, to_window_size,
+    };
+    let mut model = model(1);
+    model.frame_scale = scale_between(density_for_dpi(120), density_for_dpi(96));
+    model.shown = to_window_size(model.task, model.frame_scale);
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
+    access.sync(TASK, facts_of(&model, false));
+    access.apply(TASK, settings_screen(1)).unwrap();
+    (model, access)
+}
+
+#[test]
+fn fr18_on_a_monitor_of_another_scale_places_are_where_the_window_shows_each_node() {
+    let (model, access) = settings_at_125_percent_kept_at_100();
+    assert_eq!(model.frame_scale, (82, 65));
+    assert_eq!(model.shown, (505, 757));
+    // The second row is 80 task pixels down and 80 high: 100.9 to 201.8 window pixels, grown
+    // to whole pixels.
+    assert_eq!(
+        access.extents(at(1, 5), coord::WINDOW),
+        Some((0, 100, 505, 102))
+    );
+    // Its title, 16 in and 90 down in the task, is 20.2 in and 113.5 down in the window.
+    assert_eq!(
+        access.extents(at(1, 6), coord::WINDOW),
+        Some((20, 113, 465, 39))
+    );
+    // A point on the title as the window shows it finds the title.
+    assert_eq!(
+        access.at_point(Object::Window(TASK), 30, 120, coord::WINDOW),
+        Some(at(1, 6))
+    );
+    // 101 window pixels down is 80.5 task pixels down: the second row above its title,
+    // where at 1:1 it would have been on the title.
+    assert_eq!(
+        access.at_point(Object::Window(TASK), 30, 101, coord::WINDOW),
+        Some(at(1, 5))
+    );
+    // 95 window pixels down is 75.7 task pixels down: still the first row, whose bottom the
+    // task has at 80, where at 1:1 it would have been the second row's title.
+    assert_eq!(
+        access.at_point(Object::Window(TASK), 30, 95, coord::WINDOW),
+        Some(at(1, 3))
+    );
+}
+
+#[test]
+fn fr18_a_new_scale_moves_every_node_on_the_screen() {
+    let (mut model, mut access) = settings_at_125_percent_kept_at_100();
+    // Back on a 100% monitor, the window shows the task 1:1 again.
+    model.frame_scale = (1, 1);
+    model.shown = model.task;
+    let events = access.sync(TASK, facts_of(&model, false));
+    let moved: Vec<(Object, (i32, i32, i32, i32))> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Bounds { object, rect } if matches!(object, Object::Node { .. }) => {
+                Some((*object, *rect))
+            }
+            _ => None,
+        })
+        .collect();
+    for id in 1..=6 {
+        assert!(
+            moved.iter().any(|(object, _)| *object == at(1, id)),
+            "node {id} was not said to move: {moved:?}"
+        );
+    }
+    assert!(moved.contains(&(at(1, 5), (0, 80, 400, 80))));
+}
+
 #[test]
 fn fr18_actions_become_the_nodes_accessibility_actions() {
     let mut access = settings(1);
@@ -392,6 +558,7 @@ fn fr18_actions_become_the_nodes_accessibility_actions() {
             action: NodeAction::Click,
             text: String::new(),
             request_id: 1,
+            ..ActionRequest::default()
         })
     );
     // The list scrolls forward and backward.
@@ -424,7 +591,7 @@ fn fr18_actions_become_the_nodes_accessibility_actions() {
 
 #[test]
 fn fr18_fields_take_new_text_and_sliders_new_values() {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     access.sync(TASK, facts_of(&model(1), false));
     let field = Node {
         states: NodeStates {
@@ -462,6 +629,7 @@ fn fr18_fields_take_new_text_and_sliders_new_values() {
                 ],
                 removed: vec![],
                 focused: Some(2),
+                accessibility_focused: None,
             },
         )
         .unwrap();
@@ -583,7 +751,7 @@ fn fr18_changes_raise_children_name_state_and_bounds_events() {
 
 #[test]
 fn fr18_typing_raises_text_events_and_focus_follows_the_active_window() {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     let mut window = model(1);
     window.states.activated = true;
     let events = access.sync(TASK, facts_of(&window, false));
@@ -630,6 +798,7 @@ fn fr18_typing_raises_text_events_and_focus_follows_the_active_window() {
         nodes: vec![field("wi")],
         removed: vec![],
         focused: Some(1),
+        accessibility_focused: None,
     };
     let events = access.apply(TASK, first.clone()).unwrap();
     assert!(events.contains(&Event::State {
@@ -675,7 +844,7 @@ fn fr18_typing_raises_text_events_and_focus_follows_the_active_window() {
 
 #[test]
 fn fr18_title_bar_buttons_are_named_push_buttons_that_click() {
-    let mut access = Access::new(false, Duration::from_secs(30));
+    let mut access = Access::new(UiLanguage::English, Duration::from_secs(30));
     let mut window = model(1);
     access.sync(TASK, facts_of(&window, false));
     let frame = Object::Window(TASK);
@@ -762,10 +931,16 @@ fn fr18_title_bar_buttons_are_named_push_buttons_that_click() {
 
 #[test]
 fn fr22_the_buttons_are_named_in_the_first_preferred_language() {
-    assert_eq!(back_name(true), "뒤로");
-    assert_eq!(back_name(false), "Back");
-    assert_eq!(button_name(TitleButton::Close, false, true), "닫기");
-    assert_eq!(button_name(TitleButton::Maximize, true, false), "Restore");
+    assert_eq!(back_name(UiLanguage::Korean), "뒤로");
+    assert_eq!(back_name(UiLanguage::English), "Back");
+    assert_eq!(
+        button_name(TitleButton::Close, false, UiLanguage::Korean),
+        "닫기"
+    );
+    assert_eq!(
+        button_name(TitleButton::Maximize, true, UiLanguage::English),
+        "Restore"
+    );
     let env = |pairs: &'static [(&'static str, &'static str)]| {
         move |name: &str| {
             pairs
@@ -774,25 +949,116 @@ fn fr22_the_buttons_are_named_in_the_first_preferred_language() {
                 .map(|(_, value)| value.to_string())
         }
     };
-    // LANGUAGE lists the languages by preference; its first decides.
-    assert!(prefers_korean(env(&[
-        ("LANGUAGE", "ko:en"),
-        ("LANG", "en_US.UTF-8")
-    ])));
-    assert!(!prefers_korean(env(&[
-        ("LANGUAGE", "en_US:ko"),
-        ("LANG", "ko_KR.UTF-8")
-    ])));
+    // LANGUAGE lists the languages by preference; the first DSA has words for decides.
+    assert_eq!(
+        ui_language_in(env(&[("LANGUAGE", "ko:en"), ("LANG", "en_US.UTF-8")])),
+        UiLanguage::Korean
+    );
+    assert_eq!(
+        ui_language_in(env(&[("LANGUAGE", "en_US:ko"), ("LANG", "ko_KR.UTF-8")])),
+        UiLanguage::English
+    );
+    assert_eq!(
+        ui_language_in(env(&[("LANGUAGE", "nl:ja"), ("LANG", "en_US.UTF-8")])),
+        UiLanguage::Japanese
+    );
     // Without it, the locale does.
-    assert!(prefers_korean(env(&[("LANG", "ko_KR.UTF-8")])));
-    assert!(!prefers_korean(env(&[("LANG", "en_US.UTF-8")])));
-    let mut korean = Access::new(true, Duration::from_secs(30));
+    assert_eq!(
+        ui_language_in(env(&[("LANG", "ko_KR.UTF-8")])),
+        UiLanguage::Korean
+    );
+    assert_eq!(
+        ui_language_in(env(&[("LANG", "en_US.UTF-8")])),
+        UiLanguage::English
+    );
+    let mut korean = Access::new(UiLanguage::Korean, Duration::from_secs(30));
     korean.sync(TASK, facts_of(&model(1), true));
     assert_eq!(korean.name(Object::Button(TASK, TitleButton::Back)), "뒤로");
     assert_eq!(
         korean.name(Object::Button(TASK, TitleButton::Minimize)),
         "최소화"
     );
+}
+
+#[test]
+fn fr17_the_buttons_and_actions_are_named_in_every_interface_language() {
+    let buttons = [
+        (TitleButton::Back, false),
+        (TitleButton::Minimize, false),
+        (TitleButton::Maximize, false),
+        (TitleButton::Maximize, true),
+        (TitleButton::Close, false),
+    ];
+    let english_actions = action_names(UiLanguage::English);
+    for language in UiLanguage::ALL {
+        let mut names = Vec::new();
+        for (button, maximized) in buttons {
+            let name = button_name(button, maximized, language);
+            assert!(!name.trim().is_empty(), "{language:?} {button:?}");
+            assert!(
+                !name.contains(char::from_u32(0x2014).unwrap()),
+                "{language:?} {button:?}"
+            );
+            if language != UiLanguage::English {
+                assert_ne!(
+                    name,
+                    button_name(button, maximized, UiLanguage::English),
+                    "{language:?} {button:?} is English"
+                );
+            }
+            names.push(name);
+        }
+        // Each button says what it does, so no two share a name.
+        let mut unique = names.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), names.len(), "{language:?}: {names:?}");
+        let actions = action_names(language);
+        for (index, name) in actions.iter().enumerate() {
+            assert!(!name.trim().is_empty(), "{language:?} action {index}");
+            assert!(
+                !name.contains(char::from_u32(0x2014).unwrap()),
+                "{language:?} action {index}"
+            );
+            if language != UiLanguage::English {
+                assert_ne!(*name, english_actions[index], "{language:?} action {index}");
+            }
+        }
+        assert_eq!(NODE_ACTIONS.len(), actions.len());
+        // A client reads the button's name and its click in the language, and matches the
+        // action by its English name.
+        let mut access = Access::new(language, Duration::from_secs(30));
+        assert_eq!(access.language(), language);
+        access.sync(TASK, facts_of(&model(1), true));
+        assert_eq!(
+            access.name(Object::Button(TASK, TitleButton::Close)),
+            button_name(TitleButton::Close, false, language)
+        );
+        let click = access.actions(Object::Button(TASK, TitleButton::Close));
+        assert_eq!(click.len(), 1);
+        assert_eq!(click[0].name, "click");
+        assert_eq!(click[0].localized, actions[0]);
+    }
+    // The action names clients match on stay English.
+    let matched: Vec<&str> = NODE_ACTIONS.iter().map(|(_, name)| *name).collect();
+    assert_eq!(
+        matched,
+        [
+            "click",
+            "select",
+            "long press",
+            "scroll forward",
+            "scroll backward",
+            "focus"
+        ]
+    );
+    assert_eq!(back_name(UiLanguage::Japanese), "戻る");
+    assert_eq!(
+        button_name(TitleButton::Close, false, UiLanguage::German),
+        "Schließen"
+    );
+    assert_eq!(posix_locale(UiLanguage::ChineseTraditional), "zh_TW");
+    assert_eq!(posix_locale(UiLanguage::English), "en_US");
 }
 
 #[test]
@@ -863,7 +1129,7 @@ fn fr18_no_client_no_requests() {
         Arc::new(move || Box::new(Counting(Arc::clone(&dials))) as Box<dyn Connector>)
     };
     let shared = Shared::new(
-        Access::new(false, Duration::from_millis(300)),
+        Access::new(UiLanguage::English, Duration::from_millis(300)),
         Some(connect),
         Arc::new(|_: TitleCommand| {}),
         Arc::new(|_: &str| {}),
@@ -898,7 +1164,7 @@ fn fr18_no_client_no_requests() {
     assert_eq!(dials.load(Ordering::SeqCst), settled, "the watch ended");
     // A window with no service to dial never watches.
     let none = Shared::new(
-        Access::new(false, Duration::from_millis(300)),
+        Access::new(UiLanguage::English, Duration::from_millis(300)),
         None,
         Arc::new(|_: TitleCommand| {}),
         Arc::new(|_: &str| {}),
@@ -915,7 +1181,7 @@ fn fr18_a_listening_client_keeps_the_tree() {
         Arc::new(move || Box::new(Counting(Arc::clone(&dials))) as Box<dyn Connector>)
     };
     let shared = Shared::new(
-        Access::new(false, Duration::from_millis(200)),
+        Access::new(UiLanguage::English, Duration::from_millis(200)),
         Some(connect),
         Arc::new(|_: TitleCommand| {}),
         Arc::new(|_: &str| {}),

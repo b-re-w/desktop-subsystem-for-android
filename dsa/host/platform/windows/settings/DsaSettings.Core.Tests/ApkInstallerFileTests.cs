@@ -64,21 +64,47 @@ public class ApkInstallerFileTests
     public void Fr11_each_kind_of_file_has_its_plain_sentence()
     {
         // Bundles install now; one is refused only for what is wrong with it.
+        var text = TableText.Of("Strings.resx");
         Assert.Equal("a.xapk is a split APK bundle that cannot be read, so it cannot be installed.",
-            UnsupportedFile.Message(UnsupportedKind.SplitBundle, "a.xapk"));
+            UnsupportedFile.Message(text, UnsupportedKind.SplitBundle, "a.xapk"));
         Assert.Equal("a.xapk is a split APK bundle that cannot be installed: the bundle holds no base APK.",
-            UnsupportedFile.Message(UnsupportedKind.SplitBundle, "a.xapk", "the bundle holds no base APK"));
+            UnsupportedFile.Message(text, UnsupportedKind.SplitBundle, "a.xapk", "the bundle holds no base APK"));
         foreach (var kind in Enum.GetValues<UnsupportedKind>())
         {
-            Assert.DoesNotContain("not supported", UnsupportedFile.Message(kind, "a.xapk"));
+            Assert.DoesNotContain("not supported", UnsupportedFile.Message(text, kind, "a.xapk"));
         }
-        var aab = UnsupportedFile.Message(UnsupportedKind.AppBundle, "a.aab");
+        var aab = UnsupportedFile.Message(text, UnsupportedKind.AppBundle, "a.aab");
         Assert.StartsWith("a.aab is an Android App Bundle.", aab);
         Assert.Contains("another key", aab);
         Assert.Contains("Get the app as an APK", aab);
-        Assert.StartsWith("a.apkm is an encrypted bundle", UnsupportedFile.Message(UnsupportedKind.EncryptedBundle, "a.apkm"));
-        Assert.Contains("another certificate", UnsupportedFile.Message(UnsupportedKind.SplitSignatureMismatch, "a.xapk"));
-        Assert.Equal("a.bin is not a valid APK file.", UnsupportedFile.Message(UnsupportedKind.NotApk, "a.bin"));
+        Assert.StartsWith("a.apkm is an encrypted bundle", UnsupportedFile.Message(text, UnsupportedKind.EncryptedBundle, "a.apkm"));
+        Assert.Contains("another certificate", UnsupportedFile.Message(text, UnsupportedKind.SplitSignatureMismatch, "a.xapk"));
+        Assert.Equal("a.bin is not a valid APK file.", UnsupportedFile.Message(text, UnsupportedKind.NotApk, "a.bin"));
+        // An app whose native code DSA's 64-bit-only Android does not run says why, in dsa's words.
+        Assert.Equal("chrome.xapk cannot run in DSA: the app's native code is 32-bit only (armeabi-v7a).",
+            UnsupportedFile.Message(text, UnsupportedKind.UnsupportedAbi, "chrome.xapk", "the app's native code is 32-bit only (armeabi-v7a)."));
+        Assert.Contains("64-bit code only", UnsupportedFile.Message(text, UnsupportedKind.UnsupportedAbi, "a.apk"));
+    }
+
+    [Theory]
+    [MemberData(nameof(StringTables.Files), MemberType = typeof(StringTables))]
+    public void Fr11_each_kind_of_file_has_its_sentence_in_every_language(string file)
+    {
+        // Each sentence names the file, and dsa's words when it gives them, in the table's
+        // language; none falls back to its key.
+        var text = TableText.Of(file);
+        foreach (var kind in Enum.GetValues<UnsupportedKind>())
+        {
+            var plain = UnsupportedFile.Message(text, kind, "a.xapk");
+            Assert.Contains("a.xapk", plain);
+            Assert.DoesNotContain("ApkWindow_", plain);
+            var told = UnsupportedFile.Message(text, kind, "a.xapk", "the bundle holds no base APK");
+            Assert.Contains("a.xapk", told);
+            if (kind is UnsupportedKind.SplitBundle or UnsupportedKind.UnsupportedAbi)
+            {
+                Assert.Contains("the bundle holds no base APK", told);
+            }
+        }
     }
 
     [Theory]
@@ -86,6 +112,7 @@ public class ApkInstallerFileTests
     [InlineData("dsa: not installed (encrypted-bundle): a.apkm: the bundle is encrypted", UnsupportedKind.EncryptedBundle)]
     [InlineData("dsa: not installed (split-signature-mismatch): a.xapk: config.ko.apk is signed with another certificate", UnsupportedKind.SplitSignatureMismatch)]
     [InlineData("dsa: not installed (invalid-bundle): a.apks: the bundle holds two base APKs", UnsupportedKind.SplitBundle)]
+    [InlineData("dsa: not installed (unsupported-abi): chrome.xapk: the app's native code is 32-bit only (armeabi-v7a)", UnsupportedKind.UnsupportedAbi)]
     public void Fr11_a_bundle_dsa_refuses_is_named_by_its_reason(string error, UnsupportedKind kind)
     {
         var refusal = UnsupportedFile.FromRefusal(error);

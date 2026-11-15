@@ -5,6 +5,17 @@
 //! dismisses it there. The service numbers notifications itself, so the host keeps which
 //! number stands for which key.
 //!
+//! The notification's action buttons are the desktop notification's actions
+//! (`button:<place>`), so a person acts on it from the desktop's notification list, with the
+//! keyboard or a screen reader too. Invoking one runs that action in the guest. A button that
+//! takes a reply becomes the service's inline reply where the service offers one (the
+//! `inline-reply` capability, as KDE Plasma's has): the service shows a text field, with the
+//! app's label as its placeholder (`x-kde-reply-placeholder-text`), and sends what the user
+//! wrote with `NotificationReplied`, which runs the action with that reply. A service without
+//! it shows the button as any other, which runs the action with no reply. The freedesktop
+//! specification has no field for a reply, so there is nothing better to fall back to; only
+//! the first reply button is the inline reply, since the service shows one field.
+//!
 //! The same watch carries DSA's own news about updates: that an Android image is ready, was
 //! applied, or failed. Those show under DSA's settings app (its launcher entry,
 //! [`SETTINGS_ENTRY`]), one per kind of update, so the news that an update was applied
@@ -15,7 +26,8 @@
 
 use std::collections::BTreeMap;
 
-use dsa_host_core::notifications::{Notification, NotificationAction};
+use dsa_host_core::notifications::{Notification, NotificationAction, NotificationButton};
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::update::alerts::{buttons_of, is_update_key, thread_of, RESTART_NOW};
 
 use super::desktop_entry::app_id;
@@ -25,6 +37,38 @@ pub const DEFAULT_ACTION: &str = "default";
 
 /// The service's reason for a notification the user dismissed (`NotificationClosed`).
 pub const CLOSED_BY_USER: u32 = 2;
+
+/// What the action of a notification's button is called: `button:` and the button's place.
+pub const BUTTON_ACTION: &str = "button:";
+
+/// The action that is the service's inline reply, and the capability that offers it.
+pub const INLINE_REPLY: &str = "inline-reply";
+
+/// The action of the button at `place`.
+pub fn button_action(place: usize) -> String {
+    format!("{BUTTON_ACTION}{place}")
+}
+
+/// The name of the action a click on a notification runs, [`DEFAULT_ACTION`], in `language`:
+/// it opens the notification in its app. A service that lists the actions shows it.
+pub fn open_label(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "Open",
+        UiLanguage::Korean => "열기",
+        UiLanguage::Japanese => "開く",
+        UiLanguage::ChineseSimplified => "打开",
+        UiLanguage::ChineseTraditional => "開啟",
+        UiLanguage::Spanish => "Abrir",
+        UiLanguage::French => "Ouvrir",
+        UiLanguage::German => "Öffnen",
+        UiLanguage::PortugueseBrazil => "Abrir",
+        UiLanguage::Russian => "Открыть",
+        UiLanguage::Italian => "Apri",
+        UiLanguage::Vietnamese => "Mở",
+        UiLanguage::Indonesian => "Buka",
+        UiLanguage::Turkish => "Aç",
+    }
+}
 
 /// The launcher entry of DSA's settings app, which DSA's own notifications show under.
 pub const SETTINGS_ENTRY: &str = "io.github.thisisthepy.DSA.Settings";
@@ -75,6 +119,26 @@ pub struct Notify {
     /// Whether the notification stays until the user acts on it (one that may not be
     /// dismissed, as an ongoing call's).
     pub resident: bool,
+    /// The placeholder of the inline reply field (`x-kde-reply-placeholder-text`); empty
+    /// when the notification has no inline reply.
+    pub reply_placeholder: String,
+}
+
+/// The `Notify` call for one of DSA's own notices that the compositor raises itself, such as
+/// the one that Android restarts because its graphics did not recover: under DSA's settings
+/// app, as the news about updates, with nothing to click.
+pub fn dsa_notice(notification: &Notification) -> Notify {
+    Notify {
+        app_name: notification.app_label.clone(),
+        replaces_id: 0,
+        summary: notification.title.clone(),
+        body: body_text(&notification.text),
+        actions: Vec::new(),
+        urgency: urgency(notification),
+        desktop_entry: SETTINGS_ENTRY.to_string(),
+        resident: false,
+        reply_placeholder: String::new(),
+    }
 }
 
 /// What the host's notifications and the service's numbers stand for.
@@ -84,6 +148,21 @@ pub struct Shown {
     by_key: BTreeMap<String, u32>,
     /// The key of the notification each number shows.
     by_id: BTreeMap<u32, String>,
+    /// The buttons of each notification shown, by key, so an invoked action names its button.
+    buttons: BTreeMap<String, Vec<NotificationButton>>,
+    /// Whether the service offers an inline reply (its `inline-reply` capability).
+    pub inline_reply: bool,
+}
+
+/// The place of the button that is the notification's inline reply: its first that takes a
+/// reply, when the service offers inline replies.
+fn inline_reply_of(buttons: &[NotificationButton], offered: bool) -> Option<usize> {
+    if !offered {
+        return None;
+    }
+    buttons
+        .iter()
+        .position(|button| button.reply && !button.title.trim().is_empty())
 }
 
 impl Shown {
@@ -91,12 +170,15 @@ impl Shown {
         Shown::default()
     }
 
-    /// The `Notify` call that shows `notification`, replacing the one with its key. DSA's
-    /// question whether Android restarts into a downloaded image gets [Restart now] and
-    /// [Later], labelled in Korean when `korean`.
-    pub fn notify_in(&self, notification: &Notification, korean: bool) -> Notify {
+    /// The `Notify` call that shows `notification`, replacing the one with its key, with its
+    /// click's action named in `language`. DSA's question whether Android restarts into a
+    /// downloaded image gets [Restart now] and [Later], labelled in `language`.
+    pub fn notify_in(&self, notification: &Notification, language: UiLanguage) -> Notify {
         let mut notify = self.notify(notification);
-        for button in buttons_of(&notification.key, korean) {
+        if let Some(label) = notify.actions.get_mut(1) {
+            *label = open_label(language).to_string();
+        }
+        for button in buttons_of(&notification.key, language) {
             notify.actions.push(button.action.to_string());
             notify.actions.push(button.label);
         }
@@ -115,6 +197,30 @@ impl Shown {
         } else {
             app_id(&notification.package_name)
         };
+        let mut actions = vec![DEFAULT_ACTION.to_string(), "Open".to_string()];
+        let inline = inline_reply_of(&notification.buttons, self.inline_reply);
+        let mut reply_placeholder = String::new();
+        for (place, button) in notification
+            .buttons
+            .iter()
+            .enumerate()
+            .take(dsa_host_core::notifications::MAX_BUTTONS)
+        {
+            if button.title.trim().is_empty() {
+                continue;
+            }
+            if Some(place) == inline {
+                actions.push(INLINE_REPLY.to_string());
+                reply_placeholder = if button.reply_label.trim().is_empty() {
+                    button.title.clone()
+                } else {
+                    button.reply_label.clone()
+                };
+            } else {
+                actions.push(button_action(place));
+            }
+            actions.push(button.title.clone());
+        }
         Notify {
             app_name,
             replaces_id: self
@@ -124,11 +230,42 @@ impl Shown {
                 .unwrap_or(0),
             summary: notification.title.clone(),
             body: body_text(&notification.text),
-            actions: vec![DEFAULT_ACTION.into(), "Open".into()],
+            actions,
             urgency: urgency(notification),
             desktop_entry,
             resident: !notification.clearable,
+            reply_placeholder,
         }
+    }
+
+    /// The service numbered `notification` as `id`: as [`Shown::shown`], and its buttons are
+    /// kept so an invoked action names its button.
+    pub fn shown_with(&mut self, notification: &Notification, id: u32) {
+        self.shown(&notification.key, id);
+        if notification.buttons.is_empty() {
+            self.buttons.remove(&notification.key);
+        } else {
+            self.buttons
+                .insert(notification.key.clone(), notification.buttons.clone());
+        }
+    }
+
+    /// `NotificationReplied`: the inline reply the user sent, which runs the notification's
+    /// reply button with it. `None` for a number that is not one of ours, a notification
+    /// with no reply button, or an empty reply.
+    pub fn replied(&self, id: u32, text: &str) -> Option<NotificationAction> {
+        let key = self.by_id.get(&id)?;
+        let buttons = self.buttons.get(key)?;
+        let place = inline_reply_of(buttons, true)?;
+        if text.trim().is_empty() {
+            return None;
+        }
+        Some(NotificationAction::Button {
+            key: key.clone(),
+            button: place as u32,
+            title: buttons[place].title.clone(),
+            reply: dsa_host_core::notifications::cut_reply(text.to_string()),
+        })
     }
 
     /// The service numbered the notification with `key` as `id`.
@@ -143,15 +280,27 @@ impl Shown {
 
     /// The notification with `key` is gone from the guest: the number to close, if shown.
     pub fn removed(&mut self, key: &str) -> Option<u32> {
+        self.buttons.remove(key);
         let id = self.by_key.remove(&slot(key))?;
         self.by_id.remove(&id);
         Some(id)
     }
 
-    /// `ActionInvoked`: what the guest is told.
+    /// `ActionInvoked`: what the guest is told. A click opens the notification; a button runs
+    /// its action, with no reply.
     pub fn action_invoked(&self, id: u32, action: &str) -> Option<NotificationAction> {
         let key = self.by_id.get(&id)?;
-        (action == DEFAULT_ACTION).then(|| NotificationAction::Open { key: key.clone() })
+        if action == DEFAULT_ACTION {
+            return Some(NotificationAction::Open { key: key.clone() });
+        }
+        let place: usize = action.strip_prefix(BUTTON_ACTION)?.parse().ok()?;
+        let button = self.buttons.get(key)?.get(place)?;
+        Some(NotificationAction::Button {
+            key: key.clone(),
+            button: place as u32,
+            title: button.title.clone(),
+            reply: String::new(),
+        })
     }
 
     /// Whether `ActionInvoked` is [Restart now] on DSA's question whether Android restarts
@@ -165,6 +314,7 @@ impl Shown {
     pub fn closed(&mut self, id: u32, reason: u32) -> Option<NotificationAction> {
         let key = self.by_id.remove(&id)?;
         self.by_key.remove(&slot(&key));
+        self.buttons.remove(&key);
         (reason == CLOSED_BY_USER).then_some(NotificationAction::Dismiss { key })
     }
 
@@ -180,6 +330,7 @@ impl Shown {
         for id in &guest {
             if let Some(key) = self.by_id.remove(id) {
                 self.by_key.remove(&slot(&key));
+                self.buttons.remove(&key);
             }
         }
         guest
@@ -272,11 +423,24 @@ mod tests {
     }
 
     #[test]
+    fn nfr5_the_notice_that_android_restarts_for_its_graphics_shows_under_dsa() {
+        use dsa_host_core::compositor::frame_stall::Notice;
+        let notice =
+            Notice::Restarting.notification(dsa_host_core::ui_language::UiLanguage::Korean);
+        let notify = dsa_notice(&notice);
+        assert_eq!(notify.app_name, "DSA");
+        assert_eq!(notify.desktop_entry, SETTINGS_ENTRY);
+        assert_eq!(notify.summary, notice.title);
+        assert!(notify.actions.is_empty(), "nothing to click");
+        assert_eq!(notify.urgency, 1);
+    }
+
+    #[test]
     fn fr14_the_question_to_restart_has_restart_now_and_later_actions() {
         use dsa_host_core::update::alerts::{AlertKind, Subject, UpdateAlert, LATER};
         let mut shown = Shown::new();
         let asked = UpdateAlert::new(Subject::Android, AlertKind::Restart, "16.0.3").notification();
-        let notify = shown.notify_in(&asked, false);
+        let notify = shown.notify_in(&asked, UiLanguage::English);
         assert_eq!(
             notify.actions,
             [
@@ -288,7 +452,9 @@ mod tests {
                 "Later"
             ]
         );
-        assert_eq!(shown.notify_in(&asked, true).actions[3], "지금 다시 시작");
+        let korean = shown.notify_in(&asked, UiLanguage::Korean);
+        assert_eq!(korean.actions[1], "열기");
+        assert_eq!(korean.actions[3], "지금 다시 시작");
         shown.shown(&asked.key, 21);
         assert!(shown.restart_asked(21, RESTART_NOW));
         assert!(!shown.restart_asked(21, LATER));
@@ -298,7 +464,115 @@ mod tests {
         shown.shown("0|com.example.chat|1|null|10100", 22);
         assert!(!shown.restart_asked(22, RESTART_NOW));
         let ready = UpdateAlert::new(Subject::Android, AlertKind::Ready, "16.0.3").notification();
-        assert_eq!(shown.notify_in(&ready, false).actions.len(), 2);
+        assert_eq!(
+            shown.notify_in(&ready, UiLanguage::English).actions.len(),
+            2
+        );
+    }
+
+    #[test]
+    fn fr17_a_notifications_actions_are_named_in_every_interface_language() {
+        use dsa_host_core::update::alerts::{AlertKind, Subject, UpdateAlert};
+        let shown = Shown::new();
+        let asked = UpdateAlert::new(Subject::Android, AlertKind::Restart, "16.0.3").notification();
+        for language in UiLanguage::ALL {
+            let open = open_label(language);
+            assert!(!open.trim().is_empty(), "{language:?}");
+            assert!(
+                !open.contains(char::from_u32(0x2014).unwrap()),
+                "{language:?}"
+            );
+            if language != UiLanguage::English {
+                assert_ne!(open, "Open", "{language:?}");
+            }
+            let notify = shown.notify_in(&asked, language);
+            // The actions keep their names; only their labels are translated.
+            assert_eq!(notify.actions.len(), 6, "{language:?}");
+            assert_eq!(notify.actions[0], DEFAULT_ACTION);
+            assert_eq!(notify.actions[1], open);
+            assert_eq!(notify.actions[2], RESTART_NOW);
+            assert!(notify.actions.iter().all(|label| !label.trim().is_empty()));
+        }
+        assert_eq!(open_label(UiLanguage::Japanese), "開く");
+        assert_eq!(open_label(UiLanguage::German), "Öffnen");
+    }
+
+    fn with_buttons(key: &str) -> Notification {
+        Notification {
+            buttons: vec![
+                NotificationButton {
+                    title: "Reply".into(),
+                    reply: true,
+                    reply_label: "Reply to Ann".into(),
+                    semantic_action: 1,
+                    ..NotificationButton::default()
+                },
+                NotificationButton::default(),
+                NotificationButton {
+                    title: "Mark as read".into(),
+                    semantic_action: 2,
+                    ..NotificationButton::default()
+                },
+            ],
+            ..notification(key)
+        }
+    }
+
+    #[test]
+    fn fr18_a_notifications_buttons_are_its_actions_and_run_in_the_guest() {
+        let mut shown = Shown::new();
+        let posted = with_buttons("k1");
+        let notify = shown.notify(&posted);
+        // The button with no words is left out; the others keep their places.
+        assert_eq!(
+            notify.actions,
+            [
+                DEFAULT_ACTION,
+                "Open",
+                "button:0",
+                "Reply",
+                "button:2",
+                "Mark as read"
+            ]
+        );
+        assert!(notify.reply_placeholder.is_empty());
+        shown.shown_with(&posted, 5);
+        assert_eq!(
+            shown.action_invoked(5, "button:2"),
+            Some(NotificationAction::Button {
+                key: "k1".into(),
+                button: 2,
+                title: "Mark as read".into(),
+                reply: String::new(),
+            })
+        );
+        assert_eq!(shown.action_invoked(5, "button:9"), None);
+        assert_eq!(shown.action_invoked(5, "button:x"), None);
+    }
+
+    #[test]
+    fn fr18_a_reply_button_is_the_inline_reply_where_the_service_offers_one() {
+        let mut shown = Shown::new();
+        shown.inline_reply = true;
+        let posted = with_buttons("k1");
+        let notify = shown.notify(&posted);
+        assert_eq!(notify.actions[2..4], [INLINE_REPLY, "Reply"]);
+        assert_eq!(notify.reply_placeholder, "Reply to Ann");
+        shown.shown_with(&posted, 6);
+        assert_eq!(
+            shown.replied(6, "see you \u{c548}\u{b155}"),
+            Some(NotificationAction::Button {
+                key: "k1".into(),
+                button: 0,
+                title: "Reply".into(),
+                reply: "see you \u{c548}\u{b155}".into(),
+            })
+        );
+        assert_eq!(shown.replied(6, " "), None);
+        assert_eq!(shown.replied(99, "hi"), None);
+        // Once it is gone, a late reply goes nowhere.
+        shown.removed("k1");
+        assert_eq!(shown.replied(6, "hi"), None);
     }
 
     #[test]

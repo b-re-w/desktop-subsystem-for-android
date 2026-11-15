@@ -10,9 +10,9 @@ use dsa_guest_channeld::router::{
 };
 use dsa_protocol::control::envelope::Body;
 use dsa_protocol::control::{
-    AgentConnected, AppInfo, AuthProof, CloseTask, Envelope, GuestBoot, Hello, LaunchApp,
-    LocationRequest, PowerHint, PowerHintKind, PowerState, Rect, TaskFrames, TaskRemoved,
-    TaskUpdated,
+    AgentConnected, AppInfo, AuthProof, CaptionCompat, CloseTask, Envelope, GuestBoot, Hello,
+    LaunchApp, LocationRequest, PowerHint, PowerHintKind, PowerState, Rect, TaskFrames,
+    TaskRemoved, TaskUpdated, TasksShown,
 };
 
 /// A client's callback that keeps what it is given, and can be made to die.
@@ -94,6 +94,49 @@ fn fr3_frames_from_the_host_reach_every_listener() {
 
     assert_eq!(agent.frames(), vec![close.clone(), launch.clone()]);
     assert_eq!(composer.frames(), vec![close, launch]);
+}
+
+#[test]
+fn nfr1_the_agent_hears_which_task_windows_the_user_can_see() {
+    let (router, _host) = router();
+    let agent = Arc::new(Recorder::default());
+    router.subscribe(AGENT, agent.clone());
+    // The agent reports tasks 3 and 5; the host shows only 3.
+    router.from_guest(AGENT, task_updated(3)).unwrap();
+    router.from_guest(AGENT, task_updated(5)).unwrap();
+    let shown = frame(Body::TasksShown(TasksShown { task_ids: vec![3] }));
+    router.from_host(&shown);
+    // The agent trims the app of task 5, and the daemon's reclaim still counts what is shown.
+    assert_eq!(agent.frames(), vec![shown.clone()]);
+    assert_eq!(router.tasks_shown(), 1);
+    // A process that subscribes later hears it after the tasks it names.
+    let again = Arc::new(Recorder::default());
+    router.subscribe(COMPOSER, again.clone());
+    assert_eq!(again.frames().last(), Some(&shown));
+    assert_eq!(again.frames().len(), 3);
+}
+
+#[test]
+fn fr22_an_agent_that_starts_after_the_host_spoke_hears_which_apps_start_below_the_title_bar() {
+    let (router, _host) = router();
+    let compat = |packages: &[&str]| {
+        frame(Body::CaptionCompat(CaptionCompat {
+            below_title_bar: packages.iter().map(|package| package.to_string()).collect(),
+        }))
+    };
+    // The host says it as soon as it connects, before the agent has started.
+    let first = compat(&["com.example.player"]);
+    router.from_host(&first);
+    let agent = Arc::new(Recorder::default());
+    router.subscribe(AGENT, agent.clone());
+    assert_eq!(agent.frames(), vec![first]);
+    // A later word reaches the agent at once, and is the one a later subscriber hears.
+    let second = compat(&[]);
+    router.from_host(&second);
+    assert_eq!(agent.frames().last(), Some(&second));
+    let again = Arc::new(Recorder::default());
+    router.subscribe(AGENT, again.clone());
+    assert_eq!(again.frames(), vec![second]);
 }
 
 #[test]
@@ -579,6 +622,88 @@ fn fr29_file_sharing_reaches_the_switch_and_the_agent() {
     );
 }
 
+/// The agent, which notes whether the installer had already run each time it heard of the
+/// host's certificates.
+struct CertificateAgent {
+    installed: Arc<Mutex<Vec<Vec<Vec<u8>>>>>,
+    heard_after_install: Mutex<Vec<bool>>,
+}
+
+impl Listener for CertificateAgent {
+    fn deliver(&self, frame: &[u8]) -> Delivery {
+        if let Ok(Envelope {
+            body: Some(Body::HostCertificates(_)),
+        }) = dsa_protocol::decode(frame)
+        {
+            let done = !self.installed.lock().unwrap().is_empty();
+            self.heard_after_install.lock().unwrap().push(done);
+        }
+        Delivery::Delivered
+    }
+}
+
+#[test]
+fn fr28_host_certificates_are_installed_before_the_agent_hears_of_them() {
+    let (router, _host) = router();
+    let installed = Arc::new(Mutex::new(Vec::new()));
+    let seen = Arc::clone(&installed);
+    let router = router.on_host_certificates(move |certificates| {
+        seen.lock().unwrap().push(certificates.certificates.clone())
+    });
+    let agent = Arc::new(CertificateAgent {
+        installed: Arc::clone(&installed),
+        heard_after_install: Mutex::new(Vec::new()),
+    });
+    router.subscribe(AGENT, agent.clone());
+    router.from_host(&frame(Body::HostCertificates(
+        dsa_protocol::control::HostCertificates {
+            enabled: true,
+            certificates: vec![vec![0x30, 0x00]],
+        },
+    )));
+    assert_eq!(*installed.lock().unwrap(), vec![vec![vec![0x30, 0x00]]]);
+    assert_eq!(
+        *agent.heard_after_install.lock().unwrap(),
+        vec![true],
+        "the agent hears once the certificates are in place"
+    );
+}
+
+#[test]
+fn pr7_where_the_shared_picture_memory_is_reaches_the_kernels_switch_and_no_client() {
+    use dsa_guest_channeld::shared_memory::{property_value, PROPERTY};
+    let (router, _host) = router();
+    let switched = Arc::new(Mutex::new(Vec::new()));
+    let seen = Arc::clone(&switched);
+    let router = router.on_shared_memory(move |region| seen.lock().unwrap().push(region.clone()));
+    let agent = Arc::new(Recorder::default());
+    router.subscribe(AGENT, agent.clone());
+    let region = dsa_protocol::control::GuestSharedMemory {
+        name: "video_pictures".into(),
+        guest_physical_address: 0x1_0800_0000,
+        length: 64 << 20,
+    };
+    router.from_host(&frame(Body::GuestSharedMemory(region.clone())));
+    assert_eq!(*switched.lock().unwrap(), vec![region.clone()]);
+    assert!(agent.frames().is_empty(), "no client maps physical memory");
+    // init hands the kernel's parameter the address and the length.
+    assert_eq!(PROPERTY, "vendor.dsa.video_pictures");
+    assert_eq!(
+        property_value(&region).as_deref(),
+        Some("0x108000000,67108864")
+    );
+    let other = dsa_protocol::control::GuestSharedMemory {
+        name: "something_else".into(),
+        ..region.clone()
+    };
+    assert_eq!(property_value(&other), None);
+    let empty = dsa_protocol::control::GuestSharedMemory {
+        length: 0,
+        ..region
+    };
+    assert_eq!(property_value(&empty), None);
+}
+
 #[test]
 fn fr29_the_request_for_androids_files_reaches_the_switch_and_no_client() {
     let (router, _host) = router();
@@ -746,4 +871,37 @@ fn fr30_the_hosts_controllers_stop_at_the_daemon_and_the_system_settings_reach_t
     router.from_host(&settings);
     assert_eq!(pads.0.lock().unwrap().len(), 1);
     assert_eq!(agent.frames(), vec![settings]);
+}
+
+#[test]
+fn fr36_only_the_agent_sends_backups_and_passkey_requests() {
+    use dsa_protocol::control::{BackupUpload, KeyMintRootKeyRequest, PasskeyRequest};
+    let (router, host) = router();
+    let passkey = frame(Body::PasskeyRequest(PasskeyRequest {
+        request_id: 1,
+        package: "org.example.bank".into(),
+        ..PasskeyRequest::default()
+    }));
+    let upload = frame(Body::BackupUpload(BackupUpload {
+        request_id: 2,
+        offset: 0,
+        data: vec![1, 2, 3],
+    }));
+    assert!(matches!(
+        router.from_guest(COMPOSER, passkey.clone()),
+        Err(SendError::NotAllowed(_))
+    ));
+    assert!(matches!(
+        router.from_guest(COMPOSER, upload.clone()),
+        Err(SendError::NotAllowed(_))
+    ));
+    assert!(host.try_recv().is_err(), "nothing reached the host");
+    router.from_guest(AGENT, passkey.clone()).unwrap();
+    router.from_guest(AGENT, upload.clone()).unwrap();
+    assert_eq!(host.try_recv().unwrap(), passkey);
+    assert_eq!(host.try_recv().unwrap(), upload);
+    // KeyMint's root key is never asked for on the control channel, even by the agent.
+    let keymint = frame(Body::KeymintRootKeyRequest(KeyMintRootKeyRequest {}));
+    assert!(router.from_guest(AGENT, keymint).is_err());
+    assert!(host.try_recv().is_err());
 }

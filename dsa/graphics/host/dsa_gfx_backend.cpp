@@ -14,6 +14,8 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -25,6 +27,8 @@
 #include "render-utils/RenderChannel.h"
 #include "render-utils/Renderer.h"
 #include "FrameBuffer.h"
+#include "RenderThreadInfo.h"
+#include "dsa_graphics_memory.h"
 #include "vulkan/VkCommonOperations.h"
 #include "vulkan/VkDecoderGlobalState.h"
 #include "vulkan/VulkanDispatch.h"
@@ -38,6 +42,10 @@ static dsa_color_buffer_post_fn s_color_buffer_post_cb = nullptr;
 static void* s_color_buffer_post_ctx = nullptr;
 
 static void dummy_fence_cb(void*, struct stream_renderer_fence*) {}
+
+/* The embedder's renderer features (dsa_gfx_set_renderer_features). */
+static std::mutex s_features_mutex;
+static std::string s_extra_features;
 
 /* Where the renderer's warnings, errors and fatal errors go: the embedder's log. Without a
  * callback they go to standard error, which a process without a console loses. */
@@ -120,7 +128,77 @@ gfxstream::RenderChannelPtr create_channel(const gfxstream::RendererPtr& rendere
     return channel;
 }
 
+/* The guest process the calling render thread serves, as the guest named it (rcSetPuid): who
+ * a grant of shared graphics memory is for. */
+uint64_t render_thread_process() {
+    gfxstream::RenderThreadInfo* info = gfxstream::RenderThreadInfo::get();
+    return info ? info->m_puid : 0;
+}
+
+template <typename T>
+bool read_fully(dsa_stream_read_fn read_cb, void* user_data, T* value) {
+    size_t received = 0;
+    while (received < sizeof(T)) {
+        int n = read_cb(user_data, reinterpret_cast<char*>(value) + received, sizeof(T) - received);
+        if (n < 0) {
+            return false;
+        }
+        received += static_cast<size_t>(n);
+    }
+    return true;
+}
+
+template <typename T>
+bool write_fully(dsa_stream_write_fn write_cb, void* user_data, const T& value) {
+    size_t sent = 0;
+    while (sent < sizeof(T)) {
+        int n = write_cb(user_data, reinterpret_cast<const char*>(&value) + sent, sizeof(T) - sent);
+        if (n <= 0) {
+            return false;
+        }
+        sent += static_cast<size_t>(n);
+    }
+    return true;
+}
+
+/* One staging grant for a process without a Vulkan device of its own (the hwcomposer): what
+ * its gralloc buffers' CPU uploads go through (dsa_graphics_memory.h). A request for another
+ * size lets the last one go first; a size of 0 only lets it go. */
+dsa::StagingReply answer_staging(uint64_t puid, uint64_t size,
+                                 std::optional<dsa::GraphicsGrant>* held) {
+    dsa::GraphicsMemory& memory = dsa::graphicsMemory();
+    dsa::StagingReply reply = {};
+    if (*held) {
+        memory.release((*held)->offset, (*held)->generation);
+        held->reset();
+    }
+    if (size == 0) {
+        return reply;
+    }
+    dsa::GrantRefusal why = dsa::GrantRefusal::NotRefused;
+    auto grant = memory.allocate(size, puid, &why);
+    if (!grant) {
+        static dsa::GraphicsRefusalLog said;
+        said.note(why, [](const char* text) {
+            char line[200];
+            std::snprintf(line, sizeof(line),
+                          "graphics memory: a CPU upload goes through the stream: %s", text);
+            forward_log('W', line);
+        });
+        reply.result = -12; /* ENOMEM */
+        return reply;
+    }
+    *held = *grant;
+    reply.offset = grant->offset;
+    reply.length = grant->length;
+    reply.key = grant->key;
+    return reply;
+}
+
 }  // namespace
+
+/* For the files of the backend that include no gfxstream header. */
+void dsa_gfx_log_line(char severity, const char* message) { forward_log(severity, message); }
 
 extern "C" DSA_GFX_EXPORT int dsa_gfx_init(uint32_t width, uint32_t height) {
     if (s_initialized.load(std::memory_order_acquire)) {
@@ -142,23 +220,49 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_init(uint32_t width, uint32_t height) {
     // decoder copies them only when neither GlDirectMem nor VirtioGpuNext is on, and the
     // guest decides from the same features.
     static const char kFeatures[] = "VirtioGpuNext:disabled";
+    // The embedder's own, for the Vulkan implementation it chose, after the backend's. The
+    // string stays alive for the renderer's whole life: gfxstream reads it during the init.
+    static std::string s_all_features;
+    {
+        std::lock_guard<std::mutex> lock(s_features_mutex);
+        s_all_features = kFeatures;
+        if (!s_extra_features.empty()) {
+            s_all_features += ",";
+            s_all_features += s_extra_features;
+        }
+    }
 
     struct stream_renderer_param params[] = {
         {STREAM_RENDERER_PARAM_USER_DATA, reinterpret_cast<uint64_t>(&s_cookie)},
         {STREAM_RENDERER_PARAM_FENCE_CALLBACK, reinterpret_cast<uint64_t>(dummy_fence_cb)},
         {STREAM_RENDERER_PARAM_RENDERER_FLAGS, flags},
-        {STREAM_RENDERER_PARAM_RENDERER_FEATURES, reinterpret_cast<uint64_t>(kFeatures)},
+        {STREAM_RENDERER_PARAM_RENDERER_FEATURES,
+         reinterpret_cast<uint64_t>(s_all_features.c_str())},
         {STREAM_RENDERER_PARAM_WIN0_WIDTH, width},
         {STREAM_RENDERER_PARAM_WIN0_HEIGHT, height},
         {STREAM_RENDERER_PARAM_DEBUG_CALLBACK, reinterpret_cast<uint64_t>(forward_renderer_debug)},
     };
 
+    dsa::graphicsOwnerLookup().store(render_thread_process);
     int ret = stream_renderer_init(params, sizeof(params) / sizeof(params[0]));
     if (ret == 0) {
         s_initialized.store(true, std::memory_order_release);
         dsa_gfx_memory_install();
     }
     return ret;
+}
+
+extern "C" DSA_GFX_EXPORT int dsa_gfx_set_renderer_features(const char* features) {
+    if (s_initialized.load(std::memory_order_acquire)) {
+        return -1;
+    }
+    const std::string text = features ? features : "";
+    if (text.size() > 4096) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(s_features_mutex);
+    s_extra_features = text;
+    return 0;
 }
 
 extern "C" DSA_GFX_EXPORT void dsa_gfx_set_log_callback(dsa_gfx_log_fn cb, void* context) {
@@ -189,6 +293,17 @@ extern "C" DSA_GFX_EXPORT uint64_t dsa_gfx_device_generation(void) {
         return 0;
     }
     return fb->getEmulationVk().deviceGeneration();
+}
+
+extern "C" DSA_GFX_EXPORT uint64_t dsa_gfx_device_losses(void) {
+    if (!s_initialized.load(std::memory_order_acquire)) {
+        return 0;
+    }
+    gfxstream::FrameBuffer* fb = gfxstream::FrameBuffer::getFB();
+    if (!fb || !fb->hasEmulationVk()) {
+        return 0;
+    }
+    return fb->getEmulationVk().deviceLosses();
 }
 
 extern "C" DSA_GFX_EXPORT int dsa_gfx_select_gpu(uint32_t rule, const uint8_t* luid, const char* name) {
@@ -289,6 +404,9 @@ extern "C" DSA_GFX_EXPORT void dsa_gfx_on_process_destroy(uint64_t puid) {
     if (renderer) {
         renderer->cleanupProcGLObjects(puid);
     }
+    /* What the process was granted of the shared graphics memory: its Vulkan objects are gone
+     * with it, and the granules come back once its file in the guest has closed. */
+    dsa::graphicsMemory().releaseOwner(puid);
 }
 
 extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
@@ -329,11 +447,25 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
         sent += static_cast<size_t>(n);
     }
 
-    /* Keep connection alive until client disconnects. */
-    char dummy[256];
+    /* Keep the connection until the client disconnects. A client that knows the renderer
+     * shares graphics memory (kGraphicsMemoryExtension) may ask for a staging grant on it;
+     * anything else it writes is read and dropped, as before. */
+    std::optional<dsa::GraphicsGrant> staging;
     for (;;) {
-        int n = read_cb(user_data, dummy, sizeof(dummy));
-        if (n < 0) {
+        uint32_t op = 0;
+        if (!read_fully(read_cb, user_data, &op)) {
+            break;
+        }
+        if (op != dsa::kStagingRequest) {
+            continue;
+        }
+        uint32_t reserved = 0;
+        uint64_t size = 0;
+        if (!read_fully(read_cb, user_data, &reserved) || !read_fully(read_cb, user_data, &size)) {
+            break;
+        }
+        const dsa::StagingReply reply = answer_staging(puid, size, &staging);
+        if (!write_fully(write_cb, user_data, reply)) {
             break;
         }
     }

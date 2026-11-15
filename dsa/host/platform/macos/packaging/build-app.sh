@@ -141,11 +141,17 @@ cp "$here/icon/MenuBarTemplate.png" "$here/icon/MenuBarTemplate@2x.png" "$app/Co
 rm -rf "$out/DSA.icon"
 cp -R "$here/icon/DSA.icon" "$out/DSA.icon"
 
-# The settings app's texts: its String Catalog compiled to the English and Korean string
-# tables the bundle looks up in the user's language.
+# The settings app's texts: its String Catalog compiled to a string table for each of the
+# fourteen languages the bundle declares (CFBundleLocalizations), looked up in the user's
+# language. A language the catalog left out would show its keys, so the build stops.
 xcrun xcstringstool compile "$settings_package/Resources/Localizable.xcstrings" \
     --output-directory "$app/Contents/Resources"
-for language in en ko; do
+declared="$(/usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$app/Contents/Info.plist")"
+for language in en ko ja zh-Hans zh-Hant es fr de pt-BR ru it vi id tr; do
+    if ! grep -qx "[[:space:]]*$language" <<<"$declared"; then
+        echo "Info.plist does not list $language in CFBundleLocalizations" >&2
+        exit 1
+    fi
     table="$app/Contents/Resources/$language.lproj/Localizable.strings"
     if [[ ! -s "$table" ]]; then
         echo "the String Catalog gave no $language table ($table)" >&2
@@ -159,15 +165,44 @@ sign() {
     codesign --force --timestamp=none --options runtime \
         --entitlements "$here/dsa.entitlements" --sign "$identity" "$@"
 }
+# The Mac's passkeys for Android apps need dsa-devices signed with Apple's browser passkey
+# entitlement, which only a provisioning profile that grants it allows. DSA_PASSKEY_PROFILE
+# names that profile; it is embedded in the bundle, and its identifiers are merged into
+# dsa-devices' entitlements. Without it dsa-devices is signed like the other programs, and
+# Android is told the Mac's passkeys are unavailable.
+devices_entitlements="$here/dsa.entitlements"
+if [[ -n "${DSA_PASSKEY_PROFILE:-}" ]]; then
+    cp "$DSA_PASSKEY_PROFILE" "$app/Contents/embedded.provisionprofile"
+    devices_entitlements="$out/dsa-devices.entitlements"
+    cp "$here/dsa-devices-passkeys.entitlements" "$devices_entitlements"
+    granted="$out/profile-entitlements.plist"
+    security cms -D -i "$DSA_PASSKEY_PROFILE" > "$out/profile.plist"
+    /usr/libexec/PlistBuddy -x -c "Print :Entitlements" "$out/profile.plist" > "$granted"
+    for key in com.apple.application-identifier com.apple.developer.team-identifier; do
+        if value="$(/usr/libexec/PlistBuddy -c "Print :$key" "$granted" 2>/dev/null)"; then
+            /usr/libexec/PlistBuddy -c "Add :$key string $value" "$devices_entitlements"
+        fi
+    done
+    rm -f "$out/profile.plist" "$granted"
+fi
 # Inside out: libraries and helper programs first, the bundle last.
 for library in "$app/Contents/Frameworks"/*.dylib; do
     [[ -e "$library" ]] || continue
     codesign --force --timestamp=none --sign "$identity" "$library"
 done
 for program in "$app/Contents/MacOS"/*; do
-    [[ "$(basename "$program")" == dsa-settings ]] && continue
-    sign "$program"
+    case "$(basename "$program")" in
+        dsa-settings) continue ;;
+        dsa-devices)
+            codesign --force --timestamp=none --options runtime \
+                --entitlements "$devices_entitlements" --sign "$identity" "$program"
+            ;;
+        *) sign "$program" ;;
+    esac
 done
+if [[ "$devices_entitlements" == "$out/"* ]]; then
+    rm -f "$devices_entitlements"
+fi
 sign "$helper"
 sign "$app"
 codesign --verify --strict --verbose=2 "$app"

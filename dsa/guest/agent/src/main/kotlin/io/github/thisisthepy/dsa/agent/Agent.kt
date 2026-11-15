@@ -3,6 +3,9 @@ package io.github.thisisthepy.dsa.agent
 import com.google.protobuf.InvalidProtocolBufferException
 import io.github.thisisthepy.dsa.agent.accessibility.AccessibilityExport
 import io.github.thisisthepy.dsa.agent.accessibility.AccessibilitySource
+import io.github.thisisthepy.dsa.agent.audio.AppAudio
+import io.github.thisisthepy.dsa.agent.audio.AppAudioPort
+import io.github.thisisthepy.dsa.agent.audio.AppVolumeStore
 import io.github.thisisthepy.dsa.agent.channel.ChannelClient
 import io.github.thisisthepy.dsa.agent.channel.ChannelLocator
 import io.github.thisisthepy.dsa.agent.clipboard.ClipboardSync
@@ -46,16 +49,24 @@ import io.github.thisisthepy.dsa.agent.files.FileReceiver
 import io.github.thisisthepy.dsa.agent.files.MediaScan
 import io.github.thisisthepy.dsa.agent.files.SharedFolders
 import io.github.thisisthepy.dsa.agent.files.TransferStore
+import io.github.thisisthepy.dsa.agent.language.HostLanguage
+import io.github.thisisthepy.dsa.agent.language.LanguageServicesSetup
 import io.github.thisisthepy.dsa.agent.links.BrowserRole
 import io.github.thisisthepy.dsa.agent.links.GuestBrowser
 import io.github.thisisthepy.dsa.agent.links.Links
 import io.github.thisisthepy.dsa.agent.power.DevicePower
 import io.github.thisisthepy.dsa.agent.power.Lifecycle
 import io.github.thisisthepy.dsa.agent.memory.AppProcesses
+import io.github.thisisthepy.dsa.agent.memory.BackgroundProcesses
+import io.github.thisisthepy.dsa.agent.memory.AppMemoryPort
+import io.github.thisisthepy.dsa.agent.memory.CachedProcesses
+import io.github.thisisthepy.dsa.agent.memory.HiddenApps
+import io.github.thisisthepy.dsa.agent.memory.UsedAppsCompile
 import io.github.thisisthepy.dsa.agent.memory.ClosedApps
 import io.github.thisisthepy.dsa.agent.memory.MemoryReporter
 import io.github.thisisthepy.dsa.agent.memory.MemorySource
 import io.github.thisisthepy.dsa.agent.network.NetworkSetup
+import io.github.thisisthepy.dsa.agent.network.PrivateDnsPort
 import io.github.thisisthepy.dsa.agent.network.WifiPort
 import io.github.thisisthepy.dsa.agent.background.AppStopper
 import io.github.thisisthepy.dsa.agent.background.BackgroundApps
@@ -72,8 +83,15 @@ import io.github.thisisthepy.dsa.agent.settings.DeviceNameSync
 import io.github.thisisthepy.dsa.agent.settings.SystemSettingsPort
 import io.github.thisisthepy.dsa.agent.settings.SystemSettingsSync
 import io.github.thisisthepy.dsa.agent.tasks.AppInfoSource
+import io.github.thisisthepy.dsa.agent.tasks.BackStacks
+import io.github.thisisthepy.dsa.agent.tasks.FullScreenHolds
+import io.github.thisisthepy.dsa.agent.tasks.WindowingChange
 import io.github.thisisthepy.dsa.agent.tasks.InstalledAppReporter
 import io.github.thisisthepy.dsa.agent.tasks.LauncherApps
+import io.github.thisisthepy.dsa.agent.tasks.PinRequest
+import io.github.thisisthepy.dsa.agent.tasks.PinRequests
+import io.github.thisisthepy.dsa.agent.tasks.ShortcutReporter
+import io.github.thisisthepy.dsa.agent.tasks.ShortcutSource
 import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 import io.github.thisisthepy.dsa.agent.tasks.TaskReporter
 import io.github.thisisthepy.dsa.agent.tasks.TaskSource
@@ -86,11 +104,18 @@ import io.github.thisisthepy.dsa.agent.widgets.WidgetPlatform
 import io.github.thisisthepy.dsa.agent.widgets.WidgetStore
 import io.github.thisisthepy.dsa.agent.windowing.FreeformSetup
 import io.github.thisisthepy.dsa.agent.windowing.GestureExclusion
+import io.github.thisisthepy.dsa.agent.windowing.BelowTitleBar
 import io.github.thisisthepy.dsa.agent.windowing.CaptionInsets
 import io.github.thisisthepy.dsa.agent.windowing.TaskArranger
 import io.github.thisisthepy.dsa.agent.windowing.WindowingControl
+import io.github.thisisthepy.dsa.agent.backup.BackupManagerPort
+import io.github.thisisthepy.dsa.agent.backup.BackupRuns
+import io.github.thisisthepy.dsa.agent.backup.HostBackup
+import io.github.thisisthepy.dsa.agent.channel.HostCalls
+import io.github.thisisthepy.dsa.agent.passkeys.HostPasskeys
 import io.github.thisisthepy.dsa.control.v1.AgentConnected
 import io.github.thisisthepy.dsa.control.v1.Envelope
+import io.github.thisisthepy.dsa.control.v1.KeyAction
 import io.github.thisisthepy.dsa.control.v1.PointerAction
 
 /**
@@ -127,14 +152,22 @@ import io.github.thisisthepy.dsa.control.v1.PointerAction
  * host's desktop are hosted and drawn here, and their images go to the host ([WidgetManager]).
  * When the host gathers diagnostics, the agent sends its part: the system services' state and
  * the dropbox ([DiagnosticsCollector]). Documents apps print to the agent's print service go
- * to the host, which prints them on its printers ([HostPrinter]). The host's time zone, display
+ * to the host, which prints them on its printers ([HostPrinter]). Android's app data backups go
+ * to the host's backup folder through the agent's backup transport, and come back from it
+ * ([HostBackup], [BackupRuns]), and passkeys are made and used by the host's authenticator
+ * ([HostPasskeys]). The host's time zone, display
  * languages, regional format, dark theme and accent color become the guest's
  * ([SystemSettingsSync]), and the computer's name becomes the guest's device name ([DeviceNameSync]).
+ * The agent's text-to-speech engine, speech recognition service and spell checker, the guest's
+ * defaults, answer apps with the host's voices, speech recognition and spell checker
+ * ([HostLanguage]).
  * With Google Play installed, the parts of Play services a desktop does not use stay off,
  * across Play services' updates ([DesktopPlayServices]).
  * The host's location is also the guest's network location ([NetworkLocation]), the guest's
  * geocoder asks the host ([HostGeocoder]), and what apps share through "Share on PC" goes to
- * the host's share UI, its files read like a drag's ([DragOut.share]).
+ * the host's share UI, its files read like a drag's ([DragOut.share]). Each app with a window
+ * plays on an output of its own, which the host plays as that app at the app's volume, and the
+ * host's volume mixer is the only place the guest's sound is turned down ([AppAudio]).
  */
 class Agent(
     private val ownPackage: String,
@@ -152,6 +185,8 @@ class Agent(
     private val trace: ResizeTrace = ResizeTrace(log),
     power: DevicePower = DevicePower.NONE,
     private val launcherApps: LauncherApps = LauncherApps.NONE,
+    /** The apps' launcher shortcuts, which the host shows in each app's jump list. */
+    private val shortcuts: ShortcutSource = ShortcutSource.NONE,
     memory: MemorySource? = null,
     private val inputScheduler: Scheduler = scheduler,
     private val inputTrace: InputTrace = InputTrace(log),
@@ -162,6 +197,8 @@ class Agent(
     fileStore: TransferStore? = null,
     fileOpener: FileOpener = FileOpener.NONE,
     mediaScan: MediaScan = MediaScan.NONE,
+    trustStoreNotice: io.github.thisisthepy.dsa.agent.network.TrustStoreNotice =
+        io.github.thisisthepy.dsa.agent.network.TrustStoreNotice.NONE,
     sharedStorage: java.io.File = java.io.File("/storage/emulated/0"),
     clipboard: GuestClipboard = GuestClipboard.NONE,
     notifications: NotificationSource = NotificationSource.NONE,
@@ -178,38 +215,73 @@ class Agent(
     arm64Supported: () -> Boolean = { false },
     widgets: WidgetPlatform = WidgetPlatform.NONE,
     appProcesses: AppProcesses = AppProcesses.NONE,
+    /** The app processes for ending those that stay cached with no window; null ends none. */
+    backgroundProcesses: BackgroundProcesses? = null,
     widgetStore: WidgetStore = WidgetStore.memory(),
     accessibility: AccessibilitySource = AccessibilitySource.NONE,
+    /** Where the accessibility trees of watched tasks are read, past the scheduler's thread. */
+    accessibilityReader: Scheduler = scheduler,
+    /** The desktop widgets' views as accessibility nodes: the widget platform's, when it has them. */
+    widgetNodes: io.github.thisisthepy.dsa.agent.accessibility.WidgetNodes =
+        (widgets as? io.github.thisisthepy.dsa.agent.accessibility.WidgetNodes)
+            ?: io.github.thisisthepy.dsa.agent.accessibility.WidgetNodes.NONE,
     clock: () -> Long = { System.nanoTime() / 1_000_000 },
     diagnostics: DiagnosticsSource = DiagnosticsSource.NONE,
     diagnosticsRunner: (Runnable) -> Unit = { Thread(it, "dsa-diagnostics").start() },
     systemSettings: SystemSettingsPort = SystemSettingsPort.NONE,
     deviceName: DeviceNamePort = DeviceNamePort.NONE,
     wifi: WifiPort = WifiPort.NONE,
+    privateDns: PrivateDnsPort = PrivateDnsPort.NONE,
     dragCatcher: DragCatcher = DragCatcher.NONE,
     dragRunner: ((Runnable) -> Unit)? = null,
     private val gestureExclusion: GestureExclusion = GestureExclusion.NONE,
     private val unhandledKeys: UnhandledKeys = UnhandledKeys.NONE,
     private val editorFocused: () -> Boolean = { false },
+    private val languageSetup: LanguageServicesSetup = LanguageServicesSetup.NONE,
     componentStates: ComponentStates = ComponentStates.NONE,
+    backupManager: BackupManagerPort = BackupManagerPort.NONE,
     /** Tells the user that a share did not reach the PC (the host's reason, or empty). */
     shareNotice: (String) -> Unit = {},
+    appAudio: AppAudioPort = AppAudioPort.NONE,
+    appVolumes: AppVolumeStore = AppVolumeStore.memory(),
+    /** Trims the apps the user cannot see and compiles the apps the user opens. */
+    private val appMemory: AppMemoryPort = AppMemoryPort.NONE,
+    /** The default display's windows, among them the apps' overlay windows the host shows. */
+    private val overlayWindows: io.github.thisisthepy.dsa.agent.overlays.OverlaySource =
+        io.github.thisisthepy.dsa.agent.overlays.OverlaySource.NONE,
 ) {
-    private val network = NetworkSetup(wifi, log)
+    private val network = NetworkSetup(wifi, log, privateDns)
     private val channel = ChannelClient(
         locator = locator,
         scheduler = scheduler,
         log = log,
         onFrame = ::onFrame,
         onConnected = ::onConnected,
-        intercept = ::pointerFrame,
+        intercept = ::interceptFrame,
     )
     private val reporter = TaskReporter(ownPackage, apps) { frame -> channel.send(frame) }
     private val requests = HostRequests(ownPackage, actions, reporter::isReported)
 
+    /**
+     * The apps' overlay windows (floating lyrics, a chat head), which are in no task: the host
+     * shows each in a window of its own, and its input comes with the overlay's ID.
+     */
+    private val overlays = io.github.thisisthepy.dsa.agent.overlays.OverlayReporter(ownPackage, apps) { frame ->
+        channel.send(frame)
+    }
+
+    /** The default display's windows as SurfaceFlinger last listed them, until the agent's thread takes them. */
+    private val listedWindows =
+        java.util.concurrent.atomic.AtomicReference<List<io.github.thisisthepy.dsa.agent.overlays.GuestWindow>?>(null)
+    private var lastWindows: List<io.github.thisisthepy.dsa.agent.overlays.GuestWindow> = emptyList()
+
     /** Where the host was last told each task is, for the input thread to read. */
     @Volatile
     private var taskBounds: Map<Int, TaskBounds> = emptyMap()
+
+    /** Whether Back in each task lands on a screen the user saw, for the title bar's back arrow. */
+    private val backStacks = BackStacks()
+    private val backClock = clock
     private val pointer = PointerInput(injector, { taskId -> taskBounds[taskId] }, log) { taskId, keyCode, down ->
         // Keys belong to the scheduler's thread.
         scheduler.post {
@@ -228,6 +300,16 @@ class Agent(
             log.warn("injecting pointer input failed", e)
         }
         inputTrace.injected(event, queuedNanos, System.nanoTime() - started)
+        // A press or a scroll is the user acting on the screen on top.
+        if (event.action == PointerAction.POINTER_ACTION_DOWN || event.action == PointerAction.POINTER_ACTION_SCROLL) {
+            backStacks.interacted(event.taskId)
+        }
+        if (event.action == PointerAction.POINTER_ACTION_DOWN) {
+            // The editor a press focuses is in this task's window; text input belongs to the
+            // scheduler's thread.
+            val taskId = event.taskId
+            scheduler.post { text.addressed(taskId) }
+        }
         val frames = frameTrace
         if (frames != null && event.action == PointerAction.POINTER_ACTION_UP) {
             // The reporter belongs to the scheduler's thread.
@@ -236,8 +318,10 @@ class Agent(
     }
     private val keys = KeyInput(
         injector,
-        reporter::isReported,
-        reporter::reportedFocused,
+        { id -> reporter.isReported(id) || overlays.isReported(id) },
+        // An overlay is never given the focus as a task is: the window manager gives a
+        // focusable overlay the focus itself, and a key for it goes where the focus is.
+        { id -> reporter.reportedFocused(id) || overlays.isReported(id) },
         actions::focusTask,
         log,
         // A task the agent has not read yet counts as on its first screen, so a key never
@@ -249,13 +333,15 @@ class Agent(
         editor = editor,
         injector = injector,
         keys = textKeys,
-        isReported = reporter::isReported,
-        isFocused = reporter::reportedFocused,
+        isReported = { id -> reporter.isReported(id) || overlays.isReported(id) },
+        isFocused = { id -> reporter.reportedFocused(id) || overlays.isReported(id) },
         focus = actions::focusTask,
-        bounds = reporter::reportedBounds,
+        bounds = { id -> reporter.reportedBounds(id) ?: overlays.bounds[id] },
         focusedTask = reporter::focusedTask,
         send = { frame -> channel.send(frame) },
         log = log,
+        reportedTasks = { reporter.reported },
+        packageOf = reporter::reportedPackage,
     )
     private val lifecycle = Lifecycle(power, { frame -> channel.send(frame) }, log, { reporter.reported.isNotEmpty() })
     private val memoryReporter = memory?.let {
@@ -290,11 +376,41 @@ class Agent(
         onInstalled = { requestAppsRefresh() },
         expansionFiles = expansionFiles,
     )
+    /** The thread the scheduler runs the agent's work on, once it has started. */
+    @Volatile
+    private var agentThread: Thread? = null
+
+    /**
+     * The backup transport's and the credential provider's requests to the host, which they
+     * make on Android's binder threads and wait for ([HostCalls]).
+     */
+    private val hostCalls = HostCalls(::sendFromAnyThread, log)
+
+    /** The backup transport's half on the host's side ([HostBackup]). */
+    val hostBackup = HostBackup(hostCalls, log)
+
+    /** The credential provider's half on the host's side ([HostPasskeys]). */
+    val passkeys = HostPasskeys(hostCalls, log)
+    private val backupRuns = BackupRuns(
+        backupManager,
+        hostBackup,
+        { frame -> channel.send(frame) },
+        log,
+        post = { work -> scheduler.post(work) },
+        later = { delay, work -> scheduler.postDelayed(delay, work) },
+    )
     private val printer = HostPrinter(
         { frame -> channel.send(frame) },
         log,
         isConnected = { channel.connected },
         post = { work -> scheduler.post(work) },
+    )
+    /** Speech and spelling from the host, for the agent's speech and spelling services. */
+    val language = HostLanguage(
+        { frame -> channel.send(frame) },
+        post = { work -> scheduler.post(work) },
+        isConnected = { channel.connected },
+        log = log,
     )
     private val packageQueries = PackageQueries(packages, { frame -> channel.send(frame) }, log)
     private val googleDeviceIds = GoogleDeviceIds(googleDeviceId, { frame -> channel.send(frame) }, log)
@@ -337,14 +453,42 @@ class Agent(
         log = log,
         clock = clock,
     )
-    private val playServices = DesktopPlayServices(componentStates, scheduler, log, clock)
+    private val cachedProcesses = backgroundProcesses?.let {
+        CachedProcesses(
+            it,
+            scheduler,
+            log,
+            clock,
+            isConnected = { channel.connected },
+            ownPackage = ownPackage,
+            shownPackages = {
+                notifications.active().map { notice -> notice.packageName }.toSet() +
+                    widgets.placedIds().mapNotNull { id -> widgets.info(id)?.packageName }
+            },
+        )
+    }
+    private val playServices =DesktopPlayServices(componentStates, scheduler, log, clock)
     private val freeform = FreeformSetup(windowing, scheduler, log)
     private val arranger = TaskArranger(actions, windowing::displaySize, log)
     private val captions = CaptionInsets(actions, log)
+    private val belowTitleBar = BelowTitleBar()
+    private val fullScreenHolds = FullScreenHolds()
     private val installed = InstalledAppReporter(ownPackage) { frame -> channel.send(frame) }
+    private val shortcutReporter = ShortcutReporter(ownPackage) { frame -> channel.send(frame) }
+    private val pinRequests = PinRequests(
+        { frame -> channel.send(frame) },
+        log,
+        later = { delay, work -> scheduler.postDelayed(delay, work) },
+    )
+
+    /** The apps a launcher lists, as last read, whose shortcuts the host is told. */
+    private var listedPackages: List<String> = emptyList()
+    private var shortcutsPending = false
+    private val changedShortcuts = HashSet<String>()
     private val links = Links(browserRole, guestBrowser, { frame -> channel.send(frame) }, log)
     private val files = FileReceiver(fileStore, fileOpener, { frame -> channel.send(frame) }, log)
     private val sharedFolders = SharedFolders(sharedStorage, mediaScan, scheduler, log)
+    private val hostCertificates = io.github.thisisthepy.dsa.agent.network.HostCertificates(trustStoreNotice, log)
     private val dragThread by lazy {
         java.util.concurrent.Executors.newSingleThreadExecutor { work -> Thread(work, "dsa-drag-out") }
     }
@@ -371,6 +515,23 @@ class Agent(
         run = dragRunner ?: { work -> dragThread.execute(work) },
         notify = shareNotice,
     )
+    private val appSound = AppAudio(
+        appAudio,
+        appVolumes,
+        { frame -> channel.send(frame) },
+        log,
+        isConnected = { channel.connected },
+    )
+    private val hiddenApps = HiddenApps(
+        appMemory,
+        scheduler,
+        log,
+        clock,
+        playing = { appAudio.playing() },
+        hasForegroundService = appProcesses::hasForegroundService,
+        ownPackage = ownPackage,
+    )
+    private val usedAppsCompile = UsedAppsCompile(appMemory, scheduler, log, clock, ownPackage)
     private val networkLocation = NetworkLocation({ frame -> channel.send(frame) }, log, isConnected = { channel.connected })
     private val geocoder = HostGeocoder({ frame -> channel.send(frame) }, log, isConnected = { channel.connected }, scheduler)
     private val accessibilityExport = AccessibilityExport(
@@ -380,6 +541,9 @@ class Agent(
         log,
         reporter::reportedBounds,
         clock,
+        accessibilityReader,
+        widgetNodes,
+        reporter::reportedPackage,
     )
     /** Where the apps on the display keep system gestures out, as last heard. */
     private var exclusion: List<TaskBounds> = emptyList()
@@ -391,11 +555,24 @@ class Agent(
     private var appsForced = false
     private var checkPending = false
 
+    /** Sizes and densities from the host, with when each arrived, for [takeWindowFrames]. */
+    private val windowFrames = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
+    private val windowFramesPosted = java.util.concurrent.atomic.AtomicBoolean(false)
+
     fun start() {
         scheduler.post {
+            agentThread = Thread.currentThread()
+            backupRuns.start()
             freeform.start()
             closedApps.configure()
+            cachedProcesses?.start()
             playServices.start()
+            try {
+                // The package manager's broadcasts arrive on the main thread.
+                appMemory.start { packageName -> scheduler.post { usedAppsCompile.packageChanged(packageName) } }
+            } catch (e: Exception) {
+                log.warn("could not follow app updates; an updated app is compiled again after the next boot", e)
+            }
             try {
                 inputMethods.useHostInputMethod()
             } catch (e: Exception) {
@@ -407,11 +584,17 @@ class Agent(
                 log.warn("could not join the host's network; apps have no network until Wi-Fi joins it", e)
             }
             try {
+                languageSetup.useHostServices()
+            } catch (e: Exception) {
+                log.warn("could not make the agent's speech and spelling services the guest's defaults", e)
+            }
+            try {
                 touchSounds.turnOff()
             } catch (e: Exception) {
                 log.warn("could not turn click sounds off; each click spends time on a sound nobody hears", e)
             }
             accessibilityExport.start()
+            appSound.start { work -> scheduler.post(work) }
             listen()
             lifecycle.start { work -> scheduler.post(work) }
             clipboardSync.start { work -> scheduler.post(work) }
@@ -421,12 +604,70 @@ class Agent(
                 scheduler.post(work)
             }
             listenToApps()
+            listenToShortcuts()
             listenToCrashes()
             listenToExclusion()
             listenToUnhandledKeys()
+            listenToOverlays()
             channel.start()
             requestRefresh()
         }
+    }
+
+    /**
+     * Follows the default display's windows for the apps' overlay windows. SurfaceFlinger
+     * calls on a binder thread and waits for the call to return, so the list is only kept
+     * there, the newest in the place of any the agent's thread has not taken yet.
+     */
+    private fun listenToOverlays() {
+        try {
+            val listening = overlayWindows.listen { windows ->
+                if (listedWindows.getAndSet(windows) == null) scheduler.post(::takeListedWindows)
+            }
+            if (listening) log.info("following the display's windows for app overlay windows")
+        } catch (e: Exception) {
+            log.warn("could not follow the display's windows; app overlay windows are not shown on the host", e)
+        }
+    }
+
+    private fun takeListedWindows() {
+        lastWindows = listedWindows.getAndSet(null) ?: return
+        reportOverlays()
+    }
+
+    /** Tells the host of the app overlay windows as last listed, and where their input goes. */
+    private fun reportOverlays() {
+        if (!channel.connected) return
+        val before = overlays.reported
+        try {
+            overlays.update(lastWindows, arranger.display, overlayWindows.density())
+        } catch (e: Exception) {
+            log.warn("reporting the app overlay windows failed", e)
+            return
+        }
+        val now = overlays.reported
+        for (overlayId in now - before) log.info("app overlay window $overlayId is shown on the host")
+        for (overlayId in before - now) log.info("app overlay window $overlayId is gone")
+        syncInputBounds()
+        // An app that only has an overlay keeps its processes like one with a task.
+        if (now != before) requestRefresh()
+    }
+
+    /**
+     * Where the host was told each task and each app overlay window is, for the input thread,
+     * and which of them key and text input may still name.
+     */
+    private fun syncInputBounds() {
+        val reported = reporter.reported
+        val told = reported.mapNotNull { taskId -> reporter.reportedBounds(taskId)?.let { taskId to it } }.toMap() +
+            overlays.bounds
+        val known = reported + overlays.reported
+        if (told != taskBounds) {
+            taskBounds = told
+            inputScheduler.post { pointer.retainTasks(known) }
+        }
+        keys.retainTasks(known)
+        text.retainTasks(known)
     }
 
     private fun listenToApps() {
@@ -474,6 +715,58 @@ class Agent(
         }
     }
 
+    private fun listenToShortcuts() {
+        try {
+            shortcuts.listen { packageName -> scheduler.post { shortcutsChanged(packageName) } }
+        } catch (e: Exception) {
+            log.warn("listening to the apps' shortcuts failed; trying again", e)
+            scheduler.postDelayed(RETRY_MILLIS, ::listenToShortcuts)
+        }
+    }
+
+    /**
+     * An app's shortcuts changed: they are read again once the changes that come together
+     * have arrived, so an app that publishes several at once is reported once.
+     */
+    private fun shortcutsChanged(packageName: String) {
+        changedShortcuts += packageName
+        if (shortcutsPending) return
+        shortcutsPending = true
+        scheduler.post {
+            shortcutsPending = false
+            val changed = changedShortcuts.toSet()
+            changedShortcuts.clear()
+            if (channel.connected) shortcutReporter.changed(changed.filter { it in listedPackages }, ::readShortcuts)
+        }
+    }
+
+    /** Tells the host the shortcuts of each listed app that changed, after the list itself. */
+    private fun refreshShortcuts() {
+        if (!channel.connected) return
+        shortcutReporter.update(listedPackages, ::readShortcuts)
+    }
+
+    private fun readShortcuts(packageName: String): List<io.github.thisisthepy.dsa.agent.tasks.LauncherShortcut>? = try {
+        shortcuts.shortcuts(packageName)
+    } catch (e: Exception) {
+        log.warn("reading the shortcuts of $packageName failed", e)
+        null
+    }
+
+    /**
+     * An app asks to pin one of its shortcuts, as the agent's pin activity received it: the
+     * host asks the user. Called from any thread.
+     */
+    fun pinRequested(request: PinRequest) {
+        scheduler.post {
+            if (!channel.connected) {
+                log.warn("an app asked to pin a shortcut while the host is not connected; the request lapses")
+            } else {
+                pinRequests.requested(request)
+            }
+        }
+    }
+
     private fun requestAppsRefresh(force: Boolean = false) {
         if (force) appsForced = true
         if (appsPending) return
@@ -499,6 +792,8 @@ class Agent(
             return
         } ?: return
         installed.update(apps, force)
+        listedPackages = apps.map { it.packageName }
+        refreshShortcuts()
     }
 
     private fun listen() {
@@ -530,10 +825,21 @@ class Agent(
         }
     }
 
+    /**
+     * Input restarted on the focused editor, which is now [state]: a composition being typed
+     * there goes on. Called from any thread.
+     */
+    fun editorRestarted(state: io.github.thisisthepy.dsa.agent.input.EditorState) {
+        scheduler.post {
+            if (channel.connected) text.editorRestarted(state)
+        }
+    }
+
     private fun onConnected() {
         // The daemon tells the host from this that the guest's requests have someone to reach.
         channel.send(Envelope.newBuilder().setAgentConnected(AgentConnected.getDefaultInstance()).build().toByteArray())
         reporter.resend()
+        overlays.resend()
         settingsSync.connected()
         deviceNameSync.connected()
         lifecycle.connected()
@@ -543,12 +849,17 @@ class Agent(
         widgetManager.connected()
         apkInstaller.connected()
         printer.connected()
+        hostCalls.connected()
+        language.connected()
         networkLocation.connected()
         installed.resend()
+        shortcutReporter.resend()
+        pinRequests.disconnected()
         memoryReporter?.connected()
         links.connected()
         files.connected()
         accessibilityExport.connected()
+        appSound.connected()
         requestRefresh()
         requestAppsRefresh()
     }
@@ -561,16 +872,33 @@ class Agent(
         if (settingsSync.handle(frame)) return
         if (deviceNameSync.handle(frame)) return
         if (linksOrFiles(frame)) return
+        if (handleRequest(frame)) requestRefresh()
+    }
+
+    /**
+     * Acts on a request from the host (a launch, a close, a size, ...). Returns whether it was
+     * one for the agent, after which the tasks are read again. [queuedMillis] is how long the
+     * frame waited for the scheduler's thread, for the resize trace.
+     */
+    private fun handleRequest(frame: ByteArray, queuedMillis: Double? = null): Boolean {
+        noteClosing(frame)
         val result = try {
             requests.handle(frame)
         } catch (e: Exception) {
             log.warn("acting on a frame from the channel failed", e)
-            return
+            return false
         }
         when (result) {
             is RequestResult.Launched ->
                 log.info(if (result.newWindow) "opened a new window of ${result.packageName}" else "launched ${result.packageName}")
             is RequestResult.LaunchFailed -> log.warn("could not launch ${result.packageName}: ${result.reason}")
+            is RequestResult.ShortcutLaunched -> log.info(
+                if (result.appInstead) {
+                    "the shortcut ${result.shortcutId} of ${result.packageName} did not start; launched the app instead"
+                } else {
+                    "started the shortcut ${result.shortcutId} of ${result.packageName}"
+                },
+            )
             is RequestResult.SettingsOpened ->
                 log.info("opened the ${result.page.name.lowercase()} settings of ${result.packageName ?: "every app"}")
             is RequestResult.SettingsFailed ->
@@ -578,12 +906,14 @@ class Agent(
             is RequestResult.Closed -> log.info("ended task ${result.taskId}")
             is RequestResult.CloseRefused -> log.warn("did not end task ${result.taskId}: ${result.reason}")
             is RequestResult.Resize -> {
-                trace.received(result.taskId, result.size, result.live)
+                trace.received(result.taskId, result.size, result.live, queuedMillis)
                 arranger.resize(result.taskId, result.size, result.live)
+                accessibilityExport.resizing(result.taskId)
             }
             is RequestResult.Density -> {
                 log.info("task ${result.taskId} draws at ${result.densityDpi} dpi")
                 arranger.setDensity(result.taskId, result.densityDpi)
+                accessibilityExport.resizing(result.taskId)
             }
             is RequestResult.Caption -> {
                 log.info("task ${result.taskId} is under a title bar ${result.height} pixels high")
@@ -595,24 +925,93 @@ class Agent(
                     result.endWidth,
                 )
             }
+            is RequestResult.FullScreen -> {
+                log.info(
+                    if (result.inWindow) {
+                        "task ${result.taskId} keeps a full screen request inside its window"
+                    } else {
+                        "task ${result.taskId} fills the screen when it asks to"
+                    },
+                )
+                fullScreenHolds.hostSays(result.taskId, result.inWindow)
+                requestRefresh()
+            }
+            is RequestResult.CaptionCompat -> {
+                log.info("${result.belowTitleBar.size} apps start below the title bar")
+                belowTitleBar.hostSays(result.belowTitleBar)
+            }
             is RequestResult.SizeRefused -> log.warn("did not resize task ${result.taskId}: ${result.reason}")
             is RequestResult.Malformed -> log.warn("dropped a frame: ${result.reason}")
             is RequestResult.NotForTheAgent -> Unit
         }
-        if (result !is RequestResult.NotForTheAgent) requestRefresh()
+        return result !is RequestResult.NotForTheAgent
     }
 
-    /** Queues the frame for the input thread if it is pointer input. Called on a binder thread. */
-    private fun pointerFrame(frame: ByteArray): Boolean {
+    /**
+     * Queues the frame for the input thread if it is pointer input, and ahead of the
+     * scheduler's other work if it gives a task a new size or density. Called on a binder
+     * thread.
+     */
+    private fun interceptFrame(frame: ByteArray): Boolean {
         val envelope = try {
             Envelope.parseFrom(frame)
         } catch (e: InvalidProtocolBufferException) {
             // The scheduler's thread reports it.
             return false
         }
-        if (envelope.bodyCase != Envelope.BodyCase.POINTER_EVENT) return false
-        pointerQueue.add(envelope.pointerEvent)
+        when (envelope.bodyCase) {
+            Envelope.BodyCase.POINTER_EVENT -> pointerQueue.add(envelope.pointerEvent)
+            Envelope.BodyCase.RESIZE_TASK, Envelope.BodyCase.SET_TASK_DENSITY -> windowFrame(frame)
+            else -> return false
+        }
         return true
+    }
+
+    /**
+     * A window's new size or density, which the user is waiting to see. It goes ahead of
+     * whatever else waits for the scheduler's thread (task reads, notifications, an
+     * accessibility tree being sent), so a window resized while the thread is busy is not
+     * held back by that work. The frames that arrive together are handled together and in
+     * order, with one read of the tasks after them, so a density and the size that comes with
+     * it still reach the framework in one change. Called on a binder thread.
+     */
+    private fun windowFrame(frame: ByteArray) {
+        windowFrames.add(frame to System.nanoTime())
+        if (windowFramesPosted.compareAndSet(false, true)) scheduler.postFirst(::takeWindowFrames)
+    }
+
+    private fun takeWindowFrames() {
+        windowFramesPosted.set(false)
+        var any = false
+        while (true) {
+            val (frame, arrived) = windowFrames.poll() ?: break
+            handleRequest(frame, queuedMillis = (System.nanoTime() - arrived) / 1_000_000.0)
+            any = true
+        }
+        if (any) refresh()
+    }
+
+    /**
+     * What the trims of the apps the user cannot see and the compiles of the apps the user
+     * opens follow: which task windows the user can see, whether any window is shown, and the
+     * host's power. Each frame goes on to whatever else acts on it.
+     */
+    private fun appMemoryFrame(envelope: Envelope) {
+        try {
+            when (envelope.bodyCase) {
+                Envelope.BodyCase.SCREEN_STATE -> {
+                    hiddenApps.screen(envelope.screenState.on)
+                    usedAppsCompile.screen(envelope.screenState.on)
+                }
+                Envelope.BodyCase.TASKS_SHOWN -> hiddenApps.shown(envelope.tasksShown.taskIdsList.toSet())
+                Envelope.BodyCase.POWER_STATE -> envelope.powerState.let {
+                    usedAppsCompile.power(it.acOnline, it.batteryPresent, it.powerSaver)
+                }
+                else -> Unit
+            }
+        } catch (e: Exception) {
+            log.warn("following which apps the user can see failed", e)
+        }
     }
 
     /** Injects the frame if it is key or text input. False for any other frame. */
@@ -623,6 +1022,7 @@ class Agent(
             return false
         }
         if (envelope.bodyCase == Envelope.BodyCase.SCREEN_STATE) widgetManager.screen(envelope.screenState.on)
+        appMemoryFrame(envelope)
         if (lifecycle.handle(envelope)) return true
         try {
             if (widgetManager.handle(envelope)) return true
@@ -631,6 +1031,7 @@ class Agent(
             return true
         }
         if (sharedFolders.handle(envelope)) return true
+        if (hostCertificates.handle(envelope)) return true
         if (clipboardSync.handle(envelope)) return true
         if (notificationForwarder.handle(envelope)) return true
         if (backgroundApps.handle(envelope)) return true
@@ -639,13 +1040,28 @@ class Agent(
         if (googleDeviceIds.handle(envelope)) return true
         if (dragOut.handle(envelope)) return true
         if (printer.handle(envelope)) return true
+        if (language.handle(envelope)) return true
         if (networkLocation.handle(envelope)) return true
         if (geocoder.handle(envelope)) return true
         if (appUninstaller.handle(envelope)) return true
         if (appReinstaller.handle(envelope)) return true
+        if (hostCalls.handle(envelope)) return true
+        if (backupRuns.handle(envelope)) return true
+        if (appSound.handle(envelope)) return true
+        if (envelope.bodyCase == Envelope.BodyCase.PIN_SHORTCUT_ANSWER) {
+            pinRequests.answered(envelope.pinShortcutAnswer.requestId, envelope.pinShortcutAnswer.accepted)
+            return true
+        }
         when (envelope.bodyCase) {
             Envelope.BodyCase.REFRESH_APPS -> requestAppsRefresh(force = true)
             Envelope.BodyCase.KEY_EVENT -> try {
+                // A key is the user acting on the screen on top; Back itself leaves it.
+                val key = envelope.keyEvent
+                // KeyEvent.KEYCODE_BACK.
+                if (key.action == KeyAction.KEY_ACTION_DOWN && key.keyCode != 4) {
+                    backStacks.interacted(key.taskId)
+                }
+                if (key.action == KeyAction.KEY_ACTION_DOWN) text.addressed(key.taskId)
                 keys.handle(envelope.keyEvent)
             } catch (e: Exception) {
                 log.warn("injecting key input failed", e)
@@ -750,6 +1166,22 @@ class Agent(
         scheduler.post { printer.cancelRequested(job) }
     }
 
+    /**
+     * Sends a frame from any thread: on the agent's thread at once, from another through the
+     * scheduler, waiting for it to go. False when it did not go.
+     */
+    private fun sendFromAnyThread(frame: ByteArray): Boolean {
+        if (Thread.currentThread() === agentThread) return channel.send(frame)
+        val sent = java.util.concurrent.ArrayBlockingQueue<Boolean>(1)
+        scheduler.post { sent.offer(channel.send(frame)) }
+        return try {
+            sent.poll(SEND_WAIT_MILLIS, java.util.concurrent.TimeUnit.MILLISECONDS) ?: false
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        }
+    }
+
     /** Reports the guest's memory if the frame asks for it. False for any other frame. */
     private fun memoryRequest(frame: ByteArray): Boolean {
         val envelope = try {
@@ -769,6 +1201,29 @@ class Agent(
             }
         }
         return true
+    }
+
+    /**
+     * When the host closes an app's last task window, has [closedApps] read what the app holds
+     * first: removing the task ends its processes, so read afterwards their memory would already
+     * be free and the close would seem to give nothing back.
+     */
+    private fun noteClosing(frame: ByteArray) {
+        val envelope = try {
+            Envelope.parseFrom(frame)
+        } catch (e: InvalidProtocolBufferException) {
+            return
+        }
+        if (envelope.bodyCase != Envelope.BodyCase.CLOSE_TASK) return
+        val taskId = envelope.closeTask.taskId
+        val packageName = reporter.reportedPackage(taskId) ?: return
+        val others = reporter.reported.any { it != taskId && reporter.reportedPackage(it) == packageName }
+        if (others || packageName == ownPackage) return
+        try {
+            closedApps.closing(packageName)
+        } catch (e: Exception) {
+            log.warn("could not read what $packageName holds before its window closes", e)
+        }
     }
 
     /**
@@ -807,11 +1262,29 @@ class Agent(
      * window hears at once that its task is taking its size.
      */
     private fun refresh() {
-        val running = try {
+        val read = try {
             tasks.snapshot()
         } catch (e: Exception) {
             log.warn("reading the running tasks failed", e)
             return
+        }
+        // Every change to a task's stack is followed, connected or not, so the back arrow
+        // knows which screens below the top the user saw.
+        val now = backClock()
+        backStacks.retain(read.map { it.taskId })
+        val stacked = read.map { task ->
+            val stack = task.stack ?: return@map task
+            task.copy(canGoBack = backStacks.update(task.taskId, stack, now))
+        }
+        // A task whose app left freeform goes back to its window when the host says so, and is
+        // reported at its window's bounds from the start.
+        val (running, windowing) = fullScreenHolds.apply(stacked)
+        for (change in windowing) {
+            val done = when (change) {
+                is WindowingChange.ToFreeform -> actions.setWindowingMode(change.taskId, change.bounds)
+                is WindowingChange.ToFullscreen -> actions.setWindowingMode(change.taskId, null)
+            }
+            if (!done) log.warn("could not change the windowing mode of task ${change.taskId}: the framework refused or lacks the call")
         }
         for (task in running) trace.boundsRead(task.taskId, task.bounds.right - task.bounds.left, task.bounds.bottom - task.bounds.top)
         // A font scale the host asked for waits while an app that would be restarted for it
@@ -819,12 +1292,20 @@ class Agent(
         settingsSync.tasksRunning(restartedByFontScale(running))
         val arranging = System.nanoTime()
         val bounds = arranger.arrange(running.filter(reporter::reportable))
+        for ((taskId, to) in arranger.resizedTo) trace.asked(taskId, to.right - to.left, to.bottom - to.top)
         trace.applied((System.nanoTime() - arranging) / 1_000_000.0)
         if (arranger.waiting) checkMoves()
         if (!channel.connected) return
+        // Whether a task starts below the title bar is settled when it is first seen here.
+        val below = belowTitleBar.tasks(running.associate { it.taskId to it.packageName })
         val placedTasks = running.map { task ->
             val placed = bounds[task.taskId]
             val moved = if (placed == null || placed == task.bounds) task else task.copy(bounds = placed)
+            if (moved.taskId in below) {
+                // The user's switch wins over an app that asks to draw its own title bar: the
+                // whole band is the host's, and the app has no controls in it.
+                return@map moved.copy(belowTitleBar = true, transparentCaption = false, captionInteractive = emptyList())
+            }
             val controls = captions.controls(moved.taskId, moved.bounds, moved.transparentCaption, exclusion)
             if (controls.isEmpty()) moved else moved.copy(captionInteractive = controls)
         }
@@ -832,14 +1313,31 @@ class Agent(
         pastFirstScreen = placedTasks.filter { it.canGoBack }.map { it.taskId }.toSet()
         val reported = reporter.reported
         val told = reported.mapNotNull { taskId -> reporter.reportedBounds(taskId)?.let { taskId to it } }.toMap()
-        captions.update(told, placedTasks.filter { it.transparentCaption }.map { it.taskId }.toSet())
-        if (told != taskBounds) {
-            taskBounds = told
-            inputScheduler.post { pointer.retainTasks(reported) }
+        // A task's band is given as soon as the host is told of it, before its window has
+        // opened and said how high its title bar is, so the app's first screen lays out below it.
+        val titled = placedTasks.filter { it.taskId in told && !it.fullscreen && !it.pictureInPicture }
+        captions.update(
+            told,
+            placedTasks.filter { it.transparentCaption }.map { it.taskId }.toSet(),
+            awaiting = titled.associate { it.taskId to it.densityDpi },
+            opaque = below,
+        )
+        // The overlays go with every report of the tasks: after a new connection, and with the
+        // display's size once it is known.
+        try {
+            overlays.update(lastWindows, arranger.display, overlayWindows.density())
+        } catch (e: Exception) {
+            log.warn("reporting the app overlay windows failed", e)
         }
-        keys.retainTasks(reporter.reported)
-        text.retainTasks(reporter.reported)
-        closedApps.tasks(reported.mapNotNull(reporter::reportedPackage).toSet())
+        syncInputBounds()
+        val packages = reported.mapNotNull(reporter::reportedPackage).toSet()
+        // An app whose overlay is on the screen is open, though it has no task.
+        closedApps.tasks(packages + overlays.packages)
+        // Every task's app keeps its processes, a task the host was not told of included.
+        cachedProcesses?.tasks(packages + overlays.packages + running.mapNotNull { it.packageName })
+        appSound.tasks(packages, reporter.focusedTask()?.let(reporter::reportedPackage))
+        hiddenApps.tasks(reported.mapNotNull { taskId -> reporter.reportedPackage(taskId)?.let { taskId to it } }.toMap())
+        usedAppsCompile.tasks(packages)
     }
 
     /**
@@ -859,5 +1357,8 @@ class Agent(
 
     private companion object {
         const val RETRY_MILLIS = 1000L
+
+        /** How long a frame from another thread waits for the agent's thread to send it. */
+        const val SEND_WAIT_MILLIS = 10_000L
     }
 }

@@ -1,0 +1,1840 @@
+# Spanish translation of DSA Settings for Linux.
+# This file is distributed under the same licence as Desktop Subsystem for Android.
+msgid ""
+msgstr ""
+"Project-Id-Version: dsa-settings\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "The dsa command could not be started. Reinstall DSA."
+msgstr "No se pudo iniciar el comando dsa. Reinstale DSA."
+
+msgid "The DSA service is not running."
+msgstr "El servicio de DSA no se está ejecutando."
+
+msgid "The DSA service could not do this."
+msgstr "El servicio de DSA no pudo hacer esto."
+
+msgid "The answer of the dsa command could not be read. Reinstall DSA."
+msgstr "No se pudo leer la respuesta del comando dsa. Reinstale DSA."
+
+msgid "The setting was not changed, because an administrator's permission was not given."
+msgstr "No se cambió la configuración porque no se concedió el permiso de administrador."
+
+msgid "Unknown"
+msgstr "Desconocido"
+
+msgid "Stopped"
+msgstr "Detenido"
+
+msgid "Starting"
+msgstr "Iniciando"
+
+msgid "Running"
+msgstr "En ejecución"
+
+msgid "Dozing (idle)"
+msgstr "En reposo (Doze)"
+
+msgid "Frozen"
+msgstr "Congelado"
+
+msgid "Stopping"
+msgstr "Deteniendo"
+
+msgid "Not ready"
+msgstr "No está listo"
+
+msgid "Virtual machine (crosvm)"
+msgstr "Máquina virtual (crosvm)"
+
+msgid "Window manager"
+msgstr "Gestor de ventanas"
+
+msgid "Graphics renderer"
+msgstr "Renderizador de gráficos"
+
+msgid "App window"
+msgstr "Ventana de aplicación"
+
+msgid "Process {0}, {1} private"
+msgstr "Proceso {0}, {1} privada"
+
+msgid "Apps and system"
+msgstr "Aplicaciones y sistema"
+
+msgid "{0} in memory, {1} compressed"
+msgstr "{0} en memoria, {1} comprimida"
+
+msgid "Google Play services"
+msgstr "Servicios de Google Play"
+
+msgid "The Google apps you installed, {0} processes: {1}"
+msgstr "Las aplicaciones de Google que instaló, {0} procesos: {1}"
+
+msgid "unknown"
+msgstr "desconocido"
+
+msgid "Cache"
+msgstr "Caché"
+
+msgid "File contents kept in memory. Android drops them when it needs the memory."
+msgstr "Contenido de archivos guardado en memoria. Android lo descarta cuando necesita la memoria."
+
+msgid "Kernel caches"
+msgstr "Cachés del kernel"
+
+msgid "Kernel caches the kernel can free on demand."
+msgstr "Cachés que el kernel puede liberar cuando lo necesita."
+
+msgid "Shared memory"
+msgstr "Memoria compartida"
+
+msgid "Compressed memory"
+msgstr "Memoria comprimida"
+
+msgid "Holds {0} of pages, compressed"
+msgstr "Contiene {0} de páginas, comprimidas"
+
+msgid "Free"
+msgstr "Libre"
+
+msgid "Kernel objects"
+msgstr "Objetos del kernel"
+
+msgid "Memory the kernel keeps for its own data and cannot reclaim"
+msgstr "Memoria que el kernel reserva para sus propios datos y no puede recuperar"
+
+msgid "Thread stacks"
+msgstr "Pilas de hilos"
+
+msgid "Page tables"
+msgstr "Tablas de páginas"
+
+msgid "Kernel mappings (vmalloc)"
+msgstr "Asignaciones del kernel (vmalloc)"
+
+msgid "Per-CPU data"
+msgstr "Datos por CPU"
+
+msgid "Drivers"
+msgstr "Controladores"
+
+msgid "What no counter names, such as GPU and DMA buffers"
+msgstr "Lo que ningún contador nombra, como los búferes de GPU y DMA"
+
+msgid "Reserved at boot"
+msgstr "Reservado al arrancar"
+
+msgid "Kernel code, page structures and buffers, of {0} given; contiguous area {1}"
+msgstr "Código del kernel, estructuras de página y búferes, de {0} asignados; área contigua {1}"
+
+msgid "Process {0}"
+msgstr "Proceso {0}"
+
+msgid "Process {0}, Google Play services"
+msgstr "Proceso {0}, servicios de Google Play"
+
+msgid "Automatic"
+msgstr "Automático"
+
+msgid "The GPU of the primary monitor (recommended)"
+msgstr "La GPU del monitor principal (recomendado)"
+
+msgid "Integrated GPU"
+msgstr "GPU integrada"
+
+msgid "Discrete GPU (for example, for games)"
+msgstr "GPU dedicada (por ejemplo, para juegos)"
+
+msgid "Always the newest (now Android {0})"
+msgstr "Siempre la más reciente (ahora Android {0})"
+
+msgid "Android {0}"
+msgstr "Android {0}"
+
+msgid "{0} of {1} apps"
+msgstr "{0} de {1} aplicaciones"
+
+msgid "{0} apps"
+msgstr "{0} aplicaciones"
+
+msgid "Version {0}"
+msgstr "Versión {0}"
+
+msgid "Part of Android"
+msgstr "Parte de Android"
+
+msgid "Opens at the size Android chooses"
+msgstr "Se abre con el tamaño que elige Android"
+
+msgid "Phone, portrait ({0} × {1})"
+msgstr "Teléfono, vertical ({0} × {1})"
+
+msgid "Phone, landscape ({0} × {1})"
+msgstr "Teléfono, horizontal ({0} × {1})"
+
+msgid "Tablet, portrait ({0} × {1})"
+msgstr "Tableta, vertical ({0} × {1})"
+
+msgid "Tablet, landscape ({0} × {1})"
+msgstr "Tableta, horizontal ({0} × {1})"
+
+msgid "it is no longer installed"
+msgstr "ya no está instalada"
+
+msgid "it is part of Android"
+msgstr "forma parte de Android"
+
+msgid "Android does not allow it, because the app is a device administrator or a policy keeps it"
+msgstr "Android no lo permite porque la aplicación es un administrador del dispositivo o una directiva la protege"
+
+msgid "Android could not uninstall it"
+msgstr "Android no pudo desinstalarla"
+
+msgid "it is an Android App Bundle, made to be uploaded to an app store. Get the app as an APK, or as an .xapk, .apks or .apkm bundle."
+msgstr "es un Android App Bundle, hecho para tiendas de aplicaciones. Consiga la aplicación como APK o como paquete .xapk, .apks o .apkm."
+
+msgid "the bundle is encrypted, so its APKs cannot be read. Get the app as an APK, or as a newer bundle."
+msgstr "el paquete está cifrado, así que no se pueden leer sus APK. Consiga la aplicación como APK o como un paquete más reciente."
+
+msgid "a split APK of the bundle is signed with another key than its base APK, so Android would refuse it."
+msgstr "un APK dividido del paquete está firmado con una clave distinta a la de su APK base, así que Android lo rechazaría."
+
+msgid "the bundle is not one app that Android can install."
+msgstr "el paquete no es una única aplicación que Android pueda instalar."
+
+msgid "the app has no 64-bit code that DSA's Android runs: x86_64, or arm64-v8a through ARM translation. Get one of those builds."
+msgstr "la aplicación no tiene código de 64 bits para el Android de DSA (x86_64, o arm64-v8a con traducción ARM). Consiga una de esas versiones."
+
+msgid "the app has only ARM code (arm64-v8a), and ARM translation is off. Turn it on under ARM apps, restart Android and install it again."
+msgstr "solo tiene código ARM (arm64-v8a) y la traducción ARM está desactivada. Actívela en Aplicaciones ARM, reinicie Android y reinstale."
+
+msgid "the app does not run on this Android: it needs another processor type, a newer Android version or a feature this device does not have."
+msgstr "no funciona en este Android: necesita otro procesador, un Android más reciente o una función que este dispositivo no tiene."
+
+msgid "the app is installed already, signed with another key. Uninstall it in Android first."
+msgstr "la aplicación ya está instalada, firmada con otra clave. Desinstálela primero en Android."
+
+msgid "the file is not a signed APK that Android can read."
+msgstr "el archivo no es un APK firmado que Android pueda leer."
+
+msgid "Android has no room for the app."
+msgstr "Android no tiene espacio para la aplicación."
+
+msgid "a newer version of the app is installed. Uninstall it in Android first."
+msgstr "hay instalada una versión más reciente de la aplicación. Desinstálela primero en Android."
+
+msgid "a policy of this Android does not allow the app."
+msgstr "una directiva de este Android no permite la aplicación."
+
+msgid "Android did not install the app."
+msgstr "Android no instaló la aplicación."
+
+msgid "Not supported: no ARM translation package is installed."
+msgstr "No compatible: no hay ningún paquete de traducción ARM instalado."
+
+msgid "Not supported: {0} {1} is installed but turned off."
+msgstr "No compatible: {0} {1} está instalado pero desactivado."
+
+msgid "Not supported: {0} {1} is turned off."
+msgstr "No compatible: {0} {1} está desactivado."
+
+msgid "Supported by {0} {1} ({2}), the translator that comes with this Android."
+msgstr "Compatible mediante {0} {1} ({2}), el traductor que incluye este Android."
+
+msgid "{0} {1} ({2}) comes with this Android. It is used unless you install another translator.\nGoing back to it removes the package that replaced it, from the next start of Android."
+msgstr "{0} {1} ({2}) viene con este Android. Se usa a menos que instale otro traductor.\nVolver a él quita el paquete que lo sustituyó, a partir del próximo inicio de Android."
+
+msgid "Use the default translator"
+msgstr "Usar el traductor predeterminado"
+
+msgid "Use"
+msgstr "Usar"
+
+msgid "licence not given"
+msgstr "licencia no indicada"
+
+msgid "Supported by {0} {1} ({2})."
+msgstr "Compatible mediante {0} {1} ({2})."
+
+msgid "Android installs apps for: {0}"
+msgstr "Android instala aplicaciones para: {0}"
+
+msgid "Android is not running, so what it supports now is not known."
+msgstr "Android no se está ejecutando, así que no se sabe qué admite ahora."
+
+msgid "Connected through this computer (NAT). Android apps see it as Wi-Fi, with no data charges."
+msgstr "Conectado a través de este equipo (NAT). Las aplicaciones de Android lo ven como Wi-Fi, sin cargos por datos."
+
+msgid "Connected to this computer's network as a device of its own (advanced networking)."
+msgstr "Conectado a la red de este equipo como un dispositivo propio (red avanzada)."
+
+msgid "Android is not running, so it has no network yet."
+msgstr "Android no se está ejecutando, así que todavía no tiene red."
+
+msgid "The DSA service does not report the network. Update DSA to see it."
+msgstr "El servicio de DSA no informa de la red. Actualice DSA para verla."
+
+msgid "None"
+msgstr "Ninguno"
+
+msgid "Manufacturer"
+msgstr "Fabricante"
+
+msgid "Brand"
+msgstr "Marca"
+
+msgid "Model"
+msgstr "Modelo"
+
+msgid "Device"
+msgstr "Dispositivo"
+
+msgid "Product name"
+msgstr "Nombre del producto"
+
+msgid "Form factor"
+msgstr "Formato"
+
+msgid "Release"
+msgstr "Versión"
+
+msgid "Build ID"
+msgstr "Id. de compilación"
+
+msgid "Incremental version"
+msgstr "Versión incremental"
+
+msgid "Build type"
+msgstr "Tipo de compilación"
+
+msgid "Tags"
+msgstr "Etiquetas"
+
+msgid "Whole fingerprint"
+msgstr "Huella completa"
+
+msgid "Verbose"
+msgstr "Detallado"
+
+msgid "Debug"
+msgstr "Depuración"
+
+msgid "Info"
+msgstr "Información"
+
+msgid "Warning"
+msgstr "Advertencia"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Fatal"
+msgstr "Grave"
+
+msgid "Paused. {0} new lines are waiting."
+msgstr "En pausa. Hay {0} líneas nuevas en espera."
+
+msgid "General"
+msgstr "General"
+
+msgid "Memory"
+msgstr "Memoria"
+
+msgid "Apps"
+msgstr "Aplicaciones"
+
+msgid "Running in the background"
+msgstr "En segundo plano"
+
+msgid "Widgets"
+msgstr "Widgets"
+
+msgid "Display and GPU"
+msgstr "Pantalla y GPU"
+
+msgid "Android version"
+msgstr "Versión de Android"
+
+msgid "Updates"
+msgstr "Actualizaciones"
+
+msgid "Device identity"
+msgstr "Identidad del dispositivo"
+
+msgid "Network"
+msgstr "Red"
+
+msgid "Advanced"
+msgstr "Avanzado"
+
+msgid "Android log"
+msgstr "Registro de Android"
+
+msgid "About"
+msgstr "Acerca de"
+
+msgid "The Android apps on this computer. Open them, change them in App info, or uninstall the ones you installed.\nAndroid starts when you open this page."
+msgstr "Las aplicaciones de Android de este equipo. Ábralas, cámbielas en Información de la aplicación o desinstale las que instaló usted.\nAndroid se inicia al abrir esta página."
+
+msgid "Manage apps"
+msgstr "Administrar aplicaciones"
+
+msgid "Open the list of apps in Android's own settings"
+msgstr "Abrir la lista de aplicaciones en la propia configuración de Android"
+
+msgid "The apps could not be read or changed"
+msgstr "No se pudieron leer ni cambiar las aplicaciones"
+
+msgid "Installed apps"
+msgstr "Aplicaciones instaladas"
+
+msgid "Search apps"
+msgstr "Buscar aplicaciones"
+
+msgid "Refresh"
+msgstr "Actualizar"
+
+msgid "No app is installed in Android yet. Open an APK file to install one."
+msgstr "Todavía no hay ninguna aplicación instalada en Android. Abra un archivo APK para instalar una."
+
+msgid "No app matches your search."
+msgstr "Ninguna aplicación coincide con la búsqueda."
+
+msgid "Open"
+msgstr "Abrir"
+
+msgid "Package"
+msgstr "Paquete"
+
+msgid "Installed"
+msgstr "Instalada"
+
+msgid "App info"
+msgstr "Información de la aplicación"
+
+msgid "Permissions, storage and notifications, in Android's settings"
+msgstr "Permisos, almacenamiento y notificaciones, en la configuración de Android"
+
+msgid "Desktop shortcut"
+msgstr "Acceso directo en el escritorio"
+
+msgid "A shortcut on the desktop that opens the app"
+msgstr "Un acceso directo en el escritorio que abre la aplicación"
+
+msgid "Create desktop shortcut"
+msgstr "Crear acceso directo en el escritorio"
+
+msgid "The desktop shortcut could not be made"
+msgstr "No se pudo crear el acceso directo en el escritorio"
+
+msgid "{0} is on the desktop."
+msgstr "{0} está en el escritorio."
+
+msgid "{0}'s windows follow the new settings from the next one that opens."
+msgstr "Las ventanas de {0} siguen la nueva configuración a partir de la próxima que se abra."
+
+msgid "Resizable"
+msgstr "Redimensionable"
+
+msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
+msgstr "Si puede cambiar el tamaño de las ventanas de esta aplicación y maximizarlas. Desactivado, cada ventana mantiene el tamaño inicial."
+
+msgid "Start below the title bar"
+msgstr "Empezar debajo de la barra de título"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Para las apps cuya barra superior queda aplastada u oculta bajo la barra de título.\nLa app empieza debajo de la barra de título en lugar de dibujar detrás de ella.\nSe aplica la próxima vez que se abra la ventana de la app."
+
+msgid "Window size when it opens"
+msgstr "Tamaño de la ventana al abrirse"
+
+msgid "The size this app's windows open at"
+msgstr "El tamaño con que se abren las ventanas de esta aplicación"
+
+msgid "Uninstall"
+msgstr "Desinstalar"
+
+msgid "This app is part of Android and cannot be uninstalled."
+msgstr "Esta aplicación forma parte de Android y no se puede desinstalar."
+
+msgid "Uninstall {0}?"
+msgstr "¿Desinstalar {0}?"
+
+msgid "{0} and its data will be removed from Android. This cannot be undone."
+msgstr "{0} y sus datos se quitarán de Android. Esta acción no se puede deshacer."
+
+msgid "{0} is uninstalled."
+msgstr "{0} se desinstaló."
+
+msgid "Not uninstalled"
+msgstr "No se desinstaló"
+
+msgid "{0} was not uninstalled: {1} ({2})"
+msgstr "{0} no se desinstaló: {1} ({2})"
+
+msgid "These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used."
+msgstr "Estas aplicaciones de Android siguen funcionando tras cerrar sus ventanas: música, descargas, una VPN u otras tareas.\nCada una tiene además un indicador en la barra superior.\nDetener una aplicación termina lo que está haciendo y libera la memoria que usaba."
+
+msgid "Stopping apps"
+msgstr "Detener aplicaciones"
+
+msgid "Ask before stopping an app from its indicator"
+msgstr "Preguntar antes de detener una aplicación desde su indicador"
+
+msgid "Turn this back on if you chose not to be asked again."
+msgstr "Vuelva a activar esto si eligió que no se le volviera a preguntar."
+
+msgid "The setting was not changed"
+msgstr "No se cambió la configuración"
+
+msgid "The apps that run in the background could not be read or changed"
+msgstr "No se pudieron leer ni cambiar las aplicaciones en segundo plano"
+
+msgid "No app runs in the background."
+msgstr "No hay ninguna aplicación en segundo plano."
+
+msgid "Playing {0}"
+msgstr "Reproduciendo {0}"
+
+msgid "Paused: {0}"
+msgstr "En pausa: {0}"
+
+msgid "Stop"
+msgstr "Detener"
+
+msgid "{0} was stopped."
+msgstr "{0} se detuvo."
+
+msgid "On your desktop"
+msgstr "En el escritorio"
+
+msgid "Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page."
+msgstr "Coloque en el escritorio los widgets que ofrecen sus aplicaciones de Android. Cada widget tiene su propia ventana, debajo de las demás.\nMantenga pulsado un widget para editarlo: arrástrelo para moverlo y arrastre sus tiradores para cambiar su tamaño.\nHaga clic derecho en un widget para ver su configuración, sus tamaños y Quitar. Android se inicia al abrir esta página."
+
+msgid "Widgets your apps offer"
+msgstr "Widgets que ofrecen sus aplicaciones"
+
+msgid "Widgets could not be read or changed"
+msgstr "No se pudieron leer ni cambiar los widgets"
+
+msgid "No widget is on your desktop yet."
+msgstr "Todavía no hay ningún widget en el escritorio."
+
+msgid "No app in Android offers a widget."
+msgstr "Ninguna aplicación de Android ofrece widgets."
+
+msgid "At {0}, {1}, {2} × {3}"
+msgstr "En {0}, {1}, {2} × {3}"
+
+msgid "Remove"
+msgstr "Quitar"
+
+msgid "{0} was removed from your desktop."
+msgstr "{0} se quitó del escritorio."
+
+msgid "asks you to set it up"
+msgstr "pide que lo configure"
+
+msgid "Add to desktop"
+msgstr "Añadir al escritorio"
+
+msgid "{0} is on your desktop."
+msgstr "{0} está en el escritorio."
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "The folder could not be opened"
+msgstr "No se pudo abrir la carpeta"
+
+msgid "{0} does not exist yet, or you may not open it."
+msgstr "{0} todavía no existe o no tiene permiso para abrirla."
+
+msgid "Android sends its log only while this page is open, and nothing is written to disk.\nSave diagnostics gathers what a problem report needs into one zip file."
+msgstr "Android envía su registro solo mientras esta página está abierta, y no se escribe nada en el disco.\nGuardar diagnóstico reúne en un archivo zip lo que necesita un informe de problemas."
+
+msgid "Filter by tag or text"
+msgstr "Filtrar por etiqueta o texto"
+
+msgid "Pause"
+msgstr "Pausar"
+
+msgid "Save diagnostics"
+msgstr "Guardar diagnóstico"
+
+msgid "The log cannot be read"
+msgstr "No se puede leer el registro"
+
+msgid "Gathering the diagnostics. This takes a minute or more."
+msgstr "Recopilando el diagnóstico. Tarda un minuto o más."
+
+msgid "Saved the diagnostics to {0}."
+msgstr "El diagnóstico se guardó en {0}."
+
+msgid "DSA Settings"
+msgstr "Configuración de DSA"
+
+msgid "Not installed"
+msgstr "No instalada"
+
+msgid "Only APK files and split APK bundles can be installed: {0}"
+msgstr "Solo se pueden instalar archivos APK y paquetes de APK divididos: {0}"
+
+msgid "Installing {0} in Android…"
+msgstr "Instalando {0} en Android…"
+
+msgid "{0} is installed ({1}). Open it from the app grid."
+msgstr "{0} está instalada ({1}). Ábrala desde la cuadrícula de aplicaciones."
+
+msgid "{0} was not installed: {1} ({2})"
+msgstr "{0} no se instaló: {1} ({2})"
+
+msgid "{0} did not reach Android. {1}"
+msgstr "{0} no llegó a Android. {1}"
+
+msgid "State"
+msgstr "Estado"
+
+msgid "Desktop Subsystem for Android™ runs Android in its own lightweight virtual machine and shows each app in its own window."
+msgstr "Desktop Subsystem for Android™ ejecuta Android en su propia máquina virtual ligera y muestra cada aplicación en su propia ventana."
+
+msgid "Android"
+msgstr "Android"
+
+msgid "Start"
+msgstr "Iniciar"
+
+msgid "Android is not ready"
+msgstr "Android no está listo"
+
+msgid "Last stopped"
+msgstr "Última detención"
+
+msgid "Update"
+msgstr "Actualizar"
+
+msgid "More"
+msgstr "Más"
+
+msgid "Freeze Android now"
+msgstr "Congelar Android ahora"
+
+msgid "Stops every process in Android until you open one of its windows again. Notifications, alarms and widgets stop with it."
+msgstr "Detiene todos los procesos de Android hasta que vuelva a abrir una ventana. También se detienen notificaciones, alarmas y widgets."
+
+msgid "Freeze"
+msgstr "Congelar"
+
+msgid "Open my log folder"
+msgstr "Abrir mi carpeta de registros"
+
+msgid "The logs of the window manager and the app windows, for reporting a problem."
+msgstr "Los registros del gestor de ventanas y de las ventanas de aplicaciones, para informar de un problema."
+
+msgid "Open the service's log folder (administrators)"
+msgstr "Abrir la carpeta de registros del servicio (administradores)"
+
+msgid "The logs of the DSA service and of Android itself."
+msgstr "Los registros del servicio de DSA y del propio Android."
+
+msgid "Ask the DSA service for the state again."
+msgstr "Volver a pedir el estado al servicio de DSA."
+
+msgid "Something went wrong"
+msgstr "Algo salió mal"
+
+msgid "On this computer"
+msgstr "En este equipo"
+
+msgid "In use on this computer"
+msgstr "En uso en este equipo"
+
+msgid "The RAM the virtual machine, the window manager and the app windows hold now."
+msgstr "La RAM que ocupan ahora la máquina virtual, el gestor de ventanas y las ventanas de aplicaciones."
+
+msgid "Android's VM now"
+msgstr "La VM de Android ahora"
+
+msgid "The memory the VM holds on this computer, and how much of it Android uses"
+msgstr "La memoria que ocupa la VM en este equipo y cuánta usa Android"
+
+msgid "Inside Android"
+msgstr "Dentro de Android"
+
+msgid "Available to Android"
+msgstr "Disponible para Android"
+
+msgid "Android's kernel"
+msgstr "Kernel de Android"
+
+msgid "Largest processes"
+msgstr "Procesos más grandes"
+
+msgid "Memory limit"
+msgstr "Límite de memoria"
+
+msgid "The most memory Android may grow to. Android takes only what it needs and returns the rest at once.\nAutomatic sets no fixed limit: up to this computer's memory less what Linux keeps.\nTakes effect the next time Android starts."
+msgstr "La memoria máxima que puede alcanzar Android. Android toma solo lo que necesita y devuelve el resto de inmediato.\nAutomático no fija ningún límite: hasta la memoria de este equipo menos la que reserva Linux.\nSe aplica la próxima vez que se inicie Android."
+
+msgid "The memory could not be measured"
+msgstr "No se pudo medir la memoria"
+
+msgid "{0}: used by Android {1}, free, not yet returned {2}"
+msgstr "{0}: usada por Android {1}, libre pero aún no devuelta {2}"
+
+msgid "Android is not running, so it takes no memory on this computer."
+msgstr "Android no se está ejecutando, así que no ocupa memoria en este equipo."
+
+msgid "No report yet. Android reports how it uses its memory a few minutes after it starts."
+msgstr "Todavía no hay informe. Android informa de cómo usa su memoria unos minutos después de iniciarse."
+
+msgid "Reported {0} seconds ago"
+msgstr "Informado hace {0} segundos"
+
+msgid "{0} available of {1}"
+msgstr "{0} disponibles de {1}"
+
+msgid "Render GPU"
+msgstr "GPU de renderizado"
+
+msgid "The GPU that draws Android apps.\nThe default, the primary monitor's GPU, keeps frames on one GPU and lets a laptop's discrete GPU sleep."
+msgstr "La GPU que dibuja las aplicaciones de Android.\nLa predeterminada, la GPU del monitor principal, mantiene los fotogramas en una GPU y deja dormir la GPU dedicada de un portátil."
+
+msgid "A new render GPU takes effect when the window manager starts again: at the next sign-in, or when you restart it below."
+msgstr "El cambio de GPU de renderizado se aplica cuando se reinicia el gestor de ventanas: al iniciar sesión de nuevo, o si lo reinicia abajo."
+
+msgid "GPU of the primary monitor"
+msgstr "GPU del monitor principal"
+
+msgid "What the default choice renders on now."
+msgstr "Dónde renderiza ahora la opción predeterminada."
+
+msgid "Restart the window manager"
+msgstr "Reiniciar el gestor de ventanas"
+
+msgid "Open Android app windows close and come back."
+msgstr "Las ventanas abiertas de aplicaciones de Android se cierran y vuelven a abrirse."
+
+msgid "Restart"
+msgstr "Reiniciar"
+
+msgid "Restart the window manager?"
+msgstr "¿Reiniciar el gestor de ventanas?"
+
+msgid "The windows of Android apps close for a moment. Android and its apps keep running."
+msgstr "Las ventanas de las aplicaciones de Android se cierran un momento. Android y sus aplicaciones siguen en ejecución."
+
+msgid "The window manager could not be restarted"
+msgstr "No se pudo reiniciar el gestor de ventanas"
+
+msgid "Chosen by the window manager when it starts"
+msgstr "La elige el gestor de ventanas al iniciarse"
+
+msgid "Running now"
+msgstr "En ejecución ahora"
+
+msgid "Build"
+msgstr "Compilación"
+
+msgid "Security patch level"
+msgstr "Nivel de parche de seguridad"
+
+msgid "Changing the Android version"
+msgstr "Cambiar la versión de Android"
+
+msgid "Every user of this computer runs the same Android version, so changing it needs an administrator.\nThe chosen version keeps getting security updates.\nWhen its support ends, DSA moves to the next version and keeps your apps."
+msgstr "Todos los usuarios de este equipo ejecutan la misma versión de Android, así que cambiarla requiere un administrador.\nLa versión elegida sigue recibiendo actualizaciones de seguridad.\nCuando termine su soporte, DSA pasa a la siguiente versión y conserva sus aplicaciones."
+
+msgid "Version to use"
+msgstr "Versión que se usará"
+
+msgid "DSA supports the latest two Android versions. Some apps run on only one of them."
+msgstr "DSA admite las dos versiones más recientes de Android. Algunas aplicaciones solo funcionan en una de ellas."
+
+msgid "Change"
+msgstr "Cambiar"
+
+msgid "Android {0} is chosen. It is downloaded now and used the next time Android starts."
+msgstr "Se eligió Android {0}. Se descarga ahora y se usará la próxima vez que se inicie Android."
+
+msgid "Supported versions: Android {0}"
+msgstr "Versiones compatibles: Android {0}"
+
+msgid "Move to a newer Android?"
+msgstr "¿Pasar a un Android más reciente?"
+
+msgid "Android {0} is downloaded and used the next time Android starts.\n\nYour apps and their data move along. Moving back later erases the data."
+msgstr "Android {0} se descarga y se usará la próxima vez que se inicie Android.\n\nSus aplicaciones y sus datos se conservan. Volver atrás más adelante borra los datos."
+
+msgid "Erase Android data to move to an older version?"
+msgstr "¿Borrar los datos de Android para pasar a una versión anterior?"
+
+msgid "Android {0} is older than the Android {1} that runs now. Android cannot read data a newer version wrote.\n\nMoving erases the Android data of every user of this computer:\n• every app they installed\n• the accounts they signed in to\n• the data of every app\n\nEach user's Android then starts as it was first installed. DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Android {0} es anterior al Android {1} que se ejecuta ahora. Android no puede leer los datos que escribió una versión más reciente.\n\nEl cambio borra los datos de Android de todos los usuarios de este equipo:\n• todas las aplicaciones que instalaron\n• las cuentas en las que iniciaron sesión\n• los datos de todas las aplicaciones\n\nEl Android de cada usuario se inicia entonces como recién instalado. La configuración de DSA se conserva.\n\nEsta acción no se puede deshacer."
+
+msgid "Erase data and change"
+msgstr "Borrar datos y cambiar"
+
+msgid "New versions of DSA come through the system's package manager and software center, with the other updates.\nInstalling DSA added its signed package repository."
+msgstr "Las nuevas versiones de DSA llegan a través del gestor de paquetes y el centro de software del sistema, con las demás actualizaciones.\nAl instalar DSA se añadió su repositorio de paquetes firmado."
+
+msgid "Open software updates"
+msgstr "Abrir las actualizaciones de software"
+
+msgid "Shows the updates the system has for DSA and the other installed programs."
+msgstr "Muestra las actualizaciones que el sistema tiene para DSA y los demás programas instalados."
+
+msgid "No software center was found"
+msgstr "No se encontró ningún centro de software"
+
+msgid "Update DSA with the system's package manager, such as apt or dnf."
+msgstr "Actualice DSA con el gestor de paquetes del sistema, como apt o dnf."
+
+msgid "Android image"
+msgstr "Imagen de Android"
+
+msgid "This setting applies to every user of this computer, so changing it asks for an administrator's permission."
+msgstr "Esta configuración se aplica a todos los usuarios de este equipo, así que para cambiarla se pide permiso de administrador."
+
+msgid "The newest supported version (now Android {0})"
+msgstr "La versión compatible más reciente (ahora Android {0})"
+
+msgid "Android {0} and its security updates"
+msgstr "Android {0} y sus actualizaciones de seguridad"
+
+msgid "No Android update is waiting. DSA checks every day, and restarts Android into an update once no app window is open."
+msgstr "No hay actualizaciones de Android pendientes. DSA comprueba a diario y reinicia Android para actualizar cuando no hay ventanas abiertas."
+
+msgid "Android {0} is downloaded. Restart Android to use it now."
+msgstr "Android {0} está descargado. Reinicie Android para usarlo ahora."
+
+msgid "Restart now"
+msgstr "Reiniciar ahora"
+
+msgid "Restart Android now?"
+msgstr "¿Reiniciar Android ahora?"
+
+msgid "Android restarts into Android {0}.\n\nIts app windows close. Open the apps again once it has started."
+msgstr "Android se reinicia con Android {0}.\n\nSus ventanas de aplicaciones se cierran. Vuelva a abrir las aplicaciones cuando se haya iniciado."
+
+msgid "Restart Android into updates by itself"
+msgstr "Reiniciar Android automáticamente para actualizar"
+
+msgid "On by default. With no app window open, Android restarts into a downloaded update at once.\nWith windows open, DSA asks first or waits until you close them.\nOff, an update is used the next time you start Android."
+msgstr "Activado de forma predeterminada. Sin ventanas abiertas, Android se reinicia al momento con una actualización descargada.\nCon ventanas abiertas, DSA pregunta antes o espera a que las cierre.\nDesactivado, la actualización se usa la próxima vez que inicie Android."
+
+msgid "Version it follows"
+msgstr "Versión que sigue"
+
+msgid "Android update"
+msgstr "Actualización de Android"
+
+msgid "Check now"
+msgstr "Comprobar ahora"
+
+msgid "Device specifications"
+msgstr "Especificaciones del dispositivo"
+
+msgid "What Android reports"
+msgstr "Lo que informa Android"
+
+msgid "Not reported"
+msgstr "No informado"
+
+msgid "Get pre-release versions"
+msgstr "Obtener versiones preliminares"
+
+msgid "Also install versions that are still being finished. Every release before 1.0 is a pre-release.\nThe package manager then reads DSA's pre-release repository.\nTurning this off never moves DSA back: it waits for a stable release newer than the one installed."
+msgstr "Instalar también versiones que aún se están terminando. Todas las versiones anteriores a la 1.0 son preliminares.\nEl gestor de paquetes lee entonces el repositorio de versiones preliminares de DSA.\nDesactivarlo nunca hace volver atrás a DSA: espera a una versión estable más reciente que la instalada."
+
+msgid "This installation does not follow a release channel."
+msgstr "Esta instalación no sigue ningún canal de publicación."
+
+msgid "Update the Android image automatically"
+msgstr "Actualizar la imagen de Android automáticamente"
+
+msgid "Download signed security updates and new versions of Android.\nThey apply when Android restarts, as the Android update settings above say."
+msgstr "Descargar actualizaciones de seguridad firmadas y nuevas versiones de Android.\nSe aplican cuando Android se reinicia, según la configuración de actualización de Android de arriba."
+
+msgid "This installation does not offer image updates."
+msgstr "Esta instalación no ofrece actualizaciones de imagen."
+
+msgid "Desktop Subsystem for Android™"
+msgstr "Desktop Subsystem for Android™"
+
+msgid "Thisisthepy"
+msgstr "Thisisthepy"
+
+msgid "DSA Settings version"
+msgstr "Versión de Configuración de DSA"
+
+msgid "DSA service version"
+msgstr "Versión del servicio de DSA"
+
+msgid "Android image version"
+msgstr "Versión de la imagen de Android"
+
+msgid "The Android image the next start boots. Image updates change it."
+msgstr "La imagen de Android que arranca el próximo inicio. Las actualizaciones de imagen la cambian."
+
+msgid "Licences"
+msgstr "Licencias"
+
+msgid "DSA is licensed under the Apache License 2.0. Open the licences of every component it ships."
+msgstr "DSA se distribuye con la Apache License 2.0. Abra las licencias de todos los componentes que incluye."
+
+msgid "Source code"
+msgstr "Código fuente"
+
+msgid "Desktop Subsystem for Android is an independent open source project.\nIt is not affiliated with, endorsed by or sponsored by Microsoft or Google."
+msgstr "Desktop Subsystem for Android es un proyecto independiente de código abierto.\nNo está afiliado a Microsoft ni a Google, ni cuenta con su respaldo o patrocinio."
+
+msgid "Android is a trademark of Google LLC."
+msgstr "Android es una marca comercial de Google LLC."
+
+msgid "The names and build fingerprint Android reports to apps. Leave a box empty to keep the value shown.\nChanges apply from the next start of Android."
+msgstr "Los nombres y la huella de compilación que Android comunica a las aplicaciones. Deje un campo vacío para conservar el valor mostrado.\nLos cambios se aplican a partir del próximo inicio de Android."
+
+msgid "Apps may notice"
+msgstr "Las aplicaciones pueden notarlo"
+
+msgid "Changing the model or the fingerprint can change how apps behave.\nSome check the device before they run, and payment and integrity checks may fail."
+msgstr "Cambiar el modelo o la huella puede cambiar el comportamiento de las aplicaciones.\nAlgunas comprueban el dispositivo antes de ejecutarse, y los pagos y las comprobaciones de integridad pueden fallar."
+
+msgid "Build fingerprint"
+msgstr "Huella de compilación"
+
+msgid "Fingerprint from the next start"
+msgstr "Huella a partir del próximo inicio"
+
+msgid "Restart Android now"
+msgstr "Reiniciar Android ahora"
+
+msgid "Reset to defaults"
+msgstr "Restablecer valores predeterminados"
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "Saved. Android uses it from its next start."
+msgstr "Guardado. Android lo usará a partir de su próximo inicio."
+
+msgid "Saved. Restart Android to use it now."
+msgstr "Guardado. Reinicie Android para usarlo ahora."
+
+msgid "Reset the device identity?"
+msgstr "¿Restablecer la identidad del dispositivo?"
+
+msgid "Every value goes back to its default: this computer's, or DSA's own where the computer does not say.\n\nIt applies from the next start of Android."
+msgstr "Todos los valores vuelven a su valor predeterminado: el de este equipo, o el de DSA cuando el equipo no lo indica.\n\nSe aplica a partir del próximo inicio de Android."
+
+msgid "Back to the defaults. Android uses them from its next start."
+msgstr "Valores predeterminados restablecidos. Android los usará a partir de su próximo inicio."
+
+msgid "Back to the defaults. Restart Android to use them now."
+msgstr "Valores predeterminados restablecidos. Reinicie Android para usarlos ahora."
+
+msgid "Android started again with this identity."
+msgstr "Android se reinició con esta identidad."
+
+msgid "Android's network"
+msgstr "Red de Android"
+
+msgid "Connection"
+msgstr "Conexión"
+
+msgid "Address"
+msgstr "Dirección"
+
+msgid "DNS"
+msgstr "DNS"
+
+msgid "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps."
+msgstr "Responde el resolvedor de este equipo, así que su archivo hosts, VPN y filtros DNS se aplican a las aplicaciones de Android."
+
+msgid "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}"
+msgstr "El resolvedor de este equipo no responde, así que Android consulta los servidores DNS de la red: {0}"
+
+msgid "Gateway"
+msgstr "Puerta de enlace"
+
+msgid "Advanced networking is not in use"
+msgstr "La red avanzada no está en uso"
+
+msgid "Restart Android to apply"
+msgstr "Reinicie Android para aplicar el cambio"
+
+msgid "The change applies the next time Android starts. Stop Android on the General page, then open an app."
+msgstr "El cambio se aplica la próxima vez que se inicie Android. Detenga Android en la página General y abra una aplicación."
+
+msgid "Advanced networking"
+msgstr "Red avanzada"
+
+msgid "Off by default. When on, Android joins this computer's network as a device of its own.\nOther devices on the network and Android apps can then reach each other directly.\nPrograms on this computer can always reach a server in Android at the address above."
+msgstr "Desactivado de forma predeterminada. Activado, Android se une a la red de este equipo como un dispositivo propio.\nLos demás dispositivos de la red y las aplicaciones de Android pueden entonces comunicarse directamente.\nLos programas de este equipo siempre pueden llegar a un servidor de Android en la dirección de arriba."
+
+msgid "Trusted certificates"
+msgstr "Certificados de confianza"
+
+msgid "Root certificates you or an administrator added to this computer, such as a company's or a security program's.\nThe system's own certificates are not listed: Android has its own."
+msgstr "Certificados raíz que usted o un administrador añadieron a este equipo, como los de una empresa o un programa de seguridad.\nNo se muestran los certificados propios del sistema: Android tiene los suyos."
+
+msgid "Trust certificates added to this computer"
+msgstr "Confiar en los certificados añadidos a este equipo"
+
+msgid "On by default. Android apps trust the certificates listed below as they trust Android's own.\nSites and servers this computer trusts then open in Android too. The change applies at once."
+msgstr "Activado de forma predeterminada. Las aplicaciones de Android confían en los certificados de abajo igual que en los de Android.\nAsí, los sitios y servidores en los que confía este equipo también se abren en Android. El cambio se aplica al instante."
+
+msgid "This computer's trusted root certificates"
+msgstr "Certificados raíz de confianza de este equipo"
+
+msgid "This computer's group policy"
+msgstr "Directiva de grupo de este equipo"
+
+msgid "This computer's enterprise certificates"
+msgstr "Certificados empresariales de este equipo"
+
+msgid "Your trusted root certificates"
+msgstr "Sus certificados raíz de confianza"
+
+msgid "Your group policy"
+msgstr "Su directiva de grupo"
+
+msgid "This computer's administrator trust settings"
+msgstr "Configuración de confianza del administrador de este equipo"
+
+msgid "Added to the system's certificate store"
+msgstr "Añadido al almacén de certificados del sistema"
+
+msgid "SHA-256 {0}"
+msgstr "SHA-256 {0}"
+
+msgid "A certificate without a name"
+msgstr "Un certificado sin nombre"
+
+msgid "Issued by {0}"
+msgstr "Emitido por {0}"
+
+msgid "No added root certificates were found on this computer."
+msgstr "No se encontraron certificados raíz añadidos en este equipo."
+
+msgid "Files"
+msgstr "Archivos"
+
+msgid "Send files to Android apps"
+msgstr "Enviar archivos a aplicaciones de Android"
+
+msgid "To send a file to an Android app, drag it from the file manager onto the app's window. An APK you drop is installed."
+msgstr "Para enviar un archivo a una aplicación de Android, arrástrelo desde el gestor de archivos a su ventana. Un APK que suelte se instala."
+
+msgid "Share folders with Android"
+msgstr "Compartir carpetas con Android"
+
+msgid "On by default. The folders chosen below show in Android's shared storage, for Android apps to open and save files.\nApps need Android's storage permission, and can do only what your own account may do."
+msgstr "Activado de forma predeterminada. Las carpetas de abajo aparecen en el almacenamiento compartido de Android para abrir y guardar archivos.\nLas aplicaciones necesitan el permiso de almacenamiento de Android y solo pueden hacer lo que permite su cuenta."
+
+msgid "Shared folders"
+msgstr "Carpetas compartidas"
+
+msgid "A folder you clear is taken away from Android at once."
+msgstr "Una carpeta que desmarque se retira de Android al instante."
+
+msgid "Android files"
+msgstr "Archivos de Android"
+
+msgid "Opens Android's shared storage in the file manager: the files Android apps saved, such as photos.\nAndroid starts if it is not running. DSA Files in the app grid does the same."
+msgstr "Abre en el gestor de archivos el almacenamiento compartido de Android: los archivos que guardaron sus aplicaciones, como fotos.\nAndroid se inicia si no se está ejecutando. DSA Files en la cuadrícula de aplicaciones hace lo mismo."
+
+msgid "Open web links in Android apps"
+msgstr "Abrir enlaces web en aplicaciones de Android"
+
+msgid "Off by default: a web link you tap in an Android app opens in your default browser on this computer.\nOn, it opens in an Android app, as on a phone.\nA link an installed app has verified as its own opens in that app either way."
+msgstr "Desactivado de forma predeterminada: los enlaces web que pulse en Android se abren en el navegador predeterminado de este equipo.\nActivado, se abren en una aplicación de Android, como en un teléfono.\nUn enlace que una aplicación instalada haya verificado como suyo se abre en esa aplicación en ambos casos."
+
+msgid "ARM apps"
+msgstr "Aplicaciones ARM"
+
+msgid "Run apps built only for ARM"
+msgstr "Ejecutar aplicaciones creadas solo para ARM"
+
+msgid "Many Android apps have code only for ARM processors. They run here only through an ARM translator.\nAndroid uses its own open source translator, unless you install another (dsa arm-translation install) or Google's.\nOff, Android uses no translator at all. Changes apply from the next start of Android.\nOnly 64-bit ARM apps (arm64-v8a) can run."
+msgstr "Muchas aplicaciones de Android solo tienen código para procesadores ARM. Aquí solo se ejecutan mediante un traductor ARM.\nAndroid usa su propio traductor de código abierto, salvo que instale otro (dsa arm-translation install) o el de Google.\nDesactivado, Android no usa ningún traductor. Los cambios se aplican a partir del próximo inicio de Android.\nSolo se pueden ejecutar aplicaciones ARM de 64 bits (arm64-v8a)."
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Android started before this change. Stop and start Android for ARM apps to follow it."
+msgstr "Android se inició antes de este cambio. Detenga e inicie Android para que las aplicaciones ARM lo apliquen."
+
+msgid "Remove the ARM translation package"
+msgstr "Quitar el paquete de traducción ARM"
+
+msgid "Deletes the package from your add-on disk. ARM apps you installed stay, but do not run after Android restarts."
+msgstr "Elimina el paquete de su disco de complementos. Las aplicaciones ARM instaladas siguen ahí, pero no funcionan tras reiniciar Android."
+
+msgid "Developer"
+msgstr "Desarrollador"
+
+msgid "Developer mode"
+msgstr "Modo de desarrollador"
+
+msgid "Off by default. When on, adb on this computer connects to Android without asking in Android.\nThe port is reachable only from this computer. Turn it off when you are done."
+msgstr "Desactivado de forma predeterminada. Activado, adb en este equipo se conecta a Android sin preguntar en Android.\nEl puerto solo es accesible desde este equipo. Desactívelo cuando termine."
+
+msgid "Connect adb automatically"
+msgstr "Conectar adb automáticamente"
+
+msgid "On by default. While developer mode is on, Android shows in adb devices and Android Studio without adb connect.\nAfter adb disconnect, it stays off until the adb server restarts."
+msgstr "Activado de forma predeterminada. En modo de desarrollador, Android aparece en adb devices y Android Studio sin adb connect.\nTras adb disconnect, queda desactivada hasta que se reinicie el servidor de adb."
+
+msgid "Automatic connection"
+msgstr "Conexión automática"
+
+msgid "Not connecting: developer mode or automatic connection is off."
+msgstr "Sin conexión: el modo de desarrollador o la conexión automática están desactivados."
+
+msgid "Waiting for adb: Android connects when adb starts on this computer."
+msgstr "Esperando a adb: Android se conecta cuando adb se inicia en este equipo."
+
+msgid "Waiting for Android: it connects once Android is running."
+msgstr "Esperando a Android: se conecta en cuanto Android esté en ejecución."
+
+msgid "Connected: adb lists Android."
+msgstr "Conectado: adb muestra Android."
+
+msgid "Disconnected with adb disconnect. Android connects again when the adb server restarts."
+msgstr "Desconectado con adb disconnect. Android vuelve a conectarse cuando se reinicia el servidor de adb."
+
+msgid "Connect adb"
+msgstr "Conectar adb"
+
+msgid "While developer mode is on and Android is running, run this command:"
+msgstr "Con el modo de desarrollador activado y Android en ejecución, ejecute este comando:"
+
+msgid "Port"
+msgstr "Puerto"
+
+msgid "Share the clipboard with Android"
+msgstr "Compartir el portapapeles con Android"
+
+msgid "On by default: text copied on this computer can be pasted in Android apps, and the other way round.\nImages stay where they were copied."
+msgstr "Activado de forma predeterminada: el texto copiado en este equipo se puede pegar en aplicaciones de Android, y al revés.\nLas imágenes se quedan donde se copiaron."
+
+msgid "Freeze Android when idle"
+msgstr "Congelar Android en inactividad"
+
+msgid "Off by default: an idle Android dozes and still receives notifications.\nFrozen, it uses no CPU but receives nothing until you open an app."
+msgstr "Desactivado de forma predeterminada: un Android inactivo entra en reposo y sigue recibiendo notificaciones.\nCongelado, no usa CPU, pero no recibe nada hasta que abra una aplicación."
+
+msgid "Diagnostics"
+msgstr "Diagnóstico"
+
+msgid "The traces make the DSA logs below grow, so turn them on only to report a problem.\nThey apply to every user of this computer, so changing them asks for an administrator's permission."
+msgstr "Los seguimientos hacen crecer los registros de DSA de abajo, así que actívelos solo para informar de un problema.\nSe aplican a todos los usuarios de este equipo, así que para cambiarlos se pide permiso de administrador."
+
+msgid "Input trace"
+msgstr "Seguimiento de entrada"
+
+msgid "Every DSA process records when each touch, click and key reaches it, to measure the delay to the picture.\nOff by default."
+msgstr "Cada proceso de DSA registra cuándo le llega cada toque, clic y tecla, para medir el retraso hasta la imagen.\nDesactivado de forma predeterminada."
+
+msgid "Resize trace"
+msgstr "Seguimiento de cambio de tamaño"
+
+msgid "Every DSA process records each stage of each window resize, to find where it is slow or flickers.\nOff by default."
+msgstr "Cada proceso de DSA registra cada fase de cada cambio de tamaño de ventana, para encontrar dónde es lento o parpadea.\nDesactivado de forma predeterminada."
+
+msgid "Logs"
+msgstr "Registros"
+
+msgid "The logs of your window manager and app windows."
+msgstr "Los registros de su gestor de ventanas y de las ventanas de aplicaciones."
+
+msgid "Command line"
+msgstr "Línea de comandos"
+
+msgid "The dsa command"
+msgstr "El comando dsa"
+
+msgid "dsa status"
+msgstr "dsa status"
+
+msgid "dsa settings"
+msgstr "dsa settings"
+
+msgid "dsa memory"
+msgstr "dsa memory"
+
+msgid "Everything on these pages is also available from a terminal."
+msgstr "Todo lo de estas páginas también está disponible desde una terminal."
+
+msgid "Reset"
+msgstr "Restablecer"
+
+msgid "Reset Android's data"
+msgstr "Restablecer los datos de Android"
+
+msgid "Erases every app you installed, your accounts and every app's data. Android starts as it was first installed.\nThe Android image and these settings stay."
+msgstr "Borra todas las aplicaciones que instaló, sus cuentas y los datos de todas las aplicaciones. Android se inicia como recién instalado.\nLa imagen de Android y esta configuración se conservan."
+
+msgid "Reset Android's data?"
+msgstr "¿Restablecer los datos de Android?"
+
+msgid "This erases from Android:\n• every app you installed\n• the accounts you signed in to\n• the data of every app\n\nAndroid stops now. Its next start is as it was first installed.\n\nThe Android image and DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Esto borra de Android:\n• todas las aplicaciones que instaló\n• las cuentas en las que inició sesión\n• los datos de todas las aplicaciones\n\nAndroid se detiene ahora. Su próximo inicio será como recién instalado.\n\nLa imagen de Android y la configuración de DSA se conservan.\n\nEsta acción no se puede deshacer."
+
+msgid "Android's data was reset"
+msgstr "Se restablecieron los datos de Android"
+
+msgid "The next app you open starts Android as it was first installed."
+msgstr "La próxima aplicación que abra iniciará Android como recién instalado."
+
+msgid "Documents"
+msgstr "Documentos"
+
+msgid "Downloads"
+msgstr "Descargas"
+
+msgid "Pictures"
+msgstr "Imágenes"
+
+msgid "Music"
+msgstr "Música"
+
+msgid "Videos"
+msgstr "Vídeos"
+
+msgid "Desktop"
+msgstr "Escritorio"
+
+msgid "OK"
+msgstr "Aceptar"
+
+msgid "Copy"
+msgstr "Copiar"
+
+msgid "Google Play"
+msgstr "Google Play"
+
+msgid "Google Play services and the Play Store are not part of DSA.\nWhen you ask, DSA downloads LiteGapps Core, a public package of Google's apps, and installs it in your Android.\nWithout it, the rest of DSA works as before."
+msgstr "Los servicios de Google Play y Play Store no forman parte de DSA.\nSi lo pide, DSA descarga LiteGapps Core, un paquete público de aplicaciones de Google, y lo instala en su Android.\nSin él, el resto de DSA funciona igual que antes."
+
+msgid "LiteGapps {0} {1} for Android {2} ({3})"
+msgstr "LiteGapps {0} {1} para Android {2} ({3})"
+
+msgid "Installed: {0}. Restart Android to start using it."
+msgstr "Instalado: {0}. Reinicie Android para empezar a usarlo."
+
+msgid "Removed. The Google apps stay in Android until it restarts."
+msgstr "Quitado. Las aplicaciones de Google permanecen en Android hasta que se reinicie."
+
+msgid "Installed: {0}."
+msgstr "Instalado: {0}."
+
+msgid "{0} was installed by an older DSA and is no longer used, so Android starts without Google's apps. Install Google Play again."
+msgstr "{0} es de una versión anterior de DSA y ya no se usa, así que Android se inicia sin las aplicaciones de Google. Reinstale Google Play."
+
+msgid "Not installed."
+msgstr "No instalado."
+
+msgid "Downloaded from the LiteGapps project: {0}"
+msgstr "Descargado del proyecto LiteGapps: {0}"
+
+msgid "Downloading and installing Google Play. This can take several minutes."
+msgstr "Descargando e instalando Google Play. Puede tardar varios minutos."
+
+msgid "Enter this number on Google's registration page."
+msgstr "Introduzca este número en la página de registro de Google."
+
+msgid "It shows here once Google Play is installed and Android has started."
+msgstr "Aparece aquí cuando Google Play esté instalado y Android se haya iniciado."
+
+msgid "Android started before this change. Stop and start Android for Google Play to follow it."
+msgstr "Android se inició antes de este cambio. Detenga e inicie Android para que Google Play lo aplique."
+
+msgid "Install Google Play"
+msgstr "Instalar Google Play"
+
+msgid "Downloads LiteGapps Core for your Android version (about 120 to 260 MB) from the LiteGapps project, checks it and installs it.\nAndroid starts if it is not running. Google Play is there from the next start of Android."
+msgstr "Descarga LiteGapps Core para su versión de Android (unos 120 a 260 MB) del proyecto LiteGapps, lo comprueba y lo instala.\nAndroid se inicia si no se está ejecutando. Google Play estará disponible a partir del próximo inicio de Android."
+
+msgid "Install"
+msgstr "Instalar"
+
+msgid "Remove Google Play"
+msgstr "Quitar Google Play"
+
+msgid "Deletes Google's apps from your add-on disk. They are gone from the next start of Android."
+msgstr "Elimina las aplicaciones de Google de su disco de complementos. Desaparecen a partir del próximo inicio de Android."
+
+msgid "Google's terms"
+msgstr "Condiciones de Google"
+
+msgid "Google's ARM translator"
+msgstr "Traductor ARM de Google"
+
+msgid "Installs the ARM translator from the Android emulator image Google offers for this Android version.\nDownloads about 2 GB from Google, under Google's Android SDK License, and keeps only the translator.\nNothing is downloaded until you agree. DSA does not include or pass on Google's translator.\nA package built from another translator, such as Digitalis, does the same job."
+msgstr "Instala el traductor ARM de la imagen del emulador de Android que Google ofrece para esta versión de Android.\nDescarga unos 2 GB de Google, bajo la Licencia del SDK de Android, y conserva solo el traductor.\nNo se descarga nada hasta que acepte. DSA no incluye ni redistribuye el traductor de Google.\nUn paquete creado con otro traductor, como Digitalis, hace lo mismo."
+
+msgid "Get"
+msgstr "Obtener"
+
+msgid "Android SDK License"
+msgstr "Licencia del SDK de Android"
+
+msgid "Google's terms for the emulator image the translator comes from."
+msgstr "Las condiciones de Google para la imagen del emulador de la que procede el traductor."
+
+msgid "Get Google's ARM translator?"
+msgstr "¿Obtener el traductor ARM de Google?"
+
+msgid "Accept and download"
+msgstr "Aceptar y descargar"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its ARM translator.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nThe translator is Google's software. DSA does not ship or pass it on.\n\nThe translator works from the next start of Android."
+msgstr "DSA descarga la imagen del emulador de Android de Google para esta versión de Android y extrae solo su traductor ARM.\n\n• Origen: el repositorio del SDK de Google ({0})\n• Tamaño: unos 2 GB, que se eliminan después\n• Licencia: la Licencia del SDK de Android ({1}). Al descargar, acepta sus condiciones.\n\nEl traductor es software de Google. DSA no lo incluye ni lo redistribuye.\n\nEl traductor funciona a partir del próximo inicio de Android."
+
+msgid "Downloading about 2 GB from Google and taking out the translator. It takes minutes."
+msgstr "Descargando unos 2 GB de Google y extrayendo el traductor. Tarda unos minutos."
+
+msgid "Google's apps belong to Google and follow Google's terms.\nDSA does not distribute them: it downloads the public LiteGapps package when you ask."
+msgstr "Las aplicaciones de Google pertenecen a Google y siguen sus condiciones.\nDSA no las distribuye: descarga el paquete público de LiteGapps cuando usted lo pide."
+
+msgid "Register this device with Google"
+msgstr "Registrar este dispositivo en Google"
+
+msgid "Google has not certified this Android, so Google may refuse to sign you in until you register it.\nOpen Google's registration page, sign in with your Google account and enter the Android ID below."
+msgstr "Google no ha certificado este Android, así que puede negarse a iniciar su sesión hasta que lo registre.\nAbra la página de registro de Google, inicie sesión con su cuenta de Google e introduzca el ID de Android de abajo."
+
+msgid "Android ID"
+msgstr "ID de Android"
+
+msgid "Google Play was not installed"
+msgstr "No se instaló Google Play"
+
+msgid "Google Play was not removed"
+msgstr "No se quitó Google Play"
+
+msgid "Where Google Play stands could not be read"
+msgstr "No se pudo leer el estado de Google Play"
+
+msgid "The page could not be opened"
+msgstr "No se pudo abrir la página"
+
+msgid "Runs the app's ARM code through the translator. Off runs its x86_64 code."
+msgstr "Ejecuta el código ARM de la aplicación mediante el traductor. Desactivado, ejecuta su código x86_64."
+
+msgid "Apps that are part of Android run as Android installed them."
+msgstr "Las aplicaciones que forman parte de Android se ejecutan tal como Android las instaló."
+
+msgid "No APK of this app on the device holds its ARM code."
+msgstr "Ningún APK de esta aplicación en el dispositivo contiene su código ARM."
+
+msgid "ARM translation is not on. Turn it on under ARM apps and restart Android."
+msgstr "La traducción ARM no está activada. Actívela en Aplicaciones ARM y reinicie Android."
+
+msgid "This app has only ARM code, so it always runs as ARM."
+msgstr "Esta aplicación solo tiene código ARM, así que siempre se ejecuta como ARM."
+
+msgid "This version of DSA cannot say whether the app can run as ARM."
+msgstr "Esta versión de DSA no puede saber si la aplicación puede ejecutarse como ARM."
+
+msgid "{0} runs as ARM now."
+msgstr "{0} se ejecuta ahora como ARM."
+
+msgid "{0} runs its x86_64 code now."
+msgstr "{0} ejecuta ahora su código x86_64."
+
+msgid "its APKs on the device hold no code for that"
+msgstr "sus APK en el dispositivo no contienen código para eso"
+
+msgid "ARM translation is not on"
+msgstr "La traducción ARM no está activada"
+
+msgid "Android refused"
+msgstr "Android lo rechazó"
+
+msgid "{0} was not installed again: {1} ({2})"
+msgstr "{0} no se reinstaló: {1} ({2})"
+
+msgid "Run as ARM"
+msgstr "Ejecutar como ARM"
+
+msgid "Erase {0}'s data?"
+msgstr "¿Borrar los datos de {0}?"
+
+msgid "Android cannot change how {0} runs and keep its data.\n\nInstalling it again erases its data: sign-ins, settings and files it keeps for itself."
+msgstr "Android no puede cambiar cómo se ejecuta {0} y conservar sus datos.\n\nReinstalarla borra sus datos: inicios de sesión, configuración y archivos que guarda para sí misma."
+
+msgid "Erase and install again"
+msgstr "Borrar y reinstalar"
+
+msgid "Not installed again"
+msgstr "No se reinstaló"
+
+msgid "Default: from this computer"
+msgstr "Predeterminado: de este equipo"
+
+msgid "Default: DSA's value"
+msgstr "Predeterminado: valor de DSA"
+
+msgid "This computer does not say; Android keeps its own."
+msgstr "Este equipo no lo indica; Android conserva el suyo."
+
+msgid "From this computer"
+msgstr "De este equipo"
+
+msgid "These follow this computer and are read again each time Android starts.\nAndroid's Settings shows the device name and the chip.\nThe model name shows only here, as Android's Settings has no place for it."
+msgstr "Estos valores siguen a este equipo y se vuelven a leer cada vez que se inicia Android.\nLa configuración de Android muestra el nombre del dispositivo y el chip.\nEl nombre del modelo solo se muestra aquí, porque la configuración de Android no tiene sitio para él."
+
+msgid "Model name"
+msgstr "Nombre del modelo"
+
+msgid "Device name"
+msgstr "Nombre del dispositivo"
+
+msgid "Chip manufacturer"
+msgstr "Fabricante del chip"
+
+msgid "Chip model"
+msgstr "Modelo del chip"
+
+msgid "Root access"
+msgstr "Acceso root"
+
+msgid "Not allowed"
+msgstr "No permitido"
+
+msgid "Ask each time"
+msgstr "Preguntar cada vez"
+
+msgid "Remember (no asking)"
+msgstr "Recordar (sin preguntar)"
+
+msgid "Not available"
+msgstr "No disponible"
+
+msgid "Not changed"
+msgstr "Sin cambios"
+
+msgid "Not allowed hides su from the app.\nAsk each time asks an administrator for each request, then not again for 15 minutes.\nRemember approves without asking. Choosing it needs an administrator's approval."
+msgstr "No permitido oculta su a la aplicación.\nPreguntar cada vez pide aprobación a un administrador en cada solicitud y luego no vuelve a preguntar durante 15 minutos.\nRecordar aprueba sin preguntar. Elegirlo requiere la aprobación de un administrador."
+
+msgid "Shares its user ID with {0}, so Android cannot tell them apart.\nTheir root access is one setting: a change here applies to all of them.\nIf any of them is set to Not allowed, none of them can use su."
+msgstr "Comparte su ID de usuario con {0}, así que Android no puede distinguirlas.\nSu acceso root es una sola configuración: un cambio aquí se aplica a todas.\nSi alguna tiene No permitido, ninguna puede usar su."
+
+msgid "Root access is off for this computer. An administrator turns it on under Advanced."
+msgstr "El acceso root está desactivado en este equipo. Un administrador lo activa en Avanzado."
+
+msgid "This version of DSA cannot say how far the app may use root."
+msgstr "Esta versión de DSA no puede indicar hasta dónde puede usar root la aplicación."
+
+msgid "The root level of {0} was not changed: {1}"
+msgstr "No se cambió el nivel root de {0}: {1}"
+
+msgid "{0} cannot use root any more. su disappears for it from the next start of Android."
+msgstr "{0} ya no puede usar root. su desaparece para ella a partir del próximo inicio de Android."
+
+msgid "{0} now uses su without asking. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} usa ahora su sin preguntar. Si antes no veía su, lo verá a partir del próximo inicio de Android."
+
+msgid "{0} now asks an administrator each time it uses su. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} pide ahora aprobación a un administrador cada vez que usa su. Si antes no veía su, lo verá a partir del próximo inicio de Android."
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command: {0}"
+msgstr "Cada solicitud queda en el registro del servicio con la aplicación, la hora, si se aprobó y el comando: {0}"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command."
+msgstr "Cada solicitud queda en el registro del servicio con la aplicación, la hora, si se aprobó y el comando."
+
+msgid "Root access is off for this computer, so no app can use su.\nAn administrator turns it on under Advanced. Then you choose each app's level here."
+msgstr "El acceso root está desactivado en este equipo, así que ninguna aplicación puede usar su.\nUn administrador lo activa en Avanzado. Después, elija aquí el nivel de cada aplicación."
+
+msgid "This applies to every user of this computer, so changing it asks for an administrator's permission.\nChoose each app's level under Apps."
+msgstr "Esto se aplica a todos los usuarios de este equipo, así que para cambiarlo se pide permiso de administrador.\nElija el nivel de cada aplicación en Aplicaciones."
+
+msgid "Let Android apps ask for root"
+msgstr "Permitir que las aplicaciones de Android pidan acceso root"
+
+msgid "Off by default. An app you allow under Apps can run commands as root once an administrator approves, as with sudo.\nThe Android image, its build properties and SELinux stay as they are."
+msgstr "Desactivado de forma predeterminada. Las aplicaciones permitidas en Aplicaciones usan root como con sudo, si un administrador lo aprueba.\nLa imagen de Android, sus propiedades de compilación y SELinux no cambian."
+
+msgid "Root access changes from the next start of Android. Stop Android on the General page, then open an app."
+msgstr "El acceso root cambia a partir del próximo inicio de Android. Detenga Android en la página General y abra una aplicación."
+
+msgid "Where requests are recorded"
+msgstr "Dónde se registran las solicitudes"
+
+msgid "Follow the default"
+msgstr "Seguir el valor predeterminado"
+
+msgid "On the whole screen"
+msgstr "En toda la pantalla"
+
+msgid "Inside the window"
+msgstr "Dentro de la ventana"
+
+msgid "Full screen"
+msgstr "Pantalla completa"
+
+msgid "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+msgstr "Dónde se ve la petición clara de pantalla completa, como en un reproductor de vídeo. F11 siempre alterna la pantalla completa."
+
+msgid "Bars hidden"
+msgstr "Barras ocultas"
+
+msgid "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+msgstr "Dónde se muestra esta aplicación cuando oculta sus barras sin pedir pantalla completa, como hace un feed de vídeos cortos."
+
+msgid "{0}'s windows follow the new settings now."
+msgstr "Las ventanas de {0} siguen ahora la nueva configuración."
+
+msgid "App full screen"
+msgstr "Pantalla completa de aplicaciones"
+
+msgid "On the whole screen, the title bar appears when the pointer reaches the top edge."
+msgstr "En toda la pantalla, la barra de título aparece cuando el puntero llega al borde superior."
+
+msgid "Full screen request"
+msgstr "Petición de pantalla completa"
+
+msgid "Where an app's full screen request shows, such as a video's full screen button."
+msgstr "Dónde se muestra la petición de pantalla completa de una aplicación, como el botón de pantalla completa de un vídeo."
+
+msgid "Where an app shows when it only hides its bars, as a feed of short videos does."
+msgstr "Dónde se muestra una aplicación cuando solo oculta sus barras, como hace un feed de vídeos cortos."
+
+msgid "Scaling on another monitor"
+msgstr "Escala en otro monitor"
+
+msgid "App"
+msgstr "Aplicación"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "System (forced)"
+msgstr "Sistema (forzado)"
+
+msgid "System (forced), not available yet"
+msgstr "Sistema (forzado), aún no disponible"
+
+msgid "System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System."
+msgstr "Sistema (forzado) da a la aplicación la nueva escala sin reiniciarla, aunque no indique que la admite.\nAún no está disponible: a esta compilación le falta el cambio de Android que necesita. Hasta entonces funciona como Sistema."
+
+msgid "System (recommended for this app)"
+msgstr "Sistema (recomendado para esta aplicación)"
+
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "Aplicación: la aplicación adopta la escala del nuevo monitor en cuanto la ventana llega a él y se redibuja a esa escala, así el texto queda nítido.\nUna aplicación que no indica que lo gestiona se vuelve a crear conservando su estado, así que puede redibujarse brevemente.\nSistema: DSA escala la ventana al mismo tamaño físico. El texto puede verse algo borroso.\nAutomático elige Sistema para las aplicaciones que fallan al cambiar de escala en ejecución, como YouTube; para cualquier otra elige Aplicación si indica que lo gestiona, y Sistema si no.\nAutomático y Sistema nunca reinician la aplicación."
+
+msgid "Getting the update ready"
+msgstr "Preparando la actualización"
+
+msgid "Downloading DSA {0}"
+msgstr "Descargando DSA {0}"
+
+msgid "Stopping Android to install DSA {0}"
+msgstr "Deteniendo Android para instalar DSA {0}"
+
+msgid "Installing DSA {0}"
+msgstr "Instalando DSA {0}"
+
+msgid "DSA is restarting to finish the update"
+msgstr "DSA se está reiniciando para terminar la actualización"
+
+msgid "Do not close DSA or start Android apps until the update is done."
+msgstr "No cierre DSA ni inicie aplicaciones de Android hasta que termine la actualización."
+
+msgid "Updated to {0}"
+msgstr "Actualizado a {0}"
+
+msgid "DSA has not come back after the update to {0}. If it does not start soon, restart the computer."
+msgstr "DSA no ha vuelto después de actualizarse a {0}. Si no se inicia pronto, reinicie el equipo."
+
+msgid "Updating to {0} failed. The version before it is still installed."
+msgstr "No se pudo actualizar a {0}. La versión anterior sigue instalada."
+
+msgid "Updating DSA"
+msgstr "Actualizando DSA"
+
+msgid "Update of DSA"
+msgstr "Actualización de DSA"
+
+msgid "Backup"
+msgstr "Copia de seguridad"
+
+msgid "DSA keeps an encrypted backup of your Android apps' data in a folder of your home folder.\nThe apps and their data can come back after Android's data is reset, or on another computer.\nThe key that opens it is kept in your keyring."
+msgstr "DSA guarda una copia de seguridad cifrada de los datos de sus aplicaciones de Android en una carpeta de su carpeta personal.\nLas aplicaciones y sus datos pueden recuperarse tras restablecer los datos de Android, o en otro equipo.\nLa clave que la abre se guarda en su llavero."
+
+msgid "Folder"
+msgstr "Carpeta"
+
+msgid "Backups are unavailable"
+msgstr "Las copias de seguridad no están disponibles"
+
+msgid "Last backup"
+msgstr "Última copia de seguridad"
+
+msgid "In the backup"
+msgstr "En la copia de seguridad"
+
+msgid "Last restore"
+msgstr "Última restauración"
+
+msgid "Last problem"
+msgstr "Último problema"
+
+msgid "Back up now"
+msgstr "Hacer copia de seguridad ahora"
+
+msgid "Has Android back up the data of every app into the folder now. Android starts if it is not running."
+msgstr "Hace que Android copie ahora los datos de todas las aplicaciones en la carpeta. Android se inicia si no se está ejecutando."
+
+msgid "Back up"
+msgstr "Hacer copia"
+
+msgid "Restore"
+msgstr "Restaurar"
+
+msgid "Installs the apps of the backup that Android does not have, then replaces every app's data with the backup's."
+msgstr "Instala las aplicaciones de la copia que Android no tiene y luego sustituye los datos de cada aplicación por los de la copia."
+
+msgid "Show recovery key"
+msgstr "Mostrar la clave de recuperación"
+
+msgid "The key that opens the backup anywhere else. Write it down and keep it safe."
+msgstr "La clave que abre la copia de seguridad en cualquier otro lugar. Anótela y guárdela en un lugar seguro."
+
+msgid "Show"
+msgstr "Mostrar"
+
+msgid "Use a recovery key"
+msgstr "Usar una clave de recuperación"
+
+msgid "Opens a backup folder brought from another computer, or kept from before this computer's keyring was reset."
+msgstr "Abre una carpeta de copia de seguridad traída de otro equipo, o de antes de restablecer el llavero de este equipo."
+
+msgid "Enter"
+msgstr "Introducir"
+
+msgid "The backup was not restored"
+msgstr "No se restauró la copia de seguridad"
+
+msgid "The apps were not backed up"
+msgstr "No se hizo la copia de seguridad de las aplicaciones"
+
+msgid "Restore from the backup?"
+msgstr "¿Restaurar desde la copia de seguridad?"
+
+msgid "The recovery key could not be shown"
+msgstr "No se pudo mostrar la clave de recuperación"
+
+msgid "The recovery key is kept. The backup folder is read with it."
+msgstr "Se guardó la clave de recuperación. La carpeta de copia de seguridad se lee con ella."
+
+msgid "The recovery key was not used"
+msgstr "No se usó la clave de recuperación"
+
+msgid "Where the backup stands could not be read"
+msgstr "No se pudo leer el estado de la copia de seguridad"
+
+msgid "Recovery key"
+msgstr "Clave de recuperación"
+
+msgid "Enter the recovery key of the backup folder, as it was written down.\n\nSpaces, dashes and capitals do not matter.\n\nA key that does not open the folder is refused, and the key kept now stays."
+msgstr "Introduzca la clave de recuperación de la carpeta de copia de seguridad, tal como la anotó.\n\nNo importan los espacios, los guiones ni las mayúsculas.\n\nUna clave que no abra la carpeta se rechaza, y se conserva la clave guardada ahora."
+
+msgid "Never"
+msgstr "Nunca"
+
+msgid "No apps yet"
+msgstr "Todavía no hay aplicaciones"
+
+msgid "{0} apps, {1}"
+msgstr "{0} aplicaciones, {1}"
+
+msgid "Backing up every app. Android starts if it is not running. This can take a while."
+msgstr "Haciendo copia de seguridad de todas las aplicaciones. Android se inicia si no se está ejecutando. Puede tardar un rato."
+
+msgid "Restoring apps and their data from the backup. Android starts if it is not running. This can take a while."
+msgstr "Restaurando las aplicaciones y sus datos desde la copia. Android se inicia si no se está ejecutando. Puede tardar un rato."
+
+msgid "Apps restored: {0}. Apps installed first: {1}."
+msgstr "Aplicaciones restauradas: {0}. Aplicaciones instaladas antes: {1}."
+
+msgid "Apps restored: {0}. Apps installed first: {1}. Apps that could not be restored: {2}."
+msgstr "Aplicaciones restauradas: {0}. Aplicaciones instaladas antes: {1}. Aplicaciones que no se pudieron restaurar: {2}."
+
+msgid "Apps backed up: {0}."
+msgstr "Aplicaciones copiadas: {0}."
+
+msgid "Apps backed up: {0}. Apps that could not be backed up: {1}."
+msgstr "Aplicaciones copiadas: {0}. Aplicaciones que no se pudieron copiar: {1}."
+
+msgid "Apps in the backup that Android does not have are installed.\n\nThe data of every app in the backup is replaced with the backup's. What those apps saved since the backup is lost.\n\nAndroid starts if it is not running."
+msgstr "Se instalan las aplicaciones de la copia que Android no tiene.\n\nLos datos de cada aplicación de la copia se sustituyen por los de la copia. Se pierde lo que guardaron después de la copia.\n\nAndroid se inicia si no se está ejecutando."
+
+msgid "Write this key down and keep it somewhere safe, away from this computer.\n\nAnyone with it can read the backup.\n\nWithout it, the backup cannot be opened on another computer or after this computer's keyring is lost."
+msgstr "Anote esta clave y guárdela en un lugar seguro, lejos de este equipo.\n\nCualquiera que la tenga puede leer la copia de seguridad.\n\nSin ella, la copia no se puede abrir en otro equipo ni después de perder el llavero de este equipo."
+
+msgid "Enter the recovery key."
+msgstr "Introduzca la clave de recuperación."
+
+msgid "The key was not used: {0}"
+msgstr "No se usó la clave: {0}"
+
+msgid "Keeps an encrypted second copy of your Android apps' user data on this computer.\nIt can be restored after a data reset or on another computer. Off until you turn it on."
+msgstr "Guarda en este equipo una segunda copia cifrada de los datos de usuario de sus aplicaciones de Android.\nSe puede restaurar tras restablecer los datos o en otro equipo. Desactivado hasta que lo active."
+
+msgid "Earlier backups of {0} apps ({1}) are still kept in your DSA Backup folder."
+msgstr "Las copias anteriores de {0} aplicaciones ({1}) se conservan aún en su carpeta DSA Backup."
+
+msgid "The backups of {0} apps ({1}) are still kept on this computer.\n\nDelete them and their key as well, or keep them for a later restore?"
+msgstr "Las copias de seguridad de {0} aplicaciones ({1}) se conservan aún en este equipo.\n\n¿Eliminarlas también junto con su clave, o conservarlas para restaurarlas más adelante?"
+
+msgid "Backup is on. Android backs up its apps' data to this computer from now on."
+msgstr "La copia de seguridad está activada. A partir de ahora, Android copia los datos de sus aplicaciones en este equipo."
+
+msgid "Backup is off, and the backups and their key were deleted."
+msgstr "La copia de seguridad está desactivada, y se eliminaron las copias y su clave."
+
+msgid "Backup is off. The backups made so far are kept."
+msgstr "La copia de seguridad está desactivada. Las copias hechas hasta ahora se conservan."
+
+msgid "Android's keys get their protection the first time Android starts."
+msgstr "Las claves de Android reciben su protección la primera vez que se inicia Android."
+
+msgid "Sealed by this computer's TPM.\nA copy of Android's disk cannot open the apps' keys or Android's encrypted storage anywhere else."
+msgstr "Sellado por el TPM de este equipo.\nUna copia del disco de Android no puede abrir las claves de las aplicaciones ni el almacenamiento cifrado de Android en otro lugar."
+
+msgid "Kept by your keyring only, because this computer has no TPM 2.0 that can be used.\nOnce one works, DSA seals the keys with it."
+msgstr "Solo lo guarda su llavero, porque este equipo no tiene un TPM 2.0 utilizable.\nCuando funcione uno, DSA sellará las claves con él."
+
+msgid "Protected by {0}."
+msgstr "Protegido por {0}."
+
+msgid "Why not the TPM: {0}"
+msgstr "Por qué no el TPM: {0}"
+
+msgid "Back up apps' data to this computer"
+msgstr "Hacer copia de seguridad de los datos de aplicaciones en este equipo"
+
+msgid "Protection of Android's keys"
+msgstr "Protección de las claves de Android"
+
+msgid "Android's keys"
+msgstr "Claves de Android"
+
+msgid "Why not the TPM"
+msgstr "Por qué no el TPM"
+
+msgid "Android's keys could not be opened"
+msgstr "No se pudieron abrir las claves de Android"
+
+msgid "Backup was not turned on"
+msgstr "No se activó la copia de seguridad"
+
+msgid "Backup was not turned off"
+msgstr "No se desactivó la copia de seguridad"
+
+msgid "Turn off backup?"
+msgstr "¿Desactivar la copia de seguridad?"
+
+msgid "Keep them"
+msgstr "Conservarlas"
+
+msgid "Delete backups"
+msgstr "Eliminar copias"
+
+msgid "Protected content"
+msgstr "Contenido protegido"
+
+msgid "Widevine lets streaming apps play protected video.\nDSA does not include or pass on Widevine. When you ask, your computer takes it unchanged from Google's emulator image."
+msgstr "Widevine permite a las aplicaciones de streaming reproducir vídeo protegido.\nDSA no incluye ni redistribuye Widevine. Si lo pide, su equipo lo extrae sin cambios de la imagen del emulador de Google."
+
+msgid "Android started before this change. Stop and start Android for Widevine to follow it."
+msgstr "Android se inició antes de este cambio. Detenga e inicie Android para que Widevine lo aplique."
+
+msgid "Standard definition only"
+msgstr "Solo definición estándar"
+
+msgid "Widevine here is security level L3, so streaming services send standard definition (SD) at most.\nTo watch in high definition, use this computer's own browser or app."
+msgstr "Aquí Widevine tiene el nivel de seguridad L3, así que los servicios de streaming envían como máximo definición estándar (SD).\nPara verlo en alta definición, use el navegador o una aplicación de este equipo."
+
+msgid "Get Widevine"
+msgstr "Obtener Widevine"
+
+msgid "Downloads about 2 GB from Google, under Google's Android SDK License, and keeps only Widevine.\nNothing is downloaded until you agree. Widevine is there from the next start of Android."
+msgstr "Descarga unos 2 GB de Google, bajo la Licencia del SDK de Android, y conserva solo Widevine.\nNo se descarga nada hasta que acepte. Widevine estará disponible a partir del próximo inicio de Android."
+
+msgid "Remove Widevine"
+msgstr "Quitar Widevine"
+
+msgid "Removes the module and the device certificates it kept, from the next start of Android."
+msgstr "Quita el módulo y los certificados del dispositivo que guardó, a partir del próximo inicio de Android."
+
+msgid "Widevine is Google's software and follows Google's terms. DSA does not distribute it."
+msgstr "Widevine es software de Google y sigue sus condiciones. DSA no lo distribuye."
+
+msgid "Get Widevine from Google?"
+msgstr "¿Obtener Widevine de Google?"
+
+msgid "Widevine was not installed"
+msgstr "No se instaló Widevine"
+
+msgid "Widevine was not removed"
+msgstr "No se quitó Widevine"
+
+msgid "Where Widevine stands could not be read"
+msgstr "No se pudo leer el estado de Widevine"
+
+msgid "Google's image {0} for Android {1} ({2})"
+msgstr "Imagen de Google {0} para Android {1} ({2})"
+
+msgid "Removed. Widevine stays in Android until it restarts."
+msgstr "Quitado. Widevine permanece en Android hasta que se reinicie."
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its Widevine module, unchanged.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nWidevine is Google's software. DSA does not ship or pass it on.\n\nWidevine here is security level L3, so streaming services send standard definition (SD) at most.\n\nWidevine works from the next start of Android."
+msgstr "DSA descarga la imagen del emulador de Android de Google para esta versión de Android y extrae sin cambios solo su módulo Widevine.\n\n• Origen: el repositorio del SDK de Google ({0})\n• Tamaño: unos 2 GB, que se eliminan después\n• Licencia: la Licencia del SDK de Android ({1}). Al descargar, acepta sus condiciones.\n\nWidevine es software de Google. DSA no lo incluye ni lo redistribuye.\n\nAquí Widevine tiene el nivel de seguridad L3, así que los servicios de streaming envían como máximo definición estándar (SD).\n\nWidevine funciona a partir del próximo inicio de Android."
+
+msgid "Downloading about 2 GB from Google and taking out Widevine. It takes minutes."
+msgstr "Descargando unos 2 GB de Google y extrayendo Widevine. Tarda unos minutos."
+
+msgid "{0}, {1}"
+msgstr "{0}, {1}"
+
+msgid "{0}, {1}, {2}: {3}"
+msgstr "{0}, {1}, {2}: {3}"
+
+msgid "{0} records dropped"
+msgstr "{0} registros descartados"
+
+msgid "Lowest priority shown"
+msgstr "Prioridad mínima mostrada"
+
+msgid "Copied"
+msgstr "Copiado"
+
+msgid "When only the bars hide"
+msgstr "Al ocultar solo las barras"
+
+msgid "Scaling"
+msgstr "Escala"
+
+msgid "Automatic (app)"
+msgstr "Automático (aplicación)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Automático (sistema, recomendado para esta aplicación)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Seguir el valor predeterminado (en toda la pantalla)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Seguir el valor predeterminado (dentro de la ventana)"

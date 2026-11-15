@@ -1,0 +1,1840 @@
+# Vietnamese translation of DSA Settings for Linux.
+# This file is distributed under the same licence as Desktop Subsystem for Android.
+msgid ""
+msgstr ""
+"Project-Id-Version: dsa-settings\n"
+"Language: vi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "The dsa command could not be started. Reinstall DSA."
+msgstr "Không thể khởi chạy lệnh dsa. Hãy cài đặt lại DSA."
+
+msgid "The DSA service is not running."
+msgstr "Dịch vụ DSA không chạy."
+
+msgid "The DSA service could not do this."
+msgstr "Dịch vụ DSA không thể thực hiện việc này."
+
+msgid "The answer of the dsa command could not be read. Reinstall DSA."
+msgstr "Không thể đọc phản hồi của lệnh dsa. Hãy cài đặt lại DSA."
+
+msgid "The setting was not changed, because an administrator's permission was not given."
+msgstr "Cài đặt chưa được thay đổi vì không có quyền của quản trị viên."
+
+msgid "Unknown"
+msgstr "Không rõ"
+
+msgid "Stopped"
+msgstr "Đã dừng"
+
+msgid "Starting"
+msgstr "Đang khởi động"
+
+msgid "Running"
+msgstr "Đang chạy"
+
+msgid "Dozing (idle)"
+msgstr "Doze (nghỉ)"
+
+msgid "Frozen"
+msgstr "Đã đóng băng"
+
+msgid "Stopping"
+msgstr "Đang dừng"
+
+msgid "Not ready"
+msgstr "Chưa sẵn sàng"
+
+msgid "Virtual machine (crosvm)"
+msgstr "Máy ảo (crosvm)"
+
+msgid "Window manager"
+msgstr "Trình quản lý cửa sổ"
+
+msgid "Graphics renderer"
+msgstr "Trình kết xuất đồ họa"
+
+msgid "App window"
+msgstr "Cửa sổ ứng dụng"
+
+msgid "Process {0}, {1} private"
+msgstr "Tiến trình {0}, {1} riêng"
+
+msgid "Apps and system"
+msgstr "Ứng dụng và hệ thống"
+
+msgid "{0} in memory, {1} compressed"
+msgstr "{0} trong bộ nhớ, {1} nén"
+
+msgid "Google Play services"
+msgstr "Google Play services"
+
+msgid "The Google apps you installed, {0} processes: {1}"
+msgstr "Các ứng dụng Google bạn đã cài, {0} tiến trình: {1}"
+
+msgid "unknown"
+msgstr "không rõ"
+
+msgid "Cache"
+msgstr "Bộ nhớ đệm"
+
+msgid "File contents kept in memory. Android drops them when it needs the memory."
+msgstr "Nội dung tệp được giữ trong bộ nhớ. Android giải phóng chúng khi cần bộ nhớ."
+
+msgid "Kernel caches"
+msgstr "Bộ nhớ đệm của kernel"
+
+msgid "Kernel caches the kernel can free on demand."
+msgstr "Bộ nhớ đệm mà kernel có thể giải phóng khi cần."
+
+msgid "Shared memory"
+msgstr "Bộ nhớ dùng chung"
+
+msgid "Compressed memory"
+msgstr "Bộ nhớ nén"
+
+msgid "Holds {0} of pages, compressed"
+msgstr "Giữ {0} trang ở dạng nén"
+
+msgid "Free"
+msgstr "Trống"
+
+msgid "Kernel objects"
+msgstr "Đối tượng kernel"
+
+msgid "Memory the kernel keeps for its own data and cannot reclaim"
+msgstr "Bộ nhớ kernel giữ cho dữ liệu riêng và không thể thu hồi"
+
+msgid "Thread stacks"
+msgstr "Ngăn xếp luồng"
+
+msgid "Page tables"
+msgstr "Bảng trang"
+
+msgid "Kernel mappings (vmalloc)"
+msgstr "Ánh xạ kernel (vmalloc)"
+
+msgid "Per-CPU data"
+msgstr "Dữ liệu theo từng CPU"
+
+msgid "Drivers"
+msgstr "Trình điều khiển"
+
+msgid "What no counter names, such as GPU and DMA buffers"
+msgstr "Những gì không bộ đếm nào ghi nhận, chẳng hạn bộ đệm GPU và DMA"
+
+msgid "Reserved at boot"
+msgstr "Dành riêng khi khởi động"
+
+msgid "Kernel code, page structures and buffers, of {0} given; contiguous area {1}"
+msgstr "Mã kernel, cấu trúc trang và bộ đệm, trong {0} được cấp; vùng liên tục {1}"
+
+msgid "Process {0}"
+msgstr "Tiến trình {0}"
+
+msgid "Process {0}, Google Play services"
+msgstr "Tiến trình {0}, Google Play services"
+
+msgid "Automatic"
+msgstr "Tự động"
+
+msgid "The GPU of the primary monitor (recommended)"
+msgstr "GPU của màn hình chính (khuyên dùng)"
+
+msgid "Integrated GPU"
+msgstr "GPU tích hợp"
+
+msgid "Discrete GPU (for example, for games)"
+msgstr "GPU rời (chẳng hạn cho trò chơi)"
+
+msgid "Always the newest (now Android {0})"
+msgstr "Luôn mới nhất (hiện là Android {0})"
+
+msgid "Android {0}"
+msgstr "Android {0}"
+
+msgid "{0} of {1} apps"
+msgstr "{0} trong {1} ứng dụng"
+
+msgid "{0} apps"
+msgstr "{0} ứng dụng"
+
+msgid "Version {0}"
+msgstr "Phiên bản {0}"
+
+msgid "Part of Android"
+msgstr "Một phần của Android"
+
+msgid "Opens at the size Android chooses"
+msgstr "Mở ở kích thước Android chọn"
+
+msgid "Phone, portrait ({0} × {1})"
+msgstr "Điện thoại, dọc ({0} × {1})"
+
+msgid "Phone, landscape ({0} × {1})"
+msgstr "Điện thoại, ngang ({0} × {1})"
+
+msgid "Tablet, portrait ({0} × {1})"
+msgstr "Máy tính bảng, dọc ({0} × {1})"
+
+msgid "Tablet, landscape ({0} × {1})"
+msgstr "Máy tính bảng, ngang ({0} × {1})"
+
+msgid "it is no longer installed"
+msgstr "ứng dụng không còn được cài đặt"
+
+msgid "it is part of Android"
+msgstr "ứng dụng là một phần của Android"
+
+msgid "Android does not allow it, because the app is a device administrator or a policy keeps it"
+msgstr "Android không cho phép, vì ứng dụng là quản trị viên thiết bị hoặc một chính sách giữ nó lại"
+
+msgid "Android could not uninstall it"
+msgstr "Android không thể gỡ cài đặt ứng dụng"
+
+msgid "it is an Android App Bundle, made to be uploaded to an app store. Get the app as an APK, or as an .xapk, .apks or .apkm bundle."
+msgstr "đây là Android App Bundle, dùng để tải lên cửa hàng ứng dụng. Hãy lấy ứng dụng dạng APK, hoặc gói .xapk, .apks hay .apkm."
+
+msgid "the bundle is encrypted, so its APKs cannot be read. Get the app as an APK, or as a newer bundle."
+msgstr "gói đã được mã hóa nên không đọc được các APK bên trong. Hãy lấy ứng dụng dạng APK, hoặc một gói mới hơn."
+
+msgid "a split APK of the bundle is signed with another key than its base APK, so Android would refuse it."
+msgstr "một APK tách của gói được ký bằng khóa khác với APK gốc, nên Android sẽ từ chối."
+
+msgid "the bundle is not one app that Android can install."
+msgstr "gói này không phải một ứng dụng mà Android có thể cài đặt."
+
+msgid "the app has no 64-bit code that DSA's Android runs: x86_64, or arm64-v8a through ARM translation. Get one of those builds."
+msgstr "ứng dụng không có mã 64-bit mà Android của DSA chạy được: x86_64, hoặc arm64-v8a qua dịch ARM. Hãy lấy một trong các bản dựng đó."
+
+msgid "the app has only ARM code (arm64-v8a), and ARM translation is off. Turn it on under ARM apps, restart Android and install it again."
+msgstr "ứng dụng chỉ có mã ARM (arm64-v8a) và dịch ARM đang tắt. Hãy bật nó trong Ứng dụng ARM, khởi động lại Android rồi cài lại."
+
+msgid "the app does not run on this Android: it needs another processor type, a newer Android version or a feature this device does not have."
+msgstr "ứng dụng không chạy trên Android này: cần loại bộ xử lý khác, Android mới hơn hoặc tính năng mà thiết bị này không có."
+
+msgid "the app is installed already, signed with another key. Uninstall it in Android first."
+msgstr "ứng dụng đã được cài, nhưng ký bằng khóa khác. Hãy gỡ cài đặt nó trong Android trước."
+
+msgid "the file is not a signed APK that Android can read."
+msgstr "tệp không phải là APK đã ký mà Android có thể đọc."
+
+msgid "Android has no room for the app."
+msgstr "Android không còn chỗ cho ứng dụng."
+
+msgid "a newer version of the app is installed. Uninstall it in Android first."
+msgstr "một phiên bản mới hơn của ứng dụng đã được cài. Hãy gỡ cài đặt nó trong Android trước."
+
+msgid "a policy of this Android does not allow the app."
+msgstr "một chính sách của Android này không cho phép ứng dụng."
+
+msgid "Android did not install the app."
+msgstr "Android đã không cài đặt ứng dụng."
+
+msgid "Not supported: no ARM translation package is installed."
+msgstr "Không được hỗ trợ: chưa cài gói dịch ARM nào."
+
+msgid "Not supported: {0} {1} is installed but turned off."
+msgstr "Không được hỗ trợ: {0} {1} đã được cài nhưng đang tắt."
+
+msgid "Not supported: {0} {1} is turned off."
+msgstr "Không được hỗ trợ: {0} {1} đang tắt."
+
+msgid "Supported by {0} {1} ({2}), the translator that comes with this Android."
+msgstr "Được hỗ trợ bởi {0} {1} ({2}), trình dịch đi kèm Android này."
+
+msgid "{0} {1} ({2}) comes with this Android. It is used unless you install another translator.\nGoing back to it removes the package that replaced it, from the next start of Android."
+msgstr "{0} {1} ({2}) đi kèm Android này. Nó được dùng trừ khi bạn cài một trình dịch khác.\nQuay lại nó sẽ gỡ gói đã thay thế nó, từ lần khởi động Android tiếp theo."
+
+msgid "Use the default translator"
+msgstr "Dùng trình dịch mặc định"
+
+msgid "Use"
+msgstr "Dùng"
+
+msgid "licence not given"
+msgstr "không có giấy phép"
+
+msgid "Supported by {0} {1} ({2})."
+msgstr "Được hỗ trợ bởi {0} {1} ({2})."
+
+msgid "Android installs apps for: {0}"
+msgstr "Android cài ứng dụng cho: {0}"
+
+msgid "Android is not running, so what it supports now is not known."
+msgstr "Android không chạy nên chưa biết hiện nó hỗ trợ những gì."
+
+msgid "Connected through this computer (NAT). Android apps see it as Wi-Fi, with no data charges."
+msgstr "Kết nối qua máy tính này (NAT). Ứng dụng Android thấy đây là Wi-Fi, không tính phí dữ liệu."
+
+msgid "Connected to this computer's network as a device of its own (advanced networking)."
+msgstr "Kết nối với mạng của máy tính này như một thiết bị riêng (mạng nâng cao)."
+
+msgid "Android is not running, so it has no network yet."
+msgstr "Android không chạy nên chưa có mạng."
+
+msgid "The DSA service does not report the network. Update DSA to see it."
+msgstr "Dịch vụ DSA không báo cáo mạng. Hãy cập nhật DSA để xem."
+
+msgid "None"
+msgstr "Không có"
+
+msgid "Manufacturer"
+msgstr "Nhà sản xuất"
+
+msgid "Brand"
+msgstr "Thương hiệu"
+
+msgid "Model"
+msgstr "Kiểu máy"
+
+msgid "Device"
+msgstr "Thiết bị"
+
+msgid "Product name"
+msgstr "Tên sản phẩm"
+
+msgid "Form factor"
+msgstr "Kiểu dáng"
+
+msgid "Release"
+msgstr "Bản phát hành"
+
+msgid "Build ID"
+msgstr "ID bản dựng"
+
+msgid "Incremental version"
+msgstr "Phiên bản tăng dần"
+
+msgid "Build type"
+msgstr "Loại bản dựng"
+
+msgid "Tags"
+msgstr "Thẻ"
+
+msgid "Whole fingerprint"
+msgstr "Dấu vân tay đầy đủ"
+
+msgid "Verbose"
+msgstr "Chi tiết"
+
+msgid "Debug"
+msgstr "Gỡ lỗi"
+
+msgid "Info"
+msgstr "Thông tin"
+
+msgid "Warning"
+msgstr "Cảnh báo"
+
+msgid "Error"
+msgstr "Lỗi"
+
+msgid "Fatal"
+msgstr "Nghiêm trọng"
+
+msgid "Paused. {0} new lines are waiting."
+msgstr "Đã tạm dừng. {0} dòng mới đang chờ."
+
+msgid "General"
+msgstr "Chung"
+
+msgid "Memory"
+msgstr "Bộ nhớ"
+
+msgid "Apps"
+msgstr "Ứng dụng"
+
+msgid "Running in the background"
+msgstr "Đang chạy nền"
+
+msgid "Widgets"
+msgstr "Widget"
+
+msgid "Display and GPU"
+msgstr "Màn hình và GPU"
+
+msgid "Android version"
+msgstr "Phiên bản Android"
+
+msgid "Updates"
+msgstr "Cập nhật"
+
+msgid "Device identity"
+msgstr "Danh tính thiết bị"
+
+msgid "Network"
+msgstr "Mạng"
+
+msgid "Advanced"
+msgstr "Nâng cao"
+
+msgid "Android log"
+msgstr "Nhật ký Android"
+
+msgid "About"
+msgstr "Giới thiệu"
+
+msgid "The Android apps on this computer. Open them, change them in App info, or uninstall the ones you installed.\nAndroid starts when you open this page."
+msgstr "Các ứng dụng Android trên máy tính này. Mở chúng, thay đổi trong Thông tin ứng dụng, hoặc gỡ cài đặt các ứng dụng bạn đã cài.\nAndroid khởi động khi bạn mở trang này."
+
+msgid "Manage apps"
+msgstr "Quản lý ứng dụng"
+
+msgid "Open the list of apps in Android's own settings"
+msgstr "Mở danh sách ứng dụng trong cài đặt riêng của Android"
+
+msgid "The apps could not be read or changed"
+msgstr "Không thể đọc hoặc thay đổi các ứng dụng"
+
+msgid "Installed apps"
+msgstr "Ứng dụng đã cài đặt"
+
+msgid "Search apps"
+msgstr "Tìm ứng dụng"
+
+msgid "Refresh"
+msgstr "Làm mới"
+
+msgid "No app is installed in Android yet. Open an APK file to install one."
+msgstr "Chưa có ứng dụng nào được cài trong Android. Hãy mở một tệp APK để cài."
+
+msgid "No app matches your search."
+msgstr "Không có ứng dụng nào khớp với tìm kiếm."
+
+msgid "Open"
+msgstr "Mở"
+
+msgid "Package"
+msgstr "Gói"
+
+msgid "Installed"
+msgstr "Đã cài đặt"
+
+msgid "App info"
+msgstr "Thông tin ứng dụng"
+
+msgid "Permissions, storage and notifications, in Android's settings"
+msgstr "Quyền, bộ nhớ lưu trữ và thông báo, trong cài đặt của Android"
+
+msgid "Desktop shortcut"
+msgstr "Lối tắt trên desktop"
+
+msgid "A shortcut on the desktop that opens the app"
+msgstr "Lối tắt trên desktop để mở ứng dụng"
+
+msgid "Create desktop shortcut"
+msgstr "Tạo lối tắt trên desktop"
+
+msgid "The desktop shortcut could not be made"
+msgstr "Không thể tạo lối tắt trên desktop"
+
+msgid "{0} is on the desktop."
+msgstr "{0} đã có trên desktop."
+
+msgid "{0}'s windows follow the new settings from the next one that opens."
+msgstr "Cửa sổ của {0} theo cài đặt mới, bắt đầu từ cửa sổ mở tiếp theo."
+
+msgid "Resizable"
+msgstr "Có thể đổi kích thước"
+
+msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
+msgstr "Có thể đổi kích thước và phóng to cửa sổ của ứng dụng này hay không. Khi tắt, mỗi cửa sổ giữ kích thước lúc mở."
+
+msgid "Start below the title bar"
+msgstr "Bắt đầu bên dưới thanh tiêu đề"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Dành cho ứng dụng có thanh trên cùng bị thanh tiêu đề ép lại hoặc che khuất.\nỨng dụng bắt đầu bên dưới thanh tiêu đề thay vì vẽ phía sau thanh này.\nÁp dụng từ lần mở cửa sổ ứng dụng tiếp theo."
+
+msgid "Window size when it opens"
+msgstr "Kích thước cửa sổ khi mở"
+
+msgid "The size this app's windows open at"
+msgstr "Kích thước mà cửa sổ của ứng dụng này mở ra"
+
+msgid "Uninstall"
+msgstr "Gỡ cài đặt"
+
+msgid "This app is part of Android and cannot be uninstalled."
+msgstr "Ứng dụng này là một phần của Android và không thể gỡ cài đặt."
+
+msgid "Uninstall {0}?"
+msgstr "Gỡ cài đặt {0}?"
+
+msgid "{0} and its data will be removed from Android. This cannot be undone."
+msgstr "{0} và dữ liệu của nó sẽ bị xóa khỏi Android. Không thể hoàn tác thao tác này."
+
+msgid "{0} is uninstalled."
+msgstr "Đã gỡ cài đặt {0}."
+
+msgid "Not uninstalled"
+msgstr "Chưa gỡ cài đặt"
+
+msgid "{0} was not uninstalled: {1} ({2})"
+msgstr "Chưa gỡ cài đặt được {0}: {1} ({2})"
+
+msgid "These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used."
+msgstr "Các ứng dụng Android này vẫn chạy sau khi đóng cửa sổ, để phát nhạc, tải tệp, giữ VPN hoặc làm việc khác.\nMỗi ứng dụng còn có một chỉ báo trên thanh trên cùng.\nDừng một ứng dụng sẽ kết thúc việc nó đang làm và giải phóng bộ nhớ nó đã dùng."
+
+msgid "Stopping apps"
+msgstr "Dừng ứng dụng"
+
+msgid "Ask before stopping an app from its indicator"
+msgstr "Hỏi trước khi dừng ứng dụng từ chỉ báo của nó"
+
+msgid "Turn this back on if you chose not to be asked again."
+msgstr "Bật lại mục này nếu bạn đã chọn không hỏi lại."
+
+msgid "The setting was not changed"
+msgstr "Cài đặt chưa được thay đổi"
+
+msgid "The apps that run in the background could not be read or changed"
+msgstr "Không thể đọc hoặc thay đổi các ứng dụng đang chạy nền"
+
+msgid "No app runs in the background."
+msgstr "Không có ứng dụng nào chạy nền."
+
+msgid "Playing {0}"
+msgstr "Đang phát {0}"
+
+msgid "Paused: {0}"
+msgstr "Đã tạm dừng: {0}"
+
+msgid "Stop"
+msgstr "Dừng"
+
+msgid "{0} was stopped."
+msgstr "Đã dừng {0}."
+
+msgid "On your desktop"
+msgstr "Trên desktop"
+
+msgid "Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page."
+msgstr "Đặt các widget mà ứng dụng Android cung cấp lên desktop. Mỗi widget có cửa sổ riêng, nằm dưới các cửa sổ khác.\nNhấn giữ một widget để chỉnh sửa: kéo để di chuyển, kéo các tay nắm để đổi kích thước.\nNhấp chuột phải vào widget để xem cài đặt, kích thước và Gỡ bỏ. Android khởi động khi bạn mở trang này."
+
+msgid "Widgets your apps offer"
+msgstr "Widget mà ứng dụng cung cấp"
+
+msgid "Widgets could not be read or changed"
+msgstr "Không thể đọc hoặc thay đổi widget"
+
+msgid "No widget is on your desktop yet."
+msgstr "Chưa có widget nào trên desktop."
+
+msgid "No app in Android offers a widget."
+msgstr "Không có ứng dụng Android nào cung cấp widget."
+
+msgid "At {0}, {1}, {2} × {3}"
+msgstr "Tại {0}, {1}, {2} × {3}"
+
+msgid "Remove"
+msgstr "Gỡ bỏ"
+
+msgid "{0} was removed from your desktop."
+msgstr "Đã gỡ {0} khỏi desktop."
+
+msgid "asks you to set it up"
+msgstr "yêu cầu bạn thiết lập"
+
+msgid "Add to desktop"
+msgstr "Thêm vào desktop"
+
+msgid "{0} is on your desktop."
+msgstr "{0} đã có trên desktop."
+
+msgid "Cancel"
+msgstr "Hủy"
+
+msgid "The folder could not be opened"
+msgstr "Không thể mở thư mục"
+
+msgid "{0} does not exist yet, or you may not open it."
+msgstr "{0} chưa tồn tại, hoặc bạn không có quyền mở."
+
+msgid "Android sends its log only while this page is open, and nothing is written to disk.\nSave diagnostics gathers what a problem report needs into one zip file."
+msgstr "Android chỉ gửi nhật ký khi trang này đang mở, và không ghi gì xuống đĩa.\nLưu chẩn đoán gom những gì một báo cáo sự cố cần vào một tệp zip."
+
+msgid "Filter by tag or text"
+msgstr "Lọc theo thẻ hoặc văn bản"
+
+msgid "Pause"
+msgstr "Tạm dừng"
+
+msgid "Save diagnostics"
+msgstr "Lưu chẩn đoán"
+
+msgid "The log cannot be read"
+msgstr "Không thể đọc nhật ký"
+
+msgid "Gathering the diagnostics. This takes a minute or more."
+msgstr "Đang thu thập chẩn đoán. Việc này mất một phút hoặc lâu hơn."
+
+msgid "Saved the diagnostics to {0}."
+msgstr "Đã lưu chẩn đoán vào {0}."
+
+msgid "DSA Settings"
+msgstr "Cài đặt DSA"
+
+msgid "Not installed"
+msgstr "Chưa cài đặt"
+
+msgid "Only APK files and split APK bundles can be installed: {0}"
+msgstr "Chỉ có thể cài tệp APK và gói APK tách: {0}"
+
+msgid "Installing {0} in Android…"
+msgstr "Đang cài {0} vào Android…"
+
+msgid "{0} is installed ({1}). Open it from the app grid."
+msgstr "Đã cài {0} ({1}). Mở nó từ lưới ứng dụng."
+
+msgid "{0} was not installed: {1} ({2})"
+msgstr "Chưa cài được {0}: {1} ({2})"
+
+msgid "{0} did not reach Android. {1}"
+msgstr "{0} không đến được Android. {1}"
+
+msgid "State"
+msgstr "Trạng thái"
+
+msgid "Desktop Subsystem for Android™ runs Android in its own lightweight virtual machine and shows each app in its own window."
+msgstr "Desktop Subsystem for Android™ chạy Android trong máy ảo nhẹ riêng và hiển thị mỗi ứng dụng trong cửa sổ riêng."
+
+msgid "Android"
+msgstr "Android"
+
+msgid "Start"
+msgstr "Khởi động"
+
+msgid "Android is not ready"
+msgstr "Android chưa sẵn sàng"
+
+msgid "Last stopped"
+msgstr "Lần dừng gần nhất"
+
+msgid "Update"
+msgstr "Cập nhật"
+
+msgid "More"
+msgstr "Thêm"
+
+msgid "Freeze Android now"
+msgstr "Đóng băng Android ngay"
+
+msgid "Stops every process in Android until you open one of its windows again. Notifications, alarms and widgets stop with it."
+msgstr "Dừng mọi tiến trình trong Android cho đến khi bạn mở lại một cửa sổ của nó. Thông báo, báo thức và widget cũng dừng theo."
+
+msgid "Freeze"
+msgstr "Đóng băng"
+
+msgid "Open my log folder"
+msgstr "Mở thư mục nhật ký của tôi"
+
+msgid "The logs of the window manager and the app windows, for reporting a problem."
+msgstr "Nhật ký của trình quản lý cửa sổ và các cửa sổ ứng dụng, để báo cáo sự cố."
+
+msgid "Open the service's log folder (administrators)"
+msgstr "Mở thư mục nhật ký của dịch vụ (quản trị viên)"
+
+msgid "The logs of the DSA service and of Android itself."
+msgstr "Nhật ký của dịch vụ DSA và của chính Android."
+
+msgid "Ask the DSA service for the state again."
+msgstr "Hỏi lại dịch vụ DSA về trạng thái."
+
+msgid "Something went wrong"
+msgstr "Đã xảy ra lỗi"
+
+msgid "On this computer"
+msgstr "Trên máy tính này"
+
+msgid "In use on this computer"
+msgstr "Đang dùng trên máy tính này"
+
+msgid "The RAM the virtual machine, the window manager and the app windows hold now."
+msgstr "RAM mà máy ảo, trình quản lý cửa sổ và các cửa sổ ứng dụng đang giữ."
+
+msgid "Android's VM now"
+msgstr "VM của Android hiện tại"
+
+msgid "The memory the VM holds on this computer, and how much of it Android uses"
+msgstr "Bộ nhớ VM giữ trên máy tính này, và bao nhiêu trong đó Android dùng"
+
+msgid "Inside Android"
+msgstr "Bên trong Android"
+
+msgid "Available to Android"
+msgstr "Dành cho Android"
+
+msgid "Android's kernel"
+msgstr "Kernel của Android"
+
+msgid "Largest processes"
+msgstr "Tiến trình lớn nhất"
+
+msgid "Memory limit"
+msgstr "Giới hạn bộ nhớ"
+
+msgid "The most memory Android may grow to. Android takes only what it needs and returns the rest at once.\nAutomatic sets no fixed limit: up to this computer's memory less what Linux keeps.\nTakes effect the next time Android starts."
+msgstr "Mức bộ nhớ tối đa Android có thể dùng. Android chỉ lấy những gì cần và trả lại phần còn lại ngay.\nTự động không đặt giới hạn cố định: tối đa bằng bộ nhớ của máy tính này trừ phần Linux giữ lại.\nCó hiệu lực ở lần khởi động Android tiếp theo."
+
+msgid "The memory could not be measured"
+msgstr "Không thể đo bộ nhớ"
+
+msgid "{0}: used by Android {1}, free, not yet returned {2}"
+msgstr "{0}: Android dùng {1}, trống nhưng chưa trả lại {2}"
+
+msgid "Android is not running, so it takes no memory on this computer."
+msgstr "Android không chạy nên không chiếm bộ nhớ trên máy tính này."
+
+msgid "No report yet. Android reports how it uses its memory a few minutes after it starts."
+msgstr "Chưa có báo cáo. Android báo cáo cách dùng bộ nhớ vài phút sau khi khởi động."
+
+msgid "Reported {0} seconds ago"
+msgstr "Đã báo cáo {0} giây trước"
+
+msgid "{0} available of {1}"
+msgstr "{0} khả dụng trong {1}"
+
+msgid "Render GPU"
+msgstr "GPU kết xuất"
+
+msgid "The GPU that draws Android apps.\nThe default, the primary monitor's GPU, keeps frames on one GPU and lets a laptop's discrete GPU sleep."
+msgstr "GPU vẽ các ứng dụng Android.\nMặc định là GPU của màn hình chính, giữ khung hình trên một GPU và để GPU rời của laptop được nghỉ."
+
+msgid "A new render GPU takes effect when the window manager starts again: at the next sign-in, or when you restart it below."
+msgstr "GPU kết xuất mới có hiệu lực khi trình quản lý cửa sổ khởi động lại: lần đăng nhập tới, hoặc khi bạn khởi động lại bên dưới."
+
+msgid "GPU of the primary monitor"
+msgstr "GPU của màn hình chính"
+
+msgid "What the default choice renders on now."
+msgstr "GPU mà lựa chọn mặc định đang kết xuất."
+
+msgid "Restart the window manager"
+msgstr "Khởi động lại trình quản lý cửa sổ"
+
+msgid "Open Android app windows close and come back."
+msgstr "Các cửa sổ ứng dụng Android đang mở sẽ đóng rồi mở lại."
+
+msgid "Restart"
+msgstr "Khởi động lại"
+
+msgid "Restart the window manager?"
+msgstr "Khởi động lại trình quản lý cửa sổ?"
+
+msgid "The windows of Android apps close for a moment. Android and its apps keep running."
+msgstr "Cửa sổ của các ứng dụng Android sẽ đóng trong giây lát. Android và các ứng dụng vẫn tiếp tục chạy."
+
+msgid "The window manager could not be restarted"
+msgstr "Không thể khởi động lại trình quản lý cửa sổ"
+
+msgid "Chosen by the window manager when it starts"
+msgstr "Do trình quản lý cửa sổ chọn khi khởi động"
+
+msgid "Running now"
+msgstr "Đang chạy"
+
+msgid "Build"
+msgstr "Bản dựng"
+
+msgid "Security patch level"
+msgstr "Cấp bản vá bảo mật"
+
+msgid "Changing the Android version"
+msgstr "Thay đổi phiên bản Android"
+
+msgid "Every user of this computer runs the same Android version, so changing it needs an administrator.\nThe chosen version keeps getting security updates.\nWhen its support ends, DSA moves to the next version and keeps your apps."
+msgstr "Mọi người dùng máy tính này chạy cùng phiên bản Android, nên việc thay đổi cần quản trị viên.\nPhiên bản đã chọn tiếp tục nhận bản cập nhật bảo mật.\nKhi phiên bản hết được hỗ trợ, DSA chuyển sang phiên bản kế tiếp và giữ các ứng dụng của bạn."
+
+msgid "Version to use"
+msgstr "Phiên bản sử dụng"
+
+msgid "DSA supports the latest two Android versions. Some apps run on only one of them."
+msgstr "DSA hỗ trợ hai phiên bản Android mới nhất. Một số ứng dụng chỉ chạy trên một trong hai."
+
+msgid "Change"
+msgstr "Thay đổi"
+
+msgid "Android {0} is chosen. It is downloaded now and used the next time Android starts."
+msgstr "Đã chọn Android {0}. Phiên bản này được tải ngay và dùng ở lần khởi động Android tiếp theo."
+
+msgid "Supported versions: Android {0}"
+msgstr "Phiên bản được hỗ trợ: Android {0}"
+
+msgid "Move to a newer Android?"
+msgstr "Chuyển sang Android mới hơn?"
+
+msgid "Android {0} is downloaded and used the next time Android starts.\n\nYour apps and their data move along. Moving back later erases the data."
+msgstr "Android {0} sẽ được tải xuống và dùng ở lần khởi động Android tiếp theo.\n\nỨng dụng và dữ liệu của chúng được chuyển theo. Quay lại sau này sẽ xóa dữ liệu."
+
+msgid "Erase Android data to move to an older version?"
+msgstr "Xóa dữ liệu Android để chuyển sang phiên bản cũ hơn?"
+
+msgid "Android {0} is older than the Android {1} that runs now. Android cannot read data a newer version wrote.\n\nMoving erases the Android data of every user of this computer:\n• every app they installed\n• the accounts they signed in to\n• the data of every app\n\nEach user's Android then starts as it was first installed. DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Android {0} cũ hơn Android {1} đang chạy. Android không đọc được dữ liệu do phiên bản mới hơn ghi.\n\nViệc chuyển sẽ xóa dữ liệu Android của mọi người dùng máy tính này:\n• mọi ứng dụng họ đã cài\n• các tài khoản họ đã đăng nhập\n• dữ liệu của mọi ứng dụng\n\nSau đó Android của mỗi người dùng khởi động như lúc mới cài. Cài đặt của DSA được giữ nguyên.\n\nKhông thể hoàn tác thao tác này."
+
+msgid "Erase data and change"
+msgstr "Xóa dữ liệu và thay đổi"
+
+msgid "New versions of DSA come through the system's package manager and software center, with the other updates.\nInstalling DSA added its signed package repository."
+msgstr "Phiên bản mới của DSA đến qua trình quản lý gói và trung tâm phần mềm của hệ thống, cùng các bản cập nhật khác.\nKhi cài, DSA đã thêm kho gói có chữ ký của nó."
+
+msgid "Open software updates"
+msgstr "Mở cập nhật phần mềm"
+
+msgid "Shows the updates the system has for DSA and the other installed programs."
+msgstr "Hiển thị các bản cập nhật mà hệ thống có cho DSA và các chương trình đã cài khác."
+
+msgid "No software center was found"
+msgstr "Không tìm thấy trung tâm phần mềm"
+
+msgid "Update DSA with the system's package manager, such as apt or dnf."
+msgstr "Hãy cập nhật DSA bằng trình quản lý gói của hệ thống, chẳng hạn apt hoặc dnf."
+
+msgid "Android image"
+msgstr "Ảnh Android"
+
+msgid "This setting applies to every user of this computer, so changing it asks for an administrator's permission."
+msgstr "Cài đặt này áp dụng cho mọi người dùng máy tính này, nên việc thay đổi sẽ yêu cầu quyền của quản trị viên."
+
+msgid "The newest supported version (now Android {0})"
+msgstr "Phiên bản được hỗ trợ mới nhất (hiện là Android {0})"
+
+msgid "Android {0} and its security updates"
+msgstr "Android {0} và các bản cập nhật bảo mật của nó"
+
+msgid "No Android update is waiting. DSA checks every day, and restarts Android into an update once no app window is open."
+msgstr "Không có cập nhật Android đang chờ. DSA kiểm tra hằng ngày và khởi động lại Android để cập nhật khi không mở cửa sổ ứng dụng nào."
+
+msgid "Android {0} is downloaded. Restart Android to use it now."
+msgstr "Đã tải Android {0}. Hãy khởi động lại Android để dùng ngay."
+
+msgid "Restart now"
+msgstr "Khởi động lại ngay"
+
+msgid "Restart Android now?"
+msgstr "Khởi động lại Android ngay?"
+
+msgid "Android restarts into Android {0}.\n\nIts app windows close. Open the apps again once it has started."
+msgstr "Android sẽ khởi động lại vào Android {0}.\n\nCác cửa sổ ứng dụng sẽ đóng. Hãy mở lại ứng dụng khi Android đã khởi động xong."
+
+msgid "Restart Android into updates by itself"
+msgstr "Tự khởi động lại Android vào bản cập nhật"
+
+msgid "On by default. With no app window open, Android restarts into a downloaded update at once.\nWith windows open, DSA asks first or waits until you close them.\nOff, an update is used the next time you start Android."
+msgstr "Bật theo mặc định. Khi không có cửa sổ ứng dụng nào mở, Android khởi động lại vào bản cập nhật đã tải ngay lập tức.\nKhi có cửa sổ đang mở, DSA hỏi trước hoặc chờ đến khi bạn đóng chúng.\nKhi tắt, bản cập nhật được dùng ở lần khởi động Android tiếp theo."
+
+msgid "Version it follows"
+msgstr "Phiên bản đang theo"
+
+msgid "Android update"
+msgstr "Cập nhật Android"
+
+msgid "Check now"
+msgstr "Kiểm tra ngay"
+
+msgid "Device specifications"
+msgstr "Thông số thiết bị"
+
+msgid "What Android reports"
+msgstr "Những gì Android báo cáo"
+
+msgid "Not reported"
+msgstr "Không được báo cáo"
+
+msgid "Get pre-release versions"
+msgstr "Nhận phiên bản phát hành trước"
+
+msgid "Also install versions that are still being finished. Every release before 1.0 is a pre-release.\nThe package manager then reads DSA's pre-release repository.\nTurning this off never moves DSA back: it waits for a stable release newer than the one installed."
+msgstr "Cài cả các phiên bản vẫn đang được hoàn thiện. Mọi bản phát hành trước 1.0 đều là bản phát hành trước.\nKhi đó trình quản lý gói đọc kho phát hành trước của DSA.\nTắt mục này không bao giờ đưa DSA lùi lại: nó chờ một bản ổn định mới hơn bản đang cài."
+
+msgid "This installation does not follow a release channel."
+msgstr "Bản cài đặt này không theo kênh phát hành nào."
+
+msgid "Update the Android image automatically"
+msgstr "Tự động cập nhật ảnh Android"
+
+msgid "Download signed security updates and new versions of Android.\nThey apply when Android restarts, as the Android update settings above say."
+msgstr "Tải các bản cập nhật bảo mật có chữ ký và phiên bản Android mới.\nChúng được áp dụng khi Android khởi động lại, theo cài đặt cập nhật Android ở trên."
+
+msgid "This installation does not offer image updates."
+msgstr "Bản cài đặt này không cung cấp cập nhật ảnh."
+
+msgid "Desktop Subsystem for Android™"
+msgstr "Desktop Subsystem for Android™"
+
+msgid "Thisisthepy"
+msgstr "Thisisthepy"
+
+msgid "DSA Settings version"
+msgstr "Phiên bản Cài đặt DSA"
+
+msgid "DSA service version"
+msgstr "Phiên bản dịch vụ DSA"
+
+msgid "Android image version"
+msgstr "Phiên bản ảnh Android"
+
+msgid "The Android image the next start boots. Image updates change it."
+msgstr "Ảnh Android mà lần khởi động tới sẽ dùng. Cập nhật ảnh sẽ thay đổi nó."
+
+msgid "Licences"
+msgstr "Giấy phép"
+
+msgid "DSA is licensed under the Apache License 2.0. Open the licences of every component it ships."
+msgstr "DSA được cấp phép theo Apache License 2.0. Mở giấy phép của mọi thành phần đi kèm."
+
+msgid "Source code"
+msgstr "Mã nguồn"
+
+msgid "Desktop Subsystem for Android is an independent open source project.\nIt is not affiliated with, endorsed by or sponsored by Microsoft or Google."
+msgstr "Desktop Subsystem for Android là một dự án mã nguồn mở độc lập.\nDự án không liên kết với Microsoft hay Google, và không được hai công ty này xác nhận hoặc tài trợ."
+
+msgid "Android is a trademark of Google LLC."
+msgstr "Android là nhãn hiệu của Google LLC."
+
+msgid "The names and build fingerprint Android reports to apps. Leave a box empty to keep the value shown.\nChanges apply from the next start of Android."
+msgstr "Tên và dấu vân tay bản dựng mà Android báo cho ứng dụng. Để trống một ô để giữ giá trị đang hiển thị.\nThay đổi có hiệu lực từ lần khởi động Android tiếp theo."
+
+msgid "Apps may notice"
+msgstr "Ứng dụng có thể nhận ra"
+
+msgid "Changing the model or the fingerprint can change how apps behave.\nSome check the device before they run, and payment and integrity checks may fail."
+msgstr "Thay đổi kiểu máy hoặc dấu vân tay có thể làm thay đổi cách ứng dụng hoạt động.\nMột số ứng dụng kiểm tra thiết bị trước khi chạy, và kiểm tra thanh toán và tính toàn vẹn có thể thất bại."
+
+msgid "Build fingerprint"
+msgstr "Dấu vân tay bản dựng"
+
+msgid "Fingerprint from the next start"
+msgstr "Dấu vân tay từ lần khởi động tới"
+
+msgid "Restart Android now"
+msgstr "Khởi động lại Android ngay"
+
+msgid "Reset to defaults"
+msgstr "Đặt lại về mặc định"
+
+msgid "Save"
+msgstr "Lưu"
+
+msgid "Saved. Android uses it from its next start."
+msgstr "Đã lưu. Android dùng giá trị này từ lần khởi động tiếp theo."
+
+msgid "Saved. Restart Android to use it now."
+msgstr "Đã lưu. Hãy khởi động lại Android để dùng ngay."
+
+msgid "Reset the device identity?"
+msgstr "Đặt lại danh tính thiết bị?"
+
+msgid "Every value goes back to its default: this computer's, or DSA's own where the computer does not say.\n\nIt applies from the next start of Android."
+msgstr "Mọi giá trị trở về mặc định: giá trị của máy tính này, hoặc của DSA khi máy tính không cho biết.\n\nThay đổi có hiệu lực từ lần khởi động Android tiếp theo."
+
+msgid "Back to the defaults. Android uses them from its next start."
+msgstr "Đã trở về mặc định. Android dùng các giá trị này từ lần khởi động tiếp theo."
+
+msgid "Back to the defaults. Restart Android to use them now."
+msgstr "Đã trở về mặc định. Hãy khởi động lại Android để dùng ngay."
+
+msgid "Android started again with this identity."
+msgstr "Android đã khởi động lại với danh tính này."
+
+msgid "Android's network"
+msgstr "Mạng của Android"
+
+msgid "Connection"
+msgstr "Kết nối"
+
+msgid "Address"
+msgstr "Địa chỉ"
+
+msgid "DNS"
+msgstr "DNS"
+
+msgid "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps."
+msgstr "Được trình phân giải của máy tính này trả lời, nên tệp hosts, VPN và bộ lọc DNS của nó áp dụng cho ứng dụng Android."
+
+msgid "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}"
+msgstr "Trình phân giải của máy tính này không trả lời, nên Android hỏi các máy chủ DNS của mạng: {0}"
+
+msgid "Gateway"
+msgstr "Cổng mạng"
+
+msgid "Advanced networking is not in use"
+msgstr "Mạng nâng cao không được sử dụng"
+
+msgid "Restart Android to apply"
+msgstr "Khởi động lại Android để áp dụng"
+
+msgid "The change applies the next time Android starts. Stop Android on the General page, then open an app."
+msgstr "Thay đổi có hiệu lực ở lần khởi động Android tiếp theo. Hãy dừng Android ở trang Chung, rồi mở một ứng dụng."
+
+msgid "Advanced networking"
+msgstr "Mạng nâng cao"
+
+msgid "Off by default. When on, Android joins this computer's network as a device of its own.\nOther devices on the network and Android apps can then reach each other directly.\nPrograms on this computer can always reach a server in Android at the address above."
+msgstr "Tắt theo mặc định. Khi bật, Android tham gia mạng của máy tính này như một thiết bị riêng.\nKhi đó các thiết bị khác trong mạng và ứng dụng Android có thể kết nối trực tiếp với nhau.\nCác chương trình trên máy tính này luôn kết nối được tới máy chủ trong Android qua địa chỉ ở trên."
+
+msgid "Trusted certificates"
+msgstr "Chứng chỉ tin cậy"
+
+msgid "Root certificates you or an administrator added to this computer, such as a company's or a security program's.\nThe system's own certificates are not listed: Android has its own."
+msgstr "Chứng chỉ gốc mà bạn hoặc quản trị viên đã thêm vào máy tính này, chẳng hạn của công ty hoặc chương trình bảo mật.\nChứng chỉ của chính hệ thống không được liệt kê: Android có chứng chỉ riêng."
+
+msgid "Trust certificates added to this computer"
+msgstr "Tin cậy chứng chỉ đã thêm vào máy tính này"
+
+msgid "On by default. Android apps trust the certificates listed below as they trust Android's own.\nSites and servers this computer trusts then open in Android too. The change applies at once."
+msgstr "Bật theo mặc định. Ứng dụng Android tin cậy các chứng chỉ bên dưới như tin cậy chứng chỉ của chính Android.\nKhi đó các trang web và máy chủ mà máy tính này tin cậy cũng mở được trong Android. Thay đổi áp dụng ngay."
+
+msgid "This computer's trusted root certificates"
+msgstr "Chứng chỉ gốc tin cậy của máy tính này"
+
+msgid "This computer's group policy"
+msgstr "Chính sách nhóm của máy tính này"
+
+msgid "This computer's enterprise certificates"
+msgstr "Chứng chỉ doanh nghiệp của máy tính này"
+
+msgid "Your trusted root certificates"
+msgstr "Chứng chỉ gốc tin cậy của bạn"
+
+msgid "Your group policy"
+msgstr "Chính sách nhóm của bạn"
+
+msgid "This computer's administrator trust settings"
+msgstr "Cài đặt tin cậy của quản trị viên máy tính này"
+
+msgid "Added to the system's certificate store"
+msgstr "Đã thêm vào kho chứng chỉ của hệ thống"
+
+msgid "SHA-256 {0}"
+msgstr "SHA-256 {0}"
+
+msgid "A certificate without a name"
+msgstr "Chứng chỉ không có tên"
+
+msgid "Issued by {0}"
+msgstr "Do {0} cấp"
+
+msgid "No added root certificates were found on this computer."
+msgstr "Không tìm thấy chứng chỉ gốc nào được thêm vào máy tính này."
+
+msgid "Files"
+msgstr "Tệp"
+
+msgid "Send files to Android apps"
+msgstr "Gửi tệp tới ứng dụng Android"
+
+msgid "To send a file to an Android app, drag it from the file manager onto the app's window. An APK you drop is installed."
+msgstr "Để gửi tệp tới ứng dụng Android, hãy kéo tệp từ trình quản lý tệp thả vào cửa sổ ứng dụng. APK bạn thả vào sẽ được cài."
+
+msgid "Share folders with Android"
+msgstr "Chia sẻ thư mục với Android"
+
+msgid "On by default. The folders chosen below show in Android's shared storage, for Android apps to open and save files.\nApps need Android's storage permission, and can do only what your own account may do."
+msgstr "Bật theo mặc định. Các thư mục chọn bên dưới hiện trong vùng lưu trữ dùng chung của Android, để ứng dụng mở và lưu tệp.\nỨng dụng cần quyền lưu trữ của Android, và chỉ làm được những gì tài khoản của bạn được phép."
+
+msgid "Shared folders"
+msgstr "Thư mục được chia sẻ"
+
+msgid "A folder you clear is taken away from Android at once."
+msgstr "Thư mục bạn bỏ chọn sẽ bị gỡ khỏi Android ngay lập tức."
+
+msgid "Android files"
+msgstr "Tệp Android"
+
+msgid "Opens Android's shared storage in the file manager: the files Android apps saved, such as photos.\nAndroid starts if it is not running. DSA Files in the app grid does the same."
+msgstr "Mở vùng lưu trữ dùng chung của Android trong trình quản lý tệp: các tệp ứng dụng Android đã lưu, chẳng hạn ảnh.\nAndroid khởi động nếu chưa chạy. DSA Files trong lưới ứng dụng cũng làm như vậy."
+
+msgid "Open web links in Android apps"
+msgstr "Mở liên kết web trong ứng dụng Android"
+
+msgid "Off by default: a web link you tap in an Android app opens in your default browser on this computer.\nOn, it opens in an Android app, as on a phone.\nA link an installed app has verified as its own opens in that app either way."
+msgstr "Tắt theo mặc định: liên kết web bạn nhấn trong ứng dụng Android sẽ mở trong trình duyệt mặc định của máy tính này.\nKhi bật, liên kết mở trong một ứng dụng Android, như trên điện thoại.\nLiên kết mà một ứng dụng đã cài xác minh là của mình luôn mở trong ứng dụng đó, dù bật hay tắt."
+
+msgid "ARM apps"
+msgstr "Ứng dụng ARM"
+
+msgid "Run apps built only for ARM"
+msgstr "Chạy ứng dụng chỉ được xây dựng cho ARM"
+
+msgid "Many Android apps have code only for ARM processors. They run here only through an ARM translator.\nAndroid uses its own open source translator, unless you install another (dsa arm-translation install) or Google's.\nOff, Android uses no translator at all. Changes apply from the next start of Android.\nOnly 64-bit ARM apps (arm64-v8a) can run."
+msgstr "Nhiều ứng dụng Android chỉ có mã cho bộ xử lý ARM. Ở đây chúng chỉ chạy được qua một trình dịch ARM.\nAndroid dùng trình dịch mã nguồn mở riêng, trừ khi bạn cài trình dịch khác (dsa arm-translation install) hoặc của Google.\nKhi tắt, Android không dùng trình dịch nào. Thay đổi có hiệu lực từ lần khởi động Android tiếp theo.\nChỉ ứng dụng ARM 64-bit (arm64-v8a) chạy được."
+
+msgid "Status"
+msgstr "Trạng thái"
+
+msgid "Android started before this change. Stop and start Android for ARM apps to follow it."
+msgstr "Android đã khởi động trước thay đổi này. Hãy dừng rồi khởi động Android để ứng dụng ARM áp dụng nó."
+
+msgid "Remove the ARM translation package"
+msgstr "Gỡ bỏ gói dịch ARM"
+
+msgid "Deletes the package from your add-on disk. ARM apps you installed stay, but do not run after Android restarts."
+msgstr "Xóa gói khỏi đĩa tiện ích bổ sung. Các ứng dụng ARM bạn đã cài vẫn còn, nhưng không chạy sau khi Android khởi động lại."
+
+msgid "Developer"
+msgstr "Nhà phát triển"
+
+msgid "Developer mode"
+msgstr "Chế độ nhà phát triển"
+
+msgid "Off by default. When on, adb on this computer connects to Android without asking in Android.\nThe port is reachable only from this computer. Turn it off when you are done."
+msgstr "Tắt theo mặc định. Khi bật, adb trên máy tính này kết nối với Android mà không cần xác nhận trong Android.\nCổng chỉ truy cập được từ máy tính này. Hãy tắt khi bạn dùng xong."
+
+msgid "Connect adb automatically"
+msgstr "Tự động kết nối adb"
+
+msgid "On by default. While developer mode is on, Android shows in adb devices and Android Studio without adb connect.\nAfter adb disconnect, it stays off until the adb server restarts."
+msgstr "Bật theo mặc định. Khi bật chế độ nhà phát triển, Android hiện trong adb devices và Android Studio mà không cần adb connect.\nSau adb disconnect, tính năng này tắt cho đến khi máy chủ adb khởi động lại."
+
+msgid "Automatic connection"
+msgstr "Kết nối tự động"
+
+msgid "Not connecting: developer mode or automatic connection is off."
+msgstr "Không kết nối: chế độ nhà phát triển hoặc kết nối tự động đang tắt."
+
+msgid "Waiting for adb: Android connects when adb starts on this computer."
+msgstr "Đang chờ adb: Android kết nối khi adb khởi động trên máy tính này."
+
+msgid "Waiting for Android: it connects once Android is running."
+msgstr "Đang chờ Android: kết nối khi Android đang chạy."
+
+msgid "Connected: adb lists Android."
+msgstr "Đã kết nối: adb liệt kê Android."
+
+msgid "Disconnected with adb disconnect. Android connects again when the adb server restarts."
+msgstr "Đã ngắt bằng adb disconnect. Android kết nối lại khi máy chủ adb khởi động lại."
+
+msgid "Connect adb"
+msgstr "Kết nối adb"
+
+msgid "While developer mode is on and Android is running, run this command:"
+msgstr "Khi chế độ nhà phát triển đang bật và Android đang chạy, hãy chạy lệnh này:"
+
+msgid "Port"
+msgstr "Cổng"
+
+msgid "Share the clipboard with Android"
+msgstr "Chia sẻ bộ nhớ tạm với Android"
+
+msgid "On by default: text copied on this computer can be pasted in Android apps, and the other way round.\nImages stay where they were copied."
+msgstr "Bật theo mặc định: văn bản sao chép trên máy tính này có thể dán vào ứng dụng Android, và ngược lại.\nHình ảnh chỉ ở lại nơi chúng được sao chép."
+
+msgid "Freeze Android when idle"
+msgstr "Đóng băng Android khi rảnh"
+
+msgid "Off by default: an idle Android dozes and still receives notifications.\nFrozen, it uses no CPU but receives nothing until you open an app."
+msgstr "Tắt theo mặc định: Android khi rảnh sẽ vào Doze và vẫn nhận thông báo.\nKhi đóng băng, Android không dùng CPU nhưng không nhận gì cho đến khi bạn mở một ứng dụng."
+
+msgid "Diagnostics"
+msgstr "Chẩn đoán"
+
+msgid "The traces make the DSA logs below grow, so turn them on only to report a problem.\nThey apply to every user of this computer, so changing them asks for an administrator's permission."
+msgstr "Các bản theo dõi làm nhật ký DSA bên dưới lớn lên, nên chỉ bật khi cần báo cáo sự cố.\nChúng áp dụng cho mọi người dùng máy tính này, nên việc thay đổi sẽ yêu cầu quyền của quản trị viên."
+
+msgid "Input trace"
+msgstr "Theo dõi nhập liệu"
+
+msgid "Every DSA process records when each touch, click and key reaches it, to measure the delay to the picture.\nOff by default."
+msgstr "Mọi tiến trình DSA ghi lại thời điểm mỗi lần chạm, nhấp và phím đến nơi, để đo độ trễ tới hình ảnh.\nTắt theo mặc định."
+
+msgid "Resize trace"
+msgstr "Theo dõi đổi kích thước"
+
+msgid "Every DSA process records each stage of each window resize, to find where it is slow or flickers.\nOff by default."
+msgstr "Mọi tiến trình DSA ghi lại từng giai đoạn của mỗi lần đổi kích thước cửa sổ, để tìm chỗ chậm hoặc nhấp nháy.\nTắt theo mặc định."
+
+msgid "Logs"
+msgstr "Nhật ký"
+
+msgid "The logs of your window manager and app windows."
+msgstr "Nhật ký của trình quản lý cửa sổ và các cửa sổ ứng dụng của bạn."
+
+msgid "Command line"
+msgstr "Dòng lệnh"
+
+msgid "The dsa command"
+msgstr "Lệnh dsa"
+
+msgid "dsa status"
+msgstr "dsa status"
+
+msgid "dsa settings"
+msgstr "dsa settings"
+
+msgid "dsa memory"
+msgstr "dsa memory"
+
+msgid "Everything on these pages is also available from a terminal."
+msgstr "Mọi thứ trên các trang này cũng dùng được từ terminal."
+
+msgid "Reset"
+msgstr "Đặt lại"
+
+msgid "Reset Android's data"
+msgstr "Đặt lại dữ liệu Android"
+
+msgid "Erases every app you installed, your accounts and every app's data. Android starts as it was first installed.\nThe Android image and these settings stay."
+msgstr "Xóa mọi ứng dụng bạn đã cài, tài khoản của bạn và dữ liệu của mọi ứng dụng. Android khởi động như lúc mới cài.\nẢnh Android và các cài đặt này được giữ nguyên."
+
+msgid "Reset Android's data?"
+msgstr "Đặt lại dữ liệu Android?"
+
+msgid "This erases from Android:\n• every app you installed\n• the accounts you signed in to\n• the data of every app\n\nAndroid stops now. Its next start is as it was first installed.\n\nThe Android image and DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Thao tác này xóa khỏi Android:\n• mọi ứng dụng bạn đã cài\n• các tài khoản bạn đã đăng nhập\n• dữ liệu của mọi ứng dụng\n\nAndroid dừng ngay bây giờ. Lần khởi động tới sẽ như lúc mới cài.\n\nẢnh Android và cài đặt của DSA được giữ nguyên.\n\nKhông thể hoàn tác thao tác này."
+
+msgid "Android's data was reset"
+msgstr "Đã đặt lại dữ liệu Android"
+
+msgid "The next app you open starts Android as it was first installed."
+msgstr "Ứng dụng tiếp theo bạn mở sẽ khởi động Android như lúc mới cài."
+
+msgid "Documents"
+msgstr "Tài liệu"
+
+msgid "Downloads"
+msgstr "Tải xuống"
+
+msgid "Pictures"
+msgstr "Ảnh"
+
+msgid "Music"
+msgstr "Nhạc"
+
+msgid "Videos"
+msgstr "Video"
+
+msgid "Desktop"
+msgstr "Màn hình nền"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Copy"
+msgstr "Sao chép"
+
+msgid "Google Play"
+msgstr "Google Play"
+
+msgid "Google Play services and the Play Store are not part of DSA.\nWhen you ask, DSA downloads LiteGapps Core, a public package of Google's apps, and installs it in your Android.\nWithout it, the rest of DSA works as before."
+msgstr "Google Play services và Play Store không phải là một phần của DSA.\nKhi bạn yêu cầu, DSA tải LiteGapps Core, một gói công khai các ứng dụng của Google, và cài vào Android của bạn.\nKhông có nó, phần còn lại của DSA vẫn hoạt động như trước."
+
+msgid "LiteGapps {0} {1} for Android {2} ({3})"
+msgstr "LiteGapps {0} {1} cho Android {2} ({3})"
+
+msgid "Installed: {0}. Restart Android to start using it."
+msgstr "Đã cài: {0}. Hãy khởi động lại Android để bắt đầu dùng."
+
+msgid "Removed. The Google apps stay in Android until it restarts."
+msgstr "Đã gỡ bỏ. Các ứng dụng Google vẫn ở trong Android cho đến khi Android khởi động lại."
+
+msgid "Installed: {0}."
+msgstr "Đã cài: {0}."
+
+msgid "{0} was installed by an older DSA and is no longer used, so Android starts without Google's apps. Install Google Play again."
+msgstr "{0} do DSA cũ cài và không còn được dùng, nên Android khởi động không có ứng dụng Google. Hãy cài lại Google Play."
+
+msgid "Not installed."
+msgstr "Chưa cài đặt."
+
+msgid "Downloaded from the LiteGapps project: {0}"
+msgstr "Tải từ dự án LiteGapps: {0}"
+
+msgid "Downloading and installing Google Play. This can take several minutes."
+msgstr "Đang tải và cài Google Play. Việc này có thể mất vài phút."
+
+msgid "Enter this number on Google's registration page."
+msgstr "Nhập số này vào trang đăng ký của Google."
+
+msgid "It shows here once Google Play is installed and Android has started."
+msgstr "Số này hiện ở đây khi Google Play đã được cài và Android đã khởi động."
+
+msgid "Android started before this change. Stop and start Android for Google Play to follow it."
+msgstr "Android đã khởi động trước thay đổi này. Hãy dừng rồi khởi động Android để Google Play áp dụng nó."
+
+msgid "Install Google Play"
+msgstr "Cài Google Play"
+
+msgid "Downloads LiteGapps Core for your Android version (about 120 to 260 MB) from the LiteGapps project, checks it and installs it.\nAndroid starts if it is not running. Google Play is there from the next start of Android."
+msgstr "Tải LiteGapps Core cho phiên bản Android của bạn (khoảng 120 đến 260 MB) từ dự án LiteGapps, kiểm tra rồi cài đặt.\nAndroid khởi động nếu chưa chạy. Google Play có mặt từ lần khởi động Android tiếp theo."
+
+msgid "Install"
+msgstr "Cài đặt"
+
+msgid "Remove Google Play"
+msgstr "Gỡ bỏ Google Play"
+
+msgid "Deletes Google's apps from your add-on disk. They are gone from the next start of Android."
+msgstr "Xóa các ứng dụng của Google khỏi đĩa tiện ích bổ sung. Chúng biến mất từ lần khởi động Android tiếp theo."
+
+msgid "Google's terms"
+msgstr "Điều khoản của Google"
+
+msgid "Google's ARM translator"
+msgstr "Trình dịch ARM của Google"
+
+msgid "Installs the ARM translator from the Android emulator image Google offers for this Android version.\nDownloads about 2 GB from Google, under Google's Android SDK License, and keeps only the translator.\nNothing is downloaded until you agree. DSA does not include or pass on Google's translator.\nA package built from another translator, such as Digitalis, does the same job."
+msgstr "Cài trình dịch ARM từ ảnh trình giả lập Android mà Google cung cấp cho phiên bản Android này.\nTải khoảng 2 GB từ Google, theo Android SDK License của Google, và chỉ giữ lại trình dịch.\nKhông tải gì cho đến khi bạn đồng ý. DSA không kèm theo hay phân phối lại trình dịch của Google.\nMột gói dựng từ trình dịch khác, chẳng hạn Digitalis, cũng làm được việc này."
+
+msgid "Get"
+msgstr "Tải về"
+
+msgid "Android SDK License"
+msgstr "Android SDK License"
+
+msgid "Google's terms for the emulator image the translator comes from."
+msgstr "Điều khoản của Google cho ảnh trình giả lập chứa trình dịch."
+
+msgid "Get Google's ARM translator?"
+msgstr "Tải trình dịch ARM của Google?"
+
+msgid "Accept and download"
+msgstr "Chấp nhận và tải xuống"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its ARM translator.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nThe translator is Google's software. DSA does not ship or pass it on.\n\nThe translator works from the next start of Android."
+msgstr "DSA tải ảnh trình giả lập Android của Google cho phiên bản Android này và chỉ lấy ra trình dịch ARM của nó.\n\n• Nguồn: kho SDK của Google ({0})\n• Kích thước: khoảng 2 GB, xóa sau khi xong\n• Giấy phép: Android SDK License ({1}). Khi tải xuống, bạn chấp nhận các điều khoản của nó.\n\nTrình dịch là phần mềm của Google. DSA không đi kèm hay phân phối lại nó.\n\nTrình dịch hoạt động từ lần khởi động Android tiếp theo."
+
+msgid "Downloading about 2 GB from Google and taking out the translator. It takes minutes."
+msgstr "Đang tải khoảng 2 GB từ Google và lấy ra trình dịch. Việc này mất vài phút."
+
+msgid "Google's apps belong to Google and follow Google's terms.\nDSA does not distribute them: it downloads the public LiteGapps package when you ask."
+msgstr "Các ứng dụng của Google thuộc về Google và tuân theo điều khoản của Google.\nDSA không phân phối chúng: DSA tải gói LiteGapps công khai khi bạn yêu cầu."
+
+msgid "Register this device with Google"
+msgstr "Đăng ký thiết bị này với Google"
+
+msgid "Google has not certified this Android, so Google may refuse to sign you in until you register it.\nOpen Google's registration page, sign in with your Google account and enter the Android ID below."
+msgstr "Google chưa chứng nhận Android này, nên Google có thể từ chối cho bạn đăng nhập cho đến khi bạn đăng ký nó.\nMở trang đăng ký của Google, đăng nhập bằng tài khoản Google và nhập Android ID bên dưới."
+
+msgid "Android ID"
+msgstr "Android ID"
+
+msgid "Google Play was not installed"
+msgstr "Chưa cài được Google Play"
+
+msgid "Google Play was not removed"
+msgstr "Chưa gỡ được Google Play"
+
+msgid "Where Google Play stands could not be read"
+msgstr "Không thể đọc trạng thái của Google Play"
+
+msgid "The page could not be opened"
+msgstr "Không thể mở trang"
+
+msgid "Runs the app's ARM code through the translator. Off runs its x86_64 code."
+msgstr "Chạy mã ARM của ứng dụng qua trình dịch. Khi tắt, ứng dụng chạy mã x86_64."
+
+msgid "Apps that are part of Android run as Android installed them."
+msgstr "Các ứng dụng là một phần của Android chạy theo cách Android đã cài chúng."
+
+msgid "No APK of this app on the device holds its ARM code."
+msgstr "Không có APK nào của ứng dụng này trên thiết bị chứa mã ARM."
+
+msgid "ARM translation is not on. Turn it on under ARM apps and restart Android."
+msgstr "Dịch ARM chưa bật. Hãy bật nó trong Ứng dụng ARM và khởi động lại Android."
+
+msgid "This app has only ARM code, so it always runs as ARM."
+msgstr "Ứng dụng này chỉ có mã ARM, nên luôn chạy dưới dạng ARM."
+
+msgid "This version of DSA cannot say whether the app can run as ARM."
+msgstr "Phiên bản DSA này không biết ứng dụng có thể chạy dưới dạng ARM hay không."
+
+msgid "{0} runs as ARM now."
+msgstr "{0} hiện chạy dưới dạng ARM."
+
+msgid "{0} runs its x86_64 code now."
+msgstr "{0} hiện chạy mã x86_64."
+
+msgid "its APKs on the device hold no code for that"
+msgstr "các APK của ứng dụng trên thiết bị không chứa mã cho việc đó"
+
+msgid "ARM translation is not on"
+msgstr "Dịch ARM chưa bật"
+
+msgid "Android refused"
+msgstr "Android đã từ chối"
+
+msgid "{0} was not installed again: {1} ({2})"
+msgstr "Chưa cài lại được {0}: {1} ({2})"
+
+msgid "Run as ARM"
+msgstr "Chạy dưới dạng ARM"
+
+msgid "Erase {0}'s data?"
+msgstr "Xóa dữ liệu của {0}?"
+
+msgid "Android cannot change how {0} runs and keep its data.\n\nInstalling it again erases its data: sign-ins, settings and files it keeps for itself."
+msgstr "Android không thể thay đổi cách {0} chạy mà vẫn giữ dữ liệu của nó.\n\nCài lại sẽ xóa dữ liệu của nó: thông tin đăng nhập, cài đặt và các tệp nó giữ cho riêng mình."
+
+msgid "Erase and install again"
+msgstr "Xóa và cài lại"
+
+msgid "Not installed again"
+msgstr "Chưa cài lại"
+
+msgid "Default: from this computer"
+msgstr "Mặc định: từ máy tính này"
+
+msgid "Default: DSA's value"
+msgstr "Mặc định: giá trị của DSA"
+
+msgid "This computer does not say; Android keeps its own."
+msgstr "Máy tính này không cho biết; Android giữ giá trị riêng."
+
+msgid "From this computer"
+msgstr "Từ máy tính này"
+
+msgid "These follow this computer and are read again each time Android starts.\nAndroid's Settings shows the device name and the chip.\nThe model name shows only here, as Android's Settings has no place for it."
+msgstr "Các giá trị này theo máy tính này và được đọc lại mỗi lần Android khởi động.\nCài đặt của Android hiển thị tên thiết bị và chip.\nTên kiểu máy chỉ hiện ở đây, vì Cài đặt của Android không có chỗ cho nó."
+
+msgid "Model name"
+msgstr "Tên kiểu máy"
+
+msgid "Device name"
+msgstr "Tên thiết bị"
+
+msgid "Chip manufacturer"
+msgstr "Nhà sản xuất chip"
+
+msgid "Chip model"
+msgstr "Kiểu chip"
+
+msgid "Root access"
+msgstr "Quyền root"
+
+msgid "Not allowed"
+msgstr "Không cho phép"
+
+msgid "Ask each time"
+msgstr "Hỏi mỗi lần"
+
+msgid "Remember (no asking)"
+msgstr "Ghi nhớ (không hỏi)"
+
+msgid "Not available"
+msgstr "Không khả dụng"
+
+msgid "Not changed"
+msgstr "Chưa thay đổi"
+
+msgid "Not allowed hides su from the app.\nAsk each time asks an administrator for each request, then not again for 15 minutes.\nRemember approves without asking. Choosing it needs an administrator's approval."
+msgstr "Không cho phép sẽ ẩn su khỏi ứng dụng.\nHỏi mỗi lần sẽ hỏi quản trị viên cho từng yêu cầu, rồi không hỏi lại trong 15 phút.\nGhi nhớ sẽ chấp thuận mà không hỏi. Chọn mục này cần quản trị viên chấp thuận."
+
+msgid "Shares its user ID with {0}, so Android cannot tell them apart.\nTheir root access is one setting: a change here applies to all of them.\nIf any of them is set to Not allowed, none of them can use su."
+msgstr "Dùng chung ID người dùng với {0}, nên Android không phân biệt được chúng.\nQuyền root của chúng là một cài đặt: thay đổi ở đây áp dụng cho tất cả.\nNếu một trong số chúng đặt là Không cho phép, không ứng dụng nào dùng được su."
+
+msgid "Root access is off for this computer. An administrator turns it on under Advanced."
+msgstr "Quyền root đang tắt trên máy tính này. Quản trị viên bật nó trong Nâng cao."
+
+msgid "This version of DSA cannot say how far the app may use root."
+msgstr "Phiên bản DSA này không biết ứng dụng được dùng root đến mức nào."
+
+msgid "The root level of {0} was not changed: {1}"
+msgstr "Chưa thay đổi được mức root của {0}: {1}"
+
+msgid "{0} cannot use root any more. su disappears for it from the next start of Android."
+msgstr "{0} không thể dùng root nữa. su sẽ biến mất với ứng dụng này từ lần khởi động Android tiếp theo."
+
+msgid "{0} now uses su without asking. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} giờ dùng su mà không hỏi. Nếu trước đây không thấy su, nó sẽ thấy từ lần khởi động Android tiếp theo."
+
+msgid "{0} now asks an administrator each time it uses su. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} giờ hỏi quản trị viên mỗi lần dùng su. Nếu trước đây không thấy su, nó sẽ thấy từ lần khởi động Android tiếp theo."
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command: {0}"
+msgstr "Mỗi yêu cầu được ghi trong nhật ký dịch vụ cùng ứng dụng, thời gian, việc có được chấp thuận không và lệnh: {0}"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command."
+msgstr "Mỗi yêu cầu được ghi trong nhật ký dịch vụ cùng ứng dụng, thời gian, việc có được chấp thuận không và lệnh."
+
+msgid "Root access is off for this computer, so no app can use su.\nAn administrator turns it on under Advanced. Then you choose each app's level here."
+msgstr "Quyền root đang tắt trên máy tính này, nên không ứng dụng nào dùng được su.\nQuản trị viên bật nó trong Nâng cao. Sau đó bạn chọn mức của từng ứng dụng tại đây."
+
+msgid "This applies to every user of this computer, so changing it asks for an administrator's permission.\nChoose each app's level under Apps."
+msgstr "Cài đặt này áp dụng cho mọi người dùng máy tính này, nên việc thay đổi sẽ yêu cầu quyền của quản trị viên.\nChọn mức của từng ứng dụng trong Ứng dụng."
+
+msgid "Let Android apps ask for root"
+msgstr "Cho phép ứng dụng Android yêu cầu quyền root"
+
+msgid "Off by default. An app you allow under Apps can run commands as root once an administrator approves, as with sudo.\nThe Android image, its build properties and SELinux stay as they are."
+msgstr "Tắt theo mặc định. Ứng dụng bạn cho phép trong Ứng dụng có thể chạy lệnh với quyền root khi quản trị viên chấp thuận, như sudo.\nẢnh Android, các thuộc tính bản dựng và SELinux được giữ nguyên."
+
+msgid "Root access changes from the next start of Android. Stop Android on the General page, then open an app."
+msgstr "Thay đổi quyền root có hiệu lực từ lần khởi động Android tiếp theo. Hãy dừng Android ở trang Chung, rồi mở một ứng dụng."
+
+msgid "Where requests are recorded"
+msgstr "Nơi ghi lại các yêu cầu"
+
+msgid "Follow the default"
+msgstr "Theo mặc định"
+
+msgid "On the whole screen"
+msgstr "Trên cả màn hình"
+
+msgid "Inside the window"
+msgstr "Trong cửa sổ"
+
+msgid "Full screen"
+msgstr "Toàn màn hình"
+
+msgid "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+msgstr "Nơi ứng dụng hiện khi rõ ràng yêu cầu toàn màn hình, như nút toàn màn hình của trình phát video. F11 luôn bật tắt toàn màn hình."
+
+msgid "Bars hidden"
+msgstr "Ẩn các thanh"
+
+msgid "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+msgstr "Nơi ứng dụng này hiện khi ẩn các thanh mà không yêu cầu toàn màn hình, như một luồng video ngắn."
+
+msgid "{0}'s windows follow the new settings now."
+msgstr "Cửa sổ của {0} giờ theo cài đặt mới."
+
+msgid "App full screen"
+msgstr "Toàn màn hình của ứng dụng"
+
+msgid "On the whole screen, the title bar appears when the pointer reaches the top edge."
+msgstr "Khi trên cả màn hình, thanh tiêu đề xuất hiện khi con trỏ chạm mép trên."
+
+msgid "Full screen request"
+msgstr "Yêu cầu toàn màn hình"
+
+msgid "Where an app's full screen request shows, such as a video's full screen button."
+msgstr "Nơi hiện yêu cầu toàn màn hình của ứng dụng, như nút toàn màn hình của một video."
+
+msgid "Where an app shows when it only hides its bars, as a feed of short videos does."
+msgstr "Nơi ứng dụng hiện khi chỉ ẩn các thanh, như một luồng video ngắn."
+
+msgid "Scaling on another monitor"
+msgstr "Co giãn trên màn hình khác"
+
+msgid "App"
+msgstr "Ứng dụng"
+
+msgid "System"
+msgstr "Hệ thống"
+
+msgid "System (forced)"
+msgstr "Hệ thống (bắt buộc)"
+
+msgid "System (forced), not available yet"
+msgstr "Hệ thống (bắt buộc), chưa khả dụng"
+
+msgid "System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System."
+msgstr "Hệ thống (bắt buộc) đưa tỷ lệ mới cho ứng dụng mà không khởi động lại, kể cả khi ứng dụng không báo là xử lý được.\nTùy chọn này chưa có: bản dựng này thiếu thay đổi Android cần thiết. Cho đến lúc đó, nó hoạt động như Hệ thống."
+
+msgid "System (recommended for this app)"
+msgstr "Hệ thống (khuyên dùng cho ứng dụng này)"
+
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "Ứng dụng: ứng dụng dùng ngay tỷ lệ của màn hình mới khi cửa sổ chạm tới đó và vẽ lại ở tỷ lệ ấy, nên chữ vẫn sắc nét.\nỨng dụng không cho biết tự xử lý việc này sẽ được tạo lại, giữ nguyên trạng thái, nên có thể vẽ lại trong chốc lát.\nHệ thống: DSA co giãn cửa sổ về cùng kích thước vật lý. Chữ có thể hơi mờ.\nTự động chọn Hệ thống cho ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, như YouTube; với ứng dụng khác, chọn Ứng dụng nếu nó cho biết tự xử lý việc này, và Hệ thống nếu không.\nTự động và Hệ thống không bao giờ khởi động lại ứng dụng."
+
+msgid "Getting the update ready"
+msgstr "Đang chuẩn bị bản cập nhật"
+
+msgid "Downloading DSA {0}"
+msgstr "Đang tải DSA {0}"
+
+msgid "Stopping Android to install DSA {0}"
+msgstr "Đang dừng Android để cài DSA {0}"
+
+msgid "Installing DSA {0}"
+msgstr "Đang cài DSA {0}"
+
+msgid "DSA is restarting to finish the update"
+msgstr "DSA đang khởi động lại để hoàn tất cập nhật"
+
+msgid "Do not close DSA or start Android apps until the update is done."
+msgstr "Đừng đóng DSA hay mở ứng dụng Android cho đến khi cập nhật xong."
+
+msgid "Updated to {0}"
+msgstr "Đã cập nhật lên {0}"
+
+msgid "DSA has not come back after the update to {0}. If it does not start soon, restart the computer."
+msgstr "DSA chưa hoạt động trở lại sau khi cập nhật lên {0}. Nếu DSA không sớm khởi động, hãy khởi động lại máy tính."
+
+msgid "Updating to {0} failed. The version before it is still installed."
+msgstr "Cập nhật lên {0} không thành công. Phiên bản trước đó vẫn được cài."
+
+msgid "Updating DSA"
+msgstr "Đang cập nhật DSA"
+
+msgid "Update of DSA"
+msgstr "Bản cập nhật DSA"
+
+msgid "Backup"
+msgstr "Sao lưu"
+
+msgid "DSA keeps an encrypted backup of your Android apps' data in a folder of your home folder.\nThe apps and their data can come back after Android's data is reset, or on another computer.\nThe key that opens it is kept in your keyring."
+msgstr "DSA giữ một bản sao lưu được mã hóa của dữ liệu ứng dụng Android trong một thư mục thuộc thư mục chính của bạn.\nỨng dụng và dữ liệu có thể được khôi phục sau khi đặt lại dữ liệu Android, hoặc trên máy tính khác.\nKhóa để mở bản sao lưu được giữ trong chùm khóa của bạn."
+
+msgid "Folder"
+msgstr "Thư mục"
+
+msgid "Backups are unavailable"
+msgstr "Không thể dùng sao lưu"
+
+msgid "Last backup"
+msgstr "Lần sao lưu gần nhất"
+
+msgid "In the backup"
+msgstr "Trong bản sao lưu"
+
+msgid "Last restore"
+msgstr "Lần khôi phục gần nhất"
+
+msgid "Last problem"
+msgstr "Sự cố gần nhất"
+
+msgid "Back up now"
+msgstr "Sao lưu ngay"
+
+msgid "Has Android back up the data of every app into the folder now. Android starts if it is not running."
+msgstr "Yêu cầu Android sao lưu dữ liệu của mọi ứng dụng vào thư mục ngay bây giờ. Android khởi động nếu chưa chạy."
+
+msgid "Back up"
+msgstr "Sao lưu"
+
+msgid "Restore"
+msgstr "Khôi phục"
+
+msgid "Installs the apps of the backup that Android does not have, then replaces every app's data with the backup's."
+msgstr "Cài các ứng dụng trong bản sao lưu mà Android chưa có, rồi thay dữ liệu của mọi ứng dụng bằng dữ liệu trong bản sao lưu."
+
+msgid "Show recovery key"
+msgstr "Hiện khóa khôi phục"
+
+msgid "The key that opens the backup anywhere else. Write it down and keep it safe."
+msgstr "Khóa để mở bản sao lưu ở bất kỳ nơi nào khác. Hãy ghi lại và cất giữ cẩn thận."
+
+msgid "Show"
+msgstr "Hiện"
+
+msgid "Use a recovery key"
+msgstr "Dùng khóa khôi phục"
+
+msgid "Opens a backup folder brought from another computer, or kept from before this computer's keyring was reset."
+msgstr "Mở thư mục sao lưu mang từ máy tính khác, hoặc giữ từ trước khi chùm khóa của máy tính này bị đặt lại."
+
+msgid "Enter"
+msgstr "Nhập"
+
+msgid "The backup was not restored"
+msgstr "Chưa khôi phục được bản sao lưu"
+
+msgid "The apps were not backed up"
+msgstr "Chưa sao lưu được các ứng dụng"
+
+msgid "Restore from the backup?"
+msgstr "Khôi phục từ bản sao lưu?"
+
+msgid "The recovery key could not be shown"
+msgstr "Không thể hiện khóa khôi phục"
+
+msgid "The recovery key is kept. The backup folder is read with it."
+msgstr "Đã lưu khóa khôi phục. Thư mục sao lưu được đọc bằng khóa này."
+
+msgid "The recovery key was not used"
+msgstr "Khóa khôi phục chưa được dùng"
+
+msgid "Where the backup stands could not be read"
+msgstr "Không thể đọc trạng thái sao lưu"
+
+msgid "Recovery key"
+msgstr "Khóa khôi phục"
+
+msgid "Enter the recovery key of the backup folder, as it was written down.\n\nSpaces, dashes and capitals do not matter.\n\nA key that does not open the folder is refused, and the key kept now stays."
+msgstr "Nhập khóa khôi phục của thư mục sao lưu, đúng như đã ghi lại.\n\nDấu cách, gạch nối và chữ hoa không quan trọng.\n\nKhóa không mở được thư mục sẽ bị từ chối, và khóa đang giữ vẫn được giữ nguyên."
+
+msgid "Never"
+msgstr "Chưa bao giờ"
+
+msgid "No apps yet"
+msgstr "Chưa có ứng dụng nào"
+
+msgid "{0} apps, {1}"
+msgstr "{0} ứng dụng, {1}"
+
+msgid "Backing up every app. Android starts if it is not running. This can take a while."
+msgstr "Đang sao lưu mọi ứng dụng. Android khởi động nếu chưa chạy. Việc này có thể mất một lúc."
+
+msgid "Restoring apps and their data from the backup. Android starts if it is not running. This can take a while."
+msgstr "Đang khôi phục ứng dụng và dữ liệu từ bản sao lưu. Android khởi động nếu chưa chạy. Việc này có thể mất một lúc."
+
+msgid "Apps restored: {0}. Apps installed first: {1}."
+msgstr "Ứng dụng đã khôi phục: {0}. Ứng dụng được cài trước: {1}."
+
+msgid "Apps restored: {0}. Apps installed first: {1}. Apps that could not be restored: {2}."
+msgstr "Ứng dụng đã khôi phục: {0}. Ứng dụng được cài trước: {1}. Ứng dụng không khôi phục được: {2}."
+
+msgid "Apps backed up: {0}."
+msgstr "Ứng dụng đã sao lưu: {0}."
+
+msgid "Apps backed up: {0}. Apps that could not be backed up: {1}."
+msgstr "Ứng dụng đã sao lưu: {0}. Ứng dụng không sao lưu được: {1}."
+
+msgid "Apps in the backup that Android does not have are installed.\n\nThe data of every app in the backup is replaced with the backup's. What those apps saved since the backup is lost.\n\nAndroid starts if it is not running."
+msgstr "Các ứng dụng trong bản sao lưu mà Android chưa có sẽ được cài.\n\nDữ liệu của mọi ứng dụng trong bản sao lưu được thay bằng bản sao lưu. Những gì chúng lưu sau lần sao lưu sẽ mất.\n\nAndroid khởi động nếu chưa chạy."
+
+msgid "Write this key down and keep it somewhere safe, away from this computer.\n\nAnyone with it can read the backup.\n\nWithout it, the backup cannot be opened on another computer or after this computer's keyring is lost."
+msgstr "Hãy ghi lại khóa này và cất ở nơi an toàn, tách khỏi máy tính này.\n\nBất kỳ ai có khóa đều đọc được bản sao lưu.\n\nKhông có nó, không thể mở bản sao lưu trên máy tính khác hoặc sau khi mất chùm khóa của máy tính này."
+
+msgid "Enter the recovery key."
+msgstr "Nhập khóa khôi phục."
+
+msgid "The key was not used: {0}"
+msgstr "Khóa chưa được dùng: {0}"
+
+msgid "Keeps an encrypted second copy of your Android apps' user data on this computer.\nIt can be restored after a data reset or on another computer. Off until you turn it on."
+msgstr "Giữ một bản sao thứ hai được mã hóa của dữ liệu người dùng của ứng dụng Android trên máy tính này.\nCó thể khôi phục sau khi đặt lại dữ liệu hoặc trên máy tính khác. Tắt cho đến khi bạn bật."
+
+msgid "Earlier backups of {0} apps ({1}) are still kept in your DSA Backup folder."
+msgstr "Các bản sao lưu trước của {0} ứng dụng ({1}) vẫn được giữ trong thư mục DSA Backup của bạn."
+
+msgid "The backups of {0} apps ({1}) are still kept on this computer.\n\nDelete them and their key as well, or keep them for a later restore?"
+msgstr "Các bản sao lưu của {0} ứng dụng ({1}) vẫn được giữ trên máy tính này.\n\nXóa cả chúng và khóa của chúng, hay giữ lại để khôi phục sau?"
+
+msgid "Backup is on. Android backs up its apps' data to this computer from now on."
+msgstr "Sao lưu đã bật. Từ giờ Android sao lưu dữ liệu ứng dụng vào máy tính này."
+
+msgid "Backup is off, and the backups and their key were deleted."
+msgstr "Sao lưu đã tắt, các bản sao lưu và khóa của chúng đã bị xóa."
+
+msgid "Backup is off. The backups made so far are kept."
+msgstr "Sao lưu đã tắt. Các bản sao lưu đã tạo vẫn được giữ."
+
+msgid "Android's keys get their protection the first time Android starts."
+msgstr "Khóa của Android được bảo vệ ở lần đầu Android khởi động."
+
+msgid "Sealed by this computer's TPM.\nA copy of Android's disk cannot open the apps' keys or Android's encrypted storage anywhere else."
+msgstr "Được niêm phong bằng TPM của máy tính này.\nBản sao đĩa Android không thể mở khóa của ứng dụng hay vùng lưu trữ mã hóa của Android ở nơi khác."
+
+msgid "Kept by your keyring only, because this computer has no TPM 2.0 that can be used.\nOnce one works, DSA seals the keys with it."
+msgstr "Chỉ được giữ trong chùm khóa của bạn, vì máy tính này không có TPM 2.0 dùng được.\nKhi có TPM hoạt động, DSA sẽ niêm phong khóa bằng nó."
+
+msgid "Protected by {0}."
+msgstr "Được bảo vệ bởi {0}."
+
+msgid "Why not the TPM: {0}"
+msgstr "Lý do không dùng TPM: {0}"
+
+msgid "Back up apps' data to this computer"
+msgstr "Sao lưu dữ liệu ứng dụng vào máy tính này"
+
+msgid "Protection of Android's keys"
+msgstr "Bảo vệ khóa của Android"
+
+msgid "Android's keys"
+msgstr "Khóa của Android"
+
+msgid "Why not the TPM"
+msgstr "Lý do không dùng TPM"
+
+msgid "Android's keys could not be opened"
+msgstr "Không thể mở khóa của Android"
+
+msgid "Backup was not turned on"
+msgstr "Chưa bật được sao lưu"
+
+msgid "Backup was not turned off"
+msgstr "Chưa tắt được sao lưu"
+
+msgid "Turn off backup?"
+msgstr "Tắt sao lưu?"
+
+msgid "Keep them"
+msgstr "Giữ lại"
+
+msgid "Delete backups"
+msgstr "Xóa bản sao lưu"
+
+msgid "Protected content"
+msgstr "Nội dung được bảo vệ"
+
+msgid "Widevine lets streaming apps play protected video.\nDSA does not include or pass on Widevine. When you ask, your computer takes it unchanged from Google's emulator image."
+msgstr "Widevine cho phép ứng dụng phát trực tuyến phát video được bảo vệ.\nDSA không kèm theo hay phân phối lại Widevine. Khi bạn yêu cầu, máy tính lấy nó nguyên vẹn từ ảnh trình giả lập của Google."
+
+msgid "Android started before this change. Stop and start Android for Widevine to follow it."
+msgstr "Android đã khởi động trước thay đổi này. Hãy dừng rồi khởi động Android để Widevine áp dụng nó."
+
+msgid "Standard definition only"
+msgstr "Chỉ độ nét tiêu chuẩn"
+
+msgid "Widevine here is security level L3, so streaming services send standard definition (SD) at most.\nTo watch in high definition, use this computer's own browser or app."
+msgstr "Widevine ở đây có cấp bảo mật L3, nên dịch vụ phát trực tuyến gửi tối đa độ nét tiêu chuẩn (SD).\nĐể xem ở độ nét cao, hãy dùng trình duyệt hoặc ứng dụng của chính máy tính này."
+
+msgid "Get Widevine"
+msgstr "Tải Widevine"
+
+msgid "Downloads about 2 GB from Google, under Google's Android SDK License, and keeps only Widevine.\nNothing is downloaded until you agree. Widevine is there from the next start of Android."
+msgstr "Tải khoảng 2 GB từ Google, theo Android SDK License của Google, và chỉ giữ lại Widevine.\nKhông tải gì cho đến khi bạn đồng ý. Widevine có mặt từ lần khởi động Android tiếp theo."
+
+msgid "Remove Widevine"
+msgstr "Gỡ bỏ Widevine"
+
+msgid "Removes the module and the device certificates it kept, from the next start of Android."
+msgstr "Gỡ mô-đun và các chứng chỉ thiết bị mà nó đã lưu, từ lần khởi động Android tiếp theo."
+
+msgid "Widevine is Google's software and follows Google's terms. DSA does not distribute it."
+msgstr "Widevine là phần mềm của Google và tuân theo điều khoản của Google. DSA không phân phối nó."
+
+msgid "Get Widevine from Google?"
+msgstr "Tải Widevine từ Google?"
+
+msgid "Widevine was not installed"
+msgstr "Chưa cài được Widevine"
+
+msgid "Widevine was not removed"
+msgstr "Chưa gỡ được Widevine"
+
+msgid "Where Widevine stands could not be read"
+msgstr "Không thể đọc trạng thái của Widevine"
+
+msgid "Google's image {0} for Android {1} ({2})"
+msgstr "Ảnh {0} của Google cho Android {1} ({2})"
+
+msgid "Removed. Widevine stays in Android until it restarts."
+msgstr "Đã gỡ bỏ. Widevine vẫn ở trong Android cho đến khi Android khởi động lại."
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its Widevine module, unchanged.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nWidevine is Google's software. DSA does not ship or pass it on.\n\nWidevine here is security level L3, so streaming services send standard definition (SD) at most.\n\nWidevine works from the next start of Android."
+msgstr "DSA tải ảnh trình giả lập Android của Google cho phiên bản Android này và chỉ lấy ra mô-đun Widevine, không chỉnh sửa.\n\n• Nguồn: kho SDK của Google ({0})\n• Kích thước: khoảng 2 GB, xóa sau khi xong\n• Giấy phép: Android SDK License ({1}). Khi tải xuống, bạn chấp nhận các điều khoản của nó.\n\nWidevine là phần mềm của Google. DSA không đi kèm hay phân phối lại nó.\n\nWidevine ở đây có cấp bảo mật L3, nên dịch vụ phát trực tuyến gửi tối đa độ nét tiêu chuẩn (SD).\n\nWidevine hoạt động từ lần khởi động Android tiếp theo."
+
+msgid "Downloading about 2 GB from Google and taking out Widevine. It takes minutes."
+msgstr "Đang tải khoảng 2 GB từ Google và lấy ra Widevine. Việc này mất vài phút."
+
+msgid "{0}, {1}"
+msgstr "{0}, {1}"
+
+msgid "{0}, {1}, {2}: {3}"
+msgstr "{0}, {1}, {2}: {3}"
+
+msgid "{0} records dropped"
+msgstr "Đã bỏ {0} bản ghi"
+
+msgid "Lowest priority shown"
+msgstr "Mức ưu tiên thấp nhất được hiển thị"
+
+msgid "Copied"
+msgstr "Đã sao chép"
+
+msgid "When only the bars hide"
+msgstr "Khi chỉ ẩn các thanh"
+
+msgid "Scaling"
+msgstr "Co giãn"
+
+msgid "Automatic (app)"
+msgstr "Tự động (ứng dụng)"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "Tự động (hệ thống, khuyên dùng cho ứng dụng này)"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "Theo mặc định (trên cả màn hình)"
+
+msgid "Follow the default (inside the window)"
+msgstr "Theo mặc định (trong cửa sổ)"

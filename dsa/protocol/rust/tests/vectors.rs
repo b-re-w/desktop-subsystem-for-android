@@ -9,21 +9,23 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use dsa_protocol::control::{
-    envelope::Body, AccessibilityAction, AccessibilityActionResult, AccessibilityNode,
-    AccessibilityTree, AccessibilityWatch, AgentConnected, ApkChunk, AppInfo, AuthChallenge,
-    AuthProof, CancelInstall, ClipboardSharing, ClipboardText, ClockAnswer, ClockProbe, CloseTask,
-    DeviceIdle, Envelope, FileAction, FileChunk, FileProgress, GuestBoot, GuestMemory,
-    GuestNotification, Hello, HelloAccepted, HelloRejected, ImeCommit, ImeComposition, ImeCursor,
-    ImeEditor, ImeInputKind, ImeSetComposingRegion, ImeSetSelection, InstallApk, InstallPart,
-    InstallProgress, InstallResult, InstallStatus, KeyAction, KeyEvent, LaunchApp, LinkHandling,
-    NodeAction, NodeRange, NotificationClicked, NotificationDismissed, NotificationRemoved,
-    OpenFile, OpenLink, PackageState, PointerAction, PointerEvent, PointerTool, PowerHint,
-    PowerHintKind, PowerState, ProcessMemory, QueryPackage, Rect, RejectReason, RequestGuestMemory,
-    ResizeTask, Role, ScreenState, SetTaskDensity, TaskFrames, TaskRemoved, TaskUpdated,
+    envelope::Body, AccessibilityAction, AccessibilityActionResult, AccessibilityAnnouncement,
+    AccessibilityListening, AccessibilityNode, AccessibilityTree, AccessibilityWatch,
+    AgentConnected, ApkChunk, AppInfo, AuthChallenge, AuthProof, CancelInstall, ClipboardSharing,
+    ClipboardText, ClockAnswer, ClockProbe, CloseTask, DeviceIdle, Envelope, FileAction, FileChunk,
+    FileProgress, GuestBoot, GuestMemory, GuestNotification, Hello, HelloAccepted, HelloRejected,
+    ImeCommit, ImeComposition, ImeCursor, ImeEditor, ImeInputKind, ImeSetComposingRegion,
+    ImeSetSelection, InstallApk, InstallPart, InstallProgress, InstallResult, InstallStatus,
+    KeyAction, KeyEvent, LaunchApp, LinkHandling, NodeAction, NodeRange, NotificationClicked,
+    NotificationDismissed, NotificationRemoved, OpenFile, OpenLink, PackageState, PointerAction,
+    PointerEvent, PointerTool, PowerHint, PowerHintKind, PowerState, ProcessMemory, QueryPackage,
+    Rect, RejectReason, RequestGuestMemory, ResizeTask, Role, ScreenState, SetTaskDensity,
+    TaskFrames, TaskRemoved, TaskUpdated,
 };
 use dsa_protocol::control::{
-    AddWidget, ListWidgetProviders, RemoveWidget, ResizeWidget, WidgetAdded, WidgetFrame,
-    WidgetList, WidgetPointer, WidgetProvider, WidgetProviders, WidgetUpdated,
+    AddWidget, ListWidgetProviders, ReconfigureWidget, RemoveWidget, ResizeWidget, WidgetAdded,
+    WidgetFrame, WidgetList, WidgetPointer, WidgetProvider, WidgetProviders, WidgetReconfigured,
+    WidgetUpdated,
 };
 use dsa_protocol::control::{
     CameraDevice, CameraFacing, CameraFrame, CameraList, CameraMode, CameraOpen, CameraStill,
@@ -34,8 +36,14 @@ use dsa_protocol::control::{
     VideoCapabilities, VideoCodec, VideoCodecSupport, VideoDecoderOpen, VideoFlush, VideoFrame,
     VideoPacket,
 };
+use dsa_protocol::control::{GuestSharedMemory, VideoSlotReturned};
+use dsa_protocol::control::{NotificationButton, NotificationButtonClicked};
 use dsa_protocol::control::{
     PrintJob, PrintJobCancel, PrintJobChunk, PrintJobResult, PrintOutcome,
+};
+use dsa_protocol::control::{
+    RecognitionEvent, RecognitionEventKind, SpeakText, SpeechAudio, SpellingMistake,
+    SpellingResult, SpellingText,
 };
 use dsa_protocol::control::{
     SensorActivate, SensorDescription, SensorKind, SensorList, SensorReading, SensorReadings,
@@ -85,6 +93,7 @@ fn clock_provider() -> WidgetProvider {
         resize_mode: 3,
         needs_configuration: false,
         app_label: String::new(),
+        reconfigurable: false,
     }
 }
 
@@ -175,6 +184,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             wrap(Body::SetTaskDensity(SetTaskDensity {
                 task_id: 42,
                 density_dpi: 240,
+                recreate: false,
             })),
         ),
         (
@@ -186,6 +196,29 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                     top: -10,
                     right: 600,
                     bottom: 400,
+                }),
+                ..TaskUpdated::default()
+            })),
+        ),
+        (
+            "task_updated_overlay",
+            wrap(Body::TaskUpdated(TaskUpdated {
+                task_id: 0x4000_0001,
+                bounds: Some(Rect {
+                    left: 158,
+                    top: 82,
+                    right: 666,
+                    bottom: 220,
+                }),
+                package_name: "skplanet.musicmate".into(),
+                label: "FLO".into(),
+                density_dpi: 262,
+                max_width: 3840,
+                max_height: 3840,
+                overlay: Some(dsa_protocol::control::OverlayWindow {
+                    window_type: 2038,
+                    focusable: false,
+                    touchable: true,
                 }),
                 ..TaskUpdated::default()
             })),
@@ -210,6 +243,36 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 codec: VideoCodec::H264 as i32,
                 width: 1280,
                 height: 720,
+                picture_region_id: 0,
+            })),
+        ),
+        (
+            "video_decoder_open_shared",
+            wrap(Body::VideoDecoderOpen(VideoDecoderOpen {
+                codec: VideoCodec::H264 as i32,
+                width: 1280,
+                height: 720,
+                picture_region_id: 42,
+            })),
+        ),
+        (
+            "video_slot_returned",
+            wrap(Body::VideoSlotReturned(VideoSlotReturned { slot: 5 })),
+        ),
+        (
+            "guest_shared_memory",
+            wrap(Body::GuestSharedMemory(GuestSharedMemory {
+                name: "video_pictures".into(),
+                guest_physical_address: 0x1_0800_0000,
+                length: 64 * 1024 * 1024,
+            })),
+        ),
+        (
+            "guest_shared_memory_graphics",
+            wrap(Body::GuestSharedMemory(GuestSharedMemory {
+                name: "graphics_memory".into(),
+                guest_physical_address: 0x1_1020_0000,
+                length: 256 * 1024 * 1024,
             })),
         ),
         ("video_flush", wrap(Body::VideoFlush(VideoFlush {}))),
@@ -269,6 +332,22 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 stride: 2,
                 nv12: vec![0x10, 0x10, 0x10, 0x10, 0x80, 0x80],
                 end_of_stream: false,
+                slot: 0,
+                slot_offset: 0,
+            })),
+        ),
+        (
+            "video_frame_in_slot",
+            wrap(Body::VideoFrame(VideoFrame {
+                frame_index: 3,
+                timestamp_us: 100_000,
+                width: 2,
+                height: 2,
+                stride: 2,
+                nv12: Vec::new(),
+                end_of_stream: false,
+                slot: 1,
+                slot_offset: 65_536,
             })),
         ),
         (
@@ -574,6 +653,39 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 high_priority: true,
                 clearable: true,
                 when_millis: 1_700_000_000_000,
+                buttons: vec![],
+            })),
+        ),
+        (
+            "notification_buttons",
+            wrap(Body::Notification(GuestNotification {
+                key: CHAT_KEY.into(),
+                title: "Ann".into(),
+                buttons: vec![
+                    NotificationButton {
+                        title: "Reply".into(),
+                        reply: true,
+                        reply_label: "Reply to Ann".into(),
+                        reply_choices: vec!["Yes".into()],
+                        reply_choices_only: false,
+                        semantic_action: 1,
+                    },
+                    NotificationButton {
+                        title: "Delete".into(),
+                        semantic_action: 4,
+                        ..NotificationButton::default()
+                    },
+                ],
+                ..GuestNotification::default()
+            })),
+        ),
+        (
+            "notification_button_clicked",
+            wrap(Body::NotificationButtonClicked(NotificationButtonClicked {
+                key: CHAT_KEY.into(),
+                button: 1,
+                title: "Reply".into(),
+                reply_text: "\u{c548}\u{b155}".into(),
             })),
         ),
         (
@@ -901,10 +1013,27 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             })),
         ),
         (
+            "widget_reconfigure",
+            wrap(Body::ReconfigureWidget(ReconfigureWidget {
+                request_id: 7,
+                widget_id: 12,
+            })),
+        ),
+        (
+            "widget_reconfigured",
+            wrap(Body::WidgetReconfigured(WidgetReconfigured {
+                request_id: 7,
+                widget_id: 12,
+                finished: true,
+                error: String::new(),
+            })),
+        ),
+        (
             "accessibility_watch_on",
             wrap(Body::AccessibilityWatch(AccessibilityWatch {
                 task_id: 42,
                 on: true,
+                widget_id: 0,
             })),
         ),
         (
@@ -912,6 +1041,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             wrap(Body::AccessibilityWatch(AccessibilityWatch {
                 task_id: 42,
                 on: false,
+                widget_id: 0,
             })),
         ),
         (
@@ -980,6 +1110,8 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 ],
                 removed_ids: vec![],
                 focused_id: 3,
+                accessibility_focused_id: 0,
+                widget_id: 0,
             })),
         ),
         (
@@ -1024,9 +1156,63 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                         NodeAction::Select as i32,
                     ],
                     state_description: String::new(),
+                    ..AccessibilityNode::default()
                 }],
                 removed_ids: vec![3],
                 focused_id: 0,
+                accessibility_focused_id: 0,
+                widget_id: 0,
+            })),
+        ),
+        (
+            "accessibility_tree_text",
+            wrap(Body::AccessibilityTree(AccessibilityTree {
+                task_id: 42,
+                epoch: 1,
+                root_ids: vec![1],
+                nodes: vec![AccessibilityNode {
+                    id: 2,
+                    class_name: "android.widget.EditText".into(),
+                    text: "hi".into(),
+                    editable: true,
+                    accessibility_focused: true,
+                    text_selection_start: 1,
+                    text_selection_end: 2,
+                    has_text_selection: true,
+                    ..AccessibilityNode::default()
+                }],
+                focused_id: 2,
+                accessibility_focused_id: 2,
+                ..AccessibilityTree::default()
+            })),
+        ),
+        (
+            "accessibility_announcement",
+            wrap(Body::AccessibilityAnnouncement(AccessibilityAnnouncement {
+                task_id: 42,
+                text: "Saved".into(),
+                assertive: false,
+                toast: true,
+            })),
+        ),
+        (
+            "accessibility_listening",
+            wrap(Body::AccessibilityListening(AccessibilityListening {
+                task_id: 42,
+                listening: true,
+            })),
+        ),
+        (
+            "accessibility_set_selection",
+            wrap(Body::AccessibilityAction(AccessibilityAction {
+                task_id: 42,
+                epoch: 1,
+                node_id: 2,
+                action: NodeAction::SetSelection as i32,
+                request_id: 8,
+                selection_start: 3,
+                selection_end: 5,
+                ..AccessibilityAction::default()
             })),
         ),
         (
@@ -1038,6 +1224,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 action: NodeAction::SetText as i32,
                 text: "hello".into(),
                 request_id: 7,
+                ..AccessibilityAction::default()
             })),
         ),
         (
@@ -1047,6 +1234,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 request_id: 7,
                 done: false,
                 error: "the node is gone".into(),
+                widget_id: 0,
             })),
         ),
         (
@@ -1192,6 +1380,52 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                     timestamp_us: 1000,
                     values: vec![2.5],
                 }],
+            })),
+        ),
+        (
+            "speak_text",
+            wrap(Body::SpeakText(SpeakText {
+                request_id: 3,
+                text: "hello".into(),
+                voice_id: "aria".into(),
+                language_tag: "en-US".into(),
+                rate: 1.5,
+                pitch: 0.8,
+            })),
+        ),
+        (
+            "speech_audio",
+            wrap(Body::SpeechAudio(SpeechAudio {
+                request_id: 3,
+                sample_rate_hz: 24000,
+                channel_count: 1,
+                pcm: vec![1, 0, 2, 0],
+            })),
+        ),
+        (
+            "recognition_event",
+            wrap(Body::RecognitionEvent(RecognitionEvent {
+                request_id: 9,
+                kind: RecognitionEventKind::Final as i32,
+                texts: vec!["hello world".into()],
+                confidences: vec![0.9],
+                error: 0,
+                message: String::new(),
+            })),
+        ),
+        (
+            "spelling_result",
+            wrap(Body::SpellingResult(SpellingResult {
+                request_id: 5,
+                texts: vec![SpellingText {
+                    mistakes: vec![SpellingMistake {
+                        start: 6,
+                        length: 3,
+                        suggestions: vec!["the".into()],
+                        recommended: true,
+                    }],
+                }],
+                supported: true,
             })),
         ),
     ])

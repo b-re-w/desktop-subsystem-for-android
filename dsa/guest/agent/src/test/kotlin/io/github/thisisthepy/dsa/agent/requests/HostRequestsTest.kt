@@ -36,6 +36,46 @@ class HostRequestsTest {
         .setSetTaskDensity(SetTaskDensity.newBuilder().setTaskId(taskId).setDensityDpi(densityDpi))
         .build().toByteArray()
 
+    private fun launchShortcut(packageName: String, shortcutId: String) = Envelope.newBuilder()
+        .setLaunchShortcut(
+            io.github.thisisthepy.dsa.control.v1.LaunchShortcut.newBuilder().setPackageName(packageName).setShortcutId(shortcutId),
+        )
+        .build().toByteArray()
+
+    @Test
+    fun fr7_launch_shortcut_starts_the_apps_shortcut() {
+        actions.startableShortcuts = setOf("org.example.chat" to "new-chat")
+
+        assertEquals(
+            RequestResult.ShortcutLaunched("org.example.chat", "new-chat"),
+            requests.handle(launchShortcut("org.example.chat", "new-chat")),
+        )
+        assertEquals(listOf("org.example.chat" to "new-chat"), actions.shortcutsLaunched)
+        assertTrue(actions.launched.isEmpty())
+    }
+
+    @Test
+    fun fr7_a_shortcut_that_cannot_start_opens_its_app_instead() {
+        actions.launchable = setOf("org.example.chat")
+
+        assertEquals(
+            RequestResult.ShortcutLaunched("org.example.chat", "gone", appInstead = true),
+            requests.handle(launchShortcut("org.example.chat", "gone")),
+        )
+        assertEquals(listOf("org.example.chat"), actions.launched)
+        assertTrue(requests.handle(launchShortcut("org.example.missing", "gone")) is RequestResult.LaunchFailed)
+    }
+
+    @Test
+    fun fr7_launch_shortcut_naming_no_package_no_shortcut_or_the_agent_starts_nothing() {
+        assertTrue(requests.handle(launchShortcut("", "new-chat")) is RequestResult.Malformed)
+        assertTrue(requests.handle(launchShortcut("not a/package", "new-chat")) is RequestResult.Malformed)
+        assertTrue(requests.handle(launchShortcut("org.example.chat", "")) is RequestResult.Malformed)
+        assertTrue(requests.handle(launchShortcut(AGENT, "new-chat")) is RequestResult.LaunchFailed)
+        assertTrue(actions.shortcutsLaunched.isEmpty())
+        assertTrue(actions.launched.isEmpty())
+    }
+
     @Test
     fun fr4_a_resize_and_a_density_for_a_reported_task_are_handed_back() {
         reported += 3
@@ -47,6 +87,38 @@ class HostRequestsTest {
     private fun caption(taskId: Int, height: Int) = Envelope.newBuilder()
         .setSetTaskCaption(SetTaskCaption.newBuilder().setTaskId(taskId).setHeight(height))
         .build().toByteArray()
+
+    @Test
+    fun fr30_where_a_tasks_full_screen_shows_is_handed_back_for_a_reported_task() {
+        val frame = { taskId: Int, inWindow: Boolean ->
+            Envelope.newBuilder()
+                .setSetTaskFullScreen(
+                    io.github.thisisthepy.dsa.control.v1.SetTaskFullScreen.newBuilder().setTaskId(taskId).setInWindow(inWindow),
+                )
+                .build().toByteArray()
+        }
+        assertTrue(requests.handle(frame(5, true)) is RequestResult.SizeRefused)
+        reported += 5
+        assertEquals(RequestResult.FullScreen(5, true), requests.handle(frame(5, true)))
+        assertEquals(RequestResult.FullScreen(5, false), requests.handle(frame(5, false)))
+    }
+
+    @Test
+    fun fr22_the_apps_that_start_below_the_title_bar_are_handed_back() {
+        val frame = { packages: List<String> ->
+            Envelope.newBuilder()
+                .setCaptionCompat(
+                    io.github.thisisthepy.dsa.control.v1.CaptionCompat.newBuilder().addAllBelowTitleBar(packages),
+                )
+                .build().toByteArray()
+        }
+        assertEquals(
+            RequestResult.CaptionCompat(setOf("com.example.player", "org.example.video")),
+            requests.handle(frame(listOf("com.example.player", "org.example.video", "com.example.player", ""))),
+        )
+        // An empty list is a list too: no app starts below the title bar any more.
+        assertEquals(RequestResult.CaptionCompat(emptySet()), requests.handle(frame(emptyList())))
+    }
 
     @Test
     fun fr22_the_reach_of_a_windows_icon_and_buttons_is_handed_back_with_its_height() {

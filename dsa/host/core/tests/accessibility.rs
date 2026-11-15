@@ -4,10 +4,12 @@
 use std::time::{Duration, Instant};
 
 use dsa_host_core::accessibility::{
-    from_screen, role_of, to_screen, ActionRequest, ActionResult, ClientPresence, Node, NodeAction,
-    NodeRange, NodeStates, PresenceChange, Role, Tree, TreeError, TreeUpdate, MAX_NODES,
-    MAX_TEXT_CHARS,
+    from_screen, role_of, to_screen, ActionRequest, ActionResult, ClientDemand, ClientPresence,
+    Demand, DemandReason, Node, NodeAction, NodeRange, NodeStates, PresenceChange, Role, Tree,
+    TreeError, TreeUpdate, MAX_NODES, MAX_TEXT_CHARS, SNAPSHOT_INTERVAL,
 };
+use dsa_host_core::compositor::window_sizing::{density_for_dpi, scale_between, to_window_size};
+use dsa_host_core::input::WindowGeometry;
 use dsa_host_core::tasks::Bounds;
 use dsa_protocol::control;
 
@@ -73,6 +75,7 @@ fn settings_screen(epoch: u32) -> TreeUpdate {
         ],
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -85,6 +88,7 @@ fn change(epoch: u32, nodes: Vec<Node>, removed: Vec<u32>, roots: Vec<u32>) -> T
         nodes,
         removed,
         focused: None,
+        accessibility_focused: None,
     }
 }
 
@@ -200,6 +204,7 @@ fn fr18_a_tree_over_the_node_cap_is_dropped() {
         nodes,
         removed: vec![],
         focused: None,
+        accessibility_focused: None,
     };
     let mut tree = Tree::new();
     assert!(matches!(tree.apply(update), Err(TreeError::Malformed(_))));
@@ -240,6 +245,43 @@ fn fr18_an_oversized_tree_from_the_guest_is_refused_and_long_text_cut() {
     assert_eq!(update.nodes[0].actions, vec![NodeAction::Click]);
 }
 
+/// A watch, an action and a guest's answer name a desktop widget by its own field, with no
+/// task, so a widget's window and a task window of the same number never share a tree.
+#[test]
+fn fr18_widget_tree_watch_names_the_widget_on_the_wire() {
+    use dsa_host_core::accessibility::AccessibilityTarget;
+    let widget = AccessibilityTarget::Widget(12);
+    assert_eq!(widget.ids(), (0, 12));
+    assert_eq!(
+        widget.to_control_watch(true),
+        control::AccessibilityWatch {
+            task_id: 0,
+            on: true,
+            widget_id: 12,
+        }
+    );
+    assert_eq!(AccessibilityTarget::of(0, 12), widget);
+    assert_eq!(
+        AccessibilityTarget::of(12, 0),
+        AccessibilityTarget::Task(12)
+    );
+    assert_ne!(AccessibilityTarget::of(12, 0), widget);
+    assert_eq!(widget.to_string(), "widget 12");
+    assert_eq!(AccessibilityTarget::Task(3).to_string(), "task 3");
+    let action = ActionRequest {
+        epoch: 4,
+        node_id: 2,
+        action: NodeAction::Click,
+        text: String::new(),
+        request_id: 1,
+        ..ActionRequest::default()
+    };
+    let sent = action.to_control_for(widget);
+    assert_eq!((sent.task_id, sent.widget_id, sent.node_id), (0, 12, 2));
+    let task = action.to_control(3);
+    assert_eq!((task.task_id, task.widget_id), (3, 0));
+}
+
 #[test]
 fn fr18_the_tree_crosses_the_local_api_unchanged() {
     let mut update = settings_screen(3);
@@ -257,6 +299,7 @@ fn fr18_the_tree_crosses_the_local_api_unchanged() {
         action: NodeAction::SetText,
         text: "hello".into(),
         request_id: 9,
+        ..ActionRequest::default()
     };
     assert_eq!(
         ActionRequest::from_host_api(request.to_host_api()).unwrap(),
@@ -378,29 +421,114 @@ fn fr18_names_values_and_passwords() {
 #[test]
 fn fr18_bounds_go_to_the_screen_through_the_window() {
     // A 1:1 window whose client area starts at (100, 50).
-    let rect = to_screen(bounds(10, 20, 110, 70), (400, 600), (400, 600), (100, 50));
+    let window = WindowGeometry::one_to_one((400, 600), (400, 600));
+    let rect = to_screen(bounds(10, 20, 110, 70), window, (100, 50));
     assert_eq!(
         (rect.left, rect.top, rect.width, rect.height),
         (110.0, 70.0, 100.0, 50.0)
     );
     // A task smaller than its window for a moment: frames are shown 1:1, never stretched,
     // and so are the bounds.
-    let rect = to_screen(bounds(10, 20, 110, 70), (400, 600), (800, 1200), (0, 0));
+    let grown = WindowGeometry::one_to_one((800, 1200), (400, 600));
+    let rect = to_screen(bounds(10, 20, 110, 70), grown, (0, 0));
     assert_eq!(
         (rect.left, rect.top, rect.width, rect.height),
         (10.0, 20.0, 100.0, 50.0)
     );
     // Cut to the client area.
-    let rect = to_screen(bounds(-50, 550, 450, 700), (400, 600), (400, 600), (0, 0));
+    let rect = to_screen(bounds(-50, 550, 450, 700), window, (0, 0));
     assert_eq!(
         (rect.left, rect.top, rect.width, rect.height),
         (0.0, 550.0, 400.0, 50.0)
     );
     // And back.
+    assert_eq!(from_screen((110.0, 70.0), grown, (100, 50)), (10, 20));
+}
+
+/// A task that keeps the density of a main monitor at 100% (130 dpi), shown on a monitor at
+/// 125% (164 dpi): its window shows each task pixel at 164 window pixels per 130.
+fn kept_at_100_percent_on_125_percent(task: (u32, u32)) -> WindowGeometry {
+    let scale = scale_between(density_for_dpi(120), density_for_dpi(96));
+    WindowGeometry {
+        client: to_window_size(task, scale),
+        task,
+        scale,
+    }
+}
+
+#[test]
+fn fr18_on_a_monitor_of_another_scale_bounds_are_where_the_window_shows_the_node() {
+    let window = kept_at_100_percent_on_125_percent((1300, 900));
+    assert_eq!(window.scale, (82, 65));
+    // A button 130 by 65 task pixels at (650, 325) is shown 164 by 82 window pixels at
+    // (820, 410), not where the task has it.
+    let rect = to_screen(bounds(650, 325, 780, 390), window, (100, 50));
     assert_eq!(
-        from_screen((110.0, 70.0), (400, 600), (800, 1200), (100, 50)),
-        (10, 20)
+        (rect.left, rect.top, rect.width, rect.height),
+        (920.0, 460.0, 164.0, 82.0)
     );
+    // The whole task covers the whole client area, and no more.
+    let rect = to_screen(bounds(0, 0, 1300, 900), window, (0, 0));
+    assert_eq!(
+        (rect.left, rect.top, rect.width, rect.height),
+        (
+            0.0,
+            0.0,
+            f64::from(window.client.0),
+            f64::from(window.client.1)
+        )
+    );
+    // A point on the button's shown middle hits the button's middle in the task.
+    assert_eq!(
+        from_screen((100.0 + 902.0, 50.0 + 451.0), window, (100, 50)),
+        (715, 357)
+    );
+    // Every edge maps back to the pixel it came from.
+    for (x, y) in [(0, 0), (650, 325), (1299, 899)] {
+        let shown = to_screen(bounds(x, y, x + 1, y + 1), window, (0, 0));
+        assert_eq!(
+            from_screen((shown.left + 0.5, shown.top + 0.5), window, (0, 0)),
+            (x, y)
+        );
+    }
+}
+
+#[test]
+fn fr18_on_a_monitor_above_and_left_of_the_main_one_a_hit_test_lands_on_the_node_shown() {
+    // The 125% monitor is left of and above the main one: its client area starts at
+    // negative screen coordinates.
+    let window = kept_at_100_percent_on_125_percent((810, 1661));
+    let origin = (-2900, -880);
+    let mut tree = Tree::new();
+    let mut search = node(2, &[], "android.widget.Button", "Search");
+    search.bounds = bounds(650, 1300, 780, 1365);
+    let mut root = node(1, &[2], "android.widget.FrameLayout", "");
+    root.bounds = bounds(0, 0, 810, 1661);
+    tree.apply(TreeUpdate {
+        task_id: 6,
+        epoch: 1,
+        full: true,
+        nodes: vec![root, search],
+        removed: vec![],
+        roots: vec![1],
+        focused: None,
+        accessibility_focused: None,
+    })
+    .unwrap();
+    // The button is shown at 820 by 1640 window pixels into the client area.
+    let rect = to_screen(bounds(650, 1300, 780, 1365), window, origin);
+    assert_eq!((rect.left, rect.top), (-2900.0 + 820.0, -880.0 + 1640.0));
+    assert_eq!((rect.width, rect.height), (164.0, 82.0));
+    // A point just inside its shown corner is on the button; one just above it is not, though
+    // at 1:1 it would have been far below the button's top.
+    let inside = from_screen((rect.left + 1.0, rect.top + 1.0), window, origin);
+    assert_eq!(tree.hit(inside.0, inside.1), Some(2));
+    let above = from_screen((rect.left + 1.0, rect.top - 2.0), window, origin);
+    assert_eq!(tree.hit(above.0, above.1), Some(1));
+    // At the task's own coordinates (1:1) the shown corner would have missed the button.
+    let one_to_one = WindowGeometry::one_to_one(window.client, window.task);
+    let wrong = from_screen((rect.left + 1.0, rect.top + 1.0), one_to_one, origin);
+    assert_eq!(tree.hit(wrong.0, wrong.1), None);
 }
 
 #[test]
@@ -434,4 +562,141 @@ fn fr18_the_guest_is_asked_while_a_client_asks_and_stops_after_the_grace() {
     presence.asked(start + Duration::from_secs(300));
     assert_eq!(presence.end(), Some(PresenceChange::Stop));
     assert_eq!(presence.end(), None);
+}
+
+#[test]
+fn fr18_a_client_that_is_not_a_screen_reader_does_not_start_the_watch() {
+    let start = Instant::now();
+    let mut demand = ClientDemand::new(Duration::from_secs(30), SNAPSHOT_INTERVAL);
+    // A client that only reads gets the tree read once, not a watch.
+    assert_eq!(
+        demand.asked(start, false, false),
+        Some((Demand::Snapshot, DemandReason::Read))
+    );
+    assert!(!demand.continuous());
+    // Not again while that read runs, nor within the interval after it.
+    assert_eq!(demand.asked(start, false, true), None);
+    assert_eq!(
+        demand.asked(start + Duration::from_secs(1), false, false),
+        None
+    );
+    assert_eq!(
+        demand.asked(start + SNAPSHOT_INTERVAL, false, false),
+        Some((Demand::Snapshot, DemandReason::Read))
+    );
+    // An action always reaches Android, however soon after a read.
+    assert_eq!(
+        demand.acted(start + SNAPSHOT_INTERVAL, false),
+        Some((Demand::Snapshot, DemandReason::Action))
+    );
+    // Nothing runs that a poll would have to stop.
+    assert_eq!(
+        demand.poll(start + Duration::from_secs(100), true, false),
+        None
+    );
+}
+
+#[test]
+fn fr18_a_screen_reader_starts_the_fast_watch_and_its_end_stops_it() {
+    let start = Instant::now();
+    let mut demand = ClientDemand::new(Duration::from_secs(30), SNAPSHOT_INTERVAL);
+    assert_eq!(
+        demand.asked(start, true, false),
+        Some((Demand::Continuous, DemandReason::AssistiveTechnology))
+    );
+    assert!(demand.continuous());
+    // While it runs, reads and actions need nothing more.
+    assert_eq!(demand.asked(start, false, false), None);
+    assert_eq!(demand.acted(start, false), None);
+    assert_eq!(
+        demand.poll(start + Duration::from_secs(60), true, true),
+        None
+    );
+    // The screen reader goes: the watch stops at once, whoever else listens.
+    assert_eq!(
+        demand.poll(start + Duration::from_secs(61), true, false),
+        Some((PresenceChange::Stop, DemandReason::AssistiveTechnologyGone))
+    );
+    assert!(!demand.continuous());
+}
+
+#[test]
+fn fr18_the_client_focus_is_the_focus_that_moved_last() {
+    let mut tree = Tree::new();
+    let mut screen = settings_screen(1);
+    screen.focused = Some(3);
+    assert_eq!(tree.apply(screen).unwrap().focus, Some(3));
+    assert_eq!(tree.client_focus(), Some(3));
+    // The accessibility focus moves to the second row while the input focus stays.
+    let mut moved = change(1, vec![], vec![], vec![1]);
+    moved.focused = Some(3);
+    moved.accessibility_focused = Some(5);
+    assert_eq!(tree.apply(moved).unwrap().focus, Some(5));
+    assert_eq!(tree.client_focus(), Some(5));
+    assert_eq!(tree.focused(), Some(3));
+    assert_eq!(tree.accessibility_focused(), Some(5));
+    // Nothing moves: no focus event.
+    let mut same = change(1, vec![], vec![], vec![1]);
+    same.focused = Some(3);
+    same.accessibility_focused = Some(5);
+    assert_eq!(tree.apply(same).unwrap().focus, None);
+    // The input focus moves: it is the one the user went to.
+    let mut back = change(1, vec![], vec![], vec![1]);
+    back.focused = Some(4);
+    back.accessibility_focused = Some(5);
+    assert_eq!(tree.apply(back).unwrap().focus, Some(4));
+    // The accessibility focus is cleared: the input focus is what is left.
+    let mut cleared = change(1, vec![], vec![], vec![1]);
+    cleared.focused = Some(4);
+    assert_eq!(tree.apply(cleared).unwrap().focus, None);
+    assert_eq!(tree.client_focus(), Some(4));
+    // An accessibility focus on a node that is not there is refused.
+    let mut lost = change(1, vec![], vec![], vec![1]);
+    lost.accessibility_focused = Some(77);
+    assert!(matches!(tree.apply(lost), Err(TreeError::Malformed(_))));
+}
+
+#[test]
+fn fr18_selection_and_accessibility_focus_cross_both_wires() {
+    let mut update = settings_screen(3);
+    update.nodes[3].states.editable = true;
+    update.nodes[3].states.accessibility_focused = true;
+    update.nodes[3].selection = Some((5, 2));
+    update.accessibility_focused = Some(4);
+    let back = TreeUpdate::from_host_api(update.to_host_api()).unwrap();
+    assert_eq!(back, update);
+    let request = ActionRequest {
+        epoch: 3,
+        node_id: 4,
+        action: NodeAction::SetSelection,
+        text: String::new(),
+        request_id: 10,
+        selection: (2, 7),
+        ..ActionRequest::default()
+    };
+    assert_eq!(
+        ActionRequest::from_host_api(request.to_host_api()).unwrap(),
+        request
+    );
+    let control = request.to_control(7);
+    assert_eq!(control.action, control::NodeAction::SetSelection as i32);
+    assert_eq!((control.selection_start, control.selection_end), (2, 7));
+    // A node that says it has no selection has none, whatever its numbers.
+    let none = control::AccessibilityTree {
+        task_id: 7,
+        epoch: 1,
+        full: true,
+        root_ids: vec![1],
+        nodes: vec![control::AccessibilityNode {
+            id: 1,
+            text_selection_start: 3,
+            text_selection_end: 3,
+            ..control::AccessibilityNode::default()
+        }],
+        ..control::AccessibilityTree::default()
+    };
+    assert_eq!(
+        TreeUpdate::from_control(none).unwrap().nodes[0].selection,
+        None
+    );
 }

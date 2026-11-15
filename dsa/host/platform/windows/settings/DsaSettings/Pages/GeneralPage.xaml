@@ -16,9 +16,9 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Style="{StaticResource PageContent}">
                 <ui:InfoBar Title="{l:Text GeneralErrorBar.Title}" Severity="Error" IsClosable="False"
-                            IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" Margin="0,0,0,4" />
+                            IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" />
 
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Desktop24}">
+                <ui:CardControl Icon="{ui:SymbolIcon Desktop24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text GeneralStateCard.Header}" Style="{StaticResource CardTitle}" />
@@ -27,7 +27,8 @@
                     </ui:CardControl.Header>
                     <StackPanel Style="{StaticResource CardControls}">
                         <ui:ProgressRing IsIndeterminate="True" Width="20" Height="20" Margin="0,0,12,0"
-                                         Visibility="{Binding IsBusy, Converter={StaticResource Visible}}" />
+                                         Visibility="{Binding IsBusy, Converter={StaticResource Visible}}"
+                                         AutomationProperties.Name="{l:Text GeneralStateCard.Header}" />
                         <TextBlock Text="{Binding StateText, Mode=OneWay}" Margin="0,0,12,0" Style="{StaticResource CardValue}" />
                         <ui:Button Content="{l:Text StartButton.Content}" Appearance="Primary" Click="OnStart" Margin="0,0,8,0"
                                    IsEnabled="{Binding CanStart, Mode=OneWay}" />
@@ -36,9 +37,9 @@
                 </ui:CardControl>
 
                 <ui:InfoBar Title="{l:Text ProblemBar.Title}" Severity="Error" IsClosable="False"
-                            IsOpen="{Binding HasProblem, Mode=OneWay}" Message="{Binding Problem, Mode=OneWay}" Margin="0,0,0,4" />
+                            IsOpen="{Binding HasProblem, Mode=OneWay}" Message="{Binding Problem, Mode=OneWay}" />
                 <ui:InfoBar Title="{l:Text LastReasonBar.Title}" Severity="Warning" IsClosable="False"
-                            IsOpen="{Binding HasLastReason, Mode=OneWay}" Message="{Binding LastReason, Mode=OneWay}" Margin="0,0,0,4" />
+                            IsOpen="{Binding HasLastReason, Mode=OneWay}" Message="{Binding LastReason, Mode=OneWay}" />
                 <Expander Header="{l:Text LastReasonDetails.Header}" IsExpanded="False" Margin="0,0,0,4"
                           Visibility="{Binding HasLastReasonDetail, Converter={StaticResource Visible}}">
                     <Grid>
@@ -47,15 +48,17 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
-                            <TextBox Text="{Binding LastReasonDetail, Mode=OneWay}" Style="{StaticResource SelectableCode}" />
+                            <TextBox Text="{Binding LastReasonDetail, Mode=OneWay}" Style="{StaticResource SelectableCode}"
+                                     AutomationProperties.Name="{l:Text LastReasonDetails.Header}" />
                         </ScrollViewer>
                         <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0" VerticalAlignment="Top"
-                                   ToolTip="{l:Text LastReasonCopy.ToolTip}" Click="OnCopyLastReason" />
+                                   ToolTip="{l:Text LastReasonCopy.ToolTip}" AutomationProperties.Name="{l:Text LastReasonCopy.ToolTip}"
+                                   Click="OnCopyLastReason" />
                     </Grid>
                 </Expander>
                 <ui:InfoBar Title="{l:Text UpdateNoticeBar.Title}" Severity="Informational" IsClosable="False"
-                            IsOpen="{Binding HasUpdateNotice, Mode=OneWay}" Message="{Binding UpdateNotice, Mode=OneWay}" Margin="0,0,0,4" />
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Snooze24}">
+                            IsOpen="{Binding HasUpdateNotice, Mode=OneWay}" Message="{Binding UpdateNotice, Mode=OneWay}" />
+                <ui:CardControl Icon="{ui:SymbolIcon Snooze24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text FreezeNowCard.Header}" Style="{StaticResource CardTitle}" />
@@ -66,19 +69,25 @@
                 </ui:CardControl>
 
                 <TextBlock Text="{l:Text GeneralMoreHeader.Text}" Style="{StaticResource SectionHeader}" />
-                <ui:CardAction Icon="{ui:SymbolIcon Folder24}" Click="OnOpenLogs" Margin="0,0,0,4">
+                <ui:CardAction Icon="{ui:SymbolIcon Folder24}" Click="OnOpenLogs"
+                               AutomationProperties.Name="{l:Text OpenLogsCard.Header}"
+                               AutomationProperties.HelpText="{l:Text OpenLogsCard.Description}">
                     <StackPanel>
                         <TextBlock Text="{l:Text OpenLogsCard.Header}" Style="{StaticResource CardTitle}" />
                         <TextBlock Text="{l:Text OpenLogsCard.Description}" Style="{StaticResource CardDescription}" />
                     </StackPanel>
                 </ui:CardAction>
-                <ui:CardAction Icon="{ui:SymbolIcon FolderPeople24}" Click="OnOpenServiceLogs" Margin="0,0,0,4">
+                <ui:CardAction Icon="{ui:SymbolIcon FolderPeople24}" Click="OnOpenServiceLogs"
+                               AutomationProperties.Name="{l:Text ServiceLogsCard.Header}"
+                               AutomationProperties.HelpText="{l:Text ServiceLogsCard.Description}">
                     <StackPanel>
                         <TextBlock Text="{l:Text ServiceLogsCard.Header}" Style="{StaticResource CardTitle}" />
                         <TextBlock Text="{l:Text ServiceLogsCard.Description}" Style="{StaticResource CardDescription}" />
                     </StackPanel>
                 </ui:CardAction>
-                <ui:CardAction Icon="{ui:SymbolIcon ArrowClockwise24}" Click="OnRefresh">
+                <ui:CardAction Icon="{ui:SymbolIcon ArrowClockwise24}" Click="OnRefresh"
+                               AutomationProperties.Name="{l:Text RefreshCard.Header}"
+                               AutomationProperties.HelpText="{l:Text RefreshCard.Description}">
                     <StackPanel>
                         <TextBlock Text="{l:Text RefreshCard.Header}" Style="{StaticResource CardTitle}" />
                         <TextBlock Text="{l:Text RefreshCard.Description}" Style="{StaticResource CardDescription}" />

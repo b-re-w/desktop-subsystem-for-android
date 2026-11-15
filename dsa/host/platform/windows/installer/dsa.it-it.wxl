@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The package's own words in Italian, for a package built with -culture it-IT. -->
+<WixLocalization Culture="it-IT" Language="1040" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+    <String Id="ArpComments" Value="Desktop Subsystem for Android è un progetto open source indipendente. Non è affiliato a Microsoft o Google, né approvato o sponsorizzato da loro. Android è un marchio di Google LLC." />
+    <String Id="SettingsShortcutDescription" Value="Impostazioni e stato di Desktop Subsystem for Android" />
+    <String Id="ApkFileType" Value="Pacchetto dell'app APK" />
+    <String Id="ApkBundleType" Value="Bundle di APK divisi" />
+</WixLocalization>

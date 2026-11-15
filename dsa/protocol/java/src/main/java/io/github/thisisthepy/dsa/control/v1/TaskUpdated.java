@@ -7,7 +7,7 @@ package io.github.thisisthepy.dsa.control.v1;
  * <pre>
  * Guest to host, from the agent: an app task the host shows as one window appeared, or
  * something the window shows about it changed. Every field is sent each time, so the host
- * keeps only the latest.
+ * keeps only the latest. An app overlay window is reported with it too (`overlay`).
  * </pre>
  *
  * Protobuf type {@code dsa.control.v1.TaskUpdated}
@@ -660,8 +660,8 @@ public  final class TaskUpdated extends
   private boolean fullscreen_;
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -673,8 +673,8 @@ public  final class TaskUpdated extends
   }
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -686,8 +686,8 @@ public  final class TaskUpdated extends
   }
   /**
    * <pre>
-   * Whether the task's app asked to fill the screen (the task left the freeform windowing
-   * mode for fullscreen). The host makes the task's window fill its monitor.
+   * Whether the task's app asked to fill the screen, in either of the ways
+   * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
    * </pre>
    *
    * <code>bool fullscreen = 21;</code>
@@ -1067,6 +1067,214 @@ public  final class TaskUpdated extends
     handlesDensityChange_ = false;
   }
 
+  public static final int FULLSCREEN_REQUEST_FIELD_NUMBER = 27;
+  private int fullscreenRequest_;
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The enum numeric value on the wire for fullscreenRequest.
+   */
+  @java.lang.Override
+  public int getFullscreenRequestValue() {
+    return fullscreenRequest_;
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @return The fullscreenRequest.
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.FullScreenRequest getFullscreenRequest() {
+    io.github.thisisthepy.dsa.control.v1.FullScreenRequest result = io.github.thisisthepy.dsa.control.v1.FullScreenRequest.forNumber(fullscreenRequest_);
+    return result == null ? io.github.thisisthepy.dsa.control.v1.FullScreenRequest.UNRECOGNIZED : result;
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @param value The enum numeric value on the wire for fullscreenRequest to set.
+   */
+  private void setFullscreenRequestValue(int value) {
+      fullscreenRequest_ = value;
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   * @param value The fullscreenRequest to set.
+   */
+  private void setFullscreenRequest(io.github.thisisthepy.dsa.control.v1.FullScreenRequest value) {
+    fullscreenRequest_ = value.getNumber();
+    
+  }
+  /**
+   * <pre>
+   * Which kind of full screen the task's app asks for, if any. The host shows the task's
+   * window on its whole monitor or keeps it inside its window, as the user's setting for that
+   * kind of request says.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+   */
+  private void clearFullscreenRequest() {
+    
+    fullscreenRequest_ = 0;
+  }
+
+  public static final int OVERLAY_FIELD_NUMBER = 28;
+  private io.github.thisisthepy.dsa.control.v1.OverlayWindow overlay_;
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  @java.lang.Override
+  public boolean hasOverlay() {
+    return overlay_ != null;
+  }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.OverlayWindow getOverlay() {
+    return overlay_ == null ? io.github.thisisthepy.dsa.control.v1.OverlayWindow.getDefaultInstance() : overlay_;
+  }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  private void setOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+    value.getClass();
+  overlay_ = value;
+    
+    }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  @java.lang.SuppressWarnings({"ReferenceEquality"})
+  private void mergeOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+    value.getClass();
+  if (overlay_ != null &&
+        overlay_ != io.github.thisisthepy.dsa.control.v1.OverlayWindow.getDefaultInstance()) {
+      overlay_ =
+        io.github.thisisthepy.dsa.control.v1.OverlayWindow.newBuilder(overlay_).mergeFrom(value).buildPartial();
+    } else {
+      overlay_ = value;
+    }
+    
+  }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  private void clearOverlay() {  overlay_ = null;
+    
+  }
+
+  public static final int BELOW_TITLE_BAR_FIELD_NUMBER = 40;
+  private boolean belowTitleBar_;
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   * @return The belowTitleBar.
+   */
+  @java.lang.Override
+  public boolean getBelowTitleBar() {
+    return belowTitleBar_;
+  }
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   * @param value The belowTitleBar to set.
+   */
+  private void setBelowTitleBar(boolean value) {
+    
+    belowTitleBar_ = value;
+  }
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   */
+  private void clearBelowTitleBar() {
+    
+    belowTitleBar_ = false;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.TaskUpdated parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1152,7 +1360,7 @@ public  final class TaskUpdated extends
    * <pre>
    * Guest to host, from the agent: an app task the host shows as one window appeared, or
    * something the window shows about it changed. Every field is sent each time, so the host
-   * keeps only the latest.
+   * keeps only the latest. An app overlay window is reported with it too (`overlay`).
    * </pre>
    *
    * Protobuf type {@code dsa.control.v1.TaskUpdated}
@@ -1837,8 +2045,8 @@ public  final class TaskUpdated extends
 
     /**
      * <pre>
-     * Whether the task's app asked to fill the screen (the task left the freeform windowing
-     * mode for fullscreen). The host makes the task's window fill its monitor.
+     * Whether the task's app asked to fill the screen, in either of the ways
+     * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
      * </pre>
      *
      * <code>bool fullscreen = 21;</code>
@@ -1850,8 +2058,8 @@ public  final class TaskUpdated extends
     }
     /**
      * <pre>
-     * Whether the task's app asked to fill the screen (the task left the freeform windowing
-     * mode for fullscreen). The host makes the task's window fill its monitor.
+     * Whether the task's app asked to fill the screen, in either of the ways
+     * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
      * </pre>
      *
      * <code>bool fullscreen = 21;</code>
@@ -1865,8 +2073,8 @@ public  final class TaskUpdated extends
     }
     /**
      * <pre>
-     * Whether the task's app asked to fill the screen (the task left the freeform windowing
-     * mode for fullscreen). The host makes the task's window fill its monitor.
+     * Whether the task's app asked to fill the screen, in either of the ways
+     * `fullscreen_request` tells apart. Set whenever `fullscreen_request` is not NONE.
      * </pre>
      *
      * <code>bool fullscreen = 21;</code>
@@ -2272,6 +2480,229 @@ public  final class TaskUpdated extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @return The enum numeric value on the wire for fullscreenRequest.
+     */
+    @java.lang.Override
+    public int getFullscreenRequestValue() {
+      return instance.getFullscreenRequestValue();
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @param value The fullscreenRequest to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFullscreenRequestValue(int value) {
+      copyOnWrite();
+      instance.setFullscreenRequestValue(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @return The fullscreenRequest.
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.FullScreenRequest getFullscreenRequest() {
+      return instance.getFullscreenRequest();
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @param value The enum numeric value on the wire for fullscreenRequest to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFullscreenRequest(io.github.thisisthepy.dsa.control.v1.FullScreenRequest value) {
+      copyOnWrite();
+      instance.setFullscreenRequest(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Which kind of full screen the task's app asks for, if any. The host shows the task's
+     * window on its whole monitor or keeps it inside its window, as the user's setting for that
+     * kind of request says.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.FullScreenRequest fullscreen_request = 27;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFullscreenRequest() {
+      copyOnWrite();
+      instance.clearFullscreenRequest();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    @java.lang.Override
+    public boolean hasOverlay() {
+      return instance.hasOverlay();
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.OverlayWindow getOverlay() {
+      return instance.getOverlay();
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder setOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+      copyOnWrite();
+      instance.setOverlay(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder setOverlay(
+        io.github.thisisthepy.dsa.control.v1.OverlayWindow.Builder builderForValue) {
+      copyOnWrite();
+      instance.setOverlay(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder mergeOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+      copyOnWrite();
+      instance.mergeOverlay(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder clearOverlay() {  copyOnWrite();
+      instance.clearOverlay();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Whether the task's app starts below the title bar: the user turned that on for the app
+     * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+     * framework consumes for the app, whose content begins under the band. The host then
+     * paints the band itself. Settled when the task starts. While it is set,
+     * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+     * </pre>
+     *
+     * <code>bool below_title_bar = 40;</code>
+     * @return The belowTitleBar.
+     */
+    @java.lang.Override
+    public boolean getBelowTitleBar() {
+      return instance.getBelowTitleBar();
+    }
+    /**
+     * <pre>
+     * Whether the task's app starts below the title bar: the user turned that on for the app
+     * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+     * framework consumes for the app, whose content begins under the band. The host then
+     * paints the band itself. Settled when the task starts. While it is set,
+     * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+     * </pre>
+     *
+     * <code>bool below_title_bar = 40;</code>
+     * @param value The belowTitleBar to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBelowTitleBar(boolean value) {
+      copyOnWrite();
+      instance.setBelowTitleBar(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Whether the task's app starts below the title bar: the user turned that on for the app
+     * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+     * framework consumes for the app, whose content begins under the band. The host then
+     * paints the band itself. Settled when the task starts. While it is set,
+     * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+     * </pre>
+     *
+     * <code>bool below_title_bar = 40;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBelowTitleBar() {
+      copyOnWrite();
+      instance.clearBelowTitleBar();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.TaskUpdated)
   }
   @java.lang.Override
@@ -2308,12 +2739,15 @@ public  final class TaskUpdated extends
             io.github.thisisthepy.dsa.control.v1.Rect.class,
             "canGoBack_",
             "handlesDensityChange_",
+            "fullscreenRequest_",
+            "overlay_",
+            "belowTitleBar_",
           };
           java.lang.String info =
-              "\u0000\u0013\u0000\u0000\u0001\u001a\u0013\u0000\u0001\u0000\u0001\u0004\u0002\t" +
-              "\u0003\u0208\u0004\u0208\u0005\u0007\u0006\u000b\u0007\u000b\b\u000b\t\u000b\n\u000b" +
-              "\u000b\f\f\u0006\u0014\f\u0015\u0007\u0016\u0007\u0017\u0007\u0018\u001b\u0019\u0007" +
-              "\u001a\u0007";
+              "\u0000\u0016\u0000\u0000\u0001(\u0016\u0000\u0001\u0000\u0001\u0004\u0002\t\u0003" +
+              "\u0208\u0004\u0208\u0005\u0007\u0006\u000b\u0007\u000b\b\u000b\t\u000b\n\u000b\u000b" +
+              "\f\f\u0006\u0014\f\u0015\u0007\u0016\u0007\u0017\u0007\u0018\u001b\u0019\u0007\u001a" +
+              "\u0007\u001b\f\u001c\t(\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

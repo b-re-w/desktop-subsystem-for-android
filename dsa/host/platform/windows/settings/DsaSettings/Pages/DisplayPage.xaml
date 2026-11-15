@@ -16,9 +16,9 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Style="{StaticResource PageContent}">
                 <ui:InfoBar Title="{l:Text SettingsErrorBar.Title}" Severity="Error" IsClosable="False"
-                            IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" Margin="0,0,0,4" />
+                            IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" />
 
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Desktop24}">
+                <ui:CardControl Icon="{ui:SymbolIcon Desktop24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text RenderGpuCard.Header}" Style="{StaticResource CardTitle}" />
@@ -30,9 +30,10 @@
                               DisplayMemberPath="Label"
                               SelectedIndex="{Binding SelectedGpuIndex, Mode=OneWay}"
                               IsEnabled="{Binding CanChange, Mode=OneWay}"
-                              SelectionChanged="OnGpuChosen" />
+                              SelectionChanged="OnGpuChosen"
+                              AutomationProperties.Name="{l:Text RenderGpuCard.Header}" />
                 </ui:CardControl>
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon DeveloperBoard24}">
+                <ui:CardControl Icon="{ui:SymbolIcon DeveloperBoard24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text DisplayGpuCard.Header}" Style="{StaticResource CardTitle}" />
@@ -42,10 +43,66 @@
                     <TextBlock Text="{Binding DisplayGpuName, Mode=OneWay}" Style="{StaticResource CardValue}" />
                 </ui:CardControl>
 
-                <ui:InfoBar Title="{l:Text RenderGpuAppliesBar.Title}" Message="{l:Text RenderGpuAppliesBar.Message}" Severity="Informational" IsClosable="False" IsOpen="True"
-                            Margin="0,0,0,4" />
+                <!-- Which Vulkan the renderer uses: a native driver, or Dozen from Microsoft's
+                     Compatibility Pack where no GPU has one. -->
+                <ui:CardControl Icon="{ui:SymbolIcon Cube24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="{l:Text VulkanDriverCard.Header}" Style="{StaticResource CardTitle}" />
+                            <TextBlock Text="{l:Text VulkanDriverCard.Description}" Style="{StaticResource CardDescription}" />
+                            <TextBlock Text="{Binding GraphicsStatusText, Mode=OneWay}" Style="{StaticResource CardDescription}"
+                                       Margin="0,4,0,0" TextWrapping="Wrap" />
+                            <ui:HyperlinkButton Content="{l:Text CompatibilityPackLink.Content}" Click="OnOpenCompatibilityPack"
+                                                Padding="0" Margin="0,4,0,0" HorizontalAlignment="Left"
+                                                Visibility="{Binding OffersCompatibilityPack, Converter={StaticResource Visible}}" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ComboBox x:Name="VulkanDriverBox" MinWidth="280"
+                              ItemsSource="{Binding VulkanDriverChoices, Mode=OneWay}"
+                              DisplayMemberPath="Label"
+                              SelectedIndex="{Binding VulkanDriverIndex, Mode=OneWay}"
+                              IsEnabled="{Binding CanChange, Mode=OneWay}"
+                              SelectionChanged="OnVulkanDriverChosen"
+                              AutomationProperties.Name="{l:Text VulkanDriverCard.Header}" />
+                </ui:CardControl>
+                <ui:InfoBar Title="{l:Text CpuRenderingBar.Title}" Message="{l:Text CpuRenderingBar.Message}" Severity="Warning"
+                            IsClosable="False" IsOpen="{Binding DrawsOnCpu, Mode=OneWay}" />
 
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon TapDouble24}"
+                <ui:InfoBar Title="{l:Text RenderGpuAppliesBar.Title}" Message="{l:Text RenderGpuAppliesBar.Message}" Severity="Informational" IsClosable="False" IsOpen="True" />
+
+                <!-- Where an app's full screen shows, for every app without its own choice. -->
+                <ui:CardControl Icon="{ui:SymbolIcon FullScreenMaximize24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="{l:Text AppFullScreenCard.Header}" Style="{StaticResource CardTitle}" />
+                            <TextBlock Text="{l:Text AppFullScreenCard.Description}" Style="{StaticResource CardDescription}" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ComboBox x:Name="AppFullScreenBox" MinWidth="200"
+                              ItemsSource="{Binding AppFullScreenChoices, Mode=OneWay}"
+                              DisplayMemberPath="Label"
+                              SelectedIndex="{Binding AppFullScreenIndex, Mode=OneWay}"
+                              IsEnabled="{Binding CanChange, Mode=OneWay}"
+                              SelectionChanged="OnAppFullScreen"
+                              AutomationProperties.Name="{l:Text AppFullScreenCard.Header}" />
+                </ui:CardControl>
+                <ui:CardControl Icon="{ui:SymbolIcon FullScreenMaximize24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="{l:Text AppImmersiveCard.Header}" Style="{StaticResource CardTitle}" />
+                            <TextBlock Text="{l:Text AppImmersiveCard.Description}" Style="{StaticResource CardDescription}" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ComboBox x:Name="AppImmersiveBox" MinWidth="200"
+                              ItemsSource="{Binding AppFullScreenChoices, Mode=OneWay}"
+                              DisplayMemberPath="Label"
+                              SelectedIndex="{Binding AppImmersiveIndex, Mode=OneWay}"
+                              IsEnabled="{Binding CanChange, Mode=OneWay}"
+                              SelectionChanged="OnAppImmersive"
+                              AutomationProperties.Name="{l:Text AppImmersiveCard.Header}" />
+                </ui:CardControl>
+
+                <ui:CardControl Icon="{ui:SymbolIcon TapDouble24}"
                                 Visibility="{Binding ShowTouchGestures, Converter={StaticResource Visible}}">
                     <ui:CardControl.Header>
                         <StackPanel>
@@ -64,7 +121,7 @@
                                      AutomationProperties.Name="{l:Text TouchGesturesCard.Header}" />
                 </ui:CardControl>
 
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon ArrowClockwise24}">
+                <ui:CardControl Icon="{ui:SymbolIcon ArrowClockwise24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text RestartWindowManagerCard.Header}" Style="{StaticResource CardTitle}" />

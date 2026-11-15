@@ -99,6 +99,31 @@ enum GpuRule {
   GPU_RULE_NAME = 4;
 }
 
+// Which Vulkan implementation the renderer may use, as the user's setting asks. Only the
+// Windows renderer has a choice; the others take what the system has.
+enum VulkanDriverRule {
+  // A native Vulkan driver; Dozen (Vulkan on Direct3D 12) only when no native driver works.
+  VULKAN_DRIVER_RULE_AUTO = 0;
+  // Native Vulkan drivers only.
+  VULKAN_DRIVER_RULE_NATIVE = 1;
+  // Dozen only.
+  VULKAN_DRIVER_RULE_DOZEN = 2;
+}
+
+// Which Vulkan implementation the renderer runs on.
+enum VulkanDriverKind {
+  // The renderer does not say (an older renderer, or a host without a choice).
+  VULKAN_DRIVER_KIND_UNKNOWN = 0;
+  // A native Vulkan driver.
+  VULKAN_DRIVER_KIND_NATIVE = 1;
+  // Dozen on a GPU's Direct3D 12 driver.
+  VULKAN_DRIVER_KIND_DOZEN = 2;
+  // Dozen on the software Direct3D 12 device (WARP): the CPU draws everything.
+  VULKAN_DRIVER_KIND_DOZEN_CPU = 3;
+  // No Vulkan the renderer can use: it renders nothing.
+  VULKAN_DRIVER_KIND_NONE = 4;
+}
+
 // Window manager to renderer, after the handshake: how to start.
 message Start {
   GpuRule gpu_rule = 1;
@@ -120,6 +145,8 @@ message Start {
   // Whether the window manager takes frames on the GPU. When false (a Linux desktop that
   // takes no dmabufs) every frame is read back.
   bool frames_on_gpu = 10;
+  // Which Vulkan implementation to use.
+  VulkanDriverRule vulkan_driver = 11;
 }
 
 // Whether the renderer runs on the GPU Start asked for.
@@ -162,6 +189,10 @@ message Started {
   // The locally unique ID of the GPU the frames are on, which the window manager makes its
   // textures on (Windows). Empty when unknown.
   bytes adapter_luid = 9;
+  // Which Vulkan implementation the renderer runs on, and why, in words for the log and the
+  // user: the devices it saw, the setting, and with VULKAN_DRIVER_KIND_NONE what to install.
+  VulkanDriverKind vulkan_driver = 10;
+  string vulkan_driver_reason = 11;
 }
 
 // Window manager to renderer: the guest VM whose graphics streams to take (Windows, where a
@@ -296,6 +327,16 @@ message Note {
 // Window manager to renderer: end now. The renderer closes the guest's streams and exits.
 message Stop {}
 
+// Renderer to window manager: the renderer found its Vulkan device lost (a GPU reset), or
+// made it again. Sent at once each time either count goes up, so the window manager learns of
+// a reset the moment the renderer does, not when its own Direct3D device fails later.
+message DeviceState {
+  // How many times the renderer found its device lost since it started.
+  uint64 losses = 1;
+  // How many times it made its device again since it started.
+  uint64 generation = 2;
+}
+
 // The one message type on the wire. Each frame carries exactly one.
 message Envelope {
   oneof body {
@@ -317,5 +358,6 @@ message Envelope {
     RendererLog renderer_log = 16;
     Note note = 17;
     Stop stop = 18;
+    DeviceState device_state = 19;
   }
 }

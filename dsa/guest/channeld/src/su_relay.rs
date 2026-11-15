@@ -38,8 +38,19 @@ use dsa_protocol::control::{
     Envelope, RootApp, RootElevationConfig, RootLevel, SuDecision, SuRequest,
 };
 
-/// How long a su call waits for the host before it fails, matching the host's own limit.
-pub const ANSWER_TIMEOUT: Duration = Duration::from_secs(60);
+/// How long a su call waits for the host before it fails, the same number the host keeps.
+///
+/// The host's administrator prompt has under a minute to be answered, but five minutes while a
+/// screen reader runs on the host, because a person who hears the prompt read out (the app, the
+/// command, each button) takes far longer to choose. su has to outlast the longer of the two,
+/// with room for the answer to cross, so it always hears the host's own answer, "timed out"
+/// included, and never gives up on a prompt still open. This limit only ends a wait the host
+/// never answers; a host that disconnects fails every waiting call at once.
+pub const ANSWER_TIMEOUT: Duration = Duration::from_secs(5 * 60 + 10);
+
+/// The longest the host's administrator prompt may stay open: the time it has while a screen
+/// reader runs on the host. [`ANSWER_TIMEOUT`] is longer, so su waits it out.
+pub const LONGEST_HOST_PROMPT: Duration = Duration::from_secs(5 * 60);
 
 /// The kernel su guard's control file, one command per line.
 pub const CONTROL_FILE: &str = "/sys/kernel/security/dsa_su/control";
@@ -816,7 +827,11 @@ impl ConfigApplier {
             HashMap::new()
         };
         let resolved = with_uids(config, &uids);
-        for app in resolved.apps.iter().filter(|app| app.uid == 0) {
+        for app in resolved
+            .apps
+            .iter()
+            .filter(|app| app.uid == 0 && app.level() != RootLevel::Off)
+        {
             (self.say)(&format!(
                 "root elevation: {} is not installed, so it sees no su",
                 app.package
@@ -940,6 +955,15 @@ mod tests {
                 reason: String::new(),
             })
             .is_none());
+    }
+
+    #[test]
+    fn fr18_su_waits_past_the_longer_prompt() {
+        // The host's prompt may stay open five minutes while a screen reader runs; su waits
+        // longer than that, with room for the host's "timed out" to arrive first.
+        assert!(ANSWER_TIMEOUT >= LONGEST_HOST_PROMPT + Duration::from_secs(5));
+        // The host keeps the same number for how long su waits.
+        assert_eq!(ANSWER_TIMEOUT, Duration::from_secs(310));
     }
 
     #[test]

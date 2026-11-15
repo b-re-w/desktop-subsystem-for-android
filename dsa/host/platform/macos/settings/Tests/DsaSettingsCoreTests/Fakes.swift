@@ -44,3 +44,29 @@ final class FakeCli: DsaCli, LogStream {
 final class KeyText: TextSource {
     func get(_ key: String) -> String { key }
 }
+
+/// The texts of one language of the app's String Catalog, so a test reads the words a user
+/// sees. A key the catalog lacks comes back as the key.
+final class LanguageText: TextSource {
+    private let values: [String: String]
+
+    init(_ language: String) throws {
+        let package = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let data = try Data(contentsOf: package.appendingPathComponent("Resources/Localizable.xcstrings"))
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        var values: [String: String] = [:]
+        for (key, entry) in root?["strings"] as? [String: Any] ?? [:] {
+            let unit = ((entry as? [String: Any])?["localizations"] as? [String: Any])?[language] as? [String: Any]
+            values[key] = (unit?["stringUnit"] as? [String: Any])?["value"] as? String
+        }
+        self.values = values
+    }
+
+    func get(_ key: String) -> String { values[key] ?? key }
+}
+
+/// Gives each text's key back, except the DNS fallback, whose servers the tests read.
+final class DnsText: TextSource {
+    func get(_ key: String) -> String { key == "Network_DnsFallback" ? "dns fallback: {0}" : key }
+}

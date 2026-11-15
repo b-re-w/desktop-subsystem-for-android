@@ -14,6 +14,18 @@
 	<array>
 		<string>en</string>
 		<string>ko</string>
+		<string>ja</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>de</string>
+		<string>pt-BR</string>
+		<string>ru</string>
+		<string>it</string>
+		<string>vi</string>
+		<string>id</string>
+		<string>tr</string>
 	</array>
 	<key>CFBundleIdentifier</key>
 	<string>org.thisisthepy.dsa</string>
@@ -50,6 +62,8 @@
 	<string>Apps in Desktop Subsystem for Android use the camera when you allow them to.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Apps in Desktop Subsystem for Android record sound when you allow them to.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Apps in Desktop Subsystem for Android recognise what you say when you allow them to.</string>
 	<key>NSLocationUsageDescription</key>
 	<string>Apps in Desktop Subsystem for Android use your location when you allow them to.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

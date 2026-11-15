@@ -8,11 +8,16 @@
 //!   that a failed start reports.
 //! - [`console_pipe`]: the named pipe that console arrives on (Windows only).
 //! - [`hvsocket`]: the control channel's transport, Hyper-V sockets (Windows only).
-//! - [`https`]: downloads for image updates, through WinHTTP (Windows only).
+//! - [`https`]: downloads for image updates and the documents a passkey check reads, through
+//!   WinHTTP (Windows only).
+//! - [`credential_store`]: each user's backup key and KeyMint root key, sealed by DPAPI and the
+//!   computer's TPM (the sealing part on Windows only).
 //! - [`pipe`]: the local API over a named pipe (Windows only).
 //! - [`gpt`]: finding and copying the partitions of a user's Android disk.
 //! - [`guid`]: the VM and service IDs those sockets are addressed by.
 //! - [`vm_listener`]: a control channel listener that follows the VM's ID across restarts.
+//! - [`host_certificates`]: the root certificates a user or an administrator added to Windows,
+//!   which the user's Android trusts beside its own.
 //! - [`host_config`]: the configuration file `dsa-hostd` reads.
 //! - [`paths`]: where every file DSA makes at run time goes, in the machine's and each user's
 //!   DSA folder, and moving files from where earlier releases kept them.
@@ -47,10 +52,15 @@
 //!   the guest.
 //! - [`video_decoder`]: the guest's video, decoded with Media Foundation on the GPU (the
 //!   decoding part on Windows only).
+//! - [`picture_region`]: the memory the VM shares with the window manager, where decoded
+//!   video pictures go instead of through the video port (making and mapping it on Windows
+//!   only).
 //! - [`sensors`]: the computer's motion and light sensors, read for the guest's sensors HAL
 //!   (the reading part on Windows only).
 //! - [`start_menu`]: a Start menu shortcut for each app installed in the user's Android, which
 //!   Windows search finds (Windows only).
+//! - [`ui_language`]: the language DSA's own words are shown in, from the user's Windows
+//!   display language.
 
 /// The DSA release this program belongs to. The installer build sets `DSA_VERSION` to the
 /// release's version; a plain `cargo build` falls back to the crate's version.
@@ -78,11 +88,17 @@ pub mod computer_identity;
 pub mod console_log;
 #[cfg(windows)]
 pub mod console_pipe;
+pub mod credential_store;
 #[cfg(windows)]
 pub mod data_reset;
 #[cfg(windows)]
+pub mod desktop_shortcuts;
+#[cfg(windows)]
+pub mod dns_resolver;
+#[cfg(windows)]
 pub mod file_share;
 pub mod gpt;
+pub mod graphics_region;
 #[cfg(windows)]
 pub mod guest_communication_services;
 pub mod guest_performance;
@@ -91,6 +107,8 @@ pub mod guid;
 pub mod hcn;
 #[cfg(windows)]
 pub mod hcs;
+#[cfg(windows)]
+pub mod host_certificates;
 pub mod host_config;
 pub mod host_memory;
 #[cfg(windows)]
@@ -100,11 +118,18 @@ pub mod hvsocket;
 #[cfg(windows)]
 pub mod installed_apps;
 pub mod installer_actions;
+#[cfg(windows)]
+pub mod jump_list;
+#[cfg(windows)]
+pub mod machine_user_folder;
+pub mod mapped_pages;
 pub mod monitors;
 pub mod network;
 pub mod paths;
+pub mod picture_region;
 #[cfg(windows)]
 pub mod pipe;
+pub mod pmem_disk;
 pub mod power;
 #[cfg(windows)]
 pub mod profile;
@@ -112,6 +137,9 @@ pub mod pstore_disk;
 pub mod render_gpu;
 pub mod renderer;
 pub mod root_approval;
+#[cfg(windows)]
+pub mod safe_fs;
+pub mod safe_paths;
 #[cfg(windows)]
 pub mod scheduling;
 #[cfg(windows)]
@@ -123,6 +151,7 @@ pub mod setup;
 #[cfg(windows)]
 pub mod start_menu;
 pub mod ui_automation;
+pub mod ui_language;
 pub mod uninstall;
 #[cfg(windows)]
 pub mod user_disk;
@@ -131,5 +160,6 @@ pub mod user_registry;
 pub mod video_decoder;
 pub mod vm;
 pub mod vm_listener;
+pub mod vulkan_driver;
 #[cfg(windows)]
 pub mod window_manager;

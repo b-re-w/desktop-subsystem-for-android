@@ -55,6 +55,98 @@ class CaptionInsetsTest {
     }
 
     @Test
+    fun fr22_a_new_task_gets_its_top_inset_before_its_window_says_how_high_the_title_bar_is() {
+        // At 262 dpi the framework's status bar is the title bar of a 200% monitor, 58 px.
+        actions.statusBarHeights = mapOf(262 to 58)
+        val at = TaskBounds(100, 40, 900, 1040)
+
+        // Told of the task, before its window has opened: the band it is expected to have.
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        assertEquals(listOf(7 to TaskBounds(-reach, 40, reach, 98)), actions.captionInsets)
+
+        // Nothing new while it waits.
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        assertEquals(1, actions.captionInsets.size)
+
+        // The window's own height replaces it, and the task stops waiting.
+        insets.setHeight(7, 60, at)
+        assertEquals(7 to TaskBounds(-reach, 40, reach, 100), actions.captionInsets.last())
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        assertEquals(2, actions.captionInsets.size)
+
+        // A window that fills the screen has no title bar: the host's 0 stands.
+        insets.setHeight(7, 0, at)
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        assertEquals(3, actions.captionInsets.size)
+        assertEquals(7 to null, actions.captionInsets.last())
+    }
+
+    @Test
+    fun fr22_an_expected_inset_is_taken_back_when_the_task_fills_the_screen_first() {
+        actions.statusBarHeights = mapOf(262 to 58)
+        val at = TaskBounds(0, 0, 800, 600)
+        insets.update(mapOf(4 to at), awaiting = mapOf(4 to 262))
+        actions.captionInsets.clear()
+
+        // It left the freeform windowing mode before its window opened: no title bar to expect.
+        insets.update(mapOf(4 to at))
+        assertEquals(listOf<Pair<Int, TaskBounds?>>(4 to null), actions.captionInsets)
+
+        // A density the framework has no status bar height for expects nothing.
+        insets.update(mapOf(5 to at), awaiting = mapOf(5 to 999))
+        assertEquals(1, actions.captionInsets.size)
+    }
+
+    @Test
+    fun fr22_a_task_back_from_full_screen_gets_the_hosts_title_bar_band_again() {
+        actions.statusBarHeights = mapOf(262 to 58)
+        val at = TaskBounds(100, 40, 900, 1040)
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        insets.setHeight(7, 58, at)
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+
+        // The app hid its bars and asked for full screen: its window takes its title bar away.
+        insets.update(mapOf(7 to at))
+        insets.setHeight(7, 0, at)
+        assertEquals(7 to null, actions.captionInsets.last())
+
+        // Back in a window, the band comes back at once, as high as the title bar the host gave
+        // it at this density, not left at the 0 of its full screen until the host speaks again.
+        actions.captionInsets.clear()
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262))
+        assertEquals(listOf(7 to TaskBounds(-reach, 40, reach, 98)), actions.captionInsets)
+
+        // The host's word on its return changes nothing.
+        insets.setHeight(7, 58, at)
+        assertEquals(1, actions.captionInsets.size)
+    }
+
+    @Test
+    fun fr22_a_task_back_from_full_screen_at_another_density_gets_the_band_of_that_density() {
+        // 262 dpi is a 200% monitor's density, 164 dpi a 125% one's.
+        actions.statusBarHeights = mapOf(262 to 58, 164 to 38)
+        val at = TaskBounds(0, 0, 800, 600)
+        insets.update(mapOf(3 to at), awaiting = mapOf(3 to 262))
+        insets.setHeight(3, 58, at)
+        insets.update(mapOf(3 to at))
+        insets.setHeight(3, 0, at)
+
+        // Its density changed while it filled the screen: the band follows the density it has
+        // now, not the height the host gave at the old one.
+        actions.captionInsets.clear()
+        insets.update(mapOf(3 to at), awaiting = mapOf(3 to 164))
+        assertEquals(listOf(3 to TaskBounds(-reach, 0, reach, 38)), actions.captionInsets)
+
+        // Then the host says how high the title bar is now, which stands.
+        insets.setHeight(3, 37, at)
+        insets.update(mapOf(3 to at), awaiting = mapOf(3 to 164))
+        assertEquals(
+            listOf(3 to TaskBounds(-reach, 0, reach, 38), 3 to TaskBounds(-reach, 0, reach, 37)),
+            actions.captionInsets,
+        )
+    }
+
+    @Test
     fun fr22_an_inset_the_framework_refused_is_tried_again_and_logged_once() {
         actions.insetsTaken = false
         insets.setHeight(7, 31, TaskBounds(0, 0, 400, 300))
@@ -93,6 +185,50 @@ class CaptionInsetsTest {
         insets.update(mapOf(7 to TaskBounds(100, 40, 1100, 1040)))
         assertEquals(7 to TaskBounds(-reach, 40, reach, 71), actions.captionInsets.last())
         assertEquals(emptyList<TaskBounds>(), actions.captionBoundingRects.last())
+    }
+
+    @Test
+    fun fr22_a_task_below_the_title_bar_gets_a_consumed_caption_inset_and_no_status_bar_inset() {
+        actions.statusBarHeights = mapOf(262 to 58)
+        val at = TaskBounds(100, 40, 900, 1040)
+
+        // Told of the task before its window has opened: the band it is expected to have is
+        // already one the framework consumes for the app, so its first screen starts below it.
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262), opaque = setOf(7))
+        assertEquals(listOf(7 to TaskBounds(100, 40, 900, 98)), actions.captionInsets)
+        assertEquals(listOf(true), actions.captionOpaque)
+
+        // The window's own height replaces it, still consumed.
+        insets.setHeight(7, 60, at, startWidth = 40, endWidth = 138)
+        assertEquals(7 to TaskBounds(100, 40, 900, 100), actions.captionInsets.last())
+        assertEquals(true, actions.captionOpaque.last())
+
+        // A task under the unified title bar gets its band the usual way, with nothing consumed.
+        insets.update(mapOf(7 to at, 8 to at), awaiting = mapOf(7 to 262, 8 to 262), opaque = setOf(7))
+        assertEquals(8 to TaskBounds(-reach, 40, reach, 98), actions.captionInsets.last())
+        assertEquals(false, actions.captionOpaque.last())
+
+        // A window that fills the screen has no title bar: the band goes, as for any task.
+        insets.setHeight(7, 0, at)
+        assertEquals(7 to null, actions.captionInsets.last())
+    }
+
+    @Test
+    fun fr22_the_switch_wins_over_an_app_drawn_title_bar() {
+        val at = TaskBounds(100, 40, 900, 1040)
+        // The app asks to draw its own title bar, and the user set it to start below the band.
+        insets.update(mapOf(7 to at), appDrawn = setOf(7), opaque = setOf(7))
+        insets.setHeight(7, 31, at, startWidth = 40, endWidth = 138)
+
+        // The band is the host's from end to end: one bounding rectangle over all of it, not
+        // the icon's cell and the buttons with the app's space between them.
+        assertEquals(7 to TaskBounds(100, 40, 900, 71), actions.captionInsets.last())
+        assertEquals(listOf(TaskBounds(0, 0, 800, 31)), actions.captionBoundingRects.last())
+        assertEquals(true, actions.captionOpaque.last())
+
+        // A change of width moves the rectangle's end.
+        insets.update(mapOf(7 to TaskBounds(100, 40, 1100, 1040)), appDrawn = setOf(7), opaque = setOf(7))
+        assertEquals(listOf(TaskBounds(0, 0, 1000, 31)), actions.captionBoundingRects.last())
     }
 
     @Test

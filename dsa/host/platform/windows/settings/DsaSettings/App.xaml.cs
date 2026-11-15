@@ -34,6 +34,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
         General.Updating = () => ProgramUpdate.InProgress;
+        // Each app's "Follow the default" says where the Display page's choice takes it now.
+        Apps.Follow(Settings);
         // `--lang ko-KR` shows the app in another language than the user's display language,
         // for pictures of each language taken on one machine.
         var lang = Array.IndexOf(e.Args, "--lang");
@@ -49,8 +51,19 @@ public partial class App : Application
             {
             }
         }
-        // Malgun Gothic has no Semibold: a strong font would draw Korean titles in Bold.
-        if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ko")
+        // Japanese and Chinese are drawn in their own UI fonts, not in Malgun Gothic's Korean
+        // forms of the same characters.
+        var language = UiLanguage.Resolve(System.Globalization.CultureInfo.CurrentUICulture);
+        if (UiFonts.For(language) is { } fonts)
+        {
+            Resources["TextFont"] = new System.Windows.Media.FontFamily(fonts.Text);
+            Resources["DisplayFont"] = new System.Windows.Media.FontFamily(fonts.Display);
+            Resources["StrongTextFont"] = new System.Windows.Media.FontFamily(fonts.StrongText);
+            Resources["StrongDisplayFont"] = new System.Windows.Media.FontFamily(fonts.StrongDisplay);
+        }
+        // Malgun Gothic, Microsoft YaHei UI and Microsoft JhengHei UI have no Semibold: a
+        // strong font would draw Korean and Chinese titles in Bold.
+        if (UiFonts.HasNoSemibold(language))
         {
             Resources["StrongTextFont"] = Resources["TextFont"];
             Resources["StrongDisplayFont"] = Resources["DisplayFont"];

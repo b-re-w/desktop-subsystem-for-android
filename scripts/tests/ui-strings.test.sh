@@ -71,8 +71,6 @@ def wxl(path):
     return {s.get("Id"): s.get("Value") for s in root.iter() if s.tag.endswith("String")}
 
 english, korean = wxl(f"{windows}/installer/dsa.en-us.wxl"), wxl(f"{windows}/installer/dsa.ko-kr.wxl")
-if set(english) != set(korean):
-    fail(f"fr3_installer_has_korean_strings: dsa.ko-kr.wxl ids {sorted(korean)} differ from {sorted(english)}")
 for name, value in korean.items():
     if not re.search(r"[가-힣]", value or ""):
         fail(f"fr3_installer_has_korean_strings: {name} in dsa.ko-kr.wxl is not Korean")
@@ -80,17 +78,44 @@ wxs = open(f"{windows}/installer/dsa.wxs", encoding="utf-8").read()
 for name in english:
     if f"!(loc.{name})" not in wxs:
         fail(f"fr3_installer_has_korean_strings: dsa.wxs does not use !(loc.{name})")
-if "dsa.ko-kr.wxl" not in open(f"{windows}/installer/build.ps1", encoding="utf-8").read():
-    fail("fr3_installer_has_korean_strings: build.ps1 does not pass dsa.ko-kr.wxl")
+# Every interface language has the package's words, with the same ids as English, and the build
+# passes each file.
+build = open(f"{windows}/installer/build.ps1", encoding="utf-8").read()
+for culture in ["ko-kr", "ja-jp", "zh-cn", "zh-tw", "es-es", "fr-fr", "de-de", "pt-br", "ru-ru", "it-it", "vi-vn", "id-id", "tr-tr"]:
+    path = f"{windows}/installer/dsa.{culture}.wxl"
+    try:
+        words = wxl(path)
+    except FileNotFoundError:
+        fail(f"fr17_installer_has_every_language: {path} is missing")
+        continue
+    if set(words) != set(english):
+        fail(f"fr17_installer_has_every_language: dsa.{culture}.wxl ids {sorted(words)} differ from {sorted(english)}")
+    for name, value in words.items():
+        if not (value or "").strip() or chr(0x2014) in value:
+            fail(f"fr17_installer_has_every_language: {name} in dsa.{culture}.wxl is empty or has an em dash")
+    if f"dsa.{culture}.wxl" not in build:
+        fail(f"fr17_installer_has_every_language: build.ps1 does not pass dsa.{culture}.wxl")
 
 # The shell words: each one dsa.wxs points at is in the string table with Korean.
 lib = open(f"{windows}/resources/src/lib.rs", encoding="utf-8").read()
 ids = dict(re.findall(r"pub const (\w+): u16 = (\d+);", lib.split("pub mod shell", 1)[1].split("pub const STRINGS", 1)[0]))
 string = r'"((?:[^"\\]|\\.)*)"'
-table = re.findall(r'\(\s*(\w+),\s*' + string + r',\s*' + string + r',?\s*\)', lib)
-korean_by_id = {ids[name]: ko for name, _, ko in table if name in ids}
+# Each entry is (ID, [English, Korean, ... one per interface language]).
+table = re.findall(r'\(\s*(\w+),\s*\[((?:\s*' + string + r',?)+)\s*\],?\s*\)', lib)
+korean_by_id = {}
+# A word that reads the same in every language is written once for all of them.
+for name, word in re.findall(r'\(\s*(\w+),\s*\[' + string + r';\s*super::languages::COUNT\]\s*\)', lib):
+    if name in ids:
+        korean_by_id[ids[name]] = word
+for name, words, *_ in table:
+    texts = re.findall(string, words)
+    if name not in ids:
+        continue
+    if len(texts) != 14 or not all(t.strip() for t in texts):
+        fail(f"fr17_shell_words_have_every_language: string {ids[name]} has {len(texts)} languages, or an empty one")
+    korean_by_id[ids[name]] = texts[1] if len(texts) > 1 else ""
 for id_ in ids.values():
-    if id_ not in korean_by_id:
+    if id_ not in korean_by_id or (id_ != ids.get("NAVIGATION_NAME") and not re.search(r"[가-힣]", korean_by_id[id_])):
         fail(f"fr3_shell_words_have_korean: string {id_} has no Korean")
 # A string is named "@file,-id"; "file,-id" without the @ is an icon (DefaultIcon), not a string.
 used = set(re.findall(r"@\[INSTALLFOLDER\]dsa-app-window\.exe,-(\d+)", wxs)) | set(re.findall(r'(?:Description|Display)ResourceId="(\d+)"', wxs))

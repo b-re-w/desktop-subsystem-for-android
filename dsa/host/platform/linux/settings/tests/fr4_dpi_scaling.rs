@@ -135,6 +135,55 @@ fn fr4_system_forced_is_marked_not_available_yet() {
 }
 
 #[test]
+fn fr4_youtube_scales_the_system_way_by_default() {
+    let fake = Fake::new(&[(
+        "app-window --json",
+        json!({"apps": [], "system_scaled_by_default": ["com.google.android.youtube"]}),
+    )]);
+    let list = client(fake).app_window_list().unwrap();
+    assert_eq!(
+        list.system_scaled_by_default,
+        vec!["com.google.android.youtube".to_string()]
+    );
+    // YouTube's automatic choice says it is System for it; the others stay as they are.
+    let choices = view::dpi_scaling_choices_for(true, false);
+    let scalings: Vec<DpiScaling> = choices.iter().map(|(_, s)| *s).collect();
+    assert_eq!(scalings, DpiScaling::ALL);
+    assert_eq!(choices[0].0, "Automatic (system, recommended for this app)");
+    assert_eq!(choices[1..], view::dpi_scaling_choices(false)[1..]);
+    // Any other app's automatic choice says it is App for it.
+    assert_eq!(
+        view::dpi_scaling_choices_for(false, false)[0].0,
+        "Automatic (app)"
+    );
+    // A dsa that does not name the list has none.
+    let fake = Fake::new(&[("app-window --json", json!({"apps": []}))]);
+    assert!(client(fake)
+        .app_window_list()
+        .unwrap()
+        .system_scaled_by_default
+        .is_empty());
+}
+
+#[test]
+fn fr4_the_users_choice_wins_over_the_built_in_list() {
+    // The user's choice for YouTube is what the row selects, not the automatic one.
+    let fake = Fake::new(&[(
+        "app-window --json",
+        json!({
+            "apps": [{"package": "com.google.android.youtube", "dpi_scaling": "app"}],
+            "system_scaled_by_default": ["com.google.android.youtube"],
+        }),
+    )]);
+    let list = client(fake).app_window_list().unwrap();
+    let youtube = &list.apps[0];
+    assert_eq!(
+        DpiScaling::ALL[view::dpi_scaling_index(Some(youtube))],
+        DpiScaling::App
+    );
+}
+
+#[test]
 fn fr4_dpi_scaling_words_are_the_ones_dsa_takes() {
     let codes: Vec<&str> = DpiScaling::ALL.iter().map(|s| s.code()).collect();
     assert_eq!(codes, ["auto", "app", "system", "system-forced"]);

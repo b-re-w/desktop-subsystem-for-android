@@ -1,0 +1,1840 @@
+# Simplified Chinese translation of DSA Settings for Linux.
+# This file is distributed under the same licence as Desktop Subsystem for Android.
+msgid ""
+msgstr ""
+"Project-Id-Version: dsa-settings\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "The dsa command could not be started. Reinstall DSA."
+msgstr "无法启动 dsa 命令。请重新安装 DSA。"
+
+msgid "The DSA service is not running."
+msgstr "DSA 服务未在运行。"
+
+msgid "The DSA service could not do this."
+msgstr "DSA 服务无法完成此操作。"
+
+msgid "The answer of the dsa command could not be read. Reinstall DSA."
+msgstr "无法读取 dsa 命令的响应。请重新安装 DSA。"
+
+msgid "The setting was not changed, because an administrator's permission was not given."
+msgstr "未获得管理员权限，因此设置未更改。"
+
+msgid "Unknown"
+msgstr "未知"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Starting"
+msgstr "正在启动"
+
+msgid "Running"
+msgstr "正在运行"
+
+msgid "Dozing (idle)"
+msgstr "Doze（空闲）"
+
+msgid "Frozen"
+msgstr "已冻结"
+
+msgid "Stopping"
+msgstr "正在停止"
+
+msgid "Not ready"
+msgstr "未就绪"
+
+msgid "Virtual machine (crosvm)"
+msgstr "虚拟机（crosvm）"
+
+msgid "Window manager"
+msgstr "窗口管理器"
+
+msgid "Graphics renderer"
+msgstr "图形渲染器"
+
+msgid "App window"
+msgstr "应用窗口"
+
+msgid "Process {0}, {1} private"
+msgstr "进程 {0}，专用 {1}"
+
+msgid "Apps and system"
+msgstr "应用和系统"
+
+msgid "{0} in memory, {1} compressed"
+msgstr "内存中 {0}，已压缩 {1}"
+
+msgid "Google Play services"
+msgstr "Google Play 服务"
+
+msgid "The Google apps you installed, {0} processes: {1}"
+msgstr "您安装的 Google 应用，{0} 个进程：{1}"
+
+msgid "unknown"
+msgstr "未知"
+
+msgid "Cache"
+msgstr "缓存"
+
+msgid "File contents kept in memory. Android drops them when it needs the memory."
+msgstr "保存在内存中的文件内容。Android 需要内存时会将其释放。"
+
+msgid "Kernel caches"
+msgstr "内核缓存"
+
+msgid "Kernel caches the kernel can free on demand."
+msgstr "内核可按需释放的缓存。"
+
+msgid "Shared memory"
+msgstr "共享内存"
+
+msgid "Compressed memory"
+msgstr "压缩内存"
+
+msgid "Holds {0} of pages, compressed"
+msgstr "以压缩形式保存 {0} 的页面"
+
+msgid "Free"
+msgstr "可用"
+
+msgid "Kernel objects"
+msgstr "内核对象"
+
+msgid "Memory the kernel keeps for its own data and cannot reclaim"
+msgstr "内核为自身数据保留且无法回收的内存"
+
+msgid "Thread stacks"
+msgstr "线程栈"
+
+msgid "Page tables"
+msgstr "页表"
+
+msgid "Kernel mappings (vmalloc)"
+msgstr "内核映射（vmalloc）"
+
+msgid "Per-CPU data"
+msgstr "每 CPU 数据"
+
+msgid "Drivers"
+msgstr "驱动程序"
+
+msgid "What no counter names, such as GPU and DMA buffers"
+msgstr "没有计数器记录的内存，例如 GPU 和 DMA 缓冲区"
+
+msgid "Reserved at boot"
+msgstr "启动时保留"
+
+msgid "Kernel code, page structures and buffers, of {0} given; contiguous area {1}"
+msgstr "在分配的 {0} 中用于内核代码、页结构和缓冲区；连续区域 {1}"
+
+msgid "Process {0}"
+msgstr "进程 {0}"
+
+msgid "Process {0}, Google Play services"
+msgstr "进程 {0}，Google Play 服务"
+
+msgid "Automatic"
+msgstr "自动"
+
+msgid "The GPU of the primary monitor (recommended)"
+msgstr "主显示器的 GPU（推荐）"
+
+msgid "Integrated GPU"
+msgstr "集成 GPU"
+
+msgid "Discrete GPU (for example, for games)"
+msgstr "独立 GPU（例如用于游戏）"
+
+msgid "Always the newest (now Android {0})"
+msgstr "始终使用最新版本（当前为 Android {0}）"
+
+msgid "Android {0}"
+msgstr "Android {0}"
+
+msgid "{0} of {1} apps"
+msgstr "{1} 个应用中的 {0} 个"
+
+msgid "{0} apps"
+msgstr "{0} 个应用"
+
+msgid "Version {0}"
+msgstr "版本 {0}"
+
+msgid "Part of Android"
+msgstr "Android 自带"
+
+msgid "Opens at the size Android chooses"
+msgstr "以 Android 选择的大小打开"
+
+msgid "Phone, portrait ({0} × {1})"
+msgstr "手机，纵向（{0} × {1}）"
+
+msgid "Phone, landscape ({0} × {1})"
+msgstr "手机，横向（{0} × {1}）"
+
+msgid "Tablet, portrait ({0} × {1})"
+msgstr "平板电脑，纵向（{0} × {1}）"
+
+msgid "Tablet, landscape ({0} × {1})"
+msgstr "平板电脑，横向（{0} × {1}）"
+
+msgid "it is no longer installed"
+msgstr "该应用已不再安装"
+
+msgid "it is part of Android"
+msgstr "该应用是 Android 的一部分"
+
+msgid "Android does not allow it, because the app is a device administrator or a policy keeps it"
+msgstr "Android 不允许此操作，因为该应用是设备管理器或受到策略保护"
+
+msgid "Android could not uninstall it"
+msgstr "Android 无法卸载该应用"
+
+msgid "it is an Android App Bundle, made to be uploaded to an app store. Get the app as an APK, or as an .xapk, .apks or .apkm bundle."
+msgstr "这是 Android App Bundle，用于上传到应用商店。请获取 APK 格式的应用，或 .xapk、.apks 或 .apkm 包。"
+
+msgid "the bundle is encrypted, so its APKs cannot be read. Get the app as an APK, or as a newer bundle."
+msgstr "该包已加密，因此无法读取其中的 APK。请获取 APK 格式的应用，或较新的包。"
+
+msgid "a split APK of the bundle is signed with another key than its base APK, so Android would refuse it."
+msgstr "包中的某个拆分 APK 与其基础 APK 使用不同的密钥签名，因此 Android 会拒绝它。"
+
+msgid "the bundle is not one app that Android can install."
+msgstr "该包不是 Android 可以安装的单个应用。"
+
+msgid "the app has no 64-bit code that DSA's Android runs: x86_64, or arm64-v8a through ARM translation. Get one of those builds."
+msgstr "该应用没有 DSA 的 Android 可运行的 64 位代码：x86_64，或通过 ARM 转译运行的 arm64-v8a。请获取其中一种版本。"
+
+msgid "the app has only ARM code (arm64-v8a), and ARM translation is off. Turn it on under ARM apps, restart Android and install it again."
+msgstr "该应用只有 ARM 代码（arm64-v8a），而 ARM 转译已关闭。请在“ARM 应用”中开启，重启 Android 后再次安装。"
+
+msgid "the app does not run on this Android: it needs another processor type, a newer Android version or a feature this device does not have."
+msgstr "该应用无法在此 Android 上运行：它需要其他处理器类型、更新的 Android 版本或此设备没有的功能。"
+
+msgid "the app is installed already, signed with another key. Uninstall it in Android first."
+msgstr "该应用已安装，但使用其他密钥签名。请先在 Android 中卸载它。"
+
+msgid "the file is not a signed APK that Android can read."
+msgstr "该文件不是 Android 可以读取的已签名 APK。"
+
+msgid "Android has no room for the app."
+msgstr "Android 没有空间安装该应用。"
+
+msgid "a newer version of the app is installed. Uninstall it in Android first."
+msgstr "已安装该应用的更新版本。请先在 Android 中卸载它。"
+
+msgid "a policy of this Android does not allow the app."
+msgstr "此 Android 的策略不允许该应用。"
+
+msgid "Android did not install the app."
+msgstr "Android 未安装该应用。"
+
+msgid "Not supported: no ARM translation package is installed."
+msgstr "不支持：未安装 ARM 转译包。"
+
+msgid "Not supported: {0} {1} is installed but turned off."
+msgstr "不支持：{0} {1} 已安装但已关闭。"
+
+msgid "Not supported: {0} {1} is turned off."
+msgstr "不支持：{0} {1} 已关闭。"
+
+msgid "Supported by {0} {1} ({2}), the translator that comes with this Android."
+msgstr "由 {0} {1}（{2}）支持，这是此 Android 自带的转译器。"
+
+msgid "{0} {1} ({2}) comes with this Android. It is used unless you install another translator.\nGoing back to it removes the package that replaced it, from the next start of Android."
+msgstr "{0} {1}（{2}）随此 Android 提供。除非您安装其他转译器，否则将使用它。\n切换回它会移除替代它的包，从下次启动 Android 时生效。"
+
+msgid "Use the default translator"
+msgstr "使用默认转译器"
+
+msgid "Use"
+msgstr "使用"
+
+msgid "licence not given"
+msgstr "未提供许可证"
+
+msgid "Supported by {0} {1} ({2})."
+msgstr "由 {0} {1}（{2}）支持。"
+
+msgid "Android installs apps for: {0}"
+msgstr "Android 为以下架构安装应用：{0}"
+
+msgid "Android is not running, so what it supports now is not known."
+msgstr "Android 未在运行，因此目前无法得知它支持什么。"
+
+msgid "Connected through this computer (NAT). Android apps see it as Wi-Fi, with no data charges."
+msgstr "通过此计算机连接（NAT）。Android 应用将其视为 Wi-Fi，不产生流量费用。"
+
+msgid "Connected to this computer's network as a device of its own (advanced networking)."
+msgstr "作为独立设备连接到此计算机的网络（高级网络）。"
+
+msgid "Android is not running, so it has no network yet."
+msgstr "Android 未在运行，因此还没有网络。"
+
+msgid "The DSA service does not report the network. Update DSA to see it."
+msgstr "DSA 服务不报告网络信息。请更新 DSA 以查看。"
+
+msgid "None"
+msgstr "无"
+
+msgid "Manufacturer"
+msgstr "制造商"
+
+msgid "Brand"
+msgstr "品牌"
+
+msgid "Model"
+msgstr "型号"
+
+msgid "Device"
+msgstr "设备"
+
+msgid "Product name"
+msgstr "产品名称"
+
+msgid "Form factor"
+msgstr "外形规格"
+
+msgid "Release"
+msgstr "发布版本"
+
+msgid "Build ID"
+msgstr "构建 ID"
+
+msgid "Incremental version"
+msgstr "增量版本"
+
+msgid "Build type"
+msgstr "构建类型"
+
+msgid "Tags"
+msgstr "标签"
+
+msgid "Whole fingerprint"
+msgstr "完整指纹"
+
+msgid "Verbose"
+msgstr "详细"
+
+msgid "Debug"
+msgstr "调试"
+
+msgid "Info"
+msgstr "信息"
+
+msgid "Warning"
+msgstr "警告"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Fatal"
+msgstr "严重错误"
+
+msgid "Paused. {0} new lines are waiting."
+msgstr "已暂停。{0} 行新内容正在等待。"
+
+msgid "General"
+msgstr "常规"
+
+msgid "Memory"
+msgstr "内存"
+
+msgid "Apps"
+msgstr "应用"
+
+msgid "Running in the background"
+msgstr "后台运行"
+
+msgid "Widgets"
+msgstr "小部件"
+
+msgid "Display and GPU"
+msgstr "显示与 GPU"
+
+msgid "Android version"
+msgstr "Android 版本"
+
+msgid "Updates"
+msgstr "更新"
+
+msgid "Device identity"
+msgstr "设备标识"
+
+msgid "Network"
+msgstr "网络"
+
+msgid "Advanced"
+msgstr "高级"
+
+msgid "Android log"
+msgstr "Android 日志"
+
+msgid "About"
+msgstr "关于"
+
+msgid "The Android apps on this computer. Open them, change them in App info, or uninstall the ones you installed.\nAndroid starts when you open this page."
+msgstr "此计算机上的 Android 应用。可以打开它们、在“应用信息”中更改，或卸载您安装的应用。\n打开此页面时 Android 会启动。"
+
+msgid "Manage apps"
+msgstr "管理应用"
+
+msgid "Open the list of apps in Android's own settings"
+msgstr "在 Android 自己的设置中打开应用列表"
+
+msgid "The apps could not be read or changed"
+msgstr "无法读取或更改应用"
+
+msgid "Installed apps"
+msgstr "已安装的应用"
+
+msgid "Search apps"
+msgstr "搜索应用"
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "No app is installed in Android yet. Open an APK file to install one."
+msgstr "Android 中还没有安装任何应用。打开 APK 文件即可安装。"
+
+msgid "No app matches your search."
+msgstr "没有与搜索匹配的应用。"
+
+msgid "Open"
+msgstr "打开"
+
+msgid "Package"
+msgstr "软件包"
+
+msgid "Installed"
+msgstr "已安装"
+
+msgid "App info"
+msgstr "应用信息"
+
+msgid "Permissions, storage and notifications, in Android's settings"
+msgstr "Android 设置中的权限、存储和通知"
+
+msgid "Desktop shortcut"
+msgstr "桌面快捷方式"
+
+msgid "A shortcut on the desktop that opens the app"
+msgstr "桌面上用于打开该应用的快捷方式"
+
+msgid "Create desktop shortcut"
+msgstr "创建桌面快捷方式"
+
+msgid "The desktop shortcut could not be made"
+msgstr "无法创建桌面快捷方式"
+
+msgid "{0} is on the desktop."
+msgstr "{0} 已放到桌面上。"
+
+msgid "{0}'s windows follow the new settings from the next one that opens."
+msgstr "{0} 的窗口从下一个打开的窗口起采用新设置。"
+
+msgid "Resizable"
+msgstr "可调整大小"
+
+msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
+msgstr "是否可以调整此应用窗口的大小并将其最大化。关闭后，每个窗口都保持打开时的大小。"
+
+msgid "Start below the title bar"
+msgstr "从标题栏下方开始"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "适用于顶部栏被标题栏挤压或遮挡的应用。\n应用从标题栏下方开始显示，而不是绘制在标题栏后面。\n下次打开该应用的窗口时生效。"
+
+msgid "Window size when it opens"
+msgstr "打开时的窗口大小"
+
+msgid "The size this app's windows open at"
+msgstr "此应用窗口打开时的大小"
+
+msgid "Uninstall"
+msgstr "卸载"
+
+msgid "This app is part of Android and cannot be uninstalled."
+msgstr "此应用是 Android 的一部分，无法卸载。"
+
+msgid "Uninstall {0}?"
+msgstr "要卸载 {0} 吗？"
+
+msgid "{0} and its data will be removed from Android. This cannot be undone."
+msgstr "{0} 及其数据将从 Android 中移除。此操作无法撤消。"
+
+msgid "{0} is uninstalled."
+msgstr "已卸载 {0}。"
+
+msgid "Not uninstalled"
+msgstr "未卸载"
+
+msgid "{0} was not uninstalled: {1} ({2})"
+msgstr "未卸载 {0}：{1}（{2}）"
+
+msgid "These Android apps keep running after their windows close, to play music, download files, keep a VPN on or do other work.\nEach also has an indicator in the top bar.\nStopping an app ends what it is doing and frees the memory it used."
+msgstr "这些 Android 应用在窗口关闭后仍继续运行，用于播放音乐、下载文件、保持 VPN 连接或执行其他工作。\n每个应用在顶栏中也有一个指示器。\n停止应用会结束其正在进行的工作，并释放它占用的内存。"
+
+msgid "Stopping apps"
+msgstr "停止应用"
+
+msgid "Ask before stopping an app from its indicator"
+msgstr "从指示器停止应用前询问"
+
+msgid "Turn this back on if you chose not to be asked again."
+msgstr "如果您选择了不再询问，可以在此重新开启。"
+
+msgid "The setting was not changed"
+msgstr "设置未更改"
+
+msgid "The apps that run in the background could not be read or changed"
+msgstr "无法读取或更改后台运行的应用"
+
+msgid "No app runs in the background."
+msgstr "没有应用在后台运行。"
+
+msgid "Playing {0}"
+msgstr "正在播放 {0}"
+
+msgid "Paused: {0}"
+msgstr "已暂停：{0}"
+
+msgid "Stop"
+msgstr "停止"
+
+msgid "{0} was stopped."
+msgstr "已停止 {0}。"
+
+msgid "On your desktop"
+msgstr "在桌面上"
+
+msgid "Place the widgets your Android apps offer on your desktop. Each widget gets a window of its own, below your other windows.\nPress and hold a widget to edit it: drag it to move it, and drag its handles to resize it.\nRight-click a widget for its settings, its sizes and Remove. Android starts when you open this page."
+msgstr "将 Android 应用提供的小部件放到桌面上。每个小部件都有自己的窗口，位于其他窗口下方。\n长按小部件即可编辑：拖动以移动，拖动其控制柄以调整大小。\n右键单击小部件可打开其设置、尺寸和“移除”。打开此页面时 Android 会启动。"
+
+msgid "Widgets your apps offer"
+msgstr "应用提供的小部件"
+
+msgid "Widgets could not be read or changed"
+msgstr "无法读取或更改小部件"
+
+msgid "No widget is on your desktop yet."
+msgstr "桌面上还没有小部件。"
+
+msgid "No app in Android offers a widget."
+msgstr "Android 中没有应用提供小部件。"
+
+msgid "At {0}, {1}, {2} × {3}"
+msgstr "位置 {0}, {1}，大小 {2} × {3}"
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "{0} was removed from your desktop."
+msgstr "已从桌面移除 {0}。"
+
+msgid "asks you to set it up"
+msgstr "需要您进行设置"
+
+msgid "Add to desktop"
+msgstr "添加到桌面"
+
+msgid "{0} is on your desktop."
+msgstr "{0} 已放到桌面上。"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "The folder could not be opened"
+msgstr "无法打开文件夹"
+
+msgid "{0} does not exist yet, or you may not open it."
+msgstr "{0} 尚不存在，或者您无权打开它。"
+
+msgid "Android sends its log only while this page is open, and nothing is written to disk.\nSave diagnostics gathers what a problem report needs into one zip file."
+msgstr "Android 仅在此页面打开时发送日志，且不会向磁盘写入任何内容。\n“保存诊断信息”会将问题报告所需的内容收集到一个 zip 文件中。"
+
+msgid "Filter by tag or text"
+msgstr "按标签或文本筛选"
+
+msgid "Pause"
+msgstr "暂停"
+
+msgid "Save diagnostics"
+msgstr "保存诊断信息"
+
+msgid "The log cannot be read"
+msgstr "无法读取日志"
+
+msgid "Gathering the diagnostics. This takes a minute or more."
+msgstr "正在收集诊断信息。这需要一分钟或更长时间。"
+
+msgid "Saved the diagnostics to {0}."
+msgstr "诊断信息已保存到 {0}。"
+
+msgid "DSA Settings"
+msgstr "DSA 设置"
+
+msgid "Not installed"
+msgstr "未安装"
+
+msgid "Only APK files and split APK bundles can be installed: {0}"
+msgstr "只能安装 APK 文件和拆分 APK 包：{0}"
+
+msgid "Installing {0} in Android…"
+msgstr "正在将 {0} 安装到 Android…"
+
+msgid "{0} is installed ({1}). Open it from the app grid."
+msgstr "{0} 已安装（{1}）。可从应用网格中打开。"
+
+msgid "{0} was not installed: {1} ({2})"
+msgstr "未安装 {0}：{1}（{2}）"
+
+msgid "{0} did not reach Android. {1}"
+msgstr "{0} 未能送达 Android。{1}"
+
+msgid "State"
+msgstr "状态"
+
+msgid "Desktop Subsystem for Android™ runs Android in its own lightweight virtual machine and shows each app in its own window."
+msgstr "Desktop Subsystem for Android™ 在自己的轻量级虚拟机中运行 Android，并在单独的窗口中显示每个应用。"
+
+msgid "Android"
+msgstr "Android"
+
+msgid "Start"
+msgstr "启动"
+
+msgid "Android is not ready"
+msgstr "Android 未就绪"
+
+msgid "Last stopped"
+msgstr "上次停止原因"
+
+msgid "Update"
+msgstr "更新"
+
+msgid "More"
+msgstr "更多"
+
+msgid "Freeze Android now"
+msgstr "立即冻结 Android"
+
+msgid "Stops every process in Android until you open one of its windows again. Notifications, alarms and widgets stop with it."
+msgstr "停止 Android 中的所有进程，直到您再次打开它的某个窗口。通知、闹钟和小部件也会随之停止。"
+
+msgid "Freeze"
+msgstr "冻结"
+
+msgid "Open my log folder"
+msgstr "打开我的日志文件夹"
+
+msgid "The logs of the window manager and the app windows, for reporting a problem."
+msgstr "窗口管理器和应用窗口的日志，用于报告问题。"
+
+msgid "Open the service's log folder (administrators)"
+msgstr "打开服务的日志文件夹（管理员）"
+
+msgid "The logs of the DSA service and of Android itself."
+msgstr "DSA 服务和 Android 本身的日志。"
+
+msgid "Ask the DSA service for the state again."
+msgstr "再次向 DSA 服务查询状态。"
+
+msgid "Something went wrong"
+msgstr "出现问题"
+
+msgid "On this computer"
+msgstr "在此计算机上"
+
+msgid "In use on this computer"
+msgstr "在此计算机上使用中"
+
+msgid "The RAM the virtual machine, the window manager and the app windows hold now."
+msgstr "虚拟机、窗口管理器和应用窗口当前占用的 RAM。"
+
+msgid "Android's VM now"
+msgstr "当前的 Android 虚拟机"
+
+msgid "The memory the VM holds on this computer, and how much of it Android uses"
+msgstr "虚拟机在此计算机上占用的内存，以及其中 Android 使用的量"
+
+msgid "Inside Android"
+msgstr "Android 内部"
+
+msgid "Available to Android"
+msgstr "Android 可用"
+
+msgid "Android's kernel"
+msgstr "Android 的内核"
+
+msgid "Largest processes"
+msgstr "占用最多的进程"
+
+msgid "Memory limit"
+msgstr "内存限制"
+
+msgid "The most memory Android may grow to. Android takes only what it needs and returns the rest at once.\nAutomatic sets no fixed limit: up to this computer's memory less what Linux keeps.\nTakes effect the next time Android starts."
+msgstr "Android 可以增长到的最大内存。Android 只占用所需的内存，并立即归还其余部分。\n“自动”不设固定限制：最多为此计算机的内存减去 Linux 保留的部分。\n下次启动 Android 时生效。"
+
+msgid "The memory could not be measured"
+msgstr "无法测量内存"
+
+msgid "{0}: used by Android {1}, free, not yet returned {2}"
+msgstr "{0}：Android 使用 {1}，空闲但尚未归还 {2}"
+
+msgid "Android is not running, so it takes no memory on this computer."
+msgstr "Android 未在运行，因此不占用此计算机的内存。"
+
+msgid "No report yet. Android reports how it uses its memory a few minutes after it starts."
+msgstr "尚无报告。Android 会在启动几分钟后报告其内存使用情况。"
+
+msgid "Reported {0} seconds ago"
+msgstr "{0} 秒前报告"
+
+msgid "{0} available of {1}"
+msgstr "{0} 可用，共 {1}"
+
+msgid "Render GPU"
+msgstr "渲染 GPU"
+
+msgid "The GPU that draws Android apps.\nThe default, the primary monitor's GPU, keeps frames on one GPU and lets a laptop's discrete GPU sleep."
+msgstr "绘制 Android 应用的 GPU。\n默认使用主显示器的 GPU，使帧保留在同一个 GPU 上，并让笔记本电脑的独立 GPU 休眠。"
+
+msgid "A new render GPU takes effect when the window manager starts again: at the next sign-in, or when you restart it below."
+msgstr "新的渲染 GPU 在窗口管理器再次启动时生效：下次登录时，或在下方重启窗口管理器时。"
+
+msgid "GPU of the primary monitor"
+msgstr "主显示器的 GPU"
+
+msgid "What the default choice renders on now."
+msgstr "默认选项当前使用的渲染 GPU。"
+
+msgid "Restart the window manager"
+msgstr "重启窗口管理器"
+
+msgid "Open Android app windows close and come back."
+msgstr "打开的 Android 应用窗口会关闭并重新出现。"
+
+msgid "Restart"
+msgstr "重启"
+
+msgid "Restart the window manager?"
+msgstr "要重启窗口管理器吗？"
+
+msgid "The windows of Android apps close for a moment. Android and its apps keep running."
+msgstr "Android 应用的窗口会短暂关闭。Android 及其应用会继续运行。"
+
+msgid "The window manager could not be restarted"
+msgstr "无法重启窗口管理器"
+
+msgid "Chosen by the window manager when it starts"
+msgstr "由窗口管理器在启动时选择"
+
+msgid "Running now"
+msgstr "当前运行"
+
+msgid "Build"
+msgstr "构建"
+
+msgid "Security patch level"
+msgstr "安全补丁级别"
+
+msgid "Changing the Android version"
+msgstr "更改 Android 版本"
+
+msgid "Every user of this computer runs the same Android version, so changing it needs an administrator.\nThe chosen version keeps getting security updates.\nWhen its support ends, DSA moves to the next version and keeps your apps."
+msgstr "此计算机的所有用户运行同一个 Android 版本，因此更改它需要管理员。\n所选版本会持续获得安全更新。\n其支持结束时，DSA 会升级到下一个版本并保留您的应用。"
+
+msgid "Version to use"
+msgstr "要使用的版本"
+
+msgid "DSA supports the latest two Android versions. Some apps run on only one of them."
+msgstr "DSA 支持最新的两个 Android 版本。某些应用只能在其中一个版本上运行。"
+
+msgid "Change"
+msgstr "更改"
+
+msgid "Android {0} is chosen. It is downloaded now and used the next time Android starts."
+msgstr "已选择 Android {0}。现在开始下载，下次 Android 启动时使用。"
+
+msgid "Supported versions: Android {0}"
+msgstr "支持的版本：Android {0}"
+
+msgid "Move to a newer Android?"
+msgstr "要升级到更新的 Android 吗？"
+
+msgid "Android {0} is downloaded and used the next time Android starts.\n\nYour apps and their data move along. Moving back later erases the data."
+msgstr "将下载 Android {0}，并在下次 Android 启动时使用。\n\n您的应用及其数据会一起迁移。以后再改回会清除数据。"
+
+msgid "Erase Android data to move to an older version?"
+msgstr "要清除 Android 数据以改用旧版本吗？"
+
+msgid "Android {0} is older than the Android {1} that runs now. Android cannot read data a newer version wrote.\n\nMoving erases the Android data of every user of this computer:\n• every app they installed\n• the accounts they signed in to\n• the data of every app\n\nEach user's Android then starts as it was first installed. DSA's settings stay.\n\nThis cannot be undone."
+msgstr "Android {0} 比当前运行的 Android {1} 旧。Android 无法读取较新版本写入的数据。\n\n更改将清除此计算机所有用户的 Android 数据：\n• 他们安装的所有应用\n• 他们登录的账号\n• 所有应用的数据\n\n之后每个用户的 Android 都会以初次安装时的状态启动。DSA 的设置会保留。\n\n此操作无法撤消。"
+
+msgid "Erase data and change"
+msgstr "清除数据并更改"
+
+msgid "New versions of DSA come through the system's package manager and software center, with the other updates.\nInstalling DSA added its signed package repository."
+msgstr "DSA 的新版本通过系统的软件包管理器和软件中心提供，与其他更新一起。\nDSA 安装时添加了其签名的软件包仓库。"
+
+msgid "Open software updates"
+msgstr "打开软件更新"
+
+msgid "Shows the updates the system has for DSA and the other installed programs."
+msgstr "显示系统为 DSA 和其他已安装程序提供的更新。"
+
+msgid "No software center was found"
+msgstr "未找到软件中心"
+
+msgid "Update DSA with the system's package manager, such as apt or dnf."
+msgstr "请使用系统的软件包管理器（如 apt 或 dnf）更新 DSA。"
+
+msgid "Android image"
+msgstr "Android 映像"
+
+msgid "This setting applies to every user of this computer, so changing it asks for an administrator's permission."
+msgstr "此设置适用于此计算机的所有用户，因此更改它需要管理员权限。"
+
+msgid "The newest supported version (now Android {0})"
+msgstr "支持的最新版本（当前为 Android {0}）"
+
+msgid "Android {0} and its security updates"
+msgstr "Android {0} 及其安全更新"
+
+msgid "No Android update is waiting. DSA checks every day, and restarts Android into an update once no app window is open."
+msgstr "没有待安装的 Android 更新。DSA 每天检查一次，并在没有打开任何应用窗口时重启 Android 以应用更新。"
+
+msgid "Android {0} is downloaded. Restart Android to use it now."
+msgstr "Android {0} 已下载。重启 Android 即可立即使用。"
+
+msgid "Restart now"
+msgstr "立即重启"
+
+msgid "Restart Android now?"
+msgstr "要立即重启 Android 吗？"
+
+msgid "Android restarts into Android {0}.\n\nIts app windows close. Open the apps again once it has started."
+msgstr "Android 将重启到 Android {0}。\n\n其应用窗口会关闭。启动完成后请重新打开应用。"
+
+msgid "Restart Android into updates by itself"
+msgstr "自动重启 Android 以应用更新"
+
+msgid "On by default. With no app window open, Android restarts into a downloaded update at once.\nWith windows open, DSA asks first or waits until you close them.\nOff, an update is used the next time you start Android."
+msgstr "默认开启。没有打开的应用窗口时，Android 会立即重启以应用已下载的更新。\n有窗口打开时，DSA 会先询问，或等待您关闭它们。\n关闭此项时，更新将在您下次启动 Android 时应用。"
+
+msgid "Version it follows"
+msgstr "跟随的版本"
+
+msgid "Android update"
+msgstr "Android 更新"
+
+msgid "Check now"
+msgstr "立即检查"
+
+msgid "Device specifications"
+msgstr "设备规格"
+
+msgid "What Android reports"
+msgstr "Android 报告的信息"
+
+msgid "Not reported"
+msgstr "未报告"
+
+msgid "Get pre-release versions"
+msgstr "获取预发布版本"
+
+msgid "Also install versions that are still being finished. Every release before 1.0 is a pre-release.\nThe package manager then reads DSA's pre-release repository.\nTurning this off never moves DSA back: it waits for a stable release newer than the one installed."
+msgstr "也安装仍在完善中的版本。1.0 之前的每个版本都是预发布版本。\n然后软件包管理器会读取 DSA 的预发布仓库。\n关闭此项绝不会让 DSA 降级：它会等待比已安装版本更新的稳定版本。"
+
+msgid "This installation does not follow a release channel."
+msgstr "此安装不跟随发布渠道。"
+
+msgid "Update the Android image automatically"
+msgstr "自动更新 Android 映像"
+
+msgid "Download signed security updates and new versions of Android.\nThey apply when Android restarts, as the Android update settings above say."
+msgstr "下载已签名的安全更新和新的 Android 版本。\n它们会在 Android 重启时应用，具体按上方的 Android 更新设置。"
+
+msgid "This installation does not offer image updates."
+msgstr "此安装不提供映像更新。"
+
+msgid "Desktop Subsystem for Android™"
+msgstr "Desktop Subsystem for Android™"
+
+msgid "Thisisthepy"
+msgstr "Thisisthepy"
+
+msgid "DSA Settings version"
+msgstr "DSA 设置版本"
+
+msgid "DSA service version"
+msgstr "DSA 服务版本"
+
+msgid "Android image version"
+msgstr "Android 映像版本"
+
+msgid "The Android image the next start boots. Image updates change it."
+msgstr "下次启动时引导的 Android 映像。映像更新会更改它。"
+
+msgid "Licences"
+msgstr "许可证"
+
+msgid "DSA is licensed under the Apache License 2.0. Open the licences of every component it ships."
+msgstr "DSA 采用 Apache License 2.0 许可。打开它附带的所有组件的许可证。"
+
+msgid "Source code"
+msgstr "源代码"
+
+msgid "Desktop Subsystem for Android is an independent open source project.\nIt is not affiliated with, endorsed by or sponsored by Microsoft or Google."
+msgstr "Desktop Subsystem for Android 是一个独立的开源项目。\n它与 Microsoft 或 Google 无关联，也未获得其认可或赞助。"
+
+msgid "Android is a trademark of Google LLC."
+msgstr "Android 是 Google LLC 的商标。"
+
+msgid "The names and build fingerprint Android reports to apps. Leave a box empty to keep the value shown.\nChanges apply from the next start of Android."
+msgstr "Android 向应用报告的名称和构建指纹。将某个框留空即保留显示的值。\n更改从下次启动 Android 时生效。"
+
+msgid "Apps may notice"
+msgstr "应用可能会察觉"
+
+msgid "Changing the model or the fingerprint can change how apps behave.\nSome check the device before they run, and payment and integrity checks may fail."
+msgstr "更改型号或指纹可能会改变应用的行为。\n有些应用会在运行前检查设备，支付和完整性检查可能会失败。"
+
+msgid "Build fingerprint"
+msgstr "构建指纹"
+
+msgid "Fingerprint from the next start"
+msgstr "下次启动时的指纹"
+
+msgid "Restart Android now"
+msgstr "立即重启 Android"
+
+msgid "Reset to defaults"
+msgstr "重置为默认值"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Saved. Android uses it from its next start."
+msgstr "已保存。Android 将从下次启动起使用。"
+
+msgid "Saved. Restart Android to use it now."
+msgstr "已保存。重启 Android 即可立即使用。"
+
+msgid "Reset the device identity?"
+msgstr "要重置设备标识吗？"
+
+msgid "Every value goes back to its default: this computer's, or DSA's own where the computer does not say.\n\nIt applies from the next start of Android."
+msgstr "每个值都会恢复为默认值：此计算机的值，或在计算机未提供时使用 DSA 自己的值。\n\n从下次启动 Android 时生效。"
+
+msgid "Back to the defaults. Android uses them from its next start."
+msgstr "已恢复默认值。Android 将从下次启动起使用。"
+
+msgid "Back to the defaults. Restart Android to use them now."
+msgstr "已恢复默认值。重启 Android 即可立即使用。"
+
+msgid "Android started again with this identity."
+msgstr "Android 已使用此标识重新启动。"
+
+msgid "Android's network"
+msgstr "Android 的网络"
+
+msgid "Connection"
+msgstr "连接"
+
+msgid "Address"
+msgstr "地址"
+
+msgid "DNS"
+msgstr "DNS"
+
+msgid "Answered by this computer's resolver, so its hosts file, VPN and DNS filters apply to Android apps."
+msgstr "由此计算机的解析器应答，因此其 hosts 文件、VPN 和 DNS 过滤器也适用于 Android 应用。"
+
+msgid "This computer's resolver does not answer, so Android asks the network's DNS servers: {0}"
+msgstr "此计算机的解析器未应答，因此 Android 会询问网络的 DNS 服务器：{0}"
+
+msgid "Gateway"
+msgstr "网关"
+
+msgid "Advanced networking is not in use"
+msgstr "未使用高级网络"
+
+msgid "Restart Android to apply"
+msgstr "重启 Android 以应用"
+
+msgid "The change applies the next time Android starts. Stop Android on the General page, then open an app."
+msgstr "更改将在下次 Android 启动时生效。请在“常规”页面停止 Android，然后打开一个应用。"
+
+msgid "Advanced networking"
+msgstr "高级网络"
+
+msgid "Off by default. When on, Android joins this computer's network as a device of its own.\nOther devices on the network and Android apps can then reach each other directly.\nPrograms on this computer can always reach a server in Android at the address above."
+msgstr "默认关闭。开启后，Android 会作为独立设备加入此计算机的网络。\n网络中的其他设备与 Android 应用之后可以直接互相访问。\n此计算机上的程序始终可以通过上方的地址访问 Android 中的服务器。"
+
+msgid "Trusted certificates"
+msgstr "受信任的证书"
+
+msgid "Root certificates you or an administrator added to this computer, such as a company's or a security program's.\nThe system's own certificates are not listed: Android has its own."
+msgstr "您或管理员添加到此计算机的根证书，例如公司或安全程序的证书。\n系统自带的证书不会列出：Android 有自己的证书。"
+
+msgid "Trust certificates added to this computer"
+msgstr "信任添加到此计算机的证书"
+
+msgid "On by default. Android apps trust the certificates listed below as they trust Android's own.\nSites and servers this computer trusts then open in Android too. The change applies at once."
+msgstr "默认开启。Android 应用会像信任 Android 自带证书一样信任下方列出的证书。\n此计算机信任的网站和服务器随后也能在 Android 中打开。更改立即生效。"
+
+msgid "This computer's trusted root certificates"
+msgstr "此计算机受信任的根证书"
+
+msgid "This computer's group policy"
+msgstr "此计算机的组策略"
+
+msgid "This computer's enterprise certificates"
+msgstr "此计算机的企业证书"
+
+msgid "Your trusted root certificates"
+msgstr "您的受信任的根证书"
+
+msgid "Your group policy"
+msgstr "您的组策略"
+
+msgid "This computer's administrator trust settings"
+msgstr "此计算机的管理员信任设置"
+
+msgid "Added to the system's certificate store"
+msgstr "已添加到系统证书存储"
+
+msgid "SHA-256 {0}"
+msgstr "SHA-256 {0}"
+
+msgid "A certificate without a name"
+msgstr "无名称的证书"
+
+msgid "Issued by {0}"
+msgstr "颁发者：{0}"
+
+msgid "No added root certificates were found on this computer."
+msgstr "在此计算机上未找到添加的根证书。"
+
+msgid "Files"
+msgstr "文件"
+
+msgid "Send files to Android apps"
+msgstr "向 Android 应用发送文件"
+
+msgid "To send a file to an Android app, drag it from the file manager onto the app's window. An APK you drop is installed."
+msgstr "要向 Android 应用发送文件，请将其从文件管理器拖到应用窗口上。拖入的 APK 会被安装。"
+
+msgid "Share folders with Android"
+msgstr "与 Android 共享文件夹"
+
+msgid "On by default. The folders chosen below show in Android's shared storage, for Android apps to open and save files.\nApps need Android's storage permission, and can do only what your own account may do."
+msgstr "默认开启。下方选择的文件夹会显示在 Android 的共享存储中，供 Android 应用打开和保存文件。\n应用需要 Android 的存储权限，并且只能执行您自己的账户被允许的操作。"
+
+msgid "Shared folders"
+msgstr "共享的文件夹"
+
+msgid "A folder you clear is taken away from Android at once."
+msgstr "取消勾选的文件夹会立即从 Android 中移除。"
+
+msgid "Android files"
+msgstr "Android 文件"
+
+msgid "Opens Android's shared storage in the file manager: the files Android apps saved, such as photos.\nAndroid starts if it is not running. DSA Files in the app grid does the same."
+msgstr "在文件管理器中打开 Android 的共享存储：Android 应用保存的文件，例如照片。\nAndroid 未运行时会启动它。应用网格中的“DSA 文件”也有同样作用。"
+
+msgid "Open web links in Android apps"
+msgstr "在 Android 应用中打开网页链接"
+
+msgid "Off by default: a web link you tap in an Android app opens in your default browser on this computer.\nOn, it opens in an Android app, as on a phone.\nA link an installed app has verified as its own opens in that app either way."
+msgstr "默认关闭：在 Android 应用中点按的网页链接会在此计算机的默认浏览器中打开。\n开启后，它会像在手机上一样在 Android 应用中打开。\n已安装的应用验证为自己所有的链接，无论哪种设置都会在该应用中打开。"
+
+msgid "ARM apps"
+msgstr "ARM 应用"
+
+msgid "Run apps built only for ARM"
+msgstr "运行仅为 ARM 构建的应用"
+
+msgid "Many Android apps have code only for ARM processors. They run here only through an ARM translator.\nAndroid uses its own open source translator, unless you install another (dsa arm-translation install) or Google's.\nOff, Android uses no translator at all. Changes apply from the next start of Android.\nOnly 64-bit ARM apps (arm64-v8a) can run."
+msgstr "许多 Android 应用只有适用于 ARM 处理器的代码。它们只能通过 ARM 转译器在这里运行。\n除非您安装其他转译器（dsa arm-translation install）或 Google 的转译器，否则 Android 使用自带的开源转译器。\n关闭后，Android 不使用任何转译器。更改从下次启动 Android 时生效。\n只有 64 位 ARM 应用（arm64-v8a）可以运行。"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Android started before this change. Stop and start Android for ARM apps to follow it."
+msgstr "Android 在此更改之前已启动。停止并重新启动 Android，ARM 应用才会遵循此更改。"
+
+msgid "Remove the ARM translation package"
+msgstr "移除 ARM 转译包"
+
+msgid "Deletes the package from your add-on disk. ARM apps you installed stay, but do not run after Android restarts."
+msgstr "从附加组件磁盘中删除该包。已安装的 ARM 应用会保留，但在 Android 重启后无法运行。"
+
+msgid "Developer"
+msgstr "开发者"
+
+msgid "Developer mode"
+msgstr "开发者模式"
+
+msgid "Off by default. When on, adb on this computer connects to Android without asking in Android.\nThe port is reachable only from this computer. Turn it off when you are done."
+msgstr "默认关闭。开启后，此计算机上的 adb 无需在 Android 中确认即可连接到 Android。\n该端口只能从此计算机访问。使用完毕后请将其关闭。"
+
+msgid "Connect adb automatically"
+msgstr "自动连接 adb"
+
+msgid "On by default. While developer mode is on, Android shows in adb devices and Android Studio without adb connect.\nAfter adb disconnect, it stays off until the adb server restarts."
+msgstr "默认开启。开发者模式开启期间，Android 无需 adb connect 即可显示在 adb devices 和 Android Studio 中。\n执行 adb disconnect 后，它会保持断开，直到 adb 服务器重启。"
+
+msgid "Automatic connection"
+msgstr "自动连接"
+
+msgid "Not connecting: developer mode or automatic connection is off."
+msgstr "未连接：开发者模式或自动连接已关闭。"
+
+msgid "Waiting for adb: Android connects when adb starts on this computer."
+msgstr "正在等待 adb：此计算机上的 adb 启动时，Android 会连接。"
+
+msgid "Waiting for Android: it connects once Android is running."
+msgstr "正在等待 Android：Android 运行后即会连接。"
+
+msgid "Connected: adb lists Android."
+msgstr "已连接：adb 列出了 Android。"
+
+msgid "Disconnected with adb disconnect. Android connects again when the adb server restarts."
+msgstr "已通过 adb disconnect 断开。adb 服务器重启后，Android 会再次连接。"
+
+msgid "Connect adb"
+msgstr "连接 adb"
+
+msgid "While developer mode is on and Android is running, run this command:"
+msgstr "在开发者模式开启且 Android 正在运行时，运行以下命令："
+
+msgid "Port"
+msgstr "端口"
+
+msgid "Share the clipboard with Android"
+msgstr "与 Android 共享剪贴板"
+
+msgid "On by default: text copied on this computer can be pasted in Android apps, and the other way round.\nImages stay where they were copied."
+msgstr "默认开启：在此计算机上复制的文本可以粘贴到 Android 应用中，反之亦然。\n图片只保留在复制它的一侧。"
+
+msgid "Freeze Android when idle"
+msgstr "空闲时冻结 Android"
+
+msgid "Off by default: an idle Android dozes and still receives notifications.\nFrozen, it uses no CPU but receives nothing until you open an app."
+msgstr "默认关闭：空闲的 Android 会进入 Doze，仍能接收通知。\n冻结后，它不占用 CPU，但在您打开应用之前不会接收任何内容。"
+
+msgid "Diagnostics"
+msgstr "诊断"
+
+msgid "The traces make the DSA logs below grow, so turn them on only to report a problem.\nThey apply to every user of this computer, so changing them asks for an administrator's permission."
+msgstr "跟踪会使下方的 DSA 日志变大，因此只在报告问题时开启。\n它们适用于此计算机的所有用户，因此更改它们需要管理员权限。"
+
+msgid "Input trace"
+msgstr "输入跟踪"
+
+msgid "Every DSA process records when each touch, click and key reaches it, to measure the delay to the picture.\nOff by default."
+msgstr "每个 DSA 进程都会记录每次触摸、点击和按键到达它的时间，以测量到画面显示的延迟。\n默认关闭。"
+
+msgid "Resize trace"
+msgstr "调整大小跟踪"
+
+msgid "Every DSA process records each stage of each window resize, to find where it is slow or flickers.\nOff by default."
+msgstr "每个 DSA 进程都会记录每次窗口调整大小的每个阶段，以找出变慢或闪烁的位置。\n默认关闭。"
+
+msgid "Logs"
+msgstr "日志"
+
+msgid "The logs of your window manager and app windows."
+msgstr "您的窗口管理器和应用窗口的日志。"
+
+msgid "Command line"
+msgstr "命令行"
+
+msgid "The dsa command"
+msgstr "dsa 命令"
+
+msgid "dsa status"
+msgstr "dsa status"
+
+msgid "dsa settings"
+msgstr "dsa settings"
+
+msgid "dsa memory"
+msgstr "dsa memory"
+
+msgid "Everything on these pages is also available from a terminal."
+msgstr "这些页面上的所有功能也都可以在终端中使用。"
+
+msgid "Reset"
+msgstr "重置"
+
+msgid "Reset Android's data"
+msgstr "重置 Android 的数据"
+
+msgid "Erases every app you installed, your accounts and every app's data. Android starts as it was first installed.\nThe Android image and these settings stay."
+msgstr "清除您安装的所有应用、您的账号以及所有应用的数据。Android 会以初次安装时的状态启动。\nAndroid 映像和这些设置会保留。"
+
+msgid "Reset Android's data?"
+msgstr "要重置 Android 的数据吗？"
+
+msgid "This erases from Android:\n• every app you installed\n• the accounts you signed in to\n• the data of every app\n\nAndroid stops now. Its next start is as it was first installed.\n\nThe Android image and DSA's settings stay.\n\nThis cannot be undone."
+msgstr "这将从 Android 中清除：\n• 您安装的所有应用\n• 您登录的账号\n• 所有应用的数据\n\nAndroid 会立即停止。下次启动时将恢复为初次安装时的状态。\n\nAndroid 映像和 DSA 的设置会保留。\n\n此操作无法撤消。"
+
+msgid "Android's data was reset"
+msgstr "Android 的数据已重置"
+
+msgid "The next app you open starts Android as it was first installed."
+msgstr "您打开的下一个应用会以初次安装时的状态启动 Android。"
+
+msgid "Documents"
+msgstr "文档"
+
+msgid "Downloads"
+msgstr "下载"
+
+msgid "Pictures"
+msgstr "图片"
+
+msgid "Music"
+msgstr "音乐"
+
+msgid "Videos"
+msgstr "视频"
+
+msgid "Desktop"
+msgstr "桌面"
+
+msgid "OK"
+msgstr "确定"
+
+msgid "Copy"
+msgstr "复制"
+
+msgid "Google Play"
+msgstr "Google Play"
+
+msgid "Google Play services and the Play Store are not part of DSA.\nWhen you ask, DSA downloads LiteGapps Core, a public package of Google's apps, and installs it in your Android.\nWithout it, the rest of DSA works as before."
+msgstr "Google Play 服务和 Play 商店不属于 DSA。\n在您要求时，DSA 会下载 Google 应用的公开软件包 LiteGapps Core，并将其安装到您的 Android 中。\n没有它，DSA 的其余部分照常工作。"
+
+msgid "LiteGapps {0} {1} for Android {2} ({3})"
+msgstr "适用于 Android {2} 的 LiteGapps {0} {1}（{3}）"
+
+msgid "Installed: {0}. Restart Android to start using it."
+msgstr "已安装：{0}。重启 Android 即可开始使用。"
+
+msgid "Removed. The Google apps stay in Android until it restarts."
+msgstr "已移除。在 Android 重启之前，Google 应用仍保留在 Android 中。"
+
+msgid "Installed: {0}."
+msgstr "已安装：{0}。"
+
+msgid "{0} was installed by an older DSA and is no longer used, so Android starts without Google's apps. Install Google Play again."
+msgstr "{0} 由旧版 DSA 安装，现已不再使用，因此 Android 启动时不带 Google 应用。请重新安装 Google Play。"
+
+msgid "Not installed."
+msgstr "未安装。"
+
+msgid "Downloaded from the LiteGapps project: {0}"
+msgstr "从 LiteGapps 项目下载：{0}"
+
+msgid "Downloading and installing Google Play. This can take several minutes."
+msgstr "正在下载并安装 Google Play。这可能需要几分钟。"
+
+msgid "Enter this number on Google's registration page."
+msgstr "请在 Google 的注册页面上输入此号码。"
+
+msgid "It shows here once Google Play is installed and Android has started."
+msgstr "安装 Google Play 且 Android 启动后，它会显示在这里。"
+
+msgid "Android started before this change. Stop and start Android for Google Play to follow it."
+msgstr "Android 在此更改之前已启动。停止并重新启动 Android，Google Play 才会遵循此更改。"
+
+msgid "Install Google Play"
+msgstr "安装 Google Play"
+
+msgid "Downloads LiteGapps Core for your Android version (about 120 to 260 MB) from the LiteGapps project, checks it and installs it.\nAndroid starts if it is not running. Google Play is there from the next start of Android."
+msgstr "从 LiteGapps 项目下载适用于您的 Android 版本的 LiteGapps Core（约 120 到 260 MB），检查后进行安装。\nAndroid 未运行时会启动它。Google Play 从下次启动 Android 时起可用。"
+
+msgid "Install"
+msgstr "安装"
+
+msgid "Remove Google Play"
+msgstr "移除 Google Play"
+
+msgid "Deletes Google's apps from your add-on disk. They are gone from the next start of Android."
+msgstr "从附加组件磁盘中删除 Google 的应用。从下次启动 Android 起，它们将不再存在。"
+
+msgid "Google's terms"
+msgstr "Google 的条款"
+
+msgid "Google's ARM translator"
+msgstr "Google 的 ARM 转译器"
+
+msgid "Installs the ARM translator from the Android emulator image Google offers for this Android version.\nDownloads about 2 GB from Google, under Google's Android SDK License, and keeps only the translator.\nNothing is downloaded until you agree. DSA does not include or pass on Google's translator.\nA package built from another translator, such as Digitalis, does the same job."
+msgstr "从 Google 为此 Android 版本提供的 Android 模拟器映像中安装 ARM 转译器。\n根据 Google 的 Android SDK 许可协议，从 Google 下载约 2 GB，只保留转译器。\n在您同意之前不会下载任何内容。DSA 不包含也不再分发 Google 的转译器。\n用其他转译器（例如 Digitalis）构建的包也能完成同样的工作。"
+
+msgid "Get"
+msgstr "获取"
+
+msgid "Android SDK License"
+msgstr "Android SDK 许可协议"
+
+msgid "Google's terms for the emulator image the translator comes from."
+msgstr "转译器所在的模拟器映像适用的 Google 条款。"
+
+msgid "Get Google's ARM translator?"
+msgstr "要获取 Google 的 ARM 转译器吗？"
+
+msgid "Accept and download"
+msgstr "接受并下载"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its ARM translator.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nThe translator is Google's software. DSA does not ship or pass it on.\n\nThe translator works from the next start of Android."
+msgstr "DSA 会下载 Google 为此 Android 版本提供的 Android 模拟器映像，并只取出其中的 ARM 转译器。\n\n• 来源：Google 的 SDK 仓库（{0}）\n• 大小：约 2 GB，用完后删除\n• 许可：Android SDK 许可协议（{1}）。下载即表示您接受其条款。\n\n该转译器是 Google 的软件。DSA 不附带也不再分发它。\n\n转译器从下次启动 Android 时起生效。"
+
+msgid "Downloading about 2 GB from Google and taking out the translator. It takes minutes."
+msgstr "正在从 Google 下载约 2 GB 并取出转译器。这需要几分钟。"
+
+msgid "Google's apps belong to Google and follow Google's terms.\nDSA does not distribute them: it downloads the public LiteGapps package when you ask."
+msgstr "Google 的应用属于 Google，并遵循 Google 的条款。\nDSA 不分发这些应用：它仅在您要求时下载公开的 LiteGapps 软件包。"
+
+msgid "Register this device with Google"
+msgstr "向 Google 注册此设备"
+
+msgid "Google has not certified this Android, so Google may refuse to sign you in until you register it.\nOpen Google's registration page, sign in with your Google account and enter the Android ID below."
+msgstr "Google 尚未认证此 Android，因此在您注册之前，Google 可能会拒绝您登录。\n打开 Google 的注册页面，使用您的 Google 账号登录，然后输入下方的 Android ID。"
+
+msgid "Android ID"
+msgstr "Android ID"
+
+msgid "Google Play was not installed"
+msgstr "未能安装 Google Play"
+
+msgid "Google Play was not removed"
+msgstr "未能移除 Google Play"
+
+msgid "Where Google Play stands could not be read"
+msgstr "无法读取 Google Play 的状态"
+
+msgid "The page could not be opened"
+msgstr "无法打开页面"
+
+msgid "Runs the app's ARM code through the translator. Off runs its x86_64 code."
+msgstr "通过转译器运行应用的 ARM 代码。关闭时运行其 x86_64 代码。"
+
+msgid "Apps that are part of Android run as Android installed them."
+msgstr "属于 Android 的应用按 Android 安装它们的方式运行。"
+
+msgid "No APK of this app on the device holds its ARM code."
+msgstr "设备上没有包含此应用 ARM 代码的 APK。"
+
+msgid "ARM translation is not on. Turn it on under ARM apps and restart Android."
+msgstr "ARM 转译未开启。请在“ARM 应用”中开启，然后重启 Android。"
+
+msgid "This app has only ARM code, so it always runs as ARM."
+msgstr "此应用只有 ARM 代码，因此始终以 ARM 方式运行。"
+
+msgid "This version of DSA cannot say whether the app can run as ARM."
+msgstr "此版本的 DSA 无法判断该应用能否以 ARM 方式运行。"
+
+msgid "{0} runs as ARM now."
+msgstr "{0} 现在以 ARM 方式运行。"
+
+msgid "{0} runs its x86_64 code now."
+msgstr "{0} 现在运行其 x86_64 代码。"
+
+msgid "its APKs on the device hold no code for that"
+msgstr "设备上它的 APK 不包含相应的代码"
+
+msgid "ARM translation is not on"
+msgstr "ARM 转译未开启"
+
+msgid "Android refused"
+msgstr "Android 拒绝了操作"
+
+msgid "{0} was not installed again: {1} ({2})"
+msgstr "未重新安装 {0}：{1}（{2}）"
+
+msgid "Run as ARM"
+msgstr "以 ARM 方式运行"
+
+msgid "Erase {0}'s data?"
+msgstr "要清除 {0} 的数据吗？"
+
+msgid "Android cannot change how {0} runs and keep its data.\n\nInstalling it again erases its data: sign-ins, settings and files it keeps for itself."
+msgstr "Android 无法在保留数据的同时更改 {0} 的运行方式。\n\n重新安装会清除其数据：登录信息、设置以及它为自己保存的文件。"
+
+msgid "Erase and install again"
+msgstr "清除并重新安装"
+
+msgid "Not installed again"
+msgstr "未重新安装"
+
+msgid "Default: from this computer"
+msgstr "默认：来自此计算机"
+
+msgid "Default: DSA's value"
+msgstr "默认：DSA 的值"
+
+msgid "This computer does not say; Android keeps its own."
+msgstr "此计算机未提供；Android 保留自己的值。"
+
+msgid "From this computer"
+msgstr "来自此计算机"
+
+msgid "These follow this computer and are read again each time Android starts.\nAndroid's Settings shows the device name and the chip.\nThe model name shows only here, as Android's Settings has no place for it."
+msgstr "这些值跟随此计算机，每次 Android 启动时都会重新读取。\nAndroid 的设置中显示设备名称和芯片。\n型号名称只在这里显示，因为 Android 的设置中没有显示它的位置。"
+
+msgid "Model name"
+msgstr "型号名称"
+
+msgid "Device name"
+msgstr "设备名称"
+
+msgid "Chip manufacturer"
+msgstr "芯片制造商"
+
+msgid "Chip model"
+msgstr "芯片型号"
+
+msgid "Root access"
+msgstr "root 访问权限"
+
+msgid "Not allowed"
+msgstr "不允许"
+
+msgid "Ask each time"
+msgstr "每次询问"
+
+msgid "Remember (no asking)"
+msgstr "记住（不询问）"
+
+msgid "Not available"
+msgstr "不可用"
+
+msgid "Not changed"
+msgstr "未更改"
+
+msgid "Not allowed hides su from the app.\nAsk each time asks an administrator for each request, then not again for 15 minutes.\nRemember approves without asking. Choosing it needs an administrator's approval."
+msgstr "“不允许”会对应用隐藏 su。\n“每次询问”会就每个请求询问管理员，之后 15 分钟内不再询问。\n“记住”会直接批准而不询问。选择此项需要管理员批准。"
+
+msgid "Shares its user ID with {0}, so Android cannot tell them apart.\nTheir root access is one setting: a change here applies to all of them.\nIf any of them is set to Not allowed, none of them can use su."
+msgstr "与 {0} 共用用户 ID，因此 Android 无法区分它们。\n它们的 root 访问权限是同一个设置：在此处的更改适用于所有这些应用。\n只要其中任何一个设置为“不允许”，它们都不能使用 su。"
+
+msgid "Root access is off for this computer. An administrator turns it on under Advanced."
+msgstr "此计算机已关闭 root 访问权限。管理员可在“高级”中开启。"
+
+msgid "This version of DSA cannot say how far the app may use root."
+msgstr "此版本的 DSA 无法判断该应用可以在多大程度上使用 root。"
+
+msgid "The root level of {0} was not changed: {1}"
+msgstr "{0} 的 root 级别未更改：{1}"
+
+msgid "{0} cannot use root any more. su disappears for it from the next start of Android."
+msgstr "{0} 无法再使用 root。从下次启动 Android 起，su 对它不可见。"
+
+msgid "{0} now uses su without asking. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} 现在无需询问即可使用 su。如果它之前看不到 su，则从下次启动 Android 起可以看到。"
+
+msgid "{0} now asks an administrator each time it uses su. If it could not see su before, it sees it from the next start of Android."
+msgstr "{0} 现在每次使用 su 时都会询问管理员。如果它之前看不到 su，则从下次启动 Android 起可以看到。"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command: {0}"
+msgstr "每个请求都会连同应用、时间、是否获批和命令记录在服务日志中：{0}"
+
+msgid "Each request is kept in the service log with the app, the time, whether it was approved and the command."
+msgstr "每个请求都会连同应用、时间、是否获批和命令记录在服务日志中。"
+
+msgid "Root access is off for this computer, so no app can use su.\nAn administrator turns it on under Advanced. Then you choose each app's level here."
+msgstr "此计算机已关闭 root 访问权限，因此任何应用都不能使用 su。\n管理员可在“高级”中开启。然后您可以在此为每个应用选择级别。"
+
+msgid "This applies to every user of this computer, so changing it asks for an administrator's permission.\nChoose each app's level under Apps."
+msgstr "此项适用于此计算机的所有用户，因此更改它需要管理员权限。\n请在“应用”中为每个应用选择级别。"
+
+msgid "Let Android apps ask for root"
+msgstr "允许 Android 应用请求 root"
+
+msgid "Off by default. An app you allow under Apps can run commands as root once an administrator approves, as with sudo.\nThe Android image, its build properties and SELinux stay as they are."
+msgstr "默认关闭。您在“应用”中允许的应用，在管理员批准后可以像 sudo 一样以 root 身份运行命令。\nAndroid 映像、其构建属性和 SELinux 保持不变。"
+
+msgid "Root access changes from the next start of Android. Stop Android on the General page, then open an app."
+msgstr "root 访问权限的更改从下次启动 Android 时生效。请在“常规”页面停止 Android，然后打开一个应用。"
+
+msgid "Where requests are recorded"
+msgstr "请求的记录位置"
+
+msgid "Follow the default"
+msgstr "跟随默认设置"
+
+msgid "On the whole screen"
+msgstr "整个屏幕"
+
+msgid "Inside the window"
+msgstr "在窗口内"
+
+msgid "Full screen"
+msgstr "全屏"
+
+msgid "Where this app shows a clear full screen request, such as a video player's full screen button. F11 always switches full screen."
+msgstr "此应用发出明确的全屏请求（例如视频播放器的全屏按钮）时的显示位置。F11 始终可切换全屏。"
+
+msgid "Bars hidden"
+msgstr "隐藏栏"
+
+msgid "Where this app shows when it hides its bars without asking for full screen, as a feed of short videos does."
+msgstr "此应用隐藏其栏但不请求全屏时的显示位置，例如短视频信息流。"
+
+msgid "{0}'s windows follow the new settings now."
+msgstr "{0} 的窗口现在采用新设置。"
+
+msgid "App full screen"
+msgstr "应用全屏"
+
+msgid "On the whole screen, the title bar appears when the pointer reaches the top edge."
+msgstr "在整个屏幕上显示时，指针移到顶部边缘会出现标题栏。"
+
+msgid "Full screen request"
+msgstr "全屏请求"
+
+msgid "Where an app's full screen request shows, such as a video's full screen button."
+msgstr "应用的全屏请求（例如视频的全屏按钮）的显示位置。"
+
+msgid "Where an app shows when it only hides its bars, as a feed of short videos does."
+msgstr "应用只隐藏其栏时的显示位置，例如短视频信息流。"
+
+msgid "Scaling on another monitor"
+msgstr "在其他显示器上的缩放"
+
+msgid "App"
+msgstr "应用"
+
+msgid "System"
+msgstr "系统"
+
+msgid "System (forced)"
+msgstr "系统（强制）"
+
+msgid "System (forced), not available yet"
+msgstr "系统（强制），尚不可用"
+
+msgid "System (forced) gives the app the new scale without a restart, even if it does not say it handles one.\nIt is not available yet: this build lacks the change to Android it needs. Until then it works like System."
+msgstr "“系统（强制）”会在不重启的情况下向应用提供新的缩放比例，即使它未声明能处理缩放变化。\n它尚不可用：此版本缺少所需的 Android 更改。在此之前，它的效果与“系统”相同。"
+
+msgid "System (recommended for this app)"
+msgstr "系统（推荐用于此应用）"
+
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "应用：窗口到达新显示器时，应用立即采用该显示器的缩放比例并按此比例重绘，文字保持清晰。\n没有声明自行处理缩放变化的应用会在保留状态的情况下重新创建，因此可能会短暂重绘。\n系统：DSA 将窗口缩放到相同的物理尺寸。文字可能略显模糊。\n“自动”会为运行中缩放比例变化就会出问题的应用（例如 YouTube）选择“系统”；对其他应用，若其声明自行处理则选择“应用”，否则选择“系统”。\n“自动”和“系统”不会重启应用。"
+
+msgid "Getting the update ready"
+msgstr "正在准备更新"
+
+msgid "Downloading DSA {0}"
+msgstr "正在下载 DSA {0}"
+
+msgid "Stopping Android to install DSA {0}"
+msgstr "正在停止 Android 以安装 DSA {0}"
+
+msgid "Installing DSA {0}"
+msgstr "正在安装 DSA {0}"
+
+msgid "DSA is restarting to finish the update"
+msgstr "DSA 正在重启以完成更新"
+
+msgid "Do not close DSA or start Android apps until the update is done."
+msgstr "更新完成之前，请不要关闭 DSA 或启动 Android 应用。"
+
+msgid "Updated to {0}"
+msgstr "已更新到 {0}"
+
+msgid "DSA has not come back after the update to {0}. If it does not start soon, restart the computer."
+msgstr "更新到 {0} 后 DSA 未恢复运行。如果它没有很快启动，请重启计算机。"
+
+msgid "Updating to {0} failed. The version before it is still installed."
+msgstr "更新到 {0} 失败。之前的版本仍处于安装状态。"
+
+msgid "Updating DSA"
+msgstr "正在更新 DSA"
+
+msgid "Update of DSA"
+msgstr "DSA 更新"
+
+msgid "Backup"
+msgstr "备份"
+
+msgid "DSA keeps an encrypted backup of your Android apps' data in a folder of your home folder.\nThe apps and their data can come back after Android's data is reset, or on another computer.\nThe key that opens it is kept in your keyring."
+msgstr "DSA 会将您的 Android 应用数据加密备份到主文件夹中的一个文件夹里。\n在 Android 数据重置后或在其他计算机上，都可以恢复应用及其数据。\n用于打开备份的密钥保存在您的密钥环中。"
+
+msgid "Folder"
+msgstr "文件夹"
+
+msgid "Backups are unavailable"
+msgstr "备份不可用"
+
+msgid "Last backup"
+msgstr "上次备份"
+
+msgid "In the backup"
+msgstr "备份内容"
+
+msgid "Last restore"
+msgstr "上次恢复"
+
+msgid "Last problem"
+msgstr "上次出现的问题"
+
+msgid "Back up now"
+msgstr "立即备份"
+
+msgid "Has Android back up the data of every app into the folder now. Android starts if it is not running."
+msgstr "让 Android 立即将所有应用的数据备份到该文件夹。Android 未运行时会启动它。"
+
+msgid "Back up"
+msgstr "备份"
+
+msgid "Restore"
+msgstr "恢复"
+
+msgid "Installs the apps of the backup that Android does not have, then replaces every app's data with the backup's."
+msgstr "安装备份中有而 Android 中没有的应用，然后用备份中的数据替换每个应用的数据。"
+
+msgid "Show recovery key"
+msgstr "显示恢复密钥"
+
+msgid "The key that opens the backup anywhere else. Write it down and keep it safe."
+msgstr "在其他地方打开备份所用的密钥。请把它记下来并妥善保管。"
+
+msgid "Show"
+msgstr "显示"
+
+msgid "Use a recovery key"
+msgstr "使用恢复密钥"
+
+msgid "Opens a backup folder brought from another computer, or kept from before this computer's keyring was reset."
+msgstr "打开从其他计算机带来的备份文件夹，或在此计算机的密钥环重置之前就已存在的备份文件夹。"
+
+msgid "Enter"
+msgstr "输入"
+
+msgid "The backup was not restored"
+msgstr "未能恢复备份"
+
+msgid "The apps were not backed up"
+msgstr "未能备份应用"
+
+msgid "Restore from the backup?"
+msgstr "要从备份中恢复吗？"
+
+msgid "The recovery key could not be shown"
+msgstr "无法显示恢复密钥"
+
+msgid "The recovery key is kept. The backup folder is read with it."
+msgstr "恢复密钥已保存。现在将使用它读取备份文件夹。"
+
+msgid "The recovery key was not used"
+msgstr "未使用恢复密钥"
+
+msgid "Where the backup stands could not be read"
+msgstr "无法读取备份状态"
+
+msgid "Recovery key"
+msgstr "恢复密钥"
+
+msgid "Enter the recovery key of the backup folder, as it was written down.\n\nSpaces, dashes and capitals do not matter.\n\nA key that does not open the folder is refused, and the key kept now stays."
+msgstr "请按照记下的内容输入备份文件夹的恢复密钥。\n\n空格、短横线和大小写均无影响。\n\n无法打开该文件夹的密钥会被拒绝，当前保存的密钥保持不变。"
+
+msgid "Never"
+msgstr "从不"
+
+msgid "No apps yet"
+msgstr "还没有应用"
+
+msgid "{0} apps, {1}"
+msgstr "{0} 个应用，{1}"
+
+msgid "Backing up every app. Android starts if it is not running. This can take a while."
+msgstr "正在备份所有应用。Android 未运行时会启动它。这可能需要一段时间。"
+
+msgid "Restoring apps and their data from the backup. Android starts if it is not running. This can take a while."
+msgstr "正在从备份中恢复应用及其数据。Android 未运行时会启动它。这可能需要一段时间。"
+
+msgid "Apps restored: {0}. Apps installed first: {1}."
+msgstr "已恢复的应用：{0}。先行安装的应用：{1}。"
+
+msgid "Apps restored: {0}. Apps installed first: {1}. Apps that could not be restored: {2}."
+msgstr "已恢复的应用：{0}。先行安装的应用：{1}。无法恢复的应用：{2}。"
+
+msgid "Apps backed up: {0}."
+msgstr "已备份的应用：{0}。"
+
+msgid "Apps backed up: {0}. Apps that could not be backed up: {1}."
+msgstr "已备份的应用：{0}。无法备份的应用：{1}。"
+
+msgid "Apps in the backup that Android does not have are installed.\n\nThe data of every app in the backup is replaced with the backup's. What those apps saved since the backup is lost.\n\nAndroid starts if it is not running."
+msgstr "将安装备份中有而 Android 中没有的应用。\n\n备份中每个应用的数据都会被替换为备份中的数据。这些应用在备份后保存的内容将会丢失。\n\nAndroid 未运行时会启动它。"
+
+msgid "Write this key down and keep it somewhere safe, away from this computer.\n\nAnyone with it can read the backup.\n\nWithout it, the backup cannot be opened on another computer or after this computer's keyring is lost."
+msgstr "请记下此密钥，并将其保存在远离此计算机的安全地方。\n\n任何拥有它的人都能读取备份。\n\n没有它，就无法在其他计算机上，或在此计算机的密钥环丢失后打开备份。"
+
+msgid "Enter the recovery key."
+msgstr "请输入恢复密钥。"
+
+msgid "The key was not used: {0}"
+msgstr "未使用该密钥：{0}"
+
+msgid "Keeps an encrypted second copy of your Android apps' user data on this computer.\nIt can be restored after a data reset or on another computer. Off until you turn it on."
+msgstr "在此计算机上保留一份加密的 Android 应用用户数据副本。\n可在数据重置后或在其他计算机上恢复。在您开启之前保持关闭。"
+
+msgid "Earlier backups of {0} apps ({1}) are still kept in your DSA Backup folder."
+msgstr "之前 {0} 个应用的备份（{1}）仍保留在您的 DSA Backup 文件夹中。"
+
+msgid "The backups of {0} apps ({1}) are still kept on this computer.\n\nDelete them and their key as well, or keep them for a later restore?"
+msgstr "{0} 个应用的备份（{1}）仍保留在此计算机上。\n\n要同时删除这些备份及其密钥，还是保留它们以便以后恢复？"
+
+msgid "Backup is on. Android backs up its apps' data to this computer from now on."
+msgstr "备份已开启。从现在起，Android 会将其应用数据备份到此计算机。"
+
+msgid "Backup is off, and the backups and their key were deleted."
+msgstr "备份已关闭，备份及其密钥已删除。"
+
+msgid "Backup is off. The backups made so far are kept."
+msgstr "备份已关闭。目前为止的备份会保留。"
+
+msgid "Android's keys get their protection the first time Android starts."
+msgstr "Android 的密钥在 Android 首次启动时获得保护。"
+
+msgid "Sealed by this computer's TPM.\nA copy of Android's disk cannot open the apps' keys or Android's encrypted storage anywhere else."
+msgstr "由此计算机的 TPM 密封。\nAndroid 磁盘的副本无法在其他任何地方打开应用的密钥或 Android 的加密存储。"
+
+msgid "Kept by your keyring only, because this computer has no TPM 2.0 that can be used.\nOnce one works, DSA seals the keys with it."
+msgstr "仅由您的密钥环保存，因为此计算机没有可用的 TPM 2.0。\n一旦有可用的 TPM，DSA 就会用它密封密钥。"
+
+msgid "Protected by {0}."
+msgstr "由 {0} 保护。"
+
+msgid "Why not the TPM: {0}"
+msgstr "不使用 TPM 的原因：{0}"
+
+msgid "Back up apps' data to this computer"
+msgstr "将应用数据备份到此计算机"
+
+msgid "Protection of Android's keys"
+msgstr "Android 密钥的保护"
+
+msgid "Android's keys"
+msgstr "Android 的密钥"
+
+msgid "Why not the TPM"
+msgstr "不使用 TPM 的原因"
+
+msgid "Android's keys could not be opened"
+msgstr "无法打开 Android 的密钥"
+
+msgid "Backup was not turned on"
+msgstr "未能开启备份"
+
+msgid "Backup was not turned off"
+msgstr "未能关闭备份"
+
+msgid "Turn off backup?"
+msgstr "要关闭备份吗？"
+
+msgid "Keep them"
+msgstr "保留"
+
+msgid "Delete backups"
+msgstr "删除备份"
+
+msgid "Protected content"
+msgstr "受保护的内容"
+
+msgid "Widevine lets streaming apps play protected video.\nDSA does not include or pass on Widevine. When you ask, your computer takes it unchanged from Google's emulator image."
+msgstr "Widevine 让流媒体应用能够播放受保护的视频。\nDSA 不包含也不再分发 Widevine。在您要求时，您的计算机会从 Google 的模拟器映像中原样取出它。"
+
+msgid "Android started before this change. Stop and start Android for Widevine to follow it."
+msgstr "Android 在此更改之前已启动。停止并重新启动 Android，Widevine 才会遵循此更改。"
+
+msgid "Standard definition only"
+msgstr "仅限标清"
+
+msgid "Widevine here is security level L3, so streaming services send standard definition (SD) at most.\nTo watch in high definition, use this computer's own browser or app."
+msgstr "此处的 Widevine 安全级别为 L3，因此流媒体服务最多只提供标清（SD）画质。\n要观看高清内容，请使用此计算机自己的浏览器或应用。"
+
+msgid "Get Widevine"
+msgstr "获取 Widevine"
+
+msgid "Downloads about 2 GB from Google, under Google's Android SDK License, and keeps only Widevine.\nNothing is downloaded until you agree. Widevine is there from the next start of Android."
+msgstr "根据 Google 的 Android SDK 许可协议，从 Google 下载约 2 GB，只保留 Widevine。\n在您同意之前不会下载任何内容。Widevine 从下次启动 Android 时起可用。"
+
+msgid "Remove Widevine"
+msgstr "移除 Widevine"
+
+msgid "Removes the module and the device certificates it kept, from the next start of Android."
+msgstr "从下次启动 Android 起，移除该模块及其保存的设备证书。"
+
+msgid "Widevine is Google's software and follows Google's terms. DSA does not distribute it."
+msgstr "Widevine 是 Google 的软件，遵循 Google 的条款。DSA 不分发它。"
+
+msgid "Get Widevine from Google?"
+msgstr "要从 Google 获取 Widevine 吗？"
+
+msgid "Widevine was not installed"
+msgstr "未能安装 Widevine"
+
+msgid "Widevine was not removed"
+msgstr "未能移除 Widevine"
+
+msgid "Where Widevine stands could not be read"
+msgstr "无法读取 Widevine 的状态"
+
+msgid "Google's image {0} for Android {1} ({2})"
+msgstr "适用于 Android {1}（{2}）的 Google 映像 {0}"
+
+msgid "Removed. Widevine stays in Android until it restarts."
+msgstr "已移除。在 Android 重启之前，Widevine 仍保留在 Android 中。"
+
+msgid "DSA downloads Google's Android emulator image for this Android version and takes out only its Widevine module, unchanged.\n\n• Source: Google's SDK repository ({0})\n• Size: about 2 GB, deleted afterwards\n• Licence: the Android SDK License ({1}). By downloading, you accept its terms.\n\nWidevine is Google's software. DSA does not ship or pass it on.\n\nWidevine here is security level L3, so streaming services send standard definition (SD) at most.\n\nWidevine works from the next start of Android."
+msgstr "DSA 会下载 Google 为此 Android 版本提供的 Android 模拟器映像，并只原样取出其中的 Widevine 模块。\n\n• 来源：Google 的 SDK 仓库（{0}）\n• 大小：约 2 GB，用完后删除\n• 许可：Android SDK 许可协议（{1}）。下载即表示您接受其条款。\n\nWidevine 是 Google 的软件。DSA 不附带也不再分发它。\n\n此处的 Widevine 安全级别为 L3，因此流媒体服务最多只提供标清（SD）画质。\n\nWidevine 从下次启动 Android 时起生效。"
+
+msgid "Downloading about 2 GB from Google and taking out Widevine. It takes minutes."
+msgstr "正在从 Google 下载约 2 GB 并取出 Widevine。这需要几分钟。"
+
+msgid "{0}, {1}"
+msgstr "{0}，{1}"
+
+msgid "{0}, {1}, {2}: {3}"
+msgstr "{0}, {1}, {2}: {3}"
+
+msgid "{0} records dropped"
+msgstr "丢弃了 {0} 条记录"
+
+msgid "Lowest priority shown"
+msgstr "显示的最低优先级"
+
+msgid "Copied"
+msgstr "已复制"
+
+msgid "When only the bars hide"
+msgstr "仅隐藏栏时"
+
+msgid "Scaling"
+msgstr "缩放"
+
+msgid "Automatic (app)"
+msgstr "自动（应用）"
+
+msgid "Automatic (system, recommended for this app)"
+msgstr "自动（系统，推荐用于此应用）"
+
+msgid "Follow the default (on the whole screen)"
+msgstr "跟随默认设置（整个屏幕）"
+
+msgid "Follow the default (inside the window)"
+msgstr "跟随默认设置（在窗口内）"

@@ -117,6 +117,7 @@ struct SettingsWindow: View {
             .navigationSplitViewColumnWidth(min: 224, ideal: 224, max: 300)
         } detail: {
             VStack(spacing: 0) {
+                PageHeading(text: T((page ?? .general).titleKey))
                 InstallBar(install: model.install)
                 detail
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -141,7 +142,7 @@ struct SettingsWindow: View {
         }
         .task { await model.settings.load() }
         // App Info in a task window's Window menu: the Apps page, searched for that app so its
-        // row is the one in view.
+        // card is the one in view, and the card open.
         .onOpenURL { url in
             // A click on DSA's notification about an update: the Updates page.
             if AppPageLink.isUpdates(url) {
@@ -151,7 +152,7 @@ struct SettingsWindow: View {
             }
             guard let package = AppPageLink.package(of: url) else { return }
             page = .apps
-            model.apps.search = package
+            model.apps.show(package)
             NSApp.activate(ignoringOtherApps: true)
         }
     }
@@ -167,7 +168,7 @@ struct SettingsWindow: View {
         case .updates: UpdatesPage(vm: model.settings, android: model.android, general: model.general, update: model.programUpdate)
         case .identity: DeviceIdentityPage(vm: model.identity)
         case .network: NetworkPage(vm: model.settings)
-        case .advanced: AdvancedPage(vm: model.settings, gapps: model.gapps)
+        case .advanced: AdvancedPage(vm: model.settings, gapps: model.gapps, widevine: model.widevine, backup: model.backup)
         case .logs: LogsPage(vm: model.logs)
         case .about: AboutPage(vm: model.settings)
         }
@@ -210,6 +211,7 @@ struct InstallBar: View {
                 Spacer(minLength: 0)
                 if install.isBusy {
                     ProgressView().controlSize(.small)
+                        .accessibilityLabel(install.title)
                 } else {
                     Button {
                         install.isOpen = false
@@ -217,7 +219,8 @@ struct InstallBar: View {
                         Image(systemName: "xmark.circle.fill")
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel(T("CancelButton"))
+                    .help(T("A11y_Close"))
+                    .accessibilityLabel(T("A11y_Close"))
                 }
             }
             .padding(12)

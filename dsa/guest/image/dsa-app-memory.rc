@@ -1,0 +1,42 @@
+# Desktop Subsystem for Android (DSA)
+# The agent's requests for the memory of the apps the user uses. Both run as the shell, the one
+# caller other than the system the activity manager and the package manager take these from;
+# the agent is a platform app, not the system, so it asks init through a property
+# (sepolicy/app-memory.cil), and each script answers in a property of its own.
+#
+# app-trim.sh: an app no window of which the user can see (all minimized, covered by other
+# windows, or on another virtual desktop) is sent the framework's memory trim, as a phone's app
+# is when it goes to the background: TRIM_MEMORY_UI_HIDDEN first, TRIM_MEMORY_BACKGROUND later,
+# and then the activity manager's full compaction of its process, which pages its memory out to
+# zram. The request is "<number> <HIDDEN|BACKGROUND> <compact: 0 or 1> <process>", and the
+# answer (vendor.dsa.app.trim.done) is the request's number once it is carried out.
+#
+# app-compile.sh: an app the user opens is compiled with the speed filter while the guest is
+# idle, so its code is clean pages of its .oat file, which the kernel drops under pressure and
+# reads back, rather than JIT code each of its processes keeps in memory of its own. The request
+# is "<number> <package>", the answer (vendor.dsa.app.compile.done) "<number> <result>". It runs
+# at the lowest CPU and I/O priority, one package at a time.
+#
+# A request that comes while its script runs is seen at the script's end, and carried out then:
+# init does not start a service that is running.
+service dsa_app_trim /system/bin/sh /system/etc/dsa/app-trim.sh
+    user shell
+    group shell
+    seclabel u:r:shell:s0
+    oneshot
+    disabled
+
+on property:vendor.dsa.app.trim=*
+    start dsa_app_trim
+
+service dsa_app_compile /system/bin/sh /system/etc/dsa/app-compile.sh
+    user shell
+    group shell
+    seclabel u:r:shell:s0
+    priority 19
+    ioprio idle 7
+    oneshot
+    disabled
+
+on property:vendor.dsa.app.compile=*
+    start dsa_app_compile

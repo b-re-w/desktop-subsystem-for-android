@@ -281,11 +281,26 @@ if has_program dsa-settings; then
     command -v msgfmt >/dev/null || die "msgfmt (gettext) is needed to build the translations"
     while read -r language; do
         [[ -n "$language" ]] || continue
+        [[ -f "$settings_dir/po/$language.po" ]] || die "po/LINGUAS lists $language, which has no po/$language.po"
         install -d "$stage/usr/share/locale/$language/LC_MESSAGES"
         msgfmt --check -o "$stage/usr/share/locale/$language/LC_MESSAGES/dsa-settings.mo" \
             "$settings_dir/po/$language.po"
         chmod 0644 "$stage/usr/share/locale/$language/LC_MESSAGES/dsa-settings.mo"
     done < "$settings_dir/po/LINGUAS"
+    # The regions gettext does not find a translation for on its own: it tries the locale's
+    # language and region (zh_HK), then the language alone (zh), so a region that reads
+    # another region's translation gets a link to it. Hong Kong and Macao read Traditional
+    # Chinese, Singapore Simplified, and every Portuguese region (pt_PT finds pt) Brazilian
+    # Portuguese.
+    for alias in zh_HK:zh_TW zh_MO:zh_TW zh_SG:zh_CN pt:pt_BR; do
+        region="${alias%%:*}"
+        source="${alias#*:}"
+        [[ -f "$stage/usr/share/locale/$source/LC_MESSAGES/dsa-settings.mo" ]] \
+            || die "po/LINGUAS does not list $source, which $region reads"
+        install -d "$stage/usr/share/locale/$region/LC_MESSAGES"
+        ln -sfn "../../$source/LC_MESSAGES/dsa-settings.mo" \
+            "$stage/usr/share/locale/$region/LC_MESSAGES/dsa-settings.mo"
+    done
 fi
 
 # What the software center shows for the package.
@@ -505,7 +520,7 @@ if [[ "$make_deb" -eq 1 ]]; then
         echo "Maintainer: thisisthepy <noreply@github.com>"
         echo "Installed-Size: $size_kb"
         echo "Depends: libc6, libstdc++6, libcap2, libwayland-client0, libdrm2, libvulkan1, libgtk-4-1, libadwaita-1-0, systemd, udev"
-        echo "Recommends: pipewire-pulse | pulseaudio, libpulse0, geoclue-2.0, xdg-desktop-portal, cups-client, upower, power-profiles-daemon, iio-sensor-proxy, xdg-utils, polkitd | policykit-1"
+        echo "Recommends: pipewire-pulse | pulseaudio, libpulse0, geoclue-2.0, xdg-desktop-portal, cups-client, upower, power-profiles-daemon, iio-sensor-proxy, xdg-utils, polkitd | policykit-1, speech-dispatcher, libenchant-2-2"
         echo "Section: otherosfs"
         echo "Priority: optional"
         echo "Homepage: https://github.com/thisisthepy/desktop-subsystem-for-android"

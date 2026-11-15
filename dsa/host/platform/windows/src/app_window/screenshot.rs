@@ -9,7 +9,7 @@
 //!
 //! The file is named as the Snipping Tool names its own: "Screenshot 2026-11-08 143022.png",
 //! the date and the local time to the second, in the user's display language ("스크린샷 ..."
-//! in Korean). A second screenshot in the same second gets " (2)" before the extension, the
+//! in Korean, "Captura de pantalla ..." in Spanish). A second screenshot in the same second gets " (2)" before the extension, the
 //! next " (3)", and so on, so no file is ever written over.
 //!
 //! The work runs on a thread of its own: reading the frame back and encoding it take a moment,
@@ -343,7 +343,7 @@ fn screenshots_folder() -> Result<PathBuf, String> {
 }
 
 /// The path of the known folder `id`, for this process's user.
-fn known_folder(id: &windows_sys::core::GUID, flags: i32) -> Option<PathBuf> {
+pub(crate) fn known_folder(id: &windows_sys::core::GUID, flags: i32) -> Option<PathBuf> {
     use windows_sys::Win32::System::Com::CoTaskMemFree;
     use windows_sys::Win32::UI::Shell::SHGetKnownFolderPath;
     let mut path = std::ptr::null_mut();

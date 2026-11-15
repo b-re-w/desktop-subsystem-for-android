@@ -1,5 +1,7 @@
 # Installing APKs
 
+**English** · [한국어](ko/install-apks.md) · [日本語](ja/install-apks.md) · [简体中文](zh-CN/install-apks.md) · [繁體中文](zh-TW/install-apks.md) · [Español](es/install-apks.md) · [Français](fr/install-apks.md) · [Deutsch](de/install-apks.md) · [Português (Brasil)](pt-BR/install-apks.md) · [Русский](ru/install-apks.md) · [Italiano](it/install-apks.md) · [Tiếng Việt](vi/install-apks.md) · [Bahasa Indonesia](id/install-apks.md) · [Türkçe](tr/install-apks.md)
+
 Desktop Subsystem for Android™ (DSA) ships no app store. You install apps from APK files,
 with the APK Installer or the `dsa` command. This page describes DSA on Windows.
 

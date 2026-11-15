@@ -56,6 +56,30 @@ class AndroidTaskActions(
     override fun launchNewWindow(packageName: String): Boolean =
         launch(packageName, Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
 
+    /**
+     * Starts the shortcut through LauncherApps, as the default launcher, in a freeform window
+     * on the guest display like any app the host launches. Android throws when the app has no
+     * such shortcut or it is turned off.
+     */
+    override fun launchShortcut(packageName: String, shortcutId: String): Boolean {
+        val launcher = context.getSystemService(android.content.pm.LauncherApps::class.java) ?: return false
+        val options = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        freeform(options)
+        return try {
+            launcher.startShortcut(packageName, shortcutId, null, options.toBundle(), android.os.Process.myUserHandle())
+            true
+        } catch (e: ActivityNotFoundException) {
+            log.warn("$packageName has no shortcut $shortcutId to start, or it is turned off", e)
+            false
+        } catch (e: IllegalStateException) {
+            log.warn("the shortcut $shortcutId of $packageName cannot start before the user's storage is unlocked", e)
+            false
+        } catch (e: SecurityException) {
+            log.warn("the framework refused to start the shortcut $shortcutId of $packageName", e)
+            false
+        }
+    }
+
     private fun launch(packageName: String, flags: Int): Boolean {
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
         intent.addFlags(flags)
@@ -249,14 +273,54 @@ class AndroidTaskActions(
     }
 
     /**
+     * Puts the task in the freeform windowing mode at [freeformBounds], or in the fullscreen
+     * one with null, in one WindowContainerTransaction (setWindowingMode, and setBounds for
+     * freeform). A task whose app left freeform for fullscreen comes back to its host window
+     * this way, at the size it had, when the user keeps its full screen inside the window.
+     */
+    override fun setWindowingMode(taskId: Int, freeformBounds: TaskBounds?): Boolean = try {
+        val token = taskToken(taskId)
+        if (token == null) {
+            false
+        } else {
+            val tokenClass = Class.forName("android.window.WindowContainerToken")
+            val transactionClass = Class.forName("android.window.WindowContainerTransaction")
+            val transaction = transactionClass.getConstructor().newInstance()
+            // WindowConfiguration.WINDOWING_MODE_FULLSCREEN is 1.
+            val mode = if (freeformBounds != null) WINDOWING_MODE_FREEFORM else 1
+            transactionClass.getMethod("setWindowingMode", tokenClass, Int::class.javaPrimitiveType)
+                .invoke(transaction, token, mode)
+            if (freeformBounds != null) {
+                transactionClass.getMethod("setBounds", tokenClass, Rect::class.java).invoke(
+                    transaction,
+                    token,
+                    Rect(freeformBounds.left, freeformBounds.top, freeformBounds.right, freeformBounds.bottom),
+                )
+            }
+            commit(transactionClass, transaction)
+        }
+    } catch (e: ReflectiveOperationException) {
+        log.warn("the framework cannot change task $taskId's windowing mode", e)
+        false
+    } catch (e: LinkageError) {
+        log.warn("the framework cannot change task $taskId's windowing mode", e)
+        false
+    } catch (e: RuntimeException) {
+        log.warn("the framework refused to change task $taskId's windowing mode", e)
+        false
+    }
+
+    /**
      * Applies [transaction] through the window organizer controller, which needs
      * MANAGE_ACTIVITY_TASKS, not a registered organizer. False when the framework has no
      * controller.
      */
     private fun commit(transactionClass: Class<*>, transaction: Any): Boolean {
-        val controller = Class.forName("android.app.IActivityTaskManager")
-            .getMethod("getWindowOrganizerController")
-            .invoke(ActivityTaskManager.getService())
+        val controller = organizer
+            ?: Class.forName("android.app.IActivityTaskManager")
+                .getMethod("getWindowOrganizerController")
+                .invoke(ActivityTaskManager.getService())
+                ?.also { organizer = it }
             ?: return false
         Class.forName("android.window.IWindowOrganizerController")
             .getMethod("applyTransaction", transactionClass)
@@ -270,17 +334,37 @@ class AndroidTaskActions(
      * (WindowContainerTransaction.addInsetsSource and removeInsetsSource). This is how the
      * framework's own desktop windowing gives a freeform task the inset of the caption it draws
      * over the task: the frame is in display pixels, and the task's windows receive the part
-     * that overlaps them. The status bar type is given too because the guest has no status bar
-     * of its own, and apps lay out their top edge by the status bar inset. The sources do not
-     * force their insets to be consumed, so an app drawing edge to edge draws its status bar
-     * background under the band.
+     * that overlaps them. The status bar type is given too because the host window's title bar
+     * is Android's status bar: the guest has no status bar of its own, and most apps lay out
+     * their top edge by the status bar inset, as on a phone. Stock Android hands a freeform
+     * window only its caption bar and IME insets; the image's window manager keeps the status
+     * bar inset too (make-image.py's SERVICES_CODE), so an app that pads by it keeps its
+     * toolbar below the title bar. The sources do not force their insets to be consumed, so an
+     * app drawing edge to edge draws its status bar background under the band, and Android
+     * draws the status bar colour of an app that does not there.
      *
      * The caption bar source carries [boundingRects], relative to [frame], as Android's own
      * desktop windows give an app that draws its own title bar the places their caption draws
      * over (WindowDecoration's calculateBoundingRectsInsets); the app reads them with
      * WindowInsets.getBoundingRects(captionBar()). The status bar source carries none.
+     *
+     * With [opaque] the task's app starts below the band, as the user chose for it. The task
+     * then gets what the framework's desktop windowing gives an app that asked for no
+     * transparent caption (DesktopModeWindowDecoration.updateRelayoutParams): no status bar
+     * source, which a freeform window never has there, and a caption bar source that carries
+     * InsetsSource.FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR (with FLAG_FORCE_CONSUMING, for an
+     * app that hides the caption). DecorView.updateColorViews consumes such a caption inset
+     * for the app: the content root gets it as its top margin, the app is dispatched a top
+     * inset of 0, and the decor paints the app's status bar colour, or its window background,
+     * in the band. DecorView does not do so for a window that asks for a transparent caption
+     * bar background, which keeps its caption inset.
      */
-    override fun setCaptionInset(taskId: Int, frame: TaskBounds?, boundingRects: List<TaskBounds>): Boolean = try {
+    override fun setCaptionInset(
+        taskId: Int,
+        frame: TaskBounds?,
+        boundingRects: List<TaskBounds>,
+        opaque: Boolean,
+    ): Boolean = try {
         val token = taskToken(taskId)
         if (token == null) {
             false
@@ -290,7 +374,9 @@ class AndroidTaskActions(
             val transaction = transactionClass.getConstructor().newInstance()
             val types = listOf(WindowInsets.Type.statusBars(), WindowInsets.Type.captionBar())
             for ((index, type) in types.withIndex()) {
-                if (frame == null) {
+                // A task below the title bar has no status bar inset; one it was given while
+                // it was still expected under the unified title bar is taken away.
+                if (frame == null || (opaque && type == WindowInsets.Type.statusBars())) {
                     transactionClass.getMethod(
                         "removeInsetsSource",
                         tokenClass,
@@ -303,7 +389,8 @@ class AndroidTaskActions(
                         .takeIf { it.isNotEmpty() && type == WindowInsets.Type.captionBar() }
                         ?.map { Rect(it.left, it.top, it.right, it.bottom) }
                         ?.toTypedArray()
-                    addInsetsSource(transactionClass, transaction, token, index, type, frame, rects)
+                    val flags = if (opaque) FORCE_CONSUMING_CAPTION else 0
+                    addInsetsSource(transactionClass, transaction, token, index, type, frame, rects, flags)
                 }
             }
             commit(transactionClass, transaction)
@@ -322,7 +409,9 @@ class AndroidTaskActions(
     /**
      * WindowContainerTransaction.addInsetsSource in whichever form this framework has: with
      * bounding rectangles and flags (Android 15 and later), with bounding rectangles, or with
-     * the frame alone. [boundingRects] go where the form takes them; no flags are given.
+     * the frame alone. [boundingRects] and [flags] (InsetsSource's) go where the form takes
+     * them. A form without flags cannot make the framework consume an inset, so flags asked of
+     * it are refused rather than dropped: the caller then knows the task did not get them.
      */
     private fun addInsetsSource(
         transactionClass: Class<*>,
@@ -332,6 +421,7 @@ class AndroidTaskActions(
         type: Int,
         frame: TaskBounds,
         boundingRects: Array<Rect>?,
+        flags: Int = 0,
     ) {
         val methods = transactionClass.methods.filter { it.name == "addInsetsSource" }
         val form = InsetsSourceForm.choose(methods.map { m -> m.parameterTypes.map { it.typeName } })
@@ -345,12 +435,44 @@ class AndroidTaskActions(
             is InsetsSourceForm.Frame -> form.parameterCount
             is InsetsSourceForm.Size -> form.parameterCount
         }
+        if (flags != 0 && count < 7) {
+            throw NoSuchMethodException("WindowContainerTransaction.addInsetsSource with flags")
+        }
         val args: Array<Any?> = when (count) {
-            7 -> arrayOf(token, insetsOwner, index, type, area, boundingRects, 0)
+            7 -> arrayOf(token, insetsOwner, index, type, area, boundingRects, flags)
             6 -> arrayOf(token, insetsOwner, index, type, area, boundingRects)
             else -> arrayOf(token, insetsOwner, index, type, area)
         }
         methods[form.index].invoke(transaction, *args)
+    }
+
+    /** The status bar heights read so far, by density. */
+    private val statusBarHeights = HashMap<Int, Int>()
+
+    /**
+     * Reads the framework's status_bar_height at [densityDpi], as an app drawing at that
+     * density reads it: the system configuration with only its density changed. The image's
+     * framework overlay sets it to the title bar's height in pixels at each density Android
+     * draws at on a monitor scale.
+     */
+    override fun statusBarHeight(densityDpi: Int): Int {
+        if (densityDpi <= 0) return 0
+        statusBarHeights[densityDpi]?.let { return it }
+        val height = try {
+            val system = android.content.res.Resources.getSystem()
+            val id = system.getIdentifier("status_bar_height", "dimen", "android")
+            if (id == 0) {
+                0
+            } else {
+                val config = Configuration(system.configuration).apply { this.densityDpi = densityDpi }
+                context.createConfigurationContext(config).resources.getDimensionPixelSize(id)
+            }
+        } catch (e: RuntimeException) {
+            log.warn("could not read the status bar height at $densityDpi dpi", e)
+            0
+        }
+        statusBarHeights[densityDpi] = height
+        return height
     }
 
     private fun warnNoInsets(error: Throwable) {
@@ -359,15 +481,36 @@ class AndroidTaskActions(
         log.warn("could not give a task an inset through a window container transaction", error)
     }
 
-    /** The task's window container token (TaskInfo.token, not in the SDK). */
+    /**
+     * The task's window container token (TaskInfo.token, not in the SDK). A task keeps its
+     * token for as long as it lives, and a task ID is not given to another task while the
+     * guest runs, so the tokens are kept: a resize then asks the framework for nothing before
+     * its transaction. Reading the running tasks is a binder call that waits for the window
+     * manager's lock and builds every task's description; on a busy guest it is one more wait
+     * between a new size and the window manager, on the thread the size waits on. The tasks are
+     * read again only for a task not seen yet, and the tokens of tasks that ended go then.
+     */
     private fun taskToken(taskId: Int): Any? {
+        tokens[taskId]?.let { return it }
         @Suppress("DEPRECATION")
-        val info = context.getSystemService(ActivityManager::class.java)
-            .getRunningTasks(MAX_TASKS)
-            .firstOrNull { it.taskId == taskId }
-            ?: return null
-        return Class.forName("android.app.TaskInfo").getField("token").get(info)
+        val running = context.getSystemService(ActivityManager::class.java).getRunningTasks(MAX_TASKS)
+        val field = Class.forName("android.app.TaskInfo").getField("token")
+        val read = HashMap<Int, Any>()
+        for (info in running) field.get(info)?.let { read[info.taskId] = it }
+        tokens = read
+        return read[taskId]
     }
+
+    /** Each running task's window container token, as [taskToken] last read them. */
+    @Volatile
+    private var tokens: Map<Int, Any> = emptyMap()
+
+    /**
+     * The window organizer controller, read once: it is the window manager's, which lives as
+     * long as the guest does.
+     */
+    @Volatile
+    private var organizer: Any? = null
 
     private fun warnNoDensity(error: Throwable) {
         if (warnedNoDensity) return
@@ -412,6 +555,12 @@ class AndroidTaskActions(
         const val RESIZE_MODE_PRESERVE_WINDOW = 1
 
         const val MAX_TASKS = 1000
+
+        // InsetsSource.FLAG_FORCE_CONSUMING (1 shl 2) and
+        // FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR (1 shl 4), the same in Android 16 and 17:
+        // the flags the framework's desktop windowing gives the caption source of an app that
+        // asked for no transparent caption. The SDK hides them.
+        const val FORCE_CONSUMING_CAPTION = (1 shl 2) or (1 shl 4)
 
         // Settings.ACTION_MANAGE_USER_ASPECT_RATIO_SETTINGS, which the SDK hides. Settings of
         // Android 16 and 17 answers it with the package as data (UserAspectRatioAppActivity).

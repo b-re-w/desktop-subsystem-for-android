@@ -30,13 +30,20 @@
 //! A window also follows how its app asks to be shown ([`ModeState`]): an app that fills the
 //! screen gets a window that covers its monitor with no title bar, and one in
 //! picture-in-picture a small window in the corner of the work area that stays above the
-//! others. F11 turns full screen on and off. Each change of mode proposes the new size like any
+//! others. F11 and the window menu's Full screen turn full screen on and off. A window that fills
+//! its monitor shows its title bar while the pointer is at the monitor's top edge
+//! ([`caption_revealed`]), so minimize and close stay in reach; its middle button leaves full
+//! screen. The keyboard reaches it too: Alt pressed and released alone brings the title bar
+//! out and keeps it out ([`AltTap`], [`keyboard_reveal`]), and Alt again, Esc or a press in the
+//! app takes it away. Alt still reaches the app, and Alt with another key stays a shortcut.
+//! Each change of mode proposes the new size like any
 //! other, so the window takes it together with a frame of that size. A window the user's
 //! settings for the app make fixed in size cannot be resized or maximized by the user; it
 //! still takes the sizes Android gives it.
 //!
 //! Each window's system menu carries the Android window menu after Windows' own items
-//! ([`super::system_menu`]). Its Screenshot is taken here ([`super::screenshot`]); every other
+//! ([`super::system_menu`]), and is shown as a Windows 11 menu rather than the classic one
+//! ([`super::window_menu`]). Its Screenshot is taken here ([`super::screenshot`]); every other
 //! item is reported to the window manager, which carries it out.
 
 use std::cell::{Cell, RefCell};
@@ -45,17 +52,23 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
-use dsa_host_core::compositor::caption::{BandSample, CaptionBand};
+use dsa_host_core::compositor::caption::BandSample;
 use dsa_host_core::compositor::task_windows::fit_within;
 use dsa_host_core::compositor::window_hosts::{FromHost, ToHost};
-use dsa_host_core::compositor::window_mode::{picture_in_picture_place, ModeState, WindowMode};
-use dsa_host_core::compositor::window_sizing::{
-    maximized_position, min_client_size, rescaled_rect, to_task_size,
+use dsa_host_core::compositor::window_mode::{
+    caption_revealed, picture_in_picture_place, ModeState, WindowMode,
 };
+use dsa_host_core::compositor::window_sizing::{
+    maximized_outer, maximized_position, min_client_size, rescaled_rect, size_is_held,
+    to_task_position, to_task_size, to_window_position, SizeProposal,
+};
+use dsa_host_core::compositor::window_tasks::WindowTasks;
+use dsa_host_core::ime::ImeCursor;
 use dsa_host_core::input::InputEvent;
 use windows_sys::Win32::Foundation::{
     GetLastError, ERROR_CLASS_ALREADY_EXISTS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM,
 };
+use windows_sys::Win32::Graphics::Gdi::ScreenToClient;
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, EndPaint, GetMonitorInfoW, MonitorFromRect, MonitorFromWindow, MONITORINFO,
     MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
@@ -64,7 +77,7 @@ use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::HiDpi::{
     GetDpiForWindow, SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
 };
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_F11;
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_F11};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW,
     GetWindowLongPtrW, GetWindowRect, IsIconic, IsZoomed, KillTimer, LoadCursorW, LoadIconW,
@@ -82,8 +95,16 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetClientRect, GetWindowPlacement, SetWindowPlacement, GWL_STYLE, HTBORDER, HTBOTTOMRIGHT,
     HTLEFT, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, SC_MAXIMIZE, SC_SIZE, SWP_FRAMECHANGED,
-    SWP_NOOWNERZORDER, SW_RESTORE, WINDOWPLACEMENT, WM_KEYDOWN, WM_KEYUP, WM_NCHITTEST,
+    SWP_NOOWNERZORDER, SW_RESTORE, WINDOWPLACEMENT, WM_COMMAND, WM_KEYDOWN, WM_KEYUP, WM_NCHITTEST,
     WM_SYSCOMMAND, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_POPUP,
+};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    GetCursorPos, HTCAPTION, HTNOWHERE, SC_RESTORE, WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCMOUSELEAVE,
+    WM_NCMOUSEMOVE, WS_SYSMENU,
+};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    WM_KILLFOCUS, WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_MOUSEWHEEL, WM_NCLBUTTONDOWN,
+    WM_NCRBUTTONDOWN, WM_POINTERDOWN, WM_RBUTTONDOWN,
 };
 
 use crate::compositor::log::{input_trace, input_trace_on};
@@ -91,15 +112,17 @@ use crate::compositor::log::{note, CompositorLogger};
 use crate::compositor::present::{self, Gpu, WindowPresenter};
 use crate::compositor::window_marks;
 
-use super::accessibility::{AccessibilityWindow, ApiConnect, WM_APP_ACCESSIBILITY};
+use super::accessibility::{AccessibilityWindow, ApiConnect, CaptionCells, WM_APP_ACCESSIBILITY};
 use super::caption::{task_frame, CaptionWindow};
 use super::drag_source::{self, DragStarter, WM_APP_DRAG_OUT};
 use super::drop_target::{self, DropHandler};
 use super::ime::ImeWindow;
-use super::keys::KeyWindow;
+use super::keys::{other_modifiers_held, AltTap, KeyWindow};
 use super::pointer::PointerWindow;
 use super::system_menu::{self, SystemMenuItem};
 use super::tsf;
+use super::window_menu::{self, MenuMessage};
+use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SendMessageW, SC_CLOSE};
 
 /// A task window that is open, as tests and logs see it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -129,23 +152,36 @@ const WM_APP_FRAME_READY: u32 = WM_APP + 4;
 /// bar changes ([`pack_band_sample`]).
 const WM_APP_BAND_COLOUR: u32 = WM_APP + 5;
 
-/// A band sample as the parameters of [`WM_APP_BAND_COLOUR`]: the fill color in `wparam`, and
-/// in `lparam` bit 0 set when there is a fill, bit 1 set when the band's luminance was read,
-/// and the luminance itself from bit 16.
+/// A band sample as the parameters of [`WM_APP_BAND_COLOUR`]: the fill color in the low half
+/// of `wparam` and the band's own color in its high half, and in `lparam` bit 0 set when
+/// there is a fill, bit 1 set when the band's luminance was read, bit 2 set when its darkest
+/// and lightest samples were, bit 3 set when the band is one color, the luminance itself
+/// from bit 16, the darkest sample's from bit 32 and the lightest's from bit 48 (each at most
+/// 1000).
 fn pack_band_sample(sample: BandSample) -> (WPARAM, LPARAM) {
-    let wparam = sample.fill.unwrap_or(0) as WPARAM;
+    let colors = u64::from(sample.fill.unwrap_or(0)) | u64::from(sample.band.unwrap_or(0)) << 32;
+    let wparam = colors as WPARAM;
     let mut lparam = LPARAM::from(sample.fill.is_some());
+    if sample.band.is_some() {
+        lparam |= 8;
+    }
     if let Some(luminance) = sample.luminance {
-        lparam |= 2 | (luminance as LPARAM) << 16;
+        lparam |= 2 | (luminance.min(1000) as LPARAM) << 16;
+    }
+    if let Some((darkest, lightest)) = sample.range {
+        lparam |= 4 | (darkest.min(1000) as LPARAM) << 32 | (lightest.min(1000) as LPARAM) << 48;
     }
     (wparam, lparam)
 }
 
 /// The band sample [`pack_band_sample`] put in a message's parameters.
 fn unpack_band_sample(wparam: WPARAM, lparam: LPARAM) -> BandSample {
+    let field = |shift: u32| ((lparam >> shift) & 0xFFFF) as u16;
     BandSample {
         fill: (lparam & 1 != 0).then_some(wparam as u32),
-        luminance: (lparam & 2 != 0).then_some(((lparam >> 16) & 0xFFFF) as u16),
+        luminance: (lparam & 2 != 0).then_some(field(16)),
+        range: (lparam & 4 != 0).then_some((field(32), field(48))),
+        band: (lparam & 8 != 0).then_some((wparam as u64 >> 32) as u32),
     }
 }
 
@@ -232,11 +268,18 @@ pub struct UiSetup {
     /// Dials the service's local API to watch a task's accessibility tree, while a UI
     /// Automation client reads its window. `None` answers clients with an empty tree.
     pub accessibility: Option<ApiConnect>,
+    /// The task each window shows, which a window's accessibility tree is watched for.
+    pub tasks: WindowTasks,
     /// What happens to files dropped on a task window. `None` takes no drops.
     pub drops: Option<DropHandler>,
     /// Asks whether an app drags out of a task window a press has left. `None` starts no
     /// drags on the host.
     pub drags: Option<DragStarter>,
+    /// The app's package, which the place of its overlay windows is remembered under.
+    pub package: String,
+    /// The folder the places of apps' overlay windows are remembered in. `None` remembers
+    /// none.
+    pub overlay_places: Option<std::path::PathBuf>,
 }
 
 /// Starts the UI thread. Returns once its message window exists.
@@ -293,12 +336,29 @@ struct WindowData {
     /// Which edges the user drags (left, top), so a window that takes the size of a frame
     /// keeps the other edges where they are.
     drag_edges: Cell<(bool, bool)>,
+    /// Whether the user is dragging one of the window's edges now.
+    sizing: Cell<bool>,
+    /// Whether the window holds the size the desktop gave it (maximised, snapped, full
+    /// screen) and shows a frame of another size in its middle, rather than take the size of
+    /// the frames Android draws for it ([`size_is_held`]).
+    held: Cell<bool>,
+    /// The cursor of the editor focused in the task, as the window manager last said, in the
+    /// window's pixels at its scale; the input method gets it where the window shows it.
+    ime_cursor: Cell<Option<ImeCursor>>,
     /// Whether the window is taking the size of a frame, which the guest is not asked for.
     following: Cell<bool>,
     /// What the app asked for and the user's F11 over it.
     mode: Cell<ModeState>,
     /// The mode the window is shown in now.
     shown_mode: Cell<WindowMode>,
+    /// Whether a window that fills its monitor shows its title bar now: the pointer came to
+    /// the top edge, or Alt brought it out.
+    revealed: Cell<bool>,
+    /// Whether the keyboard brought the title bar out (Alt alone), which keeps it out until
+    /// Alt again, Esc or a press in the app, wherever the pointer goes.
+    revealed_by_keys: Cell<bool>,
+    /// Whether Alt is being pressed alone, which brings a full screen window's title bar out.
+    alt_tap: Cell<AltTap>,
     /// Whether the user may resize the window, as the user's settings for the app say.
     resizable: Cell<bool>,
     /// Where an ordinary window was before it filled its monitor or went into
@@ -315,6 +375,36 @@ struct WindowData {
     /// The icons the window shows in place of its program's, once the window manager sent
     /// the app's new icon; kept while the window shows them.
     icons: RefCell<Option<super::live_icon::WindowIcons>>,
+    /// The media buttons in the window's taskbar preview, while the app has a media session.
+    thumb_bar: super::thumb_bar::ThumbBar,
+}
+
+/// Shows the app's media session on the media buttons of `hwnd`'s taskbar preview, and logs
+/// why when the taskbar does not take them.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn sync_thumb_bar(hwnd: HWND, data: &WindowData, step: ThumbBarStep) {
+    let result = match step {
+        ThumbBarStep::Created => data.thumb_bar.button_created(hwnd as isize),
+        ThumbBarStep::Changed => data.thumb_bar.update(hwnd as isize),
+        ThumbBarStep::Restyled => data.thumb_bar.restyle(hwnd as isize),
+    };
+    if let Err(why) = result {
+        note(data.logger.as_deref(), &why);
+    }
+}
+
+/// What the media buttons of a window's taskbar preview follow.
+#[derive(Clone, Copy)]
+enum ThumbBarStep {
+    /// The taskbar made the window's button.
+    Created,
+    /// The app's media session changed.
+    Changed,
+    /// The window's DPI or the theme changed.
+    Restyled,
 }
 
 /// Gives the window the app's icon the window manager sent, if it sent one, at the sizes of
@@ -466,6 +556,7 @@ fn run(setup: UiSetup, commands: Receiver<ToHost>, ready: Sender<Result<isize, S
             for task_id in open {
                 ui.close(task_id);
             }
+            super::overlay::close_all(&ui.setup);
             ui.publish();
         }
         tsf::end_thread();
@@ -562,6 +653,25 @@ unsafe extern "system" fn task_window_proc(
     lparam: LPARAM,
 ) -> LRESULT {
     if let Some(data) = window_data(hwnd) {
+        // The taskbar made the window's button: its preview gets the media buttons.
+        let created = super::thumb_bar::button_created_message();
+        if created != 0 && message == created {
+            sync_thumb_bar(hwnd, data, ThumbBarStep::Created);
+            return 0;
+        }
+        // A click on a media button of the preview goes to the app's media session.
+        if message == WM_COMMAND {
+            if let Some(id) = super::thumb_bar::clicked(wparam) {
+                let media = super::thumb_bar::current();
+                if let Some(button) = super::thumb_bar::pressed(id, media.as_ref()) {
+                    (data.report)(FromHost::MediaButton {
+                        task_id: data.task_id,
+                        button,
+                    });
+                }
+                return 0;
+            }
+        }
         // The Android items of the system menu; Windows' own commands go on below.
         if message == WM_SYSCOMMAND {
             if let Some(item) = system_menu::chosen(wparam) {
@@ -569,17 +679,50 @@ unsafe extern "system" fn task_window_proc(
                 return 0;
             }
         }
+        // A window that fills its monitor shows its title bar on Alt alone too, and hides it
+        // on Esc or a press in the app. It sees every key first, F11 too, so Alt+F11 is never
+        // taken for Alt alone.
+        if let Some(result) = reveal_message(hwnd, data, message, wparam, lparam) {
+            return result;
+        }
         if let Some(result) = mode_message(hwnd, data, message, wparam, lparam) {
             return result;
         }
-        // The title bar first: what lies in it is the window's, never the app's. A window that
-        // fills its monitor has none.
         let presenter = data.presenter.borrow().clone();
-        if data.shown_mode.get() != WindowMode::Fullscreen {
+        // A window that fills its monitor shows its title bar while the pointer is at the top
+        // edge, and takes it away once the pointer goes below it or out of the window.
+        if !titled(data) {
+            follow_reveal(hwnd, data, message, lparam, presenter.as_deref());
+        }
+        // The window menu: a click on the icon, a right click on the title bar, Alt+Space. A
+        // window that fills its monitor keeps it, for Alt+Space and its revealed title bar.
+        let hit = |x: i32, y: i32| {
+            let at = ((y as u16 as LPARAM) << 16) | (x as u16 as LPARAM);
+            SendMessageW(hwnd, WM_NCHITTEST, 0, at) as u32
+        };
+        if let Some(what) = window_menu::menu_message(message, wparam, lparam, &hit) {
+            match what {
+                MenuMessage::Open(opening) => open_window_menu(hwnd, data, opening),
+                // Posted, as Windows posts it for a double click on a window's icon.
+                MenuMessage::Close => {
+                    PostMessageW(hwnd, WM_SYSCOMMAND, SC_CLOSE as WPARAM, 0);
+                }
+                MenuMessage::Swallow => {}
+            }
+            return 0;
+        }
+        // The title bar first: what lies in it is the window's, never the app's. A window that
+        // fills its monitor has one only while it is revealed, and lays out no frame for it.
+        let revealed = !titled(data) && data.revealed.get() && message != WM_NCCALCSIZE;
+        if titled(data) || revealed {
             if let Some(result) =
                 data.caption
                     .handle(hwnd, message, wparam, lparam, presenter.as_deref())
             {
+                // Its band neither drags nor resizes a window that fills its monitor.
+                if revealed && message == WM_NCHITTEST {
+                    return full_screen_hit(result);
+                }
                 return result;
             }
         }
@@ -640,13 +783,18 @@ unsafe extern "system" fn task_window_proc(
                         // was reported when it was proposed (WM_WINDOWPOSCHANGING).
                         presenter.view_resized((width, height));
                     }
+                    // A window that holds its size shows its frame in its new middle.
+                    if data.held.get() {
+                        place_ime_cursor(hwnd, data);
+                    }
                     // The buttons stay at the right end, and a maximized window's middle
                     // button restores it.
                     if titled(data) {
                         data.caption.paint(hwnd, data.presenter.borrow().as_deref());
                     }
-                    // A narrow window has no room for the icon's cell, and so no back arrow.
-                    sync_back_button(hwnd, data);
+                    // The buttons move with the right edge, the middle one is Restore while
+                    // the window is maximized, and a narrow window has no icon's cell.
+                    sync_caption_buttons(hwnd, data);
                 }
             }
             0
@@ -656,6 +804,8 @@ unsafe extern "system" fn task_window_proc(
                 if message == WM_ENTERSIZEMOVE {
                     data.drag_edges.set((false, false));
                 }
+                // WM_SIZING says when the drag is of an edge.
+                data.sizing.set(false);
                 (data.report)(FromHost::Dragging {
                     task_id: data.task_id,
                     dragging: message == WM_ENTERSIZEMOVE,
@@ -667,6 +817,7 @@ unsafe extern "system" fn task_window_proc(
             // Which edge the user drags, for when the window later takes the size of a frame.
             if let Some(data) = window_data(hwnd) {
                 let edge = wparam as u32;
+                data.sizing.set(true);
                 data.drag_edges.set((
                     matches!(edge, WMSZ_LEFT | WMSZ_TOPLEFT | WMSZ_BOTTOMLEFT),
                     matches!(edge, WMSZ_TOP | WMSZ_TOPLEFT | WMSZ_TOPRIGHT),
@@ -697,22 +848,29 @@ unsafe extern "system" fn task_window_proc(
             let dpi = GetDpiForWindow(hwnd).max(96);
             let info = &mut *(lparam as *mut MINMAXINFO);
             let max = data.max_client.get();
-            // Never larger than Android can draw: a larger window could only show the
-            // task's frames with an empty margin. Maximising takes this size too.
-            if let Some(max) = max {
-                // Windows keeps every size it applies within the tracking sizes, a maximized
-                // window's too, so they are measured with the borders the window has now.
-                let (width, height) = window_outer(hwnd, max, dpi);
-                info.ptMaxTrackSize = POINT {
-                    x: width.min(info.ptMaxTrackSize.x),
-                    y: height.min(info.ptMaxTrackSize.y),
-                };
-                // A maximized window keeps a top border off the screen as well.
-                let (width, height) = outer_size(max, dpi, true);
-                info.ptMaxSize = POINT {
-                    x: width.min(info.ptMaxSize.x),
-                    y: height.min(info.ptMaxSize.y),
-                };
+            // No largest size: a maximised, snapped or full screen window takes the size the
+            // desktop gives it on its own monitor, and shows the largest frame Android draws in
+            // its middle when the guest's display holds less (size_is_held, frame_placement).
+            // Windows keeps every size it applies within the tracking sizes, a maximised
+            // window's too, so a largest tracking size would keep it from filling its monitor.
+            // A window the user drags larger than Android can draw keeps the size of the
+            // largest frame Android draws instead (keep_to_frame).
+            //
+            // A maximised window fills its own monitor's work area and no more: left to
+            // Windows, its client area, which reaches under the title bar, could be the whole
+            // monitor, under the taskbar, and the guest would be asked for the monitor's size
+            // (maximized_outer). WM_WINDOWPOSCHANGING keeps it to that size as well.
+            if titled(data) {
+                if let Some(outer) = maximized_window_outer(hwnd, None) {
+                    info.ptMaxSize = POINT {
+                        x: outer.0,
+                        y: outer.1,
+                    };
+                    info.ptMaxTrackSize = POINT {
+                        x: info.ptMaxTrackSize.x.max(outer.0),
+                        y: info.ptMaxTrackSize.y.max(outer.1),
+                    };
+                }
             }
             // Never smaller than Android gives this task, which its app may declare: the guest
             // would keep the task larger than the window, and no frame could show 1:1.
@@ -736,15 +894,41 @@ unsafe extern "system" fn task_window_proc(
                     pos.flags |= SWP_NOSIZE;
                 }
             }
+            // A maximised window's client area is its own monitor's work area, whatever size
+            // was proposed, before the guest is asked for it below: never the whole monitor,
+            // under the taskbar, and never a size measured on another monitor.
+            if IsZoomed(hwnd) != 0
+                && IsIconic(hwnd) == 0
+                && pos.flags & SWP_NOSIZE == 0
+                && window_data(hwnd).is_some_and(titled)
+            {
+                let proposed = RECT {
+                    left: pos.x,
+                    top: pos.y,
+                    right: pos.x + pos.cx,
+                    bottom: pos.y + pos.cy,
+                };
+                let on = (pos.flags & SWP_NOMOVE == 0).then_some(&proposed);
+                if let Some((width, height)) = maximized_window_outer(hwnd, on) {
+                    pos.cx = width;
+                    pos.cy = height;
+                }
+            }
             // DefWindowProc above has already kept the proposed size to WM_GETMINMAXINFO.
             if pos.flags & SWP_NOSIZE == 0 && IsIconic(hwnd) == 0 {
                 if let Some(data) = window_data(hwnd) {
+                    // A maximised, snapped or full screen window keeps the size proposed,
+                    // whatever size the guest gives its task. A new monitor scale changes
+                    // nothing about that.
+                    if !data.rescaling.get() {
+                        set_held(hwnd, data, holds_proposed_size(hwnd, data, pos));
+                    }
                     keep_to_frame(hwnd, data, pos);
                 }
             }
-            // A maximised window takes the most Android can draw (WM_GETMINMAXINFO above),
-            // shown 1:1. On a monitor larger than that it is centred on the work area rather
-            // than left in its top left corner.
+            // A maximised window fills its work area, and has its client area at the work
+            // area's corner, whatever position was proposed. One smaller than the work area
+            // is centred on it rather than left in its top left corner.
             if IsZoomed(hwnd) != 0 && pos.flags & (SWP_NOMOVE | SWP_NOSIZE) == 0 {
                 let proposed = RECT {
                     left: pos.x,
@@ -753,8 +937,9 @@ unsafe extern "system" fn task_window_proc(
                     bottom: pos.y + pos.cy,
                 };
                 if let Some(work) = work_area(&proposed) {
-                    pos.x = maximized_position(pos.x, work.left, work.right - work.left, pos.cx);
-                    pos.y = maximized_position(pos.y, work.top, work.bottom - work.top, pos.cy);
+                    let (left, top) = maximized_border(hwnd);
+                    pos.x = maximized_position(work.left, work.right - work.left, pos.cx, left);
+                    pos.y = maximized_position(work.top, work.bottom - work.top, pos.cy, top);
                 }
             }
             result
@@ -788,6 +973,8 @@ unsafe extern "system" fn task_window_proc(
                 if let Some(presenter) = data.presenter.borrow().as_deref() {
                     presenter.splash_dpi_changed(dpi.max(96));
                 }
+                // The preview's media buttons are drawn again at the new scale.
+                sync_thumb_bar(hwnd, data, ThumbBarStep::Restyled);
                 // The app's icon the window manager sent is drawn again at the new scale.
                 if data.icons.borrow().is_some() {
                     if let Some(icon) = super::live_icon::current() {
@@ -805,7 +992,14 @@ unsafe extern "system" fn task_window_proc(
             let suggested = &*(lparam as *const RECT);
             let zoomed = IsZoomed(hwnd) != 0;
             let mut limit = (i32::MAX, i32::MAX);
-            if let Some(max) = data.and_then(|data| data.max_client.get()) {
+            // A window that holds the size the desktop gives it (maximised, snapped, full
+            // screen) takes the suggested size whole, and shows the largest frame Android draws
+            // in its middle.
+            let held = zoomed || data.is_some_and(|data| data.held.get());
+            if let Some(max) = data
+                .and_then(|data| data.max_client.get())
+                .filter(|_| !held)
+            {
                 limit = outer_size(max, dpi.max(96), zoomed);
             }
             // A maximized window is kept to its monitor by Windows, and one that fills its
@@ -846,22 +1040,34 @@ unsafe extern "system" fn task_window_proc(
                 if titled(data) {
                     data.caption.paint(hwnd, data.presenter.borrow().as_deref());
                 }
-                // The icon's cell follows the scale.
-                sync_back_button(hwnd, data);
+                // The title bar's cells follow the scale.
+                sync_caption_buttons(hwnd, data);
             }
             0
         }
         WM_SETTINGCHANGE | WM_THEMECHANGED | WM_SYSCOLORCHANGE => {
+            // The taskbar's theme or high contrast may have changed: the preview's media
+            // buttons take their colour.
+            if let Some(data) = window_data(hwnd) {
+                sync_thumb_bar(hwnd, data, ThumbBarStep::Restyled);
+            }
             // The caption's size, high contrast and the system colors may have changed.
             if let Some(data) = window_data(hwnd).filter(|data| titled(data)) {
                 data.caption.report_height(hwnd, &*data.report);
                 data.caption
                     .repaint(hwnd, data.presenter.borrow().as_deref());
-                sync_back_button(hwnd, data);
+                sync_caption_buttons(hwnd, data);
             }
             DefWindowProcW(hwnd, message, wparam, lparam)
         }
         WM_ACTIVATE => {
+            // The window menu takes the foreground while it is open; the window stays the
+            // user's, and the app keeps its focus, as under Windows' own menu.
+            let menu_took_it = (wparam & 0xffff) as u32 == WA_INACTIVE
+                && window_data(hwnd).is_some_and(|data| data.caption.menu_open());
+            if menu_took_it {
+                return DefWindowProcW(hwnd, message, wparam, lparam);
+            }
             if let Some(data) = window_data(hwnd) {
                 if titled(data) {
                     data.caption.activated(
@@ -911,6 +1117,13 @@ unsafe extern "system" fn task_window_proc(
             if let Some(target) = target {
                 target.raise(hwnd as isize);
             }
+            // A client that is no screen reader read the tree or acted on it: the window
+            // reads the task's tree once for it.
+            if let Some(data) = window_data(hwnd) {
+                if let Ok(mut tree) = data.accessibility.try_borrow_mut() {
+                    tree.serve(hwnd as isize);
+                }
+            }
             0
         }
         WM_NCDESTROY => {
@@ -932,10 +1145,34 @@ unsafe extern "system" fn task_window_proc(
     }
 }
 
+/// Shows `hwnd`'s window menu for `opening` ([`window_menu::show`]), under the icon's cell
+/// for a click on the icon or Alt+Space. Once it closes, the title bar and the app's focus
+/// follow whichever window has the foreground then.
+unsafe fn open_window_menu(hwnd: HWND, data: &WindowData, opening: window_menu::Opening) {
+    let layout = data.caption.layout(hwnd);
+    let cell = layout.icon_cell().unwrap_or((0, 0, 0, layout.height));
+    data.caption.set_menu_open(true);
+    window_menu::show(hwnd, opening, cell, data.resizable.get());
+    data.caption.set_menu_open(false);
+    let active = GetForegroundWindow() == hwnd;
+    let presenter = data.presenter.borrow().clone();
+    data.caption.activated(hwnd, active, presenter.as_deref());
+    if !active {
+        (data.report)(FromHost::Focus {
+            task_id: data.task_id,
+            focused: false,
+        });
+    }
+}
+
 /// The user chose `item` in `hwnd`'s system menu. The screenshot is taken here; the window
 /// manager carries out the rest.
 unsafe fn menu_chosen(hwnd: HWND, data: &WindowData, item: SystemMenuItem) {
     use windows_sys::Win32::UI::WindowsAndMessaging::{AllowSetForegroundWindow, ASFW_ANY};
+    if item == SystemMenuItem::FullScreen {
+        toggle_full_screen(hwnd, data);
+        return;
+    }
     if item == SystemMenuItem::Screenshot {
         match data.presenter.borrow().clone() {
             Some(presenter) => super::screenshot::take(
@@ -1027,10 +1264,80 @@ unsafe fn keep_to_frame(hwnd: HWND, data: &WindowData, pos: &mut WINDOWPOS) {
     pos.cy = height;
 }
 
+/// Whether `hwnd` keeps the size `pos` proposes for it whatever size the guest gives its task:
+/// it is maximised, full screen, or snapped by the desktop to a part of its monitor (a size
+/// other than its restored one that neither the user's drag of an edge nor the window itself
+/// chose).
+unsafe fn holds_proposed_size(hwnd: HWND, data: &WindowData, pos: &WINDOWPOS) -> bool {
+    let mut placement: WINDOWPLACEMENT = std::mem::zeroed();
+    placement.length = std::mem::size_of::<WINDOWPLACEMENT>() as u32;
+    let off_normal_size = GetWindowPlacement(hwnd, &mut placement) != 0 && {
+        let normal = placement.rcNormalPosition;
+        (normal.right - normal.left, normal.bottom - normal.top) != (pos.cx, pos.cy)
+    };
+    size_is_held(SizeProposal {
+        maximized: IsZoomed(hwnd) != 0,
+        fills_monitor: !titled(data),
+        user_sizing: data.sizing.get(),
+        host_sizing: data.self_sizing.get() || data.following.get() || data.rescaling.get(),
+        off_normal_size,
+    })
+}
+
+/// The window holds the size the desktop gave it from now on (`held`), or takes the size of
+/// its frames again: its frames, its pointer input, its UI Automation tree and its input
+/// method's cursor all follow where the frame is in it.
+unsafe fn set_held(hwnd: HWND, data: &WindowData, held: bool) {
+    if data.held.replace(held) == held {
+        return;
+    }
+    data.pointer.set_held(held);
+    if let Ok(mut tree) = data.accessibility.try_borrow_mut() {
+        tree.set_held(held);
+    }
+    if let Some(presenter) = data.presenter.borrow().as_deref() {
+        presenter.set_held(held);
+    }
+    place_ime_cursor(hwnd, data);
+}
+
+/// Gives the input method the editor's cursor where the window shows it. The window manager
+/// sends it in the window's pixels at the window's scale; a window that holds its size shows
+/// its frame in its middle, at the scale that fits it there.
+unsafe fn place_ime_cursor(hwnd: HWND, data: &WindowData) {
+    let Some(cursor) = data.ime_cursor.get() else {
+        return;
+    };
+    let mut client: RECT = std::mem::zeroed();
+    GetClientRect(hwnd, &mut client);
+    let view = (
+        (client.right - client.left).max(0) as u32,
+        (client.bottom - client.top).max(0) as u32,
+    );
+    let placed = match data.pointer.placement(view) {
+        Some(placement) => {
+            let scale = data.scale.get();
+            let at = |value: i32, origin: u32| -> i32 {
+                let task = to_task_position(f64::from(value), scale);
+                (f64::from(origin) + to_window_position(task, placement.scale)).round() as i32
+            };
+            ImeCursor {
+                left: at(cursor.left, placement.origin.0),
+                top: at(cursor.top, placement.origin.1),
+                right: at(cursor.right, placement.origin.0),
+                bottom: at(cursor.bottom, placement.origin.1),
+            }
+        }
+        None => cursor,
+    };
+    data.ime.cursor_moved(placed);
+}
+
 /// A frame of another size than the window's is kept for it: the window takes its size, and
 /// the frame is shown with it (WM_SIZE). The edges the user is not dragging stay put.
 unsafe fn take_kept_frame(hwnd: HWND, data: &WindowData) {
-    if IsIconic(hwnd) != 0 {
+    // A window that holds the size the desktop gave it shows every frame in it instead.
+    if IsIconic(hwnd) != 0 || data.held.get() {
         return;
     }
     let Some(presenter) = data.presenter.borrow().clone() else {
@@ -1059,6 +1366,17 @@ unsafe fn take_kept_frame(hwnd: HWND, data: &WindowData) {
     if !titled(data) {
         if let Some(monitor) = monitor_rect(hwnd) {
             (x, y) = centred(&monitor, (width as u32, height as u32));
+        }
+    } else if IsZoomed(hwnd) != 0 {
+        // A maximised window goes where a maximised window of the frame's size belongs on
+        // its own monitor, not where its last frame was: that one was smaller and centred,
+        // so a frame the size of the work area would start at its corner and run off the
+        // screen. WM_WINDOWPOSCHANGING places it the same way; this keeps the rectangle
+        // it measures on the window's own monitor.
+        if let Some(work) = window_work_area(hwnd) {
+            let (left, top) = maximized_border(hwnd);
+            x = maximized_position(work.left, work.right - work.left, width, left);
+            y = maximized_position(work.top, work.bottom - work.top, height, top);
         }
     }
     data.following.set(true);
@@ -1099,36 +1417,230 @@ unsafe fn window_outer(hwnd: HWND, client: (u32, u32), dpi: u32) -> (i32, i32) {
 fn centred(monitor: &RECT, size: (u32, u32)) -> (i32, i32) {
     let (width, height) = (size.0 as i32, size.1 as i32);
     (
-        maximized_position(
-            monitor.left,
-            monitor.left,
-            monitor.right - monitor.left,
-            width,
-        ),
-        maximized_position(
-            monitor.top,
-            monitor.top,
-            monitor.bottom - monitor.top,
-            height,
-        ),
+        maximized_position(monitor.left, monitor.right - monitor.left, width, 0),
+        maximized_position(monitor.top, monitor.bottom - monitor.top, height, 0),
     )
 }
 
-/// Whether the window has its title bar: not while it fills its monitor.
+/// The outer size `hwnd` takes maximised: its client area is the work area of the monitor
+/// nearest `on` (where Windows proposes to put it), or of its own monitor without one, and its
+/// borders hang off the work area's edges. `None` when the monitor does not say.
+unsafe fn maximized_window_outer(hwnd: HWND, on: Option<&RECT>) -> Option<(i32, i32)> {
+    let work = match on {
+        Some(rect) => work_area(rect),
+        None => window_work_area(hwnd),
+    }?;
+    let dpi = GetDpiForWindow(hwnd).max(96);
+    Some(maximized_outer(
+        (work.right - work.left, work.bottom - work.top),
+        outer_size((0, 0), dpi, true),
+    ))
+}
+
+/// The borders (left, top) a maximised `hwnd` hangs off its work area's edges: those of its
+/// frame at its scale, and none while it fills its monitor without a frame.
+unsafe fn maximized_border(hwnd: HWND) -> (i32, i32) {
+    if window_data(hwnd).is_some_and(|data| !titled(data)) {
+        return (0, 0);
+    }
+    let dpi = GetDpiForWindow(hwnd).max(96);
+    let (left, top, _, _) = task_frame(TASK_STYLE, TASK_EX_STYLE, dpi, true);
+    (left, top)
+}
+
+/// Follows the pointer over a window that fills its monitor: the title bar comes out when the
+/// pointer reaches the top edge, and goes once the pointer is below its band or out of the
+/// window. While it shows, the band's points are the title bar's (`WM_NCHITTEST`), so the
+/// window hears the pointer over it as non-client moves, and a move in the client area below
+/// is the pointer leaving it.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn follow_reveal(
+    hwnd: HWND,
+    data: &WindowData,
+    message: u32,
+    lparam: LPARAM,
+    presenter: Option<&WindowPresenter>,
+) {
+    // A title bar the keyboard brought out stays until the keyboard or a press takes it away.
+    if data.revealed_by_keys.get() {
+        return;
+    }
+    let pointer_y = match message {
+        WM_MOUSEMOVE => Some(((lparam >> 16) & 0xffff) as i16 as i32),
+        WM_NCMOUSEMOVE | WM_NCMOUSELEAVE => {
+            let mut point: POINT = std::mem::zeroed();
+            GetCursorPos(&mut point);
+            let mut client: RECT = std::mem::zeroed();
+            GetClientRect(hwnd, &mut client);
+            ScreenToClient(hwnd, &mut point);
+            let inside = point.x >= client.left
+                && point.x < client.right
+                && point.y >= client.top
+                && point.y < client.bottom;
+            inside.then_some(point.y)
+        }
+        _ => return,
+    };
+    let dpi = GetDpiForWindow(hwnd).max(96);
+    let band = data.caption.layout(hwnd).height;
+    let now = caption_revealed(data.revealed.get(), pointer_y, band, dpi);
+    show_revealed(hwnd, data, now, presenter);
+}
+
+/// Shows a full screen window's title bar (`revealed`) or takes it away, and tells the
+/// window's UI Automation tree its buttons are on the screen or off it.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn show_revealed(
+    hwnd: HWND,
+    data: &WindowData,
+    revealed: bool,
+    presenter: Option<&WindowPresenter>,
+) {
+    if data.revealed.replace(revealed) == revealed {
+        return;
+    }
+    if revealed {
+        data.caption.paint(hwnd, presenter);
+    } else {
+        data.caption.hide(presenter);
+    }
+    sync_caption_buttons(hwnd, data);
+}
+
+/// What a message does to a full screen window's hidden title bar, from the keyboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RevealInput {
+    /// Alt was pressed and released alone.
+    AltTapped,
+    /// Esc was pressed.
+    Escape,
+    /// The pointer pressed the app, below the title bar.
+    PressInApp,
+}
+
+/// The title bar of a full screen window after `input`, as (whether it shows, whether the
+/// keyboard brought it out), from whether it shows now (`revealed`) and whether the keyboard
+/// brought it out (`by_keys`); `None` when the input changes nothing. Alt alone brings it out
+/// and keeps it out, as Alt shows a menu bar; Alt again, Esc or a press in the app takes away
+/// what the keyboard brought out. The pointer's reveal follows the pointer instead
+/// ([`caption_revealed`]), so Esc and presses leave it to the app.
+fn keyboard_reveal(revealed: bool, by_keys: bool, input: RevealInput) -> Option<(bool, bool)> {
+    let held = revealed && by_keys;
+    match input {
+        RevealInput::AltTapped if held => Some((false, false)),
+        RevealInput::AltTapped => Some((true, true)),
+        RevealInput::Escape | RevealInput::PressInApp if held => Some((false, false)),
+        RevealInput::Escape | RevealInput::PressInApp => None,
+    }
+}
+
+/// Follows the keys and presses that bring a full screen window's title bar out from the
+/// keyboard or take it away. Alt goes on to the guest as it always does; only the Esc that
+/// hides the title bar is taken (`Some`), as Esc closes a menu without reaching the app.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn reveal_message(
+    hwnd: HWND,
+    data: &WindowData,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> Option<LRESULT> {
+    let mut tap = data.alt_tap.get();
+    let input = match message {
+        WM_KEYDOWN | WM_SYSKEYDOWN | WM_KEYUP | WM_SYSKEYUP => {
+            let vk = wparam as u16;
+            let down = matches!(message, WM_KEYDOWN | WM_SYSKEYDOWN);
+            let repeat = down && (lparam >> 30) & 1 != 0;
+            if tap.key(vk, down, repeat, other_modifiers_held()) {
+                Some(RevealInput::AltTapped)
+            } else if down && vk == VK_ESCAPE {
+                Some(RevealInput::Escape)
+            } else {
+                None
+            }
+        }
+        WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_POINTERDOWN => {
+            tap.interrupt();
+            Some(RevealInput::PressInApp)
+        }
+        // Alt with a click on the title bar, a turn of the wheel, or the focus going (Alt+Tab
+        // takes it) is not Alt alone.
+        WM_NCLBUTTONDOWN | WM_NCRBUTTONDOWN | WM_MOUSEWHEEL | WM_KILLFOCUS => {
+            tap.interrupt();
+            None
+        }
+        _ => None,
+    };
+    data.alt_tap.set(tap);
+    let input = input?;
+    if titled(data) {
+        return None;
+    }
+    let (revealed, by_keys) =
+        keyboard_reveal(data.revealed.get(), data.revealed_by_keys.get(), input)?;
+    data.revealed_by_keys.set(by_keys);
+    let presenter = data.presenter.borrow().clone();
+    show_revealed(hwnd, data, revealed, presenter.as_deref());
+    (input == RevealInput::Escape).then_some(0)
+}
+
+/// What a point of a full screen window's revealed band is: the band's buttons and its icon as
+/// in any window, and nothing elsewhere, where an ordinary window would drag or resize.
+fn full_screen_hit(code: LRESULT) -> LRESULT {
+    let code = code as u32;
+    if code == HTCAPTION || (HTLEFT..=HTBOTTOMRIGHT).contains(&code) {
+        HTNOWHERE as LRESULT
+    } else {
+        code as LRESULT
+    }
+}
+
+/// Turns full screen on or off over what the app asked for, as F11 and the window menu's Full
+/// screen do, whatever the user's setting for the app's full screen.
+///
+/// # Safety
+///
+/// `hwnd` is a live task window of the calling thread, and `data` its data.
+unsafe fn toggle_full_screen(hwnd: HWND, data: &WindowData) {
+    let mut mode = data.mode.get();
+    let shown = mode.toggle_fullscreen();
+    data.mode.set(mode);
+    apply_mode(hwnd, data, shown);
+    sync_caption_buttons(hwnd, data);
+}
+
+/// Whether the window has its title bar for good: not while it fills its monitor, where it
+/// shows one only while the pointer is at the top edge.
 fn titled(data: &WindowData) -> bool {
     data.shown_mode.get() != WindowMode::Fullscreen
 }
 
-/// Tells the window's UI Automation tree whether the title bar shows the back arrow now, and
-/// the icon's cell it is in, so its button comes, goes and moves with the arrow.
-unsafe fn sync_back_button(hwnd: HWND, data: &WindowData) {
-    let cell = if titled(data) && data.caption.shows_back() {
-        data.caption.layout(hwnd).icon_cell()
-    } else {
-        None
-    };
+/// Tells the window's UI Automation tree where the title bar's buttons are now and what they
+/// say: the icon's cell (the back arrow in it while the task can go back), minimize, maximize
+/// (Restore while the window is maximized or fills its monitor) and close, off the screen
+/// while a window that fills its monitor hides its title bar. Its buttons come, go, move and
+/// are renamed with the title bar.
+unsafe fn sync_caption_buttons(hwnd: HWND, data: &WindowData) {
+    let full_screen = !titled(data);
+    let cells = CaptionCells::of(
+        &data.caption.layout(hwnd),
+        data.caption.shows_back(),
+        full_screen || IsZoomed(hwnd) != 0,
+        // A window that fills its monitor can always leave it from its middle button.
+        full_screen || data.resizable.get(),
+        full_screen && !data.revealed.get(),
+    );
     if let Ok(mut tree) = data.accessibility.try_borrow_mut() {
-        tree.set_back(hwnd as isize, cell);
+        tree.set_caption(hwnd as isize, cells);
     }
 }
 
@@ -1174,12 +1686,17 @@ unsafe fn mode_message(
             // Held down, the key repeats; only the press counts.
             let repeat = (lparam >> 30) & 1 != 0;
             if !repeat {
-                let mut mode = data.mode.get();
-                let shown = mode.toggle_fullscreen();
-                data.mode.set(mode);
-                apply_mode(hwnd, data, shown);
-                sync_back_button(hwnd, data);
+                toggle_full_screen(hwnd, data);
             }
+            Some(0)
+        }
+        // The middle button of a full screen window's revealed title bar, and Restore or
+        // Maximize from its menu, leave full screen.
+        WM_SYSCOMMAND
+            if data.shown_mode.get() == WindowMode::Fullscreen
+                && matches!((wparam & 0xfff0) as u32, SC_MAXIMIZE | SC_RESTORE) =>
+        {
+            toggle_full_screen(hwnd, data);
             Some(0)
         }
         WM_KEYUP | WM_SYSKEYUP if wparam as u16 == VK_F11 => Some(0),
@@ -1226,6 +1743,10 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
         }
     }
     data.shown_mode.set(mode);
+    // A window that fills its monitor starts with its title bar hidden.
+    data.revealed.set(false);
+    data.revealed_by_keys.set(false);
+    data.caption.set_full_screen(mode == WindowMode::Fullscreen);
     let keep = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
     match previous {
         WindowMode::Fullscreen => {
@@ -1242,10 +1763,11 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
         WindowMode::PictureInPicture => {
             place_self(hwnd, HWND_NOTOPMOST, (0, 0, 0, 0), keep);
         }
-        WindowMode::Normal => {}
+        // A task's window is never an overlay's (`super::overlay`).
+        WindowMode::Normal | WindowMode::Overlay => {}
     }
     match mode {
-        WindowMode::Normal => {
+        WindowMode::Normal | WindowMode::Overlay => {
             if let Some(placement) = data.restore.take() {
                 data.self_sizing.set(true);
                 SetWindowPlacement(hwnd, &placement);
@@ -1257,16 +1779,13 @@ unsafe fn apply_mode(hwnd: HWND, data: &WindowData, mode: WindowMode) {
                 return;
             };
             let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
-            let style = (style & !TASK_STYLE) | WS_POPUP;
+            // It keeps its system menu, for Alt+Space and its revealed title bar's icon.
+            let style = (style & !TASK_STYLE) | WS_POPUP | WS_SYSMENU;
             SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
-            // No title bar, so no top inset: the app draws to the monitor's top edge.
-            (data.report)(FromHost::Caption {
-                task_id: data.task_id,
-                band: CaptionBand::default(),
-            });
-            if let Some(presenter) = data.presenter.borrow().as_deref() {
-                presenter.hide_caption();
-            }
+            // No title bar, so no top inset: the app draws to the monitor's top edge. The band
+            // is forgotten with it, so the title bar's return reports it again.
+            data.caption.report_none(&*data.report);
+            data.caption.hide(data.presenter.borrow().as_deref());
             place_self(
                 hwnd,
                 HWND_TOP,
@@ -1333,9 +1852,10 @@ unsafe fn apply_size(hwnd: HWND, size: (u32, u32)) -> (u32, u32) {
     // The task's size is in the guest's pixels, which are the window's pixels.
     let dpi = GetDpiForWindow(hwnd).max(96);
     let client = fit_within(size, usable_client_area(hwnd, dpi));
-    // A maximized window keeps the maximized size: resizing it would shrink it inside its
-    // maximized frame, and the guest would be asked for a size nobody chose.
-    if IsZoomed(hwnd) != 0 {
+    // A maximized, snapped or full screen window keeps the size the desktop gave it: resizing
+    // it would shrink it inside its place on the monitor, and the guest would be asked for a
+    // size nobody chose. A size the guest gives its task is shown in it instead.
+    if IsZoomed(hwnd) != 0 || window_data(hwnd).is_some_and(|data| data.held.get()) {
         return client;
     }
     // A window that fills its monitor has no frame, and stays centred on the monitor.
@@ -1374,6 +1894,14 @@ impl Ui {
 
     fn drain_commands(&mut self) {
         while let Ok(command) = self.commands.try_recv() {
+            // An app overlay window is a window of another kind (`super::overlay`): no title
+            // bar, no close button, above the others, placed where its app has it.
+            if command.task_id().is_some_and(super::overlay::is_overlay) {
+                let beside = self.open.values().next().copied();
+                // SAFETY: on the windows' thread.
+                unsafe { super::overlay::command(&self.setup, beside, command) };
+                continue;
+            }
             // SAFETY: plain Win32 calls on this thread's own windows.
             unsafe {
                 match command {
@@ -1420,12 +1948,18 @@ impl Ui {
                         min,
                         scale,
                     } => {
-                        if let Some(data) =
-                            self.open.get(&task_id).and_then(|hwnd| window_data(*hwnd))
+                        let hwnd = self.open.get(&task_id).copied();
+                        if let Some((hwnd, data)) =
+                            hwnd.and_then(|hwnd| Some((hwnd, window_data(hwnd)?)))
                         {
                             data.pointer.task_resized((width, height));
+                            // A point in the window is a task pixel at the window's scale.
+                            data.pointer.set_scale(scale);
+                            // So is a node's place on the screen, and a screen point in a hit
+                            // test.
                             if let Ok(mut tree) = data.accessibility.try_borrow_mut() {
                                 tree.task_resized((width, height));
+                                tree.set_scale(scale);
                             }
                             data.max_client.set(max);
                             data.min_client.set(min);
@@ -1434,12 +1968,18 @@ impl Ui {
                                     presenter.set_scale(scale);
                                 }
                             }
+                            // A window that holds its size shows a frame of the new size
+                            // elsewhere in it.
+                            if data.held.get() {
+                                place_ime_cursor(hwnd, data);
+                            }
                         }
                     }
                     ToHost::ImeCursor { task_id, cursor } => {
                         if let Some(hwnd) = self.open.get(&task_id) {
                             if let Some(data) = window_data(*hwnd) {
-                                data.ime.cursor_moved(cursor);
+                                data.ime_cursor.set(Some(cursor));
+                                place_ime_cursor(*hwnd, data);
                             }
                         }
                     }
@@ -1462,7 +2002,7 @@ impl Ui {
                                 let shown = state.app_asks(mode);
                                 data.mode.set(state);
                                 apply_mode(*hwnd, data, shown);
-                                sync_back_button(*hwnd, data);
+                                sync_caption_buttons(*hwnd, data);
                             }
                         }
                     }
@@ -1478,6 +2018,7 @@ impl Ui {
                         task_id,
                         app_drawn,
                         interactive,
+                        below,
                     } => {
                         if let Some(hwnd) = self.open.get(&task_id) {
                             if let Some(data) = window_data(*hwnd) {
@@ -1486,6 +2027,7 @@ impl Ui {
                                     *hwnd,
                                     app_drawn,
                                     interactive,
+                                    below,
                                     presenter.as_deref(),
                                 );
                             }
@@ -1496,10 +2038,16 @@ impl Ui {
                             if let Some(data) = window_data(*hwnd) {
                                 let presenter = data.presenter.borrow().clone();
                                 data.caption.set_back(*hwnd, back, presenter.as_deref());
-                                sync_back_button(*hwnd, data);
+                                sync_caption_buttons(*hwnd, data);
                             }
                         }
                     }
+                    // The window host's `WindowTasks` takes it, before it reaches this thread;
+                    // the window itself shows the same.
+                    ToHost::ShownTask { .. } => {}
+                    // Only an overlay's window is placed by its app, and those are taken
+                    // above.
+                    ToHost::Overlay { .. } => {}
                     ToHost::AppMenu { new_window } => {
                         // Every window of the app has the same menu, and the next ones too.
                         self.new_window = new_window;
@@ -1521,6 +2069,17 @@ impl Ui {
                             }
                         } else {
                             self.log("the app's new icon is not an image; its windows keep theirs");
+                        }
+                    }
+                    ToHost::AppMedia { media } => {
+                        // Every window's preview follows the app's media session, and the next
+                        // windows' too.
+                        if super::thumb_bar::set(media) {
+                            for hwnd in self.open.values() {
+                                if let Some(data) = window_data(*hwnd) {
+                                    sync_thumb_bar(*hwnd, data, ThumbBarStep::Changed);
+                                }
+                            }
                         }
                     }
                 }
@@ -1597,11 +2156,12 @@ impl Ui {
                 self.setup.drags.clone(),
             ),
             keys: KeyWindow::new(task_id, self.setup.input.clone()),
-            ime: ImeWindow::new(task_id, self.setup.input.clone()),
+            ime: ImeWindow::new(task_id, self.setup.input.clone(), self.setup.logger.clone()),
             accessibility: RefCell::new(AccessibilityWindow::new(
                 task_id,
                 size,
                 self.setup.input.clone(),
+                self.setup.tasks.clone(),
                 self.setup.accessibility.clone(),
                 self.setup.logger.clone(),
             )),
@@ -1618,15 +2178,22 @@ impl Ui {
                 self.setup.input.clone(),
             ),
             drag_edges: Cell::new((false, false)),
+            sizing: Cell::new(false),
+            held: Cell::new(false),
+            ime_cursor: Cell::new(None),
             following: Cell::new(false),
             mode: Cell::new(ModeState::new()),
             shown_mode: Cell::new(WindowMode::Normal),
+            revealed: Cell::new(false),
+            revealed_by_keys: Cell::new(false),
+            alt_tap: Cell::new(AltTap::default()),
             resizable: Cell::new(true),
             restore: Cell::new(None),
             self_sizing: Cell::new(false),
             rescaling: Cell::new(false),
             logger: self.setup.logger.clone(),
             icons: RefCell::new(None),
+            thumb_bar: super::thumb_bar::ThumbBar::new(),
         }));
         let class = wide(TASK_CLASS);
         let hwnd = CreateWindowExW(
@@ -1667,6 +2234,10 @@ impl Ui {
         // The app's icon, when it changed after the program was made.
         if let Some(data) = window_data(hwnd) {
             take_live_icon(hwnd, data, false);
+            // The tone the title bar's glyphs take, and why, once per change.
+            let logger = self.setup.logger.clone();
+            data.caption
+                .set_log(Box::new(move |line| note(logger.as_deref(), line)));
         }
         // Files dropped from Explorer go to the task's app.
         if let Some(handler) = &self.setup.drops {
@@ -1695,6 +2266,9 @@ impl Ui {
         };
         if let Some(data) = window_data(hwnd) {
             *data.presenter.borrow_mut() = presenter.clone();
+            if let Some(presenter) = presenter.as_deref() {
+                presenter.set_held(data.held.get());
+            }
         }
         if let Some(presenter) = presenter {
             let window = hwnd as isize;
@@ -1841,6 +2415,88 @@ mod tests {
         }
     }
 
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        VK_F4, VK_LMENU, VK_MENU, VK_RMENU, VK_SPACE, VK_TAB, VK_X,
+    };
+
+    /// Alt pressed and released with `between` pressed and released in the middle; whether
+    /// the release of Alt was Alt alone.
+    fn alt_around(tap: &mut AltTap, alt: u16, between: &[u16]) -> bool {
+        assert!(!tap.key(alt, true, false, false));
+        for key in between {
+            assert!(!tap.key(*key, true, false, false));
+            assert!(!tap.key(*key, false, false, false));
+        }
+        tap.key(alt, false, false, false)
+    }
+
+    #[test]
+    fn fr18_alt_alone_reveals_the_full_screen_caption() {
+        let mut tap = AltTap::default();
+        for alt in [VK_MENU, VK_LMENU, VK_RMENU] {
+            assert!(alt_around(&mut tap, alt, &[]), "alt {alt:#x}");
+        }
+        // Held down, Alt repeats; it is still Alt alone.
+        assert!(!tap.key(VK_MENU, true, false, false));
+        assert!(!tap.key(VK_MENU, true, true, false));
+        assert!(!tap.key(VK_MENU, true, true, false));
+        assert!(tap.key(VK_MENU, false, false, false));
+        // The release brings a hidden title bar out, held by the keyboard.
+        assert_eq!(
+            keyboard_reveal(false, false, RevealInput::AltTapped),
+            Some((true, true))
+        );
+        // Over a title bar the pointer brought out, the keyboard now holds it.
+        assert_eq!(
+            keyboard_reveal(true, false, RevealInput::AltTapped),
+            Some((true, true))
+        );
+        // Alt alone again takes it away, as it closes a menu bar.
+        assert_eq!(
+            keyboard_reveal(true, true, RevealInput::AltTapped),
+            Some((false, false))
+        );
+    }
+
+    #[test]
+    fn fr18_alt_with_another_key_does_not_reveal() {
+        let mut tap = AltTap::default();
+        // Alt+Space opens the window menu, Alt+F4 closes the window, Alt+Tab switches
+        // windows, and Alt+X is the app's shortcut: none of them is Alt alone.
+        for key in [VK_SPACE, VK_F4, VK_TAB, VK_X] {
+            assert!(!alt_around(&mut tap, VK_MENU, &[key]), "key {key:#x}");
+        }
+        // Alt with Ctrl, Shift or a Windows key held is a shortcut too, whichever went first.
+        assert!(!tap.key(VK_MENU, true, false, true));
+        assert!(!tap.key(VK_MENU, false, false, true));
+        assert!(!tap.key(VK_MENU, true, false, false));
+        assert!(!tap.key(VK_MENU, false, false, true));
+        // A press of the pointer, or the focus going, while Alt is down.
+        assert!(!tap.key(VK_MENU, true, false, false));
+        tap.interrupt();
+        assert!(!tap.key(VK_MENU, false, false, false));
+        // A key released while Alt is down (pressed before it) is not Alt alone either.
+        assert!(!tap.key(VK_MENU, true, false, false));
+        assert!(!tap.key(VK_X, false, false, false));
+        assert!(!tap.key(VK_MENU, false, false, false));
+        // A release of Alt with no press of it (pressed in another window) is nothing.
+        assert!(!tap.key(VK_MENU, false, false, false));
+        // And alone again, it still works.
+        assert!(alt_around(&mut tap, VK_MENU, &[]));
+    }
+
+    #[test]
+    fn fr18_escape_or_a_press_in_the_app_hides_the_revealed_caption() {
+        for input in [RevealInput::Escape, RevealInput::PressInApp] {
+            // What the keyboard brought out, Esc and a press take away.
+            assert_eq!(keyboard_reveal(true, true, input), Some((false, false)));
+            // A hidden title bar stays hidden, and Esc goes to the app.
+            assert_eq!(keyboard_reveal(false, false, input), None);
+            // The pointer's reveal follows the pointer; Esc and presses are the app's.
+            assert_eq!(keyboard_reveal(true, false, input), None);
+        }
+    }
+
     #[test]
     fn fr3_content_stays_attached_until_the_window_is_gone() {
         let mut window = FakeWindow {
@@ -1867,19 +2523,106 @@ mod tests {
             BandSample {
                 fill: Some(0xFFFF_FFFF),
                 luminance: None,
+                range: None,
+                band: None,
             },
             BandSample {
                 fill: None,
                 luminance: Some(0),
+                range: Some((0, 0)),
+                band: None,
             },
             BandSample {
                 fill: Some(0xFF00_0000),
                 luminance: Some(1000),
+                range: Some((1000, 1000)),
+                band: None,
+            },
+            // A light grey bar with a darker part: what turns an app's light glyphs dark.
+            BandSample {
+                fill: None,
+                luminance: Some(745),
+                range: Some((402, 913)),
+                band: None,
+            },
+            // A bar of one color, which the band of an app below the title bar takes.
+            BandSample {
+                fill: None,
+                luminance: Some(745),
+                range: Some((745, 745)),
+                band: Some(0xFFE0_E0E0),
+            },
+            BandSample {
+                fill: Some(0xFF3F_51B5),
+                luminance: Some(0),
+                range: Some((0, 0)),
+                band: Some(0xFF00_0000),
             },
         ] {
             let (wparam, lparam) = pack_band_sample(sample);
             assert_eq!(unpack_band_sample(wparam, lparam), sample);
         }
+    }
+
+    #[test]
+    fn fr22_a_still_window_whose_only_frame_has_a_light_band_ends_with_dark_glyphs() {
+        use dsa_host_core::compositor::caption::{frame_band_sample, CaptionTone};
+        // MX Player's settings screen in R51's window: 1439 task pixels wide, a band of 58, a
+        // light grey bar (#E0E0E0) over the first 105 rows, and an app that never asks for
+        // dark status bar icons, which is read as a dark bar.
+        let (width, height, band) = (1439u32, 1166u32, 58u32);
+        let mut rgba = Vec::with_capacity((width * height * 4) as usize);
+        for y in 0..height {
+            let color = if y < 105 {
+                [0xE0, 0xE0, 0xE0, 0xFF]
+            } else {
+                [0xFF, 0xFF, 0xFF, 0xFF]
+            };
+            for _ in 0..width {
+                rgba.extend_from_slice(&color);
+            }
+        }
+        let (input, _guest) = std::sync::mpsc::channel();
+        let caption = CaptionWindow::new(7, TASK_STYLE, TASK_EX_STYLE, ICON_ID, input);
+        let lines = std::rc::Rc::new(RefCell::new(Vec::<String>::new()));
+        let told = std::rc::Rc::clone(&lines);
+        caption.set_log(Box::new(move |line| {
+            told.borrow_mut().push(line.to_string())
+        }));
+        let hwnd: HWND = std::ptr::null_mut();
+        // SAFETY: with no presenter the window draws nothing; the frame's mode is asked of a
+        // null window, which Windows refuses and changes nothing.
+        unsafe {
+            caption.set_tone(hwnd, Some(CaptionTone::LightGlyphs), None);
+        }
+        assert_eq!(caption.glyph_tone(), CaptionTone::LightGlyphs);
+        // The window is still: the presenter reads the band of its one frame, the window is
+        // told it in a message, and that is all that ever comes.
+        let sample = frame_band_sample(&rgba, width, height, band);
+        let (wparam, lparam) = pack_band_sample(sample);
+        // SAFETY: as above.
+        unsafe {
+            caption.set_sample(hwnd, unpack_band_sample(wparam, lparam), None);
+        }
+        assert_eq!(caption.glyph_tone(), CaptionTone::DarkGlyphs, "{sample:?}");
+        // Said once each time the tone changes, with the rule and the numbers.
+        let said = lines.borrow().clone();
+        assert_eq!(said.len(), 2, "{said:?}");
+        assert!(said[0].contains("take light glyphs"), "{said:?}");
+        assert!(said[1].starts_with("task 7: "), "{said:?}");
+        assert!(said[1].contains("take dark glyphs"), "{said:?}");
+        assert!(
+            said[1].contains("cannot be read anywhere on the band (darkest 745, lightest 745"),
+            "{said:?}"
+        );
+        // Read again, the same band changes nothing and says nothing.
+        // SAFETY: as above.
+        unsafe {
+            caption.set_sample(hwnd, sample, None);
+            caption.set_tone(hwnd, Some(CaptionTone::LightGlyphs), None);
+        }
+        assert_eq!(caption.glyph_tone(), CaptionTone::DarkGlyphs);
+        assert_eq!(lines.borrow().len(), 2);
     }
 
     #[test]

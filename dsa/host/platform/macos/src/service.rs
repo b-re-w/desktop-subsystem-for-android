@@ -58,6 +58,11 @@ pub fn local_user() -> String {
 
 /// The total memory of this Mac, in MiB.
 fn total_memory_mb() -> Option<u64> {
+    total_memory_kb().map(|kb| kb / 1024)
+}
+
+/// The total memory of this Mac, in KiB.
+fn total_memory_kb() -> Option<u64> {
     let mut bytes: u64 = 0;
     let mut len = std::mem::size_of::<u64>();
     let name = c"hw.memsize";
@@ -71,7 +76,7 @@ fn total_memory_mb() -> Option<u64> {
             0,
         )
     };
-    (result == 0).then_some(bytes / (1024 * 1024))
+    (result == 0).then_some(bytes / 1024)
 }
 
 /// Keeps the window manager running. Installed, it has a launchd agent of its own, which is
@@ -274,6 +279,7 @@ impl Planner {
             dsa_host_core::file_share::SHARE_PORT,
         ];
         listen_ports.extend(RELAYED_PORTS);
+        listen_ports.extend(crate::host_services::listen_ports());
         let vm = MacVmConfig {
             kernel: files.kernel.clone(),
             initrd: files.initrd.clone(),
@@ -301,7 +307,11 @@ impl Planner {
                     Some(dir.as_path()),
                     &attached,
                 )
-                + &dsa_host_core::gapps::bootconfig_for(&*self.settings, &self.name, &attached),
+                + &dsa_host_core::gapps::bootconfig_for(&*self.settings, &self.name, &attached)
+                + &dsa_host_core::widevine::bootconfig_for(&*self.settings, &self.name, &attached)
+                // The Mac's physical memory, read at each start, which Google Play sees as the
+                // device's memory.
+                + &dsa_host_core::host_memory::bootconfig(total_memory_kb()),
         })
     }
 }
@@ -542,6 +552,30 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
     // The Mac's name becomes the guest's device name.
     session.set_device_name_source(Arc::new(move || boot_identity.device_name()));
     session.serve_file_shares(Box::new(share), Arc::new(user_folders()));
+    // App data backups in ~/DSA Backup (once the user turns backup on), the passkey check,
+    // and KeyMint's root key, sealed by the Secure Enclave first.
+    let keymint = VsockListener::new(
+        channels.receiver(dsa_host_core::keymint_root::KEYMINT_PORT),
+        Framing::Framed,
+    );
+    crate::host_services::serve(
+        &session,
+        &user_folders().home,
+        Box::new(keymint),
+        &shared.build,
+        &config.settings_dir(&shared.user),
+        name,
+    );
+    // The guest's DNS queries, answered by the Mac's resolver.
+    let dns = VsockListener::new(
+        channels.receiver(dsa_host_core::dns::DNS_PORT),
+        Framing::Framed,
+    );
+    session.serve_dns_port(
+        Box::new(dns),
+        Arc::new(dsa_host_unix::dns_resolver::SystemResolver),
+        &shared.build,
+    );
     let dial = |port: u32| {
         let slot = slot.clone();
         Arc::new(move |_vm_id: &str| {
@@ -558,17 +592,26 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
     session.set_adb_advertise(crate::adb_discovery::advertiser());
     session.set_android_files_connect(dial(dsa_host_core::file_share::ANDROID_FILES_PORT));
     // An app's root request that needs the administrator is asked through macOS's own
-    // administrator dialog, by the levels in the user's settings.
-    let prompt = Arc::new(crate::root_approval::AuthorizationPrompt::new(
-        crate::root_approval::SecurityAuthorization,
-        shared.user.boot_dir().join("prompt-icons"),
+    // administrator dialog, by the levels in the user's settings, in the language the rest of
+    // DSA on this Mac shows.
+    let prompt = Arc::new(
+        crate::root_approval::AuthorizationPrompt::new(
+            crate::root_approval::SecurityAuthorization,
+            shared.user.boot_dir().join("prompt-icons"),
+        )
+        .in_language_of(crate::ui_language::current),
+    );
+    // While VoiceOver runs the dialog has longer to be answered, as hearing it read out takes
+    // longer than reading it.
+    session.set_root_approval(Arc::new(
+        RootApproval::new(
+            name,
+            Arc::clone(&shared.settings),
+            prompt,
+            dsa_host_core::root_approval::service_log(),
+        )
+        .with_screen_reader(Arc::new(crate::root_approval::voice_over_running)),
     ));
-    session.set_root_approval(Arc::new(RootApproval::new(
-        name,
-        Arc::clone(&shared.settings),
-        prompt,
-        dsa_host_core::root_approval::service_log(),
-    )));
     let session = Arc::new(session);
     // The guest's battery follows the Mac's, and its data is on disk before the Mac sleeps.
     shared.power.attach(&session);
@@ -622,6 +665,7 @@ fn apply_settings(
     android.share_clipboard(settings.as_ref().is_none_or(|s| s.clipboard));
     android.links_in_android(settings.as_ref().is_some_and(|s| s.links_in_android));
     android.image_auto_restart(settings.as_ref().is_none_or(|s| s.image_auto_restart));
+    android.trust_host_certificates(settings.as_ref().is_none_or(|s| s.host_certificates));
     android.share_folders(
         settings.as_ref().is_none_or(|s| s.file_sharing),
         settings

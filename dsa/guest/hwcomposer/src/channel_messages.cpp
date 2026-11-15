@@ -20,7 +20,8 @@ ChannelEvent decodeChannelFrame(const uint8_t* data, size_t size) {
         case v1::Envelope::kTaskUpdated: {
             const v1::TaskUpdated& updated = envelope.task_updated();
             const v1::Rect& b = updated.bounds();
-            return TaskUpdate{updated.task_id(), Rect{b.left(), b.top(), b.right(), b.bottom()}};
+            return TaskUpdate{updated.task_id(), Rect{b.left(), b.top(), b.right(), b.bottom()},
+                              updated.has_overlay()};
         }
         case v1::Envelope::kTaskRemoved:
             return TaskEnd{envelope.task_removed().task_id()};

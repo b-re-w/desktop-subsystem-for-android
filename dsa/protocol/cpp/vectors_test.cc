@@ -108,6 +108,21 @@ std::map<std::string, v1::Envelope> Cases() {
     task->mutable_bounds()->set_right(600);
     task->mutable_bounds()->set_bottom(400);
   }
+  {
+    v1::TaskUpdated* task = cases["task_updated_overlay"].mutable_task_updated();
+    task->set_task_id(0x40000001);
+    task->mutable_bounds()->set_left(158);
+    task->mutable_bounds()->set_top(82);
+    task->mutable_bounds()->set_right(666);
+    task->mutable_bounds()->set_bottom(220);
+    task->set_package_name("skplanet.musicmate");
+    task->set_label("FLO");
+    task->set_density_dpi(262);
+    task->set_max_width(3840);
+    task->set_max_height(3840);
+    task->mutable_overlay()->set_window_type(2038);
+    task->mutable_overlay()->set_touchable(true);
+  }
   cases["task_removed"].mutable_task_removed()->set_task_id(42);
   {
     v1::VideoCodecSupport* support = cases["video_capabilities"].mutable_video_capabilities()->add_codecs();
@@ -120,6 +135,27 @@ std::map<std::string, v1::Envelope> Cases() {
     open->set_codec(v1::VIDEO_CODEC_H264);
     open->set_width(1280);
     open->set_height(720);
+  }
+  {
+    v1::VideoDecoderOpen* open = cases["video_decoder_open_shared"].mutable_video_decoder_open();
+    open->set_codec(v1::VIDEO_CODEC_H264);
+    open->set_width(1280);
+    open->set_height(720);
+    open->set_picture_region_id(42);
+  }
+  cases["video_slot_returned"].mutable_video_slot_returned()->set_slot(5);
+  {
+    v1::GuestSharedMemory* region = cases["guest_shared_memory"].mutable_guest_shared_memory();
+    region->set_name("video_pictures");
+    region->set_guest_physical_address(0x108000000ULL);
+    region->set_length(64ULL * 1024 * 1024);
+  }
+  {
+    v1::GuestSharedMemory* region =
+        cases["guest_shared_memory_graphics"].mutable_guest_shared_memory();
+    region->set_name("graphics_memory");
+    region->set_guest_physical_address(0x110200000ULL);
+    region->set_length(256ULL * 1024 * 1024);
   }
   cases["video_flush"].mutable_video_flush();
   {
@@ -165,6 +201,16 @@ std::map<std::string, v1::Envelope> Cases() {
     frame->set_height(2);
     frame->set_stride(2);
     frame->set_nv12(std::string("\x10\x10\x10\x10\x80\x80", 6));
+  }
+  {
+    v1::VideoFrame* frame = cases["video_frame_in_slot"].mutable_video_frame();
+    frame->set_frame_index(3);
+    frame->set_timestamp_us(100000);
+    frame->set_width(2);
+    frame->set_height(2);
+    frame->set_stride(2);
+    frame->set_slot(1);
+    frame->set_slot_offset(65536);
   }
   {
     v1::VideoPacket* packet = cases["video_packet"].mutable_video_packet();
@@ -371,6 +417,24 @@ std::map<std::string, v1::Envelope> Cases() {
     n->set_high_priority(true);
     n->set_clearable(true);
     n->set_when_millis(1700000000000LL);
+    v1::GuestNotification* b = cases["notification_buttons"].mutable_notification();
+    b->set_key(key);
+    b->set_title("Ann");
+    v1::NotificationButton* reply = b->add_buttons();
+    reply->set_title("Reply");
+    reply->set_reply(true);
+    reply->set_reply_label("Reply to Ann");
+    reply->add_reply_choices("Yes");
+    reply->set_semantic_action(1);
+    v1::NotificationButton* remove = b->add_buttons();
+    remove->set_title("Delete");
+    remove->set_semantic_action(4);
+    v1::NotificationButtonClicked* chosen =
+        cases["notification_button_clicked"].mutable_notification_button_clicked();
+    chosen->set_key(key);
+    chosen->set_button(1);
+    chosen->set_title("Reply");
+    chosen->set_reply_text("\xec\x95\x88\xeb\x85\x95");
     cases["notification_removed"].mutable_notification_removed()->set_key(key);
     cases["notification_clicked"].mutable_notification_clicked()->set_key(key);
     cases["notification_dismissed"].mutable_notification_dismissed()->set_key(key);
@@ -523,6 +587,47 @@ std::map<std::string, v1::Envelope> Cases() {
     watch->set_on(true);
   }
   cases["accessibility_watch_off"].mutable_accessibility_watch()->set_task_id(42);
+  {
+    v1::AccessibilityAnnouncement* announcement =
+        cases["accessibility_announcement"].mutable_accessibility_announcement();
+    announcement->set_task_id(42);
+    announcement->set_text("Saved");
+    announcement->set_toast(true);
+  }
+  {
+    v1::AccessibilityListening* listening =
+        cases["accessibility_listening"].mutable_accessibility_listening();
+    listening->set_task_id(42);
+    listening->set_listening(true);
+  }
+  {
+    v1::AccessibilityAction* action =
+        cases["accessibility_set_selection"].mutable_accessibility_action();
+    action->set_task_id(42);
+    action->set_epoch(1);
+    action->set_node_id(2);
+    action->set_action(v1::NODE_ACTION_SET_SELECTION);
+    action->set_request_id(8);
+    action->set_selection_start(3);
+    action->set_selection_end(5);
+  }
+  {
+    v1::AccessibilityTree* tree = cases["accessibility_tree_text"].mutable_accessibility_tree();
+    tree->set_task_id(42);
+    tree->set_epoch(1);
+    tree->add_root_ids(1);
+    v1::AccessibilityNode* field = tree->add_nodes();
+    field->set_id(2);
+    field->set_class_name("android.widget.EditText");
+    field->set_text("hi");
+    field->set_editable(true);
+    field->set_accessibility_focused(true);
+    field->set_text_selection_start(1);
+    field->set_text_selection_end(2);
+    field->set_has_text_selection(true);
+    tree->set_focused_id(2);
+    tree->set_accessibility_focused_id(2);
+  }
   {
     v1::AccessibilityTree* tree = cases["accessibility_tree_full"].mutable_accessibility_tree();
     tree->set_task_id(42);
@@ -762,6 +867,48 @@ std::map<std::string, v1::Envelope> Cases() {
     pointer->set_action(v1::POINTER_ACTION_DOWN);
     pointer->set_x(10.5f);
     pointer->set_y(20.25f);
+    v1::ReconfigureWidget* reconfigure =
+        cases["widget_reconfigure"].mutable_reconfigure_widget();
+    reconfigure->set_request_id(7);
+    reconfigure->set_widget_id(12);
+    v1::WidgetReconfigured* reconfigured =
+        cases["widget_reconfigured"].mutable_widget_reconfigured();
+    reconfigured->set_request_id(7);
+    reconfigured->set_widget_id(12);
+    reconfigured->set_finished(true);
+  }
+  {
+    v1::SpeakText* speak = cases["speak_text"].mutable_speak_text();
+    speak->set_request_id(3);
+    speak->set_text("hello");
+    speak->set_voice_id("aria");
+    speak->set_language_tag("en-US");
+    speak->set_rate(1.5f);
+    speak->set_pitch(0.8f);
+  }
+  {
+    v1::SpeechAudio* audio = cases["speech_audio"].mutable_speech_audio();
+    audio->set_request_id(3);
+    audio->set_sample_rate_hz(24000);
+    audio->set_channel_count(1);
+    audio->set_pcm(std::string("\x01\x00\x02\x00", 4));
+  }
+  {
+    v1::RecognitionEvent* event = cases["recognition_event"].mutable_recognition_event();
+    event->set_request_id(9);
+    event->set_kind(v1::RECOGNITION_EVENT_KIND_FINAL);
+    event->add_texts("hello world");
+    event->add_confidences(0.9f);
+  }
+  {
+    v1::SpellingResult* result = cases["spelling_result"].mutable_spelling_result();
+    result->set_request_id(5);
+    v1::SpellingMistake* mistake = result->add_texts()->add_mistakes();
+    mistake->set_start(6);
+    mistake->set_length(3);
+    mistake->add_suggestions("the");
+    mistake->set_recommended(true);
+    result->set_supported(true);
   }
   return cases;
 }

@@ -33,7 +33,8 @@ public sealed record InstalledAppInfo(
     ulong CacheBytes,
     byte[] IconPng,
     RunAsArmSwitch? RunAsArm = null,
-    string Root = "")
+    string Root = "",
+    string SharedUserId = "")
 {
     public ulong TotalBytes => AppBytes + DataBytes + CacheBytes;
 }
@@ -80,8 +81,9 @@ public sealed record RootReport(bool Done, string Level, string Message);
 /// never restart the app.</summary>
 public enum DpiScaling
 {
-    /// <summary>App for apps that say they handle a change of density themselves, System for
-    /// the others.</summary>
+    /// <summary>System for the apps on DSA's built-in list that break when their scale changes
+    /// while they run; for any other app, App if it says it handles a change of density
+    /// itself, System if not.</summary>
     Auto,
     /// <summary>The app redraws at the new monitor's scale. Android recreates the screen of an
     /// app that does not say it handles a change of density, and restores its state.</summary>
@@ -120,9 +122,57 @@ public static class DpiScalings
     };
 }
 
-/// <summary>Every app's window settings as dsa app-window reports them, and whether this build
-/// of Android scales an app the System (forced) way yet.</summary>
-public sealed record WindowSettingsList(IReadOnlyDictionary<string, AppWindowSetting> Apps, bool SystemForcedAvailable);
+/// <summary>Where a window shows an app that asks to fill the screen.</summary>
+public enum FullScreenPlace
+{
+    /// <summary>For one app, as the choice for every app says; for every app, DSA's own default
+    /// (the whole screen for a clear request, the window for bars hidden alone).</summary>
+    Default,
+    /// <summary>On the whole screen: the window fills its monitor, and its title bar shows at
+    /// the top edge.</summary>
+    Screen,
+    /// <summary>Inside the window: it keeps its size and its title bar.</summary>
+    Window,
+}
+
+/// <summary>The words dsa takes and reports for each <see cref="FullScreenPlace"/>.</summary>
+public static class FullScreenPlaces
+{
+    public static readonly IReadOnlyList<FullScreenPlace> All =
+        new[] { FullScreenPlace.Default, FullScreenPlace.Screen, FullScreenPlace.Window };
+
+    public static string Code(FullScreenPlace place) => place switch
+    {
+        FullScreenPlace.Screen => "screen",
+        FullScreenPlace.Window => "window",
+        _ => "default",
+    };
+
+    /// <summary>The choice dsa names; anything else, or nothing, is <paramref name="missing"/>.</summary>
+    public static FullScreenPlace Parse(string? code, FullScreenPlace missing = FullScreenPlace.Default) => code switch
+    {
+        "screen" => FullScreenPlace.Screen,
+        "window" => FullScreenPlace.Window,
+        "default" => FullScreenPlace.Default,
+        _ => missing,
+    };
+}
+
+/// <summary>A full screen choice the Apps page offers: what the list shows, and the choice.</summary>
+public sealed record FullScreenChoice(string Label, FullScreenPlace Place);
+
+/// <summary>Every app's window settings as dsa app-window reports them, whether this build of
+/// Android scales an app the System (forced) way yet, and the apps whose automatic choice is
+/// System: DSA's built-in list of apps that break when their density changes while they run.
+/// <paramref name="BelowTitleBarByDefault"/> is the apps that start below the title bar unless
+/// the user chose otherwise. <paramref name="DefaultFullScreen"/> and
+/// <paramref name="DefaultImmersive"/> are where every app without its own choice shows a clear
+/// full screen request and its bars hidden alone.</summary>
+public sealed record WindowSettingsList(IReadOnlyDictionary<string, AppWindowSetting> Apps, bool SystemForcedAvailable,
+    IReadOnlySet<string>? SystemScaledByDefault = null,
+    IReadOnlySet<string>? BelowTitleBarByDefault = null,
+    FullScreenPlace DefaultFullScreen = FullScreenPlace.Screen,
+    FullScreenPlace DefaultImmersive = FullScreenPlace.Window);
 
 /// <summary>A scaling choice the Apps page offers: what the list shows, the choice, and
 /// whether it does what it says yet.</summary>
@@ -130,9 +180,13 @@ public sealed record DpiScalingChoice(string Label, DpiScaling Scaling, bool Ava
 
 /// <summary>The user's window settings for one app, as dsa app-window reports them: whether
 /// its windows keep their size, the size they open at in density-independent pixels (null for
-/// the size Android gives the task), and how its windows follow a monitor of another scale.</summary>
+/// the size Android gives the task), how its windows follow a monitor of another scale, and
+/// whether the app starts below the title bar instead of drawing behind it.</summary>
 public sealed record AppWindowSetting(string Package, bool FixedSize, int? StartWidth, int? StartHeight,
-    DpiScaling DpiScaling = DpiScaling.Auto)
+    DpiScaling DpiScaling = DpiScaling.Auto,
+    FullScreenPlace FullScreen = FullScreenPlace.Default,
+    FullScreenPlace Immersive = FullScreenPlace.Default,
+    bool BelowTitleBar = false)
 {
     public static AppWindowSetting Default(string package) => new(package, false, null, null);
 
@@ -248,7 +302,8 @@ public sealed class AppsService
         Number(app, "cache_bytes"),
         Png(app, "icon_png"),
         ReadRunAsArm(app),
-        String(app, "root"));
+        String(app, "root"),
+        String(app, "shared_user_id"));
 
     /// <summary>The start of dsa's line for a root level the service did not set: the
     /// package, then the service's words.</summary>
@@ -332,7 +387,42 @@ public sealed class AppsService
         // A dsa that does not say counts as one whose Android cannot do it yet.
         var forced = json.TryGetProperty("system_forced_available", out var available)
             && available.ValueKind == JsonValueKind.True;
-        return new WindowSettingsList(ReadWindowSettings(json), forced);
+        // A dsa that does not name a list has none: every app's automatic choice is App, and
+        // no app starts below the title bar unless the user says so. One that does not name the
+        // defaults has DSA's own.
+        var defaults = json.TryGetProperty("defaults", out var named) && named.ValueKind == JsonValueKind.Object
+            ? named
+            : default;
+        return new WindowSettingsList(ReadWindowSettings(json), forced,
+            Packages(json, "system_scaled_by_default"), Packages(json, "below_title_bar_by_default"),
+            DefaultPlace(defaults, "fullscreen", FullScreenPlace.Screen),
+            DefaultPlace(defaults, "immersive", FullScreenPlace.Window));
+    }
+
+    /// <summary>A place the choice for every app names; <paramref name="builtin"/> for none,
+    /// or for one that is not a place.</summary>
+    private static FullScreenPlace DefaultPlace(JsonElement defaults, string name, FullScreenPlace builtin)
+    {
+        var code = defaults.ValueKind == JsonValueKind.Object ? String(defaults, name) : "";
+        var place = FullScreenPlaces.Parse(code, builtin);
+        return place == FullScreenPlace.Default ? builtin : place;
+    }
+
+    /// <summary>The packages a list of dsa's names; none when dsa does not name the list.</summary>
+    private static HashSet<string> Packages(JsonElement json, string name)
+    {
+        var packages = new HashSet<string>();
+        if (json.TryGetProperty(name, out var listed) && listed.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var package in listed.EnumerateArray())
+            {
+                if (package.ValueKind == JsonValueKind.String && package.GetString() is { Length: > 0 } text)
+                {
+                    packages.Add(text);
+                }
+            }
+        }
+        return packages;
     }
 
     private static IReadOnlyDictionary<string, AppWindowSetting> ReadWindowSettings(JsonElement json)
@@ -356,21 +446,40 @@ public sealed class AppsService
                 var scaling = app.TryGetProperty("dpi_scaling", out var code) && code.ValueKind == JsonValueKind.String
                     ? DpiScalings.Parse(code.GetString())
                     : DpiScaling.Auto;
-                settings[package] = new AppWindowSetting(package, Bool(app, "fixed_size"), width, height, scaling);
+                var fullScreen = FullScreenPlaces.Parse(String(app, "fullscreen"));
+                var immersive = FullScreenPlaces.Parse(String(app, "immersive"));
+                settings[package] = new AppWindowSetting(package, Bool(app, "fixed_size"), width, height, scaling,
+                    fullScreen, immersive, Bool(app, "below_title_bar"));
             }
         }
         return settings;
     }
 
+    /// <summary>Starts <paramref name="package"/> below the title bar (<paramref name="on"/>) or
+    /// lets it draw behind it, and returns the app's window settings as the service now has
+    /// them. Its other window settings stay as they are.</summary>
+    public async Task<AppWindowSetting> SetBelowTitleBarAsync(string package, bool on)
+    {
+        var json = await RunJsonAsync("app-window", package, "--below-title-bar", on ? "on" : "off")
+            .ConfigureAwait(true);
+        return ReadWindowSettings(json).TryGetValue(package, out var now)
+            ? now
+            : AppWindowSetting.Default(package) with { BelowTitleBar = on };
+    }
+
     /// <summary>Replaces the window settings of one app, and returns them as the service now
-    /// has them.</summary>
+    /// has them. Whether the app starts below the title bar is not sent, so an app the user
+    /// never chose for keeps following DSA's own list; <see cref="SetBelowTitleBarAsync"/>
+    /// changes it.</summary>
     public async Task<AppWindowSetting> SetWindowSettingAsync(AppWindowSetting setting)
     {
         var json = await RunJsonAsync(
             "app-window", setting.Package,
             "--fixed-size", setting.FixedSize ? "on" : "off",
             "--start-size", setting.StartSizeArgument,
-            "--dpi-scaling", DpiScalings.Code(setting.DpiScaling)).ConfigureAwait(true);
+            "--dpi-scaling", DpiScalings.Code(setting.DpiScaling),
+            "--fullscreen", FullScreenPlaces.Code(setting.FullScreen),
+            "--immersive", FullScreenPlaces.Code(setting.Immersive)).ConfigureAwait(true);
         return ReadWindowSettings(json).TryGetValue(setting.Package, out var now)
             ? now
             : AppWindowSetting.Default(setting.Package);
@@ -400,6 +509,14 @@ public sealed class AppsService
         }
         var json = Parse(result.Output);
         return new RunAsArmReport(String(json, "status") == "done", String(json, "status"), String(json, "message"), Bool(json, "on"));
+    }
+
+    /// <summary>Puts a shortcut to <paramref name="package"/> on the desktop, as the app's
+    /// Start menu entry opens it; returns where it is.</summary>
+    public async Task<string> CreateDesktopShortcutAsync(string package)
+    {
+        var json = await RunJsonAsync("apps", "desktop-shortcut", package).ConfigureAwait(true);
+        return String(json, "path");
     }
 
     /// <summary>Uninstalls <paramref name="package"/>. A refusal by Android is a report with its
@@ -436,18 +553,43 @@ public sealed record AppRow(
     int StartSizeIndex = 0,
     int DpiScalingIndex = 0,
     string? DpiScalingTip = null,
+    int FullScreenIndex = 0,
+    int ImmersiveIndex = 0,
     bool RunAsArm = false,
     bool CanRunAsArm = false,
     string? RunAsArmTip = null,
     bool IsHighlighted = false,
     int RootIndex = -1,
     bool CanChangeRoot = false,
-    string? RootTip = null)
+    string? RootTip = null,
+    string? RootGroupNote = null,
+    IReadOnlyList<DpiScalingChoice>? DpiScalingChoices = null,
+    bool BelowTitleBar = false,
+    bool IsExpanded = false)
 {
     public bool NoIcon => Icon is null;
 
+    /// <summary>Whether the page says why the app's root level cannot be chosen.</summary>
+    public bool HasRootTip => RootTip is not null;
+
+    /// <summary>Whether the app shares its user ID with other apps, so the page says that
+    /// their root level is one setting.</summary>
+    public bool HasRootGroupNote => RootGroupNote is not null;
+
     /// <summary>Whether the page says why the app cannot run as ARM.</summary>
     public bool HasRunAsArmTip => RunAsArmTip is not null;
+}
+
+/// <summary>The words of a setting on the page.</summary>
+public static class SettingText
+{
+    /// <summary>The first line of a text that says more over several lines: the line a setting
+    /// shows under its name, while the whole text stays its tool tip. A one-line text is itself.</summary>
+    public static string FirstLine(string text)
+    {
+        var end = text.IndexOfAny(new[] { '\r', '\n' });
+        return (end < 0 ? text : text[..end]).Trim();
+    }
 }
 
 /// <summary>A root level the Apps page offers: what the list shows, and the level.</summary>
@@ -462,8 +604,13 @@ public sealed class AppsViewModel : ObservableObject
     private IReadOnlyList<InstalledAppInfo>? _apps;
     private IReadOnlyDictionary<string, AppWindowSetting> _windows = new Dictionary<string, AppWindowSetting>();
     private bool _systemForcedAvailable;
+    private IReadOnlySet<string> _systemScaledByDefault = new HashSet<string>();
+    private IReadOnlySet<string> _belowTitleBarByDefault = new HashSet<string>();
+    private FullScreenPlace _defaultFullScreen = FullScreenPlace.Screen;
+    private FullScreenPlace _defaultImmersive = FullScreenPlace.Window;
     private string _search = "";
     private string? _highlighted;
+    private readonly HashSet<string> _expanded = new(StringComparer.Ordinal);
     private string? _error;
     private string? _message;
     private bool _busy;
@@ -522,6 +669,8 @@ public sealed class AppsViewModel : ObservableObject
     public void Highlight(string package)
     {
         _highlighted = package;
+        // The user came for this app's settings, so its card is open.
+        _expanded.Add(package);
         if (_search.Length > 0 && !Matches(package, _search.Trim()))
         {
             _search = "";
@@ -531,6 +680,22 @@ public sealed class AppsViewModel : ObservableObject
         Changed(nameof(Rows));
         Changed(nameof(HasNoMatches));
         Changed(nameof(Count));
+    }
+
+    /// <summary>Remembers whether the user opened or closed the card of
+    /// <paramref name="package"/>. Every change to an app reads the list again and the page
+    /// draws its cards anew, so without this a card closed under the user each time one of its
+    /// options changed. It changes no row, so the page does not draw the list again for it.</summary>
+    public void SetExpanded(string package, bool expanded)
+    {
+        if (expanded)
+        {
+            _expanded.Add(package);
+        }
+        else
+        {
+            _expanded.Remove(package);
+        }
     }
 
     /// <summary>Whether the app <paramref name="package"/> is among the apps the search
@@ -553,20 +718,50 @@ public sealed class AppsViewModel : ObservableObject
             ? string.Format(culture ?? CultureInfo.CurrentCulture, "{0:0} KB", Math.Ceiling(bytes / 1024.0))
             : Format.Size(bytes / 1024, culture);
 
-    /// <summary>The apps the search matches, by name.</summary>
+    /// <summary>The apps the search matches, by name. Apps that share a user ID are one group:
+    /// the group is listed together, in the place of its first app by name, and a search that
+    /// finds one of them shows them all.</summary>
     public IReadOnlyList<AppRow> Rows
     {
         get
         {
             var query = _search.Trim();
-            return (_apps ?? Array.Empty<InstalledAppInfo>())
-                .Where(a => query.Length == 0
-                    || a.Label.Contains(query, StringComparison.CurrentCultureIgnoreCase)
-                    || a.Package.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(a => a.Label.Length > 0 ? a.Label : a.Package, StringComparer.CurrentCultureIgnoreCase)
+            var apps = _apps ?? Array.Empty<InstalledAppInfo>();
+            bool Found(InstalledAppInfo a) => query.Length == 0
+                || a.Label.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+                || a.Package.Contains(query, StringComparison.OrdinalIgnoreCase);
+            string Name(InstalledAppInfo a) => a.Label.Length > 0 ? a.Label : a.Package;
+            string GroupName(InstalledAppInfo a) => SharedWith(a).Append(a)
+                .Select(Name)
+                .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
+                .First();
+            return apps
+                .Where(a => Found(a) || SharedWith(a).Any(Found))
+                .OrderBy(GroupName, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(a => a.SharedUserId, StringComparer.Ordinal)
+                .ThenBy(Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(Row)
                 .ToList();
         }
+    }
+
+    /// <summary>The other apps that share <paramref name="app"/>'s user ID, by name.</summary>
+    private IEnumerable<InstalledAppInfo> SharedWith(InstalledAppInfo app) =>
+        app.SharedUserId.Length == 0
+            ? Enumerable.Empty<InstalledAppInfo>()
+            : (_apps ?? Array.Empty<InstalledAppInfo>())
+                .Where(other => other.SharedUserId == app.SharedUserId && other.Package != app.Package)
+                .OrderBy(other => other.Label.Length > 0 ? other.Label : other.Package, StringComparer.CurrentCultureIgnoreCase);
+
+    /// <summary>What the page says under an app's root level when it shares its user ID with
+    /// other apps: which apps, and that their level is one setting; null for an app with a
+    /// user ID of its own.</summary>
+    public string? RootGroupNoteOf(InstalledAppInfo app)
+    {
+        var others = SharedWith(app).Select(other => other.Label.Length > 0 ? other.Label : other.Package).ToList();
+        return others.Count == 0
+            ? null
+            : string.Format(CultureInfo.CurrentCulture, _text.Get("Apps_RootGroup"), string.Join(", ", others));
     }
 
     /// <summary>The start sizes the page offers: Android's own, then phone and tablet sizes, in
@@ -592,6 +787,27 @@ public sealed class AppsViewModel : ObservableObject
             : new DpiScalingChoice(_text.Get($"Apps_DpiScaling_{scaling}"), scaling, true))
         .ToList();
 
+    /// <summary>The scaling choices the page offers for <paramref name="package"/>: those of
+    /// <see cref="DpiScalingChoices"/>, with the automatic one named System for an app on DSA's
+    /// built-in list of apps that break when their density changes while they run.</summary>
+    public IReadOnlyList<DpiScalingChoice> DpiScalingChoicesOf(string package)
+    {
+        var choices = DpiScalingChoices;
+        if (!SystemScaledByDefault(package))
+        {
+            return choices;
+        }
+        return choices
+            .Select(choice => choice.Scaling == DpiScaling.Auto
+                ? choice with { Label = _text.Get("Apps_DpiScaling_AutoSystem") }
+                : choice)
+            .ToList();
+    }
+
+    /// <summary>Whether DSA scales <paramref name="package"/> the System way unless the user
+    /// chose otherwise, because the app breaks when its density changes while it runs.</summary>
+    public bool SystemScaledByDefault(string package) => _systemScaledByDefault.Contains(package);
+
     /// <summary>Whether this build of Android scales an app the System (forced) way yet.</summary>
     public bool SystemForcedAvailable => _systemForcedAvailable;
 
@@ -602,9 +818,17 @@ public sealed class AppsViewModel : ObservableObject
             ? _text.Get("Apps_DpiScaling_SystemForcedTip")
             : null;
 
+    /// <summary>Whether DSA starts <paramref name="package"/> below the title bar unless the
+    /// user chose otherwise.</summary>
+    public bool BelowTitleBarByDefault(string package) => _belowTitleBarByDefault.Contains(package);
+
+    /// <summary>The window settings of an app the user chose nothing for.</summary>
+    private AppWindowSetting DefaultOf(string package) =>
+        AppWindowSetting.Default(package) with { BelowTitleBar = BelowTitleBarByDefault(package) };
+
     /// <summary>The window settings of <paramref name="package"/>.</summary>
     public AppWindowSetting WindowOf(string package) =>
-        _windows.TryGetValue(package, out var setting) ? setting : AppWindowSetting.Default(package);
+        _windows.TryGetValue(package, out var setting) ? setting : DefaultOf(package);
 
     /// <summary>Where a start size is among <see cref="StartSizeChoices"/>; -1, none of them,
     /// for a size set another way (with dsa app-window).</summary>
@@ -650,13 +874,19 @@ public sealed class AppsViewModel : ObservableObject
             StartSizeIndexOf(WindowOf(app.Package)),
             (int)WindowOf(app.Package).DpiScaling,
             DpiScalingTipOf(WindowOf(app.Package)),
+            (int)WindowOf(app.Package).FullScreen,
+            (int)WindowOf(app.Package).Immersive,
             arm.On,
             arm.Available,
             RunAsArmTipOf(arm),
             app.Package == _highlighted,
             RootLevels.Parse(app.Root) is { } level ? (int)level : -1,
             RootLevels.Parse(app.Root) is not null,
-            RootTipOf(app.Root));
+            RootTipOf(app.Root),
+            RootGroupNoteOf(app),
+            DpiScalingChoicesOf(app.Package),
+            WindowOf(app.Package).BelowTitleBar,
+            _expanded.Contains(app.Package));
     }
 
     /// <summary>The root levels the page offers, in the order of <see cref="RootLevel"/>.</summary>
@@ -742,20 +972,31 @@ public sealed class AppsViewModel : ObservableObject
             var list = await _service.WindowSettingsAsync().ConfigureAwait(true);
             _windows = list.Apps;
             _systemForcedAvailable = list.SystemForcedAvailable;
+            _systemScaledByDefault = list.SystemScaledByDefault ?? new HashSet<string>();
+            _belowTitleBarByDefault = list.BelowTitleBarByDefault ?? new HashSet<string>();
+            _defaultFullScreen = Placed(list.DefaultFullScreen, FullScreenPlace.Screen);
+            _defaultImmersive = Placed(list.DefaultImmersive, FullScreenPlace.Window);
         }
         catch (DsaException e) when (e.Problem == Problem.Refused)
         {
             _windows = new Dictionary<string, AppWindowSetting>();
             _systemForcedAvailable = false;
+            _systemScaledByDefault = new HashSet<string>();
+            _belowTitleBarByDefault = new HashSet<string>();
         }
         return null;
     }, reload: false);
 
-    private Task SetWindowAsync(AppWindowSetting wanted) => Run(async () =>
+    private Task SetWindowAsync(AppWindowSetting wanted) =>
+        ChangeWindowAsync(() => _service.SetWindowSettingAsync(wanted));
+
+    /// <summary>Makes a change to one app's window settings, keeps what the service has now,
+    /// and says that the app's windows follow it.</summary>
+    private Task ChangeWindowAsync(Func<Task<AppWindowSetting>> change) => Run(async () =>
     {
-        var now = await _service.SetWindowSettingAsync(wanted).ConfigureAwait(true);
+        var now = await change().ConfigureAwait(true);
         var windows = new Dictionary<string, AppWindowSetting>(_windows);
-        if (now == AppWindowSetting.Default(now.Package))
+        if (now == DefaultOf(now.Package))
         {
             windows.Remove(now.Package);
         }
@@ -771,6 +1012,14 @@ public sealed class AppsViewModel : ObservableObject
     /// at. Windows that open from now on follow it.</summary>
     public Task SetResizableAsync(string package, bool resizable) =>
         SetWindowAsync(WindowOf(package) with { FixedSize = !resizable });
+
+    /// <summary>Starts the app below the title bar, or lets it draw behind it: for an app whose
+    /// top bar is squeezed or hidden under the title bar. The app's window follows it the next
+    /// time it opens. Choosing what the app has already sends nothing.</summary>
+    public Task SetBelowTitleBarAsync(string package, bool on) =>
+        WindowOf(package).BelowTitleBar == on
+            ? Task.CompletedTask
+            : ChangeWindowAsync(() => _service.SetBelowTitleBarAsync(package, on));
 
     /// <summary>Opens the app's windows at the start size at <paramref name="index"/> of
     /// <see cref="StartSizeChoices"/>.</summary>
@@ -806,6 +1055,99 @@ public sealed class AppsViewModel : ObservableObject
             return Task.CompletedTask;
         }
         return SetWindowAsync(current with { DpiScaling = scaling });
+    }
+
+    /// <summary>Where an app's clear full screen request can show, in the order of
+    /// <see cref="FullScreenPlace"/>: as the choice for every app, on the whole screen, or inside
+    /// its window. The first says where the choice for every app shows it now.</summary>
+    public IReadOnlyList<FullScreenChoice> FullScreenChoices => ChoicesFollowing(_defaultFullScreen);
+
+    /// <summary>Where an app hiding both its bars alone can show, in the same order as
+    /// <see cref="FullScreenChoices"/>. The first says where the choice for every app shows it
+    /// now.</summary>
+    public IReadOnlyList<FullScreenChoice> ImmersiveChoices => ChoicesFollowing(_defaultImmersive);
+
+    /// <summary>Where every app without its own choice shows a clear full screen request now.</summary>
+    public FullScreenPlace DefaultFullScreen => _defaultFullScreen;
+
+    /// <summary>Where every app without its own choice shows its bars hidden alone now.</summary>
+    public FullScreenPlace DefaultImmersive => _defaultImmersive;
+
+    /// <summary>The full screen places, the first named after <paramref name="now"/>, where it
+    /// takes an app that follows the default: "Follow the default (inside the window)".</summary>
+    private IReadOnlyList<FullScreenChoice> ChoicesFollowing(FullScreenPlace now) => FullScreenPlaces.All
+        .Select(place => new FullScreenChoice(
+            place == FullScreenPlace.Default
+                ? _text.Get($"Apps_FullScreen_Default{now}")
+                : _text.Get($"Apps_FullScreen_{place}"),
+            place))
+        .ToList();
+
+    /// <summary>A place for the choice for every app: <paramref name="builtin"/> for
+    /// <see cref="FullScreenPlace.Default"/>, which that choice never is.</summary>
+    private static FullScreenPlace Placed(FullScreenPlace place, FullScreenPlace builtin) =>
+        place == FullScreenPlace.Default ? builtin : place;
+
+    /// <summary>Follows the Display page's choices for every app: the first item of each app's
+    /// full screen lists says where they take it now. The lists change only when a choice
+    /// does.</summary>
+    public void FollowFullScreenDefaults(FullScreenPlace fullScreen, FullScreenPlace immersive)
+    {
+        fullScreen = Placed(fullScreen, FullScreenPlace.Screen);
+        immersive = Placed(immersive, FullScreenPlace.Window);
+        if (fullScreen == _defaultFullScreen && immersive == _defaultImmersive)
+        {
+            return;
+        }
+        _defaultFullScreen = fullScreen;
+        _defaultImmersive = immersive;
+        // The rows are made again with the lists, so each one shows its choice in the new list.
+        ChangedAll();
+    }
+
+    /// <summary>Keeps the full screen lists in step with <paramref name="settings"/>, the
+    /// Display page's choices for every app, from the time they are read.</summary>
+    public void Follow(SettingsViewModel settings)
+    {
+        void Update()
+        {
+            if (settings.Loaded)
+            {
+                FollowFullScreenDefaults(settings.AppFullScreenDefault, settings.AppImmersiveDefault);
+            }
+        }
+        settings.PropertyChanged += (_, _) => Update();
+        Update();
+    }
+
+    /// <summary>Shows the app's clear full screen request the way at <paramref name="index"/> of
+    /// <see cref="FullScreenChoices"/>. The windows open already follow it at once.</summary>
+    public Task SetFullScreenAsync(string package, int index)
+    {
+        if (index < 0 || index >= FullScreenPlaces.All.Count)
+        {
+            return Task.CompletedTask;
+        }
+        var place = FullScreenPlaces.All[index];
+        var current = WindowOf(package);
+        return current.FullScreen == place
+            ? Task.CompletedTask
+            : SetWindowAsync(current with { FullScreen = place });
+    }
+
+    /// <summary>Shows the app hiding both its bars alone the way at <paramref name="index"/> of
+    /// <see cref="FullScreenChoices"/>.</summary>
+    public Task SetImmersiveAsync(string package, int index)
+    {
+        if (index < 0 || index >= FullScreenPlaces.All.Count)
+        {
+            return Task.CompletedTask;
+        }
+        var place = FullScreenPlaces.All[index];
+        var current = WindowOf(package);
+        return current.Immersive == place
+            ? Task.CompletedTask
+            : SetWindowAsync(current with { Immersive = place });
     }
 
     /// <summary>The name an app goes by on the page.</summary>
@@ -870,6 +1212,14 @@ public sealed class AppsViewModel : ObservableObject
     {
         await _service.OpenSettingsAsync(package).ConfigureAwait(true);
         return null;
+    }, reload: false);
+
+    /// <summary>Puts a shortcut to the app on the desktop, which opens it as its Start menu
+    /// entry does and goes when the app is uninstalled.</summary>
+    public Task CreateDesktopShortcutAsync(string package) => Run(async () =>
+    {
+        await _service.CreateDesktopShortcutAsync(package).ConfigureAwait(true);
+        return string.Format(CultureInfo.CurrentCulture, _text.Get("Apps_DesktopShortcutMade"), LabelOf(package));
     }, reload: false);
 
     /// <summary>Opens Android's own list of every app.</summary>

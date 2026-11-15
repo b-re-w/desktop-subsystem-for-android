@@ -16,9 +16,9 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Style="{StaticResource PageContent}">
                 <ui:InfoBar Title="{l:Text SettingsErrorBar.Title}" Severity="Error" IsClosable="False"
-                            IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" Margin="0,0,0,4" />
+                            IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" />
 
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Globe24}">
+                <ui:CardControl Icon="{ui:SymbolIcon Globe24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text NetworkStatusCard.Header}" Style="{StaticResource CardTitle}" />
@@ -29,9 +29,9 @@
                                Click="OnRefresh" />
                 </ui:CardControl>
                 <ui:InfoBar Title="{l:Text NetworkProblemBar.Title}" Severity="Warning" IsClosable="False"
-                            IsOpen="{Binding HasNetworkProblem, Mode=OneWay}" Message="{Binding NetworkProblem, Mode=OneWay}" Margin="0,0,0,4" />
+                            IsOpen="{Binding HasNetworkProblem, Mode=OneWay}" Message="{Binding NetworkProblem, Mode=OneWay}" />
 
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Info24}"
+                <ui:CardControl Icon="{ui:SymbolIcon Info24}"
                                 Visibility="{Binding HasNetworkDetails, Converter={StaticResource Visible}}">
                     <ui:CardControl.Header>
                         <Grid>
@@ -45,17 +45,20 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Text NetworkAddressLabel.Text}" Margin="0,0,16,4" />
-                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkAddresses, Mode=OneWay}" />
+                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkAddresses, Mode=OneWay}"
+                                     AutomationProperties.Name="{l:Text NetworkAddressLabel.Text}" />
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Text NetworkDnsLabel.Text}" Margin="0,0,16,4" />
-                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkDns, Mode=OneWay}" />
+                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" Text="{Binding NetworkDns, Mode=OneWay}"
+                                     AutomationProperties.Name="{l:Text NetworkDnsLabel.Text}" />
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Text NetworkGatewayLabel.Text}" Margin="0,0,16,0" />
-                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="2" Grid.Column="1" Text="{Binding NetworkGateway, Mode=OneWay}" />
+                            <TextBox Style="{StaticResource SelectableText}" Grid.Row="2" Grid.Column="1" Text="{Binding NetworkGateway, Mode=OneWay}"
+                                     AutomationProperties.Name="{l:Text NetworkGatewayLabel.Text}" />
                         </Grid>
                     </ui:CardControl.Header>
                 </ui:CardControl>
 
                 <TextBlock Text="{l:Text NetworkAdvancedHeader.Text}" Style="{StaticResource SectionHeader}" />
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon PlugConnected24}">
+                <ui:CardControl Icon="{ui:SymbolIcon PlugConnected24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text AdvancedNetworkingCard.Header}" Style="{StaticResource CardTitle}" />
@@ -63,14 +66,50 @@
                         </StackPanel>
                     </ui:CardControl.Header>
                     <ui:ToggleSwitch x:Name="AdvancedNetworkingSwitch" IsChecked="{Binding AdvancedNetworking, Mode=OneWay}"
-                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnAdvancedNetworkingToggled" />
+                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnAdvancedNetworkingToggled"
+                                     AutomationProperties.Name="{l:Text AdvancedNetworkingCard.Header}" />
                 </ui:CardControl>
                 <ui:InfoBar Title="{l:Text NetworkRestartBar.Title}" Message="{l:Text NetworkRestartBar.Message}"
                             Severity="Informational" IsClosable="False"
-                            IsOpen="{Binding NetworkRestartNeeded, Mode=OneWay}" Margin="0,0,0,4" />
+                            IsOpen="{Binding NetworkRestartNeeded, Mode=OneWay}" />
+
+                <!-- The root certificates a user or an administrator added to this PC, which
+                     Android trusts while the switch is on. The change applies at once. -->
+                <TextBlock Text="{l:Text NetworkCertificatesHeader.Text}" Style="{StaticResource SectionHeader}" />
+                <ui:CardControl Icon="{ui:SymbolIcon ShieldCheckmark24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="{l:Text HostCertificatesCard.Header}" Style="{StaticResource CardTitle}" />
+                            <TextBlock Text="{l:Text HostCertificatesCard.Description}" Style="{StaticResource CardDescription}" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:ToggleSwitch x:Name="HostCertificatesSwitch" IsChecked="{Binding HostCertificates, Mode=OneWay}"
+                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnHostCertificatesToggled"
+                                     AutomationProperties.Name="{l:Text HostCertificatesCard.Header}" />
+                </ui:CardControl>
+                <TextBlock Text="{l:Text CertificatesNone.Text}" Style="{StaticResource Note}"
+                           Visibility="{Binding HasNoImportedCertificates, Converter={StaticResource Visible}}" />
+                <l:RowList ItemsSource="{Binding ImportedCertificates, Mode=OneWay}">
+                    <l:RowList.ItemTemplate>
+                        <DataTemplate>
+                            <ui:CardControl Icon="{ui:SymbolIcon Certificate24}"
+                                            ToolTip="{Binding Location, TargetNullValue={x:Null}}"
+                                            AutomationProperties.Name="{Binding Subject}"
+                                            AutomationProperties.HelpText="{Binding SourceText}">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Subject}" Style="{StaticResource CardTitle}" />
+                                        <TextBlock Text="{Binding IssuedByText}" Style="{StaticResource CardDescription}" />
+                                        <TextBlock Text="{Binding SourceText}" Style="{StaticResource CardDescription}" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                            </ui:CardControl>
+                        </DataTemplate>
+                    </l:RowList.ItemTemplate>
+                </l:RowList>
 
                 <TextBlock Text="{l:Text DeveloperHeader.Text}" Style="{StaticResource SectionHeader}" />
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon DeveloperBoard24}">
+                <ui:CardControl Icon="{ui:SymbolIcon DeveloperBoard24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text DeveloperModeCard.Header}" Style="{StaticResource CardTitle}" />
@@ -78,9 +117,10 @@
                         </StackPanel>
                     </ui:CardControl.Header>
                     <ui:ToggleSwitch x:Name="DeveloperModeSwitch" IsChecked="{Binding DeveloperMode, Mode=OneWay}"
-                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnDeveloperModeToggled" />
+                                     IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnDeveloperModeToggled"
+                                     AutomationProperties.Name="{l:Text DeveloperModeCard.Header}" />
                 </ui:CardControl>
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon ArrowSync24}">
+                <ui:CardControl Icon="{ui:SymbolIcon ArrowSync24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text AdbAutoConnectCard.Header}" Style="{StaticResource CardTitle}" />
@@ -93,7 +133,7 @@
                                      IsEnabled="{Binding CanChange, Mode=OneWay}" Click="OnAdbAutoConnectToggled"
                                      AutomationProperties.Name="{l:Text AdbAutoConnectCard.Header}" />
                 </ui:CardControl>
-                <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon PlugConnected24}">
+                <ui:CardControl Icon="{ui:SymbolIcon PlugConnected24}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <TextBlock Text="{l:Text AdbCard.Header}" Style="{StaticResource CardTitle}" />
@@ -105,10 +145,12 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:Name="AdbCommand" Style="{StaticResource SelectableCode}" VerticalAlignment="Center"
-                                             Text="{Binding AdbConnect, Mode=OneWay}" />
+                                             Text="{Binding AdbConnect, Mode=OneWay}"
+                                             AutomationProperties.Name="{l:Text AdbCard.Header}" />
                                     <ui:Button x:Name="AdbCopyButton" Grid.Column="1" Margin="8,0,0,0" MinWidth="32" Width="32" Height="32" Padding="0"
                                                Appearance="Transparent" Icon="{ui:SymbolIcon Copy24}" Click="OnCopyAdbCommand"
-                                               ToolTip="{l:Text CopyButton.ToolTip}" AutomationProperties.Name="{l:Text CopyButton.ToolTip}" />
+                                               ToolTip="{l:Text CopyButton.ToolTip}"
+                                               AutomationProperties.Name="{l:ItemName CopyButton.ToolTip, Item=AdbCard.Header}" />
                                 </Grid>
                             </Border>
                         </StackPanel>

@@ -39,4 +39,11 @@
     <Resource Include="assets\logo.png" />
     <Resource Include="assets\logo.ico" />
   </ItemGroup>
+
+  <!-- The settings app's choice of interface language from the display language: setup shows
+       the same one of the fourteen languages as the settings app on the same machine. It is
+       plain C# that builds for .NET Framework as well, so setup compiles the one file in. -->
+  <ItemGroup>
+    <Compile Include="..\..\settings\DsaSettings.Core\UiLanguage.cs" Link="Shared\UiLanguage.cs" />
+  </ItemGroup>
 </Project>

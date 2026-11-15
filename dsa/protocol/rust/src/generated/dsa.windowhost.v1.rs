@@ -46,6 +46,10 @@ pub struct Attach {
     /// window manager: the app is then started in Android if it has no task yet.
     #[prost(bool, tag = "3")]
     pub launch: bool,
+    /// With `launch`: start this shortcut of the app (its jump list task or desktop shortcut)
+    /// rather than the app itself. Empty for the app.
+    #[prost(string, tag = "4")]
+    pub shortcut_id: ::prost::alloc::string::String,
 }
 /// Window manager to window host: the answer to Attach.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -304,6 +308,10 @@ pub struct ClientRect {
 /// band inside `interactive` (the app's controls there, in client pixels) go to the app; the
 /// rest of the band still drags the window. Sent when it changes; a window opens with the
 /// window's own title bar.
+///
+/// `below` says the task's app starts below the title bar (the user's setting for the app):
+/// the app draws nothing of its own in the band, and the window paints the band opaque, in
+/// the color the app's frame has there. `app_drawn` is never set with it.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SetCaptionMode {
     #[prost(int32, tag = "1")]
@@ -312,6 +320,8 @@ pub struct SetCaptionMode {
     pub app_drawn: bool,
     #[prost(message, repeated, tag = "3")]
     pub interactive: ::prost::alloc::vec::Vec<ClientRect>,
+    #[prost(bool, tag = "4")]
+    pub below: bool,
 }
 /// Window manager to window host: whether the task has somewhere to go back to (it is past
 /// its first screen). While it has, the title bar shows a back arrow in the place of the app's
@@ -347,6 +357,38 @@ pub struct AppIcon {
     #[prost(bytes = "vec", tag = "2")]
     pub caption_icon_png: ::prost::alloc::vec::Vec<u8>,
 }
+/// Window manager to window host: the app's media session, for the media buttons (previous,
+/// play or pause, next) in the taskbar preview of each of its windows. Sent when the window
+/// host attaches while the app has a session, whenever the session's playback state or allowed
+/// actions change, and once with `active` false when the session ends, which hides the buttons.
+/// About the app, like AppIcon.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AppMedia {
+    /// Whether the app has an active media session.
+    #[prost(bool, tag = "1")]
+    pub active: bool,
+    /// Whether it plays now: the middle button then pauses, otherwise it plays.
+    #[prost(bool, tag = "2")]
+    pub playing: bool,
+    /// What the session allows now. A button it does not allow is shown disabled.
+    #[prost(bool, tag = "3")]
+    pub can_previous: bool,
+    #[prost(bool, tag = "4")]
+    pub can_play: bool,
+    #[prost(bool, tag = "5")]
+    pub can_pause: bool,
+    #[prost(bool, tag = "6")]
+    pub can_next: bool,
+}
+/// Window host to window manager: the user clicked a media button in the taskbar preview of the
+/// task's window. The window manager sends the action to the app's media session.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MediaButtonPressed {
+    #[prost(int32, tag = "1")]
+    pub task_id: i32,
+    #[prost(enumeration = "MediaButton", tag = "2")]
+    pub button: i32,
+}
 /// Window host to window manager: the user chose an item of the task window's system menu.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MenuChosen {
@@ -364,6 +406,40 @@ pub struct SetCaptionTone {
     #[prost(enumeration = "CaptionTone", tag = "2")]
     pub tone: i32,
 }
+/// Window manager to window host: where the app has the overlay the window shows (`task_id`
+/// is the overlay's ID), and what the overlay takes. Sent with a window that opens in
+/// WINDOW_MODE_OVERLAY, right after its SetWindowMode, and whenever any of it changes, as when
+/// the app moves the overlay.
+///
+/// The window host places the windows of all of an app's overlays with one translation of
+/// Android's display onto the desktop, at the scale of TaskSize, so they keep the places their
+/// app gave them relative to each other. It first puts that translation where the overlay lies
+/// on its monitor as it lies on Android's display, a move the app makes moves the window by the
+/// same distance at that scale, and a move the user makes with the window's handle moves the
+/// translation, which the window host remembers for the app.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetOverlay {
+    #[prost(int32, tag = "1")]
+    pub task_id: i32,
+    /// The top left corner of the overlay's surface on Android's display, in its pixels.
+    #[prost(int32, tag = "2")]
+    pub left: i32,
+    #[prost(int32, tag = "3")]
+    pub top: i32,
+    /// The size of Android's display, in its pixels; 0 when unknown.
+    #[prost(uint32, tag = "4")]
+    pub display_width: u32,
+    #[prost(uint32, tag = "5")]
+    pub display_height: u32,
+    /// Whether the overlay may take the keyboard focus. The window takes it only then, and only
+    /// when the user clicks it; otherwise a click never activates the window.
+    #[prost(bool, tag = "6")]
+    pub focusable: bool,
+    /// Whether the overlay takes pointer input. The pointer passes through the window of one
+    /// that does not, to whatever is under it.
+    #[prost(bool, tag = "7")]
+    pub touchable: bool,
+}
 /// Window manager to window host: how the task's window is shown, as the app asks and the
 /// user's settings for the app say. Sent when the window opens unless the window is an
 /// ordinary resizable one, and on each change. The user's F11 turns full screen on or off
@@ -378,12 +454,26 @@ pub struct SetWindowMode {
     #[prost(bool, tag = "3")]
     pub resizable: bool,
 }
+/// Window manager to window host: the window opened for task `task_id` shows task
+/// `shown_task_id` from now on. After a GPU reset an app's task can end and the app start
+/// again; its new task then takes the window over, so the window keeps its place and its size.
+/// Every message on this connection still names the window by `task_id`. What the window sends
+/// Android itself, past the window manager (its pointer, key and text input, its accessibility
+/// watch and actions, a drag out of it), goes to `shown_task_id`, since the task the window
+/// opened for has ended. Sent again with each later takeover.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetShownTask {
+    #[prost(int32, tag = "1")]
+    pub task_id: i32,
+    #[prost(int32, tag = "2")]
+    pub shown_task_id: i32,
+}
 /// The one message type on the wire. Each frame carries exactly one.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Envelope {
     #[prost(
         oneof = "envelope::Body",
-        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 30, 31, 32, 33, 34, 35, 36, 60, 61, 62"
+        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 30, 31, 32, 33, 34, 35, 36, 60, 61, 62, 63, 64, 65, 66"
     )]
     pub body: ::core::option::Option<envelope::Body>,
 }
@@ -449,6 +539,14 @@ pub mod envelope {
         ImeEditor(super::ImeEditor),
         #[prost(message, tag = "62")]
         AppIcon(super::AppIcon),
+        #[prost(message, tag = "63")]
+        AppMedia(super::AppMedia),
+        #[prost(message, tag = "64")]
+        MediaButtonPressed(super::MediaButtonPressed),
+        #[prost(message, tag = "65")]
+        SetShownTask(super::SetShownTask),
+        #[prost(message, tag = "66")]
+        SetOverlay(super::SetOverlay),
     }
 }
 /// The protocol version. CURRENT goes up when the meaning of existing messages changes.
@@ -609,6 +707,42 @@ impl ImeInputKind {
         }
     }
 }
+/// A media button of a window's taskbar preview.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum MediaButton {
+    Unspecified = 0,
+    Previous = 1,
+    Play = 2,
+    Pause = 3,
+    Next = 4,
+}
+impl MediaButton {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "MEDIA_BUTTON_UNSPECIFIED",
+            Self::Previous => "MEDIA_BUTTON_PREVIOUS",
+            Self::Play => "MEDIA_BUTTON_PLAY",
+            Self::Pause => "MEDIA_BUTTON_PAUSE",
+            Self::Next => "MEDIA_BUTTON_NEXT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "MEDIA_BUTTON_UNSPECIFIED" => Some(Self::Unspecified),
+            "MEDIA_BUTTON_PREVIOUS" => Some(Self::Previous),
+            "MEDIA_BUTTON_PLAY" => Some(Self::Play),
+            "MEDIA_BUTTON_PAUSE" => Some(Self::Pause),
+            "MEDIA_BUTTON_NEXT" => Some(Self::Next),
+            _ => None,
+        }
+    }
+}
 /// An item of a task window's system menu that the window manager carries out.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -687,10 +821,15 @@ impl CaptionTone {
 pub enum WindowMode {
     /// An ordinary window with a title bar, which the user moves and resizes.
     Normal = 0,
-    /// The app asked to fill the screen: the window covers its whole monitor, with no title bar.
+    /// The window covers its whole monitor, as the app asked and the user's setting says, or as
+    /// the user's F11 chose. Its title bar shows only while the pointer is at the top edge.
     Fullscreen = 1,
     /// The app went into picture-in-picture: a small window that stays above the others.
     PictureInPicture = 2,
+    /// The window shows an app overlay window (floating lyrics, a chat head), not a task: it has
+    /// no border, no title bar and no close button, stays above the others, shows the desktop
+    /// through what the app left clear, is not in the taskbar, and goes where SetOverlay says.
+    Overlay = 3,
 }
 impl WindowMode {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -702,6 +841,7 @@ impl WindowMode {
             Self::Normal => "WINDOW_MODE_NORMAL",
             Self::Fullscreen => "WINDOW_MODE_FULLSCREEN",
             Self::PictureInPicture => "WINDOW_MODE_PICTURE_IN_PICTURE",
+            Self::Overlay => "WINDOW_MODE_OVERLAY",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -710,6 +850,7 @@ impl WindowMode {
             "WINDOW_MODE_NORMAL" => Some(Self::Normal),
             "WINDOW_MODE_FULLSCREEN" => Some(Self::Fullscreen),
             "WINDOW_MODE_PICTURE_IN_PICTURE" => Some(Self::PictureInPicture),
+            "WINDOW_MODE_OVERLAY" => Some(Self::Overlay),
             _ => None,
         }
     }

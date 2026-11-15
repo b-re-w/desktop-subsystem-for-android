@@ -32,19 +32,26 @@ use dsa_transport::TransportError;
 use windows_sys::Win32::Foundation::{CloseHandle, DuplicateHandle, DUPLICATE_SAME_ACCESS, HANDLE};
 use windows_sys::Win32::System::Threading::GetCurrentProcess;
 
-use super::{describe_frame_path, start_for, started_adapter, started_gpu, RENDERER_EXE};
+use dsa_host_core::graphics_state::GraphicsState;
+
+use super::{
+    describe_frame_path, graphics_state_of, start_with, started_adapter, started_gpu, RENDERER_EXE,
+};
 use crate::compositor::adapter::{DisplayPresenter, DisplaySink};
 use crate::compositor::log::{note, renderer_line, CompositorLogger};
 use crate::guid::Guid;
 use crate::pipe::{current_user_only_sddl, NamedPipeListener};
 use crate::render_gpu::{describe_outcome, GpuRequest};
 use crate::vm_listener::VmIdSlot;
+use crate::vulkan_driver::VulkanDriverSetting;
 
 /// No console window for the renderer.
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 /// How often the window manager looks whether the VM changed, to tell the renderer.
 const VM_POLL: Duration = Duration::from_millis(100);
+
+pub use dsa_host_core::renderer::describe_device_state;
 
 /// The compositor's stream renderer once the renderer runs in its own process: the
 /// compositor never takes a stream itself (`Compositor::without_graphics_streams`), so this
@@ -289,15 +296,24 @@ struct State {
     refused: HashSet<u32>,
 }
 
+/// Told what each renderer that starts runs on: the window manager passes it to the service
+/// and tells the user where they must act.
+pub type GraphicsListener = Box<dyn Fn(&GraphicsState) + Send + Sync>;
+
 /// The renderer process, as the compositor presents through it.
 pub struct RendererClient {
     request: GpuRequest,
+    vulkan: VulkanDriverSetting,
+    on_graphics: Option<GraphicsListener>,
     ports: (u32, u32),
     state: Mutex<State>,
     changed: Condvar,
     memory: Pending<MemoryReport>,
     process: RendererProcess,
     logger: Option<Arc<CompositorLogger>>,
+    /// How many times a renderer said its device was lost or made again: each DeviceState
+    /// is a change. Kept across renderer restarts, whose counts start from zero again.
+    device_changes: AtomicU64,
 }
 
 impl RendererClient {
@@ -309,14 +325,37 @@ impl RendererClient {
         process: RendererProcess,
         logger: Option<Arc<CompositorLogger>>,
     ) -> Arc<RendererClient> {
+        Self::with_vulkan(
+            request,
+            VulkanDriverSetting::Auto,
+            None,
+            ports,
+            process,
+            logger,
+        )
+    }
+
+    /// [`new`](Self::new), with the user's Vulkan driver setting, and `on_graphics` told what
+    /// each renderer runs on once it has started.
+    pub fn with_vulkan(
+        request: GpuRequest,
+        vulkan: VulkanDriverSetting,
+        on_graphics: Option<GraphicsListener>,
+        ports: (u32, u32),
+        process: RendererProcess,
+        logger: Option<Arc<CompositorLogger>>,
+    ) -> Arc<RendererClient> {
         Arc::new(RendererClient {
             request,
+            vulkan,
+            on_graphics,
             ports,
             state: Mutex::new(State::default()),
             changed: Condvar::new(),
             memory: Pending::new(),
             process,
             logger,
+            device_changes: AtomicU64::new(0),
         })
     }
 
@@ -474,7 +513,7 @@ impl RendererClient {
 
 impl RendererHandler for RendererClient {
     fn start(&self) -> Start {
-        start_for(&self.request, self.ports)
+        start_with(&self.request, self.vulkan, self.ports)
     }
 
     fn connected(&self, started: &Started, link: &RendererLink) {
@@ -482,6 +521,14 @@ impl RendererHandler for RendererClient {
         crate::scheduling::raise_this_thread();
         for line in &started.notes {
             self.log_line(line);
+        }
+        // Which Vulkan and why, once for each renderer that starts.
+        let graphics = graphics_state_of(started);
+        if !started.vulkan_driver_reason.is_empty() {
+            self.log_line(&format!("Vulkan: {}", started.vulkan_driver_reason));
+        }
+        if let Some(listener) = &self.on_graphics {
+            listener(&graphics);
         }
         match started_gpu(started) {
             Some(gpu) => self.log_line(&describe_outcome(&self.request, &gpu)),
@@ -536,6 +583,12 @@ impl RendererHandler for RendererClient {
                 }
             }
             Body::MemoryReport(report) => self.memory.complete(report.request, report),
+            Body::DeviceState(state) => {
+                // The window manager's thread looks at this within half a second and takes
+                // the change as a GPU reset, without waiting for its own device to fail.
+                self.device_changes.fetch_add(1, Ordering::SeqCst);
+                self.log_line(&describe_device_state(&state));
+            }
             Body::RendererLog(line) => {
                 let severity = u8::try_from(line.severity).unwrap_or(b'E');
                 if let Some(line) = renderer_line(severity, &line.message) {
@@ -592,7 +645,104 @@ impl DisplayPresenter for RendererClient {
         self.ask_memory(false)
     }
 
+    fn device_generation(&self) -> u64 {
+        self.device_changes.load(Ordering::SeqCst)
+    }
+
     fn give_back(&self) -> Option<RendererProcessMemory> {
         self.ask_memory(true)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dsa_protocol::renderer::types::DeviceState;
+
+    fn client() -> Arc<RendererClient> {
+        RendererClient::new(GpuRequest::Ranking, (0, 0), Arc::default(), None)
+    }
+
+    #[test]
+    fn pr3_each_started_renderer_says_what_it_runs_on_and_asks_with_the_setting() {
+        let heard: Arc<Mutex<Vec<GraphicsState>>> = Arc::default();
+        let into = Arc::clone(&heard);
+        let client = RendererClient::with_vulkan(
+            GpuRequest::Ranking,
+            VulkanDriverSetting::Dozen,
+            Some(Box::new(move |state: &GraphicsState| {
+                into.lock().unwrap().push(state.clone())
+            })),
+            (0, 0),
+            Arc::default(),
+            None,
+        );
+        let start = RendererHandler::start(&*client);
+        assert_eq!(
+            super::super::vulkan_driver_of(&start),
+            VulkanDriverSetting::Dozen
+        );
+        let mut started = Started::default();
+        super::super::report_vulkan_driver(
+            &mut started,
+            crate::vulkan_driver::DriverOutcome::None,
+            "install the pack",
+        );
+        RendererHandler::connected(&*client, &started, &RendererLink::detached());
+        assert_eq!(
+            *heard.lock().unwrap(),
+            vec![GraphicsState::Unavailable("install the pack".into())]
+        );
+    }
+
+    #[test]
+    fn nfr5_the_renderers_lost_device_reaches_the_window_manager_across_the_processes() {
+        let client = client();
+        let link = RendererLink::detached();
+        // Before, the window manager read 0 from a renderer in another process, whatever it did.
+        assert_eq!(DisplayPresenter::device_generation(&*client), 0);
+        let lost = DeviceState {
+            losses: 1,
+            generation: 0,
+        };
+        RendererHandler::message(&*client, Body::DeviceState(lost), &link);
+        let at_loss = DisplayPresenter::device_generation(&*client);
+        assert_ne!(at_loss, 0, "the loss is a change at once");
+        let made = DeviceState {
+            losses: 1,
+            generation: 1,
+        };
+        RendererHandler::message(&*client, Body::DeviceState(made), &link);
+        assert_ne!(DisplayPresenter::device_generation(&*client), at_loss);
+    }
+
+    #[test]
+    fn nfr5_a_restarted_renderers_counts_from_zero_still_change_what_is_followed() {
+        let client = client();
+        let link = RendererLink::detached();
+        let mut seen = vec![DisplayPresenter::device_generation(&*client)];
+        for (losses, generation) in [(1, 0), (1, 1), (1, 0)] {
+            let state = DeviceState { losses, generation };
+            RendererHandler::message(&*client, Body::DeviceState(state), &link);
+            seen.push(DisplayPresenter::device_generation(&*client));
+        }
+        assert!(seen.windows(2).all(|pair| pair[1] != pair[0]));
+    }
+
+    #[test]
+    fn nfr5_the_log_says_whether_the_device_was_lost_or_made_again() {
+        let lost = describe_device_state(&DeviceState {
+            losses: 2,
+            generation: 1,
+        });
+        assert!(lost.contains("lost (loss 2)"), "{lost}");
+        let made = describe_device_state(&DeviceState {
+            losses: 2,
+            generation: 2,
+        });
+        assert!(
+            made.contains("made its GPU device again (number 2"),
+            "{made}"
+        );
     }
 }

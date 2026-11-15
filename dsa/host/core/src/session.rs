@@ -101,11 +101,15 @@
 //! [`Session::watch_print_jobs`] watcher, which prints them on the host. Its outcome
 //! ([`Session::print_result`]) goes back to the guest. A job canceled in the guest, or one the
 //! guest's agent no longer has because it went away, is withdrawn from the watcher.
+//!
+//! The requests of the agent's text-to-speech engine, speech recognition service and spell
+//! checker go to the first [`Session::serve_language`] client, which answers them with the
+//! host's own services ([`crate::language`]); a request nobody serves fails at once.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::io::Read;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
@@ -116,11 +120,13 @@ use dsa_protocol::control::{self, envelope::Body};
 use dsa_transport::{Connection, FrameSender, Listener, TransportError};
 
 use crate::accessibility::{
-    AccessibilityWatch, ActionRequest, ActionResult, GuestAccessibility, TreeUpdate,
+    AccessibilityTarget, AccessibilityWatch, ActionRequest, ActionResult, GuestAccessibility,
+    TreeUpdate,
 };
 use crate::adb_bridge::{AdbBridge, BridgeStream, GuestAdb};
 use crate::adb_discovery::{AdbAdvertise, AdbServerLink, AutoConnectState, AutoConnectWatcher};
 use crate::apk::{self, InstallOutcome, InstallPart, InstalledPackage};
+use crate::app_audio::{self, AppAudioHub, AppAudioWatch, AppStream, VolumeChange};
 use crate::apps::UninstallOutcome;
 use crate::arm_translation::GuestArmTranslation;
 use crate::background::{
@@ -142,6 +148,7 @@ use crate::guest_log::{
 use crate::ime::{ImeCursor, ImeEditor, ImeEvent};
 use crate::input::{PointerAction, PointerEvent};
 use crate::keys::KeyEvent;
+use crate::language;
 use crate::links::{self, LinkGate};
 use crate::location::{LocationEvent, LocationHub, Wanted};
 use crate::memory::{GrowthAction, GuestMemory, GuestMemoryReport, GuestPressure, MemoryGrowth};
@@ -155,12 +162,17 @@ use crate::root_elevation::{AppLevel, Level};
 use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
-    AppInfo, AppSettingsPage, Bounds, StatusBarAppearance, Task, TaskEvent, TaskOrientation,
-    TaskRequest, TaskTable, TaskWatch,
+    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, OverlayWindow,
+    PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest,
+    TaskTable, TaskWatch,
 };
 use crate::widgets::{
     self, Placement, Widget, WidgetEvent, WidgetFrame, WidgetProvider, WidgetSize,
 };
+
+mod dns_port;
+mod host_services;
+pub use host_services::{KeyMintKeyState, RestoreOutcome};
 
 /// Where the session is in its life.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -209,6 +221,11 @@ pub enum StopReason {
     },
     /// The agent connected but the handshake refused it.
     HandshakeRejected(String),
+    /// The agent connected, but it belongs to another DSA release: it speaks another version
+    /// of the control protocol, or one built from another definition. `why` is the
+    /// handshake's account of it. Its image does not fit this host, which is what happens to
+    /// the boot that still runs the image from before an update.
+    GuestFromOtherRelease(String),
     /// The host could not listen for the agent.
     ListenerFailed(String),
     /// The control channel was lost while the session was active.
@@ -244,6 +261,11 @@ impl fmt::Display for StopReason {
             StopReason::HandshakeRejected(why) => {
                 write!(f, "the agent's connection was refused: {why}")
             }
+            StopReason::GuestFromOtherRelease(why) => write!(
+                f,
+                "Android's image was made for another release of DSA, so DSA could not talk                  to it; get the image that matches with `dsa update`
+details: {why}"
+            ),
             StopReason::ListenerFailed(why) => {
                 write!(f, "could not listen for the agent: {why}")
             }
@@ -370,6 +392,14 @@ pub trait GuestLauncher: Send + 'static {
         None
     }
 
+    /// The regions of host memory the running guest sees as physical memory of its own, where
+    /// it is: each boot's control daemon is told them after its handshake, so its kernel can
+    /// map them (see `crate::video_slots` for the one that carries decoded video pictures).
+    /// None by default, and for a launcher whose guest has none.
+    fn shared_memory(&self) -> Vec<control::GuestSharedMemory> {
+        Vec::new()
+    }
+
     /// What the guest cannot run without and is missing now, as a sentence saying so and what
     /// to do; `None` when nothing is. The launcher tries to provide it each time it is asked.
     /// The session asks before it starts the guest, and about once a second while the guest
@@ -449,6 +479,10 @@ pub enum Refusal {
     /// The guest's daemon cannot work with this host, for example because it was built
     /// from a different protocol definition. Waiting longer cannot help, so the start fails.
     Incompatible(String),
+    /// The guest's daemon belongs to another DSA release: another protocol version, or a
+    /// protocol built from another definition. Its image does not fit this host, so the
+    /// start fails, as for [`Refusal::Incompatible`].
+    OtherRelease(String),
     /// The connection is not the guest's daemon: it did not prove it knows this boot's
     /// secret, or it broke off. Any app in the guest can open such a connection, so it is
     /// closed and the session goes on waiting for the daemon.
@@ -458,7 +492,9 @@ pub enum Refusal {
 impl fmt::Display for Refusal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Refusal::Incompatible(why) | Refusal::NotTheGuest(why) => f.write_str(why),
+            Refusal::Incompatible(why) | Refusal::OtherRelease(why) | Refusal::NotTheGuest(why) => {
+                f.write_str(why)
+            }
         }
     }
 }
@@ -566,6 +602,8 @@ enum RefreshInput {
     MonitorHz(u32),
     /// Whether the host's battery saver is on.
     BatterySaver(bool),
+    /// Whether any task window is being resized live changed.
+    LiveResize,
 }
 
 enum Command {
@@ -581,6 +619,10 @@ enum Command {
     Refresh(RefreshInput),
     /// Whether the host is short of memory changed.
     HostMemoryLow(bool),
+    /// Which tasks have their window shown changed.
+    TasksShown(Vec<i32>),
+    /// Which apps start below the title bar changed.
+    CaptionCompat(Vec<String>),
     /// The host's system settings or one of its game controllers changed.
     System(SystemInput),
     /// Freeze the guest after this long in Doze, or never.
@@ -644,6 +686,9 @@ struct Shared {
     sender: Mutex<Option<Box<dyn FrameSender>>>,
     /// The guest's last memory report, and when it arrived. Cleared when the guest stops.
     guest_memory: Mutex<Option<(GuestMemory, Instant)>>,
+    /// The VM's memory as the host last set it, in MiB, while the platform resizes it (see
+    /// [`MemoryGrowth`]); `None` when it does not, and while the guest is stopped.
+    vm_memory_mb: Mutex<Option<u64>>,
     /// What keeps the guest from being ready, while something does.
     problem: Mutex<Option<BootProblem>>,
     /// Who opens the web links the guest sends.
@@ -654,6 +699,9 @@ struct Shared {
     last_transfer: AtomicU32,
     /// How to pair the host's clock with the guest's, when the platform traces input.
     clock_trace: Mutex<Option<ClockTrace>>,
+    /// The task windows being resized live, which hold the guest's refresh rate down until
+    /// they end. The caller that sends a resize marks it, and the worker reads it for the rate.
+    live_resizes: Mutex<crate::guest_refresh::LiveResizes>,
     /// Who hears of the text the guest copies.
     clipboard_watchers: Mutex<Vec<Sender<String>>>,
     /// Who plays the rumble effects the guest's apps play on the host's controllers.
@@ -672,6 +720,8 @@ struct Shared {
     open_shares: Mutex<HashSet<u32>>,
     /// The apps that run in the background, their media sessions, and who watches them.
     background: Mutex<BackgroundHub>,
+    /// Which app each output of the guest's sound plays and its volume, and who watches it.
+    app_audio: Mutex<AppAudioHub>,
     /// The install under way, by its transfer ID, with who waits for the agent's word on it.
     installs: Mutex<HashMap<u32, Sender<InstallEvent>>>,
     /// The transfer ID of the last install.
@@ -728,6 +778,8 @@ struct Shared {
     power_hint_watchers: Mutex<Vec<Sender<GuestPower>>>,
     /// Whether the guest wants the host's location, and who hears of it.
     location: Mutex<LocationHub>,
+    /// Who serves the guest's speech and spelling, and which of its requests each one has.
+    language: Mutex<language::relay::Relay>,
     /// Whether the user's developer mode is on, which each agent that connects is told.
     developer_mode: AtomicBool,
     /// Who reads the guest's log, its recent records, and the dumps and diagnostics under way.
@@ -736,6 +788,11 @@ struct Shared {
     boot_secret: Mutex<Option<BootSecret>>,
     /// Set when the session ends, so the log port's threads end with it.
     log_port_stop: Arc<AtomicBool>,
+    /// The guest's connections on the DNS port that passed the handshake and are still open:
+    /// while there is one, the host's resolver answers the guest's names.
+    dns_connections: AtomicUsize,
+    /// Whether the platform serves the DNS port, so the guest's names can be answered here.
+    dns_port_served: AtomicBool,
     /// Which of the user's host folders their Android shows, which each agent that connects
     /// is told.
     file_sharing: SharingNow,
@@ -753,6 +810,11 @@ struct Shared {
     /// Who decides the su calls of the guest's apps, once the platform says, with a way to
     /// send each decision from the thread that waits for the administrator.
     root_approval: Mutex<Option<(Arc<RootApproval>, Sender<Command>)>>,
+    /// The user's first display language as the host last said it (a BCP 47 tag; empty while
+    /// it has not), which the administrator prompt names who asks for root in.
+    prompt_language: Mutex<String>,
+    /// The backups, passkeys and KeyMint root key the platform serves the guest.
+    host_services: Mutex<host_services::HostServices>,
 }
 
 /// The root elevation settings as the guest is told them.
@@ -760,7 +822,9 @@ struct Shared {
 struct RootElevationNow {
     /// The computer's switch, as it stands now.
     on: bool,
-    /// The apps with a level other than off.
+    /// The apps with a level the user set, off included: apps that share an Android user ID
+    /// are one group, and one of them set to off hides su from the whole group, which only
+    /// the guest can tell apart by uid.
     apps: Vec<AppLevel>,
     /// The switch as it stood when the running boot started; `None` while no boot runs. The
     /// kernel's su guard and the relay are set up at boot, so a boot that started with the
@@ -831,6 +895,8 @@ pub enum BackgroundRequest {
 enum WidgetAnswer {
     Providers(Vec<WidgetProvider>, bool),
     Added(Result<i32, String>),
+    /// How a widget's setup, opened again, ended: Ok when the user finished it.
+    Reconfigured(Result<(), String>),
 }
 
 /// The widgets the agent hosts, each with what it last showed, and who is watching them,
@@ -877,12 +943,42 @@ enum InstallEvent {
     Done(InstallOutcome),
 }
 
-/// The watchers of each task's accessibility tree. The guest reads a task's tree while the
-/// task has at least one.
+/// The watchers of each task's and each desktop widget's accessibility tree. The guest reads
+/// a tree while it has at least one.
 #[derive(Default)]
 struct AccessibilityHub {
     next_watch: u64,
-    watchers: HashMap<i32, Vec<(u64, Sender<GuestAccessibility>)>>,
+    watchers: HashMap<AccessibilityTarget, Vec<(u64, Sender<GuestAccessibility>)>>,
+    /// The trees whose first update since their newest watch began the service's log has
+    /// named, so a watch that never gets one shows by the missing line.
+    announced: HashSet<AccessibilityTarget>,
+    /// The watches of each task whose client says a screen reader listens. The guest sends
+    /// a task's focus at once while it has at least one.
+    listening: HashMap<i32, HashSet<u64>>,
+}
+
+impl AccessibilityHub {
+    /// Whether a screen reader listens for task `task_id`'s events through any watch.
+    fn is_listening(&self, task_id: i32) -> bool {
+        self.listening
+            .get(&task_id)
+            .is_some_and(|watches| !watches.is_empty())
+    }
+
+    /// Notes whether watch `id` of the task listens; true when that changes the task's.
+    fn set_listening(&mut self, task_id: i32, id: u64, listening: bool) -> bool {
+        let before = self.is_listening(task_id);
+        let watches = self.listening.entry(task_id).or_default();
+        if listening {
+            watches.insert(id);
+        } else {
+            watches.remove(&id);
+        }
+        if watches.is_empty() {
+            self.listening.remove(&task_id);
+        }
+        before != self.is_listening(task_id)
+    }
 }
 
 /// The guest's tasks and who is watching them, under one lock, so a new watcher's starting
@@ -978,6 +1074,14 @@ impl Shared {
         *self.vm_id.lock().unwrap_or_else(|e| e.into_inner()) = vm_id;
     }
 
+    /// Forgets why an earlier boot stopped, once a newer one is up and well. Shown beside a
+    /// healthy Android, the old cause reads as a current fault: a refusal from the boot before
+    /// an update went on reading "was built from a different protocol definition" after the
+    /// updated guest had connected.
+    fn forget_last_reason(&self) {
+        self.status.lock().unwrap_or_else(|e| e.into_inner()).1 = None;
+    }
+
     fn set_problem(&self, problem: Option<BootProblem>) {
         *self.problem.lock().unwrap_or_else(|e| e.into_inner()) = problem;
     }
@@ -989,8 +1093,21 @@ impl Shared {
             .clone()
     }
 
+    /// Keeps the guest's latest memory report. A report that follows one from the same boot
+    /// says how fast memory went back to the host in between ([`GuestMemory::following`]).
     fn set_guest_memory(&self, memory: Option<(GuestMemory, Instant)>) {
-        *self.guest_memory.lock().unwrap_or_else(|e| e.into_inner()) = memory;
+        let mut kept = self.guest_memory.lock().unwrap_or_else(|e| e.into_inner());
+        *kept = match (memory, kept.take()) {
+            (Some((memory, at)), Some((before, then))) => Some((
+                memory.following(&before, at.saturating_duration_since(then)),
+                at,
+            )),
+            (memory, _) => memory,
+        };
+    }
+
+    fn set_vm_memory_mb(&self, mb: Option<u64>) {
+        *self.vm_memory_mb.lock().unwrap_or_else(|e| e.into_inner()) = mb;
     }
 
     /// Records a task message and hands it to the watchers, unless it changes nothing.
@@ -1001,6 +1118,14 @@ impl Shared {
         }
         hub.watchers
             .retain(|watcher| watcher.send(event.clone()).is_ok());
+    }
+
+    /// The user's first display language as the host last said it; empty while it has not.
+    fn prompt_language(&self) -> String {
+        self.prompt_language
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// The installed app `package`, as the guest last listed it.
@@ -1033,6 +1158,18 @@ impl Shared {
             hub.table.installed_event(packages)
         };
         self.publish_task(event);
+    }
+
+    /// Records the launcher shortcuts of `package`, and hands the list of installed apps that
+    /// carries them to the watchers when they changed it.
+    fn publish_shortcuts(&self, package: &str, shortcuts: Vec<AppShortcut>) {
+        let event = {
+            let mut hub = self.tasks.lock().unwrap_or_else(|e| e.into_inner());
+            hub.table.shortcuts_event(package, shortcuts)
+        };
+        if let Some(event) = event {
+            self.publish_task(event);
+        }
     }
 
     /// Tells whoever waits for a fresh list of installed apps that it arrived.
@@ -1149,23 +1286,42 @@ impl Shared {
         }
     }
 
-    /// Hands what the guest sent about a task's accessibility to the task's watchers.
-    fn publish_accessibility(&self, task_id: i32, message: GuestAccessibility) {
+    /// Hands what the guest sent about a task's or a widget's accessibility to its watchers.
+    fn publish_accessibility(&self, target: AccessibilityTarget, message: GuestAccessibility) {
         let mut hub = self.accessibility.lock().unwrap_or_else(|e| e.into_inner());
-        match hub.watchers.get_mut(&task_id) {
+        if let GuestAccessibility::Tree(tree) = &message {
+            if hub.watchers.contains_key(&target) && hub.announced.insert(target) {
+                eprintln!(
+                    "accessibility: Android sent {target}'s tree ({} nodes)",
+                    tree.nodes.len()
+                );
+            }
+        }
+        match hub.watchers.get_mut(&target) {
             Some(watchers) => watchers.retain(|(_, w)| w.send(message.clone()).is_ok()),
             None => eprintln!(
-                "accessibility: dropped the guest's tree of task {task_id}, which nobody watches"
+                "accessibility: dropped the guest's tree of {target}, which nobody watches"
             ),
         }
     }
 
-    /// The tasks whose accessibility tree is watched.
-    fn watched_tasks(&self) -> Vec<i32> {
+    /// The tasks and widgets whose accessibility tree is watched, each with whether a screen
+    /// reader listens for its events (never for a widget: listening is said per task).
+    fn watched_trees(&self) -> Vec<(AccessibilityTarget, bool)> {
         let hub = self.accessibility.lock().unwrap_or_else(|e| e.into_inner());
-        let mut tasks: Vec<i32> = hub.watchers.keys().copied().collect();
-        tasks.sort();
-        tasks
+        let mut targets: Vec<(AccessibilityTarget, bool)> = hub
+            .watchers
+            .keys()
+            .map(|target| {
+                let listening = match target {
+                    AccessibilityTarget::Task(task_id) => hub.is_listening(*task_id),
+                    AccessibilityTarget::Widget(_) => false,
+                };
+                (*target, listening)
+            })
+            .collect();
+        targets.sort();
+        targets
     }
 
     /// Hands text the guest copied to every clipboard watcher still listening.
@@ -1254,6 +1410,10 @@ impl Shared {
             .retain(|watcher| watcher.send(PrintEvent::Withdrawn { job_id }).is_ok());
     }
 
+    fn language(&self) -> std::sync::MutexGuard<'_, language::relay::Relay> {
+        self.language.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     /// What the guest wants of the host's location now; every watcher hears a change.
     fn set_location(&self, wanted: Wanted) {
         self.location
@@ -1325,11 +1485,13 @@ impl Session {
             tasks: Mutex::new(TaskHub::default()),
             sender: Mutex::new(None),
             guest_memory: Mutex::new(None),
+            vm_memory_mb: Mutex::new(None),
             problem: Mutex::new(None),
             link_watchers: Mutex::new(Vec::new()),
             transfers: Mutex::new(HashMap::new()),
             last_transfer: AtomicU32::new(0),
             clock_trace: Mutex::new(None),
+            live_resizes: Mutex::new(Default::default()),
             clipboard_watchers: Mutex::new(Vec::new()),
             rumble_watchers: Mutex::new(Vec::new()),
             notification_watchers: Mutex::new(Vec::new()),
@@ -1339,6 +1501,7 @@ impl Session {
             share_watchers: Mutex::new(Vec::new()),
             open_shares: Mutex::new(HashSet::new()),
             background: Mutex::new(BackgroundHub::default()),
+            app_audio: Mutex::new(AppAudioHub::default()),
             installs: Mutex::new(HashMap::new()),
             last_install: AtomicU32::new(0),
             install_turn: Mutex::new(()),
@@ -1365,16 +1528,21 @@ impl Session {
             accessibility: Mutex::new(AccessibilityHub::default()),
             power_hint_watchers: Mutex::new(Vec::new()),
             location: Mutex::new(LocationHub::default()),
+            language: Mutex::new(language::relay::Relay::new()),
             developer_mode: AtomicBool::new(false),
             logs: Mutex::new(LogHub::default()),
             boot_secret: Mutex::new(None),
             log_port_stop: Arc::new(AtomicBool::new(false)),
+            dns_connections: AtomicUsize::new(0),
+            dns_port_served: AtomicBool::new(false),
             file_sharing: Arc::new(Mutex::new(Sharing::default())),
             share_server: Mutex::new(None),
             android_files_token: Mutex::new(None),
             device_name: Mutex::new(None),
             root_config: Mutex::new(RootElevationNow::default()),
             root_approval: Mutex::new(None),
+            prompt_language: Mutex::new(String::new()),
+            host_services: Mutex::new(host_services::HostServices::default()),
         });
         let freeze_delay = config.freeze_after.unwrap_or(DEFAULT_FREEZE_AFTER);
         let (commands, command_rx) = mpsc::channel();
@@ -1404,6 +1572,10 @@ impl Session {
             refresh_pending: false,
             host_memory_low: false,
             host_memory_pending: false,
+            tasks_shown: None,
+            tasks_shown_pending: false,
+            caption_compat: None,
+            caption_compat_pending: false,
             system_settings: None,
             gamepads: GamepadTable::new(),
             system_pending: false,
@@ -1634,7 +1806,7 @@ impl Session {
     }
 
     /// Sets the user's root elevation settings: the computer's switch and the apps with a
-    /// level other than off. The running Android is told at once, so a changed level applies
+    /// level the user set, off included. The running Android is told at once, so a changed level applies
     /// without a restart; so does turning the switch off. Turning it on applies from the next
     /// start of Android, as the kernel's su guard and the relay are set up at boot. Each boot
     /// is told again once its agent connects.
@@ -1649,11 +1821,9 @@ impl Session {
             if !on && now.boot_on.is_some() {
                 now.off_since_boot = true;
             }
-            now.apps = apps
-                .into_iter()
-                .filter(|app| app.level != Level::Off)
-                .collect();
+            now.apps = apps;
             now.apps.sort_by(|a, b| a.package.cmp(&b.package));
+            now.apps.dedup_by(|a, b| a.package == b.package);
         }
         if let Some(body) = self.shared.root_elevation_body(false) {
             send_quietly(&self.shared, &self.commands, body);
@@ -1918,14 +2088,26 @@ impl Session {
 
     /// The guest's last memory report and how old it is. `None` until the agent has sent one
     /// since the guest started.
+    ///
+    /// The memory the guest was given is the VM's size as the host last set it, when the
+    /// platform resizes the VM. The guest counts its online memory blocks, and memory that was
+    /// hot-added and then ballooned back to the host stays online in the guest, so its count
+    /// alone takes that memory for the kernel's own: on the owner's PC, a VM grown to 3840 MiB
+    /// and shrunk back to 2560 MiB showed 1357 MiB "reserved by the kernel at boot", where the
+    /// kernel had kept 77 MiB and the host had the other 1280 MiB back.
     pub fn guest_memory(&self) -> Option<GuestMemoryReport> {
+        let vm_mb = *self
+            .shared
+            .vm_memory_mb
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         self.shared
             .guest_memory
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .as_ref()
             .map(|(memory, at)| GuestMemoryReport {
-                memory: memory.clone(),
+                memory: memory.given(vm_mb),
                 age: at.elapsed(),
             })
     }
@@ -2368,6 +2550,24 @@ impl Session {
             .map_err(|_| SessionError::Gone)
     }
 
+    /// Says which tasks have their window shown: open and not minimized. The session keeps the
+    /// latest word in every state; the guest is told now if it is up, and each time it connects,
+    /// so it keeps less memory for a minimized task's app.
+    pub fn tasks_shown(&self, task_ids: Vec<i32>) -> Result<(), SessionError> {
+        self.commands
+            .send(Command::TasksShown(task_ids))
+            .map_err(|_| SessionError::Gone)
+    }
+
+    /// Says which apps start below the title bar, as the user chose for each. The session keeps
+    /// the latest word in every state; the guest is told now if it is up, and each time it
+    /// connects, so a task that starts has its insets settled before its first screen.
+    pub fn caption_compat(&self, below_title_bar: Vec<String>) -> Result<(), SessionError> {
+        self.commands
+            .send(Command::CaptionCompat(below_title_bar))
+            .map_err(|_| SessionError::Gone)
+    }
+
     /// Records the host's power, which the guest is told now if it is up, and each time its
     /// agent connects.
     pub fn set_power(&self, state: PowerState) {
@@ -2402,7 +2602,15 @@ impl Session {
     /// Records the host's system settings (time zone, languages, regional format, theme and
     /// accent color). The guest's agent is told now if it is there, and each time it connects.
     pub fn set_system_settings(&self, settings: SystemSettings) {
-        let input = SystemInput::Settings(settings.checked());
+        let settings = settings.checked();
+        if let Some(language) = settings.locales.first() {
+            *self
+                .shared
+                .prompt_language
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()) = language.clone();
+        }
+        let input = SystemInput::Settings(settings);
         let _ = self.commands.send(Command::System(input));
     }
 
@@ -2439,7 +2647,9 @@ impl Session {
                 package_name: package.to_string(),
                 ..Default::default()
             });
-        approval.approve_keep_root(app)
+        let request = crate::root_approval::ApprovalRequest::keep_root(app)
+            .with_language(&self.shared.prompt_language());
+        approval.approve_keep_root_request(request)
     }
 
     /// Gives the guest's agent the device name `source` says each time it connects, which the
@@ -2563,6 +2773,35 @@ impl Session {
         }))
     }
 
+    /// Serves the guest's speech and spelling from now on: its requests come to the returned
+    /// watch while no client that came before still serves them. The watch lasts across
+    /// restarts of the guest. Each answer goes back through [`Session::language_answer`], and
+    /// [`Session::language_server_gone`] says when the client has gone.
+    pub fn serve_language(&self) -> language::relay::Served {
+        self.shared.language().serve()
+    }
+
+    /// Passes an answer of client `server`'s to the guest, if it answers a request the client
+    /// has. Anything that is no answer is an error, and reaches nobody.
+    pub fn language_answer(&self, server: u64, envelope: control::Envelope) -> Result<(), String> {
+        let Some(body) = envelope.body else {
+            return Err("an empty message".into());
+        };
+        if let Some(answer) = self.shared.language().answer(server, body)? {
+            send_quietly(&self.shared, &self.commands, answer);
+        }
+        Ok(())
+    }
+
+    /// Client `server` no longer serves the guest's speech and spelling: what it had not
+    /// answered fails in the guest.
+    pub fn language_server_gone(&self, server: u64) {
+        let failures = self.shared.language().server_gone(server);
+        for failure in failures {
+            send_quietly(&self.shared, &self.commands, failure);
+        }
+    }
+
     /// The address lookups of the guest's apps from now on, each to one watcher only, which
     /// answers it with [`Session::geocode_result`]. The watch lasts across restarts of the
     /// guest.
@@ -2657,8 +2896,8 @@ impl Session {
         rx
     }
 
-    /// Passes what the user did with a notification to the guest. Opening one wakes a guest
-    /// in Doze or frozen first. Needs a running guest that has the notification; one the
+    /// Passes what the user did with a notification to the guest. Opening one, or choosing
+    /// one of its buttons, wakes a guest in Doze or frozen first. Needs a running guest that has the notification; one the
     /// guest has not shown is ignored.
     pub fn notification_action(&self, action: NotificationAction) -> Result<(), SessionError> {
         let (reply_tx, reply_rx) = mpsc::channel();
@@ -2699,6 +2938,35 @@ impl Session {
         reply_rx.recv().map_err(|_| SessionError::Gone)?
     }
 
+    /// Which app each output of the guest's sound plays and its volume now, and every list
+    /// after it. The watch lasts across restarts of the guest; a guest that stops has none.
+    pub fn watch_app_audio(&self) -> AppAudioWatch {
+        self.shared
+            .app_audio
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .watch()
+    }
+
+    /// Which app each output of the guest's sound plays and its volume now.
+    pub fn app_audio(&self) -> Vec<AppStream> {
+        self.shared
+            .app_audio
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .streams()
+    }
+
+    /// Gives the guest the volume the user set for an app on the host. A change for a guest
+    /// that is not running is dropped: its apps are gone with it.
+    pub fn set_app_volume(&self, change: &VolumeChange) {
+        send_quietly(
+            &self.shared,
+            &self.commands,
+            Body::SetAppVolume(change.to_control()),
+        );
+    }
+
     /// Freezes the guest now, as when the user chooses it. It stays frozen until a task
     /// window is shown or it is stopped. Needs a running guest.
     pub fn freeze(&self) -> Result<(), SessionError> {
@@ -2734,6 +3002,19 @@ impl Session {
     /// asks the guest for a full tree again, which every watcher receives. The watch lasts
     /// across restarts of the guest: each agent that connects is asked again.
     pub fn watch_accessibility(&self, task_id: i32) -> AccessibilityWatch {
+        self.watch_tree(AccessibilityTarget::Task(task_id))
+    }
+
+    /// Watches the accessibility tree of the desktop widget `widget_id`'s window: the nodes
+    /// of the widget's own views (its text, buttons and lists), in pixels of its image. The
+    /// same rule as for a task holds: the guest reads the widget's nodes only while a watch of
+    /// it lasts.
+    pub fn watch_widget_accessibility(&self, widget_id: i32) -> AccessibilityWatch {
+        self.watch_tree(AccessibilityTarget::Widget(widget_id))
+    }
+
+    /// Watches `target`'s tree, as [`Session::watch_accessibility`] says.
+    fn watch_tree(&self, target: AccessibilityTarget) -> AccessibilityWatch {
         let (tx, updates) = mpsc::channel();
         let id = {
             let mut hub = self
@@ -2743,41 +3024,117 @@ impl Session {
                 .unwrap_or_else(|e| e.into_inner());
             hub.next_watch += 1;
             let id = hub.next_watch;
-            hub.watchers.entry(task_id).or_default().push((id, tx));
+            hub.watchers.entry(target).or_default().push((id, tx));
+            hub.announced.remove(&target);
             id
         };
-        eprintln!(
-            "accessibility: a host client watches task {task_id}; asking Android for its tree"
-        );
+        eprintln!("accessibility: a host client watches {target}; asking Android for its tree");
         send_quietly(
             &self.shared,
             &self.commands,
-            Body::AccessibilityWatch(control::AccessibilityWatch { task_id, on: true }),
+            Body::AccessibilityWatch(target.to_control_watch(true)),
         );
+        // Whether a screen reader listens is said per task: a widget's tree is read whole each
+        // time, so there is nothing faster to ask for.
+        let listen_task = match target {
+            AccessibilityTarget::Task(task_id) => Some(task_id),
+            AccessibilityTarget::Widget(_) => None,
+        };
+        // A new watch of a task a screen reader listens for: the agent forgets that with
+        // the `on` it was just sent, so it hears it again.
+        let listening = listen_task.filter(|task_id| {
+            let hub = self
+                .shared
+                .accessibility
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            hub.is_listening(*task_id)
+        });
+        if let Some(task_id) = listening {
+            send_quietly(
+                &self.shared,
+                &self.commands,
+                Body::AccessibilityListening(control::AccessibilityListening {
+                    task_id,
+                    listening: true,
+                }),
+            );
+        }
         let shared = Arc::clone(&self.shared);
         let commands = self.commands.clone();
+        let listen_shared = Arc::clone(&self.shared);
+        let listen_commands = self.commands.clone();
         AccessibilityWatch::new(updates, move || {
-            let last = {
+            let (last, quiet) = {
                 let mut hub = shared
                     .accessibility
                     .lock()
                     .unwrap_or_else(|e| e.into_inner());
-                let watchers = hub.watchers.entry(task_id).or_default();
+                let watchers = hub.watchers.entry(target).or_default();
                 watchers.retain(|(watch, _)| *watch != id);
                 let last = watchers.is_empty();
                 if last {
-                    hub.watchers.remove(&task_id);
+                    hub.watchers.remove(&target);
                 }
-                last
+                let quiet = listen_task.filter(|task_id| hub.set_listening(*task_id, id, false));
+                (last, quiet)
             };
             if last {
                 eprintln!(
-                    "accessibility: no host client watches task {task_id}; Android stops reading it"
+                    "accessibility: no host client watches {target}; Android stops reading it"
                 );
                 send_quietly(
                     &shared,
                     &commands,
-                    Body::AccessibilityWatch(control::AccessibilityWatch { task_id, on: false }),
+                    Body::AccessibilityWatch(target.to_control_watch(false)),
+                );
+            } else if let Some(task_id) = quiet {
+                eprintln!(
+                    "accessibility: no screen reader listens for task {task_id} any more; \
+                     Android keeps its usual waits"
+                );
+                send_quietly(
+                    &shared,
+                    &commands,
+                    Body::AccessibilityListening(control::AccessibilityListening {
+                        task_id,
+                        listening: false,
+                    }),
+                );
+            }
+        })
+        .with_listening(move |listening| {
+            let Some(task_id) = listen_task else {
+                return;
+            };
+            let changed = {
+                let mut hub = listen_shared
+                    .accessibility
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                hub.set_listening(task_id, id, listening)
+            };
+            if changed {
+                eprintln!(
+                    "accessibility: a screen reader {} for task {task_id}; Android {}",
+                    if listening {
+                        "listens"
+                    } else {
+                        "no longer listens"
+                    },
+                    if listening {
+                        "sends its focus at once"
+                    } else {
+                        "keeps its usual waits"
+                    }
+                );
+                send_quietly(
+                    &listen_shared,
+                    &listen_commands,
+                    Body::AccessibilityListening(control::AccessibilityListening {
+                        task_id,
+                        listening,
+                    }),
                 );
             }
         })
@@ -2790,8 +3147,27 @@ impl Session {
         task_id: i32,
         action: &ActionRequest,
     ) -> Result<(), SessionError> {
+        self.tree_action(AccessibilityTarget::Task(task_id), action)
+    }
+
+    /// Asks the guest to do `action` on a node of the desktop widget `widget_id`, as an Invoke
+    /// on one of its buttons presses that button in the widget. The answer arrives on the
+    /// widget's watches. Needs a running guest.
+    pub fn widget_accessibility_action(
+        &self,
+        widget_id: i32,
+        action: &ActionRequest,
+    ) -> Result<(), SessionError> {
+        self.tree_action(AccessibilityTarget::Widget(widget_id), action)
+    }
+
+    fn tree_action(
+        &self,
+        target: AccessibilityTarget,
+        action: &ActionRequest,
+    ) -> Result<(), SessionError> {
         self.send(dsa_protocol::encode(&control::Envelope {
-            body: Some(Body::AccessibilityAction(action.to_control(task_id))),
+            body: Some(Body::AccessibilityAction(action.to_control_for(target))),
         }))
     }
 
@@ -2902,11 +3278,16 @@ impl Session {
     }
 
     /// Asks the guest to close, resize or rescale a task, or to launch an app. Needs an
-    /// active session, except for the word on shown windows, which is always taken.
+    /// active session, except for the words on shown windows and tasks and on the apps that
+    /// start below the title bar, which are always taken.
     pub fn request(&self, request: TaskRequest) -> Result<(), SessionError> {
         let body = match request {
             TaskRequest::WindowsShown { shown } => return self.windows_shown(shown),
+            TaskRequest::TasksShown { task_ids } => return self.tasks_shown(task_ids),
             TaskRequest::Close { task_id } => Body::CloseTask(control::CloseTask { task_id }),
+            TaskRequest::CaptionCompat { below_title_bar } => {
+                return self.caption_compat(below_title_bar)
+            }
             TaskRequest::Launch { package_name } => Body::LaunchApp(control::LaunchApp {
                 package_name,
                 new_window: false,
@@ -2921,23 +3302,42 @@ impl Session {
             TaskRequest::StopApp { package_name } => {
                 Body::StopApp(control::StopApp { package_name })
             }
+            TaskRequest::LaunchShortcut {
+                package_name,
+                shortcut_id,
+            } => Body::LaunchShortcut(control::LaunchShortcut {
+                package_name,
+                shortcut_id,
+            }),
+            TaskRequest::AnswerPinShortcut {
+                request_id,
+                accepted,
+            } => Body::PinShortcutAnswer(control::PinShortcutAnswer {
+                request_id,
+                accepted,
+            }),
             TaskRequest::Resize {
                 task_id,
                 width,
                 height,
                 live,
-            } => Body::ResizeTask(control::ResizeTask {
-                task_id,
-                width,
-                height,
-                live,
-            }),
+            } => {
+                return self.resize(control::ResizeTask {
+                    task_id,
+                    width,
+                    height,
+                    live,
+                })
+            }
             TaskRequest::SetDensity {
                 task_id,
                 density_dpi,
             } => Body::SetTaskDensity(control::SetTaskDensity {
                 task_id,
                 density_dpi,
+                // The task takes the density as Android gives it; the agent is never asked to
+                // recreate its activity on top of that.
+                recreate: false,
             }),
             TaskRequest::SetCaption {
                 task_id,
@@ -2950,10 +3350,43 @@ impl Session {
                 start_width,
                 end_width,
             }),
+            TaskRequest::SetFullScreen { task_id, in_window } => {
+                Body::SetTaskFullScreen(control::SetTaskFullScreen { task_id, in_window })
+            }
         };
         self.send(dsa_protocol::encode(&control::Envelope {
             body: Some(body),
         }))
+    }
+
+    /// Sends a step of a task window's resize, and holds the guest's refresh rate down while
+    /// any window is resized live ([`crate::guest_refresh::LiveResizes`]).
+    ///
+    /// A step that starts or ends the live resizes goes through the worker, right behind the
+    /// word that changes the rate, so the first live step reaches a guest already at the lower
+    /// rate. The caller waits for the worker to send it, so the steps after it, which go out
+    /// at once as every other step does, never overtake it.
+    fn resize(&self, resize: control::ResizeTask) -> Result<(), SessionError> {
+        let changed = self
+            .shared
+            .live_resizes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .step(resize.task_id, resize.live, Instant::now());
+        let frame = dsa_protocol::encode(&control::Envelope {
+            body: Some(Body::ResizeTask(resize)),
+        });
+        if !changed {
+            return self.send(frame);
+        }
+        let _ = self
+            .commands
+            .send(Command::Refresh(RefreshInput::LiveResize));
+        let (reply_tx, reply_rx) = mpsc::channel();
+        self.commands
+            .send(Command::Send(frame, reply_tx))
+            .map_err(|_| SessionError::Gone)?;
+        reply_rx.recv().map_err(|_| SessionError::Gone)?
     }
 
     /// The widgets the agent hosts now, and every change to them from now on. The watch lasts
@@ -3364,7 +3797,7 @@ impl Session {
                             break;
                         }
                     }
-                    Ok(WidgetAnswer::Added(_)) => {}
+                    Ok(WidgetAnswer::Added(_)) | Ok(WidgetAnswer::Reconfigured(_)) => {}
                     Err(_) => {
                         return Err(SessionError::WidgetRefused(format!(
                             "Android did not list its widgets within {} seconds",
@@ -3415,10 +3848,78 @@ impl Session {
                     Ok(WidgetAnswer::Added(Err(why))) => {
                         return Err(SessionError::WidgetRefused(why))
                     }
-                    Ok(WidgetAnswer::Providers(..)) => {}
+                    Ok(WidgetAnswer::Providers(..)) | Ok(WidgetAnswer::Reconfigured(_)) => {}
                     Err(_) => {
                         return Err(SessionError::WidgetRefused(format!(
                             "Android did not place the widget within {} seconds",
+                            timeout.as_secs()
+                        )))
+                    }
+                }
+            }
+        })();
+        self.forget_widget_request(request_id);
+        result
+    }
+
+    /// Opens the setup of a placed widget again, as its app's window, and waits up to
+    /// `timeout` for the user to finish it (Ok) or leave it (WidgetRefused with the reason).
+    /// Only a widget whose app says it can be set up again is asked for; the widget stays
+    /// placed either way, and once the user finishes, the agent describes and draws it anew.
+    /// A press wakes a guest in Doze first, as the setup is a window the user works in.
+    /// Needs an active session.
+    pub fn reconfigure_widget(
+        &self,
+        widget_id: i32,
+        timeout: Duration,
+    ) -> Result<(), SessionError> {
+        let provider = self
+            .widgets()
+            .into_iter()
+            .find(|(id, _)| *id == widget_id)
+            .map(|(_, provider)| provider);
+        match provider {
+            None => {
+                return Err(SessionError::WidgetRefused(format!(
+                    "there is no widget {widget_id}"
+                )))
+            }
+            Some(provider) if !provider.reconfigurable => {
+                return Err(SessionError::WidgetRefused(format!(
+                    "the widget {} cannot be set up again; its app offers no settings for it",
+                    if provider.label.is_empty() {
+                        provider.provider
+                    } else {
+                        provider.label
+                    }
+                )))
+            }
+            Some(_) => {}
+        }
+        let (reply_tx, reply_rx) = mpsc::channel();
+        if self.commands.send(Command::WidgetPressed(reply_tx)).is_ok() {
+            let _ = reply_rx.recv();
+        }
+        let (request_id, answers) = self.widget_request();
+        let result = (|| {
+            self.send(dsa_protocol::encode(&control::Envelope {
+                body: Some(Body::ReconfigureWidget(control::ReconfigureWidget {
+                    request_id,
+                    widget_id,
+                })),
+            }))?;
+            let deadline = Instant::now() + timeout;
+            loop {
+                let left = deadline.saturating_duration_since(Instant::now());
+                match answers.recv_timeout(left) {
+                    Ok(WidgetAnswer::Reconfigured(Ok(()))) => return Ok(()),
+                    Ok(WidgetAnswer::Reconfigured(Err(why))) => {
+                        return Err(SessionError::WidgetRefused(why))
+                    }
+                    Ok(WidgetAnswer::Providers(..)) | Ok(WidgetAnswer::Added(_)) => {}
+                    Err(_) => {
+                        return Err(SessionError::WidgetRefused(format!(
+                            "the widget's settings did not close within {} seconds",
                             timeout.as_secs()
                         )))
                     }
@@ -3795,6 +4296,20 @@ const GAPPS_WAIT: Duration = Duration::from_secs(5);
 /// at once.
 const DEVICE_ID_WAIT: Duration = Duration::from_secs(2);
 
+/// One of an app's launcher shortcuts, as the agent describes it.
+fn shortcut_from_control(shortcut: control::AppShortcut) -> AppShortcut {
+    AppShortcut {
+        id: shortcut.id,
+        short_label: shortcut.short_label,
+        long_label: shortcut.long_label,
+        icon_png: shortcut.icon_png,
+        rank: shortcut.rank,
+        manifest: shortcut.manifest,
+        dynamic: shortcut.dynamic,
+        pinned: shortcut.pinned,
+    }
+}
+
 /// What the guest's control daemon says of the Google apps, as the host keeps it.
 fn guest_gapps(state: control::GappsState) -> GuestGapps {
     GuestGapps {
@@ -3887,6 +4402,15 @@ struct Worker {
     host_memory_low: bool,
     /// Set when that changed while the guest was frozen, so it is told after the thaw.
     host_memory_pending: bool,
+    /// The tasks whose window is shown, as last recorded, once the window manager has said.
+    tasks_shown: Option<Vec<i32>>,
+    /// Set when they changed while the guest was frozen, so it is told after the thaw.
+    tasks_shown_pending: bool,
+    /// The apps that start below the title bar, as last recorded, once the window manager
+    /// has said.
+    caption_compat: Option<Vec<String>>,
+    /// Set when they changed while the guest was frozen, so it is told after the thaw.
+    caption_compat_pending: bool,
     /// The host's system settings, as last recorded.
     system_settings: Option<SystemSettings>,
     /// The host's game controllers that are connected, and the latest state of each.
@@ -3976,6 +4500,8 @@ impl Worker {
                         Ok(Command::Power(state)) => self.set_power(state),
                         Ok(Command::Refresh(input)) => self.refresh_input(input),
                         Ok(Command::HostMemoryLow(low)) => self.set_host_memory_low(low),
+                        Ok(Command::TasksShown(task_ids)) => self.set_tasks_shown(task_ids),
+                        Ok(Command::CaptionCompat(packages)) => self.set_caption_compat(packages),
                         Ok(Command::System(input)) => self.system_input(input),
                         Ok(Command::FreezeAfter(after)) => self.config.freeze_after = after,
                         Ok(Command::LinksInAndroid(on)) => self.set_links_in_android(on),
@@ -4009,6 +4535,8 @@ impl Worker {
                         Ok(Command::Power(state)) => self.set_power(state),
                         Ok(Command::Refresh(input)) => self.refresh_input(input),
                         Ok(Command::HostMemoryLow(low)) => self.set_host_memory_low(low),
+                        Ok(Command::TasksShown(task_ids)) => self.set_tasks_shown(task_ids),
+                        Ok(Command::CaptionCompat(packages)) => self.set_caption_compat(packages),
                         Ok(Command::System(input)) => self.system_input(input),
                         Ok(Command::FreezeAfter(after)) => self.config.freeze_after = after,
                         Ok(Command::LinksInAndroid(on)) => self.set_links_in_android(on),
@@ -4084,6 +4612,14 @@ impl Worker {
             }
             Command::HostMemoryLow(low) => {
                 self.set_host_memory_low(low);
+                true
+            }
+            Command::TasksShown(task_ids) => {
+                self.set_tasks_shown(task_ids);
+                true
+            }
+            Command::CaptionCompat(packages) => {
+                self.set_caption_compat(packages);
                 true
             }
             Command::System(input) => {
@@ -4363,18 +4899,24 @@ impl Worker {
             &app.native_libraries,
             crash.arm64_supported,
         );
-        if switch.on {
-            eprintln!("apps: {package} runs as ARM already; nothing is offered");
+        if switch.available() && !switch.on {
+            self.post_notice(native_abi::Notice::Offer.notification(&app));
             return;
         }
-        if let Some(why) = switch.unavailable {
+        if switch.on {
+            eprintln!("apps: {package} runs as ARM already; nothing is offered");
+        } else if let Some(why) = switch.unavailable {
             eprintln!(
                 "apps: {package} cannot run as ARM ({}); nothing is offered",
                 why.code()
             );
-            return;
         }
-        self.post_notice(native_abi::Notice::Offer.notification(&app));
+        // A build made to run as 32-bit code, which the 64-bit-only guest does not run: the
+        // user is told to install its 64-bit build.
+        if native_abi::needs_64_bit_build(&app.native_libraries, switch, &detail) {
+            eprintln!("apps: {package} holds 32-bit code, which Android here does not run");
+            self.post_notice(native_abi::Notice::Needs64Bit.notification(&app));
+        }
     }
 
     /// What the user did with one of the host's notifications about running an app as ARM.
@@ -4418,7 +4960,9 @@ impl Worker {
                     new_window: false,
                 }));
             }
-            native_abi::Notice::NeedsErase | native_abi::Notice::Failed => {}
+            native_abi::Notice::NeedsErase
+            | native_abi::Notice::Failed
+            | native_abi::Notice::Needs64Bit => {}
         }
         Ok(())
     }
@@ -4457,7 +5001,8 @@ impl Worker {
     }
 
     /// Decides an app's su call on a thread of its own, since the host's administrator may
-    /// take up to a minute to answer, and sends the decision back to the guest's su relay. A
+    /// take up to a minute to answer (five while a screen reader runs), and sends the decision
+    /// back to the guest's su relay. A
     /// host that cannot ask an administrator refuses at once, so su does not wait for nothing.
     fn su_request(&mut self, request: control::SuRequest) {
         let approval = self
@@ -4479,13 +5024,35 @@ impl Worker {
             }));
             return;
         };
-        let app = self.shared.installed_app(&request.package);
+        // The guest names every app of a shared user ID group, since the uid alone is all the
+        // kernel knows of the caller; the prompt shows each of them with its name and icon.
+        let packages = crate::root_approval::package_group(&request.package);
+        let app = packages
+            .first()
+            .and_then(|package| self.shared.installed_app(package));
+        let mut approval_request =
+            crate::root_approval::ApprovalRequest::from_su(&request, app.as_ref());
+        if packages.len() > 1 {
+            let shared_apps = packages
+                .iter()
+                .map(|package| {
+                    self.shared
+                        .installed_app(package)
+                        .unwrap_or_else(|| AppInfo {
+                            package_name: package.to_string(),
+                            ..Default::default()
+                        })
+                })
+                .collect();
+            approval_request = approval_request.with_shared_apps(shared_apps);
+        }
+        let approval_request = approval_request.with_language(&self.shared.prompt_language());
         let shared = Arc::clone(&self.shared);
         let request_id = request.request_id;
         let spawned = thread::Builder::new()
             .name("dsa-su-approval".into())
             .spawn(move || {
-                let decision = approval.decide(&request, app.as_ref());
+                let decision = approval.answer(&approval_request);
                 send_quietly(&shared, &commands, Body::SuDecision(decision));
             });
         if let Err(error) = spawned {
@@ -4677,10 +5244,10 @@ impl Worker {
             let package = package.to_string();
             return self.act_on_notice(notice, package, &action);
         }
-        let Some(clearable) = self
+        let Some((clearable, buttons)) = self
             .notifications
             .get(action.key())
-            .map(|shown| shown.clearable)
+            .map(|shown| (shown.clearable, shown.buttons.len()))
         else {
             eprintln!("notifications: the host acted on one the guest does not have; ignored");
             return Ok(());
@@ -4698,6 +5265,36 @@ impl Worker {
                 self.send_body(Body::NotificationClicked(control::NotificationClicked {
                     key,
                 }));
+            }
+            NotificationAction::Button {
+                key,
+                button,
+                title,
+                reply,
+            } => {
+                if button as usize >= buttons {
+                    eprintln!(
+                        "notifications: the host chose button {button} of one with {buttons} \
+                         buttons; ignored"
+                    );
+                    return Ok(());
+                }
+                // The action runs in an app that may open a window or send the reply over the
+                // network, which Doze holds back: the guest leaves Doze first, as for a click,
+                // and reads the button after the screen's word on the same channel.
+                self.hidden_since = Instant::now();
+                self.wake();
+                if !self.running() {
+                    return Err(SessionError::NotActive(self.state()));
+                }
+                self.send_body(Body::NotificationButtonClicked(
+                    control::NotificationButtonClicked {
+                        key,
+                        button,
+                        title,
+                        reply_text: notifications::cut_reply(reply),
+                    },
+                ));
             }
             NotificationAction::Dismiss { key } => {
                 if !clearable {
@@ -5032,10 +5629,21 @@ impl Worker {
             let low = self.host_memory_low;
             self.send_body(Body::HostMemory(control::HostMemory { low }));
         }
+        if std::mem::take(&mut self.tasks_shown_pending) {
+            if let Some(task_ids) = self.tasks_shown.clone() {
+                self.send_body(Body::TasksShown(control::TasksShown { task_ids }));
+            }
+        }
+        if std::mem::take(&mut self.caption_compat_pending) {
+            self.send_caption_compat();
+        }
         if std::mem::take(&mut self.system_pending) {
             self.replay_system_settings();
             self.replay_gamepads();
         }
+        // A change to the host's root certificates while the guest was frozen was not heard.
+        let body = self.shared.host_certificates_body();
+        self.send_body(body);
         true
     }
 
@@ -5079,8 +5687,32 @@ impl Worker {
         match input {
             RefreshInput::MonitorHz(hz) => self.monitor_hz = Some(hz),
             RefreshInput::BatterySaver(on) => self.battery_saver = on,
+            RefreshInput::LiveResize => {}
         }
         self.update_refresh();
+    }
+
+    fn resizing_live(&self) -> bool {
+        self.shared
+            .live_resizes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .any()
+    }
+
+    /// Ends the live resizes that have heard nothing for a while, and tells the guest the rate
+    /// that follows.
+    fn tick_refresh(&mut self) {
+        let expired = self
+            .shared
+            .live_resizes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .expire(Instant::now());
+        if expired {
+            eprintln!("lifecycle: a live resize ended without its last step");
+            self.update_refresh();
+        }
     }
 
     /// Tells the guest its display refresh rate, if it changed since it was last told and the
@@ -5089,7 +5721,8 @@ impl Worker {
         let Some(monitor_hz) = self.monitor_hz else {
             return;
         };
-        let hz = crate::guest_refresh::refresh_rate(monitor_hz, self.battery_saver);
+        let resizing = self.resizing_live();
+        let hz = crate::guest_refresh::refresh_rate_while(monitor_hz, self.battery_saver, resizing);
         if self.refresh_sent == Some(hz) {
             return;
         }
@@ -5100,8 +5733,9 @@ impl Worker {
             | SessionState::Dozing => {
                 eprintln!(
                     "lifecycle: the guest's display refreshes at {hz} Hz (fastest monitor \
-                     {monitor_hz} Hz, battery saver {})",
-                    if self.battery_saver { "on" } else { "off" }
+                     {monitor_hz} Hz, battery saver {}, live resize {})",
+                    if self.battery_saver { "on" } else { "off" },
+                    if resizing { "on" } else { "off" }
                 );
                 self.refresh_sent = Some(hz);
                 self.send_body(Body::DisplayRefresh(control::DisplayRefresh { hz }));
@@ -5172,6 +5806,49 @@ impl Worker {
                 self.send_body(Body::HostMemory(control::HostMemory { low }));
             }
             SessionState::Frozen => self.host_memory_pending = true,
+            _ => {}
+        }
+    }
+
+    /// Records which apps start below the title bar, and tells a guest that is up.
+    fn set_caption_compat(&mut self, below_title_bar: Vec<String>) {
+        if self.caption_compat.as_ref() == Some(&below_title_bar) {
+            return;
+        }
+        self.caption_compat = Some(below_title_bar);
+        match self.state() {
+            SessionState::Starting
+            | SessionState::Stalled
+            | SessionState::Active
+            | SessionState::Dozing => self.send_caption_compat(),
+            SessionState::Frozen => self.caption_compat_pending = true,
+            _ => {}
+        }
+    }
+
+    /// Tells the guest which apps start below the title bar, once the window manager has said.
+    fn send_caption_compat(&mut self) {
+        if let Some(below_title_bar) = self.caption_compat.clone() {
+            self.send_body(Body::CaptionCompat(control::CaptionCompat {
+                below_title_bar,
+            }));
+        }
+    }
+
+    /// Records which tasks have their window shown, and tells a guest that is up.
+    fn set_tasks_shown(&mut self, task_ids: Vec<i32>) {
+        if self.tasks_shown.as_ref() == Some(&task_ids) {
+            return;
+        }
+        self.tasks_shown = Some(task_ids.clone());
+        match self.state() {
+            SessionState::Starting
+            | SessionState::Stalled
+            | SessionState::Active
+            | SessionState::Dozing => {
+                self.send_body(Body::TasksShown(control::TasksShown { task_ids }));
+            }
+            SessionState::Frozen => self.tasks_shown_pending = true,
             _ => {}
         }
     }
@@ -5304,6 +5981,7 @@ impl Worker {
         match result {
             Ok(()) => {
                 growth.applied();
+                self.shared.set_vm_memory_mb(Some(mb));
                 eprintln!(
                     "memory: Android's memory {} from {before} to {mb} MiB ({} MiB available, \
                      {:.1}% stalled)",
@@ -5365,8 +6043,14 @@ impl Worker {
             if let Some(power) = self.power {
                 self.send_body(Body::PowerState(power.to_control()));
             }
-            // A new agent holds the display at the rate it is told, from the start.
+            // A new agent holds the display at the rate it is told, from the start. A resize
+            // under way went to the agent before it, and the next live step starts it again.
             self.refresh_sent = None;
+            self.shared
+                .live_resizes
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clear();
             self.update_refresh();
             if self.host_memory_low {
                 self.send_body(Body::HostMemory(control::HostMemory { low: true }));
@@ -5406,12 +6090,15 @@ impl Worker {
             if let Some(body) = self.shared.android_files_body() {
                 self.send_body(body);
             }
-            // A new agent reads no task's accessibility tree until it is asked.
-            for task_id in self.shared.watched_tasks() {
-                self.send_body(Body::AccessibilityWatch(control::AccessibilityWatch {
-                    task_id,
-                    on: true,
-                }));
+            // A new agent reads no task's or widget's accessibility tree until it is asked,
+            // and keeps its usual waits until it hears a screen reader listens.
+            for (target, listening) in self.shared.watched_trees() {
+                self.send_body(Body::AccessibilityWatch(target.to_control_watch(true)));
+                if let (AccessibilityTarget::Task(task_id), true) = (target, listening) {
+                    self.send_body(Body::AccessibilityListening(
+                        control::AccessibilityListening { task_id, listening },
+                    ));
+                }
             }
             // A new agent takes the clipboards to be shared, and has none of the host's text.
             self.clipboard_last = None;
@@ -5425,6 +6112,15 @@ impl Worker {
             if let Some(body) = self.shared.root_elevation_body(true) {
                 self.send_body(body);
             }
+            // A new agent keeps Android's backup manager from backing up to the host until it
+            // hears that the user turned backup on.
+            let body = self.shared.backup_setting_body();
+            self.send_body(body);
+            // The root certificates added on the host again: a change the daemon could not
+            // hear while Android was starting reaches it now, and the new agent has the apps
+            // that started before it forget the anchors they looked up.
+            let body = self.shared.host_certificates_body();
+            self.send_body(body);
         } else {
             self.agent_lost_at = Some(now);
             // The tasks are what the agent reported, and the agent goes when Android's framework
@@ -5555,6 +6251,7 @@ impl Worker {
         match self.state() {
             SessionState::Starting | SessionState::Stalled if ready => {
                 self.shared.set_problem(None);
+                self.shared.forget_last_reason();
                 // The doze delay counts from here when no window is shown.
                 self.hidden_since = now;
                 let doze = self.stall_doze.take();
@@ -5661,6 +6358,8 @@ impl Worker {
             eprintln!("memory: Android starts with {base} MiB and may grow to {max} MiB");
             MemoryGrowth::new(base, max)
         });
+        self.shared
+            .set_vm_memory_mb(self.memory_growth.as_ref().map(MemoryGrowth::current_mb));
         let started = Instant::now();
         self.started_at = started;
         // A new boot of Android: the root policy is read again and no app keeps a grace.
@@ -5732,9 +6431,27 @@ impl Worker {
                             self.dozing_since = None;
                             self.power_pending = false;
                             self.host_memory_pending = false;
+                            // The control daemon takes every task to be shown until it is told.
+                            self.tasks_shown_pending = false;
+                            if let Some(task_ids) = self.tasks_shown.clone() {
+                                self.send_body(Body::TasksShown(control::TasksShown { task_ids }));
+                            }
+                            // The agent starts every task under the unified title bar until
+                            // it is told which apps start below it.
+                            self.caption_compat_pending = false;
+                            self.send_caption_compat();
                             // A new boot's control daemon has no controller yet.
                             self.system_pending = false;
                             self.replay_gamepads();
+                            // A boot trusts none of the root certificates added on the host
+                            // until its daemon is told them, before any app reaches the network.
+                            let body = self.shared.host_certificates_body();
+                            self.send_body(body);
+                            // The memory this VM shares with the host, which its kernel maps
+                            // only once the daemon has been told where it is.
+                            for region in self.launcher.shared_memory() {
+                                self.send_body(Body::GuestSharedMemory(region));
+                            }
                             return;
                         }
                         Err(Refusal::NotTheGuest(why)) => {
@@ -5744,6 +6461,11 @@ impl Worker {
                         Err(Refusal::Incompatible(why)) => {
                             connection.close();
                             self.stop(StopReason::HandshakeRejected(why));
+                            return;
+                        }
+                        Err(Refusal::OtherRelease(why)) => {
+                            connection.close();
+                            self.stop(StopReason::GuestFromOtherRelease(why));
                             return;
                         }
                     }
@@ -5786,6 +6508,14 @@ impl Worker {
             }
             Command::HostMemoryLow(low) => {
                 self.set_host_memory_low(low);
+                true
+            }
+            Command::TasksShown(task_ids) => {
+                self.set_tasks_shown(task_ids);
+                true
+            }
+            Command::CaptionCompat(packages) => {
+                self.set_caption_compat(packages);
                 true
             }
             Command::System(input) => {
@@ -5852,6 +6582,7 @@ impl Worker {
                 return;
             }
             self.tick_lifecycle();
+            self.tick_refresh();
             self.tick_clock();
             self.offer_host_clipboard();
             self.tick_notifications();
@@ -5940,6 +6671,11 @@ impl Worker {
                     control::TaskOrientation::Landscape => TaskOrientation::Landscape,
                     control::TaskOrientation::Unspecified => TaskOrientation::Unspecified,
                 };
+                let fullscreen_request = match update.fullscreen_request() {
+                    control::FullScreenRequest::Explicit => FullScreenRequest::Explicit,
+                    control::FullScreenRequest::BarsHidden => FullScreenRequest::BarsHidden,
+                    control::FullScreenRequest::None => FullScreenRequest::None,
+                };
                 let status_bar = match update.status_bar_appearance() {
                     control::StatusBarAppearance::Light => StatusBarAppearance::Light,
                     control::StatusBarAppearance::Dark => StatusBarAppearance::Dark,
@@ -5964,7 +6700,7 @@ impl Worker {
                     status_bar,
                     status_bar_color: update.status_bar_color,
                     orientation,
-                    fullscreen: update.fullscreen,
+                    fullscreen_request,
                     picture_in_picture: update.picture_in_picture,
                     transparent_caption: update.transparent_caption,
                     caption_interactive: update
@@ -5979,6 +6715,12 @@ impl Worker {
                         .collect(),
                     can_go_back: update.can_go_back,
                     handles_density_change: update.handles_density_change,
+                    overlay: update.overlay.map(|overlay| OverlayWindow {
+                        window_type: overlay.window_type,
+                        focusable: overlay.focusable,
+                        touchable: overlay.touchable,
+                    }),
+                    below_title_bar: update.below_title_bar,
                 }));
             }
             Some(Body::TaskRemoved(removed)) => {
@@ -6017,12 +6759,37 @@ impl Worker {
                     cache_bytes: app.cache_bytes,
                     native_libraries: NativeLibraries::from_control(&app.native_libraries),
                     primary_abi: native_abi::checked_abi(&app.primary_abi),
+                    shared_user_id: app.shared_user_id,
                     ..Default::default()
                 });
             }
             Some(Body::InstalledApps(apps)) => {
                 self.shared.publish_installed(&apps.package_names);
                 self.shared.apps_refreshed();
+            }
+            Some(Body::AppShortcuts(shortcuts)) => {
+                let list = shortcuts
+                    .shortcuts
+                    .into_iter()
+                    .map(shortcut_from_control)
+                    .collect();
+                self.shared.publish_shortcuts(&shortcuts.package_name, list);
+            }
+            Some(Body::PinShortcutRequest(request)) => {
+                let Some(shortcut) = request.shortcut else {
+                    eprintln!(
+                        "apps: {} asked to pin a shortcut but gave none; it is ignored",
+                        request.package_name
+                    );
+                    return;
+                };
+                self.shared
+                    .publish_task(TaskEvent::PinShortcut(PinShortcutRequest {
+                        request_id: request.request_id,
+                        package_name: request.package_name,
+                        app_label: request.app_label,
+                        shortcut: shortcut_from_control(shortcut),
+                    }));
             }
             Some(Body::ReinstallResult(result)) => self.guest_reinstall_result(result),
             Some(Body::NativeLibraryCrash(crash)) => self.native_library_crash(crash),
@@ -6104,6 +6871,12 @@ impl Worker {
                     package_name: gone.package_name,
                 })
             }
+            Some(Body::AppAudio(list)) => self
+                .shared
+                .app_audio
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .apply(app_audio::checked_streams(list)),
             Some(Body::InstallProgress(progress)) => self.shared.install_event(
                 progress.transfer_id,
                 InstallEvent::Progress(progress.received),
@@ -6125,6 +6898,16 @@ impl Worker {
                     Err("Android did not place the widget".into())
                 } else {
                     Err(added.error.chars().take(512).collect())
+                }),
+            ),
+            Some(Body::WidgetReconfigured(answer)) => self.shared.widget_answer(
+                answer.request_id,
+                WidgetAnswer::Reconfigured(if answer.finished {
+                    Ok(())
+                } else if answer.error.trim().is_empty() {
+                    Err("the widget's settings were closed without a change".into())
+                } else {
+                    Err(answer.error.chars().take(512).collect())
                 }),
             ),
             Some(Body::WidgetUpdated(updated)) => self.guest_widget(updated),
@@ -6191,21 +6974,31 @@ impl Worker {
                 eprintln!("control channel: dropping a message that stops at the guest's daemon");
             }
             Some(Body::AccessibilityTree(tree)) => {
-                let task_id = tree.task_id;
+                let target = AccessibilityTarget::of(tree.task_id, tree.widget_id);
                 match TreeUpdate::from_control(tree) {
                     Ok(update) => self
                         .shared
-                        .publish_accessibility(task_id, GuestAccessibility::Tree(update)),
-                    Err(why) => eprintln!(
-                        "accessibility: dropped the guest's tree of task {task_id}: {why}"
-                    ),
+                        .publish_accessibility(target, GuestAccessibility::Tree(update)),
+                    Err(why) => {
+                        eprintln!("accessibility: dropped the guest's tree of {target}: {why}")
+                    }
                 }
             }
             Some(Body::AccessibilityActionResult(result)) => {
-                let task_id = result.task_id;
+                let target = AccessibilityTarget::of(result.task_id, result.widget_id);
                 self.shared.publish_accessibility(
-                    task_id,
+                    target,
                     GuestAccessibility::ActionResult(ActionResult::from_control(result)),
+                );
+            }
+            Some(Body::AccessibilityAnnouncement(announcement)) => {
+                // An announcement comes from an app, so it is always about a task.
+                let target = AccessibilityTarget::Task(announcement.task_id);
+                self.shared.publish_accessibility(
+                    target,
+                    GuestAccessibility::Announcement(
+                        crate::accessibility::Announcement::from_control(announcement),
+                    ),
                 );
             }
             Some(Body::PrintJob(job)) => {
@@ -6230,7 +7023,56 @@ impl Worker {
                 self.shared.set_location(Wanted::from_control(&request))
             }
             Some(Body::SuRequest(request)) => self.su_request(request),
+            Some(
+                body @ (Body::BackupUpload(_)
+                | Body::BackupCommit(_)
+                | Body::BackupDiscard(_)
+                | Body::BackupClear(_)
+                | Body::BackupQuery(_)
+                | Body::BackupFetch(_)
+                | Body::BackupRunResult(_)
+                | Body::PasskeyRequest(_)),
+            ) => {
+                let (shared, commands) = (Arc::clone(&self.shared), self.own_commands.clone());
+                let reply = move |body| send_quietly(&shared, &commands, body);
+                if !self.shared.host_services_message(body, reply) {
+                    eprintln!("control channel: dropping a message no host service takes");
+                }
+            }
+            Some(Body::KeymintRootKeyRequest(_)) => {
+                eprintln!(
+                    "control channel: dropping a request for the KeyMint root key, which belongs \
+                     on the KeyMint port"
+                );
+            }
+            Some(Body::DnsQuery(_) | Body::DnsAnswer(_)) => {
+                eprintln!("control channel: dropping a DNS message, which belongs on the DNS port");
+            }
+            Some(
+                body @ (Body::ListSpeechVoices(_)
+                | Body::SpeakText(_)
+                | Body::StopSpeaking(_)
+                | Body::StartRecognition(_)
+                | Body::StopRecognition(_)
+                | Body::CancelRecognition(_)
+                | Body::CheckSpelling(_)),
+            ) => {
+                let replies = self.shared.language().from_guest(body);
+                for reply in replies {
+                    self.send_body(reply);
+                }
+            }
+            Some(Body::SpeechVoices(_))
+            | Some(Body::SpeechAudio(_))
+            | Some(Body::SpeechDone(_))
+            | Some(Body::RecognitionEvent(_))
+            | Some(Body::SpellingResult(_)) => {
+                eprintln!(
+                    "control channel: dropping a speech or spelling answer only the host sends"
+                );
+            }
             Some(Body::ScreenState(_))
+            | Some(Body::TasksShown(_))
             | Some(Body::PowerState(_))
             | Some(Body::DisplayRefresh(_))
             | Some(Body::HostMemory(_))
@@ -6239,7 +7081,10 @@ impl Worker {
             | Some(Body::LaunchApp(_))
             | Some(Body::ResizeTask(_))
             | Some(Body::SetTaskDensity(_))
+            | Some(Body::LaunchPlacement(_))
+            | Some(Body::CaptionCompat(_))
             | Some(Body::SetTaskCaption(_))
+            | Some(Body::SetTaskFullScreen(_))
             | Some(Body::PointerEvent(_))
             | Some(Body::KeyEvent(_))
             | Some(Body::ImeComposition(_))
@@ -6265,6 +7110,7 @@ impl Worker {
             | Some(Body::GoogleDeviceIdQuery(_))
             | Some(Body::NotificationClicked(_))
             | Some(Body::NotificationDismissed(_))
+            | Some(Body::NotificationButtonClicked(_))
             | Some(Body::BackgroundAppAction(_))
             | Some(Body::MediaControl(_))
             | Some(Body::InstallApk(_))
@@ -6280,12 +7126,16 @@ impl Worker {
             | Some(Body::OpenAppSettings(_))
             | Some(Body::RequestGuestMemory(_))
             | Some(Body::StopApp(_))
+            | Some(Body::LaunchShortcut(_))
+            | Some(Body::PinShortcutAnswer(_))
             | Some(Body::ListWidgetProviders(_))
             | Some(Body::AddWidget(_))
             | Some(Body::RemoveWidget(_))
+            | Some(Body::ReconfigureWidget(_))
             | Some(Body::ResizeWidget(_))
             | Some(Body::WidgetPointer(_))
             | Some(Body::AccessibilityWatch(_))
+            | Some(Body::AccessibilityListening(_))
             | Some(Body::AccessibilityAction(_))
             | Some(Body::LogStream(_))
             | Some(Body::LogDump(_))
@@ -6307,13 +7157,25 @@ impl Worker {
             | Some(Body::VideoFlush(_))
             | Some(Body::VideoFlushed(_))
             | Some(Body::VideoError(_))
+            | Some(Body::VideoSlotReturned(_))
+            | Some(Body::GuestSharedMemory(_))
             | Some(Body::LocationStatus(_))
             | Some(Body::LocationFix(_))
             | Some(Body::SystemSettings(_))
             | Some(Body::DeviceName(_))
             | Some(Body::GamepadConnected(_))
             | Some(Body::GamepadDisconnected(_))
-            | Some(Body::GamepadState(_)) => {
+            | Some(Body::GamepadState(_))
+            | Some(Body::BackupAnswer(_))
+            | Some(Body::BackupContents(_))
+            | Some(Body::BackupFetchData(_))
+            | Some(Body::BackupRun(_))
+            | Some(Body::BackupRestore(_))
+            | Some(Body::PasskeyResponse(_))
+            | Some(Body::KeymintRootKey(_))
+            | Some(Body::BackupSetting(_))
+            | Some(Body::HostCertificates(_))
+            | Some(Body::SetAppVolume(_)) => {
                 eprintln!("control channel: dropping a request only the host sends");
             }
             Some(Body::SensorList(_))
@@ -6389,11 +7251,22 @@ impl Worker {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clear();
+        // And its outputs of sound.
+        self.shared
+            .app_audio
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
         // And the modes and boosts its power HAL asked for.
         self.shared.publish_power(GuestPower::Stopped);
         // And its wish for the host's location, so the host's location service stops.
         self.shared.set_location(Wanted::NONE);
+        // And its backups, restores and passkey ceremonies under way.
+        self.shared.host_services_gone();
+        // And what it asked of the host's speech and spelling.
+        self.shared.language().guest_gone();
         self.shared.set_guest_memory(None);
+        self.shared.set_vm_memory_mb(None);
         // A dump or diagnostics under way gets no more from this guest.
         self.shared
             .logs

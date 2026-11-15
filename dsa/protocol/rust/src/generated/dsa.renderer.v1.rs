@@ -64,6 +64,9 @@ pub struct Start {
     /// takes no dmabufs) every frame is read back.
     #[prost(bool, tag = "10")]
     pub frames_on_gpu: bool,
+    /// Which Vulkan implementation to use.
+    #[prost(enumeration = "VulkanDriverRule", tag = "11")]
+    pub vulkan_driver: i32,
 }
 /// Renderer to window manager: the answer to Start.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -94,6 +97,12 @@ pub struct Started {
     /// textures on (Windows). Empty when unknown.
     #[prost(bytes = "vec", tag = "9")]
     pub adapter_luid: ::prost::alloc::vec::Vec<u8>,
+    /// Which Vulkan implementation the renderer runs on, and why, in words for the log and the
+    /// user: the devices it saw, the setting, and with VULKAN_DRIVER_KIND_NONE what to install.
+    #[prost(enumeration = "VulkanDriverKind", tag = "10")]
+    pub vulkan_driver: i32,
+    #[prost(string, tag = "11")]
+    pub vulkan_driver_reason: ::prost::alloc::string::String,
 }
 /// Window manager to renderer: the guest VM whose graphics streams to take (Windows, where a
 /// Hyper-V socket is bound to one VM). Sent after Start and whenever it changes; an empty ID
@@ -278,12 +287,24 @@ pub struct Note {
 /// Window manager to renderer: end now. The renderer closes the guest's streams and exits.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Stop {}
+/// Renderer to window manager: the renderer found its Vulkan device lost (a GPU reset), or
+/// made it again. Sent at once each time either count goes up, so the window manager learns of
+/// a reset the moment the renderer does, not when its own Direct3D device fails later.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeviceState {
+    /// How many times the renderer found its device lost since it started.
+    #[prost(uint64, tag = "1")]
+    pub losses: u64,
+    /// How many times it made its device again since it started.
+    #[prost(uint64, tag = "2")]
+    pub generation: u64,
+}
 /// The one message type on the wire. Each frame carries exactly one.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Envelope {
     #[prost(
         oneof = "envelope::Body",
-        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18"
+        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19"
     )]
     pub body: ::core::option::Option<envelope::Body>,
 }
@@ -327,6 +348,8 @@ pub mod envelope {
         Note(super::Note),
         #[prost(message, tag = "18")]
         Stop(super::Stop),
+        #[prost(message, tag = "19")]
+        DeviceState(super::DeviceState),
     }
 }
 /// The protocol version. CURRENT goes up when the meaning of existing messages changes.
@@ -462,6 +485,81 @@ impl GpuRule {
             "GPU_RULE_INTEGRATED" => Some(Self::Integrated),
             "GPU_RULE_DISCRETE" => Some(Self::Discrete),
             "GPU_RULE_NAME" => Some(Self::Name),
+            _ => None,
+        }
+    }
+}
+/// Which Vulkan implementation the renderer may use, as the user's setting asks. Only the
+/// Windows renderer has a choice; the others take what the system has.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum VulkanDriverRule {
+    /// A native Vulkan driver; Dozen (Vulkan on Direct3D 12) only when no native driver works.
+    Auto = 0,
+    /// Native Vulkan drivers only.
+    Native = 1,
+    /// Dozen only.
+    Dozen = 2,
+}
+impl VulkanDriverRule {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Auto => "VULKAN_DRIVER_RULE_AUTO",
+            Self::Native => "VULKAN_DRIVER_RULE_NATIVE",
+            Self::Dozen => "VULKAN_DRIVER_RULE_DOZEN",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "VULKAN_DRIVER_RULE_AUTO" => Some(Self::Auto),
+            "VULKAN_DRIVER_RULE_NATIVE" => Some(Self::Native),
+            "VULKAN_DRIVER_RULE_DOZEN" => Some(Self::Dozen),
+            _ => None,
+        }
+    }
+}
+/// Which Vulkan implementation the renderer runs on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum VulkanDriverKind {
+    /// The renderer does not say (an older renderer, or a host without a choice).
+    Unknown = 0,
+    /// A native Vulkan driver.
+    Native = 1,
+    /// Dozen on a GPU's Direct3D 12 driver.
+    Dozen = 2,
+    /// Dozen on the software Direct3D 12 device (WARP): the CPU draws everything.
+    DozenCpu = 3,
+    /// No Vulkan the renderer can use: it renders nothing.
+    None = 4,
+}
+impl VulkanDriverKind {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "VULKAN_DRIVER_KIND_UNKNOWN",
+            Self::Native => "VULKAN_DRIVER_KIND_NATIVE",
+            Self::Dozen => "VULKAN_DRIVER_KIND_DOZEN",
+            Self::DozenCpu => "VULKAN_DRIVER_KIND_DOZEN_CPU",
+            Self::None => "VULKAN_DRIVER_KIND_NONE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "VULKAN_DRIVER_KIND_UNKNOWN" => Some(Self::Unknown),
+            "VULKAN_DRIVER_KIND_NATIVE" => Some(Self::Native),
+            "VULKAN_DRIVER_KIND_DOZEN" => Some(Self::Dozen),
+            "VULKAN_DRIVER_KIND_DOZEN_CPU" => Some(Self::DozenCpu),
+            "VULKAN_DRIVER_KIND_NONE" => Some(Self::None),
             _ => None,
         }
     }

@@ -70,7 +70,155 @@ fn config() -> AndroidVmConfig {
         hosting_process_name_suffix: None,
         fine_grained_memory: false,
         network_adapter: None,
+        direct_mapped: None,
+        picture_region: None,
+        graphics_region: None,
     }
+}
+
+#[test]
+fn pr7_the_hcs_document_shares_the_picture_section_read_only_with_the_guest() {
+    use dsa_host_windows::picture_region::{
+        hcs_section_name, picture_region, section_name, section_sddl,
+    };
+    let mut vm = config();
+    assert!(document(&vm)["VirtualMachine"]["Devices"]
+        .get("SharedMemory")
+        .is_none());
+    vm.picture_region = picture_region(Some(USER_SID), None);
+    let region = vm.picture_region.clone().expect("on by default");
+    assert_eq!(region.section_name, section_name(USER_SID));
+    assert!(region.section_name.starts_with(r"Global\"));
+    assert!(region.section_name.ends_with(USER_SID));
+    assert_eq!(region.length, 64 << 20);
+    let doc = document(&vm);
+    let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
+    assert_eq!(regions.as_array().map(Vec::len), Some(1));
+    // HCS opens the section by its kernel object path; the Win32 `Global\` name fails to start.
+    assert_eq!(
+        regions[0]["SectionName"],
+        hcs_section_name(&region.section_name)
+    );
+    assert_eq!(
+        regions[0]["SectionName"],
+        format!(r"\BaseNamedObjects\DSA-VideoPictures-{USER_SID}")
+    );
+    assert_eq!(regions[0]["StartOffset"], 0);
+    assert_eq!(regions[0]["Length"], 64u64 << 20);
+    assert_eq!(regions[0]["AllowGuestWrite"], false);
+    assert_eq!(regions[0]["HiddenFromGuest"], false);
+    // SYSTEM, the VM workers and the user; nobody else.
+    assert_eq!(
+        section_sddl(USER_SID),
+        format!("D:P(A;;GA;;;SY)(A;;GA;;;S-1-5-83-0)(A;;GRGW;;;{USER_SID})")
+    );
+    // The user's setting: 0 is none, another size is rounded up to whole 2 MiB, and a VM with
+    // no user to name it after has none.
+    assert_eq!(picture_region(Some(USER_SID), Some(0)), None);
+    assert_eq!(
+        picture_region(Some(USER_SID), Some(33)).map(|r| r.length),
+        Some(34 << 20)
+    );
+    assert_eq!(picture_region(Some(USER_SID), Some(1)), None, "too small");
+    assert_eq!(picture_region(None, None), None);
+}
+
+#[test]
+fn pr7_the_hcs_document_shares_the_graphics_memory_and_its_read_only_grants() {
+    use dsa_host_windows::graphics_region::{
+        data_section_name, grants_section_name, graphics_region,
+    };
+    use dsa_host_windows::picture_region::{hcs_section_name, picture_region};
+    let mut vm = config();
+    vm.graphics_region = graphics_region(Some(USER_SID), None);
+    let region = vm.graphics_region.clone().expect("on by default");
+    assert_eq!(region.data_section, data_section_name(USER_SID));
+    assert_eq!(region.grants_section, grants_section_name(USER_SID));
+    assert!(region.data_section.starts_with(r"Global\") && region.data_section.ends_with(USER_SID));
+    assert_ne!(region.data_section, region.grants_section);
+    assert_eq!(region.data_length, 256 << 20);
+    assert_eq!(region.grants_length, 2 << 20);
+    let doc = document(&vm);
+    let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
+    assert_eq!(regions.as_array().map(Vec::len), Some(2));
+    // The guest writes its host-visible memory, and only reads the grants.
+    assert_eq!(regions[0]["Length"], 256u64 << 20);
+    assert_eq!(regions[0]["AllowGuestWrite"], true);
+    assert_eq!(regions[1]["AllowGuestWrite"], false);
+    // HCS opens each section by its kernel object path; the Win32 `Global\` name fails to
+    // start the VM.
+    assert_eq!(
+        regions[0]["SectionName"],
+        format!(r"\BaseNamedObjects\DSA-GraphicsMemory-{USER_SID}")
+    );
+    assert_eq!(
+        regions[1]["SectionName"],
+        format!(r"\BaseNamedObjects\DSA-GraphicsGrants-{USER_SID}")
+    );
+    // With the pictures' region too: all three, the pictures' first.
+    vm.picture_region = picture_region(Some(USER_SID), None);
+    let doc = document(&vm);
+    let regions = &doc["VirtualMachine"]["Devices"]["SharedMemory"]["Regions"];
+    assert_eq!(regions.as_array().map(Vec::len), Some(3));
+    assert_eq!(
+        regions[0]["SectionName"],
+        hcs_section_name(&vm.picture_region.unwrap().section_name)
+    );
+    for entry in regions.as_array().unwrap() {
+        let name = entry["SectionName"].as_str().unwrap();
+        assert!(name.starts_with(r"\BaseNamedObjects\"), "{name}");
+    }
+    // 0 turns it off; a size is whole 2 MiB; no user, none.
+    assert_eq!(graphics_region(Some(USER_SID), Some(0)), None);
+    assert_eq!(
+        graphics_region(Some(USER_SID), Some(33)).map(|r| r.data_length),
+        Some(34 << 20)
+    );
+    assert_eq!(graphics_region(None, None), None);
+}
+
+#[test]
+fn pr7_the_guest_address_of_the_picture_section_is_read_from_the_vms_properties() {
+    use dsa_host_windows::picture_region::{guest_address_from_properties, properties_query};
+    let query: Value = serde_json::from_str(&properties_query()).unwrap();
+    assert_eq!(query["PropertyTypes"][0], "SharedMemoryRegion");
+    let name = r"Global\DSA-VideoPictures-S-1-5-21-1";
+    let properties = format!(
+        r#"{{"Id":"dsa","SharedMemoryRegionInfo":[{{"SectionName":"Global\\other","GuestPhysicalAddress":1}},{{"SectionName":"{}","GuestPhysicalAddress":4429185024}}]}}"#,
+        name.replace('\\', "\\\\")
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, name),
+        Some(0x1_0800_0000)
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, "Global\\missing"),
+        None
+    );
+    // HCS reports the section under the kernel path the document named it by.
+    let reported = r#"{"SharedMemoryRegionInfo":[{"SectionName":"\\BaseNamedObjects\\DSA-VideoPictures-S-1-5-21-1","GuestPhysicalAddress":131072}]}"#;
+    assert_eq!(guest_address_from_properties(reported, name), Some(131072));
+    assert_eq!(guest_address_from_properties("not json", name), None);
+    assert_eq!(guest_address_from_properties("{}", name), None);
+}
+
+#[test]
+fn pr7_the_graphics_sections_are_found_under_the_kernel_paths_hcs_reports() {
+    use dsa_host_windows::graphics_region::{data_section_name, grants_section_name};
+    use dsa_host_windows::picture_region::guest_address_from_properties;
+    let data = data_section_name(USER_SID);
+    let grants = grants_section_name(USER_SID);
+    let properties = format!(
+        r#"{{"SharedMemoryRegionInfo":[{{"SectionName":"\\BaseNamedObjects\\DSA-GraphicsMemory-{USER_SID}","GuestPhysicalAddress":131072}},{{"SectionName":"\\BaseNamedObjects\\DSA-GraphicsGrants-{USER_SID}","GuestPhysicalAddress":196608}}]}}"#
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, &data),
+        Some(131072)
+    );
+    assert_eq!(
+        guest_address_from_properties(&properties, &grants),
+        Some(196608)
+    );
 }
 
 fn document(config: &AndroidVmConfig) -> Value {
@@ -242,6 +390,61 @@ fn nfr2_the_vm_faults_and_frees_memory_in_small_pieces_where_the_build_can() {
     assert_eq!(memory.get("BackingPageSize"), None);
     assert_eq!(memory.get("FaultClusterSizeShift"), None);
     assert_eq!(memory.get("DirectMapFaultClusterSizeShift"), None);
+}
+
+#[test]
+fn nfr2_the_guest_is_told_the_fault_cluster_and_compacts_only_for_whole_block_reporting() {
+    // Small backing pages with 64 KiB fault clusters, reporting every free 4 KiB page: the
+    // guest reports again the free pages Hyper-V backs again with a neighbour, and does not
+    // compact, which would only move memory into pages Hyper-V had taken back.
+    let mut fine = config();
+    fine.fine_grained_memory = true;
+    fine.page_reporting_order = 0;
+    let cmdline = fine.full_kernel_cmdline_for(GuestArch::X86_64);
+    assert!(
+        cmdline
+            .contains("page_reporting.page_reporting_order=0 page_reporting.fault_cluster_order=4"),
+        "{cmdline}"
+    );
+    assert!(!cmdline.contains("memory_compaction"), "{cmdline}");
+    // The same words reach the ARM64 firmware's boot entry.
+    let arm = fine.full_kernel_cmdline_for(GuestArch::Arm64);
+    assert!(
+        arm.contains("page_reporting.fault_cluster_order=4"),
+        "{arm}"
+    );
+
+    // Large backing pages, reporting 2 MiB blocks: no cluster to tell, and compaction
+    // gathers the blocks.
+    let mut blocks = config();
+    blocks.page_reporting_order = 9;
+    let cmdline = blocks.full_kernel_cmdline_for(GuestArch::X86_64);
+    assert!(!cmdline.contains("fault_cluster_order"), "{cmdline}");
+    assert!(
+        cmdline
+            .contains("page_reporting.page_reporting_order=9 androidboot.dsa.memory_compaction=on"),
+        "{cmdline}"
+    );
+}
+
+#[test]
+fn nfr1_the_guest_waits_a_second_before_it_reports_freed_pages() {
+    // A 4K video frees and allocates 11 MiB pictures 30 times a second; reported at once,
+    // the host took each back and faulted it in again, 20 GiB a minute. With the wait, what is
+    // freed and reused within it stays with the guest, at every reporting order.
+    for order in [0, 9] {
+        let mut vm = config();
+        vm.fine_grained_memory = order == 0;
+        vm.page_reporting_order = order;
+        for arch in [GuestArch::X86_64, GuestArch::Arm64] {
+            let cmdline = vm.full_kernel_cmdline_for(arch);
+            assert_eq!(
+                cmdline.matches("page_reporting.delay_ms=1000").count(),
+                1,
+                "{cmdline}"
+            );
+        }
+    }
 }
 
 #[test]
@@ -577,4 +780,185 @@ fn nfr2_the_guest_kernel_sets_little_memory_aside_at_boot() {
         // The user's own parameters still come last, so they can override these.
         assert!(cmdline.ends_with("androidboot.hardware=dsa"), "{cmdline}");
     }
+}
+
+fn direct_mapped(addon_bytes: Option<u64>) -> dsa_host_windows::vm::DirectMapped {
+    dsa_host_windows::vm::DirectMapped {
+        system_disk: PathBuf::from(r"C:\ProgramData\DSA\direct-mapped\17.0.0-1.vhd"),
+        system_bytes: 1800 << 20,
+        addon_bytes,
+        support: dsa_host_core::direct_mapped::ImageSupport {
+            fstab_suffix: "dsa_dax".into(),
+            system_disk: dsa_host_core::direct_mapped_disk::SystemDisk {
+                format: dsa_host_core::direct_mapped_disk::FORMAT,
+                bytes: 1800 << 20,
+                sha256: "ab".repeat(32),
+                super_bytes: 1600 << 20,
+            },
+            verified_partitions: vec!["odm".into()],
+        },
+    }
+}
+
+#[test]
+fn nfr1_a_direct_mapped_vm_maps_its_read_only_disks_as_persistent_memory() {
+    let mut vm = config();
+    vm.addon_disk = Some(PathBuf::from(r"C:\Users\me\AppData\Local\DSA\addons.vhd"));
+    vm.kernel_cmdline =
+        "androidboot.boot_devices=vmbus androidboot.fstab_suffix=dsa androidboot.hardware=dsa"
+            .into();
+    vm.direct_mapped = Some(direct_mapped(Some(300 << 20)));
+    let doc = document(&vm);
+    let devices = &doc["VirtualMachine"]["Devices"];
+    // The system disk and the add-on disk are read-only persistent memory, mapped from their
+    // flat VHD files, and no longer SCSI disks; the user's disk and the pstore disk stay there.
+    let pmem = &devices["VirtualPMem"];
+    assert_eq!(
+        pmem["Devices"]["0"]["HostPath"],
+        r"C:\ProgramData\DSA\direct-mapped\17.0.0-1.vhd"
+    );
+    assert_eq!(
+        pmem["Devices"]["1"]["HostPath"],
+        r"C:\Users\me\AppData\Local\DSA\addons.vhd"
+    );
+    for device in ["0", "1"] {
+        assert_eq!(pmem["Devices"][device]["ReadOnly"], true, "{device}");
+        assert_eq!(pmem["Devices"][device]["ImageFormat"], "Vhd1", "{device}");
+    }
+    assert_eq!(pmem["MaximumCount"], 2, "no empty devices");
+    assert_eq!(pmem["MaximumSizeBytes"], 1800u64 << 20);
+    // Backed by a mapping of the file, which the host can drop and read again, never by
+    // memory of the VM's own.
+    assert_eq!(pmem["Backing"], "Virtual");
+    let disks = devices["Scsi"]["0"]["Attachments"].as_object().unwrap();
+    let mut paths: Vec<&str> = disks
+        .values()
+        .map(|d| d["Path"].as_str().unwrap())
+        .collect();
+    paths.sort();
+    assert_eq!(
+        paths,
+        [
+            r"C:\Users\me\AppData\Local\DSA\data.vhdx",
+            r"C:\Users\me\AppData\Local\DSA\pstore.vhd"
+        ]
+    );
+    assert_eq!(disks["0"]["ReadOnly"], false);
+    // The guest boots the image's mount table for the mode, with the persistent memory's
+    // platform device among the boot devices, each named once.
+    let cmdline = vm.full_kernel_cmdline_for(GuestArch::X86_64);
+    assert!(
+        cmdline.contains(" androidboot.boot_devices=vmbus,nfit "),
+        "{cmdline}"
+    );
+    assert!(
+        cmdline.contains(" androidboot.fstab_suffix=dsa_dax "),
+        "{cmdline}"
+    );
+    assert_eq!(cmdline.matches("androidboot.fstab_suffix=").count(), 1);
+    assert!(cmdline.ends_with("androidboot.hardware=dsa"), "{cmdline}");
+}
+
+#[test]
+fn nfr1_without_the_direct_mapped_mode_the_disks_stay_on_scsi() {
+    let mut vm = config();
+    vm.addon_disk = Some(PathBuf::from(r"C:\Users\me\AppData\Local\DSA\addons.vhd"));
+    let doc = document(&vm);
+    assert!(doc["VirtualMachine"]["Devices"]
+        .get("VirtualPMem")
+        .is_none());
+    let disks = &doc["VirtualMachine"]["Devices"]["Scsi"]["0"]["Attachments"];
+    assert_eq!(disks["0"]["Path"], r"C:\Program Files\DSA\vm\system.vhdx");
+    assert_eq!(
+        disks["3"]["Path"],
+        r"C:\Users\me\AppData\Local\DSA\addons.vhd"
+    );
+    assert!(!vm
+        .full_kernel_cmdline_for(GuestArch::X86_64)
+        .contains("dsa_dax"));
+    // A direct-mapped boot with no add-on disk to map keeps an attached one on SCSI.
+    vm.direct_mapped = Some(direct_mapped(None));
+    let doc = document(&vm);
+    let pmem = &doc["VirtualMachine"]["Devices"]["VirtualPMem"];
+    assert_eq!(pmem["MaximumCount"], 1);
+    assert!(pmem["Devices"].get("1").is_none());
+    let disks = &doc["VirtualMachine"]["Devices"]["Scsi"]["0"]["Attachments"];
+    assert_eq!(
+        disks["2"]["Path"],
+        r"C:\Users\me\AppData\Local\DSA\addons.vhd"
+    );
+}
+
+#[test]
+fn nfr1_a_direct_mapped_vm_that_could_not_map_its_disks_is_refused() {
+    let mut vm = config();
+    let mut mapped = direct_mapped(None);
+    mapped.system_bytes = (1800 << 20) + 4096;
+    vm.direct_mapped = Some(mapped);
+    let why = vm
+        .to_hcs_document_for(GuestArch::X86_64)
+        .unwrap_err()
+        .to_string();
+    assert!(why.contains("whole number of 2 MiB"), "{why}");
+    let mut arm = arm64_config();
+    arm.direct_mapped = Some(direct_mapped(None));
+    let why = arm
+        .to_hcs_document_for(GuestArch::Arm64)
+        .unwrap_err()
+        .to_string();
+    assert!(why.contains("x86_64"), "{why}");
+}
+
+#[test]
+fn nfr1_the_mapped_disks_views_are_named_as_windows_names_them() {
+    use dsa_host_windows::mapped_pages::{device_path, drive_of};
+    let volume = r"\Device\HarddiskVolume3";
+    assert_eq!(
+        device_path(r"C:\ProgramData\DSA\direct-mapped", volume).as_deref(),
+        Some(r"\Device\HarddiskVolume3\ProgramData\DSA\direct-mapped")
+    );
+    assert_eq!(
+        device_path(
+            r"\\?\C:\ProgramData\DSA\users\S-1-5-21-1\addons.vhd\",
+            volume
+        )
+        .as_deref(),
+        Some(r"\Device\HarddiskVolume3\ProgramData\DSA\users\S-1-5-21-1\addons.vhd")
+    );
+    assert_eq!(
+        device_path("C:/ProgramData/DSA", volume).as_deref(),
+        Some(r"\Device\HarddiskVolume3\ProgramData\DSA")
+    );
+    assert_eq!(device_path(r"\\server\share\x.vhd", volume), None);
+    assert_eq!(
+        drive_of(std::path::Path::new(r"c:\ProgramData\DSA")).as_deref(),
+        Some("C:")
+    );
+    assert_eq!(drive_of(std::path::Path::new(r"\\server\share")), None);
+}
+
+#[test]
+fn nfr1_only_the_views_of_the_mapped_disks_are_given_back() {
+    use dsa_host_windows::mapped_pages::is_within;
+    let folder = r"\Device\HarddiskVolume3\ProgramData\DSA\direct-mapped";
+    let addons = r"\Device\HarddiskVolume3\ProgramData\DSA\users\S-1-5-21-1\addons.vhd";
+    // As the VM's memory process names its view of the system disk.
+    let system =
+        r"\Device\HarddiskVolume3\ProgramData\DSA\direct-mapped\17.0.0-16373615-15-dev.14.vhd";
+    assert!(is_within(system, folder));
+    assert!(is_within(&system.to_ascii_uppercase(), folder));
+    assert!(is_within(addons, addons));
+    // A folder that starts with the same name, another user's disk, another volume.
+    assert!(!is_within(
+        r"\Device\HarddiskVolume3\ProgramData\DSA\direct-mapped-old\a.vhd",
+        folder
+    ));
+    assert!(!is_within(
+        r"\Device\HarddiskVolume3\ProgramData\DSA\users\S-1-5-21-2\addons.vhd",
+        addons
+    ));
+    assert!(!is_within(
+        r"\Device\HarddiskVolume4\ProgramData\DSA\direct-mapped\a.vhd",
+        folder
+    ));
 }

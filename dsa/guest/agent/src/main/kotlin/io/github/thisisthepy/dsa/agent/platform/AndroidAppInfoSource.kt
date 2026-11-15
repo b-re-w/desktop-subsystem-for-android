@@ -1,6 +1,7 @@
 package io.github.thisisthepy.dsa.agent.platform
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
@@ -20,8 +21,8 @@ import java.io.ByteArrayOutputStream
  * window program on the host.
  *
  * The icon is drawn at [WINDOW_ICON_SIZE] pixels. The host draws the window's splash from it
- * before the app's first frame, 160 dp large like the app's own splash, which is 192 pixels on
- * a 200% monitor; at 512 the host scales it down on every monitor up to 500%, and never up.
+ * before the app's first frame, 160 dp large like the app's own splash, which is 262 pixels on
+ * a 200% monitor; at 512 the host scales it down on every monitor up to 390%, and never up.
  * The host makes the program's 256 pixel icon from it too. Adaptive icons are drawn with the
  * launcher's mask, as a launcher shows them.
  *
@@ -44,7 +45,15 @@ class AndroidAppInfoSource(
         } catch (e: PackageManager.NameNotFoundException) {
             return null
         }
-        val label = app.loadLabel(pm).toString().ifEmpty { packageName }
+        // The name a launcher shows, as the list of installed apps gives it, so the host never
+        // sees two names for one app: the launcher activity's label may differ from the app's
+        // own (the Play Store's activity is "Play Store", the app "Google Play Store").
+        val listedName = try {
+            launcherLabel(pm, packageName)
+        } catch (e: RuntimeException) {
+            null
+        }
+        val label = listedName ?: app.loadLabel(pm).toString().ifEmpty { packageName }
         var size = WINDOW_ICON_SIZE
         // The icon a launcher shows, which the Start menu shows too: the launcher activity's,
         // which may differ from the app's own, as an activity alias's often does.
@@ -100,6 +109,17 @@ internal fun launcherIconResource(pm: PackageManager, packageName: String): Int?
 }
 
 /**
+ * The label of [packageName]'s first launcher activity, as [AndroidLauncherApps] names the app
+ * in the list of installed apps; null when the app has no launcher activity or it has no label.
+ */
+internal fun launcherLabel(pm: PackageManager, packageName: String): String? {
+    val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(packageName)
+    val activity = pm.queryIntentActivities(launcher, PackageManager.ResolveInfoFlags.of(0))
+        .firstOrNull { it.activityInfo?.packageName == packageName } ?: return null
+    return activity.loadLabel(pm).toString().takeIf { it.isNotEmpty() }
+}
+
+/**
  * Whether the app's launcher activity, or else the app, declares that it supports several
  * windows (WindowManager.PROPERTY_SUPPORTS_MULTI_INSTANCE_SYSTEM_UI), as Android's desktop
  * windows ask before they offer New window. False when it declares nothing. The host offers New
@@ -148,10 +168,9 @@ internal fun iconPng(drawable: Drawable, size: Int = ICON_SIZE): ByteArray {
  * The icon [iconRes] of [app] drawn as a square PNG of [size] pixels, loaded at the density at
  * which its bitmaps are at least that large.
  *
- * The package manager loads an icon at the agent's own density, the guest display's (96 dpi
- * on a 100% main monitor), where a launcher icon is 29 pixels and an adaptive icon's layers
- * 65: drawn into 256 pixels
- * that is scaled up eight times and blurred. [fallback] is the icon as the package manager
+ * The package manager loads an icon at the agent's own density, the guest display's (130 dpi
+ * on a 100% main monitor), where a launcher icon is 39 pixels and an adaptive icon's layers
+ * 88: drawn into 256 pixels that is scaled up more than six times and blurred. [fallback] is the icon as the package manager
  * gives it, for an app whose icon cannot be read by resource.
  */
 internal fun sharpIconPng(pm: PackageManager, app: ApplicationInfo, iconRes: Int, size: Int = ICON_SIZE, fallback: () -> Drawable): ByteArray =

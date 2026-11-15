@@ -1,0 +1,102 @@
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+@@ -5,6 +5,7 @@
+ 
+ #include "ResourceTracker.h"
+ 
++#include "dsa_dirty_pages.h"
+ #include "dsa_shadow_blocks.h"
+ #include "dsa_shadow_memory.h"
+ 
+@@ -1632,6 +1633,10 @@ static bool inputTraceRequested() {
+ #endif
+ }
+ 
++// Where the dirty tracking says once which way it finds the pages an app wrote, or why it
++// hashes every block.
++static void logDirtyTracking(const char* message) { mesa_logi("%s", message); }
++
+ void ResourceTracker::flushShadowedMemory(VkEncoder* enc, VkDevice device) {
+     const bool traced = inputTraceRequested();
+     const auto started = std::chrono::steady_clock::now();
+@@ -1642,19 +1647,24 @@ void ResourceTracker::flushShadowedMemory(VkEncoder* enc, VkDevice device) {
+         // Held across the scan, so another thread freeing an allocation cannot free its copy
+         // from under it.
+         std::lock_guard<std::recursive_mutex> lock(mLock);
++        // Only the blocks the kernel saw written are compared (dsa_dirty_pages.h), so a submit
++        // costs what the app wrote, not what it has mapped, and nothing when it wrote nothing.
++        dsa::DirtyPages& dirty = dsa::dirtyPages(logDirtyTracking);
++        dirty.beginFlush();
+         for (const auto& [memory, info] : info_VkDeviceMemory) {
+             // Memory the app never mapped holds nothing the CPU wrote.
+             if (!info.shadowed || info.device != device || !info.shadowBlocks ||
+                 !info.shadowMapping.keptInStep()) {
+                 continue;
+             }
+-            scanned += info.shadowBlocks->size();
+-            for (const dsa::ShadowBlocks::Range& range : info.shadowBlocks->changed(info.ptr)) {
++            for (const dsa::ShadowBlocks::Range& range : dsa::changedShadow(
++                     dirty, info.shadowRegion, *info.shadowBlocks, info.ptr, &scanned)) {
+                 ranges.push_back({VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, memory,
+                                   range.offset, range.size});
+                 changed += range.size;
+             }
+         }
++        dirty.endFlush();
+     }
+     const auto compared = std::chrono::steady_clock::now();
+     if (!ranges.empty()) {
+@@ -4483,6 +4493,8 @@ void ResourceTracker::on_vkFreeMemory(void* context, VkDevice device, VkDeviceMe
+ 
+     if (!info.coherentMemory) {
+         if (info.shadowed) {
++            // The kernel stops tracking the copy before its pages go.
++            if (info.shadowRegion) dsa::dirtyPages(logDirtyTracking).untrack(info.shadowRegion);
+             dsa::freeShadowMemory(info.ptr, info.shadowSize);
+             info_VkDeviceMemory.erase(it);
+         }
+@@ -4572,6 +4584,16 @@ VkResult ResourceTracker::on_vkMapMemory(void* context, VkResult host_result, Vk
+     }
+ 
+     if (deviceMemoryInfo.shadowed && deviceMemoryInfo.shadowMapping.firstMap()) {
++        // From now on the kernel tracks which pages of the copy are written, so a flush
++        // compares only those (dsa_dirty_pages.h). Tracked before the read back below, so
++        // what it writes is counted too, and only memory the app maps is tracked.
++        if (!deviceMemoryInfo.shadowTracked) {
++            deviceMemoryInfo.shadowTracked = true;
++            deviceMemoryInfo.shadowRegion = dsa::dirtyPages(logDirtyTracking)
++                                                .track(deviceMemoryInfo.ptr,
++                                                       dsa::shadowMemoryLength(
++                                                           deviceMemoryInfo.shadowSize));
++        }
+         // The guest's copy was not kept in step while the app had not mapped it, so the
+         // device's writes are read back first, for a type the host caches, as every later
+         // read back is (dsa_shadow_memory.h).
+@@ -4592,8 +4614,11 @@ VkResult ResourceTracker::on_vkMapMemory(void* context, VkResult host_result, Vk
+                                                                             true /* do lock */);
+             lock.lock();
+             // The copy now holds what the host sent; the next flush need not send it back.
++            // Only the blocks the read back wrote are hashed again where the kernel tracks them.
+             if (deviceMemoryInfo.shadowBlocks) {
+-                deviceMemoryInfo.shadowBlocks->refresh(deviceMemoryInfo.ptr);
++                dsa::refreshShadow(dsa::dirtyPages(logDirtyTracking),
++                                   deviceMemoryInfo.shadowRegion, *deviceMemoryInfo.shadowBlocks,
++                                   deviceMemoryInfo.ptr);
+             }
+         }
+         deviceMemoryInfo.shadowMapping.mapped();
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+@@ -799,6 +799,10 @@ class ResourceTracker {
+         dsa::ShadowMapping shadowMapping;
+         // The size the copy was made with, which it is freed with.
+         uint64_t shadowSize = 0;
++        // The kernel's tracking of which pages of the copy are written (dsa_dirty_pages.h),
++        // from the app's first map: its id, 0 when every block is compared instead.
++        bool shadowTracked = false;
++        uint64_t shadowRegion = 0;
+ 
+         uint64_t blobId = 0;
+         uint64_t allocationSize = 0;

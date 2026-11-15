@@ -47,7 +47,7 @@ pub struct Task {
     pub label: String,
     /// Whether the task has input focus in the guest.
     pub focused: bool,
-    /// The density the task's app draws at, in dots per inch (96 at a scale of 100%); 0
+    /// The density the task's app draws at, in dots per inch (130 at a scale of 100%); 0
     /// when the agent could not read it.
     pub density_dpi: u32,
     /// The largest size the guest can give the task, in its display pixels; 0 when unknown.
@@ -62,8 +62,8 @@ pub struct Task {
     pub status_bar_color: u32,
     /// The orientation the task's top activity is locked to, if any.
     pub orientation: TaskOrientation,
-    /// Whether the task's app asked to fill the screen.
-    pub fullscreen: bool,
+    /// Which kind of full screen the task's app asks for, if any.
+    pub fullscreen_request: FullScreenRequest,
     /// Whether the task's app went into picture-in-picture.
     pub picture_in_picture: bool,
     /// Whether the task's app draws its own title bar: it asked for a transparent caption bar
@@ -78,7 +78,36 @@ pub struct Task {
     /// Whether the task's top activity says it handles a change of density itself, so
     /// Android redraws it at a new density instead of relaunching it.
     pub handles_density_change: bool,
+    /// Set when this is not an app task but an app overlay window, which the guest reports the
+    /// same way ([`OverlayWindow`]).
+    pub overlay: Option<OverlayWindow>,
+    /// Whether the task's app starts below the title bar, as the user chose for the app when
+    /// the task started: the guest gives it no top inset to handle, and the window paints
+    /// its band itself.
+    pub below_title_bar: bool,
 }
+
+/// An app overlay window: a window an app adds over other apps with Android's "display over
+/// other apps" permission, such as floating lyrics, a chat head or a screen filter. The guest
+/// reports it as a [`Task`] with [`Task::overlay`] set: `task_id` is the overlay's ID (never a
+/// task's: overlays are numbered from [`OVERLAY_ID_BASE`]), `bounds` the frame of its surface
+/// on the guest's display, `density_dpi` the display's density and `max_width` by
+/// `max_height` the display's size. The host shows it in a borderless window of its own that
+/// stays above the others ([`crate::compositor::overlay_windows`]), and never closes, resizes
+/// or reconfigures it: all of that is its app's.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub struct OverlayWindow {
+    /// The window's type in Android (`WindowManager.LayoutParams.type`): 2038 for
+    /// `TYPE_APPLICATION_OVERLAY`.
+    pub window_type: i32,
+    /// Whether the window may take the keyboard focus.
+    pub focusable: bool,
+    /// Whether the window takes pointer input.
+    pub touchable: bool,
+}
+
+/// The first ID the guest gives an app overlay window. Android's task IDs stay far below it.
+pub const OVERLAY_ID_BASE: i32 = 0x4000_0000;
 
 /// The orientation a task's top activity asks for.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -88,6 +117,22 @@ pub enum TaskOrientation {
     Unspecified,
     Portrait,
     Landscape,
+}
+
+/// How a task's app asks to fill the screen. The user's settings say where each kind is
+/// shown ([`crate::app_windows::full_screen_place`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum FullScreenRequest {
+    /// It does not.
+    #[default]
+    None,
+    /// A clear request: the task left the freeform windowing mode for fullscreen, its theme
+    /// sets `android:windowFullscreen`, or it hides both system bars while it asks for a
+    /// landscape orientation, as a video player's full screen button does.
+    Explicit,
+    /// It hides both system bars and asks for no landscape orientation (immersive mode, as a
+    /// feed of short videos does).
+    BarsHidden,
 }
 
 /// What an app told the system about its status bar's icons.
@@ -111,6 +156,31 @@ impl Task {
     /// The smallest size the guest gives the task, when the agent said.
     pub fn min_size(&self) -> Option<(u32, u32)> {
         (self.min_width > 0 || self.min_height > 0).then_some((self.min_width, self.min_height))
+    }
+
+    /// Whether the task's app asks to fill the screen, in either way.
+    pub fn asks_for_full_screen(&self) -> bool {
+        self.fullscreen_request != FullScreenRequest::None
+    }
+
+    /// Whether this is an app overlay window rather than an app task.
+    pub fn is_overlay(&self) -> bool {
+        self.overlay.is_some()
+    }
+
+    /// Whether this is an overlay that covers the guest's whole display, as a screen filter or
+    /// a dimmer does. Such an overlay gets no window: on the user's desktop it would cover
+    /// everything, and take every click if it takes input. The guest draws it over every app's
+    /// window instead, as it covers every app on a phone's screen. An overlay whose display
+    /// the guest did not size is not taken for one.
+    pub fn covers_display(&self) -> bool {
+        self.is_overlay()
+            && self.max_width > 0
+            && self.max_height > 0
+            && self.bounds.left <= 0
+            && self.bounds.top <= 0
+            && i64::from(self.bounds.right) >= i64::from(self.max_width)
+            && i64::from(self.bounds.bottom) >= i64::from(self.max_height)
     }
 }
 
@@ -162,6 +232,95 @@ pub struct AppInfo {
     /// it: `off`, `ask` or `remember`, or `unavailable` while root elevation is off for the
     /// computer. Empty where nothing reported it, as for an app that only has a task.
     pub root: String,
+    /// The app's launcher shortcuts, in the list of installed apps: the static and dynamic
+    /// ones in rank order, then the pinned ones. Empty for an app that only has a task.
+    pub shortcuts: Vec<AppShortcut>,
+    /// The user ID the app shares with other apps (its manifest's `android:sharedUserId`), in
+    /// the list of installed apps. Apps with the same value run under one Android uid, so root
+    /// elevation treats them as one group and the settings apps show them together. Empty for
+    /// an app with a user ID of its own, and for an app that only has a task.
+    pub shared_user_id: String,
+}
+
+/// One of an app's launcher shortcuts in Android (`ShortcutManager`): a static one from its
+/// manifest, a dynamic one it published, or one pinned at its request. The host shows the
+/// static and dynamic ones as tasks of the app's jump list, Dock menu or desktop entry, and a
+/// pinned one as a desktop shortcut.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AppShortcut {
+    /// Unique within its app.
+    pub id: String,
+    pub short_label: String,
+    /// Empty when the app gave none.
+    pub long_label: String,
+    /// A square PNG image; empty when the shortcut has none, and the app's icon stands in.
+    pub icon_png: Vec<u8>,
+    /// Lowest first.
+    pub rank: u32,
+    pub manifest: bool,
+    pub dynamic: bool,
+    pub pinned: bool,
+}
+
+impl AppShortcut {
+    /// Whether the app's jump list (Dock menu, desktop entry actions) shows it: a static or
+    /// dynamic shortcut, not one that is only pinned.
+    pub fn in_jump_list(&self) -> bool {
+        self.manifest || self.dynamic
+    }
+
+    /// The name to show: the short label, else the long one, else the ID.
+    pub fn label(&self) -> &str {
+        [&self.short_label, &self.long_label, &self.id]
+            .into_iter()
+            .map(|label| label.trim())
+            .find(|label| !label.is_empty())
+            .unwrap_or("")
+    }
+}
+
+/// The shortcuts of `shortcuts` an app's jump list shows, in the order it shows them: the
+/// static and dynamic ones by rank, at most [`MAX_JUMP_LIST_TASKS`], each ID once.
+pub fn jump_list_shortcuts(shortcuts: &[AppShortcut]) -> Vec<&AppShortcut> {
+    let mut listed: Vec<&AppShortcut> = shortcuts
+        .iter()
+        .filter(|shortcut| shortcut.in_jump_list() && is_valid_shortcut_id(&shortcut.id))
+        .collect();
+    listed.sort_by_key(|shortcut| (!shortcut.manifest, shortcut.rank));
+    let mut seen = std::collections::BTreeSet::new();
+    listed.retain(|shortcut| seen.insert(shortcut.id.as_str()));
+    listed.truncate(MAX_JUMP_LIST_TASKS);
+    listed
+}
+
+/// The most shortcuts of an app a jump list shows. Android lets an app publish a few more,
+/// but a launcher shows about this many, and the taskbar's menu would outgrow the screen.
+pub const MAX_JUMP_LIST_TASKS: usize = 10;
+
+/// The most shortcuts the table keeps of one app. Android caps the static and dynamic ones
+/// far lower; the rest are pinned ones, and a guest that reports more is broken or hostile.
+pub const MAX_SHORTCUTS: usize = 64;
+
+/// The largest shortcut icon the table keeps, in bytes; a larger one is dropped and the
+/// shortcut shows the app's icon.
+pub const MAX_SHORTCUT_ICON_BYTES: usize = 256 * 1024;
+
+/// Whether `id` can name a shortcut on a command line and in a file: not empty, at most 256
+/// characters, and no control characters. Android takes any string as an ID; one that is not
+/// this is left out of the jump list rather than passed to a shell.
+pub fn is_valid_shortcut_id(id: &str) -> bool {
+    !id.is_empty() && id.chars().count() <= 256 && !id.chars().any(char::is_control)
+}
+
+/// An app's request to put one of its shortcuts on the desktop (`requestPinShortcut`). The
+/// window manager asks the user and answers with [`TaskRequest::AnswerPinShortcut`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PinShortcutRequest {
+    pub request_id: u32,
+    pub package_name: String,
+    /// The app's own name, for the question.
+    pub app_label: String,
+    pub shortcut: AppShortcut,
 }
 
 impl AppInfo {
@@ -201,6 +360,9 @@ pub enum TaskEvent {
     /// The apps installed in the guest that a launcher lists changed. It carries the whole
     /// list, in package order, as the host's start menu shows it.
     Installed(Vec<AppInfo>),
+    /// An app asks for one of its shortcuts on the desktop. Like the cursor it is passed on as
+    /// it comes and is not part of the tasks a late watcher starts from.
+    PinShortcut(PinShortcutRequest),
 }
 
 impl TaskEvent {
@@ -212,7 +374,7 @@ impl TaskEvent {
             | TaskEvent::Frames { task_id, .. }
             | TaskEvent::ImeCursor { task_id, .. }
             | TaskEvent::ImeEditor { task_id, .. } => Some(*task_id),
-            TaskEvent::App(_) | TaskEvent::Installed(_) => None,
+            TaskEvent::App(_) | TaskEvent::Installed(_) | TaskEvent::PinShortcut(_) => None,
         }
     }
 }
@@ -228,6 +390,10 @@ pub struct TaskWatch {
 /// What the host asks of the guest about its tasks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskRequest {
+    /// The apps whose tasks start below the title bar, as the user chose for each: the guest
+    /// gives a task of one of them no status bar inset and a caption inset the framework
+    /// consumes for the app. The list replaces the one before, and counts when a task starts.
+    CaptionCompat { below_title_bar: Vec<String> },
     /// The user closed the task's window; the agent ends the task.
     Close { task_id: i32 },
     /// Start the app's launcher activity as a new task in its own window.
@@ -264,13 +430,28 @@ pub enum TaskRequest {
         start_width: u32,
         end_width: u32,
     },
+    /// Where the task's window shows a clear full screen request of its app: with
+    /// `in_window`, a task that leaves freeform for fullscreen is put back in freeform at the
+    /// bounds it had, so its window keeps its size; without it, the task fills the screen.
+    SetFullScreen { task_id: i32, in_window: bool },
     /// Whether any task window is shown: open and not minimized. Once none has been shown for
     /// a while the guest's screen goes off and the guest goes into Doze; it wakes as soon as
     /// a window is shown again.
     WindowsShown { shown: bool },
+    /// The tasks whose window is shown: open and not minimized. The guest keeps less memory
+    /// for a minimized task's app.
+    TasksShown { task_ids: Vec<i32> },
     /// End every process of the app and give its memory back to the host, even one kept
     /// running by a widget or a foreground service: the user's Stop.
     StopApp { package_name: String },
+    /// Start one of the app's shortcuts as a task in its own window: its jump list task or
+    /// desktop shortcut.
+    LaunchShortcut {
+        package_name: String,
+        shortcut_id: String,
+    },
+    /// The user's answer to an app's request to put a shortcut on the desktop.
+    AnswerPinShortcut { request_id: u32, accepted: bool },
 }
 
 impl TaskRequest {
@@ -278,6 +459,10 @@ impl TaskRequest {
     pub fn describe(&self) -> String {
         match self {
             TaskRequest::Close { task_id } => format!("end task {task_id}"),
+            TaskRequest::CaptionCompat { below_title_bar } => format!(
+                "start the tasks of {} apps below the title bar",
+                below_title_bar.len()
+            ),
             TaskRequest::Launch { package_name } => format!("launch {package_name}"),
             TaskRequest::NewWindow { package_name } => {
                 format!("open a new window of {package_name}")
@@ -309,13 +494,36 @@ impl TaskRequest {
             TaskRequest::SetCaption {
                 task_id, height, ..
             } => format!("give task {task_id} a title bar inset of {height} pixels"),
+            TaskRequest::SetFullScreen {
+                task_id,
+                in_window: true,
+            } => format!("keep task {task_id} inside its window when it asks for full screen"),
+            TaskRequest::SetFullScreen {
+                task_id,
+                in_window: false,
+            } => format!("let task {task_id} fill the screen when it asks for full screen"),
             TaskRequest::WindowsShown { shown: true } => "wake for a shown window".into(),
             TaskRequest::WindowsShown { shown: false } => {
                 "let the screen go off with no window shown".into()
             }
+            TaskRequest::TasksShown { task_ids } => {
+                format!("keep memory for the shown tasks {task_ids:?}")
+            }
             TaskRequest::StopApp { package_name } => {
                 format!("stop {package_name} and give its memory back")
             }
+            TaskRequest::LaunchShortcut {
+                package_name,
+                shortcut_id,
+            } => format!("start the shortcut {shortcut_id:?} of {package_name}"),
+            TaskRequest::AnswerPinShortcut {
+                request_id,
+                accepted: true,
+            } => format!("pin the shortcut of request {request_id}"),
+            TaskRequest::AnswerPinShortcut {
+                request_id,
+                accepted: false,
+            } => format!("decline the shortcut of request {request_id}"),
         }
     }
 }
@@ -346,7 +554,13 @@ pub fn coalesce(requests: Vec<TaskRequest>) -> Vec<TaskRequest> {
                     TaskRequest::SetCaption { task_id: a, .. },
                     TaskRequest::SetCaption { task_id: b, .. },
                 ) => a == b,
+                (
+                    TaskRequest::SetFullScreen { task_id: a, .. },
+                    TaskRequest::SetFullScreen { task_id: b, .. },
+                ) => a == b,
                 (TaskRequest::WindowsShown { .. }, TaskRequest::WindowsShown { .. }) => true,
+                (TaskRequest::TasksShown { .. }, TaskRequest::TasksShown { .. }) => true,
+                (TaskRequest::CaptionCompat { .. }, TaskRequest::CaptionCompat { .. }) => true,
                 _ => false,
             })
     };
@@ -409,6 +623,23 @@ fn kept(app: &AppInfo) -> AppInfo {
     app
 }
 
+/// `shortcuts` as the table keeps them: at most [`MAX_SHORTCUTS`], each ID once, with no icon
+/// past [`MAX_SHORTCUT_ICON_BYTES`] and none without an ID.
+fn kept_shortcuts(shortcuts: Vec<AppShortcut>) -> Vec<AppShortcut> {
+    let mut seen = std::collections::BTreeSet::new();
+    shortcuts
+        .into_iter()
+        .filter(|shortcut| !shortcut.id.is_empty() && seen.insert(shortcut.id.clone()))
+        .take(MAX_SHORTCUTS)
+        .map(|mut shortcut| {
+            if shortcut.icon_png.len() > MAX_SHORTCUT_ICON_BYTES {
+                shortcut.icon_png.clear();
+            }
+            shortcut
+        })
+        .collect()
+}
+
 /// `apps` in package order, each package once, within [`MAX_INSTALLED_APPS`] and
 /// [`MAX_INSTALLED_ICON_BYTES`].
 fn installed_list(apps: &[AppInfo]) -> Vec<AppInfo> {
@@ -456,6 +687,9 @@ pub struct TaskTable {
     /// The name and icon of each installed app the guest described, by package, until the
     /// list that names it arrives.
     described: BTreeMap<String, AppInfo>,
+    /// The launcher shortcuts of each app, by package, as the guest last gave them. They come
+    /// apart from the app's description, and the list of installed apps carries them.
+    shortcuts: BTreeMap<String, Vec<AppShortcut>>,
 }
 
 impl TaskTable {
@@ -541,7 +775,52 @@ impl TaskTable {
                 self.installed = Some(list);
                 true
             }
+            // Passed on as it comes; nothing of it is kept.
+            TaskEvent::PinShortcut(request) => !request.package_name.is_empty(),
         }
+    }
+
+    /// Records the shortcuts the guest gave `package`, and returns the list of installed
+    /// apps that carries them, when the app is in it and they changed. Past
+    /// [`MAX_SHORTCUTS`] the rest are dropped, and so is an icon past
+    /// [`MAX_SHORTCUT_ICON_BYTES`].
+    pub fn shortcuts_event(
+        &mut self,
+        package: &str,
+        shortcuts: Vec<AppShortcut>,
+    ) -> Option<TaskEvent> {
+        if package.is_empty() {
+            return None;
+        }
+        let shortcuts = kept_shortcuts(shortcuts);
+        if shortcuts.is_empty() {
+            self.shortcuts.remove(package);
+        } else {
+            if !self.shortcuts.contains_key(package) && self.shortcuts.len() >= MAX_INSTALLED_APPS {
+                return None;
+            }
+            self.shortcuts
+                .insert(package.to_string(), shortcuts.clone());
+        }
+        if let Some(app) = self.described.get_mut(package) {
+            app.shortcuts = shortcuts.clone();
+        }
+        let installed = self.installed.as_ref()?;
+        let app = installed.iter().find(|app| app.package_name == package)?;
+        if app.shortcuts == shortcuts {
+            return None;
+        }
+        let apps: Vec<AppInfo> = installed
+            .iter()
+            .map(|app| {
+                let mut app = app.clone();
+                if app.package_name == package {
+                    app.shortcuts = shortcuts.clone();
+                }
+                app
+            })
+            .collect();
+        Some(TaskEvent::Installed(apps))
     }
 
     /// Records the name and icon the guest gave an installed app, for the list that names it
@@ -583,8 +862,19 @@ impl TaskTable {
                         ..Default::default()
                     })
             })
+            .map(|mut app| {
+                app.shortcuts = self
+                    .shortcuts
+                    .get(&app.package_name)
+                    .cloned()
+                    .unwrap_or_default();
+                app
+            })
             .collect();
         self.described
+            .retain(|package, _| packages.iter().any(|named| named == package));
+        // An app that is gone takes its shortcuts with it.
+        self.shortcuts
             .retain(|package, _| packages.iter().any(|named| named == package));
         TaskEvent::Installed(installed_list(&apps))
     }
@@ -1081,5 +1371,106 @@ mod tests {
         table.apply(&TaskEvent::Removed { task_id: 7 });
         table.apply(&TaskEvent::Updated(task(7, "Notes")));
         assert!(table.apply(&editor("ab")), "a new task's editor is news");
+    }
+
+    fn chat_shortcut(id: &str, rank: u32, manifest: bool, dynamic: bool) -> AppShortcut {
+        AppShortcut {
+            id: id.into(),
+            short_label: id.to_uppercase(),
+            rank,
+            manifest,
+            dynamic,
+            ..AppShortcut::default()
+        }
+    }
+
+    fn list_chat(table: &mut TaskTable) {
+        table.describe_installed(&AppInfo {
+            package_name: "com.example.chat".into(),
+            label: "Chat".into(),
+            ..AppInfo::default()
+        });
+        let event = table.installed_event(&["com.example.chat".into()]);
+        table.apply(&event);
+    }
+
+    #[test]
+    fn fr7_shortcuts_ride_with_the_installed_app_and_survive_its_next_description() {
+        let mut table = TaskTable::new();
+        list_chat(&mut table);
+        let event = table
+            .shortcuts_event("com.example.chat", vec![chat_shortcut("a", 0, false, true)])
+            .expect("the list changes");
+        assert!(table.apply(&event));
+        assert_eq!(table.installed().unwrap()[0].shortcuts.len(), 1);
+        // The same shortcuts again change nothing.
+        assert_eq!(
+            table.shortcuts_event("com.example.chat", vec![chat_shortcut("a", 0, false, true)]),
+            None
+        );
+        // An update describes the app again without its shortcuts; the list keeps them.
+        list_chat(&mut table);
+        assert_eq!(table.installed().unwrap()[0].shortcuts[0].id, "a");
+        // Shortcuts of an app that is not listed wait for it; an uninstall drops them.
+        assert_eq!(
+            table.shortcuts_event("com.example.new", vec![chat_shortcut("b", 0, true, false)]),
+            None
+        );
+        let gone = table.installed_event(&[]);
+        table.apply(&gone);
+        list_chat(&mut table);
+        assert!(table.installed().unwrap()[0].shortcuts.is_empty());
+    }
+
+    #[test]
+    fn fr7_a_guest_cannot_flood_the_host_with_shortcuts() {
+        let mut table = TaskTable::new();
+        list_chat(&mut table);
+        let mut many: Vec<AppShortcut> = (0..200)
+            .map(|n| chat_shortcut(&format!("s{n}"), n, false, true))
+            .collect();
+        many[0].icon_png = vec![0; MAX_SHORTCUT_ICON_BYTES + 1];
+        many.push(chat_shortcut("s1", 1, false, true));
+        many.push(chat_shortcut("", 1, false, true));
+        let event = table.shortcuts_event("com.example.chat", many).unwrap();
+        table.apply(&event);
+        let kept = &table.installed().unwrap()[0].shortcuts;
+        assert_eq!(kept.len(), MAX_SHORTCUTS);
+        assert!(kept[0].icon_png.is_empty());
+    }
+
+    #[test]
+    fn fr7_the_jump_list_shows_static_then_dynamic_shortcuts_by_rank_and_no_pinned_ones() {
+        let pinned = AppShortcut {
+            pinned: true,
+            ..chat_shortcut("pinned", 0, false, false)
+        };
+        let shortcuts = vec![
+            chat_shortcut("dynamic-1", 1, false, true),
+            pinned,
+            chat_shortcut("dynamic-0", 0, false, true),
+            chat_shortcut("static", 5, true, false),
+            chat_shortcut("bad\u{7}id", 0, true, false),
+        ];
+        let listed: Vec<&str> = jump_list_shortcuts(&shortcuts)
+            .into_iter()
+            .map(|shortcut| shortcut.id.as_str())
+            .collect();
+        assert_eq!(listed, vec!["static", "dynamic-0", "dynamic-1"]);
+        let many: Vec<AppShortcut> = (0..30)
+            .map(|n| chat_shortcut(&format!("s{n}"), n, false, true))
+            .collect();
+        assert_eq!(jump_list_shortcuts(&many).len(), MAX_JUMP_LIST_TASKS);
+    }
+
+    #[test]
+    fn fr7_a_shortcut_shows_its_short_label_else_its_long_label_else_its_id() {
+        let mut shortcut = chat_shortcut("id", 0, true, false);
+        assert_eq!(shortcut.label(), "ID");
+        shortcut.short_label = " ".into();
+        shortcut.long_label = "Long".into();
+        assert_eq!(shortcut.label(), "Long");
+        shortcut.long_label.clear();
+        assert_eq!(shortcut.label(), "id");
     }
 }

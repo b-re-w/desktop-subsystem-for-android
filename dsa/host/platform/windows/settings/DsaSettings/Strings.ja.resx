@@ -1,0 +1,2600 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The texts of DSA Settings in Japanese, read through ResourceManager. Each key has the same meaning in every language. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>DSA 設定</value>
+  </data>
+  <data name="AppTitle.Text" xml:space="preserve">
+    <value>DSA 設定</value>
+  </data>
+  <data name="NavGeneral.Content" xml:space="preserve">
+    <value>全般</value>
+  </data>
+  <data name="NavMemory.Content" xml:space="preserve">
+    <value>メモリ</value>
+  </data>
+  <data name="NavDisplay.Content" xml:space="preserve">
+    <value>ディスプレイと GPU</value>
+  </data>
+  <data name="NavUpdates.Content" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="NavAdvanced.Content" xml:space="preserve">
+    <value>詳細設定</value>
+  </data>
+  <data name="NavAbout.Content" xml:space="preserve">
+    <value>バージョン情報</value>
+  </data>
+  <data name="GeneralTitle.Text" xml:space="preserve">
+    <value>全般</value>
+  </data>
+  <data name="GeneralErrorBar.Title" xml:space="preserve">
+    <value>問題が発生しました</value>
+  </data>
+  <data name="GeneralStateCard.Header" xml:space="preserve">
+    <value>状態</value>
+  </data>
+  <data name="GeneralStateCard.Description" xml:space="preserve">
+    <value>Desktop Subsystem for Android™ は Android を専用の軽量な仮想マシンで実行し、アプリをそれぞれ専用のウィンドウに表示します。</value>
+  </data>
+  <data name="StartButton.Content" xml:space="preserve">
+    <value>開始</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="ProblemBar.Title" xml:space="preserve">
+    <value>Android の準備ができていません</value>
+  </data>
+  <data name="LastReasonBar.Title" xml:space="preserve">
+    <value>前回の停止理由</value>
+  </data>
+  <data name="LastReason_Requested" xml:space="preserve">
+    <value>要求により Android を停止しました。必要になったら再び開始してください。</value>
+  </data>
+  <data name="LastReason_Updating" xml:space="preserve">
+    <value>DSA を更新しています。更新が終わったら Android を再び開始してください。</value>
+  </data>
+  <data name="LastReason_Virtualization" xml:space="preserve">
+    <value>仮想化がオフになっているか、Hyper-V がありません。仮想マシン プラットフォームをオンにしてから、PC を再起動してください。</value>
+  </data>
+  <data name="LastReason_InvalidConfiguration" xml:space="preserve">
+    <value>Windows が Android の仮想マシンの設定を拒否しました。DSA を更新するか、再インストールしてください。</value>
+  </data>
+  <data name="LastReason_OutOfMemory" xml:space="preserve">
+    <value>Android を開始するためのメモリが足りません。ほかのアプリを閉じてから、もう一度お試しください。</value>
+  </data>
+  <data name="LastReason_Disk" xml:space="preserve">
+    <value>ディスクの問題で Android を開始できませんでした。空き領域を増やすかドライブを確認してから、もう一度お試しください。</value>
+  </data>
+  <data name="LastReason_TimedOut" xml:space="preserve">
+    <value>Android の開始に時間がかかりすぎました。もう一度開始してみてください。</value>
+  </data>
+  <data name="LastReason_Lost" xml:space="preserve">
+    <value>Android が予期せず停止しました。もう一度開始してみてください。</value>
+  </data>
+  <data name="LastReason_General" xml:space="preserve">
+    <value>Android を開始できませんでした。もう一度お試しください。失敗が続く場合は詳細を確認してください。</value>
+  </data>
+  <data name="LastReasonDetails.Header" xml:space="preserve">
+    <value>詳細</value>
+  </data>
+  <data name="LastReasonCopy.ToolTip" xml:space="preserve">
+    <value>詳細をコピー</value>
+  </data>
+  <data name="UpdateNoticeBar.Title" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="UpdateNotice_AndroidUpdated" xml:space="preserve">
+    <value>Android を {0} に更新しました。</value>
+  </data>
+  <data name="UpdateNotice_AndroidInstalled" xml:space="preserve">
+    <value>Android {0} がインストールされています。</value>
+  </data>
+  <data name="UpdateNotice_AndroidChosen" xml:space="preserve">
+    <value>Android {0} が選択されました。DSA が今すぐダウンロードし、次に Android を開始するときに使います。</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
+    <value>Android {0} が起動しなかったため ({1})、Android {2} を再び使っています。
+Android {0} は、その新しいビルドか DSA の新しいバージョンが出たときにもう一度試します。</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
+    <value>Android {0} が起動しなかったため ({1})、Android {2} を再び使っています。
+Android {2} はまだ起動を完了していません ({3})。Android を再び開始して起動してください。</value>
+  </data>
+  <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
+    <value>Android {0} が起動せず ({1})、ほかのイメージはインストールされていません。
+ほかのイメージがあれば DSA がダウンロードします。次の DSA のバージョンで、このイメージをもう一度試します。</value>
+  </data>
+  <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
+    <value>Android {0} は試用中のままで、問題の原因ではありません: {1}</value>
+  </data>
+  <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
+    <value>DSA を {0} に更新しました。</value>
+  </data>
+  <data name="UpdateNotice_DsaDownloaded" xml:space="preserve">
+    <value>DSA {0} をダウンロードしました。Android が実行されていないときにインストールされます。</value>
+  </data>
+  <data name="UpdateNotice_DsaInstalling" xml:space="preserve">
+    <value>DSA {0} をインストールしています。完了するとサービスが再起動します。</value>
+  </data>
+  <data name="UpdateNotice_DsaFailed" xml:space="preserve">
+    <value>DSA を {0} に更新できませんでした ({1})。DSA {2} はインストールされたままです。</value>
+  </data>
+  <data name="GeneralMoreHeader.Text" xml:space="preserve">
+    <value>その他</value>
+  </data>
+  <data name="OpenLogsCard.Header" xml:space="preserve">
+    <value>ログ フォルダーを開く</value>
+  </data>
+  <data name="OpenLogsCard.Description" xml:space="preserve">
+    <value>ウィンドウ マネージャーとアプリ ウィンドウのログです。問題を報告するときに使います。</value>
+  </data>
+  <data name="RefreshCard.Header" xml:space="preserve">
+    <value>最新の情報に更新</value>
+  </data>
+  <data name="RefreshCard.Description" xml:space="preserve">
+    <value>DSA サービスに状態をもう一度問い合わせます。</value>
+  </data>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>不明</value>
+  </data>
+  <data name="State_Stopped" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="State_Starting" xml:space="preserve">
+    <value>開始中</value>
+  </data>
+  <data name="State_Active" xml:space="preserve">
+    <value>実行中</value>
+  </data>
+  <data name="State_Dozing" xml:space="preserve">
+    <value>Doze (アイドル)</value>
+  </data>
+  <data name="State_Frozen" xml:space="preserve">
+    <value>フリーズ中</value>
+  </data>
+  <data name="State_Stopping" xml:space="preserve">
+    <value>停止中</value>
+  </data>
+  <data name="State_Stalled" xml:space="preserve">
+    <value>準備ができていません</value>
+  </data>
+  <data name="Problem_CliMissing" xml:space="preserve">
+    <value>dsa コマンドを開始できませんでした。DSA を再インストールしてください。</value>
+  </data>
+  <data name="Problem_ServiceUnreachable" xml:space="preserve">
+    <value>DSA サービスが実行されていません。</value>
+  </data>
+  <data name="Problem_Refused" xml:space="preserve">
+    <value>DSA サービスはこの操作を実行できませんでした。</value>
+  </data>
+  <data name="Problem_Unreadable" xml:space="preserve">
+    <value>dsa コマンドの応答を読み取れませんでした。DSA を再インストールしてください。</value>
+  </data>
+  <data name="MemoryTitle.Text" xml:space="preserve">
+    <value>メモリ</value>
+  </data>
+  <data name="MemoryRefreshButton.Content" xml:space="preserve">
+    <value>最新の情報に更新</value>
+  </data>
+  <data name="MemoryErrorBar.Title" xml:space="preserve">
+    <value>メモリを測定できませんでした</value>
+  </data>
+  <data name="MemoryHostHeader.Text" xml:space="preserve">
+    <value>この PC</value>
+  </data>
+  <data name="MemoryHostTotalCard.Header" xml:space="preserve">
+    <value>この PC での使用量</value>
+  </data>
+  <data name="MemoryHostTotalCard.Description" xml:space="preserve">
+    <value>仮想マシン、ウィンドウ マネージャー、アプリ ウィンドウが現在使用している RAM です。</value>
+  </data>
+  <data name="MemoryHostNone.Text" xml:space="preserve">
+    <value>Android は実行されていないため、この PC のメモリを使用していません。</value>
+  </data>
+  <data name="MemoryGuestHeader.Text" xml:space="preserve">
+    <value>Android の内部</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Title" xml:space="preserve">
+    <value>まだ報告がありません</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Message" xml:space="preserve">
+    <value>Android は開始から数分後に、メモリの使用状況を報告します。</value>
+  </data>
+  <data name="MemoryGuestTotalCard.Header" xml:space="preserve">
+    <value>Android が使用できるメモリ</value>
+  </data>
+  <data name="MemoryAvailableOf.Text" xml:space="preserve">
+    <value>使用可能 / 合計</value>
+  </data>
+  <data name="MemoryTopHeader.Text" xml:space="preserve">
+    <value>メモリ使用量の多いプロセス</value>
+  </data>
+  <data name="Role_Vm" xml:space="preserve">
+    <value>仮想マシン (vmmem)</value>
+  </data>
+  <data name="Role_WindowManager" xml:space="preserve">
+    <value>ウィンドウ マネージャー</value>
+  </data>
+  <data name="Role_Renderer" xml:space="preserve">
+    <value>グラフィックス レンダラー</value>
+  </data>
+  <data name="Role_AppWindow" xml:space="preserve">
+    <value>アプリ ウィンドウ</value>
+  </data>
+  <data name="Memory_ProcessDetail" xml:space="preserve">
+    <value>プロセス {0}、専用 {1}</value>
+  </data>
+  <data name="Memory_ReportAge" xml:space="preserve">
+    <value>{0} 秒前に報告</value>
+  </data>
+  <data name="Memory_Apps" xml:space="preserve">
+    <value>アプリとシステム</value>
+  </data>
+  <data name="Memory_AppsDetail" xml:space="preserve">
+    <value>メモリ内 {0}、圧縮 {1}</value>
+  </data>
+  <data name="Memory_Cache" xml:space="preserve">
+    <value>キャッシュ</value>
+  </data>
+  <data name="Memory_CacheDetail" xml:space="preserve">
+    <value>メモリに保持されたファイルの内容です。メモリが必要になると Android が解放します。</value>
+  </data>
+  <data name="Memory_Kernel" xml:space="preserve">
+    <value>カーネル キャッシュ</value>
+  </data>
+  <data name="Memory_KernelDetail" xml:space="preserve">
+    <value>カーネルが必要に応じて解放できるキャッシュです。</value>
+  </data>
+  <data name="Memory_Shared" xml:space="preserve">
+    <value>共有メモリ</value>
+  </data>
+  <data name="Memory_Zram" xml:space="preserve">
+    <value>圧縮メモリ</value>
+  </data>
+  <data name="Memory_ZramDetail" xml:space="preserve">
+    <value>{0} 分のページを圧縮して保持しています</value>
+  </data>
+  <data name="Memory_Free" xml:space="preserve">
+    <value>空き</value>
+  </data>
+  <data name="Memory_GuestProcessDetail" xml:space="preserve">
+    <value>プロセス {0}</value>
+  </data>
+  <data name="Memory_GuestProcessGooglePlay" xml:space="preserve">
+    <value>プロセス {0}、Google Play 開発者サービス</value>
+  </data>
+  <data name="Memory_GooglePlay" xml:space="preserve">
+    <value>Google Play 開発者サービス</value>
+  </data>
+  <data name="Memory_GooglePlayDetail" xml:space="preserve">
+    <value>インストールした Google のアプリ、{0} 個のプロセス: {1}</value>
+  </data>
+  <data name="Memory_Unknown" xml:space="preserve">
+    <value>不明</value>
+  </data>
+  <data name="DisplayTitle.Text" xml:space="preserve">
+    <value>ディスプレイと GPU</value>
+  </data>
+  <data name="SettingsErrorBar.Title" xml:space="preserve">
+    <value>設定は変更されませんでした</value>
+  </data>
+  <data name="RenderGpuCard.Header" xml:space="preserve">
+    <value>レンダリング GPU</value>
+  </data>
+  <data name="RenderGpuCard.Description" xml:space="preserve">
+    <value>Android アプリを描画する GPU です。既定はメイン モニターの GPU で、フレームが同じ GPU にとどまり、ノート PC の専用 GPU は休止できます。</value>
+  </data>
+  <data name="Gpu_Display" xml:space="preserve">
+    <value>メイン モニターの GPU (推奨)</value>
+  </data>
+  <data name="Gpu_Integrated" xml:space="preserve">
+    <value>内蔵 GPU</value>
+  </data>
+  <data name="Gpu_Discrete" xml:space="preserve">
+    <value>専用 GPU (ゲーム向けなど)</value>
+  </data>
+  <data name="DisplayGpuCard.Header" xml:space="preserve">
+    <value>メイン モニターの GPU</value>
+  </data>
+  <data name="DisplayGpuCard.Description" xml:space="preserve">
+    <value>既定の選択で現在描画に使われている GPU です。</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Title" xml:space="preserve">
+    <value>再起動後に適用されます</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
+    <value>新しいレンダリング GPU は、ウィンドウ マネージャーの次回起動時に有効になります。次回のサインイン時か、下で再起動したときです。</value>
+  </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Vulkan ドライバー</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Android アプリは Vulkan で描画します。Vulkan ドライバーのない GPU は、Microsoft の OpenCL, OpenGL, and Vulkan Compatibility Pack の Dozen (Vulkan on Direct3D 12) を使えます。ウィンドウ マネージャーの再起動時に適用されます。</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>自動: GPU のドライバー、ない場合のみ Dozen (推奨)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>GPU 独自の Vulkan ドライバーのみ</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>Dozen のみ (テストと比較用)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>ウィンドウ マネージャーは、何で描画しているかをまだ報告していません。</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>現在 GPU の Vulkan ドライバーで描画しています。</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>現在 Dozen (Vulkan on Direct3D 12) で描画しています。</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>現在 CPU 上の Dozen で描画しています。この GPU には Direct3D 12 ドライバーがありません。</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>描画に使える Vulkan がないため、Android は開始しません。Microsoft Store か winget install Microsoft.OpenCLGLVulkanCompatibilityPack で Compatibility Pack をインストールし、サインアウトして再びサインインしてください。</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>Microsoft Store で Compatibility Pack を入手</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android は CPU で描画しています</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>この PC の GPU には Direct3D 12 ドライバーがないため、アプリは動作しますが、ゲームやアニメーションは遅くなります。</value>
+  </data>
+  <data name="TouchGesturesCard.Header" xml:space="preserve">
+    <value>DSA のアプリ ウィンドウで Windows のタッチ ジェスチャをオフにする</value>
+  </data>
+  <data name="TouchGesturesCard.Description" xml:space="preserve">
+    <value>DSA のウィンドウが前面にある間は Windows の 3 本指と 4 本指のジェスチャがオフになり、アプリは最大 10 本の指を使えます。
+既定でオンです。ほかのアプリでは、Windows の設定で指定したジェスチャがそのまま使われます。</value>
+  </data>
+  <data name="TouchGestures_Failed" xml:space="preserve">
+    <value>この設定は使えません: Windows がタッチ ジェスチャの変更を拒否しました ({0})。Windows の設定で、すべてのアプリに対してオフにできます。</value>
+  </data>
+  <data name="TouchGestures_NoReason" xml:space="preserve">
+    <value>理由は示されていません</value>
+  </data>
+  <data name="TouchSettingsLink.Content" xml:space="preserve">
+    <value>タッチの設定を開く</value>
+  </data>
+  <data name="RestartWindowManagerCard.Header" xml:space="preserve">
+    <value>ウィンドウ マネージャーを再起動する</value>
+  </data>
+  <data name="RestartWindowManagerCard.Description" xml:space="preserve">
+    <value>開いている Android アプリのウィンドウがいったん閉じて、再び表示されます。</value>
+  </data>
+  <data name="RestartWindowManagerButton.Content" xml:space="preserve">
+    <value>再起動</value>
+  </data>
+  <data name="RestartWindowManagerTitle" xml:space="preserve">
+    <value>ウィンドウ マネージャーを再起動しますか?</value>
+  </data>
+  <data name="RestartWindowManagerBody" xml:space="preserve">
+    <value>Android アプリのウィンドウが一時的に閉じます。
+
+Android とアプリは実行を続けます。</value>
+  </data>
+  <data name="RestartWindowManagerAction" xml:space="preserve">
+    <value>再起動</value>
+  </data>
+  <data name="RestartWindowManagerFailed" xml:space="preserve">
+    <value>ウィンドウ マネージャーを再起動できませんでした</value>
+  </data>
+  <data name="UpdatesTitle.Text" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="ProgramUpdatesCard.Header" xml:space="preserve">
+    <value>DSA を自動的に更新する</value>
+  </data>
+  <data name="ProgramUpdatesCard.Description" xml:space="preserve">
+    <value>署名された DSA の新しいバージョンをダウンロードし、Android が実行されていないときにインストールします。</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Header" xml:space="preserve">
+    <value>プレリリース版を受け取る</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Description" xml:space="preserve">
+    <value>仕上げ中のバージョンもインストールします。1.0 より前のリリースはすべてプレリリースです。
+これをオフにしても DSA が前のバージョンに戻ることはなく、より新しい安定版のリリースを待ちます。</value>
+  </data>
+  <data name="ImageUpdatesCard.Header" xml:space="preserve">
+    <value>Android イメージを自動的に更新する</value>
+  </data>
+  <data name="ImageUpdatesCard.Description" xml:space="preserve">
+    <value>署名されたセキュリティ更新と Android の新しいバージョンをダウンロードします。下の設定に従い、Android の再起動時に適用されます。</value>
+  </data>
+  <data name="UpdatesMachineNote.Text" xml:space="preserve">
+    <value>これらの設定はこの PC のすべてのユーザーに適用されるため、管理者だけが変更できます。
+オフのまま変わらないスイッチは、このインストールでは提供されていない機能です。</value>
+  </data>
+  <data name="AdminBar.Title" xml:space="preserve">
+    <value>管理者の権限が必要です</value>
+  </data>
+  <data name="AdminBar.Message" xml:space="preserve">
+    <value>更新の設定はこの PC のすべてのユーザーに適用されるため、管理者だけが変更できます。
+[管理者として変更] を使うと、Windows が許可を求めます。</value>
+  </data>
+  <data name="AdminShield.ToolTip" xml:space="preserve">
+    <value>この設定は管理者だけが変更できます。</value>
+  </data>
+  <data name="ChangeAsAdmin.Content" xml:space="preserve">
+    <value>管理者として変更</value>
+  </data>
+  <data name="ElevatedFailed" xml:space="preserve">
+    <value>設定は変更されませんでした (dsa の終了コード {0})。</value>
+  </data>
+  <data name="ElevationDeclined" xml:space="preserve">
+    <value>管理者の権限が与えられなかったため、設定は変更されませんでした。</value>
+  </data>
+  <data name="UpdateNowHeader.Text" xml:space="preserve">
+    <value>今すぐインストール</value>
+  </data>
+  <data name="UpdateNowCard.Header" xml:space="preserve">
+    <value>DSA の最新バージョンを今すぐインストールする</value>
+  </data>
+  <data name="UpdateNowCard.Description" xml:space="preserve">
+    <value>セットアップの実行中は、すべてのユーザーの Android が停止します。</value>
+  </data>
+  <data name="UpdateNowButton.Content" xml:space="preserve">
+    <value>今すぐインストール</value>
+  </data>
+  <data name="UpdateNowTitle" xml:space="preserve">
+    <value>最新バージョンを今すぐインストールしますか?</value>
+  </data>
+  <data name="UpdateNowBody" xml:space="preserve">
+    <value>DSA はすべてのユーザーの Android を停止し、最新バージョンをインストールします。
+
+セットアップが完了すると DSA サービスが再起動します。</value>
+  </data>
+  <data name="UpdateNowAction" xml:space="preserve">
+    <value>インストール</value>
+  </data>
+  <data name="UpdateNowFailed" xml:space="preserve">
+    <value>DSA は更新されませんでした</value>
+  </data>
+  <data name="ProgramUpdateCard.Header" xml:space="preserve">
+    <value>DSA を更新しています</value>
+  </data>
+  <data name="ProgramUpdateDone.Title" xml:space="preserve">
+    <value>DSA を更新しました</value>
+  </data>
+  <data name="ProgramUpdate_Starting" xml:space="preserve">
+    <value>更新を準備しています</value>
+  </data>
+  <data name="ProgramUpdate_Downloading" xml:space="preserve">
+    <value>DSA {0} をダウンロードしています</value>
+  </data>
+  <data name="ProgramUpdate_StoppingAndroid" xml:space="preserve">
+    <value>DSA {0} をインストールするために Android を停止しています</value>
+  </data>
+  <data name="ProgramUpdate_Installing" xml:space="preserve">
+    <value>DSA {0} をインストールしています</value>
+  </data>
+  <data name="ProgramUpdate_Restarting" xml:space="preserve">
+    <value>更新を完了するために DSA を再起動しています</value>
+  </data>
+  <data name="ProgramUpdate_Version" xml:space="preserve">
+    <value>バージョン {0}</value>
+  </data>
+  <data name="ProgramUpdate_KeepOpen" xml:space="preserve">
+    <value>更新が完了するまで、DSA を閉じたり Android アプリを開始したりしないでください。</value>
+  </data>
+  <data name="ProgramUpdate_Applied" xml:space="preserve">
+    <value>{0} に更新しました</value>
+  </data>
+  <data name="ProgramUpdate_Failed" xml:space="preserve">
+    <value>{0} への更新に失敗しました。以前のバージョンはインストールされたままです。</value>
+  </data>
+  <data name="ProgramUpdate_NotBack" xml:space="preserve">
+    <value>{0} への更新の後、DSA が再開していません。まもなく開始しない場合は、コンピューターを再起動してください。</value>
+  </data>
+  <data name="AdvancedTitle.Text" xml:space="preserve">
+    <value>詳細設定</value>
+  </data>
+  <data name="FilesHeader.Text" xml:space="preserve">
+    <value>ファイル</value>
+  </data>
+  <data name="FileSharingCard.Header" xml:space="preserve">
+    <value>Windows のフォルダーを Android と共有する</value>
+  </data>
+  <data name="FileSharingCard.Description" xml:space="preserve">
+    <value>下で選んだフォルダーを、Android の共有ストレージの Host フォルダーに表示します。既定でオンです。
+Android アプリには Android のストレージの権限が必要で、Windows アカウントに許可されていることしかできません。</value>
+  </data>
+  <data name="SharedFoldersCard.Header" xml:space="preserve">
+    <value>共有するフォルダー</value>
+  </data>
+  <data name="SharedFoldersCard.Description" xml:space="preserve">
+    <value>チェックを外したフォルダーは、すぐに Android から見えなくなります。</value>
+  </data>
+  <data name="Folder_Documents" xml:space="preserve">
+    <value>ドキュメント</value>
+  </data>
+  <data name="Folder_Downloads" xml:space="preserve">
+    <value>ダウンロード</value>
+  </data>
+  <data name="Folder_Pictures" xml:space="preserve">
+    <value>ピクチャ</value>
+  </data>
+  <data name="Folder_Music" xml:space="preserve">
+    <value>ミュージック</value>
+  </data>
+  <data name="Folder_Videos" xml:space="preserve">
+    <value>ビデオ</value>
+  </data>
+  <data name="Folder_Desktop" xml:space="preserve">
+    <value>デスクトップ</value>
+  </data>
+  <data name="AndroidFilesCard.Header" xml:space="preserve">
+    <value>Android のファイル</value>
+  </data>
+  <data name="AndroidFilesCard.Description" xml:space="preserve">
+    <value>Android アプリが保存した写真やダウンロードなどのファイルを、エクスプローラーで開きます。Android が実行されていない場合は開始します。
+エクスプローラーのナビゲーション ウィンドウの Android からも開けます。</value>
+  </data>
+  <data name="FilesDropCard.Header" xml:space="preserve">
+    <value>Android アプリにファイルを送る</value>
+  </data>
+  <data name="FilesNote.Text" xml:space="preserve">
+    <value>Android アプリにファイルを送るには、エクスプローラーからアプリのウィンドウにドラッグします。ドロップした APK はインストールされます。</value>
+  </data>
+  <data name="LinksCard.Header" xml:space="preserve">
+    <value>Web リンクを Android アプリで開く</value>
+  </data>
+  <data name="LinksCard.Description" xml:space="preserve">
+    <value>既定はオフで、Android アプリでタップしたリンクは Windows のブラウザーで開きます。オンでは、スマートフォンのように Android アプリで開きます。
+インストールされたアプリが自分のものと確認したリンクは、常にそのアプリで開きます。</value>
+  </data>
+  <data name="ArmHeader.Text" xml:space="preserve">
+    <value>ARM アプリ</value>
+  </data>
+  <data name="ArmCard.Header" xml:space="preserve">
+    <value>ARM 専用のアプリを実行する</value>
+  </data>
+  <data name="ArmCard.Description" xml:space="preserve">
+    <value>ARM プロセッサ専用のアプリを、ARM 変換ツールでここにインストールして実行できます。Android の次回起動時から適用されます。
+動作するのは 64 ビットの ARM アプリ (arm64-v8a) だけです。
+既定は内蔵のオープンソース変換ツールです。下の Google 版か dsa arm-translation install で入れたものがあれば、それを使います。</value>
+  </data>
+  <data name="ArmRestartBar.Title" xml:space="preserve">
+    <value>適用するには Android を再起動してください</value>
+  </data>
+  <data name="ArmRestartBar.Message" xml:space="preserve">
+    <value>Android はこの変更の前に開始されました。ARM アプリに反映するには、Android を停止してから再び開始してください。</value>
+  </data>
+  <data name="ArmDefaultCard.Header" xml:space="preserve">
+    <value>既定の変換ツールを使う</value>
+  </data>
+  <data name="ArmDefaultButton.Content" xml:space="preserve">
+    <value>使用</value>
+  </data>
+  <data name="Arm_DefaultDescription" xml:space="preserve">
+    <value>{0} {1} ({2}) はこの Android に含まれており、ほかの変換ツールをインストールしない限り、これが使われます。
+これに戻すと、インストールしたパッケージは Android の次回起動時から削除されます。</value>
+  </data>
+  <data name="Arm_SupportedDefault" xml:space="preserve">
+    <value>この Android に含まれる変換ツール {0} {1} ({2}) で対応しています。</value>
+  </data>
+  <data name="Arm_DefaultTurnedOff" xml:space="preserve">
+    <value>非対応: {0} {1} はオフになっています。</value>
+  </data>
+  <data name="ArmRemoveCard.Header" xml:space="preserve">
+    <value>ARM 変換パッケージを削除する</value>
+  </data>
+  <data name="ArmRemoveCard.Description" xml:space="preserve">
+    <value>アドオン用ディスクからパッケージを削除します。インストールした ARM アプリは残りますが、Android の再起動後は動作しません。</value>
+  </data>
+  <data name="ArmRemoveButton.Content" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Arm_NotSupported" xml:space="preserve">
+    <value>非対応: ARM 変換パッケージがインストールされていません。</value>
+  </data>
+  <data name="Arm_Supported" xml:space="preserve">
+    <value>{0} {1} ({2}) で対応しています。</value>
+  </data>
+  <data name="Arm_TurnedOff" xml:space="preserve">
+    <value>非対応: {0} {1} はインストールされていますが、オフになっています。</value>
+  </data>
+  <data name="Arm_NoLicense" xml:space="preserve">
+    <value>ライセンスの記載なし</value>
+  </data>
+  <data name="Arm_Abis" xml:space="preserve">
+    <value>Android がアプリをインストールする対象: {0}</value>
+  </data>
+  <data name="Arm_NotRunning" xml:space="preserve">
+    <value>Android が実行されていないため、現在の対応状況はわかりません。</value>
+  </data>
+  <data name="ArmGoogleCard.Header" xml:space="preserve">
+    <value>Google の ARM 変換ツール</value>
+  </data>
+  <data name="ArmGoogleCard.Description" xml:space="preserve">
+    <value>この Android バージョン向けの Google の Android エミュレーター イメージから、ARM 変換ツールをインストールします。
+Google から約 2 GB をダウンロードし、変換ツールだけを残して残りは削除します。同意するまで何もダウンロードしません。
+Digitalis などほかの変換ツールから作ったパッケージでも、同じことができます。</value>
+  </data>
+  <data name="ArmGoogleButton.Content" xml:space="preserve">
+    <value>入手</value>
+  </data>
+  <data name="ArmGoogleTermsLink.Content" xml:space="preserve">
+    <value>Android SDK ライセンス</value>
+  </data>
+  <data name="ArmGoogleConfirm.Title" xml:space="preserve">
+    <value>Google の ARM 変換ツールを入手しますか?</value>
+  </data>
+  <data name="ArmGoogleConfirm.Action" xml:space="preserve">
+    <value>同意してダウンロード</value>
+  </data>
+  <data name="ArmGoogle_Notice" xml:space="preserve">
+    <value>DSA はこの Android バージョン向けの Android エミュレーター イメージを Google からダウンロードし、ARM 変換ツールだけを取り出します。
+
+• ダウンロード: 約 2 GB。後で削除されます。
+• 入手元: {0}
+• 利用条件: 変換ツールは Android SDK ライセンス ({1}) に基づく Google のソフトウェアです。ダウンロードすると条件に同意したことになります。
+• 変換ツールは Android の次回起動時から動作します。
+
+DSA は変換ツールを同梱も再配布もしません。</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Title" xml:space="preserve">
+    <value>Google の ARM 変換ツールを入手しています</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Message" xml:space="preserve">
+    <value>Google から約 2 GB をダウンロードし、変換ツールを取り出しています。数分かかります。</value>
+  </data>
+  <data name="GappsHeader.Text" xml:space="preserve">
+    <value>Google Play</value>
+  </data>
+  <data name="GappsCard.Header" xml:space="preserve">
+    <value>Google Play 開発者サービスと Play ストア</value>
+  </data>
+  <data name="GappsCard.Description" xml:space="preserve">
+    <value>この Android バージョン向けの公開パッケージ LiteGapps Core (Google Play 開発者サービス、Play ストア、アカウント同期) をインストールします。
+DSA には Google のアプリは含まれていません。Android の次回起動時から適用されます。</value>
+  </data>
+  <data name="GappsInstallButton.Content" xml:space="preserve">
+    <value>インストール</value>
+  </data>
+  <data name="GappsInstallingBar.Title" xml:space="preserve">
+    <value>Google Play をインストールしています</value>
+  </data>
+  <data name="GappsInstallingBar.Message" xml:space="preserve">
+    <value>Google Play をダウンロードしてインストールしています。数分かかることがあります。</value>
+  </data>
+  <data name="GappsRestartBar.Title" xml:space="preserve">
+    <value>適用するには Android を再起動してください</value>
+  </data>
+  <data name="GappsRestartBar.Message" xml:space="preserve">
+    <value>Android はこの変更の前に開始されました。Google Play に反映するには、Android を停止してから再び開始してください。</value>
+  </data>
+  <data name="GappsRemoveCard.Header" xml:space="preserve">
+    <value>Google Play を削除する</value>
+  </data>
+  <data name="GappsRemoveCard.Description" xml:space="preserve">
+    <value>Android の次回起動時から、アドオン用ディスクから Google のアプリを削除します。
+Play ストアから入手したアプリは残りますが、Google Play 開発者サービスが必要なアプリは動作しなくなることがあります。</value>
+  </data>
+  <data name="GappsRemoveButton.Content" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="GappsTermsCard.Header" xml:space="preserve">
+    <value>Google の利用規約</value>
+  </data>
+  <data name="GappsTermsCard.Description" xml:space="preserve">
+    <value>Google Play 開発者サービスと Play ストアは Google のソフトウェアで、Google の利用規約に従います。
+DSA はこれらを配布しません。要求されたときにだけ、公開されている LiteGapps パッケージをダウンロードします。</value>
+  </data>
+  <data name="GappsTermsLink.Content" xml:space="preserve">
+    <value>Google 利用規約</value>
+  </data>
+  <data name="GappsRegisterCard.Header" xml:space="preserve">
+    <value>このデバイスを Google に登録する</value>
+  </data>
+  <data name="GappsRegisterCard.Description" xml:space="preserve">
+    <value>この Android は Google の認定を受けていないため、デバイスを登録するまで Google がサインインを拒否することがあります。
+1. 登録ページを開き、Google アカウントでサインインします。
+2. このデバイスの Android ID を入力します。
+3. Android を再起動し、もう一度サインインします。</value>
+  </data>
+  <data name="GappsRegisterLink.Content" xml:space="preserve">
+    <value>登録ページを開く</value>
+  </data>
+  <data name="GappsDeviceIdLabel.Text" xml:space="preserve">
+    <value>Android ID</value>
+  </data>
+  <data name="Gapps_NotInstalled" xml:space="preserve">
+    <value>未インストール: Android には Google Play 開発者サービスも Play ストアもありません。</value>
+  </data>
+  <data name="Gapps_Installed" xml:space="preserve">
+    <value>インストール済み: Android {1} ({2}) 用の LiteGapps Core {0}。</value>
+  </data>
+  <data name="Gapps_InstalledPending" xml:space="preserve">
+    <value>インストール済み: Android {1} ({2}) 用の LiteGapps Core {0}。Android の次回起動時から使われます。</value>
+  </data>
+  <data name="Gapps_RemovedPending" xml:space="preserve">
+    <value>削除済み: Android の次回起動時に Google のアプリが削除されます。</value>
+  </data>
+  <data name="Gapps_ReinstallNeeded" xml:space="preserve">
+    <value>以前の DSA の Android {1} ({2}) 用 LiteGapps Core {0} はもう使われないため、Android は Google のアプリなしで開始します。
+Google Play をもう一度インストールしてください。</value>
+  </data>
+  <data name="Gapps_Source" xml:space="preserve">
+    <value>LiteGapps からダウンロード: {0}</value>
+  </data>
+  <data name="Gapps_DeviceId" xml:space="preserve">
+    <value>Android ID: {0}</value>
+  </data>
+  <data name="Gapps_NoDeviceId" xml:space="preserve">
+    <value>Google Play をインストールし、それを含めて Android が開始すると、ここに Android ID が表示されます。</value>
+  </data>
+  <data name="DeveloperHeader.Text" xml:space="preserve">
+    <value>開発者</value>
+  </data>
+  <data name="DeveloperModeCard.Header" xml:space="preserve">
+    <value>開発者モード</value>
+  </data>
+  <data name="DeveloperModeCard.Description" xml:space="preserve">
+    <value>この PC の adb が、Android 側で確認せずに Android に接続できるようにします。この PC からしか届かないポートを使います。
+既定でオフです。使い終わったらオフにしてください。</value>
+  </data>
+  <data name="AdbAutoConnectCard.Header" xml:space="preserve">
+    <value>adb を自動的に接続する</value>
+  </data>
+  <data name="AdbAutoConnectCard.Description" xml:space="preserve">
+    <value>開発者モードがオンの間は、adb connect なしで adb devices と Android Studio に Android が表示されます。既定でオンです。
+adb disconnect の後は、adb サーバーが再起動するまで接続しません。</value>
+  </data>
+  <data name="AdbAutoConnect_Off" xml:space="preserve">
+    <value>未接続: 開発者モードまたは自動接続がオフです。</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForServer" xml:space="preserve">
+    <value>adb を待機中: この PC で adb が開始すると Android が接続します。</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForAndroid" xml:space="preserve">
+    <value>Android を待機中: Android が実行されると接続します。</value>
+  </data>
+  <data name="AdbAutoConnect_Attached" xml:space="preserve">
+    <value>接続済み: adb の一覧に Android があります。</value>
+  </data>
+  <data name="AdbAutoConnect_Detached" xml:space="preserve">
+    <value>adb disconnect で切断されました。adb サーバーが再起動すると Android が再び接続します。</value>
+  </data>
+  <data name="AdbCard.Header" xml:space="preserve">
+    <value>adb を接続する</value>
+  </data>
+  <data name="AdbCard.Description" xml:space="preserve">
+    <value>開発者モードがオンで Android が実行されているときに、次のコマンドを実行してください:</value>
+  </data>
+  <data name="CopyButton.ToolTip" xml:space="preserve">
+    <value>コピー</value>
+  </data>
+  <data name="AdbPortLabel.Text" xml:space="preserve">
+    <value>ポート</value>
+  </data>
+  <data name="ClipboardCard.Header" xml:space="preserve">
+    <value>Android とクリップボードを共有する</value>
+  </data>
+  <data name="ClipboardCard.Description" xml:space="preserve">
+    <value>Windows でコピーしたテキストを Android アプリに貼り付けられます。その逆もできます。既定でオンです。
+画像はコピーした側にだけ残ります。</value>
+  </data>
+  <data name="FreezeCard.Header" xml:space="preserve">
+    <value>アイドル時に Android をフリーズする</value>
+  </data>
+  <data name="FreezeCard.Description" xml:space="preserve">
+    <value>既定でオフです。アイドル状態の Android は Doze に入り、通知を受け取り続けます。
+フリーズすると CPU を使いませんが、アプリを開くまで何も受け取りません。</value>
+  </data>
+  <data name="FreezeNowCard.Header" xml:space="preserve">
+    <value>今すぐ Android をフリーズする</value>
+  </data>
+  <data name="FreezeNowCard.Description" xml:space="preserve">
+    <value>Android のウィンドウをもう一度開くまで、Android のすべてのプロセスを停止します。通知、アラーム、ウィジェットも止まります。</value>
+  </data>
+  <data name="FreezeNowButton.Content" xml:space="preserve">
+    <value>フリーズ</value>
+  </data>
+  <data name="MemoryLimitCard.Header" xml:space="preserve">
+    <value>メモリの上限</value>
+  </data>
+  <data name="MemoryLimitCard.Description" xml:space="preserve">
+    <value>Android が使えるメモリの最大量です。Android は必要な分だけメモリを使い、使い終わると返します。
+自動: この PC のメモリから Windows の分を除いた量までです。Android の次回起動時から適用されます。</value>
+  </data>
+  <data name="MemoryLimit_Auto" xml:space="preserve">
+    <value>自動</value>
+  </data>
+  <data name="MemoryVmSizeCard.Header" xml:space="preserve">
+    <value>現在の Android の VM</value>
+  </data>
+  <data name="MemoryVmSizeCard.Description" xml:space="preserve">
+    <value>この PC で VM が保持しているメモリと、そのうち Android が使っている量</value>
+  </data>
+  <data name="MemoryGuestUsedLabel.Text" xml:space="preserve">
+    <value>Android が使用中</value>
+  </data>
+  <data name="MemoryBeyondGuestLabel.Text" xml:space="preserve">
+    <value>空き (まだ返却されていない)</value>
+  </data>
+  <data name="MemoryKernelHeader.Text" xml:space="preserve">
+    <value>Android のカーネル</value>
+  </data>
+  <data name="Memory_KernelSlab" xml:space="preserve">
+    <value>カーネル オブジェクト</value>
+  </data>
+  <data name="Memory_KernelSlabDetail" xml:space="preserve">
+    <value>カーネルが自身のデータ用に保持し、回収できないメモリ</value>
+  </data>
+  <data name="Memory_KernelStacks" xml:space="preserve">
+    <value>スレッド スタック</value>
+  </data>
+  <data name="Memory_KernelPageTables" xml:space="preserve">
+    <value>ページ テーブル</value>
+  </data>
+  <data name="Memory_KernelVmalloc" xml:space="preserve">
+    <value>カーネル マッピング (vmalloc)</value>
+  </data>
+  <data name="Memory_KernelPercpu" xml:space="preserve">
+    <value>CPU ごとのデータ</value>
+  </data>
+  <data name="Memory_KernelUnaccounted" xml:space="preserve">
+    <value>ドライバー</value>
+  </data>
+  <data name="Memory_KernelUnaccountedDetail" xml:space="preserve">
+    <value>GPU や DMA のバッファーなど、どのカウンターにも表れないもの</value>
+  </data>
+  <data name="Memory_KernelReserved" xml:space="preserve">
+    <value>起動時に予約</value>
+  </data>
+  <data name="Memory_KernelReservedDetail" xml:space="preserve">
+    <value>割り当てられた {0} のうちのカーネル コード、ページ構造、バッファー。連続領域 {1}</value>
+  </data>
+  <data name="DiagnosticsHeader.Text" xml:space="preserve">
+    <value>診断</value>
+  </data>
+  <data name="InputTraceCard.Header" xml:space="preserve">
+    <value>入力トレース</value>
+  </data>
+  <data name="InputTraceCard.Description" xml:space="preserve">
+    <value>すべての DSA プロセスが、タッチ、クリック、キーが届いた時刻を記録し、入力から画面表示までの遅延を測定できます。既定でオフです。</value>
+  </data>
+  <data name="ResizeTraceCard.Header" xml:space="preserve">
+    <value>サイズ変更トレース</value>
+  </data>
+  <data name="ResizeTraceCard.Description" xml:space="preserve">
+    <value>すべての DSA プロセスがウィンドウのサイズ変更の各段階を記録し、遅い箇所やちらつく箇所を見つけられるようにします。既定でオフです。</value>
+  </data>
+  <data name="DiagnosticsNote.Text" xml:space="preserve">
+    <value>トレースは下の DSA のログに書き込まれてログが大きくなるため、問題を報告するときだけオンにしてください。
+この PC のすべてのユーザーに適用されるため、管理者だけが変更できます。</value>
+  </data>
+  <data name="LogsHeader.Text" xml:space="preserve">
+    <value>ログ</value>
+  </data>
+  <data name="UserLogsCard.Header" xml:space="preserve">
+    <value>ログ フォルダーを開く</value>
+  </data>
+  <data name="UserLogsCard.Description" xml:space="preserve">
+    <value>自分のウィンドウ マネージャーとアプリ ウィンドウのログです。</value>
+  </data>
+  <data name="ServiceLogsCard.Header" xml:space="preserve">
+    <value>サービスのログ フォルダーを開く (管理者)</value>
+  </data>
+  <data name="ServiceLogsCard.Description" xml:space="preserve">
+    <value>DSA サービスと Android 自体のログです。</value>
+  </data>
+  <data name="CommandLineHeader.Text" xml:space="preserve">
+    <value>コマンド ライン</value>
+  </data>
+  <data name="CommandLineCard.Header" xml:space="preserve">
+    <value>dsa コマンド</value>
+  </data>
+  <data name="CommandLineCard.Description" xml:space="preserve">
+    <value>このページのすべての機能は、ターミナルからも使えます。</value>
+  </data>
+  <data name="AboutTitle.Text" xml:space="preserve">
+    <value>バージョン情報</value>
+  </data>
+  <data name="AboutProductCard.Header" xml:space="preserve">
+    <value>Desktop Subsystem for Android™</value>
+  </data>
+  <data name="AboutProductCard.Description" xml:space="preserve">
+    <value>Thisisthepy</value>
+  </data>
+  <data name="AboutAppVersionCard.Header" xml:space="preserve">
+    <value>DSA 設定のバージョン</value>
+  </data>
+  <data name="AboutServiceVersionCard.Header" xml:space="preserve">
+    <value>DSA サービスのバージョン</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Header" xml:space="preserve">
+    <value>Android イメージのバージョン</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Description" xml:space="preserve">
+    <value>次回の開始時に起動する Android イメージです。イメージの更新で変わります。</value>
+  </data>
+  <data name="AboutLicenseCard.Header" xml:space="preserve">
+    <value>ライセンス</value>
+  </data>
+  <data name="AboutLicenseCard.Description" xml:space="preserve">
+    <value>DSA は Apache License 2.0 でライセンスされています。同梱するすべてのコンポーネントのライセンスを開きます。</value>
+  </data>
+  <data name="AboutSourceCard.Header" xml:space="preserve">
+    <value>ソース コード</value>
+  </data>
+  <data name="AboutIndependent.Text" xml:space="preserve">
+    <value>Desktop Subsystem for Android は独立したオープンソース プロジェクトです。
+Microsoft および Google とは提携しておらず、両社による承認や後援も受けていません。</value>
+  </data>
+  <data name="AboutTrademark.Text" xml:space="preserve">
+    <value>Android は Google LLC の商標です。</value>
+  </data>
+  <data name="FolderMissingTitle" xml:space="preserve">
+    <value>フォルダーを開けませんでした</value>
+  </data>
+  <data name="FolderMissingBody" xml:space="preserve">
+    <value>{0} はまだ存在しないか、開く権限がありません。</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="Install_BusyTitle" xml:space="preserve">
+    <value>インストールしています</value>
+  </data>
+  <data name="Install_Busy" xml:space="preserve">
+    <value>{0} を Android にインストールしています…</value>
+  </data>
+  <data name="Install_DoneTitle" xml:space="preserve">
+    <value>インストールしました</value>
+  </data>
+  <data name="Install_FailedTitle" xml:space="preserve">
+    <value>インストールされませんでした</value>
+  </data>
+  <data name="Install_Installed" xml:space="preserve">
+    <value>{0} をインストールしました ({1})。スタート メニューから開けます。</value>
+  </data>
+  <data name="Install_Refused" xml:space="preserve">
+    <value>{0} はインストールされませんでした: {1} ({2})</value>
+  </data>
+  <data name="Install_NotSent" xml:space="preserve">
+    <value>{0} が Android に届きませんでした。{1}</value>
+  </data>
+  <data name="Install_NotApk" xml:space="preserve">
+    <value>インストールできるのは APK ファイルだけです: {0}</value>
+  </data>
+  <data name="Install_Reason_incompatible" xml:space="preserve">
+    <value>このアプリはこの Android では動作しません。別の種類のプロセッサ、より新しい Android のバージョン、またはこのデバイスにない機能が必要です。</value>
+  </data>
+  <data name="Install_Reason_conflicting-signature" xml:space="preserve">
+    <value>別のキーで署名された同じアプリがすでにインストールされています。先に Android でアンインストールしてください。</value>
+  </data>
+  <data name="Install_Reason_invalid-apk" xml:space="preserve">
+    <value>ファイルは Android が読み取れる署名済みの APK ではありません。</value>
+  </data>
+  <data name="Install_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android にアプリを入れる空き領域がありません。</value>
+  </data>
+  <data name="Install_Reason_downgrade" xml:space="preserve">
+    <value>このアプリの新しいバージョンがインストールされています。先に Android でアンインストールしてください。</value>
+  </data>
+  <data name="Install_Reason_blocked" xml:space="preserve">
+    <value>この Android のポリシーでこのアプリは許可されていません。</value>
+  </data>
+  <data name="Install_Reason_other" xml:space="preserve">
+    <value>Android はアプリをインストールしませんでした。</value>
+  </data>
+  <data name="NavWidgets.Content" xml:space="preserve">
+    <value>ウィジェット</value>
+  </data>
+  <data name="WidgetsTitle.Text" xml:space="preserve">
+    <value>ウィジェット</value>
+  </data>
+  <data name="WidgetsRefreshButton.Content" xml:space="preserve">
+    <value>最新の情報に更新</value>
+  </data>
+  <data name="WidgetsIntro.Text" xml:space="preserve">
+    <value>Android アプリが提供するウィジェットをデスクトップに配置します。このページを開くと Android が開始します。
+• ウィジェットはそれぞれ専用のウィンドウになり、ほかのウィンドウの下に表示されます。
+• ウィジェットを長押しすると編集できます。ドラッグで移動し、ハンドルをドラッグしてサイズを変更します。
+• ウィジェットを右クリックすると、設定、サイズ、[削除] が表示されます。</value>
+  </data>
+  <data name="WidgetsErrorBar.Title" xml:space="preserve">
+    <value>ウィジェットを読み取れないか、変更できませんでした</value>
+  </data>
+  <data name="WidgetsDoneBar.Title" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="WidgetsPlacedHeader.Text" xml:space="preserve">
+    <value>デスクトップ上のウィジェット</value>
+  </data>
+  <data name="WidgetsPlacedNone.Text" xml:space="preserve">
+    <value>デスクトップにはまだウィジェットがありません。</value>
+  </data>
+  <data name="WidgetsGalleryHeader.Text" xml:space="preserve">
+    <value>アプリが提供するウィジェット</value>
+  </data>
+  <data name="WidgetsGalleryNone.Text" xml:space="preserve">
+    <value>ウィジェットを提供する Android アプリはありません。</value>
+  </data>
+  <data name="WidgetsAddButton.Content" xml:space="preserve">
+    <value>デスクトップに追加</value>
+  </data>
+  <data name="WidgetsRemoveButton.Content" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Widgets_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Widgets_Setup" xml:space="preserve">
+    <value>配置時に設定が必要</value>
+  </data>
+  <data name="Widgets_At" xml:space="preserve">
+    <value>位置 {0}, {1}、サイズ {2} × {3}</value>
+  </data>
+  <data name="Widgets_Placed" xml:space="preserve">
+    <value>{0} をデスクトップに配置しました。</value>
+  </data>
+  <data name="Widgets_Removed" xml:space="preserve">
+    <value>{0} をデスクトップから削除しました。</value>
+  </data>
+  <data name="ApkWindow_Caption" xml:space="preserve">
+    <value>APK インストーラー</value>
+  </data>
+  <data name="ApkWindow_Reading" xml:space="preserve">
+    <value>ファイルを読み取っています</value>
+  </data>
+  <data name="ApkWindow_Install" xml:space="preserve">
+    <value>インストール</value>
+  </data>
+  <data name="ApkWindow_Update" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="ApkWindow_Reinstall" xml:space="preserve">
+    <value>再インストール</value>
+  </data>
+  <data name="ApkWindow_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="ApkWindow_Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="ApkWindow_Open" xml:space="preserve">
+    <value>起動</value>
+  </data>
+  <data name="ApkWindow_AndroidChip" xml:space="preserve">
+    <value>Android {0} 以降</value>
+  </data>
+  <data name="ApkWindow_SummaryUpdate" xml:space="preserve">
+    <value>{0} はすでにインストールされています。バージョン {1} からバージョン {2} に更新します。データはそのまま残ります。</value>
+  </data>
+  <data name="ApkWindow_SummaryReinstall" xml:space="preserve">
+    <value>{0} バージョン {1} はすでにインストールされています。同じバージョンをもう一度インストールします。データはそのまま残ります。</value>
+  </data>
+  <data name="ApkWindow_SummaryDowngrade" xml:space="preserve">
+    <value>{0} バージョン {1} がインストールされており、このファイルは古いバージョン {2} です。Android は古いバージョンで上書きしません。
+このファイルを使うには、先に Android でアプリをアンインストールしてください。</value>
+  </data>
+  <data name="ApkWindow_SummarySignature" xml:space="preserve">
+    <value>{0} はすでにインストールされていますが、このファイルとは署名のキーが異なります。データを守るため、Android は置き換えを許可しません。
+このファイルを使うには、先に Android でアプリをアンインストールしてください。</value>
+  </data>
+  <data name="ApkWindow_FactPackage" xml:space="preserve">
+    <value>パッケージ</value>
+  </data>
+  <data name="ApkWindow_FactVersion" xml:space="preserve">
+    <value>バージョン</value>
+  </data>
+  <data name="ApkWindow_FactInstalled" xml:space="preserve">
+    <value>インストール済み</value>
+  </data>
+  <data name="ApkWindow_FactAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="ApkWindow_FactSize" xml:space="preserve">
+    <value>サイズ</value>
+  </data>
+  <data name="ApkWindow_FactAbis" xml:space="preserve">
+    <value>プロセッサ</value>
+  </data>
+  <data name="ApkWindow_FactSigner" xml:space="preserve">
+    <value>署名者</value>
+  </data>
+  <data name="ApkWindow_AndroidRange" xml:space="preserve">
+    <value>{0} 以降、{1} 向け</value>
+  </data>
+  <data name="ApkWindow_VersionText" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ApkWindow_ApiLevel" xml:space="preserve">
+    <value>API レベル {0}</value>
+  </data>
+  <data name="ApkWindow_AndroidVersion" xml:space="preserve">
+    <value>Android {0} (API {1})</value>
+  </data>
+  <data name="ApkWindow_Signer" xml:space="preserve">
+    <value>SHA-256 {1} ({0} 署名)</value>
+  </data>
+  <data name="ApkWindow_Unsigned" xml:space="preserve">
+    <value>署名されていません。Android は署名されたアプリしかインストールしません。</value>
+  </data>
+  <data name="ApkWindow_NoPermissions" xml:space="preserve">
+    <value>権限を要求しません。</value>
+  </data>
+  <data name="ApkWindow_Sensitive" xml:space="preserve">
+    <value>先に Android が確認します</value>
+  </data>
+  <data name="ApkWindow_StartingTitle" xml:space="preserve">
+    <value>Android を開始しています</value>
+  </data>
+  <data name="ApkWindow_StartingDetail" xml:space="preserve">
+    <value>Android は一度開始すると、アプリのために準備が整った状態を保ちます。</value>
+  </data>
+  <data name="ApkWindow_CheckingTitle" xml:space="preserve">
+    <value>アプリを確認しています</value>
+  </data>
+  <data name="ApkWindow_CheckingDetail" xml:space="preserve">
+    <value>アプリがすでにインストールされているかを確認しています。</value>
+  </data>
+  <data name="ApkWindow_InstallingTitle" xml:space="preserve">
+    <value>{0} をインストールしています</value>
+  </data>
+  <data name="ApkWindow_SendingDetail" xml:space="preserve">
+    <value>アプリを Android にコピーしています</value>
+  </data>
+  <data name="ApkWindow_AndroidInstallingDetail" xml:space="preserve">
+    <value>Android がアプリをインストールしています</value>
+  </data>
+  <data name="ApkWindow_Cancelling" xml:space="preserve">
+    <value>中止しています</value>
+  </data>
+  <data name="ApkWindow_Cancelled" xml:space="preserve">
+    <value>インストールを中止しました。何も変更されていません。</value>
+  </data>
+  <data name="ApkWindow_DoneTitle" xml:space="preserve">
+    <value>{0} をインストールしました</value>
+  </data>
+  <data name="ApkWindow_UpdatedTitle" xml:space="preserve">
+    <value>{0} を更新しました</value>
+  </data>
+  <data name="ApkWindow_DoneText" xml:space="preserve">
+    <value>今すぐ起動するか、後でスタート メニューから起動できます。</value>
+  </data>
+  <data name="ApkWindow_FailedTitle" xml:space="preserve">
+    <value>インストールされませんでした</value>
+  </data>
+  <data name="ApkWindow_NotApkTitle" xml:space="preserve">
+    <value>このファイルはインストールできません</value>
+  </data>
+  <data name="ApkWindow_StartFailed" xml:space="preserve">
+    <value>Android が開始しなかったため、アプリはインストールされませんでした。{0}</value>
+  </data>
+  <data name="ApkWindow_NotSent" xml:space="preserve">
+    <value>アプリが Android に届きませんでした。{0}</value>
+  </data>
+  <data name="ApkWindow_ReasonWithWords" xml:space="preserve">
+    <value>{0} Android のメッセージ: {1}</value>
+  </data>
+  <data name="ApkWindow_OpenFailed" xml:space="preserve">
+    <value>{0} を開けませんでした。{1}</value>
+  </data>
+  <data name="ApkWindow_Reason_incompatible" xml:space="preserve">
+    <value>このアプリはこの Android では動作しません。別の種類のプロセッサ、より新しい Android のバージョン、またはこのデバイスにない機能が必要です。</value>
+  </data>
+  <data name="ApkWindow_Reason_conflicting-signature" xml:space="preserve">
+    <value>別のキーで署名された同じアプリがすでにインストールされています。先に Android でアンインストールしてください。</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-apk" xml:space="preserve">
+    <value>ファイルは Android が読み取れる署名済みの APK ではありません。</value>
+  </data>
+  <data name="ApkWindow_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android にアプリを入れる空き領域がありません。Android で空き領域を増やしてから、もう一度お試しください。</value>
+  </data>
+  <data name="ApkWindow_Reason_downgrade" xml:space="preserve">
+    <value>このアプリの新しいバージョンがインストールされています。先に Android でアンインストールしてください。</value>
+  </data>
+  <data name="ApkWindow_Reason_blocked" xml:space="preserve">
+    <value>この Android のポリシーでこのアプリは許可されていません。</value>
+  </data>
+  <data name="ApkWindow_Reason_other" xml:space="preserve">
+    <value>Android はアプリをインストールしませんでした。</value>
+  </data>
+  <data name="ApkWindow_AbiWarning" xml:space="preserve">
+    <value>このアプリには {0} プロセッサ用のコードしかなく、この PC のプロセッサ用のコードはありません。
+Android は ARM 変換パッケージがある場合にだけこのアプリを実行でき、インストールを拒否することもあります。</value>
+  </data>
+  <data name="ApkWindow_Abi32Warning" xml:space="preserve">
+    <value>このアプリには {0} プロセッサ用のコードしかありません。
+ARM 変換ツールが実行するのは 64 ビットの ARM (arm64-v8a) のコードだけなので、インストールが拒否されるか、起動しないことがあります。</value>
+  </data>
+  <data name="ApkWindow_LaunchFailedAfterInstall" xml:space="preserve">
+    <value>{0} はインストールされましたが、開きませんでした。{1}</value>
+  </data>
+  <data name="ApkWindow_LaunchWhenReady" xml:space="preserve">
+    <value>準備ができたら起動</value>
+  </data>
+  <data name="NavLogs.Content" xml:space="preserve">
+    <value>ログ</value>
+  </data>
+  <data name="LogsTitle.Text" xml:space="preserve">
+    <value>ログ</value>
+  </data>
+  <data name="LogsNote.Text" xml:space="preserve">
+    <value>Android はこのページが開いている間だけログを送り、ディスクには何も書き込まれません。
+[診断情報を保存] で、問題の報告に必要なものを 1 つの zip ファイルにまとめます。</value>
+  </data>
+  <data name="LogsSaveButton.Content" xml:space="preserve">
+    <value>診断情報を保存</value>
+  </data>
+  <data name="LogsFilter.PlaceholderText" xml:space="preserve">
+    <value>タグまたはテキストで絞り込み</value>
+  </data>
+  <data name="LogsPause.Content" xml:space="preserve">
+    <value>一時停止</value>
+  </data>
+  <data name="LogsErrorBar.Title" xml:space="preserve">
+    <value>ログを読み取れません</value>
+  </data>
+  <data name="LogsStatusBar.Title" xml:space="preserve">
+    <value>診断情報</value>
+  </data>
+  <data name="Logs_Paused" xml:space="preserve">
+    <value>一時停止中です。新しい行が {0} 行待機しています。</value>
+  </data>
+  <data name="Logs_Saving" xml:space="preserve">
+    <value>診断情報を収集しています。1 分以上かかります。</value>
+  </data>
+  <data name="Logs_Saved" xml:space="preserve">
+    <value>診断情報を {0} に保存しました。</value>
+  </data>
+  <data name="Logs_SaveDialogTitle" xml:space="preserve">
+    <value>診断情報を保存</value>
+  </data>
+  <data name="Logs_SaveDialogFilter" xml:space="preserve">
+    <value>ZIP アーカイブ</value>
+  </data>
+  <data name="Logs_Priority_V" xml:space="preserve">
+    <value>詳細</value>
+  </data>
+  <data name="Logs_Priority_D" xml:space="preserve">
+    <value>デバッグ</value>
+  </data>
+  <data name="Logs_Priority_I" xml:space="preserve">
+    <value>情報</value>
+  </data>
+  <data name="Logs_Priority_W" xml:space="preserve">
+    <value>警告</value>
+  </data>
+  <data name="Logs_Priority_E" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="Logs_Priority_F" xml:space="preserve">
+    <value>致命的なエラー</value>
+  </data>
+  <data name="NavIdentity.Content" xml:space="preserve">
+    <value>デバイス ID</value>
+  </data>
+  <data name="IdentityTitle.Text" xml:space="preserve">
+    <value>デバイス ID</value>
+  </data>
+  <data name="IdentityIntro.Text" xml:space="preserve">
+    <value>Android がアプリに報告する名前とビルドのフィンガープリントです。ボックスを空のままにすると、表示されている値がそのまま使われます。
+変更は Android の次回起動時から適用されます。</value>
+  </data>
+  <data name="IdentityWarning.Title" xml:space="preserve">
+    <value>アプリが気付くことがあります</value>
+  </data>
+  <data name="IdentityWarning.Message" xml:space="preserve">
+    <value>モデルやフィンガープリントを変えると、アプリの動作が変わることがあります。
+実行前にデバイスを確認するアプリがあり、支払いや整合性のチェックが失敗することがあります。</value>
+  </data>
+  <data name="IdentityDoneBar.Title" xml:space="preserve">
+    <value>デバイス ID</value>
+  </data>
+  <data name="IdentitySaveButton.Content" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="IdentityResetButton.Content" xml:space="preserve">
+    <value>既定値に戻す</value>
+  </data>
+  <data name="IdentityRestartButton.Content" xml:space="preserve">
+    <value>今すぐ Android を再起動</value>
+  </data>
+  <data name="IdentityResetConfirmTitle" xml:space="preserve">
+    <value>デバイス ID をリセットしますか?</value>
+  </data>
+  <data name="IdentityResetConfirmBody" xml:space="preserve">
+    <value>すべての値が既定値に戻ります。既定値はこのコンピューターの値で、コンピューターが示さない値は DSA の値です。
+
+Android の次回起動時から適用されます。</value>
+  </data>
+  <data name="IdentityNamesHeader.Text" xml:space="preserve">
+    <value>デバイス</value>
+  </data>
+  <data name="IdentityFingerprintHeader.Text" xml:space="preserve">
+    <value>ビルドのフィンガープリント</value>
+  </data>
+  <data name="IdentityPreview.Text" xml:space="preserve">
+    <value>次回起動時からのフィンガープリント</value>
+  </data>
+  <data name="Identity_Saved" xml:space="preserve">
+    <value>保存しました。Android の次回起動時から使われます。</value>
+  </data>
+  <data name="Identity_SavedRestart" xml:space="preserve">
+    <value>保存しました。今すぐ使うには Android を再起動してください。</value>
+  </data>
+  <data name="Identity_Reset" xml:space="preserve">
+    <value>既定値に戻しました。Android の次回起動時から使われます。</value>
+  </data>
+  <data name="Identity_ResetRestart" xml:space="preserve">
+    <value>既定値に戻しました。今すぐ使うには Android を再起動してください。</value>
+  </data>
+  <data name="Identity_Restarted" xml:space="preserve">
+    <value>Android はこのデバイス ID で再起動しました。</value>
+  </data>
+  <data name="Identity_FromComputer" xml:space="preserve">
+    <value>既定: このコンピューターから</value>
+  </data>
+  <data name="Identity_FromDsa" xml:space="preserve">
+    <value>既定: DSA の値</value>
+  </data>
+  <data name="Identity_NotSaid" xml:space="preserve">
+    <value>このコンピューターが値を示さないため、Android の値がそのまま使われます。</value>
+  </data>
+  <data name="IdentityComputerHeader.Text" xml:space="preserve">
+    <value>このコンピューターから</value>
+  </data>
+  <data name="IdentityComputerNote.Text" xml:space="preserve">
+    <value>これらはこのコンピューターに従い、Android の開始ごとに読み直されるので、コンピューター名を変えると次回の開始から反映されます。
+Android の設定には、デバイス名とチップが表示されます。モデル名はここにだけ表示されます。</value>
+  </data>
+  <data name="Identity_model_name" xml:space="preserve">
+    <value>モデル名</value>
+  </data>
+  <data name="Identity_model_name_Description" xml:space="preserve">
+    <value>コンピューターの販売名です (ro.product.marketname)。</value>
+  </data>
+  <data name="Identity_device_name" xml:space="preserve">
+    <value>デバイス名</value>
+  </data>
+  <data name="Identity_device_name_Description" xml:space="preserve">
+    <value>コンピューターの名前です。設定、Bluetooth、Wi-Fi Direct で、このデバイスの名前として表示されます。</value>
+  </data>
+  <data name="Identity_soc_manufacturer" xml:space="preserve">
+    <value>チップの製造元</value>
+  </data>
+  <data name="Identity_soc_manufacturer_Description" xml:space="preserve">
+    <value>Build.SOC_MANUFACTURER: コンピューターのプロセッサの製造元です。</value>
+  </data>
+  <data name="Identity_soc_model" xml:space="preserve">
+    <value>チップのモデル</value>
+  </data>
+  <data name="Identity_soc_model_Description" xml:space="preserve">
+    <value>Build.SOC_MODEL: コンピューターのプロセッサです。</value>
+  </data>
+  <data name="Identity_manufacturer" xml:space="preserve">
+    <value>製造元</value>
+  </data>
+  <data name="Identity_manufacturer_Description" xml:space="preserve">
+    <value>Build.MANUFACTURER。印刷可能な ASCII 文字で 64 文字までです。</value>
+  </data>
+  <data name="Identity_manufacturer_Invalid" xml:space="preserve">
+    <value>印刷可能な ASCII 文字を 1～64 文字使ってください。先頭と末尾に空白は使えません。</value>
+  </data>
+  <data name="Identity_brand" xml:space="preserve">
+    <value>ブランド</value>
+  </data>
+  <data name="Identity_brand_Description" xml:space="preserve">
+    <value>Build.BRAND で、フィンガープリントの最初の部分です。英字、数字、'.'、'_'、'-' を使えます。</value>
+  </data>
+  <data name="Identity_brand_Invalid" xml:space="preserve">
+    <value>英字か数字で始まる、32 文字以内の英字、数字、'.'、'_'、'-' を使ってください。</value>
+  </data>
+  <data name="Identity_model" xml:space="preserve">
+    <value>モデル</value>
+  </data>
+  <data name="Identity_model_Description" xml:space="preserve">
+    <value>Build.MODEL: アプリがこのデバイスの名前として表示する値です。</value>
+  </data>
+  <data name="Identity_model_Invalid" xml:space="preserve">
+    <value>印刷可能な ASCII 文字を 1～64 文字使ってください。先頭と末尾に空白は使えません。</value>
+  </data>
+  <data name="Identity_device" xml:space="preserve">
+    <value>デバイス</value>
+  </data>
+  <data name="Identity_device_Description" xml:space="preserve">
+    <value>Build.DEVICE。英字、数字、'.'、'_'、'-' を使えます。</value>
+  </data>
+  <data name="Identity_device_Invalid" xml:space="preserve">
+    <value>英字か数字で始まる、32 文字以内の英字、数字、'.'、'_'、'-' を使ってください。</value>
+  </data>
+  <data name="Identity_name" xml:space="preserve">
+    <value>製品名</value>
+  </data>
+  <data name="Identity_name_Description" xml:space="preserve">
+    <value>Build.PRODUCT。英字、数字、'.'、'_'、'-' を使えます。</value>
+  </data>
+  <data name="Identity_name_Invalid" xml:space="preserve">
+    <value>英字か数字で始まる、32 文字以内の英字、数字、'.'、'_'、'-' を使ってください。</value>
+  </data>
+  <data name="Identity_characteristics" xml:space="preserve">
+    <value>フォーム ファクター</value>
+  </data>
+  <data name="Identity_characteristics_Description" xml:space="preserve">
+    <value>ro.build.characteristics: tablet (大画面向けのレイアウト)、default (スマートフォン)、またはコンマで区切ったほかの語です。</value>
+  </data>
+  <data name="Identity_characteristics_Invalid" xml:space="preserve">
+    <value>英小文字、数字、'_' からなる語を、コンマで区切って使ってください。</value>
+  </data>
+  <data name="Identity_fingerprint_release" xml:space="preserve">
+    <value>リリース</value>
+  </data>
+  <data name="Identity_fingerprint_release_Description" xml:space="preserve">
+    <value>フィンガープリントに含まれる Android のリリースです。</value>
+  </data>
+  <data name="Identity_fingerprint_release_Invalid" xml:space="preserve">
+    <value>英字、数字、'.'、'_'、'-' を 1～64 文字使ってください。</value>
+  </data>
+  <data name="Identity_fingerprint_id" xml:space="preserve">
+    <value>ビルド ID</value>
+  </data>
+  <data name="Identity_fingerprint_id_Description" xml:space="preserve">
+    <value>フィンガープリントに含まれるビルド ID です。</value>
+  </data>
+  <data name="Identity_fingerprint_id_Invalid" xml:space="preserve">
+    <value>英字、数字、'.'、'_'、'-' を 1～64 文字使ってください。</value>
+  </data>
+  <data name="Identity_fingerprint_incremental" xml:space="preserve">
+    <value>増分バージョン</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Description" xml:space="preserve">
+    <value>フィンガープリントに含まれる増分ビルドのバージョンです。</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Invalid" xml:space="preserve">
+    <value>英字、数字、'.'、'_'、'-' を 1～64 文字使ってください。</value>
+  </data>
+  <data name="Identity_fingerprint_type" xml:space="preserve">
+    <value>ビルドの種類</value>
+  </data>
+  <data name="Identity_fingerprint_type_Description" xml:space="preserve">
+    <value>user、userdebug、eng のいずれかです。フィンガープリントにだけ使われ、Android は user ビルドのままです。</value>
+  </data>
+  <data name="Identity_fingerprint_type_Invalid" xml:space="preserve">
+    <value>user、userdebug、eng のいずれかを使ってください。</value>
+  </data>
+  <data name="Identity_fingerprint_tags" xml:space="preserve">
+    <value>タグ</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Description" xml:space="preserve">
+    <value>release-keys などです。</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Invalid" xml:space="preserve">
+    <value>英字、数字、'.'、'_'、'-'、',' を使ってください。</value>
+  </data>
+  <data name="Identity_fingerprint" xml:space="preserve">
+    <value>フィンガープリント全体</value>
+  </data>
+  <data name="Identity_fingerprint_Description" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags
+設定すると、上の各部分に関係なく、これが Build.FINGERPRINT になります。</value>
+  </data>
+  <data name="Identity_fingerprint_Invalid" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags の形式で書き、種類には user、userdebug、eng のいずれかを指定してください。</value>
+  </data>
+  <data name="NavApps.Content" xml:space="preserve">
+    <value>アプリ</value>
+  </data>
+  <data name="AppsTitle.Text" xml:space="preserve">
+    <value>アプリ</value>
+  </data>
+  <data name="AppsRefreshButton.Content" xml:space="preserve">
+    <value>最新の情報に更新</value>
+  </data>
+  <data name="AppsIntro.Text" xml:space="preserve">
+    <value>この PC にインストールされている Android アプリです。このページを開くと Android が開始します。
+アプリを開いたり、[アプリ情報] で権限、ストレージ、通知を変更したり、自分でインストールしたアプリをアンインストールしたりできます。
+Windows の [設定] &gt; [アプリ] &gt; [インストールされているアプリ] にも表示されます。</value>
+  </data>
+  <data name="AppsErrorBar.Title" xml:space="preserve">
+    <value>アプリを読み取れないか、変更できませんでした</value>
+  </data>
+  <data name="AppsDoneBar.Title" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="AppsManageCard.Title" xml:space="preserve">
+    <value>アプリの管理</value>
+  </data>
+  <data name="AppsManageCard.Description" xml:space="preserve">
+    <value>Android 自体の設定でアプリの一覧を開きます</value>
+  </data>
+  <data name="AppsInstalledHeader.Text" xml:space="preserve">
+    <value>インストールされているアプリ</value>
+  </data>
+  <data name="AppsSearch.PlaceholderText" xml:space="preserve">
+    <value>アプリを検索</value>
+  </data>
+  <data name="AppsNone.Text" xml:space="preserve">
+    <value>Android にはまだアプリがインストールされていません。APK ファイルを開くとインストールできます。</value>
+  </data>
+  <data name="AppsNoMatch.Text" xml:space="preserve">
+    <value>検索に一致するアプリはありません。</value>
+  </data>
+  <data name="AppsOpenButton.Content" xml:space="preserve">
+    <value>開く</value>
+  </data>
+  <data name="AppsInfoButton.Content" xml:space="preserve">
+    <value>アプリ情報</value>
+  </data>
+  <data name="AppsDesktopShortcutButton.Content" xml:space="preserve">
+    <value>デスクトップのショートカットを作成</value>
+  </data>
+  <data name="Apps_DesktopShortcutMade" xml:space="preserve">
+    <value>{0} のショートカットをデスクトップに作成しました。</value>
+  </data>
+  <data name="AppsUninstallButton.Content" xml:space="preserve">
+    <value>アンインストール</value>
+  </data>
+  <data name="AppsUninstallConfirmTitle" xml:space="preserve">
+    <value>{0} をアンインストールしますか?</value>
+  </data>
+  <data name="AppsUninstallConfirmBody" xml:space="preserve">
+    <value>{0} とそのデータが Android から削除されます。
+
+この操作は元に戻せません。</value>
+  </data>
+  <data name="Apps_Count" xml:space="preserve">
+    <value>{0} 個のアプリ</value>
+  </data>
+  <data name="Apps_CountMatching" xml:space="preserve">
+    <value>{1} 個中 {0} 個のアプリ</value>
+  </data>
+  <data name="Apps_Version" xml:space="preserve">
+    <value>バージョン {0}</value>
+  </data>
+  <data name="Apps_Installed" xml:space="preserve">
+    <value>{0} にインストール</value>
+  </data>
+  <data name="Apps_System" xml:space="preserve">
+    <value>Android の一部</value>
+  </data>
+  <data name="Apps_SystemTip" xml:space="preserve">
+    <value>このアプリは Android の一部のため、アンインストールできません。</value>
+  </data>
+  <data name="Apps_Uninstalled" xml:space="preserve">
+    <value>{0} をアンインストールしました。</value>
+  </data>
+  <data name="Apps_NotUninstalled" xml:space="preserve">
+    <value>{0} はアンインストールされませんでした: {1} ({2})</value>
+  </data>
+  <data name="Apps_Refused_not-installed" xml:space="preserve">
+    <value>すでにインストールされていません</value>
+  </data>
+  <data name="Apps_Refused_system-app" xml:space="preserve">
+    <value>Android の一部です</value>
+  </data>
+  <data name="Apps_Refused_blocked" xml:space="preserve">
+    <value>デバイス管理アプリであるか、ポリシーで保護されているため、Android が許可しません</value>
+  </data>
+  <data name="Apps_Refused_other" xml:space="preserve">
+    <value>Android がアンインストールできませんでした</value>
+  </data>
+  <data name="UninstallWindow_Caption" xml:space="preserve">
+    <value>Android アプリのアンインストール</value>
+  </data>
+  <data name="UninstallWindow_Version" xml:space="preserve">
+    <value>バージョン {0}</value>
+  </data>
+  <data name="UninstallWindow_Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="UninstallWindow_Busy" xml:space="preserve">
+    <value>{0} をアンインストールしています</value>
+  </data>
+  <data name="UninstallWindow_BusyDetail" xml:space="preserve">
+    <value>Android からアプリとそのデータを削除しています。Android が実行されていない場合は、先に開始します。</value>
+  </data>
+  <data name="UninstallWindow_DoneTitle" xml:space="preserve">
+    <value>アンインストールしました</value>
+  </data>
+  <data name="UninstallWindow_DoneText" xml:space="preserve">
+    <value>{0} を Android から削除しました。</value>
+  </data>
+  <data name="UninstallWindow_FailedTitle" xml:space="preserve">
+    <value>アンインストールされませんでした</value>
+  </data>
+  <data name="UninstallWindow_Refused" xml:space="preserve">
+    <value>{0} はアンインストールされませんでした: {1}。</value>
+  </data>
+  <data name="UninstallWindow_RefusedDetail" xml:space="preserve">
+    <value>{0} はアンインストールされませんでした: {1} ({2})。</value>
+  </data>
+  <data name="NavBackground.Content" xml:space="preserve">
+    <value>バックグラウンドで実行中</value>
+  </data>
+  <data name="BackgroundTitle.Text" xml:space="preserve">
+    <value>バックグラウンドで実行中</value>
+  </data>
+  <data name="BackgroundRefreshButton.Content" xml:space="preserve">
+    <value>最新の情報に更新</value>
+  </data>
+  <data name="BackgroundIntro.Text" xml:space="preserve">
+    <value>これらの Android アプリは、ウィンドウを閉じた後も音楽の再生、ファイルのダウンロード、VPN の維持などの処理のために実行を続けます。
+各アプリには、タスクバーの通知領域にアイコンがあります。アプリを停止すると処理が終わり、メモリが解放されます。</value>
+  </data>
+  <data name="BackgroundErrorBar.Title" xml:space="preserve">
+    <value>バックグラウンドで実行中のアプリを読み取れないか、変更できませんでした</value>
+  </data>
+  <data name="BackgroundDoneBar.Title" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="BackgroundAppsHeader.Text" xml:space="preserve">
+    <value>アプリ</value>
+  </data>
+  <data name="BackgroundNone.Text" xml:space="preserve">
+    <value>バックグラウンドで実行中のアプリはありません。</value>
+  </data>
+  <data name="BackgroundOpenButton.Content" xml:space="preserve">
+    <value>開く</value>
+  </data>
+  <data name="BackgroundStopButton.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="BackgroundStoppingHeader.Text" xml:space="preserve">
+    <value>アプリの停止</value>
+  </data>
+  <data name="BackgroundAskCard.Header" xml:space="preserve">
+    <value>通知領域からアプリを停止する前に確認する</value>
+  </data>
+  <data name="BackgroundAskCard.Description" xml:space="preserve">
+    <value>今後確認しないように選んだ場合は、ここでもう一度オンにできます。</value>
+  </data>
+  <data name="Background_Playing" xml:space="preserve">
+    <value>再生中: {0}</value>
+  </data>
+  <data name="Background_Paused" xml:space="preserve">
+    <value>一時停止中: {0}</value>
+  </data>
+  <data name="Background_Stopped" xml:space="preserve">
+    <value>{0} を停止しました。</value>
+  </data>
+  <data name="AppsResizable.Content" xml:space="preserve">
+    <value>サイズ変更可能</value>
+  </data>
+  <data name="AppsResizable.ToolTip" xml:space="preserve">
+    <value>このアプリのウィンドウのサイズ変更や最大化を許可するかどうかです。オフにすると、各ウィンドウは開いたときのサイズのままになります。</value>
+  </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>タイトルバーの下から開始</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>上部のバーがタイトルバーに押しつぶされたり隠れたりするアプリのための設定です。
+アプリはタイトルバーの後ろに描画せず、その下から始まります。
+次にアプリのウィンドウを開いたときから適用されます。</value>
+  </data>
+  <data name="AppsStartSize.ToolTip" xml:space="preserve">
+    <value>このアプリのウィンドウが開くときのサイズ</value>
+  </data>
+  <data name="Apps_StartSize_Auto" xml:space="preserve">
+    <value>Android が選んだサイズで開く</value>
+  </data>
+  <data name="Apps_StartSize_PhonePortrait" xml:space="preserve">
+    <value>スマートフォン、縦 ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_PhoneLandscape" xml:space="preserve">
+    <value>スマートフォン、横 ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletPortrait" xml:space="preserve">
+    <value>タブレット、縦 ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletLandscape" xml:space="preserve">
+    <value>タブレット、横 ({0} × {1})</value>
+  </data>
+  <data name="Apps_WindowChanged" xml:space="preserve">
+    <value>{0} のウィンドウは、次に開くものから新しい設定に従います。</value>
+  </data>
+  <data name="AppsDpiScaling.Name" xml:space="preserve">
+    <value>拡大縮小</value>
+  </data>
+  <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
+    <value>拡大率の異なるモニターにウィンドウを移したとき、このアプリをどちらが拡大縮小するかです。
+• アプリ: ウィンドウが新しいモニターに着いた時点で、そのモニターの拡大率をすぐ適用し、アプリがその拡大率で描き直すので文字が鮮明です。これに対応すると示していないアプリは、Android が状態を保って画面を作り直すため、一瞬描き直されることがあります。
+• システム: アプリは拡大率を変えず、DSA が同じ物理サイズに拡大縮小します。文字が少しぼやけることがあります。
+• 自動: YouTube のように実行中に拡大率が変わると表示が崩れるアプリにはシステム、それ以外のアプリには、自分で対応すると示していればアプリ、示していなければシステムを使います。
+自動とシステムはアプリを再起動しません。</value>
+  </data>
+  <data name="Apps_DpiScaling_Auto" xml:space="preserve">
+    <value>自動 (アプリ)</value>
+  </data>
+  <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
+    <value>自動 (システム、このアプリに推奨)</value>
+  </data>
+  <data name="Apps_DpiScaling_App" xml:space="preserve">
+    <value>アプリ</value>
+  </data>
+  <data name="Apps_DpiScaling_System" xml:space="preserve">
+    <value>システム</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
+    <value>システム (強制)</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
+    <value>システム (強制)、まだ利用できません</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
+    <value>システム (強制) は、拡大率の変更に対応すると宣言していないアプリにも、再起動せずに新しい拡大率を渡します。
+まだ使用できません: このビルドにない Android フレームワークの変更が必要なため、現時点ではシステムと同じように動作します。</value>
+  </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>全画面表示の要求</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>動画プレーヤーの全画面ボタンのように、このアプリが明確に全画面表示を要求したときの表示先です。F11 では常に全画面表示を切り替えます。</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>バーだけを隠すとき</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>ショート動画のフィードのように、このアプリが全画面表示を要求せずにバーを隠したときの表示先です。</value>
+  </data>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>開くときのウィンドウサイズ</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>既定に従う (画面全体)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>既定に従う (ウィンドウ内)</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>画面全体</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>ウィンドウ内</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>アプリの全画面表示</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>動画の全画面ボタンのような、アプリからの全画面表示の要求の表示先です。画面全体の場合、上端にタイトル バーが現れます。[アプリ] ページでアプリごとに選んだ値が優先されます。</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>バーを隠すアプリ</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>ショート動画のフィードのように、アプリがバーを隠すだけのときの表示先です。</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>画面全体</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>ウィンドウ内</value>
+  </data>
+  <data name="NavNetwork.Content" xml:space="preserve">
+    <value>ネットワーク</value>
+  </data>
+  <data name="NetworkTitle.Text" xml:space="preserve">
+    <value>ネットワーク</value>
+  </data>
+  <data name="NetworkStatusCard.Header" xml:space="preserve">
+    <value>Android のネットワーク</value>
+  </data>
+  <data name="NetworkRefreshButton.Content" xml:space="preserve">
+    <value>最新の情報に更新</value>
+  </data>
+  <data name="Network_ModeNat" xml:space="preserve">
+    <value>この PC 経由で接続しています (NAT)。Android アプリからは、データ料金のかからない Wi-Fi として見えます。</value>
+  </data>
+  <data name="Network_ModeAdvanced" xml:space="preserve">
+    <value>独立したデバイスとして、この PC のネットワークに接続しています (高度なネットワーク)。</value>
+  </data>
+  <data name="Network_ModeOff" xml:space="preserve">
+    <value>Android が実行されていないため、まだネットワークはありません。</value>
+  </data>
+  <data name="Network_ModeUnknown" xml:space="preserve">
+    <value>DSA サービスはネットワークを報告していません。表示するには DSA を更新してください。</value>
+  </data>
+  <data name="Network_None" xml:space="preserve">
+    <value>なし</value>
+  </data>
+  <data name="Network_DnsHost" xml:space="preserve">
+    <value>この PC のリゾルバーが応答するため、この PC の hosts ファイル、VPN、DNS フィルターが Android アプリにも適用されます。</value>
+  </data>
+  <data name="Network_DnsFallback" xml:space="preserve">
+    <value>この PC のリゾルバーが応答しないため、Android はネットワークの DNS サーバーに問い合わせます: {0}</value>
+  </data>
+  <data name="NetworkAddressLabel.Text" xml:space="preserve">
+    <value>アドレス</value>
+  </data>
+  <data name="NetworkDnsLabel.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="NetworkGatewayLabel.Text" xml:space="preserve">
+    <value>ゲートウェイ</value>
+  </data>
+  <data name="NetworkProblemBar.Title" xml:space="preserve">
+    <value>高度なネットワークは使われていません</value>
+  </data>
+  <data name="NetworkAdvancedHeader.Text" xml:space="preserve">
+    <value>詳細設定</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Header" xml:space="preserve">
+    <value>高度なネットワーク</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Description" xml:space="preserve">
+    <value>Android は独立したデバイスとしてこの PC のネットワークに参加し、ほかのデバイスと Android アプリが通信し合えます。既定でオフです。
+この PC のプログラムは、常に上のアドレスで Android 内のサーバーに接続できます。</value>
+  </data>
+  <data name="NetworkRestartBar.Title" xml:space="preserve">
+    <value>適用するには Android を再起動してください</value>
+  </data>
+  <data name="NetworkRestartBar.Message" xml:space="preserve">
+    <value>変更は次に Android が開始したときに適用されます。[全般] ページで Android を停止してから、アプリを開いてください。</value>
+  </data>
+  <data name="NetworkCertificatesHeader.Text" xml:space="preserve">
+    <value>信頼された証明書</value>
+  </data>
+  <data name="HostCertificatesCard.Header" xml:space="preserve">
+    <value>この PC に追加されたルート証明書を使う</value>
+  </data>
+  <data name="HostCertificatesCard.Description" xml:space="preserve">
+    <value>会社やセキュリティ プログラムの証明書など、この PC に追加されたルート証明書を Android アプリも信頼します。既定でオンです。
+Windows に付属するルート証明書は一覧に表示されません。変更はすぐに適用されます。</value>
+  </data>
+  <data name="CertificatesNone.Text" xml:space="preserve">
+    <value>この PC に追加されたルート証明書は見つかりませんでした。</value>
+  </data>
+  <data name="Certificate_IssuedBy" xml:space="preserve">
+    <value>発行者: {0}</value>
+  </data>
+  <data name="Certificate_SourceMachine" xml:space="preserve">
+    <value>この PC の信頼されたルート証明機関</value>
+  </data>
+  <data name="Certificate_SourceMachineGroupPolicy" xml:space="preserve">
+    <value>この PC の信頼されたルート証明機関 (グループ ポリシーで設定)</value>
+  </data>
+  <data name="Certificate_SourceMachineEnterprise" xml:space="preserve">
+    <value>この PC の信頼されたルート証明機関 (組織が設定)</value>
+  </data>
+  <data name="Certificate_SourceUser" xml:space="preserve">
+    <value>ユーザーの信頼されたルート証明機関</value>
+  </data>
+  <data name="Certificate_SourceUserGroupPolicy" xml:space="preserve">
+    <value>ユーザーの信頼されたルート証明機関 (グループ ポリシーで設定)</value>
+  </data>
+  <data name="Certificate_SourceAdmin" xml:space="preserve">
+    <value>この PC の管理者が追加</value>
+  </data>
+  <data name="Certificate_SourceSystem" xml:space="preserve">
+    <value>システムの証明書ストアに追加</value>
+  </data>
+  <data name="BackupHeader.Text" xml:space="preserve">
+    <value>バックアップ</value>
+  </data>
+  <data name="BackupUnavailableBar.Title" xml:space="preserve">
+    <value>現在バックアップは使用できません</value>
+  </data>
+  <data name="BackupErrorBar.Title" xml:space="preserve">
+    <value>操作できませんでした</value>
+  </data>
+  <data name="BackupResultBar.Title" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="BackupCard.Header" xml:space="preserve">
+    <value>アプリのデータをバックアップする</value>
+  </data>
+  <data name="BackupCard.Description" xml:space="preserve">
+    <value>Android はアプリのデータをユーザー フォルダーにバックアップし、Windows が保管するキーで暗号化します。
+データのリセット後や、回復キーを使ってほかの PC で復元できます。</value>
+  </data>
+  <data name="BackupNowButton.Content" xml:space="preserve">
+    <value>今すぐバックアップ</value>
+  </data>
+  <data name="BackupRestoreButton.Content" xml:space="preserve">
+    <value>復元</value>
+  </data>
+  <data name="BackupRestoreConfirm.Title" xml:space="preserve">
+    <value>バックアップからアプリのデータを復元しますか?</value>
+  </data>
+  <data name="BackupRestoreConfirm.Action" xml:space="preserve">
+    <value>復元</value>
+  </data>
+  <data name="RecoveryKeyCard.Header" xml:space="preserve">
+    <value>回復キー</value>
+  </data>
+  <data name="RecoveryKeyCard.Description" xml:space="preserve">
+    <value>回復キーがあれば、ほかの PC や Windows の再インストール後にバックアップを開けます。
+回復キーがなければ、この PC のこの Windows アカウントだけがバックアップを読み取れます。</value>
+  </data>
+  <data name="RecoveryKeyShowButton.Content" xml:space="preserve">
+    <value>回復キーを表示</value>
+  </data>
+  <data name="RecoveryKeyHideButton.Content" xml:space="preserve">
+    <value>非表示</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Header" xml:space="preserve">
+    <value>回復キーを使う</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Description" xml:space="preserve">
+    <value>ほかの PC で作成したバックアップを復元するには、その DSA Backup フォルダーをユーザー フォルダーにコピーし、作成時の回復キーを入力します。</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Placeholder" xml:space="preserve">
+    <value>回復キー</value>
+  </data>
+  <data name="UseRecoveryKeyButton.Content" xml:space="preserve">
+    <value>キーを使う</value>
+  </data>
+  <data name="Backup_NoService" xml:space="preserve">
+    <value>DSA サービスはバックアップの状態を報告しませんでした。しばらくしてから、このページをもう一度開いてください。</value>
+  </data>
+  <data name="Backup_Unavailable" xml:space="preserve">
+    <value>現在、バックアップ フォルダーまたはそのキーを使用できません。</value>
+  </data>
+  <data name="Backup_Folder" xml:space="preserve">
+    <value>フォルダー: {0}</value>
+  </data>
+  <data name="Backup_Last" xml:space="preserve">
+    <value>前回のバックアップ: {0}</value>
+  </data>
+  <data name="Backup_Never" xml:space="preserve">
+    <value>なし</value>
+  </data>
+  <data name="Backup_Apps" xml:space="preserve">
+    <value>バックアップ内のアプリ: {0} 個 ({1})</value>
+  </data>
+  <data name="Backup_LastError" xml:space="preserve">
+    <value>前回の問題: {0}</value>
+  </data>
+  <data name="Backup_Done" xml:space="preserve">
+    <value>{0} 個のアプリのデータをバックアップしました。</value>
+  </data>
+  <data name="Backup_DoneSome" xml:space="preserve">
+    <value>{0} 個のアプリのデータをバックアップしました。{1} 個はバックアップできませんでした。</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>{0} 個のアプリのデータを復元し、{1} 個のアプリをインストールしました。</value>
+  </data>
+  <data name="Backup_RestoredSome" xml:space="preserve">
+    <value>{0} 個のアプリのデータを復元し、{1} 個のアプリをインストールしました。{2} 個は復元できませんでした。</value>
+  </data>
+  <data name="Backup_RestoreWarning" xml:space="preserve">
+    <value>バックアップ内の各アプリのデータが、現在のデータの代わりにバックアップのデータになります。
+
+• 見つからないアプリはもう一度インストールされます。
+• Android が実行されていない場合は開始します。</value>
+  </data>
+  <data name="Backup_KeyAdvice" xml:space="preserve">
+    <value>キーを書き留めるかパスワード マネージャーに入れ、この PC とは別に保管してください。キーとバックアップ フォルダーがあれば誰でも読み取れます。</value>
+  </data>
+  <data name="Backup_KeyEmpty" xml:space="preserve">
+    <value>先に回復キーを入力してください。</value>
+  </data>
+  <data name="Backup_KeyUsed" xml:space="preserve">
+    <value>回復キーをバックアップのキーとして保管しました。このキーで作成されたバックアップ フォルダーを、ここで復元できるようになりました。</value>
+  </data>
+  <data name="BackupSwitchCard.Header" xml:space="preserve">
+    <value>この PC にアプリのデータをバックアップする</value>
+  </data>
+  <data name="BackupSwitchCard.Description" xml:space="preserve">
+    <value>Android アプリのユーザー データを暗号化してこの PC にもう 1 部保管し、データのリセット後やほかの PC で復元できます。
+オンにするまではオフです。</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>バックアップはオフです。バックアップは作成されず、アプリのデータはこの PC に一切保管されません。</value>
+  </data>
+  <data name="Backup_OffKept" xml:space="preserve">
+    <value>バックアップはオフです。以前に作成した {0} 個のアプリのバックアップ ({1}) は、DSA Backup フォルダーに残っています。</value>
+  </data>
+  <data name="Backup_DeleteQuestion" xml:space="preserve">
+    <value>{0} 個のアプリのバックアップ ({1}) が、まだこの PC に保管されています。
+
+バックアップとそのキーも削除しますか? それとも後で復元するために残しますか?</value>
+  </data>
+  <data name="BackupOffConfirm.Title" xml:space="preserve">
+    <value>バックアップをオフにする</value>
+  </data>
+  <data name="BackupOffConfirm.Delete" xml:space="preserve">
+    <value>バックアップを削除</value>
+  </data>
+  <data name="BackupOffConfirm.Keep" xml:space="preserve">
+    <value>残す</value>
+  </data>
+  <data name="Backup_TurnedOn" xml:space="preserve">
+    <value>バックアップをオンにしました。今後、Android はアプリのデータをこの PC にバックアップします。</value>
+  </data>
+  <data name="Backup_TurnedOff" xml:space="preserve">
+    <value>バックアップをオフにしました。これまでのバックアップは残っています。</value>
+  </data>
+  <data name="Backup_TurnedOffDeleted" xml:space="preserve">
+    <value>バックアップをオフにし、バックアップとそのキーを削除しました。</value>
+  </data>
+  <data name="KeyProtectionCard.Header" xml:space="preserve">
+    <value>Android のキーの保護</value>
+  </data>
+  <data name="KeyProtection_None" xml:space="preserve">
+    <value>Android のキーは、Android の初回起動時に保護されます。</value>
+  </data>
+  <data name="KeyProtection_Tpm" xml:space="preserve">
+    <value>この PC の TPM で封印されています。Android のディスクをコピーしても、ほかではアプリのキーや Android の暗号化されたストレージを開けません。</value>
+  </data>
+  <data name="KeyProtection_Dpapi" xml:space="preserve">
+    <value>使える TPM がないため、Windows がアカウント専用に保管しています。ディスクをコピーしても、アカウントなしではキーを開けません。
+TPM が使えるようになると、DSA はキーを TPM で封印します。</value>
+  </data>
+  <data name="KeyProtection_Hardware" xml:space="preserve">
+    <value>{0} で封印されています。</value>
+  </data>
+  <data name="KeyProtection_Store" xml:space="preserve">
+    <value>{0} に保管されています。</value>
+  </data>
+  <data name="KeyProtection_Why" xml:space="preserve">
+    <value>TPM を使わない理由: {0}</value>
+  </data>
+  <data name="KeyProblemBar.Title" xml:space="preserve">
+    <value>Android のキーを開けませんでした</value>
+  </data>
+  <data name="ResetDataHeader.Text" xml:space="preserve">
+    <value>リセット</value>
+  </data>
+  <data name="ResetDataCard.Header" xml:space="preserve">
+    <value>Android のデータをリセットする</value>
+  </data>
+  <data name="ResetDataCard.Description" xml:space="preserve">
+    <value>インストールしたすべてのアプリ、アカウント、すべてのアプリのデータを消去し、Android を最初にインストールしたときの状態に戻します。
+Android イメージとこれらの設定は残ります。</value>
+  </data>
+  <data name="ResetDataButton.Content" xml:space="preserve">
+    <value>リセット</value>
+  </data>
+  <data name="ResetDataConfirm.Title" xml:space="preserve">
+    <value>Android のデータをリセットしますか?</value>
+  </data>
+  <data name="ResetDataConfirm.Action" xml:space="preserve">
+    <value>リセット</value>
+  </data>
+  <data name="ResetData_Warning" xml:space="preserve">
+    <value>Android から次のものが消去されます:
+• インストールしたすべてのアプリ
+• サインインしたアカウント
+• すべてのアプリのデータ
+
+Android は今すぐ停止し、次回は最初にインストールしたときの状態で開始します。Android イメージと DSA の設定は残ります。
+
+この操作は元に戻せません。</value>
+  </data>
+  <data name="ResetDoneBar.Title" xml:space="preserve">
+    <value>Android のデータをリセットしました</value>
+  </data>
+  <data name="ResetDoneBar.Message" xml:space="preserve">
+    <value>次にアプリを開くと、最初にインストールしたときの状態で Android が開始します。</value>
+  </data>
+  <data name="Toggle.On" xml:space="preserve">
+    <value>オン</value>
+  </data>
+  <data name="Toggle.Off" xml:space="preserve">
+    <value>オフ</value>
+  </data>
+  <data name="AndroidRunningHeader.Text" xml:space="preserve">
+    <value>現在実行中</value>
+  </data>
+  <data name="Android_Major" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="Android_Unknown" xml:space="preserve">
+    <value>不明</value>
+  </data>
+  <data name="Android_Supported" xml:space="preserve">
+    <value>対応バージョン: Android {0}</value>
+  </data>
+  <data name="Android_Switching" xml:space="preserve">
+    <value>Android {0} が選択されました。今すぐダウンロードされ、次に Android が開始するときに使われます。</value>
+  </data>
+  <data name="AndroidSwitchingBar.Title" xml:space="preserve">
+    <value>Android のバージョンを変更しています</value>
+  </data>
+  <data name="AndroidBuildCard.Header" xml:space="preserve">
+    <value>ビルド</value>
+  </data>
+  <data name="AndroidPatchCard.Header" xml:space="preserve">
+    <value>セキュリティ パッチ レベル</value>
+  </data>
+  <data name="AndroidChooseHeader.Text" xml:space="preserve">
+    <value>Android のバージョン</value>
+  </data>
+  <data name="AndroidChooseCard.Header" xml:space="preserve">
+    <value>使用するバージョン</value>
+  </data>
+  <data name="AndroidChooseCard.Description" xml:space="preserve">
+    <value>DSA は Android の最新の 2 つのバージョンに対応しています。どちらか一方でしか動作しないアプリもあります。</value>
+  </data>
+  <data name="Android_ChoiceLatest" xml:space="preserve">
+    <value>常に最新 (現在は Android {0})</value>
+  </data>
+  <data name="Android_ChoiceMajor" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="AndroidApplyButton.Content" xml:space="preserve">
+    <value>変更</value>
+  </data>
+  <data name="AndroidChooseNote.Text" xml:space="preserve">
+    <value>このコンピューターのすべてのユーザーが同じ Android のバージョンを使うため、変更には管理者が必要です。
+選んだバージョンには、引き続きセキュリティ更新が届きます。サポートが終わると、DSA は次のバージョンに移り、アプリはそのまま残ります。</value>
+  </data>
+  <data name="AndroidUpConfirm.Title" xml:space="preserve">
+    <value>新しい Android に移行しますか?</value>
+  </data>
+  <data name="AndroidUpConfirm.Body" xml:space="preserve">
+    <value>Android {0} がダウンロードされ、Android の次回起動時から使われます。アプリとそのデータも一緒に移行します。
+
+後で元に戻すと、データは消去されます。</value>
+  </data>
+  <data name="AndroidDownConfirm.Title" xml:space="preserve">
+    <value>古いバージョンに移行するために Android のデータを消去しますか?</value>
+  </data>
+  <data name="AndroidDownConfirm.Action" xml:space="preserve">
+    <value>データを消去して変更</value>
+  </data>
+  <data name="Android_DownWarning" xml:space="preserve">
+    <value>Android {0} は現在実行中の Android {1} より古く、新しいバージョンが書き込んだデータを読み取れません。
+
+移行すると、このコンピューターのすべてのユーザーの Android のデータが消去されます:
+• ユーザーがインストールしたすべてのアプリ
+• サインインしたアカウント
+• すべてのアプリのデータ
+
+各ユーザーの Android は、最初にインストールしたときの状態で開始します。DSA の設定は残ります。
+
+この操作は元に戻せません。</value>
+  </data>
+  <data name="ApkWindow_AbiWarningTitle" xml:space="preserve">
+    <value>このアプリはこの PC で動作しない可能性があります</value>
+  </data>
+  <data name="ApkWindow_InstalledTitle" xml:space="preserve">
+    <value>インストール済みです</value>
+  </data>
+  <data name="ApkWindow_DowngradeTitle" xml:space="preserve">
+    <value>新しいバージョンがインストールされています</value>
+  </data>
+  <data name="ApkWindow_SignatureTitle" xml:space="preserve">
+    <value>別のキーで署名されています</value>
+  </data>
+  <data name="AppsRunAsArm.Content" xml:space="preserve">
+    <value>ARM として実行</value>
+  </data>
+  <data name="Apps_RunAsArm_system-app" xml:space="preserve">
+    <value>Android の一部であるアプリは、Android がインストールしたとおりに実行されます。</value>
+  </data>
+  <data name="Apps_RunAsArm_no-arm-libraries" xml:space="preserve">
+    <value>デバイス上のこのアプリの APK には、ARM のコードが含まれていません。</value>
+  </data>
+  <data name="Apps_RunAsArm_translation-off" xml:space="preserve">
+    <value>ARM 変換がオンになっていません。[ARM アプリ] でオンにして、Android を再起動してください。</value>
+  </data>
+  <data name="Apps_RunAsArm_arm-only" xml:space="preserve">
+    <value>このアプリには ARM のコードしかないため、常に ARM として実行されます。</value>
+  </data>
+  <data name="Apps_RunAsArm_unknown" xml:space="preserve">
+    <value>このバージョンの DSA では、アプリを ARM として実行できるかどうかがわかりません。</value>
+  </data>
+  <data name="AppsRunAsArmEraseTitle" xml:space="preserve">
+    <value>{0} のデータを消去しますか?</value>
+  </data>
+  <data name="AppsRunAsArmEraseBody" xml:space="preserve">
+    <value>Android は、データを保ったまま {0} の実行方法を変更できません。
+
+もう一度インストールすると、サインイン情報、設定、アプリが保存しているファイルなどのデータが消去されます。</value>
+  </data>
+  <data name="AppsRunAsArmEraseButton" xml:space="preserve">
+    <value>消去して再インストール</value>
+  </data>
+  <data name="Apps_RunAsArmKept" xml:space="preserve">
+    <value>{0} はデータも含めてそのままにしました。</value>
+  </data>
+  <data name="Apps_RunAsArmOn" xml:space="preserve">
+    <value>{0} は現在 ARM として実行されます。</value>
+  </data>
+  <data name="Apps_RunAsArmOff" xml:space="preserve">
+    <value>{0} は現在 x86_64 のコードで実行されます。</value>
+  </data>
+  <data name="Apps_RunAsArmNotChanged" xml:space="preserve">
+    <value>{0} は再インストールされませんでした: {1} ({2})</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_not-installed" xml:space="preserve">
+    <value>すでにインストールされていません</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_system-app" xml:space="preserve">
+    <value>Android の一部です</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_no-libraries" xml:space="preserve">
+    <value>デバイス上の APK にそのためのコードがありません</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_translation-off" xml:space="preserve">
+    <value>ARM 変換がオンになっていません</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_data-would-be-erased" xml:space="preserve">
+    <value>データが消去されてしまいます</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_other" xml:space="preserve">
+    <value>Android が拒否しました</value>
+  </data>
+  <data name="ApkWindow_BundleTitle" xml:space="preserve">
+    <value>分割 APK のバンドル</value>
+  </data>
+  <data name="ApkWindow_BundleSummary" xml:space="preserve">
+    <value>{0} は複数の APK で構成されています。この PC に必要な {1} 個をまとめてインストールします (合計 {2})。</value>
+  </data>
+  <data name="ApkWindow_BundleSummaryObb" xml:space="preserve">
+    <value>{0} は複数の APK で構成されています。この PC に必要な {1} 個を拡張ファイルとまとめてインストールします (合計 {2})。</value>
+  </data>
+  <data name="ApkWindow_FactApks" xml:space="preserve">
+    <value>APK</value>
+  </data>
+  <data name="ApkWindow_ApksValue" xml:space="preserve">
+    <value>{0} 個 (ベースと {1} 個の分割)</value>
+  </data>
+  <data name="ApkWindow_FactObbs" xml:space="preserve">
+    <value>拡張ファイル</value>
+  </data>
+  <data name="Install_Reason_app-bundle" xml:space="preserve">
+    <value>アプリ ストアへのアップロード用の Android App Bundle です。アプリを APK、または .xapk、.apks、.apkm のバンドルとして入手してください。</value>
+  </data>
+  <data name="Install_Reason_encrypted-bundle" xml:space="preserve">
+    <value>バンドルが暗号化されているため、APK を読み取れません。アプリを APK か、新しいバンドルとして入手してください。</value>
+  </data>
+  <data name="Install_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>バンドルの分割 APK がベース APK とは別のキーで署名されているため、Android は拒否します。</value>
+  </data>
+  <data name="Install_Reason_invalid-bundle" xml:space="preserve">
+    <value>バンドルが、Android がインストールできる 1 つのアプリになっていません。</value>
+  </data>
+  <data name="ApkWindow_Reason_app-bundle" xml:space="preserve">
+    <value>アプリ ストアへのアップロード用の Android App Bundle です。アプリを APK、または .xapk、.apks、.apkm のバンドルとして入手してください。</value>
+  </data>
+  <data name="ApkWindow_Reason_encrypted-bundle" xml:space="preserve">
+    <value>バンドルが暗号化されているため、APK を読み取れません。アプリを APK か、新しいバンドルとして入手してください。</value>
+  </data>
+  <data name="ApkWindow_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>バンドルの分割 APK がベース APK とは別のキーで署名されているため、Android は拒否します。</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-bundle" xml:space="preserve">
+    <value>バンドルが、Android がインストールできる 1 つのアプリになっていません。</value>
+  </data>
+  <data name="ApkWindow_Reason_translation-off" xml:space="preserve">
+    <value>このアプリは ARM のコード (arm64-v8a) でしか動作せず、ARM 変換がオンになっていません。
+[ARM アプリ] でオンにし、Android を再起動してから、アプリをもう一度インストールしてください。</value>
+  </data>
+  <data name="UpdatesAndroidHeader.Text" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="UpdatesProgramHeader.Text" xml:space="preserve">
+    <value>DSA</value>
+  </data>
+  <data name="AndroidFollowsCard.Header" xml:space="preserve">
+    <value>追従するバージョン</value>
+  </data>
+  <data name="Android_FollowsLatest" xml:space="preserve">
+    <value>対応する最新のバージョン (現在は Android {0})</value>
+  </data>
+  <data name="Android_FollowsMajor" xml:space="preserve">
+    <value>Android {0} とそのセキュリティ更新</value>
+  </data>
+  <data name="AndroidUpdateCard.Header" xml:space="preserve">
+    <value>Android の更新</value>
+  </data>
+  <data name="Android_UpToDate" xml:space="preserve">
+    <value>保留中の Android の更新はありません。DSA は毎日確認し、アプリのウィンドウが開いていないときに Android を再起動して更新を適用します。</value>
+  </data>
+  <data name="AndroidCheckButton.Content" xml:space="preserve">
+    <value>今すぐ確認</value>
+  </data>
+  <data name="Android_RestartPending" xml:space="preserve">
+    <value>Android {0} をダウンロードしました。今すぐ使うには Android を再起動してください。</value>
+  </data>
+  <data name="AndroidRestartButton.Content" xml:space="preserve">
+    <value>今すぐ再起動</value>
+  </data>
+  <data name="AndroidRestartConfirm.Title" xml:space="preserve">
+    <value>今すぐ Android を再起動しますか?</value>
+  </data>
+  <data name="AndroidRestartConfirm.Body" xml:space="preserve">
+    <value>Android は Android {0} で再起動します。
+
+アプリのウィンドウは閉じます。起動が完了したら、アプリをもう一度開いてください。</value>
+  </data>
+  <data name="ImageAutoRestartCard.Header" xml:space="preserve">
+    <value>自動で再起動して更新を適用する</value>
+  </data>
+  <data name="ImageAutoRestartCard.Description" xml:space="preserve">
+    <value>アプリ ウィンドウが開いていなければ、ダウンロードした更新ですぐに Android を再起動します。開いていれば先に確認するか、閉じるまで待ちます。
+既定でオンです。オフの場合、更新は次に Android を開始したときに使われます。</value>
+  </data>
+  <data name="IdentitySpecsCard.Header" xml:space="preserve">
+    <value>デバイスの仕様</value>
+  </data>
+  <data name="IdentityCopyButton.Content" xml:space="preserve">
+    <value>コピー</value>
+  </data>
+  <data name="IdentityAndroidHeader.Text" xml:space="preserve">
+    <value>Android が報告する情報</value>
+  </data>
+  <data name="Identity_NotReported" xml:space="preserve">
+    <value>報告なし</value>
+  </data>
+  <data name="AppsRoot.Name" xml:space="preserve">
+    <value>root 権限</value>
+  </data>
+  <data name="Apps_Root_off" xml:space="preserve">
+    <value>root: 許可しない</value>
+  </data>
+  <data name="Apps_Root_ask" xml:space="preserve">
+    <value>root: 毎回確認する</value>
+  </data>
+  <data name="Apps_Root_remember" xml:space="preserve">
+    <value>root: 記憶する (確認しない)</value>
+  </data>
+  <data name="Apps_RootGroup" xml:space="preserve">
+    <value>{0} とユーザー ID を共有しています。Android はこれらのアプリを区別できないため、root 権限の設定は 1 つです。
+ここで変更すると、すべてのアプリが変更されます。どれか 1 つでも [許可しない] の場合、どのアプリも su を使えません。</value>
+  </data>
+  <data name="Apps_RootTip_unavailable" xml:space="preserve">
+    <value>この PC では root 権限がオフになっています。管理者が [詳細設定] でオンにできます。</value>
+  </data>
+  <data name="Apps_RootTip_unknown" xml:space="preserve">
+    <value>DSA サービスはこのアプリの root レベルを報告していません。ここで選ぶには DSA を更新してください。</value>
+  </data>
+  <data name="Apps_RootNotChanged" xml:space="preserve">
+    <value>{0} の root レベルは変更されませんでした: {1}</value>
+  </data>
+  <data name="Apps_RootSet_off" xml:space="preserve">
+    <value>{0} は今後 root を使えません。Android の次回起動時から、このアプリには su が見えなくなります。</value>
+  </data>
+  <data name="Apps_RootSet_ask" xml:space="preserve">
+    <value>{0} は今後、su を使うたびにこの PC の管理者に確認します。これまで su が見えなかった場合は、Android の次回起動時から見えるようになります。</value>
+  </data>
+  <data name="Apps_RootSet_remember" xml:space="preserve">
+    <value>{0} は今後、確認なしで su を使います。これまで su が見えなかった場合は、Android の次回起動時から見えるようになります。</value>
+  </data>
+  <data name="AppsRootOffBar.Title" xml:space="preserve">
+    <value>root 権限はオフです</value>
+  </data>
+  <data name="AppsRootOffBar.Message" xml:space="preserve">
+    <value>どのアプリも su を使えません。この PC の管理者が [詳細設定] で root 権限をオンにすると、ここでアプリごとのレベルを選べます。</value>
+  </data>
+  <data name="AppsRootNote.Text" xml:space="preserve">
+    <value>root 権限:
+• [許可しない] では、アプリから su が見えなくなります。
+• [毎回確認する] では、要求ごとにアプリの名前を示した管理者確認のプロンプトが表示されます。承認は 15 分間有効です。
+• [記憶する] は確認せずに承認するため、これを選ぶには管理者の承認が必要です。</value>
+  </data>
+  <data name="RootHeader.Text" xml:space="preserve">
+    <value>root 権限</value>
+  </data>
+  <data name="RootElevationCard.Header" xml:space="preserve">
+    <value>Android アプリに root の要求を許可する</value>
+  </data>
+  <data name="RootElevationCard.Description" xml:space="preserve">
+    <value>[アプリ] ページで許可したアプリは、この PC の管理者が承認すると、sudo のように root としてコマンドを実行できます。既定でオフです。
+Android イメージ、そのビルド プロパティ、SELinux はそのまま変わりません。</value>
+  </data>
+  <data name="RootElevationAdminReason.Text" xml:space="preserve">
+    <value>この PC のすべてのユーザーに適用されるため、管理者だけが変更できます。
+[管理者として変更] を使うと、Windows が許可を求めます。</value>
+  </data>
+  <data name="RootElevationRestartBar.Title" xml:space="preserve">
+    <value>適用するには Android を再起動してください</value>
+  </data>
+  <data name="RootElevationRestartBar.Message" xml:space="preserve">
+    <value>root 権限の変更は Android の次回起動時から適用されます。[全般] ページで Android を停止してから、アプリを開いてください。</value>
+  </data>
+  <data name="RootLogCard.Header" xml:space="preserve">
+    <value>要求の記録先</value>
+  </data>
+  <data name="RootElevation_LogAt" xml:space="preserve">
+    <value>各要求は、アプリ、時刻、承認されたかどうか、コマンドとともにサービスのログに記録されます: {0}</value>
+  </data>
+  <data name="RootElevation_LogUnknown" xml:space="preserve">
+    <value>各要求は、アプリ、時刻、承認されたかどうか、コマンドとともにサービスのログに記録されます。</value>
+  </data>
+  <data name="RootNote.Text" xml:space="preserve">
+    <value>アプリごとのレベルは [アプリ] ページで選びます。各ユーザーは、自分の Android のアプリについて選びます。</value>
+  </data>
+  <data name="AppsAdbShell.Text" xml:space="preserve">
+    <value>adb shell</value>
+  </data>
+  <data name="WidevineHeader.Text" xml:space="preserve">
+    <value>保護されたコンテンツ</value>
+  </data>
+  <data name="WidevineCard.Header" xml:space="preserve">
+    <value>Widevine</value>
+  </data>
+  <data name="WidevineCard.Description" xml:space="preserve">
+    <value>ストリーミング アプリで保護された動画を再生できるようにします。Android の次回起動時から適用されます。
+Android SDK ライセンスに基づいて Google から約 2 GB をダウンロードし、Widevine だけを残して残りは削除します。</value>
+  </data>
+  <data name="WidevineInstallButton.Content" xml:space="preserve">
+    <value>入手</value>
+  </data>
+  <data name="WidevineConfirm.Title" xml:space="preserve">
+    <value>Google から Widevine を入手しますか?</value>
+  </data>
+  <data name="WidevineConfirm.Action" xml:space="preserve">
+    <value>同意してダウンロード</value>
+  </data>
+  <data name="Widevine_Notice" xml:space="preserve">
+    <value>DSA はこの Android バージョン向けの Android エミュレーター イメージを Google から入手し、Widevine モジュールだけをそのまま取り出します。
+
+• ダウンロード: 約 2 GB。後で削除されます。
+• 入手元: {0}
+• 利用条件: Widevine は Android SDK ライセンス ({1}) に基づく Google のソフトウェアです。ダウンロードすると条件に同意したことになります。
+• 画質: セキュリティ レベル L3 のため、ストリーミング サービスから届くのは最大でも標準画質 (SD) です。
+• Widevine は Android の次回起動時から動作します。
+
+DSA は Widevine を同梱も再配布もしません。</value>
+  </data>
+  <data name="WidevineInstallingBar.Title" xml:space="preserve">
+    <value>Widevine を入手しています</value>
+  </data>
+  <data name="WidevineInstallingBar.Message" xml:space="preserve">
+    <value>Google から約 2 GB をダウンロードし、Widevine を取り出しています。数分かかります。</value>
+  </data>
+  <data name="WidevineRestartBar.Title" xml:space="preserve">
+    <value>適用するには Android を再起動してください</value>
+  </data>
+  <data name="WidevineRestartBar.Message" xml:space="preserve">
+    <value>Android の次回起動時から変更が使われます。</value>
+  </data>
+  <data name="WidevineQualityCard.Header" xml:space="preserve">
+    <value>標準画質のみ</value>
+  </data>
+  <data name="Widevine_Quality" xml:space="preserve">
+    <value>ここでの Widevine はセキュリティ レベル L3 のため、ストリーミング サービスから届くのは最大でも標準画質 (SD) です。
+高画質で見るには、このコンピューターのブラウザーやアプリを使ってください。</value>
+  </data>
+  <data name="WidevineRemoveCard.Header" xml:space="preserve">
+    <value>Widevine を削除する</value>
+  </data>
+  <data name="WidevineRemoveCard.Description" xml:space="preserve">
+    <value>Android の次回起動時から、モジュールと、モジュールが保存したデバイス証明書を削除します。</value>
+  </data>
+  <data name="WidevineRemoveButton.Content" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="WidevineTermsLink.Content" xml:space="preserve">
+    <value>Android SDK ライセンス</value>
+  </data>
+  <data name="Widevine_NotInstalled" xml:space="preserve">
+    <value>インストールされていません。</value>
+  </data>
+  <data name="Widevine_Installed" xml:space="preserve">
+    <value>インストール済み: Android {1} ({2}) 用の Google のイメージ {0} から取得。</value>
+  </data>
+  <data name="Widevine_InstalledPending" xml:space="preserve">
+    <value>インストール済み: Android {1} ({2}) 用の Google のイメージ {0} から取得。Android の次回起動時から使われます。</value>
+  </data>
+  <data name="Widevine_RemovedPending" xml:space="preserve">
+    <value>削除しました。Android は次回起動するまで使い続けます。</value>
+  </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{1}、{0}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}。{1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}、{1}、{2}: {3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>{0} 件の記録が失われました</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>表示する最低の優先度</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>読み込み中</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>コピーしました</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>ナビゲーションを表示または非表示</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>最小化</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>最大化</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>元に戻す (縮小)</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>ヘルプ</value>
+  </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>{0} をインストールしますか?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>パッケージ名:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>発行元:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>バージョン:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>入手元:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>機能 ({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>詳細表示</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>簡易表示</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} は分割 APK のバンドルですが、インストールできません: {1}。</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} は分割 APK のバンドルですが、読み取れないためインストールできません。</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} は Android App Bundle です。App Bundle はアプリ ストア向けの公開形式のため、そのままではインストールできません。
+APK を作成するには別のキーで署名する必要があり、そうするとアプリは入手元から更新を受け取れなくなります。
+アプリを APK、または .xapk、.apks、.apkm のバンドルとして入手してください。</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} は暗号化されたバンドルのため、APK を読み取れません。古い .apkm ファイルの一部がこれに当たり、作成したアプリでしか開けません。
+アプリを APK か、新しいバンドルとして入手してください。</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} には、ベース APK とは別の証明書で署名された分割 APK が含まれています。つまり、バンドルは作成後に変更されています。
+Android はこれを拒否します。</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>{0} は DSA で実行できません: {1}。</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>{0} は DSA で実行できません。ネイティブ コードが、64 ビットのコードしか実行しない DSA の Android で動作するものではありません。
+アプリの x86_64 または arm64-v8a ビルドを入手してください。</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} は有効な APK ファイルではありません。</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa がコード {0} で終了しました。</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>{0} のアイコン</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>APK ファイルと分割 APK のバンドル</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>すべてのファイル</value>
+  </data>
+</root>

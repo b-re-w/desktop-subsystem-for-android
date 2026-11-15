@@ -90,9 +90,16 @@ add_executable(dsa-codec2
     src/component.cpp
     src/decoder_interface.cpp
     src/host_link.cpp
+    src/picture_region.cpp
     src/video_messages.cpp
     src/picture_copy.cpp
     src/output_buffer.cpp
+    src/output_gate.cpp
+    src/send_queue.cpp
+    src/message_reader.cpp
+    src/bounded_thread.cpp
+    src/arrival_queue.cpp
+    src/picture_stats.cpp
     src/config_rules.cpp
     src/platform_support.cpp
     ${PLATFORM_SOURCES}

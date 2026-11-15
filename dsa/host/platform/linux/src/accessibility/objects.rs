@@ -22,17 +22,19 @@ use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 use dsa_host_core::accessibility::{
-    to_screen, ActionRequest, Changes, ClientPresence, Node, NodeAction, NodeRange, Tree,
-    TreeError, TreeUpdate,
+    chars_to_utf16, from_screen, to_screen, utf16_to_chars, ActionRequest, Changes, ClientPresence,
+    Node, NodeAction, NodeRange, Tree, TreeError, TreeUpdate,
 };
 use dsa_host_core::compositor::caption::CaptionButton;
+use dsa_host_core::input::WindowGeometry;
 use dsa_host_core::tasks::Bounds;
 
 use super::atspi::{self, coord, role, state, StateSet};
 use super::text;
 use crate::compositor::title_bar::TitleBar;
 use crate::compositor::toplevel::Toplevel;
-use crate::compositor::window_menu::{menu_text, reads_korean_in};
+use crate::compositor::window_menu::menu_text;
+use dsa_host_core::ui_language::UiLanguage;
 
 /// The AT-SPI interfaces the objects implement.
 pub mod interface {
@@ -43,6 +45,8 @@ pub mod interface {
     pub const VALUE: &str = "org.a11y.atspi.Value";
     pub const TEXT: &str = "org.a11y.atspi.Text";
     pub const EDITABLE_TEXT: &str = "org.a11y.atspi.EditableText";
+    pub const TABLE: &str = "org.a11y.atspi.Table";
+    pub const TABLE_CELL: &str = "org.a11y.atspi.TableCell";
 }
 
 /// The application's object path, which AT-SPI fixes.
@@ -61,7 +65,7 @@ const MAX_NAME_EVENTS: usize = 64;
 /// A rectangle in the window's logical pixels: left, top, width, height.
 pub type Rect = (i32, i32, i32, i32);
 
-/// A rectangle in the window's pixels (the task's pixels): left, top, width, height.
+/// A rectangle in the window's pixels: left, top, width, height.
 pub type PixelRect = (i32, i32, u32, u32);
 
 /// A button of the title bar.
@@ -198,59 +202,163 @@ pub struct Action {
 }
 
 /// The node actions a client can call, in the order they are offered: the first is the
-/// default action, which a screen reader calls when the user activates the object.
-const NODE_ACTIONS: [(NodeAction, &str, &str, &str); 6] = [
-    (NodeAction::Click, "click", "Click", "클릭"),
-    (NodeAction::Select, "select", "Select", "선택"),
-    (
-        NodeAction::LongClick,
-        "long press",
-        "Long press",
-        "길게 누르기",
-    ),
-    (
-        NodeAction::ScrollForward,
-        "scroll forward",
-        "Scroll forward",
-        "앞으로 스크롤",
-    ),
-    (
-        NodeAction::ScrollBackward,
-        "scroll backward",
-        "Scroll backward",
-        "뒤로 스크롤",
-    ),
-    (NodeAction::Focus, "focus", "Focus", "포커스"),
+/// default action, which a screen reader calls when the user activates the object. The
+/// second value is the name clients match on, which stays English.
+pub const NODE_ACTIONS: [(NodeAction, &str); 6] = [
+    (NodeAction::Click, "click"),
+    (NodeAction::Select, "select"),
+    (NodeAction::LongClick, "long press"),
+    (NodeAction::ScrollForward, "scroll forward"),
+    (NodeAction::ScrollBackward, "scroll backward"),
+    (NodeAction::Focus, "focus"),
 ];
 
+/// The names a screen reader speaks for [`NODE_ACTIONS`] in `language`, in the same order:
+/// Click, Select, Long press, Scroll forward, Scroll backward and Focus.
+pub fn action_names(language: UiLanguage) -> [&'static str; 6] {
+    match language {
+        UiLanguage::English => [
+            "Click",
+            "Select",
+            "Long press",
+            "Scroll forward",
+            "Scroll backward",
+            "Focus",
+        ],
+        UiLanguage::Korean => [
+            "클릭",
+            "선택",
+            "길게 누르기",
+            "앞으로 스크롤",
+            "뒤로 스크롤",
+            "포커스",
+        ],
+        UiLanguage::Japanese => [
+            "クリック",
+            "選択",
+            "長押し",
+            "前方へスクロール",
+            "後方へスクロール",
+            "フォーカス",
+        ],
+        UiLanguage::ChineseSimplified => ["点击", "选择", "长按", "向前滚动", "向后滚动", "聚焦"],
+        UiLanguage::ChineseTraditional => ["點擊", "選取", "長按", "向前捲動", "向後捲動", "聚焦"],
+        UiLanguage::Spanish => [
+            "Hacer clic",
+            "Seleccionar",
+            "Mantener pulsado",
+            "Desplazar hacia delante",
+            "Desplazar hacia atrás",
+            "Enfocar",
+        ],
+        UiLanguage::French => [
+            "Cliquer",
+            "Sélectionner",
+            "Appui prolongé",
+            "Faire défiler vers l'avant",
+            "Faire défiler vers l'arrière",
+            "Mettre le focus",
+        ],
+        UiLanguage::German => [
+            "Klicken",
+            "Auswählen",
+            "Lange drücken",
+            "Vorwärts scrollen",
+            "Rückwärts scrollen",
+            "Fokussieren",
+        ],
+        UiLanguage::PortugueseBrazil => [
+            "Clicar",
+            "Selecionar",
+            "Tocar e manter pressionado",
+            "Rolar para frente",
+            "Rolar para trás",
+            "Focar",
+        ],
+        UiLanguage::Russian => [
+            "Нажать",
+            "Выбрать",
+            "Долгое нажатие",
+            "Прокрутить вперёд",
+            "Прокрутить назад",
+            "Перевести фокус",
+        ],
+        UiLanguage::Italian => [
+            "Fai clic",
+            "Seleziona",
+            "Pressione prolungata",
+            "Scorri avanti",
+            "Scorri indietro",
+            "Imposta lo stato attivo",
+        ],
+        UiLanguage::Vietnamese => [
+            "Nhấp",
+            "Chọn",
+            "Nhấn giữ",
+            "Cuộn tới",
+            "Cuộn lui",
+            "Đặt tiêu điểm",
+        ],
+        UiLanguage::Indonesian => [
+            "Klik",
+            "Pilih",
+            "Tekan lama",
+            "Gulir maju",
+            "Gulir mundur",
+            "Fokuskan",
+        ],
+        UiLanguage::Turkish => [
+            "Tıkla",
+            "Seç",
+            "Uzun bas",
+            "İleri kaydır",
+            "Geri kaydır",
+            "Odakla",
+        ],
+    }
+}
+
 /// The actions a node offers: what it says it supports, the default first.
-pub fn node_actions(node: &Node, korean: bool) -> Vec<Action> {
+pub fn node_actions(node: &Node, language: UiLanguage) -> Vec<Action> {
+    let names = action_names(language);
     NODE_ACTIONS
         .iter()
-        .filter(|(action, ..)| node.supports(*action))
-        .map(|&(action, name, english, korean_name)| Action {
+        .zip(names)
+        .filter(|((action, _), _)| node.supports(*action))
+        .map(|(&(action, name), localized)| Action {
             name,
-            localized: if korean { korean_name } else { english },
+            localized,
             work: Work::Node(action),
         })
         .collect()
 }
 
-/// The back button's name in the user's language.
-pub fn back_name(korean: bool) -> &'static str {
-    if korean {
-        "뒤로"
-    } else {
-        "Back"
+/// The back button's name in `language`.
+pub fn back_name(language: UiLanguage) -> &'static str {
+    match language {
+        UiLanguage::English => "Back",
+        UiLanguage::Korean => "뒤로",
+        UiLanguage::Japanese => "戻る",
+        UiLanguage::ChineseSimplified => "返回",
+        UiLanguage::ChineseTraditional => "返回",
+        UiLanguage::Spanish => "Atrás",
+        UiLanguage::French => "Retour",
+        UiLanguage::German => "Zurück",
+        UiLanguage::PortugueseBrazil => "Voltar",
+        UiLanguage::Russian => "Назад",
+        UiLanguage::Italian => "Indietro",
+        UiLanguage::Vietnamese => "Quay lại",
+        UiLanguage::Indonesian => "Kembali",
+        UiLanguage::Turkish => "Geri",
     }
 }
 
-/// A title bar button's name in the user's language: the window menu's words for the caption
+/// A title bar button's name in `language`: the window menu's words for the caption
 /// buttons, and Restore for the maximize button of a maximized window.
-pub fn button_name(button: TitleButton, maximized: bool, korean: bool) -> &'static str {
-    let words = menu_text(korean);
+pub fn button_name(button: TitleButton, maximized: bool, language: UiLanguage) -> &'static str {
+    let words = menu_text(language);
     match button {
-        TitleButton::Back => back_name(korean),
+        TitleButton::Back => back_name(language),
         TitleButton::Minimize => words.minimize,
         TitleButton::Maximize if maximized => words.restore,
         TitleButton::Maximize => words.maximize,
@@ -266,21 +374,6 @@ pub fn button_action(button: TitleButton, maximized: bool) -> TitleAction {
         TitleButton::Maximize if maximized => TitleAction::Restore,
         TitleButton::Maximize => TitleAction::Maximize,
         TitleButton::Close => TitleAction::Close,
-    }
-}
-
-/// Whether the user's first preferred language is Korean: the first entry of `LANGUAGE`, the
-/// list of languages gettext reads messages in by preference, else the locale gettext would
-/// choose (`LC_ALL`, `LC_MESSAGES`, `LANG`), as `var` reads them.
-pub fn prefers_korean(var: impl Fn(&str) -> Option<String>) -> bool {
-    let first = var("LANGUAGE").and_then(|list| {
-        list.split(':')
-            .find(|language| !language.is_empty())
-            .map(str::to_string)
-    });
-    match first {
-        Some(language) => language.starts_with("ko"),
-        None => reads_korean_in(var),
     }
 }
 
@@ -304,6 +397,10 @@ pub struct WindowFacts {
     pub shown: (u32, u32),
     /// The task's size in Android's pixels.
     pub task: (u32, u32),
+    /// How large the window shows each of the task's pixels (window pixels per task pixels):
+    /// 1:1 unless the task keeps its density on a monitor of another scale. A node's bounds
+    /// are in the task's pixels, and the window shows them at this scale.
+    pub frame_scale: (u32, u32),
     /// Whether the window is the active one.
     pub active: bool,
     pub maximized: bool,
@@ -332,10 +429,32 @@ pub fn window_facts(model: &Toplevel, title_bar: &TitleBar) -> WindowFacts {
         scale: model.scale.max(1),
         shown: model.shown,
         task: model.task,
+        frame_scale: model.frame_scale,
         active: model.states.activated,
         maximized: model.states.maximized,
         resizable: model.resizable,
         caption,
+    }
+}
+
+/// What a desktop widget's window shows a client of itself: a frame named after the widget,
+/// with no title bar, whose nodes are the widget's in pixels of its image, which the window
+/// shows 1:1 from its top left.
+pub fn widget_facts(window: &dsa_host_core::widget_windows::desk::DeskWindow) -> WindowFacts {
+    use dsa_host_core::widget_windows::menu::{menu_name, menu_text};
+    let lang = crate::interface_language::ui_language();
+    let (_, _, width, height) = window.widget_rect();
+    let size = (width.max(1) as u32, height.max(1) as u32);
+    WindowFacts {
+        title: menu_name(&menu_text(lang), &window.widget.provider),
+        scale: (window.dpi / 96).max(1),
+        shown: size,
+        task: size,
+        frame_scale: (1, 1),
+        active: false,
+        maximized: false,
+        resizable: false,
+        caption: None,
     }
 }
 
@@ -405,8 +524,18 @@ impl WindowAccess {
         ))
     }
 
+    /// What node bounds and points are converted with: the window shows the task's frames
+    /// at its frame scale.
+    fn geometry(&self) -> WindowGeometry {
+        WindowGeometry {
+            client: self.facts.shown,
+            task: self.facts.task,
+            scale: self.facts.frame_scale,
+        }
+    }
+
     fn node_rect(&self, bounds: Bounds) -> Rect {
-        let rect = to_screen(bounds, self.facts.task, self.facts.shown, (0, 0));
+        let rect = to_screen(bounds, self.geometry(), (0, 0));
         logical(
             rect.left,
             rect.top,
@@ -477,6 +606,12 @@ pub enum WindowEvent {
 /// An AT-SPI event, for the clients that listen.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
+    /// `object:announcement`: an app's announcement or toast, for the screen reader to say.
+    Announcement {
+        object: Object,
+        text: String,
+        assertive: bool,
+    },
     /// `object:children-changed:add`.
     ChildAdded {
         parent: Object,
@@ -560,23 +695,24 @@ fn child_events<T: Copy + PartialEq>(
 /// Every window's objects, as the AT-SPI provider of the compositor answers for them.
 pub struct Access {
     windows: BTreeMap<i32, WindowAccess>,
-    korean: bool,
+    language: UiLanguage,
     grace: Duration,
 }
 
 impl Access {
-    /// No windows yet. Names are Korean when `korean`; a window stops asking the guest for its
-    /// tree `grace` after a client last asked for it while none listens.
-    pub fn new(korean: bool, grace: Duration) -> Access {
+    /// No windows yet. Names are in `language`; a window stops asking the guest for its tree
+    /// `grace` after a client last asked for it while none listens.
+    pub fn new(language: UiLanguage, grace: Duration) -> Access {
         Access {
             windows: BTreeMap::new(),
-            korean,
+            language,
             grace,
         }
     }
 
-    pub fn korean(&self) -> bool {
-        self.korean
+    /// The language the names are in.
+    pub fn language(&self) -> UiLanguage {
+        self.language
     }
 
     pub fn window(&self, task_id: i32) -> Option<&WindowAccess> {
@@ -717,7 +853,7 @@ impl Access {
                     .windows
                     .get(&task_id)
                     .is_some_and(|window| window.facts.maximized);
-                button_name(button, maximized, self.korean).to_string()
+                button_name(button, maximized, self.language).to_string()
             }
             Object::Node { id, .. } => self
                 .node(object)
@@ -776,7 +912,7 @@ impl Access {
                     let (_, _, width, height) = window.node_rect(node.bounds);
                     atspi::states_of(
                         node,
-                        window.tree.focused() == Some(id),
+                        window.tree.client_focus() == Some(id),
                         width > 0 && height > 0,
                     )
                 }
@@ -788,13 +924,85 @@ impl Access {
     /// The object's attributes: what the node is in Android.
     pub fn attributes(&self, object: Object) -> Vec<(String, String)> {
         let mut attributes = vec![("toolkit".to_string(), "Android".to_string())];
-        if let Some((_, node)) = self.node(object) {
+        if let Some((window, node)) = self.node(object) {
             attributes.push(("class".into(), node.class_name.clone()));
             if !node.view_id.is_empty() {
                 attributes.push(("id".into(), node.view_id.clone()));
             }
+            attributes.extend(atspi::node_attributes(node));
+            // Where an item is in its list, which a screen reader says ("3 of 40").
+            if let Some((place, size)) = window.tree.place_in_set(node.id) {
+                attributes.push(("posinset".into(), place.to_string()));
+                attributes.push(("setsize".into(), size.to_string()));
+            }
         }
         attributes
+    }
+
+    /// An editable node's selection, in characters of its text: where it starts and where it
+    /// ends. `None` while Android says none.
+    pub fn selection(&self, object: Object) -> Option<(i32, i32)> {
+        let (_, node) = self.node(object)?;
+        let (start, end) = node.selection?;
+        let text = node.value().unwrap_or_default();
+        Some((
+            utf16_to_chars(&text, start) as i32,
+            utf16_to_chars(&text, end) as i32,
+        ))
+    }
+
+    /// Asks Android to select the characters from `start` to `end` of an editable node, or to
+    /// put the cursor there when the two are equal.
+    pub fn select_text(&mut self, object: Object, start: i32, end: i32) -> Result<(), String> {
+        let text = self.text(object).unwrap_or_default();
+        let at = |offset: i32| chars_to_utf16(&text, offset.max(0) as u32);
+        let request = ActionRequest {
+            selection: (at(start), at(end)),
+            ..ActionRequest::default()
+        };
+        self.request_with(object, NodeAction::SetSelection, request)
+    }
+
+    /// A list's or a grid's rows and columns; a list that says no columns has one.
+    pub fn table(&self, object: Object) -> Option<(i32, i32)> {
+        let collection = self.node(object)?.1.collection?;
+        Some((collection.rows.max(0), collection.columns.max(1)))
+    }
+
+    /// The item of the list or grid at `row` and `column`, while it is on the screen.
+    pub fn table_cell_at(&self, object: Object, row: i32, column: i32) -> Option<Object> {
+        let Object::Node { task_id, epoch, id } = object else {
+            return None;
+        };
+        let (window, _) = self.node(object)?;
+        let item = window.tree.item_at(id, row, column)?;
+        Some(Object::Node {
+            task_id,
+            epoch,
+            id: item,
+        })
+    }
+
+    /// An item's place in its list or grid: row, column, row span and column span, and the
+    /// list or grid.
+    pub fn table_cell(&self, object: Object) -> Option<(i32, i32, i32, i32, Option<Object>)> {
+        let Object::Node { task_id, epoch, id } = object else {
+            return None;
+        };
+        let (window, node) = self.node(object)?;
+        let item = node.collection_item?;
+        let table = window.tree.collection_of(id).map(|table| Object::Node {
+            task_id,
+            epoch,
+            id: table,
+        });
+        Some((
+            item.row,
+            item.column,
+            item.row_span.max(1),
+            item.column_span.max(1),
+            table,
+        ))
     }
 
     /// The AT-SPI interfaces the object implements.
@@ -807,7 +1015,7 @@ impl Access {
             Object::Node { .. } => {
                 interfaces.push(interface::COMPONENT);
                 if let Some((_, node)) = self.node(object) {
-                    if !node_actions(node, false).is_empty() {
+                    if !node_actions(node, UiLanguage::English).is_empty() {
                         interfaces.push(interface::ACTION);
                     }
                     if node.range.is_some() {
@@ -818,6 +1026,12 @@ impl Access {
                     }
                     if node.states.editable && node.supports(NodeAction::SetText) {
                         interfaces.push(interface::EDITABLE_TEXT);
+                    }
+                    if node.collection.is_some() {
+                        interfaces.push(interface::TABLE);
+                    }
+                    if node.collection_item.is_some() {
+                        interfaces.push(interface::TABLE_CELL);
                     }
                 }
             }
@@ -888,8 +1102,15 @@ impl Access {
                 }
             }
         }
-        let scale = window.facts.scale.max(1) as i32;
-        let hit = window.tree.hit(wx * scale, wy * scale)?;
+        // The middle of the logical pixel, in the window's pixels, is the task pixel the
+        // window shows there at its frame scale.
+        let scale = f64::from(window.facts.scale.max(1));
+        let (tx, ty) = from_screen(
+            ((f64::from(wx) + 0.5) * scale, (f64::from(wy) + 0.5) * scale),
+            window.geometry(),
+            (0, 0),
+        );
+        let hit = window.tree.hit(tx, ty)?;
         let found = window.node_object(task_id, hit)?;
         match object {
             Object::Window(_) => Some(found),
@@ -918,13 +1139,13 @@ impl Access {
                     .is_some_and(|window| window.facts.maximized);
                 vec![Action {
                     name: "click",
-                    localized: if self.korean { "클릭" } else { "Click" },
+                    localized: action_names(self.language)[0],
                     work: Work::Title(button_action(button, maximized)),
                 }]
             }
             Object::Node { .. } => self
                 .node(object)
-                .map(|(_, node)| node_actions(node, self.korean))
+                .map(|(_, node)| node_actions(node, self.language))
                 .unwrap_or_default(),
             _ => Vec::new(),
         }
@@ -956,6 +1177,25 @@ impl Access {
         })
     }
 
+    /// Asks Android to give a slider `value`: at once where the slider takes a value
+    /// (`ACTION_SET_PROGRESS`), else a step toward it ([`Access::value_action`]).
+    pub fn set_value(&mut self, object: Object, value: f64) -> Result<(), String> {
+        let (_, node) = self.node(object).ok_or("the node is gone")?;
+        if node.supports(NodeAction::SetProgress) {
+            let range = node.range.ok_or("the node has no range")?;
+            let value = value.clamp(f64::from(range.min), f64::from(range.max)) as f32;
+            let request = ActionRequest {
+                progress: value,
+                ..ActionRequest::default()
+            };
+            return self.request_with(object, NodeAction::SetProgress, request);
+        }
+        match self.value_action(object, value) {
+            Some(action) => self.request(object, action, String::new()),
+            None => Ok(()),
+        }
+    }
+
     /// The action a new value for a slider asks for: Android moves a slider a step forward or
     /// backward.
     pub fn value_action(&self, object: Object, value: f64) -> Option<NodeAction> {
@@ -979,6 +1219,23 @@ impl Access {
         action: NodeAction,
         text: String,
     ) -> Result<(), String> {
+        self.request_with(
+            object,
+            action,
+            ActionRequest {
+                text,
+                ..ActionRequest::default()
+            },
+        )
+    }
+
+    /// As [`Access::request`], with what the action needs besides (a selection, a value).
+    pub fn request_with(
+        &mut self,
+        object: Object,
+        action: NodeAction,
+        details: ActionRequest,
+    ) -> Result<(), String> {
         let Object::Node { task_id, epoch, id } = object else {
             return Err("only an Android node takes an accessibility action".into());
         };
@@ -996,8 +1253,8 @@ impl Access {
             epoch,
             node_id: id,
             action,
-            text,
             request_id: window.next_request,
+            ..details
         };
         match &window.actions {
             Some(actions) if actions.send(request).is_ok() => Ok(()),
@@ -1087,7 +1344,7 @@ impl Access {
         if before.maximized != after.maximized && new.contains(&TitleButton::Maximize) {
             events.push(Event::Name {
                 object: Object::Button(task_id, TitleButton::Maximize),
-                name: button_name(TitleButton::Maximize, after.maximized, self.korean).into(),
+                name: button_name(TitleButton::Maximize, after.maximized, self.language).into(),
             });
         }
         if before.shown != after.shown || before.scale != after.scale {
@@ -1107,6 +1364,28 @@ impl Access {
                         rect,
                     });
                 }
+            }
+        }
+        // A new scale moves every node on the screen without the task changing.
+        if before.scale != after.scale || before.frame_scale != after.frame_scale {
+            let mut ids: Vec<u32> = window.tree.roots().to_vec();
+            let mut at = 0;
+            while at < ids.len() && ids.len() <= window.tree.len() {
+                if let Some(node) = window.tree.node(ids[at]) {
+                    ids.extend(node.children.iter().copied());
+                }
+                at += 1;
+            }
+            for id in ids.into_iter().take(window.tree.len()) {
+                let (Some(object), Some(node)) =
+                    (window.node_object(task_id, id), window.tree.node(id))
+                else {
+                    continue;
+                };
+                events.push(Event::Bounds {
+                    object,
+                    rect: window.node_rect(node.bounds),
+                });
             }
         }
         if before.active != after.active {

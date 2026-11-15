@@ -59,7 +59,45 @@ git -C $GfxstreamDir clean -fdx
 # shared ColorBuffer before it knows whether another made it. Without 0018 an image release the
 # GPU has not finished in three seconds hands its still pending fence back to the pool, the
 # next release resets it and submits with it again while the GPU may still signal it, and
-# nothing checks the renderer's device. A patch that does not apply stops the fetch.
+# nothing checks the renderer's device. Without 0019 a YUV gralloc buffer a guest CPU writes (a
+# video decoder's pictures, a camera's frames) gets an RGBA ColorBuffer the guest cannot copy
+# its planes into, so videos show their sound and a green picture. Without 0020 every read back
+# of host-visible memory sends all of it, changed or not: the guest reads its mapped memory back
+# at each fence, so every frame of every app waited for tens of megabytes to cross the socket.
+# Without 0021 the renderer makes its lost device again while holding its lock, so every guest
+# call that touches a ColorBuffer waits for the GPU to come back from its reset (13 s on an
+# Intel Arc), and Android ends the app whose input went unanswered. Without 0022 a ColorBuffer
+# read back or written whole is one GPU job however large the window, 2880x2048 and more for a
+# window maximized on a 200% monitor. Without 0023 the renderer's memory count follows neither the
+# device it makes again after a GPU reset nor any guest's device, so after a reset it reads 0.
+# Without 0024 a fence or semaphore whose operation never looked finished (its fence reset by the
+# guest before it was polled) is leaked, and a device destroyed with such garbage leaks it too.
+# Without 0025 the images and memory of destroyed ColorBuffers wait for the next ColorBuffer to be
+# made or destroyed, so those of the window that closed last stay. Without 0026 the renderer holds a
+# 128 MiB host-visible staging buffer from the start, whether or not a copy ever needs it. Without
+# 0027 each render thread's read buffer stays twice the largest batch its guest thread ever sent.
+# Without 0028 its Vulkan reply buffer stays twice the largest reply it ever sent. Without 0029 a
+# ColorBuffer asked for while the device is being made again after a GPU reset ends the guest's
+# stream as a fatal error, instead of failing that one call. Without 0030 the upload of what a
+# guest CPU wrote (a video's pictures) is not ordered with its layout transitions or with an
+# earlier frame still sampling the image, and the rows copied first show blocks of other data.
+# Without 0031 that upload never releases the image to the guest, which reads it through an image
+# of its own: on a GPU that compresses what a copy writes (Intel Arc) a video's pictures show
+# rows of green, purple and yellow blocks where they are flat.
+# Without 0032 a YUV ColorBuffer is optimal, and so is the guest's image of it: such a driver may
+# keep the copied planes compressed, and the guest's image still shows blocks of light purple and
+# yellow-green in a video's flat areas. Without 0033 a guest's synchronization2 barrier keeps the
+# foreign queue family, and the ColorBuffer it takes or gives back is not recorded. Without 0034
+# the ColorBuffers a guest closed last (a whole video's, closed within one second) stay until
+# another ColorBuffer is closed, which with one still app open never comes. Without 0035 an RGB
+# ColorBuffer is optimal on Intel's Gen9 to Gen11 GPUs, whose last driver keeps an app's fast
+# clears in the app's own image: every window shows its new frame over parts of earlier frames.
+# Without 0036 a GLES app (through ANGLE) is offered no ASTC on a GPU that lacks it (NVIDIA and
+# AMD desktop GPUs, Intel Arc), even though the renderer decodes ASTC on the GPU for Vulkan apps
+# there, and the log does not say whether ASTC is native, decoded on the GPU or unavailable.
+# Without 0037 every byte of a guest's host-visible memory and of a gralloc buffer's CPU upload
+# or read back crosses the stream, even where the service shares graphics memory with the VM.
+# A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0004-*.patch") +
@@ -75,7 +113,26 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0015-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0016-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0017-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0018-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0018-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0019-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0020-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0021-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0022-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0023-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0024-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0025-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0026-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0027-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0028-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0029-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0030-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0031-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0032-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0033-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0034-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0035-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0036-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0037-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName

@@ -1,5 +1,7 @@
 # Getting started
 
+**English** · [한국어](ko/getting-started.md) · [日本語](ja/getting-started.md) · [简体中文](zh-CN/getting-started.md) · [繁體中文](zh-TW/getting-started.md) · [Español](es/getting-started.md) · [Français](fr/getting-started.md) · [Deutsch](de/getting-started.md) · [Português (Brasil)](pt-BR/getting-started.md) · [Русский](ru/getting-started.md) · [Italiano](it/getting-started.md) · [Tiếng Việt](vi/getting-started.md) · [Bahasa Indonesia](id/getting-started.md) · [Türkçe](tr/getting-started.md)
+
 Desktop Subsystem for Android™ (DSA) runs Android in a lightweight virtual machine with
 its own kernel. Each Android app opens in its own window on your desktop.
 
@@ -7,21 +9,25 @@ its own kernel. Each Android app opens in its own window on your desktop.
 
 | Host | Status |
 |---|---|
-| Windows 11, x64 | Preview, released. Features are tested in CI; testing by hand on real hardware is still in progress. |
-| Windows 11, ARM64 | In progress. Builds and installs in CI; not released yet. |
+| Windows 11, x64 | Released. |
+| Windows 11, ARM64 | Released. Android is ARM64 too, so ARM apps run without translation. |
 | Linux, x64 and ARM64 | In progress. The `.deb` and `.rpm` packages build in CI; not released yet. |
 | macOS, Apple silicon | In progress. `DSA.app`, its `.pkg` and its `.dmg` build in CI; not released yet. |
 
 ## Install on Windows
 
-You need 64-bit Windows 11 on an x64 PC, with the Windows feature **Virtual Machine
+You need Windows 11 on an x64 or ARM64 PC, with the Windows feature **Virtual Machine
 Platform** turned on.
 
 1. Turn on Virtual Machine Platform. Open **Turn Windows features on or off**, tick
-   **Virtual Machine Platform**, select **OK**, and restart. Setup does not turn it on for
-   you: it stops with a message if the feature is off.
-2. Download `DSA-v<version>-win-x64-setup.exe` and `SHA256SUMS.txt` from the
-   [latest release](https://github.com/thisisthepy/desktop-subsystem-for-android/releases/latest).
+   **Virtual Machine Platform**, select **OK**, and restart. Or run
+   `dism /online /enable-feature /featurename:VirtualMachinePlatform /all` in an
+   administrator terminal. Setup does not turn it on for you: it stops with a message if
+   the feature is off.
+2. Download the setup program and `SHA256SUMS.txt` from the
+   [latest release](https://github.com/thisisthepy/desktop-subsystem-for-android/releases/latest):
+   `DSA-v<version>-win-x64-setup.exe` on an x64 PC, `DSA-v<version>-win-arm64-setup.exe` on
+   an ARM64 PC.
 3. Check the download. The hash this command prints must match the line in
    `SHA256SUMS.txt`:
 
@@ -57,9 +63,20 @@ settings, kernel or distributions.
 
 ## Updates
 
-DSA updates itself and the Android image. Both are signed. If an Android image fails to
-boot, DSA goes back to the previous one, and `dsa status` says so. An administrator can turn
-updates off on the **Updates** page of DSA Settings.
+DSA updates itself and the Android image. Both are signed, and DSA applies nothing whose
+signature, size or hash does not match.
+
+- **DSA itself** is updated when no user's Android is running. Until then the update waits;
+  `dsa update` installs it at once. DSA never moves to a lower version.
+- **Release channels.** From 1.0, DSA has a stable channel and a pre-release channel for
+  versions still being finished. Your channel starts from the installer you used, and
+  upgrades keep it. An administrator changes it with **Get pre-release versions** on the
+  **Updates** page of DSA Settings. Every release before 1.0 is a pre-release.
+- **The Android image** does not depend on the channel. If an image fails to boot, DSA goes
+  back to the previous one, and `dsa status` says so.
+
+An administrator can turn updates off on the **Updates** page of DSA Settings. See
+[Settings](settings.md) for every switch.
 
 ## Linux (in progress, not released)
 

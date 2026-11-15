@@ -20,7 +20,8 @@ use std::time::Duration;
 
 use dsa_host_core::compositor::{GraphicsRenderer, GraphicsStreamKind};
 use dsa_host_core::memory::RendererMemory;
-use dsa_host_core::renderer::RendererProcessMemory;
+use dsa_host_core::renderer::{device_resets, Allocations, RendererOwners, RendererProcessMemory};
+use dsa_protocol::renderer::types::DeviceState;
 use dsa_transport::{Connection, FrameSender};
 
 use crate::render_gpu::{GpuRequest, Luid, RendererGpu};
@@ -77,6 +78,42 @@ struct MemoryStats {
 }
 
 type GetMemoryStatsFn = unsafe extern "C" fn(*mut MemoryStats) -> c_int;
+
+/// The renderer's allocations by owner, as `dsa_gfx_memory_owners` lays it out: by kind
+/// (GPU-only, CPU-mapped, imported), on its own device and on the guests' devices.
+#[repr(C)]
+#[derive(Default)]
+struct MemoryOwners {
+    renderer_bytes: [u64; 3],
+    guest_bytes: [u64; 3],
+    largest_guest_device_bytes: [u64; 4],
+    renderer_count: [u32; 3],
+    guest_count: [u32; 3],
+    guest_devices: u32,
+    /// Keeps the layout of the backend's struct; never read.
+    _reserved: u32,
+}
+
+type GetMemoryOwnersFn = unsafe extern "C" fn(*mut MemoryOwners) -> c_int;
+
+fn renderer_owners(owners: &MemoryOwners) -> RendererOwners {
+    let kinds = |bytes: &[u64; 3], counts: &[u32; 3]| {
+        std::array::from_fn(|kind| Allocations {
+            kb: bytes[kind] / 1024,
+            count: counts[kind],
+        })
+    };
+    RendererOwners {
+        renderer: kinds(&owners.renderer_bytes, &owners.renderer_count),
+        guests: kinds(&owners.guest_bytes, &owners.guest_count),
+        guest_devices: owners.guest_devices,
+        largest_guest_devices_kb: owners
+            .largest_guest_device_bytes
+            .iter()
+            .map(|bytes| bytes / 1024)
+            .collect(),
+    }
+}
 
 fn renderer_memory(stats: &MemoryStats) -> RendererMemory {
     RendererMemory {
@@ -153,8 +190,9 @@ pub trait DisplayPresenter: Send + Sync {
         let _ = display_id;
     }
 
-    /// How many times the renderer has made its Vulkan device again after a GPU reset; 0 when
-    /// it cannot say.
+    /// A count that goes up the moment the renderer finds its Vulkan device lost (a GPU
+    /// reset) and again once it has made it again; 0 when it cannot say. A change is a GPU
+    /// reset.
     fn device_generation(&self) -> u64 {
         0
     }
@@ -281,6 +319,11 @@ pub trait GfxBackend: Send + Sync {
         None
     }
 
+    /// The same memory by whose device it is on. `None` from a backend that cannot say.
+    fn memory_owners(&self) -> Option<RendererOwners> {
+        None
+    }
+
     /// Makes every Vulkan device of the renderer act lost, as a GPU reset leaves them, for a
     /// test. Returns whether the backend could.
     fn simulate_device_loss(&self) -> bool {
@@ -289,6 +332,12 @@ pub trait GfxBackend: Send + Sync {
 
     /// How many times the renderer has made its own Vulkan device again after losing it.
     fn device_generation(&self) -> u64 {
+        0
+    }
+
+    /// How many times the renderer found its own Vulkan device lost: it counts up the moment
+    /// it does, before the device is made again.
+    fn device_losses(&self) -> u64 {
         0
     }
 }
@@ -336,9 +385,33 @@ pub struct NativeBackend {
     fn_forget_display: Option<unsafe extern "C" fn(u32)>,
     /// Absent from a backend built before the renderer counted its memory.
     fn_get_memory_stats: Option<GetMemoryStatsFn>,
+    /// Absent from a backend built before the renderer said whose its memory is.
+    fn_get_memory_owners: Option<GetMemoryOwnersFn>,
     /// Absent from a backend built before it survived a GPU reset.
     fn_simulate_device_loss: Option<unsafe extern "C" fn() -> c_int>,
     fn_device_generation: Option<unsafe extern "C" fn() -> u64>,
+    /// Absent from a backend built before it made a lost device again on a thread of its own.
+    fn_device_losses: Option<unsafe extern "C" fn() -> u64>,
+    /// Absent from a backend built before it shared graphics memory with the guest: every
+    /// host-visible byte then goes through the stream.
+    fn_set_shared_graphics_memory: Option<SetSharedGraphicsMemoryFn>,
+    /// The renderer's views of the graphics memory the VM shares, and the boot's id they were
+    /// handed over with (see `crate::graphics_region`).
+    shared_graphics: Mutex<SharedGraphics>,
+}
+
+/// `dsa_gfx_set_shared_graphics_memory`.
+type SetSharedGraphicsMemoryFn = unsafe extern "C" fn(*mut u8, u64, *mut u8, u64) -> c_int;
+
+/// What the renderer holds of the graphics memory the VM shares.
+#[derive(Default)]
+struct SharedGraphics {
+    views: Option<crate::graphics_region::RendererGraphicsMemory>,
+    region_id: Option<u64>,
+    /// Views of the boots before, kept mapped (see `share_graphics_memory`).
+    retired: Vec<crate::graphics_region::RendererGraphicsMemory>,
+    /// The last reason it is not shared, said once until it changes.
+    said: Option<String>,
 }
 
 // SAFETY: HMODULE is owned and accessed across threads safely through the loaded function pointers.
@@ -357,6 +430,16 @@ impl NativeBackend {
     pub fn load_on(
         path: &Path,
         request: &GpuRequest,
+    ) -> Result<(NativeBackend, Option<String>), String> {
+        Self::load_with(path, request, &[])
+    }
+
+    /// [`load_on`](Self::load_on), with gfxstream renderer features to turn on or off
+    /// (`Name:enabled` or `Name:disabled`) beside the backend's own.
+    pub fn load_with(
+        path: &Path,
+        request: &GpuRequest,
+        features: &[String],
     ) -> Result<(NativeBackend, Option<String>), String> {
         let wide_path = wide(&path.to_string_lossy());
         // SAFETY: LoadLibraryW with null-terminated UTF-16 path.
@@ -387,10 +470,15 @@ impl NativeBackend {
             let fn_forget_display = Self::get_symbol(handle, b"dsa_gfx_forget_display\0").ok();
             let fn_get_memory_stats: Option<GetMemoryStatsFn> =
                 Self::get_symbol(handle, b"dsa_gfx_get_memory_stats\0").ok();
+            let fn_get_memory_owners: Option<GetMemoryOwnersFn> =
+                Self::get_symbol(handle, b"dsa_gfx_get_memory_owners\0").ok();
             let fn_simulate_device_loss =
                 Self::get_symbol(handle, b"dsa_gfx_simulate_device_loss\0").ok();
             let fn_device_generation =
                 Self::get_symbol(handle, b"dsa_gfx_device_generation\0").ok();
+            let fn_device_losses = Self::get_symbol(handle, b"dsa_gfx_device_losses\0").ok();
+            let fn_set_shared_graphics_memory: Option<SetSharedGraphicsMemoryFn> =
+                Self::get_symbol(handle, b"dsa_gfx_set_shared_graphics_memory\0").ok();
 
             // Before the start, so what the start says reaches the log too.
             let set_log: Option<unsafe extern "C" fn(Option<LogFn>, *mut c_void)> =
@@ -399,7 +487,24 @@ impl NativeBackend {
                 set_log(Some(renderer_log_trampoline), std::ptr::null_mut());
             }
 
-            let note = select_gpu(fn_select_gpu, request);
+            let mut note = select_gpu(fn_select_gpu, request);
+            if !features.is_empty() {
+                let set_features: Option<unsafe extern "C" fn(*const c_char) -> c_int> =
+                    Self::get_symbol(handle, b"dsa_gfx_set_renderer_features\0").ok();
+                let joined = features.join(",");
+                match (set_features, CString::new(joined.as_str())) {
+                    (Some(set), Ok(text)) if set(text.as_ptr()) == 0 => {}
+                    _ => {
+                        let why = format!(
+                            "this graphics backend cannot be given the renderer features {joined}"
+                        );
+                        note = Some(match note {
+                            Some(before) => format!("{before}; {why}"),
+                            None => why,
+                        });
+                    }
+                }
+            }
 
             let ret = (fn_init)(1280, 720);
             if ret != 0 {
@@ -407,25 +512,105 @@ impl NativeBackend {
                 return Err(format!("dsa_gfx_init failed with code {ret}"));
             }
 
-            Ok((
-                NativeBackend {
-                    handle,
-                    fn_init,
-                    fn_teardown,
-                    fn_serve_stream,
-                    fn_process_pipe,
-                    fn_on_process_create,
-                    fn_on_process_destroy,
-                    fn_set_display_callbacks,
-                    fn_get_adapter_luid,
-                    fn_get_gpu_info,
-                    fn_forget_display,
-                    fn_get_memory_stats,
-                    fn_simulate_device_loss,
-                    fn_device_generation,
-                },
-                note,
-            ))
+            let backend = NativeBackend {
+                handle,
+                fn_init,
+                fn_teardown,
+                fn_serve_stream,
+                fn_process_pipe,
+                fn_on_process_create,
+                fn_on_process_destroy,
+                fn_set_display_callbacks,
+                fn_get_adapter_luid,
+                fn_get_gpu_info,
+                fn_forget_display,
+                fn_get_memory_stats,
+                fn_get_memory_owners,
+                fn_simulate_device_loss,
+                fn_device_generation,
+                fn_device_losses,
+                fn_set_shared_graphics_memory,
+                shared_graphics: Mutex::new(SharedGraphics::default()),
+            };
+            backend.share_graphics_memory();
+            Ok((backend, note))
+        }
+    }
+
+    /// Hands the renderer the graphics memory the VM shares, when the service made it and it is
+    /// not the one already handed over: at the start, and as each guest process starts, since
+    /// the renderer may start before the VM and outlive a boot (each boot's table has a new id).
+    /// Why it is not shared is logged once until the reason changes.
+    fn share_graphics_memory(&self) {
+        let Some(set) = self.fn_set_shared_graphics_memory else {
+            return;
+        };
+        let mut shared = self
+            .shared_graphics
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let current = shared.views.as_ref().and_then(|views| views.region_id());
+        if current.is_some() && current == shared.region_id {
+            return;
+        }
+        let opened = crate::account::current_user_sid()
+            .map_err(|e| format!("this user's SID is unknown ({e})"))
+            .and_then(|sid| {
+                crate::graphics_region::RendererGraphicsMemory::open(&sid)
+                    .map_err(|e| format!("the service made no graphics memory for this VM ({e})"))
+            });
+        let views = match opened {
+            Ok(views) => views,
+            Err(why) => {
+                if shared.said.as_deref() != Some(why.as_str()) {
+                    super::log::renderer_log(
+                        b'W',
+                        &format!(
+                            "graphics memory: host-visible memory goes through the stream: {why}"
+                        ),
+                    );
+                    shared.said = Some(why);
+                }
+                return;
+            }
+        };
+        use dsa_host_core::video_slots::SharedRegion;
+        let region_id = views.region_id();
+        // SAFETY: both views stay mapped while `shared` holds them, and they are handed over
+        // again (or taken back) before they go.
+        let code = unsafe {
+            set(
+                views.data.as_ptr(),
+                views.data.len() as u64,
+                views.grants.as_ptr(),
+                views.grants.len() as u64,
+            )
+        };
+        if code != 0 {
+            let why = format!("the renderer refused the memory the service shares ({code})");
+            if shared.said.as_deref() != Some(why.as_str()) {
+                super::log::renderer_log(
+                    b'W',
+                    &format!("graphics memory: host-visible memory goes through the stream: {why}"),
+                );
+                shared.said = Some(why);
+            }
+            return;
+        }
+        super::log::renderer_log(
+            b'W',
+            &format!(
+                "graphics memory: {} MiB shared with the guest; host-visible memory goes there \
+                 where the driver takes it, and is copied through the stream elsewhere",
+                views.data.len() >> 20
+            ),
+        );
+        shared.said = None;
+        shared.region_id = region_id;
+        // The views handed over before stay mapped: Vulkan memory the renderer imported from
+        // them may outlive the boot by the moment its guest process takes to be cleaned up.
+        if let Some(old) = shared.views.replace(views) {
+            shared.retired.push(old);
         }
     }
 
@@ -506,6 +691,9 @@ impl GfxBackend for NativeBackend {
         write_cb: StreamWriteFn,
         user_data: *mut c_void,
     ) -> Result<(), String> {
+        // A guest process is starting: the VM, and so its graphics memory, may be newer than
+        // what the renderer was handed.
+        self.share_graphics_memory();
         let ret = (self.fn_process_pipe)(read_cb, write_cb, user_data);
         if ret == 0 {
             Ok(())
@@ -587,6 +775,16 @@ impl GfxBackend for NativeBackend {
         Some(renderer_memory(&stats))
     }
 
+    fn memory_owners(&self) -> Option<RendererOwners> {
+        let get_memory_owners = self.fn_get_memory_owners?;
+        let mut owners = MemoryOwners::default();
+        // SAFETY: `owners` has the layout the backend fills.
+        if unsafe { get_memory_owners(&mut owners) } != 0 {
+            return None;
+        }
+        Some(renderer_owners(&owners))
+    }
+
     fn simulate_device_loss(&self) -> bool {
         // SAFETY: takes nothing; the renderer is running while the backend is loaded.
         self.fn_simulate_device_loss
@@ -597,6 +795,12 @@ impl GfxBackend for NativeBackend {
         // SAFETY: takes nothing.
         self.fn_device_generation
             .map_or(0, |generation| unsafe { generation() })
+    }
+
+    fn device_losses(&self) -> u64 {
+        // SAFETY: takes nothing.
+        self.fn_device_losses
+            .map_or(0, |losses| unsafe { losses() })
     }
 }
 
@@ -729,10 +933,29 @@ impl GfxstreamAdapter {
 
     /// Like [`new`](Self::new), starting the renderer on the GPU `request` asks for.
     pub fn on_gpu(custom_path: Option<PathBuf>, request: &GpuRequest) -> GfxstreamAdapter {
+        Self::on_gpu_with(custom_path, request, &[])
+    }
+
+    /// An adapter with no backend, for a renderer with nothing to run on: `note` says why.
+    pub fn without_backend(note: String) -> GfxstreamAdapter {
+        GfxstreamAdapter {
+            dll_path: None,
+            backend: None,
+            sink: Mutex::new(None),
+            notes: vec![note],
+        }
+    }
+
+    /// Like [`on_gpu`](Self::on_gpu), with gfxstream renderer `features` (`Name:disabled`).
+    pub fn on_gpu_with(
+        custom_path: Option<PathBuf>,
+        request: &GpuRequest,
+        features: &[String],
+    ) -> GfxstreamAdapter {
         let dll_path = custom_path.or_else(Self::find_backend_dll);
         let mut notes = Vec::new();
         let backend = if let Some(path) = &dll_path {
-            match NativeBackend::load_on(path, request) {
+            match NativeBackend::load_with(path, request, features) {
                 Ok((b, note)) => {
                     notes.extend(note);
                     Some(Arc::new(b) as Arc<dyn GfxBackend>)
@@ -795,9 +1018,23 @@ impl GfxstreamAdapter {
             .map_or(0, |backend| backend.device_generation())
     }
 
+    /// How many times the renderer found its own Vulkan device lost.
+    pub fn device_losses(&self) -> u64 {
+        self.backend
+            .as_ref()
+            .map_or(0, |backend| backend.device_losses())
+    }
+
     /// What the renderer holds in memory, as it counts it; `None` when it cannot say.
     pub fn counted_memory(&self) -> Option<RendererMemory> {
         self.backend.as_ref().and_then(|backend| backend.memory())
+    }
+
+    /// The same memory by whose device it is on; `None` when it cannot say.
+    pub fn counted_owners(&self) -> Option<RendererOwners> {
+        self.backend
+            .as_ref()
+            .and_then(|backend| backend.memory_owners())
     }
 
     /// Whether the graphics backend is available and ready to serve streams.
@@ -863,7 +1100,11 @@ impl DisplayPresenter for GfxstreamAdapter {
     }
 
     fn device_generation(&self) -> u64 {
-        GfxstreamAdapter::device_generation(self)
+        // The loss counts at once, the new device again once it is made.
+        device_resets(&DeviceState {
+            losses: self.device_losses(),
+            generation: GfxstreamAdapter::device_generation(self),
+        })
     }
 
     fn memory(&self) -> Option<RendererProcessMemory> {
@@ -1367,5 +1608,27 @@ mod tests {
         // The layout matches the backend's `dsa_gfx_memory_stats`: four 64-bit sizes, then
         // three counts and the process count.
         assert_eq!(std::mem::size_of::<MemoryStats>(), 48);
+    }
+
+    #[test]
+    fn nfr1_the_renderers_memory_is_read_by_owner() {
+        let owners = MemoryOwners {
+            renderer_bytes: [300 << 20, 0, 159 << 20],
+            guest_bytes: [104 << 20, 116 << 20, 0],
+            largest_guest_device_bytes: [60 << 20, 40 << 20, 0, 0],
+            renderer_count: [120, 0, 126],
+            guest_count: [49, 56, 0],
+            guest_devices: 10,
+            _reserved: 0,
+        };
+        let read = renderer_owners(&owners);
+        assert_eq!(read.renderer[0].kb, 300 * 1024);
+        assert_eq!(read.renderer[2].count, 126);
+        assert_eq!(read.guests[1].kb, 116 * 1024);
+        assert_eq!(read.guest_devices, 10);
+        assert_eq!(read.largest_guest_devices_kb, [60 * 1024, 40 * 1024, 0, 0]);
+        // The layout matches the backend's `dsa_gfx_memory_owners`: ten 64-bit sizes, then
+        // six counts, the device count and a spare.
+        assert_eq!(std::mem::size_of::<MemoryOwners>(), 112);
     }
 }

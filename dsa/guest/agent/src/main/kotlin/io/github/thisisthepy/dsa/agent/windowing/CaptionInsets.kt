@@ -7,11 +7,17 @@ import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
 /**
  * Gives each task a top inset as high as the title bar its host window draws over it.
  *
- * The host's window has no title bar above the app: the app's frames fill the window from
- * its top edge, and the window draws its caption buttons over them. The host says how high
- * that band is ([setHeight]); the task gets an inset source of that height along its top,
- * which its app receives as its status bar, system bar and caption bar inset. The app then
- * keeps its toolbar below the buttons and draws its status bar background behind them.
+ * The host window's title bar is Android's status bar. The window has no title bar above the
+ * app: the app's frames fill the window from its top edge, and the window draws its caption
+ * over them, where a phone draws its status bar. The host says how high that band is
+ * ([setHeight]); the task gets status bar and caption bar inset sources of that height along
+ * its top, which its app receives as its status bar, system bar and caption bar inset (the
+ * image's window manager passes a freeform window its status bar inset, which stock Android
+ * drops). An app that draws edge to edge then keeps its toolbar below the band, as below a
+ * phone's status bar, and draws its own status bar background under the caption, whose
+ * glyphs follow what it draws there. An app that does not draw edge to edge gets the status
+ * bar background Android draws for it there, in its status bar colour. Nothing an app does
+ * not choose to draw under the band is covered by it.
  *
  * The framework takes the inset's frame in display pixels, so it is given again whenever the
  * task's top edge moves ([update]). The frame reaches far past the task on both sides: only
@@ -26,6 +32,34 @@ import io.github.thisisthepy.dsa.agent.tasks.TaskBounds
  * given again when the task's left or right edge moves. The app's controls in the rest of the
  * band ([controls]) take the pointer on the host.
  *
+ * A task that starts below the title bar ([update]'s `opaque`, the user's choice for its app)
+ * gets the band another way, as Android's own desktop windows give it to an app that asked
+ * for no transparent caption: no status bar inset, and a caption bar inset the framework
+ * consumes for the app, so the app's content begins under the band and the app has no top
+ * inset to handle. The host paints that band. The user's choice wins over an app that asks to
+ * draw its own title bar. The framework does not consume the caption inset of a window that
+ * asks for a transparent caption, so the caption bar inset of every such task carries one
+ * bounding rectangle over the whole band, which tells the app the host takes all of it.
+ *
+ * The host can only say how high the band is once it has opened the task's window, which is
+ * after the task's app has started and laid out its first screen. Many apps read their status
+ * bar inset when a screen is created and never again (YouTube's home screen, for one), so a
+ * band that arrived only then left such a screen's toolbar under the caption for as long as
+ * the screen lived, while screens opened later sat below it. A task the host has not yet said
+ * anything of ([update]'s `awaiting`) is therefore given a band at once, as high as the status
+ * bar the framework's resources give at the task's density
+ * ([TaskActions.statusBarHeight]), which the image sets to the title bar at that density's
+ * monitor scale. The host's own height replaces it when it comes, by at most a few pixels on
+ * a monitor of another scale.
+ *
+ * A window that fills the screen has no title bar, and the host says so with a height of 0.
+ * When the task is back in a window ([update]'s `awaiting` holds it again), that 0 no longer
+ * says anything: the task gets the band it is expected to have until the host says how high
+ * the title bar is now. That is the host's last height when the task still draws at the
+ * density it had then, else the status bar at its density now. Held at the 0 of its full
+ * screen, or at a band from before its density changed, an app that reads its inset once
+ * (YouTube's home screen, back from Shorts) kept its toolbar under the caption.
+ *
  * Not thread safe: the agent calls it from one thread.
  */
 class CaptionInsets(
@@ -35,13 +69,28 @@ class CaptionInsets(
     /** What the host said of a task's band: its height and how far its icon and buttons reach. */
     private data class Band(val height: Int, val startWidth: Int, val endWidth: Int)
 
-    /** What a task was last given: the inset's frame and its bounding rectangles. */
-    private data class Given(val frame: TaskBounds, val boundingRects: List<TaskBounds>)
+    /**
+     * What a task was last given: the inset's frame, its bounding rectangles, and whether the
+     * app starts below the band.
+     */
+    private data class Given(val frame: TaskBounds, val boundingRects: List<TaskBounds>, val opaque: Boolean = false)
 
     private val bands = HashMap<Int, Band>()
 
+    /** The bands given to tasks the host has not said anything of yet. */
+    private val expected = HashMap<Int, Band>()
+
+    /** The tasks [update] last saw with a title bar to come, with the density each drew at. */
+    private val titled = HashMap<Int, Int>()
+
+    /** The last height above 0 the host gave each task, with the density the task drew at then. */
+    private val lastHeight = HashMap<Int, Pair<Band, Int>>()
+
     /** The tasks whose apps draw their own title bar. */
     private val drawing = HashSet<Int>()
+
+    /** The tasks whose apps start below the title bar. */
+    private val below = HashSet<Int>()
 
     /** What each task was last given; null once its inset was removed. */
     private val applied = HashMap<Int, Given?>()
@@ -53,21 +102,55 @@ class CaptionInsets(
      * in from the right end.
      */
     fun setHeight(taskId: Int, height: Int, bounds: TaskBounds?, startWidth: Int = 0, endWidth: Int = 0) {
-        bands[taskId] = Band(height, startWidth.coerceAtLeast(0), endWidth.coerceAtLeast(0))
+        val band = Band(height, startWidth.coerceAtLeast(0), endWidth.coerceAtLeast(0))
+        bands[taskId] = band
+        expected.remove(taskId)
+        val density = titled[taskId]
+        if (height > 0 && density != null) lastHeight[taskId] = band to density
         apply(taskId, bounds)
     }
 
     /**
      * The tasks the host was told about, where they are now, and those of them whose apps draw
      * their own title bar. Forgets the tasks that ended.
+     *
+     * [awaiting] holds the tasks whose windows will have a title bar, with the density each
+     * draws at: one the host has not said anything of yet gets the band expected at that
+     * density until the host does. A task left out (it fills the screen, or is in
+     * picture-in-picture) keeps no expected band. A task back in [awaiting] after it was left
+     * out, whose host said 0 meanwhile (its window took its title bar away while it filled the
+     * screen), waits for the host again.
+     *
+     * [opaque] holds the tasks whose apps start below the title bar: their band is given as a
+     * caption bar inset the framework consumes, with no status bar inset, the expected band
+     * included, so such an app never lays out a screen under the band.
      */
-    fun update(bounds: Map<Int, TaskBounds>, appDrawn: Set<Int> = emptySet()) {
+    fun update(
+        bounds: Map<Int, TaskBounds>,
+        appDrawn: Set<Int> = emptySet(),
+        awaiting: Map<Int, Int> = emptyMap(),
+        opaque: Set<Int> = emptySet(),
+    ) {
         bands.keys.retainAll(bounds.keys)
+        expected.keys.retainAll(bounds.keys)
         applied.keys.retainAll(bounds.keys)
+        lastHeight.keys.retainAll(bounds.keys)
         drawing.clear()
         drawing.addAll(appDrawn intersect bounds.keys)
+        below.clear()
+        below.addAll(opaque intersect bounds.keys)
+        for (taskId in bounds.keys) {
+            val density = awaiting[taskId]
+            // Back in a window: the 0 of its full screen goes, until the host speaks again.
+            if (density != null && taskId !in titled && bands[taskId]?.height == 0) bands.remove(taskId)
+            if (taskId in bands) continue
+            val height = if (density == null) 0 else expectedHeight(taskId, density)
+            if (height > 0) expected[taskId] = Band(height, 0, 0) else expected.remove(taskId)
+        }
+        titled.clear()
+        for ((taskId, density) in awaiting) if (taskId in bounds) titled[taskId] = density
         for ((taskId, at) in bounds) {
-            if (taskId in bands) apply(taskId, at)
+            if (taskId in bands || taskId in expected || applied[taskId] != null) apply(taskId, at)
         }
     }
 
@@ -85,22 +168,48 @@ class CaptionInsets(
         return controlsIn(bounds, band.height, band.startWidth, band.endWidth, exclusion)
     }
 
+    /**
+     * The band a task drawing at [densityDpi] is expected to have before the host says: the
+     * host's last height, when the task drew at this density then, else the framework's status
+     * bar at this density.
+     */
+    private fun expectedHeight(taskId: Int, densityDpi: Int): Int {
+        val (band, at) = lastHeight[taskId] ?: return actions.statusBarHeight(densityDpi)
+        return if (at == densityDpi) band.height else actions.statusBarHeight(densityDpi)
+    }
+
     private fun apply(taskId: Int, bounds: TaskBounds?) {
-        val band = bands[taskId] ?: return
+        val band = bands[taskId] ?: expected[taskId]
+        // An expected band that was withdrawn is taken away again.
+        if (band == null && applied[taskId] == null) return
         if (bounds == null || bounds.isEmpty()) return
-        val given = if (band.height > 0) given(bounds, band, taskId in drawing) else null
+        val given = when {
+            band == null || band.height <= 0 -> null
+            taskId in below -> opaqueBand(bounds, band.height)
+            else -> given(bounds, band, taskId in drawing)
+        }
         if (taskId in applied && applied[taskId] == given) return
         if (given == null && taskId !in applied) {
             applied[taskId] = null
             return
         }
-        if (actions.setCaptionInset(taskId, given?.frame, given?.boundingRects.orEmpty())) {
+        if (actions.setCaptionInset(taskId, given?.frame, given?.boundingRects.orEmpty(), given?.opaque == true)) {
             applied[taskId] = given
         } else if (!warned) {
             warned = true
             log.warn("could not give task $taskId a top inset for its window's title bar; its app draws under the caption buttons")
         }
     }
+
+    /**
+     * The band of a task at [bounds] whose app starts below it, [height] pixels high: the
+     * task's own width, with one bounding rectangle over all of it.
+     */
+    private fun opaqueBand(bounds: TaskBounds, height: Int) = Given(
+        TaskBounds(bounds.left, bounds.top, bounds.right, bounds.top + height),
+        listOf(TaskBounds(0, 0, bounds.right - bounds.left, height)),
+        opaque = true,
+    )
 
     private fun given(bounds: TaskBounds, band: Band, appDrawn: Boolean): Given {
         if (!appDrawn) return Given(frameOf(bounds, band.height), emptyList())

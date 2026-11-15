@@ -52,6 +52,8 @@ pub trait WindowEvents {
     fn back_pressed(&mut self) {}
 }
 
+/// No title bar, no buttons, no border: the window of an app overlay window.
+const STYLE_BORDERLESS: usize = 0;
 const STYLE_TITLED: usize = 1 << 0;
 const STYLE_CLOSABLE: usize = 1 << 1;
 const STYLE_MINIATURIZABLE: usize = 1 << 2;
@@ -196,7 +198,7 @@ unsafe fn add_back_button(
 ) -> Result<(Retained<AnyObject>, Retained<AnyObject>), String> {
     let target: Option<Retained<AnyObject>> = msg_send![back_target_class()?, new];
     let target = target.ok_or("no target for the back button could be made")?;
-    let label = ns_string(back_label(super::menu_bar::korean()));
+    let label = ns_string(back_label(crate::ui_language::current()));
     let image: *mut AnyObject = msg_send![
         class(c"NSImage")?,
         imageWithSystemSymbolName: &*ns_string("chevron.backward"),
@@ -406,6 +408,14 @@ pub struct TaskWindow {
     shown: Option<(u64, (u32, u32))>,
     /// How large the window shows each of the task's pixels (window pixels per task pixels).
     frame_scale: (u32, u32),
+    /// Whether the window shows an app overlay window rather than a task.
+    overlay: bool,
+}
+
+thread_local! {
+    /// Where this app's overlay windows lie on the desktop: one plane for all of them.
+    static OVERLAY_PLANE: RefCell<dsa_host_core::compositor::overlay_windows::OverlayPlane> =
+        RefCell::new(Default::default());
 }
 
 impl TaskWindow {
@@ -494,6 +504,7 @@ impl TaskWindow {
                 back,
                 shown: None,
                 frame_scale: (1, 1),
+                overlay: false,
             })
         }
     }
@@ -545,6 +556,13 @@ impl TaskWindow {
     /// standard title bar.
     pub fn band_height(&self) -> u32 {
         unsafe { band_of(self.ptr()) }.height
+    }
+
+    /// The rows of the task's frame the title bar band covers: [`Self::band_height`] in the
+    /// task's pixels, as the window shows the frame at its frame scale. A frame read back is
+    /// in the task's pixels, not the window's.
+    pub fn band_rows_in_frame(&self) -> u32 {
+        super::screenshot::band_rows(self.band_height(), self.frame_scale)
     }
 
     fn ptr(&self) -> *mut AnyObject {
@@ -645,6 +663,91 @@ impl TaskWindow {
     /// Whether the window is in picture in picture.
     pub fn is_picture_in_picture(&self) -> bool {
         self.before_pip.is_some()
+    }
+
+    /// Makes the window the window of an app overlay window (floating lyrics, a chat head):
+    /// no title bar and no buttons, since its app decides when it goes; above the other
+    /// windows on every space; and see-through where its app drew nothing. It stays so.
+    /// Moving it by a handle and remembering its place are not on macOS yet.
+    pub fn set_overlay(&mut self) {
+        if std::mem::replace(&mut self.overlay, true) {
+            return;
+        }
+        unsafe {
+            let _: () = msg_send![&*self.window, setStyleMask: STYLE_BORDERLESS];
+            let _: () = msg_send![&*self.window, setLevel: LEVEL_FLOATING];
+            let _: () =
+                msg_send![&*self.window, setCollectionBehavior: BEHAVIOR_CAN_JOIN_ALL_SPACES];
+            let _: () = msg_send![&*self.window, setOpaque: false];
+            if let Ok(colors) = class(c"NSColor") {
+                let clear: *mut AnyObject = msg_send![colors, clearColor];
+                let _: () = msg_send![&*self.window, setBackgroundColor: clear];
+            }
+            let _: () = msg_send![&*self.window, setHasShadow: false];
+            let smallest = CGSize {
+                width: 1.0,
+                height: 1.0,
+            };
+            let _: () = msg_send![&*self.window, setContentMinSize: smallest];
+        }
+    }
+
+    /// Puts an overlay's window where its app has the overlay: `guest` is the overlay's top
+    /// left corner on the guest's display and `display` the display's size, in guest pixels.
+    /// All of the app's overlays share one plane, first put where the overlay lies on the
+    /// guest's display, and a move by the app moves the window the same distance at its
+    /// scale. The pointer passes through the window of an overlay that takes no input.
+    pub fn place_overlay(&mut self, guest: (i32, i32), display: (u32, u32), touchable: bool) {
+        use dsa_host_core::compositor::overlay_windows::{first_place, kept_on};
+        unsafe {
+            let _: () = msg_send![&*self.window, setIgnoresMouseEvents: !touchable];
+            let mut screen: *mut AnyObject = msg_send![&*self.window, screen];
+            if screen.is_null() {
+                let Ok(screens) = class(c"NSScreen") else {
+                    return;
+                };
+                screen = msg_send![screens, mainScreen];
+            }
+            if screen.is_null() {
+                return;
+            }
+            let visible: CGRect = msg_send![screen, visibleFrame];
+            let backing: f64 = msg_send![&*self.window, backingScaleFactor];
+            let backing = if backing > 0.0 { backing } else { 1.0 };
+            let frame: CGRect = msg_send![&*self.window, frame];
+            // In pixels from the visible frame's top left corner, as the rules count.
+            let pixels = |points: f64| (points * backing).round();
+            let area = (
+                0,
+                0,
+                pixels(visible.size.width) as i32,
+                pixels(visible.size.height) as i32,
+            );
+            let size = (
+                pixels(frame.size.width).max(1.0) as u32,
+                pixels(frame.size.height).max(1.0) as u32,
+            );
+            let (scale, task) = (self.frame_scale, self.task);
+            let at = OVERLAY_PLANE.with(|plane| {
+                let mut plane = plane.borrow_mut();
+                let wanted = plane.place(guest, scale, || {
+                    first_place(guest, task, display, size, area)
+                });
+                let at = kept_on(wanted, size, area);
+                if at != wanted {
+                    plane.moved_to(guest, at);
+                }
+                at
+            });
+            // AppKit counts from the bottom left.
+            let origin = CGPoint {
+                x: visible.origin.x + f64::from(at.0) / backing,
+                y: visible.origin.y + visible.size.height
+                    - f64::from(at.1) / backing
+                    - frame.size.height,
+            };
+            let _: () = msg_send![&*self.window, setFrameOrigin: origin];
+        }
     }
 
     /// Picture in picture: a small window in the screen's corner that floats above the

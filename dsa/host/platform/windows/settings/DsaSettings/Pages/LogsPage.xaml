@@ -30,9 +30,9 @@
 
         <StackPanel Grid.Row="2">
             <ui:InfoBar Title="{l:Text LogsErrorBar.Title}" Severity="Error" IsClosable="False"
-                        IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" Margin="0,0,0,4" />
+                        IsOpen="{Binding HasError, Mode=OneWay}" Message="{Binding Error, Mode=OneWay}" />
             <ui:InfoBar Title="{l:Text LogsStatusBar.Title}" Severity="Informational" IsClosable="False"
-                        IsOpen="{Binding HasStatus, Mode=OneWay}" Message="{Binding Status, Mode=OneWay}" Margin="0,0,0,4" />
+                        IsOpen="{Binding HasStatus, Mode=OneWay}" Message="{Binding Status, Mode=OneWay}" />
         </StackPanel>
 
         <Grid Grid.Row="3" Margin="0,8,0,8">
@@ -43,9 +43,11 @@
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" PlaceholderText="{l:Text LogsFilter.PlaceholderText}"
                         Text="{Binding Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Icon="{ui:SymbolIcon Search24}" IconPlacement="Right" ClearButtonEnabled="True" />
+                        Icon="{ui:SymbolIcon Search24}" IconPlacement="Right" ClearButtonEnabled="True"
+                        AutomationProperties.Name="{l:Text LogsFilter.PlaceholderText}" />
             <ComboBox x:Name="PriorityBox" Grid.Column="1" Margin="8,0,0,0" MinWidth="140"
-                      SelectionChanged="OnPriorityChanged" />
+                      SelectionChanged="OnPriorityChanged"
+                      AutomationProperties.Name="{l:Text A11y_LogPriority}" />
             <ToggleButton Grid.Column="2" Margin="8,0,0,0" MinWidth="110"
                           IsChecked="{Binding Paused, Mode=TwoWay}" Content="{l:Text LogsPause.Content}" />
         </Grid>
@@ -76,12 +78,16 @@
                         <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                     </Style>
+                    <l:LogLineNameConverter x:Key="LogLineName" />
                 </ListBox.Resources>
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                         <Setter Property="Padding" Value="6,0" />
                         <Setter Property="Margin" Value="0" />
                         <Setter Property="MinHeight" Value="0" />
+                        <!-- A screen reader reads each row as a sentence: the time, the
+                             priority as a word, the tag and the message. -->
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Converter={StaticResource LogLineName}, Mode=OneTime}" />
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>

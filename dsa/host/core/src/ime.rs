@@ -642,6 +642,24 @@ impl EditorText {
         };
         from <= to && part(self) == part(other)
     }
+
+    /// Whether this description of the editor is the state `sent`, which the host's own events
+    /// made, as the editor reports it: the same editor ([`EditorText::agrees_with`]), or the same
+    /// text and selection with no composing region where `sent` has one. An editor loses its
+    /// composing span and keeps its text when input restarts on it (the framework finishes the
+    /// composition as the old connection closes) or when its app sets the same text again; what
+    /// it then holds is still the host's own text, not a change of the user's.
+    pub fn echoes(&self, sent: &EditorText) -> bool {
+        if self.agrees_with(sent) {
+            return true;
+        }
+        self.composition.is_none()
+            && sent.composition.is_some()
+            && self.agrees_with(&EditorText {
+                composition: None,
+                ..sent.clone()
+            })
+    }
 }
 
 /// Whether `c` is a character an editor shows, rather than a control a key event carries
@@ -735,8 +753,9 @@ impl TextInput {
     }
 }
 
-/// Where the cursor of the editor focused in a task is, in the task's own pixels from its top
-/// left corner, which its window shows one to one.
+/// Where the cursor of the editor focused in a task is, in pixels from the top left corner: the
+/// task's own as the guest reports it, which the window manager turns into its window's
+/// (the same, unless the window shows the task at another scale) before a window hears of it.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct ImeCursor {
     pub left: i32,
@@ -1219,5 +1238,31 @@ mod editor_tests {
         // A different selection is a different editor.
         assert!(!short.agrees_with(&EditorText::of(&editor("ab", 0, (1, 1)))));
         assert!(short.agrees_with(&short.clone()));
+    }
+
+    #[test]
+    fn fr6_an_editor_that_lost_its_composing_span_still_echoes_the_hosts_state() {
+        // The host composed 하 at the end of "a": the editor holds "a하" with 하 composing.
+        let sent = EditorText::of(&ImeEditor {
+            composition: Some((11, 12)),
+            ..editor("a\u{d558}", 10, (12, 12))
+        });
+        // Input restarted on the editor, which kept the text and lost the span.
+        let restarted = EditorText::of(&editor("a\u{d558}", 10, (12, 12)));
+        assert!(!restarted.agrees_with(&sent));
+        assert!(restarted.echoes(&sent));
+        assert!(sent.echoes(&sent.clone()));
+        // A span the host never made is another editor's state.
+        let other_span = EditorText::of(&ImeEditor {
+            composition: Some((10, 12)),
+            ..editor("a\u{d558}", 10, (12, 12))
+        });
+        assert!(!other_span.echoes(&sent));
+        // So is a cursor elsewhere, or other text around the composition.
+        assert!(!EditorText::of(&editor("a\u{d558}", 10, (10, 10))).echoes(&sent));
+        assert!(!EditorText::of(&editor("b\u{d558}", 10, (12, 12))).echoes(&sent));
+        // And an editor with a composing span the host's state lacks is not its echo.
+        let committed = EditorText::of(&editor("a\u{d558}", 10, (12, 12)));
+        assert!(!sent.echoes(&committed));
     }
 }

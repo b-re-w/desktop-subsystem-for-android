@@ -7,8 +7,10 @@ use std::path::{Path, PathBuf};
 use dsa_exe_resources::{parse_ico, LANG_EN_US, RT_GROUP_ICON, RT_ICON, RT_VERSION};
 use dsa_host_core::tasks::AppInfo;
 use dsa_host_windows::app_exe::{
-    ensure, ensure_installed, program_name, program_path, ProgramLauncher, NOTE_NAME,
+    ensure, ensure_following, ensure_installed, ensure_installed_following, program_name,
+    program_path, ProgramLauncher, NOTE_NAME,
 };
+use dsa_host_windows::start_menu::MenuEntry;
 use windows_sys::Win32::Foundation::FreeLibrary;
 use windows_sys::Win32::Storage::FileSystem::{
     GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW,
@@ -167,7 +169,15 @@ fn fr3_a_window_program_is_made_again_only_when_its_app_changes() {
         label: "World Clock".into(),
         ..clock()
     };
-    let (renamed_program, _) = ensure(template, &dir, "com.example.clock", Some(&renamed)).unwrap();
+    let (renamed_program, _) = ensure_following(
+        template,
+        &dir,
+        "com.example.clock",
+        Some(&renamed),
+        &no_shortcuts,
+    )
+    .unwrap();
+    // The program's file is named after the app, as Task Manager's Details tab shows it.
     assert_eq!(
         renamed_program,
         dir.join("com.example.clock").join("World Clock.exe")
@@ -175,6 +185,139 @@ fn fr3_a_window_program_is_made_again_only_when_its_app_changes() {
     assert_eq!(description(&renamed_program), "World Clock");
     // The program under the app's old name is gone.
     assert!(!program.exists());
+}
+
+/// A rename's shortcuts, where a test has none.
+fn no_shortcuts(_: &MenuEntry) -> Vec<String> {
+    Vec::new()
+}
+
+#[test]
+fn fr7_a_renamed_app_gets_a_program_of_its_new_name_and_every_shortcut_follows_it() {
+    use std::cell::RefCell;
+    // The Play Store, named "Play Store" by the list, then described as "Google Play Store"
+    // when its window opened after its data was cleared.
+    let dir = fresh_dir("follows");
+    let template = Path::new(TEMPLATE);
+    let folder = dir.join("com.example.clock");
+    let listed = AppInfo {
+        label: "Play Store".into(),
+        ..listed_clock(png(), 1)
+    };
+    let followed: RefCell<Vec<MenuEntry>> = RefCell::new(Vec::new());
+    // Every shortcut is pointed at the new program while the old one is still there, so none
+    // runs a file that is gone at any moment.
+    let follow = |entry: &MenuEntry| {
+        assert!(entry.program.is_file(), "the new program is made first");
+        assert_eq!(
+            std::fs::read_dir(&folder)
+                .unwrap()
+                .flatten()
+                .filter(|file| file.path().extension().is_some_and(|ext| ext == "exe"))
+                .count(),
+            2,
+            "the old program is removed only after the shortcuts follow"
+        );
+        followed.borrow_mut().push(entry.clone());
+        Vec::new()
+    };
+    let (program, _) = ensure_installed_following(template, &dir, &listed, &follow).unwrap();
+    assert_eq!(program, folder.join("Play Store.exe"));
+    assert!(followed.borrow().is_empty(), "nothing was renamed");
+    let window = AppInfo {
+        label: "Google Play Store".into(),
+        ..clock()
+    };
+    let (opened, _) =
+        ensure_following(template, &dir, "com.example.clock", Some(&window), &follow).unwrap();
+    // The list's name stays: the window's description does not rename the app.
+    assert_eq!(opened, program);
+    assert_eq!(description(&program), "Play Store");
+    assert_eq!(
+        program_path(&dir, "com.example.clock", "Google Play Store"),
+        program,
+        "a caller naming the app by its application label finds the program the list named"
+    );
+    assert!(followed.borrow().is_empty());
+
+    // A real rename, from the list: a program of the new name, and the shortcuts follow it.
+    let renamed = AppInfo {
+        label: "Store".into(),
+        ..listed_clock(png(), 2)
+    };
+    let (store, note) = ensure_installed_following(template, &dir, &renamed, &follow).unwrap();
+    assert!(note.is_none(), "{note:?}");
+    assert_eq!(store, folder.join("Store.exe"));
+    assert_eq!(description(&store), "Store");
+    assert!(!program.exists(), "the program of the old name is gone");
+    assert_eq!(
+        *followed.borrow(),
+        vec![MenuEntry {
+            package: "com.example.clock".into(),
+            label: "Store".into(),
+            program: store.clone(),
+        }]
+    );
+    assert_eq!(program_path(&dir, "com.example.clock", "Store"), store);
+    assert_eq!(
+        dsa_host_windows::app_exe::program_label(&store).as_deref(),
+        Some("Store")
+    );
+
+    // A shortcut that cannot follow keeps the old program, so it still runs something.
+    let stuck = |_: &MenuEntry| vec!["the desktop is read-only".to_string()];
+    let again = AppInfo {
+        label: "Shop".into(),
+        ..listed_clock(png(), 3)
+    };
+    let (shop, note) = ensure_installed_following(template, &dir, &again, &stuck).unwrap();
+    assert_eq!(shop, folder.join("Shop.exe"));
+    assert!(note.is_some());
+    assert!(
+        store.exists(),
+        "the old program stays while a shortcut runs it"
+    );
+    followed.borrow_mut().clear();
+    let (_, note) = ensure_installed_following(template, &dir, &again, &follow).unwrap();
+    assert!(note.is_none(), "{note:?}");
+    assert!(!store.exists());
+    assert_eq!(followed.borrow().len(), 1);
+}
+
+#[test]
+fn fr7_a_renamed_apps_old_program_that_runs_goes_once_its_windows_close() {
+    let dir = fresh_dir("rename-running");
+    let template = Path::new(TEMPLATE);
+    let (clock_program, _) = ensure_installed(template, &dir, &listed_clock(png(), 1)).unwrap();
+    let held = hold(&clock_program);
+    let renamed = AppInfo {
+        label: "Alarm".into(),
+        ..listed_clock(png(), 2)
+    };
+    let followed = std::cell::Cell::new(0);
+    let follow = |entry: &MenuEntry| {
+        assert_eq!(
+            entry.program,
+            dir.join("com.example.clock").join("Alarm.exe")
+        );
+        followed.set(followed.get() + 1);
+        Vec::new()
+    };
+    let (alarm, note) = ensure_installed_following(template, &dir, &renamed, &follow).unwrap();
+    // The shortcuts run the new program already; the old one waits for its windows.
+    assert_eq!(alarm, dir.join("com.example.clock").join("Alarm.exe"));
+    assert_eq!(description(&alarm), "Alarm");
+    assert_eq!(followed.get(), 1);
+    assert!(clock_program.exists());
+    assert!(
+        note.is_some(),
+        "it is tried again while the old program runs"
+    );
+    drop(held);
+    let (_, note) = ensure_installed_following(template, &dir, &renamed, &follow).unwrap();
+    assert!(note.is_none(), "{note:?}");
+    assert!(!clock_program.exists());
+    assert!(alarm.exists());
 }
 
 #[test]
@@ -261,14 +404,30 @@ fn fr3_a_running_program_under_an_old_name_does_not_keep_the_old_name() {
             .open(&bare)
             .unwrap()
     };
-    let (program, note) = ensure(template, &dir, "com.example.clock", Some(&clock())).unwrap();
-    assert!(note.is_none());
+    let (program, note) = ensure_following(
+        template,
+        &dir,
+        "com.example.clock",
+        Some(&clock()),
+        &no_shortcuts,
+    )
+    .unwrap();
     assert_eq!(program, dir.join("com.example.clock").join("Clock.exe"));
     assert_eq!(description(&program), "Clock");
-    // The old one cannot go while it runs, and goes the next time once it has ended.
+    // The old one cannot go while it runs, and goes the next time once it has ended; until
+    // then it is reported, so it is tried again.
+    assert!(note.is_some());
     assert!(bare.exists());
     drop(held);
-    ensure(template, &dir, "com.example.clock", Some(&clock())).unwrap();
+    let (_, note) = ensure_following(
+        template,
+        &dir,
+        "com.example.clock",
+        Some(&clock()),
+        &no_shortcuts,
+    )
+    .unwrap();
+    assert!(note.is_none(), "{note:?}");
     assert!(!bare.exists());
     assert!(program.exists());
 }

@@ -15,6 +15,9 @@ public enum UnsupportedKind
     EncryptedBundle,
     /// <summary>A bundle with a split signed with another certificate than its base APK.</summary>
     SplitSignatureMismatch,
+    /// <summary>An app whose native code is none DSA's Android runs, which is 64-bit only: it
+    /// has 32-bit code only, or is a build made to run as 32-bit code.</summary>
+    UnsupportedAbi,
     /// <summary>Anything else that is not an APK.</summary>
     NotApk,
 }
@@ -23,7 +26,8 @@ public enum UnsupportedKind
 /// Says in plain words why a file cannot be installed. dsa names the reason with a stable
 /// code when it refuses a bundle; otherwise what the file is comes from what is in it where it
 /// can be read, so a renamed bundle is still named for what it is, and from its extension
-/// otherwise. The window is English in every language, so these are not in the string tables.
+/// otherwise. The sentences are in the string tables, in the user's language; dsa's own words
+/// on what is wrong with a bundle are put in as dsa wrote them.
 /// </summary>
 public static class UnsupportedFile
 {
@@ -58,6 +62,7 @@ public static class UnsupportedFile
             "encrypted-bundle" => UnsupportedKind.EncryptedBundle,
             "split-signature-mismatch" => UnsupportedKind.SplitSignatureMismatch,
             "invalid-bundle" => UnsupportedKind.SplitBundle,
+            "unsupported-abi" => UnsupportedKind.UnsupportedAbi,
             _ => null,
         };
         return kind is { } known ? (known, match.Groups[2].Value.Trim()) : null;
@@ -86,20 +91,37 @@ public static class UnsupportedFile
         }
     }
 
-    /// <summary>The sentence the window shows for <paramref name="fileName"/>. A damaged
-    /// bundle's sentence ends with what is wrong with it, when dsa said.</summary>
-    public static string Message(UnsupportedKind kind, string fileName, string? detail = null) => kind switch
+    /// <summary>The sentence the window shows for <paramref name="fileName"/>, in the user's
+    /// language. A damaged bundle's sentence ends with what is wrong with it, when dsa said.</summary>
+    public static string Message(ITextSource text, UnsupportedKind kind, string fileName, string? detail = null)
     {
-        UnsupportedKind.SplitBundle when !string.IsNullOrWhiteSpace(detail) =>
-            $"{fileName} is a split APK bundle that cannot be installed: {detail.TrimEnd('.')}.",
-        UnsupportedKind.SplitBundle =>
-            $"{fileName} is a split APK bundle that cannot be read, so it cannot be installed.",
-        UnsupportedKind.AppBundle =>
-            $"{fileName} is an Android App Bundle. App Bundles are a publishing format for app stores and cannot be installed as they are: making APKs of one means signing them with another key, and the app would then no longer take updates from where it came from. Get the app as an APK, or as an .xapk, .apks or .apkm bundle.",
-        UnsupportedKind.EncryptedBundle =>
-            $"{fileName} is an encrypted bundle, so its APKs cannot be read. Some older .apkm files are, and only the app that made them opens them. Get the app as an APK, or as a newer bundle.",
-        UnsupportedKind.SplitSignatureMismatch =>
-            $"{fileName} holds a split APK signed with another certificate than its base APK, so the bundle was changed after it was made. Android would refuse it.",
-        _ => $"{fileName} is not a valid APK file.",
+        var said = string.IsNullOrWhiteSpace(detail) ? null : detail!.Trim().TrimEnd('.');
+        var (key, withDetail) = kind switch
+        {
+            UnsupportedKind.SplitBundle when said is not null => ("ApkWindow_File_SplitBundleDetail", true),
+            UnsupportedKind.SplitBundle => ("ApkWindow_File_SplitBundle", false),
+            UnsupportedKind.AppBundle => ("ApkWindow_File_AppBundle", false),
+            UnsupportedKind.EncryptedBundle => ("ApkWindow_File_EncryptedBundle", false),
+            UnsupportedKind.SplitSignatureMismatch => ("ApkWindow_File_SplitSignature", false),
+            UnsupportedKind.UnsupportedAbi when said is not null => ("ApkWindow_File_AbiDetail", true),
+            UnsupportedKind.UnsupportedAbi => ("ApkWindow_File_Abi", false),
+            _ => ("ApkWindow_File_NotApk", false),
+        };
+        return withDetail
+            ? string.Format(System.Globalization.CultureInfo.CurrentCulture, text.Get(key), fileName, said)
+            : string.Format(System.Globalization.CultureInfo.CurrentCulture, text.Get(key), fileName);
+    }
+
+    /// <summary>Every text <see cref="Message"/> can show, with how many values it takes.</summary>
+    public static readonly IReadOnlyDictionary<string, int> AllKeys = new Dictionary<string, int>
+    {
+        ["ApkWindow_File_SplitBundleDetail"] = 2,
+        ["ApkWindow_File_SplitBundle"] = 1,
+        ["ApkWindow_File_AppBundle"] = 1,
+        ["ApkWindow_File_EncryptedBundle"] = 1,
+        ["ApkWindow_File_SplitSignature"] = 1,
+        ["ApkWindow_File_AbiDetail"] = 2,
+        ["ApkWindow_File_Abi"] = 1,
+        ["ApkWindow_File_NotApk"] = 1,
     };
 }

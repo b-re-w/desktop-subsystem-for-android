@@ -5,6 +5,10 @@
   and every interactive window, reports view IDs, and asks for nothing that changes input:
   no gestures, no touch exploration, no key filtering, no accessibility button.
   notificationTimeout batches the events of one change before they reach the service.
+  These are the kinds and the batching without a screen reader. While a screen reader listens,
+  the service asks for every event at once (notificationTimeout 0) and for the kinds only a
+  screen reader needs as well: text selection, the accessibility focus, announcements and
+  toasts (HostAccessibilityService.takeEvents). Keep the two lists alike.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged|typeViewScrolled|typeViewFocused|typeViewSelected|typeViewTextChanged"

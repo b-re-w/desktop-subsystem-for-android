@@ -4,8 +4,32 @@
   <id>io.github.thisisthepy.DSA.Settings</id>
   <name>DSA Settings</name>
   <name xml:lang="ko">DSA 설정</name>
+  <name xml:lang="ja">DSA 設定</name>
+  <name xml:lang="zh_CN">DSA 设置</name>
+  <name xml:lang="zh_TW">DSA 設定</name>
+  <name xml:lang="es">Configuración de DSA</name>
+  <name xml:lang="fr">Paramètres de DSA</name>
+  <name xml:lang="de">DSA-Einstellungen</name>
+  <name xml:lang="pt_BR">Configurações do DSA</name>
+  <name xml:lang="ru">Параметры DSA</name>
+  <name xml:lang="it">Impostazioni di DSA</name>
+  <name xml:lang="vi">Cài đặt DSA</name>
+  <name xml:lang="id">Pengaturan DSA</name>
+  <name xml:lang="tr">DSA Ayarları</name>
   <summary>Settings of Desktop Subsystem for Android</summary>
   <summary xml:lang="ko">Desktop Subsystem for Android의 설정</summary>
+  <summary xml:lang="ja">Desktop Subsystem for Android の設定</summary>
+  <summary xml:lang="zh_CN">Desktop Subsystem for Android 的设置</summary>
+  <summary xml:lang="zh_TW">Desktop Subsystem for Android 的設定</summary>
+  <summary xml:lang="es">Configuración de Desktop Subsystem for Android</summary>
+  <summary xml:lang="fr">Paramètres de Desktop Subsystem for Android</summary>
+  <summary xml:lang="de">Einstellungen von Desktop Subsystem for Android</summary>
+  <summary xml:lang="pt_BR">Configurações do Desktop Subsystem for Android</summary>
+  <summary xml:lang="ru">Параметры Desktop Subsystem for Android</summary>
+  <summary xml:lang="it">Impostazioni di Desktop Subsystem for Android</summary>
+  <summary xml:lang="vi">Cài đặt của Desktop Subsystem for Android</summary>
+  <summary xml:lang="id">Pengaturan Desktop Subsystem for Android</summary>
+  <summary xml:lang="tr">Desktop Subsystem for Android ayarları</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>Apache-2.0</project_license>
   <developer id="io.github.thisisthepy">
@@ -23,6 +47,81 @@
       Desktop Subsystem for Android의 동작을 바꿉니다. 앱과 앱 창, 바탕 화면의 위젯,
       백그라운드에서 실행 중인 앱, 공유 폴더, 네트워크, Android 버전, 기기 정보,
       개발자 모드와 로그를 다룹니다.
+    </p>
+    <p xml:lang="ja">
+      DSA 設定は Android™ を起動、停止し、その状態とメモリー使用量を表示し、
+      Desktop Subsystem for Android の動作を変更します。アプリとそのウィンドウ、
+      デスクトップのウィジェット、バックグラウンドで実行されるアプリ、共有フォルダー、
+      ネットワーク、Android のバージョン、デバイス ID、開発者モード、ログを扱います。
+    </p>
+    <p xml:lang="zh_CN">
+      DSA 设置可以启动和停止 Android™，显示其状态和内存占用，并更改
+      Desktop Subsystem for Android 的工作方式：应用及其窗口、桌面上的小组件、
+      在后台运行的应用、共享文件夹、网络、Android 版本、设备标识、开发者模式和日志。
+    </p>
+    <p xml:lang="zh_TW">
+      DSA 設定可以啟動和停止 Android™，顯示其狀態和記憶體用量，並變更
+      Desktop Subsystem for Android 的運作方式：應用程式及其視窗、桌面上的小工具、
+      在背景執行的應用程式、共用資料夾、網路、Android 版本、裝置識別資訊、
+      開發人員模式和記錄。
+    </p>
+    <p xml:lang="es">
+      Configuración de DSA inicia y detiene Android™, muestra su estado y cuánta memoria usa,
+      y cambia cómo funciona Desktop Subsystem for Android: las aplicaciones y sus ventanas,
+      los widgets del escritorio, las aplicaciones que se ejecutan en segundo plano, las
+      carpetas compartidas, la red, la versión de Android, la identidad del dispositivo, el
+      modo de desarrollador y los registros.
+    </p>
+    <p xml:lang="fr">
+      Paramètres de DSA démarre et arrête Android™, affiche son état et la mémoire qu'il
+      utilise, et modifie le fonctionnement de Desktop Subsystem for Android : les applications
+      et leurs fenêtres, les widgets du bureau, les applications qui s'exécutent en
+      arrière-plan, les dossiers partagés, le réseau, la version d'Android, l'identité de
+      l'appareil, le mode développeur et les journaux.
+    </p>
+    <p xml:lang="de">
+      DSA-Einstellungen startet und beendet Android™, zeigt seinen Zustand und Speicherbedarf
+      und legt fest, wie Desktop Subsystem for Android arbeitet: die Apps und ihre Fenster,
+      die Widgets auf dem Desktop, die Apps im Hintergrund, die freigegebenen Ordner, das
+      Netzwerk, die Android-Version, die Geräteidentität, den Entwicklermodus und die
+      Protokolle.
+    </p>
+    <p xml:lang="pt_BR">
+      As Configurações do DSA iniciam e param o Android™, mostram o estado dele e quanta
+      memória ele usa e mudam como o Desktop Subsystem for Android funciona: os apps e suas
+      janelas, os widgets na área de trabalho, os apps executados em segundo plano, as pastas
+      compartilhadas, a rede, a versão do Android, a identidade do dispositivo, o modo de
+      desenvolvedor e os registros.
+    </p>
+    <p xml:lang="ru">
+      Параметры DSA запускают и останавливают Android™, показывают его состояние и объём
+      занятой памяти и меняют работу Desktop Subsystem for Android: приложения и их окна,
+      виджеты на рабочем столе, фоновые приложения, общие папки, сеть, версию Android,
+      идентификацию устройства, режим разработчика и журналы.
+    </p>
+    <p xml:lang="it">
+      Impostazioni di DSA avvia e arresta Android™, ne mostra lo stato e la memoria occupata e
+      modifica il funzionamento di Desktop Subsystem for Android: le app e le loro finestre, i
+      widget sul desktop, le app eseguite in background, le cartelle condivise, la rete, la
+      versione di Android, l'identità del dispositivo, la modalità sviluppatore e i log.
+    </p>
+    <p xml:lang="vi">
+      Cài đặt DSA khởi động và dừng Android™, cho biết trạng thái và lượng bộ nhớ đang dùng,
+      và thay đổi cách Desktop Subsystem for Android hoạt động: các ứng dụng và cửa sổ của
+      chúng, tiện ích trên màn hình nền, ứng dụng chạy nền, thư mục dùng chung, mạng, phiên
+      bản Android, danh tính thiết bị, chế độ nhà phát triển và nhật ký.
+    </p>
+    <p xml:lang="id">
+      Pengaturan DSA memulai dan menghentikan Android™, menampilkan statusnya dan berapa banyak
+      memori yang dipakainya, serta mengubah cara kerja Desktop Subsystem for Android: aplikasi
+      dan jendelanya, widget di desktop, aplikasi yang berjalan di latar belakang, folder
+      bersama, jaringan, versi Android, identitas perangkat, mode pengembang, dan log.
+    </p>
+    <p xml:lang="tr">
+      DSA Ayarları, Android™'i başlatır ve durdurur, durumunu ve ne kadar bellek kullandığını
+      gösterir ve Desktop Subsystem for Android'in çalışma biçimini değiştirir: uygulamalar ve
+      pencereleri, masaüstündeki widget'lar, arka planda çalışan uygulamalar, paylaşılan
+      klasörler, ağ, Android sürümü, cihaz kimliği, geliştirici modu ve günlükler.
     </p>
     <p>Android is a trademark of Google LLC.</p>
   </description>

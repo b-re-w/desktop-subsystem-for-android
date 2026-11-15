@@ -1,0 +1,2600 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The texts of DSA Settings in Italian, read through ResourceManager. Each key has the same meaning in every language. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Impostazioni DSA</value>
+  </data>
+  <data name="AppTitle.Text" xml:space="preserve">
+    <value>Impostazioni DSA</value>
+  </data>
+  <data name="NavGeneral.Content" xml:space="preserve">
+    <value>Generale</value>
+  </data>
+  <data name="NavMemory.Content" xml:space="preserve">
+    <value>Memoria</value>
+  </data>
+  <data name="NavDisplay.Content" xml:space="preserve">
+    <value>Schermo e GPU</value>
+  </data>
+  <data name="NavUpdates.Content" xml:space="preserve">
+    <value>Aggiornamenti</value>
+  </data>
+  <data name="NavAdvanced.Content" xml:space="preserve">
+    <value>Avanzate</value>
+  </data>
+  <data name="NavAbout.Content" xml:space="preserve">
+    <value>Informazioni</value>
+  </data>
+  <data name="GeneralTitle.Text" xml:space="preserve">
+    <value>Generale</value>
+  </data>
+  <data name="GeneralErrorBar.Title" xml:space="preserve">
+    <value>Si è verificato un problema</value>
+  </data>
+  <data name="GeneralStateCard.Header" xml:space="preserve">
+    <value>Stato</value>
+  </data>
+  <data name="GeneralStateCard.Description" xml:space="preserve">
+    <value>Desktop Subsystem for Android™ esegue Android in una propria macchina virtuale leggera e mostra ogni app in una propria finestra.</value>
+  </data>
+  <data name="StartButton.Content" xml:space="preserve">
+    <value>Avvia</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>Arresta</value>
+  </data>
+  <data name="ProblemBar.Title" xml:space="preserve">
+    <value>Android non è pronto</value>
+  </data>
+  <data name="LastReasonBar.Title" xml:space="preserve">
+    <value>Ultimo arresto</value>
+  </data>
+  <data name="LastReason_Requested" xml:space="preserve">
+    <value>Android è stato arrestato su richiesta. Avvialo di nuovo quando ti serve.</value>
+  </data>
+  <data name="LastReason_Updating" xml:space="preserve">
+    <value>DSA è in fase di aggiornamento. Avvia di nuovo Android al termine dell'aggiornamento.</value>
+  </data>
+  <data name="LastReason_Virtualization" xml:space="preserve">
+    <value>La virtualizzazione è disattivata o Hyper-V non è presente. Attiva Piattaforma macchina virtuale, poi riavvia il PC.</value>
+  </data>
+  <data name="LastReason_InvalidConfiguration" xml:space="preserve">
+    <value>Windows ha rifiutato le impostazioni della macchina virtuale di Android. Aggiorna o reinstalla DSA.</value>
+  </data>
+  <data name="LastReason_OutOfMemory" xml:space="preserve">
+    <value>Memoria insufficiente per avviare Android. Chiudi altre app e riprova.</value>
+  </data>
+  <data name="LastReason_Disk" xml:space="preserve">
+    <value>Un problema del disco ha impedito l'avvio di Android. Libera spazio o controlla l'unità, poi riprova.</value>
+  </data>
+  <data name="LastReason_TimedOut" xml:space="preserve">
+    <value>L'avvio di Android ha richiesto troppo tempo. Prova ad avviarlo di nuovo.</value>
+  </data>
+  <data name="LastReason_Lost" xml:space="preserve">
+    <value>Android si è arrestato in modo imprevisto. Prova ad avviarlo di nuovo.</value>
+  </data>
+  <data name="LastReason_General" xml:space="preserve">
+    <value>Impossibile avviare Android. Riprova e, se continua a non riuscire, controlla i dettagli.</value>
+  </data>
+  <data name="LastReasonDetails.Header" xml:space="preserve">
+    <value>Dettagli</value>
+  </data>
+  <data name="LastReasonCopy.ToolTip" xml:space="preserve">
+    <value>Copia i dettagli</value>
+  </data>
+  <data name="UpdateNoticeBar.Title" xml:space="preserve">
+    <value>Aggiornamento</value>
+  </data>
+  <data name="UpdateNotice_AndroidUpdated" xml:space="preserve">
+    <value>Android è stato aggiornato a {0}.</value>
+  </data>
+  <data name="UpdateNotice_AndroidInstalled" xml:space="preserve">
+    <value>Android {0} è installato.</value>
+  </data>
+  <data name="UpdateNotice_AndroidChosen" xml:space="preserve">
+    <value>Android {0} è stato scelto. DSA lo scarica ora e lo usa al prossimo avvio di Android.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
+    <value>Android {0} non si è avviato ({1}), quindi è di nuovo in uso Android {2}.
+Android {0} verrà riprovato quando ne uscirà una build più recente o una nuova versione di DSA.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
+    <value>Android {0} non si è avviato ({1}), quindi è di nuovo in uso Android {2}.
+Android {2} non ha ancora terminato l'avvio ({3}). Avvia di nuovo Android per avviarlo.</value>
+  </data>
+  <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
+    <value>Android {0} non si è avviato ({1}) e non è installata nessun'altra immagine.
+DSA scarica un'altra immagine, se disponibile. La prossima versione di DSA riproverà questa.</value>
+  </data>
+  <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
+    <value>Android {0} resta in prova e non è la causa: {1}</value>
+  </data>
+  <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
+    <value>DSA è stato aggiornato a {0}.</value>
+  </data>
+  <data name="UpdateNotice_DsaDownloaded" xml:space="preserve">
+    <value>DSA {0} è stato scaricato. Verrà installato quando Android non è in esecuzione.</value>
+  </data>
+  <data name="UpdateNotice_DsaInstalling" xml:space="preserve">
+    <value>Installazione di DSA {0} in corso. Al termine il servizio si riavvia.</value>
+  </data>
+  <data name="UpdateNotice_DsaFailed" xml:space="preserve">
+    <value>Aggiornamento di DSA a {0} non riuscito ({1}). DSA {2} è ancora installato.</value>
+  </data>
+  <data name="GeneralMoreHeader.Text" xml:space="preserve">
+    <value>Altro</value>
+  </data>
+  <data name="OpenLogsCard.Header" xml:space="preserve">
+    <value>Apri la mia cartella dei log</value>
+  </data>
+  <data name="OpenLogsCard.Description" xml:space="preserve">
+    <value>I log del gestore delle finestre e delle finestre delle app, per segnalare un problema.</value>
+  </data>
+  <data name="RefreshCard.Header" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="RefreshCard.Description" xml:space="preserve">
+    <value>Chiedi di nuovo lo stato al servizio DSA.</value>
+  </data>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>Sconosciuto</value>
+  </data>
+  <data name="State_Stopped" xml:space="preserve">
+    <value>Arrestato</value>
+  </data>
+  <data name="State_Starting" xml:space="preserve">
+    <value>Avvio in corso</value>
+  </data>
+  <data name="State_Active" xml:space="preserve">
+    <value>In esecuzione</value>
+  </data>
+  <data name="State_Dozing" xml:space="preserve">
+    <value>In Doze (inattivo)</value>
+  </data>
+  <data name="State_Frozen" xml:space="preserve">
+    <value>Congelato</value>
+  </data>
+  <data name="State_Stopping" xml:space="preserve">
+    <value>Arresto in corso</value>
+  </data>
+  <data name="State_Stalled" xml:space="preserve">
+    <value>Non pronto</value>
+  </data>
+  <data name="Problem_CliMissing" xml:space="preserve">
+    <value>Impossibile avviare il comando dsa. Reinstalla DSA.</value>
+  </data>
+  <data name="Problem_ServiceUnreachable" xml:space="preserve">
+    <value>Il servizio DSA non è in esecuzione.</value>
+  </data>
+  <data name="Problem_Refused" xml:space="preserve">
+    <value>Il servizio DSA non ha potuto eseguire questa operazione.</value>
+  </data>
+  <data name="Problem_Unreadable" xml:space="preserve">
+    <value>Impossibile leggere la risposta del comando dsa. Reinstalla DSA.</value>
+  </data>
+  <data name="MemoryTitle.Text" xml:space="preserve">
+    <value>Memoria</value>
+  </data>
+  <data name="MemoryRefreshButton.Content" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="MemoryErrorBar.Title" xml:space="preserve">
+    <value>Impossibile misurare la memoria</value>
+  </data>
+  <data name="MemoryHostHeader.Text" xml:space="preserve">
+    <value>Su questo PC</value>
+  </data>
+  <data name="MemoryHostTotalCard.Header" xml:space="preserve">
+    <value>In uso su questo PC</value>
+  </data>
+  <data name="MemoryHostTotalCard.Description" xml:space="preserve">
+    <value>La RAM occupata ora dalla macchina virtuale, dal gestore delle finestre e dalle finestre delle app.</value>
+  </data>
+  <data name="MemoryHostNone.Text" xml:space="preserve">
+    <value>Android non è in esecuzione, quindi non occupa memoria su questo PC.</value>
+  </data>
+  <data name="MemoryGuestHeader.Text" xml:space="preserve">
+    <value>All'interno di Android</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Title" xml:space="preserve">
+    <value>Ancora nessun rapporto</value>
+  </data>
+  <data name="MemoryGuestNoneBar.Message" xml:space="preserve">
+    <value>Android segnala come usa la memoria alcuni minuti dopo l'avvio.</value>
+  </data>
+  <data name="MemoryGuestTotalCard.Header" xml:space="preserve">
+    <value>Disponibile per Android</value>
+  </data>
+  <data name="MemoryAvailableOf.Text" xml:space="preserve">
+    <value>disponibili su</value>
+  </data>
+  <data name="MemoryTopHeader.Text" xml:space="preserve">
+    <value>Processi più grandi</value>
+  </data>
+  <data name="Role_Vm" xml:space="preserve">
+    <value>Macchina virtuale (vmmem)</value>
+  </data>
+  <data name="Role_WindowManager" xml:space="preserve">
+    <value>Gestore delle finestre</value>
+  </data>
+  <data name="Role_Renderer" xml:space="preserve">
+    <value>Renderer grafico</value>
+  </data>
+  <data name="Role_AppWindow" xml:space="preserve">
+    <value>Finestra dell'app</value>
+  </data>
+  <data name="Memory_ProcessDetail" xml:space="preserve">
+    <value>Processo {0}, {1} privati</value>
+  </data>
+  <data name="Memory_ReportAge" xml:space="preserve">
+    <value>Segnalato {0} secondi fa</value>
+  </data>
+  <data name="Memory_Apps" xml:space="preserve">
+    <value>App e sistema</value>
+  </data>
+  <data name="Memory_AppsDetail" xml:space="preserve">
+    <value>{0} in memoria, {1} compressi</value>
+  </data>
+  <data name="Memory_Cache" xml:space="preserve">
+    <value>Cache</value>
+  </data>
+  <data name="Memory_CacheDetail" xml:space="preserve">
+    <value>Contenuti dei file tenuti in memoria. Android li rilascia quando gli serve la memoria.</value>
+  </data>
+  <data name="Memory_Kernel" xml:space="preserve">
+    <value>Cache del kernel</value>
+  </data>
+  <data name="Memory_KernelDetail" xml:space="preserve">
+    <value>Cache che il kernel può liberare quando serve.</value>
+  </data>
+  <data name="Memory_Shared" xml:space="preserve">
+    <value>Memoria condivisa</value>
+  </data>
+  <data name="Memory_Zram" xml:space="preserve">
+    <value>Memoria compressa</value>
+  </data>
+  <data name="Memory_ZramDetail" xml:space="preserve">
+    <value>Contiene {0} di pagine, compresse</value>
+  </data>
+  <data name="Memory_Free" xml:space="preserve">
+    <value>Libera</value>
+  </data>
+  <data name="Memory_GuestProcessDetail" xml:space="preserve">
+    <value>Processo {0}</value>
+  </data>
+  <data name="Memory_GuestProcessGooglePlay" xml:space="preserve">
+    <value>Processo {0}, Google Play services</value>
+  </data>
+  <data name="Memory_GooglePlay" xml:space="preserve">
+    <value>Google Play services</value>
+  </data>
+  <data name="Memory_GooglePlayDetail" xml:space="preserve">
+    <value>Le app Google che hai installato, {0} processi: {1}</value>
+  </data>
+  <data name="Memory_Unknown" xml:space="preserve">
+    <value>sconosciuto</value>
+  </data>
+  <data name="DisplayTitle.Text" xml:space="preserve">
+    <value>Schermo e GPU</value>
+  </data>
+  <data name="SettingsErrorBar.Title" xml:space="preserve">
+    <value>L'impostazione non è stata modificata</value>
+  </data>
+  <data name="RenderGpuCard.Header" xml:space="preserve">
+    <value>GPU di rendering</value>
+  </data>
+  <data name="RenderGpuCard.Description" xml:space="preserve">
+    <value>La GPU che disegna le app Android. Di norma quella del monitor principale: i frame restano su una GPU e la GPU dedicata del laptop riposa.</value>
+  </data>
+  <data name="Gpu_Display" xml:space="preserve">
+    <value>La GPU del monitor principale (consigliata)</value>
+  </data>
+  <data name="Gpu_Integrated" xml:space="preserve">
+    <value>GPU integrata</value>
+  </data>
+  <data name="Gpu_Discrete" xml:space="preserve">
+    <value>GPU dedicata (ad esempio, per i giochi)</value>
+  </data>
+  <data name="DisplayGpuCard.Header" xml:space="preserve">
+    <value>GPU del monitor principale</value>
+  </data>
+  <data name="DisplayGpuCard.Description" xml:space="preserve">
+    <value>Dove esegue ora il rendering la scelta predefinita.</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Title" xml:space="preserve">
+    <value>Si applica dopo un riavvio</value>
+  </data>
+  <data name="RenderGpuAppliesBar.Message" xml:space="preserve">
+    <value>Una nuova GPU di rendering ha effetto al riavvio del gestore delle finestre: al prossimo accesso, o quando lo riavvii qui sotto.</value>
+  </data>
+  <data name="VulkanDriverCard.Header" xml:space="preserve">
+    <value>Driver Vulkan</value>
+  </data>
+  <data name="VulkanDriverCard.Description" xml:space="preserve">
+    <value>Le app Android disegnano tramite Vulkan. Una GPU senza driver Vulkan può usare Dozen (Vulkan su Direct3D 12) di OpenCL, OpenGL, and Vulkan Compatibility Pack di Microsoft. Si applica al riavvio del gestore delle finestre.</value>
+  </data>
+  <data name="Vulkan_Auto" xml:space="preserve">
+    <value>Automatico: il driver della GPU, Dozen solo se manca (consigliato)</value>
+  </data>
+  <data name="Vulkan_Native" xml:space="preserve">
+    <value>Solo il driver Vulkan della GPU</value>
+  </data>
+  <data name="Vulkan_Dozen" xml:space="preserve">
+    <value>Solo Dozen (per test e confronti)</value>
+  </data>
+  <data name="Graphics_Unknown" xml:space="preserve">
+    <value>Il gestore delle finestre non ha ancora indicato su cosa esegue il rendering.</value>
+  </data>
+  <data name="Graphics_Native" xml:space="preserve">
+    <value>Rendering in corso tramite il driver Vulkan della GPU.</value>
+  </data>
+  <data name="Graphics_Dozen" xml:space="preserve">
+    <value>Rendering in corso tramite Dozen (Vulkan su Direct3D 12).</value>
+  </data>
+  <data name="Graphics_DozenCpu" xml:space="preserve">
+    <value>Rendering in corso tramite Dozen sulla CPU: questa GPU non ha un driver Direct3D 12.</value>
+  </data>
+  <data name="Graphics_Unavailable" xml:space="preserve">
+    <value>Nessun Vulkan su cui eseguire il rendering, quindi Android non si avvia. Installa Compatibility Pack da Microsoft Store, o con winget install Microsoft.OpenCLGLVulkanCompatibilityPack, poi esci e accedi di nuovo.</value>
+  </data>
+  <data name="Graphics_WithDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="CompatibilityPackLink.Content" xml:space="preserve">
+    <value>Ottieni Compatibility Pack in Microsoft Store</value>
+  </data>
+  <data name="CpuRenderingBar.Title" xml:space="preserve">
+    <value>Android disegna sulla CPU</value>
+  </data>
+  <data name="CpuRenderingBar.Message" xml:space="preserve">
+    <value>La GPU di questo PC non ha un driver Direct3D 12: le app funzionano, ma giochi e animazioni saranno lenti.</value>
+  </data>
+  <data name="TouchGesturesCard.Header" xml:space="preserve">
+    <value>Disattiva i movimenti touch di Windows nelle finestre delle app DSA</value>
+  </data>
+  <data name="TouchGesturesCard.Description" xml:space="preserve">
+    <value>Con una finestra DSA in primo piano, i movimenti a tre e quattro dita di Windows sono disattivati, così le app ricevono fino a dieci dita.
+Attivo per impostazione predefinita. Le altre app mantengono i movimenti impostati in Impostazioni di Windows.</value>
+  </data>
+  <data name="TouchGestures_Failed" xml:space="preserve">
+    <value>Non disponibile: Windows ha rifiutato di cambiare i movimenti touch ({0}). Puoi disattivarli per tutte le app in Impostazioni di Windows.</value>
+  </data>
+  <data name="TouchGestures_NoReason" xml:space="preserve">
+    <value>nessun motivo indicato</value>
+  </data>
+  <data name="TouchSettingsLink.Content" xml:space="preserve">
+    <value>Apri le impostazioni touch</value>
+  </data>
+  <data name="RestartWindowManagerCard.Header" xml:space="preserve">
+    <value>Riavvia il gestore delle finestre</value>
+  </data>
+  <data name="RestartWindowManagerCard.Description" xml:space="preserve">
+    <value>Le finestre aperte delle app Android si chiudono e si riaprono.</value>
+  </data>
+  <data name="RestartWindowManagerButton.Content" xml:space="preserve">
+    <value>Riavvia</value>
+  </data>
+  <data name="RestartWindowManagerTitle" xml:space="preserve">
+    <value>Riavviare il gestore delle finestre?</value>
+  </data>
+  <data name="RestartWindowManagerBody" xml:space="preserve">
+    <value>Le finestre delle app Android si chiudono per un momento.
+
+Android e le sue app restano in esecuzione.</value>
+  </data>
+  <data name="RestartWindowManagerAction" xml:space="preserve">
+    <value>Riavvia</value>
+  </data>
+  <data name="RestartWindowManagerFailed" xml:space="preserve">
+    <value>Impossibile riavviare il gestore delle finestre</value>
+  </data>
+  <data name="UpdatesTitle.Text" xml:space="preserve">
+    <value>Aggiornamenti</value>
+  </data>
+  <data name="ProgramUpdatesCard.Header" xml:space="preserve">
+    <value>Aggiorna DSA automaticamente</value>
+  </data>
+  <data name="ProgramUpdatesCard.Description" xml:space="preserve">
+    <value>Scarica le nuove versioni firmate di DSA e le installa quando nessun Android è in esecuzione.</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Header" xml:space="preserve">
+    <value>Ricevi le versioni non definitive</value>
+  </data>
+  <data name="PrereleaseUpdatesCard.Description" xml:space="preserve">
+    <value>Installa anche le versioni ancora in fase di completamento. Ogni versione prima della 1.0 è non definitiva.
+Disattivarla non riporta mai DSA indietro: attende una versione stabile più recente.</value>
+  </data>
+  <data name="ImageUpdatesCard.Header" xml:space="preserve">
+    <value>Aggiorna automaticamente l'immagine Android</value>
+  </data>
+  <data name="ImageUpdatesCard.Description" xml:space="preserve">
+    <value>Scarica aggiornamenti di sicurezza firmati e nuove versioni di Android. Si applicano al riavvio di Android, secondo l'impostazione sotto.</value>
+  </data>
+  <data name="UpdatesMachineNote.Text" xml:space="preserve">
+    <value>Queste impostazioni valgono per tutti gli utenti di questo PC, quindi solo un amministratore può modificarle.
+Un interruttore che resta disattivato non è offerto da questa installazione.</value>
+  </data>
+  <data name="AdminBar.Title" xml:space="preserve">
+    <value>Servono diritti di amministratore</value>
+  </data>
+  <data name="AdminBar.Message" xml:space="preserve">
+    <value>Le impostazioni di aggiornamento valgono per tutti gli utenti di questo PC, quindi solo un amministratore può modificarle.
+Usa Modifica come amministratore e Windows chiederà l'autorizzazione.</value>
+  </data>
+  <data name="AdminShield.ToolTip" xml:space="preserve">
+    <value>Solo un amministratore può modificare questa impostazione.</value>
+  </data>
+  <data name="ChangeAsAdmin.Content" xml:space="preserve">
+    <value>Modifica come amministratore</value>
+  </data>
+  <data name="ElevatedFailed" xml:space="preserve">
+    <value>L'impostazione non è stata modificata (dsa è terminato con il codice {0}).</value>
+  </data>
+  <data name="ElevationDeclined" xml:space="preserve">
+    <value>L'impostazione non è stata modificata perché non sono stati concessi i diritti di amministratore.</value>
+  </data>
+  <data name="UpdateNowHeader.Text" xml:space="preserve">
+    <value>Installa ora</value>
+  </data>
+  <data name="UpdateNowCard.Header" xml:space="preserve">
+    <value>Installa ora la versione più recente di DSA</value>
+  </data>
+  <data name="UpdateNowCard.Description" xml:space="preserve">
+    <value>Durante l'installazione l'Android di ogni utente si arresta.</value>
+  </data>
+  <data name="UpdateNowButton.Content" xml:space="preserve">
+    <value>Installa ora</value>
+  </data>
+  <data name="UpdateNowTitle" xml:space="preserve">
+    <value>Installare ora la versione più recente?</value>
+  </data>
+  <data name="UpdateNowBody" xml:space="preserve">
+    <value>DSA arresta l'Android di ogni utente e installa la versione più recente.
+
+Al termine dell'installazione il servizio DSA si riavvia.</value>
+  </data>
+  <data name="UpdateNowAction" xml:space="preserve">
+    <value>Installa</value>
+  </data>
+  <data name="UpdateNowFailed" xml:space="preserve">
+    <value>DSA non è stato aggiornato</value>
+  </data>
+  <data name="ProgramUpdateCard.Header" xml:space="preserve">
+    <value>Aggiornamento di DSA</value>
+  </data>
+  <data name="ProgramUpdateDone.Title" xml:space="preserve">
+    <value>DSA aggiornato</value>
+  </data>
+  <data name="ProgramUpdate_Starting" xml:space="preserve">
+    <value>Preparazione dell'aggiornamento</value>
+  </data>
+  <data name="ProgramUpdate_Downloading" xml:space="preserve">
+    <value>Download di DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_StoppingAndroid" xml:space="preserve">
+    <value>Arresto di Android per installare DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Installing" xml:space="preserve">
+    <value>Installazione di DSA {0}</value>
+  </data>
+  <data name="ProgramUpdate_Restarting" xml:space="preserve">
+    <value>DSA si sta riavviando per completare l'aggiornamento</value>
+  </data>
+  <data name="ProgramUpdate_Version" xml:space="preserve">
+    <value>Versione {0}</value>
+  </data>
+  <data name="ProgramUpdate_KeepOpen" xml:space="preserve">
+    <value>Non chiudere DSA e non avviare app Android finché l'aggiornamento non è completato.</value>
+  </data>
+  <data name="ProgramUpdate_Applied" xml:space="preserve">
+    <value>Aggiornato a {0}</value>
+  </data>
+  <data name="ProgramUpdate_Failed" xml:space="preserve">
+    <value>Aggiornamento a {0} non riuscito. La versione precedente è ancora installata.</value>
+  </data>
+  <data name="ProgramUpdate_NotBack" xml:space="preserve">
+    <value>DSA non è tornato attivo dopo l'aggiornamento a {0}. Se non si avvia a breve, riavvia il computer.</value>
+  </data>
+  <data name="AdvancedTitle.Text" xml:space="preserve">
+    <value>Avanzate</value>
+  </data>
+  <data name="FilesHeader.Text" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="FileSharingCard.Header" xml:space="preserve">
+    <value>Condividi le cartelle di Windows con Android</value>
+  </data>
+  <data name="FileSharingCard.Description" xml:space="preserve">
+    <value>Mostra le cartelle scelte qui sotto nella memoria condivisa di Android, nella cartella Host. Attivo per impostazione predefinita.
+Le app Android richiedono l'autorizzazione di archiviazione di Android e possono fare solo ciò che può fare il tuo account Windows.</value>
+  </data>
+  <data name="SharedFoldersCard.Header" xml:space="preserve">
+    <value>Cartelle condivise</value>
+  </data>
+  <data name="SharedFoldersCard.Description" xml:space="preserve">
+    <value>Una cartella deselezionata viene subito tolta ad Android.</value>
+  </data>
+  <data name="Folder_Documents" xml:space="preserve">
+    <value>Documenti</value>
+  </data>
+  <data name="Folder_Downloads" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Folder_Pictures" xml:space="preserve">
+    <value>Immagini</value>
+  </data>
+  <data name="Folder_Music" xml:space="preserve">
+    <value>Musica</value>
+  </data>
+  <data name="Folder_Videos" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Folder_Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="AndroidFilesCard.Header" xml:space="preserve">
+    <value>File di Android</value>
+  </data>
+  <data name="AndroidFilesCard.Description" xml:space="preserve">
+    <value>Apre in Esplora file i file salvati dalle app Android, come foto e download. Android si avvia se non è in esecuzione.
+Anche Android nel riquadro di spostamento di Esplora file li apre.</value>
+  </data>
+  <data name="FilesDropCard.Header" xml:space="preserve">
+    <value>Invia file alle app Android</value>
+  </data>
+  <data name="FilesNote.Text" xml:space="preserve">
+    <value>Per inviare un file a un'app Android, trascinalo da Esplora file sulla finestra dell'app. Un APK rilasciato viene installato.</value>
+  </data>
+  <data name="LinksCard.Header" xml:space="preserve">
+    <value>Apri i link web nelle app Android</value>
+  </data>
+  <data name="LinksCard.Description" xml:space="preserve">
+    <value>Di norma disattivato: i link nelle app Android si aprono nel browser di Windows. Se attivo, in un'app Android, come su un telefono.
+Un link che un'app installata ha verificato come proprio si apre sempre in quell'app.</value>
+  </data>
+  <data name="ArmHeader.Text" xml:space="preserve">
+    <value>App ARM</value>
+  </data>
+  <data name="ArmCard.Header" xml:space="preserve">
+    <value>Esegui le app create solo per ARM</value>
+  </data>
+  <data name="ArmCard.Description" xml:space="preserve">
+    <value>Le app create solo per processori ARM si installano ed eseguono qui tramite un traduttore ARM. Si applica dal prossimo avvio di Android.
+Vengono eseguite solo le app ARM a 64 bit (arm64-v8a).
+Android usa il traduttore open source integrato, se non installi quello di Google qui sotto o un altro con dsa arm-translation install.</value>
+  </data>
+  <data name="ArmRestartBar.Title" xml:space="preserve">
+    <value>Riavvia Android per applicare</value>
+  </data>
+  <data name="ArmRestartBar.Message" xml:space="preserve">
+    <value>Android è stato avviato prima di questa modifica. Arresta e avvia Android perché le app ARM la seguano.</value>
+  </data>
+  <data name="ArmDefaultCard.Header" xml:space="preserve">
+    <value>Usa il traduttore predefinito</value>
+  </data>
+  <data name="ArmDefaultButton.Content" xml:space="preserve">
+    <value>Usa</value>
+  </data>
+  <data name="Arm_DefaultDescription" xml:space="preserve">
+    <value>{0} {1} ({2}) è incluso in questo Android e viene usato se non installi un altro traduttore.
+Tornare a questo rimuove il pacchetto installato, dal prossimo avvio di Android.</value>
+  </data>
+  <data name="Arm_SupportedDefault" xml:space="preserve">
+    <value>Supportato da {0} {1} ({2}), il traduttore incluso in questo Android.</value>
+  </data>
+  <data name="Arm_DefaultTurnedOff" xml:space="preserve">
+    <value>Non supportato: {0} {1} è disattivato.</value>
+  </data>
+  <data name="ArmRemoveCard.Header" xml:space="preserve">
+    <value>Rimuovi il pacchetto di traduzione ARM</value>
+  </data>
+  <data name="ArmRemoveCard.Description" xml:space="preserve">
+    <value>Elimina il pacchetto dal disco dei componenti aggiuntivi. Le app ARM installate restano, ma non si avviano dopo il riavvio di Android.</value>
+  </data>
+  <data name="ArmRemoveButton.Content" xml:space="preserve">
+    <value>Rimuovi</value>
+  </data>
+  <data name="Arm_NotSupported" xml:space="preserve">
+    <value>Non supportato: nessun pacchetto di traduzione ARM installato.</value>
+  </data>
+  <data name="Arm_Supported" xml:space="preserve">
+    <value>Supportato da {0} {1} ({2}).</value>
+  </data>
+  <data name="Arm_TurnedOff" xml:space="preserve">
+    <value>Non supportato: {0} {1} è installato ma disattivato.</value>
+  </data>
+  <data name="Arm_NoLicense" xml:space="preserve">
+    <value>licenza non indicata</value>
+  </data>
+  <data name="Arm_Abis" xml:space="preserve">
+    <value>Android installa app per: {0}</value>
+  </data>
+  <data name="Arm_NotRunning" xml:space="preserve">
+    <value>Android non è in esecuzione, quindi non si sa cosa supporta ora.</value>
+  </data>
+  <data name="ArmGoogleCard.Header" xml:space="preserve">
+    <value>Traduttore ARM di Google</value>
+  </data>
+  <data name="ArmGoogleCard.Description" xml:space="preserve">
+    <value>Installa il traduttore ARM dall'immagine dell'emulatore Android di Google per questa versione di Android.
+Scarica circa 2 GB da Google, conserva solo il traduttore ed elimina il resto. Non viene scaricato nulla finché non accetti.
+Un pacchetto creato da un altro traduttore, come Digitalis, fa lo stesso lavoro.</value>
+  </data>
+  <data name="ArmGoogleButton.Content" xml:space="preserve">
+    <value>Ottieni</value>
+  </data>
+  <data name="ArmGoogleTermsLink.Content" xml:space="preserve">
+    <value>Android SDK License</value>
+  </data>
+  <data name="ArmGoogleConfirm.Title" xml:space="preserve">
+    <value>Ottenere il traduttore ARM di Google?</value>
+  </data>
+  <data name="ArmGoogleConfirm.Action" xml:space="preserve">
+    <value>Accetta e scarica</value>
+  </data>
+  <data name="ArmGoogle_Notice" xml:space="preserve">
+    <value>DSA scarica da Google l'immagine dell'emulatore Android per questa versione di Android e ne estrae solo il traduttore ARM.
+
+• Download: circa 2 GB, eliminati al termine.
+• Origine: {0}
+• Condizioni: il traduttore è software di Google soggetto alla Android SDK License ({1}). Scaricandolo, accetti queste condizioni.
+• Il traduttore funziona dal prossimo avvio di Android.
+
+DSA non include né ridistribuisce il traduttore.</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Title" xml:space="preserve">
+    <value>Download del traduttore ARM di Google</value>
+  </data>
+  <data name="ArmGoogleFetchingBar.Message" xml:space="preserve">
+    <value>Download di circa 2 GB da Google ed estrazione del traduttore. Richiede alcuni minuti.</value>
+  </data>
+  <data name="GappsHeader.Text" xml:space="preserve">
+    <value>Google Play</value>
+  </data>
+  <data name="GappsCard.Header" xml:space="preserve">
+    <value>Google Play services e Play Store</value>
+  </data>
+  <data name="GappsCard.Description" xml:space="preserve">
+    <value>Installa LiteGapps Core, pacchetto pubblico con Google Play services, Play Store e sincronizzazione account per questa versione di Android.
+DSA non include le app di Google. Si applica dal prossimo avvio di Android.</value>
+  </data>
+  <data name="GappsInstallButton.Content" xml:space="preserve">
+    <value>Installa</value>
+  </data>
+  <data name="GappsInstallingBar.Title" xml:space="preserve">
+    <value>Installazione di Google Play</value>
+  </data>
+  <data name="GappsInstallingBar.Message" xml:space="preserve">
+    <value>Download e installazione di Google Play in corso. Può richiedere diversi minuti.</value>
+  </data>
+  <data name="GappsRestartBar.Title" xml:space="preserve">
+    <value>Riavvia Android per applicare la modifica</value>
+  </data>
+  <data name="GappsRestartBar.Message" xml:space="preserve">
+    <value>Android è stato avviato prima di questa modifica. Arresta Android e avvialo di nuovo per applicarla a Google Play.</value>
+  </data>
+  <data name="GappsRemoveCard.Header" xml:space="preserve">
+    <value>Rimuovi Google Play</value>
+  </data>
+  <data name="GappsRemoveCard.Description" xml:space="preserve">
+    <value>Elimina le app di Google dal disco dei componenti aggiuntivi, dal prossimo avvio di Android.
+Le app del Play Store restano, ma quelle che richiedono Google Play services potrebbero smettere di funzionare.</value>
+  </data>
+  <data name="GappsRemoveButton.Content" xml:space="preserve">
+    <value>Rimuovi</value>
+  </data>
+  <data name="GappsTermsCard.Header" xml:space="preserve">
+    <value>Condizioni di Google</value>
+  </data>
+  <data name="GappsTermsCard.Description" xml:space="preserve">
+    <value>Google Play services e il Play Store sono software di Google e seguono le condizioni di Google.
+DSA non li distribuisce. Scarica il pacchetto pubblico LiteGapps solo quando lo chiedi.</value>
+  </data>
+  <data name="GappsTermsLink.Content" xml:space="preserve">
+    <value>Termini di servizio di Google</value>
+  </data>
+  <data name="GappsRegisterCard.Header" xml:space="preserve">
+    <value>Registra questo dispositivo con Google</value>
+  </data>
+  <data name="GappsRegisterCard.Description" xml:space="preserve">
+    <value>Android qui non è certificato da Google, quindi Google potrebbe rifiutare l'accesso finché non registri questo dispositivo.
+1. Apri la pagina di registrazione e accedi con il tuo account Google.
+2. Immetti l'Android ID di questo dispositivo.
+3. Riavvia Android e accedi di nuovo.</value>
+  </data>
+  <data name="GappsRegisterLink.Content" xml:space="preserve">
+    <value>Apri la pagina di registrazione</value>
+  </data>
+  <data name="GappsDeviceIdLabel.Text" xml:space="preserve">
+    <value>Android ID</value>
+  </data>
+  <data name="Gapps_NotInstalled" xml:space="preserve">
+    <value>Non installato: Android non ha Google Play services né il Play Store.</value>
+  </data>
+  <data name="Gapps_Installed" xml:space="preserve">
+    <value>Installato: LiteGapps Core {0} per Android {1} ({2}).</value>
+  </data>
+  <data name="Gapps_InstalledPending" xml:space="preserve">
+    <value>Installato: LiteGapps Core {0} per Android {1} ({2}). Viene usato dal prossimo avvio di Android.</value>
+  </data>
+  <data name="Gapps_RemovedPending" xml:space="preserve">
+    <value>Rimosso: le app di Google lasciano Android al prossimo avvio.</value>
+  </data>
+  <data name="Gapps_ReinstallNeeded" xml:space="preserve">
+    <value>LiteGapps Core {0} per Android {1} ({2}), di un DSA precedente, non è più usato, quindi Android si avvia senza app Google.
+Installa di nuovo Google Play.</value>
+  </data>
+  <data name="Gapps_Source" xml:space="preserve">
+    <value>Scaricato da LiteGapps: {0}</value>
+  </data>
+  <data name="Gapps_DeviceId" xml:space="preserve">
+    <value>Android ID: {0}</value>
+  </data>
+  <data name="Gapps_NoDeviceId" xml:space="preserve">
+    <value>L'Android ID compare qui dopo che Google Play è stato installato e Android si è avviato con esso.</value>
+  </data>
+  <data name="DeveloperHeader.Text" xml:space="preserve">
+    <value>Sviluppatore</value>
+  </data>
+  <data name="DeveloperModeCard.Header" xml:space="preserve">
+    <value>Modalità sviluppatore</value>
+  </data>
+  <data name="DeveloperModeCard.Description" xml:space="preserve">
+    <value>Consente ad adb su questo PC di connettersi ad Android senza conferma in Android, tramite una porta raggiungibile solo da questo PC.
+Disattivata per impostazione predefinita. Disattivala quando hai finito.</value>
+  </data>
+  <data name="AdbAutoConnectCard.Header" xml:space="preserve">
+    <value>Connetti adb automaticamente</value>
+  </data>
+  <data name="AdbAutoConnectCard.Description" xml:space="preserve">
+    <value>In modalità sviluppatore, Android compare in adb devices e Android Studio senza adb connect. Attivo per impostazione predefinita.
+Dopo adb disconnect, resta disattivato finché il server adb non si riavvia.</value>
+  </data>
+  <data name="AdbAutoConnect_Off" xml:space="preserve">
+    <value>Nessuna connessione: la modalità sviluppatore o la connessione automatica è disattivata.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForServer" xml:space="preserve">
+    <value>In attesa di adb: Android si connette quando adb si avvia su questo PC.</value>
+  </data>
+  <data name="AdbAutoConnect_WaitingForAndroid" xml:space="preserve">
+    <value>In attesa di Android: si connette quando Android è in esecuzione.</value>
+  </data>
+  <data name="AdbAutoConnect_Attached" xml:space="preserve">
+    <value>Connesso: adb elenca Android.</value>
+  </data>
+  <data name="AdbAutoConnect_Detached" xml:space="preserve">
+    <value>Disconnesso con adb disconnect. Android si riconnette quando il server adb si riavvia.</value>
+  </data>
+  <data name="AdbCard.Header" xml:space="preserve">
+    <value>Connetti adb</value>
+  </data>
+  <data name="AdbCard.Description" xml:space="preserve">
+    <value>Con la modalità sviluppatore attiva e Android in esecuzione, esegui questo comando:</value>
+  </data>
+  <data name="CopyButton.ToolTip" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="AdbPortLabel.Text" xml:space="preserve">
+    <value>Porta</value>
+  </data>
+  <data name="ClipboardCard.Header" xml:space="preserve">
+    <value>Condividi gli Appunti con Android</value>
+  </data>
+  <data name="ClipboardCard.Description" xml:space="preserve">
+    <value>Il testo copiato in Windows si può incollare nelle app Android e viceversa. Attivo per impostazione predefinita.
+Le immagini restano dove sono state copiate.</value>
+  </data>
+  <data name="FreezeCard.Header" xml:space="preserve">
+    <value>Congela Android quando è inattivo</value>
+  </data>
+  <data name="FreezeCard.Description" xml:space="preserve">
+    <value>Disattivato per impostazione predefinita: un Android inattivo entra in Doze e continua a ricevere notifiche.
+Congelato, non usa la CPU ma non riceve nulla finché non apri un'app.</value>
+  </data>
+  <data name="FreezeNowCard.Header" xml:space="preserve">
+    <value>Congela Android ora</value>
+  </data>
+  <data name="FreezeNowCard.Description" xml:space="preserve">
+    <value>Arresta ogni processo in Android finché non riapri una delle sue finestre. Si fermano anche notifiche, sveglie e widget.</value>
+  </data>
+  <data name="FreezeNowButton.Content" xml:space="preserve">
+    <value>Congela</value>
+  </data>
+  <data name="MemoryLimitCard.Header" xml:space="preserve">
+    <value>Limite di memoria</value>
+  </data>
+  <data name="MemoryLimitCard.Description" xml:space="preserve">
+    <value>La memoria massima che Android può raggiungere. Android prende memoria solo quando serve e la restituisce quando ha finito.
+Automatico: fino alla memoria di questo PC meno quella che tiene Windows. Si applica dal prossimo avvio di Android.</value>
+  </data>
+  <data name="MemoryLimit_Auto" xml:space="preserve">
+    <value>Automatico</value>
+  </data>
+  <data name="MemoryVmSizeCard.Header" xml:space="preserve">
+    <value>VM di Android ora</value>
+  </data>
+  <data name="MemoryVmSizeCard.Description" xml:space="preserve">
+    <value>La memoria che la VM occupa su questo PC e quanta ne usa Android</value>
+  </data>
+  <data name="MemoryGuestUsedLabel.Text" xml:space="preserve">
+    <value>Usata da Android</value>
+  </data>
+  <data name="MemoryBeyondGuestLabel.Text" xml:space="preserve">
+    <value>Libera, non ancora restituita</value>
+  </data>
+  <data name="MemoryKernelHeader.Text" xml:space="preserve">
+    <value>Kernel di Android</value>
+  </data>
+  <data name="Memory_KernelSlab" xml:space="preserve">
+    <value>Oggetti del kernel</value>
+  </data>
+  <data name="Memory_KernelSlabDetail" xml:space="preserve">
+    <value>Memoria che il kernel tiene per i propri dati e non può recuperare</value>
+  </data>
+  <data name="Memory_KernelStacks" xml:space="preserve">
+    <value>Stack dei thread</value>
+  </data>
+  <data name="Memory_KernelPageTables" xml:space="preserve">
+    <value>Tabelle delle pagine</value>
+  </data>
+  <data name="Memory_KernelVmalloc" xml:space="preserve">
+    <value>Mapping del kernel (vmalloc)</value>
+  </data>
+  <data name="Memory_KernelPercpu" xml:space="preserve">
+    <value>Dati per CPU</value>
+  </data>
+  <data name="Memory_KernelUnaccounted" xml:space="preserve">
+    <value>Driver</value>
+  </data>
+  <data name="Memory_KernelUnaccountedDetail" xml:space="preserve">
+    <value>Ciò che nessun contatore indica, come i buffer GPU e DMA</value>
+  </data>
+  <data name="Memory_KernelReserved" xml:space="preserve">
+    <value>Riservata all'avvio</value>
+  </data>
+  <data name="Memory_KernelReservedDetail" xml:space="preserve">
+    <value>Codice del kernel, strutture di pagina e buffer, su {0} assegnati; area contigua {1}</value>
+  </data>
+  <data name="DiagnosticsHeader.Text" xml:space="preserve">
+    <value>Diagnostica</value>
+  </data>
+  <data name="InputTraceCard.Header" xml:space="preserve">
+    <value>Traccia dell'input</value>
+  </data>
+  <data name="InputTraceCard.Description" xml:space="preserve">
+    <value>Ogni processo DSA registra l'arrivo di tocchi, clic e tasti, per misurare il ritardo tra input e immagine. Di norma è disattivato.</value>
+  </data>
+  <data name="ResizeTraceCard.Header" xml:space="preserve">
+    <value>Traccia del ridimensionamento</value>
+  </data>
+  <data name="ResizeTraceCard.Description" xml:space="preserve">
+    <value>Ogni processo DSA registra ogni fase di ogni ridimensionamento di finestra, per trovare dove è lento o sfarfalla. Di norma è disattivato.</value>
+  </data>
+  <data name="DiagnosticsNote.Text" xml:space="preserve">
+    <value>Le tracce finiscono nei log DSA qui sotto e li fanno crescere, quindi attivale solo per segnalare un problema.
+Valgono per tutti gli utenti di questo PC, quindi solo un amministratore può modificarle.</value>
+  </data>
+  <data name="LogsHeader.Text" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="UserLogsCard.Header" xml:space="preserve">
+    <value>Apri la mia cartella dei log</value>
+  </data>
+  <data name="UserLogsCard.Description" xml:space="preserve">
+    <value>I log del tuo gestore delle finestre e delle finestre delle app.</value>
+  </data>
+  <data name="ServiceLogsCard.Header" xml:space="preserve">
+    <value>Apri la cartella dei log del servizio (amministratori)</value>
+  </data>
+  <data name="ServiceLogsCard.Description" xml:space="preserve">
+    <value>I log del servizio DSA e di Android stesso.</value>
+  </data>
+  <data name="CommandLineHeader.Text" xml:space="preserve">
+    <value>Riga di comando</value>
+  </data>
+  <data name="CommandLineCard.Header" xml:space="preserve">
+    <value>Il comando dsa</value>
+  </data>
+  <data name="CommandLineCard.Description" xml:space="preserve">
+    <value>Tutto ciò che è in queste pagine è disponibile anche da un terminale.</value>
+  </data>
+  <data name="AboutTitle.Text" xml:space="preserve">
+    <value>Informazioni</value>
+  </data>
+  <data name="AboutProductCard.Header" xml:space="preserve">
+    <value>Desktop Subsystem for Android™</value>
+  </data>
+  <data name="AboutProductCard.Description" xml:space="preserve">
+    <value>Thisisthepy</value>
+  </data>
+  <data name="AboutAppVersionCard.Header" xml:space="preserve">
+    <value>Versione di Impostazioni DSA</value>
+  </data>
+  <data name="AboutServiceVersionCard.Header" xml:space="preserve">
+    <value>Versione del servizio DSA</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Header" xml:space="preserve">
+    <value>Versione dell'immagine Android</value>
+  </data>
+  <data name="AboutAndroidVersionCard.Description" xml:space="preserve">
+    <value>L'immagine Android usata al prossimo avvio. Gli aggiornamenti dell'immagine la cambiano.</value>
+  </data>
+  <data name="AboutLicenseCard.Header" xml:space="preserve">
+    <value>Licenze</value>
+  </data>
+  <data name="AboutLicenseCard.Description" xml:space="preserve">
+    <value>DSA è distribuito con la Apache License 2.0. Apri le licenze di tutti i componenti inclusi.</value>
+  </data>
+  <data name="AboutSourceCard.Header" xml:space="preserve">
+    <value>Codice sorgente</value>
+  </data>
+  <data name="AboutIndependent.Text" xml:space="preserve">
+    <value>Desktop Subsystem for Android è un progetto open source indipendente.
+Non è affiliato, approvato o sponsorizzato da Microsoft o Google.</value>
+  </data>
+  <data name="AboutTrademark.Text" xml:space="preserve">
+    <value>Android è un marchio di Google LLC.</value>
+  </data>
+  <data name="FolderMissingTitle" xml:space="preserve">
+    <value>Impossibile aprire la cartella</value>
+  </data>
+  <data name="FolderMissingBody" xml:space="preserve">
+    <value>{0} non esiste ancora, oppure non hai l'autorizzazione per aprirla.</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>Annulla</value>
+  </data>
+  <data name="Install_BusyTitle" xml:space="preserve">
+    <value>Installazione</value>
+  </data>
+  <data name="Install_Busy" xml:space="preserve">
+    <value>Installazione di {0} in Android…</value>
+  </data>
+  <data name="Install_DoneTitle" xml:space="preserve">
+    <value>Installata</value>
+  </data>
+  <data name="Install_FailedTitle" xml:space="preserve">
+    <value>Non installata</value>
+  </data>
+  <data name="Install_Installed" xml:space="preserve">
+    <value>{0} è installata ({1}). Aprila dal menu Start.</value>
+  </data>
+  <data name="Install_Refused" xml:space="preserve">
+    <value>{0} non è stata installata: {1} ({2})</value>
+  </data>
+  <data name="Install_NotSent" xml:space="preserve">
+    <value>{0} non è arrivata ad Android. {1}</value>
+  </data>
+  <data name="Install_NotApk" xml:space="preserve">
+    <value>Si possono installare solo file APK: {0}</value>
+  </data>
+  <data name="Install_Reason_incompatible" xml:space="preserve">
+    <value>l'app non funziona su questo Android: richiede un altro processore, un Android più recente o una funzione assente su questo dispositivo.</value>
+  </data>
+  <data name="Install_Reason_conflicting-signature" xml:space="preserve">
+    <value>l'app è già installata, firmata con un'altra chiave. Prima disinstallala in Android.</value>
+  </data>
+  <data name="Install_Reason_invalid-apk" xml:space="preserve">
+    <value>il file non è un APK firmato che Android può leggere.</value>
+  </data>
+  <data name="Install_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android non ha spazio per l'app.</value>
+  </data>
+  <data name="Install_Reason_downgrade" xml:space="preserve">
+    <value>è installata una versione più recente dell'app. Prima disinstallala in Android.</value>
+  </data>
+  <data name="Install_Reason_blocked" xml:space="preserve">
+    <value>un criterio di questo Android non consente l'app.</value>
+  </data>
+  <data name="Install_Reason_other" xml:space="preserve">
+    <value>Android non ha installato l'app.</value>
+  </data>
+  <data name="NavWidgets.Content" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="WidgetsTitle.Text" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="WidgetsRefreshButton.Content" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="WidgetsIntro.Text" xml:space="preserve">
+    <value>Posiziona sul desktop i widget offerti dalle tue app Android. Android si avvia quando apri questa pagina.
+• Ogni widget ha una propria finestra, sotto le altre finestre.
+• Tieni premuto un widget per modificarlo: trascinalo per spostarlo e trascina le maniglie per ridimensionarlo.
+• Fai clic con il pulsante destro su un widget per le impostazioni, le dimensioni e Rimuovi.</value>
+  </data>
+  <data name="WidgetsErrorBar.Title" xml:space="preserve">
+    <value>Impossibile leggere o modificare i widget</value>
+  </data>
+  <data name="WidgetsDoneBar.Title" xml:space="preserve">
+    <value>Fatto</value>
+  </data>
+  <data name="WidgetsPlacedHeader.Text" xml:space="preserve">
+    <value>Sul desktop</value>
+  </data>
+  <data name="WidgetsPlacedNone.Text" xml:space="preserve">
+    <value>Non c'è ancora nessun widget sul desktop.</value>
+  </data>
+  <data name="WidgetsGalleryHeader.Text" xml:space="preserve">
+    <value>Widget offerti dalle app</value>
+  </data>
+  <data name="WidgetsGalleryNone.Text" xml:space="preserve">
+    <value>Nessuna app in Android offre widget.</value>
+  </data>
+  <data name="WidgetsAddButton.Content" xml:space="preserve">
+    <value>Aggiungi al desktop</value>
+  </data>
+  <data name="WidgetsRemoveButton.Content" xml:space="preserve">
+    <value>Rimuovi</value>
+  </data>
+  <data name="Widgets_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Widgets_Setup" xml:space="preserve">
+    <value>chiede di essere configurato</value>
+  </data>
+  <data name="Widgets_At" xml:space="preserve">
+    <value>In {0}, {1}, {2} × {3}</value>
+  </data>
+  <data name="Widgets_Placed" xml:space="preserve">
+    <value>{0} è sul desktop.</value>
+  </data>
+  <data name="Widgets_Removed" xml:space="preserve">
+    <value>{0} è stato rimosso dal desktop.</value>
+  </data>
+  <data name="ApkWindow_Caption" xml:space="preserve">
+    <value>APK Installer</value>
+  </data>
+  <data name="ApkWindow_Reading" xml:space="preserve">
+    <value>Lettura del file</value>
+  </data>
+  <data name="ApkWindow_Install" xml:space="preserve">
+    <value>Installa</value>
+  </data>
+  <data name="ApkWindow_Update" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="ApkWindow_Reinstall" xml:space="preserve">
+    <value>Installa di nuovo</value>
+  </data>
+  <data name="ApkWindow_Cancel" xml:space="preserve">
+    <value>Annulla</value>
+  </data>
+  <data name="ApkWindow_Close" xml:space="preserve">
+    <value>Chiudi</value>
+  </data>
+  <data name="ApkWindow_Open" xml:space="preserve">
+    <value>Avvia</value>
+  </data>
+  <data name="ApkWindow_AndroidChip" xml:space="preserve">
+    <value>Android {0} o versioni successive</value>
+  </data>
+  <data name="ApkWindow_SummaryUpdate" xml:space="preserve">
+    <value>{0} è già installata. Verrà aggiornata dalla versione {1} alla versione {2}. I suoi dati restano.</value>
+  </data>
+  <data name="ApkWindow_SummaryReinstall" xml:space="preserve">
+    <value>{0} versione {1} è già installata. Verrà installata di nuovo la stessa versione. I suoi dati restano.</value>
+  </data>
+  <data name="ApkWindow_SummaryDowngrade" xml:space="preserve">
+    <value>{0} versione {1} è installata; questo file è la versione precedente {2}. Android non installa una versione vecchia su una più recente.
+Per usare questo file, prima disinstalla l'app in Android.</value>
+  </data>
+  <data name="ApkWindow_SummarySignature" xml:space="preserve">
+    <value>{0} è già installata, firmata con una chiave diversa da questo file. Per proteggere i dati dell'app, Android non la lascia sostituire.
+Per usare questo file, prima disinstalla l'app in Android.</value>
+  </data>
+  <data name="ApkWindow_FactPackage" xml:space="preserve">
+    <value>Pacchetto</value>
+  </data>
+  <data name="ApkWindow_FactVersion" xml:space="preserve">
+    <value>Versione</value>
+  </data>
+  <data name="ApkWindow_FactInstalled" xml:space="preserve">
+    <value>Installata ora</value>
+  </data>
+  <data name="ApkWindow_FactAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="ApkWindow_FactSize" xml:space="preserve">
+    <value>Dimensioni</value>
+  </data>
+  <data name="ApkWindow_FactAbis" xml:space="preserve">
+    <value>Processore</value>
+  </data>
+  <data name="ApkWindow_FactSigner" xml:space="preserve">
+    <value>Firmata da</value>
+  </data>
+  <data name="ApkWindow_AndroidRange" xml:space="preserve">
+    <value>{0} o successive, creata per {1}</value>
+  </data>
+  <data name="ApkWindow_VersionText" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ApkWindow_ApiLevel" xml:space="preserve">
+    <value>Livello API {0}</value>
+  </data>
+  <data name="ApkWindow_AndroidVersion" xml:space="preserve">
+    <value>Android {0} (API {1})</value>
+  </data>
+  <data name="ApkWindow_Signer" xml:space="preserve">
+    <value>SHA-256 {1} (firma {0})</value>
+  </data>
+  <data name="ApkWindow_Unsigned" xml:space="preserve">
+    <value>Non firmata. Android installa solo app firmate.</value>
+  </data>
+  <data name="ApkWindow_NoPermissions" xml:space="preserve">
+    <value>Non chiede autorizzazioni.</value>
+  </data>
+  <data name="ApkWindow_Sensitive" xml:space="preserve">
+    <value>Android te lo chiede prima</value>
+  </data>
+  <data name="ApkWindow_StartingTitle" xml:space="preserve">
+    <value>Avvio di Android</value>
+  </data>
+  <data name="ApkWindow_StartingDetail" xml:space="preserve">
+    <value>Android si avvia una volta, poi resta pronto per le tue app.</value>
+  </data>
+  <data name="ApkWindow_CheckingTitle" xml:space="preserve">
+    <value>Verifica dell'app</value>
+  </data>
+  <data name="ApkWindow_CheckingDetail" xml:space="preserve">
+    <value>Verifica se l'app è già installata.</value>
+  </data>
+  <data name="ApkWindow_InstallingTitle" xml:space="preserve">
+    <value>Installazione di {0}</value>
+  </data>
+  <data name="ApkWindow_SendingDetail" xml:space="preserve">
+    <value>Copia dell'app in Android</value>
+  </data>
+  <data name="ApkWindow_AndroidInstallingDetail" xml:space="preserve">
+    <value>Android sta installando l'app</value>
+  </data>
+  <data name="ApkWindow_Cancelling" xml:space="preserve">
+    <value>Interruzione</value>
+  </data>
+  <data name="ApkWindow_Cancelled" xml:space="preserve">
+    <value>L'installazione è stata interrotta. Non è stato modificato nulla.</value>
+  </data>
+  <data name="ApkWindow_DoneTitle" xml:space="preserve">
+    <value>{0} è installata</value>
+  </data>
+  <data name="ApkWindow_UpdatedTitle" xml:space="preserve">
+    <value>{0} è aggiornata</value>
+  </data>
+  <data name="ApkWindow_DoneText" xml:space="preserve">
+    <value>Avviala ora, o più tardi dal menu Start.</value>
+  </data>
+  <data name="ApkWindow_FailedTitle" xml:space="preserve">
+    <value>Non installata</value>
+  </data>
+  <data name="ApkWindow_NotApkTitle" xml:space="preserve">
+    <value>Impossibile installare questo file</value>
+  </data>
+  <data name="ApkWindow_StartFailed" xml:space="preserve">
+    <value>Android non si è avviato, quindi l'app non è stata installata. {0}</value>
+  </data>
+  <data name="ApkWindow_NotSent" xml:space="preserve">
+    <value>L'app non è arrivata ad Android. {0}</value>
+  </data>
+  <data name="ApkWindow_ReasonWithWords" xml:space="preserve">
+    <value>{0} Messaggio di Android: {1}</value>
+  </data>
+  <data name="ApkWindow_OpenFailed" xml:space="preserve">
+    <value>Impossibile aprire {0}. {1}</value>
+  </data>
+  <data name="ApkWindow_Reason_incompatible" xml:space="preserve">
+    <value>L'app non funziona su questo Android: richiede un altro processore, un Android più recente o una funzione assente su questo dispositivo.</value>
+  </data>
+  <data name="ApkWindow_Reason_conflicting-signature" xml:space="preserve">
+    <value>L'app è già installata, firmata con un'altra chiave. Prima disinstallala in Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-apk" xml:space="preserve">
+    <value>Il file non è un APK firmato che Android può leggere.</value>
+  </data>
+  <data name="ApkWindow_Reason_insufficient-storage" xml:space="preserve">
+    <value>Android non ha spazio per l'app. Libera spazio in Android e riprova.</value>
+  </data>
+  <data name="ApkWindow_Reason_downgrade" xml:space="preserve">
+    <value>È installata una versione più recente dell'app. Prima disinstallala in Android.</value>
+  </data>
+  <data name="ApkWindow_Reason_blocked" xml:space="preserve">
+    <value>Un criterio di questo Android non consente l'app.</value>
+  </data>
+  <data name="ApkWindow_Reason_other" xml:space="preserve">
+    <value>Android non ha installato l'app.</value>
+  </data>
+  <data name="ApkWindow_AbiWarning" xml:space="preserve">
+    <value>Questa app contiene codice solo per processori {0}, non per quello di questo PC.
+Android la esegue solo con un pacchetto di traduzione ARM e potrebbe rifiutarne l'installazione.</value>
+  </data>
+  <data name="ApkWindow_Abi32Warning" xml:space="preserve">
+    <value>Questa app contiene codice solo per processori {0}.
+Il traduttore ARM esegue solo codice ARM a 64 bit (arm64-v8a), quindi Android può rifiutarne l'installazione, o l'app può non avviarsi.</value>
+  </data>
+  <data name="ApkWindow_LaunchFailedAfterInstall" xml:space="preserve">
+    <value>{0} è installata, ma non si è aperta. {1}</value>
+  </data>
+  <data name="ApkWindow_LaunchWhenReady" xml:space="preserve">
+    <value>Avvia quando è pronta</value>
+  </data>
+  <data name="NavLogs.Content" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="LogsTitle.Text" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="LogsNote.Text" xml:space="preserve">
+    <value>Android invia il log solo mentre questa pagina è aperta, e nulla viene scritto su disco.
+Salva diagnostica raccoglie in un unico file zip ciò che serve per segnalare un problema.</value>
+  </data>
+  <data name="LogsSaveButton.Content" xml:space="preserve">
+    <value>Salva diagnostica</value>
+  </data>
+  <data name="LogsFilter.PlaceholderText" xml:space="preserve">
+    <value>Filtra per tag o testo</value>
+  </data>
+  <data name="LogsPause.Content" xml:space="preserve">
+    <value>Sospendi</value>
+  </data>
+  <data name="LogsErrorBar.Title" xml:space="preserve">
+    <value>Impossibile leggere il log</value>
+  </data>
+  <data name="LogsStatusBar.Title" xml:space="preserve">
+    <value>Diagnostica</value>
+  </data>
+  <data name="Logs_Paused" xml:space="preserve">
+    <value>In pausa. {0} nuove righe in attesa.</value>
+  </data>
+  <data name="Logs_Saving" xml:space="preserve">
+    <value>Raccolta della diagnostica in corso. Richiede un minuto o più.</value>
+  </data>
+  <data name="Logs_Saved" xml:space="preserve">
+    <value>Diagnostica salvata in {0}.</value>
+  </data>
+  <data name="Logs_SaveDialogTitle" xml:space="preserve">
+    <value>Salva diagnostica</value>
+  </data>
+  <data name="Logs_SaveDialogFilter" xml:space="preserve">
+    <value>Archivio zip</value>
+  </data>
+  <data name="Logs_Priority_V" xml:space="preserve">
+    <value>Dettagliato</value>
+  </data>
+  <data name="Logs_Priority_D" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+  <data name="Logs_Priority_I" xml:space="preserve">
+    <value>Informazioni</value>
+  </data>
+  <data name="Logs_Priority_W" xml:space="preserve">
+    <value>Avviso</value>
+  </data>
+  <data name="Logs_Priority_E" xml:space="preserve">
+    <value>Errore</value>
+  </data>
+  <data name="Logs_Priority_F" xml:space="preserve">
+    <value>Irreversibile</value>
+  </data>
+  <data name="NavIdentity.Content" xml:space="preserve">
+    <value>Identità del dispositivo</value>
+  </data>
+  <data name="IdentityTitle.Text" xml:space="preserve">
+    <value>Identità del dispositivo</value>
+  </data>
+  <data name="IdentityIntro.Text" xml:space="preserve">
+    <value>I nomi e l'impronta della build che Android comunica alle app. Lascia vuota una casella per mantenere il valore mostrato.
+Le modifiche si applicano dal prossimo avvio di Android.</value>
+  </data>
+  <data name="IdentityWarning.Title" xml:space="preserve">
+    <value>Le app potrebbero accorgersene</value>
+  </data>
+  <data name="IdentityWarning.Message" xml:space="preserve">
+    <value>Modificare il modello o l'impronta può cambiare il comportamento delle app.
+Alcune app controllano il dispositivo prima di avviarsi, e i controlli di pagamento e integrità potrebbero non riuscire.</value>
+  </data>
+  <data name="IdentityDoneBar.Title" xml:space="preserve">
+    <value>Identità del dispositivo</value>
+  </data>
+  <data name="IdentitySaveButton.Content" xml:space="preserve">
+    <value>Salva</value>
+  </data>
+  <data name="IdentityResetButton.Content" xml:space="preserve">
+    <value>Ripristina predefiniti</value>
+  </data>
+  <data name="IdentityRestartButton.Content" xml:space="preserve">
+    <value>Riavvia Android ora</value>
+  </data>
+  <data name="IdentityResetConfirmTitle" xml:space="preserve">
+    <value>Ripristinare l'identità del dispositivo?</value>
+  </data>
+  <data name="IdentityResetConfirmBody" xml:space="preserve">
+    <value>Ogni valore torna al predefinito: quello di questo computer, o quello di DSA dove il computer non lo indica.
+
+Si applica dal prossimo avvio di Android.</value>
+  </data>
+  <data name="IdentityNamesHeader.Text" xml:space="preserve">
+    <value>Dispositivo</value>
+  </data>
+  <data name="IdentityFingerprintHeader.Text" xml:space="preserve">
+    <value>Impronta della build</value>
+  </data>
+  <data name="IdentityPreview.Text" xml:space="preserve">
+    <value>Impronta dal prossimo avvio</value>
+  </data>
+  <data name="Identity_Saved" xml:space="preserve">
+    <value>Salvato. Android lo usa dal prossimo avvio.</value>
+  </data>
+  <data name="Identity_SavedRestart" xml:space="preserve">
+    <value>Salvato. Riavvia Android per usarlo subito.</value>
+  </data>
+  <data name="Identity_Reset" xml:space="preserve">
+    <value>Ripristinati i predefiniti. Android li usa dal prossimo avvio.</value>
+  </data>
+  <data name="Identity_ResetRestart" xml:space="preserve">
+    <value>Ripristinati i predefiniti. Riavvia Android per usarli subito.</value>
+  </data>
+  <data name="Identity_Restarted" xml:space="preserve">
+    <value>Android si è riavviato con questa identità.</value>
+  </data>
+  <data name="Identity_FromComputer" xml:space="preserve">
+    <value>Predefinito: da questo computer</value>
+  </data>
+  <data name="Identity_FromDsa" xml:space="preserve">
+    <value>Predefinito: valore di DSA</value>
+  </data>
+  <data name="Identity_NotSaid" xml:space="preserve">
+    <value>Questo computer non lo indica; Android mantiene il proprio.</value>
+  </data>
+  <data name="IdentityComputerHeader.Text" xml:space="preserve">
+    <value>Da questo computer</value>
+  </data>
+  <data name="IdentityComputerNote.Text" xml:space="preserve">
+    <value>Seguono questo computer e sono riletti a ogni avvio di Android: se rinomini il computer, il nuovo nome vale dal prossimo avvio.
+Le Impostazioni di Android mostrano il nome del dispositivo e il chip. Il nome del modello compare solo qui.</value>
+  </data>
+  <data name="Identity_model_name" xml:space="preserve">
+    <value>Nome del modello</value>
+  </data>
+  <data name="Identity_model_name_Description" xml:space="preserve">
+    <value>Il nome con cui il computer è venduto (ro.product.marketname).</value>
+  </data>
+  <data name="Identity_device_name" xml:space="preserve">
+    <value>Nome del dispositivo</value>
+  </data>
+  <data name="Identity_device_name_Description" xml:space="preserve">
+    <value>Il nome del computer, che Impostazioni, Bluetooth e Wi-Fi Direct mostrano per il dispositivo.</value>
+  </data>
+  <data name="Identity_soc_manufacturer" xml:space="preserve">
+    <value>Produttore del chip</value>
+  </data>
+  <data name="Identity_soc_manufacturer_Description" xml:space="preserve">
+    <value>Build.SOC_MANUFACTURER: il produttore del processore del computer.</value>
+  </data>
+  <data name="Identity_soc_model" xml:space="preserve">
+    <value>Modello del chip</value>
+  </data>
+  <data name="Identity_soc_model_Description" xml:space="preserve">
+    <value>Build.SOC_MODEL: il processore del computer.</value>
+  </data>
+  <data name="Identity_manufacturer" xml:space="preserve">
+    <value>Produttore</value>
+  </data>
+  <data name="Identity_manufacturer_Description" xml:space="preserve">
+    <value>Build.MANUFACTURER. Fino a 64 caratteri ASCII stampabili.</value>
+  </data>
+  <data name="Identity_manufacturer_Invalid" xml:space="preserve">
+    <value>Usa da 1 a 64 caratteri ASCII stampabili, senza spazi all'inizio o alla fine.</value>
+  </data>
+  <data name="Identity_brand" xml:space="preserve">
+    <value>Marca</value>
+  </data>
+  <data name="Identity_brand_Description" xml:space="preserve">
+    <value>Build.BRAND e prima parte dell'impronta. Lettere, cifre, '.', '_' e '-'.</value>
+  </data>
+  <data name="Identity_brand_Invalid" xml:space="preserve">
+    <value>Usa fino a 32 lettere, cifre, '.', '_' o '-', iniziando con una lettera o una cifra.</value>
+  </data>
+  <data name="Identity_model" xml:space="preserve">
+    <value>Modello</value>
+  </data>
+  <data name="Identity_model_Description" xml:space="preserve">
+    <value>Build.MODEL, il nome che le app mostrano per questo dispositivo.</value>
+  </data>
+  <data name="Identity_model_Invalid" xml:space="preserve">
+    <value>Usa da 1 a 64 caratteri ASCII stampabili, senza spazi all'inizio o alla fine.</value>
+  </data>
+  <data name="Identity_device" xml:space="preserve">
+    <value>Dispositivo</value>
+  </data>
+  <data name="Identity_device_Description" xml:space="preserve">
+    <value>Build.DEVICE. Lettere, cifre, '.', '_' e '-'.</value>
+  </data>
+  <data name="Identity_device_Invalid" xml:space="preserve">
+    <value>Usa fino a 32 lettere, cifre, '.', '_' o '-', iniziando con una lettera o una cifra.</value>
+  </data>
+  <data name="Identity_name" xml:space="preserve">
+    <value>Nome del prodotto</value>
+  </data>
+  <data name="Identity_name_Description" xml:space="preserve">
+    <value>Build.PRODUCT. Lettere, cifre, '.', '_' e '-'.</value>
+  </data>
+  <data name="Identity_name_Invalid" xml:space="preserve">
+    <value>Usa fino a 32 lettere, cifre, '.', '_' o '-', iniziando con una lettera o una cifra.</value>
+  </data>
+  <data name="Identity_characteristics" xml:space="preserve">
+    <value>Fattore di forma</value>
+  </data>
+  <data name="Identity_characteristics_Description" xml:space="preserve">
+    <value>ro.build.characteristics: tablet (layout per schermi grandi), default (un telefono) o altre parole separate da virgole.</value>
+  </data>
+  <data name="Identity_characteristics_Invalid" xml:space="preserve">
+    <value>Usa parole minuscole di lettere, cifre e '_', separate da virgole.</value>
+  </data>
+  <data name="Identity_fingerprint_release" xml:space="preserve">
+    <value>Release</value>
+  </data>
+  <data name="Identity_fingerprint_release_Description" xml:space="preserve">
+    <value>La release di Android nell'impronta.</value>
+  </data>
+  <data name="Identity_fingerprint_release_Invalid" xml:space="preserve">
+    <value>Usa da 1 a 64 lettere, cifre, '.', '_' o '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_id" xml:space="preserve">
+    <value>ID build</value>
+  </data>
+  <data name="Identity_fingerprint_id_Description" xml:space="preserve">
+    <value>L'ID build nell'impronta.</value>
+  </data>
+  <data name="Identity_fingerprint_id_Invalid" xml:space="preserve">
+    <value>Usa da 1 a 64 lettere, cifre, '.', '_' o '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental" xml:space="preserve">
+    <value>Versione incrementale</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Description" xml:space="preserve">
+    <value>La versione incrementale della build nell'impronta.</value>
+  </data>
+  <data name="Identity_fingerprint_incremental_Invalid" xml:space="preserve">
+    <value>Usa da 1 a 64 lettere, cifre, '.', '_' o '-'.</value>
+  </data>
+  <data name="Identity_fingerprint_type" xml:space="preserve">
+    <value>Tipo di build</value>
+  </data>
+  <data name="Identity_fingerprint_type_Description" xml:space="preserve">
+    <value>user, userdebug o eng. Lo indica solo l'impronta; Android resta una build user.</value>
+  </data>
+  <data name="Identity_fingerprint_type_Invalid" xml:space="preserve">
+    <value>Usa user, userdebug o eng.</value>
+  </data>
+  <data name="Identity_fingerprint_tags" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Description" xml:space="preserve">
+    <value>Ad esempio release-keys.</value>
+  </data>
+  <data name="Identity_fingerprint_tags_Invalid" xml:space="preserve">
+    <value>Usa lettere, cifre, '.', '_', '-' o ','.</value>
+  </data>
+  <data name="Identity_fingerprint" xml:space="preserve">
+    <value>Impronta completa</value>
+  </data>
+  <data name="Identity_fingerprint_Description" xml:space="preserve">
+    <value>brand/name/device:release/id/incremental:type/tags
+Se impostata, è Build.FINGERPRINT, qualunque cosa dicano le parti qui sopra.</value>
+  </data>
+  <data name="Identity_fingerprint_Invalid" xml:space="preserve">
+    <value>Scrivila come brand/name/device:release/id/incremental:type/tags, con il tipo user, userdebug o eng.</value>
+  </data>
+  <data name="NavApps.Content" xml:space="preserve">
+    <value>App</value>
+  </data>
+  <data name="AppsTitle.Text" xml:space="preserve">
+    <value>App</value>
+  </data>
+  <data name="AppsRefreshButton.Content" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="AppsIntro.Text" xml:space="preserve">
+    <value>Le app Android installate su questo PC. Android si avvia quando apri questa pagina.
+Apri un'app, modifica autorizzazioni, archiviazione e notifiche in Informazioni app, o disinstalla un'app che hai installato.
+Sono elencate anche in Impostazioni di Windows, in App &gt; App installate.</value>
+  </data>
+  <data name="AppsErrorBar.Title" xml:space="preserve">
+    <value>Impossibile leggere o modificare le app</value>
+  </data>
+  <data name="AppsDoneBar.Title" xml:space="preserve">
+    <value>Fatto</value>
+  </data>
+  <data name="AppsManageCard.Title" xml:space="preserve">
+    <value>Gestisci app</value>
+  </data>
+  <data name="AppsManageCard.Description" xml:space="preserve">
+    <value>Apri l'elenco delle app nelle impostazioni di Android</value>
+  </data>
+  <data name="AppsInstalledHeader.Text" xml:space="preserve">
+    <value>App installate</value>
+  </data>
+  <data name="AppsSearch.PlaceholderText" xml:space="preserve">
+    <value>Cerca app</value>
+  </data>
+  <data name="AppsNone.Text" xml:space="preserve">
+    <value>In Android non è ancora installata nessuna app. Apri un file APK per installarne una.</value>
+  </data>
+  <data name="AppsNoMatch.Text" xml:space="preserve">
+    <value>Nessuna app corrisponde alla ricerca.</value>
+  </data>
+  <data name="AppsOpenButton.Content" xml:space="preserve">
+    <value>Apri</value>
+  </data>
+  <data name="AppsInfoButton.Content" xml:space="preserve">
+    <value>Informazioni app</value>
+  </data>
+  <data name="AppsDesktopShortcutButton.Content" xml:space="preserve">
+    <value>Crea collegamento sul desktop</value>
+  </data>
+  <data name="Apps_DesktopShortcutMade" xml:space="preserve">
+    <value>Sul desktop c'è un collegamento a {0}.</value>
+  </data>
+  <data name="AppsUninstallButton.Content" xml:space="preserve">
+    <value>Disinstalla</value>
+  </data>
+  <data name="AppsUninstallConfirmTitle" xml:space="preserve">
+    <value>Disinstallare {0}?</value>
+  </data>
+  <data name="AppsUninstallConfirmBody" xml:space="preserve">
+    <value>{0} e i suoi dati verranno rimossi da Android.
+
+L'operazione non può essere annullata.</value>
+  </data>
+  <data name="Apps_Count" xml:space="preserve">
+    <value>{0} app</value>
+  </data>
+  <data name="Apps_CountMatching" xml:space="preserve">
+    <value>{0} di {1} app</value>
+  </data>
+  <data name="Apps_Version" xml:space="preserve">
+    <value>Versione {0}</value>
+  </data>
+  <data name="Apps_Installed" xml:space="preserve">
+    <value>Installata il {0}</value>
+  </data>
+  <data name="Apps_System" xml:space="preserve">
+    <value>Parte di Android</value>
+  </data>
+  <data name="Apps_SystemTip" xml:space="preserve">
+    <value>Questa app fa parte di Android e non può essere disinstallata.</value>
+  </data>
+  <data name="Apps_Uninstalled" xml:space="preserve">
+    <value>{0} è stata disinstallata.</value>
+  </data>
+  <data name="Apps_NotUninstalled" xml:space="preserve">
+    <value>{0} non è stata disinstallata: {1} ({2})</value>
+  </data>
+  <data name="Apps_Refused_not-installed" xml:space="preserve">
+    <value>non è più installata</value>
+  </data>
+  <data name="Apps_Refused_system-app" xml:space="preserve">
+    <value>fa parte di Android</value>
+  </data>
+  <data name="Apps_Refused_blocked" xml:space="preserve">
+    <value>Android non lo consente, perché l'app è un amministratore del dispositivo o un criterio la mantiene</value>
+  </data>
+  <data name="Apps_Refused_other" xml:space="preserve">
+    <value>Android non è riuscito a disinstallarla</value>
+  </data>
+  <data name="UninstallWindow_Caption" xml:space="preserve">
+    <value>Disinstalla un'app Android</value>
+  </data>
+  <data name="UninstallWindow_Version" xml:space="preserve">
+    <value>Versione {0}</value>
+  </data>
+  <data name="UninstallWindow_Close" xml:space="preserve">
+    <value>Chiudi</value>
+  </data>
+  <data name="UninstallWindow_Busy" xml:space="preserve">
+    <value>Disinstallazione di {0}</value>
+  </data>
+  <data name="UninstallWindow_BusyDetail" xml:space="preserve">
+    <value>Rimozione dell'app e dei suoi dati da Android. Se Android non è in esecuzione, prima si avvia.</value>
+  </data>
+  <data name="UninstallWindow_DoneTitle" xml:space="preserve">
+    <value>Disinstallata</value>
+  </data>
+  <data name="UninstallWindow_DoneText" xml:space="preserve">
+    <value>{0} è stata rimossa da Android.</value>
+  </data>
+  <data name="UninstallWindow_FailedTitle" xml:space="preserve">
+    <value>Non disinstallata</value>
+  </data>
+  <data name="UninstallWindow_Refused" xml:space="preserve">
+    <value>{0} non è stata disinstallata: {1}.</value>
+  </data>
+  <data name="UninstallWindow_RefusedDetail" xml:space="preserve">
+    <value>{0} non è stata disinstallata: {1} ({2}).</value>
+  </data>
+  <data name="NavBackground.Content" xml:space="preserve">
+    <value>In background</value>
+  </data>
+  <data name="BackgroundTitle.Text" xml:space="preserve">
+    <value>In esecuzione in background</value>
+  </data>
+  <data name="BackgroundRefreshButton.Content" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="BackgroundIntro.Text" xml:space="preserve">
+    <value>Queste app Android restano attive a finestre chiuse, per riprodurre musica, scaricare file, tenere attiva una VPN o fare altro.
+Ognuna ha un'icona nell'area di notifica della barra delle applicazioni. Arrestare un'app ne termina il lavoro e ne libera la memoria.</value>
+  </data>
+  <data name="BackgroundErrorBar.Title" xml:space="preserve">
+    <value>Impossibile leggere o modificare le app in esecuzione in background</value>
+  </data>
+  <data name="BackgroundDoneBar.Title" xml:space="preserve">
+    <value>Fatto</value>
+  </data>
+  <data name="BackgroundAppsHeader.Text" xml:space="preserve">
+    <value>App</value>
+  </data>
+  <data name="BackgroundNone.Text" xml:space="preserve">
+    <value>Nessuna app in esecuzione in background.</value>
+  </data>
+  <data name="BackgroundOpenButton.Content" xml:space="preserve">
+    <value>Apri</value>
+  </data>
+  <data name="BackgroundStopButton.Content" xml:space="preserve">
+    <value>Arresta</value>
+  </data>
+  <data name="BackgroundStoppingHeader.Text" xml:space="preserve">
+    <value>Arresto delle app</value>
+  </data>
+  <data name="BackgroundAskCard.Header" xml:space="preserve">
+    <value>Chiedi prima di arrestare un'app dall'area di notifica</value>
+  </data>
+  <data name="BackgroundAskCard.Description" xml:space="preserve">
+    <value>Riattivalo se hai scelto di non ricevere più la domanda.</value>
+  </data>
+  <data name="Background_Playing" xml:space="preserve">
+    <value>In riproduzione: {0}</value>
+  </data>
+  <data name="Background_Paused" xml:space="preserve">
+    <value>In pausa: {0}</value>
+  </data>
+  <data name="Background_Stopped" xml:space="preserve">
+    <value>{0} è stata arrestata.</value>
+  </data>
+  <data name="AppsResizable.Content" xml:space="preserve">
+    <value>Ridimensionabile</value>
+  </data>
+  <data name="AppsResizable.ToolTip" xml:space="preserve">
+    <value>Indica se puoi ridimensionare e ingrandire le finestre di questa app. Se disattivato, ogni finestra resta alla dimensione di apertura.</value>
+  </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Inizia sotto la barra del titolo</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Per le app la cui barra superiore viene schiacciata o nascosta dalla barra del titolo.
+L'app inizia sotto la barra del titolo invece di disegnare dietro di essa.
+Si applica alla prossima apertura della finestra dell'app.</value>
+  </data>
+  <data name="AppsStartSize.ToolTip" xml:space="preserve">
+    <value>La dimensione con cui si aprono le finestre di questa app</value>
+  </data>
+  <data name="Apps_StartSize_Auto" xml:space="preserve">
+    <value>Si apre nella dimensione scelta da Android</value>
+  </data>
+  <data name="Apps_StartSize_PhonePortrait" xml:space="preserve">
+    <value>Telefono, verticale ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_PhoneLandscape" xml:space="preserve">
+    <value>Telefono, orizzontale ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletPortrait" xml:space="preserve">
+    <value>Tablet, verticale ({0} × {1})</value>
+  </data>
+  <data name="Apps_StartSize_TabletLandscape" xml:space="preserve">
+    <value>Tablet, orizzontale ({0} × {1})</value>
+  </data>
+  <data name="Apps_WindowChanged" xml:space="preserve">
+    <value>Le finestre di {0} seguono le nuove impostazioni dalla prossima che si apre.</value>
+  </data>
+  <data name="AppsDpiScaling.Name" xml:space="preserve">
+    <value>Scala</value>
+  </data>
+  <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
+    <value>Chi adatta questa app quando la sua finestra passa a un monitor con un'altra scala.
+• App: l'app assume subito la scala del nuovo monitor quando la finestra lo raggiunge e si ridisegna in quella scala, quindi il testo resta nitido. Per un'app che non dichiara di gestirlo, Android ricrea la schermata mantenendone lo stato, quindi può ridisegnarsi per un attimo.
+• Sistema: l'app mantiene la sua scala e DSA porta la finestra alla stessa dimensione fisica. Il testo può sembrare un po' sfocato.
+• Automatico: Sistema per le app che si bloccano se la scala cambia mentre sono in esecuzione, come YouTube; per ogni altra app, App se dichiara di gestirlo, Sistema se no.
+Automatico e Sistema non riavviano mai l'app.</value>
+  </data>
+  <data name="Apps_DpiScaling_Auto" xml:space="preserve">
+    <value>Automatico (app)</value>
+  </data>
+  <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
+    <value>Automatico (sistema, consigliato per questa app)</value>
+  </data>
+  <data name="Apps_DpiScaling_App" xml:space="preserve">
+    <value>App</value>
+  </data>
+  <data name="Apps_DpiScaling_System" xml:space="preserve">
+    <value>Sistema</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
+    <value>Sistema (forzato)</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
+    <value>Sistema (forzato), non ancora disponibile</value>
+  </data>
+  <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
+    <value>Sistema (forzato) passa all'app la nuova scala senza riavviarla, anche se non dichiara di gestirla.
+Non ancora disponibile: richiede una modifica al framework Android che questa build non ha, quindi per ora funziona come Sistema.</value>
+  </data>
+  <data name="AppsFullScreen.Name" xml:space="preserve">
+    <value>Richiesta di schermo intero</value>
+  </data>
+  <data name="AppsFullScreen.ToolTip" xml:space="preserve">
+    <value>Dove compare questa app su una chiara richiesta di schermo intero, come il pulsante di un lettore video. F11 lo attiva o disattiva sempre.</value>
+  </data>
+  <data name="AppsImmersive.Name" xml:space="preserve">
+    <value>Quando nasconde solo le barre</value>
+  </data>
+  <data name="AppsImmersive.ToolTip" xml:space="preserve">
+    <value>Dove compare questa app quando nasconde le barre senza chiedere lo schermo intero, come fa un feed di video brevi.</value>
+  </data>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Dimensione della finestra all'apertura</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Segui l'impostazione predefinita (su tutto lo schermo)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Segui l'impostazione predefinita (all'interno della finestra)</value>
+  </data>
+  <data name="Apps_FullScreen_Screen" xml:space="preserve">
+    <value>Su tutto lo schermo</value>
+  </data>
+  <data name="Apps_FullScreen_Window" xml:space="preserve">
+    <value>All'interno della finestra</value>
+  </data>
+  <data name="AppFullScreenCard.Header" xml:space="preserve">
+    <value>Schermo intero delle app</value>
+  </data>
+  <data name="AppFullScreenCard.Description" xml:space="preserve">
+    <value>Dove compare la richiesta di schermo intero di un'app, come il pulsante di un video. A schermo intero, la barra del titolo appare dal bordo superiore. Prevale la scelta per un'app nella pagina App.</value>
+  </data>
+  <data name="AppImmersiveCard.Header" xml:space="preserve">
+    <value>App che nascondono le barre</value>
+  </data>
+  <data name="AppImmersiveCard.Description" xml:space="preserve">
+    <value>Dove compare un'app quando nasconde solo le barre, come fa un feed di video brevi.</value>
+  </data>
+  <data name="Display_FullScreen_Screen" xml:space="preserve">
+    <value>Su tutto lo schermo</value>
+  </data>
+  <data name="Display_FullScreen_Window" xml:space="preserve">
+    <value>All'interno della finestra</value>
+  </data>
+  <data name="NavNetwork.Content" xml:space="preserve">
+    <value>Rete</value>
+  </data>
+  <data name="NetworkTitle.Text" xml:space="preserve">
+    <value>Rete</value>
+  </data>
+  <data name="NetworkStatusCard.Header" xml:space="preserve">
+    <value>Rete di Android</value>
+  </data>
+  <data name="NetworkRefreshButton.Content" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="Network_ModeNat" xml:space="preserve">
+    <value>Connesso tramite questo PC (NAT). Le app Android la vedono come Wi-Fi, senza costi per i dati.</value>
+  </data>
+  <data name="Network_ModeAdvanced" xml:space="preserve">
+    <value>Connesso alla rete di questo PC come dispositivo a sé (rete avanzata).</value>
+  </data>
+  <data name="Network_ModeOff" xml:space="preserve">
+    <value>Android non è in esecuzione, quindi non ha ancora una rete.</value>
+  </data>
+  <data name="Network_ModeUnknown" xml:space="preserve">
+    <value>Il servizio DSA non indica la rete. Aggiorna DSA per vederla.</value>
+  </data>
+  <data name="Network_None" xml:space="preserve">
+    <value>Nessuno</value>
+  </data>
+  <data name="Network_DnsHost" xml:space="preserve">
+    <value>Risponde il resolver di questo PC, quindi il file hosts, la VPN e i filtri DNS si applicano alle app Android.</value>
+  </data>
+  <data name="Network_DnsFallback" xml:space="preserve">
+    <value>Il resolver di questo PC non risponde, quindi Android chiede ai server DNS della rete: {0}</value>
+  </data>
+  <data name="NetworkAddressLabel.Text" xml:space="preserve">
+    <value>Indirizzo</value>
+  </data>
+  <data name="NetworkDnsLabel.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="NetworkGatewayLabel.Text" xml:space="preserve">
+    <value>Gateway</value>
+  </data>
+  <data name="NetworkProblemBar.Title" xml:space="preserve">
+    <value>La rete avanzata non è in uso</value>
+  </data>
+  <data name="NetworkAdvancedHeader.Text" xml:space="preserve">
+    <value>Avanzate</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Header" xml:space="preserve">
+    <value>Rete avanzata</value>
+  </data>
+  <data name="AdvancedNetworkingCard.Description" xml:space="preserve">
+    <value>Android entra nella rete del PC come dispositivo a sé: altri dispositivi e app Android si raggiungono a vicenda. Di norma è disattivato.
+I programmi su questo PC possono sempre raggiungere un server in Android all'indirizzo qui sopra.</value>
+  </data>
+  <data name="NetworkRestartBar.Title" xml:space="preserve">
+    <value>Riavvia Android per applicare</value>
+  </data>
+  <data name="NetworkRestartBar.Message" xml:space="preserve">
+    <value>La modifica si applica al prossimo avvio di Android. Arresta Android nella pagina Generale, poi apri un'app.</value>
+  </data>
+  <data name="NetworkCertificatesHeader.Text" xml:space="preserve">
+    <value>Certificati attendibili</value>
+  </data>
+  <data name="HostCertificatesCard.Header" xml:space="preserve">
+    <value>Usa i certificati radice aggiunti a questo PC</value>
+  </data>
+  <data name="HostCertificatesCard.Description" xml:space="preserve">
+    <value>Le app Android si fidano dei certificati radice aggiunti al PC, come quelli aziendali o di un software di sicurezza. Di norma è attivo.
+I certificati radice inclusi in Windows non sono elencati. Una modifica si applica subito.</value>
+  </data>
+  <data name="CertificatesNone.Text" xml:space="preserve">
+    <value>Su questo PC non sono stati trovati certificati radice aggiunti.</value>
+  </data>
+  <data name="Certificate_IssuedBy" xml:space="preserve">
+    <value>Rilasciato da {0}</value>
+  </data>
+  <data name="Certificate_SourceMachine" xml:space="preserve">
+    <value>Autorità di certificazione radice attendibili di questo PC</value>
+  </data>
+  <data name="Certificate_SourceMachineGroupPolicy" xml:space="preserve">
+    <value>Autorità di certificazione radice attendibili di questo PC, impostate da Criteri di gruppo</value>
+  </data>
+  <data name="Certificate_SourceMachineEnterprise" xml:space="preserve">
+    <value>Autorità di certificazione radice attendibili di questo PC, impostate dall'organizzazione</value>
+  </data>
+  <data name="Certificate_SourceUser" xml:space="preserve">
+    <value>Le tue Autorità di certificazione radice attendibili</value>
+  </data>
+  <data name="Certificate_SourceUserGroupPolicy" xml:space="preserve">
+    <value>Le tue Autorità di certificazione radice attendibili, impostate da Criteri di gruppo</value>
+  </data>
+  <data name="Certificate_SourceAdmin" xml:space="preserve">
+    <value>Aggiunto da un amministratore di questo PC</value>
+  </data>
+  <data name="Certificate_SourceSystem" xml:space="preserve">
+    <value>Aggiunto all'archivio certificati del sistema</value>
+  </data>
+  <data name="BackupHeader.Text" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="BackupUnavailableBar.Title" xml:space="preserve">
+    <value>Al momento i backup non sono utilizzabili</value>
+  </data>
+  <data name="BackupErrorBar.Title" xml:space="preserve">
+    <value>Operazione non riuscita</value>
+  </data>
+  <data name="BackupResultBar.Title" xml:space="preserve">
+    <value>Fatto</value>
+  </data>
+  <data name="BackupCard.Header" xml:space="preserve">
+    <value>Esegui il backup dei dati delle app</value>
+  </data>
+  <data name="BackupCard.Description" xml:space="preserve">
+    <value>Android esegue il backup dei dati delle app nella tua cartella utente, crittografati con una chiave che Windows conserva per te.
+Ripristinali dopo una reimpostazione dei dati, o su un altro PC con la chiave di ripristino.</value>
+  </data>
+  <data name="BackupNowButton.Content" xml:space="preserve">
+    <value>Esegui il backup ora</value>
+  </data>
+  <data name="BackupRestoreButton.Content" xml:space="preserve">
+    <value>Ripristina</value>
+  </data>
+  <data name="BackupRestoreConfirm.Title" xml:space="preserve">
+    <value>Ripristinare i dati delle app dal backup?</value>
+  </data>
+  <data name="BackupRestoreConfirm.Action" xml:space="preserve">
+    <value>Ripristina</value>
+  </data>
+  <data name="RecoveryKeyCard.Header" xml:space="preserve">
+    <value>Chiave di ripristino</value>
+  </data>
+  <data name="RecoveryKeyCard.Description" xml:space="preserve">
+    <value>La chiave di ripristino apre il backup su un altro PC, o dopo la reinstallazione di Windows.
+Senza di essa, solo questo account Windows su questo PC può leggere il backup.</value>
+  </data>
+  <data name="RecoveryKeyShowButton.Content" xml:space="preserve">
+    <value>Mostra la chiave di ripristino</value>
+  </data>
+  <data name="RecoveryKeyHideButton.Content" xml:space="preserve">
+    <value>Nascondi</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Header" xml:space="preserve">
+    <value>Usa una chiave di ripristino</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Description" xml:space="preserve">
+    <value>Per ripristinare un backup di un altro PC, copiane la cartella DSA Backup nella tua cartella utente e immetti la sua chiave di ripristino.</value>
+  </data>
+  <data name="UseRecoveryKeyCard.Placeholder" xml:space="preserve">
+    <value>Chiave di ripristino</value>
+  </data>
+  <data name="UseRecoveryKeyButton.Content" xml:space="preserve">
+    <value>Usa la chiave</value>
+  </data>
+  <data name="Backup_NoService" xml:space="preserve">
+    <value>Il servizio DSA non ha indicato lo stato del backup. Riapri questa pagina tra poco.</value>
+  </data>
+  <data name="Backup_Unavailable" xml:space="preserve">
+    <value>Al momento la cartella di backup o la sua chiave non sono utilizzabili.</value>
+  </data>
+  <data name="Backup_Folder" xml:space="preserve">
+    <value>Cartella: {0}</value>
+  </data>
+  <data name="Backup_Last" xml:space="preserve">
+    <value>Ultimo backup: {0}</value>
+  </data>
+  <data name="Backup_Never" xml:space="preserve">
+    <value>mai</value>
+  </data>
+  <data name="Backup_Apps" xml:space="preserve">
+    <value>App nel backup: {0} ({1})</value>
+  </data>
+  <data name="Backup_LastError" xml:space="preserve">
+    <value>Ultimo problema: {0}</value>
+  </data>
+  <data name="Backup_Done" xml:space="preserve">
+    <value>Backup eseguito dei dati di {0} app.</value>
+  </data>
+  <data name="Backup_DoneSome" xml:space="preserve">
+    <value>Backup eseguito dei dati di {0} app; per {1} non è stato possibile.</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>Ripristinati i dati di {0} app e installate {1} app.</value>
+  </data>
+  <data name="Backup_RestoredSome" xml:space="preserve">
+    <value>Ripristinati i dati di {0} app e installate {1} app; {2} non sono state ripristinate.</value>
+  </data>
+  <data name="Backup_RestoreWarning" xml:space="preserve">
+    <value>Ogni app nel backup riceve i dati del backup al posto di quelli attuali.
+
+• Le app mancanti vengono installate di nuovo.
+• Android si avvia se non è in esecuzione.</value>
+  </data>
+  <data name="Backup_KeyAdvice" xml:space="preserve">
+    <value>Annota la chiave o conservala in un gestore di password, lontano dal PC. Chiunque abbia la chiave e la cartella di backup può leggerlo.</value>
+  </data>
+  <data name="Backup_KeyEmpty" xml:space="preserve">
+    <value>Immetti prima la chiave di ripristino.</value>
+  </data>
+  <data name="Backup_KeyUsed" xml:space="preserve">
+    <value>La chiave di ripristino è conservata come chiave di backup. Ora la cartella di backup creata con essa può essere ripristinata qui.</value>
+  </data>
+  <data name="BackupSwitchCard.Header" xml:space="preserve">
+    <value>Esegui il backup dei dati delle app su questo PC</value>
+  </data>
+  <data name="BackupSwitchCard.Description" xml:space="preserve">
+    <value>Tiene sul PC una seconda copia crittografata dei dati utente delle app Android, da ripristinare dopo una reimpostazione o su un altro PC.
+Disattivato finché non lo attivi.</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>Il backup è disattivato. Non viene creato alcun backup e nessun dato delle app viene conservato su questo PC.</value>
+  </data>
+  <data name="Backup_OffKept" xml:space="preserve">
+    <value>Il backup è disattivato. I backup precedenti di {0} app ({1}) sono ancora conservati nella cartella DSA Backup.</value>
+  </data>
+  <data name="Backup_DeleteQuestion" xml:space="preserve">
+    <value>I backup di {0} app ({1}) sono ancora conservati su questo PC.
+
+Eliminarli insieme alla loro chiave, o conservarli per un ripristino futuro?</value>
+  </data>
+  <data name="BackupOffConfirm.Title" xml:space="preserve">
+    <value>Disattiva il backup</value>
+  </data>
+  <data name="BackupOffConfirm.Delete" xml:space="preserve">
+    <value>Elimina i backup</value>
+  </data>
+  <data name="BackupOffConfirm.Keep" xml:space="preserve">
+    <value>Conservali</value>
+  </data>
+  <data name="Backup_TurnedOn" xml:space="preserve">
+    <value>Il backup è attivato. Da ora Android esegue il backup dei dati delle app su questo PC.</value>
+  </data>
+  <data name="Backup_TurnedOff" xml:space="preserve">
+    <value>Il backup è disattivato. I backup creati finora vengono conservati.</value>
+  </data>
+  <data name="Backup_TurnedOffDeleted" xml:space="preserve">
+    <value>Il backup è disattivato e i backup e la loro chiave sono stati eliminati.</value>
+  </data>
+  <data name="KeyProtectionCard.Header" xml:space="preserve">
+    <value>Protezione delle chiavi di Android</value>
+  </data>
+  <data name="KeyProtection_None" xml:space="preserve">
+    <value>Le chiavi di Android ricevono la loro protezione al primo avvio di Android.</value>
+  </data>
+  <data name="KeyProtection_Tpm" xml:space="preserve">
+    <value>Sigillate dal TPM di questo PC. Una copia del disco di Android non apre altrove le chiavi delle app né l'archivio crittografato di Android.</value>
+  </data>
+  <data name="KeyProtection_Dpapi" xml:space="preserve">
+    <value>Senza un TPM utilizzabile, Windows le tiene solo per il tuo account. Una copia del disco Android non apre le chiavi senza il tuo account.
+Appena un TPM funziona, DSA sigilla le chiavi con esso.</value>
+  </data>
+  <data name="KeyProtection_Hardware" xml:space="preserve">
+    <value>Sigillate da {0}.</value>
+  </data>
+  <data name="KeyProtection_Store" xml:space="preserve">
+    <value>Conservate da {0}.</value>
+  </data>
+  <data name="KeyProtection_Why" xml:space="preserve">
+    <value>Perché non il TPM: {0}</value>
+  </data>
+  <data name="KeyProblemBar.Title" xml:space="preserve">
+    <value>Impossibile aprire le chiavi di Android</value>
+  </data>
+  <data name="ResetDataHeader.Text" xml:space="preserve">
+    <value>Reimpostazione</value>
+  </data>
+  <data name="ResetDataCard.Header" xml:space="preserve">
+    <value>Reimposta i dati di Android</value>
+  </data>
+  <data name="ResetDataCard.Description" xml:space="preserve">
+    <value>Cancella tutte le app installate, gli account e tutti i dati delle app, così Android si avvia come appena installato.
+L'immagine Android e queste impostazioni restano.</value>
+  </data>
+  <data name="ResetDataButton.Content" xml:space="preserve">
+    <value>Reimposta</value>
+  </data>
+  <data name="ResetDataConfirm.Title" xml:space="preserve">
+    <value>Reimpostare i dati di Android?</value>
+  </data>
+  <data name="ResetDataConfirm.Action" xml:space="preserve">
+    <value>Reimposta</value>
+  </data>
+  <data name="ResetData_Warning" xml:space="preserve">
+    <value>Verranno cancellati da Android:
+• tutte le app che hai installato
+• gli account a cui hai effettuato l'accesso
+• i dati di tutte le app
+
+Android si arresta ora e al prossimo avvio sarà come appena installato. L'immagine Android e le impostazioni di DSA restano.
+
+L'operazione non può essere annullata.</value>
+  </data>
+  <data name="ResetDoneBar.Title" xml:space="preserve">
+    <value>I dati di Android sono stati reimpostati</value>
+  </data>
+  <data name="ResetDoneBar.Message" xml:space="preserve">
+    <value>La prossima app che apri avvia Android come appena installato.</value>
+  </data>
+  <data name="Toggle.On" xml:space="preserve">
+    <value>Attivato</value>
+  </data>
+  <data name="Toggle.Off" xml:space="preserve">
+    <value>Disattivato</value>
+  </data>
+  <data name="AndroidRunningHeader.Text" xml:space="preserve">
+    <value>In esecuzione ora</value>
+  </data>
+  <data name="Android_Major" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="Android_Unknown" xml:space="preserve">
+    <value>Sconosciuto</value>
+  </data>
+  <data name="Android_Supported" xml:space="preserve">
+    <value>Versioni supportate: Android {0}</value>
+  </data>
+  <data name="Android_Switching" xml:space="preserve">
+    <value>Android {0} è stato scelto. Viene scaricato ora e usato al prossimo avvio di Android.</value>
+  </data>
+  <data name="AndroidSwitchingBar.Title" xml:space="preserve">
+    <value>Cambio della versione di Android</value>
+  </data>
+  <data name="AndroidBuildCard.Header" xml:space="preserve">
+    <value>Build</value>
+  </data>
+  <data name="AndroidPatchCard.Header" xml:space="preserve">
+    <value>Livello patch di sicurezza</value>
+  </data>
+  <data name="AndroidChooseHeader.Text" xml:space="preserve">
+    <value>Versione di Android</value>
+  </data>
+  <data name="AndroidChooseCard.Header" xml:space="preserve">
+    <value>Versione da usare</value>
+  </data>
+  <data name="AndroidChooseCard.Description" xml:space="preserve">
+    <value>DSA supporta le ultime due versioni di Android. Alcune app funzionano solo su una delle due.</value>
+  </data>
+  <data name="Android_ChoiceLatest" xml:space="preserve">
+    <value>Sempre la più recente (ora Android {0})</value>
+  </data>
+  <data name="Android_ChoiceMajor" xml:space="preserve">
+    <value>Android {0}</value>
+  </data>
+  <data name="AndroidApplyButton.Content" xml:space="preserve">
+    <value>Cambia</value>
+  </data>
+  <data name="AndroidChooseNote.Text" xml:space="preserve">
+    <value>Tutti gli utenti di questo computer usano la stessa versione di Android, quindi per cambiarla serve un amministratore.
+La versione scelta continua a ricevere aggiornamenti di sicurezza. Finito il supporto, DSA passa alla versione successiva e mantiene le app.</value>
+  </data>
+  <data name="AndroidUpConfirm.Title" xml:space="preserve">
+    <value>Passare a un Android più recente?</value>
+  </data>
+  <data name="AndroidUpConfirm.Body" xml:space="preserve">
+    <value>Android {0} viene scaricato e usato dal prossimo avvio di Android. Le app e i loro dati vengono trasferiti.
+
+Tornare indietro in seguito cancella i dati.</value>
+  </data>
+  <data name="AndroidDownConfirm.Title" xml:space="preserve">
+    <value>Cancellare i dati di Android per passare a una versione precedente?</value>
+  </data>
+  <data name="AndroidDownConfirm.Action" xml:space="preserve">
+    <value>Cancella i dati e cambia</value>
+  </data>
+  <data name="Android_DownWarning" xml:space="preserve">
+    <value>Android {0} è precedente all'Android {1} in esecuzione e non può leggere i dati scritti da una versione più recente.
+
+Il passaggio cancella i dati Android di tutti gli utenti di questo computer:
+• tutte le app che hanno installato
+• gli account a cui hanno effettuato l'accesso
+• i dati di tutte le app
+
+Per ogni utente, Android si avvierà come appena installato. Le impostazioni di DSA restano.
+
+L'operazione non può essere annullata.</value>
+  </data>
+  <data name="ApkWindow_AbiWarningTitle" xml:space="preserve">
+    <value>Questa app potrebbe non funzionare su questo PC</value>
+  </data>
+  <data name="ApkWindow_InstalledTitle" xml:space="preserve">
+    <value>Già installata</value>
+  </data>
+  <data name="ApkWindow_DowngradeTitle" xml:space="preserve">
+    <value>È installata una versione più recente</value>
+  </data>
+  <data name="ApkWindow_SignatureTitle" xml:space="preserve">
+    <value>Firmata con un'altra chiave</value>
+  </data>
+  <data name="AppsRunAsArm.Content" xml:space="preserve">
+    <value>Esegui come ARM</value>
+  </data>
+  <data name="Apps_RunAsArm_system-app" xml:space="preserve">
+    <value>Le app che fanno parte di Android vengono eseguite come Android le ha installate.</value>
+  </data>
+  <data name="Apps_RunAsArm_no-arm-libraries" xml:space="preserve">
+    <value>Nessun APK di questa app sul dispositivo contiene il suo codice ARM.</value>
+  </data>
+  <data name="Apps_RunAsArm_translation-off" xml:space="preserve">
+    <value>La traduzione ARM non è attiva. Attivala in App ARM e riavvia Android.</value>
+  </data>
+  <data name="Apps_RunAsArm_arm-only" xml:space="preserve">
+    <value>Questa app contiene solo codice ARM, quindi viene sempre eseguita come ARM.</value>
+  </data>
+  <data name="Apps_RunAsArm_unknown" xml:space="preserve">
+    <value>Questa versione di DSA non sa dire se l'app può essere eseguita come ARM.</value>
+  </data>
+  <data name="AppsRunAsArmEraseTitle" xml:space="preserve">
+    <value>Cancellare i dati di {0}?</value>
+  </data>
+  <data name="AppsRunAsArmEraseBody" xml:space="preserve">
+    <value>Android non può cambiare il modo in cui viene eseguita {0} mantenendone i dati.
+
+Reinstallarla ne cancella i dati: accessi, impostazioni e file che conserva per sé.</value>
+  </data>
+  <data name="AppsRunAsArmEraseButton" xml:space="preserve">
+    <value>Cancella e installa di nuovo</value>
+  </data>
+  <data name="Apps_RunAsArmKept" xml:space="preserve">
+    <value>{0} è stata lasciata com'era, con i suoi dati.</value>
+  </data>
+  <data name="Apps_RunAsArmOn" xml:space="preserve">
+    <value>{0} ora viene eseguita come ARM.</value>
+  </data>
+  <data name="Apps_RunAsArmOff" xml:space="preserve">
+    <value>{0} ora esegue il suo codice x86_64.</value>
+  </data>
+  <data name="Apps_RunAsArmNotChanged" xml:space="preserve">
+    <value>{0} non è stata installata di nuovo: {1} ({2})</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_not-installed" xml:space="preserve">
+    <value>non è più installata</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_system-app" xml:space="preserve">
+    <value>fa parte di Android</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_no-libraries" xml:space="preserve">
+    <value>i suoi APK sul dispositivo non contengono codice per questo</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_translation-off" xml:space="preserve">
+    <value>la traduzione ARM non è attiva</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_data-would-be-erased" xml:space="preserve">
+    <value>i suoi dati verrebbero cancellati</value>
+  </data>
+  <data name="Apps_RunAsArmRefused_other" xml:space="preserve">
+    <value>Android ha rifiutato</value>
+  </data>
+  <data name="ApkWindow_BundleTitle" xml:space="preserve">
+    <value>Bundle di APK suddivisi</value>
+  </data>
+  <data name="ApkWindow_BundleSummary" xml:space="preserve">
+    <value>{0} è composta da più APK. I {1} necessari a questo PC vengono installati insieme, {2} in tutto.</value>
+  </data>
+  <data name="ApkWindow_BundleSummaryObb" xml:space="preserve">
+    <value>{0} è composta da più APK. I {1} necessari a questo PC vengono installati insieme ai file di espansione, {2} in tutto.</value>
+  </data>
+  <data name="ApkWindow_FactApks" xml:space="preserve">
+    <value>APK</value>
+  </data>
+  <data name="ApkWindow_ApksValue" xml:space="preserve">
+    <value>{0} (la base e {1} suddivisioni)</value>
+  </data>
+  <data name="ApkWindow_FactObbs" xml:space="preserve">
+    <value>File di espansione</value>
+  </data>
+  <data name="Install_Reason_app-bundle" xml:space="preserve">
+    <value>è un Android App Bundle, fatto per essere caricato in un app store. Ottieni l'app come APK, o come bundle .xapk, .apks o .apkm.</value>
+  </data>
+  <data name="Install_Reason_encrypted-bundle" xml:space="preserve">
+    <value>il bundle è crittografato, quindi i suoi APK non sono leggibili. Ottieni l'app come APK, o come bundle più recente.</value>
+  </data>
+  <data name="Install_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>un APK suddiviso del bundle è firmato con una chiave diversa dal suo APK di base, quindi Android lo rifiuterebbe.</value>
+  </data>
+  <data name="Install_Reason_invalid-bundle" xml:space="preserve">
+    <value>il bundle non è una singola app che Android può installare.</value>
+  </data>
+  <data name="ApkWindow_Reason_app-bundle" xml:space="preserve">
+    <value>È un Android App Bundle, fatto per essere caricato in un app store. Ottieni l'app come APK, o come bundle .xapk, .apks o .apkm.</value>
+  </data>
+  <data name="ApkWindow_Reason_encrypted-bundle" xml:space="preserve">
+    <value>Il bundle è crittografato, quindi i suoi APK non sono leggibili. Ottieni l'app come APK, o come bundle più recente.</value>
+  </data>
+  <data name="ApkWindow_Reason_split-signature-mismatch" xml:space="preserve">
+    <value>Un APK suddiviso del bundle è firmato con una chiave diversa dal suo APK di base, quindi Android lo rifiuterebbe.</value>
+  </data>
+  <data name="ApkWindow_Reason_invalid-bundle" xml:space="preserve">
+    <value>Il bundle non è una singola app che Android può installare.</value>
+  </data>
+  <data name="ApkWindow_Reason_translation-off" xml:space="preserve">
+    <value>L'app funziona solo come codice ARM (arm64-v8a) e la traduzione ARM non è attiva.
+Attivala in App ARM, riavvia Android e installa di nuovo l'app.</value>
+  </data>
+  <data name="UpdatesAndroidHeader.Text" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="UpdatesProgramHeader.Text" xml:space="preserve">
+    <value>DSA</value>
+  </data>
+  <data name="AndroidFollowsCard.Header" xml:space="preserve">
+    <value>Versione seguita</value>
+  </data>
+  <data name="Android_FollowsLatest" xml:space="preserve">
+    <value>La versione supportata più recente (ora Android {0})</value>
+  </data>
+  <data name="Android_FollowsMajor" xml:space="preserve">
+    <value>Android {0} e i suoi aggiornamenti di sicurezza</value>
+  </data>
+  <data name="AndroidUpdateCard.Header" xml:space="preserve">
+    <value>Aggiornamento di Android</value>
+  </data>
+  <data name="Android_UpToDate" xml:space="preserve">
+    <value>Nessun aggiornamento Android in attesa. DSA controlla ogni giorno e, senza finestre di app aperte, riavvia Android per aggiornarlo.</value>
+  </data>
+  <data name="AndroidCheckButton.Content" xml:space="preserve">
+    <value>Controlla ora</value>
+  </data>
+  <data name="Android_RestartPending" xml:space="preserve">
+    <value>Android {0} è stato scaricato. Riavvia Android per usarlo subito.</value>
+  </data>
+  <data name="AndroidRestartButton.Content" xml:space="preserve">
+    <value>Riavvia ora</value>
+  </data>
+  <data name="AndroidRestartConfirm.Title" xml:space="preserve">
+    <value>Riavviare Android ora?</value>
+  </data>
+  <data name="AndroidRestartConfirm.Body" xml:space="preserve">
+    <value>Android si riavvia con Android {0}.
+
+Le sue finestre delle app si chiudono. Riapri le app al termine dell'avvio.</value>
+  </data>
+  <data name="ImageAutoRestartCard.Header" xml:space="preserve">
+    <value>Riavvia Android da solo per gli aggiornamenti</value>
+  </data>
+  <data name="ImageAutoRestartCard.Description" xml:space="preserve">
+    <value>Senza finestre di app aperte, riavvia subito Android con l'aggiornamento scaricato. Altrimenti DSA chiede prima, o attende che le chiudi.
+Attivo per impostazione predefinita. Se disattivato, un aggiornamento viene usato al prossimo avvio di Android.</value>
+  </data>
+  <data name="IdentitySpecsCard.Header" xml:space="preserve">
+    <value>Specifiche del dispositivo</value>
+  </data>
+  <data name="IdentityCopyButton.Content" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="IdentityAndroidHeader.Text" xml:space="preserve">
+    <value>Ciò che Android comunica</value>
+  </data>
+  <data name="Identity_NotReported" xml:space="preserve">
+    <value>Non indicato</value>
+  </data>
+  <data name="AppsRoot.Name" xml:space="preserve">
+    <value>Accesso root</value>
+  </data>
+  <data name="Apps_Root_off" xml:space="preserve">
+    <value>Root: non consentito</value>
+  </data>
+  <data name="Apps_Root_ask" xml:space="preserve">
+    <value>Root: chiedi ogni volta</value>
+  </data>
+  <data name="Apps_Root_remember" xml:space="preserve">
+    <value>Root: ricorda (senza chiedere)</value>
+  </data>
+  <data name="Apps_RootGroup" xml:space="preserve">
+    <value>Condivide l'ID utente con {0}. Android non distingue queste app, quindi condividono un'unica impostazione di accesso root.
+Modificarla qui la modifica per tutte. Se una di esse è Non consentito, nessuna può usare su.</value>
+  </data>
+  <data name="Apps_RootTip_unavailable" xml:space="preserve">
+    <value>L'accesso root è disattivato per questo PC. Un amministratore lo attiva in Avanzate.</value>
+  </data>
+  <data name="Apps_RootTip_unknown" xml:space="preserve">
+    <value>Il servizio DSA non indica il livello root di questa app. Aggiorna DSA per sceglierlo qui.</value>
+  </data>
+  <data name="Apps_RootNotChanged" xml:space="preserve">
+    <value>Il livello root di {0} non è stato modificato: {1}</value>
+  </data>
+  <data name="Apps_RootSet_off" xml:space="preserve">
+    <value>{0} non può più usare root. su scompare per l'app dal prossimo avvio di Android.</value>
+  </data>
+  <data name="Apps_RootSet_ask" xml:space="preserve">
+    <value>{0} ora chiede a un amministratore di questo PC ogni volta che usa su. Se prima non vedeva su, lo vedrà dal prossimo avvio di Android.</value>
+  </data>
+  <data name="Apps_RootSet_remember" xml:space="preserve">
+    <value>{0} ora usa su senza chiedere. Se prima non vedeva su, lo vedrà dal prossimo avvio di Android.</value>
+  </data>
+  <data name="AppsRootOffBar.Title" xml:space="preserve">
+    <value>L'accesso root è disattivato</value>
+  </data>
+  <data name="AppsRootOffBar.Message" xml:space="preserve">
+    <value>Nessuna app può usare su. Un amministratore di questo PC può attivare l'accesso root in Avanzate, poi scegli qui il livello di ogni app.</value>
+  </data>
+  <data name="AppsRootNote.Text" xml:space="preserve">
+    <value>Accesso root:
+• Non consentito nasconde su all'app.
+• Chiedi ogni volta mostra per ogni richiesta un avviso di amministratore con il nome dell'app. Un'approvazione dura 15 minuti.
+• Ricorda approva senza chiedere, quindi per sceglierlo serve l'approvazione di un amministratore.</value>
+  </data>
+  <data name="RootHeader.Text" xml:space="preserve">
+    <value>Accesso root</value>
+  </data>
+  <data name="RootElevationCard.Header" xml:space="preserve">
+    <value>Consenti alle app Android di chiedere l'accesso root</value>
+  </data>
+  <data name="RootElevationCard.Description" xml:space="preserve">
+    <value>Un'app consentita nella pagina App esegue comandi come root se un amministratore del PC approva, come con sudo. Di norma è disattivato.
+L'immagine Android, le sue proprietà di build e SELinux restano invariati.</value>
+  </data>
+  <data name="RootElevationAdminReason.Text" xml:space="preserve">
+    <value>Solo un amministratore può modificarla, perché vale per tutti gli utenti di questo PC.
+Usa Modifica come amministratore e Windows chiederà l'autorizzazione.</value>
+  </data>
+  <data name="RootElevationRestartBar.Title" xml:space="preserve">
+    <value>Riavvia Android per applicare</value>
+  </data>
+  <data name="RootElevationRestartBar.Message" xml:space="preserve">
+    <value>L'accesso root cambia dal prossimo avvio di Android. Arresta Android nella pagina Generale, poi apri un'app.</value>
+  </data>
+  <data name="RootLogCard.Header" xml:space="preserve">
+    <value>Dove vengono registrate le richieste</value>
+  </data>
+  <data name="RootElevation_LogAt" xml:space="preserve">
+    <value>Ogni richiesta resta nel log del servizio con l'app, l'ora, se è stata approvata e il comando: {0}</value>
+  </data>
+  <data name="RootElevation_LogUnknown" xml:space="preserve">
+    <value>Ogni richiesta resta nel log del servizio con l'app, l'ora, se è stata approvata e il comando.</value>
+  </data>
+  <data name="RootNote.Text" xml:space="preserve">
+    <value>Scegli il livello di ogni app nella pagina App. Ogni utente sceglie per le app del proprio Android.</value>
+  </data>
+  <data name="AppsAdbShell.Text" xml:space="preserve">
+    <value>adb shell</value>
+  </data>
+  <data name="WidevineHeader.Text" xml:space="preserve">
+    <value>Contenuti protetti</value>
+  </data>
+  <data name="WidevineCard.Header" xml:space="preserve">
+    <value>Widevine</value>
+  </data>
+  <data name="WidevineCard.Description" xml:space="preserve">
+    <value>Consente alle app di streaming di riprodurre video protetti. Si applica dal prossimo avvio di Android.
+Scarica circa 2 GB da Google secondo la Android SDK License, conserva solo Widevine ed elimina il resto.</value>
+  </data>
+  <data name="WidevineInstallButton.Content" xml:space="preserve">
+    <value>Ottieni</value>
+  </data>
+  <data name="WidevineConfirm.Title" xml:space="preserve">
+    <value>Ottenere Widevine da Google?</value>
+  </data>
+  <data name="WidevineConfirm.Action" xml:space="preserve">
+    <value>Accetta e scarica</value>
+  </data>
+  <data name="Widevine_Notice" xml:space="preserve">
+    <value>DSA scarica da Google l'immagine dell'emulatore Android per questa versione di Android e ne estrae solo il modulo Widevine, intatto.
+
+• Download: circa 2 GB, eliminati al termine.
+• Origine: {0}
+• Condizioni: Widevine è software di Google soggetto alla Android SDK License ({1}). Scaricandolo, accetti queste condizioni.
+• Qualità: livello di sicurezza L3, quindi i servizi di streaming inviano al massimo la definizione standard (SD).
+• Widevine funziona dal prossimo avvio di Android.
+
+DSA non include né ridistribuisce Widevine.</value>
+  </data>
+  <data name="WidevineInstallingBar.Title" xml:space="preserve">
+    <value>Download di Widevine</value>
+  </data>
+  <data name="WidevineInstallingBar.Message" xml:space="preserve">
+    <value>Download di circa 2 GB da Google ed estrazione di Widevine. Richiede alcuni minuti.</value>
+  </data>
+  <data name="WidevineRestartBar.Title" xml:space="preserve">
+    <value>Riavvia Android per applicare</value>
+  </data>
+  <data name="WidevineRestartBar.Message" xml:space="preserve">
+    <value>Android usa la modifica dal prossimo avvio.</value>
+  </data>
+  <data name="WidevineQualityCard.Header" xml:space="preserve">
+    <value>Solo definizione standard</value>
+  </data>
+  <data name="Widevine_Quality" xml:space="preserve">
+    <value>Qui Widevine ha il livello di sicurezza L3, quindi i servizi di streaming inviano al massimo la definizione standard (SD).
+Per l'alta definizione, usa il browser o l'app di questo computer.</value>
+  </data>
+  <data name="WidevineRemoveCard.Header" xml:space="preserve">
+    <value>Rimuovi Widevine</value>
+  </data>
+  <data name="WidevineRemoveCard.Description" xml:space="preserve">
+    <value>Rimuove il modulo e i certificati del dispositivo che ha conservato, dal prossimo avvio di Android.</value>
+  </data>
+  <data name="WidevineRemoveButton.Content" xml:space="preserve">
+    <value>Rimuovi</value>
+  </data>
+  <data name="WidevineTermsLink.Content" xml:space="preserve">
+    <value>Android SDK License</value>
+  </data>
+  <data name="Widevine_NotInstalled" xml:space="preserve">
+    <value>Non installato.</value>
+  </data>
+  <data name="Widevine_Installed" xml:space="preserve">
+    <value>Installato: dall'immagine Google {0} per Android {1} ({2}).</value>
+  </data>
+  <data name="Widevine_InstalledPending" xml:space="preserve">
+    <value>Installato: dall'immagine Google {0} per Android {1} ({2}). Viene usato dal prossimo avvio di Android.</value>
+  </data>
+  <data name="Widevine_RemovedPending" xml:space="preserve">
+    <value>Rimosso. Android lo usa fino al prossimo avvio.</value>
+  </data>
+  <data name="A11y_ItemName" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="A11y_Notice" xml:space="preserve">
+    <value>{0}. {1}</value>
+  </data>
+  <data name="A11y_LogLine" xml:space="preserve">
+    <value>{0}, {1}, {2}: {3}</value>
+  </data>
+  <data name="A11y_LogDropped" xml:space="preserve">
+    <value>{0} record scartati</value>
+  </data>
+  <data name="A11y_LogPriority" xml:space="preserve">
+    <value>Priorità minima mostrata</value>
+  </data>
+  <data name="A11y_Loading" xml:space="preserve">
+    <value>Caricamento</value>
+  </data>
+  <data name="A11y_Copied" xml:space="preserve">
+    <value>Copiato</value>
+  </data>
+  <data name="A11y_NavToggle" xml:space="preserve">
+    <value>Mostra o nascondi la navigazione</value>
+  </data>
+  <data name="A11y_Close" xml:space="preserve">
+    <value>Chiudi</value>
+  </data>
+  <data name="A11y_Minimize" xml:space="preserve">
+    <value>Riduci a icona</value>
+  </data>
+  <data name="A11y_Maximize" xml:space="preserve">
+    <value>Ingrandisci</value>
+  </data>
+  <data name="A11y_Restore" xml:space="preserve">
+    <value>Ripristina</value>
+  </data>
+  <data name="A11y_Help" xml:space="preserve">
+    <value>Guida</value>
+  </data>
+  <data name="ApkWindow_InstallQuestion" xml:space="preserve">
+    <value>Installare {0}?</value>
+  </data>
+  <data name="ApkWindow_PackageLabel" xml:space="preserve">
+    <value>Nome pacchetto:</value>
+  </data>
+  <data name="ApkWindow_PublisherLabel" xml:space="preserve">
+    <value>Autore:</value>
+  </data>
+  <data name="ApkWindow_VersionLabel" xml:space="preserve">
+    <value>Versione:</value>
+  </data>
+  <data name="ApkWindow_SourceLabel" xml:space="preserve">
+    <value>Origine:</value>
+  </data>
+  <data name="ApkWindow_CapabilitiesHeader" xml:space="preserve">
+    <value>Funzionalità ({0}):</value>
+  </data>
+  <data name="ApkWindow_More" xml:space="preserve">
+    <value>Altro</value>
+  </data>
+  <data name="ApkWindow_Less" xml:space="preserve">
+    <value>Meno</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundleDetail" xml:space="preserve">
+    <value>{0} è un bundle di APK suddivisi che non può essere installato: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_SplitBundle" xml:space="preserve">
+    <value>{0} è un bundle di APK suddivisi illeggibile, quindi non può essere installato.</value>
+  </data>
+  <data name="ApkWindow_File_AppBundle" xml:space="preserve">
+    <value>{0} è un Android App Bundle, un formato di pubblicazione per gli app store che non può essere installato così com'è.
+Ricavarne degli APK significa firmarli con un'altra chiave, e l'app non riceverebbe più aggiornamenti dalla sua origine.
+Ottieni l'app come APK, o come bundle .xapk, .apks o .apkm.</value>
+  </data>
+  <data name="ApkWindow_File_EncryptedBundle" xml:space="preserve">
+    <value>{0} è un bundle crittografato e i suoi APK non sono leggibili. Lo sono alcuni vecchi .apkm, apribili solo dall'app che li ha creati.
+Ottieni l'app come APK, o come bundle più recente.</value>
+  </data>
+  <data name="ApkWindow_File_SplitSignature" xml:space="preserve">
+    <value>{0} contiene un APK suddiviso firmato con un certificato diverso dall'APK di base: il bundle è stato modificato dopo la creazione.
+Android lo rifiuterebbe.</value>
+  </data>
+  <data name="ApkWindow_File_AbiDetail" xml:space="preserve">
+    <value>Impossibile eseguire {0} in DSA: {1}.</value>
+  </data>
+  <data name="ApkWindow_File_Abi" xml:space="preserve">
+    <value>Impossibile eseguire {0} in DSA: il suo codice nativo non è compatibile con l'Android di DSA, che esegue solo codice a 64 bit.
+Ottieni la build x86_64 o arm64-v8a dell'app.</value>
+  </data>
+  <data name="ApkWindow_File_NotApk" xml:space="preserve">
+    <value>{0} non è un file APK valido.</value>
+  </data>
+  <data name="ApkWindow_DsaEnded" xml:space="preserve">
+    <value>dsa è terminato con il codice {0}.</value>
+  </data>
+  <data name="ApkWindow_AppIcon" xml:space="preserve">
+    <value>Icona di {0}</value>
+  </data>
+  <data name="ApkWindow_PickerApks" xml:space="preserve">
+    <value>File APK e bundle di APK suddivisi</value>
+  </data>
+  <data name="ApkWindow_PickerAllFiles" xml:space="preserve">
+    <value>Tutti i file</value>
+  </data>
+</root>

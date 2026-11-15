@@ -1,0 +1,210 @@
+diff --git a/host/vulkan/VkCommonOperations.cpp b/host/vulkan/VkCommonOperations.cpp
+--- a/host/vulkan/VkCommonOperations.cpp
++++ b/host/vulkan/VkCommonOperations.cpp
+@@ -162,6 +162,77 @@
+ }
+ 
+ }  // namespace
++
++bool canDecodeAstcOnGpu(VulkanDispatch* vk, VkPhysicalDevice physicalDevice,
++                        std::string* missing) {
++    std::string lacks;
++    auto lack = [&lacks](const char* what) {
++        if (!lacks.empty()) {
++            lacks += ", ";
++        }
++        lacks += what;
++    };
++
++    // The decoded image is made mutable with VK_IMAGE_CREATE_EXTENDED_USAGE_BIT, so that the
++    // shader can write it as RGBA8UI while the app samples it as RGBA8 or sRGB: Vulkan 1.1.
++    VkPhysicalDeviceProperties props;
++    vk->vkGetPhysicalDeviceProperties(physicalDevice, &props);
++    if (props.apiVersion < VK_API_VERSION_1_1) {
++        lack("Vulkan 1.1");
++    }
++
++    // The decoding compute shader is recorded into the app's own command buffers, which run on
++    // a queue that draws.
++    uint32_t familyCount = 0;
++    vk->vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, nullptr);
++    std::vector<VkQueueFamilyProperties> families(familyCount);
++    vk->vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families.data());
++    constexpr VkQueueFlags kDrawAndCompute = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
++    bool drawsAndComputes = false;
++    for (const VkQueueFamilyProperties& family : families) {
++        if ((family.queueFlags & kDrawAndCompute) == kDrawAndCompute) {
++            drawsAndComputes = true;
++        }
++    }
++    if (!drawsAndComputes) {
++        lack("a queue family that both draws and computes");
++    }
++
++    // The app's ASTC blocks are copied into RGBA32UI images that the shader reads as storage
++    // images; it writes RGBA8UI storage images, which the app then samples, filtered, as RGBA8
++    // or sRGB, and copies from.
++    struct Need {
++        VkFormat format;
++        VkFormatFeatureFlags features;
++        const char* what;
++    };
++    const Need needs[] = {
++        {VK_FORMAT_R32G32B32A32_UINT,
++         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT,
++         "RGBA32UI storage images that copies write"},
++        {VK_FORMAT_R8G8B8A8_UINT, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT, "RGBA8UI storage images"},
++        {VK_FORMAT_R8G8B8A8_UNORM,
++         VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT |
++             VK_FORMAT_FEATURE_TRANSFER_SRC_BIT,
++         "filtered RGBA8 sampling"},
++        {VK_FORMAT_R8G8B8A8_SRGB,
++         VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT |
++             VK_FORMAT_FEATURE_TRANSFER_SRC_BIT,
++         "filtered sRGB sampling"},
++    };
++    for (const Need& need : needs) {
++        VkFormatProperties formatProps = {};
++        vk->vkGetPhysicalDeviceFormatProperties(physicalDevice, need.format, &formatProps);
++        if ((formatProps.optimalTilingFeatures & need.features) != need.features) {
++            lack(need.what);
++        }
++    }
++
++    if (missing) {
++        *missing = lacks;
++    }
++    return lacks.empty();
++}
+ 
+ static StaticMap<VkDevice, uint32_t> sKnownStagingTypeIndices;
+ 
+@@ -1874,6 +1945,34 @@
+     mEnableYcbcrEmulation = features.enableYcbcrEmulation;
+     mGuestVulkanOnly = features.guestVulkanOnly;
+     mUseDedicatedAllocations = features.useDedicatedAllocations;
++
++    // Say once how apps get ASTC LDR textures on this GPU, through Vulkan and through ANGLE's
++    // GLES on top of it: from the GPU itself, from the compute shader that decodes them on the
++    // GPU, or not at all. Nothing decodes them on the CPU, so a GPU that cannot run the shader
++    // offers no ASTC.
++    if (mIvk && mPhysicalDevice != VK_NULL_HANDLE) {
++        const char* gpu = mDeviceInfo.physdevProps.deviceName;
++        VkPhysicalDeviceFeatures physdevFeatures = {};
++        mIvk->vkGetPhysicalDeviceFeatures(mPhysicalDevice, &physdevFeatures);
++        std::string missing;
++        if (physdevFeatures.textureCompressionASTC_LDR) {
++            INFO("ASTC LDR textures: native. %s samples them itself.", gpu);
++        } else if (mAstcLdrEmulationMode != AstcEmulationMode::Gpu) {
++            WARN("ASTC LDR textures: unavailable. %s has no ASTC, and decoding them on the GPU "
++                 "is off (ASTC emulation mode %s), so apps are not offered ASTC.",
++                 gpu, string_AstcEmulationMode(mAstcLdrEmulationMode));
++        } else if (!canDecodeAstcOnGpu(mIvk, mPhysicalDevice, &missing)) {
++            WARN("ASTC LDR textures: unavailable. %s has no ASTC, and the compute shader that "
++                 "would decode them cannot run on it (it lacks %s). Nothing decodes them on "
++                 "the CPU, so apps are not offered ASTC.",
++                 gpu, missing.c_str());
++        } else {
++            INFO("ASTC LDR textures: GPU-emulated. %s has no ASTC, so apps (Vulkan and GLES) "
++                 "are offered it and a compute shader decodes each texture to RGBA8 on the "
++                 "GPU before it is sampled.",
++                 gpu);
++        }
++    }
+ 
+     if (features.useVulkanComposition) {
+         if (mCompositorVk) {
+diff --git a/host/vulkan/VkCommonOperations.h b/host/vulkan/VkCommonOperations.h
+--- a/host/vulkan/VkCommonOperations.h
++++ b/host/vulkan/VkCommonOperations.h
+@@ -103,6 +103,12 @@
+     Cpu,       // Decompress ASTC textures on the CPU
+     Gpu,       // Decompress ASTC textures on the GPU
+ };
++
++// Whether `physicalDevice` can run the compute shader that decodes ASTC LDR textures on the GPU
++// for a device without ASTC. When it cannot, apps are not offered ASTC at all: nothing decodes
++// it on the CPU. `missing`, when given, is set to what the device lacks.
++bool canDecodeAstcOnGpu(VulkanDispatch* vk, VkPhysicalDevice physicalDevice,
++                        std::string* missing);
+ 
+ // Global state that holds a global Vulkan instance along with globally
+ // exported memory allocations + images. This is in order to service things
+diff --git a/host/vulkan/VkDecoderGlobalState.cpp b/host/vulkan/VkDecoderGlobalState.cpp
+--- a/host/vulkan/VkDecoderGlobalState.cpp
++++ b/host/vulkan/VkDecoderGlobalState.cpp
+@@ -1362,6 +1362,7 @@
+             imageFormatInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+             imageFormatInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+             imageFormatInfo.format = CompressedImageInfo::getCompressedMipmapsFormat(format);
++            dropFromChain(&imageFormatInfo, VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO);
+         }
+ 
+         auto* extImageFormatInfo =
+@@ -2563,6 +2564,7 @@
+         VkImageCreateInfo decompInfo;
+         if (needDecompression) {
+             decompInfo = cmpInfo.getOutputCreateInfo(*pCreateInfo);
++            dropFromChain(&decompInfo, VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO);
+             pCreateInfo = &decompInfo;
+         }
+ 
+@@ -2885,6 +2887,9 @@
+             if (imageInfo->cmpInfo.outputImage()) {
+                 createInfo = *pCreateInfo;
+                 createInfo.format = CompressedImageInfo::getOutputFormat(pCreateInfo->format);
++                // The view is of the decoded image now, which an ASTC decode mode cannot apply
++                // to (ANGLE asks for one where the device has VK_EXT_astc_decode_mode).
++                dropFromChain(&createInfo, VK_STRUCTURE_TYPE_IMAGE_VIEW_ASTC_DECODE_MODE_EXT);
+                 needEmulatedAlpha = CompressedImageInfo::needEmulatedAlpha(pCreateInfo->format);
+                 createInfo.image = imageInfo->cmpInfo.outputImage();
+                 pCreateInfo = &createInfo;
+@@ -8256,6 +8261,24 @@
+         return !(usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) && !(type == VK_IMAGE_TYPE_1D);
+     }
+ 
++    // Unlinks every struct of `sType` from the pNext chain after `head`. An image of a format
++    // the device emulates is made, viewed and queried in other formats (the decoded RGBA8 and
++    // the RGBA32UI blocks), so a VkImageFormatListCreateInfo naming the app's compressed formats
++    // would list formats those images cannot be viewed as, and leave out the ones the decoding
++    // shader reads and writes them through; without the list, a mutable image may be viewed in
++    // every compatible format. The structs stay where they are; only the links around them
++    // change.
++    static void dropFromChain(void* head, VkStructureType sType) {
++        auto* current = reinterpret_cast<vk_struct_common*>(head);
++        while (current->pNext) {
++            if (current->pNext->sType == sType) {
++                current->pNext = current->pNext->pNext;
++            } else {
++                current = current->pNext;
++            }
++        }
++    }
++
+     std::vector<const char*> filteredDeviceExtensionNames(VulkanDispatch* vk,
+                                                           VkPhysicalDevice physicalDevice,
+                                                           uint32_t count,
+@@ -8446,12 +8469,20 @@
+ 
+     bool enableEmulatedAstcLocked(VkPhysicalDevice physicalDevice, VulkanDispatch* vk)
+         REQUIRES(mMutex) {
+-        if (m_vkEmulation->getAstcLdrEmulationMode() == AstcEmulationMode::Disabled) {
++        // Only the compute shader that decodes ASTC on the GPU stands in for it. This renderer
++        // is built without the CPU decoder, and offering ASTC with nothing to decode it would
++        // hand apps textures that never show.
++        if (m_vkEmulation->getAstcLdrEmulationMode() != AstcEmulationMode::Gpu) {
+             return false;
+         }
+ 
+-        // Don't enable ASTC emulation for ANGLE, let it do its own emulation.
+-        return !isAngleInstanceLocked(physicalDevice, vk);
++        // ANGLE is not left to itself here, as it is for ETC2: it has no ASTC decoder of its
++        // own, and it offers GL_KHR_texture_compression_astc_ldr only for the ASTC formats the
++        // device samples, so without this every GLES app (games made with Unity and other
++        // engines) went without ASTC on a GPU that lacks it.
++        //
++        // On a device that cannot run the shader, ASTC is not offered at all.
++        return canDecodeAstcOnGpu(vk, physicalDevice, nullptr);
+     }
+ 
+     bool needEmulatedEtc2(VkPhysicalDevice physicalDevice, VulkanDispatch* vk) EXCLUDES(mMutex) {

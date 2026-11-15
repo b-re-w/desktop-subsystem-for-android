@@ -54,7 +54,8 @@ HostMessage decodeHostFrame(const uint8_t* data, size_t size) {
             return caps;
         }
         case v1::Envelope::kVideoDecoderOpened:
-            return Opened{envelope.video_decoder_opened().ok(), envelope.video_decoder_opened().error()};
+            return Opened{envelope.video_decoder_opened().ok(), envelope.video_decoder_opened().error(),
+                          envelope.video_decoder_opened().shared_pictures()};
         case v1::Envelope::kVideoFrame: {
             const v1::VideoFrame& f = envelope.video_frame();
             Frame frame;
@@ -65,6 +66,8 @@ HostMessage decodeHostFrame(const uint8_t* data, size_t size) {
             frame.stride = f.stride();
             frame.nv12 = f.nv12();
             frame.endOfStream = f.end_of_stream();
+            frame.slot = f.slot();
+            frame.slotOffset = f.slot_offset();
             return frame;
         }
         case v1::Envelope::kVideoFlushed:
@@ -86,12 +89,19 @@ std::vector<uint8_t> encodeHello(const std::string& build) {
     return encode(envelope);
 }
 
-std::vector<uint8_t> encodeOpen(Codec codec, uint32_t width, uint32_t height) {
+std::vector<uint8_t> encodeOpen(Codec codec, uint32_t width, uint32_t height, uint64_t pictureRegion) {
     v1::Envelope envelope;
     v1::VideoDecoderOpen* open = envelope.mutable_video_decoder_open();
     open->set_codec(static_cast<v1::VideoCodec>(codec));
     open->set_width(width);
     open->set_height(height);
+    open->set_picture_region_id(pictureRegion);
+    return encode(envelope);
+}
+
+std::vector<uint8_t> encodeSlotReturned(uint32_t slot) {
+    v1::Envelope envelope;
+    envelope.mutable_video_slot_returned()->set_slot(slot);
     return encode(envelope);
 }
 

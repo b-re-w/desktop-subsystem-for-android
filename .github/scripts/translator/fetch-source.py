@@ -42,7 +42,10 @@ def fetch(top, project, clang, rust):
         shutil.rmtree(path)
     path.mkdir(parents=True)
     mode, entries = digitalis_lock.sparse_entries(project, clang, rust)
-    for attempt in range(4):
+    # googlesource answers a burst of fetches with HTTP 429 for minutes at a time, so the waits
+    # grow: 30 s, 1, 2, 4 and 5 minutes.
+    attempts = 6
+    for attempt in range(attempts):
         try:
             if (path / ".git").exists():
                 shutil.rmtree(path / ".git")
@@ -58,9 +61,9 @@ def fetch(top, project, clang, rust):
             git("checkout", "-q", "--detach", "FETCH_HEAD", cwd=path)
             break
         except subprocess.CalledProcessError:
-            if attempt == 3:
+            if attempt == attempts - 1:
                 raise
-            wait = 15 * (attempt + 1)
+            wait = min(30 * 2 ** attempt, 300)
             print(f"{project['path']}: fetch failed, again in {wait} s", flush=True)
             time.sleep(wait)
     shutil.rmtree(path / ".git")

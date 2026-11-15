@@ -9,7 +9,9 @@
 //!    deny only, so it is refused);
 //! 2. starts the app's window program (`%LOCALAPPDATA%\DSA\apps\<package>\<Label>.exe`, whose
 //!    version information names the app and whose icon is the app's) in the user's session, as
-//!    the user, with [`APPROVAL_ARGUMENT`] and the pipe's name;
+//!    the user, with [`APPROVAL_ARGUMENT`] and the pipe's name. The developer shell
+//!    (`adb shell`), Android's own services and apps that share a user ID ask under a program
+//!    of their own instead ([`prompt_program`]), named in the user's language;
 //! 3. that program asks Windows to run itself elevated (`ShellExecuteEx` with `runas`), which
 //!    brings up the UAC prompt with the program's name and icon. An administrator clicks Yes; a
 //!    standard user has to type an administrator's password. Cancelling ends the program with
@@ -27,13 +29,31 @@
 //! belongs to Windows and may stay open; answering it after that runs nothing, as the pipe is
 //! gone.
 //!
+//! A prompt has longer to be answered while a screen reader runs, because hearing its words and
+//! buttons read out takes longer than reading them. Windows keeps that flag per session
+//! (`SPI_GETSCREENREADER`, which Narrator, NVDA and JAWS set), and the service's session 0 is
+//! not the user's, so [`screen_reader_running`] asks a copy of the window program started in
+//! the user's session ([`SCREEN_READER_ARGUMENT`]), which answers with its exit code.
+//!
+//! Both prompts can be used with a screen reader and the keyboard alone. The UAC dialog is
+//! Windows' own, which Narrator reads on the secure desktop. The program's own dialog is a
+//! standard message box: a screen reader reads its caption and text as it opens, its buttons
+//! are named Yes and No, the keyboard focus starts on No, so a stray Enter refuses rather than
+//! approves, and its text says how long it has as a fixed sentence, with no countdown that
+//! would be read out again and again.
+//!
 //! [`wait_for_answer`] and the argument and exit code handling are platform neutral, so they are
 //! tested without a real prompt.
 
 use std::time::{Duration, Instant};
 
-use dsa_host_core::root_approval::PromptAnswer;
+use dsa_host_core::root_approval::{ApprovalRequest, PromptAnswer, PromptIcon};
+use dsa_host_core::root_requester::{GenericIcon, Requester};
+use dsa_host_core::tasks::AppInfo;
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_transport::local::LocalListener;
+
+use crate::ui_language::fill;
 use dsa_transport::TransportError;
 
 /// The argument the service starts an app's window program with to ask for approval. The
@@ -49,6 +69,312 @@ pub const LABEL_ARGUMENT: &str = "--root-label";
 /// The argument with the command su runs, in words, hex-encoded UTF-8, for the program's own
 /// dialog.
 pub const COMMAND_ARGUMENT: &str = "--root-command";
+
+/// The argument with the line under the name (the package, or the uid of a requester that is
+/// not an app), hex-encoded UTF-8, for the program's own dialog.
+pub const DETAIL_ARGUMENT: &str = "--root-detail";
+
+/// The argument with the language of the program's own dialog, as its tag (`en`, `ko`,
+/// `zh-TW`, ...).
+pub const LANGUAGE_ARGUMENT: &str = "--root-language";
+
+/// The argument with how many seconds the program's own dialog has to be answered, which it
+/// says in its text.
+pub const TIME_ARGUMENT: &str = "--root-time";
+
+/// The argument the service starts the window program with in the user's session to learn
+/// whether a screen reader runs there. It answers with [`exit::SCREEN_READER_RUNNING`] or
+/// [`exit::NO_SCREEN_READER`] and shows nothing.
+pub const SCREEN_READER_ARGUMENT: &str = "--screen-reader-query";
+
+/// The folder, among the apps' own, of the program the developer shell (`adb shell`) asks
+/// under. It is not an Android package's, so no app's program is ever replaced by it.
+pub const SHELL_PROGRAM_KEY: &str = "io.github.thisisthepy.dsa.root.shell";
+
+/// The folder of the program Android's own services ask under.
+pub const SYSTEM_PROGRAM_KEY: &str = "io.github.thisisthepy.dsa.root.system";
+
+/// The folder of the program apps that share one user ID ask under, named after all of them.
+pub const SHARED_PROGRAM_KEY: &str = "io.github.thisisthepy.dsa.root.shared";
+
+/// What the UAC prompt is shown under for `request`: the folder of the program it runs, and
+/// the app that program is made for, whose name is the program's name in the prompt and
+/// whose icon is its icon.
+///
+/// An app asks under its own window program, named by its label with its launcher icon, as
+/// the taskbar shows it. The developer shell and Android's own services ask under a program
+/// of their own, named in the user's language with a generic icon; apps that share a user ID
+/// under one named after all of them, with the first icon among them. UAC shows a program's
+/// name and icon only, so the package is in the program's folder, which "Show more details"
+/// shows.
+pub fn prompt_program(request: &ApprovalRequest) -> (String, AppInfo) {
+    let language = request.language();
+    let generic = |key: &str, icon: GenericIcon| {
+        (
+            key.to_string(),
+            AppInfo {
+                package_name: key.to_string(),
+                label: request.name_in(language),
+                icon_png: icon.png(),
+                ..Default::default()
+            },
+        )
+    };
+    match request.requester() {
+        Requester::DeveloperShell => generic(SHELL_PROGRAM_KEY, GenericIcon::Shell),
+        Requester::System => generic(SYSTEM_PROGRAM_KEY, GenericIcon::System),
+        Requester::SharedApps => {
+            let icon_png = match request.prompt_icon() {
+                PromptIcon::App(png) => png.to_vec(),
+                _ => Vec::new(),
+            };
+            (
+                SHARED_PROGRAM_KEY.to_string(),
+                AppInfo {
+                    package_name: SHARED_PROGRAM_KEY.to_string(),
+                    label: request.name_in(language),
+                    icon_png,
+                    ..Default::default()
+                },
+            )
+        }
+        Requester::App => (request.app.package_name.clone(), request.app.clone()),
+    }
+}
+
+/// The words of the program's own dialog, which it shows when UAC is off.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfirmText {
+    pub caption: String,
+    pub text: String,
+}
+
+/// The words of the program's own dialog in one language, as written: the name of an app
+/// that has none, the caption (`{label}`), the text (`{who}` asks to run `{command}`), and the
+/// sentence that says how long it has (`{time}`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConfirmWords {
+    pub unnamed: &'static str,
+    pub caption: &'static str,
+    pub text: &'static str,
+    pub time_limit: &'static str,
+}
+
+/// The program's own dialog's words in `language`.
+pub fn confirm_words(language: UiLanguage) -> ConfirmWords {
+    let [unnamed, caption, text, time_limit] = match language {
+        UiLanguage::English => [
+            "An Android app",
+            "{label}: administrator approval",
+            "{who}\n\nwants to run this as root in Android:\n\n{command}\n\nUser Account \
+             Control is off on this computer, so Desktop Subsystem for Android asks you \
+             itself. Allow it?",
+            "If nobody answers within {time}, the request is refused.",
+        ],
+        UiLanguage::Korean => [
+            "Android 앱",
+            "{label}: 관리자 승인",
+            "{who}\n\nAndroid에서 다음을 루트 권한으로 실행하려고 합니다.\n\n{command}\n\n\
+             이 컴퓨터는 사용자 계정 컨트롤이 꺼져 있어서 Desktop Subsystem for Android가 \
+             직접 묻습니다. 허용할까요?",
+            "{time} 안에 답하지 않으면 요청은 거부됩니다.",
+        ],
+        UiLanguage::Japanese => [
+            "Android アプリ",
+            "{label}: 管理者の承認",
+            "{who}\n\nが Android で次のコマンドを root として実行しようとしています:\n\n\
+             {command}\n\nこのコンピューターではユーザー アカウント制御がオフになっているため、\
+             Desktop Subsystem for Android が直接確認しています。許可しますか?",
+            "{time}以内に応答がない場合、要求は拒否されます。",
+        ],
+        UiLanguage::ChineseSimplified => [
+            "一个 Android 应用",
+            "{label}: 管理员批准",
+            "{who}\n\n想要在 Android 中以 root 身份运行以下内容:\n\n{command}\n\n此电脑的\
+             用户帐户控制已关闭，因此由 Desktop Subsystem for Android 直接询问你。是否允许?",
+            "如果在 {time}内无人应答，请求将被拒绝。",
+        ],
+        UiLanguage::ChineseTraditional => [
+            "一個 Android 應用程式",
+            "{label}: 系統管理員核准",
+            "{who}\n\n想要在 Android 中以 root 身分執行以下內容:\n\n{command}\n\n這部電腦的\
+             使用者帳戶控制已關閉，因此由 Desktop Subsystem for Android 直接詢問您。要允許嗎?",
+            "如果在 {time}內沒有人回應，要求將會遭到拒絕。",
+        ],
+        UiLanguage::Spanish => [
+            "Una aplicación de Android",
+            "{label}: aprobación del administrador",
+            "{who}\n\nquiere ejecutar esto como root en Android:\n\n{command}\n\nEl Control de \
+             cuentas de usuario está desactivado en este equipo, así que Desktop Subsystem for \
+             Android se lo pregunta directamente. ¿Desea permitirlo?",
+            "Si nadie responde en {time}, se rechazará la solicitud.",
+        ],
+        UiLanguage::French => [
+            "Une application Android",
+            "{label}\u{a0}: approbation de l'administrateur",
+            "{who}\n\nveut exécuter ceci en tant que root dans Android\u{a0}:\n\n{command}\n\n\
+             Le Contrôle de compte d'utilisateur est désactivé sur cet ordinateur\u{a0}: \
+             Desktop Subsystem for Android vous le demande donc directement. Voulez-vous \
+             l'autoriser\u{a0}?",
+            "Si personne ne répond dans un délai de {time}, la demande sera refusée.",
+        ],
+        UiLanguage::German => [
+            "Eine Android-App",
+            "{label}: Administratorgenehmigung",
+            "{who}\n\nmöchte Folgendes in Android als root ausführen:\n\n{command}\n\nDie \
+             Benutzerkontensteuerung ist auf diesem Computer deaktiviert, daher fragt Desktop \
+             Subsystem for Android Sie selbst. Möchten Sie es zulassen?",
+            "Wenn innerhalb von {time} niemand antwortet, wird die Anfrage abgelehnt.",
+        ],
+        UiLanguage::PortugueseBrazil => [
+            "Um app Android",
+            "{label}: aprovação do administrador",
+            "{who}\n\nquer executar isto como root no Android:\n\n{command}\n\nO Controle de \
+             Conta de Usuário está desativado neste computador, então o Desktop Subsystem for \
+             Android pergunta a você diretamente. Permitir?",
+            "Se ninguém responder em {time}, a solicitação será recusada.",
+        ],
+        UiLanguage::Russian => [
+            "Приложение Android",
+            "{label}: подтверждение администратора",
+            "{who}\n\nхочет выполнить в Android от имени root:\n\n{command}\n\nНа этом \
+             компьютере отключен контроль учетных записей, поэтому Desktop Subsystem for \
+             Android спрашивает вас сам. Разрешить?",
+            "Если никто не ответит в течение {time}, запрос будет отклонен.",
+        ],
+        UiLanguage::Italian => [
+            "Un'app Android",
+            "{label}: approvazione dell'amministratore",
+            "{who}\n\nvuole eseguire questo comando come root in Android:\n\n{command}\n\nIl \
+             Controllo dell'account utente è disattivato su questo computer, quindi Desktop \
+             Subsystem for Android te lo chiede direttamente. Consentire?",
+            "Se nessuno risponde entro {time}, la richiesta verrà rifiutata.",
+        ],
+        UiLanguage::Vietnamese => [
+            "Một ứng dụng Android",
+            "{label}: phê duyệt của quản trị viên",
+            "{who}\n\nmuốn chạy lệnh sau với quyền root trong Android:\n\n{command}\n\nKiểm \
+             soát Tài khoản Người dùng đang tắt trên máy tính này, nên Desktop Subsystem for \
+             Android trực tiếp hỏi bạn. Cho phép?",
+            "Nếu không ai trả lời trong vòng {time}, yêu cầu sẽ bị từ chối.",
+        ],
+        UiLanguage::Indonesian => [
+            "Aplikasi Android",
+            "{label}: persetujuan administrator",
+            "{who}\n\ningin menjalankan ini sebagai root di Android:\n\n{command}\n\nKontrol \
+             Akun Pengguna nonaktif di komputer ini, jadi Desktop Subsystem for Android \
+             menanyakannya langsung kepada Anda. Izinkan?",
+            "Jika tidak ada yang menjawab dalam {time}, permintaan akan ditolak.",
+        ],
+        UiLanguage::Turkish => [
+            "Bir Android uygulaması",
+            "{label}: yönetici onayı",
+            "{who}\n\nAndroid'de şunu root olarak çalıştırmak istiyor:\n\n{command}\n\nBu \
+             bilgisayarda Kullanıcı Hesabı Denetimi kapalı olduğundan Desktop Subsystem for \
+             Android size doğrudan soruyor. İzin verilsin mi?",
+            "{time} içinde kimse yanıt vermezse istek reddedilir.",
+        ],
+    };
+    ConfirmWords {
+        unnamed,
+        caption,
+        text,
+        time_limit,
+    }
+}
+
+/// The program's own dialog for `label` (and the `detail` line under it) wanting to run
+/// `command`, in `language`.
+pub fn confirm_text(label: &str, detail: &str, command: &str, language: UiLanguage) -> ConfirmText {
+    let words = confirm_words(language);
+    let label = match label.trim() {
+        "" => words.unnamed,
+        label => label,
+    };
+    let who = if detail.trim().is_empty() {
+        label.to_string()
+    } else {
+        format!("{label}\n{}", detail.trim())
+    };
+    ConfirmText {
+        caption: fill(words.caption, &[("label", label)]),
+        text: fill(words.text, &[("who", &who), ("command", command)]),
+    }
+}
+
+/// The program's own dialog for `words`: [`confirm_text`], then how long it has to be answered
+/// when the service said, as one sentence a screen reader reads with the rest. The time is
+/// written once rather than counted down, so nothing is read out every second, and the person
+/// still knows how long they have.
+pub fn confirm_text_for(words: &AskedWords) -> ConfirmText {
+    let mut shown = confirm_text(&words.label, &words.detail, &words.command, words.language);
+    if let Some(limit) = time_limit_text(words.seconds, words.language) {
+        shown.text.push_str("\n\n");
+        shown.text.push_str(&limit);
+    }
+    shown
+}
+
+/// `seconds` in words in `language`, in whole minutes when it is a whole number of them, as
+/// the time limit's sentence uses it.
+pub fn time_words(seconds: u64, language: UiLanguage) -> String {
+    let whole_minutes = seconds % 60 == 0;
+    let n = if whole_minutes { seconds / 60 } else { seconds };
+    let (one, many) = match (language, whole_minutes) {
+        (UiLanguage::English, true) => ("1 minute", "{n} minutes"),
+        (UiLanguage::English, false) => ("1 second", "{n} seconds"),
+        (UiLanguage::Korean, true) => ("1분", "{n}분"),
+        (UiLanguage::Korean, false) => ("1초", "{n}초"),
+        (UiLanguage::Japanese, true) => ("1 分", "{n} 分"),
+        (UiLanguage::Japanese, false) => ("1 秒", "{n} 秒"),
+        (UiLanguage::ChineseSimplified | UiLanguage::ChineseTraditional, true) => {
+            if language == UiLanguage::ChineseSimplified {
+                ("1 分钟", "{n} 分钟")
+            } else {
+                ("1 分鐘", "{n} 分鐘")
+            }
+        }
+        (UiLanguage::ChineseSimplified | UiLanguage::ChineseTraditional, false) => {
+            ("1 秒", "{n} 秒")
+        }
+        (UiLanguage::Spanish, true) => ("1 minuto", "{n} minutos"),
+        (UiLanguage::Spanish, false) => ("1 segundo", "{n} segundos"),
+        (UiLanguage::French, true) => ("1 minute", "{n} minutes"),
+        (UiLanguage::French, false) => ("1 seconde", "{n} secondes"),
+        (UiLanguage::German, true) => ("1 Minute", "{n} Minuten"),
+        (UiLanguage::German, false) => ("1 Sekunde", "{n} Sekunden"),
+        (UiLanguage::PortugueseBrazil, true) => ("1 minuto", "{n} minutos"),
+        (UiLanguage::PortugueseBrazil, false) => ("1 segundo", "{n} segundos"),
+        // "в течение" takes the genitive: 1, 21, 31 ... минуты; every other number минут.
+        (UiLanguage::Russian, true) => ("{n} минуты", "{n} минут"),
+        (UiLanguage::Russian, false) => ("{n} секунды", "{n} секунд"),
+        (UiLanguage::Italian, true) => ("1 minuto", "{n} minuti"),
+        (UiLanguage::Italian, false) => ("1 secondo", "{n} secondi"),
+        (UiLanguage::Vietnamese, true) => ("1 phút", "{n} phút"),
+        (UiLanguage::Vietnamese, false) => ("1 giây", "{n} giây"),
+        (UiLanguage::Indonesian, true) => ("1 menit", "{n} menit"),
+        (UiLanguage::Indonesian, false) => ("1 detik", "{n} detik"),
+        (UiLanguage::Turkish, true) => ("1 dakika", "{n} dakika"),
+        (UiLanguage::Turkish, false) => ("1 saniye", "{n} saniye"),
+    };
+    let singular = if language == UiLanguage::Russian {
+        n % 10 == 1 && n % 100 != 11
+    } else {
+        n == 1
+    };
+    let number = n.to_string();
+    fill(if singular { one } else { many }, &[("n", &number)])
+}
+
+/// The sentence that says the dialog is refused after `seconds`, in `language`; `None` for no
+/// time given.
+pub fn time_limit_text(seconds: u64, language: UiLanguage) -> Option<String> {
+    if seconds == 0 {
+        return None;
+    }
+    let time = time_words(seconds, language);
+    Some(fill(confirm_words(language).time_limit, &[("time", &time)]))
+}
 
 /// What the start of every approval pipe's name is.
 pub const PIPE_PREFIX: &str = "dsa-root-approval-";
@@ -81,6 +407,17 @@ pub mod exit {
     pub const ELEVATION_FAILED: u32 = 5;
     /// The arguments did not name a valid approval pipe.
     pub const BAD_ARGUMENTS: u32 = 6;
+    /// Asked with [`super::SCREEN_READER_ARGUMENT`]: a screen reader runs in this session.
+    pub const SCREEN_READER_RUNNING: u32 = 7;
+    /// Asked with [`super::SCREEN_READER_ARGUMENT`]: no screen reader runs in this session.
+    pub const NO_SCREEN_READER: u32 = 8;
+}
+
+/// Whether the window program's exit `code`, asked with [`SCREEN_READER_ARGUMENT`], says a
+/// screen reader runs. Any other code (the program failed, or is older than the question) says
+/// no, which leaves the prompt its default time.
+pub fn screen_reader_of_exit(code: u32) -> bool {
+    code == exit::SCREEN_READER_RUNNING
 }
 
 /// What the window program's exit code says, when it ended before an approval arrived.
@@ -120,29 +457,72 @@ pub fn is_pipe_name(name: &str) -> bool {
     })
 }
 
+/// What the program's own dialog shows, when UAC is off: who asks by name, the line under it,
+/// the command, the language it is in, and how many seconds it has to be answered (0 when
+/// the service did not say).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct AskedWords {
+    pub label: String,
+    pub detail: String,
+    pub command: String,
+    pub language: UiLanguage,
+    pub seconds: u64,
+}
+
+impl AskedWords {
+    /// The words for `request`, in the user's language.
+    pub fn of(request: &ApprovalRequest) -> AskedWords {
+        let language = request.language();
+        AskedWords {
+            label: request.name_in(language),
+            detail: request.detail_in(language),
+            command: request.command_text_in(language),
+            language,
+            seconds: 0,
+        }
+    }
+
+    /// The same words, saying the dialog has `timeout` to be answered, in whole seconds.
+    pub fn within(mut self, timeout: Duration) -> AskedWords {
+        self.seconds = timeout.as_secs();
+        self
+    }
+}
+
 /// The arguments that start an app's window program to ask for approval on `pipe`.
-pub fn approval_arguments(pipe: &str, label: &str, command: &str) -> String {
+pub fn approval_arguments(pipe: &str, words: &AskedWords) -> String {
     format!(
-        "{APPROVAL_ARGUMENT} {pipe} {LABEL_ARGUMENT} {} {COMMAND_ARGUMENT} {}",
-        hex(label.as_bytes()),
-        hex(command.as_bytes())
+        "{APPROVAL_ARGUMENT} {pipe} {LABEL_ARGUMENT} {} {DETAIL_ARGUMENT} {} \
+         {COMMAND_ARGUMENT} {} {LANGUAGE_ARGUMENT} {} {TIME_ARGUMENT} {}",
+        argument_hex(&words.label),
+        argument_hex(&words.detail),
+        argument_hex(&words.command),
+        words.language.tag(),
+        words.seconds,
     )
 }
 
-/// What a window program started for approval was asked: the pipe, the app's name and the
-/// command. `None` when the arguments ask for no approval.
+/// `text` hex-encoded for the command line; `-` for nothing, so every flag keeps a value.
+fn argument_hex(text: &str) -> String {
+    if text.is_empty() {
+        "-".to_string()
+    } else {
+        hex(text.as_bytes())
+    }
+}
+
+/// What a window program started for approval was asked: the pipe, and the words of its own
+/// dialog. `None` when the arguments ask for no approval.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HelperMode {
     /// Not elevated: bring up the prompt.
-    Ask {
-        pipe: String,
-        label: String,
-        command: String,
-    },
+    Ask { pipe: String, words: AskedWords },
     /// Elevated: deliver the approval.
     Deliver { pipe: String },
     /// An approval was asked for, but not with a valid pipe.
     Invalid,
+    /// Asked whether a screen reader runs in this session: answer with the exit code.
+    ScreenReader,
 }
 
 /// What `args` ask of the window program, when they ask for an approval.
@@ -159,6 +539,9 @@ pub fn helper_mode(args: &[String]) -> Option<HelperMode> {
             .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
             .unwrap_or_default()
     };
+    if args.iter().any(|arg| arg == SCREEN_READER_ARGUMENT) {
+        return Some(HelperMode::ScreenReader);
+    }
     if args.iter().any(|arg| arg == APPROVED_ARGUMENT) {
         return Some(match value(APPROVED_ARGUMENT) {
             Some(pipe) if is_pipe_name(&pipe) => HelperMode::Deliver { pipe },
@@ -169,8 +552,17 @@ pub fn helper_mode(args: &[String]) -> Option<HelperMode> {
         return Some(match value(APPROVAL_ARGUMENT) {
             Some(pipe) if is_pipe_name(&pipe) => HelperMode::Ask {
                 pipe,
-                label: text(LABEL_ARGUMENT),
-                command: text(COMMAND_ARGUMENT),
+                words: AskedWords {
+                    label: text(LABEL_ARGUMENT),
+                    detail: text(DETAIL_ARGUMENT),
+                    command: text(COMMAND_ARGUMENT),
+                    language: UiLanguage::from_tag_or_english(
+                        value(LANGUAGE_ARGUMENT).as_deref().unwrap_or_default(),
+                    ),
+                    seconds: value(TIME_ARGUMENT)
+                        .and_then(|seconds| seconds.parse().ok())
+                        .unwrap_or(0),
+                },
             },
             _ => HelperMode::Invalid,
         });
@@ -244,7 +636,7 @@ fn unhex(text: &str) -> Option<Vec<u8>> {
 }
 
 #[cfg(windows)]
-pub use self::os::{run_helper, UacPrompt};
+pub use self::os::{run_helper, screen_reader_running, UacPrompt};
 
 #[cfg(windows)]
 mod os {
@@ -259,13 +651,90 @@ mod os {
     };
 
     use super::{
-        approval_arguments, exit, helper_mode, pipe_name, wait_for_answer, HelperMode,
-        PromptProcess, APPROVAL_PIPE_SDDL, APPROVED_ARGUMENT, RECEIVED,
+        approval_arguments, confirm_text_for, exit, helper_mode, pipe_name, prompt_program,
+        screen_reader_of_exit, wait_for_answer, AskedWords, HelperMode, PromptProcess,
+        APPROVAL_PIPE_SDDL, APPROVED_ARGUMENT, RECEIVED, SCREEN_READER_ARGUMENT,
     };
     use crate::pipe::{wide, NamedPipeConnector, NamedPipeListener, OwnedHandle};
 
     /// How long the elevated copy tries to reach the service.
     const DELIVER_WAIT: Duration = Duration::from_secs(5);
+
+    /// How long the service waits for the window program to say whether a screen reader runs.
+    /// Starting a small program takes well under a second; one that hangs past this is ended,
+    /// and the prompt opens with its default time rather than not at all.
+    const SCREEN_READER_WAIT: Duration = Duration::from_secs(5);
+
+    /// The installed window host, which every app's program is a copy of.
+    fn window_host() -> Result<PathBuf, String> {
+        let service = std::env::current_exe().ok();
+        crate::app_window::launch::window_manager_path(service.as_deref())
+            .and_then(|wm| {
+                wm.parent()
+                    .map(|dir| dir.join(crate::app_exe::TEMPLATE_NAME))
+            })
+            .filter(|path| path.is_file())
+            .or_else(|| crate::app_exe::default_template().filter(|path| path.is_file()))
+            .ok_or_else(|| {
+                format!(
+                    "{} is not installed; repair the installation",
+                    crate::app_exe::TEMPLATE_NAME
+                )
+            })
+    }
+
+    /// Whether a screen reader runs in the session of the user with SID `sid`, as Windows'
+    /// `SPI_GETSCREENREADER` says there. The service runs in session 0, whose flag is not the
+    /// user's, so the installed window host is started in the user's session to read it and
+    /// answer with its exit code. Asked as each prompt is about to open, since a screen reader
+    /// can be started or stopped at any time. No when it cannot tell, which leaves the prompt
+    /// its default time.
+    pub fn screen_reader_running(sid: &str) -> bool {
+        let asked = window_host().and_then(|program| {
+            crate::window_manager::start_as_user(sid, &program, SCREEN_READER_ARGUMENT)
+        });
+        let process = match asked {
+            Ok(process) => process,
+            Err(why) => {
+                eprintln!(
+                    "root: cannot tell whether a screen reader runs for {sid}, so the prompt \
+                     has its usual time: {why}"
+                );
+                return false;
+            }
+        };
+        let wait = SCREEN_READER_WAIT.as_millis() as u32;
+        // SAFETY: a process handle the call above returned and `process` owns.
+        if unsafe { WaitForSingleObject(process.0, wait) } != WAIT_OBJECT_0 {
+            // SAFETY: the same handle; ending an ended process does nothing.
+            unsafe { TerminateProcess(process.0, exit::FAILED) };
+            eprintln!(
+                "root: the screen reader check for {sid} did not answer in time, so the \
+                 prompt has its usual time"
+            );
+            return false;
+        }
+        let mut code = exit::FAILED;
+        // SAFETY: the same handle, and an out pointer that outlives the call.
+        if unsafe { GetExitCodeProcess(process.0, &mut code) } == 0 {
+            return false;
+        }
+        screen_reader_of_exit(code)
+    }
+
+    /// Whether a screen reader runs in this process's session: the flag Narrator, NVDA, JAWS
+    /// and other screen readers set while they run.
+    fn screen_reader_here() -> bool {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            SystemParametersInfoW, SPI_GETSCREENREADER,
+        };
+        let mut on: i32 = 0;
+        // SAFETY: a get action that writes one BOOL into a local.
+        let read = unsafe {
+            SystemParametersInfoW(SPI_GETSCREENREADER, 0, (&mut on as *mut i32).cast(), 0)
+        };
+        read != 0 && on != 0
+    }
 
     /// The UAC prompt for the su calls of the user with SID `sid`.
     pub struct UacPrompt {
@@ -279,24 +748,14 @@ mod os {
             }
         }
 
-        /// The app's own window program, made when it is missing; the installed window host
-        /// when it cannot be, which still brings up the prompt, under DSA's own name and icon.
+        /// The program the prompt is shown under ([`prompt_program`]): the app's own window
+        /// program, or the program of the developer shell, Android's services or a shared user
+        /// ID, made when it is missing; the installed window host when it cannot be, which
+        /// still brings up the prompt, under DSA's own name and icon.
         fn program(&self, request: &ApprovalRequest) -> Result<PathBuf, String> {
-            let service = std::env::current_exe().ok();
-            let template = crate::app_window::launch::window_manager_path(service.as_deref())
-                .and_then(|wm| {
-                    wm.parent()
-                        .map(|dir| dir.join(crate::app_exe::TEMPLATE_NAME))
-                })
-                .filter(|path| path.is_file())
-                .or_else(|| crate::app_exe::default_template().filter(|path| path.is_file()))
-                .ok_or_else(|| {
-                    format!(
-                        "{} is not installed; repair the installation",
-                        crate::app_exe::TEMPLATE_NAME
-                    )
-                })?;
-            let package = &request.app.package_name;
+            let template = window_host()?;
+            let (package, app) = prompt_program(request);
+            let package = &package;
             let apps_dir = crate::host_config::local_app_data(&self.sid)
                 .map(|dir| crate::paths::UserRoot::in_local_app_data(&dir).apps());
             let apps_dir = match apps_dir {
@@ -306,13 +765,23 @@ mod os {
                     return Ok(template);
                 }
             };
-            let existing = crate::app_exe::program_path(&apps_dir, package, request.app_name());
-            if existing.is_file() {
-                return Ok(existing);
-            }
-            match crate::app_exe::ensure(&template, &apps_dir, package, Some(&request.app)) {
-                Ok((program, _)) => Ok(program),
-                Err(why) => {
+            let label = match app.label.trim() {
+                "" => package.as_str(),
+                label => label,
+            };
+            let existing = crate::app_exe::program_path(&apps_dir, package, label);
+            // The app's program lives in the user's own folder, so it is checked and made
+            // with the user's own rights.
+            let made = crate::safe_fs::as_user(&self.sid, || -> Result<PathBuf, String> {
+                if existing.is_file() {
+                    return Ok(existing);
+                }
+                crate::app_exe::ensure(&template, &apps_dir, package, Some(&app))
+                    .map(|(program, _)| program)
+            });
+            match made {
+                Ok(Ok(program)) => Ok(program),
+                Ok(Err(why)) | Err(why) => {
                     eprintln!(
                         "root: asking under DSA's own name, as {package}'s program cannot be \
                          made: {why}"
@@ -340,7 +809,9 @@ mod os {
                 Ok(program) => program,
                 Err(why) => return PromptAnswer::Unavailable(why),
             };
-            let arguments = approval_arguments(&pipe, request.app_name(), &request.command_text());
+            // The program's own dialog says how long it has, which is longer while a screen
+            // reader runs.
+            let arguments = approval_arguments(&pipe, &AskedWords::of(request).within(timeout));
             let process =
                 match crate::window_manager::start_as_user(&self.sid, &program, &arguments) {
                     Ok(process) => process,
@@ -378,17 +849,20 @@ mod os {
     pub fn run_helper(args: &[String], program: &Path) -> Option<u32> {
         Some(match helper_mode(args)? {
             HelperMode::Invalid => exit::BAD_ARGUMENTS,
+            HelperMode::ScreenReader => {
+                if screen_reader_here() {
+                    exit::SCREEN_READER_RUNNING
+                } else {
+                    exit::NO_SCREEN_READER
+                }
+            }
             HelperMode::Deliver { pipe } => deliver(&pipe),
-            HelperMode::Ask {
-                pipe,
-                label,
-                command,
-            } => {
+            HelperMode::Ask { pipe, words } => {
                 if uac_enabled() {
                     elevate(program, &pipe)
                 } else if !crate::pipe::current_process_is_administrator() {
                     exit::NOT_ADMINISTRATOR
-                } else if confirm(&label, &command) {
+                } else if confirm(&words) {
                     // With UAC off an administrator's programs run with its rights already.
                     deliver(&pipe)
                 } else {
@@ -492,24 +966,25 @@ mod os {
         code
     }
 
-    /// Asks in the program's own dialog, with the app's icon, when UAC is off. True on Yes.
-    fn confirm(label: &str, command: &str) -> bool {
+    /// Asks in the program's own dialog, with its icon (the app's, or the generic one of a
+    /// requester that is not an app), when UAC is off. True on Yes.
+    ///
+    /// The dialog is a standard message box, so a screen reader and the keyboard can use it
+    /// as they use any of Windows': it takes the foreground, so its caption and text are read
+    /// as it opens; its buttons are Windows' own Yes and No, named as such; the focus starts on
+    /// No (`MB_DEFBUTTON2`), the safe answer, so a stray Enter refuses; Esc is not taken, as a
+    /// Yes/No box has no Cancel, and the person answers with Y, N, Tab or the arrow keys. How
+    /// long it has is one sentence in its text rather than a countdown, which a screen reader
+    /// would announce every time it changed.
+    fn confirm(words: &AskedWords) -> bool {
         use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
         use windows_sys::Win32::UI::WindowsAndMessaging::{
             MessageBoxIndirectW, IDYES, MB_DEFBUTTON2, MB_SETFOREGROUND, MB_TOPMOST, MB_USERICON,
             MB_YESNO, MSGBOXPARAMSW,
         };
-        let label = if label.trim().is_empty() {
-            "An Android app"
-        } else {
-            label.trim()
-        };
-        let caption = wide(&format!("{label}: administrator approval"));
-        let text = wide(&format!(
-            "{label} wants to run this as root in Android:\n\n{command}\n\nUser Account \
-             Control is off on this computer, so Desktop Subsystem for Android asks you \
-             itself. Allow it?"
-        ));
+        let shown = confirm_text_for(words);
+        let caption = wide(&shown.caption);
+        let text = wide(&shown.text);
         // SAFETY: plain data, zero is its documented initial state.
         let mut params: MSGBOXPARAMSW = unsafe { std::mem::zeroed() };
         params.cbSize = std::mem::size_of::<MSGBOXPARAMSW>() as u32;

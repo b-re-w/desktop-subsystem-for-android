@@ -6,7 +6,11 @@
 //! ([`Gpu::open_shared`]) on the same GPU. Each task window there has a DirectComposition
 //! visual holding a flip-model swapchain, and [`WindowPresenter::present`] copies the frame
 //! into the swapchain and presents it. A frame is never scaled to its window: the window
-//! takes the size of the frame it shows (`FrameFollow`). No frame passes through the CPU.
+//! takes the size of the frame it shows (`FrameFollow`). The one exception is a window that
+//! holds the size the desktop gave it (maximised, snapped, full screen) while the guest keeps
+//! its task smaller, because its display holds no more: the frame is shown in the window's
+//! middle, scaled to fit for a task that keeps its density ([`WindowPresenter::set_held`]).
+//! No frame passes through the CPU.
 //!
 //! The texture has the size of the guest's buffers, the largest a frame of the task can be,
 //! and each frame fills its top-left region. The swapchain's buffers take the texture's
@@ -47,7 +51,9 @@ use std::ffi::c_void;
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use dsa_host_core::compositor::caption::{band_sample, BandSample};
+use dsa_host_core::compositor::caption::{
+    band_points, band_reading_owed, band_sample, describe_band_sample, BandSample, BAND_SAMPLES,
+};
 use dsa_host_core::compositor::frame_buffers::{
     buffers_after_frame, content_region, frame_scale, sample_points, swapchain_buffers,
     swapchain_change, uniform_colour, wanted_swapchain_buffers, HiddenBuffers, HiddenFrame,
@@ -58,7 +64,9 @@ use dsa_host_core::compositor::present_watch::{FrameStatistics, PresentWatch};
 use dsa_host_core::compositor::resize_latency::ResizeLatency;
 use dsa_host_core::compositor::splash;
 use dsa_host_core::compositor::visible_change::{self, area_around, Area, PressWatch, Verdict};
-use dsa_host_core::compositor::window_sizing::{to_task_length, to_window_size, Scale};
+use dsa_host_core::compositor::window_sizing::{
+    frame_placement, to_task_length, window_size_of, FramePlacement, Scale,
+};
 use windows::core::{Interface, BOOL, PCWSTR};
 use windows::Win32::Foundation::{CloseHandle, E_FAIL, HANDLE, HMODULE, HWND, LUID, POINT};
 use windows::Win32::Graphics::Direct3D::{
@@ -457,8 +465,9 @@ impl Drop for SharedTexture {
 /// A texture a frame came in, the texture's size, and the region the frame fills.
 type Newest = (ID3D11Texture2D, (u32, u32), (u32, u32));
 
-/// What a visual is committed for: the buffers' size, the frame's and the scale.
-type Committed = ((u32, u32), (u32, u32), Scale);
+/// What a visual is committed for: the buffers' size, the frame's and where the window shows
+/// the frame.
+type Committed = ((u32, u32), (u32, u32), FramePlacement);
 
 struct State {
     /// The devices everything below was made on, and their generation. A GPU reset removes
@@ -492,7 +501,8 @@ struct State {
     frame: (u32, u32),
     /// The client size last proposed for the window, which the guest is asked for.
     asked: (u32, u32),
-    /// What the visual was last committed for: the buffers' size, the frame's and the scale.
+    /// What the visual was last committed for: the buffers' size, the frame's and where the
+    /// window shows it.
     committed: Option<Committed>,
     /// How large the window shows each of the task's pixels (window pixels per task pixels):
     /// 1:1 unless the task keeps its density on a monitor of another scale. `follow` measures
@@ -541,6 +551,9 @@ struct State {
     band_probed: Option<Instant>,
     /// What the window was last told of the band: its fill and its lightness.
     band_sample: BandSample,
+    /// Whether a copy that is slow to be read, or failed, was said in the log since the band
+    /// was last read.
+    band_waits_noted: bool,
     /// Whether a screenshot waits for the next frame, and what it got once one came.
     capture_wanted: bool,
     captured: Option<Result<CapturedFrame, String>>,
@@ -634,6 +647,13 @@ pub struct SplashImage {
 /// A press a window has to watch: the point in guest pixels and when it came on the host clock.
 type Press = ((f32, f32), Duration);
 
+/// The client size a frame of `region` task pixels fills at the window's scale. A frame of the
+/// task size the window's size, or the size last asked for, was turned into is that size
+/// exactly, though rounding it back at the scale can land a pixel off.
+fn frame_in_window(state: &State, region: (u32, u32)) -> (u32, u32) {
+    window_size_of(region, state.scale, &[state.follow.view(), state.asked])
+}
+
 /// The presses each task's window has to watch, by task. Filled from the window's thread, taken
 /// by the presenter.
 fn presses() -> &'static Mutex<HashMap<i32, Press>> {
@@ -726,11 +746,11 @@ pub type FrameReady = Box<dyn Fn() + Send + Sync>;
 /// band is, which the caption glyphs' tone follows.
 pub type BandColour = Box<dyn Fn(BandSample) + Send + Sync>;
 
-/// How many pixels are sampled across the band, and across the row under it.
-const BAND_SAMPLES: u32 = 8;
-
 /// How often the band is sampled at most, while frames come.
 const BAND_PROBE_EVERY: Duration = Duration::from_millis(200);
+
+/// A copy of the band still unread after this long is said in the log, once.
+const BAND_COPY_SLOW: Duration = Duration::from_secs(2);
 
 /// Shows one task's frames in its window.
 pub struct WindowPresenter {
@@ -748,6 +768,9 @@ pub struct WindowPresenter {
     /// Wakes a screenshot waiting for the next frame.
     capture_done: Condvar,
     logger: Option<Arc<CompositorLogger>>,
+    /// Whether the frames' own transparency shows the desktop through the window, as in the
+    /// window of an app overlay window; a task's window is opaque.
+    see_through: bool,
 }
 
 // SAFETY: every COM object in the state is used under the state's lock, and the
@@ -764,6 +787,30 @@ impl WindowPresenter {
         hwnd: isize,
         view: (u32, u32),
         logger: Option<Arc<CompositorLogger>>,
+    ) -> Result<Arc<Self>, String> {
+        WindowPresenter::with_transparency(task_id, gpu, hwnd, view, logger, false)
+    }
+
+    /// As [`WindowPresenter::new`], for the window of an app overlay window: the frames keep
+    /// their own transparency (premultiplied alpha), so the desktop shows through wherever the
+    /// app drew nothing.
+    pub fn new_see_through(
+        task_id: i32,
+        gpu: Arc<Gpu>,
+        hwnd: isize,
+        view: (u32, u32),
+        logger: Option<Arc<CompositorLogger>>,
+    ) -> Result<Arc<Self>, String> {
+        WindowPresenter::with_transparency(task_id, gpu, hwnd, view, logger, true)
+    }
+
+    fn with_transparency(
+        task_id: i32,
+        gpu: Arc<Gpu>,
+        hwnd: isize,
+        view: (u32, u32),
+        logger: Option<Arc<CompositorLogger>>,
+        see_through: bool,
     ) -> Result<Arc<Self>, String> {
         let (devices, generation) = gpu.devices();
         let (target, visual, caption, splash) = compose_window(&devices, hwnd)?;
@@ -810,6 +857,7 @@ impl WindowPresenter {
                 band_pending: false,
                 band_probed: None,
                 band_sample: BandSample::default(),
+                band_waits_noted: false,
                 capture_wanted: false,
                 captured: None,
             }),
@@ -818,6 +866,7 @@ impl WindowPresenter {
             band_colour: Mutex::new(None),
             capture_done: Condvar::new(),
             logger,
+            see_through,
         }))
     }
 
@@ -837,20 +886,20 @@ impl WindowPresenter {
 
     /// Samples the band and the row under it from the frame in `texture` (of `region`
     /// pixels), at most every [`BAND_PROBE_EVERY`]. The copy is read on a later frame, once
-    /// the GPU has made it, so showing a frame never waits for it. Returns the band's new
+    /// the GPU has made it, so showing a frame never waits for it. With `copy` false it only
+    /// reads the copy that waits, if one does, and makes no other. Returns the band's new
     /// sample when it changed.
     unsafe fn probe_band(
         &self,
         state: &mut State,
         texture: &ID3D11Texture2D,
         region: (u32, u32),
+        copy: bool,
     ) -> Option<BandSample> {
         let devices = Arc::clone(&state.devices);
         // The band is the window's; the frame is sampled in its own pixels.
         let band = to_task_length(state.band, state.scale);
-        if band == 0 || region.1 <= band + 2 || region.0 < BAND_SAMPLES {
-            return None;
-        }
+        let points = band_points(region, band)?;
         let context = devices.context.lock().unwrap_or_else(|e| e.into_inner());
         let mut changed = None;
         if state.band_pending {
@@ -874,20 +923,68 @@ impl WindowPresenter {
                     let (inside, below) = (row(0), row(1));
                     context.Unmap(&probe, 0);
                     state.band_pending = false;
+                    state.band_waits_noted = false;
                     let sample = band_sample(&inside, &below);
                     if sample != state.band_sample {
                         state.band_sample = sample;
                         changed = Some(sample);
+                        // Once per change, never per frame: what the window is told of the
+                        // band, from which its glyphs take their tone.
+                        note(
+                            self.logger.as_deref(),
+                            &format!(
+                                "task {}: the title bar's band ({band} rows of a {}x{} frame) \
+                                 reads {}",
+                                self.task_id,
+                                region.0,
+                                region.1,
+                                describe_band_sample(sample)
+                            ),
+                        );
                     }
                 }
-                // The GPU has not made the copy yet: it is read on a later frame.
-                Err(error) if error.code() == DXGI_ERROR_WAS_STILL_DRAWING => return None,
-                Err(_) => state.band_pending = false,
+                // The GPU has not made the copy yet: it is read on a later frame or tick.
+                Err(error) if error.code() == DXGI_ERROR_WAS_STILL_DRAWING => {
+                    // Submitted at once, so this should not last; said once if it does.
+                    let waited = state.band_probed.map(|at| at.elapsed());
+                    if !state.band_waits_noted
+                        && waited.is_some_and(|waited| waited >= BAND_COPY_SLOW)
+                    {
+                        state.band_waits_noted = true;
+                        note(
+                            self.logger.as_deref(),
+                            &format!(
+                                "task {}: the copy of the title bar's band has waited {} ms \
+                                 to be read; the glyphs keep their tone until it is",
+                                self.task_id,
+                                waited.unwrap_or_default().as_millis()
+                            ),
+                        );
+                        context.Flush();
+                    }
+                    return None;
+                }
+                Err(error) => {
+                    state.band_pending = false;
+                    // Copied again at the next frame or tick: a still window whose one copy
+                    // failed would otherwise never have its band read.
+                    state.band_probed = None;
+                    if !state.band_waits_noted {
+                        state.band_waits_noted = true;
+                        let what = format!(
+                            "task {}: reading the copy of the title bar's band",
+                            self.task_id
+                        );
+                        note(self.logger.as_deref(), &failed(&what, error));
+                    }
+                    return None;
+                }
             }
         }
-        if state
-            .band_probed
-            .is_some_and(|at| at.elapsed() < BAND_PROBE_EVERY)
+        if !copy
+            || state
+                .band_probed
+                .is_some_and(|at| at.elapsed() < BAND_PROBE_EVERY)
         {
             return changed;
         }
@@ -922,10 +1019,10 @@ impl WindowPresenter {
             return changed;
         };
         // Across the band's middle row, and the row just under it, where the app's top begins.
-        let rows = [band / 2, band + 2];
+        let rows = [points.inside, points.below];
         for (index, y) in rows.into_iter().enumerate() {
-            for column in 0..BAND_SAMPLES {
-                let x = (2 * column + 1) * region.0 / (2 * BAND_SAMPLES);
+            for (column, &x) in points.columns.iter().enumerate() {
+                let column = column as u32;
                 let pixel = D3D11_BOX {
                     left: x,
                     top: y,
@@ -946,6 +1043,11 @@ impl WindowPresenter {
                 );
             }
         }
+        // Submitted now. The frame's own copy was flushed before this one was recorded, and a
+        // still window presents nothing more that would submit it: without this the copy of
+        // a window's last frame could sit unsubmitted, every read of it would find it still
+        // drawing, and the glyphs would keep the tone of an older frame for good.
+        context.Flush();
         state.band_pending = true;
         state.band_probed = Some(Instant::now());
         changed
@@ -1011,7 +1113,8 @@ impl WindowPresenter {
         if state.hidden.frame() == HiddenFrame::Hold {
             return;
         }
-        let keep = match state.follow.frame_arrived(to_window_size(region, scale)) {
+        let shown = frame_in_window(&state, region);
+        let keep = match state.follow.frame_arrived(shown) {
             Arrival::Show => false,
             Arrival::Keep => true,
             // The next frame is followed as any other.
@@ -1088,6 +1191,38 @@ impl WindowPresenter {
                 let _ = windows_sys::Win32::Graphics::Dwm::DwmFlush();
             }
         }
+    }
+
+    /// The window holds the size the desktop gives it (`true`: it is maximised, snapped or
+    /// full screen), or takes the size of its frames again. While it holds its size, it takes
+    /// every size proposed at once and shows each frame in its middle, scaled to fit for a task
+    /// that keeps its density, rather than shrink to a frame the guest keeps smaller.
+    pub fn set_held(&self, held: bool) {
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if state.closed || state.follow.held() == held {
+            return;
+        }
+        state.follow.set_held(held);
+        // A frame kept for the window to take is shown now, in the window as it is.
+        if let Some(region) = state.kept_region.take().filter(|_| held) {
+            let started = Instant::now();
+            // SAFETY: plain COM calls on objects this presenter owns, and the immediate context
+            // under its lock.
+            match unsafe { self.present_back_buffer(&mut state, region) } {
+                Ok(new_size) => {
+                    let in_window = frame_in_window(&state, region);
+                    self.frame_shown(&mut state, in_window, new_size, None, started);
+                }
+                Err(why) => {
+                    note(self.logger.as_deref(), &why);
+                    self.recover(&mut state);
+                }
+            }
+        }
+        self.commit_visual(&mut state);
+        drop(state);
+        // A frame that waited for a claim the hold let go goes on.
+        self.claim_released.notify_all();
     }
 
     /// The window's position is settled. A size it chose and did not take (Windows did not
@@ -1245,6 +1380,37 @@ impl WindowPresenter {
                 ),
             );
         }
+        let band_changed = self.settle_band(&mut state);
+        drop(state);
+        if let Some(sample) = band_changed {
+            if let Some(told) = self
+                .band_colour
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .as_ref()
+            {
+                told(sample);
+            }
+        }
+    }
+
+    /// Reads the band of the frame the window shows once frames stop coming. The band is
+    /// copied from some frames only and each copy is read when a later frame comes, so the
+    /// last frame of a burst (a new screen that slid in and stands still) would never be read
+    /// and the glyphs would keep the tone of a frame from the middle of the transition.
+    /// Returns the band's new sample when it changed.
+    fn settle_band(&self, state: &mut State) -> Option<BandSample> {
+        if !band_reading_owed(state.band_pending, state.last_frame_at, state.band_probed) {
+            return None;
+        }
+        // Another copy only when a frame came after the last one: a still window is read
+        // once and then left alone.
+        let copy = band_reading_owed(false, state.last_frame_at, state.band_probed);
+        let (texture, _, region) = state.newest.clone()?;
+        // SAFETY: plain COM calls on objects this presenter owns, and the immediate context
+        // under its lock. The texture is the newest frame's, which stays whole while no
+        // frame follows it; a frame that does follow is probed in its turn.
+        unsafe { self.probe_band(state, &texture, region, copy) }
     }
 
     /// A shown window that has had no frame for a while gives its swapchain's third buffer
@@ -1545,7 +1711,7 @@ impl WindowPresenter {
         let deadline = started + CLAIM_WAIT;
         let arrival = loop {
             // The size the frame fills in the window, at the window's scale.
-            let shown = to_window_size(region, state.scale);
+            let shown = frame_in_window(&state, region);
             match state.follow.frame_arrived(shown) {
                 Arrival::Wait => {
                     let left = deadline.saturating_duration_since(Instant::now());
@@ -1599,7 +1765,7 @@ impl WindowPresenter {
         self.trace_frame_colour(&mut state, &texture.texture, region);
         // SAFETY: plain COM calls on objects this presenter owns, and the immediate context
         // under its lock.
-        let band_changed = unsafe { self.probe_band(&mut state, &texture.texture, region) };
+        let band_changed = unsafe { self.probe_band(&mut state, &texture.texture, region, true) };
         // A screenshot waiting for this frame reads it while it is whole in its texture.
         if state.capture_wanted {
             state.capture_wanted = false;
@@ -1625,7 +1791,7 @@ impl WindowPresenter {
             );
         } else {
             self.watch_press(&mut state, &texture.texture, region);
-            let in_window = to_window_size(region, state.scale);
+            let in_window = frame_in_window(&state, region);
             self.frame_shown(
                 &mut state,
                 in_window,
@@ -2031,14 +2197,22 @@ impl WindowPresenter {
             // Nothing to show yet: the first frame commits it.
             return false;
         };
-        let wanted = (buffers, state.frame, state.scale);
+        // A window that holds the size the desktop gave it (maximised, snapped, full screen)
+        // shows a frame of another size in its middle; any other window has its frame's size.
+        let placement = frame_placement(
+            state.frame,
+            state.follow.view(),
+            state.scale,
+            state.follow.held(),
+        );
+        let wanted = (buffers, state.frame, placement);
         if state.committed == Some(wanted) {
             return false;
         }
         let (x, y) = frame_scale(buffers, state.frame);
         // A task that keeps its density on a monitor of another scale is shown at the window's
         // scale, the same size to the eye.
-        let (numerator, denominator) = state.scale;
+        let (numerator, denominator) = placement.scale;
         let ratio = numerator as f32 / denominator.max(1) as f32;
         let (x, y) = (x * ratio, y * ratio);
         let matrix = Matrix3x2 {
@@ -2046,8 +2220,8 @@ impl WindowPresenter {
             M12: 0.0,
             M21: 0.0,
             M22: y,
-            M31: 0.0,
-            M32: 0.0,
+            M31: placement.origin.0 as f32,
+            M32: placement.origin.1 as f32,
         };
         let Ok(dcomp) = devices.dcomp() else {
             return false;
@@ -2387,7 +2561,13 @@ impl WindowPresenter {
                         // transform does the scaling.
                         Scaling: DXGI_SCALING_STRETCH,
                         SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
-                        AlphaMode: DXGI_ALPHA_MODE_IGNORE,
+                        // Android's buffers are premultiplied, as the desktop's compositor
+                        // takes them.
+                        AlphaMode: if self.see_through {
+                            DXGI_ALPHA_MODE_PREMULTIPLIED
+                        } else {
+                            DXGI_ALPHA_MODE_IGNORE
+                        },
                         Flags: 0,
                     };
                     let swapchain = devices

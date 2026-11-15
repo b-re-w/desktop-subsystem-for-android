@@ -1,5 +1,7 @@
 # Memory and idle behaviour
 
+**English** · [한국어](ko/memory.md) · [日本語](ja/memory.md) · [简体中文](zh-CN/memory.md) · [繁體中文](zh-TW/memory.md) · [Español](es/memory.md) · [Français](fr/memory.md) · [Deutsch](de/memory.md) · [Português (Brasil)](pt-BR/memory.md) · [Русский](ru/memory.md) · [Italiano](it/memory.md) · [Tiếng Việt](vi/memory.md) · [Bahasa Indonesia](id/memory.md) · [Türkçe](tr/memory.md)
+
 Desktop Subsystem for Android™ (DSA) gives memory back to your PC while Android runs, not
 only when it stops. There is nothing to set up for this. This page explains what happens,
 and how to see it.
@@ -43,6 +45,9 @@ widgets stop too. That is why DSA never freezes Android unless you ask.
 - When an app's last window closes, Android ends that app's processes, so their memory goes
   back within seconds. An app with a widget on the desktop, or one still working in the
   background (such as a music player), keeps running.
+- An app that keeps a background service running with no window, no notification, no sound
+  and no widget is stopped after five minutes. If Android starts it again and again, DSA
+  waits longer each time, up to an hour.
 - While no app window is open, Android drops its file caches and moves idle memory to
   compressed memory, so more of it can go back.
 - The window manager gives back the memory it does not use 30 seconds after the last app
@@ -50,7 +55,7 @@ widgets stop too. That is why DSA never freezes Android unless you ask.
 
 ## Memory limit
 
-The limit is **Automatic** by default, which sets no fixed limit. Android starts at 3 GB and grows while it runs, up to your PC's memory less what Windows keeps (10% of the memory or 2 GB, whichever is larger). Android holds only what it uses.
+The limit is **Automatic** by default, which sets no fixed limit. Android starts at 2 GB and grows while it runs, up to your PC's memory less what Windows keeps (10% of the memory or 2 GB, whichever is larger). Android holds only what it uses.
 To set a limit, use **Memory limit** on the **Memory** page, or:
 
 ```

@@ -16,9 +16,11 @@ use std::time::Duration;
 use dsa_host_core::apk::InstallOutcome;
 use dsa_host_core::apk_bundle::{Device, InstallFile};
 use dsa_host_core::host_api::HostApiClient;
+use dsa_host_core::ui_language::UiLanguage;
 use dsa_transport::Connector;
 
 use super::argument;
+use super::messages::{messages, say};
 
 /// The argument that names an APK to install.
 pub const INSTALL_APK_ARGUMENT: &str = "--install-apk";
@@ -62,6 +64,11 @@ pub fn open(path: &Path) -> Result<InstallFile, String> {
 pub fn install(api: &mut dyn Connector, file: &mut InstallFile) -> Result<InstallOutcome, String> {
     let mut client = HostApiClient::connect(api, BUILD, Duration::from_secs(5))
         .map_err(|e| format!("the DSA service cannot be reached: {e}"))?;
+    // An app whose 64-bit code is for arm64-v8a only is refused, with the reason, while the
+    // running Android does not translate ARM code.
+    let translation = client.arm_translation().ok();
+    file.check_translation(translation.as_ref())
+        .map_err(|refusal| refusal.to_string())?;
     match file {
         InstallFile::Apk(apk) => {
             let name = apk.name.clone();
@@ -72,7 +79,6 @@ pub fn install(api: &mut dyn Connector, file: &mut InstallFile) -> Result<Instal
                 .map_err(|e| e.to_string())
         }
         InstallFile::Bundle(bundle) => {
-            let translation = client.arm_translation().ok();
             let device = Device::of_host(
                 translation.as_ref(),
                 cfg!(target_arch = "aarch64"),
@@ -90,8 +96,10 @@ pub fn install(api: &mut dyn Connector, file: &mut InstallFile) -> Result<Instal
     }
 }
 
-/// What the message box says when the install ended, and whether it is good news.
-pub fn result_text(name: &str, outcome: &InstallOutcome) -> (String, bool) {
+/// What the message box says in `language` when the install ended, and whether it is good
+/// news.
+pub fn result_text(name: &str, outcome: &InstallOutcome, language: UiLanguage) -> (String, bool) {
+    let words = messages(language);
     if outcome.installed() {
         let package = outcome
             .package_name
@@ -99,17 +107,24 @@ pub fn result_text(name: &str, outcome: &InstallOutcome) -> (String, bool) {
             .map(|package| format!(" ({package})"))
             .unwrap_or_default();
         (
-            format!("{name}{package} is installed. Open it from the Start menu."),
+            say(words.installed, &[("name", name), ("package", &package)]),
             true,
         )
     } else {
-        (format!("{name} was not installed. {outcome}."), false)
+        let why = outcome.to_string();
+        (
+            say(words.not_installed, &[("name", name), ("why", &why)]),
+            false,
+        )
     }
 }
 
-/// What the message box says when the APK did not reach Android.
-pub fn failure_text(name: &str, why: &str) -> String {
-    format!("{name} was not installed. {why}.")
+/// What the message box says in `language` when the APK did not reach Android.
+pub fn failure_text(name: &str, why: &str, language: UiLanguage) -> String {
+    say(
+        messages(language).not_installed,
+        &[("name", name), ("why", why)],
+    )
 }
 
 #[cfg(test)]
@@ -157,22 +172,33 @@ mod tests {
                 package_name: Some("com.example.notes".into()),
                 message: String::new(),
             },
+            UiLanguage::English,
         );
         assert!(good);
         assert!(
             text.contains("com.example.notes") && text.contains("Start menu"),
             "{text}"
         );
-        let (text, good) = result_text(
-            "notes.apk",
-            &InstallOutcome {
-                status: InstallStatus::Incompatible,
-                package_name: None,
-                message: "INSTALL_FAILED_NO_MATCHING_ABIS".into(),
-            },
-        );
+        let failed = InstallOutcome {
+            status: InstallStatus::Incompatible,
+            package_name: None,
+            message: "INSTALL_FAILED_NO_MATCHING_ABIS".into(),
+        };
+        let (text, good) = result_text("notes.apk", &failed, UiLanguage::English);
         assert!(!good);
         assert!(text.contains("was not installed"), "{text}");
         assert!(text.contains("INSTALL_FAILED_NO_MATCHING_ABIS"), "{text}");
+        // In every language the message names the APK and keeps the reason.
+        for language in UiLanguage::ALL {
+            let (text, good) = result_text("notes.apk", &failed, language);
+            assert!(!good);
+            assert!(text.contains("notes.apk"), "{language:?}: {text}");
+            assert!(
+                text.contains("INSTALL_FAILED_NO_MATCHING_ABIS"),
+                "{language:?}: {text}"
+            );
+            let text = failure_text("notes.apk", "the service is not running", language);
+            assert!(text.contains("the service is not running"), "{text}");
+        }
     }
 }

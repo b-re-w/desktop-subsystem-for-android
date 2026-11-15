@@ -3,6 +3,9 @@ package io.github.thisisthepy.dsa.agent.tasks
 import com.google.protobuf.ByteString
 import io.github.thisisthepy.dsa.agent.windowing.Size
 import io.github.thisisthepy.dsa.control.v1.AppInfo
+import io.github.thisisthepy.dsa.control.v1.AppShortcut
+import io.github.thisisthepy.dsa.control.v1.AppShortcuts
+import io.github.thisisthepy.dsa.control.v1.PinShortcutRequest
 import io.github.thisisthepy.dsa.control.v1.Envelope
 import io.github.thisisthepy.dsa.control.v1.InstalledApp
 import io.github.thisisthepy.dsa.control.v1.InstalledApps
@@ -46,6 +49,13 @@ object Messages {
             },
         )
         update.setFullscreen(task.fullscreen)
+        update.setFullscreenRequest(
+            when (task.fullscreenRequest) {
+                FullScreenRequest.EXPLICIT -> io.github.thisisthepy.dsa.control.v1.FullScreenRequest.FULL_SCREEN_REQUEST_EXPLICIT
+                FullScreenRequest.BARS_HIDDEN -> io.github.thisisthepy.dsa.control.v1.FullScreenRequest.FULL_SCREEN_REQUEST_BARS_HIDDEN
+                FullScreenRequest.NONE -> io.github.thisisthepy.dsa.control.v1.FullScreenRequest.FULL_SCREEN_REQUEST_NONE
+            },
+        )
         update.setPictureInPicture(task.pictureInPicture)
         update.setTransparentCaption(task.transparentCaption)
         if (task.transparentCaption) {
@@ -57,6 +67,7 @@ object Messages {
         }
         update.setCanGoBack(task.canGoBack)
         update.setHandlesDensityChange(task.handlesDensityChange)
+        update.setBelowTitleBar(task.belowTitleBar)
         return Envelope.newBuilder().setTaskUpdated(update).build().toByteArray()
     }
 
@@ -85,12 +96,48 @@ object Messages {
             .setCacheBytes(maxOf(0L, app.cacheBytes))
             .setPrimaryAbi(app.primaryAbi)
             .addAllNativeLibraries(io.github.thisisthepy.dsa.agent.install.NativeLibraries.messages(app.nativeLibraries))
+            .setSharedUserId(app.sharedUserId)
         return Envelope.newBuilder().setInstalledApp(info).build().toByteArray()
     }
 
     fun installedApps(packageNames: List<String>): ByteArray =
         Envelope.newBuilder()
             .setInstalledApps(InstalledApps.newBuilder().addAllPackageNames(packageNames))
+            .build()
+            .toByteArray()
+
+    /** [shortcut] as the host reads it. */
+    fun shortcut(shortcut: LauncherShortcut): AppShortcut =
+        AppShortcut.newBuilder()
+            .setId(shortcut.id)
+            .setShortLabel(shortcut.shortLabel)
+            .setLongLabel(shortcut.longLabel)
+            .setIconPng(ByteString.copyFrom(shortcut.iconPng))
+            .setRank(maxOf(0, shortcut.rank))
+            .setManifest(shortcut.manifest)
+            .setDynamic(shortcut.dynamic)
+            .setPinned(shortcut.pinned)
+            .build()
+
+    fun appShortcuts(packageName: String, shortcuts: List<LauncherShortcut>): ByteArray =
+        Envelope.newBuilder()
+            .setAppShortcuts(
+                AppShortcuts.newBuilder()
+                    .setPackageName(packageName)
+                    .addAllShortcuts(shortcuts.map { shortcut(it) }),
+            )
+            .build()
+            .toByteArray()
+
+    fun pinShortcutRequest(requestId: Int, packageName: String, appLabel: String, pinned: LauncherShortcut): ByteArray =
+        Envelope.newBuilder()
+            .setPinShortcutRequest(
+                PinShortcutRequest.newBuilder()
+                    .setRequestId(requestId)
+                    .setPackageName(packageName)
+                    .setAppLabel(appLabel)
+                    .setShortcut(shortcut(pinned)),
+            )
             .build()
             .toByteArray()
 

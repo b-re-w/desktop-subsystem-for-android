@@ -1,0 +1,428 @@
+diff --git a/host/ChannelStream.cpp b/host/ChannelStream.cpp
+--- a/host/ChannelStream.cpp
++++ b/host/ChannelStream.cpp
+@@ -13,6 +13,7 @@
+ // limitations under the License.
+ #include "ChannelStream.h"
+ 
++#include "dsa_graphics_memory.h"
+ #include "render-utils/RenderChannel.h"
+ 
+ #define EMUGL_DEBUG_LEVEL  0
+@@ -90,10 +91,21 @@
+ }
+ 
+ void* ChannelStream::getDmaForReading(uint64_t guest_paddr) {
++    // DSA: a staging grant of the graphics memory shared with the guest, named by its offset
++    // there (dsa_graphics_memory.h). Whose grant it is, and how much of it the call may touch,
++    // the render control call checks.
++    if ((guest_paddr & dsa::kGraphicsDmaTagMask) == dsa::kGraphicsDmaTag) {
++        return dsa::graphicsMemory().pointer(guest_paddr & ~dsa::kGraphicsDmaTagMask);
++    }
+     return emugl::g_emugl_dma_get_host_addr(guest_paddr);
+ }
+ 
+-void ChannelStream::unlockDma(uint64_t guest_paddr) { emugl::g_emugl_dma_unlock(guest_paddr); }
++void ChannelStream::unlockDma(uint64_t guest_paddr) {
++    if ((guest_paddr & dsa::kGraphicsDmaTagMask) == dsa::kGraphicsDmaTag) {
++        return;
++    }
++    emugl::g_emugl_dma_unlock(guest_paddr);
++}
+ 
+ void ChannelStream::forceStop() {
+     mChannel->stopFromHost();
+diff --git a/host/RenderControl.cpp b/host/RenderControl.cpp
+--- a/host/RenderControl.cpp
++++ b/host/RenderControl.cpp
+@@ -33,6 +33,7 @@
+ #include "SyncThread.h"
+ #include "aemu/base/Tracing.h"
+ #include "compressedTextureFormats/AstcCpuDecompressor.h"
++#include "dsa_graphics_memory.h"
+ #include "gfxstream/host/Tracing.h"
+ #include "host-common/logging.h"
+ #include "host-common/misc.h"
+@@ -555,6 +556,14 @@
+         glStr += " ";
+     }
+ 
++    // DSA: the guest may map its host-visible memory from the graphics memory shared with it,
++    // and send gralloc buffers' CPU uploads and read backs through staging grants there
++    // (dsa_graphics_memory.h).
++    if (name == GL_EXTENSIONS && dsa::graphicsMemory().attached()) {
++        glStr += dsa::kGraphicsMemoryExtension;
++        glStr += " ";
++    }
++
+     if (vulkanEnabled && name == GL_EXTENSIONS) {
+         glStr += kVulkanFeatureStr;
+         glStr += " ";
+@@ -1054,6 +1063,54 @@
+     return 0;
+ }
+ 
++// DSA: the bytes a CPU upload or read back of `width` x `height` pixels in `format` and `type`
++// touches, rows padded to 4 bytes as GL's default alignment pads them, or 0 for a format a
++// DSA guest never sends. A DSA guest's packed YUV planes (kDsaPackedYuvFormat) are `width`
++// bytes on one row.
++static uint64_t dsaPixelBytes(GLint width, GLint height, GLenum format, GLenum type) {
++    if (width <= 0 || height <= 0) return 0;
++    // GL_RGBA, GL_BGRA_EXT, GL_RGB, GL_LUMINANCE; GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT_5_6_5,
++    // GL_HALF_FLOAT, GL_UNSIGNED_INT_2_10_10_10_REV.
++    constexpr GLenum kRgba = 0x1908, kBgra = 0x80E1, kRgb = 0x1907, kLuminance = 0x1909;
++    constexpr GLenum kUnsignedByte = 0x1401, k565 = 0x8363, kHalfFloat = 0x140B,
++                     k2101010 = 0x8368;
++    uint64_t bytes = 0;
++    if (type == kUnsignedByte) {
++        bytes = format == kRgba || format == kBgra ? 4
++                : format == kRgb                   ? 3
++                : format == kLuminance             ? 1
++                                                   : 0;
++    } else if (type == k565 && format == kRgb) {
++        bytes = 2;
++    } else if (type == kHalfFloat && format == kRgba) {
++        bytes = 8;
++    } else if (type == k2101010 && format == kRgba) {
++        bytes = 4;
++    }
++    const uint64_t row = (static_cast<uint64_t>(width) * bytes + 3) / 4 * 4;
++    return row * static_cast<uint64_t>(height);
++}
++
++// DSA: whether the pixels of a DMA call lie inside a staging grant of the graphics memory
++// shared with the guest that belongs to the calling guest process, so a process can make the
++// renderer read or write only its own memory there (dsa_graphics_memory.h).
++static bool dsaOwnsPixels(const void* pixels, uint32_t pixels_size, GLint width, GLint height,
++                          GLenum format, GLenum type) {
++    const uint64_t needed = dsaPixelBytes(width, height, format, type);
++    RenderThreadInfo* info = RenderThreadInfo::get();
++    if (!pixels || needed == 0 || needed > pixels_size || !info ||
++        !dsa::graphicsMemory().owns(pixels, needed, info->m_puid)) {
++        static std::atomic<bool> said{false};
++        if (!said.exchange(true)) {
++            WARN("graphics memory: a guest process named pixels outside its own staging memory "
++                 "(%u bytes for %dx%d); the copy is refused",
++                 pixels_size, width, height);
++        }
++        return false;
++    }
++    return true;
++}
++
+ static int rcUpdateColorBufferDMA(uint32_t colorBuffer,
+                                   GLint x, GLint y,
+                                   GLint width, GLint height,
+@@ -1062,19 +1119,15 @@
+ {
+     FrameBuffer *fb = FrameBuffer::getFB();
+ 
+-    if (!fb) {
++    if (!fb || !dsaOwnsPixels(pixels, pixels_size, width, height, format, type)) {
+         GRSYNC_DPRINT("unlock gralloc cb lock");
+         sGrallocSync()->unlockColorBufferPrepare();
+         return -1;
+     }
+ 
+-    fb->updateColorBuffer(colorBuffer, x, y, width, height,
+-                          format, type, pixels);
+-
+-    GRSYNC_DPRINT("unlock gralloc cb lock");
+-    sGrallocSync()->unlockColorBufferPrepare();
+-
+-    return 0;
++    // As rcUpdateColorBuffer does, from the pages the guest wrote in place: the packed YUV
++    // planes of a DSA guest included.
++    return rcUpdateColorBuffer(colorBuffer, x, y, width, height, format, type, pixels);
+ }
+ 
+ static uint32_t rcCreateClientImage(uint32_t context, EGLenum target, GLuint buffer)
+@@ -1559,7 +1612,7 @@
+                                 GLenum format, GLenum type, void* pixels, uint32_t pixels_size)
+ {
+     FrameBuffer *fb = FrameBuffer::getFB();
+-    if (!fb) {
++    if (!fb || !dsaOwnsPixels(pixels, pixels_size, width, height, format, type)) {
+         return -1;
+     }
+ 
+diff --git a/host/vulkan/VkDecoder.cpp b/host/vulkan/VkDecoder.cpp
+--- a/host/vulkan/VkDecoder.cpp
++++ b/host/vulkan/VkDecoder.cpp
+@@ -43,6 +43,7 @@
+ #include "VulkanBoxedHandles.h"
+ #include "VulkanDispatch.h"
+ #include "VulkanStream.h"
++#include "dsa_graphics_memory.h"
+ #include "dsa_shadow_record.h"
+ #include "aemu/base/BumpPool.h"
+ #include "aemu/base/Metrics.h"
+@@ -1951,6 +1952,12 @@
+                             continue;
+                         }
+                         uint8_t* targetRange = hostPtr + offset;
++                        if (dsa::graphicsMemory().offsetOf(hostPtr)) {
++                            // Memory the guest maps from the graphics memory shared with it:
++                            // these pages already hold what the guest wrote.
++                            *readStreamPtrPtr += readStream;
++                            continue;
++                        }
+                         memcpy(targetRange, *readStreamPtrPtr, readStream);
+                         // The guest's copy holds these bytes now; a read back leaves them
+                         // out until the device changes them.
+@@ -2057,6 +2064,11 @@
+                             continue;
+                         };
+                         uint8_t* targetRange = hostPtr + offset;
++                        if (dsa::graphicsMemory().offsetOf(hostPtr)) {
++                            // The guest maps these pages itself: size 0, nothing to copy.
++                            vkStream->write(&writeStream, sizeof(uint64_t));
++                            continue;
++                        }
+                         if (!dsa::shadowRecord().mustSend((uint64_t)memory, hostPtr, mappedSize,
+                                                           offset, actualSize)) {
+                             // The device changed nothing in the range since the guest last
+diff --git a/host/vulkan/VkDecoderGlobalState.cpp b/host/vulkan/VkDecoderGlobalState.cpp
+--- a/host/vulkan/VkDecoderGlobalState.cpp
++++ b/host/vulkan/VkDecoderGlobalState.cpp
+@@ -13,6 +13,8 @@
+ // limitations under the License.
+ #include "VkDecoderGlobalState.h"
+ 
++#include "dsa_graphics_memory.h"
++
+ #include <algorithm>
+ #include <functional>
+ #include <list>
+@@ -2342,7 +2344,12 @@
+ 
+         VkExternalMemoryBufferCreateInfo externalCI = {
+             VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO};
+-        if (m_vkEmulation->getFeatures().VulkanAllocateHostMemory.enabled) {
++        // DSA: a buffer of a device whose host-visible memory may be a grant of the graphics
++        // memory shared with the guest, which is imported host memory: the buffer must say so
++        // to be bound to it (dsa_graphics_memory.h).
++        if (m_vkEmulation->getFeatures().VulkanAllocateHostMemory.enabled ||
++            (dsaDeviceMapsSharedMemory(device) &&
++             !vk_find_struct<VkExternalMemoryBufferCreateInfo>(pCreateInfo))) {
+             localCreateInfo = *pCreateInfo;
+             // Hint that we 'may' use host allocation for this buffer. This will only be used for
+             // host visible memory.
+@@ -5706,9 +5713,23 @@
+             }
+         }
+ 
+-        VkResult result = vk->vkAllocateMemory(device, &localAllocInfo, pAllocator, pMemory);
+-        if (result != VK_SUCCESS) {
+-            return result;
++        // DSA: host-visible memory goes into the graphics memory shared with the guest where
++        // the driver takes it, and the guest maps those pages itself, so neither side copies
++        // it through the stream. Anything else is allocated as before.
++        std::optional<dsa::GraphicsGrant> dsaGrant;
++        if (isExport && hostVisible && !createBlobInfoPtr && !importHostInfo &&
++            !exportAllocateInfo) {
++            dsaGrant = dsaAllocateShared(device, vk, localAllocInfo, pAllocator, pMemory,
++                                         &mappedPtr);
++        }
++        VkResult result = VK_SUCCESS;
++        if (dsaGrant) {
++            localAllocInfo.allocationSize = dsaGrant->length;
++        } else {
++            result = vk->vkAllocateMemory(device, &localAllocInfo, pAllocator, pMemory);
++            if (result != VK_SUCCESS) {
++                return result;
++            }
+         }
+ 
+         std::lock_guard<std::mutex> lock(mMutex);
+@@ -5719,6 +5740,12 @@
+         memoryInfo.size = localAllocInfo.allocationSize;
+         memoryInfo.device = device;
+         memoryInfo.memoryIndex = localAllocInfo.memoryTypeIndex;
++        if (dsaGrant) {
++            memoryInfo.dsaShared = true;
++            memoryInfo.dsaSharedOffset = dsaGrant->offset;
++            memoryInfo.dsaSharedKey = dsaGrant->key;
++            memoryInfo.dsaSharedGeneration = dsaGrant->generation;
++        }
+ 
+         if (importCbInfoPtr) {
+             memoryInfo.boundColorBuffer = importCbInfoPtr->colorBuffer;
+@@ -5804,6 +5831,115 @@
+         }
+ 
+         deviceDispatch->vkFreeMemory(device, memory, pAllocator);
++        if (memoryInfo.dsaShared) {
++            // The driver no longer holds the pages; the granules come back once the guest has
++            // let go of them too.
++            dsa::graphicsMemory().release(memoryInfo.dsaSharedOffset,
++                                          memoryInfo.dsaSharedGeneration);
++            memoryInfo.dsaShared = false;
++        }
++    }
++
++    // Whether the guest maps the graphics memory shared with it for `device`.
++    bool dsaDeviceMapsSharedMemory(VkDevice device) {
++        std::lock_guard<std::mutex> lock(mMutex);
++        auto* deviceInfo = android::base::find(mDeviceInfo, device);
++        return deviceInfo && deviceInfo->dsaMapsSharedMemory;
++    }
++
++    // Says once, for each reason, why host-visible memory was copied through the stream.
++    void dsaSayCopied(int reason, const char* why) {
++        static std::atomic<uint32_t> said{0};
++        const uint32_t bit = 1u << reason;
++        if (said.fetch_or(bit) & bit) return;
++        WARN("graphics memory: host-visible memory is copied through the stream where %s", why);
++    }
++
++    // Allocates the host-visible memory `allocInfo` asks for as a grant of the graphics memory
++    // shared with the guest, imported into Vulkan: *pMemory is then the new memory and
++    // *mappedPtr its pages. Nothing is allocated, and the memory takes the copy path, when the
++    // guest does not map the shared memory for this device, the memory is an image's own, the
++    // driver cannot import it, or the region has no room; each reason is said once.
++    std::optional<dsa::GraphicsGrant> dsaAllocateShared(VkDevice device, VulkanDispatch* vk,
++                                                        const VkMemoryAllocateInfo& allocInfo,
++                                                        const VkAllocationCallbacks* pAllocator,
++                                                        VkDeviceMemory* pMemory,
++                                                        void** mappedPtr) {
++        uint64_t owner = 0;
++        {
++            std::lock_guard<std::mutex> lock(mMutex);
++            auto* deviceInfo = android::base::find(mDeviceInfo, device);
++            if (!deviceInfo || !deviceInfo->dsaMapsSharedMemory) return std::nullopt;
++            owner = deviceInfo->dsaGuestProcess;
++        }
++        // Only what an import may carry: allocation flags, and a dedicated buffer, which is a
++        // hint the shared memory leaves out. An image cannot be bound to imported host memory.
++        VkMemoryAllocateFlagsInfo flags = {};
++        bool hasFlags = false;
++        for (auto* next = static_cast<const VkBaseInStructure*>(allocInfo.pNext); next;
++             next = next->pNext) {
++            if (next->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO) {
++                flags = *reinterpret_cast<const VkMemoryAllocateFlagsInfo*>(next);
++                hasFlags = true;
++            } else if (next->sType == VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO) {
++                if (reinterpret_cast<const VkMemoryDedicatedAllocateInfo*>(next)->image !=
++                    VK_NULL_HANDLE) {
++                    dsaSayCopied(0, "an image has the memory to itself, and an image cannot "
++                                    "be bound to imported host memory");
++                    return std::nullopt;
++                }
++            } else {
++                dsaSayCopied(1, "the allocation asks for more than imported host memory gives "
++                                "(an opaque capture address or another import)");
++                return std::nullopt;
++            }
++        }
++        if (!m_vkEmulation->supportsExternalMemoryHostProperties() ||
++            !vk->vkGetMemoryHostPointerPropertiesEXT) {
++            dsaSayCopied(2, "the driver cannot import host memory (VK_EXT_external_memory_host)");
++            return std::nullopt;
++        }
++        const VkDeviceSize alignment =
++            m_vkEmulation->externalMemoryHostProperties().minImportedHostPointerAlignment;
++        if (alignment == 0 || dsa::kGraphicsGranule % alignment != 0) {
++            dsaSayCopied(3, "the driver imports host memory only in pieces larger than 64 KiB");
++            return std::nullopt;
++        }
++        dsa::GrantRefusal why = dsa::GrantRefusal::NotRefused;
++        auto grant = dsa::graphicsMemory().allocate(allocInfo.allocationSize, owner, &why);
++        if (!grant) {
++            dsaSayCopied(10 + static_cast<int>(why), dsa::grantRefusalText(why));
++            return std::nullopt;
++        }
++        void* at = dsa::graphicsMemory().pointer(grant->offset);
++        VkMemoryHostPointerPropertiesEXT properties = {
++            VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT, nullptr, 0};
++        if (vk->vkGetMemoryHostPointerPropertiesEXT(
++                device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, at,
++                &properties) != VK_SUCCESS ||
++            !(properties.memoryTypeBits & (1u << allocInfo.memoryTypeIndex))) {
++            dsa::graphicsMemory().release(grant->offset);
++            dsaSayCopied(8, "the driver does not take the shared memory for the memory type "
++                            "asked for");
++            return std::nullopt;
++        }
++        VkImportMemoryHostPointerInfoEXT import = {
++            VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT,
++            hasFlags ? &flags : nullptr,
++            VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
++            at,
++        };
++        flags.pNext = nullptr;
++        VkMemoryAllocateInfo info = allocInfo;
++        info.pNext = &import;
++        info.allocationSize = grant->length;
++        if (vk->vkAllocateMemory(device, &info, pAllocator, pMemory) != VK_SUCCESS) {
++            dsa::graphicsMemory().release(grant->offset);
++            dsaSayCopied(9, "the driver refused to import the shared memory");
++            return std::nullopt;
++        }
++        *mappedPtr = at;
++        return grant;
+     }
+ 
+     void freeMemoryLocked(VkDevice device, VulkanDispatch* deviceDispatch, VkDeviceMemory memory,
+@@ -6219,6 +6355,31 @@
+                                                  VkSnapshotApiCallInfo*, VkDevice boxed_device,
+                                                  VkDeviceMemory memory, uint64_t* pAddress,
+                                                  uint64_t* pSize, uint64_t* pHostmemId) {
++        // DSA: the guest's questions about the graphics memory shared with it
++        // (dsa_graphics_memory.h). With no memory, a device says it maps the shared memory;
++        // with one, the answer is its grant, which goes only to the process that owns it.
++        if (dsa::graphicsMemory().attached()) {
++            auto device = unbox_VkDevice(boxed_device);
++            std::lock_guard<std::mutex> lock(mMutex);
++            if (memory == VK_NULL_HANDLE) {
++                auto* deviceInfo = android::base::find(mDeviceInfo, device);
++                if (!deviceInfo) return VK_ERROR_DEVICE_LOST;
++                deviceInfo->dsaMapsSharedMemory = true;
++                deviceInfo->dsaGuestProcess = dsa::currentGraphicsOwner();
++                *pAddress = dsa::kGraphicsMemoryHello;
++                *pSize = dsa::graphicsMemory().length();
++                *pHostmemId = dsa::graphicsMemory().regionId();
++                return VK_SUCCESS;
++            }
++            auto* info = android::base::find(mMemoryInfo, memory);
++            if (!info || !info->dsaShared || info->device != device) {
++                return VK_ERROR_FEATURE_NOT_PRESENT;
++            }
++            *pAddress = info->dsaSharedOffset;
++            *pSize = info->size;
++            *pHostmemId = info->dsaSharedKey;
++            return VK_SUCCESS;
++        }
+         uint64_t hostBlobId = sNextHostBlobId++;
+         *pHostmemId = hostBlobId;
+         return vkGetBlobInternal(boxed_device, memory, hostBlobId);
+diff --git a/host/vulkan/VkDecoderInternalStructs.h b/host/vulkan/VkDecoderInternalStructs.h
+--- a/host/vulkan/VkDecoderInternalStructs.h
++++ b/host/vulkan/VkDecoderInternalStructs.h
+@@ -171,6 +171,13 @@
+     std::shared_ptr<PrivateMemory> privateMemory;
+     // virtio-gpu blobs
+     uint64_t blobId = 0;
++    // DSA: set when ptr is a grant of the graphics memory shared with the guest
++    // (dsa_graphics_memory.h), which the guest maps itself: its offset there, and its key,
++    // which only this memory's guest process is told.
++    bool dsaShared = false;
++    uint64_t dsaSharedOffset = 0;
++    uint64_t dsaSharedKey = 0;
++    uint64_t dsaSharedGeneration = 0;
+ 
+     // Buffer, provided via vkAllocateMemory().
+     std::optional<HandleType> boundBuffer;
+@@ -216,6 +223,12 @@
+     std::unique_ptr<GpuDecompressionPipelineManager> decompPipelines = nullptr;
+     DeviceOpTrackerPtr deviceOpTracker = nullptr;
+     std::optional<uint32_t> virtioGpuContextId;
++    // DSA: the guest maps the graphics memory shared with it for this device (it said so
++    // through vkGetMemoryHostAddressInfoGOOGLE with no memory), so its host-visible memory
++    // goes there where the driver takes it.
++    bool dsaMapsSharedMemory = false;
++    // The guest process this device belongs to, which its grants are for.
++    uint64_t dsaGuestProcess = 0;
+ 
+     // True if this is a compressed image that needs to be decompressed on the GPU (with our
+     // compute shader)

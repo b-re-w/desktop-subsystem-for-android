@@ -25,6 +25,46 @@ public partial class DisplayPage : Page
         }
     }
 
+    private async void OnVulkanDriverChosen(object sender, SelectionChangedEventArgs e)
+    {
+        // The list is set again whenever the settings change; only the user's choice is sent.
+        if (VulkanDriverBox.SelectedIndex >= 0 && ViewModel.Loaded && !ViewModel.IsBusy)
+        {
+            await ViewModel.SetVulkanDriverAsync(VulkanDriverBox.SelectedIndex);
+        }
+    }
+
+    /// <summary>Opens the Microsoft Store at the Compatibility Pack, which carries Dozen.</summary>
+    private void OnOpenCompatibilityPack(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(SettingsViewModel.CompatibilityPackStoreUri) { UseShellExecute = true });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // No Store on this computer: the text names the winget id too.
+        }
+    }
+
+    private async void OnAppFullScreen(object sender, SelectionChangedEventArgs e)
+    {
+        // The list is set again whenever the settings change; only the user's choice is sent.
+        if (AppFullScreenBox.SelectedIndex >= 0 && ViewModel.Loaded && !ViewModel.IsBusy)
+        {
+            await ViewModel.SetAppFullScreenAsync(AppFullScreenBox.SelectedIndex);
+        }
+    }
+
+    private async void OnAppImmersive(object sender, SelectionChangedEventArgs e)
+    {
+        if (AppImmersiveBox.SelectedIndex >= 0 && ViewModel.Loaded && !ViewModel.IsBusy)
+        {
+            await ViewModel.SetAppImmersiveAsync(AppImmersiveBox.SelectedIndex);
+        }
+    }
+
     private async void OnTouchGesturesToggled(object sender, RoutedEventArgs e) =>
         await ViewModel.SetTouchGesturesOffAsync(TouchGesturesSwitch.IsChecked == true);
 

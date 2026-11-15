@@ -213,6 +213,7 @@ fn fr30_window_settings_for_an_app_are_kept_and_reset_through_the_local_api() {
         start_size_dp: Some((400, 700)),
         // The DPI scaling choice crosses the local API and is stored with the rest.
         dpi_scaling: dsa_host_core::app_windows::DpiScaling::System,
+        ..AppWindowSettings::default()
     };
     assert_eq!(
         client.set_app_window_settings(&notes).unwrap(),
@@ -233,6 +234,69 @@ fn fr30_window_settings_for_an_app_are_kept_and_reset_through_the_local_api() {
         ..AppWindowSettings::default()
     };
     assert!(client.set_app_window_settings(&reset).unwrap().is_empty());
+}
+
+#[test]
+fn fr30_the_below_title_bar_switch_crosses_the_local_api() {
+    let android = Arc::new(Following::default());
+    let (mut connector, _service) = service(Arc::clone(&android));
+    let mut client = HostApiClient::connect(&mut connector, "test", WAIT).unwrap();
+    let player = AppWindowSettings {
+        package_name: "com.example.player".into(),
+        below_title_bar: Some(true),
+        ..AppWindowSettings::default()
+    };
+    // Turned on, the switch alone is an entry, stored and read back.
+    assert_eq!(
+        client.set_app_window_settings(&player).unwrap(),
+        vec![player.clone()]
+    );
+    assert_eq!(client.app_window_settings().unwrap(), vec![player.clone()]);
+    assert_eq!(
+        dsa_host_core::app_windows::below_title_bar_packages(
+            &client.app_window_settings().unwrap()
+        ),
+        vec!["com.example.player".to_string()]
+    );
+    // Turned off, the app is back at the defaults and its entry is gone.
+    let off = AppWindowSettings {
+        below_title_bar: None,
+        ..player
+    };
+    assert!(client.set_app_window_settings(&off).unwrap().is_empty());
+}
+
+#[test]
+fn fr30_an_apps_full_screen_choice_and_the_default_cross_the_local_api() {
+    use dsa_host_core::app_windows::{FullScreenDefaults, FullScreenPlace};
+    let android = Arc::new(Following::default());
+    let (mut connector, _service) = service(Arc::clone(&android));
+    let mut client = HostApiClient::connect(&mut connector, "test", WAIT).unwrap();
+    // Without a choice, a clear request fills the screen and bars hidden alone stays inside.
+    let fresh = client.app_windows().unwrap();
+    assert_eq!(fresh.defaults, FullScreenDefaults::default());
+    let video = AppWindowSettings {
+        package_name: "com.example.video".into(),
+        fullscreen: FullScreenPlace::Window,
+        immersive: FullScreenPlace::Screen,
+        ..AppWindowSettings::default()
+    };
+    assert_eq!(
+        client.set_app_window_settings(&video).unwrap(),
+        vec![video.clone()]
+    );
+    // The default for every app is a setting of its own, which the window manager reads with
+    // the apps' choices.
+    let mut settings = client.settings().unwrap().settings;
+    settings.app_full_screen = FullScreenDefaults {
+        fullscreen: FullScreenPlace::Window,
+        immersive: FullScreenPlace::Window,
+    };
+    let changed = client.set_settings(&settings).unwrap();
+    assert_eq!(changed.settings.app_full_screen, settings.app_full_screen);
+    let windows = client.app_windows().unwrap();
+    assert_eq!(windows.apps, vec![video]);
+    assert_eq!(windows.defaults, settings.app_full_screen);
 }
 
 /// Host settings a test changes, as the user would in the host's settings.

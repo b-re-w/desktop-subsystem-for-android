@@ -1,7 +1,9 @@
 # 문제 해결과 로그
 
-Desktop Subsystem for Android™(DSA)가 제대로 동작하지 않는 이유를 찾고, Android 로그를 보고, 문제를
-보고하는 방법을 설명합니다. Windows를 기준으로 하며, Linux는 따로 표시했습니다.
+[English](../troubleshooting.md) · **한국어** · [日本語](../ja/troubleshooting.md) · [简体中文](../zh-CN/troubleshooting.md) · [繁體中文](../zh-TW/troubleshooting.md) · [Español](../es/troubleshooting.md) · [Français](../fr/troubleshooting.md) · [Deutsch](../de/troubleshooting.md) · [Português (Brasil)](../pt-BR/troubleshooting.md) · [Русский](../ru/troubleshooting.md) · [Italiano](../it/troubleshooting.md) · [Tiếng Việt](../vi/troubleshooting.md) · [Bahasa Indonesia](../id/troubleshooting.md) · [Türkçe](../tr/troubleshooting.md)
+
+이 페이지는 Desktop Subsystem for Android™(DSA)가 동작하지 않는 이유를 찾고, Android 로그를 보고,
+문제를 보고하는 방법을 설명합니다. Windows를 기준으로 하며, Linux는 따로 표시했습니다.
 
 ## 먼저 상태 확인하기
 
@@ -16,7 +18,7 @@ DSA 설정 **일반** 페이지에도 같은 상태가 나옵니다.
 |---|---|---|
 | `Active` | **실행 중** | Android 부팅이 끝났고 그 안의 DSA 에이전트가 연결되었습니다 |
 | `Dozing` | **대기(Doze)** | Android가 유휴 상태입니다. [메모리](memory.md)를 참고하십시오 |
-| `Frozen` | **일시 정지됨** | 창을 열 때까지 Android가 멈춰 있습니다 |
+| `Frozen` | **일시 정지됨** | Android 창을 하나 열 때까지 Android가 멈춰 있습니다 |
 | `Stalled` | **준비되지 않음** | Android가 실행 중이지만 너무 오래 걸리고 있습니다. 다음 줄에 이유와 할 일이 나옵니다 |
 
 ## 자주 생기는 문제
@@ -32,16 +34,17 @@ DSA 설정 **일반** 페이지에도 같은 상태가 나옵니다.
 
 ### Android 데이터 초기화
 
-초기화하면 설치한 앱, 계정, 모든 앱 데이터가 지워지고, Android는 처음 설치했을 때 상태로 시작합니다.
-Android 이미지와 DSA 설정은 남습니다.
+초기화하면 설치한 앱, 계정, 모든 앱 데이터가 지워지고, Android는 처음 설치했을 때 상태로
+시작합니다. Android 이미지와 DSA 설정은 남습니다.
 
-- DSA 설정: **고급** 페이지 > **안드로이드 데이터 초기화** > **초기화**
-- 명령줄: `dsa reset-data`는 무엇이 지워지는지 알려 줍니다. `dsa reset-data --yes`는 실제로 지웁니다.
+- DSA 설정: **고급** 페이지 > **Android 데이터 초기화** > **초기화**
+- 명령줄: `dsa reset-data`는 무엇이 지워지는지 알려 줍니다. `dsa reset-data --yes`는 실제로
+  지웁니다.
 
 ## Android 로그 보기
 
-Android 로그는 Android 안의 메모리에만 있고 파일로 저장되지 않습니다. 무언가 로그를 읽는 동안에만 PC로
-전달됩니다.
+Android 로그는 Android 안의 메모리에만 있고 파일로 저장되지 않습니다. 무언가 로그를 읽는
+동안에만 PC로 전달됩니다.
 
 - DSA 설정: **로그** 페이지. 태그나 내용으로 거르고, 일시 정지할 수 있습니다.
 - 명령줄:
@@ -62,11 +65,12 @@ Android 로그는 Android 안의 메모리에만 있고 파일로 저장되지 �
    ```
 
    1분 이상 걸립니다.
-2. zip 파일을 [이슈](https://github.com/thisisthepy/desktop-subsystem-for-android/issues)에 첨부합니다.
+2. zip 파일을 [이슈](https://github.com/thisisthepy/desktop-subsystem-for-android/issues)에
+   첨부합니다.
 
-압축 파일에는 Android의 전체 로그, 충돌 기록(tombstone, ANR 추적, dropbox, pstore), Android 시스템 서비스
-요약, 이 PC에서 나와 관련된 DSA 로그가 들어갑니다. 다른 사용자의 기록은 빠집니다. 압축 파일 안의
-`summary.txt`에 모으지 못한 항목이 적혀 있습니다.
+압축 파일에는 Android의 전체 로그, 충돌 기록(tombstone, ANR 추적, dropbox, pstore), Android
+시스템 서비스 요약, 이 PC에서 나와 관련된 DSA 로그가 들어갑니다. 다른 사용자의 기록은 빠집니다.
+압축 파일 안의 `summary.txt`에 모으지 못한 항목이 적혀 있습니다.
 
 ## Windows의 로그 위치
 
@@ -75,7 +79,8 @@ Android 로그는 Android 안의 메모리에만 있고 파일로 저장되지 �
 | `%LOCALAPPDATA%\DSA\logs\` | `dsa-wm.log`(창 관리자), `dsa-app-window.log`(앱 창) |
 | `%ProgramData%\DSA\logs\` | `dsa-hostd.log`(서비스), `android-<SID>.log`(사용자별 Android 콘솔, 부팅마다 최대 2 MiB), `setup-<version>.log`(자체 업데이트) |
 
-DSA 설정 **고급** 페이지의 **내 로그 폴더 열기**와 **서비스 로그 폴더 열기(관리자)**로 이 폴더를 엽니다.
+이 폴더는 DSA 설정 **고급** 페이지의 **내 로그 폴더 열기**와 **서비스 로그 폴더 열기(관리자)**
+항목으로 엽니다.
 
 ## Linux의 로그 위치 (미출시)
 
@@ -88,10 +93,10 @@ journalctl --user -u dsa-devices -u dsa-compositor
 
 ## 모든 명령
 
-인수 없이 `dsa`를 실행하면 모든 명령이 나옵니다. `--json`을 붙이면 프로그램이 읽을 수 있는 형식으로
-출력합니다.
+인수 없이 `dsa`를 실행하면 모든 명령이 나옵니다. `--json`을 붙이면 프로그램이 읽을 수 있는
+형식으로 출력합니다.
 
 ---
 
-Android는 Google LLC의 상표입니다. Windows는 Microsoft 그룹의 상표입니다. DSA는 Google, Microsoft와
-제휴하거나 그들의 보증 또는 후원을 받지 않습니다.
+Android는 Google LLC의 상표입니다. Windows는 Microsoft 그룹의 상표입니다. DSA는 Google,
+Microsoft와 제휴하거나 그들의 보증 또는 후원을 받지 않습니다.

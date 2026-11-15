@@ -10,7 +10,6 @@ use dsa_host_core::compositor::caption::{
 use dsa_host_core::compositor::task_windows::WindowChange;
 use dsa_host_core::compositor::window_hosts::FromHost;
 use dsa_host_core::compositor::window_mode::{picture_in_picture_place, WindowMode};
-use dsa_host_core::compositor::window_sizing::to_window_size;
 use dsa_host_core::ime::ImeCursor;
 use dsa_host_core::input::PointerMapper;
 use dsa_host_core::keys::KeyMapper;
@@ -59,7 +58,9 @@ pub struct Window {
     /// A frame that waits for a free buffer.
     waiting: Option<Frame>,
     pub caption: CaptionState,
-    pub tone: CaptionTone,
+    /// The tone the app asked for; `None` when it expressed nothing, and the pixels under
+    /// the band decide ([`shown_tone`]).
+    pub tone: Option<CaptionTone>,
     pub pointer: PointerMapper,
     pub keys: KeyMapper,
     pub ime: TextInputV3,
@@ -74,9 +75,11 @@ pub struct Window {
     pub(crate) caption_layer: Option<super::gpu::CaptionLayer>,
     /// The GPU frame shown last, drawn again when the title bar changes.
     pub(crate) last_gpu: Option<(u32, crate::compositor::frames::GpuFrame)>,
-    /// The tone the caption glyphs are drawn in now: `tone`, unless the pixels under the band
-    /// call for the other ([`shown_tone`]).
-    shown_tone: CaptionTone,
+    /// The tone the caption glyphs are drawn in now: `tone` when the app asked for one, else
+    /// what the pixels under the band call for, and the fill's tone over a band the window
+    /// fills ([`shown_tone`]). `None` while neither a sample nor the app has decided it, when
+    /// the glyphs are drawn in the default tone.
+    shown_tone: Option<CaptionTone>,
     /// The band's fill and lightness over GPU frames, as sampled last, and when it was sampled.
     pub(crate) gpu_band: BandSample,
     pub(crate) band_probed: Option<Instant>,
@@ -180,7 +183,7 @@ impl State {
                 last: None,
                 waiting: None,
                 caption: CaptionState::default(),
-                tone: CaptionTone::default(),
+                tone: None,
                 pointer: PointerMapper::new(task_id),
                 keys: KeyMapper::new(task_id),
                 ime: TextInputV3::new(task_id),
@@ -190,7 +193,7 @@ impl State {
                 viewport: None,
                 caption_layer: None,
                 last_gpu: None,
-                shown_tone: CaptionTone::default(),
+                shown_tone: None,
                 gpu_band: BandSample::default(),
                 band_probed: None,
                 armed: None,
@@ -321,15 +324,30 @@ impl State {
                 let small = window.apply_mode(shown, work);
                 window.limits();
                 self.after_mode(*task_id);
-                self.picture_in_picture(*task_id, small);
+                if shown == WindowMode::Overlay {
+                    // An app overlay window floats above the others where its app has it; it
+                    // asks its app for no size.
+                    self.enter_overlay(*task_id);
+                } else {
+                    self.picture_in_picture(*task_id, small);
+                }
             }
+            WindowChange::Overlay {
+                task_id,
+                left,
+                top,
+                display,
+                ..
+            } => self.place_overlay(*task_id, *left, *top, *display),
             WindowChange::CaptionMode {
                 task_id,
                 app_drawn,
                 interactive,
+                below,
             } => {
                 if let Some(window) = self.windows.get_mut(task_id) {
                     window.title_bar.set_mode(*app_drawn, interactive.clone());
+                    window.title_bar.set_below(*below);
                 }
                 self.redraw(*task_id);
             }
@@ -339,6 +357,9 @@ impl State {
                 }
                 self.redraw(*task_id);
             }
+            // The compositor's session sends each window's input to the task it shows (its
+            // `GpuResetWindows`); the window itself has nothing to change.
+            WindowChange::ShownTask { .. } => {}
         }
     }
 
@@ -497,12 +518,15 @@ impl Window {
     /// Shows the window in `mode`. Returns the size a picture-in-picture window asks the
     /// task for.
     fn apply_mode(&mut self, mode: WindowMode, work: (i32, i32)) -> Option<(u32, u32)> {
+        self.model.mode_changed();
         match mode {
             WindowMode::Fullscreen => {
                 self.toplevel.set_fullscreen(None);
                 None
             }
-            WindowMode::Normal => {
+            // An overlay's window leaves its toplevel for a surface above the others
+            // (`enter_overlay`), at the size its app gave it.
+            WindowMode::Normal | WindowMode::Overlay => {
                 self.toplevel.unset_fullscreen();
                 None
             }
@@ -566,12 +590,15 @@ impl Window {
     ) -> (CaptionLayout, &[u8]) {
         let layout = self.model.caption_layout();
         let dpi = self.model.dpi();
+        // An app that starts below the title bar has its band filled, whatever the frame shows.
+        let sample = self.title_bar.band_sample(sample, self.tone);
         self.shown_tone = shown_tone(self.tone, sample, self.title_bar.app_drawn, self.shown_tone);
+        let tone = self.shown_tone.unwrap_or_default();
         let fill = sample.fill;
         let key = BandKey {
             layout,
             dpi,
-            tone: self.shown_tone,
+            tone,
             state: CaptionState {
                 maximized: self.model.states.maximized,
                 active: self.model.states.activated,
@@ -591,7 +618,7 @@ impl Window {
             let pixels = self.title_bar.paint(
                 &layout,
                 dpi,
-                self.shown_tone,
+                tone,
                 &key.state,
                 BandArt { icon, title, fill },
             );
@@ -664,7 +691,7 @@ impl Window {
         let mut shown = if blank || scale == (1, 1) {
             frame.clone()
         } else {
-            frame.scaled(to_window_size((frame.width, frame.height), scale))
+            frame.scaled(self.model.frame_in_window((frame.width, frame.height)))
         };
         let size = (shown.width, shown.height);
         self.buffers

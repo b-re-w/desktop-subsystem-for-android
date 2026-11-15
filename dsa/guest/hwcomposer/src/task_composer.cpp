@@ -23,6 +23,9 @@ constexpr int kFenceTimeoutMs = 3000;
 constexpr uint32_t kNoDisplay = 0;
 // The blend mode SurfaceFlinger's client target is composed with.
 constexpr int32_t kBlendPremultiplied = 2;
+// DRM_FORMAT_ABGR8888 ('AB24'): 8-bit R, G, B, A in memory, which the host's task displays
+// read as they are.
+constexpr uint32_t kDrmFormatAbgr8888 = 0x34324241;
 
 int64_t steadyMs() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -115,7 +118,7 @@ void TaskComposer::taskUpdated(const TaskUpdate& update) {
     bool changed;
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        changed = mTasks.update(update.id, update.bounds);
+        changed = mTasks.update(update.id, update.bounds, update.overlay);
         if (changed) {
             logTrace(mTrace.boundsChanged(update.id, update.bounds.width(),
                                           update.bounds.height(), traceMonoMs(), traceWallMs()));
@@ -183,6 +186,9 @@ void TaskComposer::syncGenerationLocked() {
     // one, so every display is made, and announced, again.
     mGeneration = mHost.generation();
     mShared.clear();
+    mUploadedAhead.clear();
+    // The new connection's ColorBuffers hold nothing yet.
+    mUploads.clear();
     mResizeGate.clear();
     for (auto& [_, output] : mOutputs) {
         output.onHost = false;
@@ -217,6 +223,34 @@ void TaskComposer::present(Frame& frame) {
     mPipeline.submit([this, owned, presentedMs] { compose(*owned, presentedMs); });
 }
 
+void TaskComposer::uploadCpuWritten(std::vector<CpuLayer>& layers) {
+    if (layers.empty()) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (!mHost.connected()) {
+        return;
+    }
+    syncGenerationLocked();
+    for (CpuLayer& layer : layers) {
+        // The producer's CPU has finished writing once the fence signals.
+        if (!waitForFence(layer.acquireFence, kFenceTimeoutMs)) {
+            HWC_LOGW("layer %lld's buffer was not ready in %d ms to copy up",
+                     static_cast<long long>(layer.id), kFenceTimeoutMs);
+        }
+        const uint32_t handle = sharedHandleLocked(layer.buffer);
+        if (handle == 0) {
+            continue;
+        }
+        mUploadedAhead.insert(layer.buffer.id);
+        mUploads.upload(mHost, handle, layer.buffer, layer.fresh);
+    }
+    if (!mHost.connected()) {
+        mDisconnected = true;
+        mReconnectWake.notify_all();
+    }
+}
+
 void TaskComposer::drain() { mPipeline.drain(); }
 
 void TaskComposer::compose(Frame& frame, double presentedMs) {
@@ -224,6 +258,13 @@ void TaskComposer::compose(Frame& frame, double presentedMs) {
     std::optional<int64_t> refreshAt;
     {
         std::lock_guard<std::mutex> lock(mMutex);
+        const int64_t now = steadyMs();
+        // Counted before the host is reached: a frame SurfaceFlinger composed itself while the
+        // host was away holds its client target buffers just the same, and only the frame asked
+        // for once the delay is up makes it free them.
+        mClientTarget.presented(std::any_of(frame.layers.begin(), frame.layers.end(),
+                                            [](const FrameLayer& layer) { return layer.client; }),
+                                now);
         if (!mHost.connected()) {
             // The reconnecting thread asks for a frame once the host is back; connecting
             // here would hold up SurfaceFlinger for as long as the host takes to answer.
@@ -243,7 +284,12 @@ void TaskComposer::compose(Frame& frame, double presentedMs) {
         const Layout layout = assignLayersToTasks(placements, mTasks.tasks(), frame.display);
 
         bool clientTargetReady = false;
-        const int64_t now = steadyMs();
+        const bool holdClientTarget = mClientTarget.held(now);
+        if (const std::optional<int64_t> since = mClientTarget.letGo(now)) {
+            HWC_LOGI("SurfaceFlinger has composed nothing itself for %lld ms: let go of the "
+                     "client target",
+                     static_cast<long long>(*since));
+        }
         for (const TaskLayers& task : layout.tasks) {
             const auto pairing = mDisplays.acquire(task.task);
             if (!pairing) {
@@ -314,6 +360,75 @@ void TaskComposer::compose(Frame& frame, double presentedMs) {
                 output.width = width;
                 output.height = height;
             }
+            if (task.overlay) {
+                // An overlay of one RGBA layer is shown from that layer's own buffer, which
+                // still has the transparency its app drew: the host composes into a target
+                // it clears to opaque black.
+                std::vector<OverlaySurface> surfaces;
+                surfaces.reserve(task.layers.size());
+                for (int64_t id : task.layers) {
+                    const FrameLayer& layer = *byId[id];
+                    OverlaySurface surface;
+                    surface.frame = layer.frame;
+                    surface.rgbaBuffer = !layer.client && layer.mode == ComposeMode::Device &&
+                                         layer.buffer.valid() &&
+                                         layer.buffer.format == kDrmFormatAbgr8888;
+                    surface.bufferWidth = layer.buffer.width;
+                    surface.bufferHeight = layer.buffer.height;
+                    surface.cropLeft = layer.crop.left;
+                    surface.cropTop = layer.crop.top;
+                    surface.cropRight = layer.crop.right;
+                    surface.cropBottom = layer.crop.bottom;
+                    surface.alpha = layer.alpha;
+                    surface.transform = layer.transform;
+                    surfaces.push_back(surface);
+                }
+                if (showsOwnBuffer(task.bounds, surfaces)) {
+                    FrameLayer& layer = *byId[task.layers.front()];
+                    if (!waitForFence(layer.acquireFence, kFenceTimeoutMs)) {
+                        HWC_LOGW("overlay %d's buffer was not ready in %d ms", task.task,
+                                 kFenceTimeoutMs);
+                    }
+                    const uint32_t own = sharedHandleLocked(layer.buffer);
+                    if (own != 0) {
+                        if (!output.announced) {
+                            outbox.push_back(encodeTaskFrames(task.task, output.display));
+                            output.announced = true;
+                        }
+                        if (output.targets[0] != 0 || output.targets[1] != 0) {
+                            // Composed before, shown from its own buffer now.
+                            for (uint32_t& target : output.targets) {
+                                mHost.closeColorBuffer(target);
+                                target = 0;
+                            }
+                            output.buffers = BufferSize{};
+                            output.next = 0;
+                        }
+                        mHost.post(output.display, own);
+                        // Answered only once the host has taken the post, so it has read the
+                        // app's buffer before SurfaceFlinger hands it back to the app.
+                        mHost.resizeDisplay(output.display, static_cast<uint32_t>(width),
+                                            static_cast<uint32_t>(height));
+                        if (!output.posted) {
+                            HWC_LOGI("overlay %d (%lldx%lld) is shown from its own buffer on "
+                                     "display %u",
+                                     task.task, static_cast<long long>(width),
+                                     static_cast<long long>(height), output.display);
+                        }
+                        output.posted = true;
+                        continue;
+                    }
+                }
+                if (!output.composedLogged) {
+                    // Said once: such an overlay is opaque where its app drew nothing.
+                    HWC_LOGI("overlay %d (%lldx%lld, %zu layer(s)) is composed by the host: "
+                             "it is opaque where nothing is drawn",
+                             task.task, static_cast<long long>(width),
+                             static_cast<long long>(height), task.layers.size());
+                    output.composedLogged = true;
+                }
+            }
+
             const BufferSize buffers = taskBufferSize(output.buffers, frame.display, width, height);
             if (buffers != output.buffers) {
                 // The first frame, a task past its buffers, or one far smaller than them.
@@ -415,6 +530,45 @@ void TaskComposer::compose(Frame& frame, double presentedMs) {
             if (leavesLastFrame(layerMissing, output.posted)) {
                 continue;
             }
+            if (!task.overlay) {
+                // An overlay that covers the display (a screen filter, a dimmer) lies over
+                // every app, as on a phone's screen: the part of it over this task is
+                // composed on top of the task's own layers.
+                for (int64_t id : layout.screen) {
+                    FrameLayer& layer = *byId[id];
+                    const Rect over = layer.frame.intersect(task.bounds);
+                    if (layer.client || layer.transform != 0 || over.empty() ||
+                        layer.frame.empty()) {
+                        continue;
+                    }
+                    ComposeInput in;
+                    in.mode = layer.mode;
+                    if (layer.mode == ComposeMode::Device) {
+                        waitForFence(layer.acquireFence, kFenceTimeoutMs);
+                        in.colorBuffer = sharedHandleLocked(layer.buffer);
+                        if (in.colorBuffer == 0) {
+                            continue;
+                        }
+                    }
+                    // The same part of its buffer that lies over the task.
+                    const float perX = (layer.crop.right - layer.crop.left) /
+                                       static_cast<float>(layer.frame.width());
+                    const float perY = (layer.crop.bottom - layer.crop.top) /
+                                       static_cast<float>(layer.frame.height());
+                    in.frame = over;
+                    in.crop = FRect{
+                        layer.crop.left + static_cast<float>(over.left - layer.frame.left) * perX,
+                        layer.crop.top + static_cast<float>(over.top - layer.frame.top) * perY,
+                        layer.crop.left + static_cast<float>(over.right - layer.frame.left) * perX,
+                        layer.crop.top + static_cast<float>(over.bottom - layer.frame.top) * perY};
+                    in.blendMode = layer.blendMode;
+                    in.alpha = layer.alpha;
+                    std::copy(std::begin(layer.color), std::end(layer.color),
+                              std::begin(in.color));
+                    in.transform = layer.transform;
+                    inputs.push_back(in);
+                }
+            }
 
             // Composed for display 0, which names no task window: given the task's display,
             // the host would make the target that display's frame before composing into
@@ -443,12 +597,25 @@ void TaskComposer::compose(Frame& frame, double presentedMs) {
 
         // Drop this process's hold on buffers SurfaceFlinger can no longer show.
         for (auto it = mShared.begin(); it != mShared.end();) {
-            if (frame.liveBuffers.count(it->first) || it->first == frame.clientTarget.id) {
+            const bool clientTarget = it->first == frame.clientTarget.id ||
+                                      frame.clientBuffers.count(it->first) != 0;
+            if (frame.liveBuffers.count(it->first) || (holdClientTarget && clientTarget) ||
+                mUploadedAhead.count(it->first)) {
                 ++it;
             } else {
                 mHost.closeColorBuffer(it->second);
+                mUploads.forget(it->first);
                 it = mShared.erase(it);
             }
+        }
+        // The next frame names the buffers copied up for it among its own.
+        mUploadedAhead.clear();
+
+        std::optional<int64_t> releaseAt = releaseTasksWithoutLayersLocked(layout, now);
+        if (const std::optional<int64_t> due = mClientTarget.refreshAt()) {
+            // SurfaceFlinger presents nothing more once the video is gone and the rest is
+            // still, so a frame is asked for when the client target is due to go.
+            releaseAt = releaseAt ? std::min(*releaseAt, *due) : *due;
         }
 
         if (!mHost.connected()) {
@@ -456,6 +623,11 @@ void TaskComposer::compose(Frame& frame, double presentedMs) {
             mReconnectWake.notify_all();
         }
         refreshAt = mResizeGate.nextDeadline();
+        if (releaseAt && (!refreshAt || *releaseAt < *refreshAt)) {
+            // SurfaceFlinger presents nothing more for a minimized window, so a frame is asked
+            // for when its buffers are due to go.
+            refreshAt = releaseAt;
+        }
     }
     if (refreshAt) {
         // SurfaceFlinger presents only when something changes; a held task whose app never
@@ -465,6 +637,45 @@ void TaskComposer::compose(Frame& frame, double presentedMs) {
         mReconnectWake.notify_all();
     }
     send(outbox);
+}
+
+std::optional<int64_t> TaskComposer::releaseTasksWithoutLayersLocked(const Layout& layout,
+                                                                     int64_t now) {
+    std::set<int32_t> withLayers;
+    for (const TaskLayers& task : layout.tasks) {
+        withLayers.insert(task.task);
+    }
+    std::optional<int64_t> next;
+    for (auto& [task, output] : mOutputs) {
+        if (withLayers.count(task)) {
+            output.withoutLayersSinceMs = 0;
+            continue;
+        }
+        if (output.targets[0] == 0 && output.targets[1] == 0) {
+            continue;
+        }
+        if (output.withoutLayersSinceMs == 0) {
+            output.withoutLayersSinceMs = std::max<int64_t>(now, 1);
+        }
+        const int64_t due = output.withoutLayersSinceMs + kReleaseWithoutLayersMs;
+        if (!releaseDue(output.withoutLayersSinceMs, now, kReleaseWithoutLayersMs)) {
+            next = next ? std::min(*next, due) : due;
+            continue;
+        }
+        // The same as when a task's buffers change size: the host display keeps the last frame
+        // posted to it until the next post, and the window shows its own copy of it.
+        for (uint32_t& target : output.targets) {
+            mHost.closeColorBuffer(target);
+            target = 0;
+        }
+        HWC_LOGI("task %d has had no layer for %lld ms: let go of its %lldx%lld buffers", task,
+                 static_cast<long long>(now - output.withoutLayersSinceMs),
+                 static_cast<long long>(output.buffers.width),
+                 static_cast<long long>(output.buffers.height));
+        output.buffers = BufferSize{};
+        output.next = 0;
+    }
+    return next;
 }
 
 void TaskComposer::refreshNow() {

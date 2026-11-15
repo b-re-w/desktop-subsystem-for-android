@@ -7,31 +7,50 @@
 //! buttons over the app's top right corner in a visual of their own
 //! ([`WindowPresenter::show_caption`]).
 //!
-//! The title bar keeps the height Windows gives a caption at the window's DPI. The window
-//! reports it (`FromHost::Caption`) when it opens and whenever it changes, and Android gives
-//! the task a top inset of that height, so the app's own toolbar sits below the buttons.
+//! The title bar is Android's status bar. It keeps the height Windows gives a caption at the
+//! window's DPI. The window reports it (`FromHost::Caption`) when it opens and whenever it
+//! changes, and Android gives the task a status bar inset of exactly that height, in the
+//! task's pixels, as a phone gives an app the height of its status bar. An app that draws
+//! edge to edge keeps its toolbar below the band and draws its own status bar background
+//! under it; an app that does not gets the status bar background Android draws in its status
+//! bar colour there. Either way only what the app chooses to draw under the band is covered.
+//! The guest image also sets Android's status bar height resources to this height at each
+//! scale's density, for the apps that read those instead of their insets.
 //!
 //! The band belongs to Windows, as the platform-neutral [`CaptionLayout`] decides:
 //! `WM_NCHITTEST` answers a caption button's code over the buttons (the maximize button's
 //! code is what shows the Windows 11 snap layouts), the top resize edge's codes along the
-//! top, and `HTCAPTION` everywhere else in the band, so dragging moves the window, a double
-//! click maximizes it and a right click opens the system menu, all done by Windows. The
+//! top, and `HTCAPTION` everywhere else in the band, so dragging moves the window and a double
+//! click maximizes it, both done by Windows; a right click opens the window menu. The
 //! buttons themselves are pressed here, on the non-client mouse messages, so Windows never
 //! draws its classic buttons over them.
 //!
-//! The glyphs are dark over a light band and light over a dark one. The presenter reads how
-//! light the app's pixels under the band are ([`WindowPresenter::on_band_colour`]), and they
-//! decide, since an app drawing edge to edge often leaves its status bar transparent or reports
-//! icons for a status bar it does not show; what the app's status bar reports
-//! (`ToHost::CaptionTone`) counts only until a frame has been read. Under a high contrast theme
+//! UI Automation clients find the title bar in the window's own tree, as buttons named in the
+//! display language ([`super::accessibility`]). The title bar's information the window answers
+//! (`WM_GETTITLEBARINFOEX`) gives the buttons' real places and marks them invisible, so the
+//! non-client proxy Windows adds to every window's tree does not describe them a second time
+//! ([`withdraw_from_proxies`]).
+//!
+//! The glyphs are dark over a light band and light over a dark one. What the app asked its
+//! status bar's icons to be (`ToHost::CaptionTone`, from the appearance the guest's window
+//! manager reports as the app changes it) decides, as it does on Android's own status bar.
+//! Only when the app expressed nothing does the presenter's reading of how light the app's
+//! pixels under the band are ([`WindowPresenter::on_band_colour`]) decide. A band the window
+//! fills takes the tone of its fill. Under a high contrast theme
 //! the buttons take the theme's colors.
 //!
 //! At the left of the band the window draws the app's icon (the program's icon, which the
 //! taskbar shows too, read at the small icon size of the window's DPI so it stays sharp) and
 //! the app's name (the window's title, in Segoe UI Variable at the caption text size, cut
 //! with an ellipsis before the buttons), both in the glyphs' color and fainter while the
-//! window is inactive. A press on the icon is `HTSYSMENU`, which opens the system menu as
-//! a standard caption icon does.
+//! window is inactive. The icon is `HTSYSMENU`, the code of a standard caption icon; a click
+//! on it opens the window menu, the Windows 11 menu that replaces the classic system menu, and
+//! a double click closes the window, as Windows' own icon does ([`super::window_menu`]).
+//!
+//! An icon drawn without its plate can vanish into a band of its own colour, as a white logo
+//! on a white title bar. The window measures the logo's contrast against the band each time
+//! it draws, and when too little of it stands out it draws the whole icon with the app's
+//! background, or the logo on a neutral plate ([`caption_icon::choose`]).
 //!
 //! An app that draws nothing behind the band (an old theme draws no system bar background)
 //! would leave it black. The presenter samples the band and the row under it from the app's
@@ -45,7 +64,9 @@
 //! icon, which the taskbar and Alt+Tab show too, has its plate and is drawn as it is. While the task can go back (`ToHost::CaptionBack`), the icon's cell
 //! shows a back arrow instead, a button of the caption buttons' look whose click sends the task
 //! Back; its hit test code is `HTHELP`, which a window without a help button never otherwise
-//! answers, so Windows leaves the press to this window.
+//! answers, so Windows leaves the press to this window. After a Back the arrow waits for the
+//! task's state to be told again ([`BACK_SETTLE_MS`] at most) before it sends another, so a
+//! quick second click never sends Back past the first screen, which would close the app.
 //!
 //! An app that draws its own title bar (`ToHost::CaptionMode`) fills the band with its own
 //! content. The window then draws only the icon's cell and the buttons over it, and the points
@@ -57,10 +78,11 @@ use std::cell::{Cell, RefCell};
 use std::sync::mpsc::Sender;
 
 use dsa_host_core::compositor::caption::{
-    paint_title_bar, scaled, shown_tone, title_bar_hit, BackButton, BandSample, CaptionBand,
-    CaptionButton, CaptionHit, CaptionLayout, CaptionPalette, CaptionState, CaptionTone,
-    TitleBarContent, TitleBarHit, TitleBarMode, TITLE_TEXT_AT_100,
+    below_title_bar_sample, paint_title_bar, scaled, shown_tone, title_bar_hit, tone_reason,
+    BackButton, BandSample, CaptionBand, CaptionButton, CaptionHit, CaptionLayout, CaptionPalette,
+    CaptionState, CaptionTone, TitleBarContent, TitleBarHit, TitleBarMode, TITLE_TEXT_AT_100,
 };
+use dsa_host_core::compositor::caption_icon::{self, IconLook};
 use dsa_host_core::compositor::window_hosts::FromHost;
 use dsa_host_core::input::InputEvent;
 use dsa_host_core::keys::{keycode, KeyAction, KeyEvent as GuestKey};
@@ -70,12 +92,12 @@ use windows_sys::Win32::Graphics::Dwm::{
     DwmExtendFrameIntoClientArea, DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE,
 };
 use windows_sys::Win32::Graphics::Gdi::{
-    CreateCompatibleDC, CreateDIBSection, CreateFontIndirectW, DeleteDC, DeleteObject, DrawTextW,
-    GdiFlush, GetSysColor, GetTextFaceW, ScreenToClient, SelectObject, SetBkMode, SetTextColor,
-    ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, COLOR_BTNFACE, COLOR_BTNTEXT,
-    COLOR_GRAYTEXT, COLOR_HIGHLIGHT, COLOR_HIGHLIGHTTEXT, DEFAULT_CHARSET, DIB_RGB_COLORS,
-    DT_END_ELLIPSIS, DT_LEFT, DT_NOPREFIX, DT_SINGLELINE, DT_VCENTER, HDC, HFONT, LOGFONTW,
-    SYS_COLOR_INDEX, TRANSPARENT,
+    ClientToScreen, CreateCompatibleDC, CreateDIBSection, CreateFontIndirectW, DeleteDC,
+    DeleteObject, DrawTextW, GdiFlush, GetSysColor, GetTextFaceW, ScreenToClient, SelectObject,
+    SetBkMode, SetTextColor, ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
+    COLOR_BTNFACE, COLOR_BTNTEXT, COLOR_GRAYTEXT, COLOR_HIGHLIGHT, COLOR_HIGHLIGHTTEXT,
+    DEFAULT_CHARSET, DIB_RGB_COLORS, DT_END_ELLIPSIS, DT_LEFT, DT_NOPREFIX, DT_SINGLELINE,
+    DT_VCENTER, HDC, HFONT, LOGFONTW, SYS_COLOR_INDEX, TRANSPARENT,
 };
 use windows_sys::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW};
 use windows_sys::Win32::UI::Controls::MARGINS;
@@ -87,9 +109,9 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     DefWindowProcW, GetClientRect, GetMessageTime, IsZoomed, PostMessageW, SystemParametersInfoW,
     HTCAPTION, HTCLIENT, HTCLOSE, HTHELP, HTMAXBUTTON, HTMINBUTTON, HTSYSMENU, HTTOP, HTTOPLEFT,
     HTTOPRIGHT, NCCALCSIZE_PARAMS, SC_CLOSE, SC_MAXIMIZE, SC_MINIMIZE, SC_RESTORE,
-    SPI_GETHIGHCONTRAST, WINDOW_EX_STYLE, WINDOW_STYLE, WM_NCACTIVATE, WM_NCCALCSIZE, WM_NCHITTEST,
-    WM_NCLBUTTONDBLCLK, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_NCMOUSELEAVE, WM_NCMOUSEMOVE,
-    WM_SYSCOMMAND,
+    SPI_GETHIGHCONTRAST, TITLEBARINFOEX, WINDOW_EX_STYLE, WINDOW_STYLE, WM_GETTITLEBARINFOEX,
+    WM_NCACTIVATE, WM_NCCALCSIZE, WM_NCHITTEST, WM_NCLBUTTONDBLCLK, WM_NCLBUTTONDOWN,
+    WM_NCLBUTTONUP, WM_NCMOUSELEAVE, WM_NCMOUSEMOVE, WM_SYSCOMMAND,
 };
 
 use crate::compositor::present::WindowPresenter;
@@ -198,7 +220,7 @@ fn code_of(hit: CaptionHit) -> u32 {
 
 /// The hit test code of the back arrow in the icon's cell. A window without a help button
 /// never answers it otherwise, and this window presses it itself, as it does its buttons.
-const HT_BACK: u32 = HTHELP;
+pub const HT_BACK: u32 = HTHELP;
 
 /// The hit test code of the client point (`x`, `y`) of a window laid out as `layout`, its
 /// title bar showing `mode`. The app's icon is `HTSYSMENU`, so a press on it opens the system
@@ -209,6 +231,48 @@ fn hit_code(layout: &CaptionLayout, x: i32, y: i32, mode: &TitleBarMode) -> u32 
         TitleBarHit::SystemMenu => HTSYSMENU,
         TitleBarHit::Back => HT_BACK,
         TitleBarHit::Window(hit) => code_of(hit),
+    }
+}
+
+/// The title bar and its minimize, maximize and close buttons, in screen pixels, of a window
+/// laid out as `layout` whose client area's top left corner is at (`x`, `y`) on the screen:
+/// what `WM_GETTITLEBARINFOEX` answers. Windows works them out from a standard caption, which
+/// this window's client area has taken over, and so reported buttons one pixel high at the
+/// window's top edge to UI Automation and a title bar below the real one.
+fn title_bar_rects(layout: &CaptionLayout, x: i32, y: i32) -> (RECT, [RECT; 3]) {
+    let rect = |(left, top, width, height): (i32, i32, u32, u32)| RECT {
+        left: x + left,
+        top: y + top,
+        right: x + left + width as i32,
+        bottom: y + top + height as i32,
+    };
+    let title = rect((0, 0, layout.width, layout.height));
+    let buttons = CaptionButton::ALL.map(|button| rect(layout.button_rect(button)));
+    (title, buttons)
+}
+
+/// `STATE_SYSTEM_INVISIBLE`, the state bit of a part of a title bar that is not there.
+const STATE_INVISIBLE: u32 = 0x0000_8000;
+
+/// Marks the title bar and its buttons invisible in the states `WM_GETTITLEBARINFOEX`
+/// answers (`rgstate`: the title bar, a reserved one, minimize, maximize, help and close).
+///
+/// UI Automation's non-client proxy, which every client merges into a window's tree, and the
+/// standard title bar object of Microsoft Active Accessibility build a caption's elements from
+/// this answer. The window's own tree has the title bar the window draws, every button named
+/// and placed, with the window menu Alt+Space opens, the back arrow, Restore in full screen,
+/// and the buttons kept while a full screen window hides them ([`super::accessibility`]). Left
+/// visible, the proxy's copy would stand beside them: a second set of buttons, without the
+/// icon's back arrow, gone while the window fills its monitor, which clients would find first
+/// at a point (the proxy answers the band's hit test codes before the window's own tree is
+/// asked). Marked invisible, the proxy leaves them out, and clients find the window's own. The
+/// rectangles stay the real ones, for any caller that reads where the buttons are.
+fn withdraw_from_proxies(states: &mut [u32; 6]) {
+    for (index, state) in states.iter_mut().enumerate() {
+        // Index 1 is reserved and holds nothing.
+        if index != 1 {
+            *state |= STATE_INVISIBLE;
+        }
     }
 }
 
@@ -226,6 +290,12 @@ pub fn back_keys(task_id: i32, time_ms: u32) -> [GuestKey; 2] {
     };
     [key(KeyAction::Down), key(KeyAction::Up)]
 }
+
+/// How long after a Back the arrow sends no other, unless the task's state is told again
+/// first, in milliseconds. Android tells the new state once the screen has gone, which takes
+/// about as long as its transition; until then the arrow's state is stale, and a second Back
+/// on what is by then the first screen would close the app.
+pub const BACK_SETTLE_MS: u32 = 700;
 
 /// The faces the app's name is written in, the first one installed winning: Segoe UI
 /// Variable at its optical size for caption text, then at its text size, then Segoe UI,
@@ -352,7 +422,7 @@ unsafe fn title_mask(title: &str, size: (u32, u32), dpi: u32) -> Option<Vec<u8>>
 
 /// What a title bar was drawn from, so a message that changes nothing draws nothing: the
 /// layout, the buttons' state, the colors, the DPI, the name, the fill, whether the app draws
-/// its own title bar, and the back arrow.
+/// its own title bar, the back arrow, and how the icon is drawn.
 type Drawn = (
     CaptionLayout,
     CaptionState,
@@ -362,12 +432,25 @@ type Drawn = (
     Option<u32>,
     bool,
     Option<BackButton>,
+    Option<IconLook>,
 );
+
+/// The title bar's icon at one side, read once for each side: the adaptive icon's logo alone
+/// (`None` for an app without one), and the whole icon with its background.
+#[derive(Default)]
+struct IconPixels {
+    side: u32,
+    logo: Option<Vec<u8>>,
+    whole: Option<Vec<u8>>,
+}
 
 /// A task window's title bar: the tone and state of its buttons, the app's icon and name,
 /// and the height it last reported.
 /// What the title was laid out for: the text, the box it fits in and the DPI.
 type TitleKey = (String, (u32, u32), u32);
+
+/// Where a title bar writes a line of the log.
+pub type CaptionLog = Box<dyn Fn(&str)>;
 
 pub struct CaptionWindow {
     task_id: i32,
@@ -380,13 +463,18 @@ pub struct CaptionWindow {
     /// What was last read from the app's frame under the band: the color the band is filled
     /// with while the app leaves it empty, and how light the band is.
     sample: Cell<BandSample>,
-    /// The tone the glyphs, the name and the frame are drawn in now ([`shown_tone`]).
-    shown: Cell<CaptionTone>,
-    /// The icon as last read, and the side it was read at.
-    icon: RefCell<Option<(u32, Option<Vec<u8>>)>>,
+    /// The tone the glyphs, the name and the frame are drawn in now ([`shown_tone`]); `None`
+    /// while neither a sample nor the app has decided it, when they are drawn in the default
+    /// tone ([`CaptionWindow::shown`]).
+    shown: Cell<Option<CaptionTone>>,
+    /// The icon as last read, at the side it was read at.
+    icon: RefCell<Option<IconPixels>>,
+    /// How the icon was last drawn: bare, or on a plate over a band it would vanish into.
+    icon_look: Cell<Option<IconLook>>,
     /// The name as last laid out, and what it was laid out for: text, box and DPI.
     text: RefCell<Option<(TitleKey, Option<Vec<u8>>)>>,
-    tone: Cell<CaptionTone>,
+    /// The tone the app asked for; `None` while it expressed nothing, so the pixels decide.
+    tone: Cell<Option<CaptionTone>>,
     hovered: Cell<Option<CaptionButton>>,
     pressed: Cell<Option<CaptionButton>>,
     active: Cell<bool>,
@@ -395,17 +483,33 @@ pub struct CaptionWindow {
     /// Whether the app draws its own title bar, and where its controls are in the band.
     app_drawn: Cell<bool>,
     interactive: RefCell<Vec<Bounds>>,
+    /// Whether the app starts below the title bar, so the window paints the band opaque, and
+    /// the color it is painted with now.
+    below: Cell<bool>,
+    filled: Cell<Option<u32>>,
     /// Whether the icon's cell shows the back arrow, and whether the pointer is over it or
     /// presses it.
     back: Cell<bool>,
     back_hovered: Cell<bool>,
     back_pressed: Cell<bool>,
+    /// When (the message clock, in milliseconds) the arrow last sent Back, until the task's
+    /// state is told again.
+    back_sent: Cell<Option<u32>>,
+    /// Whether the window menu is open over this window, which keeps the title bar drawn as
+    /// active while the menu has the foreground.
+    menu_open: Cell<bool>,
     /// Where the back arrow's Back goes: the window host's input for the guest.
     input: Sender<InputEvent>,
     /// Whether Windows will say when the pointer leaves the non-client area.
     tracking: Cell<bool>,
     /// What was last drawn, so a message that changes nothing draws nothing.
     drawn: RefCell<Option<Drawn>>,
+    /// Whether the window fills its monitor, where its title bar shows only while the pointer
+    /// is at the top edge: it then has no resize edges, and its middle button leaves full
+    /// screen, drawn as Restore.
+    full_screen: Cell<bool>,
+    /// Where the window says which tone its glyphs take and why, once per change.
+    log: RefCell<Option<CaptionLog>>,
 }
 
 impl CaptionWindow {
@@ -423,27 +527,41 @@ impl CaptionWindow {
             icon_id,
             title: RefCell::new(String::new()),
             sample: Cell::new(BandSample::default()),
-            shown: Cell::new(CaptionTone::default()),
+            shown: Cell::new(None),
             icon: RefCell::new(None),
+            icon_look: Cell::new(None),
             text: RefCell::new(None),
-            tone: Cell::new(CaptionTone::default()),
+            tone: Cell::new(None),
             hovered: Cell::new(None),
             pressed: Cell::new(None),
             active: Cell::new(true),
             reported: Cell::new(CaptionBand::default()),
             app_drawn: Cell::new(false),
             interactive: RefCell::new(Vec::new()),
+            below: Cell::new(false),
+            filled: Cell::new(None),
             back: Cell::new(false),
             back_hovered: Cell::new(false),
             back_pressed: Cell::new(false),
+            back_sent: Cell::new(None),
+            menu_open: Cell::new(false),
             input,
             tracking: Cell::new(false),
             drawn: RefCell::new(None),
+            full_screen: Cell::new(false),
+            log: RefCell::new(None),
         }
     }
 
+    /// Has `log` told, once per change, which tone the glyphs, the name and the back arrow
+    /// take and why ([`tone_reason`]).
+    pub fn set_log(&self, log: CaptionLog) {
+        *self.log.borrow_mut() = Some(log);
+    }
+
     /// Whether the app draws its own title bar, and where its controls are in the band, in
-    /// client pixels.
+    /// client pixels; or (`below`) that the app starts below the title bar, so the band is
+    /// painted opaque in the color the app's frame has there, and is never the app's.
     ///
     /// # Safety
     ///
@@ -453,10 +571,15 @@ impl CaptionWindow {
         hwnd: HWND,
         app_drawn: bool,
         interactive: Vec<Bounds>,
+        below: bool,
         presenter: Option<&WindowPresenter>,
     ) {
+        let app_drawn = app_drawn && !below;
         self.app_drawn.set(app_drawn);
-        *self.interactive.borrow_mut() = interactive;
+        *self.interactive.borrow_mut() = if app_drawn { interactive } else { Vec::new() };
+        if self.below.replace(below) != below {
+            self.filled.set(None);
+        }
         self.retone(hwnd);
         self.paint(hwnd, presenter);
     }
@@ -471,7 +594,26 @@ impl CaptionWindow {
             self.back_hovered.set(false);
             self.back_pressed.set(false);
         }
+        // The task's state is fresh again: the arrow may send the next Back.
+        self.back_sent.set(None);
         self.paint(hwnd, presenter);
+    }
+
+    /// The window fills its monitor now, or no longer does.
+    pub fn set_full_screen(&self, full_screen: bool) {
+        self.full_screen.set(full_screen);
+        self.drawn.replace(None);
+    }
+
+    /// Takes the title bar away, as a full screen window does once the pointer leaves it. The
+    /// next paint draws it whole again.
+    pub fn hide(&self, presenter: Option<&WindowPresenter>) {
+        self.drawn.replace(None);
+        self.hovered.set(None);
+        self.pressed.set(None);
+        if let Some(presenter) = presenter {
+            presenter.hide_caption();
+        }
     }
 
     /// Whether the icon's cell shows the back arrow now, for the window's accessibility.
@@ -479,14 +621,40 @@ impl CaptionWindow {
         self.back.get()
     }
 
-    /// Sends the task Back, as a click on the back arrow does.
-    pub fn go_back(&self) {
-        // SAFETY: GetMessageTime only reads this thread's message state.
-        let time = unsafe { GetMessageTime() } as u32;
-        for key in back_keys(self.task_id, time) {
+    /// The pointer pressed the back arrow.
+    pub fn press_back(&self) {
+        self.back_pressed.set(true);
+    }
+
+    /// The pointer let go of the back arrow at `time_ms` of the message clock: the task is sent
+    /// Back when the arrow was pressed, the task can go back, and its state has been told since
+    /// the last Back (or that Back is [`BACK_SETTLE_MS`] old). Returns whether Back was sent.
+    pub fn release_back(&self, time_ms: u32) -> bool {
+        let pressed = self.back_pressed.replace(false);
+        if !pressed || !self.back.get() {
+            return false;
+        }
+        if let Some(sent) = self.back_sent.get() {
+            if time_ms.wrapping_sub(sent) < BACK_SETTLE_MS {
+                return false;
+            }
+        }
+        self.back_sent.set(Some(time_ms));
+        for key in back_keys(self.task_id, time_ms) {
             // The sender ends only when the window host stops; Back then has nowhere to go.
             let _ = self.input.send(InputEvent::Key(key));
         }
+        true
+    }
+
+    /// The window menu opened over this window, or closed. While it is open the title bar
+    /// stays drawn as active, as it does under Windows' own system menu.
+    pub fn set_menu_open(&self, open: bool) {
+        self.menu_open.set(open);
+    }
+
+    pub fn menu_open(&self) -> bool {
+        self.menu_open.get()
     }
 
     /// What the title bar shows besides its layout, for its hit test.
@@ -515,7 +683,7 @@ impl CaptionWindow {
         let dpi = GetDpiForWindow(hwnd).max(96);
         let mut client: RECT = std::mem::zeroed();
         GetClientRect(hwnd, &mut client);
-        let maximized = IsZoomed(hwnd) != 0;
+        let maximized = IsZoomed(hwnd) != 0 || self.full_screen.get();
         let border = if maximized {
             0
         } else {
@@ -546,8 +714,9 @@ impl CaptionWindow {
         self.apply_tone(hwnd);
     }
 
-    /// The app's status bar calls for `tone`. The buttons take it, and the window's frame the
-    /// matching dark or light mode, unless the pixels under the band say otherwise.
+    /// The app's status bar calls for `tone`, or for nothing (`None`). The buttons take the
+    /// tone it calls for, and the window's frame the matching dark or light mode, unless the
+    /// window fills the band; while it calls for nothing, the pixels under the band decide.
     ///
     /// # Safety
     ///
@@ -555,7 +724,7 @@ impl CaptionWindow {
     pub unsafe fn set_tone(
         &self,
         hwnd: HWND,
-        tone: CaptionTone,
+        tone: Option<CaptionTone>,
         presenter: Option<&WindowPresenter>,
     ) {
         self.tone.set(tone);
@@ -565,8 +734,8 @@ impl CaptionWindow {
 
     /// What the presenter last read from the app's frame under the band: the band takes the
     /// fill (0xAARRGGBB), the app's top color, while the app leaves the band empty, or stays
-    /// transparent without one; the glyphs take the tone the fill, else the band's lightness,
-    /// calls for.
+    /// transparent without one; the glyphs take the tone the fill calls for, else the app's,
+    /// else the one the band's lightness calls for.
     ///
     /// # Safety
     ///
@@ -592,10 +761,22 @@ impl CaptionWindow {
         self.paint(hwnd, presenter);
     }
 
+    /// What the band shows under the title bar: what the presenter last read, with the fill
+    /// of an app that starts below the title bar ([`below_title_bar_sample`]).
+    fn band_sample(&self) -> BandSample {
+        let sample = self.sample.get();
+        if self.below.get() {
+            below_title_bar_sample(sample, self.tone.get(), self.filled.get())
+        } else {
+            sample
+        }
+    }
+
     /// The color the band is filled with: the app's top color while it leaves the band
-    /// empty. An app that draws its own title bar is never filled over.
+    /// empty, and always a color for an app that starts below the title bar. An app that
+    /// draws its own title bar is never filled over.
     fn fill(&self) -> Option<u32> {
-        self.sample.get().fill.filter(|_| !self.app_drawn.get())
+        self.band_sample().fill.filter(|_| !self.app_drawn.get())
     }
 
     /// Settles the tone the glyphs, the name and the frame are drawn in, from the app's
@@ -606,35 +787,102 @@ impl CaptionWindow {
     ///
     /// `hwnd` is this window, a live window of the calling thread.
     unsafe fn retone(&self, hwnd: HWND) {
-        let now = shown_tone(
+        let before = self.shown();
+        let decided_before = self.shown.get();
+        let sample = self.band_sample();
+        if self.below.get() {
+            self.filled.set(sample.fill);
+        }
+        let decided = shown_tone(
             self.tone.get(),
-            self.sample.get(),
+            sample,
             self.app_drawn.get(),
             self.shown.get(),
         );
-        if self.shown.replace(now) != now {
+        self.shown.set(decided);
+        if decided != decided_before {
+            if let Some(log) = self.log.borrow().as_ref() {
+                let reason = tone_reason(self.tone.get(), sample, self.app_drawn.get(), decided);
+                log(&format!(
+                    "task {}: the title bar's name, back arrow and buttons take {}: {reason}",
+                    self.task_id,
+                    self.shown().describe()
+                ));
+            }
+        }
+        if self.shown() != before {
             self.apply_tone(hwnd);
         }
     }
 
-    /// The title bar's icon `side` pixels square, read once for each side: the adaptive icon's
-    /// foreground the program carries for it, else the program's own icon.
-    fn icon_pixels(&self, side: u32) -> Option<Vec<u8>> {
+    /// The tone the glyphs, the name and the frame are drawn in now: the decided one, or the
+    /// default while nothing has decided it.
+    fn shown(&self) -> CaptionTone {
+        self.shown.get().unwrap_or_default()
+    }
+
+    /// The tone the name, the back arrow and the buttons are drawn in now.
+    pub fn glyph_tone(&self) -> CaptionTone {
+        self.shown()
+    }
+
+    /// The title bar's icon `side` pixels square, as it is drawn over the band now, and how:
+    /// the adaptive icon's logo alone (enlarged to the size of a whole icon) while it stands
+    /// out against the band, else the whole icon or the logo on a plate
+    /// ([`caption_icon::choose`]). The icons are read once for each side.
+    fn icon_pixels(&self, side: u32, palette: &CaptionPalette) -> Option<(IconLook, Vec<u8>)> {
         let mut cache = self.icon.borrow_mut();
-        if cache.as_ref().map(|(at, _)| *at) != Some(side) {
-            // The icon the window manager sent since the program started comes first.
-            let live = super::live_icon::current()
-                .and_then(|icon| super::live_icon::premultiplied(icon.caption_png(), side));
-            let pixels = live
-                .or_else(|| super::splash::caption_icon_pixels(side))
-                .or_else(|| {
-                    super::splash::icon_pixels(self.icon_id, side)
-                        .filter(|(_, size)| *size == (side, side))
-                        .map(|(pixels, _)| pixels)
-                });
-            *cache = Some((side, pixels));
+        if cache.as_ref().map(|icon| icon.side) != Some(side) {
+            *cache = Some(self.read_icon(side));
         }
-        cache.as_ref().and_then(|(_, pixels)| pixels.clone())
+        let icon = cache.as_ref()?;
+        // Under high contrast the band is the theme's color.
+        let background = if palette.rest >> 24 != 0 && !self.app_drawn.get() {
+            let fill = BandSample {
+                fill: Some(palette.rest),
+                luminance: None,
+                range: None,
+                band: None,
+            };
+            caption_icon::background_luminance(fill, false, self.shown())
+        } else {
+            caption_icon::background_luminance(
+                self.band_sample(),
+                self.app_drawn.get(),
+                self.shown(),
+            )
+        };
+        let chosen = caption_icon::choose(
+            icon.logo.as_deref(),
+            icon.whole.as_deref(),
+            side,
+            background,
+            self.icon_look.get(),
+        );
+        self.icon_look.set(chosen.as_ref().map(|(look, _)| *look));
+        chosen
+    }
+
+    /// The app's logo and whole icon `side` pixels square: the ones the window manager sent
+    /// since the program started, else the adaptive icon's foreground the program carries and
+    /// the program's own icon.
+    fn read_icon(&self, side: u32) -> IconPixels {
+        if let Some(live) = super::live_icon::current() {
+            let whole = super::live_icon::premultiplied(&live.icon_png, side);
+            let logo = (!live.caption_icon_png.is_empty())
+                .then(|| super::live_icon::caption_logo(&live.caption_icon_png, side))
+                .flatten();
+            if logo.is_some() || whole.is_some() {
+                return IconPixels { side, logo, whole };
+            }
+        }
+        IconPixels {
+            side,
+            logo: super::splash::caption_icon_pixels(side),
+            whole: super::splash::icon_pixels(self.icon_id, side)
+                .filter(|(_, size)| *size == (side, side))
+                .map(|(pixels, _)| pixels),
+        }
     }
 
     /// The app's name laid out for a box of `size` at `dpi`, laid out again only when one of
@@ -650,7 +898,7 @@ impl CaptionWindow {
     }
 
     unsafe fn apply_tone(&self, hwnd: HWND) {
-        let dark: i32 = i32::from(self.shown.get() == CaptionTone::LightGlyphs);
+        let dark: i32 = i32::from(self.shown() == CaptionTone::LightGlyphs);
         DwmSetWindowAttribute(
             hwnd,
             DWMWA_USE_IMMERSIVE_DARK_MODE as u32,
@@ -672,12 +920,25 @@ impl CaptionWindow {
             height,
             ..CaptionLayout::new(0, height, dpi, 0).band()
         };
+        self.report_band(band, report);
+    }
+
+    /// Reports `band` when it differs from the one last reported.
+    fn report_band(&self, band: CaptionBand, report: &dyn Fn(FromHost)) {
         if self.reported.replace(band) != band {
             report(FromHost::Caption {
                 task_id: self.task_id,
                 band,
             });
         }
+    }
+
+    /// Reports that the window has no title bar (it fills the monitor), so the task has no top
+    /// inset. The band is reported again when the title bar comes back
+    /// ([`Self::report_height`]), even at the height it had before: the task's inset was 0 in
+    /// between, and an app that reads its inset once kept its toolbar under the caption.
+    pub fn report_none(&self, report: &dyn Fn(FromHost)) {
+        self.report_band(CaptionBand::default(), report);
     }
 
     /// Draws the title bar as it is now, unless that is what was drawn last.
@@ -694,10 +955,12 @@ impl CaptionWindow {
         let state = CaptionState {
             hovered: self.hovered.get(),
             pressed: self.pressed.get(),
-            maximized: IsZoomed(hwnd) != 0,
+            maximized: IsZoomed(hwnd) != 0 || self.full_screen.get(),
             active: self.active.get(),
         };
-        let palette = palette(self.shown.get());
+        let palette = palette(self.shown());
+        // The icon is chosen again each time the band may have changed under it.
+        let icon = self.icon_pixels(layout.icon, &palette);
         let now = Some((
             layout,
             state,
@@ -707,17 +970,17 @@ impl CaptionWindow {
             self.fill(),
             self.app_drawn.get(),
             self.back_button(),
+            icon.as_ref().map(|(look, _)| *look),
         ));
         if *self.drawn.borrow() == now {
             return;
         }
-        let icon = self.icon_pixels(layout.icon);
         let title = layout
             .title_rect()
             .and_then(|(_, _, width, height)| self.title_pixels((width, height), dpi));
         let content = TitleBarContent {
             fill: self.fill(),
-            icon: icon.as_deref(),
+            icon: icon.as_ref().map(|(_, pixels)| pixels.as_slice()),
             title: title.as_deref(),
             app_drawn: self.app_drawn.get(),
             back: self.back_button(),
@@ -843,16 +1106,13 @@ impl CaptionWindow {
                 Some(DefWindowProcW(hwnd, message, wparam, lparam))
             }
             WM_NCLBUTTONDOWN | WM_NCLBUTTONDBLCLK if wparam as u32 == HT_BACK => {
-                self.back_pressed.set(true);
+                self.press_back();
                 self.paint(hwnd, presenter);
                 Some(0)
             }
             WM_NCLBUTTONUP if wparam as u32 == HT_BACK => {
-                let pressed = self.back_pressed.replace(false);
+                self.release_back(GetMessageTime() as u32);
                 self.paint(hwnd, presenter);
-                if pressed && self.back.get() {
-                    self.go_back();
-                }
                 Some(0)
             }
             WM_NCLBUTTONDOWN | WM_NCLBUTTONDBLCLK => match button_of(wparam as u32) {
@@ -887,11 +1147,37 @@ impl CaptionWindow {
                     None
                 }
             },
+            WM_GETTITLEBARINFOEX => {
+                // Windows fills in which buttons the window has; where they are is this
+                // window's to say, as its client area holds the title bar.
+                let result = DefWindowProcW(hwnd, message, wparam, lparam);
+                let info = lparam as *mut TITLEBARINFOEX;
+                if info.is_null()
+                    || (*info).cbSize as usize != std::mem::size_of::<TITLEBARINFOEX>()
+                {
+                    return Some(result);
+                }
+                let mut origin = POINT { x: 0, y: 0 };
+                ClientToScreen(hwnd, &mut origin);
+                let (title, [minimize, maximize, close]) =
+                    title_bar_rects(&self.layout(hwnd), origin.x, origin.y);
+                (*info).rcTitleBar = title;
+                // The order Windows gives them: the title bar, a reserved one, minimize,
+                // maximize, help and close.
+                (*info).rgrect[2] = minimize;
+                (*info).rgrect[3] = maximize;
+                (*info).rgrect[5] = close;
+                // The window's own tree describes them; Windows' proxy leaves them out.
+                withdraw_from_proxies(&mut (*info).rgstate);
+                Some(result)
+            }
             WM_NCACTIVATE => {
                 // Windows would paint its caption; there is none. -1 keeps it from painting
-                // the frame, which DWM draws.
-                self.activated(hwnd, wparam != 0, presenter);
-                Some(DefWindowProcW(hwnd, message, wparam, -1))
+                // the frame, which DWM draws. The window menu taking the foreground leaves the
+                // title bar active, as Windows' own menu does.
+                let active = wparam != 0 || self.menu_open.get();
+                self.activated(hwnd, active, presenter);
+                Some(DefWindowProcW(hwnd, message, WPARAM::from(active), -1))
             }
             _ => None,
         }
@@ -911,6 +1197,44 @@ mod tests {
         assert_eq!(code_of(CaptionHit::Caption), HTCAPTION);
         assert_eq!(code_of(CaptionHit::Client), HTCLIENT);
         assert_eq!(button_of(HTCAPTION), None);
+    }
+
+    #[test]
+    fn fr22_the_caption_buttons_report_where_they_are_drawn() {
+        // A 200% window whose client area starts at (100, 59) on the screen.
+        let layout = CaptionLayout::new(800, 58, 192, 16);
+        let (title, buttons) = title_bar_rects(&layout, 100, 59);
+        assert_eq!(
+            (title.left, title.top, title.right, title.bottom),
+            (100, 59, 900, 117)
+        );
+        // Each button is as high as the band, not a pixel, and they end at the right edge,
+        // close rightmost.
+        let width = layout.button_width as i32;
+        for (index, button) in buttons.iter().enumerate() {
+            let left = 900 - (3 - index as i32) * width;
+            assert_eq!(
+                (button.left, button.top, button.right, button.bottom),
+                (left, 59, left + width, 117),
+                "button {index}"
+            );
+        }
+    }
+
+    #[test]
+    fn fr18_windows_proxy_leaves_the_drawn_title_bar_to_the_windows_own_tree() {
+        // What DefWindowProc fills in for a window with a caption: the title bar and its
+        // buttons there, the help button and the reserved slot not.
+        let mut states = [0, STATE_INVISIBLE, 0, 0, STATE_INVISIBLE, 0];
+        withdraw_from_proxies(&mut states);
+        for index in [0, 2, 3, 4, 5] {
+            assert_ne!(states[index] & STATE_INVISIBLE, 0, "part {index}");
+        }
+        // Nothing else Windows said about them changes.
+        let mut pressed = [0x8 /* STATE_SYSTEM_PRESSED */, 0, 0x8, 0, 0, 0];
+        withdraw_from_proxies(&mut pressed);
+        assert_eq!(pressed[0] & 0x8, 0x8);
+        assert_eq!(pressed[1], 0, "the reserved slot");
     }
 
     #[test]
@@ -967,6 +1291,84 @@ mod tests {
         assert_eq!(up.action, KeyAction::Up);
         assert_eq!((up.key_code, up.event_time_ms), (4, 1234));
         assert!(!down.canceled && !up.canceled);
+    }
+
+    #[test]
+    fn fr22_the_back_arrow_sends_back_only_while_the_task_can_go_back() {
+        let (input, guest) = std::sync::mpsc::channel();
+        let caption = CaptionWindow::new(7, WS_OVERLAPPEDWINDOW, 0, 1, input);
+        let sent = || {
+            let keys: Vec<InputEvent> = guest.try_iter().collect();
+            keys.len()
+        };
+        let none = std::ptr::null_mut();
+        // On the first screen the cell is the icon: a click there opens the window menu and
+        // sends Android nothing, even a release over the cell.
+        caption.press_back();
+        assert!(!caption.release_back(1000));
+        assert_eq!(sent(), 0);
+        // SAFETY: with no presenter the window is never drawn, so no window is needed.
+        unsafe { caption.set_back(none, true, None) };
+        caption.press_back();
+        assert!(caption.release_back(2000));
+        assert_eq!(sent(), 2, "Back pressed and released");
+        // A second click before Android has told the task's new state sends nothing: that
+        // state is stale, and a Back on what may be the first screen by now closes the app.
+        caption.press_back();
+        assert!(!caption.release_back(2000 + BACK_SETTLE_MS - 1));
+        assert_eq!(sent(), 0);
+        // Told again (still past the first screen), the arrow works again at once.
+        // SAFETY: as above.
+        unsafe { caption.set_back(none, true, None) };
+        caption.press_back();
+        assert!(caption.release_back(2100));
+        assert_eq!(sent(), 2);
+        // A state that never comes (the task stayed past its first screen) holds it no
+        // longer than the settle time.
+        caption.press_back();
+        assert!(caption.release_back(2100 + BACK_SETTLE_MS));
+        assert_eq!(sent(), 2);
+        // Back on the first screen: the cell is the icon again and sends nothing.
+        // SAFETY: as above.
+        unsafe { caption.set_back(none, false, None) };
+        caption.press_back();
+        assert!(!caption.release_back(9000));
+        assert_eq!(sent(), 0);
+        // A release with no press on the arrow (the press began elsewhere) sends nothing.
+        // SAFETY: as above.
+        unsafe { caption.set_back(none, true, None) };
+        assert!(!caption.release_back(9500));
+        assert_eq!(sent(), 0);
+    }
+
+    #[test]
+    fn fr22_the_title_bar_band_is_reported_again_when_full_screen_ends() {
+        let (input, _guest) = std::sync::mpsc::channel();
+        let caption = CaptionWindow::new(7, WS_OVERLAPPEDWINDOW, 0, 1, input);
+        let reports = std::cell::RefCell::new(Vec::new());
+        let report = |message: FromHost| reports.borrow_mut().push(message);
+        let band = CaptionBand {
+            height: 58,
+            start_width: 70,
+            end_width: 276,
+        };
+        caption.report_band(band, &report);
+        // The same band again says nothing new.
+        caption.report_band(band, &report);
+        // Full screen takes the title bar away, and the task's inset with it.
+        caption.report_none(&report);
+        // Back in a window the band is reported again, though it is the one it had before:
+        // the task was at 0 in between.
+        caption.report_band(band, &report);
+        let reported: Vec<CaptionBand> = reports
+            .borrow()
+            .iter()
+            .map(|message| match message {
+                FromHost::Caption { task_id: 7, band } => *band,
+                other => panic!("unexpected report {other:?}"),
+            })
+            .collect();
+        assert_eq!(reported, vec![band, CaptionBand::default(), band]);
     }
 
     #[test]

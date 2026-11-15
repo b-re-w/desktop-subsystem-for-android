@@ -24,10 +24,13 @@ fn main() {
     use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
 
+    use dsa_host_core::graphics_state::GraphicsState;
     use dsa_host_core::host_api::HostApiClient;
     use dsa_host_core::renderer::spawn_supervisor;
     use dsa_host_windows::compositor::display_gpu::{adapter_names, display_sources};
+    use dsa_host_windows::compositor::graphics_notice::{self, GraphicsNotices};
     use dsa_host_windows::compositor::log::{default_log_file, CompositorLogger};
+    use dsa_host_windows::compositor::notifications::{user_language, DsaNews};
     use dsa_host_windows::compositor::shutdown::SignOutListener;
     use dsa_host_windows::compositor::single_instance::SingleInstanceMutex;
     use dsa_host_windows::compositor::{Compositor, CompositorConfig};
@@ -38,6 +41,7 @@ fn main() {
     use dsa_host_windows::renderer::client::{
         ProgramLauncher, RendererClient, RendererProcess, ServedByRenderer,
     };
+    use dsa_host_windows::vulkan_driver::VulkanDriverSetting;
 
     // The window manager runs itself with this argument to find which video formats the GPU
     // decodes, so the decoders never load into the long-running process until they are used.
@@ -152,13 +156,23 @@ fn main() {
                     report.settings.input_trace,
                     report.settings.resize_trace,
                 );
-                report.settings.render_gpu
+                report.settings
             })
             .map_err(|e| e.to_string())
     })();
-    let (render_gpu, notes) = render_gpu_setting(from_service, || {
-        CompositorSettings::load(&compositor_settings)
-    });
+    // Which Vulkan the renderer may use; `auto` when the service cannot be asked.
+    let vulkan = from_service
+        .as_ref()
+        .map(|settings| VulkanDriverSetting::parse(&settings.vulkan_driver))
+        .unwrap_or_default();
+    log(&format!(
+        "Vulkan driver setting {}: the graphics renderer says what it runs on once it starts",
+        vulkan.name()
+    ));
+    let (render_gpu, notes) =
+        render_gpu_setting(from_service.map(|settings| settings.render_gpu), || {
+            CompositorSettings::load(&compositor_settings)
+        });
     for note in &notes {
         log(note);
     }
@@ -179,9 +193,69 @@ fn main() {
     // that process, and the app windows stay with their last frame.
     let ports = (config.command_port, config.process_pipe_port);
     let process: RendererProcess = Arc::default();
-    let client = RendererClient::new(request, ports, Arc::clone(&process), logger.clone());
+    // What each renderer runs on goes to the service, which keeps Android stopped while there
+    // is no Vulkan to draw on, and to the user where they must act.
+    let news = DsaNews::default();
+    let on_graphics = {
+        let news = Arc::clone(&news);
+        let pipe = config.pipe_name.clone();
+        let logger = logger.clone();
+        let notices = std::sync::Mutex::new(GraphicsNotices::new(
+            dsa_host_windows::paths::UserRoot::current().and_then(|root| {
+                root.compositor_settings()
+                    .parent()
+                    .map(GraphicsNotices::marker_in)
+            }),
+        ));
+        Box::new(move |state: &GraphicsState| {
+            if notices
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .should_tell(state)
+            {
+                if let Some(notice) = graphics_notice::notification(state, user_language()) {
+                    news.lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .push_back(notice);
+                }
+            }
+            // The service is told on a thread of its own: the renderer's connection waits
+            // for nothing.
+            let state = state.clone();
+            let pipe = pipe.clone();
+            let logger = logger.clone();
+            let _ = std::thread::Builder::new()
+                .name("dsa-wm-graphics-report".into())
+                .spawn(move || {
+                    let mut connector = NamedPipeConnector { name: pipe };
+                    let told = HostApiClient::connect(
+                        &mut connector,
+                        &format!("dsa-wm {}", dsa_host_windows::VERSION),
+                        std::time::Duration::from_secs(5),
+                    )
+                    .and_then(|mut client| client.report_graphics(&state));
+                    if let Err(why) = told {
+                        if let Some(log) = &logger {
+                            log.log(&format!(
+                                "the service was not told what the graphics renderer runs on: \
+                                 {why}"
+                            ));
+                        }
+                    }
+                });
+        }) as dsa_host_windows::renderer::client::GraphicsListener
+    };
+    let client = RendererClient::with_vulkan(
+        request,
+        vulkan,
+        Some(on_graphics),
+        ports,
+        Arc::clone(&process),
+        logger.clone(),
+    );
     let mut compositor = Compositor::new(config, Arc::new(ServedByRenderer))
         .without_graphics_streams()
+        .with_dsa_news(news)
         .with_display_presenter(client.clone());
     if let Some(log) = logger.clone() {
         compositor = compositor.with_logger(log);
