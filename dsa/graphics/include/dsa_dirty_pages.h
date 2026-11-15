@@ -25,6 +25,10 @@
 //    flushes. Clearing also makes the process's next write to each of its pages fault once.
 // 3. Hashing every block, as before, when neither is there. The reason is logged once.
 //
+// The first two use the process's own /proc/self/pagemap. Most apps are not dumpable, and the
+// kernel gives a process that is not its /proc files to root, so the driver makes the process
+// dumpable for the one open and puts it back (LinuxDirtyKernel::openOwnProcFile).
+//
 // A process the app forks has none of this tracking (the kernel drops it from the child), so
 // a child compares every block. Copies are tracked from the app's first map of them, so memory
 // the app never maps costs no page tables for the protection either.
@@ -48,6 +52,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif
@@ -627,7 +632,8 @@ class LinuxDirtyKernel final : public DirtyKernel {
     int openSoftDirty(std::string* reason) override {
         const int pagemap = pagemap_ >= 0 ? pagemap_ : openPagemap(reason);
         if (pagemap < 0) return pagemap;
-        clearRefs_ = open("/proc/self/clear_refs", O_WRONLY | O_CLOEXEC);
+        bool madeDumpable = false;
+        clearRefs_ = openOwnProcFile("/proc/self/clear_refs", O_WRONLY, &madeDumpable);
         if (clearRefs_ < 0) {
             return failed(reason, "/proc/self/clear_refs could not be opened", errno);
         }
@@ -692,9 +698,43 @@ class LinuxDirtyKernel final : public DirtyKernel {
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     }
 
+    // Opens one of the process's own /proc files. While a process is not dumpable the kernel
+    // gives its /proc files to root, and the zygote makes every app that is neither debuggable
+    // nor profileable from the shell not dumpable (a game's anti-cheat may do the same). Then
+    // the app's own uid may not open its pagemap (mode 0400) or clear_refs (0200): EACCES from
+    // the file's owner and mode, before SELinux is asked, so no denial is logged. The process is
+    // made dumpable for that one open and put back at once. An open file keeps working either
+    // way: the kernel checks who may reach the memory only when the file is opened.
+    static int openOwnProcFile(const char* path, int flags, bool* madeDumpable) {
+        *madeDumpable = false;
+        int fd = open(path, flags | O_CLOEXEC);
+        if (fd >= 0 || errno != EACCES) return fd;
+        if (prctl(PR_GET_DUMPABLE, 0, 0, 0, 0) != 0) {
+            errno = EACCES;
+            return -1;
+        }
+        if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) != 0) {
+            errno = EACCES;
+            return -1;
+        }
+        *madeDumpable = true;
+        fd = open(path, flags | O_CLOEXEC);
+        const int error = errno;
+        prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);
+        errno = error;
+        return fd;
+    }
+
     int openPagemap(std::string* reason) {
-        pagemap_ = open("/proc/self/pagemap", O_RDONLY | O_CLOEXEC);
-        if (pagemap_ < 0) return failed(reason, "/proc/self/pagemap could not be opened", errno);
+        bool madeDumpable = false;
+        pagemap_ = openOwnProcFile("/proc/self/pagemap", O_RDONLY, &madeDumpable);
+        if (pagemap_ < 0) {
+            return failed(reason,
+                          madeDumpable ? "/proc/self/pagemap could not be opened, even with the "
+                                         "process made dumpable for the open"
+                                       : "/proc/self/pagemap could not be opened",
+                          errno);
+        }
         return pagemap_;
     }
 

@@ -488,7 +488,7 @@ index 00000000..5d1a0c3e
 +		goto out;
 +	}
 +	err = dsa_gfx_take(grants, grants_length, data, data_length);
-+	if (err == -ENODEV && grants < (1ULL << (63 - PAGE_SHIFT)) &&
++	if (err && grants < (1ULL << (63 - PAGE_SHIFT)) &&
 +	    data < (1ULL << (63 - PAGE_SHIFT)))
 +		err = dsa_gfx_take((phys_addr_t)grants << PAGE_SHIFT, grants_length,
 +				   (phys_addr_t)data << PAGE_SHIFT, data_length);

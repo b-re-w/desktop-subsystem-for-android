@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <cerrno>
 #include <cstdint>
 #include <mutex>
 
@@ -86,7 +87,22 @@ class GraphicsMemoryDevice {
    private:
     const char* open() {
         mFd = ::open(kGraphicsMemoryDevice, O_RDWR | O_CLOEXEC);
-        if (mFd < 0) return "the guest has no /dev/dsa_graphics_memory";
+        if (mFd < 0) {
+            // Each refusal says what it means: the node is there whenever the kernel is DSA's.
+            switch (errno) {
+                case ENOENT:
+                    return "the guest has no /dev/dsa_graphics_memory";
+                case ENODEV:
+                    return "/dev/dsa_graphics_memory could not be opened (No such device, errno "
+                           "19): the kernel was not told where the host's graphics memory is, "
+                           "or did not find it there";
+                case EACCES:
+                    return "/dev/dsa_graphics_memory could not be opened (Permission denied, errno "
+                           "13): SELinux or the node's mode refuses this process";
+                default:
+                    return "/dev/dsa_graphics_memory could not be opened";
+            }
+        }
         if (ioctl(mFd, kGraphicsMemoryInfoIoctl, &mInfo) != 0 || mInfo.length == 0) {
             ::close(mFd);
             mFd = -1;

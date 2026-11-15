@@ -9590,5 +9590,59 @@ class SharedPictureMemoryTests(unittest.TestCase):
         self.assertIn("    chmod 0666 /dev/dsa_graphics_memory\n", self.RC.replace("\r\n", "\n"))
 
 
+class AppGraphicsMemoryAccessTests(unittest.TestCase):
+    """check-image.py refuses an image whose app processes cannot reach the kernel's write
+    protection of their Vulkan copies or the graphics memory the host shares."""
+
+    HERE = Path(make_image.__file__).parent
+    POLICY = ((HERE / "sepolicy/memory.cil").read_text() + "\n" +
+              (HERE / "sepolicy/graphics-memory.cil").read_text())
+    FILE_CONTEXTS = make_image.update_vendor_file_contexts("")
+    PROPERTY_CONTEXTS = make_image.update_vendor_property_contexts("")
+    DRIVER = (b"\0host-visible memory\0" + make_image.VULKAN_DRIVER_PAGEMAP_TEXT + b"\0" +
+              make_image.VULKAN_DRIVER_GRAPHICS_DEVICE_TEXT + b", errno 19)\0")
+
+    def problems(self, policy=None, file_contexts=None, property_contexts=None, driver=DRIVER):
+        return make_image.graphics_memory_access_problems(
+            self.POLICY if policy is None else policy,
+            self.FILE_CONTEXTS if file_contexts is None else file_contexts,
+            self.PROPERTY_CONTEXTS if property_contexts is None else property_contexts,
+            driver)
+
+    def test_nfr2_pr3_pr7_an_image_with_every_piece_passes(self):
+        self.assertEqual(self.problems(), [])
+        # An image without the driver is refused elsewhere; this check does not double it.
+        self.assertEqual(self.problems(driver=None), [])
+
+    def test_nfr2_pr3_an_image_without_pagemap_scan_for_apps_is_refused(self):
+        for rule in ["(allowx appdomain self (ioctl file (0x6610)))",
+                     "(allowx system_server self (ioctl file (0x6610)))"]:
+            problems = self.problems(policy=self.POLICY.replace(rule, ""))
+            self.assertEqual(len(problems), 1, rule)
+            self.assertIn("PAGEMAP_SCAN", problems[0])
+
+    def test_nfr2_an_image_whose_driver_cannot_open_pagemap_in_an_app_is_refused(self):
+        driver = self.DRIVER.replace(make_image.VULKAN_DRIVER_PAGEMAP_TEXT, b"")
+        problems = self.problems(driver=driver)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("not dumpable", problems[0])
+        # The text the driver carries is the header's.
+        header = (self.HERE.parent.parent / "graphics/include/dsa_dirty_pages.h").read_text(encoding="utf-8")
+        self.assertIn('"' + make_image.VULKAN_DRIVER_PAGEMAP_TEXT.decode() + '"', header)
+
+    def test_pr7_an_image_whose_apps_cannot_open_the_graphics_memory_is_refused(self):
+        self.assertIn("graphics_memory", self.problems(
+            file_contexts=self.FILE_CONTEXTS.replace(make_image.GRAPHICS_MEMORY_DEVICE_CONTEXT, ""))[0])
+        self.assertIn(make_image.GRAPHICS_MEMORY_PROPERTY, self.problems(
+            property_contexts=self.PROPERTY_CONTEXTS.replace(make_image.GRAPHICS_MEMORY_PROPERTY_CONTEXT, ""))[0])
+        self.assertIn("parameter", self.problems(
+            policy=self.POLICY.replace('(genfscon sysfs "/module/dsa_graphics_memory"', ""))[0])
+        problems = self.problems(driver=self.DRIVER.replace(make_image.VULKAN_DRIVER_GRAPHICS_DEVICE_TEXT, b""))
+        self.assertEqual(len(problems), 1)
+        header = (self.HERE.parent.parent / "graphics/include/dsa_graphics_memory_device.h").read_text(
+            encoding="utf-8")
+        self.assertIn('"' + make_image.VULKAN_DRIVER_GRAPHICS_DEVICE_TEXT.decode() + ", errno", header)
+
+
 if __name__ == "__main__":
     unittest.main()
