@@ -84,6 +84,7 @@ use dsa_host_core::compositor::caption::{
 };
 use dsa_host_core::compositor::caption_icon::{self, IconLook};
 use dsa_host_core::compositor::window_hosts::FromHost;
+use dsa_host_core::compositor::window_sizing::{maximize_command, MaximizeCommand};
 use dsa_host_core::input::InputEvent;
 use dsa_host_core::keys::{keycode, KeyAction, KeyEvent as GuestKey};
 use dsa_host_core::tasks::Bounds;
@@ -1115,6 +1116,17 @@ impl CaptionWindow {
                 self.paint(hwnd, presenter);
                 Some(0)
             }
+            // A double click on the title bar maximises or restores the window the way the
+            // maximise button does, by the same posted command, rather than through the
+            // default handling, whose first click has already run a move loop.
+            WM_NCLBUTTONDBLCLK if wparam as u32 == HTCAPTION => {
+                let command = match maximize_command(IsZoomed(hwnd) != 0) {
+                    MaximizeCommand::Restore => SC_RESTORE,
+                    MaximizeCommand::Maximize => SC_MAXIMIZE,
+                };
+                PostMessageW(hwnd, WM_SYSCOMMAND, command as WPARAM, 0);
+                Some(0)
+            }
             WM_NCLBUTTONDOWN | WM_NCLBUTTONDBLCLK => match button_of(wparam as u32) {
                 Some(button) => {
                     self.pressed.set(Some(button));
@@ -1130,8 +1142,12 @@ impl CaptionWindow {
                     if pressed == Some(button) {
                         let command = match button {
                             CaptionButton::Minimize => SC_MINIMIZE,
-                            CaptionButton::Maximize if IsZoomed(hwnd) != 0 => SC_RESTORE,
-                            CaptionButton::Maximize => SC_MAXIMIZE,
+                            CaptionButton::Maximize => {
+                                match maximize_command(IsZoomed(hwnd) != 0) {
+                                    MaximizeCommand::Restore => SC_RESTORE,
+                                    MaximizeCommand::Maximize => SC_MAXIMIZE,
+                                }
+                            }
                             CaptionButton::Close => SC_CLOSE,
                         };
                         // Posted, as a click on Windows' own button does, so the window
