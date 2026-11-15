@@ -4196,12 +4196,10 @@ class TouchLatencyTests(unittest.TestCase):
             self.assertIn("vendor/overlay/DsaSettingsOverlay.apk 0 0 644 capabilities=0x0", fs_config)
             self.assertEqual(fs_config.count("vendor/overlay 0 0 755"), 1)
 
-    def test_fr22_settings_lists_get_no_bottom_margin_of_their_own(self):
-        # A task has no navigation bar inset, and SettingsLib's EdgeToEdgeUtils pads Settings'
-        # pages by that alone, so they end on the window's bottom edge like every app's: the
-        # overlay gives Settings' lists no bottom margin of its own.
+    def test_fr22_the_settings_overlay_leaves_the_room_below_the_lists_to_settings_apk(self):
+        # The room below the last row of Settings' lists is set in Settings.apk itself
+        # (SETTINGS_LIST_END): the overlay replaces none of their layouts and adds no dimension.
         ns = "{http://schemas.android.com/apk/res/android}"
-        self.assertFalse(hasattr(make_image, "LIST_BOTTOM_MARGIN_DP"))
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             make_image.settings_overlay_sources(root / "src")
@@ -4211,7 +4209,7 @@ class TouchLatencyTests(unittest.TestCase):
             resources_map = overlay.get(ns + "resourcesMap")
             self.assertTrue(resources_map.startswith("@xml/"))
 
-            # androidx.preference's own list layout stands, with no padding of the overlay's.
+            # androidx.preference's own list layout is not replaced by one of the overlay's.
             self.assertFalse((root / "src/res/layout/preference_recyclerview.xml").exists())
             values = ET.fromstring((root / "src/res/values/dsa.xml").read_text())
             self.assertNotIn("preferenceFragmentListStyle", [a.get("name") for a in values.findall("attr")])
@@ -4916,14 +4914,88 @@ def card_background(top_radius):
 CARD_TOP = "res/drawable-v36/settingslib_round_background_top.xml"
 
 
+LIST_END = dp(16)
+PREFERENCE_LIST = "res/layout/preference_recyclerview.xml"
+ALL_APPS_LIST = "res/layout/manage_applications_apps.xml"
+RUNNING_SERVICES_LIST = "res/layout/running_processes_view.xml"
+TRUSTED_CREDENTIALS_LIST = "res/layout/trusted_credential_list_container.xml"
+RUNNING_SERVICE_PAGE = "res/layout/running_service_details.xml"
+ANDROID_LAYOUT_HEIGHT = 0x010100F5
+NESTED_SCROLL_VIEW = "androidx.core.widget.NestedScrollView"
+# Running services' and Trusted credentials' lists, cut down: a ListView that names neither
+# its bottom padding nor whether it clips to it.
+LIST_VIEW_LAYOUT = ("LinearLayout", [], [
+    ("ListView", [("id", ANDROID_ID, TYPE_REFERENCE, 0x0102000A),
+                  ("layout_height", ANDROID_LAYOUT_HEIGHT, TYPE_INT_DEC, 0xFFFFFFFF)], []),
+    ("TextView", [("id", ANDROID_ID, TYPE_REFERENCE, 0x01020004)], []),
+])
+# A running service's page: a scroll view that does not clip to a padding it does not set.
+SCROLL_PAGE_LAYOUT = (NESTED_SCROLL_VIEW, [("clipToPadding", ANDROID_CLIP_TO_PADDING, TYPE_BOOLEAN, 0)], [
+    ("LinearLayout", [("id", ANDROID_ID, TYPE_REFERENCE, 0x7F0A0001)], []),
+])
+
+COMPOSE_PADDING = "Landroidx/compose/foundation/layout/PaddingValues;"
+VERTICAL_PADDING = ("Lcom/android/settingslib/spa/framework/compose/VerticalPaddingValues;"
+                    "->calculateBottomPadding-D9Ej5fM")
+SEARCH_SCAFFOLD = "Lcom/android/settingslib/spa/widget/scaffold/SearchScaffoldKt;"
+
+
+def compose_padding_dex(search_lambda="SearchScaffold$lambda$12"):
+    """The code of SettingsLib's two Compose scaffolds that reads the padding below a page's
+    content, as d8 compiled it in Settings.apk, cut down to the instructions that matter. The
+    compiler names SearchScaffold's lambda as it likes (`search_lambda`)."""
+    vertical, _ = VERTICAL_PADDING.split("->")
+    methods = [
+        (vertical, "calculateBottomPadding-D9Ej5fM", "F"),
+        (COMPOSE_PADDING, "calculateBottomPadding-D9Ej5fM", "F"),
+        (SEARCH_SCAFFOLD, search_lambda, "LL"),
+        ("Landroidx/compose/ui/unit/Dp;", "box-impl", "LF"),
+        (SEARCH_SCAFFOLD, "SearchScaffold", "V"),
+        (COMPOSE_PADDING, "calculateTopPadding-D9Ej5fM", "F"),
+    ]
+    calculate_bottom_padding = bytes.fromhex(
+        "54000000"  # iget-object v0, v0, paddingValues
+        "721001000000"  # invoke-interface {v0}, PaddingValues.calculateBottomPadding
+        "0a00"  # move-result v0
+        "0f00"  # return v0
+    )
+    search_content = bytes.fromhex(
+        "721005000300"  # invoke-interface {v3}, PaddingValues.calculateTopPadding
+        "0a02"  # move-result v2
+        "721001000300"  # invoke-interface {v3}, PaddingValues.calculateBottomPadding
+        "0a03"  # move-result v3
+        "711003000300"  # invoke-static {v3}, Dp.box-impl
+        "0c03"  # move-result-object v3
+        "1103"  # return-object v3
+    )
+    return dex_file(methods, {0: (1, calculate_bottom_padding), 2: (4, search_content), 4: (1, bytes.fromhex("0e00"))},
+                    fields=[(vertical, "paddingValues", COMPOSE_PADDING)])
+
+
 class ListBottomRoomTests(unittest.TestCase):
-    """The lists in Settings, Files and the permission screens get no bottom margin of their
-    own: a task has no navigation bar inset, so they end on the window's bottom edge, as every
-    app's do."""
+    """Every Settings page keeps the home page's 16 dp below its last row, inside what it
+    scrolls: a task has no navigation bar inset, which is all a page opened from the home page
+    takes that room from, so its last card sat on the window's bottom edge."""
 
     @staticmethod
     def apk(files):
         return SettingsWithoutBluetoothTests.apk(files)
+
+    @staticmethod
+    def layouts():
+        return {
+            PREFERENCE_LIST: compiled_layout(PREFERENCE_LIST_LAYOUT),
+            ALL_APPS_LIST: compiled_layout(ALL_APPS_LAYOUT),
+            RUNNING_SERVICES_LIST: compiled_layout(LIST_VIEW_LAYOUT),
+            TRUSTED_CREDENTIALS_LIST: compiled_layout(LIST_VIEW_LAYOUT),
+            RUNNING_SERVICE_PAGE: compiled_layout(SCROLL_PAGE_LAYOUT),
+        }
+
+    def edited(self, files):
+        """The files of Settings.apk with `files` after make-image.py's edits."""
+        settings = make_image.edit_settings_apk(self.apk(files), "Settings.apk")
+        with zipfile.ZipFile(io.BytesIO(settings)) as archive:
+            return {name: archive.read(name) for name in archive.namelist()}
 
     def modified(self, files):
         with tempfile.TemporaryDirectory() as tmp:
@@ -4937,34 +5009,137 @@ class ListBottomRoomTests(unittest.TestCase):
             with zipfile.ZipFile(modified) as archive:
                 return {name: archive.read(name) for name in archive.namelist()}
 
-    def test_fr22_the_lists_have_no_bottom_margin_of_their_own(self):
-        # A margin of their own would be a band under these lists that no other app has.
-        for name in ("LIST_BOTTOM_MARGIN_DP", "SETTINGS_CODE_LIST_MARGIN", "SETTINGS_HOME_PADDING_DIMEN",
-                     "SETTINGS_LIST_DIMENSIONS", "PERMISSION_CONTROLLER_DIMENSIONS", "DOCUMENTSUI_CODE"):
-            self.assertFalse(hasattr(make_image, name), name)
+    def test_fr22_the_room_below_a_settings_page_is_the_home_pages(self):
+        # Android 17's dashboard_padding_bottom, which its home list keeps in a DSA window.
+        self.assertEqual(make_image.SETTINGS_LIST_END_DP, 16)
+        for edits in (*make_image.SETTINGS_LIST_END.values(), *make_image.PERMISSION_CONTROLLER_LIST_END.values()):
+            self.assertIn(make_image.SETTINGS_LIST_END_DP, [value for _, _, value in edits])
+        # Files keeps its own layout, and no other app is edited for this.
+        self.assertFalse(hasattr(make_image, "DOCUMENTSUI_CODE"))
         self.assertEqual(make_image.EDITED_APPS, [make_image.SETTINGS_APP])
-        # Android 16's home list keeps its own setPadding call, and the All apps list the
-        # layout Settings was built with.
+
+    def test_fr22_every_preference_page_keeps_the_room_below_its_last_row(self):
+        # androidx.preference inflates preference_recyclerview for every preference page. It
+        # says paddingBottom 0dp and clipToPadding false: the padding becomes the room, and
+        # rows still scroll under it to the window's edge.
+        files = self.edited({PREFERENCE_LIST: compiled_layout(PREFERENCE_LIST_LAYOUT)})
+        (tag, _, attributes), = layout_attributes(files[PREFERENCE_LIST])
+        self.assertEqual(tag, RECYCLER_VIEW)
+        self.assertEqual(attributes, [("id", TYPE_REFERENCE, 0x7F0A03AB),
+                                      ("paddingTop", TYPE_DIMENSION, dp(0)),
+                                      ("paddingBottom", TYPE_DIMENSION, LIST_END),
+                                      ("clipToPadding", TYPE_BOOLEAN, 0)])
+
+    def test_fr22_the_app_list_keeps_the_room_below_its_last_row(self):
+        # The list of the app lists that are not Compose pages names no bottom padding: it is
+        # added between the attributes around it, and the view beside the list keeps its own.
+        files = self.edited({ALL_APPS_LIST: compiled_layout(ALL_APPS_LAYOUT)})
+        _, (tag, id_index, attributes), (_, _, beside) = layout_attributes(files[ALL_APPS_LIST])
+        self.assertEqual((tag, id_index), (RECYCLER_VIEW, 1))
+        self.assertEqual(attributes, [("id", TYPE_REFERENCE, 0x7F0A00DA),
+                                      ("paddingBottom", TYPE_DIMENSION, LIST_END),
+                                      ("visibility", TYPE_INT_DEC, 1),
+                                      ("clipToPadding", TYPE_BOOLEAN, 0)])
+        self.assertIn(("paddingBottom", TYPE_DIMENSION, dp(12)), beside)
+
+    def test_fr22_a_list_view_page_keeps_the_room_and_scrolls_under_it(self):
+        # Running services and Trusted credentials list their rows in a ListView, which clips
+        # to its padding unless told not to, and their layouts name neither attribute: both
+        # names join the file, and every other string still reads as it did.
+        for layout in (RUNNING_SERVICES_LIST, TRUSTED_CREDENTIALS_LIST):
+            files = self.edited({layout: compiled_layout(LIST_VIEW_LAYOUT)})
+            self.assertEqual(layout_attributes(files[layout]), [
+                ("LinearLayout", 0, []),
+                ("ListView", 1, [("id", TYPE_REFERENCE, 0x0102000A),
+                                 ("paddingBottom", TYPE_DIMENSION, LIST_END),
+                                 ("clipToPadding", TYPE_BOOLEAN, 0),
+                                 ("layout_height", TYPE_INT_DEC, 0xFFFFFFFF)]),
+                ("TextView", 1, [("id", TYPE_REFERENCE, 0x01020004)]),
+            ], layout)
+            self.assertEqual(elements(files[layout]), elements(compiled_layout(LIST_VIEW_LAYOUT)), layout)
+
+    def test_fr22_a_scroll_view_page_keeps_the_room_below_its_content(self):
+        # A running service's page scrolls in a view that already does not clip to its padding.
+        files = self.edited({RUNNING_SERVICE_PAGE: compiled_layout(SCROLL_PAGE_LAYOUT)})
+        self.assertEqual(layout_attributes(files[RUNNING_SERVICE_PAGE]), [
+            (NESTED_SCROLL_VIEW, 0, [("paddingBottom", TYPE_DIMENSION, LIST_END), ("clipToPadding", TYPE_BOOLEAN, 0)]),
+            ("LinearLayout", 1, [("id", TYPE_REFERENCE, 0x7F0A0001)]),
+        ])
+
+    def test_fr22_an_attribute_name_joins_a_utf16_file_too(self):
+        layout = compiled_layout(SCROLL_PAGE_LAYOUT)
+        # The same file with its strings in UTF-16, as aapt2 writes them for some files.
+        strings = make_image.xml_strings(layout, 8)
+        _, header_size, size = struct.unpack_from("<HHI", layout, 8)
+        data, starts = b"", []
+        for text in strings:
+            starts.append(len(data))
+            data += struct.pack("<H", len(text)) + text.encode("utf-16-le") + b"\0\0"
+        data += bytes(-len(data) % 4)
+        start = 28 + 4 * len(strings)
+        pool = struct.pack("<HHIIIIII", 0x0001, 28, start + len(data), len(strings), 0, 0, start, 0)
+        pool += struct.pack(f"<{len(starts)}I", *starts) + data
+        wide = layout[:8] + pool + layout[8 + size:]
+        wide = wide[:4] + struct.pack("<I", len(wide)) + wide[8:]
+        edited, changed = make_image.set_xml_dimensions(
+            wide, [(NESTED_SCROLL_VIEW, ANDROID_PADDING_BOTTOM, 16)])
+        self.assertEqual(changed, 1)
+        self.assertEqual(layout_attributes(edited)[0],
+                         (NESTED_SCROLL_VIEW, 0, [("paddingBottom", TYPE_DIMENSION, LIST_END),
+                                                  ("clipToPadding", TYPE_BOOLEAN, 0)]))
+        self.assertEqual(make_image.set_xml_dimensions(edited, [(NESTED_SCROLL_VIEW, ANDROID_PADDING_BOTTOM, 16)]),
+                         (edited, 0))
+
+    def test_fr22_an_attribute_with_no_known_name_is_refused(self):
+        # Only the names in XML_ATTRIBUTE_NAMES can be added to a file that lacks them.
+        layout = compiled_layout((RECYCLER_VIEW, [("id", ANDROID_ID, TYPE_REFERENCE, 1)], []))
+        with self.assertRaises(ValueError):
+            make_image.set_xml_dimensions(layout, [(RECYCLER_VIEW, ANDROID_PADDING_TOP, 16)])
+
+    def test_fr22_compose_pages_take_the_room_where_they_read_the_bottom_inset(self):
+        # SettingsLib's two scaffolds hand a Compose page the bottom of the window insets as the
+        # padding below what it scrolls. A task has none, so each read becomes the room: 16.0f,
+        # as const/high16 loads it, in the register the call's result went to. The compiler
+        # names SearchScaffold's lambda differently in each build.
+        for search_lambda in ("SearchScaffold$lambda$12", "$r8$lambda$kpTcNfJSPn7-cEC5uL5jZ4U5bFs"):
+            dex = compose_padding_dex(search_lambda)
+            edited = self.edited({"classes3.dex": dex})["classes3.dex"]
+            self.assertEqual(dex_code(edited, VERTICAL_PADDING), bytes.fromhex(
+                "54000000"  # iget-object v0, v0, paddingValues
+                "15008041"  # const/high16 v0, 16.0f
+                "00000000"  # nop, nop
+                "0f00"  # return v0
+            ))
+            self.assertEqual(dex_code(edited, f"{SEARCH_SCAFFOLD}->{search_lambda}"), bytes.fromhex(
+                "721005000300" "0a02"  # the top padding is read as before
+                "15038041"  # const/high16 v3, 16.0f
+                "00000000"  # nop, nop
+                "711003000300" "0c03" "1103"
+            ))
+            self.assertEqual(dex_code(edited, f"{SEARCH_SCAFFOLD}->SearchScaffold"), bytes.fromhex("0e00"))
+            # A second pass finds nothing left to change.
+            self.assertEqual(make_image.edit_dex(edited, make_image.SETTINGS_CODE_LIST_END), (edited, []))
+
+    def test_fr22_a_scaffold_that_does_not_keep_the_padding_it_reads_stops_the_image(self):
+        vertical, name = VERTICAL_PADDING.split("->")
+        dex = dex_file([(vertical, name, "F"), (COMPOSE_PADDING, name, "F")],
+                       {0: (1, bytes.fromhex("721001000000" "1200" "0f00"))})
+        with self.assertRaises(ValueError):
+            make_image.edit_dex(dex, make_image.SETTINGS_CODE_LIST_END)
+        with self.assertRaises(ValueError):
+            make_image.edit_dex(compose_padding_dex(), {VERTICAL_PADDING: (
+                "constant result", {"call": f"{COMPOSE_PADDING}->{name}", "float": 16.1})})
+
+    def test_fr22_settings_home_list_on_android_16_keeps_the_room_its_layout_gives(self):
+        # Android 16's home list calls setPadding(0, 0, 0, 0) over its layout, which is the
+        # preference list's, and has no freeform padding: the call is skipped.
         dex = top_level_settings_dex()
-        layout = compiled_layout(ALL_APPS_LAYOUT)
-        docs = "SYSTEM/priv-app/DocumentsUI/DocumentsUI.apk"
-        files = self.modified({
-            make_image.SETTINGS_APP: self.apk({"classes2.dex": dex, "res/layout/manage_applications_apps.xml": layout}),
-            docs: self.apk({"classes.dex": dex_file([("Lcom/android/documentsui/dirlist/DirectoryFragment;",
-                                                      "getSaveLayoutHeight", "I")], {0: (1, bytes.fromhex("1200" "0f00"))})}),
-        })
-        with zipfile.ZipFile(io.BytesIO(files[make_image.SETTINGS_APP])) as archive:
-            on_create = f"{TOP_LEVEL_SETTINGS}->onCreateRecyclerView"
-            self.assertEqual(dex_code(archive.read("classes2.dex"), on_create), dex_code(dex, on_create))
-            self.assertEqual(archive.read("res/layout/manage_applications_apps.xml"), layout)
-        # Files is not edited at all.
-        with zipfile.ZipFile(io.BytesIO(files[docs])) as archive:
-            self.assertEqual(dex_code(archive.read("classes.dex"), "Lcom/android/documentsui/dirlist/DirectoryFragment;->getSaveLayoutHeight"),
-                             bytes.fromhex("1200" "0f00"))
-        # PermissionController's list layout is as the app was built.
-        controller = self.apk({"res/layout/preference_recyclerview.xml": compiled_layout(PREFERENCE_LIST_LAYOUT)})
-        self.assertIs(make_image.edit_permission_controller_apk(controller, "PermissionController.apk"), controller)
-        self.assertNotIn("res/layout/preference_recyclerview.xml", make_image.permission_controller_edits())
+        edited = self.edited({"classes2.dex": dex})["classes2.dex"]
+        self.assertEqual(dex_code(edited, f"{TOP_LEVEL_SETTINGS}->onCreateRecyclerView"), bytes.fromhex(
+            "6f4001001032" "0c01" "1202" "6e2002002100"
+            "000000000000"  # setPadding, skipped
+            "1101"
+        ))
 
     def test_fr22_settings_home_list_on_android_17_keeps_its_own_freeform_padding(self):
         # Android 17 adds dashboard_padding_bottom (16 dp) below the home list in a window with
@@ -4973,19 +5148,50 @@ class ListBottomRoomTests(unittest.TestCase):
         # does not sit on the window's bottom edge.
         self.assertEqual(make_image.SETTINGS_FREEFORM_WINDOW, FREEFORM_WINDOW)
         dex = top_level_settings_dex()
-        settings = make_image.edit_settings_apk(self.apk({"classes2.dex": dex}), "Settings.apk")
-        with zipfile.ZipFile(io.BytesIO(settings)) as archive:
-            edited = archive.read("classes2.dex")
+        edited = self.edited({"classes2.dex": dex})["classes2.dex"]
         self.assertEqual(dex_code(edited, FREEFORM_WINDOW), dex_code(dex, FREEFORM_WINDOW))
-        on_create = f"{TOP_LEVEL_SETTINGS}->onCreateRecyclerView"
-        self.assertEqual(dex_code(edited, on_create), dex_code(dex, on_create))
-        # The Settings overlay pads nothing either.
+        # The Settings overlay pads nothing.
         self.assertNotIn("dimen/dashboard_padding_bottom", make_image.settings_overlay_map())
 
-    def test_fr22_an_attribute_the_layout_never_names_is_refused(self):
-        layout = compiled_layout((RECYCLER_VIEW, [("id", ANDROID_ID, TYPE_REFERENCE, 1)], []))
-        with self.assertRaises(ValueError):
-            make_image.set_xml_dimensions(layout, [(RECYCLER_VIEW, ANDROID_PADDING_BOTTOM, 24)])
+    def test_fr22_permission_controller_lists_keep_the_same_room(self):
+        # The permission pages Settings opens are PermissionController's, with the same list.
+        controller = self.apk({PREFERENCE_LIST: compiled_layout(PREFERENCE_LIST_LAYOUT)})
+        edited = make_image.edit_permission_controller_apk(controller, "PermissionController.apk")
+        with zipfile.ZipFile(io.BytesIO(edited)) as archive:
+            (_, _, attributes), = layout_attributes(archive.read(PREFERENCE_LIST))
+        self.assertIn(("paddingBottom", TYPE_DIMENSION, LIST_END), attributes)
+        self.assertNotEqual(make_image.apk_edits_left(controller, dimensions=make_image.permission_controller_edits()), [])
+        self.assertEqual(make_image.apk_edits_left(edited, dimensions=make_image.permission_controller_edits()), [])
+        self.assertIs(make_image.edit_permission_controller_apk(edited, "PermissionController.apk"), edited)
+
+    def test_fr22_the_image_gives_settings_pages_the_room(self):
+        files = self.modified({make_image.SETTINGS_APP: self.apk({
+            **self.layouts(), "classes2.dex": top_level_settings_dex(), "classes3.dex": compose_padding_dex()})})
+        settings = files[make_image.SETTINGS_APP]
+        self.assertEqual(make_image.settings_list_end_problems(settings), [])
+        # Edited once: a second pass leaves the app as it is.
+        self.assertIs(make_image.edit_settings_apk(settings, "Settings.apk"), settings)
+
+    def test_fr22_check_image_rejects_settings_without_the_room(self):
+        whole = {**self.layouts(), "classes2.dex": top_level_settings_dex(), "classes3.dex": compose_padding_dex()}
+        # Settings as it was built: every layout and each method is named.
+        problems = make_image.settings_list_end_problems(self.apk(whole))
+        for part in (*make_image.SETTINGS_LIST_END, VERTICAL_PADDING, f"{SEARCH_SCAFFOLD}->SearchScaffold$lambda$12",
+                     f"{TOP_LEVEL_SETTINGS}->onCreateRecyclerView"):
+            self.assertTrue(any(part in problem for problem in problems), part)
+        # A Settings without one of the layouts, or without the Compose scaffolds, lays its
+        # pages out some other way: that is not a Settings whose pages have the room.
+        edited = {name: data for name, data in self.edited(whole).items() if name in whole}
+        self.assertEqual(make_image.settings_list_end_problems(self.apk(edited)), [])
+        for missing in (PREFERENCE_LIST, RUNNING_SERVICE_PAGE):
+            problems = make_image.settings_list_end_problems(
+                self.apk({name: data for name, data in edited.items() if name != missing}))
+            self.assertEqual(problems, [f"{missing} is missing"])
+        problems = make_image.settings_list_end_problems(
+            self.apk({name: data for name, data in edited.items() if name != "classes3.dex"}))
+        self.assertEqual(problems, [f"{VERTICAL_PADDING} is missing", f"{SEARCH_SCAFFOLD}->SearchScaffold is missing"])
+        script = Path(__file__).with_name("check-image.py").read_text()
+        self.assertIn("make_image.settings_list_end_problems(", script)
 
     @staticmethod
     def fake_apex_tools(calls):
@@ -5060,7 +5266,7 @@ class ListBottomRoomTests(unittest.TestCase):
                 problems = make_image.permission_controller_problems(signed, Path(tmp) / "otatools", Path(tmp), {})
                 self.assertEqual(bool(problems), found, problems)
                 if found:
-                    self.assertIn("so its cards keep corners of their own", problems[0])
+                    self.assertIn("so its lists keep corners of their own", problems[0])
         self.assertEqual(build_info, b"build info")
         # apexer writes the manifest into the payload itself.
         self.assertNotIn("apex_manifest.pb", files)
