@@ -7,8 +7,9 @@
 //! tall and folds it when the list scrolls, that it opens folded in a window under 600 dp
 //! tall, and that the rows of a Settings list are grouped in rounded cards: the first row of a
 //! group has rounded corners, and a row joined to the one above it square ones. The list of
-//! that page, one opened from the home list, ends on the window's bottom edge: a task window
-//! has no navigation bar inset, so nothing is left below it.
+//! that page, one opened from the home list, reaches the window's bottom edge (a task window
+//! has no navigation bar inset, so no band is left below it), and scrolled to its end it keeps
+//! the home page's 16 dp between its last row and that edge, as padding inside the list.
 //!
 //! It also checks that `screencap` shows what the GPU drew: the guest driver copies a
 //! capture's drawing back from the host for the CPU that reads it, so no capture may come back
@@ -50,6 +51,9 @@ const DISPLAY_SETTINGS: &str = "android.settings.DISPLAY_SETTINGS";
 const TALL_DP: u32 = 800;
 const SHORT_DP: u32 = 520;
 const WIDTH_DP: u32 = 480;
+/// The room a Settings page keeps between its last row and the window's bottom edge, in dp:
+/// the home page's.
+const LIST_END_DP: u32 = 16;
 /// The whole test, boot included, stays under twelve minutes.
 const BUDGET: Duration = Duration::from_secs(690);
 /// How long past its budget the test may run before it stops everything it started and
@@ -216,6 +220,58 @@ fn list_bottom_gap(nodes: &[Node]) -> Result<i32, String> {
     Ok(window.bottom - list.bounds.bottom)
 }
 
+/// Where the rows of a Settings page's list are on the screen, top to bottom as dumped.
+fn list_rows(nodes: &[Node]) -> Result<Vec<Rect>, String> {
+    let (list, _) = by_id(nodes, "recycler_view")
+        .ok_or_else(|| "the dump has no list (recycler_view)".to_string())?;
+    Ok(nodes
+        .iter()
+        .filter(|node| node.parent == Some(list))
+        .map(|node| node.bounds)
+        .collect())
+}
+
+/// How far the last row of a Settings page's list ends above the list's bottom edge, in
+/// pixels: the room the list keeps below its rows once it is scrolled to its end. uiautomator
+/// cuts a row's bounds to what shows of it, so a list with more rows below reads as 0.
+fn list_end_room(nodes: &[Node]) -> Result<i32, String> {
+    let (_, list) = by_id(nodes, "recycler_view")
+        .ok_or_else(|| "the dump has no list (recycler_view)".to_string())?;
+    let last = list_rows(nodes)?
+        .iter()
+        .map(|row| row.bottom)
+        .max()
+        .ok_or_else(|| "the list has no rows".to_string())?;
+    Ok(list.bounds.bottom - last)
+}
+
+/// `LIST_END_DP` in pixels in a window `window_px` pixels and `window_dp` dp tall.
+fn list_end_px(window_px: i32, window_dp: u32) -> i32 {
+    let window_dp = window_dp.max(1);
+    ((LIST_END_DP * window_px.max(0) as u32 + window_dp / 2) / window_dp) as i32
+}
+
+/// What is wrong with the room below the last row of a list scrolled to its end, `room`
+/// pixels, where `wanted` pixels are expected: nothing when it is no more than two pixels
+/// under it, and no more than a quarter of it (the margin a row may keep below its card) and
+/// two pixels over. A list too short to scroll (`scrolled` false) ends wherever its rows do,
+/// so it only has to keep at least that room.
+fn list_end_problem(room: i32, wanted: i32, scrolled: bool) -> Option<String> {
+    if room < wanted - 2 {
+        Some(format!(
+            "its last row ends {room} px above the window's bottom edge, not the {wanted} px \
+             ({LIST_END_DP} dp) the home page keeps there"
+        ))
+    } else if scrolled && room > wanted + wanted / 4 + 2 {
+        Some(format!(
+            "its list scrolls and still ends {room} px above the window's bottom edge, more than \
+             the {wanted} px ({LIST_END_DP} dp) the home page keeps there"
+        ))
+    } else {
+        None
+    }
+}
+
 /// The large title of Settings' home page: a text view with text above the search bar, at
 /// least twice its height. Settings hides the search bar when its search app is off; then
 /// the title is above the list, at least a sixth of its height. None when the home page shows
@@ -318,6 +374,37 @@ impl Adb {
         let xml = self.run(&["exec-out", "cat", "/data/local/tmp/dsa-screens.xml"])?;
         let _ = std::fs::write(dir.join(format!("{name}.xml")), &xml);
         Ok(nodes(&String::from_utf8_lossy(&xml)))
+    }
+
+    /// Scrolls the list of the Settings page on screen, dumped as `page`, to its end: swipes up
+    /// until a swipe moves no row (five at most). Returns the last dump, kept in `dir` as
+    /// `name.xml`, and whether any swipe moved the rows.
+    fn scroll_list_to_end(
+        &self,
+        dir: &Path,
+        name: &str,
+        page: &[Node],
+    ) -> Result<(Vec<Node>, bool), String> {
+        let mut nodes = page.to_vec();
+        let mut scrolled = false;
+        for _ in 0..5 {
+            let (_, list) = by_id(&nodes, "recycler_view")
+                .ok_or_else(|| "the dump has no list (recycler_view)".to_string())?;
+            let x = (list.bounds.left + list.bounds.right) / 2;
+            self.shell(&format!(
+                "input swipe {x} {} {x} {} 600",
+                list.bounds.bottom - 20,
+                list.bounds.top + 20
+            ))?;
+            std::thread::sleep(Duration::from_secs(2));
+            let next = self.dump(dir, name)?;
+            if list_rows(&next)? == list_rows(&nodes)? {
+                return Ok((next, scrolled));
+            }
+            scrolled = true;
+            nodes = next;
+        }
+        Ok((nodes, scrolled))
     }
 
     /// The overlays that apply to Settings and their state, kept in `dir` as `overlays.log`.
@@ -544,6 +631,40 @@ fn fr22_a_settings_page_s_list_that_ends_above_the_window_s_bottom_edge_is_measu
     let empty = r#"<hierarchy rotation="0"><node index="0" text="" resource-id="" class="android.widget.FrameLayout" bounds="[0,0][548,974]" /></hierarchy>"#;
     assert!(list_bottom_gap(&nodes(empty)).is_err());
     assert!(list_bottom_gap(&[]).is_err());
+}
+
+#[test]
+fn fr22_the_room_below_the_last_row_of_a_settings_page_is_measured() {
+    // The Accessibility page on the owner's PC, scrolled to its end in a 1096 x 1142 window at
+    // 262 dpi (697 dp tall): the list reaches the window's bottom edge, and its last row ends
+    // `room` px above it.
+    let page = |room: i32| {
+        format!(
+            r#"<hierarchy rotation="0"><node index="0" text="" resource-id="" class="android.widget.FrameLayout" bounds="[0,0][1096,1142]"><node index="0" text="" resource-id="com.android.settings:id/content_frame" class="android.widget.FrameLayout" bounds="[0,104][1096,1142]"><node index="0" text="" resource-id="com.android.settings:id/recycler_view" class="androidx.recyclerview.widget.RecyclerView" bounds="[0,104][1096,1142]"><node index="0" text="" resource-id="" class="android.widget.LinearLayout" bounds="[0,104][1096,900]" /><node index="1" text="" resource-id="" class="android.widget.LinearLayout" bounds="[0,903][1096,{}]" /></node></node></node></hierarchy>"#,
+            1142 - room
+        )
+    };
+    assert_eq!(list_end_px(1142, 697), 26);
+    // As reported: the last card on the window's bottom edge.
+    let reported = nodes(&page(0));
+    assert_eq!(list_bottom_gap(&reported), Ok(0));
+    assert_eq!(list_end_room(&reported), Ok(0));
+    assert!(list_end_problem(0, 26, true).is_some());
+    // With the home page's 16 dp inside the list.
+    let padded = nodes(&page(26));
+    assert_eq!(list_bottom_gap(&padded), Ok(0));
+    assert_eq!(list_end_room(&padded), Ok(26));
+    assert_eq!(list_rows(&padded).map(|rows| rows.len()), Ok(2));
+    assert_eq!(list_end_problem(26, 26, true), None);
+    assert_eq!(list_end_problem(27, 26, true), None);
+    // More than the room below a list that scrolls is a band; below one too short to scroll
+    // it is only the rest of the page.
+    assert!(list_end_problem(60, 26, true).is_some());
+    assert_eq!(list_end_problem(400, 26, false), None);
+    assert!(list_end_problem(10, 26, false).is_some());
+    // A list with no rows has no last row to measure.
+    let empty = r#"<hierarchy rotation="0"><node index="0" text="" resource-id="" class="android.widget.FrameLayout" bounds="[0,0][548,974]"><node index="0" text="" resource-id="com.android.settings:id/recycler_view" class="androidx.recyclerview.widget.RecyclerView" bounds="[0,211][548,974]" /></node></hierarchy>"#;
+    assert!(list_end_room(&nodes(empty)).is_err());
 }
 
 #[test]
@@ -922,7 +1043,7 @@ fn fr34_settings_opens_with_a_large_title_that_folds_and_lists_its_rows_in_round
         }
         Err(why) => failures.push(format!("reading Settings' display page: {why}")),
     }
-    // The same page is one opened from the home list (SubSettings): its list ends on the
+    // The same page is one opened from the home list (SubSettings): its list reaches the
     // window's bottom edge, with no band below it.
     match list_bottom_gap(&page) {
         Ok(0) => {}
@@ -930,6 +1051,37 @@ fn fr34_settings_opens_with_a_large_title_that_folds_and_lists_its_rows_in_round
             "Settings' display page leaves {gap} px empty between its list and the window's bottom edge"
         )),
         Err(why) => failures.push(format!("Settings' display page: {why}")),
+    }
+    // Scrolled to its end, the list still reaches the edge, and keeps the home page's room
+    // between its last row and it. The first swipes fold the page's large title.
+    match adb.scroll_list_to_end(&dir, "display-end", &page) {
+        Ok((end, scrolled)) => {
+            let _ = adb.screen(&dir, "display-end");
+            let window = end.first().map_or(0, |node| node.bounds.height());
+            let wanted = list_end_px(window, height);
+            match (list_bottom_gap(&end), list_end_room(&end)) {
+                (Ok(0), Ok(room)) => {
+                    eprintln!(
+                        "the display page's last row ends {room} px above the window's bottom \
+                         edge ({wanted} px wanted, the list scrolled: {scrolled})"
+                    );
+                    if let Some(problem) = list_end_problem(room, wanted, scrolled) {
+                        failures.push(format!("Settings' display page, scrolled to its end: {problem}"));
+                    }
+                }
+                (Err(why), _) | (_, Err(why)) => failures.push(format!(
+                    "Settings' display page, scrolled to its end: {why}"
+                )),
+                (Ok(gap), Ok(_)) => failures.push(format!(
+                    "Settings' display page, scrolled to its end, leaves {gap} px empty between its \
+                     list and the window's bottom edge: the room below the last row belongs inside \
+                     the list"
+                )),
+            }
+        }
+        Err(why) => failures.push(format!(
+            "scrolling Settings' display page to its end: {why}"
+        )),
     }
 
     // A short window: the home page opens folded.
