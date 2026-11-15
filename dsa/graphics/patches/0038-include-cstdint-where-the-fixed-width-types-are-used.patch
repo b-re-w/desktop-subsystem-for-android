@@ -1,0 +1,46 @@
+diff --git a/host/BorrowedImage.h b/host/BorrowedImage.h
+--- a/host/BorrowedImage.h
++++ b/host/BorrowedImage.h
+@@ -14,6 +14,8 @@
+
+ #pragma once
+
++#include <cstdint>
++
+ namespace gfxstream {
+
+ // Common base struct representing images (Gl/Vk) that are borrowed
+diff --git a/host/ReadbackWorker.h b/host/ReadbackWorker.h
+--- a/host/ReadbackWorker.h
++++ b/host/ReadbackWorker.h
+@@ -15,6 +15,8 @@
+ */
+ #pragma once
+
++#include <cstdint>
++
+ namespace gfxstream {
+
+ class ColorBuffer;
+diff --git a/host/compressedTextureFormats/AstcCpuDecompressor.h b/host/compressedTextureFormats/AstcCpuDecompressor.h
+--- a/host/compressedTextureFormats/AstcCpuDecompressor.h
++++ b/host/compressedTextureFormats/AstcCpuDecompressor.h
+@@ -13,6 +13,7 @@
+ // limitations under the License.
+ #pragma once
+
++#include <cstdint>
+ #include <memory>
+ #include <string>
+
+diff --git a/host/gl/gl-host-common/include/host-common/opengl/GLProcessPipe.h b/host/gl/gl-host-common/include/host-common/opengl/GLProcessPipe.h
+--- a/host/gl/gl-host-common/include/host-common/opengl/GLProcessPipe.h
++++ b/host/gl/gl-host-common/include/host-common/opengl/GLProcessPipe.h
+@@ -13,6 +13,7 @@
+ // limitations under the License.
+ #pragma once
+
++#include <cstdint>
+ #include <functional>
+
+ namespace android {
