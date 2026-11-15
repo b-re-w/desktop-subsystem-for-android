@@ -26,6 +26,27 @@ final class PageViewModelTests: XCTestCase {
         XCTAssertEqual(settings?.uninstallTip, "Apps_SystemTip")
     }
 
+    func test_fr30_an_apps_option_card_opens_for_app_info_and_stays_as_the_user_left_it() async {
+        let cli = FakeCli()
+        cli.answer("apps list --json", #"{"apps":[\#(app),\#(system)]}"#)
+        let apps = AppsViewModel(service: AppsService(cli: cli), text: KeyText())
+        await apps.refresh()
+        // Every card starts closed.
+        XCTAssertTrue(apps.expanded.isEmpty)
+        // App Info of a task window finds the app and opens its card.
+        apps.show("org.example.notes")
+        XCTAssertEqual(apps.search, "org.example.notes")
+        XCTAssertEqual(apps.rows.map(\.package), ["org.example.notes"])
+        XCTAssertEqual(apps.expanded, ["org.example.notes"])
+        // Reading the list again after a change keeps it open; closing it is kept too.
+        await apps.refresh()
+        XCTAssertEqual(apps.expanded, ["org.example.notes"])
+        apps.setExpanded("org.example.notes", false)
+        apps.setExpanded("com.android.settings", true)
+        await apps.refresh()
+        XCTAssertEqual(apps.expanded, ["com.android.settings"])
+    }
+
     func test_fr17_an_uninstall_android_refuses_says_why() async {
         let cli = FakeCli()
         cli.answer("apps list --json", #"{"apps":[\#(app)]}"#)

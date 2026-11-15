@@ -142,7 +142,7 @@ struct SettingsWindow: View {
         }
         .task { await model.settings.load() }
         // App Info in a task window's Window menu: the Apps page, searched for that app so its
-        // row is the one in view.
+        // card is the one in view, and the card open.
         .onOpenURL { url in
             // A click on DSA's notification about an update: the Updates page.
             if AppPageLink.isUpdates(url) {
@@ -152,7 +152,7 @@ struct SettingsWindow: View {
             }
             guard let package = AppPageLink.package(of: url) else { return }
             page = .apps
-            model.apps.search = package
+            model.apps.show(package)
             NSApp.activate(ignoringOtherApps: true)
         }
     }

@@ -446,6 +446,9 @@ public final class AppsViewModel: ObservableObject {
     @Published public private(set) var immersiveDefaultIndex = 1
     /// What the user typed to find an app: matched against its name and package.
     @Published public var search = ""
+    /// The apps whose card the user opened on the page. Each card is closed until then, and
+    /// stays as the user left it while the list is read again after a change.
+    @Published public private(set) var expanded: Set<String> = []
     @Published public private(set) var error: String?
     @Published public private(set) var message: String?
     @Published public private(set) var isBusy = false
@@ -453,6 +456,22 @@ public final class AppsViewModel: ObservableObject {
     public init(service: AppsService, text: TextSource) {
         self.service = service
         self.text = text
+    }
+
+    /// Opens or closes the card of `package`.
+    public func setExpanded(_ package: String, _ open: Bool) {
+        if open {
+            expanded.insert(package)
+        } else {
+            expanded.remove(package)
+        }
+    }
+
+    /// The page at the app `package`, as App Info in a task window's Window menu opens it: the
+    /// search finds the app, so its card is the one in view, and the card is open.
+    public func show(_ package: String) {
+        search = package
+        expanded.insert(package)
     }
 
     public var hasNoApps: Bool { apps?.isEmpty == true }
