@@ -58,6 +58,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <mutex>
 #include <optional>
@@ -807,6 +808,35 @@ struct StagingReply {
     uint64_t length;
     uint64_t key;
 };
+
+// The process pipe's word that says who the guest process is, so the renderer's memory report
+// names its device and its ColorBuffers: after the handshake the guest writes
+// {kIdentifyRequest, pid, name} once, and the renderer answers nothing. The name is the
+// process's, as /proc/self/cmdline starts (an app's package name), cut to fit and ended with
+// a 0. A renderer that does not know the word reads it as words it drops.
+inline constexpr uint32_t kIdentifyRequest = 0x31495344;  // "DSI1"
+struct ProcessIdentity {
+    uint32_t op;
+    uint32_t pid;
+    char name[56];
+};
+static_assert(sizeof(ProcessIdentity) == 64, "the process pipe's identity is 64 bytes");
+
+// Writes this process's name into `name` (`size` bytes, ended with a 0): the first word of
+// /proc/self/cmdline, or "" where there is none.
+inline void readProcessName(char* name, size_t size) {
+    if (!name || size == 0) {
+        return;
+    }
+    name[0] = '\0';
+    std::FILE* file = std::fopen("/proc/self/cmdline", "rb");
+    if (!file) {
+        return;
+    }
+    const size_t read = std::fread(name, 1, size - 1, file);
+    std::fclose(file);
+    name[read] = '\0';
+}
 
 // The renderer's GL extension that says it takes all of the above.
 inline constexpr const char kGraphicsMemoryExtension[] = "ANDROID_EMU_dsa_shared_graphics_memory";

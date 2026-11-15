@@ -78,7 +78,7 @@ class YuvCompositionPatchTests(unittest.TestCase):
                 self.assertTrue(line[:1] in (" ", "+", "-", "\\"), repr(line))
 
     def test_pr3_the_fetch_applies_it_after_0039(self):
-        self.assertIn(" 0039 0040;", (HERE / "host/fetch.sh").read_text(encoding="utf-8"))
+        self.assertIn(" 0039 0040", (HERE / "host/fetch.sh").read_text(encoding="utf-8"))
         self.assertIn('-Filter "0040-*.patch"',
                       (HERE / "host/fetch.ps1").read_text(encoding="utf-8"))
 

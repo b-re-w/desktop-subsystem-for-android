@@ -273,6 +273,11 @@ class AndroidKernelConfigTests(unittest.TestCase):
         self.assertIn("CONFIG_SLUB_DEBUG=y", lines)
         self.assertIn("# CONFIG_SLUB_DEBUG_ON is not set", lines)
 
+    def test_nfr1_anonymous_mappings_can_be_named_for_the_memory_measurement(self):
+        # The guest Vulkan driver names its copies of host-visible memory; without this option
+        # the name is refused and the copies stay in "Unknown" in dumpsys meminfo.
+        self.assertIn("CONFIG_ANON_VMA_NAME=y", fragment_lines(CONFIG))
+
     def test_nfr1_a_read_only_ext4_mount_keeps_no_conversion_thread(self):
         # Android mounts every APEX package as a read-only ext4 image (about 75 with Google
         # Play), and each mount kept a rescuer thread for a conversion workqueue it can never
