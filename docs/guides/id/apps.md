@@ -144,8 +144,8 @@ dsa app-window <package> --below-title-bar on   # off kembali ke bawaan
 
 ## Memindahkan aplikasi ke monitor dengan skala lain
 
-Aplikasi terbuka dengan skala monitor tempat jendelanya dibuka, sejak frame pertamanya,
-sehingga aplikasi tidak dibuat ulang tepat setelah terbuka. Saat Anda memindahkan jendela ke
+Android dimulai dengan skala monitor utama Anda, sehingga aplikasi terbuka dengan ukuran yang
+tepat di sana. Saat Anda memindahkan jendela ke
 monitor dengan skala lain, aplikasi mempertahankan ukurannya di layar. Setiap aplikasi
 melakukannya dengan salah satu cara berikut, yang Anda pilih di **Scaling**
 (penskalaan di monitor lain) pada halaman **Apps**, atau dengan

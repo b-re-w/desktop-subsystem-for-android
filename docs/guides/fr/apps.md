@@ -161,8 +161,8 @@ dsa app-window <package> --below-title-bar on   # off revient à la valeur par d
 
 ## Déplacer une application vers un écran d'une autre échelle
 
-Une application s'ouvre à l'échelle de l'écran sur lequel sa fenêtre s'ouvre, dès sa première
-image, donc elle n'est pas recréée juste après son ouverture. Quand vous déplacez une fenêtre
+Android démarre à l'échelle de votre écran principal, donc les applications s'y ouvrent à la
+bonne taille. Quand vous déplacez une fenêtre
 vers un écran d'une autre échelle, l'application garde sa taille à l'écran. Chaque
 application le fait de l'une des manières suivantes, que vous choisissez sous **Scaling** (mise à l'échelle sur un autre écran) sur la page **Apps**, ou avec
 `dsa app-window <package> --dpi-scaling` :

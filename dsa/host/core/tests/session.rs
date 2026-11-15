@@ -1521,42 +1521,6 @@ fn fr22_a_windows_caption_height_reaches_the_guest() {
 }
 
 #[test]
-fn fr4_the_monitor_a_launch_opens_on_reaches_the_guest_before_the_launch() {
-    let (session, mut agent, _launcher) = active_session();
-    let placement = dsa_host_core::tasks::LaunchPlacement {
-        density_dpi: 164,
-        width: 2544,
-        height: 1371,
-        monitor_width: 2560,
-        monitor_height: 1440,
-    };
-    session
-        .request(TaskRequest::PlaceLaunches(placement))
-        .expect("the placement is sent");
-    session
-        .request(TaskRequest::Launch {
-            package_name: "com.example.clock".into(),
-        })
-        .expect("the launch is sent");
-
-    let first = dsa_protocol::decode(&agent.recv(Some(WAIT)).unwrap()).unwrap();
-    assert_eq!(
-        first.body,
-        Some(Body::LaunchPlacement(
-            dsa_protocol::control::LaunchPlacement {
-                density_dpi: 164,
-                width: 2544,
-                height: 1371,
-                monitor_width: 2560,
-                monitor_height: 1440,
-            }
-        ))
-    );
-    let second = dsa_protocol::decode(&agent.recv(Some(WAIT)).unwrap()).unwrap();
-    assert!(matches!(second.body, Some(Body::LaunchApp(_))));
-}
-
-#[test]
 fn fr4_resizing_and_rescaling_a_task_reach_the_guest() {
     let (session, mut agent, _launcher) = active_session();
     session

@@ -39,7 +39,7 @@ use dsa_host_core::compositor::window_hosts::{
     MediaButtons, MenuWork, ToHost, WindowHosts,
 };
 use dsa_host_core::memory::IdleTrim;
-use dsa_host_core::tasks::{starts_a_task, AppInfo, TaskEvent, TaskRequest};
+use dsa_host_core::tasks::{AppInfo, TaskEvent, TaskRequest};
 use dsa_protocol::window_host::types::{envelope::Body, Frame, FrameTexture};
 use dsa_protocol::window_host::{decode, encode_body};
 use dsa_transport::{Connection, FrameSender, Listener, TransportError};
@@ -1146,21 +1146,6 @@ impl Manager {
 
     fn request(&self, requests: Vec<TaskRequest>) {
         for request in requests {
-            // A task is started at the density and size of the monitor its window opens on, so
-            // the app's first frame is already right and it is never relaunched right after.
-            if starts_a_task(&request) {
-                if let Some(placement) = crate::app_window::window::launch_placement() {
-                    if self
-                        .setup
-                        .requests
-                        .send(TaskRequest::PlaceLaunches(placement))
-                        .is_err()
-                    {
-                        self.log("the request thread has ended; an app cannot be started");
-                        return;
-                    }
-                }
-            }
             if self.setup.requests.send(request).is_err() {
                 self.log("the request thread has ended; a window's change does not reach Android");
                 return;
@@ -1439,7 +1424,9 @@ impl Manager {
                             package_name: package,
                         },
                     };
-                    self.request(vec![request]);
+                    if self.setup.requests.send(request).is_err() {
+                        self.log("the request thread has ended; an app cannot be started");
+                    }
                 }
                 HostAction::Disconnect { host, why } => {
                     if let Some(link) = self.links.remove(&host) {

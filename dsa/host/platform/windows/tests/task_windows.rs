@@ -1257,8 +1257,7 @@ fn fr4_a_task_window_opens_at_its_monitors_scale() {
                 == Some(&TaskRequest::SetDensity {
                     task_id: 1,
                     density_dpi: wanted,
-                    // Opening is not a move that ended: the app is not recreated.
-                    recreate: false,
+                    recreate: true,
                 }))
             .then_some(())
         });

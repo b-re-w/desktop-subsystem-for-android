@@ -1358,14 +1358,13 @@ mod tests {
     use dsa_host_core::tasks::{Task, TaskEvent};
 
     /// The candidate list of a task kept at the density of a main monitor at 100% (130 dpi),
-    /// whose window opened on a monitor at 125% (164 dpi) left of and above the main one. The
-    /// app keeps its density the system way, as YouTube does by default.
+    /// whose window is on a monitor at 125% (164 dpi) left of and above the main one.
     #[test]
     fn fr6_on_a_monitor_of_another_scale_the_candidate_list_stands_beside_the_cursor_shown() {
         let mut windows = TaskWindows::new();
         windows.apply(&TaskEvent::Updated(Task {
             task_id: 4,
-            package_name: "com.google.android.youtube".into(),
+            package_name: "com.example.notes".into(),
             label: "Notes".into(),
             density_dpi: 130,
             bounds: dsa_host_core::tasks::Bounds {
@@ -1376,17 +1375,19 @@ mod tests {
             },
             ..Task::default()
         }));
-        // The window opens on the 125% monitor and shows the task at 164 per 130.
-        windows.window_dpi(4, 120);
-        // The editor's cursor, 650 by 1300 task pixels in: the window hears it where it shows
-        // it.
+        windows.window_dpi(4, 96);
+        // The editor's cursor, 650 by 1300 task pixels in.
         let cursor = ImeCursor {
             left: 650,
             top: 1300,
             right: 652,
             bottom: 1365,
         };
-        let changes = windows.apply(&TaskEvent::ImeCursor { task_id: 4, cursor });
+        windows.apply(&TaskEvent::ImeCursor { task_id: 4, cursor });
+        // The user drags the window to the 125% monitor, and until the drag ends it shows the
+        // task at 164 per 130: the window hears the cursor where it now shows it.
+        windows.window_dragging(4, true, std::time::Instant::now());
+        let (changes, _) = windows.window_dpi(4, 120);
         let shown = changes
             .iter()
             .find_map(|change| match change {

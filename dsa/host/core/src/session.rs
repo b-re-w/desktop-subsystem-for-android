@@ -3285,15 +3285,6 @@ impl Session {
             TaskRequest::WindowsShown { shown } => return self.windows_shown(shown),
             TaskRequest::TasksShown { task_ids } => return self.tasks_shown(task_ids),
             TaskRequest::Close { task_id } => Body::CloseTask(control::CloseTask { task_id }),
-            TaskRequest::PlaceLaunches(placement) => {
-                Body::LaunchPlacement(control::LaunchPlacement {
-                    density_dpi: placement.density_dpi,
-                    width: placement.width,
-                    height: placement.height,
-                    monitor_width: placement.monitor_width,
-                    monitor_height: placement.monitor_height,
-                })
-            }
             TaskRequest::CaptionCompat { below_title_bar } => {
                 return self.caption_compat(below_title_bar)
             }

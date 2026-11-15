@@ -139,8 +139,8 @@ dsa app-window <package> --below-title-bar on   # off quay về mặc định
 
 ## Chuyển ứng dụng sang màn hình có tỷ lệ khác
 
-Ứng dụng mở ở tỷ lệ của màn hình nơi cửa sổ của nó mở, ngay từ khung hình đầu tiên, nên nó không
-bị tạo lại ngay sau khi mở. Khi bạn chuyển một cửa sổ sang màn hình có tỷ lệ khác, ứng dụng giữ
+Android khởi động ở tỷ lệ của màn hình chính, nên ứng dụng mở ở đúng kích thước trên màn hình
+đó. Khi bạn chuyển một cửa sổ sang màn hình có tỷ lệ khác, ứng dụng giữ
 nguyên kích thước trên màn hình. Mỗi ứng dụng làm việc này theo một trong các cách sau, do bạn
 chọn trong **Scaling** (co giãn) trên trang **Apps**, hoặc
 bằng `dsa app-window <package> --dpi-scaling`:

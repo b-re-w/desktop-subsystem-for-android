@@ -108,10 +108,6 @@ class AgentApplication : Application() {
             widgets = AndroidWidgets(this, log),
             appProcesses = AndroidAppProcesses(this),
             backgroundProcesses = AndroidBackgroundProcesses(this),
-            // The display's density as the boot set it (ro.sf.lcd_density), which a process
-            // started for no activity has: DSA gives tasks densities of their own and never
-            // changes the display's. The agent's own configuration may follow its home task.
-            displayDensity = { android.util.DisplayMetrics.DENSITY_DEVICE_STABLE },
             widgetStore = AndroidWidgetStore(this),
             accessibility = AndroidAccessibilitySource(this, log),
             // Reading an app's accessibility tree waits on the app's UI thread for each node,
