@@ -359,17 +359,49 @@ pub fn frame_placement(
     }
     let one_to_one = scale.0 == scale.1;
     let fits = at_scale.0 <= view.0 && at_scale.1 <= view.1;
-    let scale = if one_to_one && fits {
-        scale
+    if !(one_to_one && fits) {
+        return fit_placement(frame, view);
+    }
+    let size = (at_scale.0.min(view.0), at_scale.1.min(view.1));
+    FramePlacement {
+        scale,
+        origin: ((view.0 - size.0) / 2, (view.1 - size.1) / 2),
+        size,
+    }
+}
+
+/// Where a window of `view` pixels shows the last frame it has (`frame` task pixels, at
+/// `scale`) while a frame of its new size is still `pending`: the window grew or shrank (the
+/// maximise button, a double click on the title bar, a snap, the keyboard, a restore, an
+/// edge) and the guest has not drawn at the new size yet. The last frame is stretched to fit
+/// the window, keeping its shape, in the window's middle, in every scaling mode, so the window
+/// never shows a small frame with the desktop around it. Once nothing is pending the frame is
+/// placed as [`frame_placement`] says.
+pub fn shown_frame_placement(
+    frame: (u32, u32),
+    view: (u32, u32),
+    scale: Scale,
+    held: bool,
+    pending: bool,
+) -> FramePlacement {
+    let placed = frame_placement(frame, view, scale, held);
+    if !pending || frame.0 == 0 || frame.1 == 0 || view.0 == 0 || view.1 == 0 {
+        return placed;
+    }
+    if to_window_size(frame, scale) == view {
+        return placed;
+    }
+    fit_placement(frame, view)
+}
+
+/// `frame` task pixels scaled to fit a window of `view` pixels, keeping their shape, centred.
+fn fit_placement(frame: (u32, u32), view: (u32, u32)) -> FramePlacement {
+    // The direction that fills the window first sets the scale.
+    let wide = u64::from(view.0) * u64::from(frame.1) <= u64::from(view.1) * u64::from(frame.0);
+    let scale = if wide {
+        scale_between(view.0, frame.0)
     } else {
-        // The direction that fills the window first sets the scale.
-        let wide = u64::from(view.0) * u64::from(frame.1) <= u64::from(view.1) * u64::from(frame.0);
-        let (numerator, denominator) = if wide {
-            (view.0, frame.0)
-        } else {
-            (view.1, frame.1)
-        };
-        scale_between(numerator, denominator)
+        scale_between(view.1, frame.1)
     };
     let size = to_window_size(frame, scale);
     let size = (size.0.min(view.0), size.1.min(view.1));
@@ -377,6 +409,72 @@ pub fn frame_placement(
         scale,
         origin: ((view.0 - size.0) / 2, (view.1 - size.1) / 2),
         size,
+    }
+}
+
+/// The solid colour (`0xAARRGGBB`, opaque) under a task's frame, which shows wherever the
+/// frame does not cover the window: beside a frame stretched while a frame of the new size is
+/// pending, or beside a frame the guest keeps smaller. It is the app's own colour, never the
+/// desktop and never a white the app did not draw: the colour of the frame's top edge
+/// (`band`, then `fill`, as the title bar's band reads it) when it is known, else the app's
+/// splash background, else the theme's window colour.
+pub fn gap_fill(band: Option<u32>, fill: Option<u32>, splash: Option<u32>, theme: u32) -> u32 {
+    band.or(fill).or(splash).unwrap_or(theme) | 0xFF00_0000
+}
+
+/// What the window system's move loop says of a window, and when the window reports that
+/// the user drags it ([`WindowSizing::dragging`]). A click on the title bar enters the move
+/// loop whether or not the window then moves, so entering it is not a drag: only once the
+/// window moves or an edge is dragged is the drag reported, and its end only then. A click
+/// that never moved (the first click of a double click on the title bar) reports nothing, so
+/// a maximise by a double click takes the same path as the maximise button.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct MoveLoop {
+    inside: bool,
+    reported: bool,
+}
+
+impl MoveLoop {
+    /// The move loop started (a press on the title bar or an edge, or a move or size from the
+    /// keyboard). Nothing is reported yet.
+    pub fn entered(&mut self) {
+        self.inside = true;
+        self.reported = false;
+    }
+
+    /// The window moves or an edge is dragged inside the loop. Returns `Some(true)` the first
+    /// time: the drag starts.
+    pub fn moved(&mut self) -> Option<bool> {
+        if self.inside && !self.reported {
+            self.reported = true;
+            return Some(true);
+        }
+        None
+    }
+
+    /// The move loop ended. Returns `Some(false)` when a drag was reported for it.
+    pub fn exited(&mut self) -> Option<bool> {
+        let reported = self.inside && self.reported;
+        *self = MoveLoop::default();
+        reported.then_some(false)
+    }
+}
+
+/// What a window does when its maximise button is clicked or its title bar double clicked:
+/// both are the same command, so both take the same path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaximizeCommand {
+    Maximize,
+    Restore,
+}
+
+/// The command for the maximise button or a double click on the title bar of a window that
+/// is `maximized` or not.
+pub fn maximize_command(maximized: bool) -> MaximizeCommand {
+    if maximized {
+        MaximizeCommand::Restore
+    } else {
+        MaximizeCommand::Maximize
     }
 }
 
@@ -1137,6 +1235,78 @@ mod tests {
         // On a second monitor to the right of the primary, and on one above it.
         assert_eq!(maximized_position(1920, 2048, 2064, 8), 1912);
         assert_eq!(maximized_position(-1152, 1104, 1120, 8), -1160);
+    }
+
+    #[test]
+    fn fr4_a_pending_frame_is_stretched_to_fit_the_new_window_centred_in_every_mode() {
+        // App mode (1:1): a 1200x800 frame in a window maximised to 2560x1380 before the guest
+        // drew at that size. It fills the height, keeps its shape, and sits in the middle.
+        let placed = shown_frame_placement((1200, 800), (2560, 1380), (1, 1), true, true);
+        assert_eq!(placed.size, (2070, 1380));
+        assert_eq!(placed.origin, (245, 0));
+        // Without the pending frame the same capped frame stays 1:1 in the middle.
+        let capped = shown_frame_placement((1200, 800), (2560, 1380), (1, 1), true, false);
+        assert_eq!(capped.size, (1200, 800));
+        assert_eq!(
+            capped,
+            frame_placement((1200, 800), (2560, 1380), (1, 1), true)
+        );
+        // System mode (the task keeps its density): fit, centred, the same way.
+        let placed = shown_frame_placement((1600, 900), (2560, 1380), (82, 131), true, true);
+        assert_eq!(placed.size, (2453, 1380));
+        assert_eq!(placed.origin, (53, 0));
+        // A window that shrank (restore) and is not held stretches its last frame down too.
+        let placed = shown_frame_placement((2560, 1380), (1280, 690), (1, 1), false, true);
+        assert_eq!(placed.size, (1280, 690));
+        assert_eq!(placed.origin, (0, 0));
+        // A frame already the window's size is shown as it is.
+        let placed = shown_frame_placement((1000, 800), (1000, 800), (1, 1), true, true);
+        assert_eq!(placed.scale, (1, 1));
+        assert_eq!(placed.size, (1000, 800));
+    }
+
+    #[test]
+    fn fr4_what_a_stretched_frame_leaves_is_filled_with_the_apps_colour_never_transparent() {
+        let theme = 0x0020_2020;
+        // The colour of the frame's top edge comes first.
+        assert_eq!(
+            gap_fill(
+                Some(0xFF12_3456),
+                Some(0xFF65_4321),
+                Some(0xFFAB_CDEF),
+                theme
+            ),
+            0xFF12_3456
+        );
+        assert_eq!(
+            gap_fill(None, Some(0xFF65_4321), Some(0xFFAB_CDEF), theme),
+            0xFF65_4321
+        );
+        // Then the splash background, then the theme's colour.
+        assert_eq!(gap_fill(None, None, Some(0xFFAB_CDEF), theme), 0xFFAB_CDEF);
+        // Always opaque, so the desktop never shows through.
+        assert_eq!(gap_fill(None, None, None, theme), 0xFF20_2020);
+    }
+
+    #[test]
+    fn fr4_the_maximise_button_and_a_title_bar_double_click_take_the_same_path() {
+        // Both give the same command for the window's state.
+        assert_eq!(maximize_command(false), MaximizeCommand::Maximize);
+        assert_eq!(maximize_command(true), MaximizeCommand::Restore);
+        // The first click of a double click enters the move loop and leaves it without moving:
+        // no drag is reported, as for the button, so no pending size is taken early.
+        let mut double_click = MoveLoop::default();
+        double_click.entered();
+        let reports = [double_click.exited()];
+        assert_eq!(reports, [None]);
+        // A real drag still reports its start once and its end.
+        let mut drag = MoveLoop::default();
+        drag.entered();
+        assert_eq!(drag.moved(), Some(true));
+        assert_eq!(drag.moved(), None);
+        assert_eq!(drag.exited(), Some(false));
+        // A move outside a loop reports nothing.
+        assert_eq!(drag.moved(), None);
     }
 
     #[test]

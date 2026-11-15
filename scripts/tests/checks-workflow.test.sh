@@ -29,8 +29,7 @@ for workflow in "$workflows"/test*.yml; do
     echo "$name: Checks does not run it" >&2
     exit 1
   fi
-  # Only the Graphics test, whose artifacts the builds take, still runs on a push.
-  if [[ "$name" != test-graphics.yml ]] && triggers "$workflow" | grep -Fxq push; then
+  if triggers "$workflow" | grep -Fxq push; then
     echo "$name: runs on a push; development tests run only by hand" >&2
     exit 1
   fi
