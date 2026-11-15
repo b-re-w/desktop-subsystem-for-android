@@ -19,6 +19,7 @@ use std::cell::{Cell, RefCell};
 use std::sync::mpsc::Sender;
 
 use crate::compositor::log::{input_trace, input_trace_on};
+use dsa_host_core::compositor::overlay_windows::InputRemap;
 use dsa_host_core::compositor::window_sizing::{frame_placement, FramePlacement};
 use dsa_host_core::drag::{DragOut, LeaveWatch};
 use dsa_host_core::input::{
@@ -307,6 +308,9 @@ pub struct PointerWindow {
     leave: RefCell<LeaveWatch>,
     /// Asks whether an app drags out of the window; `None` starts no drags on the host.
     drags: Option<DragStarter>,
+    /// How each point of the client area is moved before it is converted, while an app
+    /// overlay's window follows its app's drag ([`InputRemap`]); `None` leaves them.
+    remap: Cell<Option<InputRemap>>,
 }
 
 impl PointerWindow {
@@ -326,7 +330,15 @@ impl PointerWindow {
             events,
             leave: RefCell::new(LeaveWatch::default()),
             drags,
+            remap: Cell::new(None),
         }
+    }
+
+    /// Moves every point of the client area by `remap` before it is converted, or no longer
+    /// with `None`: an app overlay's window gives its app the pointer where the plane was when
+    /// a press began, while the window itself follows the pointer.
+    pub fn set_remap(&self, remap: Option<InputRemap>) {
+        self.remap.set(remap);
     }
 
     /// Asks whether an app drags out of the window, when the press has just left it.
@@ -565,6 +577,10 @@ impl PointerWindow {
     unsafe fn deliver(&self, hwnd: HWND, input: WindowInput) {
         let client = client_size(hwnd);
         let (geometry, placement) = self.geometry(client);
+        let input = match self.remap.get() {
+            Some(remap) => moved(input, |position| remap.apply(position)),
+            None => input,
+        };
         let input = match placement {
             Some(placement) => on_frame(input, placement, client),
             None => input,
@@ -599,7 +615,11 @@ impl PointerWindow {
 /// `input` with its position made a point of the frame `placement` shows in a client area of
 /// `client`.
 fn on_frame(input: WindowInput, placement: FramePlacement, client: (u32, u32)) -> WindowInput {
-    let at = |position: (f64, f64)| placement.to_frame(position, client);
+    moved(input, |position| placement.to_frame(position, client))
+}
+
+/// `input` with its position, if it has one, put at `at(position)`.
+fn moved(input: WindowInput, at: impl Fn((f64, f64)) -> (f64, f64)) -> WindowInput {
     match input {
         WindowInput::MouseMove { position } => WindowInput::MouseMove {
             position: at(position),

@@ -346,12 +346,16 @@ after two minutes. `"keep_window_manager": false` turns this off.
   app left clear. It goes when its app removes it. A click in it goes to the app and leaves
   the user's own window active, unless the overlay may take the focus in Android; the pointer
   passes through an overlay that takes no input. Its size is the app's at the density of its
-  monitor, never more than the work area. While the pointer is over it, or a little after a
-  touch, a slim handle shows just outside its top edge; dragging the handle moves it to any
-  monitor. All of an app's overlays are placed with one translation of Android's display onto
-  the desktop: first where the overlay lies on Android's display, on the monitor of the app's
-  window or the pointer's, then moved by the app's own moves and the user's, which add up.
-  The user's choice is remembered for the app in `%LOCALAPPDATA%\DSA\apps\<package>.overlay.json`.
+  monitor, never more than the work area. DSA adds nothing to move it by: it moves the way its
+  app lets the user move it, by a drag inside the overlay. All of an app's overlays are placed
+  with one translation of Android's display onto the desktop: first where the overlay lies on
+  Android's display, on the monitor of the app's window or the pointer's, then moved by the
+  app's own moves. Android keeps an overlay inside its display, which covers only part of one
+  monitor, so while the user presses an overlay and its app drags it along with the pointer,
+  the window follows the pointer itself, onto any monitor and at that monitor's density; the
+  app keeps hearing the pointer as the press found it. Where a drag left the overlay is
+  remembered for the app in `%LOCALAPPDATA%\DSA\apps\<package>.overlay.json`, and the window
+  opens on that monitor the next time.
   An overlay that covers Android's whole display (a screen filter) gets no window; Android
   draws it over every app's window instead.
 - Each window measures how long it waits for a frame of its new size after a resize, and

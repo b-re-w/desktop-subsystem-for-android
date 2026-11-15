@@ -12,37 +12,41 @@
 //! floating button and the panel it opens beside itself stay side by side wherever the user
 //! put the button.
 //!
-//! **Who moves it.** The app moves an overlay by giving it a new place on the guest's display
-//! (many overlays are dragged by touch inside Android); the window then moves by the same
-//! distance at its scale. The user moves it with the handle the window shows while the pointer
-//! is over it ([`handle_place`]); that moves the plane, so a later move by the app starts from
-//! where the user left the window. Neither undoes the other, because each is taken as a
-//! distance and never as a place to go back to.
+//! **Who moves it.** Only its app. The app moves an overlay by giving it a new place on the
+//! guest's display (most overlays are dragged by a finger or the mouse inside the overlay
+//! itself); the window then moves by the same distance at its scale. DSA adds no handle and no
+//! drag of its own: every press inside the overlay is the app's, and the overlay moves the way
+//! its app lets the user move it.
+//!
+//! **A drag goes onto any monitor** ([`OverlayDrag`]). Android keeps an overlay inside its
+//! display, and the plane maps that display onto the desktop at the scale of one monitor, so an
+//! app's drag alone could never take the window past the area the display covers there, which
+//! is part of one monitor. While the user presses an overlay and its app drags it along with
+//! the pointer, the window follows the pointer itself, past where Android stops the overlay
+//! and onto any monitor, at that monitor's density. The app keeps hearing the pointer as it
+//! did when the press began, so its own drag goes on unchanged. When the press ends the plane
+//! is put where the drag left the window, so a later move by the app starts from there. A
+//! press the app does not move the overlay with moves nothing.
 //!
 //! **Where it first goes.** On the monitor of its app's window, or the pointer's when the app
 //! has none, where it lies on the guest's display: an overlay at the display's right edge is at
 //! the work area's right edge ([`first_place`]).
 //!
-//! **Remembered per app.** The plane is kept for the app ([`remember`], [`remembered`]), so an
-//! overlay that its app shows again at the same place on the guest's display comes back where
-//! the user left it.
+//! **Remembered per app.** The plane is kept for the app ([`remember`], [`remembered`]) when a
+//! drag ends, so an overlay that its app shows again at the same place on the guest's display
+//! comes back where the user's drag left it, on that monitor.
 //!
 //! **Its size** is what the app gave it, at the density of the monitor it is on, and never
 //! more than that monitor's work area: a larger one is shown smaller, in proportion
 //! ([`shown_size`]).
-//!
-//! **The handle** lies outside the overlay, so it covers none of the app's picture and takes
-//! none of its input: every press inside the overlay is the app's. A drag with a modifier key
-//! held was the alternative; nobody finds it without being told, and a finger has no modifier.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
 use super::task_windows::fit_within;
 use super::window_hosts::is_valid_package;
-use super::window_sizing::{dip_to_px, to_window_position, Scale};
+use super::window_sizing::{to_task_position, to_window_position, Scale};
 
 /// A rectangle on the desktop, in its pixels: left, top, right, bottom.
 pub type Area = (i32, i32, i32, i32);
@@ -97,9 +101,10 @@ impl OverlayPlane {
         )
     }
 
-    /// The window of the overlay at `guest` on the guest's display is at `host` now: the user
-    /// moved it with its handle, or it was brought back onto a monitor. The plane moves with
-    /// it, and so does every other overlay of the app. Returns the anchor to remember.
+    /// The window of the overlay at `guest` on the guest's display is at `host` now: a drag
+    /// carried it there ([`OverlayDrag`]), or it was brought back onto a monitor. The plane
+    /// moves with it, and so does every other overlay of the app. Returns the anchor to
+    /// remember.
     pub fn moved_to(&mut self, guest: (i32, i32), host: (i32, i32)) -> Anchor {
         let anchor = Anchor { guest, host };
         self.anchor = Some(anchor);
@@ -165,42 +170,228 @@ pub fn kept_on(host: (i32, i32), size: (u32, u32), work: Area) -> (i32, i32) {
     )
 }
 
-/// The handle's size at 100%: a slim bar, wide enough for a finger.
-pub const HANDLE_DIP: (u32, u32) = (72, 20);
+/// How far, at 100%, the pointer must push an overlay that lies against an edge of Android's
+/// display outward before the window follows it: past the slop of an ordinary press, so a tap
+/// or a small slip on an overlay at the edge moves nothing.
+pub const PUSH_SLOP_DIP: u32 = 8;
 
-/// The gap between the overlay and its handle at 100%.
-pub const HANDLE_GAP_DIP: u32 = 4;
+/// Which edge of Android's display an overlay lies against on one axis, as a press finds it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Edge {
+    /// Against neither edge, or against both (it spans the display on that axis).
+    Neither,
+    /// Against the left or top edge.
+    Start,
+    /// Against the right or bottom edge.
+    End,
+}
 
-/// How long the handle stays after the pointer left the overlay and the handle, so the
-/// pointer can cross the gap between them, and after a touch on the overlay.
-pub const HANDLE_LINGER: Duration = Duration::from_millis(1200);
+impl Edge {
+    /// The edge an overlay at `at` of `size` lies against on a display `display` long. Android
+    /// keeps an overlay a little way in at times (an app's own margin), so within a 64th of
+    /// the display counts as against it.
+    fn of(at: i32, size: u32, display: u32) -> Edge {
+        if display == 0 {
+            return Edge::Neither;
+        }
+        let near = i64::from((display / 64).max(2));
+        let (at, end) = (i64::from(at), i64::from(at) + i64::from(size));
+        match (at <= near, end >= i64::from(display) - near) {
+            (true, false) => Edge::Start,
+            (false, true) => Edge::End,
+            _ => Edge::Neither,
+        }
+    }
+}
 
-/// Where the handle of an overlay's window goes, as left, top, width, height in desktop
-/// pixels, for a window at `window` (left, top, width, height) on a monitor of `dpi` whose
-/// work area is `work`: centred above the window's top edge, outside the overlay, so it covers
-/// nothing the app drew and takes none of its input. With no room above (the overlay is at the
-/// top of the screen) it goes below the bottom edge, and with no room there either, beside the
-/// window's top right corner or, at last, its top left.
-pub fn handle_place(window: (i32, i32, u32, u32), dpi: u32, work: Area) -> (i32, i32, u32, u32) {
-    let (left, top, width, height) = window;
-    let (handle_width, handle_height) = (
-        dip_to_px(HANDLE_DIP.0, dpi).max(1),
-        dip_to_px(HANDLE_DIP.1, dpi).max(1),
-    );
-    let gap = dip_to_px(HANDLE_GAP_DIP, dpi) as i32;
-    let (w, h) = (handle_width as i32, handle_height as i32);
-    let (right, bottom) = (left + width as i32, top + height as i32);
-    let centred = (left + (width as i32 - w) / 2).min(work.2 - w).max(work.0);
-    let (x, y) = if top - gap - h >= work.1 {
-        (centred, top - gap - h)
-    } else if bottom + gap + h <= work.3 {
-        (centred, bottom + gap)
-    } else if right + gap + w <= work.2 {
-        (right + gap, top.max(work.1))
-    } else {
-        ((left - gap - w).max(work.0), top.max(work.1))
+/// How the window turns a point of its client area into the point it gives the app while a
+/// press lasts: `point * scale + offset`, in window pixels. See [`OverlayDrag::input`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InputRemap {
+    pub scale: f64,
+    pub offset: (f64, f64),
+}
+
+impl InputRemap {
+    /// Leaves every point where it is.
+    pub const SAME: InputRemap = InputRemap {
+        scale: 1.0,
+        offset: (0.0, 0.0),
     };
-    (x, y, handle_width, handle_height)
+
+    pub fn apply(&self, (x, y): (f64, f64)) -> (f64, f64) {
+        (
+            x * self.scale + self.offset.0,
+            y * self.scale + self.offset.1,
+        )
+    }
+}
+
+/// One press on an overlay's window, from the moment the button or the finger goes down until
+/// it comes up: how an app's own drag of its overlay carries the window onto any monitor.
+///
+/// **Why.** Android keeps an overlay inside its display, and the app's plane maps the display
+/// onto the desktop at one monitor's scale ([`OverlayPlane::place`]). The window can then only
+/// go where some place on the display maps to, which is part of one monitor (a 3840 pixel
+/// display at 262 dpi covers 1407 pixels of a monitor at 100%), so the app's drag stopped at
+/// that edge. Mapping the display onto all monitors at once was the alternative; the display
+/// is not large enough to cover them at their densities, and an overlay on a monitor of
+/// another density would be the wrong size.
+///
+/// **How.** Each axis on which the app drags the overlay along with the pointer (it moved the
+/// overlay the way the pointer went since the press began) is taken over by the window: from
+/// then on it keeps the point of the overlay that was under the pointer under it, wherever the
+/// pointer goes, onto any monitor and past where Android stops the overlay. An overlay that
+/// already lies against an edge of the display cannot follow the pointer outward, so pushing
+/// the pointer outward past [`PUSH_SLOP_DIP`] takes that axis over too. An axis the app does
+/// not move with the pointer (a seek bar, a button, an overlay its app moves only up and down)
+/// stays where the plane puts it. The app keeps hearing the pointer as the press found the
+/// plane ([`Self::input`]), so its drag sees the pointer travel as it did in Android, and the
+/// window following the pointer never feeds back into where the app thinks it is.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OverlayDrag {
+    /// Where the pointer and the window's client area were on the desktop when the press
+    /// began, where the overlay was on the guest's display, and the window's scale then.
+    pointer_at_press: (i32, i32),
+    window_at_press: (i32, i32),
+    guest_at_press: (i32, i32),
+    scale_at_press: Scale,
+    /// The display edge the overlay lay against on each axis when the press began.
+    edges: [Edge; 2],
+    /// Where the pointer is now.
+    pointer: (i32, i32),
+    /// On each axis the window has taken over, how far into the overlay the pointer is, in
+    /// the guest's pixels.
+    grab: [Option<f64>; 2],
+}
+
+/// The two axes of a point.
+fn axis(point: (i32, i32), which: usize) -> i32 {
+    if which == 0 {
+        point.0
+    } else {
+        point.1
+    }
+}
+
+impl OverlayDrag {
+    /// A press begins with the pointer at `pointer` on the desktop, on the window whose client
+    /// area is at `window` and shows each guest pixel at `scale`. The overlay is at `guest` on
+    /// the guest's display, `guest_size` large, on a display `display` large.
+    pub fn press(
+        pointer: (i32, i32),
+        window: (i32, i32),
+        scale: Scale,
+        guest: (i32, i32),
+        guest_size: (u32, u32),
+        display: (u32, u32),
+    ) -> OverlayDrag {
+        OverlayDrag {
+            pointer_at_press: pointer,
+            window_at_press: window,
+            guest_at_press: guest,
+            scale_at_press: scale,
+            edges: [
+                Edge::of(guest.0, guest_size.0, display.0),
+                Edge::of(guest.1, guest_size.1, display.1),
+            ],
+            pointer,
+            grab: [None, None],
+        }
+    }
+
+    /// Whether the window has taken over an axis, so the end of the press puts the plane
+    /// where the drag left the window.
+    pub fn carried(&self) -> bool {
+        self.grab.iter().any(Option::is_some)
+    }
+
+    /// Takes axis `which` over, with the window's client area at `window` at `scale`.
+    fn take(&mut self, which: usize, window: (i32, i32), scale: Scale) {
+        let into = f64::from(axis(self.pointer, which)) - f64::from(axis(window, which));
+        self.grab[which] = Some(to_task_position(into, scale));
+    }
+
+    /// The pointer is at `pointer` now, with the window's client area at `window` at `scale`.
+    /// `slop` is [`PUSH_SLOP_DIP`] in the pixels of the window's monitor.
+    pub fn pointer_moved(
+        &mut self,
+        pointer: (i32, i32),
+        window: (i32, i32),
+        scale: Scale,
+        slop: i32,
+    ) {
+        self.pointer = pointer;
+        for which in 0..2 {
+            if self.grab[which].is_some() {
+                continue;
+            }
+            let pushed = axis(pointer, which) - axis(self.pointer_at_press, which);
+            let outward = match self.edges[which] {
+                Edge::Start => pushed < -slop,
+                Edge::End => pushed > slop,
+                Edge::Neither => false,
+            };
+            if outward {
+                self.take(which, window, scale);
+            }
+        }
+    }
+
+    /// The app moved the overlay to `guest` on the guest's display, which the plane puts at
+    /// `placed` on the desktop at `scale`. An axis on which it went the way the pointer went
+    /// since the press began is the app dragging it: the window takes that axis over.
+    pub fn app_moved(&mut self, guest: (i32, i32), placed: (i32, i32), scale: Scale) {
+        for which in 0..2 {
+            if self.grab[which].is_some() {
+                continue;
+            }
+            let moved = axis(guest, which) - axis(self.guest_at_press, which);
+            let pointed = axis(self.pointer, which) - axis(self.pointer_at_press, which);
+            if moved != 0 && moved.signum() == pointed.signum() {
+                self.take(which, placed, scale);
+            }
+        }
+    }
+
+    /// Where the window's client area goes on the desktop: on each axis taken over, where it
+    /// keeps the point of the overlay that was under the pointer under it at `scale`, and on
+    /// the others at `placed`, where the plane puts it.
+    pub fn window_at(&self, placed: (i32, i32), scale: Scale) -> (i32, i32) {
+        let along = |which: usize| -> i32 {
+            match self.grab[which] {
+                Some(grab) => {
+                    let into = to_window_position(grab, scale).round() as i32;
+                    axis(self.pointer, which) - into
+                }
+                None => axis(placed, which),
+            }
+        };
+        (along(0), along(1))
+    }
+
+    /// How the window turns a point of its client area into the point it gives the app, with
+    /// its client area at `window` on the desktop at `scale` and the overlay last reported at
+    /// `guest`. The app hears the pointer where the plane was when the press began: a pointer
+    /// at `P` on the desktop is at `guest_at_press + (P - window_at_press) / scale_at_press` on
+    /// the guest's display, however the window has moved or rescaled since. The window gives
+    /// points relative to the overlay at its current scale, which the guest adds the overlay's
+    /// place to, so this is that point less `guest`, at `scale`. While the window is where the
+    /// plane puts it at the press's scale this leaves every point where it is.
+    pub fn input(&self, window: (i32, i32), guest: (i32, i32), scale: Scale) -> InputRemap {
+        let ratio = to_window_position(1.0, scale) / to_window_position(1.0, self.scale_at_press);
+        let along = |which: usize| -> f64 {
+            let moved =
+                f64::from(axis(window, which)) - f64::from(axis(self.window_at_press, which));
+            let behind =
+                f64::from(axis(self.guest_at_press, which)) - f64::from(axis(guest, which));
+            ratio * moved + to_window_position(behind, scale)
+        };
+        InputRemap {
+            scale: ratio,
+            offset: (along(0), along(1)),
+        }
+    }
 }
 
 /// Whether a click activates an overlay's window, giving it the keyboard focus: only for an
@@ -209,13 +400,6 @@ pub fn handle_place(window: (i32, i32, u32, u32), dpi: u32, work: Area) -> (i32,
 /// on any other overlay goes to the app and leaves the user's own window active.
 pub fn click_activates(focusable: bool) -> bool {
     focusable
-}
-
-/// Whether the handle shows, given how long ago the pointer was last over the overlay or the
-/// handle (or a finger last touched the overlay); `None` when it never was. It always shows
-/// while the user drags it.
-pub fn handle_shown(since_pointer: Option<Duration>, dragging: bool) -> bool {
-    dragging || since_pointer.is_some_and(|since| since <= HANDLE_LINGER)
 }
 
 /// The file an app's plane is remembered in, in `dir`; `None` for a name that is no package.
@@ -299,7 +483,7 @@ mod tests {
     fn fr41_a_user_move_and_an_app_move_add_up() {
         let mut plane = OverlayPlane::new(None);
         plane.place((158, 82), (1, 1), || (106, 29));
-        // The user drags the handle: the window is at (900, 600) now.
+        // The user's drag left the window at (900, 600).
         plane.moved_to((158, 82), (900, 600));
         assert_eq!(
             plane.place((158, 82), (1, 1), || unreachable!()),
@@ -310,8 +494,8 @@ mod tests {
             plane.place((128, 82), (1, 1), || unreachable!()),
             (870, 600)
         );
-        // The user moves it again while the app has it there, and the app moves it back to its
-        // first place: 30 right of where the user dropped it.
+        // A drag leaves it elsewhere while the app has it there, and the app moves it back to
+        // its first place: 30 right of where the drag left it.
         plane.moved_to((128, 82), (300, 300));
         assert_eq!(
             plane.place((158, 82), (1, 1), || unreachable!()),
@@ -322,7 +506,7 @@ mod tests {
     #[test]
     fn fr41_overlays_of_one_app_keep_their_places_relative_to_each_other() {
         let mut plane = OverlayPlane::new(None);
-        // A floating button, which the user moves.
+        // A floating button, which a drag carries elsewhere.
         plane.place((3600, 1800), (1, 1), || (2400, 656));
         plane.moved_to((3600, 1800), (400, 300));
         // The panel the app opens 200 pixels left of the button opens 200 left of it.
@@ -333,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn fr41_the_place_the_user_chose_is_remembered_per_app() {
+    fn fr41_the_place_an_app_drag_left_is_remembered_per_app() {
         let dir = std::env::temp_dir().join(format!(
             "dsa-overlay-places-{}-{:?}",
             std::process::id(),
@@ -380,38 +564,117 @@ mod tests {
         assert_eq!(kept_on((-900, 50), (4000, 86), WORK), (0, 50));
     }
 
-    #[test]
-    fn fr41_the_handle_lies_outside_the_overlay() {
-        let window = (900, 600, 318, 86);
-        let (x, y, width, height) = handle_place(window, 96, WORK);
-        assert_eq!((width, height), HANDLE_DIP);
-        // Centred above the top edge, a gap away: it covers no pixel of the overlay.
-        assert_eq!((x, y), (900 + (318 - 72) / 2, 600 - 4 - 20));
-        assert!(y + height as i32 <= 600);
-        // At 200% it is twice as large.
-        assert_eq!(handle_place(window, 192, WORK).2, 144);
-        // At the top of the screen it goes below the overlay.
-        let (_, y, _, _) = handle_place((900, 0, 318, 86), 96, WORK);
-        assert_eq!(y, 86 + 4);
-        // An overlay as high as the work area has it beside its top right corner.
-        let (x, y, _, _) = handle_place((900, 0, 318, 1400), 96, WORK);
-        assert_eq!((x, y), (900 + 318 + 4, 0));
-        // And one as large as the work area keeps it on the screen.
-        let (x, y, _, _) = handle_place((0, 0, 2560, 1400), 96, WORK);
-        assert_eq!((x, y), (0, 0));
+    /// Floating lyrics 508 by 138 at (2800, 82) of Android's display, shown at half size in a
+    /// window at (1500, 600), pressed 100 pixels into it.
+    fn lyrics_pressed() -> OverlayDrag {
+        OverlayDrag::press(
+            (1600, 620),
+            (1500, 600),
+            (1, 2),
+            (2800, 82),
+            (508, 138),
+            DISPLAY,
+        )
     }
 
     #[test]
-    fn fr41_the_handle_shows_only_around_the_pointer_or_a_touch() {
-        assert!(!handle_shown(None, false));
-        assert!(handle_shown(Some(Duration::ZERO), false));
-        assert!(handle_shown(Some(HANDLE_LINGER), false));
-        assert!(!handle_shown(
-            Some(HANDLE_LINGER + Duration::from_millis(1)),
-            false
-        ));
-        // It never goes away under the user's hand.
-        assert!(handle_shown(None, true));
+    fn fr41_an_app_drag_carries_its_overlay_past_androids_display_onto_any_monitor() {
+        let mut drag = lyrics_pressed();
+        drag.pointer_moved((1650, 620), (1500, 600), (1, 2), 8);
+        assert!(!drag.carried());
+        // The app drags the lyrics 100 of its pixels right, the way the pointer went: the
+        // window follows the pointer from here, where the plane has it now.
+        drag.app_moved((2900, 82), (1550, 600), (1, 2));
+        assert!(drag.carried());
+        assert_eq!(drag.window_at((1550, 600), (1, 2)), (1550, 600));
+        // Android stops the lyrics at its display's right edge (3332), where the plane has the
+        // window at 1766. The pointer goes on onto the second monitor, and the window with it,
+        // the pressed point still under the pointer. The app drags it down too.
+        drag.pointer_moved((3200, 640), (1550, 600), (1, 2), 8);
+        drag.app_moved((3332, 122), (1766, 620), (1, 2));
+        assert_eq!(drag.window_at((1766, 620), (1, 2)), (3100, 620));
+        // On a monitor that shows it at full size the pressed point stays under the pointer.
+        assert_eq!(drag.window_at((1766, 620), (1, 1)), (3000, 600));
+    }
+
+    #[test]
+    fn fr41_a_press_its_app_does_not_move_the_overlay_with_moves_nothing() {
+        // A press that the app answers without moving the overlay (a button, a seek bar).
+        let mut drag = lyrics_pressed();
+        drag.pointer_moved((1800, 700), (1500, 600), (1, 2), 8);
+        drag.app_moved((2800, 82), (1500, 600), (1, 2));
+        assert!(!drag.carried());
+        assert_eq!(drag.window_at((1500, 600), (1, 2)), (1500, 600));
+        // An app that moves its overlay against the pointer is not dragging it with the
+        // pointer: the window goes where the plane puts it.
+        drag.app_moved((2700, 82), (1450, 600), (1, 2));
+        assert!(!drag.carried());
+        assert_eq!(drag.window_at((1450, 600), (1, 2)), (1450, 600));
+        // A bar as wide as the display lies against both edges: pushing it moves nothing.
+        let mut bar =
+            OverlayDrag::press((600, 620), (0, 600), (1, 2), (0, 82), (3840, 138), DISPLAY);
+        bar.pointer_moved((2000, 620), (0, 600), (1, 2), 8);
+        assert!(!bar.carried());
+    }
+
+    #[test]
+    fn fr41_an_app_drag_goes_on_past_the_edge_android_keeps_the_overlay_at() {
+        // The lyrics lie against the display's right edge, where an earlier drag left them.
+        let pressed = || {
+            OverlayDrag::press(
+                (1866, 620),
+                (1766, 600),
+                (1, 2),
+                (3332, 82),
+                (508, 138),
+                DISPLAY,
+            )
+        };
+        let mut drag = pressed();
+        // A slip within the slop moves nothing.
+        drag.pointer_moved((1870, 620), (1766, 600), (1, 2), 8);
+        assert!(!drag.carried());
+        // Pushed outward past it, the window follows the pointer, without a jump.
+        drag.pointer_moved((1900, 620), (1766, 600), (1, 2), 8);
+        assert_eq!(drag.window_at((1766, 600), (1, 2)), (1766, 600));
+        drag.pointer_moved((2500, 620), (1766, 600), (1, 2), 8);
+        assert_eq!(drag.window_at((1766, 600), (1, 2)), (2366, 600));
+        // Inward the app moves it itself, so pushing inward takes nothing over.
+        let mut inward = pressed();
+        inward.pointer_moved((1800, 620), (1766, 600), (1, 2), 8);
+        assert!(!inward.carried());
+        // The top edge too.
+        let mut top = OverlayDrag::press(
+            (1600, 30),
+            (1500, 20),
+            (1, 2),
+            (2800, 10),
+            (508, 138),
+            DISPLAY,
+        );
+        top.pointer_moved((1600, 5), (1500, 20), (1, 2), 8);
+        assert_eq!(top.window_at((1500, 20), (1, 2)), (1500, 20));
+        top.pointer_moved((1600, -20), (1500, 20), (1, 2), 8);
+        assert_eq!(top.window_at((1500, 20), (1, 2)), (1500, -5));
+    }
+
+    #[test]
+    fn fr41_the_app_hears_the_pointer_as_the_press_found_it() {
+        let drag = lyrics_pressed();
+        // Where the plane put the window when the press began, every point stays.
+        assert_eq!(
+            drag.input((1500, 600), (2800, 82), (1, 2)),
+            InputRemap::SAME
+        );
+        // The window has followed the pointer to (3100, 620) while Android keeps the lyrics at
+        // (3332, 122). The pointer at (3200, 640) is 100 by 20 into the window, and the app
+        // hears it at 2800 + (3200 - 1500) * 2 = 6200 and 82 + (640 - 600) * 2 = 162, as it
+        // would have without the window moving: 2868 by 40 past where the lyrics are.
+        let remap = drag.input((3100, 620), (3332, 122), (1, 2));
+        assert_eq!(remap.apply((100.0, 20.0)), (1434.0, 20.0));
+        // On a monitor that shows the lyrics at full size, the same point of the desktop.
+        let remap = drag.input((3000, 600), (3332, 122), (1, 1));
+        assert_eq!(remap.apply((200.0, 40.0)), (2868.0, 40.0));
     }
 
     #[test]
