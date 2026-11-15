@@ -1055,7 +1055,12 @@ impl ITfContextOwnerCompositionSink_Impl for Store_Impl {
             let (_, end, _) = store.selection();
             store.set_composition(Some(extent.unwrap_or((end, end))));
         }
-        self.shared.framework_composed.set(true);
+        if !self.shared.framework_composed.replace(true) {
+            self.shared.note(
+                "the input method composes in the window's text services document in this \
+                 window",
+            );
+        }
         self.shared
             .composition_began("in the window's text services document");
         Ok(true.into())
@@ -1164,6 +1169,28 @@ fn text_change(change: TextChange) -> TS_TEXTCHANGE {
     }
 }
 
+/// Where the text services framework's focus is on the window thread.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameworkFocus {
+    /// On the window's document: the input method composes in it.
+    Ours,
+    /// On another document, such as the one IMM32 keeps for the window's input context.
+    Another,
+    /// On no document.
+    Nothing,
+}
+
+impl FrameworkFocus {
+    /// The focus, for the log.
+    pub fn describe(self) -> &'static str {
+        match self {
+            FrameworkFocus::Ours => "the window's document",
+            FrameworkFocus::Another => "another document",
+            FrameworkFocus::Nothing => "no document",
+        }
+    }
+}
+
 /// One window's document manager, associated with the window, and the context on it that
 /// holds the window's text store.
 pub struct Document {
@@ -1173,6 +1200,10 @@ pub struct Document {
     document: ITfDocumentMgr,
     context: RefCell<Option<ITfContext>>,
     shared: Rc<Shared>,
+    /// Whether the log was told the document took back the framework's focus.
+    refocused: Cell<bool>,
+    /// Whether the log was told the document could not take the framework's focus.
+    refusal_noted: Cell<bool>,
 }
 
 impl Document {
@@ -1198,6 +1229,8 @@ impl Document {
             document,
             context: RefCell::new(None),
             shared: Rc::clone(shared),
+            refocused: Cell::new(false),
+            refusal_noted: Cell::new(false),
         };
         attached.push_context()?;
         // SAFETY: as above; the document the framework had for the window, if any, goes.
@@ -1260,13 +1293,17 @@ impl Document {
             eprintln!("text input: {why}");
         }
         // SAFETY: as above; refocusing the document makes the framework take the new context.
+        // A window with the keyboard focus gets it whether or not the framework had focused
+        // its document: input restarting on another editor changes the kind, and the next
+        // composition must not go through IMM32 for want of the framework's focus.
         unsafe {
-            if self
-                .manager
-                .GetFocus()
-                .is_ok_and(|focused| focused == self.document)
-            {
+            let ours = self.focus_state() == FrameworkFocus::Ours;
+            if ours {
                 let _ = self.manager.SetFocus(&self.document);
+            } else if windows_sys::Win32::UI::Input::KeyboardAndMouse::GetFocus() as isize
+                == self.hwnd
+            {
+                self.focus("as the guest's editor changed its kind");
             }
         }
     }
@@ -1285,31 +1322,50 @@ impl Document {
         }
     }
 
-    /// The window took the keyboard focus: its document takes the framework's focus, so the
+    /// Where the framework's focus is: on this document, on another, or on none.
+    pub fn focus_state(&self) -> FrameworkFocus {
+        // SAFETY: the framework's own objects, on its thread.
+        match unsafe { self.manager.GetFocus() } {
+            Ok(focused) if focused == self.document => FrameworkFocus::Ours,
+            Ok(_) => FrameworkFocus::Another,
+            Err(_) => FrameworkFocus::Nothing,
+        }
+    }
+
+    /// The window has the keyboard focus: its document takes the framework's focus, so the
     /// input method composes in it. The framework moves its focus to the document associated
     /// with a window as the window takes the focus, but a window focused before the
-    /// association, or a focus the framework missed, leaves another document focused; the
-    /// input method then composes outside the document, through IMM32, in a window of its own.
-    pub fn focus(&self) {
+    /// association, a focus the framework missed, or the window's input context taking the
+    /// framework's focus for IMM32 as it is activated, leaves another document focused; the
+    /// input method then composes outside the document, through IMM32. `when` says when it
+    /// was found, for the log.
+    pub fn focus(&self, when: &str) {
+        let before = self.focus_state();
+        if before == FrameworkFocus::Ours {
+            return;
+        }
         // SAFETY: the framework's own objects, on its thread.
-        unsafe {
-            let ours = self
-                .manager
-                .GetFocus()
-                .is_ok_and(|focused| focused == self.document);
-            if ours {
-                return;
-            }
-            match self.manager.SetFocus(&self.document) {
-                Ok(()) => self.shared.note(
-                    "the text services framework had not focused the window's document as \
-                     the window took the keyboard focus; it does now",
-                ),
-                Err(why) => self.shared.note(&format!(
-                    "the window's document could not take the text services framework's \
-                     focus ({why}); the input method composes outside it"
-                )),
-            }
+        let taken = unsafe { self.manager.SetFocus(&self.document) };
+        // Once per window and outcome: something that keeps taking the focus away would
+        // otherwise fill the log at every key.
+        let first = match &taken {
+            Ok(()) => !self.refocused.replace(true),
+            Err(_) => !self.refusal_noted.replace(true),
+        };
+        if !first {
+            return;
+        }
+        match taken {
+            Ok(()) => self.shared.note(&format!(
+                "the text services framework's focus was on {} {when}, while the window had \
+                 the keyboard focus; the window's document has it now (logged once per window)",
+                before.describe()
+            )),
+            Err(why) => self.shared.note(&format!(
+                "the window's document could not take the text services framework's focus \
+                 {when} ({why}); the input method composes outside it, through IMM32 (logged \
+                 once per window)"
+            )),
         }
     }
 
