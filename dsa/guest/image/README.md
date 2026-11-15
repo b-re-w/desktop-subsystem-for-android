@@ -100,8 +100,17 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
   off (`config_show_emergency_gesture_settings`, in `SETTINGS_OVERLAY_BOOLEANS`), and the
   code behind it is edited as well (`SETTINGS_CODE_WITHOUT_REMOVED_APPS`): the gesture reads
   as off without asking the provider. Display's "Brightness level" row started SystemUI's
-  brightness dialog by name; the row stays, and a click on it starts nothing.
-  `check-image.py` fails an image that still shows the entry or still has that code.
+  brightness dialog by name; that code starts nothing now. `check-image.py` fails an image
+  that still shows the entry or still has that code.
+- Settings' Display page has no Brightness category ("Brightness level", "Adaptive
+  brightness", "HDR brightness"): the host owns the monitor's brightness, and the guest's
+  display passes none to it. The category is taken out of the compiled page whole
+  (`SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS`), so no empty "Brightness" title is left, and the
+  framework overlay says the device has no adaptive brightness
+  (`config_automatic_brightness_available`, in `FRAMEWORK_OVERLAY_BOOLEANS`), which keeps
+  Settings' adaptive brightness pages out of search. `check-image.py` fails an image whose
+  Display page still has the category, or whose framework overlay still has adaptive
+  brightness.
 - The system apps users open (`COMPILED_APPS`: Settings, Files, the package installer, the
   share sheet, WebView, the agent and a few more) are compiled to the guest's machine code (x86_64 or arm64) when
   the image is made. The build compiles them only into system_other, which the guest does not
