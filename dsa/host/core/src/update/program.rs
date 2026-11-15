@@ -24,6 +24,11 @@
 //! channel reads the stable list alone; one on the pre-release channel reads both and takes
 //! the higher version, so a stable release newer than every pre-release reaches it too
 //! ([`choose`]).
+//!
+//! From 1.0 the version says the channel: a stable release moves only `major.minor` and has
+//! patch 0 (1.0.0, 1.1.0, 2.0.0), and a pre-release moves only the patch (1.0.1, 1.0.2 after
+//! 1.0.0), so every pre-release stays below the next stable release. A development build is
+//! `<major>.<minor>.<patch>-dev.<n>`, below the release of its numbers.
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -170,6 +175,14 @@ impl Version {
         self.dev.is_some()
     }
 
+    /// Whether a stable release may have this version. From 1.0 a stable release moves only
+    /// `major.minor`, so its patch (and anything after it) is 0, and a version with a patch
+    /// above 0 is a pre-release; a development build is never a stable release. Versions below
+    /// 1.0 were all pre-releases, numbered before this rule, and are not held to it.
+    pub fn fits_stable_channel(&self) -> bool {
+        self.dev.is_none() && (self.part(0) == 0 || self.parts.iter().skip(2).all(|p| *p == 0))
+    }
+
     fn part(&self, i: usize) -> u64 {
         self.parts.get(i).copied().unwrap_or(0)
     }
@@ -311,12 +324,21 @@ pub fn decide(running: &str, list: &ProgramManifest) -> Result<ProgramDecision, 
 /// offers the higher version. When both offer the same version the stable list is taken, so
 /// what is installed stays installable after a switch to the stable channel. Returns the list
 /// and the channel it was published on, or `None` when the channel has no list to follow.
+///
+/// A stable list that names a version no stable release may have (a patch above 0 from 1.0,
+/// or a development build; [`Version::fits_stable_channel`]) is a mistake in publishing, and
+/// the stable channel does not follow it.
 pub fn choose<'a>(
     channel: ReleaseChannel,
     stable: Option<&'a ProgramManifest>,
     prerelease: Option<&'a ProgramManifest>,
 ) -> Option<(ReleaseChannel, &'a ProgramManifest)> {
-    let stable = stable.map(|list| (ReleaseChannel::Stable, list));
+    let stable = stable
+        .filter(|list| {
+            channel != ReleaseChannel::Stable
+                || Version::parse(&list.version).is_ok_and(|version| version.fits_stable_channel())
+        })
+        .map(|list| (ReleaseChannel::Stable, list));
     if channel == ReleaseChannel::Stable {
         return stable;
     }

@@ -37,7 +37,7 @@ class FixedWidthTypesPatchTests(unittest.TestCase):
         names = sorted(p.name for p in PATCHES.glob("00*.patch"))
         self.assertEqual(names.index(PATCH.name),
                          names.index(next(n for n in names if n.startswith("0037-"))) + 1)
-        self.assertIn(" 0037 0038;", (HERE / "host/fetch.sh").read_text(encoding="utf-8"))
+        self.assertRegex( (HERE / "host/fetch.sh").read_text(encoding="utf-8"), r" 0037 0038[ ;]")
         self.assertIn('-Filter "0038-*.patch"',
                       (HERE / "host/fetch.ps1").read_text(encoding="utf-8"))
 

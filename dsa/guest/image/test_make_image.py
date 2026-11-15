@@ -4849,6 +4849,48 @@ class CompiledSystemAppTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 make_image.as_development_build(spec, bad)
 
+    def test_fr15_the_image_revision_follows_the_channel(self):
+        spec = {"version": "17.0.0-16373615-9", "build_id": "16373615", "revision": 9}
+        arm = dict(spec, version="17.0.0-16373615-9-arm64")
+        label = make_image.next_revision_label
+        # After the stable -15: the stable -16, the pre-release -15.1, and a development
+        # build of that pre-release.
+        tags = ["android-17.0.0-16373615-14", "android-17.0.0-16373615-15", "v1.0.0",
+                "android-16.0.0-15581820-15"]
+        self.assertEqual(label(spec, tags, "stable"), "16")
+        self.assertEqual(label(spec, tags, "prerelease"), "15.1")
+        self.assertEqual(label(spec, tags, "development"), "15.1")
+        # Pre-releases count up m on the newest n; the stable after them is the next n.
+        tags += ["android-17.0.0-16373615-15.1", "android-17.0.0-16373615-15.2"]
+        self.assertEqual(label(spec, tags, "prerelease"), "15.3")
+        self.assertEqual(label(spec, tags, "stable"), "16")
+        tags += ["android-17.0.0-16373615-16"]
+        self.assertEqual(label(spec, tags, "prerelease"), "16.1")
+        # Each architecture counts its own.
+        self.assertEqual(label(arm, tags, "prerelease"), "9.1")
+        self.assertEqual(label(arm, tags + ["android-17.0.0-16373615-15.4-arm64"], "stable"), "16")
+        with self.assertRaises(ValueError):
+            label(spec, tags, "beta")
+
+        # The versions each revision names, and the build number, which carries n alone.
+        pre = make_image.revised(spec, "15.1")
+        self.assertEqual(pre["version"], "17.0.0-16373615-15.1")
+        self.assertEqual(pre["revision"], 15)
+        self.assertEqual(make_image.revised(arm, "15.2")["version"], "17.0.0-16373615-15.2-arm64")
+        self.assertEqual(make_image.revised(spec, "16")["version"], "17.0.0-16373615-16")
+        dev = make_image.as_development_build(pre, 12)
+        self.assertEqual(dev["version"], "17.0.0-16373615-15.1-dev.12")
+        self.assertEqual(dev["revision"], 15)
+        arm_dev = make_image.as_development_build(make_image.revised(arm, "15.1"), 12)
+        self.assertEqual(arm_dev["version"], "17.0.0-16373615-15.1-dev.12-arm64")
+        for bad in ("15.0", "15.x", "", "1.2.3", True):
+            with self.assertRaises(ValueError):
+                make_image.revised(spec, bad)
+
+        # The workflow asks for the revision of the run's image channel.
+        workflow = (Path(make_image.__file__).resolve().parents[3] / ".github/workflows/release-image.yml").read_text()
+        self.assertIn('--next-revision --channel "$IMAGE_CHANNEL"', workflow)
+
     def test_fr14_the_release_publishes_each_image_under_a_new_revision(self):
         workflow = (Path(make_image.__file__).resolve().parents[3] / ".github/workflows/release-image.yml").read_text()
         self.assertIn("make-image.py --major ${{ matrix.android }} --arch ${{ matrix.arch }} --next-revision", workflow)
