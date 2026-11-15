@@ -13,7 +13,7 @@
 # at its pinned commit, the large ones in part) and builds only the install paths the image
 # takes (framework_lock.py outputs).
 #
-# It runs by hand, and when the lock or the patches change on develop. Each build's compiler
+# It runs only by hand (workflow_dispatch): start it after the lock or the patches change. Each build's compiler
 # cache is kept between runs as an artifact of the run (ccache-artifact.sh in
 # .github/scripts/framework says why not in the Actions cache), also when a run fails or times
 # out, so a run that stops partway makes the next one shorter. With its cache a build takes
@@ -52,11 +52,14 @@ on:
         description: "Build only this architecture (x86_64 or arm64); empty for both"
         required: false
         default: ""
-  push:
-    branches: [develop]
-    paths:
-      - dsa/guest/framework/framework-lock.json
-      - dsa/guest/framework/patches/**
+  # Paused by the owner's decision (2026-11-16): nothing on develop starts on a push, so a
+  # change to the lock or the patches needs a run started by hand. The Development build
+  # warns when the run it takes is older than the newest such change. Uncomment to resume.
+  # push:
+  #   branches: [develop]
+  #   paths:
+  #     - dsa/guest/framework/framework-lock.json
+  #     - dsa/guest/framework/patches/**
 
 concurrency:
   group: framework-${{ github.ref }}

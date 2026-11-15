@@ -2,9 +2,9 @@
 # so nobody has to run the generator by hand, fetch a patch from a failed run, or resolve a
 # conflict in generated files.
 #
-# On a pull request from a branch of this repository, it regenerates that branch. After a
-# push to develop, it does the same for every open pull request into develop, which is when
-# their generated files start to conflict or go stale. Forks are never touched: their
+# It runs only by hand (workflow_dispatch): started on develop, it regenerates every open
+# pull request into develop, which is needed after develop changes, when their generated
+# files start to conflict or go stale. Forks are never touched: their
 # token cannot push, and their code is not run with a token that can.
 #
 # What it does to one branch is .github/scripts/protocol/regenerate.sh. It starts no tests
@@ -15,8 +15,10 @@
 name: Protocol sync
 
 on:
-  push:
-    branches: [develop]
+  # Paused by the owner's decision (2026-11-16): nothing on develop starts on a push.
+  # Uncomment to resume.
+  # push:
+  #   branches: [develop]
   workflow_dispatch:
 
 concurrency:

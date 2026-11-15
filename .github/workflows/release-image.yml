@@ -654,6 +654,9 @@ jobs:
       framework_run_id: ${{ steps.framework.outputs.run_id }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The staleness check below compares the taken runs' commits with the history.
+          fetch-depth: 0
 
       - name: Find the Translator build run with the pinned packages
         id: translator
@@ -745,6 +748,34 @@ jobs:
           done
           echo "::error::No passing Framework build run on develop has ${wanted[*]}. Run the Framework build workflow, or release with framework off."
           exit 1
+
+      # The Framework and Translator builds run only by hand, so one can be forgotten after
+      # its lock or patches change. This warns, without failing, when the run taken was made
+      # from a commit older than the newest change to its inputs.
+      - name: Warn when a taken build is older than its inputs
+        if: ${{ !cancelled() && (steps.translator.outputs.run_id || steps.framework.outputs.run_id) }}
+        env:
+          TRANSLATOR_RUN: ${{ steps.translator.outputs.run_id }}
+          FRAMEWORK_RUN: ${{ steps.framework.outputs.run_id }}
+        run: |
+          check() {
+            local label="$1" run="$2" workflow="$3"; shift 3
+            [[ -n "$run" ]] || return 0
+            local built changed
+            built="$(gh api "repos/${{ github.repository }}/actions/runs/$run" --jq .head_sha)"
+            changed="$(git log -1 --format=%H HEAD -- "$@")"
+            [[ -n "$changed" ]] || return 0
+            if git cat-file -e "$built^{commit}" 2>/dev/null && git merge-base --is-ancestor "$changed" "$built"; then
+              return 0
+            fi
+            echo "::warning title=$label build may be stale::run $run was built from ${built:0:12}, but ${changed:0:12} changed $* after it. Run the $label build ($workflow) by hand and make this build again."
+            {
+              echo "## The $label build may be stale"
+              echo "Run $run was built from \`${built:0:12}\`; \`${changed:0:12}\` changed $* after it. Start the $label build by hand."
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+          check Translator "$TRANSLATOR_RUN" translator.yml dsa/guest/arm-translation/digitalis-lock.json
+          check Framework "$FRAMEWORK_RUN" framework.yml dsa/guest/framework/framework-lock.json dsa/guest/framework/patches
 
   image:
     name: ${{ inputs.dev_build && 'Make' || 'Make and publish' }} the guest image (ubuntu-latest, Android ${{ matrix.android }}, ${{ matrix.arch }})
