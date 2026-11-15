@@ -51,7 +51,9 @@ use std::ffi::c_void;
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use dsa_host_core::compositor::caption::{band_reading_owed, band_sample, BandSample};
+use dsa_host_core::compositor::caption::{
+    band_points, band_reading_owed, band_sample, describe_band_sample, BandSample, BAND_SAMPLES,
+};
 use dsa_host_core::compositor::frame_buffers::{
     buffers_after_frame, content_region, frame_scale, sample_points, swapchain_buffers,
     swapchain_change, uniform_colour, wanted_swapchain_buffers, HiddenBuffers, HiddenFrame,
@@ -549,6 +551,9 @@ struct State {
     band_probed: Option<Instant>,
     /// What the window was last told of the band: its fill and its lightness.
     band_sample: BandSample,
+    /// Whether a copy that is slow to be read, or failed, was said in the log since the band
+    /// was last read.
+    band_waits_noted: bool,
     /// Whether a screenshot waits for the next frame, and what it got once one came.
     capture_wanted: bool,
     captured: Option<Result<CapturedFrame, String>>,
@@ -741,11 +746,11 @@ pub type FrameReady = Box<dyn Fn() + Send + Sync>;
 /// band is, which the caption glyphs' tone follows.
 pub type BandColour = Box<dyn Fn(BandSample) + Send + Sync>;
 
-/// How many pixels are sampled across the band, and across the row under it.
-const BAND_SAMPLES: u32 = 8;
-
 /// How often the band is sampled at most, while frames come.
 const BAND_PROBE_EVERY: Duration = Duration::from_millis(200);
+
+/// A copy of the band still unread after this long is said in the log, once.
+const BAND_COPY_SLOW: Duration = Duration::from_secs(2);
 
 /// Shows one task's frames in its window.
 pub struct WindowPresenter {
@@ -852,6 +857,7 @@ impl WindowPresenter {
                 band_pending: false,
                 band_probed: None,
                 band_sample: BandSample::default(),
+                band_waits_noted: false,
                 capture_wanted: false,
                 captured: None,
             }),
@@ -893,9 +899,7 @@ impl WindowPresenter {
         let devices = Arc::clone(&state.devices);
         // The band is the window's; the frame is sampled in its own pixels.
         let band = to_task_length(state.band, state.scale);
-        if band == 0 || region.1 <= band + 2 || region.0 < BAND_SAMPLES {
-            return None;
-        }
+        let points = band_points(region, band)?;
         let context = devices.context.lock().unwrap_or_else(|e| e.into_inner());
         let mut changed = None;
         if state.band_pending {
@@ -919,15 +923,62 @@ impl WindowPresenter {
                     let (inside, below) = (row(0), row(1));
                     context.Unmap(&probe, 0);
                     state.band_pending = false;
+                    state.band_waits_noted = false;
                     let sample = band_sample(&inside, &below);
                     if sample != state.band_sample {
                         state.band_sample = sample;
                         changed = Some(sample);
+                        // Once per change, never per frame: what the window is told of the
+                        // band, from which its glyphs take their tone.
+                        note(
+                            self.logger.as_deref(),
+                            &format!(
+                                "task {}: the title bar's band ({band} rows of a {}x{} frame) \
+                                 reads {}",
+                                self.task_id,
+                                region.0,
+                                region.1,
+                                describe_band_sample(sample)
+                            ),
+                        );
                     }
                 }
-                // The GPU has not made the copy yet: it is read on a later frame.
-                Err(error) if error.code() == DXGI_ERROR_WAS_STILL_DRAWING => return None,
-                Err(_) => state.band_pending = false,
+                // The GPU has not made the copy yet: it is read on a later frame or tick.
+                Err(error) if error.code() == DXGI_ERROR_WAS_STILL_DRAWING => {
+                    // Submitted at once, so this should not last; said once if it does.
+                    let waited = state.band_probed.map(|at| at.elapsed());
+                    if !state.band_waits_noted
+                        && waited.is_some_and(|waited| waited >= BAND_COPY_SLOW)
+                    {
+                        state.band_waits_noted = true;
+                        note(
+                            self.logger.as_deref(),
+                            &format!(
+                                "task {}: the copy of the title bar's band has waited {} ms \
+                                 to be read; the glyphs keep their tone until it is",
+                                self.task_id,
+                                waited.unwrap_or_default().as_millis()
+                            ),
+                        );
+                        context.Flush();
+                    }
+                    return None;
+                }
+                Err(error) => {
+                    state.band_pending = false;
+                    // Copied again at the next frame or tick: a still window whose one copy
+                    // failed would otherwise never have its band read.
+                    state.band_probed = None;
+                    if !state.band_waits_noted {
+                        state.band_waits_noted = true;
+                        let what = format!(
+                            "task {}: reading the copy of the title bar's band",
+                            self.task_id
+                        );
+                        note(self.logger.as_deref(), &failed(&what, error));
+                    }
+                    return None;
+                }
             }
         }
         if !copy
@@ -968,10 +1019,10 @@ impl WindowPresenter {
             return changed;
         };
         // Across the band's middle row, and the row just under it, where the app's top begins.
-        let rows = [band / 2, band + 2];
+        let rows = [points.inside, points.below];
         for (index, y) in rows.into_iter().enumerate() {
-            for column in 0..BAND_SAMPLES {
-                let x = (2 * column + 1) * region.0 / (2 * BAND_SAMPLES);
+            for (column, &x) in points.columns.iter().enumerate() {
+                let column = column as u32;
                 let pixel = D3D11_BOX {
                     left: x,
                     top: y,
@@ -992,6 +1043,11 @@ impl WindowPresenter {
                 );
             }
         }
+        // Submitted now. The frame's own copy was flushed before this one was recorded, and a
+        // still window presents nothing more that would submit it: without this the copy of
+        // a window's last frame could sit unsubmitted, every read of it would find it still
+        // drawing, and the glyphs would keep the tone of an older frame for good.
+        context.Flush();
         state.band_pending = true;
         state.band_probed = Some(Instant::now());
         changed
