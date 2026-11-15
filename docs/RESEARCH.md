@@ -3785,3 +3785,94 @@ SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운
 4. 미니플레이어 아래 줄이 DSA의 레이어인지 본다: `adb shell dumpsys SurfaceFlinger --list | grep -iE "youtube|toast|overlay"`. YouTube 창의 레이어와 `SurfaceView` 말고 다른 것이 없으면 YouTube가 그린 것이다.
 5. 고친 빌드에서: 125% 모니터에서 YouTube를 닫고 30초 안에 200% 모니터에서 다시 연다. `adb logcat -d -s DsaAgent | grep -E "ended the background processes of com.google.android.youtube|starts at .* in the process it has"`에 "ended the background processes ... started at 164 dpi"가 있고 시청 화면과 미니플레이어가 맞으면 고쳐진 것이다. "in the process it has"가 나오면 그 줄의 까닭(포그라운드 서비스 등)이 남긴 것이다.
 6. 공유 메모리 쪽: 같은 절차에서 `dsa-wm.log`의 `video:` 줄에 "in shared memory"가 있고 미니플레이어가 맞으면 그림 영역은 무관하다. 영역을 끄고(`video_shared_memory_mb` 0) 같은 증상이 나와도 무관하다.
+
+## R55. 앱 다섯 개를 연 DSA가 4~5 GiB를 쓰는 까닭: 같은 시점으로 다시 맞춘 메모리 내역 (NFR-1, NFR-2)
+
+**질문.** 소유자 PC에서 설정, FLO, YouTube, Play 스토어, Dragon Ball Legends(Unity 게임)를 열고 APKPure가 창 없이 떠 있을 때, 작업 관리자 기준 DSA가 5 GB 가까이 썼다. 그 메모리가 꼭 필요한지, 어디를 줄일 수 있는지 본다.
+
+**방법.** 개발 빌드 28(Android 17 dev.28, Windows 11, Intel Arc 내장 GPU, 메인 192 dpi와 보조 120 dpi 모니터)에서 2026-11-15에 `dsa memory`, `dsa memory --json`, `dumpsys SurfaceFlinger`, `dumpsys meminfo`(전체와 게임), `/proc/meminfo`, 창 관리자와 렌더러의 주기 메모리 줄, Windows 프로세스 목록을 모았다. 빌드하거나 바꾼 것은 없다. 코드는 develop과 고정한 gfxstream(`.scratch/gfxstream`, DSA 패치 전)을 읽었다. 아래에서 **확인**은 모은 값이나 코드로 증명된 것이고, **추정**은 그렇지 않은 것이다.
+
+**모은 값의 시점.** 처음 모은 파일들은 적어도 세 시점에서 왔다. 그래서 그대로 더하면 틀린다. `dsa-memory.txt`, `proc-meminfo.txt`, `meminfo.txt`는 같은 시점이다(게스트 전체 3635 MiB, VM 작업 집합 2278 MiB, 페이지 캐시 415 MiB). `mem.json`은 그 전이다(게스트 전체 4147 MiB, VM 작업 집합 2691 MiB). 두 시점 사이에 호스트가 VM을 512 MiB 줄였고(4224에서 3712 MiB), 페이지 캐시가 419 MiB 줄었다. 처음 보고한 "VM 2756"은 같은 2,755,784 KB를 1000으로 나눈 MB 값이다. 이 절의 합계는 같은 시점의 값만 더한다.
+
+### 1. 렌더러의 메모리 줄
+
+- 확인: 렌더러의 "by owner" 줄(`dsa/graphics/host/dsa_gfx_memory.cpp`)은 Vulkan 할당을 요청 크기로, (장치, 메모리)마다 한 번씩 센다(117-144행). "imported"는 Win32 핸들, fd, 호스트 포인터로 들여온 할당이라 다른 쪽의 메모리다(94-109행). "CPU-mapped"는 호스트 가시 메모리 종류, "GPU-only"는 나머지다.
+- 측정값: 화면 버퍼와 창 텍스처는 GPU-only 692 MiB(147개), imported 107 MiB(5개). 게스트 장치 8개는 GPU-only 1289 MiB, CPU-mapped 290 MiB, imported 836 MiB(가장 큰 장치 1090 MiB).
+- 겹침: imported 107 MiB는 창 관리자가 만든 태스크 창 다섯 개의 Direct3D 텍스처를 렌더러가 들여온 것이다(`compositor/hosts.rs:472`, `present.rs:344-385`). 게스트의 imported 836 MiB는 렌더러 화면 버퍼를 앱이 들여온 별칭과, 공유 그래픽 영역(최대 256 MiB, `dsa/host/core/src/graphics_memory.rs:33`)의 허가를 호스트 포인터로 들여온 것이다. 별칭이 아닌 메모리는 692 + 1289 + 290 = 2271 MiB이고, 렌더러 사적 메모리는 2247 MiB다.
+- 추정: 두 값이 거의 같은 것은 Intel Vulkan 드라이버가 할당을 프로세스 사적 메모리로 잡기 때문으로 보인다. 사적 메모리(2247)와 작업 집합(1550)의 차이 697 MiB는 상주하지 않는 커밋 메모리다. 내장 GPU에서는 GPU 메모리도 시스템 RAM이다.
+
+**화면 버퍼 147개와 SurfaceFlinger가 아는 57개.**
+
+| 무엇 | 상태 | MiB | 개수 |
+|---|---|---|---|
+| SurfaceFlinger가 들여온 버퍼(아래 2개의 클라이언트 대상 포함) | 확인 | 427.2 | 57 |
+| hwcomposer 태스크 대상: 태스크마다 2개, 512 px 단위로 올림(`task_composer.cpp:458-462`, `task_layout.cpp:437-458`) | 코드로 추정 | 148 | 10 |
+| 나머지, 개당 약 1.5 MiB | 모름 | 약 117 | 약 80 |
+
+나머지는 Play, YouTube, FLO의 하드웨어 비트맵(썸네일), SurfaceFlinger가 아직 받지 않은 큐 버퍼, 드라이버 패딩으로 보이지만(추정), 버퍼별 덤프 없이는 누수를 배제할 수 없다.
+
+**지연 닫기 목록은 원인이 아니다(확인).** `dsa_gfx_init`은 `VirtioGpuNext:disabled`만 넘기고(`dsa_gfx_backend.cpp:222`), 그러면 gfxstream이 `NoDelayCloseColorBuffer`를 늘 켠다(`virtio-gpu-gfxstream-renderer.cpp:666-667`). 이때 마지막으로 닫힌 버퍼는 바로 지워지고(`FrameBuffer.cpp:1354, 1371-1375`), 지연 목록은 닫기가 진행 중인 게시와 겹칠 때만 찬다(712행). 그래서 "Destroyed N color buffers" 줄이 한 번도 없는 것은 정상이다. 렌더러 패치 0034의 전제("4K 영상을 닫은 뒤 580 MiB가 지연 목록에 남았다")는 틀린 것으로 보이며, 그 580 MiB에는 다른 원인이 있었다.
+
+### 2. 3840x3840 클라이언트 대상
+
+- 확인: SurfaceFlinger는 디스플레이 0용으로 `LegacyFramebufferSurface` 버퍼 두 개(각 57,600 KiB)를 잡는다. 클라이언트 합성이 쓰인다(`usesClientComposition=true`). YouTube 영상 SurfaceView(YV12, 1920x1080)가 CLIENT 레이어이고, 그 까닭은 hwcomposer가 호스트가 합성하지 못하는 YUV 버퍼를 클라이언트 레이어로 돌리기 때문이다(`dsa/guest/hwcomposer/src/display.cpp:223-227`, `cpu_upload_policy.cpp:10`의 `hostComposes`). hwcomposer는 클라이언트 대상에서 YouTube 부분을 잘라 보여 주므로(`task_composer.cpp:468-527`) 이 버퍼는 쓰인다. 같은 크기의 호스트 화면 버퍼 112.5 MiB가 렌더러의 692 MiB 안에 있다. 게스트 RAM으로는 거의 들지 않는다(Shmem 17 MiB).
+- 줄이는 길: 호스트가 YUV 레이어를 직접 합성하면(호스트는 이미 YUV 화면 버퍼를 만든다, 렌더러 패치 0019와 0032) frameworks/native 0005가 마지막 클라이언트 프레임 1초 뒤 대상을 놓는다. 112.5 MiB와 영상 프레임마다의 3840x3840 GPU 합성을 아낀다. 위험은 색 정확도(BT.709 범위, YV12 평면 순서)와 YUV 형식마다 셰이더가 필요하다는 점이다.
+
+### 3. 게임의 Unknown 메모리
+
+- 확인: 게임의 TOTAL PSS 1,114,333 KB는 스왑을 포함한다(상주 819,266 + 스왑 295,067). 이름 없는 익명 메모리(`Unknown`)는 상주 691,916 KB와 스왑 266,843 KB, 약 936 MiB다. `Graphics 0`은 게스트에 GPU 메모리 계정(memtrack)이 없다는 뜻이라, 게임의 호스트 GPU 메모리(장치 최대 1090 MiB)는 Android와 lmkd에 보이지 않는다.
+- 확인: 게스트 드라이버의 호스트 가시 메모리 사본은 이름 없는 익명 매핑이라(`dsa/graphics/include/dsa_shadow_memory.h:53`) Unknown에 들어간다. 사본은 공유 영역을 거치지 않는 호스트 가시 할당에만 있고, 호스트에서는 그것이 CPU-mapped 290 MiB(게스트 장치 8개 전체)다.
+- 추정: 그래서 드라이버 사본은 게임 Unknown 936 MiB 중 많아야 약 290 MiB다. 나머지 646 MiB 이상은 게임 자체(Unity 할당기, IL2CPP 힙, 에셋의 CPU 사본)와 드라이버 스트림 버퍼이고, 호스트에 중복되지 않는다. 사본이 있는 만큼(최대 290 MiB)은 게스트와 렌더러 양쪽에 같은 바이트가 있다.
+- 이 게임이 공유 영역(제로 카피, PR #795, #815)을 쓰는지는 모은 값으로 알 수 없다. 게임의 logcat에서 `host-visible memory is mapped from 256 MiB the host shares` 또는 `host-visible memory is copied through the stream: <까닭>`(mesa 0015:385-389), 렌더러의 `graphics memory: ... shared with the guest`와 `the memory shared with the guest is full` 줄로 확인한다.
+
+### 4. VM
+
+- 확인: 게스트가 쓰는 2243 MiB는 앱 1281, 페이지 캐시 415(Shmem 17), 커널 517(그중 zram 저장소 219 MiB가 압축된 앱 메모리 929 MiB를 담는다), 부팅 예약 77 MiB다. 풍선은 640 MiB인데 `dsa memory`는 이를 보이지 않는다. 스왑은 986 MiB 중 985 MiB를 쓰는데 빈 메모리는 1.39 GiB이고, `dumpsys meminfo`는 "status critical"이다.
+- 확인: 빈 페이지 보고가 부팅 뒤 126,927 MiB를 보고했고, 그중 29,498 MiB(23%)는 다시 들여와 다시 보고했다. 메모리가 아니라 CPU 비용이다.
+- 버릴 수 있는 페이지 캐시: 많아야 약 398 MiB(Cached에서 Shmem을 뺀 파일 LRU)이고, 그중 175 MiB는 실행 중인 프로세스에 매핑돼 바로 돌아온다. 실제로는 약 110~220 MiB다.
+- DSA의 회수는 이 부하에서 의도대로 돌지 않는다(`dsa/guest/channeld/src/reclaim.rs:359-381`): 창이 5개 보이면 트림 목표가 768 MiB라 캐시 트림에 832 MiB의 버릴 수 있는 메모리가 필요하다. zram은 부팅 때 2 GiB의 50%로 정해져 VM이 커져도 늘지 않는다.
+
+### 5. 호스트 프로세스
+
+- 앱 창(앱마다 프로세스 하나, 다섯 개, 작업 집합 48~84 MiB, 사적 합계 254 MiB): 확인, 프로세스마다 자기 D3D11 장치, DXGI 팩토리, DirectComposition 장치를 만들고(`compositor/present.rs:237-305`, `app_window/mod.rs:243`) TSF, OLE, UI Automation을 시작한다. 프로세스를 나눈 까닭은 작업 표시줄 묶음과 작업 관리자의 앱 이름이다(`app_exe.rs:1-9`). 추정, 프로세스마다 약 45 MiB가 고정 비용이다.
+- 창 관리자(사적 147 MiB): 기본 힙 72 MiB 중 DSA 자신의 것은 10 MiB, 나머지는 D3D11 런타임, 드라이버, 영상 디코더 장치다.
+- DSA 설정 앱(DsaSettings.exe, 작업 집합 324 MiB, `dsa memory`에 없음): 자체 포함 .NET 8 WPF이고 ReadyToRun이 없다. 시작할 때 모든 페이지의 뷰 모델을 만들고(`App.xaml.cs:10-22`), 앱 아이콘을 256 px 그대로 디코딩하며, 페이지가 폴링하는 동안 3~5초마다 `dsa.exe`를 띄운다. 창을 닫으면 끝나므로 열려 있을 때만 메모리를 쓴다.
+
+### 같은 시점의 합계 (겹침 제외)
+
+| 부분 | MiB |
+|---|---|
+| VM 작업 집합 2278에서 디스크 파일 페이지 115 MiB를 뺀 값 | 2163 |
+| 렌더러 작업 집합 | 1550 |
+| 창 관리자 작업 집합 | 111 |
+| 앱 창 다섯 개(공유 페이지를 다섯 번 세지 않도록 사적 메모리) | 254 |
+| DSA 설정 앱 작업 집합 | 324 |
+| dsa-hostd 작업 집합 | 31 |
+| **합계** | **4433 (약 4.3 GiB)** |
+
+렌더러의 상주하지 않는 사적 메모리 697 MiB가 내장 GPU의 시스템 RAM이라면(추정) 상한은 5130 MiB다. 소유자가 본 "약 5 GB"는 이쪽으로 보이지만 증명되지 않았다. 렌더러의 imported 943 MiB(별칭), 장치별 "largest" 합계(imported 포함), 풍선과 보고된 빈 페이지는 어디에도 더하지 않았다. 그래픽과 영상 섹션의 페이지가 VM 작업 집합과 렌더러, 창 관리자 양쪽에 있을 수 있어 최대 256 + 64 MiB가 겹쳐 셌을 수 있다(`host_memory.rs:106-115`가 VM의 공유 작업 집합을 모두 디스크 파일로 센다).
+
+### 알려진 방법으로 줄일 수 있는 양 (약 0.5 GiB)
+
+| 항목 | MiB | 방법 | 위험 |
+|---|---|---|---|
+| 3840x3840 클라이언트 대상 | 112.5 | 호스트가 YUV 레이어 합성 | 색 정확도 |
+| 드라이버 사본 | 최대 290 | 게임이 공유 영역을 쓰게 함(먼저 쓰는지 확인) | 낮음 |
+| 앱 창 프로세스 | 약 180 | 하나로 합치거나 장치 대신 DirectComposition 표면 핸들을 넘김 | 작업 관리자의 앱 이름 |
+| DSA 설정 앱 | 150 이상 | 뷰 모델 지연 생성, 아이콘 48 px 디코딩, 최소화 때 타이머 정지, ReadyToRun 또는 `GCConserveMemory` | 낮음 |
+| 버릴 수 있는 페이지 캐시 | 110~220 | 회수 기준 조정 | 앱 전환 지연 |
+| 태스크 대상 올림 단위 512에서 256 px | 30~40 | | 크기 조절 중 재할당 증가 |
+
+그 밖에: zram을 지금 메모리에 맞춰 키우거나 VM이 커진 뒤 다시 만든다. 빈 메모리가 넉넉할 때 lmkd의 스왑 부족 기준을 완화한다(지금은 1.4 GiB가 비어 있어도 캐시 앱을 죽일 수 있다). `dsa memory`에 풍선을 보인다.
+
+### 남은 의문을 확정할 진단 (DSA에 없는 것)
+
+1. 렌더러 화면 버퍼 덤프: 버퍼마다 핸들, 크기, 형식, 만든 프로세스, 연 프로세스들, 나이, 마지막 게시 시각, hwcomposer 대상이나 클라이언트 대상인지. gfxstream의 화면 버퍼 표를 잠금 아래에서 훑으면 되고 `dsa` 명령 뒤에 둔다.
+2. 렌더러 owner 줄에 게스트 장치마다 프로세스 이름과 pid를 붙이고, imports를 화면 버퍼 들여오기와 공유 영역 허가로 나눈다.
+3. 게스트 드라이버 사본 매핑에 `PR_SET_VMA_ANON_NAME`으로 이름(`[anon:dsa-vk-copy]`)을 붙여 dumpsys와 smaps에서 앱별로 보이게 하고, mesa가 몇 분마다 프로세스별 합계를 한 줄 남긴다.
+4. 공유 영역 사용량: 커밋 최고치, 프로세스별 허가 바이트, 거절 이유별 횟수.
+5. 렌더러와 앱 창도 창 관리자처럼 메모리 내역과 GPU 메모리 수치를 로그에 남긴다.
+6. `dsa memory`가 설정 앱과 dsa-hostd를 포함하고, 사적 작업 집합(작업 관리자의 열), 풍선을 보이며, VM 공유 작업 집합에서 디스크 파일 페이지와 섹션 페이지를 나눈다.
+7. 같은 시점의 모든 값을 한 번에 모으는 스냅샷 명령(channeld 커널 로그와 렌더러 로그 포함).
+
+**결정.** 이 절은 조사다. 줄이는 작업은 1.0 뒤 메모리 작업에서 위 진단(1, 3, 6, 7)을 먼저 넣고 그 수치로 확인한 뒤 고른다. 설정 앱 메모리 줄이기는 위험이 낮아 먼저 해도 된다. SPEC은 바꾸지 않았다.
