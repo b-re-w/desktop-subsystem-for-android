@@ -27,6 +27,9 @@ nothing. Its one activity is the guest's home, which draws nothing (see "The hom
   for a task the host was not told about. `SetTaskCaption` gives a task a top status bar and
   caption bar inset as high as the title bar its host window draws over it, through a window
   container transaction's inset sources, given again whenever the task's top edge moves.
+  `CaptionCompat` names the apps the user set to start below the title bar: a task of one of
+  them gets no status bar inset and a caption bar inset the framework consumes for the app,
+  settled when the task starts, and is reported with `below_title_bar`.
 - **Status bar tone.** Each `TaskUpdated` carries what the task's app told the system about
   its status bar (light or dark icons, and its color), read from the task description, so
   the host draws its caption buttons in a tone that stays readable over it.

@@ -188,6 +188,50 @@ class CaptionInsetsTest {
     }
 
     @Test
+    fun fr22_a_task_below_the_title_bar_gets_a_consumed_caption_inset_and_no_status_bar_inset() {
+        actions.statusBarHeights = mapOf(262 to 58)
+        val at = TaskBounds(100, 40, 900, 1040)
+
+        // Told of the task before its window has opened: the band it is expected to have is
+        // already one the framework consumes for the app, so its first screen starts below it.
+        insets.update(mapOf(7 to at), awaiting = mapOf(7 to 262), opaque = setOf(7))
+        assertEquals(listOf(7 to TaskBounds(100, 40, 900, 98)), actions.captionInsets)
+        assertEquals(listOf(true), actions.captionOpaque)
+
+        // The window's own height replaces it, still consumed.
+        insets.setHeight(7, 60, at, startWidth = 40, endWidth = 138)
+        assertEquals(7 to TaskBounds(100, 40, 900, 100), actions.captionInsets.last())
+        assertEquals(true, actions.captionOpaque.last())
+
+        // A task under the unified title bar gets its band the usual way, with nothing consumed.
+        insets.update(mapOf(7 to at, 8 to at), awaiting = mapOf(7 to 262, 8 to 262), opaque = setOf(7))
+        assertEquals(8 to TaskBounds(-reach, 40, reach, 98), actions.captionInsets.last())
+        assertEquals(false, actions.captionOpaque.last())
+
+        // A window that fills the screen has no title bar: the band goes, as for any task.
+        insets.setHeight(7, 0, at)
+        assertEquals(7 to null, actions.captionInsets.last())
+    }
+
+    @Test
+    fun fr22_the_switch_wins_over_an_app_drawn_title_bar() {
+        val at = TaskBounds(100, 40, 900, 1040)
+        // The app asks to draw its own title bar, and the user set it to start below the band.
+        insets.update(mapOf(7 to at), appDrawn = setOf(7), opaque = setOf(7))
+        insets.setHeight(7, 31, at, startWidth = 40, endWidth = 138)
+
+        // The band is the host's from end to end: one bounding rectangle over all of it, not
+        // the icon's cell and the buttons with the app's space between them.
+        assertEquals(7 to TaskBounds(100, 40, 900, 71), actions.captionInsets.last())
+        assertEquals(listOf(TaskBounds(0, 0, 800, 31)), actions.captionBoundingRects.last())
+        assertEquals(true, actions.captionOpaque.last())
+
+        // A change of width moves the rectangle's end.
+        insets.update(mapOf(7 to TaskBounds(100, 40, 1100, 1040)), appDrawn = setOf(7), opaque = setOf(7))
+        assertEquals(listOf(TaskBounds(0, 0, 1000, 31)), actions.captionBoundingRects.last())
+    }
+
+    @Test
     fun fr22_an_apps_controls_in_its_title_bar_are_what_it_keeps_gestures_out_of() {
         val at = TaskBounds(100, 40, 900, 1040)
         insets.setHeight(7, 31, at, startWidth = 40, endWidth = 138)

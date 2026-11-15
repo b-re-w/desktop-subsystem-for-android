@@ -100,8 +100,17 @@ interface TaskActions {
      * inset carries [boundingRects] (relative to [frame]) as the places in it the host draws
      * over, for an app that draws its own title bar; none otherwise. False when the framework
      * has no way to give a task an inset, or refused.
+     *
+     * With [opaque] the task's app starts below the band instead: the task gets no status bar
+     * inset, and the caption bar inset is one the framework consumes for the app, which then
+     * has no top inset to handle.
      */
-    fun setCaptionInset(taskId: Int, frame: TaskBounds?, boundingRects: List<TaskBounds> = emptyList()): Boolean
+    fun setCaptionInset(
+        taskId: Int,
+        frame: TaskBounds?,
+        boundingRects: List<TaskBounds> = emptyList(),
+        opaque: Boolean = false,
+    ): Boolean
 
     /**
      * Puts the task in the freeform windowing mode at [freeformBounds], or, with null, in the
@@ -195,6 +204,9 @@ sealed interface RequestResult {
      */
     data class Placement(val placement: NewTaskPlacement?) : RequestResult
 
+    /** The apps whose tasks start below the title bar, as the host's user chose for each. */
+    data class CaptionCompat(val belowTitleBar: Set<String>) : RequestResult
+
     /** A resize or density for a task the host was never told about. */
     data class SizeRefused(val taskId: Int, val reason: String) : RequestResult
 
@@ -245,6 +257,8 @@ class HostRequests(
             Envelope.BodyCase.LAUNCH_PLACEMENT -> envelope.launchPlacement.let {
                 placement(it.densityDpi, it.width, it.height, it.monitorWidth, it.monitorHeight)
             }
+            Envelope.BodyCase.CAPTION_COMPAT ->
+                RequestResult.CaptionCompat(envelope.captionCompat.belowTitleBarList.filter { it.isNotEmpty() }.toSet())
             Envelope.BodyCase.SET_TASK_CAPTION -> caption(
                 envelope.setTaskCaption.taskId,
                 envelope.setTaskCaption.height,
