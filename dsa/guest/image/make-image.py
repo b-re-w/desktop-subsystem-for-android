@@ -586,10 +586,22 @@ DROPPED_PROPS = {"persist.adb.tcp.port", "service.adb.tcp.port"}
 #
 # The guest swaps to zram (fstab.dsa, dsa-memory.rc): idle apps' memory is kept compressed
 # rather than resident, so the host gets more of it back. lmkd decides from memory pressure
-# (PSI), and with swap it must also watch how full the swap is: it starts killing cached apps
-# once less than a tenth of the swap is free or the swap is 90% used, instead of letting the
-# guest thrash through a full zram. Thrashing past 30% of the time reclaiming counts as
-# pressure too, as on Android Go devices, which have the same small-memory, zram-backed shape.
+# (PSI), and with swap it must also watch how full the swap is: once the swap is 90% of what
+# is swappable and free memory is under the low watermark, it kills cached apps instead of
+# letting the guest thrash through a full zram. Thrashing past 30% of the time reclaiming
+# counts as pressure too, as on Android Go devices, which have the same small-memory,
+# zram-backed shape.
+#
+# swap_free_low_percentage is 0, which turns lmkd's "swap is low" off. In lmkd's
+# mp_event_psi (system/memory/lmkd, lmkd.cpp), swap_is_low feeds two kills: LOW_SWAP_AND_THRASHING
+# ("swap_is_low && thrashing > thrashing_limit_pct"), which never looks at free memory, and
+# LOW_MEM_AND_SWAP ("swap_is_low && wmark < WMARK_HIGH"). The first killed cached apps in a guest
+# with 1.4 GiB free whose zram, sized at boot, was full. Every kill that is left needs free memory
+# under a watermark (LOW_MEM_AND_SWAP_UTIL, LOW_MEM_AND_THRASHING, LOW_MEM) or the guest stalled
+# (PSI critical, direct reclaim and thrashing), so a guest really short still kills: LOW_MEM_AND_SWAP's
+# case falls to LOW_MEM_AND_SWAP_UTIL with a full swap, or to LOW_MEM, which kills cached apps
+# whenever the high watermark is breached. The second zram device for memory added after boot
+# (dsa-memory.rc) keeps the swap from filling while memory is free in the first place.
 #
 # ART keeps little free space in each process's heap: the heap is 90% full after a
 # collection, where a phone keeps it 75% full (60% on Cuttlefish's 4 GiB phone), with between
@@ -621,7 +633,7 @@ MEMORY_PROPS = {
     "sys.use_memfd": "true",
     "ro.lmk.use_psi": "true",
     "ro.lmk.use_minfree_levels": "false",
-    "ro.lmk.swap_free_low_percentage": "10",
+    "ro.lmk.swap_free_low_percentage": "0",
     "ro.lmk.swap_util_max": "90",
     "ro.lmk.thrashing_limit": "30",
     "dalvik.vm.heaptargetutilization": "0.9",
@@ -4938,6 +4950,10 @@ WRITEBACK_PROPERTY_CONTEXTS = {
         "vendor.dsa.memory.writeback_pages u:object_r:dsa_memory_prop:s0 exact int",
     "vendor.dsa.memory.writeback_after":
         "vendor.dsa.memory.writeback_after u:object_r:dsa_memory_prop:s0 exact int",
+    # The MiB of the second zram device for memory added after boot (dsa-memory.rc); the
+    # daemon sets it, and the helper init starts reads it.
+    "vendor.dsa.memory.zram_extra":
+        "vendor.dsa.memory.zram_extra u:object_r:dsa_memory_prop:s0 exact int",
     "vendor.dsa.memory.writeback_age":
         "vendor.dsa.memory.writeback_age u:object_r:dsa_memory_prop:s0 exact int",
     "persist.vendor.dsa.memory.writeback_day":
