@@ -469,6 +469,8 @@ mod daemon {
         let mut reclaimer = Reclaimer::new(ReclaimPolicy::default());
         let mut failures = ReadFailures::default();
         let mut closed = router.apps_closed();
+        // The second zram device's size last asked for, so init is asked only on a change.
+        let mut zram_extra_asked: Option<u64> = None;
         loop {
             let now_closed = router.wait_for_closed_app(closed, CHECK_INTERVAL);
             let app_closed = now_closed != closed;
@@ -501,6 +503,7 @@ mod daemon {
                     return;
                 }
             };
+            ask_for_zram_extra(&memory, &mut zram_extra_asked);
             let tasks = router.tasks_in_use();
             reclaimer.host_short(router.host_memory_low());
             // Pressure stall information is optional in the kernel: unreadable counts as busy.
@@ -617,6 +620,33 @@ mod daemon {
                     reclaim_outcome_line(&what, &before, &after, asked.elapsed())
                 );
             }
+        }
+    }
+
+    /// Asks init for a second zram device when the guest has more memory than zram0 was sized
+    /// for at boot, and for none when it is back (see `zram_grow`). zram0 not yet on asks
+    /// nothing.
+    fn ask_for_zram_extra(memory: &dsa_guest_channeld::reclaim::MemInfo, asked: &mut Option<u64>) {
+        use dsa_guest_channeld::zram_grow::{extra_mib, ZRAM_EXTRA_PROPERTY};
+        let zram0 = std::fs::read_to_string("/sys/devices/virtual/block/zram0/disksize")
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+            .unwrap_or(0);
+        if zram0 == 0 {
+            return;
+        }
+        let target = extra_mib(memory.mem_total_kb, zram0);
+        if *asked == Some(target) || (asked.is_none() && target == 0) {
+            return;
+        }
+        say!(
+            "the guest has {} MiB, zram0 swaps {} MiB: asking for a second zram device of {target} MiB",
+            memory.mem_total_kb / 1024,
+            zram0 / (1024 * 1024)
+        );
+        match set_property(ZRAM_EXTRA_PROPERTY, &target.to_string()) {
+            Ok(()) => *asked = Some(target),
+            Err(why) => say!("could not ask init for zram1: {why}"),
         }
     }
 
@@ -1034,6 +1064,13 @@ mod daemon {
             // A folder that could not be copied is not there, so init's bind of it fails and
             // Android's own folder stays in use.
             return 0;
+        }
+        if std::env::args().nth(1).as_deref() == Some("--zram-extra") {
+            use dsa_guest_channeld::zram_grow;
+            let target = read_property(zram_grow::ZRAM_EXTRA_PROPERTY)
+                .parse()
+                .unwrap_or(0);
+            return zram_grow::run(target, &say_line);
         }
         if std::env::args().nth(1).as_deref() == Some("--memory-report") {
             return dsa_guest_channeld::memory_report::run(&say_line);

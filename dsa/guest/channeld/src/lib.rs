@@ -64,6 +64,7 @@ pub mod su_relay;
 pub mod su_wire;
 pub mod webdav;
 pub mod writeback;
+pub mod zram_grow;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
