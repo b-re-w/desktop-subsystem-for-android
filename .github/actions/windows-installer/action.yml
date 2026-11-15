@@ -100,8 +100,10 @@ runs:
         VERSION: ${{ inputs.version }}
         RELEASE_TAG: ${{ inputs.release-tag }}
       run: |
-        $tag = @()
-        if ($env:RELEASE_TAG) { $tag = @('-ReleaseTag', $env:RELEASE_TAG) }
+        # A hashtable, not an array: splatting an array passes '-ReleaseTag' as a
+        # positional value, which build.ps1 then takes as -ImageDir.
+        $tag = @{}
+        if ($env:RELEASE_TAG) { $tag = @{ ReleaseTag = $env:RELEASE_TAG } }
         dsa/host/platform/windows/installer/build.ps1 -Version $env:VERSION @tag `
           -Kernel .scratch/kernel-out/bzImage -GfxstreamBackend $env:GFXSTREAM_DLL `
           -ListUrl '${{ inputs.list-url }}' `
