@@ -444,6 +444,12 @@ msgstr "Yeniden boyutlandırılabilir"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "Bu uygulamanın pencerelerinin yeniden boyutlandırılıp büyütülebilmesi. Kapalıyken her pencere açıldığı boyutta kalır."
 
+msgid "Start below the title bar"
+msgstr "Başlık çubuğunun altından başlat"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Üst çubuğu başlık çubuğunun altında sıkışan veya gizlenen uygulamalar içindir.\nUygulama, başlık çubuğunun arkasına çizmek yerine onun altından başlar.\nUygulamanın penceresi bir sonraki açılışında geçerli olur."
+
 msgid "Window size when it opens"
 msgstr "Açılırken pencere boyutu"
 

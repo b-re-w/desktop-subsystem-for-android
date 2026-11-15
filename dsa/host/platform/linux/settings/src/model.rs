@@ -803,10 +803,14 @@ pub struct AppWindow {
     /// Where the app shows a clear full screen request, and its bars hidden alone.
     pub fullscreen: FullScreenPlace,
     pub immersive: FullScreenPlace,
+    /// Whether the app starts below the title bar instead of drawing behind it. Off from a
+    /// `dsa` that does not name it.
+    pub below_title_bar: bool,
 }
 
 /// Every app's window settings, whether this build of Android scales an app the System
-/// (forced) way yet, and the apps whose automatic choice is System.
+/// (forced) way yet, the apps whose automatic choice is System, and the apps that start below
+/// the title bar unless the user chose otherwise.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AppWindows {
     pub apps: Vec<AppWindow>,
@@ -814,6 +818,9 @@ pub struct AppWindows {
     /// DSA's built-in list of apps that break when their density changes while they run, so
     /// that their automatic choice is System. Empty from a `dsa` that does not name it.
     pub system_scaled_by_default: Vec<String>,
+    /// DSA's built-in list of apps that start below the title bar unless the user chose
+    /// otherwise. Empty from a `dsa` that does not name it.
+    pub below_title_bar_by_default: Vec<String>,
 }
 
 impl AppWindow {
@@ -837,6 +844,7 @@ impl AppWindow {
                 json["immersive"].as_str().unwrap_or_default(),
                 FullScreenPlace::Default,
             ),
+            below_title_bar: flag(json, "below_title_bar", false),
         }
     }
 }
@@ -2225,16 +2233,27 @@ impl Client {
     /// A `dsa` that does not say counts as one whose Android cannot.
     pub fn app_window_list(&self) -> Result<AppWindows, Failure> {
         let json = self.json(&["app-window"])?;
-        Ok(AppWindows {
-            apps: items(&json, "apps").iter().map(AppWindow::read).collect(),
-            system_forced_available: flag(&json, "system_forced_available", false),
-            system_scaled_by_default: items(&json, "system_scaled_by_default")
+        let packages = |name: &str| -> Vec<String> {
+            items(&json, name)
                 .iter()
                 .filter_map(|package| package.as_str())
                 .filter(|package| !package.is_empty())
                 .map(str::to_string)
-                .collect(),
+                .collect()
+        };
+        Ok(AppWindows {
+            apps: items(&json, "apps").iter().map(AppWindow::read).collect(),
+            system_forced_available: flag(&json, "system_forced_available", false),
+            system_scaled_by_default: packages("system_scaled_by_default"),
+            below_title_bar_by_default: packages("below_title_bar_by_default"),
         })
+    }
+
+    /// Starts an app below the title bar (`on`) or lets it draw behind it; its other window
+    /// settings stay as they are.
+    pub fn set_app_below_title_bar(&self, package: &str, on: bool) -> Result<(), Failure> {
+        self.json(&["app-window", package, "--below-title-bar", on_off(on)])
+            .map(|_| ())
     }
 
     /// Changes an app's window settings: whether it may be resized, the size it opens at

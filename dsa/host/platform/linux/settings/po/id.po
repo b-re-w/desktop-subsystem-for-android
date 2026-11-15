@@ -444,6 +444,12 @@ msgstr "Dapat diubah ukurannya"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "Apakah jendela aplikasi ini dapat diubah ukurannya dan dimaksimalkan. Jika nonaktif, setiap jendela tetap pada ukuran saat dibuka."
 
+msgid "Start below the title bar"
+msgstr "Mulai di bawah bilah judul"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Untuk aplikasi yang bilah atasnya terimpit atau tertutup oleh bilah judul.\nAplikasi dimulai di bawah bilah judul, bukan menggambar di belakangnya.\nBerlaku saat jendela aplikasi dibuka berikutnya."
+
 msgid "Window size when it opens"
 msgstr "Ukuran jendela saat dibuka"
 

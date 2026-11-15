@@ -638,6 +638,13 @@ pub fn full_screen_indexes(window: Option<&AppWindow>) -> (usize, usize) {
     }
 }
 
+/// Whether an app's "Start below the title bar" switch shows on: the app's own setting, or,
+/// for an app the user chose nothing for, whether it is on DSA's built-in list of apps that
+/// start below the title bar (`by_default`).
+pub fn starts_below_title_bar(window: Option<&AppWindow>, by_default: bool) -> bool {
+    window.map_or(by_default, |window| window.below_title_bar)
+}
+
 /// What an app's "Run as ARM" switch shows: whether it is on, whether it can be changed, and
 /// what its row says under its title.
 #[derive(Debug, Clone, PartialEq, Eq)]

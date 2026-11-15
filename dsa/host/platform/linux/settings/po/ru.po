@@ -444,6 +444,12 @@ msgstr "Изменяемый размер"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "Можно ли менять размер окон этого приложения и разворачивать их. Если выключено, окно остаётся в том размере, в котором открылось."
 
+msgid "Start below the title bar"
+msgstr "Начинать под строкой заголовка"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Для приложений, у которых верхняя панель сжимается или скрывается под строкой заголовка.\nПриложение начинается под строкой заголовка, а не рисует позади неё.\nПрименяется при следующем открытии окна приложения."
+
 msgid "Window size when it opens"
 msgstr "Размер окна при открытии"
 
