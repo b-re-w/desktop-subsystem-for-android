@@ -110,6 +110,26 @@ fn fr30_the_below_title_bar_switch_is_read_and_changed() {
 }
 
 #[test]
+fn fr30_an_option_row_shows_the_first_line_of_its_explanation() {
+    // The row's subtitle is the first line; the whole text is the row's tool tip.
+    assert_eq!(
+        view::first_line(
+            "For apps whose top bar is squeezed.\nThe app starts below the title bar."
+        ),
+        "For apps whose top bar is squeezed."
+    );
+    assert_eq!(
+        view::first_line("Who scales this app.\r\n• App: redraws"),
+        "Who scales this app."
+    );
+    assert_eq!(
+        view::first_line("The size this app's windows open at"),
+        "The size this app's windows open at"
+    );
+    assert_eq!(view::first_line(""), "");
+}
+
+#[test]
 fn fr30_an_app_on_the_built_in_list_starts_below_the_title_bar_until_the_user_says_otherwise() {
     let fake = Fake::new(&[
         (
