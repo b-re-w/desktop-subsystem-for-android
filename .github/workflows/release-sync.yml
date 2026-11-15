@@ -3,17 +3,18 @@
 # `main` is protected, so nothing pushes to it directly. This workflow rebuilds the
 # `release` branch from develop with .github/scripts/release/sync-release.sh (which drops the internal
 # planning documents) and opens a pull request from release into main. A human merges it.
+# It runs only by hand (workflow_dispatch), on develop.
 #
 # `main` is always an ancestor of `release`, so merging that pull request leaves main with
 # exactly the tree the script produced.
 name: Release sync
 
 on:
-  # develop on purpose, and the one workflow that should watch it. This is not a check on
-  # develop; it is the thing that turns develop into the published branch, so it has to
-  # run where the work lands.
-  push:
-    branches: [develop]
+  # Paused by the owner's decision (2026-11-16): nothing on develop starts on a push, so
+  # the release branch and its pull request into main are rebuilt only when this is started
+  # by hand on develop. Uncomment to resume.
+  # push:
+  #   branches: [develop]
   workflow_dispatch:
 
 permissions:
