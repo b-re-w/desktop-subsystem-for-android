@@ -385,19 +385,15 @@ unsafe fn open(setup: &UiSetup, beside: Option<HWND>, task_id: i32, title: &str,
     let Some(data) = data_of(hwnd) else {
         return;
     };
-    if let Err(why) = data.ime.attach(hwnd) {
-        note(
-            setup.logger.as_deref(),
-            &format!("overlay {task_id}'s window takes no input method: {why}"),
-        );
-    }
+    // Its document is made once the guest reports an editor that takes text in it.
+    data.ime.attach(hwnd);
     // Its frames are shown in it as they come, at its scale, see-through where the app drew
     // nothing; the window itself takes the size the window manager says.
     data.pointer.set_held(true);
-    if let Some(gpu) = &setup.gpu {
+    {
         match WindowPresenter::new_see_through(
             task_id,
-            Arc::clone(gpu),
+            Arc::clone(&setup.surfaces),
             hwnd as isize,
             size,
             setup.logger.clone(),

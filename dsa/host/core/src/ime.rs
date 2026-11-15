@@ -385,6 +385,14 @@ pub struct ImeEditor {
 }
 
 impl ImeEditor {
+    /// Whether a window showing this editor needs a text services document: only once the
+    /// guest reports an editor that takes text. Until then the window makes none, and keeps
+    /// the text services framework unloaded, which saves an app that never takes text the
+    /// memory of the framework and of the input methods it loads. Keys still type without it.
+    pub fn needs_text_document(&self) -> bool {
+        self.kind != InputKind::None
+    }
+
     /// No editor takes text in the task.
     pub fn none() -> ImeEditor {
         ImeEditor {
@@ -1020,6 +1028,17 @@ mod tests {
 #[cfg(test)]
 mod editor_tests {
     use super::*;
+
+    #[test]
+    fn fr6_nfr2_text_services_start_only_for_an_editor_that_takes_text() {
+        assert!(!ImeEditor::none().needs_text_document());
+        assert!(editor("", 0, (0, 0)).needs_text_document());
+        let password = ImeEditor {
+            kind: InputKind::Password,
+            ..editor("", 0, (0, 0))
+        };
+        assert!(password.needs_text_document());
+    }
 
     fn editor(text: &str, start: u32, selection: (u32, u32)) -> ImeEditor {
         ImeEditor {

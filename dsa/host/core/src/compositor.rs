@@ -32,6 +32,7 @@ pub mod resize_latency;
 pub mod resize_pacing;
 pub mod shown_windows;
 pub mod splash;
+pub mod surface_calls;
 pub mod task_windows;
 pub mod visible_change;
 pub mod window_hosts;
