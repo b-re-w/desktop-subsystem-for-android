@@ -12,6 +12,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::program::ReleaseChannel;
+
 /// `dsa/android-versions.json`, as it was when this build was made.
 pub const SUPPORTED_LIST: &str = include_str!("../../../../android-versions.json");
 
@@ -103,25 +105,125 @@ pub fn major_of_version(version: &str) -> Option<u32> {
     digits.parse().ok()
 }
 
-/// The number of the development build an image version names: `7` in
-/// `17.0.0-16373615-15-dev.7`. The Development build workflow makes such images for testing on
-/// one computer and never publishes them. `None` for a released image.
-pub fn development_build_of(version: &str) -> Option<u64> {
-    let (_, number) = version.trim().rsplit_once("-dev.")?;
-    if number.is_empty() || !number.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    number.parse().ok()
+/// DSA's own revision of an image, read from its version
+/// (`<android>-<build id>-<revision>[-dev.<k>][-<arch>]`). The revision says the release
+/// channel the image was made for:
+///
+/// - a stable image is `-<n>` (`17.0.0-16373615-15`);
+/// - a pre-release image is `-<n>.<m>` (`17.0.0-16373615-15.1`), made on top of the stable
+///   `-<n>` and before the next stable `-<n+1>`;
+/// - a development build is `-<n>.<m>-dev.<k>` (or `-<n>-dev.<k>` from before the channels),
+///   made for testing on one computer and never published.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ImageRevision {
+    /// The `<n>`: the stable revision the image is made on.
+    pub revision: u64,
+    /// The `<m>` of a pre-release (`-<n>.<m>`); 0 for a stable image.
+    pub prerelease: u64,
+    /// The `<k>` of a development build (`-dev.<k>`); `None` for a published image.
+    pub development: Option<u64>,
 }
 
-/// How images are ordered, newest last: by major version, then build, and within one build a
+impl ImageRevision {
+    /// Whether the image is a stable release: neither a pre-release nor a development build.
+    pub fn is_stable(&self) -> bool {
+        self.prerelease == 0 && self.development.is_none()
+    }
+}
+
+/// A whole number written in ASCII digits only.
+fn whole_number(text: &str) -> Option<u64> {
+    if text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    text.parse().ok()
+}
+
+/// The revision an image version names ([`ImageRevision`]). `None` for a version not in the
+/// form `<android>-<build id>-<revision>...`, such as a name a test made up.
+pub fn image_revision_of(version: &str) -> Option<ImageRevision> {
+    let mut fields = version.trim().split('-');
+    let _android = fields.next()?;
+    whole_number(fields.next()?)?;
+    let label = fields.next()?;
+    let (revision, prerelease) = match label.split_once('.') {
+        Some((n, m)) => (whole_number(n)?, whole_number(m)?),
+        None => (whole_number(label)?, 0),
+    };
+    let mut development = None;
+    for field in fields {
+        if let Some(k) = field.strip_prefix("dev.") {
+            development = Some(whole_number(k)?);
+        }
+    }
+    Some(ImageRevision {
+        revision,
+        prerelease,
+        development,
+    })
+}
+
+/// The number of the development build an image version names: `7` in
+/// `17.0.0-16373615-15.1-dev.7` (and in `17.0.0-16373615-15-dev.7`, from before the
+/// channels). The Development build workflow makes such images for testing on one computer
+/// and never publishes them. `None` for a released image.
+pub fn development_build_of(version: &str) -> Option<u64> {
+    if let Some(revision) = image_revision_of(version) {
+        return revision.development;
+    }
+    let (_, number) = version.trim().rsplit_once("-dev.")?;
+    whole_number(number)
+}
+
+/// Whether an image version is a stable release, which a computer on the stable channel
+/// takes: not a pre-release (`-<n>.<m>`) and not a development build (`-dev.<k>`). A version
+/// in another form is stable unless it ends in `-dev.<k>`.
+pub fn is_stable_image(version: &str) -> bool {
+    match image_revision_of(version) {
+        Some(revision) => revision.is_stable(),
+        None => development_build_of(version).is_none(),
+    }
+}
+
+/// Whether a computer on the release channel `release` takes the image `version` from a
+/// published list: on the stable channel stable images only, on the pre-release channel
+/// stable and pre-release images. Development builds are never published, so a list that
+/// names one is not followed on either channel; they are installed from a folder instead.
+pub fn channel_takes_image(release: ReleaseChannel, version: &str) -> bool {
+    match release {
+        ReleaseChannel::Stable => is_stable_image(version),
+        ReleaseChannel::Prerelease => development_build_of(version).is_none(),
+    }
+}
+
+/// The address of the pre-release image list beside the stable one at `stable`: the release
+/// publishes `images-prerelease.json` beside `images.json`, and
+/// `images-prerelease-arm64.json` beside `images-arm64.json`. `None` for a list of another
+/// name, such as a folder a development build left, which has no pre-release list.
+pub fn prerelease_image_list_url(stable: &str) -> Option<String> {
+    for (name, prerelease) in [
+        ("images-arm64.json", "images-prerelease-arm64.json"),
+        ("images.json", "images-prerelease.json"),
+    ] {
+        if let Some(base) = stable.strip_suffix(name) {
+            if base.is_empty() || base.ends_with(['/', '\\']) {
+                return Some(format!("{base}{prerelease}"));
+            }
+        }
+    }
+    None
+}
+
+/// How images are ordered, newest last: by major version, then build (which carries the
+/// stable revision `<n>`), then the pre-release `<m>` (0 for stable), and within one of those a
 /// released image after every development build of it, and development builds by their
-/// number. A development build takes the revision after the newest released one, so the
-/// release that later takes that revision replaces it, and a newer development build of the
-/// same revision replaces an older one.
-pub fn image_order(android_major: u32, build: u64, version: &str) -> (u32, u64, u64) {
+/// number. So `-15` < `-15.1-dev.k` < `-15.1` < `-15.2` < `-16`: a development build is
+/// replaced by the release it leads up to, and a newer development build of the same revision
+/// replaces an older one.
+pub fn image_order(android_major: u32, build: u64, version: &str) -> (u32, u64, u64, u64) {
+    let prerelease = image_revision_of(version).map_or(0, |revision| revision.prerelease);
     let within = development_build_of(version).map_or(u64::MAX, |n| n.min(u64::MAX - 1));
-    (android_major, build, within)
+    (android_major, build, prerelease, within)
 }
 
 /// What a user sees of the Android version: what runs, what is chosen, and what can be.

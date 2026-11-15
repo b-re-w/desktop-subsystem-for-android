@@ -34,9 +34,12 @@ Installing needs an administrator. Run from a PowerShell started as administrato
 the script downloads and checks first, then starts itself again as administrator (Windows
 asks for consent) for the installation, and shows what it printed.
 
-The image's version ends in -dev.<run number> and the installer's version is
-<next release>-dev.<run number>, so neither is taken for a release. The release that comes
-next is newer than both, so the computer takes it as an ordinary update.
+The image's version is the next pre-release revision with -dev.<run number> after it
+(17.0.0-16373615-15.1-dev.<run number>) and the installer's version is
+<next pre-release>-dev.<run number> (1.0.1-dev.<run number>), so neither is taken for a
+release. The pre-release that comes next is newer than both, so a computer on the
+pre-release channel takes it as an ordinary update; one on the stable channel waits for the
+next stable release.
 
 .PARAMETER Run
 The run ID of a Development build (gh run list --workflow dev-build.yml). Without it, the

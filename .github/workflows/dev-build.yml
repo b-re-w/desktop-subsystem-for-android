@@ -11,11 +11,12 @@
 #   development-image-list   images.json and images.json.sig, the signed list naming them
 #   development-installer    DSA-v<version>-win-x64-setup.exe, SHA256SUMS.txt and the
 #                            kernel's source
-# The installer's version is <next release>-dev.<run number> (0.2.4-dev.12): newer than the
-# release before it, older than the release it leads up to, which then reaches the computer
-# as an ordinary update. The image's version is the next unpublished revision with
-# -dev.<run number> after it (17.0.0-16373615-15-dev.12): newer than the installed image,
-# and older than the release of that revision.
+# The installer's version is <next pre-release>-dev.<run number> (1.0.1-dev.12 after the
+# stable 1.0.0): newer than the release before it, older than the pre-release it leads up
+# to, which then reaches the computer as an ordinary update. The image's version is the next
+# pre-release revision with -dev.<run number> after it (17.0.0-16373615-15.1-dev.12 after the
+# stable -15): newer than the installed image, and older than the pre-release of that
+# revision.
 #
 # By default it makes only what changed since the last Development build that made each
 # part (.github/scripts/release/dev-build-plan.sh): a host change makes the installer alone
@@ -78,9 +79,9 @@ on:
         required: false
         default: auto
       next_release:
-        description: "The release this build leads up to; the installer's version is <next_release>-dev.<run number>"
+        description: "The pre-release this build leads up to (X.Y.Z, Z above 0); empty for the next one after the published releases. The installer's version is <next_release>-dev.<run number>"
         required: false
-        default: "0.2.4"
+        default: ""
 
 # A build in progress always finishes, and only the newest waiting one stays: GitHub keeps
 # one pending run per group, so a newer run replaces the one still waiting. The group is the
@@ -114,16 +115,30 @@ jobs:
         id: version
         env:
           REF: ${{ github.ref }}
-          NEXT: ${{ inputs.next_release || '0.2.4' }}
+          NEXT: ${{ inputs.next_release }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [[ "$REF" != refs/heads/develop ]]; then
             echo "::error::A Development build is made from develop only, not from $REF." >&2
             exit 1
           fi
-          if [[ ! "$NEXT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::next_release is a release version such as 0.2.4, not $NEXT." >&2
-            exit 1
+          # A development build is <major>.<minor>.<patch>-dev.<run number>, where X.Y.Z is
+          # the pre-release it leads up to: the newest stable release's X.Y with the patch
+          # after every one published on it (1.0.1 after 1.0.0). The official repository's
+          # releases decide it, also in a fork, as installed DSA reads its releases.
+          official="$(.github/scripts/release/official-repository.sh)"
+          gh api --paginate "repos/$official/releases?per_page=100" --jq '.[].tag_name' > "$RUNNER_TEMP/tags.txt"
+          if [[ -z "$NEXT" ]]; then
+            NEXT="$(.github/scripts/release/check-release-version.sh next prerelease < "$RUNNER_TEMP/tags.txt")"
+          elif ! .github/scripts/release/check-release-version.sh check "$NEXT" prerelease < "$RUNNER_TEMP/tags.txt" 2> "$RUNNER_TEMP/why.txt"; then
+            # Or the next stable release, such as 1.1.0.
+            if ! .github/scripts/release/check-release-version.sh check "$NEXT" stable < "$RUNNER_TEMP/tags.txt"; then
+              cat "$RUNNER_TEMP/why.txt" >&2
+              echo "::error::next_release $NEXT is neither the next pre-release nor a next stable release." >&2
+              exit 1
+            fi
           fi
+          echo "the build leads up to $NEXT"
           echo "installer_version=$NEXT-dev.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Decide what changed since the last Development build

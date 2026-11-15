@@ -91,7 +91,11 @@ pub fn default_true() -> bool {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateSettings {
-    /// The signed release list. Its signature is at the same URL plus `.sig`.
+    /// The signed image list of the stable channel (`images.json`, or `images-arm64.json` on
+    /// an ARM64 host), which names stable images only. Its signature is at the same URL plus
+    /// `.sig`. A computer on the pre-release channel reads the pre-release list published
+    /// beside it (`images-prerelease.json`, `images-prerelease-arm64.json`) instead, and this
+    /// one while that cannot be fetched.
     pub list_url: String,
     /// Public keys, 32 bytes in hexadecimal, any of which may sign the list.
     pub trusted_keys: Vec<String>,
