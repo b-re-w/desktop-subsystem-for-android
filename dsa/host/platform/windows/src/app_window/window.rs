@@ -69,11 +69,11 @@ use dsa_host_core::tasks::LaunchPlacement;
 use windows_sys::Win32::Foundation::{
     GetLastError, ERROR_CLASS_ALREADY_EXISTS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM,
 };
-use windows_sys::Win32::Graphics::Gdi::ScreenToClient;
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, EndPaint, GetMonitorInfoW, MonitorFromPoint, MonitorFromRect, MonitorFromWindow,
     MONITORINFO, MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
 };
+use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, ScreenToClient};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::HiDpi::{
     GetDpiForMonitor, GetDpiForWindow, SetProcessDpiAwarenessContext, SetThreadDpiAwarenessContext,
@@ -986,56 +986,58 @@ unsafe extern "system" fn task_window_proc(
                     }
                 }
             }
-            // A per-monitor aware window is handed the rectangle that keeps its size in
-            // points on the new monitor, and takes it at once (keep_to_frame), within what
-            // Android can draw and the new monitor's work area. The guest's display can be
-            // larger than any monitor, and a window larger than its monitor reaches onto the
-            // next one, which can change its scale again.
+            // A window moved to a monitor of another scale keeps its size in pixels, while the
+            // user drags it and after: the rectangle Windows suggests, which keeps its size in
+            // points, is not taken. Its task keeps its size too, and only takes the new
+            // monitor's density once the move ends, so the app lays itself out again in the
+            // same window. Only the invisible resize borders are measured at the new scale:
+            // the client area keeps its size and its place on the screen, so nothing the user
+            // sees moves or changes size. And with the window's size fixed, which monitor it
+            // is on follows the pointer alone, rather than a size that would move it back.
             let suggested = &*(lparam as *const RECT);
             let zoomed = IsZoomed(hwnd) != 0;
-            let mut limit = (i32::MAX, i32::MAX);
             // A window that holds the size the desktop gives it (maximised, snapped, full
-            // screen) takes the suggested size whole, and shows the largest frame Android draws
-            // in its middle.
-            let held = zoomed || data.is_some_and(|data| data.held.get());
-            if let Some(max) = data
-                .and_then(|data| data.max_client.get())
-                .filter(|_| !held)
-            {
-                limit = outer_size(max, dpi.max(96), zoomed);
-            }
-            // A maximized window is kept to its monitor by Windows, and one that fills its
-            // monitor covers more than the work area.
-            if !zoomed && data.is_some_and(titled) {
-                if let Some(work) = work_area(suggested) {
-                    limit = (
-                        limit.0.min(work.right - work.left),
-                        limit.1.min(work.bottom - work.top),
-                    );
+            // screen) takes the suggested rectangle, the desktop's place for it on the new
+            // monitor, and shows the largest frame Android draws in its middle.
+            let held = zoomed || data.is_some_and(|data| data.held.get() || !titled(data));
+            let rect = if held {
+                let mut limit = (i32::MAX, i32::MAX);
+                // A maximized window is kept to its monitor by Windows, and one that fills its
+                // monitor covers more than the work area.
+                if !zoomed && data.is_some_and(titled) {
+                    if let Some(work) = work_area(suggested) {
+                        limit = (work.right - work.left, work.bottom - work.top);
+                    }
                 }
-            }
-            let (x, y, width, height) = rescaled_rect(
-                (
-                    suggested.left,
-                    suggested.top,
-                    suggested.right - suggested.left,
-                    suggested.bottom - suggested.top,
-                ),
-                limit,
-            );
+                Some(rescaled_rect(
+                    (
+                        suggested.left,
+                        suggested.top,
+                        suggested.right - suggested.left,
+                        suggested.bottom - suggested.top,
+                    ),
+                    limit,
+                ))
+            } else {
+                same_client_rect(hwnd, dpi.max(96))
+            };
             if let Some(data) = data {
                 data.self_sizing.set(true);
-                data.rescaling.set(true);
+                data.rescaling.set(held);
             }
-            SetWindowPos(
-                hwnd,
-                std::ptr::null_mut(),
-                x,
-                y,
-                width,
-                height,
-                SWP_NOZORDER | SWP_NOACTIVATE,
-            );
+            if let Some((x, y, width, height)) = rect {
+                // A frame change, so the client area is laid out with the new borders even
+                // when the outer size comes out the same.
+                SetWindowPos(
+                    hwnd,
+                    std::ptr::null_mut(),
+                    x,
+                    y,
+                    width,
+                    height,
+                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                );
+            }
             if let Some(data) = data {
                 data.rescaling.set(false);
                 data.self_sizing.set(false);
@@ -1403,6 +1405,39 @@ unsafe fn outer_size(client: (u32, u32), dpi: u32, maximized: bool) -> (i32, i32
         client.0 as i32 + left + right,
         client.1 as i32 + top + bottom,
     )
+}
+
+/// Where `hwnd`, which moved onto a monitor of `dpi`, goes and how large it is there (left,
+/// top, width, height, all of its outer rectangle) when it keeps the size and the place of
+/// its client area: only its invisible resize borders take the width they have at the new
+/// scale. `None` when that is the rectangle it has, or it has no client area to keep.
+unsafe fn same_client_rect(hwnd: HWND, dpi: u32) -> Option<(i32, i32, i32, i32)> {
+    let mut window: RECT = std::mem::zeroed();
+    let mut client: RECT = std::mem::zeroed();
+    if GetWindowRect(hwnd, &mut window) == 0 || GetClientRect(hwnd, &mut client) == 0 {
+        return None;
+    }
+    let mut origin = POINT { x: 0, y: 0 };
+    if ClientToScreen(hwnd, &mut origin) == 0 {
+        return None;
+    }
+    let size = (
+        (client.right - client.left).max(0) as u32,
+        (client.bottom - client.top).max(0) as u32,
+    );
+    if size.0 == 0 || size.1 == 0 {
+        return None;
+    }
+    let (left, top, _, _) = task_frame(TASK_STYLE, TASK_EX_STYLE, dpi, false);
+    let (width, height) = outer_size(size, dpi, false);
+    let rect = (origin.x - left, origin.y - top, width, height);
+    let now = (
+        window.left,
+        window.top,
+        window.right - window.left,
+        window.bottom - window.top,
+    );
+    (rect != now).then_some(rect)
 }
 
 /// The outer size of `hwnd` with a client area of `client` pixels at `dpi`: the client area
