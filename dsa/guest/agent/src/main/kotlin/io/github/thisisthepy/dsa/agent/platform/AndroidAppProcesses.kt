@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.provider.DeviceConfig
 import android.provider.Settings
 import io.github.thisisthepy.dsa.agent.memory.AppProcesses
+import io.github.thisisthepy.dsa.agent.memory.GuestMemInfo
+import io.github.thisisthepy.dsa.agent.memory.PackageMemory
 import java.io.File
 
 /**
@@ -81,9 +83,36 @@ class AndroidAppProcesses(context: Context) : AppProcesses {
         }
     }
 
-    override fun freeKb(): Long =
+    override fun memory(): GuestMemInfo? {
+        val fields = HashMap<String, Long>()
         File("/proc/meminfo").useLines { lines ->
-            lines.firstOrNull { it.startsWith("MemFree:") }
-                ?.substringAfter(':')?.trim()?.substringBefore(' ')?.toLongOrNull() ?: 0L
+            for (line in lines) {
+                val name = line.substringBefore(':')
+                if (name != "MemTotal" && name != "MemFree" && name != "MemAvailable") continue
+                line.substringAfter(':').trim().substringBefore(' ').toLongOrNull()?.let { fields[name] = it }
+            }
         }
+        return GuestMemInfo(
+            totalKb = fields["MemTotal"] ?: return null,
+            freeKb = fields["MemFree"] ?: return null,
+            availableKb = fields["MemAvailable"] ?: return null,
+        )
+    }
+
+    /**
+     * The package's processes from `getRunningAppProcesses` (every process, as the agent holds
+     * REAL_GET_TASKS), by process name: the package's own and `<package>:<name>`. What they hold
+     * is `getProcessMemoryInfo`, which the agent, a privileged app, may ask of any process.
+     */
+    override fun packageMemory(packageName: String): PackageMemory {
+        val pids = activities.runningAppProcesses.orEmpty()
+            .filter { it.processName == packageName || it.processName.startsWith("$packageName:") }
+            .map { it.pid }
+            .sorted()
+        if (pids.isEmpty()) return PackageMemory(emptyList(), 0, 0)
+        val info = activities.getProcessMemoryInfo(pids.toIntArray())
+        val pss = info.sumOf { it.totalPss.toLong() }
+        val swapped = info.sumOf { SwapPss.of(it).coerceIn(0, it.totalPss.toLong().coerceAtLeast(0)) }
+        return PackageMemory(pids, pss, swapped)
+    }
 }

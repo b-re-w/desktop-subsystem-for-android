@@ -3,6 +3,20 @@ package io.github.thisisthepy.dsa.agent.memory
 import io.github.thisisthepy.dsa.agent.Log
 import io.github.thisisthepy.dsa.agent.Scheduler
 
+/**
+ * The guest's memory as the kernel counts it (/proc/meminfo), in KiB: all it has (MemTotal,
+ * which falls when the host takes memory back from the VM), what is free (MemFree, which free
+ * page reporting hands to the host) and what could be had without swapping (MemAvailable).
+ */
+data class GuestMemInfo(val totalKb: Long, val freeKb: Long, val availableKb: Long)
+
+/**
+ * What one app's running processes hold: their IDs, their PSS together and the part of it
+ * swapped out to zram, in KiB. Memory the app holds in the host's graphics renderer (its
+ * textures and buffers) is the host's and not in it.
+ */
+data class PackageMemory(val pids: List<Int>, val pssKb: Long, val swappedOutKb: Long)
+
 /** The guest's app processes, as far as ending a closed app needs them. */
 interface AppProcesses {
     /** Whether the app runs a foreground service: music, a call, a download the user sees. */
@@ -11,8 +25,14 @@ interface AppProcesses {
     /** Ends every process of the app, as "am force-stop" does. */
     fun stop(packageName: String)
 
-    /** The guest's free memory now, in KiB (MemFree), which is what the host can get back. */
-    fun freeKb(): Long
+    /** The guest's memory now; null when it cannot be read. */
+    fun memory(): GuestMemInfo?
+
+    /**
+     * The app's running processes (the package's own and `<package>:<name>`) and what they
+     * hold; empty when none runs, null when that cannot be read.
+     */
+    fun packageMemory(packageName: String): PackageMemory? = null
 
     /** Turns the app off if it is installed and on. True when it was turned off now. */
     fun disable(packageName: String): Boolean
@@ -24,7 +44,7 @@ interface AppProcesses {
         val NONE = object : AppProcesses {
             override fun hasForegroundService(packageName: String) = false
             override fun stop(packageName: String) = Unit
-            override fun freeKb() = 0L
+            override fun memory(): GuestMemInfo? = null
             override fun disable(packageName: String) = false
             override fun limitCachedProcesses(max: Int) = Unit
         }
@@ -42,8 +62,15 @@ interface AppProcesses {
  * desktop, or one running a foreground service (playing music, for example). The host's Stop
  * ([stop] with `force`) ends even those.
  *
- * Each end is logged as `closed <package>: returned N MiB in T ms`, N being how much more
- * memory is free [settleMillis] later than just before.
+ * What the app held is read before anything ends it: when the host closes the app's last
+ * window ([closing], before the task is removed, since removing it already ends the app's
+ * processes), or else just before the processes are ended. [settleMillis] later one line says
+ * what went: `closed <package>: its N processes held P MiB (PSS, Z MiB of it in zram) and
+ * ended; the guest's free memory rose F MiB (available memory A MiB) in T ms, counted from the
+ * window's close`. When the VM itself shrank meanwhile (the host took memory back), that part
+ * is named too, since memory the host took is not free in the guest any more. A process of the
+ * app still running then is named with its ID. The app's memory in the host's graphics renderer
+ * is not in these figures: the renderer frees it as the app's connections close and logs that.
  *
  * Not thread safe: the agent calls it from its scheduler's thread.
  */
@@ -57,6 +84,11 @@ class ClosedApps(
 ) {
     private var open: Set<String> = emptySet()
 
+    /** What an app held when its last window began to close, by package. */
+    private class Before(val at: Long, val guest: GuestMemInfo?, val app: PackageMemory?, val fromClose: Boolean)
+
+    private val closing = HashMap<String, Before>()
+
     /**
      * Sets the guest up for a desktop at the agent's start: few cached processes, and the
      * phone-only apps that start by themselves turned off.
@@ -64,6 +96,7 @@ class ClosedApps(
     fun configure() {
         try {
             processes.limitCachedProcesses(MAX_CACHED_PROCESSES)
+            log.info("the activity manager keeps at most $MAX_CACHED_PROCESSES cached processes")
         } catch (e: Exception) {
             log.warn("could not limit the cached processes", e)
         }
@@ -76,11 +109,23 @@ class ClosedApps(
         }
     }
 
+    /**
+     * The host is closing [packageName]'s last task window: what the app and the guest hold is
+     * read now, before the task's removal ends the app's processes, so the line logged once the
+     * app has ended counts what the close gave back.
+     */
+    fun closing(packageName: String) {
+        closing.keys.removeAll { closing.getValue(it).at + BEFORE_KEPT_MILLIS < clock() }
+        closing[packageName] = Before(clock(), guestOrNull(), appOrNull(packageName), fromClose = true)
+    }
+
     /** Takes the packages that have a task window now; ends those that had one and have not. */
     fun tasks(packages: Set<String>) {
         val closed = open - packages
         open = packages
         for (packageName in closed) stop(packageName, force = false)
+        // A close that left the app a window (another task of it) is forgotten.
+        closing.keys.retainAll { it !in packages }
     }
 
     /**
@@ -99,12 +144,13 @@ class ClosedApps(
                 "whether it is still in use could not be read"
             }
             if (keep != null) {
+                closing.remove(packageName)
                 log.info("closed $packageName: kept running because $keep")
                 return false
             }
         }
-        val before = freeOrNull()
-        val started = clock()
+        val before = closing.remove(packageName)?.takeIf { it.at + BEFORE_KEPT_MILLIS >= clock() }
+            ?: Before(clock(), guestOrNull(), appOrNull(packageName), fromClose = false)
         try {
             processes.stop(packageName)
         } catch (e: Exception) {
@@ -112,20 +158,64 @@ class ClosedApps(
             return false
         }
         scheduler.postDelayed(settleMillis) {
-            val after = freeOrNull()
-            val returned = if (before != null && after != null) ((after - before).coerceAtLeast(0) / 1024).toString() else "?"
-            log.info("closed $packageName: returned $returned MiB in ${clock() - started} ms")
+            val left = appOrNull(packageName)
+            log.info(line(packageName, before, guestOrNull(), left))
+            // A process that outlived the end (one the system started again for a broadcast, or
+            // one that was starting as the app was ended) is ended once more, unless the app has
+            // a window again.
+            if (!left?.pids.isNullOrEmpty() && packageName !in open) {
+                try {
+                    processes.stop(packageName)
+                } catch (e: Exception) {
+                    log.warn("closed $packageName: its processes could not be ended again", e)
+                }
+            }
         }
         return true
     }
 
-    private fun freeOrNull(): Long? = try {
-        processes.freeKb()
+    /** The line that says what ending [packageName] gave back, from [before] to [guest] and [left]. */
+    private fun line(packageName: String, before: Before, guest: GuestMemInfo?, left: PackageMemory?): String {
+        val held = before.app
+        val ended = when {
+            held == null -> "what its processes held could not be read"
+            held.pids.isEmpty() -> "none of its processes was running"
+            else -> "its ${held.pids.size} process${if (held.pids.size == 1) "" else "es"} held " +
+                "${held.pssKb / 1024} MiB (PSS, ${held.swappedOutKb / 1024} MiB of it in zram) and ended"
+        }
+        val counted = if (before.fromClose) "counted from the window's close" else "counted from the end of its processes"
+        val then = before.guest
+        val change = if (then == null || guest == null) {
+            "the guest's memory could not be read"
+        } else {
+            val free = (guest.freeKb - then.freeKb) / 1024
+            val available = (guest.availableKb - then.availableKb) / 1024
+            val shrunk = (then.totalKb - guest.totalKb) / 1024
+            val vm = if (shrunk > 0) ", and the host took $shrunk MiB back from the VM" else ""
+            "the guest's free memory ${if (free >= 0) "rose" else "fell"} ${kotlin.math.abs(free)} MiB " +
+                "(available memory ${if (available >= 0) "+" else ""}$available MiB)$vm"
+        }
+        val survivors = left?.pids?.takeIf { it.isNotEmpty() }
+            ?.let { "; still running: pid ${it.joinToString(", ")}" } ?: ""
+        return "closed $packageName: $ended; $change in ${clock() - before.at} ms, $counted$survivors"
+    }
+
+    private fun guestOrNull(): GuestMemInfo? = try {
+        processes.memory()
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun appOrNull(packageName: String): PackageMemory? = try {
+        processes.packageMemory(packageName)
     } catch (e: Exception) {
         null
     }
 
     companion object {
+        /** How long what an app held as its window began to close stands for its end. */
+        const val BEFORE_KEPT_MILLIS = 30_000L
+
         /**
          * How long after ending an app its memory is counted: long enough for the processes to
          * die and the control daemon's cache drop (about two seconds after the task ends) to

@@ -1346,9 +1346,17 @@ impl Manager {
             .filter_map(|window| self.resets.task_of(window))
             .collect();
         let covered = self.covers.seen(&hidden, now);
-        self.shown.covered(covered);
+        self.shown.covered(covered.clone());
         let windows = self.windows.windows();
         if let Some(request) = self.shown.update_tasks(&windows) {
+            // Once for each change of which windows the user can see, so the log shows the
+            // guest is told before it trims the apps of the others.
+            if let TaskRequest::TasksShown { task_ids } = &request {
+                self.log(&format!(
+                    "the user can see task windows {task_ids:?} of {windows:?}; covered or on another \
+                     desktop: {covered:?}"
+                ));
+            }
             self.request(vec![request]);
         }
     }

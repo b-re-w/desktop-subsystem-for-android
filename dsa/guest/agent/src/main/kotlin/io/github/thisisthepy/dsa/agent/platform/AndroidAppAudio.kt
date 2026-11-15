@@ -124,9 +124,20 @@ class AndroidAppAudio(private val context: Context, private val log: Log) : AppA
         }
     }
 
+    /**
+     * The apps with a player that is started now. The active playback configurations list
+     * every player not yet released, paused and stopped ones too: a video app keeps its player
+     * paused, and a game keeps its sound players made for its whole run, so counting every
+     * configuration had every such app "play audio" for as long as it ran, and the apps the user
+     * cannot see were never trimmed. A configuration whose state cannot be read counts as
+     * started, so nothing is trimmed on a guess.
+     */
     override fun playing(): Set<String> {
         val playingUids = audio.activePlaybackConfigurations.mapNotNull { configuration ->
             try {
+                val state = runCatching { configuration.javaClass.getMethod("getPlayerState").invoke(configuration) as Int }
+                    .getOrNull()
+                if (state != null && state != PLAYER_STATE_STARTED) return@mapNotNull null
                 configuration.javaClass.getMethod("getClientUid").invoke(configuration) as Int
             } catch (e: Exception) {
                 null
@@ -163,6 +174,9 @@ class AndroidAppAudio(private val context: Context, private val log: Log) : AppA
         /** The address of an app output's bus device, before its number. */
         const val ADDRESS_PREFIX = "dsa_app_"
         const val SAMPLE_RATE = 48_000
+
+        // AudioPlaybackConfiguration.PLAYER_STATE_STARTED, a system API the SDK hides.
+        const val PLAYER_STATE_STARTED = 2
         /** AudioManager.SUCCESS, what the audio policy calls return when they work; the SDK hides it. */
         const val AUDIO_POLICY_SUCCESS = 0
         /** The framework's broadcasts of a change of a stream's volume and of its mute. */
