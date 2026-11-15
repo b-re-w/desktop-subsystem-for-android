@@ -100,6 +100,8 @@ git -C $GfxstreamDir clean -fdx
 # Without 0038 the renderer does not compile with GCC 15 (Ubuntu 26.04): four headers use
 # uint32_t and friends but leave <cstdint> to what libstdc++'s <memory>, <string> or
 # <functional> used to include, and GCC 15's no longer do.
+# Without 0039 the renderer does not start on a driver that lists dma-buf export but refuses
+# a dma-buf allocation, as lavapipe does without /dev/udmabuf: it now exports an opaque fd.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -136,7 +138,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0035-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0036-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0037-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0038-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0038-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0039-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName

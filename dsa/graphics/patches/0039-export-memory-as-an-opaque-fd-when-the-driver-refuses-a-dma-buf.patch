@@ -1,0 +1,69 @@
+Subject: Export memory as an opaque fd when the driver refuses a dma-buf
+
+On the Linux runners' Ubuntu 26.04 image (Mesa's lavapipe reporting Vulkan 1.4.335 on LLVM
+21.1.8) the renderer stopped at start: the 64x64 RGBA8 ColorBuffer it makes to learn the
+ColorBuffer memory type failed in allocExternalMemory ("Failed to allocate ColorBuffer with
+Vulkan backing", then "Failed to find memory type for ColorBuffers"). The same build on Ubuntu
+24.04 (Mesa 25.2.8, Vulkan 1.4.318) started. Nothing in the renderer's patches changed between
+the two runs but 0038's includes.
+
+A device that lists VK_EXT_external_memory_dma_buf asks every exported allocation for an
+opaque fd and a dma-buf at once. lavapipe makes a dma-buf from /dev/udmabuf, which a CI runner
+or a sandboxed host does not offer, so it refuses the allocation even though an opaque fd alone
+would do. Now such an allocation is made again for the opaque fd alone, the export follows the
+handle type the memory was made with, and the renderer says once that it fell back.
+
+diff --git a/host/vulkan/VkCommonOperations.cpp b/host/vulkan/VkCommonOperations.cpp
+index 113a38bc0..f75ed1d38 100644
+--- a/host/vulkan/VkCommonOperations.cpp
++++ b/host/vulkan/VkCommonOperations.cpp
+@@ -2726,6 +2726,12 @@ bool VkEmulation::allocExternalMemory(VulkanDispatch* vk, VkEmulation::ExternalM
+         .buffer = VK_NULL_HANDLE,
+     };
+ 
++    // DSA: whether this allocation is exported as a dma-buf. A driver that lists
++    // VK_EXT_external_memory_dma_buf may still refuse a dma-buf allocation: Mesa's lavapipe
++    // makes one through /dev/udmabuf, which a host without that device or without access to
++    // it does not have. The allocation is then made again for the opaque fd alone.
++    bool exportsDmaBuf = mDeviceInfo.supportsDmaBuf;
++
+     VkMemoryAllocateInfo allocInfo = {
+         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+         .pNext = nullptr,
+@@ -2742,7 +2748,7 @@ bool VkEmulation::allocExternalMemory(VulkanDispatch* vk, VkEmulation::ExternalM
+             exportAi.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLHEAP_BIT_EXT;
+         }
+ #endif
+-        if (mDeviceInfo.supportsDmaBuf) {
++        if (exportsDmaBuf) {
+             exportAi.handleTypes |= VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+         }
+ 
+@@ -2767,6 +2773,18 @@ bool VkEmulation::allocExternalMemory(VulkanDispatch* vk, VkEmulation::ExternalM
+     while (!memoryAllocated) {
+         VkResult allocRes = vk->vkAllocateMemory(mDevice, &allocInfo, nullptr, &info->memory);
+ 
++        if (allocRes != VK_SUCCESS && exportsDmaBuf &&
++            (exportAi.handleTypes & VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT)) {
++            static std::once_flag sLogged;
++            std::call_once(sLogged, [allocRes] {
++                WARN("The driver refused memory exported as a dma-buf (%s), so external memory "
++                     "is exported as an opaque fd instead.",
++                     string_VkResult(allocRes));
++            });
++            exportsDmaBuf = false;
++            exportAi.handleTypes &= ~VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
++            continue;
++        }
+         if (allocRes != VK_SUCCESS) {
+             VERBOSE("%s: failed in vkAllocateMemory: %s",
+                     __func__, string_VkResult(allocRes));
+@@ -2867,7 +2885,7 @@ bool VkEmulation::allocExternalMemory(VulkanDispatch* vk, VkEmulation::ExternalM
+         streamHandleType = STREAM_HANDLE_TYPE_MEM_OPAQUE_FD;
+         VkExternalMemoryHandleTypeFlagBits vkHandleType =
+             VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+-        if (mDeviceInfo.supportsDmaBuf) {
++        if (exportsDmaBuf) {
+             vkHandleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+             streamHandleType = STREAM_HANDLE_TYPE_MEM_DMABUF;
+         }
