@@ -238,3 +238,28 @@
 (typeattributeset vendor_property_type (dsa_graphics_memory_prop))
 (allow vendor_init dsa_graphics_memory_prop (file (read open getattr map)))
 (allow vendor_init gpu_device (chr_file (getattr setattr)))
+
+; The second zram device for memory added after boot: dsa-channeld --zram-extra, which init
+; starts as root when the daemon sets vendor.dsa.memory.zram_extra (dsa-memory.rc). It reads the
+; property and what is swapped (/proc/swaps), adds zram1 through zram-control (hot_add, plain
+; sysfs), sizes and resets it (zram1's sysfs is sysfs_zram), writes the swap header to its block
+; device (ram_device, Android's label for every zram device) and turns it on and off, which needs
+; sys_admin. Nothing else.
+(type dsa_zram_extra)
+(roletype object_r dsa_zram_extra)
+(typeattributeset domain (dsa_zram_extra))
+(allow init dsa_zram_extra (process (transition siginh rlimitinh)))
+(dontaudit init dsa_zram_extra (process (noatsecure)))
+(allow dsa_zram_extra dsa_channeld_exec (file (entrypoint read getattr map execute open)))
+(allow dsa_zram_extra init (fd (use)))
+(allow dsa_zram_extra kmsg_device (chr_file (write append getattr)))
+(allow dsa_zram_extra kmsg_debug_device (chr_file (write append getattr)))
+(allow dsa_zram_extra self (capability (sys_admin)))
+(allow dsa_zram_extra dsa_memory_prop (file (read open getattr map)))
+(allow dsa_zram_extra proc_swaps (file (read open getattr)))
+(allow dsa_zram_extra sysfs (dir (search)))
+(allow dsa_zram_extra sysfs (file (read open getattr)))
+(allow dsa_zram_extra sysfs_zram (dir (search getattr)))
+(allow dsa_zram_extra sysfs_zram (file (read write open getattr)))
+(allow dsa_zram_extra block_device (dir (search)))
+(allow dsa_zram_extra ram_device (blk_file (read write open getattr ioctl)))

@@ -211,6 +211,10 @@ pub fn host_logs_of(config: &HostConfig, sid: &str) -> Vec<HostFile> {
         for (name, path) in [
             ("host/dsa-wm.log", root.window_manager_log()),
             ("host/dsa-app-window.log", root.app_window_log()),
+            (
+                "host/renderer-color-buffers.txt",
+                root.renderer_color_buffers(),
+            ),
         ] {
             if plain_in_user_root(&path) {
                 files.push(HostFile {

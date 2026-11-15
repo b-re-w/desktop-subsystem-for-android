@@ -148,6 +148,18 @@ bool read_fully(dsa_stream_read_fn read_cb, void* user_data, T* value) {
     return true;
 }
 
+bool read_bytes(dsa_stream_read_fn read_cb, void* user_data, char* out, size_t size) {
+    size_t received = 0;
+    while (received < size) {
+        int n = read_cb(user_data, out + received, size - received);
+        if (n < 0) {
+            return false;
+        }
+        received += static_cast<size_t>(n);
+    }
+    return true;
+}
+
 template <typename T>
 bool write_fully(dsa_stream_write_fn write_cb, void* user_data, const T& value) {
     size_t sent = 0;
@@ -465,6 +477,17 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
         if (!read_fully(read_cb, user_data, &op)) {
             break;
         }
+        if (op == dsa::kIdentifyRequest) {
+            /* Who the process is, for the memory report. The rest of the word follows. */
+            dsa::ProcessIdentity identity = {};
+            char* rest = reinterpret_cast<char*>(&identity) + sizeof(op);
+            if (!read_bytes(read_cb, user_data, rest, sizeof(identity) - sizeof(op))) {
+                break;
+            }
+            identity.name[sizeof(identity.name) - 1] = ' ';
+            dsa_gfx_memory_process_identified(puid, identity.pid, identity.name);
+            continue;
+        }
         if (op != dsa::kStagingRequest) {
             continue;
         }
@@ -480,6 +503,7 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
     }
 
     dsa_gfx_on_process_destroy(puid);
+    dsa_gfx_memory_process_forget(puid);
     dsa_gfx_memory_process_ended();
     return 0;
 }

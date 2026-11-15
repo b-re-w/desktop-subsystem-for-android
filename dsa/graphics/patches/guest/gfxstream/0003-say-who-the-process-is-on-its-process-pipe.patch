@@ -1,0 +1,36 @@
+Subject: Say who the process is on its process pipe
+
+The renderer's memory report listed each guest Vulkan device and each ColorBuffer by the
+number the renderer gave its process, which says nothing about which app holds the memory.
+After the process pipe's handshake the guest now writes one 64-byte word: the identity
+request, its pid, and its name as /proc/self/cmdline starts (an app's package name). The
+renderer answers nothing. A renderer that predates the word reads it as requests it does not
+know and drops them, as it drops anything else it does not know there.
+
+diff --git a/guest/OpenglSystemCommon/HvSocketStream.cpp b/guest/OpenglSystemCommon/HvSocketStream.cpp
+index 316723a3d..d04bd070a 100644
+--- a/guest/OpenglSystemCommon/HvSocketStream.cpp
++++ b/guest/OpenglSystemCommon/HvSocketStream.cpp
+@@ -13,6 +13,7 @@
+ 
+ #include <cutils/log.h>
+ 
++#include "dsa_graphics_memory.h"
+ #include "dsa_spare_pages.h"
+ 
+ HvSocketStream::HvSocketStream(size_t buffer_size, uint32_t port)
+@@ -59,6 +60,14 @@ uint64_t HvSocketStream::processPipeInit() {
+         ALOGW("HvSocketStream: process pipe initialisation failed");
+         return 0;
+     }
++    // Says who this process is, so the renderer's memory report names it rather than a
++    // number. A renderer that predates it reads the words as requests it does not know and
++    // drops them.
++    dsa::ProcessIdentity identity = {};
++    identity.op = dsa::kIdentifyRequest;
++    identity.pid = static_cast<uint32_t>(getpid());
++    dsa::readProcessName(identity.name, sizeof(identity.name));
++    writeFully(&identity, sizeof(identity));
+     return process_uid;
+ }
+ 

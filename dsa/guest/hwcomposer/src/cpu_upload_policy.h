@@ -9,13 +9,58 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 
 namespace dsa::hwc {
 
-// Whether the host may compose a layer of this DRM format itself. Its compositor samples
-// RGB images only; a YUV layer (a video's pictures) needs a sampler conversion it does not
-// make, so SurfaceFlinger draws it into the client target instead, from the same ColorBuffer.
-bool hostComposes(uint32_t drmFourcc);
+// How a YUV layer's samples become RGB: the matrix, the range, and the order of its chroma
+// planes. The host reads it from the layer's colour (encodeYuvColor), which it ignores for a
+// buffer layer otherwise.
+enum class YuvMatrix : uint8_t { Bt601 = 1, Bt709 = 2, Bt2020 = 3 };
+enum class YuvRange : uint8_t { Full = 1, Limited = 2 };
+struct YuvColor {
+    YuvMatrix matrix = YuvMatrix::Bt601;
+    YuvRange range = YuvRange::Limited;
+    // The first chroma plane (or the first byte of each pair) is V: YV12 and NV21.
+    bool vuOrder = false;
+};
+
+// The marker in the colour's alpha that says the other three bytes describe the YUV.
+constexpr uint8_t kYuvColorMarker = 0x59;  // 'Y'
+
+// The colour of a YUV layer of `dataspace` (an Android Dataspace) whose buffer is `height`
+// rows high, or nothing when the host cannot show it right: an HDR transfer (PQ, HLG) needs
+// tone mapping, BT.2020 constant luminance and extended range have no YCbCr model, and RGB
+// standards (DCI-P3, Adobe RGB, film) mean nothing for YUV. A dataspace without a standard or
+// range is taken as a player leaves it: BT.709 from 720 rows up, BT.601 below, limited range.
+std::optional<YuvColor> yuvColorOf(int32_t dataspace, uint32_t height);
+
+// Whether a buffer of this 4:2:0 DRM format has its chroma in V, U order.
+bool chromaVuOrder(uint32_t drmFourcc);
+
+// The layer colour the host reads `color` from (red the matrix, green the range, blue the
+// order, alpha the marker).
+void encodeYuvColor(const YuvColor& color, uint8_t out[4]);
+
+// The RGB the host shows for one 8-bit YUV sample of `color`, each channel 0 to 1 before
+// clamping: the reference for what its sampler conversion computes.
+struct Rgb {
+    double r, g, b;
+};
+Rgb yuvToRgb(uint8_t y, uint8_t u, uint8_t v, const YuvColor& color);
+
+// Whether the host composes YUV layers (it lists the YUV composition extension). Set when the
+// hwcomposer learns it from the host; false until then and after the connection goes.
+void setHostComposesYuv(bool composes);
+bool hostComposesYuv();
+
+// Whether the host may compose a layer of this DRM format, size and dataspace itself. RGB
+// always. A 4:2:0 YUV buffer (a video's pictures) only when the host composes YUV, the
+// buffer's ColorBuffer is YUV (even width and height), and its colour is one the host shows
+// right (yuvColorOf). SurfaceFlinger draws any other layer into the client target instead,
+// from the same ColorBuffer.
+bool hostComposes(uint32_t drmFourcc, uint32_t width, uint32_t height, int32_t dataspace,
+                  bool hostComposesYuv);
 
 // The buffer each layer last showed. A layer whose buffer changes holds a new picture: a
 // queue hands a buffer back to its producer only after it is shown, and the producer writes
