@@ -33,7 +33,9 @@
 //!
 //! The memory is given back when no stream uses it: once the last stream of a region ends,
 //! the slots it touched are discarded ([`SharedRegion::discard`]), so a region costs physical
-//! memory only while video plays. Discarding keeps the pages committed.
+//! memory only while video plays. While streams play, the pages no slot holds go back when the
+//! window manager gives back its spare memory ([`give_back_unused_pictures`]), so a stream that
+//! stays open holds only the slots it uses. Discarding keeps the pages committed.
 //!
 //! Nothing here names a host operating system API. The platform supplies the region.
 //!
@@ -43,7 +45,7 @@
 //! [`VideoSlotReturned`]: dsa_protocol::control::VideoSlotReturned
 
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, Weak};
 
 /// The name the region goes by in [`GuestSharedMemory`](dsa_protocol::control::GuestSharedMemory).
 pub const REGION_NAME: &str = "video_pictures";
@@ -167,6 +169,9 @@ struct State {
     /// Which [`SLOT_ALIGNMENT`] granules of the region are committed, by index from the
     /// region's start. Discarding a slot keeps its granules committed.
     committed: Vec<bool>,
+    /// Which granules a slot was written in since their pages were last given back, by index
+    /// from the region's start: the ones that may hold physical pages.
+    written: Vec<bool>,
     /// Why a commit was first refused, once one was: the reason is logged that once.
     commit_refused: Option<String>,
 }
@@ -207,6 +212,35 @@ impl State {
     }
 }
 
+/// The regions open in this process, for [`give_back_unused_pictures`].
+static OPEN: Mutex<Vec<Weak<PictureSlots>>> = Mutex::new(Vec::new());
+
+/// What the shared picture memory of this process came to: the bytes some slot reached
+/// before, and the bytes given back now.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PicturesGivenBack {
+    pub touched: usize,
+    pub given_back: usize,
+}
+
+/// Gives back the pages of every open region that no slot holds now
+/// ([`PictureSlots::give_back_unused`]), for the window manager's periodic give-back while
+/// windows are shown.
+pub fn give_back_unused_pictures() -> PicturesGivenBack {
+    let open: Vec<Arc<PictureSlots>> = OPEN
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .filter_map(Weak::upgrade)
+        .collect();
+    let mut total = PicturesGivenBack::default();
+    for slots in open {
+        total.touched += slots.touched();
+        total.given_back += slots.give_back_unused();
+    }
+    total
+}
+
 /// The slots of one region, shared by every stream that sends its pictures there.
 pub struct PictureSlots {
     region: Arc<dyn SharedRegion>,
@@ -240,7 +274,7 @@ impl PictureSlots {
                  view has {len}"
             ));
         }
-        Ok(Arc::new(PictureSlots {
+        let slots = Arc::new(PictureSlots {
             region,
             id,
             state: Mutex::new(State {
@@ -248,7 +282,60 @@ impl PictureSlots {
                 committed: vec![true; SLOTS_START / SLOT_ALIGNMENT],
                 ..State::default()
             }),
-        }))
+        });
+        let mut open = OPEN.lock().unwrap_or_else(|e| e.into_inner());
+        open.retain(|slots| slots.strong_count() > 0);
+        open.push(Arc::downgrade(&slots));
+        Ok(slots)
+    }
+
+    /// Gives back the pages no slot holds now, while streams still play: the slots of a
+    /// picture size a stream no longer sends (a 4K picture between 1080p ones, a second
+    /// stream's) and the ones placed further up while others were lent. Before, the pages any
+    /// slot ever reached stayed in this process's working set until the last stream ended,
+    /// which a window that keeps a player open never does. Returns the bytes given back.
+    ///
+    /// The state stays locked while the pages go, so no slot is taken in them meanwhile; a slot
+    /// taken later writes its pages again, as after the last stream ends.
+    pub fn give_back_unused(&self) -> usize {
+        let mut state = self.state();
+        let end = state.touched_end;
+        if end <= SLOTS_START {
+            return 0;
+        }
+        let granules = end.div_ceil(SLOT_ALIGNMENT);
+        let mut unused: Vec<bool> = (0..granules)
+            .map(|i| {
+                i >= SLOTS_START / SLOT_ALIGNMENT
+                    && state.committed.get(i).copied().unwrap_or(false)
+                    && state.written.get(i).copied().unwrap_or(false)
+            })
+            .collect();
+        let mut held_end = 0;
+        for (&offset, held) in &state.held {
+            held_end = held_end.max(offset + held.span);
+            let last = (offset + held.span).div_ceil(SLOT_ALIGNMENT).min(granules);
+            for granule in &mut unused[(offset / SLOT_ALIGNMENT).min(last)..last] {
+                *granule = false;
+            }
+        }
+        let runs = committed_runs(&unused, SLOTS_START, end);
+        for (granule, gone) in state.written.iter_mut().zip(&unused) {
+            if *gone {
+                *granule = false;
+            }
+        }
+        state.touched_end = held_end;
+        for &(offset, len) in &runs {
+            self.region.discard(offset, len);
+        }
+        runs.iter().map(|&(_, len)| len).sum()
+    }
+
+    /// The bytes of the region some slot reached since its pages were last given back: what
+    /// this process may hold of it now.
+    pub fn touched(&self) -> usize {
+        self.state().touched_end.saturating_sub(SLOTS_START)
     }
 
     /// The id in the region's header, which the guest names when it maps the same region.
@@ -380,6 +467,14 @@ impl StreamSlots {
             if !state.commit(self.slots.region.as_ref(), offset, span) {
                 return false;
             }
+            let (first, end) = (
+                offset / SLOT_ALIGNMENT,
+                (offset + span).div_ceil(SLOT_ALIGNMENT),
+            );
+            if state.written.len() < end {
+                state.written.resize(end, false);
+            }
+            state.written[first..end].fill(true);
         }
         // SAFETY: the slot's bytes lie inside the view (`take` placed them there), and no one
         // else writes them: the slot is this stream's, and not lent, until this stream lends it
@@ -431,6 +526,7 @@ impl Drop for StreamSlots {
             state.streams = state.streams.saturating_sub(1);
             if state.streams == 0 && state.touched_end > SLOTS_START {
                 let end = std::mem::take(&mut state.touched_end);
+                state.written.clear();
                 committed_runs(&state.committed, SLOTS_START, end)
             } else {
                 Vec::new()
