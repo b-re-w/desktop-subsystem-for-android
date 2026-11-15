@@ -330,6 +330,42 @@ fn pr7_every_slot_comes_back_when_the_connection_ends_and_the_memory_is_given_ba
 }
 
 #[test]
+fn nfr1_the_pages_no_slot_holds_go_back_while_a_stream_still_plays() {
+    let region = region();
+    let slots = PictureSlots::open(region.clone()).unwrap();
+    let stream = slots.stream();
+    // A large picture, then a small one placed after it while the large one is lent.
+    let large = stream.take(3 * SLOT_ALIGNMENT).unwrap();
+    assert!(stream.write(&large, |_| true));
+    let small = stream.take(PICTURE_BYTES).unwrap();
+    assert!(stream.write(&small, |_| true));
+    assert_eq!(small.offset as usize, SLOTS_START + 3 * SLOT_ALIGNMENT);
+    assert_eq!(slots.touched(), 4 * SLOT_ALIGNMENT);
+    // The large one comes back and the stream sends only small ones from now on: its pages
+    // go back, the small slot's stay.
+    assert!(stream.give_back(large.number));
+    assert_eq!(slots.give_back_unused(), 3 * SLOT_ALIGNMENT);
+    assert_eq!(region.discarded(), vec![(SLOTS_START, 3 * SLOT_ALIGNMENT)]);
+    assert_eq!(
+        slots.touched(),
+        4 * SLOT_ALIGNMENT,
+        "the small slot still reaches that far"
+    );
+    // Nothing more to give back while the small one is held.
+    assert_eq!(slots.give_back_unused(), 0);
+    assert!(stream.give_back(small.number));
+    assert_eq!(slots.give_back_unused(), SLOT_ALIGNMENT);
+    assert_eq!(slots.touched(), 0);
+    // A slot taken again where the pages went is written again.
+    let again = stream.take(3 * SLOT_ALIGNMENT).unwrap();
+    assert_eq!(again.offset as usize, SLOTS_START);
+    assert!(stream.write(&again, |bytes| {
+        bytes.fill(5);
+        true
+    }));
+}
+
+#[test]
 fn pr7_a_guest_that_maps_another_region_gets_its_pictures_in_messages() {
     let slots = PictureSlots::open(region()).unwrap();
     let mut stream = open(

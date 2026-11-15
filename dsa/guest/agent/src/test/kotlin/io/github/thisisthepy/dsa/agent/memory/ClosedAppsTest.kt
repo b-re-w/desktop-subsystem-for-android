@@ -11,15 +11,33 @@ class FakeProcesses : AppProcesses {
     val stopped = mutableListOf<String>()
     val foreground = mutableSetOf<String>()
     var free = 100L * 1024
+    var total = 4096L * 1024
+
+    /** The running processes of each package, with what each holds (PSS, KiB). */
+    val running = mutableMapOf<String, MutableMap<Int, Long>>()
+
+    /** Packages whose processes outlive one stop. */
+    val stubborn = mutableSetOf<String>()
 
     override fun hasForegroundService(packageName: String) = packageName in foreground
 
     override fun stop(packageName: String) {
         stopped += packageName
-        free += 60L * 1024
+        if (stubborn.remove(packageName)) return
+        free += running.remove(packageName)?.values?.sum() ?: 0L
     }
 
-    override fun freeKb() = free
+    /** Ends the package's processes the way removing its task does, before the agent stops it. */
+    fun taskRemoved(packageName: String) {
+        free += running.remove(packageName)?.values?.sum() ?: 0L
+    }
+
+    override fun memory() = GuestMemInfo(totalKb = total, freeKb = free, availableKb = free + 500L * 1024)
+
+    override fun packageMemory(packageName: String): PackageMemory {
+        val pids = running[packageName].orEmpty()
+        return PackageMemory(pids.keys.sorted(), pids.values.sum(), 0)
+    }
 
     val disabled = mutableListOf<String>()
     var cachedLimit: Int? = null
@@ -43,11 +61,52 @@ class ClosedAppsTest {
 
     @Test
     fun nfr2_an_app_whose_last_window_closed_is_ended_and_its_return_logged() {
+        processes.running["org.example.notes"] = mutableMapOf(41 to 40L * 1024, 42 to 20L * 1024)
         apps.tasks(setOf("org.example.notes", "org.example.clock"))
         apps.tasks(setOf("org.example.clock"))
         assertEquals(listOf("org.example.notes"), processes.stopped)
         scheduler.advance(ClosedApps.SETTLE_MILLIS)
-        assertTrue(log.lines.toString(), log.lines.contains("info: closed org.example.notes: returned 60 MiB in ${ClosedApps.SETTLE_MILLIS} ms"))
+        assertTrue(
+            log.lines.toString(),
+            log.lines.contains(
+                "info: closed org.example.notes: its 2 processes held 60 MiB (PSS, 0 MiB of it in zram) and ended; " +
+                    "the guest's free memory rose 60 MiB (available memory +60 MiB) in ${ClosedApps.SETTLE_MILLIS} ms, " +
+                    "counted from the end of its processes",
+            ),
+        )
+    }
+
+    @Test
+    fun nfr2_what_a_closed_app_held_is_counted_from_its_windows_close_before_its_task_ends_it() {
+        // Removing the task ends the app's processes before the agent hears that it has no
+        // window: what they held was counted as nothing given back.
+        processes.running["org.example.game"] = mutableMapOf(77 to 900L * 1024)
+        apps.tasks(setOf("org.example.game"))
+        apps.closing("org.example.game")
+        processes.taskRemoved("org.example.game")
+        scheduler.advance(300)
+        apps.tasks(emptySet())
+        scheduler.advance(ClosedApps.SETTLE_MILLIS)
+        val line = log.lines.single { it.startsWith("info: closed org.example.game:") }
+        assertTrue(line, line.contains("its 1 process held 900 MiB (PSS, 0 MiB of it in zram) and ended"))
+        assertTrue(line, line.contains("the guest's free memory rose 900 MiB"))
+        assertTrue(line, line.contains("in ${ClosedApps.SETTLE_MILLIS + 300} ms, counted from the window's close"))
+    }
+
+    @Test
+    fun nfr2_memory_the_host_took_back_from_the_vm_is_named_and_a_process_that_outlived_the_end_is_ended_again() {
+        processes.running["org.example.video"] = mutableMapOf(90 to 300L * 1024)
+        processes.stubborn += "org.example.video"
+        apps.tasks(setOf("org.example.video"))
+        apps.closing("org.example.video")
+        processes.total -= 200L * 1024
+        apps.tasks(emptySet())
+        scheduler.advance(ClosedApps.SETTLE_MILLIS)
+        val line = log.lines.single { it.startsWith("info: closed org.example.video:") }
+        assertTrue(line, line.contains("and the host took 200 MiB back from the VM"))
+        assertTrue(line, line.endsWith("; still running: pid 90"))
+        assertEquals(listOf("org.example.video", "org.example.video"), processes.stopped)
+        assertTrue(processes.running.isEmpty())
     }
 
     @Test

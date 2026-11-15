@@ -20,7 +20,12 @@ import io.github.thisisthepy.dsa.agent.Scheduler
  * keeps less page cache for such a task and pages out processes with no window; this reaches
  * the app's own heap, which only the app can let go of.
  *
- * Never trimmed: an app playing audio (its decoder and buffers are in use) or running a
+ * Each app that goes out of sight is logged once for that spell (`<package> is out of the user's
+ * sight`), so a log shows the host's word arrived before any trim.
+ *
+ * Never trimmed: an app playing audio (a player of it is started: its decoder and buffers are
+ * in use; a paused player, which video apps and games keep for as long as they run, is not
+ * playing) or running a
  * foreground service, which is doing work the user asked for; such an app is looked at again
  * every [RECHECK_MILLIS] while it stays hidden. The agent itself is never trimmed.
  *
@@ -84,6 +89,11 @@ class HiddenApps(
         for (packageName in nowHidden) {
             if (packageName in hidden) continue
             hidden[packageName] = Hidden(now)
+            val why = if (!screenOn) "no task window is shown" else "the host says none of its windows can be seen"
+            log.info(
+                "$packageName is out of the user's sight ($why); it is trimmed after ${HIDDEN_AFTER_MILLIS / 1000} s " +
+                    "unless it plays audio or runs a foreground service",
+            )
             scheduler.postDelayed(HIDDEN_AFTER_MILLIS) { check() }
             scheduler.postDelayed(BACKGROUND_AFTER_MILLIS) { check() }
         }

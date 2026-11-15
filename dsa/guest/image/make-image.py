@@ -712,6 +712,11 @@ def edit_preloaded_classes(text):
             if not line.strip() or line.lstrip().startswith("#") or not preload_dropped(line.strip())]
     return "".join(line + "\n" for line in kept)
 
+
+def preload_count(text):
+    """How many classes a preloaded-classes list names: its lines but comments and blank ones."""
+    return sum(1 for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#"))
+
 # Isolated compilation recompiles the system server's and the boot image's code inside a
 # protected VM of Android's own virtualization framework, which needs KVM in the guest. A
 # Hyper-V guest has none, so the service system_server starts for it, and the daily job it
@@ -6706,7 +6711,10 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
                 elif name == WIFI_RC:
                     data = edit_wifi_rc(data.decode()).encode()
                 elif name == PRELOADED_CLASSES:
-                    data = edit_preloaded_classes(data.decode()).encode()
+                    stock = data.decode()
+                    data = edit_preloaded_classes(stock).encode()
+                    print(f"{name}: the zygote preloads {preload_count(data.decode())} of the build's "
+                          f"{preload_count(stock)} classes", flush=True)
                 elif name.endswith(SETTINGS_APK):
                     data = edit_settings_apk(data, name)
                 elif name.endswith(tuple(BOOT_RECEIVER_FREE_APKS)):

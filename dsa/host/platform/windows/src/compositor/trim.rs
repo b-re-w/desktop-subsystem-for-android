@@ -16,7 +16,10 @@
 //! back too, and the working set stays: when the shown windows are still, every five minutes
 //! whether or not they draw, and a few seconds after the last video decoder closed (the
 //! decoders, their Direct3D device and Media Foundation free their memory into the heap and the
-//! driver, which keep it committed until asked to give it back).
+//! driver, which keep it committed until asked to give it back). With each give-back the pages of
+//! the video pictures shared with the guest that no picture holds now go back as well: they are
+//! mapped memory, in the working set but not in the private commit, and a player kept open
+//! otherwise held every page its slots ever reached.
 //!
 //! Each give-back logs what the process still holds (working set, private commit and GPU
 //! memory) and its committed memory by owner (`committed`), so a log shows where the window
@@ -32,6 +35,7 @@ use std::time::{Duration, Instant};
 
 use dsa_host_core::memory::{committed_line, held_line, HeldMemory, IdleTrim};
 use dsa_host_core::renderer::renderer_line;
+use dsa_host_core::video_slots::{give_back_unused_pictures, PicturesGivenBack};
 use windows_sys::Win32::System::ProcessStatus::{
     K32EmptyWorkingSet, K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
     PROCESS_MEMORY_COUNTERS_EX,
@@ -88,6 +92,24 @@ pub fn empty_working_set() {
     }
 }
 
+/// What the give-back said of the video pictures shared with the guest: mapped memory, which
+/// the working set counts and the private commit does not. Empty while no video has played.
+fn pictures_line(pictures: PicturesGivenBack) -> String {
+    if pictures.touched == 0 && pictures.given_back == 0 {
+        return String::new();
+    }
+    format!(
+        ", and {} of the {} of shared picture memory the video slots had reached that no \
+         picture holds now",
+        mib(pictures.given_back),
+        mib(pictures.touched)
+    )
+}
+
+fn mib(bytes: usize) -> String {
+    format!("{} MiB", bytes / (1024 * 1024))
+}
+
 /// The log line that says whose this process's committed memory is.
 fn by_owner(held: &HeldMemory) -> String {
     committed_line(&committed::breakdown(
@@ -109,12 +131,14 @@ pub fn give_back(
         gpu.trim();
     }
     committed::compact_heaps();
+    let pictures = give_back_unused_pictures();
     // SAFETY: our own process's pseudo handle.
     let emptied = unsafe { K32EmptyWorkingSet(GetCurrentProcess()) } != 0;
     let after = held(gpu);
     let message = if emptied {
         format!(
-            "no task window is shown: gave back memory not in use; {}",
+            "no task window is shown: gave back memory not in use{}; {}",
+            pictures_line(pictures),
             held_line(&before, &after)
         )
     } else {
@@ -146,11 +170,13 @@ fn give_back_spare(
         gpu.trim();
     }
     committed::compact_heaps();
+    let pictures = give_back_unused_pictures();
     let after = held(gpu);
     note(
         logger,
         &format!(
-            "{reason}: gave back the GPU driver's spare memory and the heap's free memory; {}",
+            "{reason}: gave back the GPU driver's spare memory and the heap's free memory{}; {}",
+            pictures_line(pictures),
             held_line(&before, &after)
         ),
     );

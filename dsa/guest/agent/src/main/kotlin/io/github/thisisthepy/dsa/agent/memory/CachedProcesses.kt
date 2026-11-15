@@ -199,6 +199,11 @@ class CachedProcesses(
 
     /** Starts looking at the processes every [intervalMillis], the first time after [firstDelayMillis]. */
     fun start(firstDelayMillis: Long = FIRST_DELAY_MILLIS) {
+        log.info(
+            "ending app processes left cached (after ${idleMillis / 1000} s) or running only services " +
+                "(after ${serviceIdleMillis / 1000} s) with no task window: a look every ${intervalMillis / 1000} s, " +
+                "the first in ${firstDelayMillis / 1000} s",
+        )
         scheduler.postDelayed(firstDelayMillis) { tick() }
     }
 
@@ -254,7 +259,17 @@ class CachedProcesses(
             process.packages.none { it in foreground } && (process !in idleServing || !inUse(process))
         }
         // An app with a foreground service keeps all its processes; it is looked at again later.
-        for (process in idle - ready.toSet()) blocked[process.pid] = now + BLOCKED_RETRY_MILLIS
+        for (process in idle - ready.toSet()) {
+            if (process.pid !in blocked && process in idleServing) {
+                val why = if (process.packages.any { it in foreground }) {
+                    "its app runs a foreground service"
+                } else {
+                    "its app plays audio, shows a notification or has a widget"
+                }
+                log.info("kept background ${process.name} (pid ${process.pid}): $why; looked at again in ${BLOCKED_RETRY_MILLIS / 1000} s")
+            }
+            blocked[process.pid] = now + BLOCKED_RETRY_MILLIS
+        }
         if (ready.isEmpty()) return
         val records = try {
             processes.records()
@@ -337,7 +352,16 @@ class CachedProcesses(
                 // one that only serves keeps its own count while it does.
                 cached.remove(process.pid)
                 val seen = serving[process.pid]
-                if (seen == null || seen.name != process.name) serving[process.pid] = Cached(process.name, now)
+                if (seen == null || seen.name != process.name) {
+                    serving[process.pid] = Cached(process.name, now)
+                    if (serviceEndable(process)) {
+                        val after = idleFor(process.name, now, serviceIdleMillis, MAX_SERVICE_IDLE_MILLIS) / 1000
+                        log.info(
+                            "watching ${process.name} (pid ${process.pid}): it runs only services with no task window; " +
+                                "it is ended after $after s unless it plays audio, shows a notification or has a widget",
+                        )
+                    }
+                }
             } else {
                 cached.remove(process.pid)
                 serving.remove(process.pid)

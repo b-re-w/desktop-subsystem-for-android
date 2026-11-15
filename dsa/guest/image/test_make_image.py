@@ -3157,6 +3157,9 @@ class GuestMemoryTests(unittest.TestCase):
                      "android.nfc.NfcAdapter", "android.bluetooth.BluetoothA2dp", "android.bluetooth.le.ScanSettings",
                      "com.android.internal.widget.LockPatternUtils", "com.android.internal.widget.LockPatternView$Cell"]:
             self.assertNotIn(name, kept)
+        # The build log says how many classes stay, which a device's list can be checked against.
+        self.assertEqual(make_image.preload_count("# phones\n\nandroid.app.Activity\n  android.car.Car\n"), 2)
+        self.assertLess(make_image.preload_count("\n".join(kept)), make_image.preload_count("\n".join(listed)))
         # The image's own list goes through the same filter; the GL driver's preload stays on.
         with tempfile.TemporaryDirectory() as tmp, self._modify(
                 Path(tmp), extra={make_image.PRELOADED_CLASSES: "\n".join(listed)}) as archive:
