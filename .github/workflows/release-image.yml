@@ -649,19 +649,38 @@ jobs:
             android="android$(jq '.supported_majors | max' dsa/android-versions.json)"
             name="framework-$android-x86_64-$(python3 dsa/guest/framework/framework_lock.py version "$android")"
             job="Pack the framework files (ubuntu-24.04, $android, x86_64)"
-            echo "looking for $name from a passing \"$job\""
+            # A run whose services build failed still packs the native files under the same
+            # name, without services.jar; the image then edits the published build's jar and
+            # its dialogs keep the caption bar inset. Such a run is taken only when no run of
+            # this version has services.jar, and the build says so where it cannot be missed.
+            services_job="Build services.jar (ubuntu-24.04, $android)"
+            echo "looking for $name from a passing \"$job\", with services.jar if a run has it"
+            fallback=""
             for run in $(gh run list --repo "${{ github.repository }}" --workflow framework.yml --branch develop \
                            --limit 30 --json databaseId --jq '.[].databaseId'); do
               conclusion="$(gh api "repos/${{ github.repository }}/actions/runs/$run/jobs?per_page=100" \
                               --jq ".jobs[] | select(.name == \"$job\") | .conclusion")"
               [[ "$conclusion" == success ]] || continue
-              if gh api "repos/${{ github.repository }}/actions/runs/$run/artifacts?name=$name" \
-                   --jq '.artifacts[] | select(.expired | not) | .id' | grep -q .; then
-                echo "run $run has it"
+              gh api "repos/${{ github.repository }}/actions/runs/$run/artifacts?name=$name" \
+                --jq '.artifacts[] | select(.expired | not) | .id' | grep -q . || continue
+              services="$(gh api "repos/${{ github.repository }}/actions/runs/$run/jobs?per_page=100" \
+                            --jq ".jobs[] | select(.name == \"$services_job\") | .conclusion")"
+              if [[ "$services" == success ]]; then
+                echo "run $run has it, with services.jar"
                 echo "run_id=$run" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
+              [[ -n "$fallback" ]] || fallback="$run"
             done
+            if [[ -n "$fallback" ]]; then
+              echo "::warning title=No services.jar::run $fallback has $name, but its services build failed and no run of this version has services.jar, so the image edits the published build's services.jar and its dialogs keep the caption bar inset. Run the Framework build for $android again and make the Development build after it passes."
+              {
+                echo "## The framework has no services.jar"
+                echo "Run $fallback packed $name without services.jar. The image's dialogs keep the caption bar inset until a Framework build run builds services.jar for $android."
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "run_id=$fallback" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "::error::No Framework build run on develop has a passing \"$job\" with $name. Run the Framework build workflow; with android set to $android and arch to x86_64 is enough."
             exit 1
           fi
