@@ -51,7 +51,7 @@ void scrub(void*, uint8_t* at, uint64_t length) {
                       static_cast<unsigned long>(code));
         dsa_gfx_log_line('W', line);
     }
-#else
+#elif defined(MADV_REMOVE)
     /* A shared mapping of a memfd: punching the range out frees its pages, which then read as
      * zeros. */
     if (madvise(at, length, MADV_REMOVE) != 0 && !s_scrub_failure_said.exchange(true)) {
@@ -59,6 +59,9 @@ void scrub(void*, uint8_t* at, uint64_t length) {
                          "graphics memory: freed shared pages were zeroed but not given back; "
                          "they go with the VM");
     }
+#else
+    /* No hole punching here (macOS, where no host shares this region yet): the zeroed pages
+     * stay until the mapping goes. */
 #endif
 }
 
