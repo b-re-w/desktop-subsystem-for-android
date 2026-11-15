@@ -64,8 +64,8 @@ created by the first change that puts real code in it.
 therefore never depend on those documents; a comment may name them only as being on
 `develop`.
 
-1. **Publishing is one way: develop to release to main.** "Release sync", started by hand
-   on `develop` (nothing on `develop` starts on a push), rebuilds `release` and opens a pull request from `release` into `main`. A
+1. **Publishing is one way: develop to release to main.** A push to `develop` runs "Release
+   sync", which rebuilds `release` and opens a pull request from `release` into `main`. A
    person merges it. Never merge `release` or `main` back into `develop`: their history
    contains the deletion of the planning documents, and merging it replays that deletion as
    if someone intended it.
@@ -101,7 +101,7 @@ therefore never depend on those documents; a comment may name them only as being
    `develop` is deleted; its commits are in `develop`, so nothing is kept for it.
 10. **Integrate on `develop` without waiting for CI.** Feature branches go into `develop` as soon as
     they are pushed; nobody waits for a pull request's checks. CI runs only on `develop`, and only
-    when started by hand (no workflow starts on a push to `develop`), where the dispatching session builds and tests the integrated whole once and fixes what
+    when started by hand (only Release sync starts on a push to `develop`), where the dispatching session builds and tests the integrated whole once and fixes what
     breaks there. Waiting for every branch's own run cost days of queues and conflicts.
 
 ## CI naming
