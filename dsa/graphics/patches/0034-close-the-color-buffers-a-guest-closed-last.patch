@@ -22,7 +22,7 @@ diff --git a/host/FrameBuffer.h b/host/FrameBuffer.h
 +++ b/host/FrameBuffer.h
 @@ -235,2 +235,10 @@
      void closeColorBuffer(HandleType p_colorbuffer);
-
+ 
 +    // Destroys the ColorBuffers whose last reference the guest closed at least the close
 +    // delay ago and that nothing opened since. closeColorBuffer does it only for what waited
 +    // before it, so the buffers closed last (a whole video's, which go within one second)
@@ -36,7 +36,7 @@ diff --git a/host/FrameBuffer.cpp b/host/FrameBuffer.cpp
 +++ b/host/FrameBuffer.cpp
 @@ -1386,3 +1386,26 @@
  }
-
+ 
 +int FrameBuffer::closeDelayedColorBuffers() {
 +    // With the guest's reference count pipe the guest destroys its buffers itself, and the
 +    // list is never filled.
