@@ -548,15 +548,8 @@ fn run(setup: UiSetup, commands: Receiver<ToHost>, ready: Sender<Result<isize, S
                 });
             }
         }
-        // The input methods compose in the windows through the text services framework,
-        // which runs on this thread for the windows it opens.
-        if let Err(why) = tsf::start_thread() {
-            UI.with(|ui| {
-                if let Some(ui) = ui.borrow().as_ref() {
-                    ui.log(&why);
-                }
-            });
-        }
+        // The input methods compose in the windows through the text services framework, which
+        // runs on this thread, started when a window first needs it (`ime`).
 
         let mut message: MSG = std::mem::zeroed();
         while GetMessageW(&mut message, std::ptr::null_mut(), 0, 0) > 0 {
@@ -2501,13 +2494,10 @@ impl Ui {
             return;
         }
         super::pointer::deliver_contacts_at_once(hwnd);
-        // The input method composes in the window's own document.
+        // The input method composes in the window's own document, made once the guest reports
+        // an editor that takes text.
         if let Some(data) = window_data(hwnd) {
-            if let Err(why) = data.ime.attach(hwnd) {
-                self.log(&format!(
-                    "task {task_id}'s window takes no input method: {why}"
-                ));
-            }
+            data.ime.attach(hwnd);
         }
         window_marks::mark_task(hwnd as isize, task_id);
         // The Android window menu, under Windows' own items.
