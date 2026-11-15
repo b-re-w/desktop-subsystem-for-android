@@ -714,17 +714,6 @@ pub fn activate(uri: &str, connector: &mut dyn Connector) -> Result<(), String> 
     }
     let mut client = HostApiClient::connect(connector, "dsa-wm notification click", ANSWER)
         .map_err(|e| e.to_string())?;
-    // The app a click, or an action button, opens starts at the density and size of the
-    // monitor its window opens on. A service that does not take the placement still opens
-    // the app.
-    if matches!(
-        action,
-        NotificationAction::Open { .. } | NotificationAction::Button { .. }
-    ) {
-        if let Some(placement) = crate::app_window::window::launch_placement() {
-            let _ = client.place_launches(&placement);
-        }
-    }
     client
         .act_on_notification(&action)
         .map_err(|e| e.to_string())

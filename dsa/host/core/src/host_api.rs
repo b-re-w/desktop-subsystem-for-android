@@ -113,9 +113,9 @@ use crate::settings::{Settings, SettingsStore};
 use crate::share::{ShareOutcome, ShareRequest};
 use crate::system_settings::SystemSettings;
 use crate::tasks::{
-    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, LaunchPlacement,
-    OverlayWindow, PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation,
-    TaskRequest, TaskRequestError, TaskWatch,
+    AppInfo, AppSettingsPage, AppShortcut, Bounds, FullScreenRequest, OverlayWindow,
+    PinShortcutRequest, StatusBarAppearance, Task, TaskEvent, TaskOrientation, TaskRequest,
+    TaskRequestError, TaskWatch,
 };
 use crate::touch_gestures::TouchGesturesState;
 use crate::update::alerts::{self as update_alerts, UpdateAlert};
@@ -5338,15 +5338,13 @@ impl HostApiService {
                     recreate: density.recreate,
                 },
             ),
-            Some(request::Body::LaunchPlacement(placement)) => self.request(
-                peer,
-                TaskRequest::PlaceLaunches(LaunchPlacement {
-                    density_dpi: placement.density_dpi,
-                    width: placement.width,
-                    height: placement.height,
-                    monitor_width: placement.monitor_width,
-                    monitor_height: placement.monitor_height,
-                }),
+            // The message stays in the protocol so that its field number is never reused, but
+            // the guest no longer takes a monitor for the tasks it starts: a task starts at
+            // Android's own density and size, and its window gives it its monitor's density
+            // once it opens.
+            Some(request::Body::LaunchPlacement(_)) => error(
+                ErrorCode::UnknownRequest,
+                "tasks start at Android's own density; this host takes no launch placement".into(),
             ),
             Some(request::Body::SetCaptionCompat(compat)) => self.request(
                 peer,
@@ -8060,18 +8058,6 @@ impl HostApiClient {
         }))
     }
 
-    /// Tells the caller's Android which monitor the window of the next task it starts opens
-    /// on, so the task starts at that monitor's density and size there.
-    pub fn place_launches(&mut self, placement: &LaunchPlacement) -> Result<(), ClientError> {
-        self.done(request::Body::LaunchPlacement(types::LaunchPlacement {
-            density_dpi: placement.density_dpi,
-            width: placement.width,
-            height: placement.height,
-            monitor_width: placement.monitor_width,
-            monitor_height: placement.monitor_height,
-        }))
-    }
-
     /// Tells the caller's Android which apps start below the title bar.
     pub fn set_caption_compat(&mut self, below_title_bar: &[String]) -> Result<(), ClientError> {
         self.done(request::Body::SetCaptionCompat(types::SetCaptionCompat {
@@ -8138,7 +8124,6 @@ impl HostApiClient {
             TaskRequest::SetFullScreen { task_id, in_window } => {
                 self.set_task_full_screen(*task_id, *in_window)
             }
-            TaskRequest::PlaceLaunches(placement) => self.place_launches(placement),
             TaskRequest::CaptionCompat { below_title_bar } => {
                 self.set_caption_compat(below_title_bar)
             }

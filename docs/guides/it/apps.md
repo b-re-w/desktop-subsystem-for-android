@@ -148,8 +148,8 @@ dsa app-window <package> --below-title-bar on   # off torna al valore predefinit
 
 ## Spostare un'app su un monitor con un'altra scala
 
-Un'app si apre con la scala del monitor su cui si apre la sua finestra, fin dal primo
-fotogramma, quindi non viene ricreata subito dopo l'apertura. Quando sposta una finestra su un
+Android si avvia con la scala del monitor principale, quindi le app si aprono lì con le
+dimensioni giuste. Quando sposta una finestra su un
 monitor con un'altra scala, l'app mantiene le sue dimensioni sullo schermo. Ogni app lo fa in
 uno di questi modi, che sceglie in **Scaling** nella pagina **Apps**, oppure
 con `dsa app-window <package> --dpi-scaling`:

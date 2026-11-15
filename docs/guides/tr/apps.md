@@ -145,8 +145,8 @@ dsa app-window <package> --below-title-bar on   # off varsayılana döner
 
 ## Bir uygulamayı başka ölçekteki bir monitöre taşıma
 
-Bir uygulama, penceresinin açıldığı monitörün ölçeğiyle ilk karesinden itibaren açılır, bu yüzden
-açıldıktan hemen sonra yeniden oluşturulmaz. Bir pencereyi başka ölçekteki bir monitöre
+Android ana monitörünüzün ölçeğiyle başlar, bu yüzden uygulamalar orada doğru boyutta açılır.
+Bir pencereyi başka ölçekteki bir monitöre
 taşıdığınızda uygulama ekrandaki boyutunu korur. Her uygulama bunu aşağıdaki yollardan biriyle
 yapar; bunu **Apps** sayfasındaki **Scaling** altında veya
 `dsa app-window <package> --dpi-scaling` ile seçersiniz:
