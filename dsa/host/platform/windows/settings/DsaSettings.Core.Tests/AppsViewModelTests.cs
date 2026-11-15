@@ -114,6 +114,61 @@ public class AppsViewModelTests
     }
 
     [Fact]
+    public async Task Fr30_an_apps_option_card_stays_open_when_the_list_is_read_again()
+    {
+        var (vm, _) = Make(new FakeCli().Answer("apps list --json", List));
+        await vm.RefreshAsync();
+        // Every card starts closed.
+        Assert.All(vm.Rows, r => Assert.False(r.IsExpanded));
+
+        // The user opens Notes' card; the page draws every card anew after a change, and the
+        // card is still open, while the others stay closed.
+        vm.SetExpanded("com.example.notes", true);
+        await vm.RefreshAsync();
+        Assert.True(vm.Rows.Single(r => r.Package == "com.example.notes").IsExpanded);
+        Assert.False(vm.Rows.Single(r => r.Package == "com.android.settings").IsExpanded);
+
+        // A search keeps it too, and closing it is remembered the same way.
+        vm.Search = "note";
+        Assert.True(vm.Rows.Single().IsExpanded);
+        vm.Search = "";
+        vm.SetExpanded("com.example.notes", false);
+        await vm.RefreshAsync();
+        Assert.All(vm.Rows, r => Assert.False(r.IsExpanded));
+    }
+
+    [Fact]
+    public async Task Fr30_app_info_of_a_window_opens_the_apps_option_card()
+    {
+        var (vm, _) = Make(new FakeCli().Answer("apps list --json", List));
+        vm.Highlight("com.example.notes");
+        await vm.RefreshAsync();
+        Assert.Equal(new[] { true, false }, vm.Rows.Select(r => r.IsExpanded));
+        // The user may close it again, and it stays closed.
+        vm.SetExpanded("com.example.notes", false);
+        await vm.RefreshAsync();
+        Assert.All(vm.Rows, r => Assert.False(r.IsExpanded));
+    }
+
+    [Fact]
+    public async Task Fr30_each_option_row_says_what_it_is_under_its_name()
+    {
+        // A tool tip of several lines puts its first line under the option's name.
+        Assert.Equal("For apps whose top bar is squeezed.",
+            SettingText.FirstLine("For apps whose top bar is squeezed.\nThe app starts below the title bar."));
+        Assert.Equal("Who scales this app.", SettingText.FirstLine("Who scales this app.\r\n• App: redraws"));
+        Assert.Equal("The size this app's windows open at", SettingText.FirstLine("The size this app's windows open at"));
+        Assert.Equal("", SettingText.FirstLine(""));
+
+        // The root row says why its level cannot be chosen, under its name.
+        var (vm, _) = Make(new FakeCli().Answer("apps list --json", List));
+        await vm.RefreshAsync();
+        var notes = vm.Rows.Single(r => r.Package == "com.example.notes");
+        Assert.True(notes.HasRootTip);
+        Assert.Equal("Apps_RootTip_unknown", notes.RootTip);
+    }
+
+    [Fact]
     public async Task Fr23_open_app_info_and_manage_apps_go_through_dsa()
     {
         var (vm, cli) = Make(new FakeCli()

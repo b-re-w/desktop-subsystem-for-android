@@ -27,7 +27,9 @@ internal sealed class ResourceText : ITextSource
     }
 }
 
-/// <summary>A text in the user's language, in XAML: <c>{l:Text NavGeneral}</c>.</summary>
+/// <summary>A text in the user's language, in XAML: <c>{l:Text NavGeneral}</c>. With
+/// <c>FirstLine=True</c> it is only the text's first line, as a setting shows its tool tip of
+/// several lines under its name.</summary>
 [MarkupExtensionReturnType(typeof(string))]
 public sealed class TextExtension : MarkupExtension
 {
@@ -43,5 +45,9 @@ public sealed class TextExtension : MarkupExtension
     [ConstructorArgument("key")]
     public string Key { get; set; } = "";
 
-    public override object ProvideValue(IServiceProvider serviceProvider) => App.Text.Get(Key);
+    /// <summary>Whether only the text's first line is wanted.</summary>
+    public bool FirstLine { get; set; }
+
+    public override object ProvideValue(IServiceProvider serviceProvider) =>
+        FirstLine ? SettingText.FirstLine(App.Text.Get(Key)) : App.Text.Get(Key);
 }
