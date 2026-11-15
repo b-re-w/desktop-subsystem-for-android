@@ -250,6 +250,7 @@ jobs:
           uv run dsa/graphics/host/test_host_renderer.py
 
       - name: Check killing the renderer process keeps the windows and frames resume
+        timeout-minutes: 10
         working-directory: dsa
         env:
           GFXSTREAM_BACKEND_PATH: ${{ github.workspace }}/.scratch/build-host/dist/bin/libgfxstream_backend.so
@@ -495,6 +496,7 @@ jobs:
           cargo test -p dsa-host-windows --test window_manager -- nfr1_the_staging_buffer_is_made_for_a_copy_and_freed_when_idle --nocapture
 
       - name: Check killing the renderer process keeps the windows and frames resume
+        timeout-minutes: 10
         shell: pwsh
         working-directory: dsa
         env:
@@ -770,6 +772,7 @@ jobs:
           uv run dsa/graphics/host/test_host_renderer.py
 
       - name: Check killing the renderer process keeps the windows and frames resume
+        timeout-minutes: 10
         working-directory: dsa
         env:
           GFXSTREAM_BACKEND_PATH: ${{ github.workspace }}/.scratch/build-host-macos/dist/bin/libgfxstream_backend.dylib
