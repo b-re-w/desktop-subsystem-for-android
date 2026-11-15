@@ -6,11 +6,13 @@
 //! guest to end a task whose window the user closed. A listener thread takes the window
 //! hosts' connections, and a thread per connection reads what each says.
 //!
-//! Frames go straight from the renderer to the window hosts: each task with a window has a
+//! Frames go from the renderer to the window hosts on the GPU: each task with a window has a
 //! [`RemoteWindow`], the frame target the renderer copies into. It makes a shared texture on
-//! the renderer's GPU, places the texture's NT handle in the window host's process, and for
-//! each frame tells the window host and waits until it has copied the frame out. No frame
-//! passes through the CPU. The texture has the size of the guest's buffers, the largest a
+//! the renderer's GPU, and for each frame tells the window host and waits until the frame has
+//! been copied out. The window host makes no Direct3D device: it asks this process to copy the
+//! frame into the window's swapchain, which this process owns and shows in the window through
+//! a DirectComposition surface handle placed in the window host's process (`surfaces`). No
+//! frame passes through the CPU. The texture has the size of the guest's buffers, the largest a
 //! frame of the task can be, so resizing the window does not remake it: each frame fills its
 //! top-left region and says how large that region is.
 //!
@@ -40,7 +42,7 @@ use dsa_host_core::compositor::window_hosts::{
 };
 use dsa_host_core::memory::IdleTrim;
 use dsa_host_core::tasks::{AppInfo, TaskEvent, TaskRequest};
-use dsa_protocol::window_host::types::{envelope::Body, Frame, FrameTexture};
+use dsa_protocol::window_host::types::{envelope::Body, Frame, SurfaceAnswer, SurfaceCall};
 use dsa_protocol::window_host::{decode, encode_body};
 use dsa_transport::{Connection, FrameSender, Listener, TransportError};
 use windows_sys::Win32::Foundation::{CloseHandle, DuplicateHandle, DUPLICATE_SAME_ACCESS, HANDLE};
@@ -55,6 +57,7 @@ use super::log::{
     CompositorLogger,
 };
 use super::present::{Gpu, SharedTexture};
+use super::surfaces::{Surfaces, WindowSurfaces};
 use dsa_host_core::resize_trace::millis;
 
 /// The build the window manager names itself by to the window hosts.
@@ -167,6 +170,10 @@ pub struct HostLink {
     progress: Condvar,
     closed: AtomicBool,
     next_texture: AtomicU64,
+    /// Each task's frame texture now and its ID, which the window host's calls copy from.
+    textures: Mutex<HashMap<i32, (Arc<SharedTexture>, u64)>>,
+    /// Each task window's swapchains, which the window host's calls draw into.
+    surfaces: Mutex<Surfaces>,
 }
 
 struct ProcessHandle(HANDLE);
@@ -194,6 +201,8 @@ impl HostLink {
             progress: Condvar::new(),
             closed: AtomicBool::new(false),
             next_texture: AtomicU64::new(1),
+            textures: Mutex::new(HashMap::new()),
+            surfaces: Mutex::new(HashMap::new()),
         }
     }
 
@@ -216,6 +225,68 @@ impl HostLink {
         self.closed.store(true, Ordering::SeqCst);
         self.sender.lock().unwrap_or_else(|e| e.into_inner()).take();
         self.progress.notify_all();
+        // The windows' swapchains and textures go with the connection.
+        self.surfaces
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
+        self.textures
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
+    }
+
+    /// Task `task_id`'s frames are in `texture`, named `id`, from now on.
+    fn set_texture(&self, task_id: i32, texture: &HostTexture) {
+        self.textures
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(task_id, (Arc::clone(&texture.shared), texture.id));
+    }
+
+    /// Task `task_id`'s window is gone: its swapchains and texture go.
+    fn forget(&self, task_id: i32) {
+        self.surfaces
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(&task_id);
+        self.textures
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(&task_id);
+    }
+
+    /// Carries out a window host's call on its window's swapchains, on `gpu`, and returns the
+    /// answers. Without a GPU every call is answered with why.
+    fn serve_call(
+        &self,
+        call: &SurfaceCall,
+        gpu: Option<&Arc<Gpu>>,
+        logger: &Option<Arc<CompositorLogger>>,
+    ) -> Vec<SurfaceAnswer> {
+        let Some(gpu) = gpu else {
+            return vec![SurfaceAnswer {
+                task_id: call.task_id,
+                call_id: call.call_id,
+                error: "the window manager has no GPU to show frames with".into(),
+                ..Default::default()
+            }];
+        };
+        let texture = self
+            .textures
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(&call.task_id)
+            .cloned();
+        let mut surfaces = self.surfaces.lock().unwrap_or_else(|e| e.into_inner());
+        let window = surfaces
+            .entry(call.task_id)
+            .or_insert_with(|| WindowSurfaces::new(call.task_id, Arc::clone(gpu), logger.clone()));
+        let answers = window.call(call, texture, &|handle| self.place(handle));
+        if call.op == dsa_host_core::compositor::surface_calls::SURFACE_OP_RELEASE_ALL {
+            surfaces.remove(&call.task_id);
+        }
+        answers
     }
 
     fn is_closed(&self) -> bool {
@@ -275,7 +346,7 @@ impl HostLink {
 
 /// A texture a window host shows a task's frames from.
 pub struct HostTexture {
-    shared: SharedTexture,
+    shared: Arc<SharedTexture>,
     id: u64,
 }
 
@@ -372,6 +443,8 @@ impl RemoteWindow {
         let Some(texture) = texture else {
             return;
         };
+        // The window host's calls copy from it whether or not it was told of it yet.
+        link.set_texture(self.task_id, &texture);
         if handover.texture && !announce(&link, self.task_id, &texture) {
             // The window host cannot open it: the next frame makes a texture it can.
             state.texture = None;
@@ -385,7 +458,8 @@ impl RemoteWindow {
             );
             return;
         }
-        if let Some((width, height)) = handover.frame {
+        if let Some(size) = handover.frame {
+            let (width, height) = frame_size(&texture, size);
             state.sequence += 1;
             let sequence = state.sequence;
             drop(state);
@@ -418,24 +492,32 @@ impl RemoteWindow {
         let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
         state.closed = true;
         state.texture = None;
+        if let Some(link) = &state.link {
+            link.forget(self.task_id);
+        }
         trace_forget(self.task_id);
     }
 }
 
-/// Places `texture`'s handle in the window host's process and tells it of the texture.
-/// Returns whether that went.
+/// Makes `texture` the one the window host's calls for task `task_id` copy frames from. The
+/// texture stays in this process: the window host has no device to open it on. Returns
+/// whether that went.
 fn announce(link: &HostLink, task_id: i32, texture: &HostTexture) -> bool {
-    let Some(handle) = link.place(texture.shared.handle()) else {
+    if link.is_closed() {
         return false;
-    };
-    let (width, height) = texture.shared.size();
-    link.send(Body::FrameTexture(FrameTexture {
-        task_id,
-        texture_id: texture.id,
-        handle,
-        width,
-        height,
-    }))
+    }
+    link.set_texture(task_id, texture);
+    true
+}
+
+/// The size a frame says it fills, the whole texture when it says none, so the window host,
+/// which does not know the texture's size, always knows the frame's.
+fn frame_size(texture: &HostTexture, (width, height): (u32, u32)) -> (u32, u32) {
+    if width == 0 || height == 0 {
+        texture.shared.size()
+    } else {
+        (width, height)
+    }
 }
 
 /// The textures of task windows whose window host has not connected yet are numbered from
@@ -482,7 +564,10 @@ impl FrameTarget for RemoteWindow {
             Some(link) => link.next_texture.fetch_add(1, Ordering::Relaxed),
             None => EARLY_TEXTURE.fetch_add(1, Ordering::Relaxed),
         };
-        let texture = Arc::new(HostTexture { shared, id });
+        let texture = Arc::new(HostTexture {
+            shared: Arc::new(shared),
+            id,
+        });
         let now = state.early.texture_made();
         let announced = match (&link, now) {
             (Some(link), true) => {
@@ -537,7 +622,8 @@ impl FrameTarget for RemoteWindow {
         texture.shared.handle()
     }
 
-    fn present(&self, texture: &HostTexture, (width, height): (u32, u32)) {
+    fn present(&self, texture: &HostTexture, size: (u32, u32)) {
+        let (width, height) = frame_size(texture, size);
         let (link, sequence) = {
             let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
             if state.closed {
@@ -608,6 +694,7 @@ pub fn accept_hosts(
     mut listener: Box<dyn Listener>,
     events: Sender<ManagerEvent>,
     adapter_luid: Option<[u8; 8]>,
+    gpu: Option<Arc<Gpu>>,
     stop: Arc<AtomicBool>,
     logger: Option<Arc<CompositorLogger>>,
 ) {
@@ -630,9 +717,10 @@ pub fn accept_hosts(
         let events = events.clone();
         let stop = Arc::clone(&stop);
         let logger = logger.clone();
+        let gpu = gpu.clone();
         let _ = thread::Builder::new()
             .name("dsa-wm-host".into())
-            .spawn(move || serve_host(connection, id, events, adapter_luid, stop, logger));
+            .spawn(move || serve_host(connection, id, events, adapter_luid, gpu, stop, logger));
     }
 }
 
@@ -684,6 +772,7 @@ fn serve_host(
     id: HostId,
     events: Sender<ManagerEvent>,
     adapter_luid: Option<[u8; 8]>,
+    gpu: Option<Arc<Gpu>>,
     stop: Arc<AtomicBool>,
     logger: Option<Arc<CompositorLogger>>,
 ) {
@@ -758,6 +847,14 @@ fn serve_host(
         };
         if let Body::FramePresented(presented) = &body {
             link.presented(presented.task_id, presented.sequence);
+        } else if let Body::SurfaceCall(call) = &body {
+            // Carried out on this thread, which reads nothing else meanwhile: the window host
+            // waits for the answer, and the renderer waits for that window host.
+            for answer in link.serve_call(call, gpu.as_ref(), &logger) {
+                if !link.send(Body::SurfaceAnswer(answer)) {
+                    break;
+                }
+            }
         } else if let Some(report) = report_from_wire(&body) {
             if events
                 .send(ManagerEvent::Report { host: id, report })

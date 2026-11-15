@@ -394,10 +394,10 @@ unsafe fn open(setup: &UiSetup, beside: Option<HWND>, task_id: i32, title: &str,
     // Its frames are shown in it as they come, at its scale, see-through where the app drew
     // nothing; the window itself takes the size the window manager says.
     data.pointer.set_held(true);
-    if let Some(gpu) = &setup.gpu {
+    {
         match WindowPresenter::new_see_through(
             task_id,
-            Arc::clone(gpu),
+            Arc::clone(&setup.surfaces),
             hwnd as isize,
             size,
             setup.logger.clone(),

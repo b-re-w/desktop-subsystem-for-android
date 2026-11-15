@@ -3,14 +3,14 @@
 //! Each app runs its own copy of this program, named and drawn as the app (see
 //! [`crate::app_exe`]), so Task Manager and the taskbar show the app as itself. It connects to
 //! the window manager in the same session, says which app it shows, opens the windows the
-//! window manager asks for ([`window`]), and shows the frames the window manager hands it:
-//! for each task, a Direct3D 11 texture shared by an NT handle that the window manager has
-//! placed in this process. The texture stays at the largest size the task can have, and each
-//! frame says which top-left region of it the frame fills. That region is copied from the
-//! texture into the window's swapchain on the GPU, and the window manager is told once the
-//! texture may be written again. It ends
-//! when the window manager closes the connection, which it does when the app's last window
-//! closes.
+//! window manager asks for ([`window`]), and shows the frames the window manager tells it of.
+//! It makes no Direct3D device and no DXGI factory, which would cost each app process tens of
+//! MiB of driver memory: the window manager owns each window's swapchains and copies each
+//! frame into them on its own device, when this process asks ([`SurfaceLink`]), and this
+//! process shows them in its windows' DirectComposition visuals through the surface handles
+//! the window manager places in it. Each frame is answered once it has been copied out, so the
+//! renderer may write the task's texture again. It ends when the window manager closes the
+//! connection, which it does when the app's last window closes.
 
 pub mod accessibility;
 pub mod apk_install;
@@ -34,23 +34,20 @@ pub mod tsf;
 pub mod window;
 pub mod window_menu;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use dsa_host_core::compositor::window_hosts::{
     connect_window_host, report_to_wire, to_host_from_wire, FromHost,
 };
-use dsa_protocol::window_host::types::{envelope::Body, Attach, FramePresented};
+use dsa_protocol::window_host::types::{envelope::Body, Attach, Frame, FramePresented};
 use dsa_protocol::window_host::{decode, encode_body};
 use dsa_transport::{Connector, FrameSender, TransportError};
-use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
 
 use self::window::{OpenWindow, Presenters, UiSetup};
-use crate::compositor::log::{
-    input_trace, input_trace_on, note, trace_forget, trace_stage, CompositorLogger,
-};
-use crate::compositor::present::{Gpu, OpenedTexture};
+use crate::compositor::log::{input_trace, input_trace_on, note, trace_forget, CompositorLogger};
+use crate::compositor::present::SurfaceLink;
 use crate::compositor::tasks::serve_window_input;
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::resize_trace::millis;
@@ -153,7 +150,7 @@ pub struct HostSetup {
     /// Dials the service's local API, which the windows' pointer and key input go to directly, so
     /// it never waits on the window manager.
     pub input: Box<dyn Connector>,
-    /// The process the window manager places the frames' textures in: this one.
+    /// The process the window manager places the windows' surface handles in: this one.
     pub process_id: u32,
     pub logger: Option<Arc<CompositorLogger>>,
     /// Where the windows that are open are listed, for tests.
@@ -163,59 +160,6 @@ pub struct HostSetup {
     /// tree.
     pub accessibility: Option<accessibility::ApiConnect>,
 }
-
-/// A task's texture as the window manager announced it: its ID, the handle the window manager
-/// placed in this process, its size, and the texture opened from it.
-///
-/// The handle stays open while the texture is the task's, so that after a GPU reset, which
-/// removes the devices it was opened on, it can be opened again on the new ones. A texture the
-/// reset took with the window manager's own device does not open again; the window manager
-/// then makes a new one and announces it.
-struct Received {
-    id: u64,
-    handle: HANDLE,
-    size: (u32, u32),
-    opened: Option<OpenedTexture>,
-}
-
-impl Received {
-    /// The texture opened on `gpu`'s current devices, opening it again when a GPU reset
-    /// replaced the ones it was opened on. `None` when it does not open there.
-    fn current(&mut self, gpu: &Gpu, log: Option<&CompositorLogger>) -> Option<&OpenedTexture> {
-        let stale = self
-            .opened
-            .as_ref()
-            .is_none_or(|opened| opened.generation() != gpu.generation());
-        if stale {
-            self.opened = match gpu.open_shared(self.handle as isize, self.size) {
-                Ok(opened) => Some(opened),
-                Err(why) => {
-                    if self.opened.is_some() {
-                        note(
-                            log,
-                            &format!(
-                                "a task's frame texture does not open on the new Direct3D \
-                                 devices ({why}); the window waits for a new one"
-                            ),
-                        );
-                    }
-                    None
-                }
-            };
-        }
-        self.opened.as_ref()
-    }
-}
-
-impl Drop for Received {
-    fn drop(&mut self) {
-        // SAFETY: a handle the window manager duplicated into this process, closed once.
-        unsafe { CloseHandle(self.handle) };
-    }
-}
-
-/// Each task's texture, as the window manager last announced it.
-type Textures = HashMap<i32, Received>;
 
 /// Runs the window host until the window manager closes the connection. An error says why
 /// it could not start.
@@ -240,24 +184,9 @@ pub fn run(mut setup: HostSetup) -> Result<(), String> {
         Arc::new(Mutex::new(connection.try_clone_sender().ok_or(
             "the connection to the window manager cannot be shared",
         )?));
-    let gpu = match Gpu::new(luid, true) {
-        Ok(gpu) => {
-            if luid.is_some() && !gpu.on_renderer_gpu() {
-                note(
-                    log.as_deref(),
-                    "the window manager's GPU was not found; the windows may stay empty",
-                );
-            }
-            Some(gpu)
-        }
-        Err(why) => {
-            note(
-                log.as_deref(),
-                &format!("the windows cannot show frames: {why}"),
-            );
-            None
-        }
-    };
+    // The window manager's GPU is the only one this process draws with, through it.
+    let _ = luid;
+    let surfaces = SurfaceLink::new(Arc::clone(&sender));
     let report_sender = Arc::clone(&sender);
     let report: window::Report = Arc::new(move |report: FromHost| {
         let frame = encode_body(report_to_wire(&report));
@@ -280,7 +209,7 @@ pub fn run(mut setup: HostSetup) -> Result<(), String> {
     let ui = window::start(UiSetup {
         report,
         input: input_tx,
-        gpu: gpu.clone(),
+        surfaces: Arc::clone(&surfaces),
         presenters: Arc::clone(&presenters),
         logger: log.clone(),
         listing: Arc::clone(&setup.listing),
@@ -307,9 +236,19 @@ pub fn run(mut setup: HostSetup) -> Result<(), String> {
         overlay_places: crate::paths::UserRoot::current().map(|root| root.apps()),
     })?;
 
-    // This thread shows each frame, and the renderer waits for it.
-    crate::scheduling::raise_this_thread();
-    let mut textures = Textures::new();
+    // Frames are shown on a thread of their own, which the renderer waits for: showing one
+    // waits for the window manager's answer, which this thread reads.
+    let (frames_tx, frames_rx) = std::sync::mpsc::channel::<(Frame, bool)>();
+    let present_presenters = Arc::clone(&presenters);
+    let present_sender = Arc::clone(&sender);
+    let present_log = log.clone();
+    let presenting = std::thread::Builder::new()
+        .name("dsa-app-window-present".into())
+        .spawn(move || {
+            crate::scheduling::raise_this_thread();
+            show_frames(frames_rx, present_presenters, present_sender, present_log)
+        })
+        .map_err(|e| format!("could not start the frames' thread: {e}"))?;
     // The windows asked for whose presenter may not be there yet.
     let mut opening: HashSet<i32> = HashSet::new();
     loop {
@@ -354,7 +293,6 @@ pub fn run(mut setup: HostSetup) -> Result<(), String> {
             tasks.follow(&command);
             match &command {
                 dsa_host_core::compositor::window_hosts::ToHost::Close { task_id } => {
-                    textures.remove(task_id);
                     opening.remove(task_id);
                     trace_forget(*task_id);
                 }
@@ -373,99 +311,79 @@ pub fn run(mut setup: HostSetup) -> Result<(), String> {
             continue;
         }
         match body {
-            Body::FrameTexture(texture) => {
-                let handle = texture.handle as isize;
-                let started = std::time::Instant::now();
-                let opened = match &gpu {
-                    Some(gpu) => gpu
-                        .open_shared(handle, (texture.width, texture.height))
-                        .map_err(|why| note(log.as_deref(), &why))
-                        .ok(),
-                    None => None,
-                };
-                trace_stage(
-                    log.as_deref(),
-                    texture.task_id,
-                    "app.texture_opened",
-                    (texture.width, texture.height),
-                    &format!(
-                        "texture={} opened={} took={}",
-                        texture.texture_id,
-                        opened.is_some(),
-                        millis(started.elapsed())
-                    ),
-                );
-                // Kept, opened or not: a texture that did not open because this process's
-                // devices were just removed opens on the new ones at the next frame.
-                textures.insert(
-                    texture.task_id,
-                    Received {
-                        id: texture.texture_id,
-                        handle: handle as HANDLE,
-                        size: (texture.width, texture.height),
-                        opened,
-                    },
-                );
-            }
+            Body::SurfaceAnswer(answer) => surfaces.answered(answer),
             Body::Frame(frame) => {
-                let presenter = if opening.remove(&frame.task_id) {
-                    wait_for_presenter(&presenters, frame.task_id, WINDOW_OPENING)
-                } else {
-                    presenters
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .get(&frame.task_id)
-                        .cloned()
-                };
-                let texture = match (&gpu, textures.get_mut(&frame.task_id)) {
-                    (Some(gpu), Some(received)) if received.id == frame.texture_id => {
-                        received.current(gpu, log.as_deref())
-                    }
-                    _ => None,
-                };
-                if let (Some(presenter), Some(texture)) = (presenter, texture) {
-                    let started = std::time::Instant::now();
-                    // A failure (a GPU reset among them) is logged and the window stays: the
-                    // presenter moves to new devices, and the connection goes on.
-                    if let Err(why) = presenter.present(texture, (frame.width, frame.height)) {
-                        note(log.as_deref(), &why);
-                    }
-                    if input_trace_on() {
-                        input_trace(
-                            "app.present",
-                            frame.task_id,
-                            &format!(
-                                "sequence={} took={}",
-                                frame.sequence,
-                                millis(started.elapsed())
-                            ),
-                        );
-                    }
-                }
-                // Answered even when nothing was shown, so the renderer never waits on it.
-                let presented = encode_body(Body::FramePresented(FramePresented {
-                    task_id: frame.task_id,
-                    sequence: frame.sequence,
-                }));
-                let sent = sender
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .send(&presented);
-                if let Err(why) = sent {
-                    note(
-                        log.as_deref(),
-                        &format!("could not tell the window manager a frame was shown: {why}"),
-                    );
+                let opening = opening.remove(&frame.task_id);
+                if frames_tx.send((frame, opening)).is_err() {
                     break;
                 }
             }
             _ => {}
         }
     }
+    // Nothing waits on the window manager any more.
+    surfaces.close();
+    drop(frames_tx);
+    let _ = presenting.join();
     // The windows close first; the pointer input ends with them.
     ui.stop();
     let _ = input.join();
     Ok(())
+}
+
+/// Shows each frame `frames` brings in its window, and tells the window manager once it has
+/// been copied out, until the connection ends.
+fn show_frames(
+    frames: std::sync::mpsc::Receiver<(Frame, bool)>,
+    presenters: Presenters,
+    sender: Arc<Mutex<Box<dyn FrameSender>>>,
+    log: Option<Arc<CompositorLogger>>,
+) {
+    for (frame, opening) in frames {
+        let presenter = if opening {
+            wait_for_presenter(&presenters, frame.task_id, WINDOW_OPENING)
+        } else {
+            presenters
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .get(&frame.task_id)
+                .cloned()
+        };
+        if let Some(presenter) = presenter {
+            let started = std::time::Instant::now();
+            // A failure (a GPU reset among them) is logged and the window stays.
+            if let Err(why) = presenter.present(frame.texture_id, (frame.width, frame.height)) {
+                note(log.as_deref(), &why);
+            }
+            if input_trace_on() {
+                input_trace(
+                    "app.present",
+                    frame.task_id,
+                    &format!(
+                        "sequence={} took={}",
+                        frame.sequence,
+                        millis(started.elapsed())
+                    ),
+                );
+            }
+        }
+        // Answered even when nothing was shown, so the renderer never waits on it.
+        let presented = encode_body(Body::FramePresented(FramePresented {
+            task_id: frame.task_id,
+            sequence: frame.sequence,
+        }));
+        let sent = sender
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .send(&presented);
+        if let Err(why) = sent {
+            note(
+                log.as_deref(),
+                &format!("could not tell the window manager a frame was shown: {why}"),
+            );
+            break;
+        }
+    }
 }
 
 /// The presenter of task `task_id`'s window, waiting at most `timeout` for the window, which

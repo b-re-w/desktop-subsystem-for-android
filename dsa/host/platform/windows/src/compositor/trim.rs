@@ -92,16 +92,12 @@ pub fn empty_working_set() {
     }
 }
 
-/// Gives back what a window host holds for a window that was just minimized: the GPU
-/// driver's spare memory for `gpu` (the swapchain let go when the window hid), the free memory
-/// of every heap, and then the working set. Emptying the working set alone only pages memory
-/// out: it stays committed and private to the process. The driver's trim and the heap
-/// decommit are what take private commit down, by what the window's frames and their staging
-/// left behind.
-pub fn give_back_minimized(gpu: Option<&Gpu>) {
-    if let Some(gpu) = gpu {
-        gpu.trim();
-    }
+/// Gives back what a window host holds for a window that was just minimized: the free memory
+/// of every heap, and then the working set. A window host has no GPU device of its own; the
+/// window manager lets the window's swapchain go and trims its own driver memory. Emptying the
+/// working set alone only pages memory out: the heap decommit is what takes private commit
+/// down.
+pub fn give_back_minimized() {
     committed::compact_heaps();
     empty_working_set();
 }

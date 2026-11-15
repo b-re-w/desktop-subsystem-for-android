@@ -111,7 +111,7 @@ use crate::compositor::log::{
     input_trace, input_trace_on, trace_detailed, trace_move_ended, trace_moving, trace_place,
 };
 use crate::compositor::log::{note, CompositorLogger};
-use crate::compositor::present::{self, Gpu, WindowPresenter};
+use crate::compositor::present::{self, SurfaceLink, WindowPresenter};
 use crate::compositor::window_marks;
 use std::fmt::Write as _;
 use windows_sys::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
@@ -263,8 +263,9 @@ pub struct UiSetup {
     pub report: Report,
     /// Where the pointer, key and text input in every task window goes.
     pub input: Sender<InputEvent>,
-    /// The GPU devices, or `None` when frames cannot be shown (the windows still open).
-    pub gpu: Option<Arc<Gpu>>,
+    /// The window manager's GPU, which the windows' frames, caption and splash are drawn with
+    /// (this process makes no Direct3D device).
+    pub surfaces: Arc<SurfaceLink>,
     /// Where the UI thread keeps each window's presenter.
     pub presenters: Presenters,
     pub logger: Option<Arc<CompositorLogger>>,
@@ -488,11 +489,7 @@ fn register_class(
     Ok(())
 }
 
-/// The devices this process's windows draw with, for the give-back when a window is minimized.
-static WINDOW_GPU: std::sync::OnceLock<Option<Arc<Gpu>>> = std::sync::OnceLock::new();
-
 fn run(setup: UiSetup, commands: Receiver<ToHost>, ready: Sender<Result<isize, String>>) {
-    let _ = WINDOW_GPU.set(setup.gpu.clone());
     // SAFETY: plain Win32 calls on this thread's own windows.
     unsafe {
         // Sizes are in real pixels on every monitor; a window that moves to a monitor of
@@ -787,9 +784,7 @@ unsafe extern "system" fn task_window_proc(
                         shown: !minimized,
                     });
                     if minimized {
-                        crate::compositor::trim::give_back_minimized(
-                            WINDOW_GPU.get().and_then(|gpu| gpu.as_deref()),
-                        );
+                        crate::compositor::trim::give_back_minimized();
                     }
                 }
             }
@@ -2532,23 +2527,20 @@ impl Ui {
             }
         }
         let client = apply_size(hwnd, size);
-        let presenter = match &self.setup.gpu {
-            Some(gpu) => match WindowPresenter::new(
-                task_id,
-                Arc::clone(gpu),
-                hwnd as isize,
-                client,
-                self.setup.logger.clone(),
-            ) {
-                Ok(presenter) => Some(presenter),
-                Err(why) => {
-                    self.log(&format!(
-                        "task {task_id}'s window cannot show frames: {why}"
-                    ));
-                    None
-                }
-            },
-            None => None,
+        let presenter = match WindowPresenter::new(
+            task_id,
+            Arc::clone(&self.setup.surfaces),
+            hwnd as isize,
+            client,
+            self.setup.logger.clone(),
+        ) {
+            Ok(presenter) => Some(presenter),
+            Err(why) => {
+                self.log(&format!(
+                    "task {task_id}'s window cannot show frames: {why}"
+                ));
+                None
+            }
         };
         if let Some(data) = window_data(hwnd) {
             *data.presenter.borrow_mut() = presenter.clone();
