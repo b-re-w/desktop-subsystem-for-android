@@ -3603,6 +3603,34 @@ SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운
 - 실기에서의 B. 테스트는 가짜 표본으로 한 것이다. 설정 화면에서 글리프가 어두워지는지, 첫 화면으로 돌아가면 다시 밝아지는지, FLO 플레이어 화면이 흰 글리프를 지키는지 PC에서 본다.
 - 리눅스 호스트의 GPU 경로가 마지막 프레임의 띠를 읽는지는 보지 않았다.
 
+### C. 선택지 3을 만들며 읽은 것 (2026-11-15 소유자 결정)
+
+**결정.** 소유자가 A의 선택지 3을 골랐다. 앱별 스위치 "제목 표시줄 아래에서 시작"이고 기본은 꺼짐이다(SPEC FR-22, FR-30).
+
+**기준과 방법.** `android-16.0.0_r1`과 `android-17.0.0_r1` 태그의 `DecorView.java`, `DesktopModeWindowDecoration.java`, `android-16.0.0_r1`의 `InsetsSource.java`와 `DesktopModeFlags.java`를 android.googlesource.com에서 읽었다. 줄 번호가 없는 페이지라 식별자로 적는다. 빌드하거나 기기에서 돌려 보지 않았다.
+
+**읽은 것.**
+
+- `InsetsSource`: `FLAG_FORCE_CONSUMING = 1 << 2`, `FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR = 1 << 4`. 뒤의 것은 캡션 바를 보이게 요청한 창에서도 인셋을 소비시키고, 창이 `APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND`를 쓰면 효과가 없다고 주석에 적혀 있다.
+- `DesktopModeWindowDecoration.updateRelayoutParams`: 투명한 캡션을 요청하지 않은 앱 머리글의 캡션 소스에 `FLAG_FORCE_CONSUMING`(`shouldExcludeCaptionFromAppBounds`가 아닐 때)과 `FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR`를 붙인다. Android 16에서는 뒤의 것이 `ENABLE_CAPTION_COMPAT_INSET_FORCE_CONSUMPTION_ALWAYS.isTrue()` 아래에 있고, Android 17에서는 조건이 없다.
+- `DecorView.updateColorViews`(Android 17): `isOpaqueCaptionBar = customizableWindowHeaders() && (appearance & APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND) == 0`, `consumingOpaqueCaptionBar = mLastForceConsumingOpaqueCaptionBar && isOpaqueCaptionBar`. 참이면 `consumingTypes |= captionBar()`가 되고, `consumedInsets = mLastInsets.getInsets(consumingTypes)`가 내용 루트의 `lp.topMargin`이 되며, 앱에는 `insets.inset(consumedInsets)`가 간다. 앱은 띠 아래에서 시작하고 위쪽 인셋 0을 받는다.
+- `DecorView.updateColorViews`(Android 16): 같은 식 앞에 `ENABLE_CAPTION_COMPAT_INSET_FORCE_CONSUMPTION_ALWAYS.isTrue() &&`가 붙는다. 이 검사는 앱 프로세스에서 돈다. `DesktopModeFlags.isTrue()`는 개발자 옵션 재정의가 없으면 aconfig 플래그 `enableCaptionCompatInsetForceConsumptionAlways`의 값을 돌려준다.
+- 띠의 그림: 상태 표시줄 색 뷰는 `calculateStatusBarColor(appearance)`(창의 `mStatusBarColor`)로, 높이 `mLastTopInset`만큼 그려진다. 캡션을 소비해도 이 호출에는 캡션에 따른 분기가 없다. 그래서 게스트가 합성한 프레임의 띠 자리에는 앱의 상태 표시줄 색이, 그 색이 투명하면 장식 뷰의 창 배경이 보인다.
+
+**만든 것.**
+
+- 게스트: 호스트가 켠 앱의 패키지 목록을 보낸다(`CaptionCompat`). 에이전트는 태스크를 처음 볼 때 그 목록으로 방식을 정하고, 그 태스크에 상태 표시줄 소스를 주지 않으며 캡션 바 소스에 두 플래그를 준다(`AndroidTaskActions.setCaptionInset`의 `opaque`). 호스트가 띠 높이를 말하기 전의 예상 띠도 같은 꼴이다. 목록은 게스트 데몬이 붙자마자 오는데 에이전트는 그 뒤에 뜨므로, 데몬(`dsa-channeld`)이 마지막 목록을 기억했다가 나중에 붙는 클라이언트에 준다.
+- 투명한 캡션을 요청한 앱: 프레임워크가 인셋을 대신 소비하지 않는다(위의 `isOpaqueCaptionBar`). 그래서 캡션 바 인셋에 띠 전체를 덮는 경계 사각형 하나를 주어 띠에 빈 자리가 없다고 알리고, 호스트는 그 창을 앱이 그리는 제목 표시줄로 다루지 않는다.
+- 호스트: 띠의 색은 프레임의 띠 픽셀에서 읽는다(`below_title_bar_sample`). 띠 표본에 "띠가 한 색일 때의 그 색"(`BandSample.band`)을 더했다. Windows와 Linux 호스트가 띠를 칠한다. macOS 호스트의 표준 창은 내용이 이미 제목 표시줄 아래에 있어 띠가 없다.
+- 열려 있는 창에는 적용하지 않는다. 프레임워크는 인셋이 바뀌면 바로 다시 나눠 주지만, 인셋을 화면이 만들어질 때 한 번만 읽는 앱(R51 앞부분의 YouTube 첫 화면)은 그 값을 지켜 이중 여백이 남는다.
+
+**확인하지 못한 것.**
+
+- Android 16 이미지에서 aconfig 플래그 `com.android.window.flags.enable_caption_compat_inset_force_consumption_always`의 값. 꺼져 있으면 Android 16에서는 `DecorView`가 캡션 인셋을 소비하지 않는다. 그때 앱은 상태 표시줄 인셋 0과 캡션 바 인셋(띠 높이)을 받으므로, `statusBars()`만 보는 앱은 띠 밑으로 들어가고 `systemBars()`를 보는 앱은 지금처럼 스스로 비운다. PC에서 `aflags list`와 `dumpsys window`로 본다. 꺼져 있으면 이미지에서 그 플래그를 켜는 방법을 따로 정해야 한다.
+- `customizableWindowHeaders()` 플래그의 값. 꺼져 있으면 두 판 모두 소비가 일어나지 않는다. 에이전트가 이미 읽는 `APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND`가 이 API와 함께 들어왔으므로 켜져 있다고 보았다.
+- 프레임워크 리소스 `status_bar_height`를 직접 읽어 여백을 주는 앱. 리소스는 띠 높이 그대로이므로 그런 앱은 스위치를 켜도 여백을 한 번 더 준다.
+- 실기의 띠 색. 가짜 표본으로만 시험했다.
+
 ## R52. 앱 오버레이 창이 호스트에 보이지 않은 까닭과 창 하나씩으로 내보내는 길 (FR-41)
 
 조사일 2026-11-15. 대상은 프레임워크 잠금(`dsa/guest/framework/framework-lock.json`)의 android16(`frameworks/base` `45034f06`, `frameworks/native` `fcbde2bc`)과 android17(`frameworks/base` `94b4c163`, `frameworks/native` `ae266dcb`), gfxstream `d047a572`다. 소스를 읽어 확인했고, 기기에서 확인해야 할 것은 맨 아래에 따로 적는다.
