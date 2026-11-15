@@ -130,6 +130,19 @@ dsa app-window <package> --dpi-scaling system   # başka bir monitörde nasıl �
 dsa app-window <package> reset                  # varsayılanlara döner
 ```
 
+## Bir uygulamayı başlık çubuğunun altından başlatma
+
+Bir uygulama, penceresinin en üstüne, başlık çubuğunun altına kadar çizer. Bu yüzden bazı
+uygulamaların üst çubuğu sıkışır ya da bir kısmı başlık çubuğunun altında kalır. Böyle bir
+uygulama için DSA Settings'in **Apps** sayfasında **Start below the title bar** (başlık çubuğunun
+altından başlat) seçeneğini açın. Uygulamanın içeriği o zaman başlık çubuğunun altından başlar ve başlık
+çubuğu, uygulamanın orada gösterdiği rengi alır. Varsayılan olarak kapalıdır ve uygulamanın
+penceresi bir sonraki açılışında geçerli olur. Komut satırından:
+
+```
+dsa app-window <package> --below-title-bar on   # off varsayılana döner
+```
+
 ## Bir uygulamayı başka ölçekteki bir monitöre taşıma
 
 Bir uygulama, penceresinin açıldığı monitörün ölçeğiyle ilk karesinden itibaren açılır, bu yüzden

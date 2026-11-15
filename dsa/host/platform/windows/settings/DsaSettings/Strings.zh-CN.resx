@@ -1683,6 +1683,14 @@ Android 的设置会显示设备名称和芯片。型号名称只显示在这里
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>是否可以调整此应用窗口的大小并将其最大化。关闭后，每个窗口都保持打开时的大小。</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>从标题栏下方开始</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>适用于顶部栏被标题栏挤压或遮挡的应用。
+应用从标题栏下方开始显示，而不是绘制在标题栏后面。
+下次打开该应用的窗口时生效。</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>此应用窗口打开时的大小</value>
   </data>

@@ -1683,6 +1683,14 @@ Masing-masing memiliki ikon di area pemberitahuan bilah tugas. Menghentikan apli
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Apakah Anda dapat mengubah ukuran dan memaksimalkan jendela aplikasi ini. Jika nonaktif, jendela tetap berukuran seperti saat dibuka.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Mulai di bawah bilah judul</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Untuk aplikasi yang bilah atasnya terimpit atau tertutup oleh bilah judul.
+Aplikasi dimulai di bawah bilah judul, bukan menggambar di belakangnya.
+Berlaku saat jendela aplikasi dibuka berikutnya.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>Ukuran saat jendela aplikasi ini dibuka</value>
   </data>

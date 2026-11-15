@@ -5,7 +5,7 @@
 //! The settings app's Apps page and `dsa app-window` change them through the local API; the
 //! service keeps them beside the user's other settings, and the user's window manager reads
 //! them when an app's window opens. An app with the defaults (resizable, opening at the size
-//! Android gives its task, scaling its own way) has no entry.
+//! Android gives its task, scaling its own way, under the unified title bar) has no entry.
 
 use dsa_protocol::host_api::types;
 use serde::{Deserialize, Serialize};
@@ -333,6 +333,40 @@ pub struct AppWindowSettings {
     /// Where the app's windows show the app hiding both its bars alone.
     #[serde(default)]
     pub immersive: FullScreenPlace,
+    /// Whether the app starts below the title bar: its content begins under the band, which
+    /// the window paints itself, and the app has no top inset to handle. For an app whose top
+    /// bar is squeezed or hidden under the unified title bar. `None` leaves it to DSA's
+    /// choice for the app ([`starts_below_title_bar`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub below_title_bar: Option<bool>,
+}
+
+/// The apps that start below the title bar unless the user chose otherwise. None for now:
+/// the unified title bar is the default for every app. An app found to need the switch (as
+/// [`SYSTEM_SCALED_BY_DEFAULT`] lists the apps that need the system's scaling) is added here;
+/// `dsa app-window` reports the list as `below_title_bar_by_default`.
+pub const BELOW_TITLE_BAR_BY_DEFAULT: &[&str] = &[];
+
+/// Whether a task of `package` starts below the title bar: the user's choice for the app
+/// (`app`), else whether [`BELOW_TITLE_BAR_BY_DEFAULT`] lists it.
+pub fn starts_below_title_bar(package: &str, app: Option<&AppWindowSettings>) -> bool {
+    app.and_then(|app| app.below_title_bar)
+        .unwrap_or_else(|| BELOW_TITLE_BAR_BY_DEFAULT.contains(&package))
+}
+
+/// The packages whose tasks start below the title bar, sorted, each once: what the guest is
+/// told, from the user's settings for every app (`apps`) and [`BELOW_TITLE_BAR_BY_DEFAULT`].
+pub fn below_title_bar_packages(apps: &[AppWindowSettings]) -> Vec<String> {
+    let chosen = |package: &str| apps.iter().find(|app| app.package_name == package);
+    let mut packages: Vec<String> = BELOW_TITLE_BAR_BY_DEFAULT
+        .iter()
+        .map(|package| package.to_string())
+        .chain(apps.iter().map(|app| app.package_name.clone()))
+        .filter(|package| starts_below_title_bar(package, chosen(package)))
+        .collect();
+    packages.sort();
+    packages.dedup();
+    packages
 }
 
 impl AppWindowSettings {
@@ -343,6 +377,7 @@ impl AppWindowSettings {
             && self.dpi_scaling == DpiScaling::Auto
             && self.fullscreen == FullScreenPlace::Default
             && self.immersive == FullScreenPlace::Default
+            && self.below_title_bar.is_none()
     }
 
     /// Checks the settings, as a client sent them: the package must be an Android package
@@ -376,6 +411,11 @@ impl AppWindowSettings {
             dpi_scaling: DpiScaling::from_wire(app.dpi_scaling),
             fullscreen: FullScreenPlace::from_wire(app.fullscreen),
             immersive: FullScreenPlace::from_wire(app.immersive),
+            // The wire carries the switch as it works. On is a choice; off is one only for an
+            // app DSA would start below the title bar on its own.
+            below_title_bar: (app.below_title_bar
+                != BELOW_TITLE_BAR_BY_DEFAULT.contains(&app.package_name.as_str()))
+            .then_some(app.below_title_bar),
         }
     }
 
@@ -390,6 +430,7 @@ impl AppWindowSettings {
             dpi_scaling: self.dpi_scaling.to_wire(),
             fullscreen: self.fullscreen.to_wire(),
             immersive: self.immersive.to_wire(),
+            below_title_bar: starts_below_title_bar(&self.package_name, Some(self)),
         }
     }
 }
@@ -611,6 +652,73 @@ mod tests {
                 .unwrap();
         assert_eq!(old.fullscreen, FullScreenPlace::Default);
         assert_eq!(old.immersive, FullScreenPlace::Default);
+    }
+
+    #[test]
+    fn fr30_the_below_title_bar_switch_is_stored_with_the_other_window_settings() {
+        let on = AppWindowSettings {
+            below_title_bar: Some(true),
+            ..notes(false, None)
+        };
+        // On is an entry of its own, and survives the wire and the stored file.
+        assert!(!on.is_default());
+        assert!(on.to_wire().below_title_bar);
+        assert_eq!(AppWindowSettings::from_wire(&on.to_wire()), on);
+        let stored = serde_json::to_string(&on).unwrap();
+        assert_eq!(
+            serde_json::from_str::<AppWindowSettings>(&stored).unwrap(),
+            on
+        );
+        assert!(starts_below_title_bar("com.example.notes", Some(&on)));
+        // Off is the default: no entry, nothing set on the wire, nothing in the file.
+        let off = notes(false, None);
+        assert!(off.is_default());
+        assert!(!off.to_wire().below_title_bar);
+        assert_eq!(AppWindowSettings::from_wire(&off.to_wire()), off);
+        assert!(!serde_json::to_string(&off)
+            .unwrap()
+            .contains("below_title_bar"));
+        assert!(!starts_below_title_bar("com.example.notes", Some(&off)));
+        assert!(!starts_below_title_bar("com.example.notes", None));
+        // Turned off again, the app's entry goes with it.
+        let list = replace(&[], on.clone()).unwrap();
+        assert_eq!(list, vec![on]);
+        assert!(replace(&list, off).unwrap().is_empty());
+        // Settings stored before the switch existed read as off.
+        let old: AppWindowSettings =
+            serde_json::from_str(r#"{"package_name":"com.example.notes","fixed_size":true}"#)
+                .unwrap();
+        assert_eq!(old.below_title_bar, None);
+        assert!(!starts_below_title_bar("com.example.notes", Some(&old)));
+    }
+
+    #[test]
+    fn fr22_the_apps_that_start_below_the_title_bar_are_the_ones_switched_on() {
+        let app = |package: &str, below: Option<bool>| AppWindowSettings {
+            package_name: package.into(),
+            fixed_size: true,
+            below_title_bar: below,
+            ..AppWindowSettings::default()
+        };
+        assert_eq!(
+            below_title_bar_packages(&[
+                app("org.example.video", Some(true)),
+                app("com.example.notes", None),
+                app("com.example.mail", Some(false)),
+                app("com.example.player", Some(true)),
+            ]),
+            vec![
+                "com.example.player".to_string(),
+                "org.example.video".to_string()
+            ]
+        );
+        assert!(below_title_bar_packages(&[]).is_empty());
+        // No app starts below the title bar on DSA's own choice for now; every entry such a
+        // list would hold is a package name, there once.
+        for (i, package) in BELOW_TITLE_BAR_BY_DEFAULT.iter().enumerate() {
+            assert!(crate::compositor::window_hosts::is_valid_package(package));
+            assert!(!BELOW_TITLE_BAR_BY_DEFAULT[..i].contains(package));
+        }
     }
 
     #[test]

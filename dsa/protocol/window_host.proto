@@ -297,10 +297,15 @@ message ClientRect {
 // band inside `interactive` (the app's controls there, in client pixels) go to the app; the
 // rest of the band still drags the window. Sent when it changes; a window opens with the
 // window's own title bar.
+//
+// `below` says the task's app starts below the title bar (the user's setting for the app):
+// the app draws nothing of its own in the band, and the window paints the band opaque, in
+// the color the app's frame has there. `app_drawn` is never set with it.
 message SetCaptionMode {
   int32 task_id = 1;
   bool app_drawn = 2;
   repeated ClientRect interactive = 3;
+  bool below = 4;
 }
 
 // Window manager to window host: whether the task has somewhere to go back to (it is past

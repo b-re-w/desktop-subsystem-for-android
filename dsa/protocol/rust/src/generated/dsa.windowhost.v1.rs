@@ -308,6 +308,10 @@ pub struct ClientRect {
 /// band inside `interactive` (the app's controls there, in client pixels) go to the app; the
 /// rest of the band still drags the window. Sent when it changes; a window opens with the
 /// window's own title bar.
+///
+/// `below` says the task's app starts below the title bar (the user's setting for the app):
+/// the app draws nothing of its own in the band, and the window paints the band opaque, in
+/// the color the app's frame has there. `app_drawn` is never set with it.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SetCaptionMode {
     #[prost(int32, tag = "1")]
@@ -316,6 +320,8 @@ pub struct SetCaptionMode {
     pub app_drawn: bool,
     #[prost(message, repeated, tag = "3")]
     pub interactive: ::prost::alloc::vec::Vec<ClientRect>,
+    #[prost(bool, tag = "4")]
+    pub below: bool,
 }
 /// Window manager to window host: whether the task has somewhere to go back to (it is past
 /// its first screen). While it has, the title bar shows a back arrow in the place of the app's

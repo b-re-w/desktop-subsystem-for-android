@@ -78,9 +78,9 @@ use std::cell::{Cell, RefCell};
 use std::sync::mpsc::Sender;
 
 use dsa_host_core::compositor::caption::{
-    paint_title_bar, scaled, shown_tone, title_bar_hit, BackButton, BandSample, CaptionBand,
-    CaptionButton, CaptionHit, CaptionLayout, CaptionPalette, CaptionState, CaptionTone,
-    TitleBarContent, TitleBarHit, TitleBarMode, TITLE_TEXT_AT_100,
+    below_title_bar_sample, paint_title_bar, scaled, shown_tone, title_bar_hit, BackButton,
+    BandSample, CaptionBand, CaptionButton, CaptionHit, CaptionLayout, CaptionPalette,
+    CaptionState, CaptionTone, TitleBarContent, TitleBarHit, TitleBarMode, TITLE_TEXT_AT_100,
 };
 use dsa_host_core::compositor::caption_icon::{self, IconLook};
 use dsa_host_core::compositor::window_hosts::FromHost;
@@ -480,6 +480,10 @@ pub struct CaptionWindow {
     /// Whether the app draws its own title bar, and where its controls are in the band.
     app_drawn: Cell<bool>,
     interactive: RefCell<Vec<Bounds>>,
+    /// Whether the app starts below the title bar, so the window paints the band opaque, and
+    /// the color it is painted with now.
+    below: Cell<bool>,
+    filled: Cell<Option<u32>>,
     /// Whether the icon's cell shows the back arrow, and whether the pointer is over it or
     /// presses it.
     back: Cell<bool>,
@@ -529,6 +533,8 @@ impl CaptionWindow {
             reported: Cell::new(CaptionBand::default()),
             app_drawn: Cell::new(false),
             interactive: RefCell::new(Vec::new()),
+            below: Cell::new(false),
+            filled: Cell::new(None),
             back: Cell::new(false),
             back_hovered: Cell::new(false),
             back_pressed: Cell::new(false),
@@ -542,7 +548,8 @@ impl CaptionWindow {
     }
 
     /// Whether the app draws its own title bar, and where its controls are in the band, in
-    /// client pixels.
+    /// client pixels; or (`below`) that the app starts below the title bar, so the band is
+    /// painted opaque in the color the app's frame has there, and is never the app's.
     ///
     /// # Safety
     ///
@@ -552,10 +559,15 @@ impl CaptionWindow {
         hwnd: HWND,
         app_drawn: bool,
         interactive: Vec<Bounds>,
+        below: bool,
         presenter: Option<&WindowPresenter>,
     ) {
+        let app_drawn = app_drawn && !below;
         self.app_drawn.set(app_drawn);
-        *self.interactive.borrow_mut() = interactive;
+        *self.interactive.borrow_mut() = if app_drawn { interactive } else { Vec::new() };
+        if self.below.replace(below) != below {
+            self.filled.set(None);
+        }
         self.retone(hwnd);
         self.paint(hwnd, presenter);
     }
@@ -737,10 +749,22 @@ impl CaptionWindow {
         self.paint(hwnd, presenter);
     }
 
+    /// What the band shows under the title bar: what the presenter last read, with the fill
+    /// of an app that starts below the title bar ([`below_title_bar_sample`]).
+    fn band_sample(&self) -> BandSample {
+        let sample = self.sample.get();
+        if self.below.get() {
+            below_title_bar_sample(sample, self.tone.get(), self.filled.get())
+        } else {
+            sample
+        }
+    }
+
     /// The color the band is filled with: the app's top color while it leaves the band
-    /// empty. An app that draws its own title bar is never filled over.
+    /// empty, and always a color for an app that starts below the title bar. An app that
+    /// draws its own title bar is never filled over.
     fn fill(&self) -> Option<u32> {
-        self.sample.get().fill.filter(|_| !self.app_drawn.get())
+        self.band_sample().fill.filter(|_| !self.app_drawn.get())
     }
 
     /// Settles the tone the glyphs, the name and the frame are drawn in, from the app's
@@ -752,9 +776,13 @@ impl CaptionWindow {
     /// `hwnd` is this window, a live window of the calling thread.
     unsafe fn retone(&self, hwnd: HWND) {
         let before = self.shown();
+        let sample = self.band_sample();
+        if self.below.get() {
+            self.filled.set(sample.fill);
+        }
         self.shown.set(shown_tone(
             self.tone.get(),
-            self.sample.get(),
+            sample,
             self.app_drawn.get(),
             self.shown.get(),
         ));
@@ -785,11 +813,12 @@ impl CaptionWindow {
                 fill: Some(palette.rest),
                 luminance: None,
                 range: None,
+                band: None,
             };
             caption_icon::background_luminance(fill, false, self.shown())
         } else {
             caption_icon::background_luminance(
-                self.sample.get(),
+                self.band_sample(),
                 self.app_drawn.get(),
                 self.shown(),
             )

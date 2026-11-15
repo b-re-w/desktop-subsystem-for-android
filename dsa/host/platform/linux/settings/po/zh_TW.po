@@ -444,6 +444,12 @@ msgstr "可調整大小"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "是否可以調整此應用程式視窗的大小或將其最大化。關閉時，每個視窗都會維持開啟時的大小。"
 
+msgid "Start below the title bar"
+msgstr "從標題列下方開始"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "適用於頂端列被標題列擠壓或遮住的應用程式。\n應用程式會從標題列下方開始顯示，而不是繪製在標題列後方。\n下次開啟該應用程式的視窗時生效。"
+
 msgid "Window size when it opens"
 msgstr "開啟時的視窗大小"
 

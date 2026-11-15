@@ -1683,6 +1683,14 @@ Cada um tem um ícone na área de notificação da barra de tarefas. Parar um ap
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Se você pode redimensionar e maximizar as janelas deste app. Desativado, cada janela fica no tamanho em que abre.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Iniciar abaixo da barra de título</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Para apps cuja barra superior fica espremida ou escondida sob a barra de título.
+O app inicia abaixo da barra de título em vez de desenhar atrás dela.
+Vale a partir da próxima vez que a janela do app for aberta.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>O tamanho em que as janelas deste app abrem</value>
   </data>

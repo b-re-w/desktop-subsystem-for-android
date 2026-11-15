@@ -68,6 +68,12 @@ data class TaskSnapshot(
      */
     val transparentCaption: Boolean = false,
     /**
+     * Whether the task's app starts below the title bar, as the host's user chose for the app:
+     * filled in by the agent ([io.github.thisisthepy.dsa.agent.windowing.BelowTitleBar]). Such
+     * a task is never reported with [transparentCaption]: the band is the host's.
+     */
+    val belowTitleBar: Boolean = false,
+    /**
      * Whether Back in the task lands on a screen the user saw, so the host draws the back
      * arrow: filled in by the agent from [stack] ([BackStacks]).
      */

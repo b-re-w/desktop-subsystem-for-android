@@ -444,6 +444,12 @@ msgstr "サイズ変更可能"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "このアプリのウィンドウのサイズ変更や最大化を許可するかどうかです。オフにすると、各ウィンドウは開いたときのサイズのままになります。"
 
+msgid "Start below the title bar"
+msgstr "タイトルバーの下から開始"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "上部のバーがタイトルバーに押しつぶされたり隠れたりするアプリのための設定です。\nアプリはタイトルバーの後ろに描画せず、その下から始まります。\n次にアプリのウィンドウを開いたときから適用されます。"
+
 msgid "Window size when it opens"
 msgstr "開くときのウィンドウサイズ"
 

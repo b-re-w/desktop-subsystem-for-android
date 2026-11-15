@@ -716,6 +716,184 @@
         }
       }
     },
+    "AppsBelowTitleBar.Content": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unter der Titelleiste beginnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start below the title bar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empezar debajo de la barra de título"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrer sous la barre de titre"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulai di bawah bilah judul"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia sotto la barra del titolo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトルバーの下から開始"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목 표시줄 아래에서 시작"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar abaixo da barra de título"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начинать под строкой заголовка"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlık çubuğunun altından başlat"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bắt đầu bên dưới thanh tiêu đề"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从标题栏下方开始"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從標題列下方開始"
+          }
+        }
+      }
+    },
+    "AppsBelowTitleBar.ToolTip": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für Apps, deren obere Leiste von der Titelleiste gequetscht oder verdeckt wird.\nDie App beginnt unter der Titelleiste, statt dahinter zu zeichnen.\nGilt ab dem nächsten Öffnen des App-Fensters."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para las apps cuya barra superior queda aplastada u oculta bajo la barra de título.\nLa app empieza debajo de la barra de título en lugar de dibujar detrás de ella.\nSe aplica la próxima vez que se abra la ventana de la app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour les apps dont la barre supérieure est écrasée ou masquée par la barre de titre.\nL'app démarre sous la barre de titre au lieu de dessiner derrière elle.\nS'applique à la prochaine ouverture de la fenêtre de l'app."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Untuk aplikasi yang bilah atasnya terimpit atau tertutup oleh bilah judul.\nAplikasi dimulai di bawah bilah judul, bukan menggambar di belakangnya.\nBerlaku saat jendela aplikasi dibuka berikutnya."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per le app la cui barra superiore viene schiacciata o nascosta dalla barra del titolo.\nL'app inizia sotto la barra del titolo invece di disegnare dietro di essa.\nSi applica alla prossima apertura della finestra dell'app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上部のバーがタイトルバーに押しつぶされたり隠れたりするアプリのための設定です。\nアプリはタイトルバーの後ろに描画せず、その下から始まります。\n次にアプリのウィンドウを開いたときから適用されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위쪽 바가 제목 표시줄에 눌리거나 가려지는 앱을 위한 설정입니다.\n앱이 제목 표시줄 뒤가 아니라 그 아래에서 시작합니다.\n앱 창을 다음에 열 때부터 적용됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para apps cuja barra superior fica espremida ou escondida sob a barra de título.\nO app inicia abaixo da barra de título em vez de desenhar atrás dela.\nVale a partir da próxima vez que a janela do app for aberta."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для приложений, у которых верхняя панель сжимается или скрывается под строкой заголовка.\nПриложение начинается под строкой заголовка, а не рисует позади неё.\nПрименяется при следующем открытии окна приложения."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Üst çubuğu başlık çubuğunun altında sıkışan veya gizlenen uygulamalar içindir.\nUygulama, başlık çubuğunun arkasına çizmek yerine onun altından başlar.\nUygulamanın penceresi bir sonraki açılışında geçerli olur."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dành cho ứng dụng có thanh trên cùng bị thanh tiêu đề ép lại hoặc che khuất.\nỨng dụng bắt đầu bên dưới thanh tiêu đề thay vì vẽ phía sau thanh này.\nÁp dụng từ lần mở cửa sổ ứng dụng tiếp theo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "适用于顶部栏被标题栏挤压或遮挡的应用。\n应用从标题栏下方开始显示，而不是绘制在标题栏后面。\n下次打开该应用的窗口时生效。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用於頂端列被標題列擠壓或遮住的應用程式。\n應用程式會從標題列下方開始顯示，而不是繪製在標題列後方。\n下次開啟該應用程式的視窗時生效。"
+          }
+        }
+      }
+    },
     "AppsDesktopShortcutButton.Content": {
       "extractionState": "manual",
       "localizations": {

@@ -252,6 +252,7 @@ mod tests {
                 fill: None,
                 luminance: Some(1000),
                 range: None,
+                band: None,
             },
             false,
             CaptionTone::DarkGlyphs,
@@ -261,6 +262,7 @@ mod tests {
                 fill: Some(0xFF20_2020),
                 luminance: Some(1000),
                 range: None,
+                band: None,
             },
             false,
             CaptionTone::LightGlyphs,
@@ -321,6 +323,7 @@ mod tests {
             fill: Some(0xFF00_0000),
             luminance: Some(900),
             range: None,
+            band: None,
         };
         assert_eq!(
             background_luminance(filled, false, CaptionTone::DarkGlyphs),

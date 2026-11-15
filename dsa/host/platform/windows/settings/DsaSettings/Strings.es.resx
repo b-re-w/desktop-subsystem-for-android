@@ -1683,6 +1683,14 @@ Cada una tiene un icono en el área de notificación de la barra de tareas. Dete
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Si puede cambiar el tamaño de las ventanas de esta aplicación y maximizarlas. Desactivado, cada ventana conserva su tamaño inicial.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Empezar debajo de la barra de título</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Para las apps cuya barra superior queda aplastada u oculta bajo la barra de título.
+La app empieza debajo de la barra de título en lugar de dibujar detrás de ella.
+Se aplica la próxima vez que se abra la ventana de la app.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>El tamaño con el que se abren las ventanas de esta aplicación</value>
   </data>

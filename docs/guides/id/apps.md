@@ -130,6 +130,19 @@ dsa app-window <package> --dpi-scaling system   # cara penskalaan di monitor lai
 dsa app-window <package> reset                  # kembali ke bawaan
 ```
 
+## Memulai aplikasi di bawah bilah judul
+
+Aplikasi menggambar sampai tepi atas jendelanya, di bawah bilah judul. Karena itu beberapa
+aplikasi membuat bilah atasnya terimpit atau sebagian tertutup oleh bilah judul. Untuk
+aplikasi seperti itu, aktifkan **Start below the title bar** (mulai di bawah bilah judul) di halaman **Apps** DSA
+Settings. Konten aplikasi lalu dimulai di bawah bilah judul, dan bilah judul mengambil warna
+yang ditampilkan aplikasi di sana. Bawaannya nonaktif, dan berlaku saat jendela aplikasi
+dibuka berikutnya. Dari baris perintah:
+
+```
+dsa app-window <package> --below-title-bar on   # off kembali ke bawaan
+```
+
 ## Memindahkan aplikasi ke monitor dengan skala lain
 
 Aplikasi terbuka dengan skala monitor tempat jendelanya dibuka, sejak frame pertamanya,

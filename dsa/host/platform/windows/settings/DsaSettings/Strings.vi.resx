@@ -1683,6 +1683,14 @@ Mỗi ứng dụng có biểu tượng trong vùng thông báo của thanh tác 
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Bạn có thể đổi kích thước và phóng to cửa sổ của ứng dụng này hay không. Khi tắt, mỗi cửa sổ giữ kích thước lúc mở.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Bắt đầu bên dưới thanh tiêu đề</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Dành cho ứng dụng có thanh trên cùng bị thanh tiêu đề ép lại hoặc che khuất.
+Ứng dụng bắt đầu bên dưới thanh tiêu đề thay vì vẽ phía sau thanh này.
+Áp dụng từ lần mở cửa sổ ứng dụng tiếp theo.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>Kích thước khi cửa sổ của ứng dụng này mở</value>
   </data>

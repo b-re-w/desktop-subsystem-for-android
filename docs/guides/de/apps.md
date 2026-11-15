@@ -133,6 +133,19 @@ dsa app-window <package> --dpi-scaling system   # Skalierung auf einem anderen M
 dsa app-window <package> reset                  # zurück zu den Standards
 ```
 
+## Eine App unter der Titelleiste beginnen lassen
+
+Eine App zeichnet bis zum oberen Rand ihres Fensters, unter die Titelleiste. Einige Apps
+quetschen dann ihre obere Leiste oder verdecken einen Teil davon unter der Titelleiste.
+Schalten Sie für eine solche App auf der Seite **Apps** von DSA Settings **Start below the
+title bar** (unter der Titelleiste beginnen) ein. Der Inhalt der App beginnt dann unter der Titelleiste, und die
+Titelleiste nimmt die Farbe an, die die App dort zeigt. Standardmäßig ist es aus, und es gilt
+ab dem nächsten Öffnen des App-Fensters. In der Befehlszeile:
+
+```
+dsa app-window <package> --below-title-bar on   # off kehrt zum Standard zurück
+```
+
 ## Eine App auf einen Monitor mit anderer Skalierung verschieben
 
 Eine App öffnet ab dem ersten Frame mit der Skalierung des Monitors, auf dem sich ihr Fenster

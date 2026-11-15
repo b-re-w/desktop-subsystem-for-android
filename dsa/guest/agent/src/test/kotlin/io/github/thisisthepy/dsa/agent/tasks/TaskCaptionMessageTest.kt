@@ -29,6 +29,12 @@ class TaskCaptionMessageTest {
     }
 
     @Test
+    fun fr22_a_task_says_that_it_starts_below_the_title_bar() {
+        assertTrue(decode(Messages.taskUpdated(appTask(1).copy(belowTitleBar = true))).taskUpdated.belowTitleBar)
+        assertFalse(decode(Messages.taskUpdated(appTask(1))).taskUpdated.belowTitleBar)
+    }
+
+    @Test
     fun fr4_a_task_says_whether_its_top_activity_handles_a_change_of_density() {
         // configChanges="density|orientation|screenSize" and "orientation|screenSize|keyboardHidden".
         assertTrue(handlesDensityChange(0x1000 or 0x80 or 0x400))

@@ -444,6 +444,12 @@ msgstr "Có thể đổi kích thước"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "Có thể đổi kích thước và phóng to cửa sổ của ứng dụng này hay không. Khi tắt, mỗi cửa sổ giữ kích thước lúc mở."
 
+msgid "Start below the title bar"
+msgstr "Bắt đầu bên dưới thanh tiêu đề"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Dành cho ứng dụng có thanh trên cùng bị thanh tiêu đề ép lại hoặc che khuất.\nỨng dụng bắt đầu bên dưới thanh tiêu đề thay vì vẽ phía sau thanh này.\nÁp dụng từ lần mở cửa sổ ứng dụng tiếp theo."
+
 msgid "Window size when it opens"
 msgstr "Kích thước cửa sổ khi mở"
 

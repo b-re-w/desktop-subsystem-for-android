@@ -16,6 +16,12 @@ public class AppWindowSettingsTests
         "\"first_install_time_ms\":0,\"last_update_time_ms\":0,\"system_app\":false," +
         "\"app_bytes\":0,\"data_bytes\":0,\"cache_bytes\":0,\"total_bytes\":0,\"icon_png\":\"\"}]}";
 
+    /// <summary>The two apps of <see cref="List"/>, and a third.</summary>
+    private static readonly string ThreeApps = List.Replace("]}",
+        ",{\"package\":\"com.example.player\",\"label\":\"Player\",\"version_name\":\"2\",\"version_code\":2," +
+        "\"first_install_time_ms\":0,\"last_update_time_ms\":0,\"system_app\":false," +
+        "\"app_bytes\":0,\"data_bytes\":0,\"cache_bytes\":0,\"total_bytes\":0,\"icon_png\":\"\"}]}");
+
     private const string Windows =
         "{\"apps\":[{\"package\":\"com.example.reader\",\"fixed_size\":true,\"start_size\":[412,915]}]}";
 
@@ -252,6 +258,99 @@ public class AppWindowSettingsTests
         var calls = cli.Calls.Count;
         await vm.SetImmersiveAsync("com.example.notes", screen);
         Assert.Equal(calls, cli.Calls.Count);
+    }
+
+    [Fact]
+    public async Task Fr30_the_below_title_bar_switch_is_read_and_changed()
+    {
+        var cli = new FakeCli()
+            .Answer("apps list --json", ThreeApps)
+            .Answer("app-window --json",
+                "{\"apps\":[" +
+                "{\"package\":\"com.example.reader\",\"fixed_size\":false,\"start_size\":null,\"below_title_bar\":true}," +
+                "{\"package\":\"com.example.player\",\"fixed_size\":true,\"start_size\":null,\"below_title_bar\":false}," +
+                "{\"package\":\"com.example.notes\",\"fixed_size\":true,\"start_size\":null}]}")
+            .Answer("app-window com.example.notes --below-title-bar on --json",
+                "{\"apps\":[{\"package\":\"com.example.notes\",\"fixed_size\":true,\"start_size\":null,\"below_title_bar\":true}]}")
+            .Answer("app-window com.example.notes --below-title-bar off --json",
+                "{\"apps\":[{\"package\":\"com.example.notes\",\"fixed_size\":true,\"start_size\":null,\"below_title_bar\":false}]}");
+        var vm = Make(cli);
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.False(vm.HasError, vm.Error);
+        // On, off, and an entry from a dsa that does not name the switch, which is off.
+        Assert.True(vm.Rows.Single(r => r.Package == "com.example.reader").BelowTitleBar);
+        Assert.False(vm.Rows.Single(r => r.Package == "com.example.player").BelowTitleBar);
+        Assert.False(vm.Rows.Single(r => r.Package == "com.example.notes").BelowTitleBar);
+
+        await vm.SetBelowTitleBarAsync("com.example.notes", true);
+        Assert.False(vm.HasError, vm.Error);
+        Assert.Equal("app-window com.example.notes --below-title-bar on --json", cli.Calls[^1]);
+        Assert.Equal("Apps_WindowChanged", vm.Message);
+        var notes = vm.Rows.Single(r => r.Package == "com.example.notes");
+        Assert.True(notes.BelowTitleBar);
+        // The app's other window settings stay as they were.
+        Assert.False(notes.Resizable);
+        // Choosing what the app has already sends nothing.
+        var calls = cli.Calls.Count;
+        await vm.SetBelowTitleBarAsync("com.example.notes", true);
+        Assert.Equal(calls, cli.Calls.Count);
+
+        await vm.SetBelowTitleBarAsync("com.example.notes", false);
+        Assert.False(vm.HasError, vm.Error);
+        Assert.Equal("app-window com.example.notes --below-title-bar off --json", cli.Calls[^1]);
+        Assert.False(vm.Rows.Single(r => r.Package == "com.example.notes").BelowTitleBar);
+    }
+
+    [Fact]
+    public async Task Fr30_an_app_on_the_built_in_list_starts_below_the_title_bar_until_the_user_says_otherwise()
+    {
+        var cli = new FakeCli()
+            .Answer("apps list --json", List)
+            .Answer("app-window --json", "{\"apps\":[],\"below_title_bar_by_default\":[\"com.example.reader\"]}")
+            .Answer("app-window com.example.reader --fixed-size on --start-size auto --dpi-scaling auto --fullscreen default --immersive default --json",
+                "{\"apps\":[{\"package\":\"com.example.reader\",\"fixed_size\":true,\"start_size\":null,\"below_title_bar\":true}]}")
+            .Answer("app-window com.example.reader --fixed-size off --start-size auto --dpi-scaling auto --fullscreen default --immersive default --json",
+                "{\"apps\":[{\"package\":\"com.example.reader\",\"fixed_size\":false,\"start_size\":null,\"below_title_bar\":true}]}")
+            .Answer("app-window com.example.reader --below-title-bar off --json",
+                "{\"apps\":[{\"package\":\"com.example.reader\",\"fixed_size\":false,\"start_size\":null,\"below_title_bar\":false}]}");
+        var vm = Make(cli);
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.False(vm.HasError, vm.Error);
+        // An app on the list, with no choice of the user's, shows as on; any other app as off.
+        Assert.True(vm.BelowTitleBarByDefault("com.example.reader"));
+        Assert.True(vm.Rows.Single(r => r.Package == "com.example.reader").BelowTitleBar);
+        Assert.False(vm.BelowTitleBarByDefault("com.example.notes"));
+        Assert.False(vm.Rows.Single(r => r.Package == "com.example.notes").BelowTitleBar);
+
+        // Changing another window setting never sends the switch, so the app keeps following the list.
+        await vm.SetResizableAsync("com.example.reader", false);
+        Assert.False(vm.HasError, vm.Error);
+        Assert.DoesNotContain("--below-title-bar", cli.Calls[^1]);
+        Assert.True(vm.Rows.Single(r => r.Package == "com.example.reader").BelowTitleBar);
+        await vm.SetResizableAsync("com.example.reader", true);
+        Assert.False(vm.HasError, vm.Error);
+        Assert.DoesNotContain("--below-title-bar", cli.Calls[^1]);
+        Assert.True(vm.Rows.Single(r => r.Package == "com.example.reader").BelowTitleBar);
+
+        // The user's choice wins over the list, though every other setting of the app is plain.
+        await vm.SetBelowTitleBarAsync("com.example.reader", false);
+        Assert.False(vm.HasError, vm.Error);
+        Assert.Equal("app-window com.example.reader --below-title-bar off --json", cli.Calls[^1]);
+        Assert.False(vm.Rows.Single(r => r.Package == "com.example.reader").BelowTitleBar);
+    }
+
+    [Fact]
+    public async Task Fr30_a_dsa_that_names_no_below_title_bar_list_starts_no_app_below_the_title_bar()
+    {
+        var vm = Make(new FakeCli()
+            .Answer("apps list --json", List)
+            .Answer("app-window --json", "{\"apps\":[]}"));
+        await vm.RefreshAsync();
+        await vm.LoadWindowSettingsAsync();
+        Assert.False(vm.HasError, vm.Error);
+        Assert.All(vm.Rows, row => Assert.False(row.BelowTitleBar));
     }
 
     [Fact]

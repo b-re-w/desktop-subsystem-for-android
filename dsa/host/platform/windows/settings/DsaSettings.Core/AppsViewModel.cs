@@ -162,9 +162,12 @@ public sealed record FullScreenChoice(string Label, FullScreenPlace Place);
 
 /// <summary>Every app's window settings as dsa app-window reports them, whether this build of
 /// Android scales an app the System (forced) way yet, and the apps whose automatic choice is
-/// System: DSA's built-in list of apps that break when their density changes while they run.</summary>
+/// System: DSA's built-in list of apps that break when their density changes while they run.
+/// <paramref name="BelowTitleBarByDefault"/> is the apps that start below the title bar unless
+/// the user chose otherwise.</summary>
 public sealed record WindowSettingsList(IReadOnlyDictionary<string, AppWindowSetting> Apps, bool SystemForcedAvailable,
-    IReadOnlySet<string>? SystemScaledByDefault = null);
+    IReadOnlySet<string>? SystemScaledByDefault = null,
+    IReadOnlySet<string>? BelowTitleBarByDefault = null);
 
 /// <summary>A scaling choice the Apps page offers: what the list shows, the choice, and
 /// whether it does what it says yet.</summary>
@@ -172,11 +175,13 @@ public sealed record DpiScalingChoice(string Label, DpiScaling Scaling, bool Ava
 
 /// <summary>The user's window settings for one app, as dsa app-window reports them: whether
 /// its windows keep their size, the size they open at in density-independent pixels (null for
-/// the size Android gives the task), and how its windows follow a monitor of another scale.</summary>
+/// the size Android gives the task), how its windows follow a monitor of another scale, and
+/// whether the app starts below the title bar instead of drawing behind it.</summary>
 public sealed record AppWindowSetting(string Package, bool FixedSize, int? StartWidth, int? StartHeight,
     DpiScaling DpiScaling = DpiScaling.Auto,
     FullScreenPlace FullScreen = FullScreenPlace.Default,
-    FullScreenPlace Immersive = FullScreenPlace.Default)
+    FullScreenPlace Immersive = FullScreenPlace.Default,
+    bool BelowTitleBar = false)
 {
     public static AppWindowSetting Default(string package) => new(package, false, null, null);
 
@@ -377,19 +382,27 @@ public sealed class AppsService
         // A dsa that does not say counts as one whose Android cannot do it yet.
         var forced = json.TryGetProperty("system_forced_available", out var available)
             && available.ValueKind == JsonValueKind.True;
-        // A dsa that does not name the list has none: every app's automatic choice is App.
-        var systemScaled = new HashSet<string>();
-        if (json.TryGetProperty("system_scaled_by_default", out var listed) && listed.ValueKind == JsonValueKind.Array)
+        // A dsa that does not name a list has none: every app's automatic choice is App, and
+        // no app starts below the title bar unless the user says so.
+        return new WindowSettingsList(ReadWindowSettings(json), forced,
+            Packages(json, "system_scaled_by_default"), Packages(json, "below_title_bar_by_default"));
+    }
+
+    /// <summary>The packages a list of dsa's names; none when dsa does not name the list.</summary>
+    private static HashSet<string> Packages(JsonElement json, string name)
+    {
+        var packages = new HashSet<string>();
+        if (json.TryGetProperty(name, out var listed) && listed.ValueKind == JsonValueKind.Array)
         {
             foreach (var package in listed.EnumerateArray())
             {
-                if (package.ValueKind == JsonValueKind.String && package.GetString() is { Length: > 0 } name)
+                if (package.ValueKind == JsonValueKind.String && package.GetString() is { Length: > 0 } text)
                 {
-                    systemScaled.Add(name);
+                    packages.Add(text);
                 }
             }
         }
-        return new WindowSettingsList(ReadWindowSettings(json), forced, systemScaled);
+        return packages;
     }
 
     private static IReadOnlyDictionary<string, AppWindowSetting> ReadWindowSettings(JsonElement json)
@@ -416,14 +429,28 @@ public sealed class AppsService
                 var fullScreen = FullScreenPlaces.Parse(String(app, "fullscreen"));
                 var immersive = FullScreenPlaces.Parse(String(app, "immersive"));
                 settings[package] = new AppWindowSetting(package, Bool(app, "fixed_size"), width, height, scaling,
-                    fullScreen, immersive);
+                    fullScreen, immersive, Bool(app, "below_title_bar"));
             }
         }
         return settings;
     }
 
+    /// <summary>Starts <paramref name="package"/> below the title bar (<paramref name="on"/>) or
+    /// lets it draw behind it, and returns the app's window settings as the service now has
+    /// them. Its other window settings stay as they are.</summary>
+    public async Task<AppWindowSetting> SetBelowTitleBarAsync(string package, bool on)
+    {
+        var json = await RunJsonAsync("app-window", package, "--below-title-bar", on ? "on" : "off")
+            .ConfigureAwait(true);
+        return ReadWindowSettings(json).TryGetValue(package, out var now)
+            ? now
+            : AppWindowSetting.Default(package) with { BelowTitleBar = on };
+    }
+
     /// <summary>Replaces the window settings of one app, and returns them as the service now
-    /// has them.</summary>
+    /// has them. Whether the app starts below the title bar is not sent, so an app the user
+    /// never chose for keeps following DSA's own list; <see cref="SetBelowTitleBarAsync"/>
+    /// changes it.</summary>
     public async Task<AppWindowSetting> SetWindowSettingAsync(AppWindowSetting setting)
     {
         var json = await RunJsonAsync(
@@ -516,7 +543,8 @@ public sealed record AppRow(
     bool CanChangeRoot = false,
     string? RootTip = null,
     string? RootGroupNote = null,
-    IReadOnlyList<DpiScalingChoice>? DpiScalingChoices = null)
+    IReadOnlyList<DpiScalingChoice>? DpiScalingChoices = null,
+    bool BelowTitleBar = false)
 {
     public bool NoIcon => Icon is null;
 
@@ -541,6 +569,7 @@ public sealed class AppsViewModel : ObservableObject
     private IReadOnlyDictionary<string, AppWindowSetting> _windows = new Dictionary<string, AppWindowSetting>();
     private bool _systemForcedAvailable;
     private IReadOnlySet<string> _systemScaledByDefault = new HashSet<string>();
+    private IReadOnlySet<string> _belowTitleBarByDefault = new HashSet<string>();
     private string _search = "";
     private string? _highlighted;
     private string? _error;
@@ -732,9 +761,17 @@ public sealed class AppsViewModel : ObservableObject
             ? _text.Get("Apps_DpiScaling_SystemForcedTip")
             : null;
 
+    /// <summary>Whether DSA starts <paramref name="package"/> below the title bar unless the
+    /// user chose otherwise.</summary>
+    public bool BelowTitleBarByDefault(string package) => _belowTitleBarByDefault.Contains(package);
+
+    /// <summary>The window settings of an app the user chose nothing for.</summary>
+    private AppWindowSetting DefaultOf(string package) =>
+        AppWindowSetting.Default(package) with { BelowTitleBar = BelowTitleBarByDefault(package) };
+
     /// <summary>The window settings of <paramref name="package"/>.</summary>
     public AppWindowSetting WindowOf(string package) =>
-        _windows.TryGetValue(package, out var setting) ? setting : AppWindowSetting.Default(package);
+        _windows.TryGetValue(package, out var setting) ? setting : DefaultOf(package);
 
     /// <summary>Where a start size is among <see cref="StartSizeChoices"/>; -1, none of them,
     /// for a size set another way (with dsa app-window).</summary>
@@ -790,7 +827,8 @@ public sealed class AppsViewModel : ObservableObject
             RootLevels.Parse(app.Root) is not null,
             RootTipOf(app.Root),
             RootGroupNoteOf(app),
-            DpiScalingChoicesOf(app.Package));
+            DpiScalingChoicesOf(app.Package),
+            WindowOf(app.Package).BelowTitleBar);
     }
 
     /// <summary>The root levels the page offers, in the order of <see cref="RootLevel"/>.</summary>
@@ -877,21 +915,28 @@ public sealed class AppsViewModel : ObservableObject
             _windows = list.Apps;
             _systemForcedAvailable = list.SystemForcedAvailable;
             _systemScaledByDefault = list.SystemScaledByDefault ?? new HashSet<string>();
+            _belowTitleBarByDefault = list.BelowTitleBarByDefault ?? new HashSet<string>();
         }
         catch (DsaException e) when (e.Problem == Problem.Refused)
         {
             _windows = new Dictionary<string, AppWindowSetting>();
             _systemForcedAvailable = false;
             _systemScaledByDefault = new HashSet<string>();
+            _belowTitleBarByDefault = new HashSet<string>();
         }
         return null;
     }, reload: false);
 
-    private Task SetWindowAsync(AppWindowSetting wanted) => Run(async () =>
+    private Task SetWindowAsync(AppWindowSetting wanted) =>
+        ChangeWindowAsync(() => _service.SetWindowSettingAsync(wanted));
+
+    /// <summary>Makes a change to one app's window settings, keeps what the service has now,
+    /// and says that the app's windows follow it.</summary>
+    private Task ChangeWindowAsync(Func<Task<AppWindowSetting>> change) => Run(async () =>
     {
-        var now = await _service.SetWindowSettingAsync(wanted).ConfigureAwait(true);
+        var now = await change().ConfigureAwait(true);
         var windows = new Dictionary<string, AppWindowSetting>(_windows);
-        if (now == AppWindowSetting.Default(now.Package))
+        if (now == DefaultOf(now.Package))
         {
             windows.Remove(now.Package);
         }
@@ -907,6 +952,14 @@ public sealed class AppsViewModel : ObservableObject
     /// at. Windows that open from now on follow it.</summary>
     public Task SetResizableAsync(string package, bool resizable) =>
         SetWindowAsync(WindowOf(package) with { FixedSize = !resizable });
+
+    /// <summary>Starts the app below the title bar, or lets it draw behind it: for an app whose
+    /// top bar is squeezed or hidden under the title bar. The app's window follows it the next
+    /// time it opens. Choosing what the app has already sends nothing.</summary>
+    public Task SetBelowTitleBarAsync(string package, bool on) =>
+        WindowOf(package).BelowTitleBar == on
+            ? Task.CompletedTask
+            : ChangeWindowAsync(() => _service.SetBelowTitleBarAsync(package, on));
 
     /// <summary>Opens the app's windows at the start size at <paramref name="index"/> of
     /// <see cref="StartSizeChoices"/>.</summary>

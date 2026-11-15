@@ -444,6 +444,12 @@ msgstr "Redimensionável"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "Define se você pode redimensionar e maximizar as janelas deste app. Desativado, cada janela fica no tamanho em que abriu."
 
+msgid "Start below the title bar"
+msgstr "Iniciar abaixo da barra de título"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Para apps cuja barra superior fica espremida ou escondida sob a barra de título.\nO app inicia abaixo da barra de título em vez de desenhar atrás dela.\nVale a partir da próxima vez que a janela do app for aberta."
+
 msgid "Window size when it opens"
 msgstr "Tamanho da janela ao abrir"
 

@@ -1683,6 +1683,14 @@ Windows の [設定] &gt; [アプリ] &gt; [インストールされているア
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>このアプリのウィンドウのサイズ変更や最大化を許可するかどうかです。オフにすると、各ウィンドウは開いたときのサイズのままになります。</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>タイトルバーの下から開始</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>上部のバーがタイトルバーに押しつぶされたり隠れたりするアプリのための設定です。
+アプリはタイトルバーの後ろに描画せず、その下から始まります。
+次にアプリのウィンドウを開いたときから適用されます。</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>このアプリのウィンドウが開くときのサイズ</value>
   </data>

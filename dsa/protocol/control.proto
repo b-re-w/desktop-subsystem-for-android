@@ -179,6 +179,12 @@ message TaskUpdated {
   // window title, `density_dpi` the display's density, which the overlay is drawn at, and
   // `max_width` by `max_height` the display's size. The rest are left at their defaults.
   OverlayWindow overlay = 28;
+  // Whether the task's app starts below the title bar: the user turned that on for the app
+  // (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+  // framework consumes for the app, whose content begins under the band. The host then
+  // paints the band itself. Settled when the task starts. While it is set,
+  // `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+  bool below_title_bar = 40;
 }
 
 // An app overlay window: a window an app adds over other apps with the "display over other
@@ -214,6 +220,18 @@ message OverlayWindow {
   // Whether the window takes pointer input (its app did not set FLAG_NOT_TOUCHABLE). The
   // pointer passes through the host's window of one that does not.
   bool touchable = 3;
+}
+
+// Host to guest: the apps whose tasks start below the title bar, as the user chose for each
+// (the per-app window setting). A task of one of these packages gets no status bar inset,
+// and its caption bar inset is consumed by the framework for the app (the caption source
+// carries InsetsSource.FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR), as Android's own desktop
+// windows do for an app that asked for no transparent caption. The list replaces the one
+// before. It counts when a task starts: a task that runs already keeps what it started
+// with, because an app may read its insets once per screen. The host sends it when it
+// connects and whenever the list changes.
+message CaptionCompat {
+  repeated string below_title_bar = 1;
 }
 
 // How a task's app asks to fill the screen.
@@ -3609,5 +3627,6 @@ message Envelope {
     DnsQuery dns_query = 690;
     DnsAnswer dns_answer = 691;
     LaunchPlacement launch_placement = 710;
+    CaptionCompat caption_compat = 715;
   }
 }

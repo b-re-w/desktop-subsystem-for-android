@@ -111,6 +111,23 @@ class HostRequestsTest {
     }
 
     @Test
+    fun fr22_the_apps_that_start_below_the_title_bar_are_handed_back() {
+        val frame = { packages: List<String> ->
+            Envelope.newBuilder()
+                .setCaptionCompat(
+                    io.github.thisisthepy.dsa.control.v1.CaptionCompat.newBuilder().addAllBelowTitleBar(packages),
+                )
+                .build().toByteArray()
+        }
+        assertEquals(
+            RequestResult.CaptionCompat(setOf("com.example.player", "org.example.video")),
+            requests.handle(frame(listOf("com.example.player", "org.example.video", "com.example.player", ""))),
+        )
+        // An empty list is a list too: no app starts below the title bar any more.
+        assertEquals(RequestResult.CaptionCompat(emptySet()), requests.handle(frame(emptyList())))
+    }
+
+    @Test
     fun fr22_the_reach_of_a_windows_icon_and_buttons_is_handed_back_with_its_height() {
         reported += 3
         val frame = Envelope.newBuilder()
