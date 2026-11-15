@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Android 앱 하나하나를 PC의 진짜 창으로 띄우는 오픈 소스 레이어. 전용 VM에서 Android 전체를 실행합니다.">
+<meta name="description" content="An open source layer that shows each Android app as a real window on your PC. The whole of Android runs in a dedicated VM.">
 <title>Desktop Subsystem for Android</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
@@ -14,17 +14,17 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Desktop Subsystem for Android">
 <meta property="og:title" content="Desktop Subsystem for Android™">
-<meta property="og:description" content="Android 앱 하나하나를 PC의 진짜 창으로 띄우는 오픈 소스 레이어. 전용 VM에서 Android 전체를 실행합니다.">
+<meta property="og:description" content="An open source layer that shows each Android app as a real window on your PC. The whole of Android runs in a dedicated VM.">
 <meta property="og:url" content="https://thisisthepy.org/desktop-subsystem-for-android/">
 <meta property="og:image" content="https://thisisthepy.org/desktop-subsystem-for-android/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="DESKTOP SUBSYSTEM 제목 옆에 분해된 CPU 부품이 펼쳐진 DSA 가이드북 첫 화면">
-<meta property="og:locale" content="ko_KR">
-<meta property="og:locale:alternate" content="en_US">
+<meta property="og:image:alt" content="The title DESKTOP SUBSYSTEM beside an exploded CPU package: the first screen of the DSA guidebook">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Desktop Subsystem for Android™">
-<meta name="twitter:description" content="Android 앱 하나하나를 PC의 진짜 창으로 띄우는 오픈 소스 레이어. 전용 VM에서 Android 전체를 실행합니다.">
+<meta name="twitter:description" content="An open source layer that shows each Android app as a real window on your PC. The whole of Android runs in a dedicated VM.">
 <meta name="twitter:image" content="https://thisisthepy.org/desktop-subsystem-for-android/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,14 +62,8 @@ body.is-light #site-header{color:var(--ink2)}
 #site-header{--hb:37,36,35;background:linear-gradient(rgba(var(--hb),.94) 55%,rgba(var(--hb),0));border-bottom:1px solid transparent;transition:color .5s,border-color .5s,transform .4s,opacity .4s}
 #site-header.away{transform:translateY(-100%);opacity:0;pointer-events:none}
 body.paper #site-header{color:#5d5a56;border-bottom-color:#b3b0ab;background:rgb(var(--hb))}
-body.paper .logo a{color:#1b1a19;font-family:"Tektur",var(--f-head);font-stretch:100%}
 body.paper .ui-select{border-color:#b3b0ab}
 body.paper #site-menu a:hover{color:#1b1a19}
-body.paper .btn-red{background:#f0661c;color:#1b1a19}
-.logo{display:flex;align-items:center;gap:10px;min-width:0}
-.logo a{display:flex;align-items:baseline;gap:6px;font:700 17px/1 var(--f-head);font-stretch:125%;letter-spacing:-.01em;text-transform:none;color:var(--fg)}
-body.is-light .logo a{color:var(--ink)}
-.logo a i{font-style:normal;color:var(--red);font-size:10px;transform:translateY(-7px)}
 .ui-select{position:relative;border:1px solid var(--line);border-radius:4px;padding:5px 22px 5px 8px;font:inherit;color:inherit;background:transparent;appearance:none;cursor:pointer;text-transform:uppercase;letter-spacing:.08em}
 body.is-light .ui-select{border-color:#b9b5b0}
 .sel-wrap{position:relative;display:inline-flex}
@@ -80,10 +74,22 @@ body.is-light .ui-select{border-color:#b9b5b0}
 #site-menu a:hover{background:rgba(127,127,127,.14);color:var(--fg)}
 body.is-light #site-menu a:hover{color:var(--ink)}
 #site-menu svg{width:13px;height:13px}
-.hdr-right{display:flex;justify-content:flex-end}
-.btn-red{display:flex;align-items:center;gap:7px;padding:8px 11px;border-radius:4px;background:rgba(255,75,75,.16);color:var(--red)}
-.btn-red:hover{background:rgba(255,75,75,.26)}
-.btn-red svg{width:12px;height:12px}
+.hdr-right{display:flex;justify-content:flex-end;align-items:center;gap:12px}
+/* the owner's logo: the orange square with the Android head, "DSA" heavy, and the product
+   line in small mono capitals under it */
+:root{--accent:#f0661c;--accent-ink:#1b1a19}
+.logo{display:inline-flex;align-items:center;gap:10px;min-width:0;justify-self:start;color:var(--fg);text-transform:none;letter-spacing:0}
+body.is-light .logo{color:#1b1a19}
+.logo svg{width:36px;height:36px;flex:none;display:block}
+.logo span{display:grid;gap:3px;font:800 17px/1 "Saira",var(--f-head);font-stretch:112%;letter-spacing:.01em;white-space:nowrap}
+.logo small{font:500 10.5px/1 var(--f-mono);font-stretch:100%;letter-spacing:.16em;text-transform:uppercase;color:var(--soft)}
+.logo:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:0}
+/* the download button is the hero's primary button: the orange cell with two cut corners */
+.hdr-dl{--p-accent:#f0661c;--p-fg:#1b1a19;box-sizing:border-box;height:30px;padding:0 13px 0 12px;font-size:11.5px;line-height:1;gap:8px;white-space:nowrap;border:0;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}   /* the same height as the language button beside it, so the corner cut is scaled down too */
+.hdr-dl svg{width:12px;height:12px;flex:none}
+.hdr-dl:focus-visible{outline:2px solid currentColor;outline-offset:-5px}
+#site-header .lang-pop{left:auto;right:0}
 
 /* fixed stage */
 #engine{position:fixed;inset:0;z-index:0;pointer-events:none}
@@ -236,23 +242,379 @@ body #site-footer{padding-bottom:max(104px,env(safe-area-inset-bottom,0px))}
   .footer-row{grid-template-columns:minmax(0,1fr)}
   #labels{display:none}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---- finishing pass: the design stays as it is; these close its gaps ---- */
+/* keyboard focus: there was no focus style, and .card .copy removed the browser's own */
+:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:4px}
+.v3-btn:focus-visible{outline-offset:-5px;border-radius:0}
+/* nothing a person has to read is set below 12 px */
+#site-header{font-size:12px}
+.feature-links a{font-size:12px}
+.card{font-size:12.5px;line-height:1.6}
+.legend,.card .fine{font-size:11.5px}
+/* the legend flows: each entry takes its own width and wraps to the next line, so a long
+   name ("Window manager", "Fenstermanager") no longer runs into its neighbour, which the
+   three fixed columns allowed once the text was set a size up */
+.legend{display:flex;flex-wrap:wrap;gap:5px 16px}
+#site-footer{font-size:12px}
+/* Korean keeps the label style but not the Latin tracking, and is a size up */
+[lang="ko"]{letter-spacing:0}
+#site-header [lang="ko"],.feature-links [lang="ko"],.v3-btn [lang="ko"]{font-size:13px}
+/* chapter copy: a little larger, and a measure that does not break every few words */
+.section-text p{font-size:16px;line-height:1.6;max-width:36ch}
+.section-text p[lang="ko"]{line-height:1.7;max-width:24em}
+/* contrast: muted text on the dark stage, and the three lightest chapter colours on paper */
+:root{--mut:#9a9793}
+body.is-light{--yellow:#8a6400;--orange:#b9501c;--lime:#4c7a12}
+/* the language list follows the page's colours instead of always being dark */
+.ui-select option{background:Canvas;color:CanvasText}
+/* a phone's address bar no longer makes each chapter taller than the screen */
+.section{min-height:100svh}
+.spacer{height:100svh}
+.v3-frame{min-height:calc(100svh - var(--hdr))}
+
+/* ---- design pass: the hero's own language (hairline cells, mono labels, the orange square)
+   carried through the header, the chapters and the footer ---- */
+:root{--pg:#e6e5e2;--ln:color-mix(in srgb,currentColor 26%,transparent);--soft:color-mix(in srgb,currentColor 64%,transparent)}
+
+/* header: the accent on paper is the orange of the squares, and the right side carries the download */
+.footer-logo i{color:#f0661c}
+/* the dot after the name is a small square now, in the same place and colour */
+.footer-logo i{display:inline-block;width:6px;height:6px;margin:3px 0 0 3px;background:#f0661c}
+body.paper #site-header{color:#4a4745}
+
+/* hero: one left edge for the title, "for Android", the lede and the buttons (they sat at
+   three), and "for Android" set as the third line of the name instead of a caption */
+.v3-big{padding-left:calc(24px - .04em)}
+.v3-title{padding-bottom:60px}
+.v3-sub{padding:20px 0 0 24px;font:700 clamp(17px,2.3vw,32px)/1 "Tektur",var(--f-head);letter-spacing:.03em}
+.v3-meta .v3-cell.end{justify-content:flex-end}
+.v3-label a:hover{color:var(--p-fg)}
+.v3-note{max-width:44em;line-height:1.6}
+.v3-note[lang="ko"]{font-family:var(--f-ko);font-size:12.5px}
+
+/* chapters: the copy sits on a hairline cell like the hero's, with a mono label row, so the
+   drawing and its leader lines no longer run through the words */
+.section-text{max-width:min(480px,38vw);margin-left:-16px;padding:24px;background:var(--pg);border:1px solid var(--ln)}
+.feature .section-text{max-width:min(400px,32vw)}
+.eyebrow{display:flex;align-items:center;gap:12px;margin:-24px -24px 4px;padding:13px 24px;border-bottom:1px solid var(--ln);
+  font:500 12px/1.2 var(--f-mono);font-stretch:100%;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+.eyebrow i{width:10px;height:10px;flex:none;background:#f0661c}
+.feature .eyebrow i{background:var(--c)}
+.eyebrow .n::after{content:"\00b7";margin-left:12px}
+#toolbox h2,#modules h2{white-space:pre-line}
+
+/* the language list: the closed control keeps the short code the header was drawn for, the
+   open list shows each language's own name */
+#gl canvas{width:100%;height:100%}
+@media (max-width:860px){#engine{opacity:.62}}   /* the chapters' copy has its own cell now, so the drawing is washed out less than the half it was */
+.v3-meta .v3-cell{overflow:hidden}
+.v3-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* the language menu, drawn like the hero's cells: a square hairline button with the orange
+   corner square, and a panel with the same corner squares, mono codes and the orange mark on
+   the language in use. It takes the header's colours, so it is paper on paper and dark on the
+   dark chapters. */
+.lang-menu{position:relative;display:inline-flex}
+.lang-btn{all:unset;box-sizing:border-box;position:relative;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 9px 0 11px;border:1px solid var(--ln);
+  font:500 11px/1 var(--f-mono);font-stretch:100%;letter-spacing:.1em;text-transform:uppercase;color:inherit;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.lang-btn::before{content:"";position:absolute;left:-1px;top:-1px;width:5px;height:5px;background:#f0661c}
+.lang-btn svg{width:10px;height:10px;flex:none;transition:transform .2s}
+.lang-btn:hover,.lang-menu.open .lang-btn{border-color:currentColor}
+.lang-menu.open .lang-btn svg{transform:rotate(180deg)}
+.lang-btn:focus-visible{outline:2px solid #f0661c;outline-offset:2px;border-radius:0}
+.lang-pop{position:absolute;left:0;top:calc(100% + 8px);z-index:30;width:248px;max-width:calc(100vw - 32px);background:rgb(var(--hb));border:1px solid var(--ln);
+  box-shadow:0 14px 34px -12px rgba(0,0,0,.35)}
+.lang-pop::before,.lang-pop::after{content:"";position:absolute;width:6px;height:6px;background:#f0661c;z-index:1}
+.lang-pop::before{left:-1px;top:-1px}.lang-pop::after{right:-1px;bottom:-1px}
+.lang-list{max-height:calc(100svh - var(--hdr) - env(safe-area-inset-top,0px) - 28px);overflow-y:auto;overscroll-behavior:contain;padding:5px 0;outline:none;
+  text-transform:none;letter-spacing:0;scrollbar-width:thin}
+.lang-list li{display:flex;align-items:center;gap:12px;min-height:40px;padding:0 14px;cursor:pointer;color:inherit}
+.lang-list li+li{border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+.lang-list li i{width:6px;height:6px;flex:none;border:1px solid var(--ln)}
+html #site-header .lang-list .nm[lang]{display:block!important;flex:1;min-width:0;font:500 14px/1.25 "IBM Plex Sans KR","IBM Plex Sans",system-ui,sans-serif;font-stretch:100%;letter-spacing:0}
+.lang-list .cd{font:500 11px/1 var(--f-mono);font-stretch:100%;letter-spacing:.1em;color:var(--soft)}
+.lang-list li.active{background:color-mix(in srgb,currentColor 9%,transparent)}
+.lang-list:focus-visible li.active{box-shadow:inset 2px 0 0 #f0661c}
+.lang-list li[aria-selected="true"] i{background:#f0661c;border-color:#f0661c}
+.lang-list li[aria-selected="true"] .cd{color:#f0661c}
+body.is-light .lang-list li[aria-selected="true"] .cd{color:#b9501c}
+body:not(.is-light) .lang-pop{box-shadow:0 14px 34px -12px rgba(0,0,0,.7)}
+
+/* desktop integration and the command line: one hairline frame each on the dark stage, the
+   hero's mono label row, cells divided by hairlines, and the chapter colours as squares */
+.xsec-in{min-height:100svh;display:flex;align-items:center;padding-block:calc(var(--hdr) + 24px) 92px}
+.xframe{width:100%;border:1px solid var(--ln);background:var(--pg)}
+.xhead{padding:24px 28px 26px;border-bottom:1px solid var(--ln)}
+.xhead .eyebrow{margin:-24px -28px 18px;padding:13px 28px}
+.xhead h2{font-size:clamp(28px,2.7vw,40px);max-width:24em}
+.igrid,.cgrid{display:grid;margin:0;padding:0;list-style:none}
+.igrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.igrid>li,.cgrid>li{border-right:1px solid var(--ln);border-bottom:1px solid var(--ln);min-width:0}
+.igrid>li:nth-child(3n),.cgrid>li:nth-child(4n){border-right:0}
+.igrid>li:nth-last-child(-n+3):nth-child(3n+1),.igrid>li:nth-last-child(-n+3):nth-child(3n+1)~li{border-bottom:0}
+.cgrid>li:nth-last-child(-n+4):nth-child(4n+1),.cgrid>li:nth-last-child(-n+4):nth-child(4n+1)~li{border-bottom:0}
+.icard{display:flex;flex-direction:column;gap:12px;padding:24px 28px 26px}
+.icard h3{display:flex;align-items:center;gap:12px;font:600 19px/1.25 var(--f-head);font-stretch:112%;color:inherit}
+.icard h3 i{width:10px;height:10px;flex:none;background:var(--sq)}
+.icard p{flex:1;font-size:15px;line-height:1.6;color:var(--soft)}
+.strip{display:flex;align-items:center;gap:10px;min-width:0;padding:12px 14px;background:#141312;color:#ecebe8;font:400 13px/1.3 var(--f-mono);font-stretch:100%;letter-spacing:.01em;
+  white-space:nowrap;overflow-x:auto;scrollbar-width:none;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
+.strip s{text-decoration:none;color:#f0661c}
+.strip b{font-weight:400;color:#8f8b86}
+.cgrid>li{display:grid;gap:6px;align-content:start;padding:16px 28px 18px}
+.cgrid code{font:400 14.5px/1.25 var(--f-mono);font-stretch:100%;white-space:nowrap}
+.cgrid code s{text-decoration:none;color:var(--soft)}
+.cgrid code b{font-weight:500;color:inherit}
+.cgrid span{font-size:14px;line-height:1.45;color:var(--soft)}
+html.cjk .icard h3,html.loc .icard h3{font-family:var(--f-loc);font-stretch:100%}
+html.cjk .xhead h2{line-height:1.2}
+@media (max-width:1100px) and (min-width:861px){.igrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .igrid>li{border-right:1px solid var(--ln)!important;border-bottom:1px solid var(--ln)!important}.igrid>li:nth-child(2n){border-right:0!important}.igrid>li:nth-last-child(-n+2){border-bottom:0!important}
+  .cgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.cgrid>li{border-right:1px solid var(--ln)!important;border-bottom:1px solid var(--ln)!important}.cgrid>li:nth-child(3n){border-right:0!important}.cgrid>li:nth-last-child(-n+1){border-bottom:0!important}}
+@media (max-width:860px){
+  .xsec-in{align-items:flex-start;padding-block:calc(var(--hdr) + 16px) 140px}
+  .xhead{padding:20px 16px 20px}.xhead .eyebrow{margin:-20px -16px 14px;padding:12px 16px}
+  .igrid{grid-template-columns:minmax(0,1fr)}
+  .igrid>li{border-right:0!important;border-bottom:1px solid var(--ln)!important}.igrid>li:last-child{border-bottom:0!important}
+  .icard{padding:18px 16px 20px;gap:10px}
+  .icard h3{font-size:17px}.icard p{font-size:14.5px}
+  .cgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .xhead h2{font-size:25px}
+  body.xfade #site-header{background:rgb(var(--hb))}
+  .cgrid>li{padding:10px 12px 11px;gap:3px;border-right:1px solid var(--ln)!important;border-bottom:1px solid var(--ln)!important}
+  .cgrid>li:nth-child(2n){border-right:0!important}.cgrid>li:nth-last-child(-n+2){border-bottom:0!important}
+  .cgrid code{font-size:13px}.cgrid span{font-size:12.5px;line-height:1.4}
+  /* while a tall section scrolls by, its next rows fade under the step buttons and the notice */
+  body.xfade::after{content:"";position:fixed;left:0;right:0;bottom:0;height:calc(176px + env(safe-area-inset-bottom,0px));z-index:5;pointer-events:none;
+    background:linear-gradient(color-mix(in srgb,var(--pg) 0%,transparent),var(--pg) 34%)}
+}
+
+/* the step boxes: square hairline cells with the orange corner square. A phone has two, at the
+   lower right above the trademark notice; a wide screen has one, "go to top", and only at the
+   closing screen, where the scrubber is gone and the footer leaves the corner empty. */
+.step{all:unset;box-sizing:border-box;position:relative;display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--ln);background:var(--pg);color:inherit;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:color .2s,border-color .2s,opacity .2s}
+.step::before{content:"";position:absolute;left:-1px;top:-1px;width:5px;height:5px;background:#f0661c}
+.step svg{width:16px;height:16px}
+.step:active,.step:focus-visible{color:#f0661c;border-color:#f0661c}
+.step:hover{border-color:currentColor}
+.step:focus-visible{outline:2px solid #f0661c;outline-offset:2px;border-radius:0}
+.step .g-top{display:none}
+.step.top .g-up{display:none}.step.top .g-top{display:inline}
+.to-top{position:fixed;z-index:8;right:max(32px,env(safe-area-inset-right,0px));bottom:max(24px,env(safe-area-inset-bottom,0px));opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .3s,transform .3s,visibility 0s .3s}
+.to-top.on{opacity:1;visibility:visible;transform:none;transition:opacity .3s,transform .3s}
+.step-nav{display:none}
+@media (max-width:860px){
+  .to-top{display:none}
+  .step-nav{display:flex;gap:8px;position:fixed;z-index:8;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(max(8px,env(safe-area-inset-bottom,0px)) + 60px)}
+  .step[aria-disabled="true"]{opacity:.32;cursor:default}
+  .step[aria-disabled="true"]::before{background:currentColor}
+  .step[aria-disabled="true"]:active{color:inherit;border-color:var(--ln)}
+}
+
+/* fourteen languages. Scripts the page's own faces lack get the matching member of the same
+   families, loaded only when that language is chosen. */
+html:lang(ko){--f-loc:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+html:lang(ja){--f-loc:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI","Noto Sans CJK JP",sans-serif}
+html:lang(zh-CN){--f-loc:"Noto Sans SC","PingFang SC","Microsoft YaHei UI",sans-serif}
+html:lang(zh-TW){--f-loc:"Noto Sans TC","PingFang TC","Microsoft JhengHei UI",sans-serif}
+html:lang(ru){--f-loc:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+html.loc{--f-mono:"IBM Plex Mono",var(--f-loc)}
+html.loc body{font-family:var(--f-loc);font-stretch:100%}
+html.loc h2,html.loc .footer-line,html.loc .card h3{font-family:var(--f-loc);font-stretch:100%}
+html.cjk h2,html.cjk .footer-line{letter-spacing:-.03em;line-height:1.16}
+html.cjk .v3-lede{font-family:var(--f-loc);font-size:16.5px}
+html.cjk .section-text p{line-height:1.7;max-width:24em}
+html.cjk #site-header,html.cjk .feature-links a,html.cjk .v3-btn,html.cjk #site-footer,html.cjk .eyebrow,html.cjk .v3-label a span{letter-spacing:.02em}
+html.cjk #site-menu span,html.cjk .hdr-dl span,html.cjk .feature-links span,html.cjk .v3-btn span,html.cjk .eyebrow span[data-i]{font-size:13px}
+html:lang(ja) body,html:lang(zh) body{word-break:normal;line-break:strict}
+html:lang(ja) h2,html:lang(ja) .footer-line{word-break:auto-phrase}   /* Japanese headings break between phrases, not inside a word */
+/* long words (German, Russian, Turkish) break with a hyphen instead of leaving the cell */
+html:not(:lang(en)) h2,html:not(:lang(en)) .section-text p{hyphens:auto;hyphenate-limit-chars:10 4 4}
+h2,.footer-line{overflow-wrap:break-word}
+.v3-btn span{white-space:nowrap}
+.feature-links{border-top-color:var(--ln);max-width:none}
+body.is-light .feature-links{border-top-color:var(--ln)}
+/* the part's name: readable over the drawing, and underlined by its own leader */
+#lines .callout text{paint-order:stroke;stroke:var(--pg);stroke-width:6px;stroke-linejoin:round}
+
+/* footer: the page ends on the action and on the ways in, using the columns it already had */
+#site-footer{--p-accent:#f0661c;--p-fg:#1b1a19;--p-line:var(--ln)}
+#site-footer .v3-btn.ghost{color:inherit}
+#site-footer .v3-btn.ghost:hover{box-shadow:inset 0 0 0 1px currentColor}
+.footer-line{margin:18px 0 22px;font:600 clamp(24px,2.4vw,34px)/1.15 var(--f-head);font-stretch:118%;letter-spacing:-.012em;text-transform:none;max-width:16em}
+.footer-line[lang="ko"]{font-family:var(--f-ko);font-stretch:100%;letter-spacing:-.03em;line-height:1.25}
+#site-footer h6{color:var(--soft)}
+#site-footer li{margin:0 0 8px}
+#site-footer li a{opacity:.86}
+#site-footer li a:hover{opacity:1}
+.footer-row+.footer-row{padding-top:20px;border-top:1px solid var(--ln);grid-template-columns:minmax(0,1fr)}
+.fine-print{margin-top:0;max-width:70em;line-height:1.6}
+
+@media (max-width:860px){
+  /* a phone keeps the way to the guides and to GitHub, and the download */
+  #site-header{grid-template-columns:1fr auto auto;gap:4px}
+  #site-menu{display:block}
+  #site-menu li.wide{display:none}
+  #site-menu a{padding:12px 10px}
+  #site-menu a span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  #site-menu svg{width:16px;height:16px}
+  .hdr-right{gap:6px}
+  .hdr-dl{padding:0 11px;letter-spacing:.06em}
+  .hdr-dl svg{display:none}
+  .logo{gap:8px}.logo svg{width:32px;height:32px}
+  /* the scrubber is a pointer's tool; on a phone it only covered the copy */
+  .sub-nav{display:none}
+  .v3-meta .v3-cell{padding-right:12px;white-space:nowrap}
+  .v3-meta .v3-cell:first-child{padding-left:56px}
+  .v3-label{font-size:11px;letter-spacing:.06em}
+  .v3-label .wide{display:none}
+  .section-text{max-width:100%;margin-left:0}
+  .feature .section-text{max-width:100%}
+  .footer-row{gap:28px}
+}
+
+/* the cards in their chapters on a phone */
+@media (min-width:861px){.card.inflow{display:none!important}}
+@media (max-width:860px){
+  .section-text .card.inflow{display:block!important;opacity:1;transform:none;pointer-events:auto;margin:8px -8px -8px;font-size:13px;line-height:1.6}
+  .card.inflow pre{white-space:pre;overflow-x:auto;scrollbar-width:thin;padding-right:24px}
+  .card.inflow h3{flex-wrap:wrap;gap:4px 12px}
+}
+
+/* the hero's action row is a band of its own, closed by a rule under it; the first button is
+   ink, and it opens the downloads panel over the row's cells instead of leaving the page */
+.v3-frame{grid-template-rows:auto auto auto 1fr}
+.v3-row.dl-row{border-bottom:1px solid var(--p-line)}
+.v3-btn.ink{border:0;background:#1b1a19;color:#efeeeb;font-family:var(--f-mono)}
+.v3-btn.ink:hover{background:#000;filter:none}
+.v3-btn.ink:focus-visible{outline:2px solid #f0661c;outline-offset:3px}
+.v3-btn.ink[aria-expanded="true"]{background:#000}
+.dl-row>.dl-panel{grid-column:1/-1;grid-row:1/span 2;z-index:3}
+.dl-row.open>.v3-cell{visibility:hidden}
+/* the panel: the guidebook's black panel with corner brackets, dashed rows, orange values and a
+   big Tektur numeral */
+.dl-panel{--panel:#141312;--panel-fg:#f3f1ee;--panel-line:#34322f;background:var(--panel);color:var(--panel-fg);position:relative;padding:16px 26px 26px;display:flex;flex-direction:column;gap:18px;
+  font:400 12.5px/1.6 var(--f-mono);outline:none;animation:dl-in .25s ease-out}
+@keyframes dl-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dl-panel .br{position:absolute;width:14px;height:14px;border:2px solid var(--panel-fg);opacity:.9}
+.dl-panel .br.tl{left:12px;top:12px;border-right:0;border-bottom:0}.dl-panel .br.tr{right:12px;top:12px;border-left:0;border-bottom:0}
+.dl-panel .br.bl{left:12px;bottom:12px;border-right:0;border-top:0}.dl-panel .br.brr{right:12px;bottom:12px;border-left:0;border-top:0}
+.dl-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 10px}
+.dl-tr{display:flex;align-items:center;gap:14px;min-width:0}
+.dl-panel .count{display:flex;align-items:center;gap:12px}
+.dl-panel .count b{font:800 56px/.9 "Tektur",var(--f-head);font-variant-numeric:tabular-nums}
+.dl-panel .count>span{font-size:12px;line-height:1.5;color:#b8b4ae;letter-spacing:.06em;white-space:nowrap}
+html.loc .dl-panel .count>span{font-family:var(--f-loc)}
+.dl-label{margin:0;white-space:nowrap;font:500 12px/1.2 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:#8f8b86}
+.dl-label b{color:var(--panel-fg);font-weight:500}
+.dl-close{all:unset;box-sizing:border-box;flex:none;display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--panel-line);color:var(--panel-fg);cursor:pointer}
+.dl-close:hover{border-color:var(--panel-fg)}
+.dl-close:focus-visible{outline:2px solid #f0661c;outline-offset:2px}
+.dl-close svg{width:12px;height:12px}
+.dl-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,auto);padding:0 10px}
+/* the three hosts share one grid, row by row: the name (with "in development" beside it where it
+   applies), the technical line, the buttons */
+.dl-os{grid-row:span 3;display:grid;grid-template-rows:subgrid;row-gap:12px;align-items:center;padding:4px 24px 6px 0;min-width:0}
+.dl-os+.dl-os{padding-left:24px;border-left:1px dashed var(--panel-line)}
+.dl-os h3{display:flex;align-items:center;gap:10px;margin:0;font:700 17px/1 "Tektur",var(--f-head);letter-spacing:.01em}
+.dl-os h3 img{width:28px;height:28px;flex:none}
+.dl-tech{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0;padding:9px 0;border-top:1px dashed var(--panel-line);border-bottom:1px dashed var(--panel-line);align-items:baseline}
+.dl-tech dt{font:500 11px/1.5 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:#8f8b86;white-space:nowrap}
+.dl-tech dd{margin:0;font:400 12.5px/1.5 var(--f-mono);color:#d8d5d0;overflow-wrap:anywhere}
+html.cjk .dl-tech dt{letter-spacing:.04em}
+.dl-badge{margin-left:auto;display:inline-flex;align-items:center;gap:7px;height:22px;padding:0 9px;font:500 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--panel-line);color:#b8b4ae}
+.dl-badge::before{content:"";width:6px;height:6px;background:#6f6b66}
+html.cjk .dl-badge,html.cjk .dl-label{letter-spacing:.04em}
+.dl-act{position:relative;display:flex;gap:6px;align-items:stretch}
+.dl-main{flex:1;justify-content:center;min-width:0;border:0;padding:12px 16px;font-size:12px;gap:8px;--p-accent:#f0661c;--p-fg:#1b1a19;white-space:nowrap}
+.dl-main span{overflow:hidden;text-overflow:ellipsis}
+.dl-main svg{width:12px;height:12px;flex:none}
+.dl-main:disabled{background:#2a2826;color:#8f8b86;cursor:default;filter:none}
+.dl-main:focus-visible{outline:2px solid #f3f1ee;outline-offset:2px}
+.dl-more{all:unset;box-sizing:border-box;width:40px;flex:none;display:grid;place-items:center;border:1px solid var(--panel-line);color:var(--panel-fg);cursor:pointer}
+.dl-more:hover,.dl-more[aria-expanded="true"]{border-color:var(--panel-fg)}
+.dl-more[aria-expanded="true"] svg{transform:rotate(180deg)}
+.dl-more svg{width:11px;height:11px}
+.dl-more:focus-visible{outline:2px solid #f0661c;outline-offset:2px}
+.dl-list{position:absolute;right:0;top:calc(100% + 6px);z-index:5;min-width:100%;margin:0;padding:4px 0;list-style:none;background:#1d1c1a;border:1px solid #4a4744;box-shadow:0 14px 30px -12px rgba(0,0,0,.8)}
+.dl-list a,.dl-list span{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;padding:8px 12px;font:400 12px/1.3 var(--f-mono);color:var(--panel-fg);white-space:nowrap}
+.dl-list b{font-weight:500}.dl-list i{font-style:normal;color:#b8b4ae}.dl-list em{font-style:normal;text-align:right;color:#f0661c}
+.dl-list .soon{color:#8f8b86}.dl-list .soon em{color:#8f8b86}
+.dl-list a:hover,.dl-list a:focus-visible{background:#2a2826;outline:none}
+.dl-list li+li{border-top:1px dashed var(--panel-line)}
+@media (max-width:1100px){.dl-cols{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .dl-os{grid-row:auto;grid-template-rows:none;padding:14px 0!important;border-left:0!important}
+  .dl-os+.dl-os{border-top:1px dashed var(--panel-line)}
+}
+@media (max-width:860px){
+  .dl-panel{padding:14px 16px 22px;max-height:calc(100svh - var(--hdr) - 170px);overflow-y:auto;overscroll-behavior:contain}
+  .dl-top{padding:0 16px 0 18px;gap:12px}.dl-cols{padding:0 4px}
+  .dl-panel .count{gap:8px}.dl-panel .count>span{font-size:11px;letter-spacing:.02em}
+  .dl-label{font-size:11px;letter-spacing:.08em}
+  .dl-panel .count b{font-size:42px}
+  .dl-tr{gap:8px}.dl-label{text-align:right}
+  .dl-tech{padding:7px 0}.dl-tech dd{font-size:12px}
+  .dl-list{left:0;right:0}
+}
+
+/* the phone's host picker: the language menu's design, on the panel's dark */
+.dl-pickrow{display:none}
+@media (max-width:860px){
+  .dl-pickrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 4px 10px}
+  .dl-pick{position:relative}
+  .dl-pick-btn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 8px;border:1px solid var(--panel-line);cursor:pointer;
+    font:700 17px/1 "Tektur",var(--f-head);color:var(--panel-fg);position:relative;-webkit-tap-highlight-color:transparent}
+  .dl-pick-btn::before{content:"";position:absolute;left:-1px;top:-1px;width:5px;height:5px;background:#f0661c}
+  .dl-pick-btn img{width:26px;height:26px}
+  .dl-pick-btn svg{width:11px;height:11px;margin-left:4px;transition:transform .2s}
+  .dl-pick.open .dl-pick-btn{border-color:var(--panel-fg)}
+  .dl-pick.open .dl-pick-btn svg{transform:rotate(180deg)}
+  .dl-pick-btn:focus-visible{outline:2px solid #f0661c;outline-offset:2px}
+  .dl-pick-list{position:absolute;left:0;top:calc(100% + 6px);z-index:6;min-width:220px;margin:0;padding:4px 0;list-style:none;background:#1d1c1a;border:1px solid #4a4744;box-shadow:0 14px 30px -12px rgba(0,0,0,.8);outline:none}
+  .dl-pick-list li{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;cursor:pointer;font:700 15px/1 "Tektur",var(--f-head);color:var(--panel-fg)}
+  .dl-pick-list li+li{border-top:1px dashed var(--panel-line)}
+  .dl-pick-list li img{width:24px;height:24px}
+  .dl-pick-list li.active{background:#2a2826}
+  .dl-pick-list:focus-visible li.active{box-shadow:inset 2px 0 0 #f0661c}
+  .dl-pick-list li[aria-selected="true"]::after{content:"";margin-left:auto;width:7px;height:7px;background:#f0661c}
+  .dl-pick-badge:empty{display:none}
+  .dl-os[data-os-col]{display:none!important}
+  .dl-os[data-os-col].sel{display:grid!important;border-top:0!important;padding-top:0!important}
+  .dl-os.sel h3{display:none}
+}
+@media (max-width:560px){.logo small{display:none}.dl-sub{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
-<body>
+<body id="top">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-arr" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></symbol>
+</svg>
+
 <header id="site-header">
-  <div class="logo">
-    <a href="#intro" aria-label="Desktop Subsystem for Android">dsa<i>●</i></a>
-    <label class="sel-wrap"><select id="lang" class="ui-select" aria-label="Language"><option value="ko">KO</option><option value="en">EN</option></select></label>
-  </div>
+  <a class="logo" href="#top" aria-label="Desktop Subsystem for Android">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" fill="var(--accent)"></rect><path d="M8 20.5a8 8 0 0 1 16 0z" fill="var(--accent-ink)"></path><rect x="12" y="17" width="2" height="2" fill="var(--accent)"></rect><rect x="18" y="17" width="2" height="2" fill="var(--accent)"></rect><path d="M10.6 10.8l1.8 2.6M21.4 10.8l-1.8 2.6" stroke="var(--accent-ink)" stroke-width="1.6"></path></svg>
+    <span>DSA<small>Desktop Subsystem</small></span>
+  </a>
   <nav id="site-menu" class="hdr-mid" aria-label="Site">
     <ul>
-      <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M5.5 2.5v11"/></svg><span lang="ko">문서</span><span lang="en">Docs</span></a></li>
-      <li><a href="#features"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><path d="M11.25 9v4.5M9 11.25h4.5"/></svg><span lang="ko">기능</span><span lang="en">Features</span></a></li>
-      <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android" target="_blank" rel="noopener" title="GitHub"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 .2a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.4 7.4 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 .2z"/></svg></a></li>
+      <li><a id="docs-link" data-guide="README.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/README.md" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M5.5 2.5v11"/></svg><span data-i="nav.docs">Docs</span></a></li>
+      <li class="wide"><a href="#features"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><path d="M11.25 9v4.5M9 11.25h4.5"/></svg><span data-i="nav.features">Features</span></a></li>
+      <li class="wide"><a href="#integration"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2.5" y="3" width="11" height="8" rx="1"/><path d="M5.5 13.5h5M8 11v2.5M5 6h3M5 8h5"/></svg><span data-i="nav.integration">Integration</span></a></li>
+      <li class="wide"><a href="#cli"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M4.5 6l2 2-2 2M8 10.5h3.5"/></svg><span data-i="nav.cli">CLI</span></a></li>
+      <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .2a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.4 7.4 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 .2z"/></svg></a></li>
     </ul>
   </nav>
   <div class="hdr-right">
+    <div class="lang-menu" id="lang-menu">
+      <button type="button" class="lang-btn" id="lang-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="lang-list" aria-label="Language: English"><span id="lang-code">EN</span><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+      <div class="lang-pop" id="lang-pop" hidden><ul class="lang-list" id="lang-list" role="listbox" tabindex="-1" aria-label="Language" data-i-aria="lang.label"></ul></div>
+    </div>
+    <a class="v3-btn primary hdr-dl" data-release href="https://github.com/thisisthepy/desktop-subsystem-for-android/releases" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6 1v7M3 5.500 6 8.500l3-3M1.500 10.500h9"/></svg><span data-i="nav.download">Download</span></a>
   </div>
 </header>
 
@@ -269,10 +631,10 @@ body #site-footer{padding-bottom:max(104px,env(safe-area-inset-bottom,0px))}
     <div class="v3">
       <div class="v3-frame">
         <div class="v3-row v3-meta">
-          <div class="v3-cell"><span class="v3-cross" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 10l24 24M34 10L10 34" stroke="currentColor" stroke-width="1.2"/><rect x="19" y="19" width="6" height="6" fill="currentColor"/></svg></span><span class="v3-label">v0.1.9 · Apache-2.0</span></div>
+          <div class="v3-cell"><span class="v3-cross" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 10l24 24M34 10L10 34" stroke="currentColor" stroke-width="1.2"/><rect x="19" y="19" width="6" height="6" fill="currentColor"/></svg></span><span class="v3-label"><a data-release href="https://github.com/thisisthepy/desktop-subsystem-for-android/releases" target="_blank" rel="noopener"><b id="rel-tag">Releases</b></a><span class="wide"> · Apache-2.0</span></span></div>
           <div class="v3-cell"><span class="v3-label">Android <b>16</b> · <b>17</b></span></div>
-          <div class="v3-cell"></div>
-          <div class="v3-cell"></div>
+          <div class="v3-cell"><span class="v3-label">Windows 11 · <b>x64</b> · <b>ARM64</b></span></div>
+          <div class="v3-cell end"><span class="v3-label"><a href="https://github.com/thisisthepy/desktop-subsystem-for-android" target="_blank" rel="noopener"><span data-i="hero.source">Source on GitHub</span> <b>↗</b></a></span></div>
         </div>
         <div class="v3-row">
           <div class="v3-cell v3-title">
@@ -281,17 +643,42 @@ body #site-footer{padding-bottom:max(104px,env(safe-area-inset-bottom,0px))}
             <div class="v3-sub"><span>For Android<span class="v3-tm">™</span></span></div>
           </div>
         </div>
-        <div class="v3-row">
+        <div class="v3-row dl-row" id="dl-row">
           <div class="v3-cell span2 v3-copy">
-            <p class="v3-lede" lang="ko">DSA는 Android를 전용 가상 머신에서 통째로 실행하고, 앱 화면 하나하나를 PC의 진짜 창으로 띄웁니다. 작업 표시줄, 알림, 키보드 입력, 파일 끌어 놓기가 다른 데스크톱 앱과 똑같이 동작합니다.</p>
-            <p class="v3-lede" lang="en">DSA runs the whole of Android in a dedicated virtual machine and shows each app as a real window on your PC. The taskbar, notifications, keyboard input and file drag and drop work the way they do for any other desktop app.</p>
+            <p class="v3-lede" data-i="hero.lede">DSA runs the whole of Android in a dedicated virtual machine and shows each app as a real window on your PC. The taskbar, notifications, keyboard input and file drag and drop work the way they do for any other desktop app.</p>
             <div class="v3-cta">
-              <a class="v3-btn primary" href="https://github.com/thisisthepy/desktop-subsystem-for-android/releases" target="_blank" rel="noopener"><span lang="ko">설치 프로그램 받기</span><span lang="en">Get the installer</span></a>
-              <a class="v3-btn ghost" href="#toolbox"><span lang="ko">작동 방식</span><span lang="en">How it works</span></a>
+              <!-- without the script it is a plain link to the releases; with it, it opens the panel below -->
+              <a class="v3-btn primary ink" id="dl-open" href="https://github.com/thisisthepy/desktop-subsystem-for-android/releases" target="_blank" rel="noopener"><span data-i="hero.cta1">Get the installer</span></a>
+              <a class="v3-btn ghost" href="#toolbox"><span data-i="hero.cta2">How it works</span></a>
             </div>
           </div>
           <div class="v3-cell span2"></div>
+          <div class="dl-panel" id="dl-panel" role="dialog" aria-labelledby="dl-title" tabindex="-1" hidden>
+            <span class="br tl" aria-hidden="true"></span><span class="br tr" aria-hidden="true"></span><span class="br bl" aria-hidden="true"></span><span class="br brr" aria-hidden="true"></span>
+            <div class="dl-top"><div class="count"><b>3</b><span><span data-i="dl.count1">hosts</span><br>= <span data-i="dl.count2">the same Android</span></span></div>
+              <div class="dl-tr"><p class="dl-label" id="dl-title"><b>DSA <span id="dl-ver">releases</span></b><span class="dl-sub"> · <span data-i="dl.title">Installers</span></span></p><button type="button" class="dl-close" id="dl-close" data-i-aria="dl.close" aria-label="Close"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.5"/></svg></button></div></div>
+            <!-- a phone shows one host at a time, picked here -->
+            <div class="dl-pickrow"><div class="dl-pick" id="dl-pick">
+              <button type="button" class="dl-pick-btn" id="dl-pick-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="dl-pick-list"><img src="brand/windows.svg" alt=""><span>Windows 11</span><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+              <ul class="dl-pick-list" id="dl-pick-list" role="listbox" tabindex="-1" data-i-aria="dl.platform" aria-label="Platform" hidden>
+                <li role="option" id="dl-pick-linux" data-os="linux" aria-selected="false"><img src="brand/linux.svg" alt="">Linux</li>
+                <li role="option" id="dl-pick-windows" data-os="windows" aria-selected="true"><img src="brand/windows.svg" alt="">Windows 11</li>
+                <li role="option" id="dl-pick-macos" data-os="macos" aria-selected="false"><img src="brand/macos.svg" alt="">macOS</li>
+              </ul></div><span class="dl-pick-badge"></span></div>
+            <div class="dl-cols">
+              <section class="dl-os" data-os-col aria-labelledby="dl-h-linux"><h3 id="dl-h-linux"><img src="brand/linux.svg" alt="">Linux<span class="dl-badge dev" data-i="dl.dev">In development</span></h3>
+                <dl class="dl-tech"><dt data-i="dl.vm">Virtualization</dt><dd>KVM · crosvm</dd><dt data-i="dl.draw">Windows</dt><dd>Wayland</dd></dl>
+                <div class="dl-act" data-os="linux"></div></section>
+              <section class="dl-os" data-os-col aria-labelledby="dl-h-windows"><h3 id="dl-h-windows"><img src="brand/windows.svg" alt="">Windows 11</h3>
+                <dl class="dl-tech"><dt data-i="dl.vm">Virtualization</dt><dd>Hyper-V (HCS)</dd><dt data-i="dl.draw">Windows</dt><dd>Win32 · DirectComposition</dd></dl>
+                <div class="dl-act" data-os="windows"></div></section>
+              <section class="dl-os" data-os-col aria-labelledby="dl-h-macos"><h3 id="dl-h-macos"><img src="brand/macos.svg" alt="">macOS<span class="dl-badge dev" data-i="dl.dev">In development</span></h3>
+                <dl class="dl-tech"><dt data-i="dl.vm">Virtualization</dt><dd>Virtualization.framework</dd><dt data-i="dl.draw">Windows</dt><dd>AppKit</dd></dl>
+                <div class="dl-act" data-os="macos"></div></section>
+            </div>
+          </div>
         </div>
+        <div class="v3-fill" aria-hidden="true"></div>
       </div>
     </div>
     <div class="spacer"></div><div class="spacer"></div>
@@ -300,10 +687,10 @@ body #site-footer{padding-bottom:max(104px,env(safe-area-inset-bottom,0px))}
   <section id="toolbox" class="section-light" data-chapter="toolbox" data-label="TOOLBOX">
     <div class="section layout-container">
       <div class="section-text">
-        <h2 lang="ko">Android는 온전하게,<br>경계는 HAL에서</h2>
-        <h2 lang="en">Android stays whole.<br>The boundary is the HAL.</h2>
-        <p lang="ko">커널, ART, 프레임워크는 전용 VM 안에 그대로 두고, 화면과 장치만 PC로 옮깁니다.</p>
-        <p lang="en">The kernel, ART and the framework stay inside a dedicated VM. Only the display and the devices move to your PC.</p>
+        <div class="eyebrow"><i></i><span data-i="tb.eye">How it works</span></div>
+        <h2 data-i="tb.h">Android stays whole.
+The boundary is the HAL.</h2>
+        <p data-i="tb.p">The kernel, ART and the framework stay inside a dedicated VM. Only the display and the devices move to your PC.</p>
       </div>
     </div>
     <div class="spacer"></div><div class="spacer"></div><div class="spacer"></div><div class="spacer"></div>
@@ -312,113 +699,89 @@ body #site-footer{padding-bottom:max(104px,env(safe-area-inset-bottom,0px))}
   <section id="features" data-label="FEATURES">
     <section class="feature" data-chapter="f0" data-c="red" data-demo="window">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">앱 하나, 창 하나</h2><h2 lang="en">One app, one window</h2>
-          <p lang="ko">작업마다 자기 아이콘과 이름을 가진 창이 생깁니다. 스냅, Alt+Tab, 작업 표시줄이 그대로 동작합니다.</p>
-          <p lang="en">Every task gets its own window with its own icon and name. Snap, Alt+Tab and the taskbar just work.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">01 / 08</span><span data-i="f0.eye">Windows</span></div>
+        <div class="section-text-heading"><h2 data-i="f0.h">One app, one window</h2><p data-i="f0.p">Every task gets its own window with its own icon and name. Snap, Alt+Tab and the taskbar just work.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">통합 제목 표시줄</span><span lang="en">Integrated title bar</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">스냅 레이아웃</span><span lang="en">Snap layouts</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">시작 메뉴와 작업 표시줄</span><span lang="en">Start menu and taskbar</span></a></li>
+          <li><a data-guide="apps.md#work-with-app-windows" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md#work-with-app-windows" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f0.l1">Integrated title bar</span></a></li>
+          <li><a data-guide="apps.md#work-with-app-windows" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md#work-with-app-windows" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f0.l2">Snap layouts</span></a></li>
+          <li><a data-guide="apps.md#open-an-app" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md#open-an-app" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f0.l3">Start menu and taskbar</span></a></li>
         </ul>
       </div></div>
     </section>
     <section class="feature" data-chapter="f1" data-c="orange" data-demo="gpu">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">그리기는 PC의 GPU가</h2><h2 lang="en">Your GPU does the drawing</h2>
-          <p lang="ko">앱의 OpenGL ES와 Vulkan 명령을 PC의 GPU가 실행하고, 렌더러는 따로 떨어진 프로세스에서 돕니다.</p>
-          <p lang="en">Your PC's GPU runs each app's OpenGL ES and Vulkan, and the renderer lives in a process of its own.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">02 / 08</span><span data-i="f1.eye">Graphics</span></div>
+        <div class="section-text-heading"><h2 data-i="f1.h">Your GPU does the drawing</h2><p data-i="f1.p">Your PC's GPU runs each app's OpenGL ES and Vulkan, and the renderer lives in a process of its own.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg>ANGLE</a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">Vulkan 원격 실행</span><span lang="en">Vulkan remoting</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">GPU 리셋 복구</span><span lang="en">GPU reset recovery</span></a></li>
+          <li><a data-guide="settings.md#pages" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/settings.md#pages" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f1.l1">ANGLE</span></a></li>
+          <li><a data-guide="settings.md#pages" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/settings.md#pages" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f1.l2">Vulkan remoting</span></a></li>
+          <li><a data-guide="settings.md#pages" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/settings.md#pages" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f1.l3">GPU reset recovery</span></a></li>
         </ul>
       </div></div>
     </section>
     <section class="feature left" data-chapter="f2" data-c="turq" data-demo="memory">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">쓰지 않는 메모리는 돌려줍니다</h2><h2 lang="en">Unused memory goes back</h2>
-          <p lang="ko">Android가 쉬는 동안 비어 있는 메모리는 바로 Windows로 돌아갑니다. 정해 둔 상한이 없습니다.</p>
-          <p lang="en">While Android rests, its free memory goes straight back to Windows. There is no fixed cap.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">03 / 08</span><span data-i="f2.eye">Memory</span></div>
+        <div class="section-text-heading"><h2 data-i="f2.h">Unused memory goes back</h2><p data-i="f2.p">While Android rests, its free memory goes straight back to Windows. There is no fixed cap.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">페이지 반환</span><span lang="en">Free page reporting</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">Doze 대기</span><span lang="en">Doze when idle</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">선택형 동결</span><span lang="en">Opt-in freeze</span></a></li>
+          <li><a data-guide="memory.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/memory.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f2.l1">Free page reporting</span></a></li>
+          <li><a data-guide="memory.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/memory.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f2.l2">Doze when idle</span></a></li>
+          <li><a data-guide="memory.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/memory.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f2.l3">Opt-in freeze</span></a></li>
         </ul>
       </div></div>
     </section>
     <section class="feature" data-chapter="f3" data-c="blue" data-demo="arm">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">ARM 앱도 그대로</h2><h2 lang="en">ARM apps too</h2>
-          <p lang="ko">x86 판이 있으면 그것을, 없을 때만 ARM 판을 번역해 실행합니다. 오픈 소스 번역기가 기본입니다.</p>
-          <p lang="en">The x86 build runs when there is one. Only ARM-only apps go through translation, with an open source translator by default.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">04 / 08</span><span data-i="f3.eye">ARM apps</span></div>
+        <div class="section-text-heading"><h2 data-i="f3.h">ARM apps too</h2><p data-i="f3.p">The x86 build runs when there is one. Only ARM-only apps go through translation, with an open source translator by default.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">x86 우선 실행</span><span lang="en">x86 first</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">기본 번역기</span><span lang="en">Default translator</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">번역기 교체</span><span lang="en">Swap the translator</span></a></li>
+          <li><a data-guide="apps.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f3.l1">x86 first</span></a></li>
+          <li><a data-guide="apps.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f3.l2">Default translator</span></a></li>
+          <li><a data-guide="apps.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f3.l3">Swap the translator</span></a></li>
         </ul>
       </div></div>
     </section>
     <section class="feature left" data-chapter="f4" data-c="purple" data-demo="hal">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">장치는 HAL 단위로 PC에</h2><h2 lang="en">Devices live on the host</h2>
-          <p lang="ko">카메라, 오디오, 코덱은 HAL 서비스로 PC에서 돌고, Android는 시스템 호출을 넘기지 않습니다.</p>
-          <p lang="en">Camera, audio and codecs run on the PC as HAL services. Android never forwards a system call.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">05 / 08</span><span data-i="f4.eye">Devices</span></div>
+        <div class="section-text-heading"><h2 data-i="f4.h">Devices live on the host</h2><p data-i="f4.p">Camera, audio and codecs run on the PC as HAL services. Android never forwards a system call.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg>RPC Binder</a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">호스트 코덱</span><span lang="en">Host codecs</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">카메라와 오디오</span><span lang="en">Camera and audio</span></a></li>
+          <li><a data-guide="README.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/README.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f4.l1">RPC Binder</span></a></li>
+          <li><a data-guide="README.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/README.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f4.l2">Host codecs</span></a></li>
+          <li><a data-guide="README.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/README.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f4.l3">Camera and audio</span></a></li>
         </ul>
       </div></div>
     </section>
     <section class="feature" data-chapter="f5" data-c="lime" data-demo="drag">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">끌어 놓고, 붙여 넣고</h2><h2 lang="en">Drag, drop and paste</h2>
-          <p lang="ko">파일을 창에 끌어 놓고, 클립보드를 함께 씁니다. 가운데 공을 직접 끌어 보세요.</p>
-          <p lang="en">Drop files on a window and share the clipboard. Try dragging the ball in the middle.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">06 / 08</span><span data-i="f5.eye">Files</span></div>
+        <div class="section-text-heading"><h2 data-i="f5.h">Drag, drop and paste</h2><p data-i="f5.p">Drop files on a window and share the clipboard. Try dragging the ball in the middle.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">파일 끌어 놓기</span><span lang="en">File drag and drop</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">클립보드 공유</span><span lang="en">Shared clipboard</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">APK 설치 관리자</span><span lang="en">APK Installer</span></a></li>
+          <li><a data-guide="files.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/files.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f5.l1">File drag and drop</span></a></li>
+          <li><a data-guide="files.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/files.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f5.l2">Shared clipboard</span></a></li>
+          <li><a data-guide="install-apks.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/install-apks.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f5.l3">APK Installer</span></a></li>
         </ul>
       </div></div>
     </section>
     <section class="feature left" data-chapter="f6" data-c="yellow" data-demo="clock">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">기다림 없이 바로</h2><h2 lang="en">Opens without the wait</h2>
-          <p lang="ko">마지막 창을 닫아도 Android는 꺼지지 않고 Doze로 쉽니다. 다음 앱은 부팅을 기다리지 않습니다.</p>
-          <p lang="en">Closing the last window puts Android into Doze instead of shutting it down, so the next app opens without a boot.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">07 / 08</span><span data-i="f6.eye">Idle</span></div>
+        <div class="section-text-heading"><h2 data-i="f6.h">Opens without the wait</h2><p data-i="f6.p">Closing the last window puts Android into Doze instead of shutting it down, so the next app opens without a boot.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">Doze 기본 대기</span><span lang="en">Doze by default</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">알림 전달</span><span lang="en">Notifications</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">바탕 화면 위젯</span><span lang="en">Desktop widgets</span></a></li>
+          <li><a data-guide="memory.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/memory.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f6.l1">Doze by default</span></a></li>
+          <li><a data-guide="apps.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f6.l2">Notifications</span></a></li>
+          <li><a data-guide="apps.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f6.l3">Desktop widgets</span></a></li>
         </ul>
       </div></div>
     </section>
     <section class="feature" data-chapter="f7" data-c="green" data-demo="hosts">
       <div class="section layout-container"><div class="section-text">
-        <div class="section-text-heading">
-          <h2 lang="ko">같은 Android, 세 가지 호스트</h2><h2 lang="en">One Android, three hosts</h2>
-          <p lang="ko">Windows가 먼저이고, 프로토콜과 게스트는 Linux와 macOS에서도 같습니다.</p>
-          <p lang="en">Windows comes first. The protocol and the guest are the same on Linux and macOS.</p>
-        </div>
+        <div class="eyebrow"><i></i><span class="n">08 / 08</span><span data-i="f7.eye">Hosts</span></div>
+        <div class="section-text-heading"><h2 data-i="f7.h">One Android, three hosts</h2><p data-i="f7.p">Windows comes first. The protocol and the guest are the same on Linux and macOS.</p></div>
         <ul class="feature-links">
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg>Windows 11</a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">Linux (개발 중)</span><span lang="en">Linux (in progress)</span></a></li>
-          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android#readme" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10M7 2l4 4-4 4"/></svg><span lang="ko">macOS (개발 중)</span><span lang="en">macOS (in progress)</span></a></li>
+          <li><a data-guide="getting-started.md#status-by-platform" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/getting-started.md#status-by-platform" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f7.l1">Windows 11</span></a></li>
+          <li><a data-guide="getting-started.md#status-by-platform" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/getting-started.md#status-by-platform" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f7.l2">Linux (in progress)</span></a></li>
+          <li><a data-guide="getting-started.md#status-by-platform" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/getting-started.md#status-by-platform" target="_blank" rel="noopener"><svg><use href="#i-arr"/></svg><span data-i="f7.l3">macOS (in progress)</span></a></li>
         </ul>
       </div></div>
     </section>
@@ -428,23 +791,67 @@ body #site-footer{padding-bottom:max(104px,env(safe-area-inset-bottom,0px))}
   <section id="modules" class="section-light" data-chapter="modules" data-label="MODULES">
     <div class="section layout-container">
       <div class="section-text">
-        <h2 lang="ko">상한 없이,<br>필요한 만큼만</h2>
-        <h2 lang="en">No fixed cap.<br>Only what it needs.</h2>
-        <p lang="ko">VM, 창 관리자, 렌더러, 앱 창이 각자 필요한 만큼만 씁니다.</p>
-        <p lang="en">The VM, the window manager, the renderer and each app window take only what they need.</p>
+        <div class="eyebrow"><i></i><span data-i="md.eye">Memory</span></div>
+        <h2 data-i="md.h">No fixed cap.
+Only what it needs.</h2>
+        <p data-i="md.p">The VM, the window manager, the renderer and each app window take only what they need.</p>
       </div>
     </div>
     <div class="spacer"></div><div class="spacer"></div><div class="spacer"></div><div class="spacer"></div>
   </section>
 
+  <!-- the desktop integrations no chapter above covers, on the dark stage once the package is
+       closed; each strip names the command or the two ends it joins -->
+  <section id="integration" class="xsec" data-chapter="integration" data-c="orange">
+    <div class="xsec-in layout-container">
+      <div class="xframe">
+        <div class="xhead"><div class="eyebrow"><i></i><span data-i="in.eye">Desktop integration</span></div><h2 data-i="in.h">Part of the desktop</h2></div>
+        <ul class="igrid">
+          <li class="icard" style="--sq:var(--red)"><h3><i></i><span data-i="in.c1.t">Host keyboard and IME</span></h3><p data-i="in.c1.p">Your Windows input method composes text inline, Korean included. No Android keyboard appears.</p><code class="strip">TSF<b>→</b>InputConnection</code></li>
+          <li class="icard" style="--sq:var(--orange)"><h3><i></i><span data-i="in.c2.t">Notifications</span></h3><p data-i="in.c2.p">Android notifications appear as Windows notifications, and selecting one opens the app's window.</p><code class="strip">NotificationListener<b>→</b>toast</code></li>
+          <li class="icard" style="--sq:var(--yellow)"><h3><i></i><span data-i="in.c3.t">APK Installer</span></h3><p data-i="in.c3.p">Double-click an APK to see its name, publisher, version and permissions before it installs.</p><code class="strip"><s>dsa</s> install notes-2.8.1.apk</code></li>
+          <li class="icard" style="--sq:var(--green)"><h3><i></i><span data-i="in.c4.t">Desktop widgets</span></h3><p data-i="in.c4.p">Place Android widgets on the Windows desktop. Resize one and it redraws at that size.</p><code class="strip"><s>dsa</s> widgets</code></li>
+          <li class="icard" style="--sq:var(--blue)"><h3><i></i><span data-i="in.c5.t">Network</span></h3><p data-i="in.c5.p">Your PC answers Android's name lookups, so the hosts file, a VPN and DNS filters apply as they do to Windows apps.</p><code class="strip"><s>dsa</s> network</code></li>
+          <li class="icard" style="--sq:var(--purple)"><h3><i></i><span data-i="in.c6.t">Google Play installer</span></h3><p data-i="in.c6.p">DSA ships no Google software. If you want Google Play, DSA downloads the public package after showing you its source and terms.</p><code class="strip"><s>dsa</s> gapps install</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- the command line: what the settings app does, one command each -->
+  <section id="cli" class="xsec" data-chapter="cli" data-c="orange">
+    <div class="xsec-in layout-container">
+      <div class="xframe">
+        <div class="xhead"><div class="eyebrow"><i></i><span data-i="cli.eye">Command line</span></div><h2 data-i="cli.h">Whatever Settings does, a command does too.</h2></div>
+        <ul class="cgrid">
+          <li><code><s>dsa</s> <b>status</b></code><span data-i="cmd.status">Android session state</span></li>
+          <li><code><s>dsa</s> <b>start</b></code><span data-i="cmd.start">Start Android</span></li>
+          <li><code><s>dsa</s> <b>stop</b></code><span data-i="cmd.stop">Stop Android</span></li>
+          <li><code><s>dsa</s> <b>update</b></code><span data-i="cmd.update">Install the newest DSA now</span></li>
+          <li><code><s>dsa</s> <b>launch</b></code><span data-i="cmd.launch">Open an app in a window</span></li>
+          <li><code><s>dsa</s> <b>tasks</b></code><span data-i="cmd.tasks">Open tasks and their windows</span></li>
+          <li><code><s>dsa</s> <b>apps</b></code><span data-i="cmd.apps">Installed apps: list, details, uninstall</span></li>
+          <li><code><s>dsa</s> <b>install</b></code><span data-i="cmd.install">Install an APK</span></li>
+          <li><code><s>dsa</s> <b>apk-info</b></code><span data-i="cmd.apk-info">See what an APK is before installing</span></li>
+          <li><code><s>dsa</s> <b>widgets</b></code><span data-i="cmd.widgets">Place and remove desktop widgets</span></li>
+          <li><code><s>dsa</s> <b>memory</b></code><span data-i="cmd.memory">Memory Android takes</span></li>
+          <li><code><s>dsa</s> <b>network</b></code><span data-i="cmd.network">Network mode, addresses and DNS</span></li>
+          <li><code><s>dsa</s> <b>settings</b></code><span data-i="cmd.settings">Show or change a setting</span></li>
+          <li><code><s>dsa</s> <b>android</b></code><span data-i="cmd.android">Show or switch the Android version</span></li>
+          <li><code><s>dsa</s> <b>gapps</b></code><span data-i="cmd.gapps">Install Google Play, if you want it</span></li>
+          <li><code><s>dsa</s> <b>logs collect</b></code><span data-i="cmd.logs">Save a diagnostics archive</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <section id="opensource" data-label="SPONSORS" data-chapter="opensource" data-c="red" data-demo="heart">
     <div class="section layout-container">
       <div class="section-text">
-        <h2 lang="ko">처음부터 끝까지 오픈 소스</h2>
-        <h2 lang="en">Open source, end to end</h2>
-        <p lang="ko">Apache-2.0으로 공개합니다. Microsoft WSA 바이너리도, Google 앱도 싣지 않습니다.</p>
-        <p lang="en">Published under Apache-2.0. No Microsoft WSA binary and no Google apps are shipped.</p>
-        <a class="boxed" href="https://github.com/thisisthepy/desktop-subsystem-for-android" target="_blank" rel="noopener"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-label="DSA for Linux"><rect x="5" y="5" width="54" height="51" rx="11"/><path d="M5 46v3a11 11 0 0 0 11 11h32a11 11 0 0 0 11-11v-3"/><g transform="translate(32 31) scale(.66) translate(-32 -32)"><path d="M22 14L16.5 5M42 14L47.5 5" vector-effect="non-scaling-stroke" stroke-width="2.2"/><path d="M13 12h38a9 9 0 0 1 9 9v28a9 9 0 0 1-9 9H13a9 9 0 0 1-9-9V21a9 9 0 0 1 9-9z" vector-effect="non-scaling-stroke"/><path d="M4 25h56" vector-effect="non-scaling-stroke"/><circle cx="40" cy="18.5" r="2.3" vector-effect="non-scaling-stroke"/><circle cx="48" cy="18.5" r="2.3" vector-effect="non-scaling-stroke"/><path d="M16 32h32a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V36a4 4 0 0 1 4-4z" vector-effect="non-scaling-stroke" stroke-dasharray="2 2"/></g></svg><span>thisisthepy / dsa</span></a>
+        <div class="eyebrow"><i></i><span data-i="os.eye">Open source</span></div>
+        <h2 data-i="os.h">Open source, end to end</h2>
+        <p data-i="os.p">Published under Apache-2.0. No Microsoft WSA binary and no Google apps are shipped.</p>
+        <a class="boxed" href="https://github.com/thisisthepy/desktop-subsystem-for-android" target="_blank" rel="noopener"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="54" height="51" rx="11"/><path d="M5 46v3a11 11 0 0 0 11 11h32a11 11 0 0 0 11-11v-3"/><g transform="translate(32 31) scale(.66) translate(-32 -32)"><path d="M22 14L16.5 5M42 14L47.5 5" vector-effect="non-scaling-stroke" stroke-width="2.2"/><path d="M13 12h38a9 9 0 0 1 9 9v28a9 9 0 0 1-9 9H13a9 9 0 0 1-9-9V21a9 9 0 0 1 9-9z" vector-effect="non-scaling-stroke"/><path d="M4 25h56" vector-effect="non-scaling-stroke"/><circle cx="40" cy="18.5" r="2.3" vector-effect="non-scaling-stroke"/><circle cx="48" cy="18.5" r="2.3" vector-effect="non-scaling-stroke"/><path d="M16 32h32a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V36a4 4 0 0 1 4-4z" vector-effect="non-scaling-stroke" stroke-dasharray="2 2"/></g></svg><span>thisisthepy / desktop-subsystem-for-android</span></a>
       </div>
     </div>
     <div class="spacer"></div>
@@ -452,45 +859,82 @@ body #site-footer{padding-bottom:max(104px,env(safe-area-inset-bottom,0px))}
 
   <footer id="site-footer" class="layout-container">
     <div class="footer-row">
-      <div><div class="footer-logo">dsa<i>●</i></div><div class="fine-print">© 2026 thisisthepy · Apache-2.0</div></div>
+      <div>
+        <div class="footer-logo">DSA<i aria-hidden="true"></i></div>
+        <p class="footer-line" data-i="ft.line">Android apps, as windows on your desktop.</p>
+        <div class="v3-cta">
+          <a class="v3-btn primary dl-go" href="https://github.com/thisisthepy/desktop-subsystem-for-android/releases" target="_blank" rel="noopener"><span data-i="hero.cta1">Get the installer</span></a>
+          <a class="v3-btn ghost" data-guide="getting-started.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/getting-started.md" target="_blank" rel="noopener"><span data-i="ft.start">Getting started</span></a>
+        </div>
+      </div>
+      <div>
+        <h6 data-i="ft.guides">Guides</h6>
+        <ul>
+          <li><a data-guide="getting-started.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/getting-started.md" target="_blank" rel="noopener" data-i="ft.g1">Getting started</a></li>
+          <li><a data-guide="apps.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/apps.md" target="_blank" rel="noopener" data-i="ft.g2">Apps and windows</a></li>
+          <li><a data-guide="settings.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/settings.md" target="_blank" rel="noopener" data-i="ft.g3">Settings</a></li>
+          <li><a data-guide="troubleshooting.md" href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/troubleshooting.md" target="_blank" rel="noopener" data-i="ft.g4">Troubleshooting</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6 data-i="ft.project">Project</h6>
+        <ul>
+          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android/releases" target="_blank" rel="noopener" data-i="ft.releases">Releases</a></li>
+          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android/issues" target="_blank" rel="noopener" data-i="ft.issues">Issues</a></li>
+          <li><a href="https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/LICENSE" target="_blank" rel="noopener">Apache-2.0</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-row">
+      <div class="fine-print">© 2026 thisisthepy · Apache-2.0</div>
     </div>
   </footer>
 </main>
 
-<p class="tm-float">Desktop Subsystem for Android™. Android is a trademark of Google LLC.<br>DSA is not affiliated with Google or Microsoft.</p>
+<!-- a phone's way through the stops, beside the swipe -->
+<div class="step-nav" id="step-nav">
+  <button type="button" class="step" id="step-prev" aria-label="Previous section" aria-disabled="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="g-up" d="M3.5 10.5L8 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path class="g-top" d="M3 3.5h10M3.5 12L8 7.5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+  <button type="button" class="step" id="step-next" data-i-aria="nav.next" aria-label="Next section"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 5.5L8 10l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+</div>
+
+<!-- at the closing screen on a wide screen: one square that goes back to the opening -->
+<button type="button" class="step to-top" id="to-top" data-i-aria="nav.top" aria-label="Go to top" title="Go to top"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10M3.5 12L8 7.5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+
+<p class="tm-float" data-i="tm" data-br>Desktop Subsystem for Android™. Android is a trademark of Google LLC.<br>DSA is not affiliated with Google or Microsoft.</p>
 
 <div class="sub-nav" id="sub-nav">
-  <div class="card" data-card="f0"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># 설치된 앱과 그 정보</span>
+  <div class="card" data-card="f0"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f0.c1"># Installed apps and their details</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> apps list
 <span class="pr">&gt; </span><span class="cmd">dsa</span> apps info <span class="arg">com.android.settings</span></pre></div>
-  <div class="card" data-card="f1"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># 세션과 렌더러 상태</span>
+  <div class="card" data-card="f1"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f1.c1"># Session and renderer state</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> status</pre></div>
-  <div class="card" data-card="f2"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># 프로세스별 메모리</span>
+  <div class="card" data-card="f2"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f2.c1"># Memory by process</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> memory</pre></div>
-  <div class="card" data-card="f3"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># 기본 번역기 설치</span>
+  <div class="card" data-card="f3"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f3.c1"># Install the default translator</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> arm-translation install
-<span class="cm"># Google 번역기로 바꾸기 (선택)</span>
+<span class="cm" data-i="f3.c2"># Switch to Google's translator (optional)</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> arm-translation fetch <span class="arg">google</span></pre></div>
-  <div class="card" data-card="f4"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># 게스트 로그와 진단 묶음</span>
+  <div class="card" data-card="f4"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f4.c1"># Guest log and a diagnostics bundle</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> logcat
 <span class="pr">&gt; </span><span class="cmd">dsa</span> logs collect -o <span class="arg">diag.zip</span></pre></div>
-  <div class="card" data-card="f5"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># 설정 앱이 하는 일을 명령으로</span>
+  <div class="card" data-card="f5"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f5.c1"># What the settings app does, as commands</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> settings</pre></div>
-  <div class="card" data-card="f6"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># Active, Dozing 같은 세션 상태</span>
+  <div class="card" data-card="f6"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f6.c1"># Session states such as Active and Dozing</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> status</pre></div>
-  <div class="card" data-card="f7"><button class="copy" title="Copy"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><path d="M1.5 8V2.5a1 1 0 0 1 1-1H8"/></svg></button><pre><span class="cm"># 게스트 Android 버전</span>
+  <div class="card" data-card="f7"><button class="copy" type="button" data-i-aria="copy.label" aria-label="Copy the commands"><svg><use href="#i-copy"/></svg></button><pre><span class="cm" data-i="f7.c1"># The guest's Android version</span>
 <span class="pr">&gt; </span><span class="cmd">dsa</span> android version
 <span class="pr">&gt; </span><span class="cmd">dsa</span> android use <span class="arg">&lt;version&gt;</span></pre></div>
   <div class="card" data-card="modules">
-    <h3><span lang="ko">앱 하나를 연 상태</span><span lang="en">One app open</span><small lang="ko">목표 ≤ 250 MiB</small><small lang="en">target ≤ 250 MiB</small></h3>
+    <h3><span data-i="md.title">One app open</span><small data-i="md.target">target ≤ 250 MiB</small></h3>
     <div class="stack" id="mem-stack"></div>
     <ul class="legend" id="mem-legend"></ul>
-    <p class="fine" lang="ko">DSA 호스트 프로세스 전체의 목표값입니다. 측정값이 아닙니다.</p>
-    <p class="fine" lang="en">The target for all DSA host processes, not a measurement.</p>
+    <p class="fine" data-i="md.fine">The target for all DSA host processes, not a measurement.</p>
   </div>
-  <div class="scrubber" id="scrubber" title="Scroll"><div class="ticks"></div><div class="cursor ghost" id="ghost"></div><div class="cursor" id="cursor"></div></div>
+  <div class="scrubber" id="scrubber" aria-hidden="true"><div class="ticks"></div><div class="cursor ghost" id="ghost"></div><div class="cursor" id="cursor"></div></div>
 </div>
 
+<script src="i18n/en.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/renderers/CSS3DRenderer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4.5.0/dist/bundles/anime.umd.min.js"></script>
@@ -504,12 +948,201 @@ function el(tag, attrs, parent){var e=document.createElementNS(NS,tag);for(var k
 function css(name){return getComputedStyle(root).getPropertyValue('--'+name).trim()}
 
 /* language */
-var langSel = document.getElementById('lang');
-function setLang(l){root.setAttribute('data-lang',l);root.lang=l;langSel.value=l;try{localStorage.setItem('dsa-guide-lang',l)}catch(e){}}
-var saved=null;try{saved=localStorage.getItem('dsa-guide-lang')}catch(e){}
-setLang(saved || ((navigator.language||'ko').toLowerCase().indexOf('ko')===0?'ko':'en'));
-langSel.addEventListener('change',function(){setLang(langSel.value)});
+var langMenu=document.getElementById('lang-menu'), langBtn=document.getElementById('lang-btn'), langPop=document.getElementById('lang-pop'),
+  langList=document.getElementById('lang-list'), langCode=document.getElementById('lang-code');
+/* each language in its own name, in the order of the README's language list */
+var NAMES={en:'English',ko:'한국어',ja:'日本語','zh-CN':'简体中文','zh-TW':'繁體中文',es:'Español',fr:'Français',de:'Deutsch','pt-BR':'Português (Brasil)',ru:'Русский',it:'Italiano',vi:'Tiếng Việt',id:'Bahasa Indonesia',tr:'Türkçe'};
+var langOrder=Object.keys(NAMES);
+var langItems=langOrder.map(function(v){var li=document.createElement('li');li.id='lang-opt-'+v;li.setAttribute('role','option');li.setAttribute('data-v',v);
+  li.setAttribute('aria-selected','false');li.setAttribute('data-k',NAMES[v].toLowerCase()+'|'+v.toLowerCase());
+  li.innerHTML='<i aria-hidden="true"></i><span class="nm" lang="'+v+'"></span><span class="cd" aria-hidden="true"></span>';
+  li.querySelector('.nm').textContent=NAMES[v];li.querySelector('.cd').textContent=v.toUpperCase();langList.appendChild(li);return li});
+/* each feature link opens the guide that explains it, in the reader's language; without the
+   script every one of them opens the list of guides */
+var GUIDES='https://github.com/thisisthepy/desktop-subsystem-for-android/blob/main/docs/guides/';
+/* The page's text lives in one table per language, i18n/<locale>.js, the same fourteen
+   languages as the README. English is in the markup and loads with the page; another
+   language's table and, where the page's fonts lack its script, its font load when chosen. */
+var I=window.DSA_I18N=window.DSA_I18N||{}, lang='en';
+var LANGS={en:'EN',ko:'KO',ja:'JA','zh-CN':'ZH-CN','zh-TW':'ZH-TW',es:'ES',fr:'FR',de:'DE','pt-BR':'PT-BR',ru:'RU',it:'IT',vi:'VI',id:'ID',tr:'TR'};
+var FONT={ja:'IBM+Plex+Sans+JP:wght@400;500;600;700','zh-CN':'Noto+Sans+SC:wght@400;500;700','zh-TW':'Noto+Sans+TC:wght@400;500;700',ru:'IBM+Plex+Sans:wght@400;500;600;700'};
+function T(k){return (I[lang]&&I[lang][k])||(I.en&&I.en[k])||''}
+/* a guide in the reader's language where docs/guides/<locale>/ has it; headings there have
+   their own anchors, so only the English links keep one */
+/* With the script, a guide opens in the site's own docs view (docs.html) in the reader's
+   language; a heading is named by its English anchor, which the docs view finds among the
+   translated headings by its place. */
+function guideUrl(page,l){var p=page.split('#'),g=p[0].replace(/\.md$/,'');
+  return 'docs.html?lang='+l+(g&&g!=='README'?'&g='+g:'')+(p[1]?'&h='+encodeURIComponent(p[1]):'')}
+var REL=null;
+function setRelease(){var tag=document.getElementById('rel-tag');
+  if(!REL){tag.textContent=T('hero.releases');return}
+  tag.textContent=REL.tag;[].forEach.call(document.querySelectorAll('[data-release]'),function(a){a.href=REL.url});drawDownloads()}
+function apply(){
+  root.lang=lang;root.setAttribute('data-lang',lang);
+  root.classList.toggle('loc',/^(ko|ja|zh|ru)/.test(lang));root.classList.toggle('cjk',/^(ko|ja|zh)/.test(lang));
+  /* an element marked data-br keeps its <br>: "\n" in its text becomes a line break */
+  [].forEach.call(document.querySelectorAll('[data-i]'),function(e){var v=T(e.getAttribute('data-i'));if(!v)return;
+    if(!e.hasAttribute('data-br')){e.textContent=v;return}
+    e.textContent='';v.split('\n').forEach(function(s,i){if(i)e.appendChild(document.createElement('br'));e.appendChild(document.createTextNode(s))})});
+  [].forEach.call(document.querySelectorAll('[data-i-aria]'),function(e){var v=T(e.getAttribute('data-i-aria'));if(v)e.setAttribute('aria-label',v)});
+  [].forEach.call(document.querySelectorAll('[data-guide]'),function(a){a.href=guideUrl(a.getAttribute('data-guide'),lang);a.removeAttribute('target')});
+  var d=T('meta.desc');[].forEach.call(document.querySelectorAll('meta[name="description"],meta[property="og:description"],meta[name="twitter:description"]'),function(m){m.setAttribute('content',d)});
+  langCode.textContent=LANGS[lang];langBtn.setAttribute('aria-label',T('lang.label')+': '+NAMES[lang]);
+  langItems.forEach(function(li){li.setAttribute('aria-selected',String(li.getAttribute('data-v')===lang))});
+  setRelease();stepState()}
+function setLang(l,keep){if(!LANGS[l])l='en';lang=l;
+  if(keep){try{localStorage.setItem('dsa-guide-lang',l)}catch(e){}}
+  if(FONT[l]&&!document.getElementById('font-'+l)){var f=document.createElement('link');f.id='font-'+l;f.rel='stylesheet';f.href='https://fonts.googleapis.com/css2?family='+FONT[l]+'&display=swap';document.head.appendChild(f)}
+  if(I[l]){apply();return}
+  var s=document.createElement('script');s.src='i18n/'+l+'.js';s.onload=s.onerror=function(){if(lang===l)apply()};document.head.appendChild(s)}
+function pickLang(){var q=/[?&]lang=([\w-]+)/.exec(location.search);if(q&&LANGS[q[1]])return q[1];
+  try{var s=localStorage.getItem('dsa-guide-lang');if(s&&LANGS[s])return s}catch(e){}
+  var n=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en'];
+  for(var i=0;i<n.length;i++){var x=String(n[i]).toLowerCase(),b=x.split('-')[0];
+    if(b==='zh')return /tw|hk|mo|hant/.test(x)?'zh-TW':'zh-CN';if(b==='pt')return 'pt-BR';if(LANGS[b])return b}
+  return 'en'}
 
+/* the language menu: a button that shows the short code and opens a list of each language
+   in its own name. The list is a listbox: arrows, Home and End move, typing a name's first
+   letters jumps to it, Enter or Space chooses, Escape and Tab close, and a click or tap
+   anywhere else closes it too. */
+function openLang(){if(!langPop.hidden)return;langPop.hidden=false;langBtn.setAttribute('aria-expanded','true');langMenu.classList.add('open');
+  setActive(Math.max(0,langOrder.indexOf(lang)));langList.focus({preventScroll:true})}
+function closeLang(refocus){if(langPop.hidden)return;langPop.hidden=true;langBtn.setAttribute('aria-expanded','false');langMenu.classList.remove('open');
+  langList.removeAttribute('aria-activedescendant');if(refocus)langBtn.focus({preventScroll:true})}
+var activeIdx=0;
+function setActive(i){activeIdx=clamp(i,0,langItems.length-1);langItems.forEach(function(li,j){li.classList.toggle('active',j===activeIdx)});
+  var li=langItems[activeIdx];langList.setAttribute('aria-activedescendant',li.id);
+  var top=li.offsetTop,bot=top+li.offsetHeight;if(top<langList.scrollTop)langList.scrollTop=top;else if(bot>langList.scrollTop+langList.clientHeight)langList.scrollTop=bot-langList.clientHeight}
+function choose(i){var v=langItems[i].getAttribute('data-v');closeLang(true);if(v!==lang)setLang(v,true)}
+var typed='',typedT=0;
+langBtn.addEventListener('click',function(){langPop.hidden?openLang():closeLang(true)});
+langBtn.addEventListener('keydown',function(e){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();openLang();if(e.key==='ArrowUp')setActive(langItems.length-1)}});
+langList.addEventListener('keydown',function(e){var k=e.key,n=langItems.length;
+  if(k==='ArrowDown')setActive(activeIdx+1);else if(k==='ArrowUp')setActive(activeIdx-1);
+  else if(k==='Home')setActive(0);else if(k==='End')setActive(n-1);
+  else if(k==='PageDown')setActive(activeIdx+5);else if(k==='PageUp')setActive(activeIdx-5);
+  else if(k==='Enter'||k===' '||k==='Spacebar')choose(activeIdx);
+  else if(k==='Escape')closeLang(true);
+  else if(k==='Tab'){closeLang(false);return}
+  else if(k.length===1&&!e.altKey&&!e.ctrlKey&&!e.metaKey){clearTimeout(typedT);typed+=k.toLowerCase();typedT=setTimeout(function(){typed=''},600);
+    /* the same letter again moves on to the next language that starts with it */
+    var same=typed.split('').every(function(c){return c===typed[0]}),from=same&&typed.length>1?activeIdx+1:activeIdx,q=same?typed[0]:typed;
+    for(var j=0;j<n;j++){var li=langItems[(from+j)%n];if(li.getAttribute('data-k').split('|').some(function(s){return s.indexOf(q)===0})){setActive((from+j)%n);break}}}
+  else return;
+  e.preventDefault();e.stopPropagation()});
+langList.addEventListener('click',function(e){var li=e.target.closest&&e.target.closest('[role="option"]');if(li)choose(langItems.indexOf(li))});
+langList.addEventListener('mousemove',function(e){var li=e.target.closest&&e.target.closest('[role="option"]');if(li&&!li.classList.contains('active'))setActive(langItems.indexOf(li))});
+langList.addEventListener('focusout',function(e){if(!langMenu.contains(e.relatedTarget))closeLang(false)});
+document.addEventListener('pointerdown',function(e){if(!langMenu.contains(e.target))closeLang(false)});
+
+/* the newest release, asked of GitHub once per browser session. A stable release wins when
+   one exists; until then every release is a pre-release and the newest of those shows.
+   If GitHub does not answer, the label stays "Releases" and links to the list. */
+function loadRelease(){
+  try{var c=sessionStorage.getItem('dsa-release2');if(c){REL=JSON.parse(c);setRelease();return}}catch(e){}
+  if(!window.fetch)return;
+  fetch('https://api.github.com/repos/thisisthepy/desktop-subsystem-for-android/releases?per_page=100',{headers:{Accept:'application/vnd.github+json'}})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+    /* the repository also publishes Android images as releases (android-17...); DSA's own are tagged v<number> */
+    .then(function(list){var live=list.filter(function(r){return !r.draft&&r.html_url&&/^v\d/.test(r.tag_name||'')});
+      var one=live.filter(function(r){return !r.prerelease})[0]||live[0];if(!one)return;
+      REL={tag:one.tag_name,url:one.html_url,pre:!!one.prerelease,assets:(one.assets||[]).map(function(a){return {n:a.name,u:a.browser_download_url,s:a.size}})};
+      try{sessionStorage.setItem('dsa-release2',JSON.stringify(REL))}catch(e){}
+      setRelease()})
+    .catch(function(){})}
+
+
+/* ---------- the downloads panel ----------
+   The installer button opens a panel over its own row: one column per host, each with the
+   installers of the newest release for each processor, found by the names the release
+   workflow gives them. A host or processor with nothing published says "in preparation"
+   instead of linking to nothing. */
+/* the recommended installer of each host, and the other processors and formats beside it */
+var DL={linux:{main:['x86_64','.deb',/_amd64\.deb$/i],other:[['arm64','.deb',/_arm64\.deb$/i],['x86_64','.rpm',/\.x86_64\.rpm$/i],['arm64','.rpm',/\.aarch64\.rpm$/i]]},
+  windows:{main:['x64','setup.exe',/-win-x64-setup\.exe$/i],other:[['ARM64','setup.exe',/-win-arm64-setup\.exe$/i]],released:true},
+  macos:{main:['Apple silicon','.dmg',/^DSA-.*\.dmg$/i],other:[['Apple silicon','.pkg',/^DSA-.*\.pkg$/i]]}};
+var DLI='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1v7M3 5.5 6 8.5l3-3M1.5 10.5h9" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
+function mb(n){try{return new Intl.NumberFormat(lang,{style:'unit',unit:'megabyte',unitDisplay:'short',maximumFractionDigits:0}).format(Math.max(1,Math.round(n/1048576)))}catch(e){return Math.round(n/1048576)+' MB'}}
+function findAsset(re){var a=(REL&&REL.assets)||[];return a.filter(function(x){return re.test(x.n)})[0]}
+function drawDownloads(){document.getElementById('dl-ver').textContent=REL?REL.tag:T('hero.releases');
+  [].forEach.call(document.querySelectorAll('#dl-panel .dl-act[data-os]'),function(box){var os=box.getAttribute('data-os'),P=DL[os],m=findAsset(P.main[2]),main;
+    box.textContent='';
+    if(m||P.released){main=document.createElement('a');main.className='v3-btn primary dl-main';main.href=m?m.u:(REL?REL.url:'https://github.com/thisisthepy/desktop-subsystem-for-android/releases');
+      if(m)main.title=m.n;main.innerHTML=DLI+'<span></span>';main.querySelector('span').textContent=P.main[0]+' · '+P.main[1]}
+    else{main=document.createElement('button');main.type='button';main.className='v3-btn primary dl-main';main.disabled=true;main.innerHTML='<span></span>';main.querySelector('span').textContent=T('dl.soon')}
+    var more=document.createElement('button');more.type='button';more.className='dl-more';more.setAttribute('aria-expanded','false');more.setAttribute('aria-haspopup','true');
+    more.setAttribute('aria-label',T('dl.more'));more.title=T('dl.more');more.innerHTML='<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
+    var list=document.createElement('ul');list.className='dl-list';list.hidden=true;list.id='dl-list-'+os;more.setAttribute('aria-controls',list.id);
+    P.other.forEach(function(o){var a=findAsset(o[2]),li=document.createElement('li'),k=document.createElement(a?'a':'span');
+      k.innerHTML='<b></b><i></i><em></em>';k.querySelector('b').textContent=o[0];k.querySelector('i').textContent=o[1];
+      if(a){k.href=a.u;k.title=a.n;k.querySelector('em').textContent=mb(a.s)}else{k.className='soon';k.querySelector('em').textContent=T('dl.soon')}
+      li.appendChild(k);list.appendChild(li)});
+    more.addEventListener('click',function(){var on=list.hidden;closeLists();list.hidden=!on;more.setAttribute('aria-expanded',String(on));
+      if(on){var f=list.querySelector('a');if(f)f.focus({preventScroll:true})}});
+    list.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();list.hidden=true;more.setAttribute('aria-expanded','false');more.focus()}});
+    box.appendChild(main);box.appendChild(more);box.appendChild(list)});
+  if(typeof headerDownload==='function'&&typeof DL!=='undefined')headerDownload();
+  if(typeof pickItems!=='undefined'&&pickItems){var cur=pickItems.filter(function(li){return li.getAttribute('aria-selected')==='true'})[0];if(cur)selectOs(cur.getAttribute('data-os'))}}
+function closeLists(){[].forEach.call(document.querySelectorAll('#dl-panel .dl-list'),function(l){l.hidden=true});
+  [].forEach.call(document.querySelectorAll('#dl-panel .dl-more'),function(b){b.setAttribute('aria-expanded','false')})}
+document.addEventListener('pointerdown',function(e){if(!(e.target.closest&&e.target.closest('.dl-act')))closeLists()});
+var dlOpen=document.getElementById('dl-open'),dlPanel=document.getElementById('dl-panel'),dlRow=document.getElementById('dl-row');
+dlOpen.setAttribute('role','button');dlOpen.setAttribute('aria-expanded','false');dlOpen.setAttribute('aria-controls','dl-panel');dlOpen.removeAttribute('target');
+/* the panel is taller than the row it covers, so opening it brings its whole height into view,
+   clear of the header above and of the notice and the step boxes below; while it is open the page
+   does not settle back onto a stop */
+function openDl(){drawDownloads();dlPanel.hidden=false;dlRow.classList.add('open');dlOpen.setAttribute('aria-expanded','true');dlPanel.focus({preventScroll:true});
+  var r=dlPanel.getBoundingClientRect(),hdr=document.getElementById('site-header').offsetHeight,room=innerHeight-(innerWidth<=860?150:78),d=0;
+  if(r.bottom>room)d=Math.min(r.bottom-room,r.top-hdr-12);if(d>0)scrollTo(0,scrollY+d)}
+function closeDl(refocus){if(dlPanel.hidden)return;dlPanel.hidden=true;dlRow.classList.remove('open');dlOpen.setAttribute('aria-expanded','false');if(refocus)dlOpen.focus({preventScroll:true});settle()}
+dlOpen.addEventListener('click',function(e){if(e.ctrlKey||e.metaKey||e.shiftKey||e.button)return;e.preventDefault();dlPanel.hidden?openDl():closeDl(true)});
+dlOpen.addEventListener('keydown',function(e){if(e.key===' '){e.preventDefault();dlPanel.hidden?openDl():closeDl(true)}});
+document.getElementById('dl-close').addEventListener('click',function(){closeDl(true)});
+dlPanel.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeDl(true)}});
+document.addEventListener('pointerdown',function(e){if(!dlPanel.hidden&&!dlPanel.contains(e.target)&&!dlOpen.contains(e.target))closeDl(false)});
+
+/* the phone's host picker: one host at a time, the visitor's own first (a phone or tablet gets
+   Windows, the released one) */
+var pickBtn=document.getElementById('dl-pick-btn'),pickList=document.getElementById('dl-pick-list'),pickBox=document.getElementById('dl-pick'),
+  pickItems=[].slice.call(pickList.querySelectorAll('[role="option"]')),pickIdx=1;
+function guessOs(){var p=((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.userAgent||'');
+  if(/android|iphone|ipad|ios/i.test(p))return 'windows';if(/win/i.test(p))return 'windows';if(/mac/i.test(p))return 'macos';if(/linux|x11|cros/i.test(p))return 'linux';return 'windows'}
+function selectOs(os){pickItems.forEach(function(li){li.setAttribute('aria-selected',String(li.getAttribute('data-os')===os))});
+  var li=pickItems.filter(function(x){return x.getAttribute('data-os')===os})[0];
+  pickBtn.querySelector('img').src=li.querySelector('img').getAttribute('src');pickBtn.querySelector('span').textContent=li.textContent;
+  pickBtn.setAttribute('aria-label',T('dl.platform')+': '+li.textContent);
+  [].forEach.call(document.querySelectorAll('#dl-panel .dl-os[data-os-col]'),function(sec){sec.classList.toggle('sel',sec.querySelector('.dl-act').getAttribute('data-os')===os)});
+  var b=document.querySelector('#dl-panel .dl-act[data-os="'+os+'"]').parentNode.querySelector('.dl-badge');
+  document.querySelector('#dl-panel .dl-pick-badge').innerHTML=b?b.outerHTML:''}
+function pickActive(i){pickIdx=clamp(i,0,pickItems.length-1);pickItems.forEach(function(li,j){li.classList.toggle('active',j===pickIdx)});pickList.setAttribute('aria-activedescendant',pickItems[pickIdx].id)}
+function pickOpen(){pickList.hidden=false;pickBox.classList.add('open');pickBtn.setAttribute('aria-expanded','true');
+  pickActive(pickItems.findIndex(function(li){return li.getAttribute('aria-selected')==='true'}));pickList.focus({preventScroll:true})}
+function pickClose(refocus){if(pickList.hidden)return;pickList.hidden=true;pickBox.classList.remove('open');pickBtn.setAttribute('aria-expanded','false');if(refocus)pickBtn.focus({preventScroll:true})}
+pickBtn.addEventListener('click',function(){pickList.hidden?pickOpen():pickClose(true)});
+pickBtn.addEventListener('keydown',function(e){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();e.stopPropagation();pickOpen()}});
+pickList.addEventListener('keydown',function(e){var k=e.key;
+  if(k==='ArrowDown')pickActive(pickIdx+1);else if(k==='ArrowUp')pickActive(pickIdx-1);else if(k==='Home')pickActive(0);else if(k==='End')pickActive(pickItems.length-1);
+  else if(k==='Enter'||k===' '){selectOs(pickItems[pickIdx].getAttribute('data-os'));pickClose(true)}
+  else if(k==='Escape'){pickClose(true)}else if(k==='Tab'){pickClose(false);return}
+  else if(k.length===1){var q=k.toLowerCase();for(var j=1;j<=pickItems.length;j++){var n=(pickIdx+j)%pickItems.length;if(pickItems[n].textContent.trim().toLowerCase().indexOf(q)===0){pickActive(n);break}}}
+  else return;e.preventDefault();e.stopPropagation()});
+pickList.addEventListener('click',function(e){var li=e.target.closest('[role="option"]');if(!li)return;selectOs(li.getAttribute('data-os'));pickClose(true)});
+document.addEventListener('pointerdown',function(e){if(!pickBox.contains(e.target))pickClose(false)});
+selectOs(guessOs());
+
+/* any other "get the installer" button goes back to the opening and opens the same panel there,
+   as if the hero's button had been pressed; with reduced motion it jumps, then opens */
+function openFromTop(){if(Math.abs(scrollY)<3&&!snap.raf){openDl();return}
+  go(0);var t0=Date.now();(function wait(){if(!snap.raf&&scrollY<3){openDl();return}if(Date.now()-t0<4000)setTimeout(wait,60);else openDl()})()}
+[].forEach.call(document.querySelectorAll('a.dl-go'),function(a){a.setAttribute('role','button');a.setAttribute('aria-controls','dl-panel');a.removeAttribute('target');
+  a.addEventListener('click',function(e){if(e.ctrlKey||e.metaKey||e.shiftKey||e.button)return;e.preventDefault();openFromTop()});
+  a.addEventListener('keydown',function(e){if(e.key===' '){e.preventDefault();openFromTop()}})});
+/* the header's download button fetches the installer for the visitor's own system when the
+   newest release has one; otherwise it opens that release's page */
+function headerDownload(){var a=document.querySelector('#site-header .hdr-dl');if(!a)return;var os=guessOs(),m=findAsset(DL[os].main[2]);
+  if(m){a.href=m.u;a.removeAttribute('target');a.setAttribute('download','');a.title=m.n}}
 /* copy buttons */
 function copy(text, btn){var done=function(){btn.style.color='var(--lime)';setTimeout(function(){btn.style.color=''},900)};
   try{navigator.clipboard.writeText(text).then(done,function(){})}catch(e){}}
@@ -517,10 +1150,20 @@ function copy(text, btn){var done=function(){btn.style.color='var(--lime)';setTi
   var t=b.parentNode.querySelector('pre').textContent.split('\n').filter(function(l){return l.indexOf('> ')===0}).map(function(l){return l.slice(2)}).join('\n');copy(t,b)})});
 
 /* memory card */
-var mem=[['red','VM','VM'],['orange','창 관리자','Window manager'],['yellow','렌더러','Renderer'],['turq','앱 창','App window'],['blue','서비스','Service']];
+var mem=[['red','mem.vm'],['orange','mem.wm'],['yellow','mem.rd'],['turq','mem.app'],['blue','mem.svc']];
 var stack=document.getElementById('mem-stack'),legend=document.getElementById('mem-legend');
 mem.forEach(function(m,i){var b=document.createElement('i');b.style.background='var(--'+m[0]+')';b.style.flex=String([5,2,2,1,1][i]);stack.appendChild(b);
-  var li=document.createElement('li');li.innerHTML='<b style="background:var(--'+m[0]+')"></b><span lang="ko">'+m[1]+'</span><span lang="en">'+m[2]+'</span>';legend.appendChild(li)});
+  var li=document.createElement('li');li.innerHTML='<b style="background:var(--'+m[0]+')"></b><span data-i="'+m[1]+'"></span>';legend.appendChild(li)});
+/* a phone has no room for the cards beside the copy, so each one also sits in its chapter,
+   under the chapter's text, in the same design (wide screens keep the floating card) */
+[].forEach.call(document.querySelectorAll('.sub-nav .card[data-card]'),function(c){var id=c.getAttribute('data-card');
+  var box=document.querySelector('[data-chapter="'+id+'"] .section-text');if(!box)return;
+  var k=c.cloneNode(true);k.classList.add('inflow','shown','on');k.removeAttribute('data-card');
+  [].forEach.call(k.querySelectorAll('[id]'),function(e){e.removeAttribute('id')});
+  var b=k.querySelector('.copy');if(b)b.addEventListener('click',function(){
+    var t=k.querySelector('pre').textContent.split(String.fromCharCode(10)).filter(function(l){return l.indexOf('> ')===0}).map(function(l){return l.slice(2)}).join(String.fromCharCode(10));copy(t,b)});
+  box.appendChild(k)});
+setLang(pickLang());loadRelease();
 
 /* ---------- 3D engine: the same scene graph, camera and scroll timeline as animejs.com ---------- */
 var THREEOK = !!window.THREE;
@@ -542,8 +1185,16 @@ var stage=null;
 if(THREEOK){try{stage=buildStage()}catch(e){console.error(e);stage=null}}
 
 function buildStage(){
-  var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
-  renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  /* the screen only ever receives the finished picture, so it needs no depth buffer of its own */
+  var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,depth:false,stencil:false});
+  /* The drawing is made of outlines found by comparing neighbouring pixels, with nothing to
+     smooth them, so every slanted line was a staircase. Where the screen allows, the scene is
+     drawn at exactly twice the screen's pixels in each direction, and the outline pass works
+     out the four pixels under each screen pixel and averages them: a whole-number box filter,
+     so a line keeps its width and darkness wherever it falls. A factor that is not a whole
+     number (the last version's 1.27 to 2) cannot be averaged this way; a smooth resample of it
+     softened every line and drew some twice. resize() picks SS. */
+  var SS=2;
   glWrap.appendChild(renderer.domElement);
   var scene=new THREE.Scene(); scene.background=new THREE.Color(0xffffff);
   var fov=40, camera=new THREE.PerspectiveCamera(fov,1,1,1000); camera.position.z=120; camera.lookAt(0,0,0);
@@ -571,22 +1222,43 @@ function buildStage(){
   });
   var rt=new THREE.WebGLRenderTarget(2,2,{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,format:THREE.RGBAFormat,type:THREE.UnsignedByteType});
   /* second pass: edges from the normal colours, then toon colours from the tone */
+  /* second pass, straight to the screen: edges from the normal colours, then toon colours from
+     the tone, worked out for each of the SS x SS scene pixels under a screen pixel and averaged.
+     Every read lands on a pixel centre (the offsets are whole pixels and the first pass is read
+     with nearest filtering), so nothing is interpolated.
+     An edge is found two ways: across the pixel, as the original did, which also draws the
+     contours of curved faces; and between the pixel and each neighbour, so that a part thinner
+     than the reach (a fin seen edge on) fills in as one line instead of a pair of lines with
+     the background between them. */
   var post=new THREE.ShaderMaterial({
-    uniforms:{tDiffuse:{value:rt.texture},resolution:{value:new THREE.Vector2(1,1)},threshold:{value:.035},thickness:{value:1},
+    defines:{SS:2},
+    uniforms:{tDiffuse:{value:rt.texture},resolution:{value:new THREE.Vector2(1,1)},threshold:{value:.035},reach:{value:2},
       outlineBlend:{value:.4},contourBlend:{value:.65},fade:{value:0},
       backgroundColor:{value:hex('#252423')},outlineColor:{value:hex('#101010')},rimColor:{value:hex('#ffc7a8')},shadowColor:{value:hex('#212121')},worldColor1:{value:hex('#423d3d')}},
-    vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
+    vertexShader:'void main(){ gl_Position=vec4(position.xy,0.,1.); }',
     fragmentShader:[
-      'uniform sampler2D tDiffuse; uniform vec2 resolution; uniform float threshold, thickness, outlineBlend, contourBlend, fade;',
-      'uniform vec3 backgroundColor, outlineColor, rimColor, shadowColor, worldColor1; varying vec2 vUv;',
-      'void main(){',
-      ' vec4 d=texture2D(tDiffuse,vUv); vec3 inC=d.rgb; float x=thickness/resolution.x, y=thickness/resolution.y;',
-      ' vec3 a=texture2D(tDiffuse,vUv-vec2(x,y)).rgb, b=texture2D(tDiffuse,vUv+vec2(x,y)).rgb, c=texture2D(tDiffuse,vUv+vec2(x,-y)).rgb, e=texture2D(tDiffuse,vUv+vec2(-x,y)).rgb;',
-      ' vec3 d0=b-a, d1=e-c; float edge=sqrt(dot(d0,d0)+dot(d1,d1)); float o= edge>threshold ? 1. : 0.;',
+      'uniform sampler2D tDiffuse; uniform vec2 resolution; uniform float threshold, reach, outlineBlend, contourBlend, fade;',
+      'uniform vec3 backgroundColor, outlineColor, rimColor, shadowColor, worldColor1;',
+      'vec3 N(vec2 p){ return texture2D(tDiffuse,p/resolution).rgb; }',
+      'vec3 shade(vec2 p){',
+      ' vec4 d=texture2D(tDiffuse,p/resolution); vec3 c=d.rgb; float r=reach;',
+      ' vec3 a=N(p+vec2(-r,-r)), b=N(p+vec2(r,r)), e=N(p+vec2(-r,r)), f=N(p+vec2(r,-r));',
+      ' vec3 d0=b-a, d1=e-f; float across=sqrt(dot(d0,d0)+dot(d1,d1));',
+      ' float own=max(max(length(c-a),length(c-b)),max(length(c-e),length(c-f)));',
+      ' float o= max(across,own)>threshold ? 1. : 0.;',
       ' vec3 outC; vec3 paint=worldColor1;',
-      ' if(all(greaterThan(inC,vec3(.999)))){ outC=(1.-o)*backgroundColor + o*mix(outlineColor,backgroundColor,contourBlend); }',
+      ' if(all(greaterThan(c,vec3(.999)))){ outC=(1.-o)*backgroundColor + o*mix(outlineColor,backgroundColor,contourBlend); }',
       ' else { if(d.a>=.95) paint=rimColor; else if(d.a<=.3) paint=shadowColor; vec3 line=mix(outlineColor,paint,outlineBlend); outC=(1.-o)*paint + o*line; }',
-      ' gl_FragColor=vec4(mix(backgroundColor,outC,fade),1.);',
+      ' return mix(backgroundColor,outC,fade);',
+      '}',
+      'void main(){',
+      ' vec2 q=floor(gl_FragCoord.xy)*float(SS);',
+      '#if SS == 2',
+      ' vec3 s=.25*(shade(q+vec2(.5,.5))+shade(q+vec2(1.5,.5))+shade(q+vec2(.5,1.5))+shade(q+vec2(1.5,1.5)));',
+      '#else',
+      ' vec3 s=shade(q+vec2(.5));',
+      '#endif',
+      ' gl_FragColor=vec4(s,1.);',
       '}'].join('\n'),
     depthTest:false, depthWrite:false
   });
@@ -796,14 +1468,35 @@ function buildStage(){
     ;
   tl.seek(0);
 
-  function resize(){var w=innerWidth,h=innerHeight,pr=renderer.getPixelRatio();
-    renderer.setSize(w,h); cssRenderer.setSize(w,h);
+  /* The canvas holds exactly as many pixels as the screen gives the stage. It used to hold
+     floor(width x ratio), which at a display scale such as 125% or 175% is a fraction short,
+     so the browser stretched the whole drawing by part of a pixel and every line went soft;
+     and above a ratio of 2 (most phones) it was drawn small and enlarged. */
+  var devW=0, devH=0, pr=1;
+  function resize(){var w=innerWidth,h=innerHeight,dpr=window.devicePixelRatio||1;
+    var dw=devW||Math.round(w*dpr), dh=devH||Math.round(h*dpr);
+    /* twice the pixels each way up to a 2560 x 1440 screen (about 15 million drawn pixels, no
+       more than the last version's budget with its second full-size buffer gone); above that,
+       and at a ratio of 1.75 or more where the pixels are already small, once. The outline
+       reaches one screen pixel each side, so a line is two screen pixels wide as in the
+       original, and two each side on phone screens of ratio 2.5 or more. */
+    var ss=(dpr<1.75&&dw*dh<=3.7e6)?2:1;
+    if(ss!==SS){SS=ss;post.defines.SS=ss;post.needsUpdate=true}
+    post.uniforms.reach.value=ss*(dpr>=2.5?2:1);
+    renderer.setPixelRatio(1); renderer.setSize(dw,dh,false);
+    renderer.domElement.style.width='100%'; renderer.domElement.style.height='100%';
+    cssRenderer.setSize(w,h);
     camera.aspect=w/h; camera.fov=fov*((h>=1000?h:1000)/1000); camera.updateProjectionMatrix();
-    rt.setSize(Math.floor(w*pr),Math.floor(h*pr)); post.uniforms.resolution.value.set(w*pr,h*pr)}
+    rt.setSize(dw*SS,dh*SS); post.uniforms.resolution.value.set(dw*SS,dh*SS)}
+  if(window.ResizeObserver){try{new ResizeObserver(function(es){var b=es[0].devicePixelContentBoxSize;
+    if(b&&b[0]&&(b[0].inlineSize!==devW||b[0].blockSize!==devH)){devW=b[0].inlineSize;devH=b[0].blockSize;resize()}}).observe(glWrap,{box:'device-pixel-content-box'})}catch(e){}}
   resize(); addEventListener('resize',resize);
   var dark={bg:hex('#252423'),ol:hex('#101010'),rim:hex('#ffc7a8'),sh:hex('#212121'),w1:hex('#423d3d'),ob:.4,cb:.65};
-  var light={bg:hex('#DAD5D0'),ol:hex('#000000'),rim:hex('#DAD5D0'),sh:hex('#DAD5D0'),w1:hex('#DAD5D0'),ob:.35,cb:.35};
-  var paper={bg:hex('#e6e5e2'),ol:hex('#1b1a19'),rim:hex('#e6e5e2'),sh:hex('#d6d4cf'),w1:hex('#e6e5e2'),ob:.3,cb:.4};
+  /* on the light stages a line was drawn a third to two fifths of the way towards the colour
+     beside it (ob, cb), so once lines were smoothed their edges went grey and a silhouette
+     against the paper read as a pale double; the lines are now nearly the full ink */
+  var light={bg:hex('#DAD5D0'),ol:hex('#000000'),rim:hex('#DAD5D0'),sh:hex('#DAD5D0'),w1:hex('#DAD5D0'),ob:.14,cb:.14};
+  var paper={bg:hex('#e6e5e2'),ol:hex('#1b1a19'),rim:hex('#e6e5e2'),sh:hex('#d6d4cf'),w1:hex('#e6e5e2'),ob:.12,cb:.12};
   var tc=new THREE.Color();
   var U=post.uniforms;
   function mix3(key,t,k){tc.copy(dark[key]).lerp(light[key],t);return paper[key].clone().lerp(tc,k)}
@@ -828,8 +1521,13 @@ function buildStage(){
     var fm=/^f(\d)$/.exec(active||''), co=false;
     if(fm&&ui.labels<.01){var sec=document.querySelector('[data-chapter="'+active+'"]');var hs=[].filter.call(sec.querySelectorAll('h2'),function(h){return h.offsetParent!==null});
       if(hs[0]){var rc=hs[0].getBoundingClientRect();if(rc.bottom>40&&rc.top<innerHeight-40){var P=PAIR[+fm[1]];Z.updateMatrixWorld(true);v3.set(0,0,0);M[P.k].localToWorld(v3);v3.project(camera);
-        var px=(v3.x*.5+.5)*innerWidth, py=(-v3.y*.5+.5)*innerHeight, rg=document.createRange();rg.selectNodeContents(hs[0]);var tr=rg.getBoundingClientRect(), lx=tr.right+18, ly=rc.top+Math.min(rc.height,48)*.5;
-        html+='<g class="callout"><polyline points="'+lx+','+ly+' '+(lx+36)+','+ly+' '+px.toFixed(1)+','+py.toFixed(1)+'"/><circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="3.5"/><text x="'+lx.toFixed(1)+'" y="'+(ly-12).toFixed(1)+'">'+P[root.lang==='en'?'en':'ko']+'</text></g>';co=true}}}
+        var px=(v3.x*.5+.5)*innerWidth, py=(-v3.y*.5+.5)*innerHeight, rg=document.createRange();/* the leader leaves the edge of the chapter's cell, runs under the part's name like a
+           drawing's callout, then goes to the part; it used to start beside the heading and cut
+           through its own label */
+        var plate=sec.querySelector('.section-text').getBoundingClientRect(), name=T(active+'.part')||P.en, lw=0;   /* it used to read the language off "root", which here is the 3D group, so only Korean showed */
+        for(var ci=0;ci<name.length;ci++)lw+=(name.charCodeAt(ci)>0x2e7f?12:7.2)+.5;
+        var lx=plate.right, tx=lx+14, ex=tx+lw+10, ly=rc.top+Math.min(rc.height,48)*.5;
+        html+='<g class="callout"><polyline points="'+lx.toFixed(1)+','+ly.toFixed(1)+' '+ex.toFixed(1)+','+ly.toFixed(1)+' '+px.toFixed(1)+','+py.toFixed(1)+'"/><circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="3.5"/><text x="'+tx.toFixed(1)+'" y="'+(ly-9).toFixed(1)+'">'+name+'</text></g>';co=true}}}
     linesSvg.innerHTML=html; linesSvg.style.opacity=String(co?1:ui.labels);
   }
   return {tl:tl,render:render,loops:loops};
@@ -839,7 +1537,7 @@ function buildStage(){
 var chapters=[].slice.call(document.querySelectorAll('[data-chapter]'));
 var labelled=[].slice.call(document.querySelectorAll('[data-label]'));
 var cursor=document.getElementById('cursor'), ghost=document.getElementById('ghost'), scrub=document.getElementById('scrubber');
-var cards=[].slice.call(document.querySelectorAll('.card'));
+var cards=[].slice.call(document.querySelectorAll('.sub-nav .card'));
 var active=null, activeDemo=null;
 function setCard(id){cards.forEach(function(c){var on=c.getAttribute('data-card')===id;if(on){c.classList.add('shown');requestAnimationFrame(function(){c.classList.add('on')})}else{c.classList.remove('on');c.classList.remove('shown')}})}
 function chapterAt(){var mid=innerHeight*.5, best=null;chapters.forEach(function(s){var r=s.getBoundingClientRect();if(r.top<=mid&&r.bottom>mid)best=s});return best}
@@ -849,7 +1547,10 @@ var PAL={paper:[230,229,226],dark:[37,36,35],light:[217,214,210],pfg:[27,26,25],
 function mixc(a,b,t){return [0,1,2].map(function(i){return Math.round(a[i]+(b[i]-a[i])*t)})}
 function paint(){var bg=mixc(PAL.paper,PAL.dark,openK), fg=openK<.5?PAL.lfg:PAL.dfg;
   var b='rgb('+bg.join(',')+')';document.body.style.backgroundColor=b;root.style.backgroundColor=b;document.body.style.color='rgb('+fg.join(',')+')';
-  document.getElementById('site-header').style.setProperty('--hb',bg.join(','));document.body.classList.toggle('paper',openK<.08);document.body.classList.toggle('is-light',openK<.5)}
+  document.getElementById('site-header').style.setProperty('--hb',bg.join(','));document.body.classList.toggle('paper',openK<.08);document.body.classList.toggle('is-light',openK<.5);
+  /* the scrollbar and the language list follow the paint: light on paper, dark on the dark stage */
+  var cs=openK<.5?'light':'dark';if(root.style.colorScheme!==cs)root.style.colorScheme=cs;
+  root.style.setProperty('--pg',b)}
 function timeForScroll(){if(!stage)return 0;var L=stage.tl.labels, y=scrollY, t=0;
   for(var i=0;i<labelled.length;i++){var s=labelled[i], top=s.offsetTop, h=s.offsetHeight, name=s.getAttribute('data-label');
     if(y>=top){var maxY=document.documentElement.scrollHeight-innerHeight;var p=clamp((y-top)/Math.max(1,Math.min(h,maxY-top)),0,1);t=L[name]+p*(L[name+'_END']-L[name])}}
@@ -867,13 +1568,98 @@ function onScroll(){
   document.getElementById('site-header').classList.toggle('away', ft.top<innerHeight-24);
   document.getElementById('sub-nav').classList.toggle('off', scrollY<=innerHeight*.35 || ft.top<innerHeight-40);
   var fi = id.charAt(0)==='f' && id.length===2 ? +id.charAt(1) : -1;
+  document.body.classList.toggle('xfade',id==='integration'||id==='cli');
   if(id!==active){active=id;
     setCard(fi>=0?'f'+fi:(id==='modules'?'modules':null));
   }
 }
 addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',onScroll);
-function scrubTo(e){var r=scrub.getBoundingClientRect();var t=clamp((e.clientX-r.left-8)/(r.width-16),0,1);scrollTo({top:t*(document.documentElement.scrollHeight-innerHeight),behavior:'smooth'})}
+/* ---------- the page moves one composed view at a time ----------
+   The stops are the scroll positions where a chapter's scene is whole: the opening, the
+   labelled exploded view with "How it works", each of the eight features with its part in
+   place, the memory chapter, the closed package with "Open source", and the closing screen.
+   The stretches between them are the scene's transitions; a step plays one through. */
+function topOf(e){return Math.round(e.getBoundingClientRect().top+scrollY)}
+function maxScroll(){return Math.max(0,document.documentElement.scrollHeight-innerHeight)}
+/* a section taller than the screen (the integration and command line grids on a phone) gets
+   one stop per screenful, each starting at a row, so no row is cut at the top; the rows below
+   the reading line fade under the step buttons */
+function tallStops(sec){var top=topOf(sec),fr=sec.querySelector('.xframe'),end=topOf(fr)+fr.offsetHeight,hdr=document.getElementById('site-header').offsetHeight,
+    lim=innerHeight-(innerWidth<=860?176:96),out=[top],y=top,guard=0;
+  var rows=[].map.call(sec.querySelectorAll('.xhead,.igrid>li,.cgrid>li'),function(e){var t=topOf(e);return {t:t,b:t+e.offsetHeight}});
+  while(end>y+lim&&guard++<20){var vis=y+lim,nx=rows.filter(function(r){return r.b>vis})[0],ny=nx?nx.t-hdr-12:end-lim;
+    if(ny<=y+8)ny=y+lim-hdr-12;y=ny;if(y<=out[out.length-1]+8)break;out.push(y)}
+  return out}
+function cardStop(sec){var c=sec.querySelector('.card.inflow');if(!c||!c.offsetHeight)return [];
+  var top=topOf(sec),hdr=document.getElementById('site-header').offsetHeight,b=topOf(c)+c.offsetHeight;
+  return b<=top+innerHeight-176?[]:[topOf(c)-hdr-12]}
+function stops(){var m=maxScroll(), ft=document.getElementById('site-footer');
+  var a=[0,topOf(document.getElementById('toolbox'))];[].forEach.call(document.querySelectorAll('.feature'),function(f){a.push(topOf(f));a=a.concat(cardStop(f))});
+  a=a.concat([topOf(document.getElementById('modules'))],cardStop(document.getElementById('modules'))).concat(tallStops(document.getElementById('integration')),tallStops(document.getElementById('cli')))
+    .concat([topOf(document.getElementById('opensource'))]);
+  if(ft.offsetHeight>innerHeight)a.push(topOf(ft));   /* a footer taller than the screen gets its top as a stop too */
+  a.push(m);
+  return a.map(function(y){return Math.min(y,m)}).filter(function(y,i,s){return i===0||y>s[i-1]+4})}
+window.dsaStops=stops;
+function nearest(y){var s=stops(),b=0;for(var i=1;i<s.length;i++)if(Math.abs(s[i]-y)<Math.abs(s[b]-y))b=i;return b}
+var snap={raf:0,idx:0,quiet:0};
+function go(i){var s=stops();i=clamp(i,0,s.length-1);snap.idx=i;
+  var from=scrollY,to=s[i],d=Math.abs(to-from);
+  if(snap.raf){cancelAnimationFrame(snap.raf);snap.raf=0}
+  if(d<2)return;
+  if(still){scrollTo(0,to);return}                    /* reduced motion: the same stops, without the glide */
+  var dur=clamp(620+300*Math.sqrt(d/Math.max(1,innerHeight)),700,1900), t0=performance.now();
+  var step=function(){var p=clamp((performance.now()-t0)/dur,0,1), e=p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+    scrollTo(0,Math.round(from+(to-from)*e));
+    if(p<1)snap.raf=requestAnimationFrame(step);else{snap.raf=0;snap.quiet=performance.now()+180}};
+  snap.raf=requestAnimationFrame(step)}
+function stepBy(n){go((snap.raf?snap.idx:nearest(scrollY))+n)}
+/* wheel and trackpad: one step for a notch or a flick; what arrives while the page is moving,
+   and a trackpad's tail after it, is swallowed */
+addEventListener('wheel',function(e){if(e.ctrlKey)return;
+  var dp=e.target&&e.target.closest&&e.target.closest('#dl-panel');if(dp&&dp.scrollHeight>dp.clientHeight)return;e.preventDefault();var now=performance.now();
+  if(snap.raf)return;if(now<snap.quiet){snap.quiet=now+120;return}
+  if(Math.abs(e.deltaY)<4)return;stepBy(e.deltaY>0?1:-1)},{passive:false});
+addEventListener('keydown',function(e){if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey)return;
+  if(e.target&&e.target.closest&&e.target.closest('#dl-panel'))return;
+  var tag=e.target&&e.target.tagName,k=e.key,n=0;
+  if(tag==='SELECT'||tag==='INPUT'||tag==='TEXTAREA')return;
+  if(k==='Home'){e.preventDefault();go(0);return}
+  if(k==='End'){e.preventDefault();go(1e9);return}
+  if(k==='ArrowDown'||k==='PageDown')n=1;else if(k==='ArrowUp'||k==='PageUp')n=-1;
+  else if(k===' '||k==='Spacebar'){if(tag==='A'||tag==='BUTTON')return;n=e.shiftKey?-1:1}
+  if(!n)return;e.preventDefault();if(!snap.raf)stepBy(n)});
+/* touch: a swipe is one step; two fingers are left to the browser for zooming */
+var touchY=null;
+addEventListener('touchstart',function(e){touchY=e.touches.length===1&&!(e.target.closest&&e.target.closest('#dl-panel'))?e.touches[0].clientY:null},{passive:true});
+addEventListener('touchmove',function(e){if(touchY!==null&&e.touches.length===1&&e.cancelable)e.preventDefault()},{passive:false});
+addEventListener('touchend',function(e){if(touchY===null)return;var dy=touchY-e.changedTouches[0].clientY;touchY=null;
+  if(Math.abs(dy)<36||snap.raf)return;stepBy(dy>0?1:-1)},{passive:true});
+/* anything else that moves the page (the scrollbar, a link to a chapter, find in page, the
+   Tab key reaching a link off screen) settles on the nearest stop */
+var settleT=0;
+function settle(){clearTimeout(settleT);settleT=setTimeout(function(){if(snap.raf||!dlPanel.hidden)return;var s=stops(),i=nearest(scrollY);
+  if(Math.abs(s[i]-scrollY)>2)go(i);else snap.idx=i},170)}
+addEventListener('scroll',function(){if(!snap.raf)settle()},{passive:true});
+addEventListener('resize',function(){clearTimeout(settleT);settleT=setTimeout(function(){if(!snap.raf)scrollTo(0,stops()[Math.min(snap.idx,stops().length-1)])},200)});
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;
+  var t=document.getElementById(a.getAttribute('href').slice(1));if(!t)return;e.preventDefault();go(nearest(topOf(t)))});
+function scrubTo(e){var r=scrub.getBoundingClientRect();var t=clamp((e.clientX-r.left-8)/(r.width-16),0,1);go(nearest(t*maxScroll()))}
 scrub.addEventListener('click',scrubTo);
+/* the phone's two step buttons: the same stops as the wheel and the keys. The one that has
+   nowhere to go is dimmed and marked unavailable, but keeps its focus. */
+var stepPrev=document.getElementById('step-prev'), stepNext=document.getElementById('step-next');
+var toTop=document.getElementById('to-top');
+/* at the last stop the up box goes to the opening instead of one stop back, and says so: its
+   arrow gets a bar over it and its name becomes "Go to top" */
+function stepState(){if(!stepPrev)return;var n=stops().length,i=snap.raf?snap.idx:nearest(scrollY),last=n>1&&i>=n-1;
+  stepPrev.setAttribute('aria-disabled',String(i<=0));stepNext.setAttribute('aria-disabled',String(i>=n-1));
+  stepPrev.classList.toggle('top',last);var lab=last?T('nav.top'):T('nav.prev');stepPrev.setAttribute('aria-label',lab);stepPrev.title=lab;
+  stepNext.title=T('nav.next');toTop.title=T('nav.top');toTop.classList.toggle('on',last)}
+stepPrev.addEventListener('click',function(){if(stepPrev.getAttribute('aria-disabled')==='true')return;if(stepPrev.classList.contains('top'))go(0);else stepBy(-1);stepState()});
+stepNext.addEventListener('click',function(){if(stepNext.getAttribute('aria-disabled')==='true')return;stepBy(1);stepState()});
+toTop.addEventListener('click',function(){go(0);stepState()});
+addEventListener('scroll',stepState,{passive:true});addEventListener('resize',stepState);stepState();
 scrub.addEventListener('mousemove',function(e){var r=scrub.getBoundingClientRect();ghost.style.left=clamp(e.clientX-r.left,8,r.width-10)+'px'});
 
 /* the intro plays by itself for four seconds, then the scroll takes over (smoothed like onScroll sync .9) */
