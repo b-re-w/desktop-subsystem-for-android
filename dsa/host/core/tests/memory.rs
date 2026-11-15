@@ -1161,6 +1161,7 @@ fn nfr1_the_renderers_gpu_memory_is_logged_by_whose_device_it_is_on() {
         guests: [at(104, 49), at(116, 56), at(0, 0)],
         guest_devices: 10,
         largest_guest_devices_kb: vec![60 * MIB, 40 * MIB, 20 * MIB, 0],
+        ..Default::default()
     };
     assert_eq!(
         renderer_owners_line(&owners),
@@ -1263,4 +1264,42 @@ fn nfr1_the_vms_section_pages_are_counted_once_and_survive_the_local_api() {
     );
     assert!(text.contains("2213 MiB private working sets"), "{text}");
     assert!(text.contains("balloon 640 MiB"), "{text}");
+}
+
+#[test]
+fn nfr1_the_renderers_largest_guest_devices_are_named_and_their_imports_split() {
+    use dsa_host_core::renderer::{renderer_owners_line, Allocations, GuestDevice, RendererOwners};
+    let owners = RendererOwners {
+        guest_devices: 2,
+        largest_guest_devices_kb: vec![60 * MIB, 8 * MIB],
+        largest_guest_devices: vec![
+            GuestDevice {
+                name: "com.google.android.youtube".to_string(),
+                pid: 4321,
+                kb: 60 * MIB,
+                color_buffers: Allocations {
+                    kb: 24 * MIB,
+                    count: 6,
+                },
+                grants: Allocations {
+                    kb: 30 * MIB,
+                    count: 9,
+                },
+            },
+            GuestDevice {
+                kb: 8 * MIB,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let line = renderer_owners_line(&owners);
+    assert!(
+        line.ends_with(
+            "(the largest: com.google.android.youtube (pid 4321) 60 MiB: color buffers 24 MiB \
+             in 6, shared grants 30 MiB in 9; an unnamed process 8 MiB: color buffers 0 MiB in \
+             0, shared grants 0 MiB in 0)"
+        ),
+        "{line}"
+    );
 }

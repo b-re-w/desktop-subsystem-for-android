@@ -228,6 +228,10 @@ impl UserRoot {
     pub fn app_window_log(&self) -> PathBuf {
         join(&self.0, &["logs", "dsa-app-window.log"])
     }
+    /// The graphics renderer's latest list of its color buffers.
+    pub fn renderer_color_buffers(&self) -> PathBuf {
+        join(&self.0, &["logs", "renderer-color-buffers.txt"])
+    }
     pub fn compositor_settings(&self) -> PathBuf {
         join(&self.0, &["compositor.json"])
     }

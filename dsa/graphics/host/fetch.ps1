@@ -104,6 +104,8 @@ git -C $GfxstreamDir clean -fdx
 # a dma-buf allocation, as lavapipe does without /dev/udmabuf: it now exports an opaque fd.
 # Without 0040 the compositor cannot sample a YUV ColorBuffer, so SurfaceFlinger draws every
 # video into a client target the size of the display.
+# Without 0041 a memory report cannot list the ColorBuffers: which guest process made each,
+# which hold it open, and which is a task window's current frame.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -142,7 +144,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0037-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0038-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0039-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0040-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0040-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0041-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName
