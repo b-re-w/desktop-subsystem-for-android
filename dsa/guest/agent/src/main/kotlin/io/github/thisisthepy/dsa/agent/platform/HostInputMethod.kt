@@ -11,8 +11,10 @@ import android.view.inputmethod.InputConnection
 import io.github.thisisthepy.dsa.agent.input.EditorCalls
 import io.github.thisisthepy.dsa.agent.input.EditorConnection
 import io.github.thisisthepy.dsa.agent.input.EditorLink
+import io.github.thisisthepy.dsa.agent.input.EditorSnapshot
 import io.github.thisisthepy.dsa.agent.input.EditorState
 import io.github.thisisthepy.dsa.agent.input.LinkedEditor
+import io.github.thisisthepy.dsa.agent.input.describedState
 import io.github.thisisthepy.dsa.agent.input.inputKind
 
 /**
@@ -128,37 +130,32 @@ class HostInputMethod : InputMethodService() {
         val to = maxOf(selStart, selEnd)
         // The text around the selection and the selection itself, read at once, so the text
         // never comes from a later state than the selection: the host's next composition can
-        // reach the editor between this report and the reads that follow it.
-        val around = if (to - from <= EditorState.MAX_TEXT - 2 * EditorState.REACH) {
-            ic.getSurroundingText(EditorState.REACH, EditorState.REACH, 0)?.takeIf { it.offset >= 0 }
+        // reach the editor between this report and the reads that follow it. An editor that
+        // has no offset for its surrounding text (one that leaves getSurroundingText to the
+        // interface's default, as Jetpack Compose's text fields do) is read whole instead,
+        // still in one call.
+        val snapshot = if (to - from <= EditorState.MAX_TEXT - 2 * EditorState.REACH) {
+            surrounding(ic) ?: extracted(ic)
         } else {
             null
         }
-        if (around != null) {
-            val nowFrom = around.offset + minOf(around.selectionStart, around.selectionEnd)
-            val nowTo = around.offset + maxOf(around.selectionStart, around.selectionEnd)
-            val moved = nowFrom != from || nowTo != to
-            // The editor moved on since it reported this selection: it reports the newer one
-            // next, with its composition, and this one would only mix the two states.
-            if (moved && fromUpdate) return
-            val text = around.text.toString()
-            val start = around.offset
-            val end = start + text.length
-            val composing = !moved && composeStart in start..end && composeEnd in composeStart..end
-            report(
-                EditorState(
-                    kind = kind,
-                    text = text,
-                    textStart = start,
-                    selectionStart = if (moved) nowFrom else selStart,
-                    selectionEnd = if (moved) nowTo else selEnd,
-                    compositionStart = if (composing) composeStart else 0,
-                    compositionEnd = if (composing) composeEnd else 0,
-                    packageName = owner,
-                ),
+        if (snapshot != null) {
+            val state = describedState(
+                kind, owner, selStart, selEnd, composeStart, composeEnd, snapshot, fromUpdate,
             )
+            if (state == null) {
+                AndroidLog.info(
+                    "an editor update in $owner was not described: the editor moved on to " +
+                        "${snapshot.selectionStart}..${snapshot.selectionEnd} from the reported " +
+                        "$selStart..$selEnd before its text was read, and describes that next",
+                )
+                return
+            }
+            report(state)
             return
         }
+        // Only an editor that offers neither read is read in parts, which may come from
+        // different states of it.
         val selected = if (to > from) ic.getSelectedText(0)?.toString() else ""
         val fits = selected != null && selected.length == to - from &&
             selected.length <= EditorState.MAX_TEXT - 2 * EditorState.REACH
@@ -183,6 +180,36 @@ class HostInputMethod : InputMethodService() {
                 compositionEnd = if (composing) composeEnd else 0,
                 packageName = owner,
             ),
+        )
+    }
+
+    /**
+     * The editor's text around the selection and the selection, from its own
+     * getSurroundingText; null when the editor gives no offset for it (the interface's default
+     * gives none) or no text.
+     */
+    private fun surrounding(ic: InputConnection): EditorSnapshot? {
+        val around = ic.getSurroundingText(EditorState.REACH, EditorState.REACH, 0)
+            ?.takeIf { it.offset >= 0 } ?: return null
+        return EditorSnapshot(
+            text = around.text.toString(),
+            start = around.offset,
+            selectionStart = around.offset + minOf(around.selectionStart, around.selectionEnd),
+            selectionEnd = around.offset + maxOf(around.selectionStart, around.selectionEnd),
+        )
+    }
+
+    /** The editor's whole text and selection, from one getExtractedText; null without them. */
+    private fun extracted(ic: InputConnection): EditorSnapshot? {
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0) ?: return null
+        val text = extracted.text?.toString() ?: return null
+        val start = extracted.startOffset
+        if (start < 0 || extracted.selectionStart < 0 || extracted.selectionEnd < 0) return null
+        return EditorSnapshot(
+            text = text,
+            start = start,
+            selectionStart = start + extracted.selectionStart,
+            selectionEnd = start + extracted.selectionEnd,
         )
     }
 
