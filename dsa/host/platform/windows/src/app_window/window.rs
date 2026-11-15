@@ -2373,6 +2373,10 @@ impl Ui {
         // The app's icon, when it changed after the program was made.
         if let Some(data) = window_data(hwnd) {
             take_live_icon(hwnd, data, false);
+            // The tone the title bar's glyphs take, and why, once per change.
+            let logger = self.setup.logger.clone();
+            data.caption
+                .set_log(Box::new(move |line| note(logger.as_deref(), line)));
         }
         // Files dropped from Explorer go to the task's app.
         if let Some(handler) = &self.setup.drops {
@@ -2697,6 +2701,67 @@ mod tests {
             let (wparam, lparam) = pack_band_sample(sample);
             assert_eq!(unpack_band_sample(wparam, lparam), sample);
         }
+    }
+
+    #[test]
+    fn fr22_a_still_window_whose_only_frame_has_a_light_band_ends_with_dark_glyphs() {
+        use dsa_host_core::compositor::caption::{frame_band_sample, CaptionTone};
+        // MX Player's settings screen in R51's window: 1439 task pixels wide, a band of 58, a
+        // light grey bar (#E0E0E0) over the first 105 rows, and an app that never asks for
+        // dark status bar icons, which is read as a dark bar.
+        let (width, height, band) = (1439u32, 1166u32, 58u32);
+        let mut rgba = Vec::with_capacity((width * height * 4) as usize);
+        for y in 0..height {
+            let color = if y < 105 {
+                [0xE0, 0xE0, 0xE0, 0xFF]
+            } else {
+                [0xFF, 0xFF, 0xFF, 0xFF]
+            };
+            for _ in 0..width {
+                rgba.extend_from_slice(&color);
+            }
+        }
+        let (input, _guest) = std::sync::mpsc::channel();
+        let caption = CaptionWindow::new(7, TASK_STYLE, TASK_EX_STYLE, ICON_ID, input);
+        let lines = std::rc::Rc::new(RefCell::new(Vec::<String>::new()));
+        let told = std::rc::Rc::clone(&lines);
+        caption.set_log(Box::new(move |line| {
+            told.borrow_mut().push(line.to_string())
+        }));
+        let hwnd: HWND = std::ptr::null_mut();
+        // SAFETY: with no presenter the window draws nothing; the frame's mode is asked of a
+        // null window, which Windows refuses and changes nothing.
+        unsafe {
+            caption.set_tone(hwnd, Some(CaptionTone::LightGlyphs), None);
+        }
+        assert_eq!(caption.glyph_tone(), CaptionTone::LightGlyphs);
+        // The window is still: the presenter reads the band of its one frame, the window is
+        // told it in a message, and that is all that ever comes.
+        let sample = frame_band_sample(&rgba, width, height, band);
+        let (wparam, lparam) = pack_band_sample(sample);
+        // SAFETY: as above.
+        unsafe {
+            caption.set_sample(hwnd, unpack_band_sample(wparam, lparam), None);
+        }
+        assert_eq!(caption.glyph_tone(), CaptionTone::DarkGlyphs, "{sample:?}");
+        // Said once each time the tone changes, with the rule and the numbers.
+        let said = lines.borrow().clone();
+        assert_eq!(said.len(), 2, "{said:?}");
+        assert!(said[0].contains("take light glyphs"), "{said:?}");
+        assert!(said[1].starts_with("task 7: "), "{said:?}");
+        assert!(said[1].contains("take dark glyphs"), "{said:?}");
+        assert!(
+            said[1].contains("cannot be read anywhere on the band (darkest 745, lightest 745"),
+            "{said:?}"
+        );
+        // Read again, the same band changes nothing and says nothing.
+        // SAFETY: as above.
+        unsafe {
+            caption.set_sample(hwnd, sample, None);
+            caption.set_tone(hwnd, Some(CaptionTone::LightGlyphs), None);
+        }
+        assert_eq!(caption.glyph_tone(), CaptionTone::DarkGlyphs);
+        assert_eq!(lines.borrow().len(), 2);
     }
 
     #[test]

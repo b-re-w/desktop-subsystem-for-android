@@ -51,6 +51,16 @@ pub enum CaptionTone {
     LightGlyphs,
 }
 
+impl CaptionTone {
+    /// The tone in words, for the log.
+    pub fn describe(self) -> &'static str {
+        match self {
+            CaptionTone::DarkGlyphs => "dark glyphs",
+            CaptionTone::LightGlyphs => "light glyphs",
+        }
+    }
+}
+
 /// The tone of a task window's caption glyphs as the app asked for it: dark over a light
 /// status bar, light over a dark one. What the app said about its status bar's icons decides,
 /// as the guest's window manager reports it while the app changes it (the appearance of the
@@ -293,6 +303,121 @@ pub fn band_reading_owed(
             (Some(_), None) => true,
             (None, _) => false,
         }
+}
+
+/// How many pixels a window samples across its band, and across the row under it.
+pub const BAND_SAMPLES: u32 = 8;
+
+/// Where a window reads the band of its app's frame ([`band_points`]): the columns, spread
+/// evenly across the frame, and the two rows, the band's middle one and the one just under
+/// the band, where the app's top begins. All in the frame's own pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BandPoints {
+    pub columns: [u32; BAND_SAMPLES as usize],
+    pub inside: u32,
+    pub below: u32,
+}
+
+/// Where a window reads the band `band` pixels high over a frame `region` pixels large, both
+/// in the frame's own pixels. `None` when there is no band, or the frame is too small to hold
+/// the band and the row under it.
+pub fn band_points(region: (u32, u32), band: u32) -> Option<BandPoints> {
+    if band == 0 || region.1 <= band + 2 || region.0 < BAND_SAMPLES {
+        return None;
+    }
+    let mut columns = [0; BAND_SAMPLES as usize];
+    for (column, x) in columns.iter_mut().enumerate() {
+        let column = column as u64;
+        *x = ((2 * column + 1) * u64::from(region.0) / (2 * u64::from(BAND_SAMPLES))) as u32;
+    }
+    Some(BandPoints {
+        columns,
+        inside: band / 2,
+        below: band + 2,
+    })
+}
+
+/// What a window reads under a band `band` pixels high from a frame of `width` by `height`
+/// pixels given as RGBA rows, top row first ([`band_sample`] at [`band_points`]). The default
+/// when the frame holds no band or fewer pixels than its size says.
+pub fn frame_band_sample(rgba: &[u8], width: u32, height: u32, band: u32) -> BandSample {
+    let Some(points) = band_points((width, height), band) else {
+        return BandSample::default();
+    };
+    if rgba.len() < width as usize * height as usize * 4 {
+        return BandSample::default();
+    }
+    let row = |y: u32| -> Vec<u32> {
+        points
+            .columns
+            .iter()
+            .map(|&x| {
+                let at = (y as usize * width as usize + x as usize) * 4;
+                // RGBA bytes, as 0xAARRGGBB.
+                u32::from_be_bytes([rgba[at + 3], rgba[at], rgba[at + 1], rgba[at + 2]])
+            })
+            .collect()
+    };
+    band_sample(&row(points.inside), &row(points.below))
+}
+
+/// What a band sample says, in words for the log: its fill, its one color, its lightness and
+/// how far apart its darkest and lightest parts are.
+pub fn describe_band_sample(sample: BandSample) -> String {
+    let fill = match sample.fill {
+        Some(fill) => format!("filled with #{:06X}", fill & 0x00FF_FFFF),
+        None => "no fill".to_string(),
+    };
+    let band = match sample.band {
+        Some(color) => format!("one colour #{:06X}", color & 0x00FF_FFFF),
+        None => "not one colour".to_string(),
+    };
+    let luminance = match sample.luminance {
+        Some(luminance) => format!("mean luminance {luminance}"),
+        None => "mean luminance unread".to_string(),
+    };
+    let range = match sample.range {
+        Some((darkest, lightest)) => format!("darkest {darkest}, lightest {lightest}"),
+        None => "not opaque all across".to_string(),
+    };
+    format!("{fill}, {band}, {luminance}, {range} (of 1000)")
+}
+
+/// Why [`shown_tone`] gave `tone` from `reported`, `sample` and `app_drawn`, in words for the
+/// log: the rule that decided and the numbers it decided on.
+pub fn tone_reason(
+    reported: Option<CaptionTone>,
+    sample: BandSample,
+    app_drawn: bool,
+    tone: Option<CaptionTone>,
+) -> String {
+    if let Some(fill) = sample.fill.filter(|_| !app_drawn) {
+        return format!("the window fills the band with #{:06X}", fill & 0x00FF_FFFF);
+    }
+    let range =
+        |(darkest, lightest): (u16, u16)| format!("darkest {darkest}, lightest {lightest} of 1000");
+    match (reported, sample.range) {
+        (Some(asked), None) => format!(
+            "the app asked for {}, and the band was not read whole, so that stands",
+            asked.describe()
+        ),
+        (Some(asked), Some(read)) if tone == Some(asked) => format!(
+            "the app asked for {}, and they can be read on the band ({})",
+            asked.describe(),
+            range(read)
+        ),
+        (Some(asked), Some(read)) => format!(
+            "the app asked for {}, but they cannot be read anywhere on the band ({})",
+            asked.describe(),
+            range(read)
+        ),
+        (None, _) => match sample.luminance {
+            Some(luminance) => format!(
+                "the app asked for nothing, and the band's mean luminance is {luminance} of 1000"
+            ),
+            None => "the app asked for nothing, and the band was not read".to_string(),
+        },
+    }
 }
 
 /// Light glyphs the app asked for are lost once even the darkest part of the band is lighter
@@ -1529,6 +1654,183 @@ mod tests {
         assert!(band_reading_owed(false, at(0), None));
         // Copied after the last frame, and read: settled.
         assert!(!band_reading_owed(false, at(150), at(400)));
+    }
+
+    /// A frame of `width` by `height` RGBA pixels, top row first: `top` over its first `bar`
+    /// rows and `rest` under them.
+    fn still_frame(width: u32, height: u32, bar: u32, top: [u8; 4], rest: [u8; 4]) -> Vec<u8> {
+        let mut rgba = Vec::with_capacity((width * height * 4) as usize);
+        for y in 0..height {
+            let color = if y < bar { top } else { rest };
+            for _ in 0..width {
+                rgba.extend_from_slice(&color);
+            }
+        }
+        rgba
+    }
+
+    /// The most opaque pixel of `rect` in a title bar image, laid over a band of the grey
+    /// `band`: the color its red channel shows there, and its opacity.
+    fn strongest_over(
+        image: &[u8],
+        layout: &CaptionLayout,
+        (left, top, width, height): (i32, i32, u32, u32),
+        band: u8,
+    ) -> (u8, u8) {
+        let mut strongest = [0u8; 4];
+        for y in top.max(0) as u32..(top.max(0) as u32 + height).min(layout.height) {
+            for x in left.max(0) as u32..(left.max(0) as u32 + width).min(layout.width) {
+                let pixel = bar_pixel(image, layout, x, y);
+                if pixel[3] > strongest[3] {
+                    strongest = pixel;
+                }
+            }
+        }
+        // Premultiplied: the pixel's own color, then the band through what it leaves.
+        let shown =
+            u32::from(strongest[2]) + u32::from(band) * (255 - u32::from(strongest[3])) / 255;
+        (shown.min(255) as u8, strongest[3])
+    }
+
+    #[test]
+    fn fr22_a_still_window_whose_only_frame_has_a_light_band_ends_with_dark_glyphs() {
+        // MX Player's settings screen: its bar is a light grey (#E0E0E0) from the window's top
+        // to below the band, from end to end, and the app never asks for dark status bar
+        // icons, which is read as a dark bar. The window is still: this one frame is all the
+        // presenter ever reads.
+        let says_dark = reported_tone(StatusBarAppearance::Dark, 0);
+        assert_eq!(says_dark, Some(CaptionTone::LightGlyphs));
+        const GREY: u8 = 0xE0;
+        for dpi in [96, 144, 192] {
+            let layout = CaptionLayout::new(scaled(800, dpi), scaled(31, dpi), dpi, 0);
+            // The frame in the task's pixels, here the window's: the bar reaches past the band.
+            let (width, height) = (layout.width, layout.height * 6);
+            let rgba = still_frame(
+                width,
+                height,
+                layout.height * 2,
+                [GREY, GREY, GREY, 0xFF],
+                [0xFF, 0xFF, 0xFF, 0xFF],
+            );
+            let sample = frame_band_sample(&rgba, width, height, layout.height);
+            assert_eq!(sample.fill, None, "the app draws the band: {sample:?}");
+            assert!(
+                sample
+                    .range
+                    .is_some_and(|(darkest, _)| darkest > LIGHT_GLYPHS_LOST_ABOVE),
+                "{}",
+                describe_band_sample(sample)
+            );
+            // The app's word comes first and nothing has been read yet: light glyphs.
+            let mut shown = shown_tone(says_dark, BandSample::default(), false, None);
+            assert_eq!(shown, Some(CaptionTone::LightGlyphs));
+            // The one sample turns them dark, and reading the same frame again keeps them so.
+            for _ in 0..3 {
+                shown = shown_tone(says_dark, sample, false, shown);
+                assert_eq!(
+                    shown,
+                    Some(CaptionTone::DarkGlyphs),
+                    "at {dpi}: {}",
+                    tone_reason(says_dark, sample, false, shown)
+                );
+            }
+            assert!(
+                tone_reason(says_dark, sample, false, shown)
+                    .contains("cannot be read anywhere on the band"),
+                "{}",
+                tone_reason(says_dark, sample, false, shown)
+            );
+
+            // Every glyph is drawn in that tone: the name, the back arrow and the buttons.
+            let palette = CaptionPalette::of(shown.unwrap_or_default());
+            let (_, _, title_width, title_height) = layout.title_rect().unwrap();
+            let title = vec![255u8; (title_width * title_height) as usize];
+            let content = TitleBarContent {
+                fill: sample.fill,
+                title: Some(&title),
+                back: Some(BackButton::default()),
+                ..TitleBarContent::default()
+            };
+            for active in [true, false] {
+                let state = CaptionState {
+                    active,
+                    ..CaptionState::default()
+                };
+                let image = paint_title_bar(&layout, dpi, &palette, &state, &content);
+                let mut parts = vec![
+                    ("name", layout.title_rect().unwrap()),
+                    ("back arrow", layout.icon_cell().unwrap()),
+                ];
+                for button in CaptionButton::ALL {
+                    parts.push(("button", layout.button_rect(button)));
+                }
+                for (part, rect) in parts {
+                    let (shown_as, opacity) = strongest_over(&image, &layout, rect, GREY);
+                    assert!(opacity > 0, "at {dpi}: the {part} is drawn");
+                    assert!(
+                        u32::from(shown_as) + 0x40 <= u32::from(GREY),
+                        "at {dpi}, active {active}: the {part} shows #{shown_as:02X} on \
+                         #{GREY:02X}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fr22_the_band_is_read_across_the_frame_in_its_middle_row_and_just_under_it() {
+        // The window of R51's screen: 1439 task pixels wide, a band of 58.
+        let points = band_points((1439, 1166), 58).unwrap();
+        assert_eq!((points.inside, points.below), (29, 60));
+        assert_eq!(points.columns[0], 89);
+        assert_eq!(points.columns[7], 1349);
+        assert!(points.columns.windows(2).all(|pair| pair[0] < pair[1]));
+        // No band, or a frame too small for it and the row under it, reads nothing.
+        assert_eq!(band_points((1439, 1166), 0), None);
+        assert_eq!(band_points((1439, 60), 58), None);
+        assert_eq!(band_points((4, 1166), 58), None);
+        assert_eq!(
+            frame_band_sample(&[], 1439, 1166, 58),
+            BandSample::default()
+        );
+        // A band of two halves reads both.
+        let mut rgba = still_frame(80, 40, 40, [0xFF, 0xFF, 0xFF, 0xFF], [0; 4]);
+        for y in 0..40usize {
+            for x in 0..40usize {
+                rgba[(y * 80 + x) * 4..(y * 80 + x) * 4 + 3].copy_from_slice(&[0, 0, 0]);
+            }
+        }
+        let sample = frame_band_sample(&rgba, 80, 40, 20);
+        assert_eq!(sample.range, Some((0, 1000)));
+        assert_eq!(sample.band, None);
+    }
+
+    #[test]
+    fn fr22_the_log_says_which_rule_decided_the_glyphs_tone() {
+        let grey = sampled(0xFFE0_E0E0, 0xFFE0_E0E0);
+        let says_dark = Some(CaptionTone::LightGlyphs);
+        let reason = tone_reason(says_dark, grey, false, Some(CaptionTone::DarkGlyphs));
+        assert!(reason.contains("asked for light glyphs"), "{reason}");
+        assert!(reason.contains("cannot be read anywhere"), "{reason}");
+        assert!(reason.contains("darkest 745, lightest 745"), "{reason}");
+        let unread = tone_reason(says_dark, BandSample::default(), false, says_dark);
+        assert!(unread.contains("not read whole"), "{unread}");
+        let readable = tone_reason(
+            says_dark,
+            sampled(0xFF20_2124, 0xFF20_2124),
+            false,
+            says_dark,
+        );
+        assert!(readable.contains("can be read on the band"), "{readable}");
+        let filled = sampled(0x0000_0000, 0xFF33_6699);
+        assert!(
+            tone_reason(says_dark, filled, false, Some(CaptionTone::LightGlyphs))
+                .contains("fills the band with #336699")
+        );
+        let nothing = tone_reason(None, grey, false, Some(CaptionTone::DarkGlyphs));
+        assert!(nothing.contains("asked for nothing"), "{nothing}");
+        assert_eq!(CaptionTone::DarkGlyphs.describe(), "dark glyphs");
+        assert!(describe_band_sample(grey).contains("one colour #E0E0E0"));
     }
 
     #[test]

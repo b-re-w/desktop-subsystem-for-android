@@ -78,8 +78,8 @@ use std::cell::{Cell, RefCell};
 use std::sync::mpsc::Sender;
 
 use dsa_host_core::compositor::caption::{
-    below_title_bar_sample, paint_title_bar, scaled, shown_tone, title_bar_hit, BackButton,
-    BandSample, CaptionBand, CaptionButton, CaptionHit, CaptionLayout, CaptionPalette,
+    below_title_bar_sample, paint_title_bar, scaled, shown_tone, title_bar_hit, tone_reason,
+    BackButton, BandSample, CaptionBand, CaptionButton, CaptionHit, CaptionLayout, CaptionPalette,
     CaptionState, CaptionTone, TitleBarContent, TitleBarHit, TitleBarMode, TITLE_TEXT_AT_100,
 };
 use dsa_host_core::compositor::caption_icon::{self, IconLook};
@@ -449,6 +449,9 @@ struct IconPixels {
 /// What the title was laid out for: the text, the box it fits in and the DPI.
 type TitleKey = (String, (u32, u32), u32);
 
+/// Where a title bar writes a line of the log.
+pub type CaptionLog = Box<dyn Fn(&str)>;
+
 pub struct CaptionWindow {
     task_id: i32,
     style: WINDOW_STYLE,
@@ -505,6 +508,8 @@ pub struct CaptionWindow {
     /// is at the top edge: it then has no resize edges, and its middle button leaves full
     /// screen, drawn as Restore.
     full_screen: Cell<bool>,
+    /// Where the window says which tone its glyphs take and why, once per change.
+    log: RefCell<Option<CaptionLog>>,
 }
 
 impl CaptionWindow {
@@ -544,7 +549,14 @@ impl CaptionWindow {
             tracking: Cell::new(false),
             drawn: RefCell::new(None),
             full_screen: Cell::new(false),
+            log: RefCell::new(None),
         }
+    }
+
+    /// Has `log` told, once per change, which tone the glyphs, the name and the back arrow
+    /// take and why ([`tone_reason`]).
+    pub fn set_log(&self, log: CaptionLog) {
+        *self.log.borrow_mut() = Some(log);
     }
 
     /// Whether the app draws its own title bar, and where its controls are in the band, in
@@ -776,16 +788,28 @@ impl CaptionWindow {
     /// `hwnd` is this window, a live window of the calling thread.
     unsafe fn retone(&self, hwnd: HWND) {
         let before = self.shown();
+        let decided_before = self.shown.get();
         let sample = self.band_sample();
         if self.below.get() {
             self.filled.set(sample.fill);
         }
-        self.shown.set(shown_tone(
+        let decided = shown_tone(
             self.tone.get(),
             sample,
             self.app_drawn.get(),
             self.shown.get(),
-        ));
+        );
+        self.shown.set(decided);
+        if decided != decided_before {
+            if let Some(log) = self.log.borrow().as_ref() {
+                let reason = tone_reason(self.tone.get(), sample, self.app_drawn.get(), decided);
+                log(&format!(
+                    "task {}: the title bar's name, back arrow and buttons take {}: {reason}",
+                    self.task_id,
+                    self.shown().describe()
+                ));
+            }
+        }
         if self.shown() != before {
             self.apply_tone(hwnd);
         }
@@ -795,6 +819,11 @@ impl CaptionWindow {
     /// default while nothing has decided it.
     fn shown(&self) -> CaptionTone {
         self.shown.get().unwrap_or_default()
+    }
+
+    /// The tone the name, the back arrow and the buttons are drawn in now.
+    pub fn glyph_tone(&self) -> CaptionTone {
+        self.shown()
     }
 
     /// The title bar's icon `side` pixels square, as it is drawn over the band now, and how:
