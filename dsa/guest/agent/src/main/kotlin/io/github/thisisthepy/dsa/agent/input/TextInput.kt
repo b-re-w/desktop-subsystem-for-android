@@ -57,6 +57,18 @@ interface EditorConnection {
     val composesInline: Boolean
         get() = true
 
+    /**
+     * Input restarted on the editor in the middle of a composition, and the framework finished
+     * the composition as the old connection closed, keeping its text. Makes that text the
+     * composition again, when the editor still holds it where it was composed. The composing
+     * region in the editor's whole text, or null when there is no composition to resume or the
+     * editor no longer holds it: then it changed, and the composition is over.
+     */
+    fun resumeComposition(): IntRange? = null
+
+    /** Input started on an editor: a new one, or the same one again when [restarting]. */
+    fun inputStarted(restarting: Boolean) {}
+
     companion object {
         /** No editor, as before the input method starts. */
         val NONE = object : EditorConnection {
@@ -379,6 +391,38 @@ class TextInput(
                 .toByteArray(),
         )
     }
+
+    /**
+     * Input restarted on the focused editor, which is now [state]. Its app restarts input as it
+     * sets the editor's text or state, and the framework finishes the composition as the old
+     * connection closes, keeping its text. A composition still being typed in the editor's task
+     * goes on: its text becomes the composition again, and the host hears the editor with it,
+     * so neither side commits the syllable half made. Only when the editor no longer holds the
+     * text where it was composed did the editor really change; the composition is then over,
+     * and the host hears the editor as it is.
+     */
+    fun editorRestarted(state: EditorState) {
+        val (task, _) = composing ?: return editorChanged(state)
+        if (state.kind == ImeInputKind.IME_INPUT_KIND_NONE || editorTask(state.packageName) != task) {
+            return editorChanged(state)
+        }
+        val region = editor().resumeComposition()
+        if (region == null) {
+            waiting = null
+            ended(task, "ended as input restarted on an editor that no longer holds it,")
+            return editorChanged(state)
+        }
+        if (!resumeNoted) {
+            resumeNoted = true
+            log.info("input restarted in task $task in the middle of a composition, which goes on in its editor")
+        }
+        val end = region.last + 1
+        val within = region.first >= state.textStart && end <= state.textStart + state.text.length
+        editorChanged(if (within) state.copy(compositionStart = region.first, compositionEnd = end) else state)
+    }
+
+    /** Whether the log was told a composition went on as input restarted. */
+    private var resumeNoted = false
 
     /**
      * The focused editor's cursor is at these display pixels. The host hears where it is in

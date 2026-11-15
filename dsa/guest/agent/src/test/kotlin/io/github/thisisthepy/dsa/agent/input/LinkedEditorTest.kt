@@ -2,6 +2,7 @@ package io.github.thisisthepy.dsa.agent.input
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -9,6 +10,10 @@ import org.junit.Test
 class FakeCalls(private val name: String = "") : EditorCalls {
     val calls = mutableListOf<String>()
     var end: Int? = 10
+
+    /** The editor's text before and after the cursor. */
+    var before: String? = ""
+    var after: String? = ""
 
     private fun call(what: String): Boolean {
         calls += if (name.isEmpty()) what else "$name $what"
@@ -24,6 +29,8 @@ class FakeCalls(private val name: String = "") : EditorCalls {
     override fun setSelection(start: Int, end: Int) = call("select $start $end")
     override fun setComposingRegion(start: Int, end: Int) = call("region $start $end")
     override fun selectionEnd(): Int? = end
+    override fun textBeforeCursor(length: Int): String? = before?.takeLast(length)
+    override fun textAfterCursor(length: Int): String? = after?.take(length)
 }
 
 class LinkedEditorTest {
@@ -86,5 +93,69 @@ class LinkedEditorTest {
         link = null
         assertFalse(editor.setComposing("한", 1))
         assertFalse(editor.commit("한"))
+    }
+
+    @Test
+    fun fr6_a_composition_goes_on_in_the_same_syllable_when_input_restarts_on_its_editor() {
+        started.end = 1
+        editor.setComposing("하", 1)
+        // Input restarts: a new connection, on an editor that kept 하 before its cursor and
+        // lost the composing span.
+        val restarted = FakeCalls("restarted").apply {
+            end = 1
+            before = "하"
+        }
+        link = EditorLink(restarted, fallback)
+        editor.setComposing("한", 1)
+        assertEquals(
+            listOf("restarted region 0 1", "restarted begin", "restarted compose 한 1", "restarted end"),
+            restarted.calls,
+        )
+        // Later updates on the same connection go as ever.
+        restarted.calls.clear()
+        editor.setComposing("한", 1)
+        assertEquals(listOf("restarted begin", "restarted compose 한 1", "restarted end"), restarted.calls)
+    }
+
+    @Test
+    fun fr6_a_commit_after_input_restarted_replaces_the_syllable_rather_than_typing_it_twice() {
+        editor.setComposing("한", 1)
+        val restarted = FakeCalls("restarted").apply {
+            end = 3
+            before = "ab한"
+        }
+        link = EditorLink(restarted, fallback)
+        editor.commit("한")
+        assertEquals(listOf("restarted region 2 3", "restarted commit 한 1"), restarted.calls)
+    }
+
+    @Test
+    fun fr6_an_editor_that_changed_as_input_restarted_composes_anew_at_its_cursor() {
+        editor.setComposing("하", 1)
+        // The app emptied the field as input restarted.
+        val restarted = FakeCalls("restarted").apply {
+            end = 0
+            before = ""
+        }
+        link = EditorLink(restarted, fallback)
+        editor.setComposing("ㄴ", 1)
+        assertEquals(listOf("restarted begin", "restarted compose ㄴ 1", "restarted end"), restarted.calls)
+        assertNull(editor.resumeComposition())
+    }
+
+    @Test
+    fun fr6_resuming_a_composition_sets_its_region_again_and_says_where() {
+        started.end = 5
+        started.before = "abc하"
+        editor.setComposing("하", 1)
+        started.calls.clear()
+        assertEquals(4 until 5, editor.resumeComposition())
+        assertEquals(listOf("editor region 4 5"), started.calls)
+        // Input started on another editor: what was composed is not this one's.
+        editor.inputStarted(restarting = false)
+        assertNull(editor.resumeComposition())
+        // Nothing composed: nothing to resume.
+        editor.setComposing("", 0)
+        assertNull(editor.resumeComposition())
     }
 }

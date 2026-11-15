@@ -74,6 +74,23 @@ class FakeEditor : EditorConnection {
         composing = if (start == end) null else start until end
         return true
     }
+
+    /** The composing span the framework finished as input restarted, while the editor still holds its text. */
+    var finished: IntRange? = null
+
+    /** Input restarts on the editor: the framework finishes its composition, keeping the text. */
+    fun restart() {
+        finished = composing
+        composing = null
+    }
+
+    override fun resumeComposition(): IntRange? {
+        calls += "resume"
+        val region = finished ?: return null
+        finished = null
+        composing = region
+        return region
+    }
 }
 
 class TextInputTest {
@@ -386,6 +403,61 @@ class TextInputTest {
         compose("한")
         commit("한")
         assertEquals("한", editor.text.toString())
+    }
+
+    @Test
+    fun fr6_input_restarting_in_the_middle_of_a_syllable_keeps_composing_it() {
+        compose("ㅎ")
+        compose("하")
+        // The app restarts input on its search field as it sets the field's text.
+        editor.restart()
+        input.editorRestarted(searchField("org.example.notes", "하"))
+        assertEquals(0 until 1, editor.composing)
+        // The host hears the editor with the composition it still has, as its own update left it.
+        val described = decode(sent.last()).imeEditor
+        assertEquals(listOf(0, 1), listOf(described.compositionStart, described.compositionEnd))
+        compose("한")
+        commit("한")
+        assertEquals("한", editor.text.toString())
+        assertTrue(editor.calls.none { it.startsWith("commit") && it != "commit 한" })
+        assertEquals(
+            listOf(
+                "info: a composition began in task 7, inline in its editor",
+                "info: input restarted in task 7 in the middle of a composition, which goes on in its editor",
+                "info: the composition in task 7 was committed after 3 updates",
+            ),
+            log.lines.filter { it.startsWith("info:") },
+        )
+    }
+
+    @Test
+    fun fr6_input_restarting_on_an_editor_that_changed_ends_the_composition_without_a_commit() {
+        compose("ㅎ")
+        compose("하")
+        // The app replaced the field's text as it restarted input.
+        editor.restart()
+        editor.finished = null
+        editor.text = StringBuilder("x")
+        editor.cursor = 1
+        input.editorRestarted(searchField("org.example.notes", "x"))
+        assertTrue(editor.calls.none { it.startsWith("commit") })
+        assertTrue(
+            log.lines.any {
+                "the composition in task 7 ended as input restarted on an editor that no longer holds it, after 2 updates" in it
+            },
+        )
+        assertEquals("x", decode(sent.last()).imeEditor.text)
+        // What the host composes next is a composition of its own, at the cursor.
+        compose("ㄴ")
+        assertEquals("xㄴ", editor.text.toString())
+        assertEquals(2, log.lines.count { "a composition began in task 7" in it })
+    }
+
+    @Test
+    fun fr6_input_restarting_with_nothing_composed_only_describes_the_editor() {
+        input.editorRestarted(searchField("org.example.notes", "a"))
+        assertEquals("a", decode(sent.single()).imeEditor.text)
+        assertTrue(editor.calls.isEmpty())
     }
 
     @Test
