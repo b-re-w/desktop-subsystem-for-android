@@ -221,6 +221,14 @@ with zipfile.ZipFile(image / "signed-target_files.zip") as z:
             if left:
                 problems.append(f"{name} still has {'; '.join(left)}, so its pages open with the large "
                                 "title folded in every window")
+    # Every Settings page keeps the home page's room below its last row: a task has no
+    # navigation bar inset, which is all a page opened from the home page takes that room from.
+    for name in names:
+        if name.endswith(make_image.SETTINGS_APK):
+            left = make_image.settings_list_end_problems(z.read(name))
+            if left:
+                problems.append(f"{name}: {'; '.join(left)}, so the last row of a Settings page sits on "
+                                "the window's bottom edge")
     # The window manager hands a freeform window its status bar inset, so an app that pads its
     # toolbar by that inset keeps it below the window's title bar. services.jar keeps its dex
     # aligned, or system_server copies 20 MiB of it into memory; its odex is checked with the

@@ -196,18 +196,31 @@ aapt2 from the Android SDK's build-tools for the system screen overlays.
     area until the page opens again. Files has no title of its own to enlarge: its layouts
     are not overlayable, so it gets the colours and its rounded Material 3 look only.
 - Settings, Files and the permission screens take the space below the last row of a list
-  from the navigation bar inset alone (SettingsLib's `EdgeToEdgeUtils` and Files'
-  `BaseActivity` pad their content by it). A task has none, so their lists end on the
-  window's bottom edge, as every app's do, and DSA adds no margin of its own. Android 17's
-  Settings home page adds `dashboard_padding_bottom` (16 dp) when its window shows a caption
-  bar (`TopLevelSettings.isRunningInFreeformWindow`), padding that stands in for the
-  navigation bar inset Android's own desktop windows lack. A DSA task has no navigation bar
-  inset either, so the home page keeps that padding unedited, as Android's desktop windows
-  show it, and its last card does not sit on the window's bottom edge.
+  from the navigation bar inset alone (Settings' `Utils.setupEdgeToEdge` and Files'
+  `BaseActivity` pad their content by it). A task has none. Android 17's Settings home page
+  adds `dashboard_padding_bottom` (16 dp) when its window shows a caption bar
+  (`TopLevelSettings.isRunningInFreeformWindow`), padding that stands in for the navigation
+  bar inset Android's own desktop windows lack. A DSA task has no navigation bar inset
+  either, so the home page keeps that padding unedited, and its last card does not sit on
+  the window's bottom edge.
+- Every other Settings page gets the home page's 16 dp at the end of what it scrolls, because
+  Settings gives it to the home list only and the last card of a page opened from it ended
+  on the window's bottom edge. The room is padding inside the list, which does not clip to
+  it: rows still scroll to the edge, and only the end of the list stops short of it.
+  `make-image.py` sets it in `Settings.apk` itself (`SETTINGS_LIST_END`,
+  `SETTINGS_CODE_LIST_END`): in the compiled layout every preference page lists its rows in
+  (`preference_recyclerview`), in the layouts of the pages with a list of their own (the app
+  lists that are not Compose pages, Running services and a service's page, Trusted
+  credentials), and in the two SettingsLib scaffolds that lay out the Compose pages (the app
+  lists, an app's page, the special access pages), which read the room where they read the
+  bottom inset. Android 16's home list, which has no freeform padding, keeps the layout's
+  room too. PermissionController's lists get the same padding. A page with buttons fixed
+  below what it scrolls keeps its own margins. Files is not changed.
   PermissionController lives in the permission APEX, which `make-image.py` unpacks with
-  otatools' `deapexer`, edits (its cards' corners) and packs with `apexer` before signing, as
-  signing itself packs it, and checks again after signing. `check-image.py` fails an image
-  without the Settings edit.
+  otatools' `deapexer`, edits (its cards' corners and its lists' padding) and packs with
+  `apexer` before signing, as signing itself packs it, and checks again after signing.
+  `check-image.py` fails an image whose Settings lacks any of these edits, or the layouts and
+  code they are made to.
 - With the input trace on (`androidboot.hardware.dsa_input_trace=1`), `dsa-trace.rc` makes every
   app's main thread log each message it takes 16 ms or more to handle, or starts 16 ms or more
   late.
