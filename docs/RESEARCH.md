@@ -3736,3 +3736,52 @@ SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운
 - 에이전트의 SELinux 도메인에서 리스너 등록이 되는지.
 - 앱의 버퍼를 그대로 올렸을 때 렌더러의 복사가 앱이 그 버퍼를 다시 쓰기 전에 끝나는지(찢어짐이 없는지).
 - `WS_EX_NOREDIRECTIONBITMAP` 창에 `WS_EX_LAYERED | WS_EX_TRANSPARENT`를 더했을 때 그림이 그대로 보이고 포인터가 통과하는지.
+
+## R53. YouTube 시청 화면의 빈 댓글 칸과 초록색 미니플레이어: 앱 프로세스가 다른 밀도로 시작했다 (FR-4, FR-22, PR-7)
+
+**본 것.** 소유자 PC(0.2.4-dev.23, Android 17 이미지, 200% 주 모니터와 125% 모니터, 창 1277x949 px)의 YouTube에서 세 가지를 보았다.
+
+1. 시청 화면의 플레이어 아래(제목, 설명, 댓글)가 하얗게 비었다. `dumpsys activity top`에서 `#watch_info_panel`은 `0,0-893,409`, `#watch_player`는 `0,38-893,540`이었다.
+2. 미니플레이어가 초록색 상자였고 재생과 닫기 단추만 보였다. 큰 플레이어는 맞는 정지 화면을 보였다.
+3. 미니플레이어 아래 끝에 가는 회색 줄이 있었다.
+
+**자료.** 이 저장소의 `dsa/guest/agent`(`TaskArranger`, `AndroidTaskActions.setCaptionInset`, `CachedProcesses`), `dsa/host/core/src/video.rs`, `video_slots.rs`, `dsa/host/platform/windows/src/picture_region.rs`, `video_decoder.rs`, `dsa/guest/codec2/src/`(`host_link.cpp`, `component.cpp`, `picture_region.cpp`), `dsa/kernel/patches/dsa-shared-memory.patch`, `docs/SPEC.md` FR-4, AOSP `frameworks/base`(main)의 `ActivityTaskManagerService.LocalService.preBindApplication`. 기기에서 돌리지 않았다. 아래 원인은 코드와 SPEC에 적힌 2026-11-14 측정에서 이끈 것이고, 확인은 아래 adb 절차로 한다.
+
+**찾은 원인: YouTube의 프로세스가 태스크와 다른 밀도로 시작했다.**
+
+1. 셋 다 2026-11-14 측정과 같은 모양이다. SPEC FR-4는 그날 YouTube를 125% 모니터(164 dpi)에서 200% 모니터(262 dpi)로 옮기자 "아래 탭, 미니플레이어 크기, 시청 화면의 댓글 열이 옛 밀도와 크기에 남아 겹치고 비었다"고, "미니플레이어가 초록색으로 남는다"고 적는다. YouTube는 밀도에 따른 값을 프로세스에 들고 있어 프로세스를 다시 시작해야만 고쳐진다. 그래서 #776이 YouTube를 시스템 방식으로 맞췄고, 시스템 방식에서는 창을 옮겨도 태스크의 밀도가 바뀌지 않는다.
+2. 남은 길은 창을 여는 때다. `TaskArranger`는 새 태스크를 창이 열릴 모니터의 밀도로 시작한다(FR-4). 이것은 태스크의 밀도이고 프로세스의 밀도가 아니다. AOSP의 `preBindApplication`은 프로세스를 전역 구성(디스플레이의 밀도, 이 PC에서는 주 모니터의 262 dpi)으로 묶은 뒤, 그 프로세스를 기다리는 첫 액티비티가 있을 때만 그 액티비티의 구성을 따르게 한다("Let the application initialize with consistent configuration as its activity"). 그러므로 이미 떠 있던 프로세스는 처음 시작한 밀도를 그대로 가진다. 작업(job)이나 브로드캐스트로 액티비티 없이 시작한 프로세스는 디스플레이의 밀도를 가지고, 창을 닫은 뒤 캐시에 남은 프로세스는 마지막 태스크의 밀도를 가진다. 이런 YouTube를 다른 배율의 모니터에서 열면, 새 태스크는 164 dpi이고 프로세스가 계산해 둔 값은 262 dpi다. 모니터 사이로 옮긴 것과 같은 상태다. 창 1277x949 px의 시청 화면이 넓은 태블릿 배치(오른쪽 광고 칸, 893 px 플레이어)로 그려진 것도 이와 맞는다.
+3. `CachedProcesses`는 창이 없는 캐시 프로세스를 30초 뒤에 끝내지만, 서비스를 돌리는 프로세스는 5분, 계속 다시 뜨는 프로세스는 더 오래 남는다. YouTube는 작업과 서비스로 자주 뜬다.
+4. 인셋(FR-22)은 원인으로 보지 않는다. 위쪽 38 px은 태스크의 상태 표시줄과 캡션 바 인셋이고(`setCaptionInset`), 플레이어가 38에서 시작하는 것은 그 인셋만큼 띄운 것이다. `dumpsys activity top`이 보이는 것은 배치 상자(left, top, right, bottom)이고 `translationY`는 들어 있지 않다. 그래서 `#watch_info_panel`이 0에 있다는 것만으로는 실제로 그 자리에 그려졌는지 알 수 없다. 높이 409는 정확히 949 - 540이므로, 이동으로 플레이어 아래에 놓인 칸이 비어 있었을 수도 있다. 아래 절차 3이 이를 가린다.
+
+**초록색 미니플레이어와 공유 메모리(PR-7).** 이 빌드에서 처음으로 그림 영역이 붙었으므로 먼저 의심했다. 읽은 것:
+- 슬롯 쓰기와 알림의 순서. 호스트는 슬롯에 다 쓴 뒤 그 번호를 메시지로 보내고(`send_pictures`), 게스트는 메시지를 받은 뒤에 읽고, 프레임의 마지막 사본이 사라질 때 돌려준다(`SharedPicture`). 맞다.
+- 위치와 줄 간격. 호스트의 `slot_offset`은 섹션 시작에서 잰 값이고 HCS 문서의 `StartOffset`은 0이다. 게스트는 머리가 있는 주소를 바탕으로 삼는다. 줄 간격은 양쪽 모두 `picture_stride`(너비를 2의 배수로 올림)이고, 게스트의 길이 계산(`stride * (h + ceil(h/2))`)은 호스트의 `nv12_len`과 같다.
+- 주소의 단위. 0x80000을 바이트 주소로 보면 게스트 RAM 안이라 `region_intersects`가 거절하고, 페이지 번호(0x80000000)로 머리를 찾는다. 그래픽 영역(0x84000, 0x94000 페이지)과 겹치지 않는다.
+- 커밋. 창 관리자는 슬롯에 처음 쓰기 전에 그 조각을 커밋하고, 게스트는 알림을 받은 슬롯만 읽는다.
+
+  찾은 결함은 하나다. 마지막 스트림이 끝날 때 `StreamSlots::drop`은 잠금을 놓은 뒤 닿았던 범위를 버렸다(`discard`). 그 사이에 새 스트림이 열려 첫 슬롯(같은 자리)에 그림을 쓰면, 뒤늦은 버리기가 그 그림을 지운다. 버린 페이지의 내용은 정해지지 않고 0으로 읽힐 수 있으며, 0으로 된 NV12는 초록색이다. 플레이어가 새 표면으로 옮기며 디코더를 놓고 곧바로 새로 만들 때가 그 경우이고, 멈춘 영상이면 그 한 장이 계속 남는다. 다만 이 창은 짧고 프로세스 밀도 쪽이 관찰과 더 잘 맞으므로, 이것을 주된 원인으로 보지 않는다. 잠금을 쥔 채 버리도록 고쳤다(`pr7_a_stream_that_opens_while_the_last_one_is_discarded_keeps_its_first_picture`).
+
+**미니플레이어 아래의 줄.** 토스트(#803)는 앱이 토스트를 띄울 때만 그 태스크에 그려지고, 오버레이(#808)는 태스크 밖의 `TYPE_APPLICATION_OVERLAY` 창만 따로 내보낸다. 미니플레이어는 YouTube 창 안의 뷰이므로 둘 다 닿지 않는다. 위쪽 인셋만 있고 아래쪽 인셋은 0이다(#760). 그래서 이 줄은 YouTube가 그린 것(미니플레이어의 진행 막대, 멈춤 상태의 회색 트랙)이 옛 밀도로 잰 자리에 남은 것으로 본다. 확인은 아래 절차 4다.
+
+**고친 것.**
+1. 에이전트(`LaunchDensities`). 호스트가 앱을 시작하기 직전(앱, 바로 가기, 알림 클릭)에, 그 앱에 태스크가 없고 프로세스가 배경에서 돌고 있으며 그 프로세스가 시작한 밀도가 이번 모니터의 밀도와 다르면, 앱의 배경 프로세스를 끝낸다(`killBackgroundProcesses`, 에이전트가 이미 가진 `KILL_ALL_BACKGROUND_PROCESSES`). 그러면 이어지는 시작이 새 프로세스를 그 밀도로 만든다. 프로세스의 밀도는 그 앱의 마지막 태스크가 사라질 때의 밀도이고, 태스크와 함께 본 적 없는 프로세스는 디스플레이의 밀도(`DisplayMetrics.DENSITY_DEVICE_STABLE`)다. 끝내지 않는 경우: 앱에 태스크가 있다, 프로세스가 액티비티를 쥐었거나 사용자가 보고 있다, 포그라운드 서비스를 돌린다(배경 재생), 끝내면 다른 앱의 프로세스까지 닿는다(`CachedProcesses`와 같은 셈), 밀도를 모른다. 끝낸 것과 남긴 까닭은 로그에 한 줄씩 남는다. 시험: `LaunchDensitiesTest`의 `fr4_*`, `HostRequestsTest.fr4_the_apps_processes_are_looked_at_before_the_app_or_its_shortcut_starts`.
+2. 호스트(`video_slots.rs`). 위의 버리기와 새 스트림의 경합.
+
+**치르는 것.** 다른 배율의 모니터에서 다시 연 앱은 캐시된 프로세스로 빨리 뜨지 않고 새로 시작한다(YouTube는 대략 1-2초). 같은 모니터에서 다시 열면 그대로다. 앱의 작업, 알람, 알림은 그대로이고(강제 중지가 아니다), 메모리가 부족할 때 활동 관리자가 캐시 프로세스를 끝내는 것과 같다.
+
+**남은 것.**
+- 처음 여는 앱(콜드 스타트)은 에이전트가 태스크에 밀도를 주는 일이 프로세스가 묶이기 전에 끝나야 맞는다. 보통은 그렇지만(포크와 앱 시작이 더 오래 걸린다) 보장되지는 않는다.
+- YouTube 창 두 개를 배율이 다른 두 모니터에 두는 경우. YouTube는 창을 여러 개 열지 않으므로 지금은 생기지 않는다. 생기면 둘째 태스크를 첫 태스크의 밀도로 시작해야 하는데, 에이전트는 어느 앱이 시스템 방식인지 모른다(호스트만 안다).
+
+**확인 절차(dispatching session, adb).** 고친 빌드를 넣기 전에 원인부터 확인할 수 있다.
+
+1. 프로세스와 태스크의 밀도를 견준다. YouTube 창이 열린 채로
+   `adb shell dumpsys activity processes com.google.android.youtube | grep -E "ProcessRecord|dpi"`
+   `adb shell dumpsys activity activities | grep -E "com.google.android.youtube|dpi" | head -20`
+   프로세스 쪽 구성의 `NNNdpi`가 태스크의 것과 다르면 이 원인이다. 같으면 원인이 아니다(아래 3, 4로 간다).
+2. 우회로 확인한다. `adb shell am force-stop com.google.android.youtube` 뒤 호스트에서 같은 모니터에 YouTube를 다시 연다. 시청 화면에 제목과 댓글이 나오고 미니플레이어에 정지 화면이 보이면 이 원인이 맞다.
+3. 칸이 실제로 어디 그려지는지 본다(이동 포함): `adb exec-out uiautomator dump /dev/tty | tr '>' '\n' | grep -E "watch_info_panel|watch_player|watch_info_watch_list"`. 칸이 `[0,540][893,949]`이면 자리는 맞고 내용이 비었다. `[0,0][893,409]`이면 정말로 플레이어 밑에 깔렸다.
+4. 미니플레이어 아래 줄이 DSA의 레이어인지 본다: `adb shell dumpsys SurfaceFlinger --list | grep -iE "youtube|toast|overlay"`. YouTube 창의 레이어와 `SurfaceView` 말고 다른 것이 없으면 YouTube가 그린 것이다.
+5. 고친 빌드에서: 125% 모니터에서 YouTube를 닫고 30초 안에 200% 모니터에서 다시 연다. `adb logcat -d -s DsaAgent | grep -E "ended the background processes of com.google.android.youtube|starts at .* in the process it has"`에 "ended the background processes ... started at 164 dpi"가 있고 시청 화면과 미니플레이어가 맞으면 고쳐진 것이다. "in the process it has"가 나오면 그 줄의 까닭(포그라운드 서비스 등)이 남긴 것이다.
+6. 공유 메모리 쪽: 같은 절차에서 `dsa-wm.log`의 `video:` 줄에 "in shared memory"가 있고 미니플레이어가 맞으면 그림 영역은 무관하다. 영역을 끄고(`video_shared_memory_mb` 0) 같은 증상이 나와도 무관하다.
