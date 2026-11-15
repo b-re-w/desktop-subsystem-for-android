@@ -19,6 +19,9 @@ import org.junit.Test
 /** An editor that keeps its text as an input method would see it change. */
 class FakeEditor : EditorConnection {
     var takesText = true
+    var inline = true
+    override val composesInline: Boolean
+        get() = inline
     var text = StringBuilder()
     var composing: IntRange? = null
     var cursor = 0
@@ -345,6 +348,44 @@ class TextInputTest {
         val editors = sent.map(::decode).filter { it.hasImeEditor() }.map { it.imeEditor }
         assertEquals(listOf(8, 8), editors.map { it.taskId })
         assertEquals(ImeInputKind.IME_INPUT_KIND_NONE, editors.last().kind)
+    }
+
+    @Test
+    fun fr6_a_composition_is_logged_once_as_it_begins_and_once_as_it_ends() {
+        compose("ㅎ")
+        compose("하")
+        compose("한")
+        commit("한")
+        compose("ㄱ")
+        compose("")
+        val info = log.lines.filter { it.startsWith("info:") }
+        assertEquals(
+            listOf(
+                "info: a composition began in task 7, inline in its editor",
+                "info: the composition in task 7 was committed after 3 updates",
+                "info: a composition began in task 7, inline in its editor",
+                "info: the composition in task 7 was removed after 1 updates",
+            ),
+            info,
+        )
+    }
+
+    @Test
+    fun fr6_a_composition_its_editor_cannot_show_asks_for_the_focus_once_and_goes_in_once_it_can() {
+        // The input method has only the app's fallback connection.
+        editor.inline = false
+        compose("ㅎ")
+        compose("하")
+        assertEquals(listOf(7), focusRequests)
+        assertEquals(1, log.lines.count { "no input connection of its own" in it })
+        // The framework starts input on the editor with its own connection.
+        editor.inline = true
+        input.editorChanged(searchField("org.example.notes"))
+        assertEquals("compose 하 1", editor.calls.last())
+        assertTrue(log.lines.any { "went into its editor" in it })
+        compose("한")
+        commit("한")
+        assertEquals("한", editor.text.toString())
     }
 
     @Test
