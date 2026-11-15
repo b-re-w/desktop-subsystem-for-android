@@ -1125,6 +1125,35 @@ impl Drop for GfxstreamAdapter {
     }
 }
 
+/// The IDs a renderer without a backend hands out; never 0, which the guest takes as none.
+static NEXT_PUID_WITHOUT_BACKEND: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(1);
+
+/// Reads the guest's 4-byte confirmation (100) on a process pipe and answers with a process
+/// ID, as gfxstream does, for a renderer that has no backend.
+fn answer_process_pipe_without_backend(connection: &mut dyn Connection) -> Result<(), String> {
+    let mut confirm = Vec::with_capacity(4);
+    while confirm.len() < 4 {
+        match connection.recv(None) {
+            Ok(bytes) if bytes.is_empty() => {
+                return Err("the guest closed its process pipe before confirming".into())
+            }
+            Ok(bytes) => confirm.extend_from_slice(&bytes),
+            Err(error) => return Err(format!("the guest's process pipe failed: {error}")),
+        }
+    }
+    let value = i32::from_le_bytes([confirm[0], confirm[1], confirm[2], confirm[3]]);
+    if value != 100 {
+        return Err(format!(
+            "the guest's process pipe began with {value}, not the confirmation 100"
+        ));
+    }
+    let puid = NEXT_PUID_WITHOUT_BACKEND.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    connection
+        .send(&puid.to_le_bytes())
+        .map_err(|error| format!("the process ID cannot be sent to the guest: {error}"))
+}
+
 impl GraphicsRenderer for GfxstreamAdapter {
     fn serve_stream(
         &self,
@@ -1159,8 +1188,12 @@ impl GraphicsRenderer for GfxstreamAdapter {
                 }
             }
         } else {
-            // When the backend DLL has not been deployed, the stream is acknowledged
-            // and maintained so that guest connections do not immediately crash.
+            // No backend (no Vulkan device, or no gfxstream library): a guest process still
+            // gets its ID at once, as the guest's driver waits for it with nothing else to go
+            // on. Its streams are then kept open and drained; nothing is drawn.
+            if kind == GraphicsStreamKind::ProcessPipe {
+                answer_process_pipe_without_backend(&mut *connection)?;
+            }
             while let Ok(n) = connection.recv(None) {
                 if n.is_empty() {
                     break;
@@ -1483,6 +1516,29 @@ mod tests {
         client_thread.join().expect("client thread join");
         assert_eq!(fake.process_created.load(Ordering::Relaxed), 1);
         assert_eq!(fake.process_destroyed.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn nfr5_a_renderer_without_a_device_still_gives_a_guest_process_its_id() {
+        let adapter = GfxstreamAdapter::without_backend("no Vulkan device".into());
+        assert!(!adapter.is_available());
+
+        let (mut server, mut client) = memory::pair();
+        let client_thread = std::thread::spawn(move || {
+            let mut conn = client.connect(Duration::from_secs(1)).expect("connect");
+            conn.send(&100i32.to_le_bytes()).expect("send confirm");
+            let puid_bytes = conn
+                .recv(Some(Duration::from_secs(1)))
+                .expect("the renderer answers with the process ID at once");
+            assert_eq!(puid_bytes.len(), 8);
+            assert_ne!(u64::from_le_bytes(puid_bytes.try_into().unwrap()), 0);
+            conn.close();
+        });
+
+        let conn = server.accept(Duration::from_secs(1)).expect("accept");
+        let result = adapter.serve_stream(GraphicsStreamKind::ProcessPipe, conn);
+        assert!(result.is_ok(), "{result:?}");
+        client_thread.join().expect("client thread join");
     }
 
     #[test]

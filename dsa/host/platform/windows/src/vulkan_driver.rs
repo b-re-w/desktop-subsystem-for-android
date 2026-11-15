@@ -170,6 +170,11 @@ pub struct Found {
     /// with Windows: `HKLM\SOFTWARE\Khronos\Vulkan\Drivers`, the display drivers' own entries,
     /// and the Compatibility Pack's package registration.
     pub elevated: bool,
+    /// Whether every driver manifest [`Found::driver_override`] names is also an enabled
+    /// driver under `HKLM\SOFTWARE\Khronos\Vulkan\Drivers`. An elevated process's loader lists
+    /// those drivers itself, so naming them still holds, as on a test machine that runs
+    /// elevated and registers its software Vulkan there.
+    pub override_registered: bool,
 }
 
 /// What an elevated process is told: why the environment does not reach the loader.
@@ -270,7 +275,7 @@ pub fn native_pin(request: &GpuRequest, devices: &[VulkanDevice]) -> Option<GpuR
 /// `request`.
 pub fn plan(setting: VulkanDriverSetting, found: &Found, request: &GpuRequest) -> DriverPlan {
     let mut plan = choose(setting, found, request);
-    if found.elevated {
+    if found.elevated && !found.override_registered {
         if let Some(drivers) = &found.driver_override {
             plan.reason = format!("{}; {}", elevated_note(drivers), plan.reason);
         }
@@ -313,8 +318,12 @@ fn choose(setting: VulkanDriverSetting, found: &Found, request: &GpuRequest) -> 
     };
 
     // An elevated process's loader ignores the drivers the environment names: what it lists
-    // is judged like any other list below.
-    if let (Some(drivers), false) = (&found.driver_override, found.elevated) {
+    // is judged like any other list below, unless those drivers are registered with Windows,
+    // when the loader lists them all the same.
+    if let (Some(drivers), false) = (
+        &found.driver_override,
+        found.elevated && !found.override_registered,
+    ) {
         let all: Vec<&VulkanDevice> = found.devices.iter().collect();
         let Some(device) = expected(&all, request) else {
             return none(format!(
@@ -963,6 +972,44 @@ mod probe {
         result
     }
 
+    /// Whether every manifest in `drivers` (separated by `;`) is an enabled driver under
+    /// `HKLM\SOFTWARE\Khronos\Vulkan\Drivers`: a DWORD named by the manifest's path, 0 when
+    /// enabled. The loader reads that key even when the process runs elevated.
+    fn registered_with_windows(drivers: &str) -> bool {
+        use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+        use windows_sys::Win32::System::Registry::{
+            RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD,
+        };
+        fn wide(text: &str) -> Vec<u16> {
+            text.encode_utf16().chain(std::iter::once(0)).collect()
+        }
+        let key = wide(r"SOFTWARE\Khronos\Vulkan\Drivers");
+        let paths: Vec<&str> = drivers
+            .split(';')
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+            .collect();
+        !paths.is_empty()
+            && paths.iter().all(|path| {
+                let name = wide(path);
+                let mut value = 1u32;
+                let mut size = 4u32;
+                // SAFETY: NUL-terminated names and a DWORD of the size given.
+                let code = unsafe {
+                    RegGetValueW(
+                        HKEY_LOCAL_MACHINE,
+                        key.as_ptr(),
+                        name.as_ptr(),
+                        RRF_RT_REG_DWORD,
+                        std::ptr::null_mut(),
+                        (&mut value as *mut u32).cast(),
+                        &mut size,
+                    )
+                };
+                code == ERROR_SUCCESS && value == 0
+            })
+    }
+
     /// Whether this process runs elevated as the Vulkan loader judges it: its token's
     /// integrity level is high (an administrator's elevated program) or above (SYSTEM). The
     /// Khronos loader checks exactly this (`TokenIntegrityLevel` against
@@ -1116,6 +1163,10 @@ mod probe {
             elevated: runs_elevated(),
             ..Found::default()
         };
+        found.override_registered = found
+            .driver_override
+            .as_deref()
+            .is_some_and(registered_with_windows);
         // Drivers the environment names already are all the loader lists; nothing is added.
         // An elevated process's loader ignores VK_ADD_DRIVER_FILES too, so the pack's Dozen
         // cannot be added for the look either: the loader lists only what it finds itself.
@@ -1514,6 +1565,27 @@ mod tests {
             "{}",
             refused.reason
         );
+    }
+
+    #[test]
+    fn pr3_an_elevated_process_takes_named_drivers_that_are_registered_with_windows() {
+        // The graphics test's elevated runner registers lavapipe under HKLM and names it: the
+        // loader lists it, so it is taken as named, with no elevation note.
+        let found = Found {
+            devices: vec![VulkanDevice {
+                name: "llvmpipe (LLVM 19.1.0, 256 bits)".into(),
+                device_type: DEVICE_TYPE_CPU,
+                ..VulkanDevice::default()
+            }],
+            driver_override: Some(r"C:\lavapipe\lvp_icd.json".into()),
+            elevated: true,
+            override_registered: true,
+            ..Found::default()
+        };
+        let plan = plan(VulkanDriverSetting::Auto, &found, &GpuRequest::Ranking);
+        assert_eq!(plan.outcome, DriverOutcome::Native);
+        assert!(plan.reason.contains("environment names"), "{}", plan.reason);
+        assert!(!plan.reason.contains("elevated"), "{}", plan.reason);
     }
 
     #[test]
