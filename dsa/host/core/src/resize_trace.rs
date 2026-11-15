@@ -88,7 +88,24 @@ pub struct ResizeTrace {
     summaries: HashMap<i32, (Instant, usize)>,
     /// The size each task was last given live, and when.
     live: HashMap<i32, ((u32, u32), Instant)>,
+    /// Each task's drag: when its last move line went out, how many were left out since,
+    /// and the last one left out.
+    moves: HashMap<i32, Moves>,
 }
+
+/// The move left out of a drag's trace, to log when the drag ends.
+type PendingMove = ((i32, i32), (u32, u32), Instant, Duration);
+
+/// A task window's drag, for [`ResizeTrace::moving`].
+#[derive(Debug)]
+struct Moves {
+    last: Instant,
+    skipped: usize,
+    pending: Option<PendingMove>,
+}
+
+/// The shortest gap between two move lines of one drag.
+pub const MOVE_INTERVAL: Duration = Duration::from_millis(250);
 
 impl ResizeTrace {
     /// A trace whose monotonic clock starts at `origin`. `detailed` turns on the per-stage
@@ -100,6 +117,7 @@ impl ResizeTrace {
             stages: HashMap::new(),
             summaries: HashMap::new(),
             live: HashMap::new(),
+            moves: HashMap::new(),
         }
     }
 
@@ -180,6 +198,85 @@ impl ResizeTrace {
         self.stages.retain(|(task, _), _| *task != task_id);
         self.summaries.remove(&task_id);
         self.live.remove(&task_id);
+        self.moves.remove(&task_id);
+    }
+
+    /// The line for `stage` of `task_id`'s window placed at `pos` with `size`, or `None` when
+    /// detail is off. Placements are events, so none is left out for being repeated.
+    #[allow(clippy::too_many_arguments)]
+    pub fn place(
+        &mut self,
+        task_id: i32,
+        stage: &'static str,
+        pos: (i32, i32),
+        size: (u32, u32),
+        detail: &str,
+        now: Instant,
+        wall: Duration,
+    ) -> Option<String> {
+        if !self.detailed {
+            return None;
+        }
+        let detail = with_pos(pos, detail);
+        Some(self.line(task_id, stage, size, &detail, now, wall))
+    }
+
+    /// The `win.move_loop` line for `task_id`'s window dragged to `pos` with `size`: the
+    /// first of a drag, then at most one every [`MOVE_INTERVAL`]. The last one left out comes
+    /// from [`ResizeTrace::move_ended`], so the log shows where the drag let go.
+    pub fn moving(
+        &mut self,
+        task_id: i32,
+        pos: (i32, i32),
+        size: (u32, u32),
+        now: Instant,
+        wall: Duration,
+    ) -> Option<String> {
+        if !self.detailed {
+            return None;
+        }
+        let skipped = match self.moves.get_mut(&task_id) {
+            Some(moves) if now.saturating_duration_since(moves.last) < MOVE_INTERVAL => {
+                moves.skipped += 1;
+                moves.pending = Some((pos, size, now, wall));
+                return None;
+            }
+            Some(moves) => moves.skipped,
+            None => 0,
+        };
+        self.moves.insert(
+            task_id,
+            Moves {
+                last: now,
+                skipped: 0,
+                pending: None,
+            },
+        );
+        Some(self.move_line(task_id, pos, size, skipped, now, wall))
+    }
+
+    /// `task_id`'s drag has ended: the line of the last move left out, if one was.
+    pub fn move_ended(&mut self, task_id: i32) -> Option<String> {
+        let moves = self.moves.remove(&task_id)?;
+        let (pos, size, now, wall) = moves.pending?;
+        Some(self.move_line(task_id, pos, size, moves.skipped, now, wall))
+    }
+
+    fn move_line(
+        &self,
+        task_id: i32,
+        pos: (i32, i32),
+        size: (u32, u32),
+        skipped: usize,
+        now: Instant,
+        wall: Duration,
+    ) -> String {
+        let mut detail = String::from("event=moving");
+        if skipped > 0 {
+            let _ = write!(detail, " skipped={skipped}");
+        }
+        let detail = with_pos(pos, &detail);
+        self.line(task_id, "win.move_loop", size, &detail, now, wall)
     }
 
     fn line(
@@ -203,6 +300,15 @@ impl ResizeTrace {
             line.push_str(detail);
         }
         line
+    }
+}
+
+/// `detail` after the position `pos=x,y`.
+fn with_pos((x, y): (i32, i32), detail: &str) -> String {
+    if detail.is_empty() {
+        format!("pos={x},{y}")
+    } else {
+        format!("pos={x},{y} {detail}")
     }
 }
 
@@ -342,5 +448,72 @@ mod tests {
             .unwrap();
         assert!(line.ends_with("waited=90.0 skipped=2"), "{line}");
         assert!(line.contains("size=530x400 stage=app.summary"), "{line}");
+    }
+
+    #[test]
+    fn fr4_a_placement_line_gives_position_and_size() {
+        let start = Instant::now();
+        let mut trace = ResizeTrace::new(true, start);
+        let line = trace
+            .place(
+                5,
+                "wm.set_pos",
+                (-8, 462),
+                (1436, 850),
+                "why=frame_arrived",
+                start,
+                ms(0),
+            )
+            .unwrap();
+        assert!(
+            line.starts_with("resize-trace task=5 size=1436x850 stage=wm.set_pos utc="),
+            "{line}"
+        );
+        assert!(line.ends_with(" pos=-8,462 why=frame_arrived"), "{line}");
+        // The same placement again is another event, and is logged again.
+        let again = trace
+            .place(5, "wm.set_pos", (-8, 462), (1436, 850), "", start, ms(0))
+            .unwrap();
+        assert!(again.ends_with(" pos=-8,462"), "{again}");
+        assert!(ResizeTrace::new(false, start)
+            .place(5, "wm.set_pos", (0, 0), (1, 1), "", start, ms(0))
+            .is_none());
+    }
+
+    #[test]
+    fn fr4_a_drag_logs_its_first_move_then_a_few_a_second_and_its_last() {
+        let start = Instant::now();
+        let mut trace = ResizeTrace::new(true, start);
+        let first = trace.moving(2, (10, 20), (800, 600), start, ms(0)).unwrap();
+        assert!(first.contains("stage=win.move_loop"), "{first}");
+        assert!(first.ends_with(" pos=10,20 event=moving"), "{first}");
+        assert!(trace
+            .moving(2, (11, 20), (800, 600), start + ms(100), ms(0))
+            .is_none());
+        assert!(trace
+            .moving(2, (12, 20), (800, 600), start + ms(200), ms(0))
+            .is_none());
+        let next = trace
+            .moving(2, (13, 20), (800, 600), start + ms(260), ms(0))
+            .unwrap();
+        assert!(
+            next.ends_with(" pos=13,20 event=moving skipped=2"),
+            "{next}"
+        );
+        assert!(trace
+            .moving(2, (1440, 0), (800, 600), start + ms(300), ms(0))
+            .is_none());
+        let last = trace.move_ended(2).unwrap();
+        assert!(
+            last.ends_with(" pos=1440,0 event=moving skipped=1"),
+            "{last}"
+        );
+        // A drag whose last move went out has nothing left to log.
+        assert_eq!(trace.move_ended(2), None);
+        trace.moving(2, (0, 0), (800, 600), start + ms(310), ms(0));
+        assert_eq!(trace.move_ended(2), None);
+        assert!(ResizeTrace::new(false, start)
+            .moving(2, (0, 0), (1, 1), start, ms(0))
+            .is_none());
     }
 }

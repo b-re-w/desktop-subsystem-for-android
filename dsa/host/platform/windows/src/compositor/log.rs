@@ -353,6 +353,60 @@ pub fn trace_summary(
     }
 }
 
+/// Logs `stage` of `task_id`'s window placed at `pos` with `size`, when the per-stage
+/// lines are on.
+pub fn trace_place(
+    logger: Option<&CompositorLogger>,
+    task_id: i32,
+    stage: &'static str,
+    pos: (i32, i32),
+    size: (u32, u32),
+    detail: &str,
+) {
+    let line = resize_trace()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .place(
+            task_id,
+            stage,
+            pos,
+            size,
+            detail,
+            Instant::now(),
+            resize_trace::wall_now(),
+        );
+    if let Some(line) = line {
+        note(logger, &line);
+    }
+}
+
+/// Logs `task_id`'s window dragged to `pos`, a few times a second at most.
+pub fn trace_moving(
+    logger: Option<&CompositorLogger>,
+    task_id: i32,
+    pos: (i32, i32),
+    size: (u32, u32),
+) {
+    let line = resize_trace()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .moving(task_id, pos, size, Instant::now(), resize_trace::wall_now());
+    if let Some(line) = line {
+        note(logger, &line);
+    }
+}
+
+/// `task_id`'s drag has ended: logs its last move, if that was left out.
+pub fn trace_move_ended(logger: Option<&CompositorLogger>, task_id: i32) {
+    let line = resize_trace()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .move_ended(task_id);
+    if let Some(line) = line {
+        note(logger, &line);
+    }
+}
+
 /// The task's window is gone: its trace state goes too.
 pub fn trace_forget(task_id: i32) {
     resize_trace()
