@@ -205,6 +205,15 @@ fn button_of(code: u32) -> Option<CaptionButton> {
     }
 }
 
+/// Whether a pointer move over the title bar part `code` goes on to Windows' default
+/// handling. Over the minimise and close buttons and the back arrow it does not, so Windows
+/// never hot-tracks a classic button there. Over the maximise button it does: Windows 11
+/// starts the Snap Layouts flyout from the default handling of that move, and the window has
+/// no classic caption left for it to draw over.
+fn move_goes_to_windows(code: u32) -> bool {
+    !matches!(code, HTMINBUTTON | HTCLOSE | HT_BACK)
+}
+
 /// The hit test code of what a point belongs to.
 fn code_of(hit: CaptionHit) -> u32 {
     match hit {
@@ -1088,11 +1097,10 @@ impl CaptionWindow {
                 if self.hover(button) | back_changed {
                     self.paint(hwnd, presenter);
                 }
-                // Over a button, Windows would draw its own; elsewhere it does the rest.
-                match button {
-                    Some(_) => Some(0),
-                    None if on_back => Some(0),
-                    None => Some(DefWindowProcW(hwnd, message, wparam, lparam)),
+                if move_goes_to_windows(wparam as u32) {
+                    Some(DefWindowProcW(hwnd, message, wparam, lparam))
+                } else {
+                    Some(0)
                 }
             }
             WM_NCMOUSELEAVE => {
@@ -1204,6 +1212,19 @@ impl CaptionWindow {
 mod tests {
     use super::*;
     use windows_sys::Win32::UI::WindowsAndMessaging::WS_OVERLAPPEDWINDOW;
+
+    #[test]
+    fn fr22_a_hover_on_the_maximise_button_reaches_windows_for_snap_layouts() {
+        assert!(move_goes_to_windows(HTMAXBUTTON), "the maximise button");
+        assert!(move_goes_to_windows(HTCAPTION), "the band");
+        assert!(!move_goes_to_windows(HTMINBUTTON), "the minimise button");
+        assert!(!move_goes_to_windows(HTCLOSE), "the close button");
+        assert!(!move_goes_to_windows(HT_BACK), "the back arrow");
+        assert_eq!(
+            code_of(CaptionHit::Button(CaptionButton::Maximize)),
+            HTMAXBUTTON
+        );
+    }
 
     #[test]
     fn fr22_a_hit_and_its_code_name_the_same_part_of_the_window() {
