@@ -20,7 +20,9 @@ use std::time::Duration;
 
 use dsa_host_core::compositor::{GraphicsRenderer, GraphicsStreamKind};
 use dsa_host_core::memory::RendererMemory;
-use dsa_host_core::renderer::{device_resets, Allocations, RendererOwners, RendererProcessMemory};
+use dsa_host_core::renderer::{
+    device_resets, Allocations, GuestDevice, RendererOwners, RendererProcessMemory,
+};
 use dsa_protocol::renderer::types::DeviceState;
 use dsa_transport::{Connection, FrameSender};
 
@@ -96,6 +98,62 @@ struct MemoryOwners {
 
 type GetMemoryOwnersFn = unsafe extern "C" fn(*mut MemoryOwners) -> c_int;
 
+/// One guest device's allocations, as `dsa_gfx_guest_device` lays it out.
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct GuestDeviceRaw {
+    bytes: [u64; 3],
+    color_buffer_import_bytes: u64,
+    grant_bytes: u64,
+    /// The renderer's number for the guest process; the name says more.
+    _process: u64,
+    count: [u32; 3],
+    color_buffer_imports: u32,
+    grants: u32,
+    pid: u32,
+    name: [u8; 56],
+}
+
+impl Default for GuestDeviceRaw {
+    fn default() -> Self {
+        GuestDeviceRaw {
+            bytes: [0; 3],
+            color_buffer_import_bytes: 0,
+            grant_bytes: 0,
+            _process: 0,
+            count: [0; 3],
+            color_buffer_imports: 0,
+            grants: 0,
+            pid: 0,
+            name: [0; 56],
+        }
+    }
+}
+
+type GetGuestDevicesFn = unsafe extern "C" fn(*mut GuestDeviceRaw, u32, *mut u32) -> c_int;
+type DescribeColorBuffersFn = unsafe extern "C" fn(*mut c_char, usize) -> usize;
+
+fn guest_device(raw: &GuestDeviceRaw) -> GuestDevice {
+    let end = raw
+        .name
+        .iter()
+        .position(|b| *b == 0)
+        .unwrap_or(raw.name.len());
+    GuestDevice {
+        name: String::from_utf8_lossy(&raw.name[..end]).into_owned(),
+        pid: raw.pid,
+        kb: raw.bytes.iter().sum::<u64>() / 1024,
+        color_buffers: Allocations {
+            kb: raw.color_buffer_import_bytes / 1024,
+            count: raw.color_buffer_imports,
+        },
+        grants: Allocations {
+            kb: raw.grant_bytes / 1024,
+            count: raw.grants,
+        },
+    }
+}
+
 fn renderer_owners(owners: &MemoryOwners) -> RendererOwners {
     let kinds = |bytes: &[u64; 3], counts: &[u32; 3]| {
         std::array::from_fn(|kind| Allocations {
@@ -112,6 +170,7 @@ fn renderer_owners(owners: &MemoryOwners) -> RendererOwners {
             .iter()
             .map(|bytes| bytes / 1024)
             .collect(),
+        largest_guest_devices: Vec::new(),
     }
 }
 
@@ -324,6 +383,12 @@ pub trait GfxBackend: Send + Sync {
         None
     }
 
+    /// Every live color buffer as tab-separated text, one moment's. `None` from a backend
+    /// that cannot say.
+    fn color_buffers(&self) -> Option<String> {
+        None
+    }
+
     /// Makes every Vulkan device of the renderer act lost, as a GPU reset leaves them, for a
     /// test. Returns whether the backend could.
     fn simulate_device_loss(&self) -> bool {
@@ -387,6 +452,8 @@ pub struct NativeBackend {
     fn_get_memory_stats: Option<GetMemoryStatsFn>,
     /// Absent from a backend built before the renderer said whose its memory is.
     fn_get_memory_owners: Option<GetMemoryOwnersFn>,
+    fn_get_guest_devices: Option<GetGuestDevicesFn>,
+    fn_describe_color_buffers: Option<DescribeColorBuffersFn>,
     /// Absent from a backend built before it survived a GPU reset.
     fn_simulate_device_loss: Option<unsafe extern "C" fn() -> c_int>,
     fn_device_generation: Option<unsafe extern "C" fn() -> u64>,
@@ -472,6 +539,10 @@ impl NativeBackend {
                 Self::get_symbol(handle, b"dsa_gfx_get_memory_stats\0").ok();
             let fn_get_memory_owners: Option<GetMemoryOwnersFn> =
                 Self::get_symbol(handle, b"dsa_gfx_get_memory_owners\0").ok();
+            let fn_get_guest_devices: Option<GetGuestDevicesFn> =
+                Self::get_symbol(handle, b"dsa_gfx_get_guest_devices\0").ok();
+            let fn_describe_color_buffers: Option<DescribeColorBuffersFn> =
+                Self::get_symbol(handle, b"dsa_gfx_describe_color_buffers\0").ok();
             let fn_simulate_device_loss =
                 Self::get_symbol(handle, b"dsa_gfx_simulate_device_loss\0").ok();
             let fn_device_generation =
@@ -526,6 +597,8 @@ impl NativeBackend {
                 fn_forget_display,
                 fn_get_memory_stats,
                 fn_get_memory_owners,
+                fn_get_guest_devices,
+                fn_describe_color_buffers,
                 fn_simulate_device_loss,
                 fn_device_generation,
                 fn_device_losses,
@@ -782,7 +855,40 @@ impl GfxBackend for NativeBackend {
         if unsafe { get_memory_owners(&mut owners) } != 0 {
             return None;
         }
-        Some(renderer_owners(&owners))
+        let mut read = renderer_owners(&owners);
+        if let Some(get_guest_devices) = self.fn_get_guest_devices {
+            let mut devices = [GuestDeviceRaw::default(); 4];
+            let mut total = 0u32;
+            // SAFETY: `devices` holds the 4 entries the call is told it may fill.
+            if unsafe { get_guest_devices(devices.as_mut_ptr(), 4, &mut total) } == 0 {
+                read.largest_guest_devices = devices
+                    .iter()
+                    .take(total.min(4) as usize)
+                    .map(guest_device)
+                    .collect();
+            }
+        }
+        Some(read)
+    }
+
+    fn color_buffers(&self) -> Option<String> {
+        let describe = self.fn_describe_color_buffers?;
+        // SAFETY: a null buffer of no bytes only asks for the size.
+        let mut needed = unsafe { describe(std::ptr::null_mut(), 0) };
+        // ColorBuffers may come between the two calls: room for a few more lines.
+        for _ in 0..3 {
+            if needed == 0 {
+                return None;
+            }
+            let mut text = vec![0u8; needed + 4096];
+            // SAFETY: `text` has the length the call is given.
+            needed = unsafe { describe(text.as_mut_ptr().cast(), text.len()) };
+            if needed <= text.len() {
+                text.truncate(needed.saturating_sub(1));
+                return Some(String::from_utf8_lossy(&text).into_owned());
+            }
+        }
+        None
     }
 
     fn simulate_device_loss(&self) -> bool {
@@ -1035,6 +1141,13 @@ impl GfxstreamAdapter {
         self.backend
             .as_ref()
             .and_then(|backend| backend.memory_owners())
+    }
+
+    /// Every live color buffer as text; `None` when it cannot say.
+    pub fn color_buffer_list(&self) -> Option<String> {
+        self.backend
+            .as_ref()
+            .and_then(|backend| backend.color_buffers())
     }
 
     /// Whether the graphics backend is available and ready to serve streams.
@@ -1686,5 +1799,28 @@ mod tests {
         // The layout matches the backend's `dsa_gfx_memory_owners`: ten 64-bit sizes, then
         // six counts, the device count and a spare.
         assert_eq!(std::mem::size_of::<MemoryOwners>(), 112);
+    }
+
+    #[test]
+    fn nfr1_a_guest_device_is_read_with_its_process_and_imports() {
+        let mut raw = GuestDeviceRaw {
+            bytes: [10 << 20, 20 << 20, 30 << 20],
+            color_buffer_import_bytes: 12 << 20,
+            grant_bytes: 18 << 20,
+            color_buffer_imports: 3,
+            grants: 5,
+            pid: 4321,
+            ..Default::default()
+        };
+        raw.name[..11].copy_from_slice(b"com.example");
+        let device = guest_device(&raw);
+        assert_eq!(device.name, "com.example");
+        assert_eq!(device.pid, 4321);
+        assert_eq!(device.kb, 60 * 1024);
+        assert_eq!(device.color_buffers.count, 3);
+        assert_eq!(device.grants.kb, 18 * 1024);
+        // The layout matches the backend's `dsa_gfx_guest_device`: six 64-bit values, six
+        // 32-bit values and a 56-byte name.
+        assert_eq!(std::mem::size_of::<GuestDeviceRaw>(), 128);
     }
 }
