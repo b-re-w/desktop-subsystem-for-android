@@ -400,6 +400,40 @@ pub struct SetCaptionTone {
     #[prost(enumeration = "CaptionTone", tag = "2")]
     pub tone: i32,
 }
+/// Window manager to window host: where the app has the overlay the window shows (`task_id`
+/// is the overlay's ID), and what the overlay takes. Sent with a window that opens in
+/// WINDOW_MODE_OVERLAY, right after its SetWindowMode, and whenever any of it changes, as when
+/// the app moves the overlay.
+///
+/// The window host places the windows of all of an app's overlays with one translation of
+/// Android's display onto the desktop, at the scale of TaskSize, so they keep the places their
+/// app gave them relative to each other. It first puts that translation where the overlay lies
+/// on its monitor as it lies on Android's display, a move the app makes moves the window by the
+/// same distance at that scale, and a move the user makes with the window's handle moves the
+/// translation, which the window host remembers for the app.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetOverlay {
+    #[prost(int32, tag = "1")]
+    pub task_id: i32,
+    /// The top left corner of the overlay's surface on Android's display, in its pixels.
+    #[prost(int32, tag = "2")]
+    pub left: i32,
+    #[prost(int32, tag = "3")]
+    pub top: i32,
+    /// The size of Android's display, in its pixels; 0 when unknown.
+    #[prost(uint32, tag = "4")]
+    pub display_width: u32,
+    #[prost(uint32, tag = "5")]
+    pub display_height: u32,
+    /// Whether the overlay may take the keyboard focus. The window takes it only then, and only
+    /// when the user clicks it; otherwise a click never activates the window.
+    #[prost(bool, tag = "6")]
+    pub focusable: bool,
+    /// Whether the overlay takes pointer input. The pointer passes through the window of one
+    /// that does not, to whatever is under it.
+    #[prost(bool, tag = "7")]
+    pub touchable: bool,
+}
 /// Window manager to window host: how the task's window is shown, as the app asks and the
 /// user's settings for the app say. Sent when the window opens unless the window is an
 /// ordinary resizable one, and on each change. The user's F11 turns full screen on or off
@@ -433,7 +467,7 @@ pub struct SetShownTask {
 pub struct Envelope {
     #[prost(
         oneof = "envelope::Body",
-        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 30, 31, 32, 33, 34, 35, 36, 60, 61, 62, 63, 64, 65"
+        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 30, 31, 32, 33, 34, 35, 36, 60, 61, 62, 63, 64, 65, 66"
     )]
     pub body: ::core::option::Option<envelope::Body>,
 }
@@ -505,6 +539,8 @@ pub mod envelope {
         MediaButtonPressed(super::MediaButtonPressed),
         #[prost(message, tag = "65")]
         SetShownTask(super::SetShownTask),
+        #[prost(message, tag = "66")]
+        SetOverlay(super::SetOverlay),
     }
 }
 /// The protocol version. CURRENT goes up when the meaning of existing messages changes.
@@ -784,6 +820,10 @@ pub enum WindowMode {
     Fullscreen = 1,
     /// The app went into picture-in-picture: a small window that stays above the others.
     PictureInPicture = 2,
+    /// The window shows an app overlay window (floating lyrics, a chat head), not a task: it has
+    /// no border, no title bar and no close button, stays above the others, shows the desktop
+    /// through what the app left clear, is not in the taskbar, and goes where SetOverlay says.
+    Overlay = 3,
 }
 impl WindowMode {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -795,6 +835,7 @@ impl WindowMode {
             Self::Normal => "WINDOW_MODE_NORMAL",
             Self::Fullscreen => "WINDOW_MODE_FULLSCREEN",
             Self::PictureInPicture => "WINDOW_MODE_PICTURE_IN_PICTURE",
+            Self::Overlay => "WINDOW_MODE_OVERLAY",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -803,6 +844,7 @@ impl WindowMode {
             "WINDOW_MODE_NORMAL" => Some(Self::Normal),
             "WINDOW_MODE_FULLSCREEN" => Some(Self::Fullscreen),
             "WINDOW_MODE_PICTURE_IN_PICTURE" => Some(Self::PictureInPicture),
+            "WINDOW_MODE_OVERLAY" => Some(Self::Overlay),
             _ => None,
         }
     }

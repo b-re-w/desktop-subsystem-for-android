@@ -62,7 +62,7 @@ pub struct Rect {
 }
 /// Guest to host, from the agent: an app task the host shows as one window appeared, or
 /// something the window shows about it changed. Every field is sent each time, so the host
-/// keeps only the latest.
+/// keeps only the latest. An app overlay window is reported with it too (`overlay`).
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TaskUpdated {
     /// The guest's task ID, unique while the task lives.
@@ -150,6 +150,51 @@ pub struct TaskUpdated {
     /// kind of request says.
     #[prost(enumeration = "FullScreenRequest", tag = "27")]
     pub fullscreen_request: i32,
+    /// Set when this is not an app task but an app overlay window (see OverlayWindow). The
+    /// other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+    /// of its surface on the guest's display, `package_name` the app that added it, `label` its
+    /// window title, `density_dpi` the display's density, which the overlay is drawn at, and
+    /// `max_width` by `max_height` the display's size. The rest are left at their defaults.
+    #[prost(message, optional, tag = "28")]
+    pub overlay: ::core::option::Option<OverlayWindow>,
+}
+/// An app overlay window: a window an app adds over other apps with the "display over other
+/// apps" permission (SYSTEM_ALERT_WINDOW), such as floating lyrics, a chat head or a screen
+/// filter. It is not part of any task, so the agent reports it as a window of its own, in a
+/// TaskUpdated with `overlay` set, and the host shows it in a borderless window of its own that
+/// stays above the others. The hwcomposer sends its frames as it sends a task's (TaskFrames),
+/// and TaskRemoved ends it: when its app removes or hides it, when the app's process dies.
+///
+/// An overlay's ID is in the same space as task IDs and never equals one: the agent numbers
+/// overlays from 0x40000000 (1073741824), and Android's task IDs stay far below. One window
+/// keeps its ID while it lives.
+///
+/// The host sends an overlay's window PointerEvent, KeyEvent and the text input messages with
+/// the overlay's ID as `task_id`, the positions relative to the top left corner of `bounds`.
+/// It never sends CloseTask, ResizeTask, SetTaskDensity, SetTaskCaption or SetTaskFullScreen
+/// for one, and the agent ignores them: how an overlay moves, changes size and closes is its
+/// app's.
+///
+/// An overlay whose `bounds` cover the whole display (a screen filter, a dimmer) is reported
+/// the same way. The host opens no window for it, because that window would cover the user's
+/// desktop, and the hwcomposer composes it over every app task's frames instead, as it covers
+/// every app on a phone's screen.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct OverlayWindow {
+    /// The window's type, as WindowManager.LayoutParams names it: TYPE_APPLICATION_OVERLAY
+    /// (2038), or one of the older TYPE_PHONE (2002), TYPE_SYSTEM_ALERT (2003),
+    /// TYPE_SYSTEM_OVERLAY (2006), TYPE_PRIORITY_PHONE (2007) and TYPE_SYSTEM_ERROR (2010) that
+    /// an app built for Android 7.1 or older may still add.
+    #[prost(int32, tag = "1")]
+    pub window_type: i32,
+    /// Whether the window may take the keyboard focus (its app did not set FLAG_NOT_FOCUSABLE).
+    /// The host's window takes the focus only then, and only when the user clicks it.
+    #[prost(bool, tag = "2")]
+    pub focusable: bool,
+    /// Whether the window takes pointer input (its app did not set FLAG_NOT_TOUCHABLE). The
+    /// pointer passes through the host's window of one that does not.
+    #[prost(bool, tag = "3")]
+    pub touchable: bool,
 }
 /// Guest to host, from the agent: the task ended; the host closes its window.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
