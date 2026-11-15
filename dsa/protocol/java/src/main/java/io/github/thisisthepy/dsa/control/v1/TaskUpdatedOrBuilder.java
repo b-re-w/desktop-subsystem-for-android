@@ -337,4 +337,18 @@ public interface TaskUpdatedOrBuilder extends
    * @return The overlay.
    */
   io.github.thisisthepy.dsa.control.v1.OverlayWindow getOverlay();
+
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   * @return The belowTitleBar.
+   */
+  boolean getBelowTitleBar();
 }
