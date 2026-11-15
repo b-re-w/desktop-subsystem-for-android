@@ -245,6 +245,9 @@ class Agent(
     appVolumes: AppVolumeStore = AppVolumeStore.memory(),
     /** Trims the apps the user cannot see and compiles the apps the user opens. */
     private val appMemory: AppMemoryPort = AppMemoryPort.NONE,
+    /** The default display's windows, among them the apps' overlay windows the host shows. */
+    private val overlayWindows: io.github.thisisthepy.dsa.agent.overlays.OverlaySource =
+        io.github.thisisthepy.dsa.agent.overlays.OverlaySource.NONE,
 ) {
     private val network = NetworkSetup(wifi, log, privateDns)
     private val channel = ChannelClient(
@@ -257,6 +260,19 @@ class Agent(
     )
     private val reporter = TaskReporter(ownPackage, apps) { frame -> channel.send(frame) }
     private val requests = HostRequests(ownPackage, actions, reporter::isReported)
+
+    /**
+     * The apps' overlay windows (floating lyrics, a chat head), which are in no task: the host
+     * shows each in a window of its own, and its input comes with the overlay's ID.
+     */
+    private val overlays = io.github.thisisthepy.dsa.agent.overlays.OverlayReporter(ownPackage, apps) { frame ->
+        channel.send(frame)
+    }
+
+    /** The default display's windows as SurfaceFlinger last listed them, until the agent's thread takes them. */
+    private val listedWindows =
+        java.util.concurrent.atomic.AtomicReference<List<io.github.thisisthepy.dsa.agent.overlays.GuestWindow>?>(null)
+    private var lastWindows: List<io.github.thisisthepy.dsa.agent.overlays.GuestWindow> = emptyList()
 
     /** Where the host was last told each task is, for the input thread to read. */
     @Volatile
@@ -301,8 +317,10 @@ class Agent(
     }
     private val keys = KeyInput(
         injector,
-        reporter::isReported,
-        reporter::reportedFocused,
+        { id -> reporter.isReported(id) || overlays.isReported(id) },
+        // An overlay is never given the focus as a task is: the window manager gives a
+        // focusable overlay the focus itself, and a key for it goes where the focus is.
+        { id -> reporter.reportedFocused(id) || overlays.isReported(id) },
         actions::focusTask,
         log,
         // A task the agent has not read yet counts as on its first screen, so a key never
@@ -314,10 +332,10 @@ class Agent(
         editor = editor,
         injector = injector,
         keys = textKeys,
-        isReported = reporter::isReported,
-        isFocused = reporter::reportedFocused,
+        isReported = { id -> reporter.isReported(id) || overlays.isReported(id) },
+        isFocused = { id -> reporter.reportedFocused(id) || overlays.isReported(id) },
         focus = actions::focusTask,
-        bounds = reporter::reportedBounds,
+        bounds = { id -> reporter.reportedBounds(id) ?: overlays.bounds[id] },
         focusedTask = reporter::focusedTask,
         send = { frame -> channel.send(frame) },
         log = log,
@@ -588,9 +606,66 @@ class Agent(
             listenToCrashes()
             listenToExclusion()
             listenToUnhandledKeys()
+            listenToOverlays()
             channel.start()
             requestRefresh()
         }
+    }
+
+    /**
+     * Follows the default display's windows for the apps' overlay windows. SurfaceFlinger
+     * calls on a binder thread and waits for the call to return, so the list is only kept
+     * there, the newest in the place of any the agent's thread has not taken yet.
+     */
+    private fun listenToOverlays() {
+        try {
+            val listening = overlayWindows.listen { windows ->
+                if (listedWindows.getAndSet(windows) == null) scheduler.post(::takeListedWindows)
+            }
+            if (listening) log.info("following the display's windows for app overlay windows")
+        } catch (e: Exception) {
+            log.warn("could not follow the display's windows; app overlay windows are not shown on the host", e)
+        }
+    }
+
+    private fun takeListedWindows() {
+        lastWindows = listedWindows.getAndSet(null) ?: return
+        reportOverlays()
+    }
+
+    /** Tells the host of the app overlay windows as last listed, and where their input goes. */
+    private fun reportOverlays() {
+        if (!channel.connected) return
+        val before = overlays.reported
+        try {
+            overlays.update(lastWindows, arranger.display, overlayWindows.density())
+        } catch (e: Exception) {
+            log.warn("reporting the app overlay windows failed", e)
+            return
+        }
+        val now = overlays.reported
+        for (overlayId in now - before) log.info("app overlay window $overlayId is shown on the host")
+        for (overlayId in before - now) log.info("app overlay window $overlayId is gone")
+        syncInputBounds()
+        // An app that only has an overlay keeps its processes like one with a task.
+        if (now != before) requestRefresh()
+    }
+
+    /**
+     * Where the host was told each task and each app overlay window is, for the input thread,
+     * and which of them key and text input may still name.
+     */
+    private fun syncInputBounds() {
+        val reported = reporter.reported
+        val told = reported.mapNotNull { taskId -> reporter.reportedBounds(taskId)?.let { taskId to it } }.toMap() +
+            overlays.bounds
+        val known = reported + overlays.reported
+        if (told != taskBounds) {
+            taskBounds = told
+            inputScheduler.post { pointer.retainTasks(known) }
+        }
+        keys.retainTasks(known)
+        text.retainTasks(known)
     }
 
     private fun listenToApps() {
@@ -752,6 +827,7 @@ class Agent(
         // The daemon tells the host from this that the guest's requests have someone to reach.
         channel.send(Envelope.newBuilder().setAgentConnected(AgentConnected.getDefaultInstance()).build().toByteArray())
         reporter.resend()
+        overlays.resend()
         settingsSync.connected()
         deviceNameSync.connected()
         lifecycle.connected()
@@ -1217,16 +1293,19 @@ class Agent(
             placedTasks.filter { it.transparentCaption }.map { it.taskId }.toSet(),
             awaiting = titled.associate { it.taskId to it.densityDpi },
         )
-        if (told != taskBounds) {
-            taskBounds = told
-            inputScheduler.post { pointer.retainTasks(reported) }
+        // The overlays go with every report of the tasks: after a new connection, and with the
+        // display's size once it is known.
+        try {
+            overlays.update(lastWindows, arranger.display, overlayWindows.density())
+        } catch (e: Exception) {
+            log.warn("reporting the app overlay windows failed", e)
         }
-        keys.retainTasks(reporter.reported)
-        text.retainTasks(reporter.reported)
+        syncInputBounds()
         val packages = reported.mapNotNull(reporter::reportedPackage).toSet()
-        closedApps.tasks(packages)
+        // An app whose overlay is on the screen is open, though it has no task.
+        closedApps.tasks(packages + overlays.packages)
         // Every task's app keeps its processes, a task the host was not told of included.
-        cachedProcesses?.tasks(packages + running.mapNotNull { it.packageName })
+        cachedProcesses?.tasks(packages + overlays.packages + running.mapNotNull { it.packageName })
         appSound.tasks(packages, reporter.focusedTask()?.let(reporter::reportedPackage))
         hiddenApps.tasks(reported.mapNotNull { taskId -> reporter.reportedPackage(taskId)?.let { taskId to it } }.toMap())
         usedAppsCompile.tasks(packages)
