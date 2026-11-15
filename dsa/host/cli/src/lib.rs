@@ -23,7 +23,8 @@
 //!     run-as-arm <package> on|off [--erase-data] | root <package> off|ask|remember]
 //! dsa background [list | open <package> | stop <package>]
 //! dsa app-window [<package> [--fixed-size on|off] [--start-size <width>x<height>|auto]
-//!     [--dpi-scaling app|system|system-forced|auto] | <package> reset]
+//!     [--dpi-scaling app|system|system-forced|auto] [--below-title-bar on|off]
+//!     | <package> reset]
 //! dsa logcat [-d] [-b <buffers>] [<tag>[:<priority>] ...]
 //! dsa logs collect -o <file.zip>
 //! dsa arm-translation [status | install <folder> | fetch google [--yes] | remove | use-default]
@@ -73,11 +74,17 @@
 //! video player's full screen button): on the whole screen, inside its window, or as the
 //! `app-fullscreen` setting for every app says. `--immersive` says the same for the app hiding
 //! both its bars alone (`app-immersive`).
+//! `--below-title-bar on|off` starts the app below the title bar: its window gives up the
+//! unified title bar, the app's content begins under the band and the band takes the app's own
+//! bar color. It is for an app whose top bar is squeezed or hidden under the title bar, is off
+//! by default, and counts from the next time a window of the app opens.
 //! `reset` puts the app back to the defaults. With `--json` it prints `apps`, each with `package`, `fixed_size`, `start_size`
 //! (null for none, else `[width, height]`), `dpi_scaling`, `default_dpi_scaling` (what `auto`
-//! is for that app: `system` or `app`), `fullscreen` and `immersive`,
+//! is for that app: `system` or `app`), `fullscreen`, `immersive` and `below_title_bar`,
 //! `system_forced_available`, whether `system-forced` does what it says yet,
-//! `system_scaled_by_default`, the packages whose `auto` is `system`, and `defaults`,
+//! `system_scaled_by_default`, the packages whose `auto` is `system`,
+//! `below_title_bar_by_default`, the packages that start below the title bar unless the user
+//! says otherwise (none for now), and `defaults`,
 //! the `fullscreen` and `immersive` choices every app without its own follows.
 //!
 //! It acts on the Android of the user who runs it: the service learns that user from the
@@ -425,7 +432,8 @@ use dsa_host_core::apk::{InstallKind, InstallOutcome, InstalledPackage};
 use dsa_host_core::apk_bundle::{Bundle, Device, InstallFile, Refusal, Selection};
 use dsa_host_core::apk_info::{signing, ApkInfo, Icon, Layer, Vector};
 use dsa_host_core::app_windows::{
-    AppWindowSettings, DpiScaling, FullScreenDefaults, FullScreenPlace, SYSTEM_SCALED_BY_DEFAULT,
+    starts_below_title_bar, AppWindowSettings, DpiScaling, FullScreenDefaults, FullScreenPlace,
+    BELOW_TITLE_BAR_BY_DEFAULT, SYSTEM_SCALED_BY_DEFAULT,
 };
 use dsa_host_core::arm_translation::{self, google};
 use dsa_host_core::background::{BackgroundApp, BackgroundCommand, MediaSession, Playback};
@@ -459,7 +467,8 @@ pub const USAGE: &str = "usage: dsa <status [--no-start] | start | stop | freeze
      shortcut <package> <id> | desktop-shortcut <package>] | \
      background [list | open <package> | stop <package>] | \
      app-window [<package> [--fixed-size on|off] [--start-size <w>x<h>|auto] \
-     [--dpi-scaling app|system|system-forced|auto] | <package> reset] | \
+     [--dpi-scaling app|system|system-forced|auto] [--below-title-bar on|off] | \
+     <package> reset] | \
      logcat [-d] [-b <buffers>] [<tag>[:<priority>] ...] | logs collect -o <file.zip> | \
      arm-translation [status | install <folder> | fetch google [--yes] | remove | use-default] | \
      files [open] | gapps [status | install [--progress] | remove] | \
@@ -581,8 +590,8 @@ pub enum AppWindowAction {
     Show(String),
     /// Change one app's: whether its windows keep their size, the size they open at
     /// (`Some(None)` for the size Android gives the task), and how it follows its window to a
-    /// monitor of another scale, and where it shows a clear full screen request and its bars
-    /// hidden alone.
+    /// monitor of another scale, where it shows a clear full screen request and its bars
+    /// hidden alone, and whether it starts below the title bar.
     Set {
         package: String,
         fixed_size: Option<bool>,
@@ -590,6 +599,7 @@ pub enum AppWindowAction {
         dpi_scaling: Option<DpiScaling>,
         fullscreen: Option<FullScreenPlace>,
         immersive: Option<FullScreenPlace>,
+        below_title_bar: Option<bool>,
     },
     /// Put one app's back to the defaults.
     Reset(String),
@@ -1025,7 +1035,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                 _ => return Err("dsa app-window reset follows the app's package".into()),
             },
             flag @ ("--fixed-size" | "--start-size" | "--dpi-scaling" | "--fullscreen"
-            | "--immersive")
+            | "--immersive" | "--below-title-bar")
                 if command == Some(Command::AppWindow) =>
             {
                 let value = args.next().ok_or_else(|| format!("{flag} needs a value"))?;
@@ -1036,8 +1046,11 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                     mut dpi_scaling,
                     mut fullscreen,
                     mut immersive,
+                    mut below_title_bar,
                 ) = match app_window.take() {
-                    Some(AppWindowAction::Show(package)) => (package, None, None, None, None, None),
+                    Some(AppWindowAction::Show(package)) => {
+                        (package, None, None, None, None, None, None)
+                    }
                     Some(AppWindowAction::Set {
                         package,
                         fixed_size,
@@ -1045,6 +1058,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                         dpi_scaling,
                         fullscreen,
                         immersive,
+                        below_title_bar,
                     }) => (
                         package,
                         fixed_size,
@@ -1052,17 +1066,18 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                         dpi_scaling,
                         fullscreen,
                         immersive,
+                        below_title_bar,
                     ),
                     _ => return Err(format!("dsa app-window {flag} follows the app's package")),
                 };
+                let on_or_off = |value: &str| match value.to_ascii_lowercase().as_str() {
+                    "on" | "true" | "yes" | "1" => Ok(true),
+                    "off" | "false" | "no" | "0" => Ok(false),
+                    _ => Err(format!("{flag} is on or off, not {value:?}")),
+                };
                 match flag {
-                    "--fixed-size" => {
-                        fixed_size = Some(match value.to_ascii_lowercase().as_str() {
-                            "on" | "true" | "yes" | "1" => true,
-                            "off" | "false" | "no" | "0" => false,
-                            _ => return Err(format!("--fixed-size is on or off, not {value:?}")),
-                        });
-                    }
+                    "--fixed-size" => fixed_size = Some(on_or_off(value)?),
+                    "--below-title-bar" => below_title_bar = Some(on_or_off(value)?),
                     "--start-size" => start_size = Some(parse_start_size(value)?),
                     "--dpi-scaling" => dpi_scaling = Some(parse_dpi_scaling(value)?),
                     "--fullscreen" => fullscreen = Some(parse_full_screen_place(flag, value)?),
@@ -1075,6 +1090,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                     dpi_scaling,
                     fullscreen,
                     immersive,
+                    below_title_bar,
                 });
             }
             "apps" if command.is_none() => command = Some(Command::Apps),
@@ -2270,6 +2286,7 @@ fn app_window_json(app: &AppWindowSettings) -> Value {
         "default_dpi_scaling": DpiScaling::default_for(&app.package_name).name(),
         "fullscreen": app.fullscreen.name(),
         "immersive": app.immersive.name(),
+        "below_title_bar": starts_below_title_bar(&app.package_name, Some(app)),
     })
 }
 
@@ -2334,6 +2351,10 @@ fn describe_app_window(app: &AppWindowSettings) -> String {
             describe_full_screen_place(app.immersive)
         ));
     }
+    // The unified title bar is the default and says nothing.
+    if starts_below_title_bar(&app.package_name, Some(app)) {
+        line.push_str(", starts below the title bar");
+    }
     line
 }
 
@@ -2368,6 +2389,7 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
             dpi_scaling,
             fullscreen,
             immersive,
+            below_title_bar,
         } => {
             let current = apps
                 .into_iter()
@@ -2379,6 +2401,7 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
                 dpi_scaling: dpi_scaling.unwrap_or(current.dpi_scaling),
                 fullscreen: fullscreen.unwrap_or(current.fullscreen),
                 immersive: immersive.unwrap_or(current.immersive),
+                below_title_bar: below_title_bar.or(current.below_title_bar),
                 ..current
             };
             let now = client
@@ -2397,6 +2420,8 @@ fn app_window(invocation: &Invocation, mut client: HostApiClient) -> Result<Stri
             // The apps whose auto is system, so a settings app can say so of an app that has
             // no entry here.
             "system_scaled_by_default": SYSTEM_SCALED_BY_DEFAULT,
+            // The apps that start below the title bar without the user's saying so.
+            "below_title_bar_by_default": BELOW_TITLE_BAR_BY_DEFAULT,
             "defaults": {
                 "fullscreen": every_app.fullscreen.name(),
                 "immersive": every_app.immersive.name(),

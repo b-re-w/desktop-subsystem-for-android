@@ -237,6 +237,36 @@ fn fr30_window_settings_for_an_app_are_kept_and_reset_through_the_local_api() {
 }
 
 #[test]
+fn fr30_the_below_title_bar_switch_crosses_the_local_api() {
+    let android = Arc::new(Following::default());
+    let (mut connector, _service) = service(Arc::clone(&android));
+    let mut client = HostApiClient::connect(&mut connector, "test", WAIT).unwrap();
+    let player = AppWindowSettings {
+        package_name: "com.example.player".into(),
+        below_title_bar: Some(true),
+        ..AppWindowSettings::default()
+    };
+    // Turned on, the switch alone is an entry, stored and read back.
+    assert_eq!(
+        client.set_app_window_settings(&player).unwrap(),
+        vec![player.clone()]
+    );
+    assert_eq!(client.app_window_settings().unwrap(), vec![player.clone()]);
+    assert_eq!(
+        dsa_host_core::app_windows::below_title_bar_packages(
+            &client.app_window_settings().unwrap()
+        ),
+        vec!["com.example.player".to_string()]
+    );
+    // Turned off, the app is back at the defaults and its entry is gone.
+    let off = AppWindowSettings {
+        below_title_bar: None,
+        ..player
+    };
+    assert!(client.set_app_window_settings(&off).unwrap().is_empty());
+}
+
+#[test]
 fn fr30_an_apps_full_screen_choice_and_the_default_cross_the_local_api() {
     use dsa_host_core::app_windows::{FullScreenDefaults, FullScreenPlace};
     let android = Arc::new(Following::default());

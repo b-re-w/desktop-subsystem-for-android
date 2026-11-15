@@ -154,13 +154,19 @@ const WM_APP_FRAME_READY: u32 = WM_APP + 4;
 /// bar changes ([`pack_band_sample`]).
 const WM_APP_BAND_COLOUR: u32 = WM_APP + 5;
 
-/// A band sample as the parameters of [`WM_APP_BAND_COLOUR`]: the fill color in `wparam`, and
-/// in `lparam` bit 0 set when there is a fill, bit 1 set when the band's luminance was read,
-/// bit 2 set when its darkest and lightest samples were, the luminance itself from bit 16,
-/// the darkest sample's from bit 32 and the lightest's from bit 48 (each at most 1000).
+/// A band sample as the parameters of [`WM_APP_BAND_COLOUR`]: the fill color in the low half
+/// of `wparam` and the band's own color in its high half, and in `lparam` bit 0 set when
+/// there is a fill, bit 1 set when the band's luminance was read, bit 2 set when its darkest
+/// and lightest samples were, bit 3 set when the band is one color, the luminance itself
+/// from bit 16, the darkest sample's from bit 32 and the lightest's from bit 48 (each at most
+/// 1000).
 fn pack_band_sample(sample: BandSample) -> (WPARAM, LPARAM) {
-    let wparam = sample.fill.unwrap_or(0) as WPARAM;
+    let colors = u64::from(sample.fill.unwrap_or(0)) | u64::from(sample.band.unwrap_or(0)) << 32;
+    let wparam = colors as WPARAM;
     let mut lparam = LPARAM::from(sample.fill.is_some());
+    if sample.band.is_some() {
+        lparam |= 8;
+    }
     if let Some(luminance) = sample.luminance {
         lparam |= 2 | (luminance.min(1000) as LPARAM) << 16;
     }
@@ -177,6 +183,7 @@ fn unpack_band_sample(wparam: WPARAM, lparam: LPARAM) -> BandSample {
         fill: (lparam & 1 != 0).then_some(wparam as u32),
         luminance: (lparam & 2 != 0).then_some(field(16)),
         range: (lparam & 4 != 0).then_some((field(32), field(48))),
+        band: (lparam & 8 != 0).then_some((wparam as u64 >> 32) as u32),
     }
 }
 
@@ -2107,6 +2114,7 @@ impl Ui {
                         task_id,
                         app_drawn,
                         interactive,
+                        below,
                     } => {
                         if let Some(hwnd) = self.open.get(&task_id) {
                             if let Some(data) = window_data(*hwnd) {
@@ -2115,6 +2123,7 @@ impl Ui {
                                     *hwnd,
                                     app_drawn,
                                     interactive,
+                                    below,
                                     presenter.as_deref(),
                                 );
                             }
@@ -2615,22 +2624,39 @@ mod tests {
                 fill: Some(0xFFFF_FFFF),
                 luminance: None,
                 range: None,
+                band: None,
             },
             BandSample {
                 fill: None,
                 luminance: Some(0),
                 range: Some((0, 0)),
+                band: None,
             },
             BandSample {
                 fill: Some(0xFF00_0000),
                 luminance: Some(1000),
                 range: Some((1000, 1000)),
+                band: None,
             },
             // A light grey bar with a darker part: what turns an app's light glyphs dark.
             BandSample {
                 fill: None,
                 luminance: Some(745),
                 range: Some((402, 913)),
+                band: None,
+            },
+            // A bar of one color, which the band of an app below the title bar takes.
+            BandSample {
+                fill: None,
+                luminance: Some(745),
+                range: Some((745, 745)),
+                band: Some(0xFFE0_E0E0),
+            },
+            BandSample {
+                fill: Some(0xFF3F_51B5),
+                luminance: Some(0),
+                range: Some((0, 0)),
+                band: Some(0xFF00_0000),
             },
         ] {
             let (wparam, lparam) = pack_band_sample(sample);

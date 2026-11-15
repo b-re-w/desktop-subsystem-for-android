@@ -81,6 +81,10 @@ pub struct Task {
     /// Set when this is not an app task but an app overlay window, which the guest reports the
     /// same way ([`OverlayWindow`]).
     pub overlay: Option<OverlayWindow>,
+    /// Whether the task's app starts below the title bar, as the user chose for the app when
+    /// the task started: the guest gives it no top inset to handle, and the window paints
+    /// its band itself.
+    pub below_title_bar: bool,
 }
 
 /// An app overlay window: a window an app adds over other apps with Android's "display over
@@ -403,6 +407,10 @@ pub enum TaskRequest {
     /// it at the monitor's density and size, so the app is never relaunched for a new density
     /// right after it opens. Sent before a request that starts a task; the latest counts.
     PlaceLaunches(LaunchPlacement),
+    /// The apps whose tasks start below the title bar, as the user chose for each: the guest
+    /// gives a task of one of them no status bar inset and a caption inset the framework
+    /// consumes for the app. The list replaces the one before, and counts when a task starts.
+    CaptionCompat { below_title_bar: Vec<String> },
     /// The user closed the task's window; the agent ends the task.
     Close { task_id: i32 },
     /// Start the app's launcher activity as a new task in its own window.
@@ -482,6 +490,10 @@ impl TaskRequest {
             TaskRequest::PlaceLaunches(placement) => format!(
                 "start new tasks at {} dpi within {}x{}",
                 placement.density_dpi, placement.width, placement.height
+            ),
+            TaskRequest::CaptionCompat { below_title_bar } => format!(
+                "start the tasks of {} apps below the title bar",
+                below_title_bar.len()
             ),
             TaskRequest::Launch { package_name } => format!("launch {package_name}"),
             TaskRequest::NewWindow { package_name } => {
@@ -605,6 +617,7 @@ pub fn coalesce(requests: Vec<TaskRequest>) -> Vec<TaskRequest> {
                     .take_while(|between| !matches!(between, TaskRequest::PlaceLaunches(_)))
                     .any(starts_a_task),
                 (TaskRequest::TasksShown { .. }, TaskRequest::TasksShown { .. }) => true,
+                (TaskRequest::CaptionCompat { .. }, TaskRequest::CaptionCompat { .. }) => true,
                 _ => false,
             })
     };

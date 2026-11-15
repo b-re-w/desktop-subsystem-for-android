@@ -2589,6 +2589,48 @@ fn nfr2_the_guest_is_told_which_task_windows_are_shown_when_it_connects_and_on_e
     assert_eq!(next_tasks_shown(&mut daemon), tasks_shown(&[]));
 }
 
+/// The next body the guest is sent that says which apps start below the title bar.
+fn next_caption_compat(daemon: &mut Box<dyn Connection>) -> Body {
+    loop {
+        let body = next_body(daemon);
+        if matches!(body, Body::CaptionCompat(_)) {
+            return body;
+        }
+    }
+}
+
+#[test]
+fn fr22_the_guest_is_told_which_apps_start_below_the_title_bar_when_it_connects_and_on_each_change()
+{
+    let compat = |packages: &[&str]| {
+        Body::CaptionCompat(dsa_protocol::control::CaptionCompat {
+            below_title_bar: packages.iter().map(|package| package.to_string()).collect(),
+        })
+    };
+    let launcher = FakeLauncher::default();
+    let (session, mut connector) = session_with(launcher.clone(), WAIT);
+    session.windows_shown(true).unwrap();
+    // Said before the guest runs: told as soon as it connects, so the first task that starts
+    // already has its insets settled.
+    session
+        .request(TaskRequest::CaptionCompat {
+            below_title_bar: vec!["com.example.player".into()],
+        })
+        .unwrap();
+    session.start();
+    let mut daemon = connect_daemon(&mut connector, &launcher);
+    assert_eq!(
+        next_caption_compat(&mut daemon),
+        compat(&["com.example.player"])
+    );
+    // The same list again is not news; an emptied one is.
+    session
+        .caption_compat(vec!["com.example.player".into()])
+        .unwrap();
+    session.caption_compat(Vec::new()).unwrap();
+    assert_eq!(next_caption_compat(&mut daemon), compat(&[]));
+}
+
 #[test]
 fn nfr2_the_host_is_short_of_memory_below_a_tenth_free_and_recovers_above_a_fifth() {
     use dsa_host_core::power::MemoryPressure;

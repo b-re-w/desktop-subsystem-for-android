@@ -540,10 +540,13 @@ fn handle(message: ToHost) {
                 window.place_overlay((left, top), display, touchable);
             }
         }),
+        // An app that starts below the title bar is never app drawn, and a standard window
+        // already has its content under the title bar, so `below` needs nothing more here.
         ToHost::CaptionMode {
             task_id,
             app_drawn,
             interactive,
+            below: _,
         } => STATE.with(|state| {
             if let Some(window) = state.borrow_mut().windows.get_mut(&task_id) {
                 window.set_app_drawn(app_drawn, interactive);

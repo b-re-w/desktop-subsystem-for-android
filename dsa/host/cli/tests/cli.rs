@@ -3431,6 +3431,7 @@ fn fr30_dsa_app_window_is_parsed() {
             dpi_scaling: None,
             fullscreen: None,
             immersive: None,
+            below_title_bar: None,
         })
     );
     assert_eq!(
@@ -3444,6 +3445,7 @@ fn fr30_dsa_app_window_is_parsed() {
             dpi_scaling: None,
             fullscreen: None,
             immersive: None,
+            below_title_bar: None,
         })
     );
     assert_eq!(
@@ -3524,6 +3526,7 @@ fn fr4_dsa_app_window_dpi_scaling_is_parsed() {
                 dpi_scaling: Some(scaling),
                 fullscreen: None,
                 immersive: None,
+                below_title_bar: None,
             })
         );
     }
@@ -3541,6 +3544,7 @@ fn fr4_dsa_app_window_dpi_scaling_is_parsed() {
             dpi_scaling: Some(DpiScaling::System),
             fullscreen: None,
             immersive: None,
+            below_title_bar: None,
         })
     );
     assert!(parse(&args("app-window com.example.notes --dpi-scaling enhanced")).is_err());
@@ -3590,6 +3594,63 @@ fn fr4_dsa_app_window_sets_and_keeps_an_apps_dpi_scaling() {
     assert_eq!(auto["apps"][0]["dpi_scaling"], "auto");
     let none = json_of(&dsa(&endpoint, "app-window --json"));
     assert_eq!(none["apps"], serde_json::json!([]));
+}
+
+#[test]
+fn fr30_app_window_sets_and_shows_the_below_title_bar_switch() {
+    use dsa_cli::AppWindowAction;
+    assert_eq!(
+        parse(&args("app-window com.example.player --below-title-bar on"))
+            .unwrap()
+            .app_window,
+        Some(AppWindowAction::Set {
+            package: "com.example.player".into(),
+            fixed_size: None,
+            start_size: None,
+            dpi_scaling: None,
+            fullscreen: None,
+            immersive: None,
+            below_title_bar: Some(true),
+        })
+    );
+    assert!(parse(&args(
+        "app-window com.example.player --below-title-bar maybe"
+    ))
+    .is_err());
+    assert!(parse(&args("app-window --below-title-bar on")).is_err());
+
+    let ((listener, _, _), endpoint) = local_pair();
+    let _service = settings_service(listener);
+    // Off by default, with no built-in list of apps.
+    let none = json_of(&dsa(&endpoint, "app-window com.example.player --json"));
+    assert_eq!(none["apps"][0]["below_title_bar"], false);
+    assert_eq!(none["below_title_bar_by_default"], serde_json::json!([]));
+    // Turned on, it is stored and read back, and the app's other settings stay.
+    let on = json_of(&dsa(
+        &endpoint,
+        "app-window com.example.player --below-title-bar on --fixed-size on --json",
+    ));
+    assert_eq!(on["apps"][0]["below_title_bar"], true);
+    assert_eq!(on["apps"][0]["fixed_size"], true);
+    let kept = json_of(&dsa(
+        &endpoint,
+        "app-window com.example.player --fixed-size off --json",
+    ));
+    assert_eq!(kept["apps"][0]["below_title_bar"], true);
+    let output = dsa(&endpoint, "app-window com.example.player");
+    assert_eq!(
+        stdout(&output).trim(),
+        "com.example.player: resizable, opens at the size Android gives it, redraws at another \
+         monitor's scale once a move ends (the default), starts below the title bar"
+    );
+    // Turned off again, the app is back at the defaults and has no entry.
+    let off = json_of(&dsa(
+        &endpoint,
+        "app-window com.example.player --below-title-bar off --json",
+    ));
+    assert_eq!(off["apps"][0]["below_title_bar"], false);
+    let listed = json_of(&dsa(&endpoint, "app-window --json"));
+    assert_eq!(listed["apps"], serde_json::json!([]));
 }
 
 #[test]
@@ -3655,6 +3716,7 @@ fn fr30_an_apps_full_screen_choice_wins_over_the_default() {
             dpi_scaling: None,
             fullscreen: Some(FullScreenPlace::Window),
             immersive: Some(FullScreenPlace::Screen),
+            below_title_bar: None,
         })
     );
     assert!(parse(&args("app-window com.example.video --fullscreen monitor")).is_err());
