@@ -148,14 +148,17 @@ under **Scaling on another monitor** on the **Apps** page, or with
   bottom tabs and miniplayer would stay broken until it restarts. Settings shows such an
   app's default as **Scaling: system (recommended for this app)**. Your own choice for the
   app comes first.
-- **App** (`app`): while you drag the window, DSA scales it to the new monitor. When you let
+- **App** (`app`): the window keeps its size in pixels while you drag it and after you let go,
+  and shows the app as it was drawn, so the app looks larger or smaller on the new monitor
+  until you let go. When you let
   go, the app redraws at the new monitor's scale, and its text stays sharp: Android recreates
   its screen once and restores its state (scroll position, typed text), so it redraws briefly
   after each move, as a Windows program does with "Application" scaling. This holds even for
   an app that says it handles a change of scale itself, because some of those apps redraw
   only part of their screen at the new scale.
-- **System** (`system`): the app keeps its scale, and DSA scales its window to the new monitor.
-  The app is never recreated. Scaled up, text can look a little soft.
+- **System** (`system`): the app keeps its scale, and its window keeps its size in pixels and
+  shows the app as it was drawn, so the app stays sharp and looks larger or smaller on a
+  monitor of another scale. The app is never recreated.
 - **System (forced)** (`system-forced`): the app is given the new scale without a restart,
   even if it does not say it handles one. Not available yet: it needs a change to Android
   that this version does not have, so until then it works like **System**.
