@@ -159,8 +159,26 @@ pub struct Found {
     pub failure: Option<String>,
     /// The drivers the renderer's own environment already names (`VK_DRIVER_FILES` or
     /// `VK_ICD_FILENAMES`, as a test running the renderer on a software Vulkan sets them):
-    /// they are taken as they are, whatever the setting says.
+    /// they are taken as they are, whatever the setting says, unless the process runs
+    /// elevated ([`Found::elevated`]), when the loader ignores them.
     pub driver_override: Option<String>,
+    /// Whether the process runs elevated (at high integrity or above, as an administrator's
+    /// elevated program or SYSTEM does). The Khronos Vulkan loader then ignores the variables
+    /// that name driver and layer files (`VK_DRIVER_FILES`, `VK_ICD_FILENAMES`,
+    /// `VK_ADD_DRIVER_FILES` and the layer paths), so that an elevated program does not load
+    /// a library a normal user's environment points at. It lists only the drivers registered
+    /// with Windows: `HKLM\SOFTWARE\Khronos\Vulkan\Drivers`, the display drivers' own entries,
+    /// and the Compatibility Pack's package registration.
+    pub elevated: bool,
+}
+
+/// What an elevated process is told: why the environment does not reach the loader.
+fn elevated_note(drivers: &str) -> String {
+    format!(
+        "this process runs elevated (as an administrator), so the Vulkan loader ignores \
+         VK_DRIVER_FILES and VK_ICD_FILENAMES ({drivers}) and lists only the drivers \
+         registered with Windows"
+    )
 }
 
 /// Which Vulkan the renderer runs on.
@@ -251,6 +269,16 @@ pub fn native_pin(request: &GpuRequest, devices: &[VulkanDevice]) -> Option<GpuR
 /// Chooses the Vulkan implementation for `setting` from what was `found`, for the render GPU
 /// `request`.
 pub fn plan(setting: VulkanDriverSetting, found: &Found, request: &GpuRequest) -> DriverPlan {
+    let mut plan = choose(setting, found, request);
+    if found.elevated {
+        if let Some(drivers) = &found.driver_override {
+            plan.reason = format!("{}; {}", elevated_note(drivers), plan.reason);
+        }
+    }
+    plan
+}
+
+fn choose(setting: VulkanDriverSetting, found: &Found, request: &GpuRequest) -> DriverPlan {
     let natives: Vec<&VulkanDevice> = found.devices.iter().filter(|d| d.is_native()).collect();
     let dozens: Vec<&VulkanDevice> = found.devices.iter().filter(|d| d.is_dozen()).collect();
     let mut env = Vec::new();
@@ -284,7 +312,9 @@ pub fn plan(setting: VulkanDriverSetting, found: &Found, request: &GpuRequest) -
         }
     };
 
-    if let Some(drivers) = &found.driver_override {
+    // An elevated process's loader ignores the drivers the environment names: what it lists
+    // is judged like any other list below.
+    if let (Some(drivers), false) = (&found.driver_override, found.elevated) {
         let all: Vec<&VulkanDevice> = found.devices.iter().collect();
         let Some(device) = expected(&all, request) else {
             return none(format!(
@@ -370,6 +400,25 @@ pub fn plan(setting: VulkanDriverSetting, found: &Found, request: &GpuRequest) -
 
     // Dozen: forced, or no native device.
     let Some(device) = expected(&dozens, request) else {
+        let what = match setting {
+            VulkanDriverSetting::Dozen => "the Vulkan driver setting is dozen, but",
+            _ => "no GPU has a Vulkan driver DSA can use:",
+        };
+        if let (true, None, Some(pack)) = (found.elevated, &found.failure, &found.pack) {
+            // The pack's Dozen reaches the loader only through VK_ADD_DRIVER_FILES or
+            // VK_DRIVER_FILES when the loader does not find it itself, and an elevated
+            // process's loader ignores both. Installing the pack again would not help.
+            return none(format!(
+                "{what} {}; the Compatibility Pack is installed ({}), but this process runs \
+                 elevated (as an administrator), so the Vulkan loader ignores \
+                 VK_ADD_DRIVER_FILES and VK_DRIVER_FILES, and Dozen cannot be added through \
+                 the environment; the loader does not find the pack's Dozen by itself (it is \
+                 registered neither under HKLM\\SOFTWARE\\Khronos\\Vulkan\\Drivers nor through \
+                 the pack's own package registration); run DSA without administrator rights",
+                listed(),
+                pack.manifest.display()
+            ));
+        }
         let why = match (&found.failure, &found.pack) {
             (Some(failure), _) => failure.clone(),
             (None, None) => format!(
@@ -384,29 +433,26 @@ pub fn plan(setting: VulkanDriverSetting, found: &Found, request: &GpuRequest) -
                 pack.manifest.display()
             ),
         };
-        let what = match setting {
-            VulkanDriverSetting::Dozen => "the Vulkan driver setting is dozen, but",
-            _ => "no GPU has a Vulkan driver DSA can use:",
-        };
         return none(format!("{what} {why}; {}", install_guidance()));
     };
     let mut request_override = None;
     match &found.pack {
-        Some(pack) => {
+        Some(pack) if !found.elevated => {
             // Only the pack's Dozen: every other driver is out of the renderer's sight.
             let manifest = pack.manifest.display().to_string();
             env.push(("VK_DRIVER_FILES".to_string(), manifest.clone()));
             env.push(("VK_ICD_FILENAMES".to_string(), manifest));
         }
-        None if !natives.is_empty() => {
-            // A Dozen the system lists without the pack, beside native drivers: only its name
-            // tells it apart.
+        _ if !natives.is_empty() => {
+            // A Dozen the system lists beside native drivers, without the pack or in an
+            // elevated process (whose loader ignores VK_DRIVER_FILES, so the other drivers
+            // cannot be hidden): only its name tells it apart.
             request_override = Some(GpuRequest::Named(match device.luid {
                 Some(_) => device.name.clone(),
                 None => DOZEN_NAME_PREFIX.to_string(),
             }));
         }
-        None => {}
+        _ => {}
     }
     let features = if dozens.iter().any(|d| !d.external_memory_host) {
         vec![NO_HOST_MEMORY_IMPORT.to_string()]
@@ -538,7 +584,7 @@ pub fn pack_loader(root: &Path) -> Option<PathBuf> {
 }
 
 #[cfg(windows)]
-pub use probe::{find_compatibility_pack, look, look_with};
+pub use probe::{find_compatibility_pack, look, look_with, runs_elevated};
 
 #[cfg(windows)]
 mod probe {
@@ -917,6 +963,57 @@ mod probe {
         result
     }
 
+    /// Whether this process runs elevated as the Vulkan loader judges it: its token's
+    /// integrity level is high (an administrator's elevated program) or above (SYSTEM). The
+    /// Khronos loader checks exactly this (`TokenIntegrityLevel` against
+    /// `SECURITY_MANDATORY_HIGH_RID`) before it reads a variable that names files to load,
+    /// and ignores the variable when it holds. False when the token cannot be read, as the
+    /// loader also takes it.
+    pub fn runs_elevated() -> bool {
+        use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+        use windows_sys::Win32::Security::{
+            GetSidSubAuthority, GetSidSubAuthorityCount, GetTokenInformation, TokenIntegrityLevel,
+            TOKEN_MANDATORY_LABEL, TOKEN_QUERY,
+        };
+        use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+        /// `SECURITY_MANDATORY_HIGH_RID`.
+        const HIGH_INTEGRITY: u32 = 0x3000;
+        let mut token: HANDLE = std::ptr::null_mut();
+        // SAFETY: this process's own token, opened for query and closed below.
+        if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) } == 0 {
+            return false;
+        }
+        // A TOKEN_MANDATORY_LABEL and the SID it points at: a SID is at most 68 bytes.
+        let mut buffer = [0u64; 16];
+        let mut needed = 0u32;
+        // SAFETY: a buffer of the size given, aligned for the label's pointer.
+        let read = unsafe {
+            GetTokenInformation(
+                token,
+                TokenIntegrityLevel,
+                buffer.as_mut_ptr().cast(),
+                std::mem::size_of_val(&buffer) as u32,
+                &mut needed,
+            )
+        };
+        let level = (read != 0).then(|| {
+            // SAFETY: Windows wrote a TOKEN_MANDATORY_LABEL whose SID lies in the buffer.
+            unsafe {
+                let label = &*(buffer.as_ptr() as *const TOKEN_MANDATORY_LABEL);
+                let sid = label.Label.Sid;
+                let count = *GetSidSubAuthorityCount(sid);
+                if count == 0 {
+                    0
+                } else {
+                    *GetSidSubAuthority(sid, u32::from(count) - 1)
+                }
+            }
+        });
+        // SAFETY: the token opened above, closed once.
+        unsafe { CloseHandle(token) };
+        level.is_some_and(|level| level >= HIGH_INTEGRITY)
+    }
+
     /// The install folder of the Compatibility Pack for this user, when it is installed.
     fn pack_root() -> Option<PathBuf> {
         type GetPackagesByPackageFamily = unsafe extern "system" fn(
@@ -1016,10 +1113,13 @@ mod probe {
             driver_override: ["VK_DRIVER_FILES", "VK_ICD_FILENAMES"]
                 .iter()
                 .find_map(|name| std::env::var(name).ok().filter(|v| !v.trim().is_empty())),
+            elevated: runs_elevated(),
             ..Found::default()
         };
         // Drivers the environment names already are all the loader lists; nothing is added.
-        let manifest = if found.driver_override.is_some() {
+        // An elevated process's loader ignores VK_ADD_DRIVER_FILES too, so the pack's Dozen
+        // cannot be added for the look either: the loader lists only what it finds itself.
+        let manifest = if found.driver_override.is_some() || found.elevated {
             None
         } else {
             manifest
@@ -1362,6 +1462,138 @@ mod tests {
         let plan = plan(VulkanDriverSetting::Auto, &warp, &GpuRequest::Ranking);
         assert_eq!(plan.outcome, DriverOutcome::DozenOnCpu);
         assert_eq!(plan.features, vec![NO_HOST_MEMORY_IMPORT.to_string()]);
+        assert!(!plan.reason.contains("elevated"), "{}", plan.reason);
+    }
+
+    #[test]
+    fn pr3_an_elevated_process_ignores_the_drivers_the_environment_names() {
+        // An elevated terminal with lavapipe named: the loader ignores the variable and lists
+        // the registered native driver, so the setting applies to what it lists.
+        let found = Found {
+            devices: vec![native(
+                "Intel(R) Arc(TM) Graphics",
+                ARC,
+                DEVICE_TYPE_INTEGRATED,
+            )],
+            driver_override: Some(r"C:\lavapipe\lvp_icd.json".into()),
+            elevated: true,
+            ..Found::default()
+        };
+        for setting in [VulkanDriverSetting::Auto, VulkanDriverSetting::Native] {
+            let plan = plan(setting, &found, &GpuRequest::Ranking);
+            assert_eq!(plan.outcome, DriverOutcome::Native);
+            assert_eq!(
+                plan.device.as_ref().unwrap().name,
+                "Intel(R) Arc(TM) Graphics"
+            );
+            assert!(
+                !plan
+                    .reason
+                    .contains("the environment names the Vulkan drivers"),
+                "{}",
+                plan.reason
+            );
+            assert!(
+                plan.reason.contains("runs elevated")
+                    && plan.reason.contains("ignores VK_DRIVER_FILES")
+                    && plan.reason.contains(r"C:\lavapipe\lvp_icd.json"),
+                "{}",
+                plan.reason
+            );
+            assert!(
+                plan.reason.contains("native Vulkan driver"),
+                "{}",
+                plan.reason
+            );
+        }
+        // The setting is no longer bypassed: dozen, with no Dozen listed, is refused.
+        let refused = plan(VulkanDriverSetting::Dozen, &found, &GpuRequest::Ranking);
+        assert_eq!(refused.outcome, DriverOutcome::None);
+        assert!(
+            refused.reason.contains("runs elevated"),
+            "{}",
+            refused.reason
+        );
+    }
+
+    #[test]
+    fn pr3_an_elevated_process_cannot_add_the_packs_dozen_through_the_environment() {
+        // No native driver, the pack installed but not registered where the loader looks: the
+        // loader lists nothing, and VK_ADD_DRIVER_FILES cannot change that when elevated.
+        let elevated = Found {
+            pack: Some(pack()),
+            elevated: true,
+            ..Found::default()
+        };
+        let plan = plan(VulkanDriverSetting::Auto, &elevated, &GpuRequest::Ranking);
+        assert_eq!(plan.outcome, DriverOutcome::None);
+        assert!(plan.env.is_empty(), "{:?}", plan.env);
+        assert!(
+            plan.reason
+                .contains("Dozen cannot be added through the environment")
+                && plan.reason.contains("runs elevated")
+                && plan
+                    .reason
+                    .contains(r"HKLM\SOFTWARE\Khronos\Vulkan\Drivers")
+                && plan.reason.contains("without administrator rights"),
+            "{}",
+            plan.reason
+        );
+        assert!(
+            !plan.reason.contains("found no Direct3D 12 device"),
+            "{}",
+            plan.reason
+        );
+        // Not elevated, the same look means Dozen was added and found nothing to run on.
+        let unelevated = Found {
+            elevated: false,
+            ..elevated
+        };
+        let plan = super::plan(VulkanDriverSetting::Auto, &unelevated, &GpuRequest::Ranking);
+        assert!(
+            plan.reason.contains("found no Direct3D 12 device"),
+            "{}",
+            plan.reason
+        );
+        assert!(!plan.reason.contains("elevated"), "{}", plan.reason);
+    }
+
+    #[test]
+    fn pr3_an_elevated_process_picks_a_registered_dozen_by_its_name() {
+        // The loader finds the pack's Dozen itself beside the native driver. VK_DRIVER_FILES
+        // would be ignored, so forcing Dozen names its device instead of hiding the others.
+        let found = Found {
+            devices: vec![
+                native("Intel(R) Arc(TM) Graphics", ARC, DEVICE_TYPE_INTEGRATED),
+                dozen("Intel(R) Arc(TM) Graphics", ARC, DEVICE_TYPE_INTEGRATED),
+            ],
+            system_lists_dozen: true,
+            pack: Some(pack()),
+            elevated: true,
+            ..Found::default()
+        };
+        let plan = plan(VulkanDriverSetting::Dozen, &found, &GpuRequest::Luid(ARC));
+        assert_eq!(plan.outcome, DriverOutcome::Dozen);
+        assert_eq!(env_of(&plan, "VK_DRIVER_FILES"), None);
+        assert_eq!(env_of(&plan, "VK_ICD_FILENAMES"), None);
+        assert_eq!(
+            plan.request,
+            Some(GpuRequest::Named(format!(
+                "{DOZEN_NAME_PREFIX}Intel(R) Arc(TM) Graphics)"
+            )))
+        );
+        // Not elevated, the pack's manifest is all the renderer sees, as before.
+        let unelevated = Found {
+            elevated: false,
+            ..found
+        };
+        let plan = super::plan(
+            VulkanDriverSetting::Dozen,
+            &unelevated,
+            &GpuRequest::Luid(ARC),
+        );
+        assert!(env_of(&plan, "VK_DRIVER_FILES").is_some());
+        assert_eq!(plan.request, None);
     }
 
     #[test]
