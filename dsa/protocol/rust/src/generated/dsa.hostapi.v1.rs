@@ -186,6 +186,14 @@ pub struct SetTaskCaption {
     #[prost(uint32, tag = "4")]
     pub end_width: u32,
 }
+/// Tells the caller's Android which apps start below the title bar: the packages whose
+/// AppWindowSettings.below_title_bar is on. The list replaces the one before, and counts for
+/// the tasks that start after it.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetCaptionCompat {
+    #[prost(string, repeated, tag = "1")]
+    pub below_title_bar: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
 /// Where a task's window shows a clear full screen request of its app: asks the caller's
 /// Android to keep a task that leaves freeform for fullscreen inside its window, at the bounds
 /// it had (`in_window`), or to let it fill the screen.
@@ -1426,6 +1434,11 @@ pub struct Task {
     /// by `max_height` the display's size.
     #[prost(message, optional, tag = "28")]
     pub overlay: ::core::option::Option<OverlayWindow>,
+    /// Whether the task's app starts below the title bar (AppWindowSettings.below_title_bar,
+    /// as it was when the task started): the window paints its band itself, and the app's
+    /// content begins under it.
+    #[prost(bool, tag = "40")]
+    pub below_title_bar: bool,
 }
 /// An app overlay window: a window an app adds over other apps with Android's "display over
 /// other apps" permission, such as floating lyrics or a chat head. A window manager shows it in
@@ -3236,6 +3249,12 @@ pub struct AppWindowSettings {
     pub fullscreen: i32,
     #[prost(enumeration = "FullScreenPlace", tag = "7")]
     pub immersive: i32,
+    /// Whether the app starts below the title bar: its windows give up the unified title bar,
+    /// the app's content begins under the band and the app has no top inset to handle. For an
+    /// app whose top bar is squeezed or hidden under the title bar. Off by default; it counts
+    /// from the next time a window of the app opens.
+    #[prost(bool, tag = "8")]
+    pub below_title_bar: bool,
 }
 /// The user's full screen choices for every app, which an app's own choice overrides. Never
 /// DEFAULT in an answer from the service.
@@ -3274,7 +3293,7 @@ pub struct Request {
     pub id: u64,
     #[prost(
         oneof = "request::Body",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 48, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 351, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702, 710"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 47, 21, 25, 26, 22, 23, 24, 27, 29, 30, 31, 46, 32, 33, 34, 28, 35, 36, 39, 38, 45, 48, 70, 71, 37, 120, 121, 200, 72, 73, 74, 80, 81, 41, 42, 43, 44, 300, 301, 302, 303, 90, 310, 320, 321, 322, 330, 331, 332, 400, 401, 402, 340, 341, 350, 351, 620, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 660, 661, 680, 681, 700, 701, 702, 710, 715"
     )]
     pub body: ::core::option::Option<request::Body>,
 }
@@ -3472,6 +3491,8 @@ pub mod request {
         RemoveWidevine(super::RemoveWidevine),
         #[prost(message, tag = "710")]
         LaunchPlacement(super::LaunchPlacement),
+        #[prost(message, tag = "715")]
+        SetCaptionCompat(super::SetCaptionCompat),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

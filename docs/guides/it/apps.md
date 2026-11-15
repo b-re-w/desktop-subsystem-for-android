@@ -133,6 +133,19 @@ dsa app-window <package> --dpi-scaling system   # come si scala su un altro moni
 dsa app-window <package> reset                  # torna ai valori predefiniti
 ```
 
+## Far iniziare un'app sotto la barra del titolo
+
+Un'app disegna fino al bordo superiore della sua finestra, sotto la barra del titolo. Alcune
+app schiacciano allora la loro barra superiore o ne nascondono una parte sotto la barra del
+titolo. Per un'app così, attivi **Start below the title bar** (inizia sotto la barra del titolo) nella pagina **Apps** di
+DSA Settings. Il contenuto dell'app inizia allora sotto la barra del titolo, e la barra del
+titolo prende il colore che l'app mostra in quel punto. È disattivato per impostazione
+predefinita e si applica alla prossima apertura della finestra dell'app. Dalla riga di comando:
+
+```
+dsa app-window <package> --below-title-bar on   # off torna al valore predefinito
+```
+
 ## Spostare un'app su un monitor con un'altra scala
 
 Un'app si apre con la scala del monitor su cui si apre la sua finestra, fin dal primo

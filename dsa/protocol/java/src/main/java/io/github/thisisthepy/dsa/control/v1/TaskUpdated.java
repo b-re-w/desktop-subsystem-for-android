@@ -1225,6 +1225,56 @@ public  final class TaskUpdated extends
     
   }
 
+  public static final int BELOW_TITLE_BAR_FIELD_NUMBER = 40;
+  private boolean belowTitleBar_;
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   * @return The belowTitleBar.
+   */
+  @java.lang.Override
+  public boolean getBelowTitleBar() {
+    return belowTitleBar_;
+  }
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   * @param value The belowTitleBar to set.
+   */
+  private void setBelowTitleBar(boolean value) {
+    
+    belowTitleBar_ = value;
+  }
+  /**
+   * <pre>
+   * Whether the task's app starts below the title bar: the user turned that on for the app
+   * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+   * framework consumes for the app, whose content begins under the band. The host then
+   * paints the band itself. Settled when the task starts. While it is set,
+   * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+   * </pre>
+   *
+   * <code>bool below_title_bar = 40;</code>
+   */
+  private void clearBelowTitleBar() {
+    
+    belowTitleBar_ = false;
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.TaskUpdated parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2601,6 +2651,58 @@ public  final class TaskUpdated extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Whether the task's app starts below the title bar: the user turned that on for the app
+     * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+     * framework consumes for the app, whose content begins under the band. The host then
+     * paints the band itself. Settled when the task starts. While it is set,
+     * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+     * </pre>
+     *
+     * <code>bool below_title_bar = 40;</code>
+     * @return The belowTitleBar.
+     */
+    @java.lang.Override
+    public boolean getBelowTitleBar() {
+      return instance.getBelowTitleBar();
+    }
+    /**
+     * <pre>
+     * Whether the task's app starts below the title bar: the user turned that on for the app
+     * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+     * framework consumes for the app, whose content begins under the band. The host then
+     * paints the band itself. Settled when the task starts. While it is set,
+     * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+     * </pre>
+     *
+     * <code>bool below_title_bar = 40;</code>
+     * @param value The belowTitleBar to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBelowTitleBar(boolean value) {
+      copyOnWrite();
+      instance.setBelowTitleBar(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Whether the task's app starts below the title bar: the user turned that on for the app
+     * (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+     * framework consumes for the app, whose content begins under the band. The host then
+     * paints the band itself. Settled when the task starts. While it is set,
+     * `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+     * </pre>
+     *
+     * <code>bool below_title_bar = 40;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBelowTitleBar() {
+      copyOnWrite();
+      instance.clearBelowTitleBar();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.TaskUpdated)
   }
   @java.lang.Override
@@ -2639,12 +2741,13 @@ public  final class TaskUpdated extends
             "handlesDensityChange_",
             "fullscreenRequest_",
             "overlay_",
+            "belowTitleBar_",
           };
           java.lang.String info =
-              "\u0000\u0015\u0000\u0000\u0001\u001c\u0015\u0000\u0001\u0000\u0001\u0004\u0002\t" +
-              "\u0003\u0208\u0004\u0208\u0005\u0007\u0006\u000b\u0007\u000b\b\u000b\t\u000b\n\u000b" +
-              "\u000b\f\f\u0006\u0014\f\u0015\u0007\u0016\u0007\u0017\u0007\u0018\u001b\u0019\u0007" +
-              "\u001a\u0007\u001b\f\u001c\t";
+              "\u0000\u0016\u0000\u0000\u0001(\u0016\u0000\u0001\u0000\u0001\u0004\u0002\t\u0003" +
+              "\u0208\u0004\u0208\u0005\u0007\u0006\u000b\u0007\u000b\b\u000b\t\u000b\n\u000b\u000b" +
+              "\f\f\u0006\u0014\f\u0015\u0007\u0016\u0007\u0017\u0007\u0018\u001b\u0019\u0007\u001a" +
+              "\u0007\u001b\f\u001c\t(\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

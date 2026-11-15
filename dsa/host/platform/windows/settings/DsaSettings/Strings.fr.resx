@@ -1683,6 +1683,14 @@ Chacune a une icône dans la zone de notification de la barre des tâches. Arrê
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Permet de redimensionner et d'agrandir les fenêtres de cette application. Désactivé, chaque fenêtre garde sa taille d'ouverture.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Démarrer sous la barre de titre</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Pour les apps dont la barre supérieure est écrasée ou masquée par la barre de titre.
+L'app démarre sous la barre de titre au lieu de dessiner derrière elle.
+S'applique à la prochaine ouverture de la fenêtre de l'app.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>La taille d'ouverture des fenêtres de cette application</value>
   </data>

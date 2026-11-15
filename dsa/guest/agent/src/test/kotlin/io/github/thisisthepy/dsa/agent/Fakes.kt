@@ -323,9 +323,18 @@ class FakeActions : TaskActions {
     val captionBoundingRects = mutableListOf<List<TaskBounds>>()
     var insetsTaken = true
 
-    override fun setCaptionInset(taskId: Int, frame: TaskBounds?, boundingRects: List<TaskBounds>): Boolean {
+    /** Whether each of [captionInsets] was for an app that starts below the title bar. */
+    val captionOpaque = mutableListOf<Boolean>()
+
+    override fun setCaptionInset(
+        taskId: Int,
+        frame: TaskBounds?,
+        boundingRects: List<TaskBounds>,
+        opaque: Boolean,
+    ): Boolean {
         captionInsets += taskId to frame
         captionBoundingRects += boundingRects
+        captionOpaque += opaque
         return insetsTaken
     }
 

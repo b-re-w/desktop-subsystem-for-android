@@ -126,6 +126,18 @@ dsa app-window <package> --dpi-scaling system   # cách co giãn trên màn hìn
 dsa app-window <package> reset                  # quay về mặc định
 ```
 
+## Cho ứng dụng bắt đầu bên dưới thanh tiêu đề
+
+Ứng dụng vẽ đến tận mép trên của cửa sổ, bên dưới thanh tiêu đề. Vì vậy một số ứng dụng có
+thanh trên cùng bị ép lại hoặc bị thanh tiêu đề che mất một phần. Với ứng dụng như vậy, hãy bật
+**Start below the title bar** (bắt đầu bên dưới thanh tiêu đề) trên trang **Apps** của DSA Settings. Khi đó nội dung của
+ứng dụng bắt đầu bên dưới thanh tiêu đề, và thanh tiêu đề lấy màu mà ứng dụng hiển thị ở đó.
+Mặc định tùy chọn này tắt, và áp dụng từ lần mở cửa sổ ứng dụng tiếp theo. Từ dòng lệnh:
+
+```
+dsa app-window <package> --below-title-bar on   # off quay về mặc định
+```
+
 ## Chuyển ứng dụng sang màn hình có tỷ lệ khác
 
 Ứng dụng mở ở tỷ lệ của màn hình nơi cửa sổ của nó mở, ngay từ khung hình đầu tiên, nên nó không

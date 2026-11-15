@@ -157,6 +157,13 @@ pub struct TaskUpdated {
     /// `max_width` by `max_height` the display's size. The rest are left at their defaults.
     #[prost(message, optional, tag = "28")]
     pub overlay: ::core::option::Option<OverlayWindow>,
+    /// Whether the task's app starts below the title bar: the user turned that on for the app
+    /// (CaptionCompat), so the task has no status bar inset and a caption bar inset the
+    /// framework consumes for the app, whose content begins under the band. The host then
+    /// paints the band itself. Settled when the task starts. While it is set,
+    /// `transparent_caption` is not and `caption_interactive` is empty: the band is the host's.
+    #[prost(bool, tag = "40")]
+    pub below_title_bar: bool,
 }
 /// An app overlay window: a window an app adds over other apps with the "display over other
 /// apps" permission (SYSTEM_ALERT_WINDOW), such as floating lyrics, a chat head or a screen
@@ -195,6 +202,19 @@ pub struct OverlayWindow {
     /// pointer passes through the host's window of one that does not.
     #[prost(bool, tag = "3")]
     pub touchable: bool,
+}
+/// Host to guest: the apps whose tasks start below the title bar, as the user chose for each
+/// (the per-app window setting). A task of one of these packages gets no status bar inset,
+/// and its caption bar inset is consumed by the framework for the app (the caption source
+/// carries InsetsSource.FLAG_FORCE_CONSUMING_OPAQUE_CAPTION_BAR), as Android's own desktop
+/// windows do for an app that asked for no transparent caption. The list replaces the one
+/// before. It counts when a task starts: a task that runs already keeps what it started
+/// with, because an app may read its insets once per screen. The host sends it when it
+/// connects and whenever the list changes.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CaptionCompat {
+    #[prost(string, repeated, tag = "1")]
+    pub below_title_bar: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Guest to host, from the agent: the task ended; the host closes its window.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -3651,7 +3671,7 @@ pub struct SpellingResult {
 pub struct Envelope {
     #[prost(
         oneof = "envelope::Body",
-        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 377, 19, 408, 409, 410, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 40, 46, 41, 407, 110, 140, 152, 153, 154, 402, 403, 404, 405, 406, 411, 412, 413, 414, 415, 42, 43, 44, 45, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 30, 50, 51, 52, 53, 54, 70, 71, 72, 73, 730, 74, 75, 76, 77, 78, 79, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 80, 81, 82, 83, 84, 85, 100, 101, 102, 103, 104, 105, 106, 107, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 220, 221, 222, 223, 141, 200, 201, 202, 240, 241, 242, 260, 261, 262, 263, 264, 265, 266, 267, 155, 156, 340, 383, 341, 342, 343, 344, 290, 291, 350, 351, 352, 353, 354, 380, 381, 382, 620, 621, 622, 623, 624, 625, 626, 627, 628, 629, 630, 631, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 680, 681, 682, 683, 684, 690, 691, 710"
+        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 377, 19, 408, 409, 410, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 40, 46, 41, 407, 110, 140, 152, 153, 154, 402, 403, 404, 405, 406, 411, 412, 413, 414, 415, 42, 43, 44, 45, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 30, 50, 51, 52, 53, 54, 70, 71, 72, 73, 730, 74, 75, 76, 77, 78, 79, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 80, 81, 82, 83, 84, 85, 100, 101, 102, 103, 104, 105, 106, 107, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 220, 221, 222, 223, 141, 200, 201, 202, 240, 241, 242, 260, 261, 262, 263, 264, 265, 266, 267, 155, 156, 340, 383, 341, 342, 343, 344, 290, 291, 350, 351, 352, 353, 354, 380, 381, 382, 620, 621, 622, 623, 624, 625, 626, 627, 628, 629, 630, 631, 470, 471, 472, 473, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 680, 681, 682, 683, 684, 690, 691, 710, 715"
     )]
     pub body: ::core::option::Option<envelope::Body>,
 }
@@ -4065,6 +4085,8 @@ pub mod envelope {
         DnsAnswer(super::DnsAnswer),
         #[prost(message, tag = "710")]
         LaunchPlacement(super::LaunchPlacement),
+        #[prost(message, tag = "715")]
+        CaptionCompat(super::CaptionCompat),
     }
 }
 /// The protocol version. CURRENT goes up when the meaning of existing messages changes.

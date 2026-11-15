@@ -444,6 +444,12 @@ msgstr "Größe veränderbar"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "Ob Sie die Fenster dieser App in der Größe ändern und maximieren können. Ausgeschaltet behält jedes Fenster seine Anfangsgröße."
 
+msgid "Start below the title bar"
+msgstr "Unter der Titelleiste beginnen"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "Für Apps, deren obere Leiste von der Titelleiste gequetscht oder verdeckt wird.\nDie App beginnt unter der Titelleiste, statt dahinter zu zeichnen.\nGilt ab dem nächsten Öffnen des App-Fensters."
+
 msgid "Window size when it opens"
 msgstr "Fenstergröße beim Öffnen"
 

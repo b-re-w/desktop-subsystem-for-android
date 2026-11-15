@@ -370,10 +370,12 @@ impl GpuResetWindows {
                 task_id,
                 app_drawn,
                 interactive,
+                below,
             } => WindowChange::CaptionMode {
                 task_id: window(task_id),
                 app_drawn,
                 interactive,
+                below,
             },
             WindowChange::CaptionBack { task_id, back } => WindowChange::CaptionBack {
                 task_id: window(task_id),

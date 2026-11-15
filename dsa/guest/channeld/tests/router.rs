@@ -10,9 +10,9 @@ use dsa_guest_channeld::router::{
 };
 use dsa_protocol::control::envelope::Body;
 use dsa_protocol::control::{
-    AgentConnected, AppInfo, AuthProof, CloseTask, Envelope, GuestBoot, Hello, LaunchApp,
-    LocationRequest, PowerHint, PowerHintKind, PowerState, Rect, TaskFrames, TaskRemoved,
-    TaskUpdated, TasksShown,
+    AgentConnected, AppInfo, AuthProof, CaptionCompat, CloseTask, Envelope, GuestBoot, Hello,
+    LaunchApp, LocationRequest, PowerHint, PowerHintKind, PowerState, Rect, TaskFrames,
+    TaskRemoved, TaskUpdated, TasksShown,
 };
 
 /// A client's callback that keeps what it is given, and can be made to die.
@@ -114,6 +114,29 @@ fn nfr1_the_agent_hears_which_task_windows_the_user_can_see() {
     router.subscribe(COMPOSER, again.clone());
     assert_eq!(again.frames().last(), Some(&shown));
     assert_eq!(again.frames().len(), 3);
+}
+
+#[test]
+fn fr22_an_agent_that_starts_after_the_host_spoke_hears_which_apps_start_below_the_title_bar() {
+    let (router, _host) = router();
+    let compat = |packages: &[&str]| {
+        frame(Body::CaptionCompat(CaptionCompat {
+            below_title_bar: packages.iter().map(|package| package.to_string()).collect(),
+        }))
+    };
+    // The host says it as soon as it connects, before the agent has started.
+    let first = compat(&["com.example.player"]);
+    router.from_host(&first);
+    let agent = Arc::new(Recorder::default());
+    router.subscribe(AGENT, agent.clone());
+    assert_eq!(agent.frames(), vec![first]);
+    // A later word reaches the agent at once, and is the one a later subscriber hears.
+    let second = compat(&[]);
+    router.from_host(&second);
+    assert_eq!(agent.frames().last(), Some(&second));
+    let again = Arc::new(Recorder::default());
+    router.subscribe(AGENT, again.clone());
+    assert_eq!(again.frames(), vec![second]);
 }
 
 #[test]

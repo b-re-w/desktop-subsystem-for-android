@@ -139,6 +139,8 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
     let forced: Rc<Cell<bool>> = Rc::default();
     // The apps DSA scales the System way unless the user chose otherwise.
     let scaled: Rc<RefCell<Vec<String>>> = Rc::default();
+    // The apps DSA starts below the title bar unless the user chose otherwise.
+    let below: Rc<RefCell<Vec<String>>> = Rc::default();
 
     // Builds the list again from what is known, as the search says.
     let render: Hook = Rc::default();
@@ -155,6 +157,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let reload = reload.clone();
         let forced = forced.clone();
         let scaled = scaled.clone();
+        let below = below.clone();
         *render.borrow_mut() = Some(Rc::new(move || {
             rows.clear();
             let all = apps.borrow();
@@ -187,6 +190,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                     window,
                     forced.get(),
                     scaled.borrow().contains(&app.package),
+                    below.borrow().contains(&app.package),
                     reload.clone(),
                 );
                 // The app App info was opened for: its row opens and comes into view, once.
@@ -208,9 +212,11 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let render = render.clone();
         let forced = forced.clone();
         let scaled = scaled.clone();
+        let below = below.clone();
         *reload.borrow_mut() = Some(Rc::new(move || {
             let (page, apps, render) = (page.clone(), apps.clone(), render.clone());
             let (windows, forced, scaled) = (windows.clone(), forced.clone(), scaled.clone());
+            let below = below.clone();
             request(
                 &ctx,
                 |c| Ok((c.apps()?, c.app_window_list().unwrap_or_default())),
@@ -223,6 +229,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                         *apps.borrow_mut() = Some(list);
                         forced.set(settings.system_forced_available);
                         *scaled.borrow_mut() = settings.system_scaled_by_default;
+                        *below.borrow_mut() = settings.below_title_bar_by_default;
                         *windows.borrow_mut() = settings
                             .apps
                             .into_iter()
@@ -262,6 +269,7 @@ fn app_row(
     window: Option<AppWindow>,
     system_forced_available: bool,
     system_scaled_by_default: bool,
+    below_title_bar_by_default: bool,
     reload: Hook,
 ) -> adw::ExpanderRow {
     let row = expander_row(&app.label, &view::app_detail(app));
@@ -399,6 +407,45 @@ fn app_row(
     };
     resizable.set(!fixed);
     row.add_row(&resizable.row);
+    // For an app whose top bar is squeezed or hidden under the title bar. It is sent on its
+    // own, so an app the user chose nothing for keeps following DSA's built-in list.
+    let below_title_bar = {
+        let (ctx, page, package, label) = (
+            ctx.clone(),
+            page.clone(),
+            app.package.clone(),
+            app.label.clone(),
+        );
+        Switch::new(
+            &tr("Start below the title bar"),
+            &tr("For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."),
+            move |on| {
+                let (page, package, ctx2) = (page.clone(), package.clone(), ctx.clone());
+                let label = label.clone();
+                request(
+                    &ctx,
+                    move |c| c.set_app_below_title_bar(&package, on),
+                    move |r| {
+                        page.show_failure(
+                            &tr("The apps could not be read or changed"),
+                            r.as_ref().err(),
+                        );
+                        if r.is_ok() {
+                            ctx2.toast(&trf(
+                                "{0}'s windows follow the new settings from the next one that opens.",
+                                &[&label],
+                            ));
+                        }
+                    },
+                );
+            },
+        )
+    };
+    below_title_bar.set(view::starts_below_title_bar(
+        window.as_ref(),
+        below_title_bar_by_default,
+    ));
+    row.add_row(&below_title_bar.row);
     let choices = view::start_size_choices();
     let size = {
         let (state, save) = (state.clone(), save.clone());

@@ -444,6 +444,12 @@ msgstr "크기 조절"
 msgid "Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at."
 msgstr "이 앱 창의 크기를 바꾸거나 최대화할 수 있는지 정합니다. 끄면 창이 열린 크기 그대로 있습니다."
 
+msgid "Start below the title bar"
+msgstr "제목 표시줄 아래에서 시작"
+
+msgid "For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."
+msgstr "위쪽 바가 제목 표시줄에 눌리거나 가려지는 앱을 위한 설정입니다.\n앱이 제목 표시줄 뒤가 아니라 그 아래에서 시작합니다.\n앱 창을 다음에 열 때부터 적용됩니다."
+
 msgid "Window size when it opens"
 msgstr "열릴 때의 창 크기"
 

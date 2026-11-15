@@ -1683,6 +1683,14 @@ Each has an icon in the taskbar's notification area. Stopping an app ends its wo
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Whether you can resize and maximize this app's windows. Off keeps each window at the size it opens at.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Start below the title bar</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>For apps whose top bar is squeezed or hidden under the title bar.
+The app starts below the title bar instead of drawing behind it.
+Applies the next time the app's window opens.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>The size this app's windows open at</value>
   </data>

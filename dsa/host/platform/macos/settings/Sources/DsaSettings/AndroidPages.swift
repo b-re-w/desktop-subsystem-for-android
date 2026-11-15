@@ -96,14 +96,27 @@ struct AppRowView: View {
                 Text(row.size).foregroundStyle(.secondary).monospacedDigit()
             }
             HStack {
-                Toggle(T("AppsResizable.Content"), isOn: Binding(
-                    get: { row.resizable },
-                    set: { value in Task { await vm.setResizable(row.package, value) } }))
-                    .toggleStyle(.checkbox)
-                    .help(T("AppsResizable.ToolTip"))
-                    .disabled(vm.isBusy)
-                    // Every row has these controls, so each one's name says whose it is.
-                    .accessibilityLabel(name("AppsResizable.Content"))
+                // The two switches are one group, so the row stays within the ten views a
+                // stack takes on every toolchain.
+                Group {
+                    Toggle(T("AppsResizable.Content"), isOn: Binding(
+                        get: { row.resizable },
+                        set: { value in Task { await vm.setResizable(row.package, value) } }))
+                        .toggleStyle(.checkbox)
+                        .help(T("AppsResizable.ToolTip"))
+                        .disabled(vm.isBusy)
+                        // Every row has these controls, so each one's name says whose it is.
+                        .accessibilityLabel(name("AppsResizable.Content"))
+                    // For an app whose top bar is squeezed or hidden under the title bar: the
+                    // app stays out of the title bar.
+                    Toggle(T("AppsBelowTitleBar.Content"), isOn: Binding(
+                        get: { row.belowTitleBar },
+                        set: { value in Task { await vm.setBelowTitleBar(row.package, value) } }))
+                        .toggleStyle(.checkbox)
+                        .help(T("AppsBelowTitleBar.ToolTip"))
+                        .disabled(vm.isBusy)
+                        .accessibilityLabel(name("AppsBelowTitleBar.Content"))
+                }
                 Picker(T("AppsStartSize.ToolTip"), selection: Binding(
                     get: { row.startSizeIndex },
                     set: { index in Task { await vm.setStartSize(row.package, index) } })) {

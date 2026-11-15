@@ -187,6 +187,9 @@ struct State {
     shown_tasks: Option<std::collections::BTreeSet<i32>>,
     /// The host's last `TasksShown`, for a client that subscribes after it.
     tasks_shown_frame: Option<Vec<u8>>,
+    /// The host's last `CaptionCompat`, for a client that subscribes after it: the host sends
+    /// it as soon as it connects, which is before the agent has started.
+    caption_compat_frame: Option<Vec<u8>>,
     /// The host said it is short of memory.
     host_memory_low: bool,
     next_id: u64,
@@ -580,6 +583,12 @@ impl Router {
                 return id;
             }
         }
+        // Before the agent reads its tasks, so each task starts with the insets its app is set to.
+        if let Some(frame) = &state.caption_compat_frame {
+            if listener.deliver(frame) == Delivery::Gone {
+                return id;
+            }
+        }
         for task in state.tasks.values() {
             if let Some((sender, frame)) = &task.updated {
                 if *sender != peer && listener.deliver(frame) == Delivery::Gone {
@@ -761,6 +770,9 @@ impl Router {
         }
         let mut state = self.lock();
         match body {
+            // The agent settles a task's insets when the task starts, and it starts after the
+            // host has said this: a client that subscribes later is told the last word.
+            Some(Body::CaptionCompat(_)) => state.caption_compat_frame = Some(frame.to_vec()),
             Some(Body::ScreenState(screen)) => state.screen_off = !screen.on,
             Some(Body::HostMemory(memory)) => state.host_memory_low = memory.low,
             Some(Body::PowerState(_)) => state.power_state = Some(frame.to_vec()),

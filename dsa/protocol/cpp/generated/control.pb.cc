@@ -126,9 +126,10 @@ PROTOBUF_CONSTEXPR TaskUpdated::TaskUpdated(
   , /*decltype(_impl_.picture_in_picture_)*/false
   , /*decltype(_impl_.transparent_caption_)*/false
   , /*decltype(_impl_.orientation_)*/0
+  , /*decltype(_impl_.fullscreen_request_)*/0
   , /*decltype(_impl_.can_go_back_)*/false
   , /*decltype(_impl_.handles_density_change_)*/false
-  , /*decltype(_impl_.fullscreen_request_)*/0
+  , /*decltype(_impl_.below_title_bar_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TaskUpdatedDefaultTypeInternal {
   PROTOBUF_CONSTEXPR TaskUpdatedDefaultTypeInternal()
@@ -154,6 +155,19 @@ struct OverlayWindowDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 OverlayWindowDefaultTypeInternal _OverlayWindow_default_instance_;
+PROTOBUF_CONSTEXPR CaptionCompat::CaptionCompat(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.below_title_bar_)*/{}
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct CaptionCompatDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR CaptionCompatDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~CaptionCompatDefaultTypeInternal() {}
+  union {
+    CaptionCompat _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CaptionCompatDefaultTypeInternal _CaptionCompat_default_instance_;
 PROTOBUF_CONSTEXPR TaskRemoved::TaskRemoved(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.task_id_)*/0
@@ -7786,9 +7800,10 @@ TaskUpdated::TaskUpdated(const TaskUpdated& from)
     , decltype(_impl_.picture_in_picture_){}
     , decltype(_impl_.transparent_caption_){}
     , decltype(_impl_.orientation_){}
+    , decltype(_impl_.fullscreen_request_){}
     , decltype(_impl_.can_go_back_){}
     , decltype(_impl_.handles_density_change_){}
-    , decltype(_impl_.fullscreen_request_){}
+    , decltype(_impl_.below_title_bar_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -7815,8 +7830,8 @@ TaskUpdated::TaskUpdated(const TaskUpdated& from)
     _this->_impl_.overlay_ = new ::dsa::control::v1::OverlayWindow(*from._impl_.overlay_);
   }
   ::memcpy(&_impl_.task_id_, &from._impl_.task_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.fullscreen_request_) -
-    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.fullscreen_request_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.below_title_bar_) -
+    reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.below_title_bar_));
   // @@protoc_insertion_point(copy_constructor:dsa.control.v1.TaskUpdated)
 }
 
@@ -7843,9 +7858,10 @@ inline void TaskUpdated::SharedCtor(
     , decltype(_impl_.picture_in_picture_){false}
     , decltype(_impl_.transparent_caption_){false}
     , decltype(_impl_.orientation_){0}
+    , decltype(_impl_.fullscreen_request_){0}
     , decltype(_impl_.can_go_back_){false}
     , decltype(_impl_.handles_density_change_){false}
-    , decltype(_impl_.fullscreen_request_){0}
+    , decltype(_impl_.below_title_bar_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.package_name_.InitDefault();
@@ -7898,8 +7914,8 @@ void TaskUpdated::Clear() {
   }
   _impl_.overlay_ = nullptr;
   ::memset(&_impl_.task_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.fullscreen_request_) -
-      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.fullscreen_request_));
+      reinterpret_cast<char*>(&_impl_.below_title_bar_) -
+      reinterpret_cast<char*>(&_impl_.task_id_)) + sizeof(_impl_.below_title_bar_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -8089,6 +8105,14 @@ const char* TaskUpdated::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
         } else
           goto handle_unusual;
         continue;
+      // bool below_title_bar = 40;
+      case 40:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 64)) {
+          _impl_.below_title_bar_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -8259,6 +8283,12 @@ uint8_t* TaskUpdated::_InternalSerialize(
         _Internal::overlay(this).GetCachedSize(), target, stream);
   }
 
+  // bool below_title_bar = 40;
+  if (this->_internal_below_title_bar() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(40, this->_internal_below_title_bar(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -8377,6 +8407,12 @@ size_t TaskUpdated::ByteSizeLong() const {
       ::_pbi::WireFormatLite::EnumSize(this->_internal_orientation());
   }
 
+  // .dsa.control.v1.FullScreenRequest fullscreen_request = 27;
+  if (this->_internal_fullscreen_request() != 0) {
+    total_size += 2 +
+      ::_pbi::WireFormatLite::EnumSize(this->_internal_fullscreen_request());
+  }
+
   // bool can_go_back = 25;
   if (this->_internal_can_go_back() != 0) {
     total_size += 2 + 1;
@@ -8387,10 +8423,9 @@ size_t TaskUpdated::ByteSizeLong() const {
     total_size += 2 + 1;
   }
 
-  // .dsa.control.v1.FullScreenRequest fullscreen_request = 27;
-  if (this->_internal_fullscreen_request() != 0) {
-    total_size += 2 +
-      ::_pbi::WireFormatLite::EnumSize(this->_internal_fullscreen_request());
+  // bool below_title_bar = 40;
+  if (this->_internal_below_title_bar() != 0) {
+    total_size += 2 + 1;
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -8468,14 +8503,17 @@ void TaskUpdated::MergeFrom(const TaskUpdated& from) {
   if (from._internal_orientation() != 0) {
     _this->_internal_set_orientation(from._internal_orientation());
   }
+  if (from._internal_fullscreen_request() != 0) {
+    _this->_internal_set_fullscreen_request(from._internal_fullscreen_request());
+  }
   if (from._internal_can_go_back() != 0) {
     _this->_internal_set_can_go_back(from._internal_can_go_back());
   }
   if (from._internal_handles_density_change() != 0) {
     _this->_internal_set_handles_density_change(from._internal_handles_density_change());
   }
-  if (from._internal_fullscreen_request() != 0) {
-    _this->_internal_set_fullscreen_request(from._internal_fullscreen_request());
+  if (from._internal_below_title_bar() != 0) {
+    _this->_internal_set_below_title_bar(from._internal_below_title_bar());
   }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
@@ -8506,8 +8544,8 @@ void TaskUpdated::InternalSwap(TaskUpdated* other) {
       &other->_impl_.label_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TaskUpdated, _impl_.fullscreen_request_)
-      + sizeof(TaskUpdated::_impl_.fullscreen_request_)
+      PROTOBUF_FIELD_OFFSET(TaskUpdated, _impl_.below_title_bar_)
+      + sizeof(TaskUpdated::_impl_.below_title_bar_)
       - PROTOBUF_FIELD_OFFSET(TaskUpdated, _impl_.bounds_)>(
           reinterpret_cast<char*>(&_impl_.bounds_),
           reinterpret_cast<char*>(&other->_impl_.bounds_));
@@ -8752,6 +8790,198 @@ void OverlayWindow::InternalSwap(OverlayWindow* other) {
 
 std::string OverlayWindow::GetTypeName() const {
   return "dsa.control.v1.OverlayWindow";
+}
+
+
+// ===================================================================
+
+class CaptionCompat::_Internal {
+ public:
+};
+
+CaptionCompat::CaptionCompat(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:dsa.control.v1.CaptionCompat)
+}
+CaptionCompat::CaptionCompat(const CaptionCompat& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  CaptionCompat* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.below_title_bar_){from._impl_.below_title_bar_}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  // @@protoc_insertion_point(copy_constructor:dsa.control.v1.CaptionCompat)
+}
+
+inline void CaptionCompat::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.below_title_bar_){arena}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+CaptionCompat::~CaptionCompat() {
+  // @@protoc_insertion_point(destructor:dsa.control.v1.CaptionCompat)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<std::string>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void CaptionCompat::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.below_title_bar_.~RepeatedPtrField();
+}
+
+void CaptionCompat::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void CaptionCompat::Clear() {
+// @@protoc_insertion_point(message_clear_start:dsa.control.v1.CaptionCompat)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.below_title_bar_.Clear();
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* CaptionCompat::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // repeated string below_title_bar = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            auto str = _internal_add_below_title_bar();
+            ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+            CHK_(ptr);
+            CHK_(::_pbi::VerifyUTF8(str, nullptr));
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* CaptionCompat::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dsa.control.v1.CaptionCompat)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // repeated string below_title_bar = 1;
+  for (int i = 0, n = this->_internal_below_title_bar_size(); i < n; i++) {
+    const auto& s = this->_internal_below_title_bar(i);
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      s.data(), static_cast<int>(s.length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "dsa.control.v1.CaptionCompat.below_title_bar");
+    target = stream->WriteString(1, s, target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dsa.control.v1.CaptionCompat)
+  return target;
+}
+
+size_t CaptionCompat::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:dsa.control.v1.CaptionCompat)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated string below_title_bar = 1;
+  total_size += 1 *
+      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.below_title_bar_.size());
+  for (int i = 0, n = _impl_.below_title_bar_.size(); i < n; i++) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+      _impl_.below_title_bar_.Get(i));
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::_pbi::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void CaptionCompat::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const CaptionCompat*>(
+      &from));
+}
+
+void CaptionCompat::MergeFrom(const CaptionCompat& from) {
+  CaptionCompat* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:dsa.control.v1.CaptionCompat)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_impl_.below_title_bar_.MergeFrom(from._impl_.below_title_bar_);
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void CaptionCompat::CopyFrom(const CaptionCompat& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:dsa.control.v1.CaptionCompat)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool CaptionCompat::IsInitialized() const {
+  return true;
+}
+
+void CaptionCompat::InternalSwap(CaptionCompat* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.below_title_bar_.InternalSwap(&other->_impl_.below_title_bar_);
+}
+
+std::string CaptionCompat::GetTypeName() const {
+  return "dsa.control.v1.CaptionCompat";
 }
 
 
@@ -71436,6 +71666,7 @@ class Envelope::_Internal {
   static const ::dsa::control::v1::DnsQuery& dns_query(const Envelope* msg);
   static const ::dsa::control::v1::DnsAnswer& dns_answer(const Envelope* msg);
   static const ::dsa::control::v1::LaunchPlacement& launch_placement(const Envelope* msg);
+  static const ::dsa::control::v1::CaptionCompat& caption_compat(const Envelope* msg);
 };
 
 const ::dsa::control::v1::Hello&
@@ -72249,6 +72480,10 @@ Envelope::_Internal::dns_answer(const Envelope* msg) {
 const ::dsa::control::v1::LaunchPlacement&
 Envelope::_Internal::launch_placement(const Envelope* msg) {
   return *msg->_impl_.body_.launch_placement_;
+}
+const ::dsa::control::v1::CaptionCompat&
+Envelope::_Internal::caption_compat(const Envelope* msg) {
+  return *msg->_impl_.body_.caption_compat_;
 }
 void Envelope::set_allocated_hello(::dsa::control::v1::Hello* hello) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -75295,6 +75530,21 @@ void Envelope::set_allocated_launch_placement(::dsa::control::v1::LaunchPlacemen
   }
   // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.launch_placement)
 }
+void Envelope::set_allocated_caption_compat(::dsa::control::v1::CaptionCompat* caption_compat) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_body();
+  if (caption_compat) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(caption_compat);
+    if (message_arena != submessage_arena) {
+      caption_compat = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, caption_compat, submessage_arena);
+    }
+    set_has_caption_compat();
+    _impl_.body_.caption_compat_ = caption_compat;
+  }
+  // @@protoc_insertion_point(field_set_allocated:dsa.control.v1.Envelope.caption_compat)
+}
 Envelope::Envelope(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
@@ -76325,6 +76575,11 @@ Envelope::Envelope(const Envelope& from)
     case kLaunchPlacement: {
       _this->_internal_mutable_launch_placement()->::dsa::control::v1::LaunchPlacement::MergeFrom(
           from._internal_launch_placement());
+      break;
+    }
+    case kCaptionCompat: {
+      _this->_internal_mutable_caption_compat()->::dsa::control::v1::CaptionCompat::MergeFrom(
+          from._internal_caption_compat());
       break;
     }
     case BODY_NOT_SET: {
@@ -77584,6 +77839,12 @@ void Envelope::clear_body() {
     case kLaunchPlacement: {
       if (GetArenaForAllocation() == nullptr) {
         delete _impl_.body_.launch_placement_;
+      }
+      break;
+    }
+    case kCaptionCompat: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.body_.caption_compat_;
       }
       break;
     }
@@ -79227,6 +79488,14 @@ const char* Envelope::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
         } else
           goto handle_unusual;
         continue;
+      // .dsa.control.v1.CaptionCompat caption_compat = 715;
+      case 715:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 90)) {
+          ptr = ctx->ParseMessage(_internal_mutable_caption_compat(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       // .dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;
       case 730:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 210)) {
@@ -80678,6 +80947,13 @@ uint8_t* Envelope::_InternalSerialize(
         _Internal::launch_placement(this).GetCachedSize(), target, stream);
   }
 
+  // .dsa.control.v1.CaptionCompat caption_compat = 715;
+  if (_internal_has_caption_compat()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(715, _Internal::caption_compat(this),
+        _Internal::caption_compat(this).GetCachedSize(), target, stream);
+  }
+
   // .dsa.control.v1.NotificationButtonClicked notification_button_clicked = 730;
   if (_internal_has_notification_button_clicked()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
@@ -82123,6 +82399,13 @@ size_t Envelope::ByteSizeLong() const {
           *_impl_.body_.launch_placement_);
       break;
     }
+    // .dsa.control.v1.CaptionCompat caption_compat = 715;
+    case kCaptionCompat: {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.body_.caption_compat_);
+      break;
+    }
     case BODY_NOT_SET: {
       break;
     }
@@ -83164,6 +83447,11 @@ void Envelope::MergeFrom(const Envelope& from) {
           from._internal_launch_placement());
       break;
     }
+    case kCaptionCompat: {
+      _this->_internal_mutable_caption_compat()->::dsa::control::v1::CaptionCompat::MergeFrom(
+          from._internal_caption_compat());
+      break;
+    }
     case BODY_NOT_SET: {
       break;
     }
@@ -83230,6 +83518,10 @@ Arena::CreateMaybeMessage< ::dsa::control::v1::TaskUpdated >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::OverlayWindow*
 Arena::CreateMaybeMessage< ::dsa::control::v1::OverlayWindow >(Arena* arena) {
   return Arena::CreateMessageInternal< ::dsa::control::v1::OverlayWindow >(arena);
+}
+template<> PROTOBUF_NOINLINE ::dsa::control::v1::CaptionCompat*
+Arena::CreateMaybeMessage< ::dsa::control::v1::CaptionCompat >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::dsa::control::v1::CaptionCompat >(arena);
 }
 template<> PROTOBUF_NOINLINE ::dsa::control::v1::TaskRemoved*
 Arena::CreateMaybeMessage< ::dsa::control::v1::TaskRemoved >(Arena* arena) {

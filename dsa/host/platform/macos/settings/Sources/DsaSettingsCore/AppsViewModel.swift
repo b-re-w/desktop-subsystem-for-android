@@ -152,6 +152,9 @@ public struct AppWindowSetting: Equatable, Sendable {
     /// Where the app shows a clear full screen request, and its bars hidden alone.
     public var fullScreen: FullScreenPlace = .standard
     public var immersive: FullScreenPlace = .standard
+    /// Whether the app starts below the title bar instead of drawing into it. Off from a dsa
+    /// that does not name it.
+    public var belowTitleBar = false
 
     public static func standard(_ package: String) -> AppWindowSetting {
         AppWindowSetting(package: package, fixedSize: false, startWidth: nil, startHeight: nil)
@@ -298,7 +301,8 @@ public final class AppsService {
                                                  startWidth: width, startHeight: height,
                                                  dpiScaling: DpiScaling.read(app["dpi_scaling"].string),
                                                  fullScreen: FullScreenPlace.read(app["fullscreen"].string),
-                                                 immersive: FullScreenPlace.read(app["immersive"].string))
+                                                 immersive: FullScreenPlace.read(app["immersive"].string),
+                                                 belowTitleBar: app.bool("below_title_bar"))
         }
         return settings
     }
@@ -312,11 +316,28 @@ public final class AppsService {
     /// of Android scales an app the System (forced) way yet, and the apps whose automatic choice
     /// is System: DSA's built-in list of apps that break when their density changes while they
     /// run. A dsa that does not say counts as one whose Android cannot, and with no such list.
+    /// `belowTitleBarByDefault` is the apps that start below the title bar unless the user
+    /// chose otherwise; none from a dsa that does not name the list.
     public func windowSettingsList() async throws
-        -> (apps: [String: AppWindowSetting], systemForcedAvailable: Bool, systemScaledByDefault: Set<String>) {
+        -> (apps: [String: AppWindowSetting], systemForcedAvailable: Bool, systemScaledByDefault: Set<String>,
+            belowTitleBarByDefault: Set<String>) {
         let json = try await service.runJson(["app-window"])
         let listed = Set(json["system_scaled_by_default"].items.compactMap(\.string).filter { !$0.isEmpty })
-        return (AppsService.readWindowSettings(json), json.bool("system_forced_available"), listed)
+        let below = Set(json["below_title_bar_by_default"].items.compactMap(\.string).filter { !$0.isEmpty })
+        return (AppsService.readWindowSettings(json), json.bool("system_forced_available"), listed, below)
+    }
+
+    /// Starts `package` below the title bar (`on`) or lets it draw into it, and returns the
+    /// app's window settings as the service now has them. Its other window settings stay as
+    /// they are.
+    public func setBelowTitleBar(_ package: String, _ on: Bool) async throws -> AppWindowSetting {
+        let json = try await service.runJson(["app-window", package, "--below-title-bar", on ? "on" : "off"])
+        if let now = AppsService.readWindowSettings(json)[package] {
+            return now
+        }
+        var plain = AppWindowSetting.standard(package)
+        plain.belowTitleBar = on
+        return plain
     }
 
     /// Where every app without its own choice shows a clear full screen request and its bars
@@ -335,6 +356,8 @@ public final class AppsService {
     }
 
     /// Replaces the window settings of one app, and returns them as the service now has them.
+    /// Whether the app starts below the title bar is not sent, so an app the user never chose
+    /// for keeps following DSA's own list; `setBelowTitleBar` changes it.
     public func setWindowSetting(_ setting: AppWindowSetting) async throws -> AppWindowSetting {
         let json = try await service.runJson([
             "app-window", setting.package,
@@ -409,6 +432,8 @@ public struct AppRow: Equatable, Identifiable, Sendable {
     public var resizable: Bool
     /// Where the app's start size is among the choices; -1 for a size set another way.
     public var startSizeIndex: Int
+    /// Whether the app starts below the title bar instead of drawing into it.
+    public var belowTitleBar = false
     /// Where the app's scaling choice is among `dpiScalingChoices`, and, while it is System
     /// (forced) and not available yet, why it works like System, in the user's language.
     public var dpiScalingIndex = 0
@@ -456,6 +481,8 @@ public final class AppsViewModel: ObservableObject {
     /// The apps DSA scales the System way unless the user chose otherwise, because they break
     /// when their density changes while they run.
     @Published public private(set) var systemScaledByDefault: Set<String> = []
+    /// The apps DSA starts below the title bar unless the user chose otherwise.
+    @Published public private(set) var belowTitleBarByDefault: Set<String> = []
     /// Where every app without its own choice shows a clear full screen request and its bars
     /// hidden alone, as indexes of `defaultFullScreenPlaces`.
     @Published public private(set) var fullScreenDefaultIndex = 0
@@ -597,8 +624,16 @@ public final class AppsViewModel: ObservableObject {
             ? text.get("Apps_DpiScaling_SystemForcedTip") : nil
     }
 
+    /// The window settings of an app the user chose nothing for: plain, and below the title
+    /// bar when the app is on DSA's built-in list.
+    private func standardOf(_ package: String) -> AppWindowSetting {
+        var setting = AppWindowSetting.standard(package)
+        setting.belowTitleBar = belowTitleBarByDefault.contains(package)
+        return setting
+    }
+
     /// The window settings of `package`.
-    public func windowOf(_ package: String) -> AppWindowSetting { windows[package] ?? .standard(package) }
+    public func windowOf(_ package: String) -> AppWindowSetting { windows[package] ?? standardOf(package) }
 
     private func startSizeIndex(_ setting: AppWindowSetting) -> Int {
         startSizeChoices.firstIndex { $0.width == setting.startWidth && $0.height == setting.startHeight } ?? -1
@@ -622,6 +657,7 @@ public final class AppsViewModel: ObservableObject {
             icon: app.iconPng.isEmpty ? nil : app.iconPng, canUninstall: !app.systemApp, isSystem: app.systemApp,
             uninstallTip: app.systemApp ? text.get("Apps_SystemTip") : nil,
             resizable: !window.fixedSize, startSizeIndex: startSizeIndex(window),
+            belowTitleBar: window.belowTitleBar,
             dpiScalingIndex: DpiScaling.allCases.firstIndex(of: window.dpiScaling) ?? 0,
             dpiScalingTip: dpiScalingTip(window),
             dpiScalingChoices: dpiScalingChoices(for: app.package),
@@ -714,6 +750,7 @@ public final class AppsViewModel: ObservableObject {
                 windows = list.apps
                 systemForcedAvailable = list.systemForcedAvailable
                 systemScaledByDefault = list.systemScaledByDefault
+                belowTitleBarByDefault = list.belowTitleBarByDefault
                 let defaults = try await service.fullScreenDefaults()
                 fullScreenDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.fullScreen) ?? 0
                 immersiveDefaultIndex = AppsViewModel.defaultFullScreenPlaces.firstIndex(of: defaults.immersive) ?? 1
@@ -721,15 +758,22 @@ public final class AppsViewModel: ObservableObject {
                 windows = [:]
                 systemForcedAvailable = false
                 systemScaledByDefault = []
+                belowTitleBarByDefault = []
             }
             return nil
         }
     }
 
     private func setWindow(_ wanted: AppWindowSetting) async {
+        await changeWindow { try await service.setWindowSetting(wanted) }
+    }
+
+    /// Makes a change to one app's window settings, keeps what the service has now, and says
+    /// that the app's windows follow it.
+    private func changeWindow(_ change: () async throws -> AppWindowSetting) async {
         await run(reload: false) {
-            let now = try await service.setWindowSetting(wanted)
-            if now == .standard(now.package) {
+            let now = try await change()
+            if now == standardOf(now.package) {
                 windows.removeValue(forKey: now.package)
             } else {
                 windows[now.package] = now
@@ -746,6 +790,16 @@ public final class AppsViewModel: ObservableObject {
         }
         wanted.fixedSize = !resizable
         await setWindow(wanted)
+    }
+
+    /// Starts the app below the title bar, or lets it draw into it: for an app whose top bar is
+    /// squeezed or hidden under the title bar. The app's window follows it the next time it
+    /// opens. Choosing what the app has already sends nothing.
+    public func setBelowTitleBar(_ package: String, _ on: Bool) async {
+        if windowOf(package).belowTitleBar == on {
+            return
+        }
+        await changeWindow { try await service.setBelowTitleBar(package, on) }
     }
 
     /// Opens the app's windows at the start size at `index` of `startSizeChoices`.

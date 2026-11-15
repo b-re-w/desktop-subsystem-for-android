@@ -2240,5 +2240,16 @@ public interface EnvelopeOrBuilder extends
    */
   io.github.thisisthepy.dsa.control.v1.LaunchPlacement getLaunchPlacement();
 
+  /**
+   * <code>.dsa.control.v1.CaptionCompat caption_compat = 715;</code>
+   * @return Whether the captionCompat field is set.
+   */
+  boolean hasCaptionCompat();
+  /**
+   * <code>.dsa.control.v1.CaptionCompat caption_compat = 715;</code>
+   * @return The captionCompat.
+   */
+  io.github.thisisthepy.dsa.control.v1.CaptionCompat getCaptionCompat();
+
   public io.github.thisisthepy.dsa.control.v1.Envelope.BodyCase getBodyCase();
 }

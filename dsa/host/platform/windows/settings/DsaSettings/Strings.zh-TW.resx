@@ -1683,6 +1683,14 @@ Android 的設定會顯示裝置名稱與晶片。型號名稱只顯示在這裡
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>是否可以調整此應用程式視窗的大小並將其最大化。關閉時，每個視窗都會維持開啟時的大小。</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>從標題列下方開始</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>適用於頂端列被標題列擠壓或遮住的應用程式。
+應用程式會從標題列下方開始顯示，而不是繪製在標題列後方。
+下次開啟該應用程式的視窗時生效。</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>此應用程式視窗開啟時的大小</value>
   </data>

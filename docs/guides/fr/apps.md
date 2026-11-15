@@ -145,6 +145,20 @@ dsa app-window <package> --dpi-scaling system   # mise à l'échelle sur un autr
 dsa app-window <package> reset                  # revient aux valeurs par défaut
 ```
 
+## Faire démarrer une application sous la barre de titre
+
+Une application dessine jusqu'au bord supérieur de sa fenêtre, sous la barre de titre.
+Certaines applications écrasent alors leur barre supérieure ou en masquent une partie sous la
+barre de titre. Pour une telle application, activez **Start below the title bar** (démarrer sous la barre de
+titre) sur la page **Apps** de DSA Settings. Le contenu de l'application démarre alors sous la barre de
+titre, et la barre de titre prend la couleur que l'application affiche à cet endroit. C'est
+désactivé par défaut, et cela s'applique à la prochaine ouverture de la fenêtre de
+l'application. En ligne de commande :
+
+```
+dsa app-window <package> --below-title-bar on   # off revient à la valeur par défaut
+```
+
 ## Déplacer une application vers un écran d'une autre échelle
 
 Une application s'ouvre à l'échelle de l'écran sur lequel sa fenêtre s'ouvre, dès sa première
