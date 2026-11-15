@@ -1,6 +1,6 @@
 # The guest's memory, kept small so the host gets back what the guest is not using.
 #
-# Compressed swap: fstab.dsa declares a zram device of half the guest's memory. Idle apps'
+# Compressed swap: fstab.dsa declares a zram device as large as the guest's memory at boot. Idle apps'
 # pages are kept there compressed (about a third of their size) instead of resident, and the
 # memory they leave is free for page reporting to hand back to Hyper-V. When the guest itself
 # runs short, the kernel takes clean page cache before it compresses app memory: swappiness 60,
