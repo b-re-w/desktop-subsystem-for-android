@@ -57,10 +57,11 @@ chưa phát hành (xem [Nền tảng được hỗ trợ](#nền-tảng-được
   thanh của mình, chẳng hạn một luồng video ngắn, vẫn ở trong cửa sổ. Cả hai đều là lựa chọn
   trong DSA Settings, cho tất cả ứng dụng hoặc cho từng ứng dụng, và F11 luôn bật hoặc tắt toàn
   màn hình.
-- Hình ảnh sắc nét trên mọi màn hình. Ứng dụng mở ở tỷ lệ của màn hình nơi nó mở. Khi bạn kéo
-  ứng dụng sang màn hình có tỷ lệ khác, ứng dụng vẽ lại ở tỷ lệ mới sau khi bạn thả chuột, hoặc
-  DSA co giãn cửa sổ thay cho ứng dụng, tùy bạn chọn cho từng ứng dụng. Những ứng dụng được biết
-  là bị lỗi khi tỷ lệ thay đổi lúc đang chạy, chẳng hạn YouTube, được DSA co giãn theo mặc định.
+- Hình ảnh sắc nét trên mọi màn hình. Khi bạn chuyển ứng dụng sang màn hình có tỷ lệ khác,
+  ứng dụng vẽ lại ở tỷ lệ mới ngay khi cửa sổ của nó đến đó, hoặc DSA co giãn cửa sổ thay cho
+  ứng dụng, tùy bạn chọn cho từng ứng dụng. Theo mặc định, ứng dụng tự nhận là xử lý được thay
+  đổi tỷ lệ sẽ vẽ lại, còn DSA co giãn mọi ứng dụng khác. Những ứng dụng được biết là bị lỗi
+  khi tỷ lệ thay đổi lúc đang chạy, chẳng hạn YouTube, được DSA co giãn theo mặc định.
 - Chữ trong ứng dụng theo cài đặt cỡ chữ của Windows.
 - Chuột (có hover), cảm ứng đến mười ngón, bút (lực nhấn, tẩy, nút trên thân bút) và bàn phím
   với mọi bố cục.

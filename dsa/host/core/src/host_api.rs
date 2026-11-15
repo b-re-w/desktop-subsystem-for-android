@@ -5335,7 +5335,6 @@ impl HostApiService {
                 TaskRequest::SetDensity {
                     task_id: density.task_id,
                     density_dpi: density.density_dpi,
-                    recreate: density.recreate,
                 },
             ),
             // The message stays in the protocol so that its field number is never reused, but
@@ -8043,18 +8042,13 @@ impl HostApiClient {
     }
 
     /// Asks the caller's Android to draw a task at `density_dpi`, as when its window moves
-    /// to a monitor of another scale; with `recreate`, the move has ended and Android
-    /// recreates the task's top activity at that density.
-    pub fn set_task_density(
-        &mut self,
-        task_id: i32,
-        density_dpi: u32,
-        recreate: bool,
-    ) -> Result<(), ClientError> {
+    /// to a monitor of another scale.
+    pub fn set_task_density(&mut self, task_id: i32, density_dpi: u32) -> Result<(), ClientError> {
         self.done(request::Body::SetTaskDensity(types::SetTaskDensity {
             task_id,
             density_dpi,
-            recreate,
+            // Never set: Android redraws or recreates the task at a new density on its own.
+            recreate: false,
         }))
     }
 
@@ -8113,8 +8107,7 @@ impl HostApiClient {
             TaskRequest::SetDensity {
                 task_id,
                 density_dpi,
-                recreate,
-            } => self.set_task_density(*task_id, *density_dpi, *recreate),
+            } => self.set_task_density(*task_id, *density_dpi),
             TaskRequest::SetCaption {
                 task_id,
                 height,

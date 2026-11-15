@@ -58,10 +58,12 @@ sorunları bildirin. Linux ve macOS üzerinde çalışılıyor ve henüz yayıml
   uygulamalar (örneğin kısa video akışları) kendi pencerelerinde kalır. İkisi de DSA Settings'te
   tüm uygulamalar için veya her uygulama için ayrı seçilebilir. F11 her zaman tam ekranı açıp
   kapatır.
-- Her monitörde keskin görüntü. Bir uygulama, açıldığı monitörün ölçeğiyle açılır. Onu başka
-  ölçekteki bir monitöre taşıdığınızda, bıraktığınız anda yeni ölçekte yeniden çizilir ya da her
-  uygulama için seçtiğiniz gibi DSA penceresini ölçekler. Çalışırken ölçeği değişince bozulduğu
-  bilinen uygulamalar (örneğin YouTube) varsayılan olarak DSA tarafından ölçeklenir.
+- Her monitörde keskin görüntü. Bir uygulamayı başka ölçekteki bir monitöre taşıdığınızda,
+  penceresi oraya ulaşır ulaşmaz yeni ölçekte yeniden çizilir ya da her uygulama için
+  seçtiğiniz gibi DSA penceresini ölçekler. Varsayılan olarak, ölçek değişikliğini kendisinin
+  işlediğini söyleyen bir uygulama yeniden çizilir, diğerlerini DSA ölçekler. Çalışırken ölçeği
+  değişince bozulduğu bilinen uygulamalar (örneğin YouTube) varsayılan olarak DSA tarafından
+  ölçeklenir.
 - Uygulamalardaki metin, Windows metin boyutu ayarını izler.
 - Fare (üzerine gelme dahil), en fazla on parmakla dokunma, kalem (basınç, silgi, yan düğme) ve
   her düzende klavye.

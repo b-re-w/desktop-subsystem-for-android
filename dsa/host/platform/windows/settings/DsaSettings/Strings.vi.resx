@@ -1717,9 +1717,10 @@ Mỗi ứng dụng có biểu tượng trong vùng thông báo của thanh tác 
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Ai co giãn ứng dụng này khi cửa sổ của nó chuyển sang màn hình có tỷ lệ khác.
-• Ứng dụng: DSA co giãn cửa sổ khi bạn kéo. Khi bạn thả, ứng dụng vẽ lại ở tỷ lệ mới và chữ vẫn sắc nét: Android tạo lại màn hình một lần và giữ trạng thái, nên ứng dụng vẽ lại trong chốc lát.
-• Hệ thống: ứng dụng giữ tỷ lệ của nó và DSA co giãn cửa sổ về cùng kích thước thực. Ứng dụng không bao giờ bị tạo lại. Chữ có thể hơi mờ.
-• Tự động: Hệ thống cho các ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, như YouTube; Ứng dụng cho mọi ứng dụng khác.</value>
+• Ứng dụng: ứng dụng dùng ngay tỷ lệ của màn hình mới khi cửa sổ chạm tới đó và vẽ lại ở tỷ lệ ấy, nên chữ vẫn sắc nét. Với ứng dụng không cho biết tự xử lý việc này, Android tạo lại màn hình và giữ trạng thái, nên ứng dụng có thể vẽ lại trong chốc lát.
+• Hệ thống: ứng dụng giữ tỷ lệ của nó và DSA co giãn cửa sổ về cùng kích thước thực. Chữ có thể hơi mờ.
+• Tự động: Hệ thống cho các ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, như YouTube; với ứng dụng khác, Ứng dụng nếu nó cho biết tự xử lý việc này, Hệ thống nếu không.
+Tự động và Hệ thống không bao giờ khởi động lại ứng dụng.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Tự động (ứng dụng)</value>

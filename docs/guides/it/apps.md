@@ -150,26 +150,24 @@ dsa app-window <package> --below-title-bar on   # off torna al valore predefinit
 
 Android si avvia con la scala del monitor principale, quindi le app si aprono lì con le
 dimensioni giuste. Quando sposta una finestra su un
-monitor con un'altra scala, l'app mantiene le sue dimensioni sullo schermo. Ogni app lo fa in
+monitor con un'altra scala, l'app mantiene le sue dimensioni sullo schermo, e con **Automatic** e **System** non viene mai riavviata. Ogni app lo fa in
 uno di questi modi, che sceglie in **Scaling** nella pagina **Apps**, oppure
 con `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, il predefinito): **System** per le app presenti nell'elenco integrato
-  di DSA delle app che si guastano quando la scala cambia mentre sono in esecuzione, e **App**
-  per tutte le altre. L'elenco contiene YouTube: mantiene il layout per la scala con cui si è
+  di DSA delle app che si guastano quando la scala cambia mentre sono in esecuzione. Per
+  ogni altra app, **App** se dichiara di gestire da sola un cambio di scala, **System** in
+  caso contrario. L'elenco contiene YouTube: mantiene il layout per la scala con cui si è
   avviato, quindi dopo uno spostamento le schede in basso e il miniplayer resterebbero guasti
   fino al riavvio. Settings mostra il valore predefinito di un'app di questo tipo come
   **Automatic (system, recommended for this app)**. La Sua scelta per l'app ha la precedenza.
-- **App** (`app`): mentre trascina la finestra, DSA la scala per il nuovo monitor. Quando la
-  rilascia, l'app si ridisegna con la scala del nuovo monitor e il testo resta nitido: Android
-  ricrea la schermata una volta e ne ripristina lo stato (posizione di scorrimento, testo
-  digitato), quindi l'app si ridisegna brevemente dopo ogni spostamento, come fa un programma
-  Windows con il ridimensionamento "Applicazione". Questo vale anche per un'app che dichiara di
-  gestire da sola un cambio di scala, perché alcune di queste app ridisegnano con la nuova
-  scala solo una parte della schermata.
+- **App** (`app`): l'app si ridisegna con la scala del nuovo monitor appena la finestra vi
+  arriva, e il testo resta nitido. Per un'app che non dichiara di gestire da sola un cambio di
+  scala, Android ricrea la schermata e ne ripristina lo stato (posizione di scorrimento, testo
+  digitato), quindi può ridisegnarsi brevemente quando la sposta, come fa un programma Windows
+  con il ridimensionamento "Applicazione".
 - **System** (`system`): l'app mantiene la sua scala, e DSA scala la finestra per il nuovo
-  monitor. L'app non viene mai ricreata. Quando la scala aumenta, il testo può apparire un
-  po' sfocato.
+  monitor. Quando la scala aumenta, il testo può apparire un po' sfocato.
 - **System (forced)** (`system-forced`): all'app viene data la nuova scala senza riavvio, anche
   se non dichiara di gestirla. Non ancora disponibile: richiede una modifica ad Android che
   questa versione non contiene, quindi fino ad allora funziona come **System**.

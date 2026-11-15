@@ -76,17 +76,18 @@ public struct InstalledAppInfo: Equatable, Sendable {
     public var totalBytes: UInt64 { appBytes + dataBytes + cacheBytes }
 }
 
-/// How an app's window follows a move to a monitor of another scale. `system` never recreates
-/// the app.
+/// How an app's window follows a move to a monitor of another scale. `auto` and `system` never
+/// restart the app.
 public enum DpiScaling: String, CaseIterable, Equatable, Sendable {
-    /// App, for every app.
+    /// System for the apps on DSA's built-in list that break when their scale changes while they
+    /// run; for any other app, App if it says it handles a change of density itself, System if
+    /// not.
     case auto
-    /// The window is scaled while it is dragged; when the move ends the app redraws at the new
-    /// monitor's scale, and Android recreates its screen once and restores its state, even for
-    /// an app that says it handles a change of density.
+    /// The app redraws at the new monitor's scale. Android recreates the screen of an app that
+    /// does not say it handles a change of density, and restores its state.
     case app
     /// The app keeps its scale and its window is scaled to the new monitor, at the same
-    /// physical size. The app is never recreated.
+    /// physical size.
     case system
     /// The app gets the new scale without a restart even when it does not say it handles one.
     /// It needs a change to Android's framework; until a build has it, it works like `system`.

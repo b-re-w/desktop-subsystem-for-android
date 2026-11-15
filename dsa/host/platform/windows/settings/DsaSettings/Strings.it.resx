@@ -1717,9 +1717,10 @@ Si applica alla prossima apertura della finestra dell'app.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Chi adatta questa app quando la sua finestra passa a un monitor con un'altra scala.
-• App: DSA ridimensiona la finestra mentre la trascini. Al rilascio, l'app si ridisegna nella nuova scala e il testo resta nitido: Android ricrea la schermata una volta e ne mantiene lo stato.
-• Sistema: l'app mantiene la sua scala e DSA porta la finestra alla stessa dimensione fisica. L'app non viene mai ricreata. Il testo può sembrare un po' sfocato.
-• Automatico: Sistema per le app che si bloccano se la scala cambia mentre sono in esecuzione, come YouTube; App per tutte le altre.</value>
+• App: l'app assume subito la scala del nuovo monitor quando la finestra lo raggiunge e si ridisegna in quella scala, quindi il testo resta nitido. Per un'app che non dichiara di gestirlo, Android ricrea la schermata mantenendone lo stato, quindi può ridisegnarsi per un attimo.
+• Sistema: l'app mantiene la sua scala e DSA porta la finestra alla stessa dimensione fisica. Il testo può sembrare un po' sfocato.
+• Automatico: Sistema per le app che si bloccano se la scala cambia mentre sono in esecuzione, come YouTube; per ogni altra app, App se dichiara di gestirlo, Sistema se no.
+Automatico e Sistema non riavviano mai l'app.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Automatico (app)</value>

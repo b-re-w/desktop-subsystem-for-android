@@ -54,9 +54,10 @@ what you find. Linux and macOS are in progress and not released (see
   their bars, such as a feed of short videos, stay in their window. Both are a choice in DSA
   Settings, for all apps or for each app, and F11 always switches full screen.
 - Sharp output on every monitor. When you move an app to a monitor of another scale, it
-  redraws at the new scale once you let go, or DSA scales its window instead, as you choose
-  for each app. Apps known to break when
-  their scale changes while they run, such as YouTube, are scaled by DSA by default.
+  redraws at the new scale as soon as its window gets there, or DSA scales its window
+  instead, as you choose for each app; by default an app that says it handles a change of
+  scale redraws, and DSA scales any other. Apps known to break when their scale changes
+  while they run, such as YouTube, are scaled by DSA by default.
 - Text in apps follows the Windows text size setting.
 - Mouse (with hover), touch with up to ten fingers, pen (pressure, eraser, barrel button),
   and the keyboard with every layout.

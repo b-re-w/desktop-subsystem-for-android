@@ -78,15 +78,6 @@ interface TaskActions {
     fun endLiveResize(taskId: Int, bounds: TaskBounds, densityDpi: Int?): ResizeOutcome
 
     /**
-     * Has Android recreate the shown activities of [packageName], which restores their saved
-     * state (scroll position, typed text), even when they say they handle the change that came
-     * last themselves: the task [taskId] took a new density, and an app that says it handles
-     * one may lay out only part of its screen again at it. False when the framework lacks the
-     * call or refused.
-     */
-    fun recreateActivities(taskId: Int, packageName: String): Boolean = false
-
-    /**
      * Gives the task the input focus, and brings it to the front of its display, so the keys
      * the host sends next reach its focused window. False when the framework refused.
      */
@@ -176,13 +167,8 @@ sealed interface RequestResult {
      */
     data class Resize(val taskId: Int, val size: Size, val live: Boolean = false) : RequestResult
 
-    /**
-     * The host's window for the task is on a monitor of another scale; it draws at [densityDpi].
-     * With [recreate], the window's move has ended, and the task's top activity is to be
-     * recreated at that density once it takes it, even when the app says it handles a change of
-     * density itself.
-     */
-    data class Density(val taskId: Int, val densityDpi: Int, val recreate: Boolean = false) : RequestResult
+    /** The host's window for the task is on a monitor of another scale; it draws at [densityDpi]. */
+    data class Density(val taskId: Int, val densityDpi: Int) : RequestResult
 
     /**
      * The host's window for the task draws its title bar over the task's top [height] pixels;
@@ -243,9 +229,8 @@ class HostRequests(
             Envelope.BodyCase.RESIZE_TASK -> envelope.resizeTask.let {
                 resize(it.taskId, it.width, it.height, it.live)
             }
-            Envelope.BodyCase.SET_TASK_DENSITY -> envelope.setTaskDensity.let {
-                density(it.taskId, it.densityDpi, it.recreate)
-            }
+            Envelope.BodyCase.SET_TASK_DENSITY ->
+                density(envelope.setTaskDensity.taskId, envelope.setTaskDensity.densityDpi)
             Envelope.BodyCase.CAPTION_COMPAT ->
                 RequestResult.CaptionCompat(envelope.captionCompat.belowTitleBarList.filter { it.isNotEmpty() }.toSet())
             Envelope.BodyCase.SET_TASK_CAPTION -> caption(
@@ -326,11 +311,11 @@ class HostRequests(
         else -> RequestResult.Resize(taskId, Size(width, height), live)
     }
 
-    private fun density(taskId: Int, densityDpi: Int, recreate: Boolean): RequestResult = when {
+    private fun density(taskId: Int, densityDpi: Int): RequestResult = when {
         densityDpi < MIN_DENSITY || densityDpi > MAX_DENSITY ->
             RequestResult.Malformed("SetTaskDensity asks for ${Integer.toUnsignedString(densityDpi)} dpi")
         !reported(taskId) -> RequestResult.SizeRefused(taskId, "the host was never told about this task")
-        else -> RequestResult.Density(taskId, densityDpi, recreate)
+        else -> RequestResult.Density(taskId, densityDpi)
     }
 
     // The height is unsigned on the wire; a value past Int.MAX_VALUE reads as negative here.

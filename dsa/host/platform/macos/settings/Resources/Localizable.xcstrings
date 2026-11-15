@@ -11847,85 +11847,85 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wer diese App anpasst, wenn ihr Fenster auf einen Monitor mit anderer Skalierung wechselt.\n• App: DSA skaliert das Fenster beim Ziehen. Nach dem Loslassen zeichnet die App in der neuen Skalierung neu, damit Text scharf bleibt; kurz und mit erhaltenem Zustand.\n• System: DSA skaliert das Fenster auf dieselbe Größe und erstellt die App nie neu. Text kann etwas unscharf wirken.\n• Automatisch: System für Apps, die bei einer Skalierungsänderung zur Laufzeit fehlerhaft werden, etwa YouTube; App für alle anderen."
+            "value": "Wer diese App anpasst, wenn ihr Fenster auf einen Monitor mit anderer Skalierung wechselt.\n• App: Die App übernimmt die Skalierung des neuen Monitors, sobald das Fenster ihn erreicht, und zeichnet in dieser Skalierung, damit Text scharf bleibt. Eine App, die nicht angibt, das selbst zu handhaben, wird mit erhaltenem Zustand neu erstellt und zeichnet sich eventuell kurz neu.\n• System: DSA skaliert das Fenster auf dieselbe Größe. Text kann etwas unscharf wirken.\n• Automatisch: System für Apps, die bei einer Skalierungsänderung zur Laufzeit fehlerhaft werden, etwa YouTube; für jede andere App App, wenn sie angibt, das selbst zu handhaben, sonst System.\nAutomatisch und System starten die App nie neu."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Who adjusts this app when its window moves to a monitor of another scale.\n• App: DSA scales the window while you drag it. When you let go, the app redraws at the new scale, so text stays sharp; it redraws briefly, keeping its state.\n• System: DSA scales the window to the same size, and never recreates the app. Text can look a little blurry.\n• Automatic: System for apps that break when their scale changes while they run, such as YouTube; App for every other app."
+            "value": "Who adjusts this app when its window moves to a monitor of another scale.\n• App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp. An app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\n• System: DSA scales the window to the same size. Text can look a little blurry.\n• Automatic: System for apps that break when their scale changes while they run, such as YouTube; for any other app, App if it says it handles this, System if not.\nAutomatic and System never restart the app."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quién ajusta esta app cuando su ventana pasa a un monitor con otra escala.\n• App: DSA escala la ventana al arrastrarla; al soltarla, la app se redibuja en la nueva escala con texto nítido, sin perder su estado.\n• Sistema: DSA escala la ventana al mismo tamaño y nunca vuelve a crear la app. El texto puede verse algo borroso.\n• Automático: Sistema para las apps que fallan si su escala cambia mientras se ejecutan, como YouTube; App para todas las demás."
+            "value": "Quién ajusta esta app cuando su ventana pasa a un monitor con otra escala.\n• App: la app adopta la escala del nuevo monitor en cuanto la ventana llega a él y se redibuja a esa escala, con texto nítido. Una app que no indica que lo gestiona se vuelve a crear conservando su estado, así que puede redibujarse brevemente.\n• Sistema: DSA escala la ventana al mismo tamaño. El texto puede verse algo borroso.\n• Automático: Sistema para las apps que fallan si su escala cambia mientras se ejecutan, como YouTube; para cualquier otra, App si indica que lo gestiona, Sistema si no.\nAutomático y Sistema nunca reinician la app."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Qui ajuste cette app quand sa fenêtre passe sur un écran d'une autre échelle.\n• App : DSA ajuste la fenêtre au glissement. Relâchée, l'app se redessine brièvement à la nouvelle échelle : texte net, état conservé.\n• Système : DSA met la fenêtre à la même taille et ne recrée jamais l'app. Le texte peut sembler un peu flou.\n• Automatique : Système pour les apps qui plantent si leur échelle change pendant l'exécution, comme YouTube ; App pour les autres."
+            "value": "Qui ajuste cette app quand sa fenêtre passe sur un écran d'une autre échelle.\n• App : l'app prend l'échelle du nouvel écran dès que la fenêtre l'atteint et se redessine à cette échelle : texte net. Une app qui n'indique pas gérer ce changement est recréée avec son état conservé, et peut donc se redessiner brièvement.\n• Système : DSA met la fenêtre à la même taille. Le texte peut sembler un peu flou.\n• Automatique : Système pour les apps qui plantent si leur échelle change pendant l'exécution, comme YouTube ; pour toute autre app, App si elle indique gérer ce changement, Système sinon.\nAutomatique et Système ne redémarrent jamais l'app."
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siapa yang menyesuaikan aplikasi ini saat jendelanya pindah ke monitor dengan skala lain.\n• Aplikasi: DSA menskalakan jendela saat diseret. Saat dilepas, aplikasi digambar ulang sejenak di skala baru: teks tajam, status tetap.\n• Sistem: DSA menskalakan jendela ke ukuran yang sama dan tidak pernah membuat ulang aplikasi. Teks bisa tampak sedikit buram.\n• Otomatis: Sistem untuk aplikasi yang rusak jika skalanya berubah saat berjalan, seperti YouTube; Aplikasi untuk yang lainnya."
+            "value": "Siapa yang menyesuaikan aplikasi ini saat jendelanya pindah ke monitor dengan skala lain.\n• Aplikasi: aplikasi langsung memakai skala monitor baru saat jendela mencapainya dan menggambar ulang pada skala itu, sehingga teks tetap tajam. Aplikasi yang tidak menyatakan menangani hal ini dibuat ulang dengan status tetap, jadi mungkin digambar ulang sejenak.\n• Sistem: DSA menskalakan jendela ke ukuran yang sama. Teks bisa tampak sedikit buram.\n• Otomatis: Sistem untuk aplikasi yang rusak jika skalanya berubah saat berjalan, seperti YouTube; untuk aplikasi lain, Aplikasi jika aplikasi menyatakan menanganinya, Sistem jika tidak.\nOtomatis dan Sistem tidak pernah memulai ulang aplikasi."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chi adatta questa app quando la sua finestra passa a un monitor con un'altra scala.\n• App: DSA scala la finestra nel trascinamento. Al rilascio l'app si ridisegna un attimo alla nuova scala: testo nitido, stato invariato.\n• Sistema: DSA scala la finestra alla stessa dimensione e non ricrea mai l'app. Il testo può apparire un po' sfocato.\n• Automatico: Sistema per le app che si guastano se la scala cambia mentre sono in esecuzione, come YouTube; App per tutte le altre."
+            "value": "Chi adatta questa app quando la sua finestra passa a un monitor con un'altra scala.\n• App: l'app assume la scala del nuovo monitor non appena la finestra lo raggiunge e si ridisegna in quella scala: testo nitido. Un'app che non dichiara di gestirlo viene ricreata mantenendo lo stato, quindi può ridisegnarsi per un attimo.\n• Sistema: DSA scala la finestra alla stessa dimensione. Il testo può apparire un po' sfocato.\n• Automatico: Sistema per le app che si guastano se la scala cambia mentre sono in esecuzione, come YouTube; per ogni altra app, App se dichiara di gestirlo, Sistema se no.\nAutomatico e Sistema non riavviano mai l'app."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウィンドウを拡大率の異なるモニターに移したとき、このアプリの調整を誰が行うかを選びます。\n• アプリ: ドラッグ中は DSA が拡大縮小し、離すとアプリが新しい拡大率で描き直すので文字が鮮明です。状態を保ったまま一瞬描き直します。\n• システム: DSA がウィンドウを同じサイズに拡大縮小し、アプリを作り直すことはありません。文字が少しぼやけることがあります。\n• 自動: YouTube のように実行中に拡大率が変わると崩れるアプリにはシステムを、それ以外のアプリにはアプリを使います。"
+            "value": "ウィンドウを拡大率の異なるモニターに移したとき、このアプリの調整を誰が行うかを選びます。\n• アプリ: ウィンドウが新しいモニターに着くとすぐ、アプリがそのモニターの拡大率で描き直すので文字が鮮明です。これに対応すると示していないアプリは、状態を保ったまま作り直されるため、一瞬描き直されることがあります。\n• システム: DSA がウィンドウを同じサイズに拡大縮小します。文字が少しぼやけることがあります。\n• 自動: YouTube のように実行中に拡大率が変わると崩れるアプリにはシステムを、それ以外のアプリには、自分で対応すると示していればアプリを、示していなければシステムを使います。\n自動とシステムはアプリを再起動しません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 앱의 창이 배율이 다른 모니터로 갈 때 누가 크기를 맞출지 정합니다.\n• 앱: 창을 끄는 동안에는 DSA가 창을 늘이거나 줄입니다. 손을 떼면 앱이 새 배율로 다시 그려 글자가 선명합니다. 상태를 지킨 채 잠깐 다시 그려집니다.\n• 시스템: DSA가 창을 같은 크기로 늘이거나 줄이고, 앱을 다시 만들지 않습니다. 글자가 조금 흐려질 수 있습니다.\n• 자동: YouTube처럼 실행 중에 배율이 바뀌면 깨지는 앱에는 시스템을, 그 밖의 앱에는 앱을 씁니다."
+            "value": "이 앱의 창이 배율이 다른 모니터로 갈 때 누가 크기를 맞출지 정합니다.\n• 앱: 창이 새 모니터에 닿는 즉시 앱이 새 모니터의 배율을 적용해 그 배율로 다시 그려서 글자가 선명합니다. 이를 처리한다고 밝히지 않은 앱은 상태를 지킨 채 다시 만들어져, 잠깐 다시 그려질 수 있습니다.\n• 시스템: DSA가 창을 같은 크기로 늘이거나 줄입니다. 글자가 조금 흐려질 수 있습니다.\n• 자동: YouTube처럼 실행 중에 배율이 바뀌면 깨지는 앱에는 시스템을, 그 밖의 앱에는 직접 처리한다고 밝힌 경우 앱을, 밝히지 않은 경우 시스템을 씁니다.\n자동과 시스템은 앱을 재시작하지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quem ajusta este app quando a janela dele vai para um monitor com outra escala.\n• App: o DSA escala a janela durante o arraste. Ao soltar, o app redesenha rápido na nova escala, com texto nítido, e mantém o estado.\n• Sistema: o DSA escala a janela para o mesmo tamanho e nunca recria o app. O texto pode parecer um pouco desfocado.\n• Automático: Sistema para apps que quebram quando a escala muda durante a execução, como o YouTube; App para todos os outros."
+            "value": "Quem ajusta este app quando a janela dele vai para um monitor com outra escala.\n• App: o app assume a escala do novo monitor assim que a janela chega a ele e redesenha nessa escala, com texto nítido. Um app que não diz tratar isso é recriado mantendo o estado, então pode ser redesenhado por um instante.\n• Sistema: o DSA escala a janela para o mesmo tamanho. O texto pode parecer um pouco desfocado.\n• Automático: Sistema para apps que quebram quando a escala muda durante a execução, como o YouTube; para qualquer outro app, App se ele diz tratar isso, Sistema se não.\nAutomático e Sistema nunca reiniciam o app."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Кто подстраивает это приложение, когда его окно переходит на монитор с другим масштабом.\n• Приложение: пока вы тянете окно, его масштабирует DSA. Потом приложение перерисуется в новом масштабе: текст чёткий, состояние то же.\n• Система: DSA масштабирует окно до того же размера и никогда не пересоздаёт приложение. Текст может выглядеть немного размытым.\n• Автоматически: «Система» для приложений, ломающихся при смене масштаба на ходу, как YouTube; «Приложение» для остальных."
+            "value": "Кто подстраивает это приложение, когда его окно переходит на монитор с другим масштабом.\n• Приложение: как только окно попадает на новый монитор, приложение получает его масштаб и перерисовывается в нём: текст чёткий. Приложение, которое не сообщает, что обрабатывает это, пересоздаётся с сохранением состояния и может ненадолго перерисоваться.\n• Система: DSA масштабирует окно до того же размера. Текст может выглядеть немного размытым.\n• Автоматически: «Система» для приложений, которые ломаются от смены масштаба на ходу, например YouTube; для остальных «Приложение», если оно сообщает, что обрабатывает это, и «Система», если нет.\n«Автоматически» и «Система» никогда не перезапускают приложение."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu uygulamanın penceresi başka ölçekteki bir monitöre taşındığında uygulamayı kimin ayarlayacağı.\n• Uygulama: sürüklerken DSA pencereyi ölçekler. Bırakınca uygulama durumunu koruyup yeni ölçekte yeniden çizilir, metin keskin kalır.\n• Sistem: DSA pencereyi aynı boyuta ölçekler ve uygulamayı hiçbir zaman yeniden oluşturmaz. Metin biraz bulanık görünebilir.\n• Otomatik: YouTube gibi, çalışırken ölçeği değişince bozulan uygulamalar için Sistem; diğer tüm uygulamalar için Uygulama."
+            "value": "Bu uygulamanın penceresi başka ölçekteki bir monitöre taşındığında uygulamayı kimin ayarlayacağı.\n• Uygulama: pencere yeni monitöre ulaşır ulaşmaz uygulama o monitörün ölçeğini alır ve o ölçekte yeniden çizer, metin keskin kalır. Bunu işlediğini belirtmeyen uygulama durumu korunarak yeniden oluşturulur, bu yüzden kısa bir süre yeniden çizilebilir.\n• Sistem: DSA pencereyi aynı boyuta ölçekler. Metin biraz bulanık görünebilir.\n• Otomatik: YouTube gibi, çalışırken ölçeği değişince bozulan uygulamalar için Sistem; diğer uygulamalarda bunu işlediğini belirtiyorsa Uygulama, belirtmiyorsa Sistem.\nOtomatik ve Sistem uygulamayı hiçbir zaman yeniden başlatmaz."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ai điều chỉnh ứng dụng này khi cửa sổ của nó chuyển sang màn hình có tỷ lệ khác.\n• Ứng dụng: DSA co giãn cửa sổ khi bạn kéo. Khi thả ra, ứng dụng vẽ lại nhanh ở tỷ lệ mới, giữ nguyên trạng thái, nên chữ vẫn sắc nét.\n• Hệ thống: DSA co giãn cửa sổ về cùng kích thước và không bao giờ tạo lại ứng dụng. Chữ có thể hơi mờ.\n• Tự động: Hệ thống cho ứng dụng bị lỗi khi tỷ lệ đổi lúc đang chạy, như YouTube; Ứng dụng cho mọi ứng dụng khác."
+            "value": "Ai điều chỉnh ứng dụng này khi cửa sổ của nó chuyển sang màn hình có tỷ lệ khác.\n• Ứng dụng: ứng dụng dùng ngay tỷ lệ của màn hình mới khi cửa sổ chạm tới đó và vẽ lại ở tỷ lệ ấy, nên chữ vẫn sắc nét. Ứng dụng không cho biết tự xử lý việc này sẽ được tạo lại, giữ nguyên trạng thái, nên có thể vẽ lại trong chốc lát.\n• Hệ thống: DSA co giãn cửa sổ về cùng kích thước. Chữ có thể hơi mờ.\n• Tự động: Hệ thống cho ứng dụng bị lỗi khi tỷ lệ đổi lúc đang chạy, như YouTube; với ứng dụng khác, Ứng dụng nếu nó cho biết tự xử lý việc này, Hệ thống nếu không.\nTự động và Hệ thống không bao giờ khởi động lại ứng dụng."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "此应用的窗口移到缩放比例不同的显示器上时，由谁来调整它。\n• 应用：拖动窗口时，由 DSA 缩放窗口。松开后，应用以新的比例重新绘制，文字保持清晰；它会短暂重绘，并保留状态。\n• 系统：DSA 把窗口缩放到相同大小，从不重新创建应用。文字可能略显模糊。\n• 自动：运行中更改缩放比例会出问题的应用（例如 YouTube）使用“系统”；其他应用使用“应用”。"
+            "value": "此应用的窗口移到缩放比例不同的显示器上时，由谁来调整它。\n• 应用：窗口到达新显示器时，应用立即采用该显示器的缩放比例并按此比例重新绘制，文字保持清晰。没有声明自行处理缩放变化的应用会在保留状态的情况下重新创建，因此可能会短暂重绘。\n• 系统：DSA 把窗口缩放到相同大小。文字可能略显模糊。\n• 自动：运行中更改缩放比例会出问题的应用（例如 YouTube）使用“系统”；对其他应用，若其声明自行处理则使用“应用”，否则使用“系统”。\n“自动”和“系统”不会重启应用。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "此應用程式的視窗移到縮放比例不同的螢幕時，由誰調整。\n• 應用程式：拖移視窗時由 DSA 縮放視窗。放開後，應用程式會以新的縮放比例重新繪製，文字保持清晰；重繪只需片刻，並會保留狀態。\n• 系統：DSA 將視窗縮放為相同大小，絕不重新建立應用程式。文字可能看起來略為模糊。\n• 自動：執行中變更縮放比例就會出問題的應用程式（例如 YouTube）使用「系統」；其他應用程式都使用「應用程式」。"
+            "value": "此應用程式的視窗移到縮放比例不同的螢幕時，由誰調整。\n• 應用程式：視窗到達新螢幕時，應用程式立即採用該螢幕的縮放比例並以此比例重新繪製，文字保持清晰。未聲明自行處理縮放變更的應用程式會在保留狀態的情況下重新建立，因此可能會短暫重繪。\n• 系統：DSA 將視窗縮放為相同大小。文字可能看起來略為模糊。\n• 自動：執行中變更縮放比例就會出問題的應用程式（例如 YouTube）使用「系統」；其他應用程式若聲明自行處理則使用「應用程式」，否則使用「系統」。\n「自動」和「系統」不會重新啟動應用程式。"
           }
         }
       }

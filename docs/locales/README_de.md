@@ -58,11 +58,12 @@ veröffentlicht (siehe [Unterstützte Plattformen](#unterstützte-plattformen)).
   Apps, die nur ihre Leisten ausblenden, etwa ein Feed mit kurzen Videos, bleiben in ihrem
   Fenster. Beides lässt sich in DSA Settings wählen, für alle Apps oder für jede App einzeln,
   und F11 schaltet immer in den Vollbildmodus und zurück.
-- Scharfe Darstellung auf jedem Monitor. Eine App öffnet mit der Skalierung des Monitors, auf
-  dem sie geöffnet wird. Verschieben Sie sie auf einen Monitor mit anderer Skalierung, zeichnet
-  sie sich nach dem Loslassen in der neuen Skalierung neu, oder DSA skaliert stattdessen ihr
-  Fenster, je nachdem, was Sie für die App wählen. Apps, die bekanntermaßen fehlerhaft werden,
-  wenn sich ihre Skalierung zur Laufzeit ändert, etwa YouTube, skaliert standardmäßig DSA.
+- Scharfe Darstellung auf jedem Monitor. Verschieben Sie eine App auf einen Monitor mit
+  anderer Skalierung, zeichnet sie sich in der neuen Skalierung neu, sobald ihr Fenster dort
+  ankommt, oder DSA skaliert stattdessen ihr Fenster, je nachdem, was Sie für die App wählen.
+  Standardmäßig zeichnet sich eine App neu, die angibt, eine Änderung der Skalierung selbst zu
+  verarbeiten, und DSA skaliert jede andere. Apps, die bekanntermaßen fehlerhaft werden, wenn
+  sich ihre Skalierung zur Laufzeit ändert, etwa YouTube, skaliert standardmäßig DSA.
 - Text in Apps folgt der Windows-Einstellung für die Textgröße.
 - Maus (mit Hover), Toucheingabe mit bis zu zehn Fingern, Stift (Druck, Radierer,
   Zylindertaste) und die Tastatur mit jedem Layout.

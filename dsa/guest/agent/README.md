@@ -360,14 +360,10 @@ configuration, so tasks on the one display each draw at their own density. On a 
 without these calls the task still gets its size through `resizeTask`, draws at the
 display's density, and the agent logs it once.
 
-A `SetTaskDensity` with `recreate` set comes when the window's move has ended. Once the task
-is seen at the new density, the agent has Android recreate its top activity if that activity
-says it handles a change of density (`configChanges` includes `density`), through
-`IActivityManager.scheduleApplicationInfoChanged`: the app's shown activities are relaunched
-with their windows kept and their saved state restored, and the process goes on. Some apps
-that say they handle a density lay out only part of their screen again at the new one. An
-activity that does not say so is recreated by Android when its density changes, so the agent
-asks for nothing more. A task not seen at the density within two seconds is left as it is.
+The agent asks Android for nothing more than the density: an activity that says it handles
+a change of density (`configChanges` includes `density`) redraws at it, and Android
+recreates any other. `SetTaskDensity` still carries a `recreate` field on the wire; the host
+leaves it unset and the agent ignores it.
 
 **While the user drags.** A `ResizeTask` with `live` set is a step of a drag that has not
 ended. A new size changes the task's screen size in dp, and with it the orientation, the
