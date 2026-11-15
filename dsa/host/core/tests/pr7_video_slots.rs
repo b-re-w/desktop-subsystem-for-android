@@ -613,6 +613,72 @@ fn pr7_a_slot_whose_commit_is_refused_takes_the_copy_path() {
     );
 }
 
+/// A region whose discard takes a while and leaves the pages zeroed, as a discarded page of a
+/// Windows section may read: it says when a discard has begun.
+struct SlowDiscardRegion {
+    memory: MemoryRegion,
+    begun: Mutex<Option<std::sync::mpsc::Sender<()>>>,
+}
+
+impl SharedRegion for SlowDiscardRegion {
+    fn as_ptr(&self) -> *mut u8 {
+        self.memory.as_ptr()
+    }
+
+    fn len(&self) -> usize {
+        self.memory.len()
+    }
+
+    fn discard(&self, offset: usize, len: usize) {
+        if let Some(begun) = self.begun.lock().unwrap().take() {
+            let _ = begun.send(());
+        }
+        thread::sleep(Duration::from_millis(200));
+        // SAFETY: inside the region; the test writes it only through the slots.
+        unsafe { std::ptr::write_bytes(self.memory.as_ptr().add(offset), 0, len) };
+        self.memory.discard(offset, len);
+    }
+}
+
+#[test]
+fn pr7_a_stream_that_opens_while_the_last_one_is_discarded_keeps_its_first_picture() {
+    // The owner's YouTube mini player (dev build 0.2.4-dev.23) stayed a green box, which is
+    // what a picture of zeros looks like. A player that moves to a new surface releases its
+    // decoder and makes another at once: the new stream must not write its first picture
+    // while the slots the old one touched are still being discarded, or the discard wipes it.
+    let (begun, discarding) = std::sync::mpsc::channel();
+    let region = Arc::new(SlowDiscardRegion {
+        memory: MemoryRegion::new(REGION_BYTES, REGION_ID),
+        begun: Mutex::new(Some(begun)),
+    });
+    let slots = PictureSlots::open(region.clone()).unwrap();
+    let old = slots.stream();
+    let slot = old.take(PICTURE_BYTES).unwrap();
+    assert!(old.write(&slot, |bytes| {
+        bytes.fill(0x11);
+        true
+    }));
+    let ending = thread::spawn(move || drop(old));
+    discarding.recv_timeout(WAIT).expect("the discard begins");
+    // The new stream opens while the discard runs.
+    let new = slots.stream();
+    let first = new.take(PICTURE_BYTES).expect("room");
+    assert_eq!(
+        first.offset, slot.offset,
+        "the first free place is the old stream's"
+    );
+    assert!(new.write(&first, |bytes| {
+        bytes.fill(0x55);
+        true
+    }));
+    ending.join().unwrap();
+    assert_eq!(
+        region.memory.read(first.offset as usize, PICTURE_BYTES),
+        vec![0x55; PICTURE_BYTES],
+        "the new stream's picture survives the old stream's discard"
+    );
+}
+
 #[test]
 fn pr7_a_region_whose_header_cannot_be_committed_carries_no_pictures() {
     let region = ReservedRegion::new(|_| true);

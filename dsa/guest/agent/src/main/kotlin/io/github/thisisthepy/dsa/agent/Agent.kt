@@ -106,6 +106,7 @@ import io.github.thisisthepy.dsa.agent.windowing.FreeformSetup
 import io.github.thisisthepy.dsa.agent.windowing.GestureExclusion
 import io.github.thisisthepy.dsa.agent.windowing.BelowTitleBar
 import io.github.thisisthepy.dsa.agent.windowing.CaptionInsets
+import io.github.thisisthepy.dsa.agent.windowing.LaunchDensities
 import io.github.thisisthepy.dsa.agent.windowing.TaskArranger
 import io.github.thisisthepy.dsa.agent.windowing.WindowingControl
 import io.github.thisisthepy.dsa.agent.backup.BackupManagerPort
@@ -217,6 +218,12 @@ class Agent(
     appProcesses: AppProcesses = AppProcesses.NONE,
     /** The app processes for ending those that stay cached with no window; null ends none. */
     backgroundProcesses: BackgroundProcesses? = null,
+    /**
+     * The guest display's density, which an app process started for no activity has; 0 when
+     * unknown. An app the host starts on a monitor of another density gets a new process
+     * ([LaunchDensities]).
+     */
+    displayDensity: () -> Int = { 0 },
     widgetStore: WidgetStore = WidgetStore.memory(),
     accessibility: AccessibilitySource = AccessibilitySource.NONE,
     /** Where the accessibility trees of watched tasks are read, past the scheduler's thread. */
@@ -260,7 +267,10 @@ class Agent(
         intercept = ::interceptFrame,
     )
     private val reporter = TaskReporter(ownPackage, apps) { frame -> channel.send(frame) }
-    private val requests = HostRequests(ownPackage, actions, reporter::isReported)
+    private val requests = HostRequests(ownPackage, actions, reporter::isReported, beforeLaunch = ::beforeLaunch)
+
+    /** Gives an app the host starts a new process when its own started at another density. */
+    private val launchDensities = backgroundProcesses?.let { LaunchDensities(it, displayDensity, log) }
 
     /**
      * The apps' overlay windows (floating lyrics, a chat head), which are in no task: the host
@@ -367,6 +377,7 @@ class Agent(
         log,
         isConnected = { channel.connected },
         also = backgroundApps,
+        beforeOpen = ::beforeLaunch,
     )
     private val apkInstaller = ApkInstaller(
         packageInstaller,
@@ -1320,9 +1331,25 @@ class Agent(
         closedApps.tasks(packages + overlays.packages)
         // Every task's app keeps its processes, a task the host was not told of included.
         cachedProcesses?.tasks(packages + overlays.packages + running.mapNotNull { it.packageName })
+        launchDensities?.tasks(
+            running.mapNotNull { task -> task.packageName?.let { it to task.densityDpi } }.toMap(),
+        )
         appSound.tasks(packages, reporter.focusedTask()?.let(reporter::reportedPackage))
         hiddenApps.tasks(reported.mapNotNull { taskId -> reporter.reportedPackage(taskId)?.let { taskId to it } }.toMap())
         usedAppsCompile.tasks(packages)
+    }
+
+    /**
+     * The host is about to start [packageName] (an app, its shortcut, or its notification): its
+     * background processes go first when they started at another density than the monitor the
+     * host named for it ([LaunchDensities]). Nothing here may stop the start.
+     */
+    private fun beforeLaunch(packageName: String) {
+        try {
+            launchDensities?.beforeLaunch(packageName, arranger.launchDensity())
+        } catch (e: Exception) {
+            log.warn("could not look at the processes of $packageName before it starts", e)
+        }
     }
 
     /**

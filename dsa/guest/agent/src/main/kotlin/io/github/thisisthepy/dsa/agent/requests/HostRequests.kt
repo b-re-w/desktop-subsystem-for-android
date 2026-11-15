@@ -234,6 +234,12 @@ class HostRequests(
     private val actions: TaskActions,
     /** Whether the host was told about the task, and so may close it. */
     private val reported: (Int) -> Boolean,
+    /**
+     * Runs just before an app or one of its shortcuts is started for the host, with its package:
+     * the app's background processes may be ended there, so it starts in a new process at the
+     * density of its window's monitor ([io.github.thisisthepy.dsa.agent.windowing.LaunchDensities]).
+     */
+    private val beforeLaunch: (String) -> Unit = {},
 ) {
     fun handle(frame: ByteArray): RequestResult {
         val envelope = try {
@@ -288,8 +294,18 @@ class HostRequests(
             } else {
                 RequestResult.LaunchFailed(packageName, "the framework refused to start another task of it")
             }
-        actions.launchApp(packageName) -> RequestResult.Launched(packageName)
+        launchApp(packageName) -> RequestResult.Launched(packageName)
         else -> RequestResult.LaunchFailed(packageName, "the package has no launcher activity, or the framework refused to start it")
+    }
+
+    private fun launchApp(packageName: String): Boolean {
+        beforeLaunch(packageName)
+        return actions.launchApp(packageName)
+    }
+
+    private fun startShortcut(packageName: String, shortcutId: String): Boolean {
+        beforeLaunch(packageName)
+        return actions.launchShortcut(packageName, shortcutId)
     }
 
     // A shortcut that is gone or turned off still opens its app, as a launcher's stale
@@ -299,7 +315,7 @@ class HostRequests(
             RequestResult.Malformed("LaunchShortcut names ${packageName.take(80).ifEmpty { "no package" }}, which is not a package name")
         shortcutId.isEmpty() -> RequestResult.Malformed("LaunchShortcut names no shortcut of $packageName")
         packageName == ownPackage -> RequestResult.LaunchFailed(packageName, "the agent has no shortcuts to start")
-        actions.launchShortcut(packageName, shortcutId) -> RequestResult.ShortcutLaunched(packageName, shortcutId)
+        startShortcut(packageName, shortcutId) -> RequestResult.ShortcutLaunched(packageName, shortcutId)
         actions.launchApp(packageName) -> RequestResult.ShortcutLaunched(packageName, shortcutId, appInstead = true)
         else -> RequestResult.LaunchFailed(packageName, "neither the shortcut $shortcutId nor the app could be started")
     }
