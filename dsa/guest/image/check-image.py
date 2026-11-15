@@ -642,6 +642,16 @@ with zipfile.ZipFile(image / "signed-target_files.zip") as z:
             if not any(expected in line and "same_process_hal_file" in line for line in vendor_fc.splitlines()):
                 problems.append(f"vendor_file_contexts does not label {expected} as same_process_hal_file")
 
+    # App processes' Vulkan drivers reach the kernel's write protection of their copies and the
+    # graphics memory the host shares, or every app hashes all its mapped memory at each submit.
+    def read_text(name):
+        return z.read(name).decode() if name in names else ""
+    problems += make_image.graphics_memory_access_problems(
+        read_text("SYSTEM/etc/selinux/plat_sepolicy.cil"),
+        read_text("VENDOR/etc/selinux/vendor_file_contexts"),
+        read_text(make_image.VENDOR_PROPERTY_CONTEXTS),
+        z.read("VENDOR/lib64/hw/vulkan.ranchu.so") if "VENDOR/lib64/hw/vulkan.ranchu.so" in names else None)
+
     vendor_props = z.read("VENDOR/build.prop").decode() if "VENDOR/build.prop" in names else ""
     for prop, val in [
         ("ro.hardware.egl", "angle"),

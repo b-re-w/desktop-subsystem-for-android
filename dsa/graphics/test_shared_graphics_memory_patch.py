@@ -161,6 +161,30 @@ class GuestPatchTests(unittest.TestCase):
         unmap = device[device.index("void unmap("):]
         self.assertLess(unmap.index("munmap(at, length);"), unmap.index("kGraphicsMemoryReleaseIoctl"))
 
+    def test_pr7_the_guest_says_why_the_device_did_not_open(self):
+        # Every failed open read "the guest has no /dev/dsa_graphics_memory", although the node
+        # was there: the kernel refused the open (ENODEV) because it had not taken the regions.
+        device = read(DEVICE)
+        opener = device[device.index("const char* open() {"):device.index("int mFd = -1;")]
+        self.assertIn("case ENOENT:", opener)
+        self.assertIn("case ENODEV:", opener)
+        self.assertIn("case EACCES:", opener)
+        self.assertLess(opener.index("case ENOENT:"), opener.index('"the guest has no /dev/dsa_graphics_memory"'))
+        self.assertLess(opener.index('"the guest has no /dev/dsa_graphics_memory"'), opener.index("case ENODEV:"))
+        self.assertIn("#include <cerrno>", device)
+
+    def test_pr7_the_kernel_takes_the_regions_at_the_page_numbers_hcs_reports(self):
+        # HCS reports where the regions are as page numbers (0x84000, 0x94000). Read as byte
+        # addresses they lie in the guest's low RAM, so the first try fails with EINVAL, not
+        # ENODEV: the driver must try the page numbers after any failure, as the picture
+        # region's does, or no app ever maps the graphics memory.
+        patch = read(HERE.parent / "kernel" / "patches" / "dsa-shared-memory.patch")
+        body = patch[patch.index("+static int dsa_set_graphics_memory("):]
+        body = body[:body.index("+static int dsa_get_graphics_memory(")]
+        self.assertNotIn("err == -ENODEV", body)
+        self.assertIn("+\tif (err && grants < (1ULL << (63 - PAGE_SHIFT)) &&", body)
+        self.assertIn("(phys_addr_t)grants << PAGE_SHIFT", body)
+
     def test_pr7_gralloc_uploads_and_read_backs_go_through_staging(self):
         gralloc = added(MESA_PATCH, "src/gfxstream/guest/android/GrallocMinigbm.cpp")
         self.assertIn("rcEnc->rcReadColorBufferDMA(", gralloc)

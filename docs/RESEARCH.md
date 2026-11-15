@@ -3153,6 +3153,36 @@ HCS에는 바로 이 목적의 장치가 문서에 있다.
 
 결정. 문서와 주소 찾기는 모든 섹션을 `\BaseNamedObjects\` 이름으로 적는다(`hcs_section_name`). 그래픽 섹션 둘은 `SEC_RESERVE`로 만든다. 5가 미지수이므로 게스트는 커밋되지 않은 페이지에 닿을 수 없어야 한다. 서비스는 섹션을 만들 때 허가 표 전체와 데이터 영역의 확인 칸을 커밋한다. 렌더러는 허가의 열쇠를 표에 쓰기 전에 그 64 KiB 조각들을 자기 뷰에서 커밋한다. 커밋한 조각은 비트맵에 적어 한 번만 커밋한다. 커밋이 실패하면(커밋 한도) 그 할당은 까닭을 한 번 남기고 복사 경로로 간다. 놓인 조각은 지금처럼 0으로 채우고 버린다. 물리 페이지는 돌아오고 커밋은 남는다. 그래서 커밋은 VM이 멈출 때까지 허가가 쓴 최고 수위만큼이다. 섹션 뷰의 길이는 `VirtualQuery`의 첫 범위가 아니라 같은 할당의 범위를 모두 더해 얻는다. 예약만 한 섹션은 커밋한 앞부분에서 첫 범위가 끝나기 때문이다. 동영상 영역(기본 64 MiB)은 처음에 `SEC_COMMIT`로 두었다. SPEC PR-7이 그 섹션이 크기 전체를 커밋한다고 적고 있었기 때문이다. 소유자가 2026-11-15에 그 줄을 바꾸기로 정해 동영상 섹션도 `SEC_RESERVE`로 만든다. 서비스는 만들 때 영역 머리의 64 KiB만 커밋한다. 창 관리자와 게스트 커널이 그림보다 먼저 읽는 것은 머리뿐이다(커널은 머리가 있는 첫 페이지만 `memremap`으로 읽고, 코덱 HAL은 머리와 메시지가 가리킨 슬롯만 읽는다). 이전 부팅의 섹션은 커밋된 페이지만 0으로 채우고 버린다. 창 관리자는 슬롯에 처음 쓰기 전에 자기 뷰에서 그 64 KiB 조각들을 커밋하고, 커밋한 조각을 적어 두어 한 번만 커밋한다. 커밋이 실패하면 그 그림은 메시지에 실려 가고 까닭은 영역마다 한 번 남는다. 마지막 디코더가 닫히면 커밋된 조각만 버린다.
 
+### 앱에서 쓰기 추적과 그래픽 공유 메모리가 꺼져 있던 까닭 (2026-11-15, NFR-2, PR-3, PR-7)
+
+본 것. 소유자 PC(0.2.4-dev.23, 이미지 17.0.0-16373615-15-dev.23)에서 PR #792(쓰기 추적)와 PR #795(그래픽 공유 메모리)가 들어간 뒤에도 Dragon Ball Legends의 로딩이 멈추고 4K 동영상이 조금 느렸다. 게임(pid 6421, `untrusted_app_34`)의 `logcat`은 두 줄을 남겼다.
+
+- `host-visible memory: every block of each mapped copy is hashed at each submit, since write protection is not available (/proc/self/pagemap could not be opened: Permission denied, errno 13 ...`. 같은 부팅의 `com.google.android.gms`(pid 1207)는 `the pages written are found with write protection (userfaultfd and PAGEMAP_SCAN)`이었다. pagemap에 대한 avc 거부는 없었다.
+- `host-visible memory is copied through the stream: the guest has no /dev/dsa_graphics_memory`. 노드는 있었다(`crw-rw-rw- root root 10,259`). 서비스 로그는 `host-visible graphics memory goes through 256 MiB of shared memory, which HCS places at 0x84000 in the VM (its grants at 0x94000)`였다.
+
+확인한 자료. `frameworks/base`의 `core/jni/com_android_internal_os_Zygote.cpp`(main), `system/sepolicy`의 `private/domain.te`와 `private/app.te`(main), 이 저장소의 `dsa_dirty_pages.h`, `dsa_graphics_memory_device.h`, `dsa/kernel/patches/dsa-shared-memory.patch`, 위 "측정"의 1(HCS의 `GuestPhysicalAddress`는 페이지 번호다).
+
+찾은 원인 1: pagemap은 SELinux가 아니라 파일의 주인이 막았다.
+
+1. zygote는 앱 uid로 바꾼 뒤 `PR_GET_DUMPABLE`이 2이면 `PR_SET_DUMPABLE, 0`으로 내린다. 다시 1로 올리는 것은 `DEBUG_ENABLE_PTRACE`(디버그 가능한 앱, 또는 디버그 빌드의 설정)와 `PROFILE_FROM_SHELL`(셸에서 프로파일할 수 있는 앱)뿐이다. DSA 이미지는 `ro.debuggable=0`이므로 대부분의 앱은 dumpable이 아니다. gms는 셸 프로파일을 허용하는 앱이라 dumpable이었다고 본다(추정, 확인하지 않았다). 안티치트가 스스로 내렸을 수도 있다.
+2. 커널은 dumpable이 아닌 프로세스의 `/proc/<pid>` 파일 주인을 root로 둔다(`task_dump_owner`). `pagemap`의 모드는 0400, `clear_refs`는 0200이다. 그래서 앱 자신의 uid가 연 `open("/proc/self/pagemap")`는 주인과 모드 검사에서 `EACCES`가 되고, SELinux 훅까지 가지 않으므로 avc가 남지 않는다.
+3. SELinux는 막지 않는다. `domain.te`에 `allow domain self:{ fifo_file file } rw_file_perms;`가 있고, PR #792가 `PAGEMAP_SCAN`(0x6610) ioctl을 더했다. `pagemap_open`의 `proc_mem_open(PTRACE_MODE_READ)`는 자기 mm이면 ptrace 검사를 건너뛴다. pagemap에 대한 `neverallow`는 고칠 것과 관계가 없다.
+4. soft-dirty도 같은 `pagemap`과 `clear_refs`를 쓰므로 같이 막혔다. userfaultfd 동기 모드(폴트마다 처리 스레드가 깨어난다)는 pagemap 없이 되지만, 프레임마다 수만 페이지를 쓰는 게임에서는 폴트 비용이 해시만큼 든다.
+
+고친 것 1. 드라이버(`LinuxDirtyKernel::openOwnProcFile`)는 자기 `/proc` 파일을 열다 `EACCES`를 받고 프로세스가 dumpable이 아니면, 그 한 번의 `open`만 `PR_SET_DUMPABLE, 1`로 열고 곧바로 0으로 되돌린다. 커널은 메모리에 닿을 권한을 열 때만 보므로, 연 파일은 되돌린 뒤에도 읽기와 `PAGEMAP_SCAN`에 쓰인다. 대가: 그 몇 마이크로초 동안 같은 uid의 프로세스가 그 앱의 `/proc` 파일을 열 수 있다. 같은 uid는 그 앱 자신이고, 앱끼리의 ptrace는 SELinux가 따로 막는다. 정책은 바꾸지 않았다.
+
+찾은 원인 2: 커널이 그래픽 영역을 받지 않았다.
+
+1. mesa 0015가 장치를 쓰기 전에 보는 것은 `open("/dev/dsa_graphics_memory", O_RDWR)`와 `DSA_GRAPHICS_MEMORY_INFO` ioctl 둘뿐이다. `vendor.dsa.graphics_memory` 속성은 읽지 않는다(셸의 `getprop` 거부는 셸에만 해당하고 앱과 관계없다). 그런데 열기가 어떤 까닭으로 실패해도 "the guest has no /dev/dsa_graphics_memory"라고 적었다.
+2. 노드의 레이블은 `gpu_device`(`vendor_file_contexts`)이고, 플랫폼은 `allow { appdomain -isolated_app_all } gpu_device:chr_file rw_file_perms;`로 열기, ioctl, 매핑을 준다. surfaceflinger, 컴포저 HAL, system_server(`graphics-vsock.cil`)도 연다. isolated 앱(Chrome과 WebView의 렌더러 프로세스)은 GPU를 쓰지 않는다. GPU 프로세스는 앱 자신의 도메인이다.
+3. 커널 드라이버의 `open`은 영역을 받기 전에는 `-ENODEV`를 돌려준다. 영역은 init이 매개변수에 `0x94000,<길이>,0x84000,268435456`을 쓸 때 받는다. HCS의 값은 페이지 번호이므로 드라이버는 먼저 바이트 주소로 보고, 안 되면 페이지 번호로 다시 본다. 그런데 그래픽 드라이버는 첫 시도가 `-ENODEV`(머리가 없다)일 때만 다시 보았다. 바이트 주소 0x84000은 게스트의 낮은 RAM 안이므로 첫 시도는 `region_intersects` 검사에서 `-EINVAL`로 끝났고, 다시 보지 않았다. 그래서 모든 열기가 `-ENODEV`였다. 동영상 드라이버는 어떤 실패에도 다시 보므로 이 문제가 없다(0x80000, 64 MiB, 그 뒤가 바로 그래픽 영역 0x84000이다).
+
+고친 것 2. 그래픽 드라이버도 첫 시도가 어떻게 실패하든 페이지 번호로 다시 본다(`dsa-shared-memory.patch`). 게스트 드라이버는 열기 실패를 errno별로 적는다(`ENOENT`, `ENODEV`, `EACCES`). `check-image.py`는 정책의 `PAGEMAP_SCAN` 허용, 매개변수의 레이블, 노드의 `gpu_device` 레이블, 속성 문맥, 그리고 Vulkan 드라이버에 두 고침의 문구가 들어 있는지 보고, 없으면 이미지를 거절한다.
+
+동영상 경로. 코덱 HAL은 `/dev/dsa_video_pictures`를 연다(`picture_region.cpp`). `/dev/dsa_shared_memory`라는 노드는 없고, 그 이름은 커널 드라이버 파일의 이름이다. 정책은 `mediacodec`(dsa-codec2의 도메인)에 열기, 읽기, 매핑, 크기 ioctl(0x4450)만 준다. 이번 로그만으로는 동영상 경로가 켜졌는지 알 수 없다. 확인은 `logcat`의 `pictures come through 64 MiB of memory shared with the host`와 `dsa-wm.log`의 `video:` 줄의 "N in shared memory"다.
+
+확인하지 못한 것: 커널과 mesa의 빌드(CI만), gms가 dumpable이었던 정확한 까닭, 고친 뒤 게임의 `UnityGfxDeviceWorker` CPU와 4K 동영상의 fps(소유자 PC).
+
 ## R43. 직접 매핑 모드에서 vmmem의 메모리가 오히려 700-850 MiB 는 까닭과 고친 것 (NFR-1, NFR-2)
 
 **질문.** 소유자 PC(0.2.4-dev.15, Windows 11)에서 R39의 직접 매핑 모드(시스템 디스크와 추가 기능 디스크를 Hyper-V `VirtualPMem`으로 붙이고 erofs를 `dax=always`로 마운트)를 켜자 게스트 페이지 캐시(유휴 153 -> 93 MiB)와 VM private(90-250 MiB)는 줄었는데, vmmem의 작업 집합(`dsa memory`의 "resident")은 700-850 MiB 늘었다(유휴 5분 568 -> 1303 MiB, Play를 띄운 1분 867 -> 1719 MiB). Hyper-V는 영구 메모리의 파일을 어떻게 매핑하는가, 그 페이지는 무엇으로 세는가, 누가 돌려줄 수 있는가.

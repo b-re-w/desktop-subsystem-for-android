@@ -121,6 +121,25 @@ class DirtyTrackingPatchTests(unittest.TestCase):
         policy = (ROOT / "dsa/guest/image/sepolicy/graphics-memory.cil").read_text(encoding="utf-8")
         self.assertIn("(allowx appdomain self (ioctl file (0x6610)))", policy)
 
+    def test_nfr2_pr3_an_app_that_is_not_dumpable_opens_its_own_pagemap(self):
+        # The zygote makes most apps not dumpable, and the kernel then gives their /proc files
+        # to root: the app's own pagemap (0400) and clear_refs (0200) refuse it with EACCES
+        # before SELinux is asked. A game logged exactly that and hashed every copy.
+        opener = DIRTY[DIRTY.index("static int openOwnProcFile("):DIRTY.index("void closeWriteProtect()")]
+        self.assertIn("if (fd >= 0 || errno != EACCES) return fd;", opener)
+        self.assertIn("prctl(PR_GET_DUMPABLE, 0, 0, 0, 0) != 0", opener)
+        made = opener.index("prctl(PR_SET_DUMPABLE, 1, 0, 0, 0)")
+        reopen = opener.index("fd = open(path, flags | O_CLOEXEC);", made)
+        # Put back at once, after the one open, whatever it returned.
+        self.assertLess(reopen, opener.index("prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);", reopen))
+        self.assertIn('openOwnProcFile("/proc/self/pagemap", O_RDONLY, &madeDumpable)', DIRTY)
+        self.assertIn('openOwnProcFile("/proc/self/clear_refs", O_WRONLY, &madeDumpable)', DIRTY)
+        self.assertNotIn('open("/proc/self/pagemap"', DIRTY)
+        self.assertNotIn('open("/proc/self/clear_refs"', DIRTY)
+        self.assertIn("#include <sys/prctl.h>", DIRTY)
+        # check-image.py looks for this text in the driver.
+        self.assertIn('"process made dumpable for the open"', DIRTY)
+
     def test_nfr2_it_applies_after_0013_and_its_unit_test_runs(self):
         names = sorted(p.name for p in PATCH_DIR.glob("*.patch"))
         self.assertEqual(names[names.index(PATCH.name) - 1][:5], "0013-")
