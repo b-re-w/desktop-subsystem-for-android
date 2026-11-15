@@ -613,7 +613,35 @@ jobs:
               ICD = [ordered]@{ api_version = "1.2.0"; library_path = $dll }
               file_format_version = "1.0.1"
           } | ConvertTo-Json | Set-Content -Path $env:DZN_ICD -Encoding utf8
+          # The runner's processes run elevated, and the Vulkan loader then ignores
+          # VK_DRIVER_FILES and VK_ICD_FILENAMES ("Loader is running with elevated permissions");
+          # it lists only the drivers in the registry. The steps below still set both, since
+          # DSA reads them to take the named drivers as they are.
+          New-Item -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Force | Out-Null
+          New-ItemProperty -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Name $env:DZN_ICD -Value 0 -PropertyType DWord -Force | Out-Null
           Write-Host "Dozen at $dll, dxil.dll from $($dxil.FullName)"
+          Get-ChildItem -Recurse .scratch/dzn | ForEach-Object { Write-Host "  $($_.FullName) ($($_.Length) bytes)" }
+          Get-Content $env:DZN_ICD | Write-Host
+
+      - name: Show what the Vulkan loader finds
+        shell: pwsh
+        working-directory: dsa
+        env:
+          VK_ICD_FILENAMES: ${{ env.DZN_ICD }}
+          VK_DRIVER_FILES: ${{ env.DZN_ICD }}
+          VK_LOADER_DEBUG: error,warn,info,driver
+        run: |
+          Write-Host "Drivers in HKLM\SOFTWARE\Khronos\Vulkan\Drivers:"
+          (Get-Item "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers").Property | ForEach-Object { Write-Host "  $_" }
+          $vulkaninfo = Get-Command vulkaninfo -ErrorAction SilentlyContinue
+          if ($vulkaninfo) {
+            & $vulkaninfo.Source --summary
+          } else {
+            Write-Host "No vulkaninfo on this runner; the loader's own log for dsa gpus follows."
+          }
+          # The loader writes its log to stderr; dsa gpus keeps running whatever it finds.
+          cargo run -q -p dsa-cli --bin dsa -- gpus --json
+          exit 0
 
       - name: List the Vulkan devices as DSA sees them
         shell: pwsh
