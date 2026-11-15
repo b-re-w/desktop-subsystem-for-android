@@ -163,27 +163,25 @@ dsa app-window <package> --below-title-bar on   # off revient à la valeur par d
 
 Android démarre à l'échelle de votre écran principal, donc les applications s'y ouvrent à la
 bonne taille. Quand vous déplacez une fenêtre
-vers un écran d'une autre échelle, l'application garde sa taille à l'écran. Chaque
+vers un écran d'une autre échelle, l'application garde sa taille à l'écran, et avec **Automatic** et **System** elle n'est jamais redémarrée. Chaque
 application le fait de l'une des manières suivantes, que vous choisissez sous **Scaling** (mise à l'échelle sur un autre écran) sur la page **Apps**, ou avec
 `dsa app-window <package> --dpi-scaling` :
 
 - **Automatic** (`auto`, la valeur par défaut) : **System** pour les applications de la liste
-  intégrée de DSA, celles qui se dérèglent quand leur échelle change en cours d'exécution, et
-  **App** pour toutes les autres. La liste contient YouTube : il garde la disposition de
+  intégrée de DSA, celles qui se dérèglent quand leur échelle change en cours d'exécution.
+  Pour toute autre application, **App** si elle déclare gérer elle-même un changement
+  d'échelle, **System** sinon. La liste contient YouTube : il garde la disposition de
   l'échelle à laquelle il a démarré, donc après un déplacement ses onglets inférieurs et son
   mini-lecteur resteraient déréglés jusqu'à son redémarrage. DSA Settings affiche la valeur par
   défaut d'une telle application comme **Automatic (system, recommended for this app)**. Votre
   propre choix pour l'application passe en premier.
-- **App** (`app`) : pendant que vous faites glisser la fenêtre, DSA la met à l'échelle du
-  nouvel écran. Quand vous la relâchez, l'application se redessine à l'échelle du nouvel écran
-  et son texte reste net : Android recrée son écran une fois et restaure son état (position
-  de défilement, texte saisi), donc elle se redessine brièvement après chaque déplacement,
-  comme un programme Windows avec la mise à l'échelle « Application ». C'est le cas même pour
-  une application qui déclare gérer elle-même un changement d'échelle, car certaines de ces
-  applications ne redessinent qu'une partie de leur écran à la nouvelle échelle.
+- **App** (`app`) : l'application se redessine à l'échelle du nouvel écran dès que la fenêtre
+  y arrive, et son texte reste net. Pour une application qui ne déclare pas gérer elle-même un
+  changement d'échelle, Android recrée son écran et restaure son état (position de défilement,
+  texte saisi), donc elle peut se redessiner brièvement quand vous la déplacez, comme un
+  programme Windows avec la mise à l'échelle « Application ».
 - **System** (`system`) : l'application garde son échelle, et DSA met sa fenêtre à l'échelle
-  du nouvel écran. L'application n'est jamais recréée. Agrandi, le texte peut paraître un peu
-  flou.
+  du nouvel écran. Agrandi, le texte peut paraître un peu flou.
 - **System (forced)** (`system-forced`) : l'application reçoit la nouvelle échelle sans
   redémarrage, même si elle ne déclare pas la gérer. Pas encore disponible : cela nécessite
   une modification d'Android que cette version n'a pas, donc d'ici là ce choix fonctionne

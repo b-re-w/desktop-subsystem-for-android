@@ -1527,7 +1527,6 @@ fn fr4_resizing_and_rescaling_a_task_reach_the_guest() {
         .request(TaskRequest::SetDensity {
             task_id: 7,
             density_dpi: 320,
-            recreate: true,
         })
         .expect("the density is sent");
     session
@@ -1546,7 +1545,7 @@ fn fr4_resizing_and_rescaling_a_task_reach_the_guest() {
             dsa_protocol::control::SetTaskDensity {
                 task_id: 7,
                 density_dpi: 320,
-                recreate: true
+                recreate: false
             }
         ))
     );

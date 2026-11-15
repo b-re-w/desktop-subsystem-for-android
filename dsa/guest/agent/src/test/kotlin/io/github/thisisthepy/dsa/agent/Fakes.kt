@@ -299,14 +299,6 @@ class FakeActions : TaskActions {
         return ResizeOutcome.APPLIED
     }
 
-    /** Each task whose activities were recreated, with its package, in order. */
-    val recreated = mutableListOf<Pair<Int, String>>()
-
-    override fun recreateActivities(taskId: Int, packageName: String): Boolean {
-        recreated += taskId to packageName
-        return true
-    }
-
     /** Each task given the input focus, in order. */
     val focused = mutableListOf<Int>()
     var focusable = true

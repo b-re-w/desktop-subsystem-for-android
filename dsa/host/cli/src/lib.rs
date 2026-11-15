@@ -63,13 +63,15 @@
 //! app's windows cannot be resized or maximized, and an app with a start size opens its windows
 //! at that size, in Android's desktop dp (1/117.23 inch, 0.819 of a pixel at a scale of 100%).
 //! `--dpi-scaling` says how the app follows its window to a monitor of another scale: `app`
-//! scales the window while it is dragged, then gives the app the new monitor's density when
-//! the move ends, and Android recreates its screen once and restores its state, so it redraws
-//! briefly; `system` keeps its density and scales the window to the same physical size, and
-//! never recreates the app; and `system-forced` would give a new density to any app without
-//! a restart, which needs a framework change that is not made yet, so it works as `system`
-//! until then. `auto`, the default, is `system` for the apps on DSA's built-in list of apps that
-//! break when their density changes while they run (YouTube), and `app` for every other app.
+//! gives it the new monitor's density and it
+//! redraws (Android recreates the screen of an app that does not say it handles a change of
+//! density, and restores its state, so it may redraw briefly), `system` keeps its
+//! density and scales the window to the same physical size, and `system-forced` would give a
+//! new density to any app without a restart, which needs a framework change that is not made
+//! yet, so it works as `system` until then. `auto`, the default, is `system` for the apps on
+//! DSA's built-in list of apps that break when their density changes while they run
+//! (YouTube); for any other app it is `app` for an app that says it handles a change of
+//! density and `system` for any other. Neither restarts the app.
 //! `--fullscreen screen|window|default` says where the app's clear full screen request shows (a
 //! video player's full screen button): on the whole screen, inside its window, or as the
 //! `app-fullscreen` setting for every app says. `--immersive` says the same for the app hiding
@@ -80,7 +82,8 @@
 //! by default, and counts from the next time a window of the app opens.
 //! `reset` puts the app back to the defaults. With `--json` it prints `apps`, each with `package`, `fixed_size`, `start_size`
 //! (null for none, else `[width, height]`), `dpi_scaling`, `default_dpi_scaling` (what `auto`
-//! is for that app: `system` or `app`), `fullscreen`, `immersive` and `below_title_bar`,
+//! is for that app: `system` for an app on the built-in list, else `auto`, its own way),
+//! `fullscreen`, `immersive` and `below_title_bar`,
 //! `system_forced_available`, whether `system-forced` does what it says yet,
 //! `system_scaled_by_default`, the packages whose `auto` is `system`,
 //! `below_title_bar_by_default`, the packages that start below the title bar unless the user
@@ -2299,10 +2302,8 @@ fn describe_dpi_scaling(scaling: DpiScaling, package: &str) -> String {
              its density changes while it runs)"
                 .to_string()
         }
-        DpiScaling::Auto => {
-            "redraws at another monitor's scale once a move ends (the default)".to_string()
-        }
-        DpiScaling::App => "redraws at another monitor's scale once a move ends".to_string(),
+        DpiScaling::Auto => "scales its own way on another monitor".to_string(),
+        DpiScaling::App => "redraws at another monitor's scale".to_string(),
         DpiScaling::System => "is scaled by DSA on another monitor".to_string(),
         DpiScaling::SystemForced if DpiScaling::FORCED_AVAILABLE => {
             "is given another monitor's scale without a restart".to_string()

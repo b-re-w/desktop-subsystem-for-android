@@ -3453,8 +3453,8 @@ fn fr30_dsa_app_window_changes_and_resets_an_apps_window_settings() {
     let output = dsa(&endpoint, "app-window com.example.notes");
     assert_eq!(
         stdout(&output).trim(),
-        "com.example.notes: resizable, opens at 400 x 700 dp, redraws at another monitor's \
-         scale once a move ends (the default)"
+        "com.example.notes: resizable, opens at 400 x 700 dp, scales its own way on another \
+         monitor"
     );
     let reset = json_of(&dsa(&endpoint, "app-window com.example.notes reset --json"));
     assert_eq!(reset["apps"][0]["start_size"], serde_json::Value::Null);
@@ -3606,8 +3606,8 @@ fn fr30_app_window_sets_and_shows_the_below_title_bar_switch() {
     let output = dsa(&endpoint, "app-window com.example.player");
     assert_eq!(
         stdout(&output).trim(),
-        "com.example.player: resizable, opens at the size Android gives it, redraws at another \
-         monitor's scale once a move ends (the default), starts below the title bar"
+        "com.example.player: resizable, opens at the size Android gives it, scales its own way \
+         on another monitor, starts below the title bar"
     );
     // Turned off again, the app is back at the defaults and has no entry.
     let off = json_of(&dsa(
@@ -3643,9 +3643,10 @@ fn fr4_dsa_app_window_shows_youtube_scales_the_system_way_by_default() {
          by DSA on another monitor (the default for this app, which breaks when its density \
          changes while it runs)"
     );
-    // Any other app's default is the app way.
+    // Any other app's default is its own way: the app way if it says it handles a change of
+    // density, the system way if not.
     let notes = json_of(&dsa(&endpoint, "app-window com.example.notes --json"));
-    assert_eq!(notes["apps"][0]["default_dpi_scaling"], "app");
+    assert_eq!(notes["apps"][0]["default_dpi_scaling"], "auto");
 }
 
 #[test]
@@ -3661,7 +3662,7 @@ fn fr4_the_users_choice_wins_over_the_built_in_list() {
     assert_eq!(
         stdout(&output).trim(),
         "com.google.android.youtube: resizable, opens at the size Android gives it, redraws at \
-         another monitor's scale once a move ends"
+         another monitor's scale"
     );
 }
 

@@ -1717,9 +1717,10 @@ Berlaku saat jendela aplikasi dibuka berikutnya.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Siapa yang menskalakan aplikasi ini saat jendelanya berpindah ke monitor dengan skala lain.
-• Aplikasi: DSA menskalakan jendela saat diseret. Setelah dilepas, aplikasi menggambar ulang pada skala baru dan teks tetap tajam: Android membuat ulang layarnya sekali dengan status tetap, jadi ada jeda singkat.
-• Sistem: aplikasi tetap pada skalanya; DSA menskalakan jendela ke ukuran fisik sama tanpa membuat ulang aplikasi. Teks bisa sedikit buram.
-• Otomatis: Sistem untuk aplikasi yang rusak saat skalanya berubah selagi berjalan, seperti YouTube; Aplikasi untuk semua aplikasi lain.</value>
+• Aplikasi: aplikasi langsung memakai skala monitor baru saat jendela mencapainya dan menggambar ulang pada skala itu, sehingga teks tetap tajam. Untuk aplikasi yang tidak menyatakan menangani perubahan ini, Android membuat ulang layarnya dengan status tetap, jadi mungkin ada jeda singkat.
+• Sistem: aplikasi tetap pada skalanya; DSA menskalakan jendela ke ukuran fisik yang sama. Teks bisa sedikit buram.
+• Otomatis: Sistem untuk aplikasi yang rusak saat skalanya berubah selagi berjalan, seperti YouTube; untuk aplikasi lain, Aplikasi jika aplikasi menyatakan menanganinya, Sistem jika tidak.
+Otomatis dan Sistem tidak pernah memulai ulang aplikasi.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Otomatis (aplikasi)</value>

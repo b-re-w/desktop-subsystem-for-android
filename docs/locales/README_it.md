@@ -59,11 +59,12 @@ ancora rilasciati (vedere [Piattaforme supportate](#piattaforme-supportate)).
   superiore. Le app che nascondono soltanto le proprie barre, come un feed di video brevi,
   restano nella loro finestra. Entrambi i comportamenti si scelgono in DSA Settings, per tutte
   le app o per ciascuna, e F11 attiva o disattiva sempre lo schermo intero.
-- Immagine nitida su ogni monitor. Un'app si apre con la scala del monitor su cui si apre e,
-  quando la sposta su un monitor con un'altra scala, si ridisegna con la nuova scala appena
-  rilascia la finestra, oppure DSA scala la finestra al suo posto, a scelta per ogni app. Le
-  app note per guastarsi quando la scala cambia mentre sono in esecuzione, come YouTube, sono
-  scalate da DSA per impostazione predefinita.
+- Immagine nitida su ogni monitor. Quando sposta un'app su un monitor con un'altra scala, si
+  ridisegna con la nuova scala appena la sua finestra vi arriva, oppure DSA scala la finestra
+  al suo posto, a scelta per ogni app. Per impostazione predefinita, un'app che dichiara di
+  gestire da sola un cambio di scala si ridisegna, e DSA scala tutte le altre. Le app note
+  per guastarsi quando la scala cambia mentre sono in esecuzione, come YouTube, sono scalate
+  da DSA per impostazione predefinita.
 - Il testo nelle app segue l'impostazione delle dimensioni del testo di Windows.
 - Mouse (con hover), tocco con un massimo di dieci dita, penna (pressione, gomma, pulsante
   laterale) e tastiera con qualsiasi layout.

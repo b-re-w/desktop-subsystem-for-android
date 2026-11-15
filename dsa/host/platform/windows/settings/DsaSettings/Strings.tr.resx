@@ -1717,9 +1717,10 @@ Uygulamanın penceresi bir sonraki açılışında geçerli olur.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Penceresi farklı ölçekli bir monitöre taşındığında bu uygulamayı kimin ölçekleyeceği.
-• Uygulama: sürüklerken DSA pencereyi ölçekler. Bırakınca uygulama yeni ölçekte çizer, metin keskin kalır: Android ekranı bir kez yeniden oluşturup durumu korur, kısa bir yeniden çizim olur.
-• Sistem: uygulama ölçeğini korur, DSA penceresini aynı fiziksel boyuta ölçekler. Uygulama yeniden oluşturulmaz. Metin bulanık olabilir.
-• Otomatik: YouTube gibi çalışırken ölçeği değişince bozulan uygulamalar için Sistem, diğer tüm uygulamalar için Uygulama.</value>
+• Uygulama: pencere yeni monitöre ulaşır ulaşmaz uygulama o monitörün ölçeğini alır ve o ölçekte yeniden çizer, metin keskin kalır. Bunu işlediğini belirtmeyen bir uygulamada Android ekranı durumu koruyarak yeniden oluşturur, bu yüzden kısa bir yeniden çizim olabilir.
+• Sistem: uygulama ölçeğini korur, DSA penceresini aynı fiziksel boyuta ölçekler. Metin biraz bulanık olabilir.
+• Otomatik: YouTube gibi çalışırken ölçeği değişince bozulan uygulamalar için Sistem; diğer uygulamalarda bunu işlediğini belirtiyorsa Uygulama, belirtmiyorsa Sistem.
+Otomatik ve Sistem uygulamayı hiçbir zaman yeniden başlatmaz.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
     <value>Otomatik (uygulama)</value>

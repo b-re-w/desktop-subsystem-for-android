@@ -64,12 +64,12 @@ de développement et ne sont pas publiés (voir
   courtes, restent dans leur fenêtre. Les deux comportements se choisissent dans DSA
   Settings, pour toutes les applications ou pour chacune, et F11 bascule toujours en plein
   écran.
-- Un affichage net sur chaque écran. Une application s'ouvre à l'échelle de l'écran sur
-  lequel elle s'ouvre. Quand vous la déplacez vers un écran d'une autre échelle, elle se
-  redessine à la nouvelle échelle une fois que vous la relâchez, ou bien DSA met sa fenêtre à
-  l'échelle, selon votre choix pour chaque application. Les applications connues pour se
-  dérégler quand leur échelle change en cours d'exécution, comme YouTube, sont mises à
-  l'échelle par DSA par défaut.
+- Un affichage net sur chaque écran. Quand vous déplacez une application vers un écran d'une
+  autre échelle, elle se redessine à la nouvelle échelle dès que sa fenêtre y arrive, ou bien
+  DSA met sa fenêtre à l'échelle, selon votre choix pour chaque application. Par défaut, une
+  application qui déclare gérer elle-même un changement d'échelle se redessine, et DSA met les
+  autres à l'échelle. Les applications connues pour se dérégler quand leur échelle change en
+  cours d'exécution, comme YouTube, sont mises à l'échelle par DSA par défaut.
 - Le texte des applications suit le réglage de taille du texte de Windows.
 - Souris (avec survol), tactile jusqu'à dix doigts, stylet (pression, gomme, bouton latéral)
   et clavier avec toutes les dispositions.
