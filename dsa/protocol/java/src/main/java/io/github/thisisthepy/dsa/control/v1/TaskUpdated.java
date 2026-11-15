@@ -7,7 +7,7 @@ package io.github.thisisthepy.dsa.control.v1;
  * <pre>
  * Guest to host, from the agent: an app task the host shows as one window appeared, or
  * something the window shows about it changed. Every field is sent each time, so the host
- * keeps only the latest.
+ * keeps only the latest. An app overlay window is reported with it too (`overlay`).
  * </pre>
  *
  * Protobuf type {@code dsa.control.v1.TaskUpdated}
@@ -1139,6 +1139,92 @@ public  final class TaskUpdated extends
     fullscreenRequest_ = 0;
   }
 
+  public static final int OVERLAY_FIELD_NUMBER = 28;
+  private io.github.thisisthepy.dsa.control.v1.OverlayWindow overlay_;
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  @java.lang.Override
+  public boolean hasOverlay() {
+    return overlay_ != null;
+  }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.OverlayWindow getOverlay() {
+    return overlay_ == null ? io.github.thisisthepy.dsa.control.v1.OverlayWindow.getDefaultInstance() : overlay_;
+  }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  private void setOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+    value.getClass();
+  overlay_ = value;
+    
+    }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  @java.lang.SuppressWarnings({"ReferenceEquality"})
+  private void mergeOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+    value.getClass();
+  if (overlay_ != null &&
+        overlay_ != io.github.thisisthepy.dsa.control.v1.OverlayWindow.getDefaultInstance()) {
+      overlay_ =
+        io.github.thisisthepy.dsa.control.v1.OverlayWindow.newBuilder(overlay_).mergeFrom(value).buildPartial();
+    } else {
+      overlay_ = value;
+    }
+    
+  }
+  /**
+   * <pre>
+   * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+   * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+   * of its surface on the guest's display, `package_name` the app that added it, `label` its
+   * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+   * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+   * </pre>
+   *
+   * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+   */
+  private void clearOverlay() {  overlay_ = null;
+    
+  }
+
   public static io.github.thisisthepy.dsa.control.v1.TaskUpdated parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1224,7 +1310,7 @@ public  final class TaskUpdated extends
    * <pre>
    * Guest to host, from the agent: an app task the host shows as one window appeared, or
    * something the window shows about it changed. Every field is sent each time, so the host
-   * keeps only the latest.
+   * keeps only the latest. An app overlay window is reported with it too (`overlay`).
    * </pre>
    *
    * Protobuf type {@code dsa.control.v1.TaskUpdated}
@@ -2420,6 +2506,101 @@ public  final class TaskUpdated extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    @java.lang.Override
+    public boolean hasOverlay() {
+      return instance.hasOverlay();
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.OverlayWindow getOverlay() {
+      return instance.getOverlay();
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder setOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+      copyOnWrite();
+      instance.setOverlay(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder setOverlay(
+        io.github.thisisthepy.dsa.control.v1.OverlayWindow.Builder builderForValue) {
+      copyOnWrite();
+      instance.setOverlay(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder mergeOverlay(io.github.thisisthepy.dsa.control.v1.OverlayWindow value) {
+      copyOnWrite();
+      instance.mergeOverlay(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Set when this is not an app task but an app overlay window (see OverlayWindow). The
+     * other fields then describe the overlay: `task_id` is the overlay's ID, `bounds` the frame
+     * of its surface on the guest's display, `package_name` the app that added it, `label` its
+     * window title, `density_dpi` the display's density, which the overlay is drawn at, and
+     * `max_width` by `max_height` the display's size. The rest are left at their defaults.
+     * </pre>
+     *
+     * <code>.dsa.control.v1.OverlayWindow overlay = 28;</code>
+     */
+    public Builder clearOverlay() {  copyOnWrite();
+      instance.clearOverlay();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:dsa.control.v1.TaskUpdated)
   }
   @java.lang.Override
@@ -2457,12 +2638,13 @@ public  final class TaskUpdated extends
             "canGoBack_",
             "handlesDensityChange_",
             "fullscreenRequest_",
+            "overlay_",
           };
           java.lang.String info =
-              "\u0000\u0014\u0000\u0000\u0001\u001b\u0014\u0000\u0001\u0000\u0001\u0004\u0002\t" +
+              "\u0000\u0015\u0000\u0000\u0001\u001c\u0015\u0000\u0001\u0000\u0001\u0004\u0002\t" +
               "\u0003\u0208\u0004\u0208\u0005\u0007\u0006\u000b\u0007\u000b\b\u000b\t\u000b\n\u000b" +
               "\u000b\f\f\u0006\u0014\f\u0015\u0007\u0016\u0007\u0017\u0007\u0018\u001b\u0019\u0007" +
-              "\u001a\u0007\u001b\f";
+              "\u001a\u0007\u001b\f\u001c\t";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

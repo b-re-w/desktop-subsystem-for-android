@@ -1420,6 +1420,32 @@ pub struct Task {
     /// Which kind of full screen the task's app asks for, if any.
     #[prost(enumeration = "FullScreenRequest", tag = "27")]
     pub fullscreen_request: i32,
+    /// Set when this is not an app task but an app overlay window (see OverlayWindow): `task_id`
+    /// is then the overlay's ID, `bounds` the frame of its surface on Android's display,
+    /// `package_name` the app that added it, `density_dpi` the display's density and `max_width`
+    /// by `max_height` the display's size.
+    #[prost(message, optional, tag = "28")]
+    pub overlay: ::core::option::Option<OverlayWindow>,
+}
+/// An app overlay window: a window an app adds over other apps with Android's "display over
+/// other apps" permission, such as floating lyrics or a chat head. A window manager shows it in
+/// a borderless window of its own that stays above the others, has no close button, and takes
+/// the focus only when the overlay may and the user clicks it. Its ID never equals a task's
+/// (overlays are numbered from 0x40000000), and the input of its window is sent with that ID
+/// as the task ID. It is never closed or resized by the host. One whose bounds cover the whole
+/// display gets no window: Android draws it over every app's window instead.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct OverlayWindow {
+    /// The window's type in Android (WindowManager.LayoutParams.type), 2038 for an application
+    /// overlay.
+    #[prost(int32, tag = "1")]
+    pub window_type: i32,
+    /// Whether the window may take the keyboard focus.
+    #[prost(bool, tag = "2")]
+    pub focusable: bool,
+    /// Whether the window takes pointer input; the pointer passes through one that does not.
+    #[prost(bool, tag = "3")]
+    pub touchable: bool,
 }
 /// The task ended.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
