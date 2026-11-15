@@ -75,6 +75,14 @@ public partial class AppsPage : Page
         }
     }
 
+    private async void OnBelowTitleBar(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleButton { Tag: string package } toggle)
+        {
+            await ViewModel.SetBelowTitleBarAsync(package, toggle.IsChecked == true);
+        }
+    }
+
     private async void OnRunAsArm(object sender, RoutedEventArgs e)
     {
         if (sender is ToggleButton { Tag: string package } toggle)

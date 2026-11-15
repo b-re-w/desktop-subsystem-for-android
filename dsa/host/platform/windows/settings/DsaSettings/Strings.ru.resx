@@ -1683,6 +1683,14 @@ Android запустит его только с пакетом трансляц�
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Можно ли изменять размер окон этого приложения и разворачивать их. Если выключено, каждое окно сохраняет размер, с которым открылось.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Начинать под строкой заголовка</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Для приложений, у которых верхняя панель сжимается или скрывается под строкой заголовка.
+Приложение начинается под строкой заголовка, а не рисует позади неё.
+Применяется при следующем открытии окна приложения.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>Размер, с которым открываются окна этого приложения</value>
   </data>

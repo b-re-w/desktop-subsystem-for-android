@@ -143,6 +143,13 @@
                                                          Margin="16,4,0,0" VerticalAlignment="Center"
                                                          ToolTip="{l:Text AppsResizable.ToolTip}"
                                                          AutomationProperties.Name="{l:ItemName AppsResizable.Content}" />
+                                        <!-- For an app whose top bar is squeezed or hidden under the title
+                                             bar: the app starts below the title bar. -->
+                                        <ui:ToggleSwitch Content="{l:Text AppsBelowTitleBar.Content}" Tag="{Binding Package}"
+                                                         IsChecked="{Binding BelowTitleBar, Mode=OneWay}" Click="OnBelowTitleBar"
+                                                         Margin="16,4,0,0" VerticalAlignment="Center"
+                                                         ToolTip="{l:Text AppsBelowTitleBar.ToolTip}"
+                                                         AutomationProperties.Name="{l:ItemName AppsBelowTitleBar.Content}" />
                                         <ComboBox Tag="{Binding Package}" MinWidth="200" Margin="16,4,0,0" VerticalAlignment="Center"
                                                   ItemsSource="{Binding DataContext.StartSizeChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   DisplayMemberPath="Label"

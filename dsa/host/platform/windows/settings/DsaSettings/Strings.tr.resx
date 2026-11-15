@@ -1683,6 +1683,14 @@ Her birinin görev çubuğunun bildirim alanında bir simgesi var. Bir uygulamay
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Bu uygulamanın pencerelerinin yeniden boyutlandırılıp ekranı kaplayabilmesi. Kapalıyken her pencere açıldığı boyutta kalır.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Başlık çubuğunun altından başlat</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Üst çubuğu başlık çubuğunun altında sıkışan veya gizlenen uygulamalar içindir.
+Uygulama, başlık çubuğunun arkasına çizmek yerine onun altından başlar.
+Uygulamanın penceresi bir sonraki açılışında geçerli olur.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>Bu uygulamanın pencerelerinin açıldığı boyut</value>
   </data>

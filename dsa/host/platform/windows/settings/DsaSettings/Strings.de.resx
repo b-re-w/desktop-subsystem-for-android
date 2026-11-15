@@ -1683,6 +1683,14 @@ Jede hat ein Symbol im Infobereich der Taskleiste. Wenn Sie eine App beenden, en
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Ob Sie die Fenster dieser App in der Größe ändern und maximieren können. Aus: Jedes Fenster behält seine Startgröße.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Unter der Titelleiste beginnen</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Für Apps, deren obere Leiste von der Titelleiste gequetscht oder verdeckt wird.
+Die App beginnt unter der Titelleiste, statt dahinter zu zeichnen.
+Gilt ab dem nächsten Öffnen des App-Fensters.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>Die Größe, in der sich die Fenster dieser App öffnen</value>
   </data>

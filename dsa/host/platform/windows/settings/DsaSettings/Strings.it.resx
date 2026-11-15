@@ -1683,6 +1683,14 @@ Ognuna ha un'icona nell'area di notifica della barra delle applicazioni. Arresta
   <data name="AppsResizable.ToolTip" xml:space="preserve">
     <value>Indica se puoi ridimensionare e ingrandire le finestre di questa app. Se disattivato, ogni finestra resta alla dimensione di apertura.</value>
   </data>
+  <data name="AppsBelowTitleBar.Content" xml:space="preserve">
+    <value>Inizia sotto la barra del titolo</value>
+  </data>
+  <data name="AppsBelowTitleBar.ToolTip" xml:space="preserve">
+    <value>Per le app la cui barra superiore viene schiacciata o nascosta dalla barra del titolo.
+L'app inizia sotto la barra del titolo invece di disegnare dietro di essa.
+Si applica alla prossima apertura della finestra dell'app.</value>
+  </data>
   <data name="AppsStartSize.ToolTip" xml:space="preserve">
     <value>La dimensione con cui si aprono le finestre di questa app</value>
   </data>
