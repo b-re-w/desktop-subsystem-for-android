@@ -103,7 +103,7 @@ Le app lo chiedono in due tipi di modi, e ciascun tipo ha il proprio valore pred
 
 Cambi i valori predefiniti in **App full screen** e **Apps that hide their bars** nella pagina
 **Display & GPU** (Schermo e GPU) di DSA Settings, oppure per una singola app in **Full
-screen** e **Bars hidden** nella pagina **Apps**. La scelta dell'app stessa ha la precedenza.
+screen request** e **When only the bars hide** nella pagina **Apps**. La scelta dell'app stessa ha la precedenza.
 F11 e **Full screen** nel menu della finestra attivano o disattivano in qualsiasi momento lo
 schermo intero sull'intero schermo, qualunque sia l'impostazione.
 
@@ -151,7 +151,7 @@ dsa app-window <package> --below-title-bar on   # off torna al valore predefinit
 Un'app si apre con la scala del monitor su cui si apre la sua finestra, fin dal primo
 fotogramma, quindi non viene ricreata subito dopo l'apertura. Quando sposta una finestra su un
 monitor con un'altra scala, l'app mantiene le sue dimensioni sullo schermo. Ogni app lo fa in
-uno di questi modi, che sceglie in **Scaling on another monitor** nella pagina **Apps**, oppure
+uno di questi modi, che sceglie in **Scaling** nella pagina **Apps**, oppure
 con `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, il predefinito): **System** per le app presenti nell'elenco integrato
@@ -159,7 +159,7 @@ con `dsa app-window <package> --dpi-scaling`:
   per tutte le altre. L'elenco contiene YouTube: mantiene il layout per la scala con cui si è
   avviato, quindi dopo uno spostamento le schede in basso e il miniplayer resterebbero guasti
   fino al riavvio. Settings mostra il valore predefinito di un'app di questo tipo come
-  **Scaling: system (recommended for this app)**. La Sua scelta per l'app ha la precedenza.
+  **Automatic (system, recommended for this app)**. La Sua scelta per l'app ha la precedenza.
 - **App** (`app`): mentre trascina la finestra, DSA la scala per il nuovo monitor. Quando la
   rilascia, l'app si ridisegna con la scala del nuovo monitor e il testo resta nitido: Android
   ricrea la schermata una volta e ne ripristina lo stato (posizione di scorrimento, testo

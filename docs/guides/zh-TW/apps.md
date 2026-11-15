@@ -82,7 +82,7 @@ DSA 只會變更或移除它自己建立的項目。
 | 明確的全螢幕要求 | 影片播放器的全螢幕按鈕 | 在整個螢幕上 |
 | 只隱藏各列 | 短影片動態 | 在視窗內 |
 
-您可以在 DSA Settings 的 **Display & GPU**（顯示與 GPU）頁面上，於 **App full screen**（應用程式全螢幕）與 **Apps that hide their bars**（隱藏各列的應用程式）下變更預設值；或在 **Apps** 頁面上，於 **Full screen** 與 **Bars hidden**（隱藏各列）下為單一應用程式變更。
+您可以在 DSA Settings 的 **Display & GPU**（顯示與 GPU）頁面上，於 **App full screen**（應用程式全螢幕）與 **Apps that hide their bars**（隱藏各列的應用程式）下變更預設值；或在 **Apps** 頁面上，於 **Full screen request**（全螢幕要求） 與 **When only the bars hide**（僅隱藏列時）下為單一應用程式變更。
 應用程式自己的選擇優先。
 不論設定為何，F11 與視窗功能表中的 **Full screen** 隨時都能切換整個螢幕的全螢幕。
 
@@ -126,11 +126,11 @@ dsa app-window <package> --below-title-bar on   # off 回到預設值
 
 應用程式從第一個畫面起，就會以其視窗開啟時所在螢幕的縮放比例開啟，因此不會在開啟後立刻被重新建立。
 將視窗移到縮放比例不同的螢幕時，應用程式在螢幕上的大小會保持不變。
-每個應用程式會以下列其中一種方式處理，您可以在 **Apps** 頁面的 **Scaling on another monitor**（在其他螢幕上的縮放）下選擇，或使用 `dsa app-window <package> --dpi-scaling`：
+每個應用程式會以下列其中一種方式處理，您可以在 **Apps** 頁面的 **Scaling**（縮放）下選擇，或使用 `dsa app-window <package> --dpi-scaling`：
 
 - **Automatic**（自動，`auto`，預設值）：對於 DSA 內建清單中那些執行時變更縮放比例就會出問題的應用程式使用 **System**，其他應用程式則使用 **App**。
   這份清單包含 YouTube：它會維持開始時的縮放比例所對應的版面配置，因此移動之後，其底部索引標籤與迷你播放器會一直顯示異常，直到重新啟動為止。
-  Settings 會將這類應用程式的預設值顯示為 **Scaling: system (recommended for this app)**。
+  Settings 會將這類應用程式的預設值顯示為 **Automatic (system, recommended for this app)**。
   您為該應用程式所做的選擇優先。
 - **App**（應用程式，`app`）：拖曳視窗時，DSA 會將其縮放到新的螢幕。
   放開後，應用程式會以新螢幕的縮放比例重新繪製，文字保持清晰：Android 會重新建立其畫面一次並還原其狀態（捲動位置、已輸入的文字），因此每次移動後會短暫重新繪製，就像 Windows 程式使用「應用程式」縮放時一樣。

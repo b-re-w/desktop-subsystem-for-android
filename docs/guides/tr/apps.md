@@ -100,7 +100,7 @@ Uygulamalar iki tür yolla ister ve her türün kendi varsayılanı vardır:
 
 Varsayılanları DSA Settings'in **Display & GPU** (ekran ve GPU) sayfasındaki **App full screen** ve
 **Apps that hide their bars** altında, tek bir uygulama için ise **Apps** sayfasındaki **Full
-screen** ve **Bars hidden** altında değiştirin. Uygulamanın kendi seçimi önce gelir. F11 ve pencere
+screen request** ve **When only the bars hide** altında değiştirin. Uygulamanın kendi seçimi önce gelir. F11 ve pencere
 menüsündeki **Full screen**, ayar ne olursa olsun tüm ekranda tam ekranı her zaman açıp kapatır.
 
 Komut satırından:
@@ -148,14 +148,14 @@ dsa app-window <package> --below-title-bar on   # off varsayılana döner
 Bir uygulama, penceresinin açıldığı monitörün ölçeğiyle ilk karesinden itibaren açılır, bu yüzden
 açıldıktan hemen sonra yeniden oluşturulmaz. Bir pencereyi başka ölçekteki bir monitöre
 taşıdığınızda uygulama ekrandaki boyutunu korur. Her uygulama bunu aşağıdaki yollardan biriyle
-yapar; bunu **Apps** sayfasındaki **Scaling on another monitor** altında veya
+yapar; bunu **Apps** sayfasındaki **Scaling** altında veya
 `dsa app-window <package> --dpi-scaling` ile seçersiniz:
 
 - **Automatic** (`auto`, varsayılan): DSA'nın, çalışırken ölçeği değişince bozulan uygulamaları
   içeren yerleşik listesindeki uygulamalar için **System**, diğer tüm uygulamalar için **App**.
   Listede YouTube bulunur: başladığı ölçeğe göre düzenini korur, bu yüzden taşındıktan sonra alt
   sekmeleri ve mini oynatıcısı yeniden başlayana kadar bozuk kalırdı. Ayarlar, böyle bir uygulamanın
-  varsayılanını **Scaling: system (recommended for this app)** olarak gösterir. Uygulama için kendi
+  varsayılanını **Automatic (system, recommended for this app)** olarak gösterir. Uygulama için kendi
   seçiminiz önce gelir.
 - **App** (`app`): pencereyi sürüklerken DSA onu yeni monitöre göre ölçekler. Bıraktığınızda
   uygulama yeni monitörün ölçeğinde yeniden çizilir ve metni keskin kalır: Android ekranını bir kez

@@ -26,7 +26,7 @@ DSA Settings 会用盾牌图标标出这些设置，
 |---|---|---|
 | **General**（常规） | Android 的状态、**Start**、**Stop**、**Freeze Android now**、最近一次出现的问题、**Open my log folder**、**Refresh** | `dsa status`、`dsa start`、`dsa stop`、`dsa freeze` |
 | **Memory**（内存） | **Memory limit**、Android 虚拟机的大小、各部分的使用量 | `memory-limit`、`dsa memory` |
-| **Apps**（应用） | 已安装的应用：**Open**、**App info**、**Uninstall**、**Create desktop shortcut**。每个应用的设置：**Resizable**、窗口打开时的大小、**Scaling on another monitor**、**Full screen**、**Bars hidden**、**Run as ARM**、**Root access**。还有一行用于 **adb shell** 的 root 访问权限 | `dsa apps`、`dsa app-window`、`dsa apps run-as-arm`、`dsa apps root` |
+| **Apps**（应用） | 已安装的应用：**Open**、**App info**、**Uninstall**、**Create desktop shortcut**。每个应用的设置：**Resizable**、窗口打开时的大小、**Scaling**、**Full screen request**、**When only the bars hide**、**Run as ARM**、**Root access**。还有一行用于 **adb shell** 的 root 访问权限 | `dsa apps`、`dsa app-window`、`dsa apps run-as-arm`、`dsa apps root` |
 | **Running in the background**（在后台运行） | 没有窗口但仍在运行的应用：**Open**、**Stop**；停止前是否询问 | `dsa background`、`stop-without-asking` |
 | **Widgets**（小部件） | 桌面上的小部件，以及 **Add to desktop** | `dsa widgets` |
 | **Display & GPU**（显示与 GPU） | **Render GPU**、**GPU of the primary monitor**、**App full screen**、**Apps that hide their bars**、**Turn off Windows touch gestures in DSA app windows**（仅限 Windows 11，默认开启）、**Restart the window manager** | `render-gpu`、`dsa gpus`、`app-fullscreen`、`app-immersive`、`touch-gestures-off` |

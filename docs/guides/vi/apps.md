@@ -95,8 +95,7 @@ Khi một ứng dụng yêu cầu toàn màn hình, cửa sổ của nó hiển 
 | Chỉ ẩn các thanh | Một luồng video ngắn | Bên trong cửa sổ |
 
 Đổi các mặc định trong **App full screen** và **Apps that hide their bars** trên trang **Display &
-GPU** (màn hình và GPU) của DSA Settings, hoặc cho một ứng dụng trong **Full screen** và **Bars
-hidden** trên trang **Apps**. Lựa chọn riêng của ứng dụng được ưu tiên. F11 và **Full screen**
+GPU** (màn hình và GPU) của DSA Settings, hoặc cho một ứng dụng trong **Full screen request** và **When only the bars hide** trên trang **Apps**. Lựa chọn riêng của ứng dụng được ưu tiên. F11 và **Full screen**
 trong menu cửa sổ luôn bật hoặc tắt toàn màn hình trên toàn bộ màn hình, bất kể cài đặt là gì.
 
 Từ dòng lệnh:
@@ -143,14 +142,14 @@ dsa app-window <package> --below-title-bar on   # off quay về mặc định
 Ứng dụng mở ở tỷ lệ của màn hình nơi cửa sổ của nó mở, ngay từ khung hình đầu tiên, nên nó không
 bị tạo lại ngay sau khi mở. Khi bạn chuyển một cửa sổ sang màn hình có tỷ lệ khác, ứng dụng giữ
 nguyên kích thước trên màn hình. Mỗi ứng dụng làm việc này theo một trong các cách sau, do bạn
-chọn trong **Scaling on another monitor** (co giãn trên màn hình khác) trên trang **Apps**, hoặc
+chọn trong **Scaling** (co giãn) trên trang **Apps**, hoặc
 bằng `dsa app-window <package> --dpi-scaling`:
 
 - **Automatic** (`auto`, mặc định): **System** cho các ứng dụng có trong danh sách tích hợp sẵn
   của DSA gồm những ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, và **App** cho mọi ứng dụng
   khác. Danh sách này có YouTube: nó giữ bố cục theo tỷ lệ lúc khởi động, nên sau khi chuyển màn
   hình, các thẻ dưới cùng và trình phát thu nhỏ của nó sẽ bị lỗi cho đến khi khởi động lại. Cài
-  đặt hiển thị mặc định của ứng dụng như vậy là **Scaling: system (recommended for this app)**.
+  đặt hiển thị mặc định của ứng dụng như vậy là **Automatic (system, recommended for this app)**.
   Lựa chọn riêng của bạn cho ứng dụng được ưu tiên.
 - **App** (`app`): khi bạn kéo cửa sổ, DSA co giãn nó theo màn hình mới. Khi bạn thả ra, ứng dụng
   vẽ lại ở tỷ lệ của màn hình mới, và chữ vẫn sắc nét: Android tạo lại màn hình của ứng dụng một
