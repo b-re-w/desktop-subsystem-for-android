@@ -164,10 +164,14 @@ public sealed record FullScreenChoice(string Label, FullScreenPlace Place);
 /// Android scales an app the System (forced) way yet, and the apps whose automatic choice is
 /// System: DSA's built-in list of apps that break when their density changes while they run.
 /// <paramref name="BelowTitleBarByDefault"/> is the apps that start below the title bar unless
-/// the user chose otherwise.</summary>
+/// the user chose otherwise. <paramref name="DefaultFullScreen"/> and
+/// <paramref name="DefaultImmersive"/> are where every app without its own choice shows a clear
+/// full screen request and its bars hidden alone.</summary>
 public sealed record WindowSettingsList(IReadOnlyDictionary<string, AppWindowSetting> Apps, bool SystemForcedAvailable,
     IReadOnlySet<string>? SystemScaledByDefault = null,
-    IReadOnlySet<string>? BelowTitleBarByDefault = null);
+    IReadOnlySet<string>? BelowTitleBarByDefault = null,
+    FullScreenPlace DefaultFullScreen = FullScreenPlace.Screen,
+    FullScreenPlace DefaultImmersive = FullScreenPlace.Window);
 
 /// <summary>A scaling choice the Apps page offers: what the list shows, the choice, and
 /// whether it does what it says yet.</summary>
@@ -383,9 +387,24 @@ public sealed class AppsService
         var forced = json.TryGetProperty("system_forced_available", out var available)
             && available.ValueKind == JsonValueKind.True;
         // A dsa that does not name a list has none: every app's automatic choice is App, and
-        // no app starts below the title bar unless the user says so.
+        // no app starts below the title bar unless the user says so. One that does not name the
+        // defaults has DSA's own.
+        var defaults = json.TryGetProperty("defaults", out var named) && named.ValueKind == JsonValueKind.Object
+            ? named
+            : default;
         return new WindowSettingsList(ReadWindowSettings(json), forced,
-            Packages(json, "system_scaled_by_default"), Packages(json, "below_title_bar_by_default"));
+            Packages(json, "system_scaled_by_default"), Packages(json, "below_title_bar_by_default"),
+            DefaultPlace(defaults, "fullscreen", FullScreenPlace.Screen),
+            DefaultPlace(defaults, "immersive", FullScreenPlace.Window));
+    }
+
+    /// <summary>A place the choice for every app names; <paramref name="builtin"/> for none,
+    /// or for one that is not a place.</summary>
+    private static FullScreenPlace DefaultPlace(JsonElement defaults, string name, FullScreenPlace builtin)
+    {
+        var code = defaults.ValueKind == JsonValueKind.Object ? String(defaults, name) : "";
+        var place = FullScreenPlaces.Parse(code, builtin);
+        return place == FullScreenPlace.Default ? builtin : place;
     }
 
     /// <summary>The packages a list of dsa's names; none when dsa does not name the list.</summary>
@@ -570,6 +589,8 @@ public sealed class AppsViewModel : ObservableObject
     private bool _systemForcedAvailable;
     private IReadOnlySet<string> _systemScaledByDefault = new HashSet<string>();
     private IReadOnlySet<string> _belowTitleBarByDefault = new HashSet<string>();
+    private FullScreenPlace _defaultFullScreen = FullScreenPlace.Screen;
+    private FullScreenPlace _defaultImmersive = FullScreenPlace.Window;
     private string _search = "";
     private string? _highlighted;
     private string? _error;
@@ -916,6 +937,8 @@ public sealed class AppsViewModel : ObservableObject
             _systemForcedAvailable = list.SystemForcedAvailable;
             _systemScaledByDefault = list.SystemScaledByDefault ?? new HashSet<string>();
             _belowTitleBarByDefault = list.BelowTitleBarByDefault ?? new HashSet<string>();
+            _defaultFullScreen = Placed(list.DefaultFullScreen, FullScreenPlace.Screen);
+            _defaultImmersive = Placed(list.DefaultImmersive, FullScreenPlace.Window);
         }
         catch (DsaException e) when (e.Problem == Problem.Refused)
         {
@@ -999,10 +1022,66 @@ public sealed class AppsViewModel : ObservableObject
 
     /// <summary>Where an app's clear full screen request can show, in the order of
     /// <see cref="FullScreenPlace"/>: as the choice for every app, on the whole screen, or inside
-    /// its window.</summary>
-    public IReadOnlyList<FullScreenChoice> FullScreenChoices => FullScreenPlaces.All
-        .Select(place => new FullScreenChoice(_text.Get($"Apps_FullScreen_{place}"), place))
+    /// its window. The first says where the choice for every app shows it now.</summary>
+    public IReadOnlyList<FullScreenChoice> FullScreenChoices => ChoicesFollowing(_defaultFullScreen);
+
+    /// <summary>Where an app hiding both its bars alone can show, in the same order as
+    /// <see cref="FullScreenChoices"/>. The first says where the choice for every app shows it
+    /// now.</summary>
+    public IReadOnlyList<FullScreenChoice> ImmersiveChoices => ChoicesFollowing(_defaultImmersive);
+
+    /// <summary>Where every app without its own choice shows a clear full screen request now.</summary>
+    public FullScreenPlace DefaultFullScreen => _defaultFullScreen;
+
+    /// <summary>Where every app without its own choice shows its bars hidden alone now.</summary>
+    public FullScreenPlace DefaultImmersive => _defaultImmersive;
+
+    /// <summary>The full screen places, the first named after <paramref name="now"/>, where it
+    /// takes an app that follows the default: "Follow the default (inside the window)".</summary>
+    private IReadOnlyList<FullScreenChoice> ChoicesFollowing(FullScreenPlace now) => FullScreenPlaces.All
+        .Select(place => new FullScreenChoice(
+            place == FullScreenPlace.Default
+                ? _text.Get($"Apps_FullScreen_Default{now}")
+                : _text.Get($"Apps_FullScreen_{place}"),
+            place))
         .ToList();
+
+    /// <summary>A place for the choice for every app: <paramref name="builtin"/> for
+    /// <see cref="FullScreenPlace.Default"/>, which that choice never is.</summary>
+    private static FullScreenPlace Placed(FullScreenPlace place, FullScreenPlace builtin) =>
+        place == FullScreenPlace.Default ? builtin : place;
+
+    /// <summary>Follows the Display page's choices for every app: the first item of each app's
+    /// full screen lists says where they take it now. The lists change only when a choice
+    /// does.</summary>
+    public void FollowFullScreenDefaults(FullScreenPlace fullScreen, FullScreenPlace immersive)
+    {
+        fullScreen = Placed(fullScreen, FullScreenPlace.Screen);
+        immersive = Placed(immersive, FullScreenPlace.Window);
+        if (fullScreen == _defaultFullScreen && immersive == _defaultImmersive)
+        {
+            return;
+        }
+        _defaultFullScreen = fullScreen;
+        _defaultImmersive = immersive;
+        // The rows are made again with the lists, so each one shows its choice in the new list.
+        ChangedAll();
+    }
+
+    /// <summary>Keeps the full screen lists in step with <paramref name="settings"/>, the
+    /// Display page's choices for every app, from the time they are read.</summary>
+    public void Follow(SettingsViewModel settings)
+    {
+        void Update()
+        {
+            if (settings.Loaded)
+            {
+                FollowFullScreenDefaults(settings.AppFullScreenDefault, settings.AppImmersiveDefault);
+            }
+        }
+        settings.PropertyChanged += (_, _) => Update();
+        Update();
+    }
 
     /// <summary>Shows the app's clear full screen request the way at <paramref name="index"/> of
     /// <see cref="FullScreenChoices"/>. The windows open already follow it at once.</summary>

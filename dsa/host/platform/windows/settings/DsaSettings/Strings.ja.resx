@@ -1713,7 +1713,7 @@ Windows の [設定] &gt; [アプリ] &gt; [インストールされているア
     <value>{0} のウィンドウは、次に開くものから新しい設定に従います。</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>別のモニターでの拡大縮小</value>
+    <value>拡大縮小</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>拡大率の異なるモニターにウィンドウを移したとき、このアプリをどちらが拡大縮小するかです。
@@ -1722,41 +1722,47 @@ Windows の [設定] &gt; [アプリ] &gt; [インストールされているア
 • 自動: YouTube のように実行中に拡大率が変わると表示が崩れるアプリにはシステム、それ以外のアプリにはアプリを使います。</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>拡大縮小: 自動</value>
+    <value>自動 (アプリ)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>拡大縮小: システム (このアプリに推奨)</value>
+    <value>自動 (システム、このアプリに推奨)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>拡大縮小の実行: アプリ</value>
+    <value>アプリ</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>拡大縮小の実行: システム</value>
+    <value>システム</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>拡大縮小の実行: システム (強制)</value>
+    <value>システム (強制)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>拡大縮小の実行: システム (強制)、まだ使用できません</value>
+    <value>システム (強制)、まだ利用できません</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>システム (強制) は、拡大率の変更に対応すると宣言していないアプリにも、再起動せずに新しい拡大率を渡します。
 まだ使用できません: このビルドにない Android フレームワークの変更が必要なため、現時点ではシステムと同じように動作します。</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>全画面表示</value>
+    <value>全画面表示の要求</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>動画プレーヤーの全画面ボタンのように、このアプリが明確に全画面表示を要求したときの表示先です。F11 では常に全画面表示を切り替えます。</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>バーを非表示</value>
+    <value>バーだけを隠すとき</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>ショート動画のフィードのように、このアプリが全画面表示を要求せずにバーを隠したときの表示先です。</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>既定に従う</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>開くときのウィンドウサイズ</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>既定に従う (画面全体)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>既定に従う (ウィンドウ内)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>画面全体</value>

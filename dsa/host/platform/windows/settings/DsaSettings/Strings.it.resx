@@ -1713,7 +1713,7 @@ Si applica alla prossima apertura della finestra dell'app.</value>
     <value>Le finestre di {0} seguono le nuove impostazioni dalla prossima che si apre.</value>
   </data>
   <data name="AppsDpiScaling.Name" xml:space="preserve">
-    <value>Ridimensionamento su un altro monitor</value>
+    <value>Scala</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Chi adatta questa app quando la sua finestra passa a un monitor con un'altra scala.
@@ -1722,41 +1722,47 @@ Si applica alla prossima apertura della finestra dell'app.</value>
 • Automatico: Sistema per le app che si bloccano se la scala cambia mentre sono in esecuzione, come YouTube; App per tutte le altre.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
-    <value>Ridimensionamento: automatico</value>
+    <value>Automatico (app)</value>
   </data>
   <data name="Apps_DpiScaling_AutoSystem" xml:space="preserve">
-    <value>Ridimensionamento: sistema (consigliato per questa app)</value>
+    <value>Automatico (sistema, consigliato per questa app)</value>
   </data>
   <data name="Apps_DpiScaling_App" xml:space="preserve">
-    <value>Ridimensionamento eseguito da: app</value>
+    <value>App</value>
   </data>
   <data name="Apps_DpiScaling_System" xml:space="preserve">
-    <value>Ridimensionamento eseguito da: sistema</value>
+    <value>Sistema</value>
   </data>
   <data name="Apps_DpiScaling_SystemForced" xml:space="preserve">
-    <value>Ridimensionamento eseguito da: sistema (forzato)</value>
+    <value>Sistema (forzato)</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedNotYet" xml:space="preserve">
-    <value>Ridimensionamento eseguito da: sistema (forzato), non ancora disponibile</value>
+    <value>Sistema (forzato), non ancora disponibile</value>
   </data>
   <data name="Apps_DpiScaling_SystemForcedTip" xml:space="preserve">
     <value>Sistema (forzato) passa all'app la nuova scala senza riavviarla, anche se non dichiara di gestirla.
 Non ancora disponibile: richiede una modifica al framework Android che questa build non ha, quindi per ora funziona come Sistema.</value>
   </data>
   <data name="AppsFullScreen.Name" xml:space="preserve">
-    <value>Schermo intero</value>
+    <value>Richiesta di schermo intero</value>
   </data>
   <data name="AppsFullScreen.ToolTip" xml:space="preserve">
     <value>Dove compare questa app su una chiara richiesta di schermo intero, come il pulsante di un lettore video. F11 lo attiva o disattiva sempre.</value>
   </data>
   <data name="AppsImmersive.Name" xml:space="preserve">
-    <value>Barre nascoste</value>
+    <value>Quando nasconde solo le barre</value>
   </data>
   <data name="AppsImmersive.ToolTip" xml:space="preserve">
     <value>Dove compare questa app quando nasconde le barre senza chiedere lo schermo intero, come fa un feed di video brevi.</value>
   </data>
-  <data name="Apps_FullScreen_Default" xml:space="preserve">
-    <value>Segui l'impostazione predefinita</value>
+  <data name="AppsStartSize.Name" xml:space="preserve">
+    <value>Dimensione della finestra all'apertura</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultScreen" xml:space="preserve">
+    <value>Segui l'impostazione predefinita (su tutto lo schermo)</value>
+  </data>
+  <data name="Apps_FullScreen_DefaultWindow" xml:space="preserve">
+    <value>Segui l'impostazione predefinita (all'interno della finestra)</value>
   </data>
   <data name="Apps_FullScreen_Screen" xml:space="preserve">
     <value>Su tutto lo schermo</value>
