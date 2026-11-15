@@ -305,8 +305,9 @@ SETTINGS_CODE_WITHOUT_BLUETOOTH = {
 #
 # SystemUI draws the brightness slider (Intent.ACTION_SHOW_BRIGHTNESS_DIALOG, sent to
 # com.android.systemui by name). Display's "Brightness level" row starts it without asking
-# whether anything answers, so a click threw ActivityNotFoundException. The row stays and
-# shows the level; the click starts nothing. The host owns the monitor's brightness.
+# whether anything answers, so a click threw ActivityNotFoundException. The Display page no
+# longer has the row (SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS); these edits keep the code
+# behind it from starting the slider should anything else still reach it.
 SETTINGS_BRIGHTNESS_DIALOG_STARTS = [
     ("skip call", "Landroid/content/Context;->startActivityForResult"),
     ("skip call", "Landroid/content/Context;->startActivityAsUser"),
@@ -324,6 +325,22 @@ SETTINGS_CODE_WITHOUT_REMOVED_APPS = {
     "Lcom/android/settings/display/BrightnessLevelPreference;->onPreferenceClick": SETTINGS_BRIGHTNESS_DIALOG_STARTS,
     "Lcom/android/settings/BrightnessPreference;->onClick": SETTINGS_BRIGHTNESS_DIALOG_STARTS,
 }
+# The Display page's Brightness category, taken out of the compiled page with everything in
+# it: "Brightness level", "Adaptive brightness" and "HDR brightness". On a PC the host owns the
+# monitor's brightness. The guest's display reports no brightness control to Android and
+# passes no level to the host, so the level row changed nothing a user could see, and
+# adaptive brightness only sets that same level from the light sensor (the framework overlay
+# also says the device has no adaptive brightness: FRAMEWORK_OVERLAY_BOOLEANS). HDR brightness
+# is shown only for an HDR display, which a task's display is not.
+#
+# The whole category goes, not each row by its availability: a category keeps its title
+# whether or not any row in it is shown, so the page would show "Brightness" over nothing.
+# Android 16's and 17's Display page is "hybrid": Settings inflates this XML and binds the
+# code-built rows of DisplayScreen (BrightnessLevelPreference, and on Android 17
+# AutoBrightnessScreen) only onto the preferences the XML has, so those go with it. The
+# controllers the category names in the XML are not made, and BrightnessLevelPreferenceController,
+# which DisplaySettings makes in code, finds no row to show.
+SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS = {"res/xml/display_settings.xml": ["category_brightness"]}
 # Android 17's Settings home page (TopLevelSettings.setPaddingHorizontal) pads its list's
 # bottom by dashboard_padding_bottom (16 dp) when isRunningInFreeformWindow, which asks
 # whether the window shows a caption bar. That padding stands in for the navigation bar inset
@@ -1936,6 +1953,27 @@ def settings_overlay_problems(table):
     return problems
 
 
+def adaptive_brightness_overlay_problems(table):
+    """What is wrong with the framework overlay's resource table for adaptive brightness: it
+    must say the device has none (ADAPTIVE_BRIGHTNESS false) in every configuration."""
+    found = arsc_booleans(table).get(ADAPTIVE_BRIGHTNESS)
+    if not found:
+        return [f"{ADAPTIVE_BRIGHTNESS} has no value"]
+    if any(found):
+        return [f"{ADAPTIVE_BRIGHTNESS} is true, not false"]
+    return []
+
+
+def settings_brightness_problems(apk):
+    """What Settings.apk still has of the Display page's brightness rows
+    (SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS): the category itself, or a page that is not
+    there at all, which lays the Display page out some other way."""
+    with zipfile.ZipFile(io.BytesIO(apk)) as z:
+        files = set(z.namelist())
+    problems = [f"{xml} is missing" for xml in SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS if xml not in files]
+    return problems + apk_edits_left(apk, keys=SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS)
+
+
 def status_bar_overlay_problems(table):
     """What is wrong with the status bar heights of the framework overlay's resource table:
     each STATUS_BAR_DIMENS value must be there for every density status_bar_heights names and
@@ -2217,6 +2255,13 @@ def system_overlay_problems(names, read):
                 if found:
                     problems.append(f"{path}: {'; '.join(found)}, so an app that pads by the navigation bar's "
                                     "height leaves an empty band along the window's bottom edge")
+                try:
+                    found = adaptive_brightness_overlay_problems(table)
+                except (ValueError, IndexError, struct.error):
+                    found = ["its resource table cannot be read"]
+                if found:
+                    problems.append(f"{path}: {'; '.join(found)}, so Settings offers adaptive brightness, which "
+                                    "sets a brightness the guest's display does not pass to the host")
         if path == SETTINGS_OVERLAY_APK:
             try:
                 found = settings_overlay_problems(apk_resource_table(read(path)))
@@ -2946,10 +2991,11 @@ def edit_dex(dex, edits):
     return bytes(out), changed
 
 
-def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_attributes=None):
+def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_attributes=None, keys=None):
     """An APK with `code` edited in its dex files (see edit_dex), the preference elements
     whose controller `controllers` names removed from its compiled XML ({xml: [controller]}),
-    the dimensions and booleans `dimensions` names set in its compiled XML ({xml: [(element,
+    the preference elements whose key `keys` names removed with everything inside them ({xml:
+    [key]}), the dimensions and booleans `dimensions` names set in its compiled XML ({xml: [(element,
     attribute, value)]}, see set_xml_dimensions), and the attributes `theme_attributes` names
     taken from the theme ({xml: [(element, attribute name)]}, see set_xml_theme_attributes).
     Prints each change; returns the APK as it was when nothing changed."""
@@ -2972,6 +3018,14 @@ def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_att
             for controller in removed_controllers:
                 print(f"removing {controller} from {name}:{xml}", flush=True)
             if removed_controllers:
+                replacements[xml] = edited
+        for xml, removed in (keys or {}).items():
+            if xml not in files:
+                continue
+            edited, removed_keys = remove_xml_elements(replacements.get(xml) or apk.read(xml), "key", set(removed))
+            for key in removed_keys:
+                print(f"removing the preference {key} from {name}:{xml}", flush=True)
+            if removed_keys:
                 replacements[xml] = edited
         for xml, edits in (dimensions or {}).items():
             if xml not in files:
@@ -3005,12 +3059,14 @@ def edit_apk(data, name, code=None, controllers=None, dimensions=None, theme_att
 def edit_settings_apk(data, name):
     """Settings.apk without the preferences, and the code, that need the Bluetooth service,
     without the calls into apps the image leaves out (SETTINGS_CODE_WITHOUT_REMOVED_APPS),
-    and with its pages' large titles opening expanded or folded as the Settings overlay's theme
+    without the Display page's brightness rows (SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS), and
+    with its pages' large titles opening expanded or folded as the Settings overlay's theme
     says (SETTINGS_TITLE_EXPANDED). Its home list keeps Android's own freeform padding
     (SETTINGS_FREEFORM_WINDOW), and its other pages get the same room below their last row
     (SETTINGS_LIST_END, SETTINGS_CODE_LIST_END)."""
     return edit_apk(data, name, code=SETTINGS_CODE, controllers=SETTINGS_CONTROLLERS_WITHOUT_BLUETOOTH,
-                    dimensions=SETTINGS_LIST_END, theme_attributes=SETTINGS_TITLE_EXPANDED)
+                    dimensions=SETTINGS_LIST_END, theme_attributes=SETTINGS_TITLE_EXPANDED,
+                    keys=SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS)
 
 
 # System apps that started at every boot to find they had nothing to do, and then stayed as
@@ -5079,7 +5135,17 @@ FRAMEWORK_OVERLAY_INTEGERS = {"config_tapTimeoutMillis": 0, "config_customizedMa
 # transparent colour it draws a translucent scrim for contrast unless config_navBarNeedsScrim
 # says the bar needs none. AOSP's gesture navigation overlay sets both the way they are here,
 # so no black or grey strip can show along a window's bottom edge.
+#
+# The device has no adaptive brightness (ADAPTIVE_BRIGHTNESS). Cuttlefish's overlay says it
+# has, for Settings' toggle. On a PC the host owns the monitor's brightness, and the guest's
+# display passes no brightness to it, so adaptive brightness would read the light sensor the
+# host may forward only to set a level nothing shows. Off, the display power controller makes
+# no automatic brightness controller and never listens to the light sensor for it, and
+# Settings counts its adaptive brightness pages unavailable, in search too (the Display
+# page's row goes with its category: SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS).
+ADAPTIVE_BRIGHTNESS = "config_automatic_brightness_available"
 FRAMEWORK_OVERLAY_BOOLEANS = {
+    ADAPTIVE_BRIGHTNESS: False,
     "config_appCompatUserAppAspectRatioSettingsIsEnabled": True,
     "config_checkWallpaperAtBoot": False,
     "config_enableNetworkLocationOverlay": False,
@@ -7447,10 +7513,10 @@ def edit_permission_apex(data, name, otatools, work):
     return edit_apex_apks(data, name, edit, otatools, work)
 
 
-def apk_edits_left(apk, code=None, controllers=None, dimensions=None, theme_attributes=None):
+def apk_edits_left(apk, code=None, controllers=None, dimensions=None, theme_attributes=None, keys=None):
     """What an APK still has of what edit_apk takes out or changes, given the same edits: the
-    methods, controllers and compiled XML files edit_apk would change. An empty list means
-    the APK has every edit (or nothing they apply to)."""
+    methods, controllers, preferences and compiled XML files edit_apk would change. An empty
+    list means the APK has every edit (or nothing they apply to)."""
     left = []
     with zipfile.ZipFile(io.BytesIO(apk)) as z:
         files = set(z.namelist())
@@ -7466,6 +7532,10 @@ def apk_edits_left(apk, code=None, controllers=None, dimensions=None, theme_attr
             if xml in files:
                 _, found = remove_xml_elements(z.read(xml), "controller", set(removed))
                 left += [f"{xml}: {controller}" for controller in found]
+        for xml, removed in (keys or {}).items():
+            if xml in files:
+                _, found = remove_xml_elements(z.read(xml), "key", set(removed))
+                left += [f"{xml}: {key}" for key in found]
         for xml, edits in (dimensions or {}).items():
             if xml in files and set_xml_dimensions(z.read(xml), edits)[1]:
                 left.append(f"{xml}: " + ", ".join(f"{element} {attribute:#x} not {xml_value_text(dp)}"

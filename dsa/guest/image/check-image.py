@@ -221,6 +221,14 @@ with zipfile.ZipFile(image / "signed-target_files.zip") as z:
             if left:
                 problems.append(f"{name} still has {'; '.join(left)}, so its pages open with the large "
                                 "title folded in every window")
+    # Settings' Display page shows no brightness rows: the host owns the monitor's brightness,
+    # and the guest's display passes none to it.
+    for name in names:
+        if name.endswith(make_image.SETTINGS_APK):
+            left = make_image.settings_brightness_problems(z.read(name))
+            if left:
+                problems.append(f"{name}: {'; '.join(left)}, so Settings' Display page still shows brightness "
+                                "rows that change nothing on a PC")
     # Every Settings page keeps the home page's room below its last row: a task has no
     # navigation bar inset, which is all a page opened from the home page takes that room from.
     for name in names:

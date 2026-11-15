@@ -4011,6 +4011,109 @@ class SettingsWithoutRemovedAppsTests(unittest.TestCase):
             self.assertIn(method, outputs[0])
         self.assertNotIn("calls into an app the image leaves out", outputs[1])
 
+    def test_fr1_the_display_page_shows_no_brightness_rows(self):
+        # The host owns the monitor's brightness: Brightness level changed nothing a user could
+        # see (and a click on it ended Settings), adaptive brightness sets that same level,
+        # and HDR brightness needs an HDR display. Their category goes whole, so no
+        # "Brightness" title is left over nothing.
+        self.assertEqual(make_image.SETTINGS_PREFERENCES_WITHOUT_BRIGHTNESS,
+                         {DISPLAY_XML: ["category_brightness"]})
+        for utf8 in (True, False):
+            apk = SettingsWithoutBluetoothTests.apk({DISPLAY_XML: compiled_xml(DISPLAY_SCREEN, utf8)})
+            edited = make_image.edit_settings_apk(apk, "Settings.apk")
+            # A second pass finds nothing left to edit.
+            self.assertEqual(make_image.edit_settings_apk(edited, "Settings.apk"), edited)
+            with zipfile.ZipFile(io.BytesIO(edited)) as archive:
+                screen = archive.read(DISPLAY_XML)
+            self.assertEqual(elements(screen), [
+                ("PreferenceScreen", "display_settings_screen"),
+                ("PreferenceCategory", "category_lock_display"),
+                ("com.android.settingslib.RestrictedPreference", "screen_timeout"),
+            ], utf8)
+            self.assertEqual(struct.unpack_from("<I", screen, 4)[0], len(screen))
+            self.assertEqual(make_image.settings_brightness_problems(edited), [])
+            self.assertEqual(make_image.settings_brightness_problems(apk),
+                             [f"{DISPLAY_XML}: category_brightness"])
+
+    def test_fr1_the_display_page_keeps_brightness_edits_together_with_the_others(self):
+        # The brightness rows go from the page, and the code behind them still starts no
+        # SystemUI dialog, in the same pass as every other Settings edit.
+        apk = SettingsWithoutBluetoothTests.apk({DISPLAY_XML: compiled_xml(DISPLAY_SCREEN),
+                                                 "classes2.dex": removed_apps_dex(17),
+                                                 "res/xml/sound_settings.xml": compiled_xml(SOUND_SCREEN)})
+        edited = make_image.edit_settings_apk(apk, "Settings.apk")
+        self.assertEqual(make_image.edit_settings_apk(edited, "Settings.apk"), edited)
+        self.assertEqual(make_image.settings_brightness_problems(edited), [])
+        self.assertEqual(make_image.apk_edits_left(edited, code=make_image.SETTINGS_CODE_WITHOUT_REMOVED_APPS,
+                                                   controllers=make_image.SETTINGS_CONTROLLERS_WITHOUT_BLUETOOTH),
+                         [])
+        with zipfile.ZipFile(io.BytesIO(edited)) as archive:
+            dex = archive.read("classes2.dex")
+        self.assertEqual(dex_code(dex, BRIGHTNESS_CLICK), bytes.fromhex("00000000000012100f00"))
+
+    def test_fr1_the_framework_overlay_says_the_device_has_no_adaptive_brightness(self):
+        # Cuttlefish's overlay says it has; off, Settings counts its adaptive brightness pages
+        # unavailable and the framework never reads the light sensor to set a level.
+        self.assertEqual(make_image.ADAPTIVE_BRIGHTNESS, "config_automatic_brightness_available")
+        self.assertIs(make_image.FRAMEWORK_OVERLAY_BOOLEANS[make_image.ADAPTIVE_BRIGHTNESS], False)
+        self.assertIn(f"bool/{make_image.ADAPTIVE_BRIGHTNESS}", make_image.framework_overlaid())
+        with tempfile.TemporaryDirectory() as tmp:
+            make_image.framework_overlay_sources(Path(tmp))
+            values = (Path(tmp) / "res/values/dsa.xml").read_text()
+        self.assertIn(f'<bool name="{make_image.ADAPTIVE_BRIGHTNESS}">false</bool>', values)
+        self.assertEqual(make_image.adaptive_brightness_overlay_problems(framework_overlay_table()), [])
+
+    def test_fr1_check_image_rejects_a_display_page_that_still_shows_brightness(self):
+        check_script = Path(__file__).with_name("check-image.py")
+        settings = SettingsWithoutBluetoothTests.apk({DISPLAY_XML: compiled_xml(DISPLAY_SCREEN)})
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            img_dir = root / "image"
+            img_dir.mkdir()
+            keys_dir = root / "keys"
+            keys_dir.mkdir()
+            (img_dir / "image.json").write_text(json.dumps({"files": {}, "kernel_cmdline": ""}))
+            (img_dir / "initrd.img").write_bytes(gzip.compress(b""))
+            outputs = []
+            for apk in [settings, make_image.edit_settings_apk(settings, "Settings.apk"),
+                        SettingsWithoutBluetoothTests.apk({})]:
+                with zipfile.ZipFile(img_dir / "signed-target_files.zip", "w") as archive:
+                    archive.writestr("SYSTEM/build.prop", "ro.debuggable=0\n")
+                    archive.writestr("META/apkcerts.txt", "")
+                    archive.writestr("SYSTEM_EXT/priv-app/Settings/Settings.apk", apk)
+                outputs.append(subprocess.run(
+                    [sys.executable, str(check_script), str(img_dir), str(keys_dir)],
+                    capture_output=True,
+                    text=True,
+                ).stdout)
+        message = "Display page still shows brightness rows"
+        self.assertIn(message, outputs[0])
+        self.assertIn(f"{DISPLAY_XML}: category_brightness", outputs[0])
+        self.assertNotIn(message, outputs[1])
+        # A Settings without the page lays it out some other way, which nothing checked.
+        self.assertIn(message, outputs[2])
+        self.assertIn(f"{DISPLAY_XML} is missing", outputs[2])
+
+
+DISPLAY_XML = "res/xml/display_settings.xml"
+# The parts of Display's page that matter here, as both builds compile it: the brightness
+# category with its three rows (the level row's key is a string resource, so it has no literal
+# key), and a category that stays.
+DISPLAY_SCREEN = preference("PreferenceScreen", "display_settings_screen", children=[
+    preference("PreferenceCategory", "category_brightness", children=[
+        ("com.android.settingslib.RestrictedPreference", [(SETTINGS_NS, "userRestriction", "no_config_brightness")],
+         []),
+        ("com.android.settingslib.PrimarySwitchPreference",
+         [(SETTINGS_NS, "controller", "com.android.settings.display.AutoBrightnessPreferenceController")], []),
+        preference("com.android.settingslib.PrimarySwitchPreference", "hdr_preference",
+                   "com.android.settings.display.HdrBrightnessPreferenceController"),
+    ]),
+    preference("PreferenceCategory", "category_lock_display", children=[
+        preference("com.android.settingslib.RestrictedPreference", "screen_timeout",
+                   "com.android.settings.display.ScreenTimeoutPreferenceController"),
+    ]),
+])
+
 
 class TouchLatencyTests(unittest.TestCase):
     """What the image changes so a press shows sooner, and what it logs to measure the rest."""
@@ -5415,11 +5518,14 @@ def complex_dp(dp):
     return (round(dp * (1 << 15)) << 8) | (2 << 4) | make_image.ARSC_UNIT_DIP
 
 
-def dimens_table(configs):
+def dimens_table(configs, booleans=None):
     """A compiled resource table of dimens in dp: one type chunk for each of `configs`, a list
-    of (density, smallest width in dp, {name: dp}), each 0 where the configuration has none."""
+    of (density, smallest width in dp, {name: dp}), each 0 where the configuration has none;
+    and, after them, the booleans `booleans` ({name: value}) in the default configuration."""
     names = sorted({name for _, _, values in configs for name in values})
-    type_pool, key_pool = string_pool(["dimen"]), string_pool(names)
+    bool_names = sorted(booleans or {})
+    type_pool = string_pool(["dimen", "bool"] if bool_names else ["dimen"])
+    key_pool = string_pool(names + bool_names)
     spec_body = struct.pack("<BBHI", 1, 0, 0, len(names)) + bytes(4 * len(names))
     chunks = struct.pack("<HHI", make_image.ARSC_TYPE_SPEC, 16, 8 + len(spec_body)) + spec_body
     for density, smallest_width, values in configs:
@@ -5437,9 +5543,23 @@ def dimens_table(configs):
         header_size = 8 + 12 + len(config)
         body = struct.pack("<BBHII", 1, 0, 0, len(names), header_size + len(array)) + bytes(config) + array + entries
         chunks += struct.pack("<HHI", make_image.ARSC_TYPE, header_size, 8 + len(body)) + body
+    if bool_names:
+        spec_body = struct.pack("<BBHI", 2, 0, 0, len(bool_names)) + bytes(4 * len(bool_names))
+        chunks += struct.pack("<HHI", make_image.ARSC_TYPE_SPEC, 16, 8 + len(spec_body)) + spec_body
+        entries, offsets = b"", []
+        for i, name in enumerate(bool_names):
+            offsets.append(len(entries))
+            entries += struct.pack("<HHI", 8, 0, len(names) + i) + struct.pack(
+                "<HBBI", 8, 0, 0x12, 0xFFFFFFFF if booleans[name] else 0)
+        array = b"".join(struct.pack("<I", offset) for offset in offsets)
+        config = struct.pack("<I", 64) + bytes(60)
+        header_size = 8 + 12 + len(config)
+        body = struct.pack("<BBHII", 2, 0, 0, len(bool_names), header_size + len(array)) + config + array + entries
+        chunks += struct.pack("<HHI", make_image.ARSC_TYPE, header_size, 8 + len(body)) + body
     name = "io.github.thisisthepy.dsa.overlay.framework".encode("utf-16-le").ljust(256, b"\0")
     package_body = (struct.pack("<I", 0x7F) + name
-                    + struct.pack("<IIIII", 288, 1, 288 + len(type_pool), len(names), 0)
+                    + struct.pack("<IIIII", 288, 2 if bool_names else 1, 288 + len(type_pool),
+                                  len(names) + len(bool_names), 0)
                     + type_pool + key_pool + chunks)
     package = struct.pack("<HHI", 0x0200, 288, 8 + len(package_body)) + package_body
     globals_pool = string_pool(["x"])
@@ -5468,12 +5588,14 @@ def status_bar_table(heights, names=None):
     return dimens_table(status_bar_configs(heights, names))
 
 
-def framework_overlay_table(heights=None, navigation=None):
-    """The framework overlay's compiled dimens: the status bar heights (the title bar's by
-    default) and the navigation bar heights (0 at the framework's widths by default)."""
+def framework_overlay_table(heights=None, navigation=None, booleans=None):
+    """The framework overlay's compiled dimens and booleans: the status bar heights (the title
+    bar's by default), the navigation bar heights (0 at the framework's widths by default), and
+    the booleans (make_image.FRAMEWORK_OVERLAY_BOOLEANS by default)."""
     heights = make_image.status_bar_heights() if heights is None else heights
     navigation = navigation_bar_configs() if navigation is None else navigation
-    return dimens_table(status_bar_configs(heights) + navigation)
+    booleans = make_image.FRAMEWORK_OVERLAY_BOOLEANS if booleans is None else booleans
+    return dimens_table(status_bar_configs(heights) + navigation, booleans)
 
 
 def booleans_table(values):
@@ -5718,6 +5840,28 @@ class SystemScreenDesignTests(unittest.TestCase):
             problems = make_image.system_overlay_problems(list(files), files.__getitem__)
             self.assertEqual(len(problems), 1, problems)
             self.assertIn("Settings ends when the page opens", problems[0])
+            self.assertIn(wanted, problems[0])
+
+    def test_fr1_check_image_rejects_a_framework_overlay_that_keeps_adaptive_brightness(self):
+        # Adaptive brightness sets a level the guest's display passes to nothing on a PC.
+        names, read = self.image()
+        files = {name: read(name) for name in names}
+        path = make_image.FRAMEWORK_OVERLAY_APK
+        with zipfile.ZipFile(io.BytesIO(files[path])) as apk:
+            record = apk.read(make_image.SYSTEM_OVERLAY_RECORD)
+        adaptive = make_image.ADAPTIVE_BRIGHTNESS
+        for booleans, wanted in [
+            # Cuttlefish's own value.
+            ({**make_image.FRAMEWORK_OVERLAY_BOOLEANS, adaptive: True}, f"{adaptive} is true, not false"),
+            # An overlay made before the switch.
+            ({name: value for name, value in make_image.FRAMEWORK_OVERLAY_BOOLEANS.items() if name != adaptive},
+             f"{adaptive} has no value"),
+        ]:
+            files[path] = apk_with_table(framework_overlay_table(booleans=booleans),
+                                         {make_image.SYSTEM_OVERLAY_RECORD: record})
+            problems = make_image.system_overlay_problems(list(files), files.__getitem__)
+            self.assertEqual(len(problems), 1, problems)
+            self.assertIn("Settings offers adaptive brightness", problems[0])
             self.assertIn(wanted, problems[0])
 
     def test_fr34_check_image_accepts_overlays_built_against_its_framework_res_and_apps(self):
