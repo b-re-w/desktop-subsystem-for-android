@@ -1,21 +1,23 @@
 # Builds the patched Android guest transport and the Windows and macOS host renderers from
-# source.
+# source. It runs only by hand (workflow_dispatch) or as a job of Checks.
 name: Graphics test
 
 on:
   # Only develop is built and tested: features are integrated there and fixed there.
-  push:
-    branches: [develop]
-    paths:
-      - "dsa/graphics/**"
-      - "dsa/host/platform/windows/**"
-      - "dsa/host/platform/linux/**"
-      - "dsa/host/platform/macos/**"
-      - "dsa/host/platform/unix/**"
-      - "dsa/host/core/src/renderer.rs"
-      - "dsa/protocol/renderer.proto"
-      - ".github/workflows/test-graphics.yml"
-      - "scripts/tests/graphics-workflow.test.sh"
+  # Paused by the owner's decision (2026-11-16): nothing on develop starts on a push, so it
+  # runs only by hand (workflow_dispatch) or from Checks. Uncomment to resume.
+  # push:
+  #   branches: [develop]
+  #   paths:
+  #     - "dsa/graphics/**"
+  #     - "dsa/host/platform/windows/**"
+  #     - "dsa/host/platform/linux/**"
+  #     - "dsa/host/platform/macos/**"
+  #     - "dsa/host/platform/unix/**"
+  #     - "dsa/host/core/src/renderer.rs"
+  #     - "dsa/protocol/renderer.proto"
+  #     - ".github/workflows/test-graphics.yml"
+  #     - "scripts/tests/graphics-workflow.test.sh"
   workflow_dispatch:
     inputs:
       dozen_on_warp:
