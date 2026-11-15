@@ -584,6 +584,13 @@ pub fn dpi_scaling_index(window: Option<&AppWindow>) -> usize {
 
 /// What the scaling row says under its title: why System (forced) works like System for now,
 /// while it is the app's choice and not available; otherwise what the choices do.
+/// The first line of a text that says more over several lines: the line an option's row shows
+/// under its name, as the Windows and macOS pages do, while the whole text stays its tool tip.
+/// A one-line text is itself.
+pub fn first_line(text: &str) -> String {
+    text.lines().next().unwrap_or_default().trim().to_string()
+}
+
 pub fn dpi_scaling_subtitle(window: Option<&AppWindow>, system_forced_available: bool) -> String {
     let scaling = window.map(|w| w.dpi_scaling).unwrap_or_default();
     if scaling == DpiScaling::SystemForced && !system_forced_available {

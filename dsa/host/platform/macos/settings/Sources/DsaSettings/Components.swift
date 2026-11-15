@@ -138,21 +138,23 @@ struct RowLabel: View {
     }
 }
 
-/// One of a list row's options: its name above its control, so two lists that offer the same
-/// choices read as different settings. The control keeps its own VoiceOver name, which says
-/// whose option it is, so the name above is not read twice.
-struct LabeledOption<Content: View>: View {
+/// One of a card's options, as System Settings lists them: its name, with the line that says
+/// what it does under it, on the left, and its control on the right. The control keeps its own
+/// VoiceOver name, which says whose option it is, and the line under the name is its hint, so
+/// the text beside it is not read twice.
+struct OptionRow<Content: View>: View {
     let title: String
+    var detail: String = ""
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityHidden(true)
+        LabeledContent {
             content
+                .accessibilityHint(detail)
+        } label: {
+            RowLabel(title: title, detail: detail)
+                .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
