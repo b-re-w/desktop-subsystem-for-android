@@ -131,7 +131,8 @@ impl Toplevel {
         match self.mode.effective() {
             WindowMode::Normal => true,
             WindowMode::Fullscreen => self.revealed,
-            WindowMode::PictureInPicture => false,
+            // An app overlay window shows only what its app drew.
+            WindowMode::PictureInPicture | WindowMode::Overlay => false,
         }
     }
 
