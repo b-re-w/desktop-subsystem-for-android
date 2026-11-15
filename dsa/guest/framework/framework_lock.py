@@ -40,7 +40,8 @@ a project fetched in part) and fetched by .github/scripts/translator/fetch-sourc
                                                    changes soong_ui's source in the services
                                                    tree so that GOMEMLIMIT reaches soong_build
 
-services.jar, with DSA's window manager, package manager and WebView service, is built in a tree
+services.jar, with DSA's window manager, package manager, WebView service and display manager
+(which shows Google Play a phone's density, so that Play delivers xxhdpi splits), is built in a tree
 of its own (SERVICES_JAR): the Java framework needs most of the platform.
 """
 

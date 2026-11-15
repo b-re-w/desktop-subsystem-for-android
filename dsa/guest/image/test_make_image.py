@@ -8822,6 +8822,41 @@ class HostMemoryImageTests(unittest.TestCase):
             self.assertIn("caller % kPerUserRange", patch)
         self.assertIn(make_image.HOST_MEMORY_FRAMEWORK_FILE, make_image.FRAMEWORK_FILES)
 
+    def test_fr32_the_framework_shows_google_play_a_phones_density(self):
+        # Play delivers the density splits that match the density the Play Store reads from
+        # the default display's metrics. The patch shows the Play Store and Play services, and
+        # them only, a display of at least 480 dpi through getDisplayInfo, so Play delivers
+        # xxhdpi splits; the display, the window manager and every other app keep its density.
+        framework = self.HERE.parent / "framework"
+        framework_lock = make_image.framework_lock
+        added = re.compile(r"^\+(?!\+\+)(.*)$", re.MULTILINE)
+        for android in ("android16", "android17"):
+            path = framework / "patches" / "frameworks" / "base" / android / "0006-show-google-play-a-phones-density.patch"
+            patch = path.read_text()
+            # Only the services build applies a Java patch, and it builds services.jar, which
+            # holds DisplayManagerService.
+            self.assertEqual(framework_lock.patch_paths(path),
+                             ["services/core/java/com/android/server/display/DisplayManagerService.java"])
+            self.assertTrue(framework_lock.java_only(path))
+            code = "\n".join(added.findall(patch))
+            self.assertIn('{"com.android.vending", "com.google.android.gms"}', code)
+            self.assertIn("DSA_PLAY_DENSITY = android.util.DisplayMetrics.DENSITY_XXHIGH;", code)
+            # The binder call apps reach is the one that changes, with the caller's uid.
+            self.assertIn("return dsaShowPlayAPhoneDensity(getDisplayInfoInternal(displayId, callingUid),", code)
+            self.assertRegex(patch, r"\n-\s+return getDisplayInfoInternal\(displayId, callingUid\);\n")
+            # A display already as dense is reported as it is, and so is every caller that is
+            # not an app.
+            self.assertIn("info.logicalDensityDpi >= DSA_PLAY_DENSITY", code)
+            self.assertIn("UserHandle.getAppId(callingUid) < FIRST_APPLICATION_UID", code)
+            # The display's own info is copied, never changed in place: the logical display and
+            # the cache hand the same object to every caller.
+            self.assertIn("shown.copyFrom(info);", code)
+            self.assertIn("shown.logicalDensityDpi = DSA_PLAY_DENSITY;", code)
+            self.assertNotRegex(code, r"\binfo\.logicalDensityDpi\s*=[^=]")
+            # Only the density changes, not the size in pixels or the physical dpi.
+            self.assertEqual(re.findall(r"shown\.(\w+)\s*=[^=]", code), ["logicalDensityDpi"])
+            self.assertIn("packages.getPackageUid(packageName, 0L, UserHandle.USER_SYSTEM)", code)
+
 
 class HostCertificatesImageTests(KeyMintKeyImageTests):
     """The guest image's side of the root certificates a user or administrator added to the

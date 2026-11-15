@@ -16,8 +16,16 @@ on:
   # not take the runners the Development and Framework builds wait for. Uncomment to resume.
   # push:
   #   branches: [develop]
+  # On the release pull request into main it runs only when someone adds the label
+  # "run-tests" on the pull request page. Release sync updates that pull request on every
+  # push to develop, and running on each update queued a run per push.
   pull_request:
     branches: [main]
+    types: [labeled]
+  # On the release pull request into main it runs once, when the owner approves it, so
+  # Release sync's update of that pull request on every push to develop queues nothing.
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
   # Checks (checks.yml) runs it as one of its jobs, with every other test, in one run.
   workflow_call:
@@ -46,6 +54,7 @@ jobs:
   # touches documents runs just the repository checks. A skipped job counts as passed, and
   # "Report the test result" always reports, so a skipped job never holds a merge back.
   changes:
+    if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review' || github.event.label.name == 'run-tests') || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Find the parts that changed
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -126,6 +135,7 @@ jobs:
   # and as rendered now. Each takes a minute or less on the same setup, so they share a
   # runner; the icons are checked even when a repository rule failed.
   repository:
+    if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review' || github.event.label.name == 'run-tests') || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Check the repository rules and the brand icons
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -877,7 +887,7 @@ jobs:
   # the large compiler caches of the builds that run least often, the slowest to build again.
   caches:
     name: Delete superseded and stale caches
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/develop') && (github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -896,7 +906,7 @@ jobs:
   # when every job passed or was skipped because its part did not change.
   result:
     name: Report the test result
-    if: always()
+    if: always() && (github.event_name != 'pull_request' || github.event.label.name == 'run-tests')
     needs:
       [changes, repository, rust, macos-host, linux-host, linux-settings, linux-vm, agent, protocol, settings-app, guest-rules]
     runs-on: ubuntu-latest

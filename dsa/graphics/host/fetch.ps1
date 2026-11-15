@@ -97,6 +97,9 @@ git -C $GfxstreamDir clean -fdx
 # there, and the log does not say whether ASTC is native, decoded on the GPU or unavailable.
 # Without 0037 every byte of a guest's host-visible memory and of a gralloc buffer's CPU upload
 # or read back crosses the stream, even where the service shares graphics memory with the VM.
+# Without 0038 the renderer does not compile with GCC 15 (Ubuntu 26.04): four headers use
+# uint32_t and friends but leave <cstdint> to what libstdc++'s <memory>, <string> or
+# <functional> used to include, and GCC 15's no longer do.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -132,7 +135,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0034-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0035-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0036-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0037-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0037-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0038-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName

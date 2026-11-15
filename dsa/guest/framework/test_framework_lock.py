@@ -704,7 +704,18 @@ def removed_lines(patch):
 
 class ServicesTests(unittest.TestCase):
     """services.jar, built from the published build's source with DSA's patches to the window
-    manager (a dialog gets no caption bar inset), the package manager and the WebView service."""
+    manager (a dialog gets no caption bar inset), the package manager, the WebView service and
+    the display manager (Google Play is shown a phone's density)."""
+
+    def test_fr32_google_play_is_shown_a_phones_density_by_the_display_manager(self):
+        for android in ("android16", "android17"):
+            patches = self._patches_to(
+                android, "services/core/java/com/android/server/display/DisplayManagerService.java")
+            self.assertEqual(len(patches), 1, android)
+            self.assertTrue(framework_lock.java_only(patches[0]), android)
+            self.assertIn("                return getDisplayInfoInternal(displayId, callingUid);",
+                          removed_lines(patches[0]), android)
+            self.assertIn(f"Applies to frameworks/base at {self._commit(android)}", patches[0].read_text())
 
     def _patches_to(self, android, path):
         return [patch for project, patch in framework_lock.patch_files(android)
@@ -749,7 +760,7 @@ class ServicesTests(unittest.TestCase):
     def test_fr22_the_native_build_leaves_the_java_patches_to_the_services_build(self):
         for android in ("android16", "android17"):
             java = [p for _, p in framework_lock.patch_files(android) if framework_lock.java_only(p)]
-            self.assertEqual(len(java), 3, android)
+            self.assertEqual(len(java), 4, android)
             native = [p for _, p in framework_lock.patch_files(android) if not framework_lock.java_only(p)]
             self.assertTrue(native, android)
         with tempfile.TemporaryDirectory() as tmp:
