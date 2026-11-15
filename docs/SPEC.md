@@ -86,6 +86,7 @@ Linux 호스트:
 - 수용 기준: 사용자가 고르지 않은 YouTube는 시스템 방식으로 맞추고, 목록에 없는 앱은 위의 기본 규칙대로 맞춘다. 사용자가 YouTube에 앱 방식을 고르면 앱 방식으로 맞춘다. 설정 앱과 `dsa app-window`는 YouTube의 기본값을 시스템으로 보인다. (`fr4_youtube_scales_the_system_way_by_default`, `fr4_the_users_choice_wins_over_the_built_in_list`)
 - 수용 기준: 창 크기를 바꾸면 새 크기로 그린 앱의 프레임이 창에 보일 때까지의 지연이 95%에서 200 ms 이하다(앱이 크기 구간을 넘어 화면을 다시 만드는 시간은 빼고). 호스트와 게스트 사이의 전송이 크기 변경 한 번에 더하는 몫은 모형 측정으로 CI에서 확인하고, 전체 지연은 실제 PC에서 잰다. 기능은 맞아도 지연이 커지는 회귀를 잡기 위해서다. (`fr4_a_resize_reaches_its_frame_within_budget`)
 - 수용 기준: 크기를 끄는 동안 창 안에 빈 영역이 보이지 않는다. (수동 확인, 녹화로 기록)
+- 수용 기준: 창이 커지거나 작아지는 모든 경우(최대화 단추, 제목 표시줄 두 번 누르기, 스냅, 키보드, 복원, 가장자리 끌기)에 새 크기의 프레임이 오기 전까지 마지막 프레임이 비율을 지켜 창에 맞게 늘어나 가운데 보이고, 덮이지 않은 곳은 앱의 색(띠 색, 스플래시 배경, 테마 색 순)으로 채워지며, 창 너머 데스크톱은 보이지 않는다. (`fr4_a_pending_frame_is_stretched_to_fit_the_new_window_centred_in_every_mode`, `fr4_what_a_stretched_frame_leaves_is_filled_with_the_apps_colour_never_transparent`, `fr4_the_maximise_button_and_a_title_bar_double_click_take_the_same_path`, 그리고 실제 PC에서 각 경우를 녹화해 확인하는 수동 확인)
 - 수용 기준: 앱 방식의 앱은 100%와 200% 배율 모니터 사이를 옮겨도 글자가 흐려지지 않는다. (수동 확인)
 - 수용 기준: 기본값과 시스템 방식의 앱은 배율이 다른 모니터로 옮길 때 재시작되지 않고, 어떤 앱도 안드로이드가 시작한 직후에 재시작되지 않는다(액티비티가 다시 만들어지지 않는다). 사용자가 앱 방식을 고른 앱은 새 밀도로 그린다. 시스템 방식 앱의 창은 새 모니터에서 같은 실제 크기로 보인다. (`fr4_moving_to_another_scale_never_relaunches_the_app`)
 - 수용 기준: 안드로이드는 주 모니터 배율에 맞는 밀도로 시작한다(100%는 130 dpi, 150%는 196 dpi, 250%는 328 dpi처럼)이고, Windows 텍스트 크기 100%에서 글꼴 배율은 1이다. (`fr4_android_starts_at_the_main_monitors_density`)
