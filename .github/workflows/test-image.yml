@@ -68,6 +68,10 @@ on:
   #     - "dsa/host/platform/linux/src/launcher.rs"
   #     - "dsa/host/core/src/addon_disk.rs"
   #     - "dsa/host/core/src/direct_mapped.rs"
+  # On the release pull request into main it runs once, when the owner approves it, so
+  # Release sync's update of that pull request on every push to develop queues nothing.
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
     inputs:
       keep_disk:
@@ -136,6 +140,7 @@ jobs:
   # artifact, so a failed step names the program. A failure does not stop the programs after
   # it, so one failure does not hide another, and the job still fails.
   guest-programs:
+    if: github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Build the guest programs (${{ matrix.arch }})
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -471,6 +476,7 @@ jobs:
   # the boot check below runs on the booted image with SELinux enforcing. Both are Java
   # builds on the same JDK, so they share one runner.
   agent:
+    if: github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Build the guest agent and the media probe
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -561,6 +567,7 @@ jobs:
   # Linux host's programs with the five boot check binaries. The boot checks take them as
   # artifacts and need no Rust build of their own.
   boot-checks:
+    if: github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Build the boot checks
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -642,6 +649,7 @@ jobs:
   # Android's NDK samples hello-gl2 (OpenGL ES) and hello-vulkan, at a pinned commit, which
   # the graphics check below installs on the booted image and opens in task windows.
   graphics-test-apps:
+    if: github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Build the graphics test apps
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -1076,7 +1084,7 @@ jobs:
   boot-image:
     name: Make and check the guest image (ubuntu-latest, Android ${{ matrix.android }}, ${{ matrix.arch }})
     needs: [guest-programs, agent]
-    if: github.event_name != 'workflow_dispatch' || inputs.android == '17' || inputs.android == 'all'
+    if: (github.event_name != 'workflow_dispatch' || inputs.android == '17' || inputs.android == 'all') && (github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -1098,7 +1106,7 @@ jobs:
   # kernel inputs did not change takes it from the cache in about a minute.
   boot-kernel:
     name: Build the guest kernel for the boot checks (x86_64)
-    if: github.event_name != 'workflow_dispatch' || inputs.android == '17' || inputs.android == 'all'
+    if: (github.event_name != 'workflow_dispatch' || inputs.android == '17' || inputs.android == 'all') && (github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:

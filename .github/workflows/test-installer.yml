@@ -23,6 +23,10 @@ on:
   #     - "dsa/**"
   #     - ".github/workflows/test-installer.yml"
   #     - ".github/scripts/installer/**"
+  # On the release pull request into main it runs once, when the owner approves it, so
+  # Release sync's update of that pull request on every push to develop queues nothing.
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
   # Checks (checks.yml) runs it as one of its jobs, with every other test, in one run.
   workflow_call:
@@ -42,6 +46,7 @@ permissions:
 
 jobs:
   installer:
+    if: github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Build, install and uninstall the installer (windows, ${{ matrix.version }}, ${{ matrix.arch }})
     # Server 2022 (build 20348) has the Windows 10 window manager, so setup shows its
     # solid background and square corners there; Server 2025 (build 26100) has the
@@ -1906,6 +1911,7 @@ jobs:
   # the settings app for win-arm64), must refuse to install there: its package and its
   # setup.exe both say no, and nothing is left behind.
   arm64-on-x64:
+    if: github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: fr27_the_arm64_package_installs_only_on_arm64_windows (windows, 2025)
     runs-on: windows-2025
     timeout-minutes: 40
@@ -1989,6 +1995,7 @@ jobs:
   # the newest kernel build that passed) and reads the arm64 lists, images-arm64.json and
   # program-arm64.json, so an ARM64 PC is never offered an x64 image or setup file.
   real-installer:
+    if: github.event_name != 'pull_request_review' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main')
     name: Build the real installer (windows, ${{ matrix.runner }}, ${{ matrix.arch }})
     strategy:
       fail-fast: false
