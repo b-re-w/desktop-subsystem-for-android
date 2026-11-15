@@ -443,7 +443,7 @@ fn nfr5_killing_the_renderer_keeps_the_window_and_its_frame_and_frames_resume() 
     assert!(wm.client.wait_started(WAIT), "the renderer starts");
     at("a Direct3D device on the renderer's GPU");
     // The window's texture is made on the GPU the renderer runs on.
-    let gpu = Gpu::new(wm.client.adapter_luid(), false).expect("a Direct3D device");
+    let gpu = Gpu::new(wm.client.adapter_luid()).expect("a Direct3D device");
     let window = Arc::new(Window {
         gpu,
         texture: Mutex::new(None),

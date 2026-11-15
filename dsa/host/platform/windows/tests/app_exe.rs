@@ -571,17 +571,18 @@ fn windows_titled(pid: u32, title: &str) -> Vec<isize> {
 }
 
 /// The real thing: the app's own program, started as the window manager starts it, opens its
-/// window and shows a frame from a texture another process made, over the real pipe.
+/// window and shows a frame from a texture another process made, over the real pipe. The
+/// program makes no Direct3D device: this test stands in for the window manager and does the
+/// GPU work the program asks for, as the window manager does.
 #[test]
 fn fr3_an_apps_window_program_shows_a_frame_made_in_another_process() {
     use std::time::{Duration, Instant};
 
     use dsa_host_core::compositor::window_hosts::{accept_window_host, answer_attached};
     use dsa_host_windows::compositor::present::Gpu;
+    use dsa_host_windows::compositor::surfaces::WindowSurfaces;
     use dsa_host_windows::pipe::{current_user_only_sddl, NamedPipeListener};
-    use dsa_protocol::window_host::types::{
-        envelope::Body, CloseWindow, Frame, FrameTexture, ShowWindow,
-    };
+    use dsa_protocol::window_host::types::{envelope::Body, CloseWindow, Frame, ShowWindow};
     use dsa_protocol::window_host::{decode, send};
     use dsa_transport::local::LocalListener;
     use windows_sys::Win32::Foundation::{CloseHandle, DuplicateHandle, DUPLICATE_SAME_ACCESS};
@@ -628,39 +629,51 @@ fn fr3_an_apps_window_program_shows_a_frame_made_in_another_process() {
         std::thread::sleep(Duration::from_millis(20));
     }
 
-    match Gpu::new(None, false) {
+    match Gpu::new(None) {
         Err(why) => eprintln!("skipping the frame: no Direct3D 11 device here ({why})"),
         Ok(gpu) => {
-            let texture = gpu.shared_texture(400, 300).unwrap();
-            let mut placed = std::ptr::null_mut();
-            unsafe {
-                let process = OpenProcess(PROCESS_DUP_HANDLE, 0, child.id());
-                assert!(!process.is_null());
-                assert_ne!(
+            let texture = std::sync::Arc::new(gpu.shared_texture(400, 300).unwrap());
+            // SAFETY: opened only to place handles in it, closed at the end.
+            let process = unsafe { OpenProcess(PROCESS_DUP_HANDLE, 0, child.id()) };
+            assert!(!process.is_null());
+            let place = |handle: isize| -> Option<u64> {
+                let mut placed = std::ptr::null_mut();
+                // SAFETY: duplicates a handle of this process into the child.
+                let ok = unsafe {
                     DuplicateHandle(
                         GetCurrentProcess(),
-                        texture.handle() as _,
+                        handle as _,
                         process,
                         &mut placed,
                         0,
                         0,
                         DUPLICATE_SAME_ACCESS,
-                    ),
-                    0
-                );
-                CloseHandle(process);
-            }
-            send(
-                &mut *connection,
-                Body::FrameTexture(FrameTexture {
-                    task_id: 1,
-                    texture_id: 1,
-                    handle: placed as usize as u64,
-                    width: 400,
-                    height: 300,
-                }),
-            )
-            .unwrap();
+                    )
+                };
+                (ok != 0).then_some(placed as usize as u64)
+            };
+            let mut surfaces = WindowSurfaces::new(1, std::sync::Arc::clone(&gpu), None);
+            // Reads until the window host answers frame `sequence`, doing the GPU work it asks
+            // for meanwhile.
+            let mut until_presented = |connection: &mut Box<dyn dsa_transport::Connection>| loop {
+                let frame = connection
+                    .recv(Some(WAIT))
+                    .expect("the window host answers");
+                match decode(&frame).unwrap().body {
+                    Some(Body::FramePresented(presented)) => break presented,
+                    Some(Body::SurfaceCall(call)) => {
+                        let answers = surfaces.call(
+                            &call,
+                            Some((std::sync::Arc::clone(&texture), 1)),
+                            &place,
+                        );
+                        for answer in answers {
+                            send(&mut **connection, Body::SurfaceAnswer(answer)).unwrap();
+                        }
+                    }
+                    _ => {}
+                }
+            };
             send(
                 &mut *connection,
                 Body::Frame(Frame {
@@ -672,14 +685,7 @@ fn fr3_an_apps_window_program_shows_a_frame_made_in_another_process() {
                 }),
             )
             .unwrap();
-            let presented = loop {
-                let frame = connection
-                    .recv(Some(WAIT))
-                    .expect("the window host answers");
-                if let Some(Body::FramePresented(presented)) = decode(&frame).unwrap().body {
-                    break presented;
-                }
-            };
+            let presented = until_presented(&mut connection);
             assert_eq!((presented.task_id, presented.sequence), (1, 1));
             // Frames that fill only part of the texture, as a resizing task's do, and one
             // that says no size, are each shown from the same texture.
@@ -695,16 +701,11 @@ fn fr3_an_apps_window_program_shows_a_frame_made_in_another_process() {
                     }),
                 )
                 .unwrap();
-                let presented = loop {
-                    let frame = connection
-                        .recv(Some(WAIT))
-                        .expect("the window host answers");
-                    if let Some(Body::FramePresented(presented)) = decode(&frame).unwrap().body {
-                        break presented;
-                    }
-                };
+                let presented = until_presented(&mut connection);
                 assert_eq!((presented.task_id, presented.sequence), (1, sequence));
             }
+            // SAFETY: the handle opened above, closed once.
+            unsafe { CloseHandle(process) };
         }
     }
 

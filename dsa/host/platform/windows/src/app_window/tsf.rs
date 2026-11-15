@@ -61,12 +61,22 @@ struct Framework {
 
 thread_local! {
     static FRAMEWORK: RefCell<Option<Framework>> = const { RefCell::new(None) };
+    /// Whether starting the framework was tried on this thread, so a failure is tried once.
+    static TRIED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-/// Starts the text services framework on the window thread, before its first window opens.
-/// Without it the windows still take every character the keys type, but no input method
-/// composes in them.
+/// Starts the text services framework on the window thread, the first time a window needs a
+/// document (the guest reported an editor that takes text), and not before: activating it loads
+/// the framework and the input methods into the process, which an app that never takes text
+/// does without. Without it the windows still take every character the keys type, but no
+/// input method composes in them. Tried once per thread.
 pub fn start_thread() -> Result<(), String> {
+    if FRAMEWORK.with(|framework| framework.borrow().is_some()) {
+        return Ok(());
+    }
+    if TRIED.with(|tried| tried.replace(true)) {
+        return Err("the text services framework did not start on this thread".into());
+    }
     // SAFETY: COM and the framework, on this thread, which keeps them for its lifetime.
     unsafe {
         let joined = CoInitializeEx(None, COINIT_APARTMENTTHREADED);

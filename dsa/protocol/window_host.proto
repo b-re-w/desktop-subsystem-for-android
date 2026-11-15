@@ -470,6 +470,117 @@ message SetShownTask {
   int32 shown_task_id = 2;
 }
 
+// Window host to window manager: one thing to do on the GPU for a task's window. The window
+// host owns the window and its DirectComposition visuals but no Direct3D device; the window
+// manager, which has the task's frame texture on its own device, owns each window's
+// swapchains, each bound to a DirectComposition surface handle it places in the window host's
+// process. `op` says what is asked (the SURFACE_OP_ values of the Rust crate):
+//   1 present frame: copy the frame of texture `texture_id` (its top-left `width` x `height`
+//     pixels) into the frame swapchain, which has `buffer_count` buffers of the texture's
+//     size, and present it unless `keep` (then it waits in the back buffer). `band` is the
+//     height of the title bar's band in the frame's pixels (0 for none), sampled when
+//     `probe_band`; `capture` reads the frame back; `press` starts watching the area around a
+//     traced press for its first visible change.
+//   2 present kept: present the back buffer, whose top-left `width` x `height` pixels hold
+//     the frame kept by an earlier present frame with `keep`.
+//   3 caption: draw `pixels` (premultiplied BGRA rows, `width` x `height`) into the caption
+//     swapchain and present it.
+//   4 splash: draw the splash of a `width` x `height` client area: background `colour`
+//     (0xAARRGGBB), the icon in `pixels` (premultiplied BGRA, `icon_width` x `icon_height`,
+//     none when empty) at `dpi`.
+//   5 fill: fill the one-pixel fill swapchain with `colour` (0xAARRGGBB, opaque).
+//   6 release frame: let the frame swapchain go (the window was minimized).
+//   7 release all: let every swapchain of the window go (the window closed).
+//   8 read frame: read the newest frame back.
+//   9 tick: read what waits to be read (the band's copy, the frame statistics) and recover
+//     from a GPU reset.
+//   10 release splash: let the splash swapchain go (the first frame is shown).
+message SurfaceCall {
+  int32 task_id = 1;
+  // Names the answer.
+  uint64 call_id = 2;
+  uint32 op = 3;
+  uint64 texture_id = 4;
+  uint32 width = 5;
+  uint32 height = 6;
+  bool keep = 7;
+  uint32 buffer_count = 8;
+  // The frames keep their own transparency (an app overlay's window).
+  bool see_through = 9;
+  uint32 band = 10;
+  bool probe_band = 11;
+  bool capture = 12;
+  bytes pixels = 13;
+  uint32 icon_width = 14;
+  uint32 icon_height = 15;
+  uint32 colour = 16;
+  uint32 dpi = 17;
+  bool press = 18;
+  // The press point in the frame's pixels, and when it came on the host clock (microseconds).
+  float press_x = 19;
+  float press_y = 20;
+  uint64 press_at_us = 21;
+  // Whether the frame swapchain's statistics are wanted in the answer.
+  bool statistics = 22;
+}
+
+// Window manager to window host: what a SurfaceCall did. A read frame is answered in several
+// SurfaceAnswers of the same call_id, each with the next rows, the last one with `more`
+// false.
+message SurfaceAnswer {
+  int32 task_id = 1;
+  uint64 call_id = 2;
+  // Empty when it went.
+  string error = 3;
+  // The window manager's devices were made again (a GPU reset); everything drawn before is
+  // gone and is drawn again by the window host.
+  uint64 generation = 4;
+  // A surface handle placed in the window host's process when the swapchain behind it was
+  // made (again); 0 when it did not change. The window host shows the new surface from now on
+  // and closes the handle it had.
+  uint64 frame_surface = 5;
+  uint64 caption_surface = 6;
+  uint64 splash_surface = 7;
+  uint64 fill_surface = 8;
+  // The size of the frame swapchain's buffers, 0 when it has none.
+  uint32 buffer_width = 9;
+  uint32 buffer_height = 10;
+  // The frame swapchain was made or resized, and how long that took in microseconds.
+  bool remade = 11;
+  uint64 resize_us = 12;
+  // A present happened, and its present count when known.
+  bool presented = 13;
+  bool has_present_count = 14;
+  uint32 present_count = 15;
+  // The frame swapchain's statistics: the count of the newest present on the screen and the
+  // performance counter at its vertical blank. `no_statistics` says it gives none.
+  bool has_statistics = 16;
+  uint32 statistics_present_count = 17;
+  int64 statistics_sync_qpc = 18;
+  bool no_statistics = 19;
+  // The band was read and changed: its fill, its own colour, its luminance and its range,
+  // each with whether it is known.
+  bool band_changed = 20;
+  bool has_band_fill = 21;
+  uint32 band_fill = 22;
+  bool has_band_colour = 23;
+  uint32 band_colour = 24;
+  bool has_band_luminance = 25;
+  uint32 band_luminance = 26;
+  bool has_band_range = 27;
+  uint32 band_darkest = 28;
+  uint32 band_lightest = 29;
+  // Whether a read of the band still waits, so the window host ticks again.
+  bool band_pending = 30;
+  // A read frame's size and the rows of it this answer carries, as RGBA.
+  uint32 frame_width = 31;
+  uint32 frame_height = 32;
+  bytes rgba = 33;
+  bool more = 34;
+  // The frame was read back (a capture), as opposed to there being none to read.
+  bool has_frame = 35;
+}
+
 // The one message type on the wire. Each frame carries exactly one.
 message Envelope {
   oneof body {
@@ -506,5 +617,7 @@ message Envelope {
     MediaButtonPressed media_button_pressed = 64;
     SetShownTask set_shown_task = 65;
     SetOverlay set_overlay = 66;
+    SurfaceCall surface_call = 67;
+    SurfaceAnswer surface_answer = 68;
   }
 }
