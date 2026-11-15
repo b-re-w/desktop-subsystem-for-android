@@ -1,7 +1,7 @@
 //! The pages about the apps in Android: Apps, Running in the background, and Widgets.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -199,6 +199,9 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
     let scaled: Rc<RefCell<Vec<String>>> = Rc::default();
     // The apps DSA starts below the title bar unless the user chose otherwise.
     let below: Rc<RefCell<Vec<String>>> = Rc::default();
+    // The apps whose rows the user opened. The list is made again after every change and on
+    // every search, so without this a row closed under the user each time it was read again.
+    let expanded: Rc<RefCell<HashSet<String>>> = Rc::default();
 
     // Builds the list again from what is known, as the search says.
     let render: Hook = Rc::default();
@@ -216,6 +219,7 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
         let forced = forced.clone();
         let scaled = scaled.clone();
         let below = below.clone();
+        let expanded = expanded.clone();
         let (defaults, following) = (defaults.clone(), following.clone());
         *render.borrow_mut() = Some(Rc::new(move || {
             rows.clear();
@@ -255,6 +259,20 @@ pub fn apps(ctx: &Shared) -> gtk::Widget {
                     &following,
                     reload.clone(),
                 );
+                // A row the user opened stays open, and opening or closing it is remembered.
+                if expanded.borrow().contains(&app.package) {
+                    row.set_expanded(true);
+                }
+                {
+                    let (expanded, package) = (expanded.clone(), app.package.clone());
+                    row.connect_expanded_notify(move |row| {
+                        if row.is_expanded() {
+                            expanded.borrow_mut().insert(package.clone());
+                        } else {
+                            expanded.borrow_mut().remove(&package);
+                        }
+                    });
+                }
                 // The app App info was opened for: its row opens and comes into view, once.
                 let focused = ctx.focus_app.borrow().as_deref() == Some(app.package.as_str());
                 if focused {
@@ -483,7 +501,9 @@ fn app_row(
     resizable.set(!fixed);
     row.add_row(&resizable.row);
     // For an app whose top bar is squeezed or hidden under the title bar. It is sent on its
-    // own, so an app the user chose nothing for keeps following DSA's built-in list.
+    // own, so an app the user chose nothing for keeps following DSA's built-in list. The row
+    // shows the first line of its explanation, and the whole of it as its tool tip.
+    let below_tip = tr("For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens.");
     let below_title_bar = {
         let (ctx, page, package, label) = (
             ctx.clone(),
@@ -493,7 +513,7 @@ fn app_row(
         );
         Switch::new(
             &tr("Start below the title bar"),
-            &tr("For apps whose top bar is squeezed or hidden under the title bar.\nThe app starts below the title bar instead of drawing behind it.\nApplies the next time the app's window opens."),
+            &view::first_line(&below_tip),
             move |on| {
                 let (page, package, ctx2) = (page.clone(), package.clone(), ctx.clone());
                 let label = label.clone();
@@ -520,6 +540,7 @@ fn app_row(
         window.as_ref(),
         below_title_bar_by_default,
     ));
+    below_title_bar.row.set_tooltip_text(Some(&below_tip));
     row.add_row(&below_title_bar.row);
     let choices = view::start_size_choices();
     let size = {
@@ -550,23 +571,22 @@ fn app_row(
     // and Auto says what it does for the app: System on DSA's built-in list, App otherwise.
     let dpi_choices =
         view::dpi_scaling_choices_for(system_scaled_by_default, system_forced_available);
+    // The first line of the explanation under the name, the whole of it as the tool tip.
+    let dpi_tip = view::dpi_scaling_subtitle(window.as_ref(), system_forced_available);
     let dpi = {
         let state = state.clone();
-        Combo::new(
-            &tr("Scaling"),
-            &view::dpi_scaling_subtitle(window.as_ref(), system_forced_available),
-            move |index| {
-                if let Some(scaling) = DpiScaling::ALL.get(index as usize) {
-                    if state.borrow().2 != *scaling {
-                        state.borrow_mut().2 = *scaling;
-                        save();
-                    }
+        Combo::new(&tr("Scaling"), &view::first_line(&dpi_tip), move |index| {
+            if let Some(scaling) = DpiScaling::ALL.get(index as usize) {
+                if state.borrow().2 != *scaling {
+                    state.borrow_mut().2 = *scaling;
+                    save();
                 }
-            },
-        )
+            }
+        })
     };
     let dpi_labels: Vec<String> = dpi_choices.into_iter().map(|(label, _)| label).collect();
     dpi.set(&dpi_labels, view::dpi_scaling_index(window.as_ref()) as u32);
+    dpi.row.set_tooltip_text(Some(&dpi_tip));
     row.add_row(&dpi.row);
 
     // Where the app's full screen shows: a clear request, and its bars hidden alone.
