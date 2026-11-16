@@ -104,10 +104,19 @@ impl PortChannels {
     }
 
     /// Drops connections a previous VM left unaccepted.
+    ///
+    /// A receiver whose lock is held has a reader waiting on it, and a waiting reader takes
+    /// whatever arrives, so nothing is left there to drop. Waiting for that lock instead
+    /// never ends: the reader takes it again the moment it lets go, and the macOS mutex does
+    /// not hand it to the thread that has waited longest.
     pub fn drain(&self) {
         let ports = self.ports.lock().unwrap_or_else(|e| e.into_inner());
         for (_, rx) in ports.values() {
-            let rx = rx.lock().unwrap_or_else(|e| e.into_inner());
+            let rx = match rx.try_lock() {
+                Ok(rx) => rx,
+                Err(std::sync::TryLockError::Poisoned(e)) => e.into_inner(),
+                Err(std::sync::TryLockError::WouldBlock) => continue,
+            };
             while rx.try_recv().is_ok() {}
         }
     }
