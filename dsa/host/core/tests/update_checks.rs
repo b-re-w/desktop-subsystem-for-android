@@ -308,6 +308,10 @@ fn fr14_an_image_in_place_is_checked_after_a_minute() {
 #[test]
 fn fr14_turned_off_updates_are_rechecked_after_a_minute() {
     let mut rig = rig(true);
+    // The image is of the one major the release list supports, so no switch of Android version
+    // is waiting; only then is the list left unread (the built-in majors are newer than the
+    // test image).
+    rig.updates.store.follow_supported(&[16]).unwrap();
     let mut machine = rig.settings.machine();
     machine.image_updates = false;
     rig.settings.set_machine(machine).unwrap();
