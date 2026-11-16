@@ -747,8 +747,9 @@ fn fr15_a_release_list_the_user_chose_is_kept_and_reported() {
 #[cfg(windows)]
 #[test]
 fn fr15_the_service_boots_the_newer_image_an_upgrade_bundled() {
+    use dsa_host_core::update::service::open_updates;
     use dsa_host_windows::host_config::InstalledPackage;
-    use dsa_host_windows::service::open_updates;
+    use dsa_host_windows::service::updates_config;
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("fr15-bundled-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
@@ -781,13 +782,17 @@ fn fr15_the_service_boots_the_newer_image_an_upgrade_bundled() {
     .unwrap();
     config.apply_package(&InstalledPackage::parse(REAL_PACKAGE).unwrap());
 
-    let updates = open_updates(&config, "test").unwrap().unwrap();
+    let updates = open_updates(updates_config(&config), "test")
+        .unwrap()
+        .unwrap();
     let state = updates.store.state().unwrap();
     assert_eq!(state.current.version, "17.0.0-5");
     assert_eq!(state.previous.unwrap().version, "17.0.0-1");
     assert!(state.on_trial);
     // The next start keeps it.
-    let updates = open_updates(&config, "test").unwrap().unwrap();
+    let updates = open_updates(updates_config(&config), "test")
+        .unwrap()
+        .unwrap();
     assert_eq!(updates.store.state().unwrap().current.version, "17.0.0-5");
 }
 

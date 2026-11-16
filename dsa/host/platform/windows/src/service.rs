@@ -44,11 +44,12 @@ use dsa_host_core::update::current::current_image;
 use dsa_host_core::update::program_service::{
     ProgramStatus, ProgramUpdates, Timing, WithProgramStatus,
 };
+pub use dsa_host_core::update::service::Updates;
 use dsa_host_core::update::service::{
-    check_alerting, follow_waiting_image, next_image_check, CheckNow, Download, StoreVersions,
-    UpdateNotices, UpdatingAndroid, WAITING_IMAGE_CHECK,
+    follow_waiting_image, open_updates, run_update_checks, StoreVersions, UpdateCheck,
+    UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
-use dsa_host_core::update::store::{ImageStore, Recovery};
+use dsa_host_core::update::store::ImageStore;
 use dsa_host_core::window_manager::WindowManagerKeeper;
 use dsa_transport::Listener;
 
@@ -70,17 +71,6 @@ use crate::vm::AndroidVmConfig;
 use crate::vm_listener::VmBoundListener;
 use crate::window_manager::UserWindowManager;
 use dsa_host_core::clock_trace::ClockTrace;
-
-/// What the service shares between users when it updates the image.
-#[derive(Clone)]
-pub struct Updates {
-    pub store: Arc<ImageStore>,
-    pub notices: Arc<UpdateNotices>,
-    pub boot_timeout: Duration,
-    pub trial_running: Arc<AtomicBool>,
-    /// Set when a user chose another Android version, so the image is checked for at once.
-    pub check_now: Arc<CheckNow>,
-}
 
 /// Sizes the guest's display for the monitors the user's session recorded, and gives it the
 /// main monitor's density, which every app starts at. This process runs in session 0 and
@@ -752,171 +742,13 @@ pub fn create_user_android(
     })
 }
 
-/// Opens the update store when the configuration names one.
-/// An image that the package installed last bundled, newer than the store's current one,
-/// becomes current on trial first: the configuration kept from an earlier installation still
-/// names that installation's image, and nothing else would boot the new one.
-pub fn open_updates(config: &HostConfig, build: &str) -> Result<Option<Updates>, String> {
-    let (Some(root), Some(configured)) = (&config.images_dir, &config.first_image) else {
-        return Ok(None);
-    };
-    let first = config.bundled_image.as_ref().unwrap_or(configured);
-    let store = ImageStore::open_as(root, first, build).map_err(|e| e.to_string())?;
-    if let Some(bundled) = &config.bundled_image {
-        let before = store.state().map(|state| state.current.version).ok();
-        match store.adopt_bundled(bundled) {
-            Ok(true) => eprintln!(
-                "{build}: this installation brought the image {}; booting it in place of {} \
-                 (which is kept until the new one has booted)",
-                bundled.version,
-                before.as_deref().unwrap_or("the previous image")
-            ),
-            Ok(false) => {}
-            Err(why) => eprintln!(
-                "{build}: switching to the bundled image {}: {why}",
-                bundled.version
-            ),
-        }
-    }
-    // An installation can find a state that names an image it cannot boot, such as a test
-    // package's stand-in, and Android would then never start.
-    match store.recover(first) {
-        Ok(Recovery::Usable) => {}
-        Ok(Recovery::Moved { broken, current }) => eprintln!(
-            "{build}: the image {} has missing or broken files; using {} instead",
-            broken.version, current.version
-        ),
-        Ok(Recovery::NothingBetter { broken }) => {
-            // An installation that bundled no image has none yet, which is not broken.
-            if store.has_image(&broken.version) {
-                eprintln!(
-                    "{build}: the image {} has missing or broken files and no other image \
-                     is installed",
-                    broken.version
-                );
-            }
-        }
-        Err(why) => eprintln!("{build}: checking the current image: {why}"),
-    }
-    let boot_timeout = config
-        .update
-        .as_ref()
-        .map(|u| u.boot_timeout_secs)
-        .unwrap_or(300);
-    Ok(Some(Updates {
-        store: Arc::new(store),
-        notices: Arc::new(UpdateNotices::default()),
-        boot_timeout: Duration::from_secs(boot_timeout),
-        trial_running: Arc::new(AtomicBool::new(false)),
-        check_now: Arc::new(CheckNow::default()),
-    }))
-}
-
-/// Checks the release list a minute after the service starts and then every
-/// `check_interval_hours`, until `stop` is set. Without an image to boot (an installation
-/// that bundled none), it checks at once and again every few minutes until one is in place,
-/// and tells the user what it is downloading.
-fn check_for_updates(
-    config: HostConfig,
-    updates: Updates,
-    build: String,
-    stop: Arc<AtomicBool>,
-    store: Arc<dyn SettingsStore>,
-    direct_mapped: Option<&DirectMappedImages>,
-) {
-    let Some(settings) = config.update.clone() else {
-        return;
-    };
-    let keys = match settings.keys() {
-        Ok(keys) => keys,
-        Err(error) => return eprintln!("{build}: not checking for updates: {error}"),
-    };
-    let interval = Duration::from_secs(settings.check_interval_hours.max(1) * 3600);
-    let no_image = || {
-        updates
-            .store
-            .state()
-            .map(|state| !updates.store.has_image(&state.current.version))
-            .unwrap_or(false)
-    };
-    let mut next = if no_image() {
-        Instant::now()
-    } else {
-        Instant::now() + Duration::from_secs(60)
-    };
-    while !stop.load(Ordering::Relaxed) {
-        next = next_image_check(next, Instant::now(), !no_image(), FIRST_IMAGE_RETRY);
-        // A user who chose another Android version waits for it now, not at the next turn.
-        if updates.check_now.take() {
-            next = Instant::now();
-        }
-        if Instant::now() < next {
-            thread::sleep(Duration::from_secs(1));
-            continue;
-        }
-        let waiting_for_first = no_image();
-        // Turned off in the settings, the list is not read, except for the first image,
-        // without which no Android can start. A minute later it looks again, so turning
-        // updates back on takes effect soon.
-        if !waiting_for_first && !updates.store.switch_pending() && !store.machine().image_updates {
-            next = Instant::now() + SETTINGS_RECHECK;
-            continue;
-        }
-        // The notice changes with every whole percent; the log gets the start only.
-        let mut shown = None;
-        let mut announce = |download: &Download| {
-            let percent = (download.done as u128 * 100)
-                .checked_div(download.total as u128)
-                .unwrap_or(100);
-            if shown == Some(percent) {
-                return;
-            }
-            shown = Some(percent);
-            let notice = download.notice();
-            if download.done == 0 {
-                eprintln!("{build}: {notice}");
-            }
-            updates.notices.set(notice);
-        };
-        // The computer's release channel picks the image list (on the pre-release channel
-        // the pre-release list beside the stable one) and the images it may take: a computer
-        // on the stable channel never moves to a pre-release image.
-        match check_alerting(
-            &updates.store,
-            &WinHttpFetch::default(),
-            &settings.list_url,
-            &keys,
-            store.machine().release_channel(),
-            &updates.notices,
-            &mut announce,
-        ) {
-            Ok(Some(notice)) => {
-                eprintln!("{build}: {notice}");
-                updates.notices.set(notice);
-                // A new image was downloaded and checked: its direct-mapped system disk is
-                // made now, in the background, before the next start of Android needs it.
-                if let Some(images) = direct_mapped {
-                    images.kick();
-                }
-            }
-            Ok(None) => {}
-            Err(error) => {
-                eprintln!("{build}: checking for updates: {error}");
-                if waiting_for_first {
-                    updates.notices.set(format!(
-                        "the Android image could not be downloaded yet ({error}); \
-                         the service tries again in {} minutes",
-                        FIRST_IMAGE_RETRY.as_secs() / 60
-                    ));
-                }
-            }
-        }
-        next = Instant::now()
-            + if no_image() {
-                FIRST_IMAGE_RETRY
-            } else {
-                interval
-            };
+/// What the configuration says about the update store.
+pub fn updates_config(config: &HostConfig) -> UpdatesConfig<'_> {
+    UpdatesConfig {
+        images_dir: config.images_dir.as_deref(),
+        first_image: config.first_image.as_ref(),
+        bundled_image: config.bundled_image.as_ref(),
+        boot_timeout_secs: config.update.as_ref().map(|u| u.boot_timeout_secs),
     }
 }
 
@@ -940,12 +772,6 @@ fn start_direct_mapped(
         Arc::new(move |line: &str| eprintln!("{log_build}: {line}")),
     ))
 }
-
-/// How soon the service tries again while it has no image to boot.
-const FIRST_IMAGE_RETRY: Duration = Duration::from_secs(300);
-
-/// How soon an update check that the settings turned off looks at them again.
-const SETTINGS_RECHECK: Duration = Duration::from_secs(60);
 
 /// Clears what earlier runs left in the machine's `tmp` folder and makes sure only SYSTEM and
 /// Administrators can write there. Problems are logged; the VMs then fail to start with the
@@ -1234,7 +1060,7 @@ where
     prepare_machine_tmp(&config, build);
     let grace = Duration::from_secs(config.stop_timeout_secs + 15);
     let store = service_settings_store(&config, build);
-    let updates = match open_updates(&config, build) {
+    let updates = match open_updates(updates_config(&config), build) {
         Ok(updates) => updates,
         Err(error) => {
             eprintln!("{build}: image updates disabled: {error}");
@@ -1243,20 +1069,22 @@ where
     };
     let image_updates_available = updates.is_some() && config.image_updates_available();
     let direct_mapped = start_direct_mapped(&config, updates.as_ref(), build);
-    if let Some(updates) = &updates {
-        let (config, updates, worker_build, stop, store, made) = (
-            config.clone(),
-            updates.clone(),
-            build.to_string(),
-            Arc::clone(&stop),
-            Arc::clone(&store),
-            direct_mapped.clone(),
-        );
+    if let (Some(updates), Some(settings)) = (&updates, config.update.clone()) {
+        let check = UpdateCheck {
+            settings,
+            updates: updates.clone(),
+            store: Arc::clone(&store),
+            build: build.to_string(),
+            // A new image was downloaded and checked: its direct-mapped system disk is made
+            // now, in the background, before the next start of Android needs it.
+            on_new_image: direct_mapped
+                .clone()
+                .map(|images| Box::new(move || images.kick()) as Box<dyn Fn() + Send>),
+        };
+        let stop = Arc::clone(&stop);
         if let Err(error) = thread::Builder::new()
             .name("dsa-updates".into())
-            .spawn(move || {
-                check_for_updates(config, updates, worker_build, stop, store, made.as_deref())
-            })
+            .spawn(move || run_update_checks(check, &WinHttpFetch::default(), stop))
         {
             eprintln!("{build}: starting the update check failed: {error}");
         }
