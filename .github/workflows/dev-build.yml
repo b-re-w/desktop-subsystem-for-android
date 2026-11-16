@@ -5,6 +5,9 @@
 # Image release's own jobs (release-image.yml, called with dev_build), so a development build
 # is made exactly as a release is.
 #
+# The arm64 image is made by its own workflow, Development build (arm64) (dev-build-arm64.yml);
+# this one makes the x86_64 image only (dev_arch stays at its default, x86_64).
+#
 # It publishes nothing: no release, tag, image list, program list or channel, so no installed
 # DSA ever sees it. What it made stays as workflow artifacts for three days:
 #   development-image        the image's files, image.json and the kernel's source
