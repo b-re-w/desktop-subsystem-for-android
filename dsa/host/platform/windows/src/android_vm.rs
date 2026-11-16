@@ -13,15 +13,14 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
+use dsa_host_core::boot_signs::{explain_unfinished_boot, explain_unreachable_agent, BootSigns};
 use dsa_host_core::bootconfig;
 use dsa_host_core::device_identity::{append_overlay, ramdisk_overlay};
 use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::session::{GuestLauncher, GuestStall, MemoryResizer};
 use dsa_protocol::auth::{bootconfig_entry, BootSecret};
 
-use crate::console_log::{
-    boot_header, explain_unfinished_boot, explain_unreachable_agent, ConsoleLog, ConsoleSigns,
-};
+use crate::console_log::{boot_header, ConsoleLog, BOOT_WORDS};
 use crate::console_pipe::ConsoleCapture;
 use crate::guid::Guid;
 use crate::hcs::{grant_vm_access, ComputeSystem};
@@ -68,7 +67,7 @@ pub struct AndroidVmLauncher {
     /// The disk the running VM boots from, for what a stalled boot tells the user to do.
     data_disk: Option<PathBuf>,
     /// What Android's log has shown during this boot, which the console no longer carries.
-    log_signs: Arc<Mutex<ConsoleSigns>>,
+    log_signs: Arc<Mutex<BootSigns>>,
     /// How far the running VM may grow, in MiB, as the configuration source last set it;
     /// `None` keeps it at the size it started with.
     memory_max: MemoryMax,
@@ -302,7 +301,7 @@ impl AndroidVmLauncher {
             boot_dir: crate::paths::MachineRoot::default_location().tmp(),
             prerequisite: None,
             data_disk: None,
-            log_signs: Arc::new(Mutex::new(ConsoleSigns::default())),
+            log_signs: Arc::new(Mutex::new(BootSigns::default())),
             memory_max: MemoryMax::default(),
             memory_base: None,
             bootconfig: None,
@@ -508,13 +507,13 @@ impl AndroidVmLauncher {
 
     /// Reads the signs of a late boot from `signs` as well as from the console: whoever reads
     /// Android's log while it boots fills it in. Each boot starts it afresh.
-    pub fn with_log_signs(mut self, signs: Arc<Mutex<ConsoleSigns>>) -> AndroidVmLauncher {
+    pub fn with_log_signs(mut self, signs: Arc<Mutex<BootSigns>>) -> AndroidVmLauncher {
         self.log_signs = signs;
         self
     }
 
     /// What this boot's console and Android's log have shown about why it is late.
-    fn signs(&self) -> ConsoleSigns {
+    fn signs(&self) -> BootSigns {
         let mut signs = self
             .console
             .as_ref()
@@ -683,7 +682,7 @@ impl GuestLauncher for AndroidVmLauncher {
         // the pipe's name is free again.
         self.end_console(Duration::ZERO);
         self.console_report = None;
-        *self.log_signs.lock().unwrap_or_else(|e| e.into_inner()) = ConsoleSigns::default();
+        *self.log_signs.lock().unwrap_or_else(|e| e.into_inner()) = BootSigns::default();
         let mut config = (self.config)()?;
         config.check_settings().map_err(|e| e.to_string())?;
         self.data_disk = Some(config.data_disk.clone());
@@ -891,9 +890,9 @@ impl GuestLauncher for AndroidVmLauncher {
         let log = self.console.as_ref()?.log_path();
         let signs = self.signs();
         Some(match stall {
-            GuestStall::BootUnfinished => explain_unfinished_boot(&signs, &log),
+            GuestStall::BootUnfinished => explain_unfinished_boot(&signs, &log, &BOOT_WORDS),
             GuestStall::AgentUnreachable => {
-                explain_unreachable_agent(&signs, &log, self.data_disk.as_deref())
+                explain_unreachable_agent(&signs, &log, self.data_disk.as_deref(), &BOOT_WORDS)
             }
         })
     }

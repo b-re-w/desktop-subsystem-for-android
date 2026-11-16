@@ -87,6 +87,7 @@ pub mod arm_translation;
 pub mod audio;
 pub mod background;
 pub mod backup;
+pub mod boot_signs;
 pub mod bootconfig;
 pub mod boundaries;
 pub mod camera;

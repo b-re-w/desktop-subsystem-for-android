@@ -19,6 +19,9 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use dsa_host_core::boot_signs::{
+    explain_unfinished_boot, explain_unreachable_agent, BootSigns, BootWords,
+};
 use dsa_host_core::bootconfig;
 use dsa_host_core::device_identity::{append_overlay, ramdisk_overlay};
 use dsa_host_core::direct_mapped_disk::DirectMappedImages;
@@ -31,8 +34,14 @@ use crate::crosvm::{virtio_mem_bytes, GuestArch, NetworkBackend, VmConfig, SHUTD
 use crate::crosvm_control::{Control, Request};
 use crate::image::ImageFiles;
 use crate::network::{place_tap, VmNetwork};
-use crate::signs::{explain_unfinished_boot, explain_unreachable_agent, BootSigns};
 use crate::users::{Account, BeforeExec};
+
+/// What this host tells the user about a late boot that no other host would.
+const BOOT_WORDS: BootWords<'static> = BootWords {
+    renderer_note: "The renderer (dsa-gfx) is started by DSA's window manager, which must run in \
+                    your desktop session.",
+    start_over: "run `dsa reset`, or `dsa stop` and move",
+};
 
 /// How long crosvm may take to open its control socket and start the guest kernel.
 const START_WAIT: Duration = Duration::from_secs(30);
@@ -695,10 +704,15 @@ impl GuestLauncher for LinuxVmLauncher {
     fn explain_stall(&mut self, stall: GuestStall) -> Option<String> {
         let signs = self.signs.lock().unwrap_or_else(|e| e.into_inner()).clone();
         Some(match stall {
-            GuestStall::BootUnfinished => explain_unfinished_boot(&signs, &self.console_log),
-            GuestStall::AgentUnreachable => {
-                explain_unreachable_agent(&signs, &self.console_log, &self.data_disk)
+            GuestStall::BootUnfinished => {
+                explain_unfinished_boot(&signs, &self.console_log, &BOOT_WORDS)
             }
+            GuestStall::AgentUnreachable => explain_unreachable_agent(
+                &signs,
+                &self.console_log,
+                Some(&self.data_disk),
+                &BOOT_WORDS,
+            ),
         })
     }
 

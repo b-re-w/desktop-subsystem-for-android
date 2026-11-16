@@ -14,16 +14,16 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use dsa_host_core::boot_signs::{watch_boot_signs, BootSigns};
 use dsa_host_core::clock_trace::{ClockTrace, HostClock};
 use dsa_host_core::data_reset::TemplateDataDisk;
 use dsa_host_core::device_identity::{BootIdentity, FileDeviceIdentities, ImageBuild};
 use dsa_host_core::diagnostics::HostFile;
 use dsa_host_core::direct_mapped_disk::{DirectMappedImages, Store};
-use dsa_host_core::guest_log::{LogFilter, LogWatch, DEFAULT_BUFFERS, WARN};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{
     HostApiService, NetworkStatus, PerUser, ServiceFacts, UserAndroid, UserAndroids,
@@ -33,7 +33,7 @@ use dsa_host_core::host_paths::HostPaths;
 use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
-use dsa_host_core::session::{Session, SessionState};
+use dsa_host_core::session::Session;
 use dsa_host_core::settings::{FileSettings, SettingsStore};
 use dsa_host_core::update::service::{
     check_alerting, follow_waiting_image, next_image_check, CheckNow, Download, StoreVersions,
@@ -48,7 +48,6 @@ use crate::config::HostConfig;
 use crate::crosvm::guest_cid;
 use crate::image::{bring_disk_to, image_files, make_disk, ImageFiles};
 use crate::launcher::{BootPlan, LauncherSetup, LinuxVmLauncher, SharedNetworkStatus};
-use crate::signs::BootSigns;
 use crate::users::{uid_of, Account};
 use crate::vsock::{connect_stream, VsockHub};
 
@@ -304,46 +303,6 @@ fn current_image(
             Ok((dir.clone(), version))
         }
         (None, None) => Err("the configuration names no Android image".into()),
-    }
-}
-
-/// Reads Android's log while it boots, for what explains a boot that stalls.
-fn watch_boot_signs(session: Weak<Session>, signs: Arc<Mutex<BootSigns>>) {
-    let Some(events) = session.upgrade().map(|s| s.events()) else {
-        return;
-    };
-    let mut watch: Option<LogWatch> = None;
-    loop {
-        let Some(running) = session.upgrade() else {
-            return;
-        };
-        let booting = matches!(
-            running.state(),
-            SessionState::Starting | SessionState::Stalled
-        );
-        if booting && watch.is_none() {
-            watch = Some(running.watch_log(LogFilter {
-                buffers: DEFAULT_BUFFERS,
-                tags: vec![("*".into(), WARN)],
-            }));
-        } else if !booting {
-            watch = None;
-        }
-        drop(running);
-        match &watch {
-            Some(log) => {
-                if let Ok(entry) = log.entries.recv_timeout(Duration::from_millis(500)) {
-                    let mut signs = signs.lock().unwrap_or_else(|e| e.into_inner());
-                    for entry in std::iter::once(entry).chain(log.entries.try_iter()) {
-                        signs.read_line(&format!("{}: {}", entry.tag, entry.message));
-                    }
-                }
-            }
-            None => match events.recv_timeout(Duration::from_secs(1)) {
-                Ok(_) | Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
-                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return,
-            },
-        }
     }
 }
 
