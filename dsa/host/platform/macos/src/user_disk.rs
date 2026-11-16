@@ -40,19 +40,12 @@ pub fn raw_disk(image_disk: &Path, cache: &Path) -> Result<PathBuf, String> {
     Ok(raw)
 }
 
-/// Makes sure the raw pstore disk at `path` exists: the pstore disk the Windows host makes,
-/// without its VHD footer. One already there is kept with its records; anything else at
-/// `path` (of another size) is replaced.
+/// Makes sure the raw pstore disk at `path` exists. One already there is kept with its
+/// records; anything else at `path` is replaced.
 pub fn ensure_pstore_disk(path: &Path) -> Result<(), String> {
-    let size = crate::pstore_disk::DISK_BYTES;
-    if std::fs::metadata(path).is_ok_and(|m| m.len() == size) {
-        return Ok(());
-    }
     if let Some(folder) = path.parent() {
         std::fs::create_dir_all(folder)
             .map_err(|e| format!("creating {}: {e}", folder.display()))?;
     }
-    let image = crate::pstore_disk::image();
-    std::fs::write(path, &image[..size as usize])
-        .map_err(|e| format!("writing the pstore disk {}: {e}", path.display()))
+    dsa_host_core::disk::pstore::ensure_raw(path)
 }

@@ -459,7 +459,7 @@ impl AndroidVmConfig {
         cmdline.push_str(BOOT_MEMORY_CMDLINE);
         if self.pstore_disk.is_some() {
             cmdline.push(' ');
-            cmdline.push_str(crate::pstore_disk::KERNEL_CMDLINE);
+            cmdline.push_str(dsa_host_core::disk::pstore::KERNEL_CMDLINE);
         }
         // Before the configured command line, so a developer's own `androidboot.dsa.vulkan`
         // there wins: Android takes the last value of a repeated `androidboot` key.

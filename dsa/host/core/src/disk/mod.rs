@@ -14,12 +14,14 @@
 //! computer on Windows, a raw file on the others. A host supplies that as a [`DiskBackend`];
 //! the rules above are here, once.
 //!
-//! [`gpt`] reads and edits the partition tables.
+//! [`gpt`] reads and edits the partition tables, and [`pstore`] makes the small disk the
+//! guest kernel keeps its last log on.
 
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
 pub mod gpt;
+pub mod pstore;
 
 /// The partitions of a single-disk image that hold Android itself. They come from the image;
 /// every other partition holds the user's data.

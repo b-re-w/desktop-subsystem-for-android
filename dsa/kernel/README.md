@@ -151,7 +151,7 @@ once, so the next start is a new VM with empty memory. A log kept in RAM (ramoop
 gone by then, so the kernel keeps it on a disk instead.
 
 The host attaches `pstore.vhd`, beside the user's Android disk, as the last disk of the VM
-(`dsa/host/platform/windows/src/pstore_disk.rs`). It is a fixed VHD of 4 MiB, so it never
+(`dsa/host/core/src/disk/pstore.rs`). It is a fixed VHD of 4 MiB, so it never
 grows, with one GPT partition whose UUID is fixed. The host names that partition on the kernel
 command line:
 

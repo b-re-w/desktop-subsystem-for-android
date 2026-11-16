@@ -62,12 +62,6 @@ pub use dsa_host_unix::vhdx;
 pub mod vm_config;
 pub mod wm;
 
-/// The pstore disk, shared with the Windows host. macOS attaches its disk part, without the
-/// VHD footer.
-#[allow(dead_code)]
-#[path = "../../windows/src/pstore_disk.rs"]
-pub(crate) mod pstore_disk;
-
 #[cfg(target_os = "macos")]
 pub mod adb_discovery;
 #[cfg(target_os = "macos")]

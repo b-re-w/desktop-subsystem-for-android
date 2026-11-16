@@ -14,7 +14,7 @@
 //!   [`app_audio`], each app's sound under its own name and volume in the host's mixer.
 //! - [`bootconfig`]: the kernel bootconfig that carries each boot's secret to the guest.
 //! - [`disk`]: each user's Android disk (GUID partition tables, bringing the disk to an image
-//!   version), on the disks a platform opens for it.
+//!   version) and the pstore disk, on the disks a platform opens for it.
 //! - [`handshake`]: the control channel's handshake as a session uses it.
 //! - [`host_api`]: the local API service, which acts on each caller's own Android, and its
 //!   client.
