@@ -27,6 +27,8 @@ use dsa_host_core::guest_display::{
 };
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid};
+use dsa_host_core::host_facts::HostFacts;
+use dsa_host_core::memory::{memory_plan, GrowthCeiling, MemoryPlan};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
@@ -56,27 +58,26 @@ pub fn local_user() -> String {
     format!("uid:{}", dsa_host_unix::socket::current_uid())
 }
 
-/// The total memory of this Mac, in MiB.
-fn total_memory_mb() -> Option<u64> {
-    total_memory_kb().map(|kb| kb / 1024)
-}
+/// What this Mac says about itself.
+pub struct MacFacts;
 
-/// The total memory of this Mac, in KiB.
-fn total_memory_kb() -> Option<u64> {
-    let mut bytes: u64 = 0;
-    let mut len = std::mem::size_of::<u64>();
-    let name = c"hw.memsize";
-    // SAFETY: hw.memsize is a 64-bit integer, and the buffer holds one.
-    let result = unsafe {
-        libc::sysctlbyname(
-            name.as_ptr(),
-            (&mut bytes as *mut u64).cast(),
-            &mut len,
-            std::ptr::null_mut(),
-            0,
-        )
-    };
-    (result == 0).then_some(bytes / 1024)
+impl HostFacts for MacFacts {
+    fn physical_memory_kb(&self) -> Option<u64> {
+        let mut bytes: u64 = 0;
+        let mut len = std::mem::size_of::<u64>();
+        let name = c"hw.memsize";
+        // SAFETY: hw.memsize is a 64-bit integer, and the buffer holds one.
+        let result = unsafe {
+            libc::sysctlbyname(
+                name.as_ptr(),
+                (&mut bytes as *mut u64).cast(),
+                &mut len,
+                std::ptr::null_mut(),
+                0,
+            )
+        };
+        (result == 0).then_some(bytes / 1024)
+    }
 }
 
 /// Keeps the window manager running. Installed, it has a launchd agent of its own, which is
@@ -270,9 +271,27 @@ impl Planner {
         );
         let settings = self.settings.get(&self.name).ok();
         let limit = settings.as_ref().map_or(0, |s| s.memory_limit_mb);
-        let (start, max) = self.config.memory_mb(limit, total_memory_mb());
-        let max = max.min(crate::vz::max_memory_mb()).max(start);
-        eprintln!("memory: Android starts with {start} MiB and may grow to {max} MiB");
+        let total_mb = MacFacts.physical_memory_kb().map(|kb| kb / 1024);
+        // Memory is shared with the GPU on a Mac, so with no limit the VM grows to half of it.
+        let plan = memory_plan(
+            self.config.memory_mb,
+            limit,
+            total_mb,
+            GrowthCeiling::HalfHost,
+        );
+        let start = u64::from(plan.start_mb);
+        let max = plan
+            .max_mb
+            .unwrap_or(start)
+            .min(crate::vz::max_memory_mb())
+            .max(start);
+        if self.config.memory_mb.is_none() {
+            let sized = MemoryPlan {
+                start_mb: plan.start_mb,
+                max_mb: (max > start).then_some(max),
+            };
+            eprintln!("{}", sized.describe(&self.name, limit));
+        }
         let mut listen_ports = vec![
             self.config.control_port,
             self.config.log_port,
@@ -311,7 +330,7 @@ impl Planner {
                 + &dsa_host_core::widevine::bootconfig_for(&*self.settings, &self.name, &attached)
                 // The Mac's physical memory, read at each start, which Google Play sees as the
                 // device's memory.
-                + &dsa_host_core::host_memory::bootconfig(total_memory_kb()),
+                + &dsa_host_core::host_memory::bootconfig(MacFacts.physical_memory_kb()),
         })
     }
 }

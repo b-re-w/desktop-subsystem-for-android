@@ -28,10 +28,10 @@ use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{
     HostApiService, NetworkStatus, PerUser, ServiceFacts, UserAndroid, UserAndroids,
 };
-use dsa_host_core::host_config::DEFAULT_MEMORY_MB;
+use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::host_paths::HostPaths;
 use dsa_host_core::input_trace::guest_traces_input;
-use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
+use dsa_host_core::memory::{memory_plan, summary_lines, GrowthCeiling, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
@@ -57,30 +57,14 @@ const FIRST_IMAGE_RETRY: Duration = Duration::from_secs(300);
 /// How soon an update check that the settings turned off looks at them again.
 const SETTINGS_RECHECK: Duration = Duration::from_secs(60);
 
-/// The memory a user's VM starts with and may grow to, in MiB, for a user whose limit is
-/// `limit_mb` (0 for automatic) on a computer with `total_mb`: a small start, as the guest
-/// kernel keeps page records for all the memory it has, and growth to their limit or to the
-/// computer's memory less what the host keeps.
-pub fn memory_sizing(limit_mb: u32, total_mb: Option<u64>) -> (u32, Option<u32>) {
-    let start = match limit_mb {
-        0 => DEFAULT_MEMORY_MB,
-        limit => limit.clamp(2048, DEFAULT_MEMORY_MB),
-    };
-    let max = total_mb
-        .map(|total| dsa_host_core::memory::vm_memory_mb(total, limit_mb))
-        .map(|max| u32::try_from(max).unwrap_or(u32::MAX))
-        .filter(|max| *max > start);
-    (start, max)
-}
+/// What this computer says about itself, from `/proc`.
+pub struct ProcFacts;
 
-fn host_total_mb() -> Option<u64> {
-    host_total_kb().map(|total_kb| total_kb / 1024)
-}
-
-/// The computer's physical memory, in KiB.
-fn host_total_kb() -> Option<u64> {
-    let text = std::fs::read_to_string("/proc/meminfo").ok()?;
-    crate::devices::power::parse_meminfo(&text).map(|(total_kb, _)| total_kb)
+impl HostFacts for ProcFacts {
+    fn physical_memory_kb(&self) -> Option<u64> {
+        let text = std::fs::read_to_string("/proc/meminfo").ok()?;
+        crate::devices::power::parse_meminfo(&text).map(|(total_kb, _)| total_kb)
+    }
 }
 
 /// The host's monotonic clock, for the clock lines.
@@ -385,23 +369,26 @@ pub fn create_user_android(
                 )?,
                 _ => {}
             }
-            let (memory_mb, memory_max_mb) = match config.memory_mb {
-                Some(fixed) => (fixed, None),
-                None => {
-                    let limit = store.get(&user).map(|s| s.memory_limit_mb).unwrap_or(0);
-                    memory_sizing(limit, host_total_mb())
-                }
+            let limit = match config.memory_mb {
+                Some(_) => 0,
+                None => store.get(&user).map(|s| s.memory_limit_mb).unwrap_or(0),
             };
-            eprintln!(
-                "{user}: memory: Android starts with {memory_mb} MiB and may grow to {}",
-                memory_max_mb.map_or("its start".to_string(), |mb| format!("{mb} MiB"))
+            let total_mb = ProcFacts.physical_memory_kb().map(|kb| kb / 1024);
+            let plan = memory_plan(
+                config.memory_mb,
+                limit,
+                total_mb,
+                GrowthCeiling::HostLessReserve,
             );
+            if config.memory_mb.is_none() {
+                eprintln!("{}", plan.describe(&user, limit));
+            }
             traced.store(guest_traces_input(&image.kernel_cmdline), Ordering::Relaxed);
             Ok(BootPlan {
                 files: image,
                 image_version: version,
-                memory_mb,
-                memory_max_mb,
+                memory_mb: plan.start_mb,
+                memory_max_mb: plan.max_mb.map(|mb| u32::try_from(mb).unwrap_or(u32::MAX)),
             })
         })
     };
@@ -447,7 +434,7 @@ pub fn create_user_android(
                 + &dsa_host_core::widevine::bootconfig_for(&*store, &user, &attached)
                 // The computer's physical memory, read at each start, which Google Play sees
                 // as the device's memory.
-                + &dsa_host_core::host_memory::bootconfig(host_total_kb())
+                + &dsa_host_core::host_memory::bootconfig(ProcFacts.physical_memory_kb())
         })
     })
     .with_boot_properties({
@@ -1099,22 +1086,6 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn nfr2_the_vm_starts_small_and_may_grow_to_the_computer_less_the_hosts_share() {
-        let (start, max) = memory_sizing(0, Some(32 * 1024));
-        assert_eq!(start, DEFAULT_MEMORY_MB);
-        let max = max.unwrap();
-        assert!(max > start && max < 32 * 1024);
-        // A user's limit caps both.
-        assert_eq!(memory_sizing(2048, Some(32 * 1024)), (2048, None));
-        assert_eq!(
-            memory_sizing(8192, Some(32 * 1024)),
-            (DEFAULT_MEMORY_MB, Some(8192))
-        );
-        // Without the computer's size the VM keeps its start.
-        assert_eq!(memory_sizing(0, None), (DEFAULT_MEMORY_MB, None));
-    }
 
     #[test]
     fn fr19_each_users_android_files_are_in_their_own_data_folder() {

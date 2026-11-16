@@ -35,8 +35,9 @@ use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::guest_display::{display_or_smallest, with_display_density, with_display_size};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid, UserAndroids};
+use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::input_trace::guest_traces_input;
-use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
+use dsa_host_core::memory::{memory_plan, summary_lines, GrowthCeiling, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{FileSettings, SettingsStore};
@@ -183,35 +184,33 @@ struct MemorySizing {
     fixed_mb: Option<u32>,
     store: Arc<dyn SettingsStore>,
     user: String,
+    facts: Arc<dyn HostFacts>,
     max: crate::android_vm::MemoryMax,
 }
 
 impl MemorySizing {
     /// The size the VM starts with; also sets how far it may grow.
     fn memory_mb(&self) -> u32 {
-        let mut max = self.max.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(fixed) = self.fixed_mb {
-            *max = None;
-            return fixed;
-        }
-        let limit = self
-            .store
-            .get(&self.user)
-            .map(|settings| settings.memory_limit_mb)
-            .unwrap_or(0);
-        let start = crate::host_config::host_sized_memory_mb(limit);
-        *max = crate::host_config::growth_max_mb(limit);
-        eprintln!(
-            "memory: {}'s Android starts with {start} MiB and may grow to {} ({})",
-            self.user,
-            max.map_or("its start".to_string(), |mb| format!("{mb} MiB")),
-            if limit > 0 {
-                format!("their limit {limit} MiB")
-            } else {
-                "automatic".to_string()
-            }
+        let limit = match self.fixed_mb {
+            Some(_) => 0,
+            None => self
+                .store
+                .get(&self.user)
+                .map(|settings| settings.memory_limit_mb)
+                .unwrap_or(0),
+        };
+        let total_mb = self.facts.physical_memory_kb().map(|kb| kb / 1024);
+        let plan = memory_plan(
+            self.fixed_mb,
+            limit,
+            total_mb,
+            GrowthCeiling::HostLessReserve,
         );
-        start
+        *self.max.lock().unwrap_or_else(|e| e.into_inner()) = plan.max_mb;
+        if self.fixed_mb.is_none() {
+            eprintln!("{}", plan.describe(&self.user, limit));
+        }
+        plan.start_mb
     }
 }
 
@@ -385,6 +384,7 @@ pub fn create_user_android(
         fixed_mb: config.memory_mb,
         store: settings_store(config),
         user: sid.to_string(),
+        facts: Arc::new(crate::power::ComputerFacts),
         max: memory_max.clone(),
     };
     let launcher = match updates {

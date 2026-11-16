@@ -121,6 +121,7 @@ pub mod host_api;
 pub mod host_api_conformance;
 pub mod host_certificates;
 pub mod host_config;
+pub mod host_facts;
 pub mod host_keys;
 pub mod host_memory;
 pub mod host_paths;

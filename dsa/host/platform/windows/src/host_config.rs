@@ -56,6 +56,7 @@ use dsa_host_core::host_config::{
 pub use dsa_host_core::host_config::{
     expand_locations, HostConfigError, UpdateSettings, DEFAULT_MEMORY_MB,
 };
+use dsa_host_core::memory::start_mb;
 use dsa_host_core::update::policy::InstalledImage;
 use dsa_host_core::update::program::ReleaseChannel;
 use dsa_host_core::update::program_service::ProgramSettings;
@@ -124,33 +125,6 @@ pub fn profile_disk(local_app_data: &std::path::Path) -> PathBuf {
     crate::paths::UserRoot::in_local_app_data(local_app_data).android_disk()
 }
 
-/// The memory a VM starts with for a user whose limit is `limit_mb` (0 for automatic):
-/// [`DEFAULT_MEMORY_MB`], or the user's limit when it is smaller.
-///
-/// The VM starts small because the guest kernel keeps its page records for all the memory
-/// it has resident, about 1.6% of it, used or not: a VM made at the computer's size from the
-/// start would cost some 460 MiB on a 32 GiB computer while idle. It grows from there while
-/// the guest needs more (see [`growth_max_mb`]).
-pub fn host_sized_memory_mb(limit_mb: u32) -> u32 {
-    match limit_mb {
-        0 => DEFAULT_MEMORY_MB,
-        limit => limit.clamp(2048, DEFAULT_MEMORY_MB),
-    }
-}
-
-/// How far a VM may grow while it runs, in MiB, for a user whose limit is `limit_mb`: their
-/// limit, never more than the computer has, or with no limit the computer's memory less what
-/// Windows keeps (see [`automatic_vm_memory_mb`]). `None` when the computer's memory cannot
-/// be read.
-///
-/// [`automatic_vm_memory_mb`]: dsa_host_core::memory::automatic_vm_memory_mb
-pub fn growth_max_mb(limit_mb: u32) -> Option<u64> {
-    #[cfg(windows)]
-    let total_mb = crate::power::read_memory().map(|(total_kb, _)| total_kb / 1024);
-    #[cfg(not(windows))]
-    let total_mb: Option<u64> = None;
-    total_mb.map(|total_mb| dsa_host_core::memory::vm_memory_mb(total_mb, limit_mb))
-}
 fn default_page_reporting_order() -> u8 {
     page_reporting_order_for_build(windows_build())
 }
@@ -203,7 +177,7 @@ pub struct HostConfig {
     #[serde(default)]
     pub kernel_cmdline: String,
     /// The VM's memory in MiB. Unset, it is sized to the computer and the user's limit
-    /// ([`host_sized_memory_mb`]); set, it is that, whatever the user's limit, for tests and
+    /// ([`start_mb`]); set, it is that, whatever the user's limit, for tests and
     /// development.
     #[serde(default)]
     pub memory_mb: Option<u32>,
@@ -723,7 +697,7 @@ impl HostConfig {
             kernel: files.kernel,
             initrd: files.initrd,
             kernel_cmdline: files.kernel_cmdline,
-            memory_mb: self.memory_mb.unwrap_or_else(|| host_sized_memory_mb(0)),
+            memory_mb: self.memory_mb.unwrap_or_else(|| start_mb(0)),
             processors: self.processors,
             system_image: files.system_image,
             data_disk,

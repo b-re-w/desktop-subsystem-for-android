@@ -1303,3 +1303,96 @@ fn nfr1_the_renderers_largest_guest_devices_are_named_and_their_imports_split() 
         "{line}"
     );
 }
+
+#[test]
+fn nfr2_memory_plan_matches_windows_sizing() {
+    use dsa_host_core::memory::{growth_max_mb, memory_plan, start_mb, GrowthCeiling::*};
+    const GIB: u64 = 1024;
+    // The VM starts at 2 GiB whatever the limit, and grows to the computer less what it keeps.
+    for limit in [0, 1024, 2048, 4096, 8192] {
+        assert_eq!(start_mb(limit), 2048, "limit {limit}");
+    }
+    let table: [(u32, u64, Option<u64>); 15] = [
+        (0, 8 * GIB, Some(6144)),
+        (0, 16 * GIB, Some(16 * GIB - 2048)),
+        (0, 32 * GIB, Some(32 * GIB - 3276)),
+        (1024, 8 * GIB, Some(2048)),
+        (1024, 32 * GIB, Some(2048)),
+        (2048, 16 * GIB, Some(2048)),
+        (2048, 32 * GIB, Some(2048)),
+        (4096, 8 * GIB, Some(4096)),
+        (4096, 16 * GIB, Some(4096)),
+        (4096, 32 * GIB, Some(4096)),
+        (8192, 8 * GIB, Some(8192)),
+        (8192, 16 * GIB, Some(8192)),
+        (8192, 32 * GIB, Some(8192)),
+        (0, 3 * GIB, Some(2048)),
+        (16384, 8 * GIB, Some(8192)),
+    ];
+    for (limit, total, expected) in table {
+        assert_eq!(
+            growth_max_mb(limit, Some(total), HostLessReserve),
+            expected,
+            "limit {limit}, total {total}"
+        );
+        // A maximum that is not above the start is no growth.
+        let plan = memory_plan(None, limit, Some(total), HostLessReserve);
+        assert_eq!(plan.start_mb, 2048);
+        assert_eq!(plan.max_mb, expected.filter(|max| *max > 2048));
+    }
+    // A fixed size in the configuration never grows, whatever the limit.
+    let plan = memory_plan(Some(4096), 8192, Some(32 * GIB), HostLessReserve);
+    assert_eq!((plan.start_mb, plan.max_mb), (4096, None));
+}
+
+#[test]
+fn nfr2_half_host_ceiling_matches_macos_sizing() {
+    use dsa_host_core::memory::{memory_plan, GrowthCeiling::HalfHost};
+    let plan = |limit, total| {
+        let plan = memory_plan(None, limit, Some(total), HalfHost);
+        (plan.start_mb, plan.max_mb)
+    };
+    // No limit: the default start, growing to half the computer's memory.
+    assert_eq!(plan(0, 16384), (2048, Some(8192)));
+    assert_eq!(plan(0, 65536), (2048, Some(32768)));
+    assert_eq!(plan(0, 8192), (2048, Some(4096)));
+    // A limit is how far it grows, within what the computer has, even above half of it.
+    assert_eq!(plan(6144, 32768), (2048, Some(6144)));
+    assert_eq!(plan(24576, 32768), (2048, Some(24576)));
+    assert_eq!(plan(2048, 32768), (2048, None));
+    let fixed = memory_plan(Some(4096), 0, Some(65536), HalfHost);
+    assert_eq!((fixed.start_mb, fixed.max_mb), (4096, None));
+}
+
+#[test]
+fn nfr2_unreadable_memory_keeps_the_start_size() {
+    use dsa_host_core::memory::{growth_max_mb, memory_plan, GrowthCeiling::*};
+    for ceiling in [HostLessReserve, HalfHost] {
+        assert_eq!(growth_max_mb(0, None, ceiling), None);
+        assert_eq!(growth_max_mb(8192, None, ceiling), None);
+        let plan = memory_plan(None, 8192, None, ceiling);
+        assert_eq!((plan.start_mb, plan.max_mb), (2048, None));
+    }
+}
+
+#[test]
+fn nfr2_the_sizing_line_names_the_user_the_start_the_limit_and_the_growth() {
+    use dsa_host_core::memory::MemoryPlan;
+    let grows = MemoryPlan {
+        start_mb: 2048,
+        max_mb: Some(6144),
+    };
+    assert_eq!(
+        grows.describe("S-1-5-21", 0),
+        "memory: S-1-5-21's Android starts with 2048 MiB and may grow to 6144 MiB (automatic)"
+    );
+    let stays = MemoryPlan {
+        start_mb: 2048,
+        max_mb: None,
+    };
+    assert_eq!(
+        stays.describe("uid:1000", 2048),
+        "memory: uid:1000's Android starts with 2048 MiB and may grow to its start \
+         (their limit 2048 MiB)"
+    );
+}

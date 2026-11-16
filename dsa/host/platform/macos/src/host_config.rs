@@ -26,7 +26,7 @@ use serde::Deserialize;
 use dsa_host_core::host_config::{
     default_connect_timeout_secs, default_control_port, default_data_disk_size_gb,
     default_doze_delay_secs, default_log_port, default_processors, default_ready_timeout_secs,
-    default_stop_timeout_secs, default_true, HostConfigError, UpdateSettings, DEFAULT_MEMORY_MB,
+    default_stop_timeout_secs, default_true, HostConfigError, UpdateSettings,
 };
 use dsa_host_core::session::SessionConfig;
 use dsa_host_core::update::policy::InstalledImage;
@@ -191,34 +191,6 @@ impl MacHostConfig {
             ..SessionConfig::default()
         }
     }
-
-    /// The memory the VM starts with and may grow to, in MiB, for a user whose limit is
-    /// `limit_mb` (0 for none) on a Mac with `total_mb` of memory when known.
-    pub fn memory_mb(&self, limit_mb: u32, total_mb: Option<u64>) -> (u64, u64) {
-        if let Some(fixed) = self.memory_mb {
-            return (u64::from(fixed), u64::from(fixed));
-        }
-        memory_range_mb(limit_mb, total_mb)
-    }
-}
-
-/// The memory a VM starts with and may grow to, in MiB: it starts at the default size (or
-/// the user's lower limit) and grows to their limit, or with none to half the Mac's memory.
-/// Growth and return follow the shared policy: the guest trims its page cache to its working
-/// set all the time, and the balloon grows the VM when the guest runs short and takes memory
-/// back once it is not.
-pub fn memory_range_mb(limit_mb: u32, total_mb: Option<u64>) -> (u64, u64) {
-    let start = match limit_mb {
-        0 => DEFAULT_MEMORY_MB,
-        limit => limit.clamp(2048, DEFAULT_MEMORY_MB),
-    };
-    let start = u64::from(start);
-    let max = match total_mb {
-        Some(total) => dsa_host_core::memory::half_host_vm_memory_mb(total, limit_mb),
-        None if limit_mb > 0 => u64::from(limit_mb),
-        None => start,
-    };
-    (start.min(max), max.max(start.min(max)))
 }
 
 /// The ports of the guest the window manager (`dsa-wm`) serves: its graphics streams.
