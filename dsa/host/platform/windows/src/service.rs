@@ -36,7 +36,7 @@ use dsa_host_core::guest_display::{display_or_smallest, with_display_density, wi
 use dsa_host_core::guest_log::{LogFilter, LogWatch, DEFAULT_BUFFERS, WARN};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid, UserAndroids};
-use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
+use dsa_host_core::memory::{log_memory, HostMemory};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{
@@ -1098,22 +1098,6 @@ fn service_settings_store(config: &HostConfig, build: &str) -> Arc<dyn SettingsS
     let store = file_settings(config);
     keep_first_channel_logged(&store, build);
     Arc::new(store)
-}
-
-/// Logs the memory of every running user's Android every few minutes until `stop` is set:
-/// on the host, its VM and window processes, and in the guest, what it last reported.
-fn log_memory(androids: &dyn UserAndroids, host: &dyn HostMemory, build: &str, stop: &AtomicBool) {
-    let mut next = Instant::now() + LOG_INTERVAL;
-    while !stop.load(Ordering::Relaxed) {
-        thread::sleep(Duration::from_secs(1));
-        if Instant::now() < next {
-            continue;
-        }
-        next = Instant::now() + LOG_INTERVAL;
-        for line in summary_lines(androids, host) {
-            eprintln!("{build}: {line}");
-        }
-    }
 }
 
 /// Takes the pages of the disks each running VM maps directly (the host's direct-mapped mode)

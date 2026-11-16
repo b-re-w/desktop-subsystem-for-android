@@ -30,7 +30,7 @@ use dsa_host_core::host_api::{
 };
 use dsa_host_core::host_config::DEFAULT_MEMORY_MB;
 use dsa_host_core::host_paths::HostPaths;
-use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
+use dsa_host_core::memory::{log_memory, HostMemory};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::{Session, SessionState};
@@ -843,21 +843,6 @@ pub fn host_logs_of(user: &str) -> Vec<HostFile> {
             only_user: None,
         },
     ]
-}
-
-/// Logs the memory of every running user's Android every few minutes until `stop` is set.
-fn log_memory(androids: &dyn UserAndroids, host: &dyn HostMemory, build: &str, stop: &AtomicBool) {
-    let mut next = Instant::now() + LOG_INTERVAL;
-    while !stop.load(Ordering::Relaxed) {
-        thread::sleep(Duration::from_secs(1));
-        if Instant::now() < next {
-            continue;
-        }
-        next = Instant::now() + LOG_INTERVAL;
-        for line in summary_lines(androids, host) {
-            eprintln!("{build}: {line}");
-        }
-    }
 }
 
 /// The network status of each user's running VM.

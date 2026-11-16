@@ -15,6 +15,7 @@
 
 use std::collections::BTreeSet;
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use dsa_protocol::control;
@@ -1114,6 +1115,29 @@ pub fn summary_lines(androids: &dyn UserAndroids, host: &dyn HostMemory) -> Vec<
             Some(format!("{user}: {}", snapshot.summary_line()))
         })
         .collect()
+}
+
+/// Logs the memory of every running user's Android every [`LOG_INTERVAL`] until `stop` is set:
+/// on the host, the VM and window processes, and in the guest, what it last reported
+/// ([`summary_lines`]). Each line is written to the service's log (standard error) after
+/// `build`. It runs on a thread of its own; it looks at `stop` every second.
+pub fn log_memory(
+    androids: &dyn UserAndroids,
+    host: &dyn HostMemory,
+    build: &str,
+    stop: &AtomicBool,
+) {
+    let mut next = Instant::now() + LOG_INTERVAL;
+    while !stop.load(Ordering::Relaxed) {
+        std::thread::sleep(Duration::from_secs(1));
+        if Instant::now() < next {
+            continue;
+        }
+        next = Instant::now() + LOG_INTERVAL;
+        for line in summary_lines(androids, host) {
+            eprintln!("{build}: {line}");
+        }
+    }
 }
 
 /// Kernel command line settings that keep what the guest kernel sets aside at boot small, the

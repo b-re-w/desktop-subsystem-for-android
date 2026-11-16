@@ -863,6 +863,21 @@ fn nfr1_the_service_logs_one_memory_line_for_each_running_android() {
     assert!(summary_lines(&OneUser(Arc::clone(&setup.session)), &host).is_empty());
 }
 
+#[test]
+fn nfr1_the_memory_log_ends_as_soon_as_the_service_stops() {
+    let setup = setup();
+    let stop = std::sync::atomic::AtomicBool::new(true);
+    // Already stopped: the loop returns at once instead of waiting out its interval.
+    dsa_host_core::memory::log_memory(
+        &OneUser(Arc::clone(&setup.session)),
+        &FakeHost::default(),
+        "test",
+        &stop,
+    );
+    setup.session.stop();
+    assert!(setup.session.wait_for(SessionState::Stopped, WAIT));
+}
+
 fn opened(task_id: i32) -> TaskEvent {
     TaskEvent::Updated(Task {
         task_id,
