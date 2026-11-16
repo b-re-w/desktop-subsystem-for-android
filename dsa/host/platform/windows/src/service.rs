@@ -466,7 +466,7 @@ pub fn create_user_android(
                 &user.vm_name,
                 Box::new(move || {
                     let current = current_image(Some(store.as_ref()), None)?;
-                    let files = config.image_files(Some(&current.dir));
+                    let files = config.image_files(Some(&current.dir))?;
                     let mut vm = base.clone();
                     let _guard = guard_android_disk(root.as_deref(), &vm.data_disk)?;
                     // A disk holding a newer Android's data than this image, after the user
@@ -489,7 +489,7 @@ pub fn create_user_android(
                     vm.kernel = files.kernel;
                     vm.initrd = files.initrd;
                     vm.kernel_cmdline = files.kernel_cmdline;
-                    vm.system_image = files.system_image;
+                    vm.system_image = files.system_disk;
                     vm.image_version = Some(current.cache_key().to_string());
                     follow_monitors(&mut vm, &owner);
                     vm.memory_mb = sizing.memory_mb();
@@ -1063,7 +1063,8 @@ fn current_image_dir(
     // Without an update store the image is the one the configuration names.
     let configured = config
         .image_files(None)
-        .initrd
+        .ok()
+        .and_then(|files| files.initrd)
         .and_then(|initrd| initrd.parent().map(Path::to_path_buf));
     Some(current_image(images, configured.as_deref()).ok()?.dir)
 }

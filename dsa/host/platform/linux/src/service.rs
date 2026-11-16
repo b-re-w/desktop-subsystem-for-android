@@ -381,8 +381,8 @@ pub fn create_user_android(
             image.kernel_cmdline =
                 crate::monitor_density::with_boot_density(&image.kernel_cmdline, &run_dir);
             // crosvm attaches raw disks, so a VHDX system disk is read into one once.
-            image.system_image = image
-                .system_image
+            image.system_disk = image
+                .system_disk
                 .as_deref()
                 .map(crate::image::raw_disk)
                 .transpose()?;
@@ -406,7 +406,7 @@ pub fn create_user_android(
                     &account,
                     &disk,
                     template,
-                    image.system_image.is_some(),
+                    image.system_disk.is_some(),
                     version,
                 )?,
                 (template, _) if !disk.exists() => make_disk(

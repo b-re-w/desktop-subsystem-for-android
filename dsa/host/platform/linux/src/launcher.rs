@@ -257,7 +257,7 @@ impl LinuxVmLauncher {
                 self.name
             )
         };
-        if files.system_image.is_none() {
+        if files.system_disk.is_none() {
             why("the image has no separate system disk to map");
             return None;
         }
@@ -482,7 +482,7 @@ impl LinuxVmLauncher {
             memory_mb: plan.memory_mb,
             memory_max_mb,
             processors: self.processors,
-            system_image: plan.files.system_image.clone(),
+            system_image: plan.files.system_disk.clone(),
             data_disk: self.data_disk.clone(),
             pstore_disk: self.pstore_disk.clone(),
             addon_disk,

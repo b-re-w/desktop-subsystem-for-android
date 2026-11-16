@@ -81,7 +81,7 @@ fn make_fresh_disk(
         return prepare_user_data_disk(disk, config.data_disk_size_gb);
     };
     let current = current_image(Some(store), None)?;
-    let files = config.image_files(Some(&current.dir));
+    let files = config.image_files(Some(&current.dir))?;
     match &files.disk_template {
         Some(template) => bring_disk_to(disk, template, current.cache_key()),
         None => prepare_user_data_disk(disk, config.data_disk_size_gb),

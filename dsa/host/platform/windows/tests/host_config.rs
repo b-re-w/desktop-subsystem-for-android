@@ -309,8 +309,8 @@ fn fr14_the_vm_boots_the_image_folder_it_is_given() {
         PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("image-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
-    let files = config.image_files(Some(&dir));
-    assert_eq!(files.system_image, Some(dir.join("system.vhdx")));
+    let files = config.image_files(Some(&dir)).unwrap();
+    assert_eq!(files.system_disk, Some(dir.join("system.vhdx")));
     assert_eq!(files.disk_template, None);
     assert_eq!(
         files.kernel,
@@ -319,7 +319,7 @@ fn fr14_the_vm_boots_the_image_folder_it_is_given() {
     );
     std::fs::write(dir.join("bzImage"), b"kernel").unwrap();
     assert_eq!(
-        config.image_files(Some(&dir)).kernel,
+        config.image_files(Some(&dir)).unwrap().kernel,
         dir.join("bzImage"),
         "the image's own kernel"
     );
@@ -334,7 +334,7 @@ fn fr27_an_arm64_image_boots_its_own_kernel_named_image() {
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("Image"), b"arm64 kernel").unwrap();
     assert_eq!(
-        config.image_files(Some(&dir)).kernel,
+        config.image_files(Some(&dir)).unwrap().kernel,
         dir.join("Image"),
         "an arm64 image's kernel is named Image"
     );
@@ -372,8 +372,8 @@ fn fr14_an_image_made_from_aosp_boots_from_one_disk_made_from_its_template() {
         r#"{"version": "17.0.0-16373615", "kernel_cmdline": "androidboot.boot_part_uuid=6b1ad5ad androidboot.fstab_suffix=dsa"}"#,
     )
     .unwrap();
-    let files = config.image_files(Some(&dir));
-    assert_eq!(files.system_image, None, "no separate system disk");
+    let files = config.image_files(Some(&dir)).unwrap();
+    assert_eq!(files.system_disk, None, "no separate system disk");
     assert_eq!(files.disk_template, Some(dir.join("disk.vhdx")));
     assert_eq!(files.initrd, Some(dir.join("initrd.img")));
     assert_eq!(
@@ -383,7 +383,7 @@ fn fr14_an_image_made_from_aosp_boots_from_one_disk_made_from_its_template() {
 
     let user = config.user_vm("S-1-5-21-1-2-3-1001").unwrap();
     let mut vm = user.config.clone();
-    vm.system_image = files.system_image;
+    vm.system_image = files.system_disk;
     vm.initrd = files.initrd;
     vm.kernel_cmdline = files.kernel_cmdline;
     let document = vm.to_hcs_document_for(GuestArch::X86_64).unwrap();
@@ -592,8 +592,8 @@ fn fr14_an_image_with_two_disks_attaches_system_image_and_data_disk() {
         r#"{"version": "17.0.0-16373615", "kernel_cmdline": "androidboot.boot_devices=vmbus androidboot.fstab_suffix=dsa", "files": {"system.vhdx": {}, "data.vhdx": {}}}"#,
     )
     .unwrap();
-    let files = config.image_files(Some(&dir));
-    assert_eq!(files.system_image, Some(dir.join("system.vhdx")));
+    let files = config.image_files(Some(&dir)).unwrap();
+    assert_eq!(files.system_disk, Some(dir.join("system.vhdx")));
     assert_eq!(files.disk_template, Some(dir.join("data.vhdx")));
     assert_eq!(files.initrd, Some(dir.join("initrd.img")));
     assert_eq!(
@@ -603,7 +603,7 @@ fn fr14_an_image_with_two_disks_attaches_system_image_and_data_disk() {
 
     let user = config.user_vm("S-1-5-21-1-2-3-1001").unwrap();
     let mut vm = user.config.clone();
-    vm.system_image = files.system_image;
+    vm.system_image = files.system_disk;
     vm.initrd = files.initrd;
     vm.kernel_cmdline = files.kernel_cmdline;
     let document = vm.to_hcs_document_for(GuestArch::X86_64).unwrap();

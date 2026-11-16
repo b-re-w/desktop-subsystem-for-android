@@ -27,6 +27,7 @@ use dsa_host_core::guest_display::{
 };
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid};
+use dsa_host_core::image_files::ImageFiles;
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
@@ -139,11 +140,19 @@ fn window_manager(config: &MacHostConfig) -> Option<ProgramWindowManager> {
     })
 }
 
+/// The template of the user's disk, which `image_files` made sure the image has.
+fn image_template(files: &ImageFiles) -> Result<PathBuf, String> {
+    files
+        .disk_template
+        .clone()
+        .ok_or_else(|| "the image has no disk to make the user's from".to_string())
+}
+
 /// Makes the user's disk hold image `version` from its template in `dir`, as a fresh disk
 /// for a data reset or at a first boot.
 fn bring_user_disk(user: &UserFolders, dir: &Path, version: &str) -> Result<(), String> {
     let files = image_files(dir, GuestArch::HOST)?;
-    let template = raw_disk(&files.disk_template, &user.image_cache(version))?;
+    let template = raw_disk(&image_template(&files)?, &user.image_cache(version))?;
     bring_disk_to(&user.disk(), &template, version)
 }
 
@@ -174,7 +183,7 @@ impl Planner {
             ));
         }
         let cache = self.user.image_cache(&version);
-        let template = raw_disk(&files.disk_template, &cache)?;
+        let template = raw_disk(&image_template(&files)?, &cache)?;
         // A disk holding a newer Android's data than this image, after the user chose an older
         // version and agreed to erase it, starts afresh.
         if let Some(major) = current.android_major {
@@ -246,7 +255,10 @@ impl Planner {
         listen_ports.extend(crate::host_services::listen_ports());
         let vm = MacVmConfig {
             kernel: files.kernel.clone(),
-            initrd: files.initrd.clone(),
+            initrd: files
+                .initrd
+                .clone()
+                .ok_or_else(|| format!("the image in {} has no initrd.img", dir.display()))?,
             cmdline,
             memory_max_mb: max,
             memory_start_mb: start,
