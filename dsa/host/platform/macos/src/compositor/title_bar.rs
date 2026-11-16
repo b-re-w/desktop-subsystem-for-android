@@ -216,6 +216,53 @@ pub fn sample_bgra(pixels: &[u8], stride: usize, width: u32, height: u32, band: 
     band_sample(&row(points.inside), &row(points.below))
 }
 
+/// The gap between the zoom button and the window's name, in points.
+pub const NAME_GAP: f64 = 14.0;
+/// The back button's size and its distance from the title bar's right end, in points.
+pub const BACK_SIZE: (f64, f64) = (28.0, 22.0);
+pub const BACK_MARGIN: f64 = 8.0;
+
+/// Where the title bar's own parts stand, in the title bar's coordinates (points; `y` is the
+/// bottom of the part in AppKit's coordinates, so only the centre line matters).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TitleLayout {
+    /// The window's name: left edge, bottom edge and width. It is as high as the text.
+    pub name: (f64, f64, f64),
+    /// The back button: left edge, bottom edge, width and height; `None` while it is hidden.
+    pub back: Option<(f64, f64, f64, f64)>,
+}
+
+/// Lays out the name and the back button in a title bar `bar_width` wide. The name starts
+/// [`NAME_GAP`] after the zoom button (`buttons_right`) whether or not the back button shows,
+/// and ends before the back button, which stands at the right end. Both are centred on the
+/// window buttons' centre line (`centre_y`), so the name has the same space above and below it
+/// as they do. `text` is the name's size at its natural width.
+pub fn title_layout(
+    bar_width: f64,
+    centre_y: f64,
+    buttons_right: f64,
+    text: (f64, f64),
+    back: bool,
+) -> TitleLayout {
+    let name_left = buttons_right + NAME_GAP;
+    let back_left = bar_width - BACK_MARGIN - BACK_SIZE.0;
+    let end = if back {
+        back_left - NAME_GAP
+    } else {
+        bar_width - BACK_MARGIN
+    };
+    let width = text.0.min((end - name_left).max(0.0)).max(0.0);
+    TitleLayout {
+        name: (name_left, centre_y - text.1 / 2.0, width),
+        back: back.then_some((
+            back_left,
+            centre_y - BACK_SIZE.1 / 2.0,
+            BACK_SIZE.0,
+            BACK_SIZE.1,
+        )),
+    }
+}
+
 /// What a double click on a title bar does, as the user chose in System Settings (Desktop &
 /// Dock, "Double-click a window's title bar to").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -369,6 +416,42 @@ mod tests {
         assert_eq!(
             sample_bgra(&pixels[..10], 80 * 4, 80, 80, 24),
             BandSample::default()
+        );
+    }
+
+    #[test]
+    fn fr22_macos_the_title_is_centred_on_the_traffic_lights() {
+        // Window buttons centred 16 points from the bar's bottom; a 16 point high name.
+        let layout = title_layout(600.0, 16.0, 70.0, (80.0, 16.0), false);
+        let (_, bottom, _) = layout.name;
+        assert_eq!(bottom + 8.0, 16.0);
+        let with_back = title_layout(600.0, 16.0, 70.0, (80.0, 16.0), true);
+        assert_eq!(with_back.name.1, layout.name.1);
+    }
+
+    #[test]
+    fn fr22_macos_the_back_button_stands_at_the_right_end_of_the_title_bar() {
+        let layout = title_layout(600.0, 16.0, 70.0, (80.0, 16.0), true);
+        let (left, bottom, width, height) = layout.back.unwrap();
+        assert_eq!(left + width + BACK_MARGIN, 600.0);
+        assert_eq!(bottom + height / 2.0, 16.0);
+        // The name starts after the window buttons, back button or not.
+        assert_eq!(layout.name.0, 70.0 + NAME_GAP);
+        assert_eq!(
+            title_layout(600.0, 16.0, 70.0, (80.0, 16.0), false).back,
+            None
+        );
+    }
+
+    #[test]
+    fn fr22_macos_a_long_name_ends_before_the_back_button() {
+        let layout = title_layout(300.0, 16.0, 70.0, (900.0, 16.0), true);
+        let (left, ..) = layout.back.unwrap();
+        assert_eq!(layout.name.0 + layout.name.2 + NAME_GAP, left);
+        // A window too narrow for any name leaves it no width.
+        assert_eq!(
+            title_layout(100.0, 16.0, 70.0, (50.0, 16.0), true).name.2,
+            0.0
         );
     }
 
