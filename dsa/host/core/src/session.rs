@@ -4033,6 +4033,20 @@ impl Session {
         })
     }
 
+    /// Why no log can come from a guest that was stopped for speaking another protocol than
+    /// this host: the handshake's account, which names both builds and both schema hashes.
+    pub fn log_problem(&self) -> Option<String> {
+        if self.state() != SessionState::Stopped {
+            return None;
+        }
+        match self.last_reason() {
+            Some(
+                reason @ (StopReason::GuestFromOtherRelease(_) | StopReason::HandshakeRejected(_)),
+            ) => Some(reason.to_string()),
+            _ => None,
+        }
+    }
+
     /// The guest's records the host holds now, oldest first.
     pub fn recent_log(&self) -> Vec<LogEntry> {
         let hub = self.shared.logs.lock().unwrap_or_else(|e| e.into_inner());
