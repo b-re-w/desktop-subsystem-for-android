@@ -323,7 +323,9 @@ DSA télécharge une autre image s'il en existe une. La prochaine version de DSA
     <value>Pilote Vulkan</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Les applications Android dessinent via Vulkan. Un GPU sans pilote Vulkan peut utiliser Dozen (Vulkan on Direct3D 12) du OpenCL, OpenGL, and Vulkan Compatibility Pack de Microsoft. S'applique au redémarrage du gestionnaire de fenêtres.</value>
+    <value>Les applications Android dessinent via Vulkan.
+Un GPU sans pilote Vulkan peut utiliser Dozen (Vulkan on Direct3D 12) du OpenCL, OpenGL, and Vulkan Compatibility Pack de Microsoft.
+S'applique au redémarrage du gestionnaire de fenêtres.</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>Automatique : le pilote du GPU, Dozen seulement s'il n'y en a pas (recommandé)</value>
@@ -347,7 +349,9 @@ DSA télécharge une autre image s'il en existe une. La prochaine version de DSA
     <value>Rendu actuel via Dozen sur le processeur : ce GPU n'a pas de pilote Direct3D 12.</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>Aucun Vulkan pour le rendu, donc Android ne démarre pas. Installez le Compatibility Pack depuis le Microsoft Store ou avec winget install Microsoft.OpenCLGLVulkanCompatibilityPack, puis reconnectez-vous.</value>
+    <value>Aucun Vulkan pour le rendu, donc Android ne démarre pas.
+Installez le Compatibility Pack depuis le Microsoft Store ou avec winget install Microsoft.OpenCLGLVulkanCompatibilityPack,
+puis reconnectez-vous.</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ S'applique à la prochaine ouverture de la fenêtre de l'app.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Qui met cette application à l'échelle quand sa fenêtre passe sur un écran d'une autre échelle.
-• Application : l'application prend l'échelle du nouvel écran dès que la fenêtre l'atteint et se redessine à cette échelle, texte net. Pour une application qui n'indique pas gérer ce changement, Android recrée son écran en gardant son état, d'où un bref redessin possible.
+• Application : l'application prend l'échelle du nouvel écran dès que la fenêtre l'atteint et se redessine à cette échelle, texte net.
+Pour une application qui n'indique pas gérer ce changement, Android recrée son écran en gardant son état, d'où un bref redessin possible.
 • Système : l'application garde son échelle et DSA ajuste sa fenêtre à la même taille physique. Le texte peut sembler un peu flou.
-• Automatique : Système pour les applications perturbées par un changement d'échelle en cours, comme YouTube ; pour toute autre application, Application si elle indique gérer ce changement, Système sinon.
+• Automatique : Système pour les applications perturbées par un changement d'échelle en cours, comme YouTube ;
+pour toute autre application, Application si elle indique gérer ce changement, Système sinon.
 Automatique et Système ne redémarrent jamais l'application.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Pas encore disponible : il faut une modification du framework Android absente de
     <value>Plein écran des applications</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>Où va le plein écran demandé par une application, comme le bouton d'une vidéo. En plein écran, la barre de titre apparaît au bord supérieur. Le choix de la page Applications l'emporte.</value>
+    <value>Où va le plein écran demandé par une application, comme le bouton d'une vidéo.
+En plein écran, la barre de titre apparaît au bord supérieur.
+Le choix de la page Applications l'emporte.</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>Applications qui masquent leurs barres</value>

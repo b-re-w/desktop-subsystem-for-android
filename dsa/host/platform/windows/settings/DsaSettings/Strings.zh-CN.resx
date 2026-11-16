@@ -323,7 +323,9 @@ Android {2} 尚未完成启动（{3}）。请再次启动 Android 以引导它�
     <value>Vulkan 驱动程序</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Android 应用通过 Vulkan 进行绘制。没有 Vulkan 驱动程序的 GPU 可以使用 Microsoft 的 OpenCL, OpenGL, and Vulkan Compatibility Pack 中的 Dozen（Vulkan on Direct3D 12）。窗口管理器重新启动时生效。</value>
+    <value>Android 应用通过 Vulkan 进行绘制。
+没有 Vulkan 驱动程序的 GPU 可以使用 Microsoft 的 OpenCL, OpenGL, and Vulkan Compatibility Pack 中的 Dozen（Vulkan on Direct3D 12）。
+窗口管理器重新启动时生效。</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>自动：使用 GPU 的驱动程序，仅在没有时使用 Dozen（推荐）</value>
@@ -347,7 +349,9 @@ Android {2} 尚未完成启动（{3}）。请再次启动 Android 以引导它�
     <value>当前在 CPU 上通过 Dozen 渲染：此 GPU 没有 Direct3D 12 驱动程序。</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>没有可用于渲染的 Vulkan，因此 Android 不会启动。请从 Microsoft Store 或使用 winget install Microsoft.OpenCLGLVulkanCompatibilityPack 安装 Compatibility Pack，然后注销并重新登录。</value>
+    <value>没有可用于渲染的 Vulkan，因此 Android 不会启动。
+请从 Microsoft Store 或使用 winget install Microsoft.OpenCLGLVulkanCompatibilityPack 安装 Compatibility Pack
+然后注销并重新登录。</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Android 的设置会显示设备名称和芯片。型号名称只显示在这里
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>当此应用的窗口移到缩放比例不同的显示器上时，由谁来缩放它。
-• 应用：窗口到达新显示器时，应用立即采用该显示器的缩放比例并按此比例重新绘制，文字保持清晰。对于没有声明自行处理缩放变化的应用，Android 会重新创建其屏幕并保留状态，因此可能会短暂地重新绘制。
+• 应用：窗口到达新显示器时，应用立即采用该显示器的缩放比例并按此比例重新绘制，文字保持清晰。
+对于没有声明自行处理缩放变化的应用，Android 会重新创建其屏幕并保留状态，因此可能会短暂地重新绘制。
 • 系统：应用保持其缩放比例，由 DSA 把窗口缩放到相同的物理大小。文字可能看起来有点模糊。
-• 自动：对在运行中更改缩放比例就会出问题的应用（例如 YouTube）使用“系统”；对其他应用，若应用声明自行处理则使用“应用”，否则使用“系统”。
+• 自动：对在运行中更改缩放比例就会出问题的应用（例如 YouTube）使用“系统”；
+对其他应用，若应用声明自行处理则使用“应用”，否则使用“系统”。
 “自动”和“系统”永远不会重启应用。</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Android 的设置会显示设备名称和芯片。型号名称只显示在这里
     <value>应用全屏</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>应用的全屏请求（例如视频的全屏按钮）显示的位置。在整个屏幕上显示时，标题栏会出现在屏幕顶部边缘。“应用”页面中为单个应用所做的选择优先。</value>
+    <value>应用的全屏请求（例如视频的全屏按钮）显示的位置。
+在整个屏幕上显示时，标题栏会出现在屏幕顶部边缘。
+“应用”页面中为单个应用所做的选择优先。</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>隐藏栏的应用</value>

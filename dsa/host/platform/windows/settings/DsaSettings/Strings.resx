@@ -323,7 +323,9 @@ DSA downloads another image if there is one. The next DSA version tries this one
     <value>Vulkan driver</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Android apps draw through Vulkan. A GPU without a Vulkan driver can use Dozen (Vulkan on Direct3D 12) from Microsoft's OpenCL, OpenGL, and Vulkan Compatibility Pack. It applies when the window manager starts again.</value>
+    <value>Android apps draw through Vulkan.
+A GPU without a Vulkan driver can use Dozen (Vulkan on Direct3D 12) from Microsoft's OpenCL, OpenGL, and Vulkan Compatibility Pack.
+It applies when the window manager starts again.</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>Automatic: the GPU's driver, Dozen only without one (recommended)</value>
@@ -347,7 +349,9 @@ DSA downloads another image if there is one. The next DSA version tries this one
     <value>Now rendering through Dozen on the CPU: this GPU has no Direct3D 12 driver.</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>No Vulkan to render on, so Android does not start. Install the Compatibility Pack from the Microsoft Store, or with winget install Microsoft.OpenCLGLVulkanCompatibilityPack, then sign out and in again.</value>
+    <value>No Vulkan to render on, so Android does not start.
+Install the Compatibility Pack from the Microsoft Store, or with winget install Microsoft.OpenCLGLVulkanCompatibilityPack,
+then sign out and in again.</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Applies the next time the app's window opens.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Who scales this app when its window moves to a monitor of another scale.
-• App: the task takes the new monitor's scale at once when the window reaches it, and the app redraws at that scale, so text stays sharp. For an app that does not say it handles this, Android recreates its screen and keeps its state, so it may redraw briefly.
+• App: the task takes the new monitor's scale at once when the window reaches it, and the app redraws at that scale, so text stays sharp.
+For an app that does not say it handles this, Android recreates its screen and keeps its state, so it may redraw briefly.
 • System: the app keeps its scale and DSA scales its window to the same physical size. Text can look a little blurry.
-• Automatic: System for apps that break when their scale changes while they run, such as YouTube; for any other app, App if it says it handles this, System if not.
+• Automatic: System for apps that break when their scale changes while they run, such as YouTube;
+for any other app, App if it says it handles this, System if not.
 Automatic and System never restart the app.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Not available yet: it needs an Android framework change this build lacks, so for
     <value>App full screen</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>Where an app's full screen request shows, such as a video's full screen button. On the whole screen, the title bar appears at the top edge. An app's own choice on the Apps page wins.</value>
+    <value>Where an app's full screen request shows, such as a video's full screen button.
+On the whole screen, the title bar appears at the top edge.
+An app's own choice on the Apps page wins.</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>Apps that hide their bars</value>

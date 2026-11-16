@@ -323,7 +323,9 @@ Android {2} 尚未完成啟動 ({3})。請再次啟動 Android 以將其開機�
     <value>Vulkan 驅動程式</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Android 應用程式透過 Vulkan 繪製。沒有 Vulkan 驅動程式的 GPU 可使用 Microsoft 的 OpenCL, OpenGL, and Vulkan Compatibility Pack 中的 Dozen (Vulkan on Direct3D 12)。會在視窗管理員重新啟動時套用。</value>
+    <value>Android 應用程式透過 Vulkan 繪製。
+沒有 Vulkan 驅動程式的 GPU 可使用 Microsoft 的 OpenCL, OpenGL, and Vulkan Compatibility Pack 中的 Dozen (Vulkan on Direct3D 12)。
+會在視窗管理員重新啟動時套用。</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>自動：GPU 的驅動程式，沒有時才使用 Dozen (建議)</value>
@@ -347,7 +349,9 @@ Android {2} 尚未完成啟動 ({3})。請再次啟動 Android 以將其開機�
     <value>目前透過 CPU 上的 Dozen 轉譯：此 GPU 沒有 Direct3D 12 驅動程式。</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>沒有 Vulkan 可轉譯，Android 無法啟動。請從 Microsoft Store 或以 winget install Microsoft.OpenCLGLVulkanCompatibilityPack 安裝 Compatibility Pack，再登出並重新登入。</value>
+    <value>沒有 Vulkan 可轉譯，Android 無法啟動。
+請從 Microsoft Store 或以 winget install Microsoft.OpenCLGLVulkanCompatibilityPack 安裝 Compatibility Pack
+再登出並重新登入。</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Android 的設定會顯示裝置名稱與晶片。型號名稱只顯示在這裡
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>此應用程式的視窗移到縮放比例不同的監視器時，由誰負責縮放。
-• 應用程式：視窗到達新監視器時，應用程式立即採用該監視器的縮放比例並以此比例重繪，文字清晰。對於未聲明自行處理縮放變更的應用程式，Android 會重建畫面並保留狀態，因此可能會短暫重繪。
+• 應用程式：視窗到達新監視器時，應用程式立即採用該監視器的縮放比例並以此比例重繪，文字清晰。
+對於未聲明自行處理縮放變更的應用程式，Android 會重建畫面並保留狀態，因此可能會短暫重繪。
 • 系統：應用程式保留其縮放比例，由 DSA 將視窗縮放到相同的實際大小。文字可能看起來有點模糊。
-• 自動：對執行中變更縮放比例就會出問題的應用程式 (例如 YouTube) 使用「系統」；對其他應用程式，若其聲明自行處理則使用「應用程式」，否則使用「系統」。
+• 自動：對執行中變更縮放比例就會出問題的應用程式 (例如 YouTube) 使用「系統」；
+對其他應用程式，若其聲明自行處理則使用「應用程式」，否則使用「系統」。
 「自動」和「系統」不會重新啟動應用程式。</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Android 的設定會顯示裝置名稱與晶片。型號名稱只顯示在這裡
     <value>應用程式全螢幕</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>應用程式的全螢幕要求 (例如影片的全螢幕按鈕) 顯示的位置。在整個螢幕上時，標題列會在頂端邊緣出現。「應用程式」頁面上的個別設定優先。</value>
+    <value>應用程式的全螢幕要求 (例如影片的全螢幕按鈕) 顯示的位置。
+在整個螢幕上時，標題列會在頂端邊緣出現。
+「應用程式」頁面上的個別設定優先。</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>隱藏其列的應用程式</value>

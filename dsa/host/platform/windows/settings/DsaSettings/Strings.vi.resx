@@ -323,7 +323,9 @@ DSA sẽ tải xuống ảnh khác nếu có. Phiên bản DSA tiếp theo sẽ 
     <value>Trình điều khiển Vulkan</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Ứng dụng Android vẽ qua Vulkan. GPU không có trình điều khiển Vulkan có thể dùng Dozen (Vulkan on Direct3D 12) từ OpenCL, OpenGL, and Vulkan Compatibility Pack của Microsoft. Áp dụng khi trình quản lý cửa sổ khởi động lại.</value>
+    <value>Ứng dụng Android vẽ qua Vulkan.
+GPU thiếu trình điều khiển Vulkan có thể dùng Dozen (Vulkan on Direct3D 12) từ OpenCL, OpenGL, and Vulkan Compatibility Pack của Microsoft.
+Áp dụng khi trình quản lý cửa sổ khởi động lại.</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>Tự động: trình điều khiển của GPU, chỉ dùng Dozen khi không có (khuyên dùng)</value>
@@ -347,7 +349,9 @@ DSA sẽ tải xuống ảnh khác nếu có. Phiên bản DSA tiếp theo sẽ 
     <value>Đang kết xuất qua Dozen trên CPU: GPU này không có trình điều khiển Direct3D 12.</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>Không có Vulkan để kết xuất, nên Android không khởi động. Hãy cài Compatibility Pack từ Microsoft Store hoặc bằng winget install Microsoft.OpenCLGLVulkanCompatibilityPack, rồi đăng xuất và đăng nhập lại.</value>
+    <value>Không có Vulkan để kết xuất, nên Android không khởi động.
+Hãy cài Compatibility Pack từ Microsoft Store hoặc bằng winget install Microsoft.OpenCLGLVulkanCompatibilityPack,
+rồi đăng xuất và đăng nhập lại.</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Mỗi ứng dụng có biểu tượng trong vùng thông báo của thanh tác 
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Ai co giãn ứng dụng này khi cửa sổ của nó chuyển sang màn hình có tỷ lệ khác.
-• Ứng dụng: ứng dụng dùng ngay tỷ lệ của màn hình mới khi cửa sổ chạm tới đó và vẽ lại ở tỷ lệ ấy, nên chữ vẫn sắc nét. Với ứng dụng không cho biết tự xử lý việc này, Android tạo lại màn hình và giữ trạng thái, nên ứng dụng có thể vẽ lại trong chốc lát.
+• Ứng dụng: ứng dụng dùng ngay tỷ lệ của màn hình mới khi cửa sổ chạm tới đó và vẽ lại ở tỷ lệ ấy, nên chữ vẫn sắc nét.
+Với ứng dụng không cho biết tự xử lý việc này, Android tạo lại màn hình và giữ trạng thái, nên ứng dụng có thể vẽ lại trong chốc lát.
 • Hệ thống: ứng dụng giữ tỷ lệ của nó và DSA co giãn cửa sổ về cùng kích thước thực. Chữ có thể hơi mờ.
-• Tự động: Hệ thống cho các ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, như YouTube; với ứng dụng khác, Ứng dụng nếu nó cho biết tự xử lý việc này, Hệ thống nếu không.
+• Tự động: Hệ thống cho các ứng dụng bị lỗi khi tỷ lệ thay đổi lúc đang chạy, như YouTube;
+với ứng dụng khác, Ứng dụng nếu nó cho biết tự xử lý việc này, Hệ thống nếu không.
 Tự động và Hệ thống không bao giờ khởi động lại ứng dụng.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Chưa khả dụng: cần một thay đổi trong framework Android mà bản d�
     <value>Toàn màn hình của ứng dụng</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>Nơi yêu cầu toàn màn hình của ứng dụng hiển thị, như nút toàn màn hình của video. Khi trên toàn màn hình, thanh tiêu đề hiện ở mép trên. Lựa chọn riêng của ứng dụng trên trang Ứng dụng được ưu tiên.</value>
+    <value>Nơi yêu cầu toàn màn hình của ứng dụng hiển thị, như nút toàn màn hình của video.
+Khi trên toàn màn hình, thanh tiêu đề hiện ở mép trên.
+Lựa chọn riêng của ứng dụng trên trang Ứng dụng được ưu tiên.</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>Ứng dụng ẩn thanh của mình</value>

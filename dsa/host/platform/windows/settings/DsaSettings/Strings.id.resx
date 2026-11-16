@@ -323,7 +323,9 @@ DSA mengunduh image lain jika ada. Versi DSA berikutnya mencoba image ini lagi.<
     <value>Driver Vulkan</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Aplikasi Android menggambar melalui Vulkan. GPU tanpa driver Vulkan dapat memakai Dozen (Vulkan on Direct3D 12) dari OpenCL, OpenGL, and Vulkan Compatibility Pack milik Microsoft. Berlaku saat pengelola jendela dimulai lagi.</value>
+    <value>Aplikasi Android menggambar melalui Vulkan.
+GPU tanpa driver Vulkan dapat memakai Dozen (Vulkan on Direct3D 12) dari OpenCL, OpenGL, and Vulkan Compatibility Pack milik Microsoft.
+Berlaku saat pengelola jendela dimulai lagi.</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>Otomatis: driver GPU, Dozen hanya jika tidak ada (disarankan)</value>
@@ -347,7 +349,9 @@ DSA mengunduh image lain jika ada. Versi DSA berikutnya mencoba image ini lagi.<
     <value>Saat ini merender melalui Dozen di CPU: GPU ini tidak memiliki driver Direct3D 12.</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>Tidak ada Vulkan untuk merender, jadi Android tidak dimulai. Instal Compatibility Pack dari Microsoft Store, atau dengan winget install Microsoft.OpenCLGLVulkanCompatibilityPack, lalu keluar dan masuk lagi.</value>
+    <value>Tidak ada Vulkan untuk merender, jadi Android tidak dimulai.
+Instal Compatibility Pack dari Microsoft Store, atau dengan winget install Microsoft.OpenCLGLVulkanCompatibilityPack,
+lalu keluar dan masuk lagi.</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Berlaku saat jendela aplikasi dibuka berikutnya.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Siapa yang menskalakan aplikasi ini saat jendelanya berpindah ke monitor dengan skala lain.
-• Aplikasi: aplikasi langsung memakai skala monitor baru saat jendela mencapainya dan menggambar ulang pada skala itu, sehingga teks tetap tajam. Untuk aplikasi yang tidak menyatakan menangani perubahan ini, Android membuat ulang layarnya dengan status tetap, jadi mungkin ada jeda singkat.
+• Aplikasi: aplikasi langsung memakai skala monitor baru saat jendela mencapainya dan menggambar ulang, sehingga teks tetap tajam.
+Untuk aplikasi yang tidak menyatakan menangani ini, Android membuat ulang layarnya dengan status tetap, jadi mungkin ada jeda singkat.
 • Sistem: aplikasi tetap pada skalanya; DSA menskalakan jendela ke ukuran fisik yang sama. Teks bisa sedikit buram.
-• Otomatis: Sistem untuk aplikasi yang rusak saat skalanya berubah selagi berjalan, seperti YouTube; untuk aplikasi lain, Aplikasi jika aplikasi menyatakan menanganinya, Sistem jika tidak.
+• Otomatis: Sistem untuk aplikasi yang rusak saat skalanya berubah selagi berjalan, seperti YouTube;
+untuk aplikasi lain, Aplikasi jika aplikasi menyatakan menanganinya, Sistem jika tidak.
 Otomatis dan Sistem tidak pernah memulai ulang aplikasi.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Belum tersedia: fitur ini memerlukan perubahan framework Android yang tidak ada 
     <value>Layar penuh aplikasi</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>Tempat permintaan layar penuh aplikasi tampil, seperti tombol layar penuh video. Di seluruh layar, bilah judul muncul di tepi atas. Pilihan per aplikasi di halaman Aplikasi diutamakan.</value>
+    <value>Tempat permintaan layar penuh aplikasi tampil, seperti tombol layar penuh video.
+Di seluruh layar, bilah judul muncul di tepi atas.
+Pilihan per aplikasi di halaman Aplikasi diutamakan.</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>Aplikasi yang menyembunyikan bilahnya</value>

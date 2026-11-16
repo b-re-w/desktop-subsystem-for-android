@@ -323,7 +323,9 @@ Android {2} はまだ起動を完了していません ({3})。Android を再び
     <value>Vulkan ドライバー</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Android アプリは Vulkan で描画します。Vulkan ドライバーのない GPU は、Microsoft の OpenCL, OpenGL, and Vulkan Compatibility Pack の Dozen (Vulkan on Direct3D 12) を使えます。ウィンドウ マネージャーの再起動時に適用されます。</value>
+    <value>Android アプリは Vulkan で描画します。
+Vulkan ドライバーのない GPU は、Microsoft の OpenCL, OpenGL, and Vulkan Compatibility Pack の Dozen (Vulkan on Direct3D 12) を使えます。
+ウィンドウ マネージャーの再起動時に適用されます。</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>自動: GPU のドライバー、ない場合のみ Dozen (推奨)</value>
@@ -347,7 +349,9 @@ Android {2} はまだ起動を完了していません ({3})。Android を再び
     <value>現在 CPU 上の Dozen で描画しています。この GPU には Direct3D 12 ドライバーがありません。</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>描画に使える Vulkan がないため、Android は開始しません。Microsoft Store か winget install Microsoft.OpenCLGLVulkanCompatibilityPack で Compatibility Pack をインストールし、サインアウトして再びサインインしてください。</value>
+    <value>描画に使える Vulkan がないため、Android は開始しません。
+Microsoft Store か winget install Microsoft.OpenCLGLVulkanCompatibilityPack で Compatibility Pack をインストールし、
+サインアウトして再びサインインしてください。</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Windows の [設定] &gt; [アプリ] &gt; [インストールされているア
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>拡大率の異なるモニターにウィンドウを移したとき、このアプリをどちらが拡大縮小するかです。
-• アプリ: ウィンドウが新しいモニターに着いた時点で、そのモニターの拡大率をすぐ適用し、アプリがその拡大率で描き直すので文字が鮮明です。これに対応すると示していないアプリは、Android が状態を保って画面を作り直すため、一瞬描き直されることがあります。
+• アプリ: ウィンドウが新しいモニターに着いた時点で、そのモニターの拡大率をすぐ適用し、アプリがその拡大率で描き直すので文字が鮮明です。
+これに対応すると示していないアプリは、Android が状態を保って画面を作り直すため、一瞬描き直されることがあります。
 • システム: アプリは拡大率を変えず、DSA が同じ物理サイズに拡大縮小します。文字が少しぼやけることがあります。
-• 自動: YouTube のように実行中に拡大率が変わると表示が崩れるアプリにはシステム、それ以外のアプリには、自分で対応すると示していればアプリ、示していなければシステムを使います。
+• 自動: YouTube のように実行中に拡大率が変わると表示が崩れるアプリにはシステム、
+それ以外のアプリには、自分で対応すると示していればアプリ、示していなければシステムを使います。
 自動とシステムはアプリを再起動しません。</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Windows の [設定] &gt; [アプリ] &gt; [インストールされているア
     <value>アプリの全画面表示</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>動画の全画面ボタンのような、アプリからの全画面表示の要求の表示先です。画面全体の場合、上端にタイトル バーが現れます。[アプリ] ページでアプリごとに選んだ値が優先されます。</value>
+    <value>動画の全画面ボタンのような、アプリからの全画面表示の要求の表示先です。
+画面全体の場合、上端にタイトル バーが現れます。
+[アプリ] ページでアプリごとに選んだ値が優先されます。</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>バーを隠すアプリ</value>
