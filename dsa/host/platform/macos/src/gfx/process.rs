@@ -7,6 +7,7 @@
 //! has gfxstream copy the frame into it on the GPU. A frame gfxstream reads back is written
 //! into the surface here. It ends when the window manager's connection closes.
 
+use dsa_host_unix::process::end_now;
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::os::fd::RawFd;
@@ -39,11 +40,6 @@ const SURFACE_WAIT: Duration = Duration::from_millis(500);
 /// What the renderer calls itself in its handshake.
 pub fn build() -> String {
     format!("dsa-gfx {}", crate::VERSION)
-}
-
-fn end_now(code: i32) -> ! {
-    // SAFETY: ends this process without the libraries' teardown.
-    unsafe { libc::_exit(code) }
 }
 
 /// The surfaces the window manager sent over Mach, by texture ID, until a frame takes them.

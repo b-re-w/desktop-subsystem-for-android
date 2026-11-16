@@ -6,6 +6,8 @@
 //! whatever program handles it, and an app in Android must never be able to do that. The
 //! link is one argument after `--`, never shell text.
 
+use dsa_host_core::follower::wait;
+use dsa_host_core::links::web_url;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -31,15 +33,9 @@ pub trait LinkOpener: Send {
     fn open(&mut self, url: &str) -> Result<(), String>;
 }
 
-/// Checks a link from Android before it is opened: an http or https link, with a host and
-/// nothing a program could take for something else.
-pub fn openable(url: &str) -> Result<&str, String> {
-    dsa_host_core::links::web_url(url)
-}
-
 /// The command that opens `url` in the user's browser.
 pub fn open_command(url: &str) -> Result<Command, String> {
-    let url = openable(url)?;
+    let url = web_url(url)?;
     let mut command = Command::new("xdg-open");
     // xdg-open takes no options, so the link cannot be read as one; it starts with http.
     command
@@ -89,7 +85,7 @@ pub fn follow(
         while !stop.load(Ordering::Relaxed) {
             match stream.next(POLL) {
                 Ok(None) => {}
-                Ok(Some(url)) => match openable(&url) {
+                Ok(Some(url)) => match web_url(&url) {
                     Ok(url) => {
                         if let Err(why) = opener.open(url) {
                             log(&format!("links: {why}"));
@@ -104,15 +100,6 @@ pub fn follow(
                 }
             }
         }
-    }
-}
-
-fn wait(stop: &AtomicBool, time: Duration) {
-    let step = Duration::from_millis(50);
-    let mut waited = Duration::ZERO;
-    while waited < time && !stop.load(Ordering::Relaxed) {
-        thread::sleep(step);
-        waited += step;
     }
 }
 

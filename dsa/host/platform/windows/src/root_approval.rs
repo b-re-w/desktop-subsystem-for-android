@@ -45,6 +45,7 @@
 //! [`wait_for_answer`] and the argument and exit code handling are platform neutral, so they are
 //! tested without a real prompt.
 
+use dsa_host_core::hex::encode as hex;
 use std::time::{Duration, Instant};
 
 use dsa_host_core::root_approval::{ApprovalRequest, PromptAnswer, PromptIcon};
@@ -353,10 +354,6 @@ pub fn wait_for_answer(
             return answer_of_exit(code);
         }
     }
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn unhex(text: &str) -> Option<Vec<u8>> {

@@ -13,6 +13,16 @@ use std::time::{Duration, Instant};
 /// path and options; no real page needs a longer one.
 pub const MAX_URL_BYTES: usize = 32_000;
 
+/// The arguments that open DSA's settings on the Apps page with `package`'s row in view.
+pub fn app_page_arguments(package: &str) -> [String; 4] {
+    [
+        "--page".into(),
+        "apps".into(),
+        "--app".into(),
+        package.into(),
+    ]
+}
+
 /// Checks that `url` is a web link the host may open, and returns it without the spaces
 /// around it. The scheme is `http` or `https` (in any case), a host follows `//`, and the link
 /// has no whitespace or control character, which a correctly encoded link never has.

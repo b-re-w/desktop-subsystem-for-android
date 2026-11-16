@@ -279,16 +279,6 @@ pub fn menu_work(action: MenuAction, package: &str, multiple_windows: bool) -> O
     })
 }
 
-/// The arguments that open DSA Settings on the Apps page with `package`'s row open.
-pub fn app_page_arguments(package: &str) -> [String; 4] {
-    [
-        "--page".into(),
-        "apps".into(),
-        "--app".into(),
-        package.into(),
-    ]
-}
-
 /// The menu's words in one language.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MenuText {
@@ -648,6 +638,7 @@ pub fn paint_menu(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dsa_host_core::links::app_page_arguments;
 
     #[test]
     fn fr22_the_window_menu_carries_the_android_window_menu() {

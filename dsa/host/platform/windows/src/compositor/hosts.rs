@@ -21,6 +21,7 @@
 //! as soon as the window host connects: an app's splash screen is drawn once, right after
 //! launch, and would otherwise be lost, leaving the window empty until the app draws.
 
+use dsa_host_core::links::app_page_arguments;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
@@ -80,16 +81,6 @@ const COVERS_CHECK: Duration = Duration::from_secs(1);
 /// The name of the pipe the window hosts of session `session` dial.
 pub fn pipe_name(session: u32) -> String {
     format!("dsa-wm-{session}")
-}
-
-/// The arguments that open DSA's settings on the Apps page with `package`'s row in view.
-pub fn app_page_arguments(package: &str) -> [String; 4] {
-    [
-        "--page".into(),
-        "apps".into(),
-        "--app".into(),
-        package.into(),
-    ]
 }
 
 /// Opens DSA's settings (the settings app installed beside this window manager) on the Apps

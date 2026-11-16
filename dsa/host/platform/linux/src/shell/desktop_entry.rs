@@ -15,6 +15,7 @@
 //! Every entry this host writes carries [`PACKAGE_KEY`], so an entry of an app that is gone
 //! is found and removed, in both folders, without touching anything else in them.
 
+use dsa_host_core::apps::shortcut_tag;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -46,17 +47,6 @@ pub fn app_id(package: &str) -> String {
 /// The file name of the app's entry.
 pub fn file_name(package: &str) -> String {
     format!("{}.desktop", app_id(package))
-}
-
-/// A short name for a shortcut's ID that any file name can carry: an FNV-1a hash of it, in
-/// hex. Android takes any text as an ID, which a file name cannot always.
-pub fn shortcut_tag(id: &str) -> String {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in id.bytes() {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(0x0100_0000_01b3);
-    }
-    format!("{hash:016x}")
 }
 
 /// The file name of the desktop entry of the app's pinned shortcut `id`.

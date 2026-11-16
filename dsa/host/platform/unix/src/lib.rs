@@ -33,6 +33,8 @@ pub mod dns_resolver;
 pub mod fd_frames;
 pub mod https_get;
 pub mod paths;
+#[cfg(unix)]
+pub mod process;
 pub mod raw_disk;
 #[cfg(unix)]
 pub mod renderer_launch;

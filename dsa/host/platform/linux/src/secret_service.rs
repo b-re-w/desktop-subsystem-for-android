@@ -26,6 +26,7 @@
 //! The rules are plain functions over [`SecretBus`], tested with a fake; the bus itself and the
 //! helper process build on Linux only.
 
+use dsa_host_core::hex::encode as hex;
 use std::time::Duration;
 
 use dsa_host_core::host_keys::{KeyError, KeyPurpose, Secret};
@@ -321,10 +322,6 @@ pub enum HelperRequest {
     Load(KeyPurpose),
     Store(KeyPurpose, Secret),
     Remove(KeyPurpose),
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn unhex(text: &str) -> Option<Vec<u8>> {

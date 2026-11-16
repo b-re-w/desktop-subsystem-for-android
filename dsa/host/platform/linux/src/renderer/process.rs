@@ -15,6 +15,7 @@ use dsa_host_core::renderer::{
     address_from, follow_device_state, open_renderer, RendererProcessMemory, WindowManagerLink,
 };
 use dsa_host_unix::fd_frames::{stream_at, FdConnection, FdSender};
+use dsa_host_unix::process::end_now;
 use dsa_protocol::renderer::encode_body;
 use dsa_protocol::renderer::types::{
     envelope::Body, FramePath as WireFramePath, GpuFrame as WireGpuFrame, GpuImage as WireGpuImage,
@@ -29,13 +30,6 @@ use crate::compositor::gfxstream::{self, FramePath, Listen, Renderer, RendererFr
 /// What the renderer calls itself in its handshake.
 pub fn build() -> String {
     format!("dsa-gfx {}", crate::VERSION)
-}
-
-/// Ends this process at once, without the libraries' teardown: a driver that hangs in it must
-/// not keep a renderer whose compositor is gone.
-fn end_now(code: i32) -> ! {
-    // SAFETY: ends this process.
-    unsafe { libc::_exit(code) }
 }
 
 /// The frames' way to the compositor.

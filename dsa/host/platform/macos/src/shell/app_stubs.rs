@@ -25,6 +25,7 @@
 //! `Info.plist`, so [`sync`] never touches an application it did not make, and a Desktop item
 //! is only ever removed when it is a link the note records into DSA's folder.
 
+use dsa_host_core::apps::shortcut_tag;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -100,17 +101,6 @@ pub fn bundle_identifier(package: &str) -> String {
         })
         .collect();
     format!("{BUNDLE_PREFIX}{clean}")
-}
-
-/// A short name for a shortcut's ID that a file name and a bundle identifier can carry: an
-/// FNV-1a hash of it, in hex. Android takes any text as an ID.
-pub fn shortcut_tag(id: &str) -> String {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in id.bytes() {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(0x0100_0000_01b3);
-    }
-    format!("{hash:016x}")
 }
 
 /// The stub's file name: the app's label, with what a file name cannot hold replaced, and
