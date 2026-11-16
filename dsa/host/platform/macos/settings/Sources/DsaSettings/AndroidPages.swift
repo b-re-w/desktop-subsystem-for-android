@@ -404,7 +404,12 @@ struct IdentityFieldRow: View {
         let problem = vm.problem(field)
         VStack(alignment: .leading, spacing: 4) {
             LabeledContent {
-                TextField(field.placeholder, text: Binding(get: { vm.field(key).value }, set: { vm.edit(key, $0) }))
+                // Android's own value is the box's prompt, shown inside it while it is empty. A
+                // title would be drawn beside the box as a label, because the box is in a Form.
+                TextField("", text: Binding(get: { vm.field(key).value }, set: { vm.edit(key, $0) }),
+                          prompt: Text(field.placeholder))
+                    .labelsHidden()
+                    .multilineTextAlignment(.leading)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
                     .disabled(vm.isBusy)
