@@ -59,16 +59,14 @@ fn nfr1_the_guest_kernel_sets_aside_as_little_at_boot_as_on_every_host() {
 }
 
 #[test]
-fn fr2_android_finds_its_partitions_on_every_pci_slot() {
+fn fr2_android_finds_its_partitions_below_the_frameworks_pci_host() {
     let cmdline = for_virtualization_framework(HYPER_V_CMDLINE, "", false);
     assert!(!cmdline.contains("boot_devices=vmbus"));
     let devices = boot_devices();
     assert!(cmdline.split_whitespace().any(|w| w == devices));
-    let list = devices.strip_prefix("androidboot.boot_devices=").unwrap();
-    let slots: Vec<&str> = list.split(',').collect();
-    assert_eq!(slots.len(), 31);
-    assert!(slots.contains(&"pci0000:00/0000:00:05.0"));
-    assert!(slots.contains(&"pci0000:00/0000:00:1f.0"));
+    // The framework describes its machine with a device tree: the PCI host is the platform
+    // device `40000000.pci`, and Android's first stage init names a disk by that device.
+    assert_eq!(devices, "androidboot.boot_devices=40000000.pci");
 }
 
 #[test]

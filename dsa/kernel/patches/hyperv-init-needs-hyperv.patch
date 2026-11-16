@@ -1,0 +1,18 @@
+--- a/arch/arm64/hyperv/mshyperv.c
++++ b/arch/arm64/hyperv/mshyperv.c
+@@ -110,6 +110,15 @@
+ {
+ 	int ret;
+ 
++	/*
++	 * A kernel built with CONFIG_HYPERV must also run where there is no Hyper-V (Apple's
++	 * Virtualization framework). The detection moved to hyperv_early_init() and this
++	 * function stopped checking its result, so it went on to Hyper-V hypercalls that
++	 * another hypervisor does not answer.
++	 */
++	if (!hyperv_initialized)
++		return 0;
++
+ 	ret = hv_common_init();
+ 	if (ret)
+ 		return ret;

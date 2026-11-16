@@ -38,6 +38,18 @@ class AndroidKernelConfigTests(unittest.TestCase):
         self.assertIn(".unlocked_ioctl\t= shmem_file_ioctl,", patch)
         self.assertIn("config MEMFD_ASHMEM_SHIM", patch)
 
+    def test_fr1_the_arm64_hyper_v_initcall_returns_where_there_is_no_hyper_v(self):
+        # The WSL kernel moved Hyper-V detection to hyperv_early_init() and left hyperv_init()
+        # without the check, so on Apple's Virtualization framework the arm64 guest went on to
+        # Hyper-V hypercalls and stopped before it printed anything.
+        patch = (PATCHES / "hyperv-init-needs-hyperv.patch").read_text()
+        self.assertIn("+++ b/arch/arm64/hyperv/mshyperv.c", patch)
+        self.assertIn("+\tif (!hyperv_initialized)\n+\t\treturn 0;", patch)
+        hunk = re.search(r"^@@ -\d+,(\d+) \+\d+,(\d+) @@.*\n((?:[ +-].*\n?)*)", patch, re.MULTILINE)
+        old, new, body = int(hunk.group(1)), int(hunk.group(2)), hunk.group(3).splitlines()
+        self.assertEqual(sum(1 for line in body if line[:1] in " -"), old)
+        self.assertEqual(sum(1 for line in body if line[:1] in " +"), new)
+
     def test_fr28_both_families_can_redirect_dns_queries_to_the_guests_stub(self):
         # dsa-channeld --dns-redirect fills a nat OUTPUT chain for IPv4 and IPv6 that sends
         # port 53 to the daemon's stub, which hands each query to the host's resolver.
@@ -462,6 +474,14 @@ class AndroidKernelConfigTests(unittest.TestCase):
         # verity device before any module can load, so the hash must be built in.
         config = CONFIG.read_text()
         self.assertIn("CONFIG_CRYPTO_BLAKE2B=y", config)
+
+    def test_fr1_dm_verity_is_built_in_because_first_stage_loads_no_modules(self):
+        # WSL's arm64 configuration builds dm-verity as a module (its x86_64 one builds it in).
+        # The guest ships no modules, so without these lines first stage init stops with
+        # "verity: unknown target type" and reboots.
+        config = CONFIG.read_text().splitlines()
+        self.assertIn("CONFIG_DM_VERITY=y", config)
+        self.assertIn("CONFIG_DM_BUFIO=y", config)
 
     def test_pr3_hyper_v_socket_transport_is_built_into_the_guest_kernel(self):
         config = CONFIG.read_text()
