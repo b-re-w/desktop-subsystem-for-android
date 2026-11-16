@@ -110,6 +110,8 @@ git -C $GfxstreamDir clean -fdx
 # app that outlived a renderer restart) ends the guest's whole stream instead of failing.
 # Without 0043 every buffer a guest makes an image of fails to import on macOS, because MoltenVK
 # refuses to bind the guest's image to memory dedicated to the ColorBuffer's own image.
+# Without 0044 a buffer the last Android left behind is opened under a new buffer's number, at
+# the old size, and a window stays black.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -151,7 +153,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0040-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0041-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0042-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0043-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0043-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0044-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName
