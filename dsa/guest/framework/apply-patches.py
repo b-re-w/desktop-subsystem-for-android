@@ -7,7 +7,9 @@
 Each patches/<project>/<android>/NNNN-*.patch applies with `git apply` in <tree>/<project>, in
 order. A patch that does not apply exactly stops it: a patch applied in part, or with fuzz to
 other source than it was made for, is not the change that was reviewed. With --check nothing
-is changed. <tree>/.dsa-patches.json then lists what was applied.
+is changed: the patches apply in order as in a build, since a later patch may change lines an
+earlier one wrote, and are then taken back in reverse. <tree>/.dsa-patches.json then lists
+what was applied.
 """
 
 import argparse
@@ -27,16 +29,17 @@ class PatchError(RuntimeError):
     pass
 
 
-def git_apply(project_dir, patch, check):
+def git_apply(project_dir, patch, reverse=False):
     # The project folder is no repository of its own (fetch-source.py drops each .git). Git must
     # not find one around it either: inside another repository, git apply would skip every
     # path outside the folder it runs in and report success.
     env = dict(os.environ, GIT_CEILING_DIRECTORIES=str(project_dir.parent))
-    args = ["git", "apply", "--verbose"] + (["--check"] if check else []) + [str(patch)]
+    args = ["git", "apply", "--verbose"] + (["--reverse"] if reverse else []) + [str(patch)]
     result = subprocess.run(args, cwd=project_dir, env=env, capture_output=True, text=True)
     if result.returncode != 0:
-        raise PatchError(f"{patch.name} does not apply to {project_dir}:\n{result.stderr.strip()}")
-    applied = [line for line in result.stderr.splitlines() if line.startswith(("Applied patch", "Checking patch"))]
+        verb = "be taken back from" if reverse else "apply to"
+        raise PatchError(f"{patch.name} does not {verb} {project_dir}:\n{result.stderr.strip()}")
+    applied = [line for line in result.stderr.splitlines() if line.startswith("Applied patch")]
     if not applied:
         raise PatchError(f"{patch.name} changed nothing in {project_dir}")
     return applied
@@ -52,16 +55,24 @@ def apply_patches(android, top, check=False, patches=framework_lock.PATCHES, nat
     if not found:
         raise PatchError(f"there are no patches for {android}")
     done = []
-    for project, patch in found:
-        if native and framework_lock.java_only(patch):
-            print(f"{project}: {patch.name} changes Java sources only, for the services build", flush=True)
-            continue
-        project_dir = top / project
-        if not project_dir.is_dir():
-            raise PatchError(f"{project} is not in {top}, so {patch.name} has nothing to apply to")
-        for line in git_apply(project_dir, patch, check):
-            print(f"{project}: {line}", flush=True)
-        done.append((project, patch.name, hashlib.sha256(patch.read_bytes()).hexdigest()))
+    applied = []
+    try:
+        for project, patch in found:
+            if native and framework_lock.java_only(patch):
+                print(f"{project}: {patch.name} changes Java sources only, for the services build", flush=True)
+                continue
+            project_dir = top / project
+            if not project_dir.is_dir():
+                raise PatchError(f"{project} is not in {top}, so {patch.name} has nothing to apply to")
+            for line in git_apply(project_dir, patch):
+                print(f"{project}: {line}", flush=True)
+            applied.append((project_dir, patch))
+            done.append((project, patch.name, hashlib.sha256(patch.read_bytes()).hexdigest()))
+    finally:
+        # A check leaves the tree as it found it, also when a patch stopped it.
+        if check:
+            for project_dir, patch in reversed(applied):
+                git_apply(project_dir, patch, reverse=True)
     return done
 
 
