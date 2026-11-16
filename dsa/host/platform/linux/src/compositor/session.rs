@@ -836,7 +836,7 @@ impl Main {
     /// the IDs of the windows the tasks show.
     fn changes(&mut self, changes: Vec<WindowChange>) {
         let changes = self.resets.changes(changes);
-        self.to_desktop(changes);
+        self.send_to_desktop(changes);
     }
 
     /// The task rules' changes after the guest's tasks changed. A task that ended soon after a
@@ -867,11 +867,11 @@ impl Main {
                 self.requests(requests);
             }
         }
-        self.to_desktop(outcome.changes);
+        self.send_to_desktop(outcome.changes);
     }
 
     /// Changes by window ID, to the desktop's windows.
-    fn to_desktop(&mut self, changes: Vec<WindowChange>) {
+    fn send_to_desktop(&mut self, changes: Vec<WindowChange>) {
         for change in changes {
             let opened = match &change {
                 WindowChange::Open { task_id, .. } => Some(*task_id),
@@ -1046,7 +1046,7 @@ impl Main {
                 Report::Task(report) => self.reported(report, now),
                 Report::CloseKept(close) => {
                     log("a window kept through a GPU reset was closed before its app came back");
-                    self.to_desktop(vec![close]);
+                    self.send_to_desktop(vec![close]);
                 }
                 Report::Dropped => {}
             },
@@ -1185,7 +1185,7 @@ impl Main {
                 "{} task window(s) kept through a GPU reset close: their app did not come back",
                 late.len()
             ));
-            self.to_desktop(late);
+            self.send_to_desktop(late);
         }
         let shown = self.shown.shown_among(&self.windows.windows());
         let Some(stall) = self.stall.tick(now, &shown, self.frames_shown) else {
