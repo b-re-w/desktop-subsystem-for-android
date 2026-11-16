@@ -10,7 +10,9 @@
 #   vector.apk         "Vector", com.example.vector, an adaptive icon (a colour and a vector
 #                      drawable)
 #   many.apk           "Many", com.example.many 3.20.8107, 40 permissions, native code only for
-#                      armeabi-v7a, an icon with transparent corners and a colour profile
+#                      a 64-bit ABI that is not the PC's own (MANY_ABI, arm64-v8a unless set;
+#                      the guest runs no 32-bit code, so a 32-bit ABI would be refused, not
+#                      warned about), an icon with transparent corners and a colour profile
 #
 # and beside each, <name>.sha256: the signer's SHA-256 digest as apksigner prints it.
 #
@@ -171,6 +173,6 @@ permissions="CAMERA RECORD_AUDIO ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION REA
   CHANGE_NETWORK_STATE FOREGROUND_SERVICE MODIFY_AUDIO_SETTINGS QUERY_ALL_PACKAGES RECEIVE_BOOT_COMPLETED
   REQUEST_INSTALL_PACKAGES SCHEDULE_EXACT_ALARM SYSTEM_ALERT_WINDOW USE_BIOMETRIC USE_FULL_SCREEN_INTENT
   VIBRATE WAKE_LOCK WRITE_SETTINGS"
-no_crunch=1 native_abi=armeabi-v7a app many com.example.many Many 8107 3.20.8107 notes "$many_res"
+no_crunch=1 native_abi="${MANY_ABI:-arm64-v8a}" app many com.example.many Many 8107 3.20.8107 notes "$many_res"
 
 rm -rf "$work"
