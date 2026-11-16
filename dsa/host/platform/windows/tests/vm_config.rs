@@ -552,7 +552,7 @@ fn fr21_the_kernel_keeps_its_last_log_on_the_pstore_disk_not_in_ram() {
     assert!(
         cmdline.contains(&format!(
             "pstore_blk.blkdev=PARTUUID={}",
-            dsa_host_windows::pstore_disk::PARTITION_UUID
+            dsa_host_core::disk::pstore::PARTITION_UUID
         )),
         "{cmdline}"
     );

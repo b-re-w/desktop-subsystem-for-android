@@ -420,7 +420,7 @@ impl LinuxVmLauncher {
             self.account.make_dir(logs)?;
         }
         if let Some(pstore) = &self.pstore_disk {
-            crate::pstore::ensure(pstore)?;
+            dsa_host_core::disk::pstore::ensure_raw(pstore)?;
             self.account.own(pstore)?;
         }
         // The add-on disk this start attaches: a change the user made while Android ran takes

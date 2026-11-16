@@ -16,7 +16,8 @@
 //! template holds, and holes for the rest. The guest's discards punch holes in it again, so it
 //! takes only what Android has written. A user whose disk an earlier DSA made as qcow2
 //! (`data.qcow2`) keeps it; crosvm reads qcow2 too. The image version it was made from or
-//! brought to is recorded beside it (`data.version`).
+//! brought to is recorded beside it (`data.image-version`), and kept up to date by the host
+//! core's algorithm ([`dsa_host_core::disk`]), the same as on every host.
 
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
@@ -367,26 +368,32 @@ pub fn image_files(
     })
 }
 
-/// The file beside a user's disk that records the image version it holds.
-pub fn version_file(disk: &Path) -> PathBuf {
+/// The file beside a user's disk that earlier versions recorded the image version in.
+fn legacy_version_file(disk: &Path) -> PathBuf {
     disk.with_extension("version")
 }
 
-/// The image version the user's disk holds, if recorded.
-pub fn disk_version(disk: &Path) -> Option<String> {
-    std::fs::read_to_string(version_file(disk))
-        .ok()
-        .map(|text| text.trim().to_string())
-        .filter(|text| !text.is_empty())
+/// Moves the image version an earlier version of DSA recorded beside `disk` (`data.version`)
+/// to where the host core reads it (`data.image-version`), so the disk keeps its version.
+pub fn adopt_legacy_version_record(disk: &Path) {
+    let (old, new) = (
+        legacy_version_file(disk),
+        dsa_host_core::disk::version_file(disk),
+    );
+    if old.exists() && !new.exists() {
+        let _ = std::fs::rename(&old, &new);
+    }
 }
 
 #[cfg(target_os = "linux")]
-pub use making::{bring_disk_to, make_disk};
+pub use making::{bring_disk_to, make_disk, UserDisks};
 
 #[cfg(target_os = "linux")]
 mod making {
     use super::*;
     use crate::users::Account;
+    use dsa_host_core::disk::DiskBackend;
+    use dsa_host_unix::raw_disk::RawDiskBackend;
 
     /// Makes a new disk at `disk` for `account`: a sparse raw copy of `template`, or without
     /// one an empty sparse disk of `size_gb`. Only the user may read or write it.
@@ -414,32 +421,43 @@ mod making {
         account.own(disk)
     }
 
-    /// Makes sure `account`'s disk holds the image `version`: a missing disk is made from
-    /// `template`, and the version is recorded.
-    ///
-    /// The images made by the image build keep Android on the separate system disk, so a
-    /// user's disk holds only their data and needs nothing copied when the image changes. A
-    /// one-disk image (`disk.vhdx`) keeps Android on the user's disk; such a disk made at an
-    /// older version is refused rather than booted with mismatched partitions.
+    /// Brings `account`'s disk to image `version` by the host core's algorithm: a missing disk
+    /// is made from `template`, a disk of another version gets the template's Android
+    /// partitions (a one-disk image) or loses the stale ones (a two-disk image), and the
+    /// user's data stays. A qcow2 disk an earlier DSA made is kept as it is, since its
+    /// partitions are not read here, and only its version is recorded.
     pub fn bring_disk_to(
         account: &Account,
         disk: &Path,
         template: &Path,
-        two_disks: bool,
         version: &str,
     ) -> Result<(), String> {
-        if !disk.exists() {
-            make_disk(account, disk, Some(template), 0)?;
-        } else if !two_disks {
-            if let Some(held) = disk_version(disk).filter(|held| held != version) {
-                return Err(format!(
-                    "{} holds Android {held}, and the image {version} keeps Android on the \
-                     same disk; reset Android's data (dsa reset) to start from {version}",
-                    disk.display()
-                ));
-            }
+        adopt_legacy_version_record(disk);
+        let backend = UserDisks(account);
+        if disk.exists() && DiskFormat::of(disk) == DiskFormat::Qcow2 {
+            return dsa_host_core::disk::record_disk_image_version(&backend, disk, version);
         }
-        account.write_private(&version_file(disk), version.as_bytes())
+        dsa_host_core::disk::bring_disk_to(&backend, disk, template, version)
+    }
+
+    /// The disks of `account`, as the host core's disk algorithm opens and makes them: raw
+    /// files, made by [`make_disk`] and the version record written as the user.
+    pub struct UserDisks<'a>(pub &'a Account);
+
+    impl DiskBackend for UserDisks<'_> {
+        type Device = <RawDiskBackend as DiskBackend>::Device;
+
+        fn open(&self, disk: &Path, write: bool) -> Result<Self::Device, String> {
+            RawDiskBackend.open(disk, write)
+        }
+
+        fn create(&self, disk: &Path, template: Option<&Path>, size_gb: u32) -> Result<(), String> {
+            make_disk(self.0, disk, template, size_gb)
+        }
+
+        fn write_beside(&self, path: &Path, bytes: &[u8]) -> Result<(), String> {
+            self.0.write_private(path, bytes)
+        }
     }
 }
 
@@ -599,10 +617,23 @@ mod tests {
     }
 
     #[test]
-    fn fr19_the_disks_version_is_kept_beside_it() {
+    fn fr19_the_version_an_earlier_dsa_recorded_beside_the_disk_is_kept() {
+        let dir = folder("legacy-version", &[]);
+        let disk = dir.join("data.img");
+        std::fs::write(dir.join("data.version"), "16.0.0-1").unwrap();
+        adopt_legacy_version_record(&disk);
         assert_eq!(
-            version_file(Path::new("/h/.local/share/dsa/data.qcow2")),
-            PathBuf::from("/h/.local/share/dsa/data.version")
+            dsa_host_core::disk::disk_image_version(&disk).as_deref(),
+            Some("16.0.0-1")
         );
+        assert!(!dir.join("data.version").exists());
+        // A record the host core wrote is not replaced by an old one.
+        std::fs::write(dir.join("data.version"), "old").unwrap();
+        adopt_legacy_version_record(&disk);
+        assert_eq!(
+            dsa_host_core::disk::disk_image_version(&disk).as_deref(),
+            Some("16.0.0-1")
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

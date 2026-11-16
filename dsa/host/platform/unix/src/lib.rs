@@ -4,6 +4,9 @@
 //! reads each client's user ID from the kernel (`SO_PEERCRED` on Linux, `getpeereid` on
 //! macOS), so it never trusts a user named in a message.
 //!
+//! [`raw_disk`] is the user's Android disk as a raw file, the host core's disk backend for
+//! those hosts.
+//!
 //! [`vhdx`] reads the image's VHDX disks into raw disk images, for the VMMs that attach
 //! only raw disks.
 //!
@@ -30,6 +33,7 @@ pub mod dns_resolver;
 pub mod fd_frames;
 pub mod https_get;
 pub mod paths;
+pub mod raw_disk;
 #[cfg(unix)]
 pub mod renderer_launch;
 #[cfg(unix)]

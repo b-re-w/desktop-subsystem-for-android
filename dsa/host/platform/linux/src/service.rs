@@ -399,6 +399,7 @@ pub fn create_user_android(
                 .as_deref()
                 .map(crate::image::raw_disk)
                 .transpose()?;
+            crate::image::adopt_legacy_version_record(&disk);
             // A disk holding a newer Android's data than this image, after the user chose an
             // older version and agreed to erase it, starts afresh.
             if let Some(updates) = &updates {
@@ -410,18 +411,14 @@ pub fn create_user_android(
                     .android_major;
                 dsa_host_core::data_reset::erase_if_newer(
                     &disk,
-                    &crate::image::version_file(&disk),
+                    &dsa_host_core::disk::version_file(&disk),
                     major,
                 )?;
             }
             match (&image.disk_template, &version) {
-                (Some(template), Some(version)) => bring_disk_to(
-                    &account,
-                    &disk,
-                    template,
-                    image.system_image.is_some(),
-                    version,
-                )?,
+                (Some(template), Some(version)) => {
+                    bring_disk_to(&account, &disk, template, version)?
+                }
                 (template, _) if !disk.exists() => make_disk(
                     &account,
                     &disk,
@@ -1022,13 +1019,13 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
                 reset_config.data_disk_size_gb,
             )?;
             match version {
-                Some(version) => {
-                    account.write_private(&crate::image::version_file(disk), version.as_bytes())
-                }
+                Some(version) => account
+                    .write_private(&dsa_host_core::disk::version_file(disk), version.as_bytes()),
                 None => Ok(()),
             }
         }),
     )
+    .with_beside("image-version")
     .with_beside("version");
     let identity_config = config.clone();
     let translator_config = config.clone();

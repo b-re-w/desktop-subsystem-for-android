@@ -752,7 +752,7 @@ impl GuestLauncher for AndroidVmLauncher {
         // The guest kernel's last log of the boot before is on this disk; one that is missing
         // or damaged is made again, empty, and Android starts either way.
         if let Some(pstore) = &config.pstore_disk {
-            if let Err(why) = crate::pstore_disk::ensure(pstore) {
+            if let Err(why) = dsa_host_core::disk::pstore::ensure(pstore) {
                 eprintln!("{why}; Android starts without its last log");
                 config.pstore_disk = None;
             }

@@ -220,7 +220,7 @@ impl Planner {
             let disk = self.user.disk();
             dsa_host_core::data_reset::erase_if_newer(
                 &disk,
-                &disk.with_extension("image-version"),
+                &dsa_host_core::disk::version_file(&disk),
                 major,
             )?;
         }
