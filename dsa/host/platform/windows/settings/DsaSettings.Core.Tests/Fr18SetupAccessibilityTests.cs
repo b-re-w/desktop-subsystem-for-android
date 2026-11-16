@@ -99,9 +99,16 @@ public class Fr18SetupAccessibilityTests
         {
             Assert.True(IsNamed(image, code), (Name(image) ?? "an image") + " has no UI Automation name");
         }
-        // The logo's name is in both languages.
+        // The logo's name is in every interface language: English first, then Korean, and one
+        // text for each of the other twelve.
         var text = File.ReadAllText(Find("Text.cs"));
-        Assert.Matches(@"Logo => Pick\(""Desktop Subsystem for Android\\u2122 logo"", ""Desktop Subsystem for Android\\u2122 로고""\)", text);
+        var logo = Regex.Match(text, @"Logo => Pick\((?<texts>[^;]*)\);");
+        Assert.True(logo.Success, "Text.Logo is not a Pick of its names");
+        var names = Regex.Matches(logo.Groups["texts"].Value, "\"([^\"]*)\"").Select(m => m.Groups[1].Value).ToList();
+        Assert.Equal(14, names.Count);
+        Assert.Equal("Desktop Subsystem for Android™ logo", names[0]);
+        Assert.Equal("Desktop Subsystem for Android™ 로고", names[1]);
+        Assert.All(names, name => Assert.Contains("Desktop Subsystem for Android™", name));
         // The Browse buttons say which folder each one picks.
         Assert.Contains("AutomationProperties.SetHelpText(this.BrowseProgram, Text.BrowseProgramTitle)", code);
         Assert.Contains("AutomationProperties.SetHelpText(this.BrowseData, Text.BrowseDataTitle)", code);
