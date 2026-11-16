@@ -43,7 +43,9 @@ class ReadBufferPatchTests(unittest.TestCase):
         consume = self.source[self.source.index("    if (m_validData == 0 && m_shrinkDue) {"):]
         self.assertIn("shrinkWhenEmpty();", consume)
         shrink = self.source[self.source.index("void ReadBuffer::shrinkWhenEmpty() {"):]
-        shrink = shrink[:shrink.index("\n}")]
+        # The function's closing brace is a context line of the diff, not an added one, so
+        # it is not in the added text: cut at a brace if there is one, else take the rest.
+        shrink = shrink.split("\n}")[0]
         self.assertIn("if (m_validData == 0 && m_shrinkDue) {", self.source)
         self.assertIn("malloc(m_initialSize)", shrink)
         self.assertIn("free(m_buf);", shrink)

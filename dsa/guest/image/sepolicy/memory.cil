@@ -250,7 +250,6 @@
 (typeattributeset domain (dsa_zram_extra))
 (allow init dsa_zram_extra (process (transition siginh rlimitinh)))
 (dontaudit init dsa_zram_extra (process (noatsecure)))
-(allow dsa_zram_extra dsa_channeld_exec (file (entrypoint read getattr map execute open)))
 (allow dsa_zram_extra init (fd (use)))
 (allow dsa_zram_extra kmsg_device (chr_file (write append getattr)))
 (allow dsa_zram_extra kmsg_debug_device (chr_file (write append getattr)))

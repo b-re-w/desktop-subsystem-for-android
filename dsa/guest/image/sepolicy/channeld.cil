@@ -287,3 +287,7 @@
 (allow dsa_memory_report cgroup_v2 (file (read open getattr)))
 (allow dsa_memory_report sysfs (dir (search)))
 (allow dsa_memory_report sysfs (file (read open getattr)))
+
+; The second zram device's helper (dsa_zram_extra, memory.cil) runs the daemon's binary, so its
+; entrypoint rule is here, with the type: an image without the daemon has neither.
+(allow dsa_zram_extra dsa_channeld_exec (file (entrypoint read getattr map execute open)))

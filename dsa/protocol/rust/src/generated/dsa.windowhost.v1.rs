@@ -473,26 +473,26 @@ pub struct SetShownTask {
 /// manager, which has the task's frame texture on its own device, owns each window's
 /// swapchains, each bound to a DirectComposition surface handle it places in the window host's
 /// process. `op` says what is asked (the SURFACE_OP_ values of the Rust crate):
-///   1 present frame: copy the frame of texture `texture_id` (its top-left `width` x `height`
-///     pixels) into the frame swapchain, which has `buffer_count` buffers of the texture's
-///     size, and present it unless `keep` (then it waits in the back buffer). `band` is the
-///     height of the title bar's band in the frame's pixels (0 for none), sampled when
-///     `probe_band`; `capture` reads the frame back; `press` starts watching the area around a
-///     traced press for its first visible change.
-///   2 present kept: present the back buffer, whose top-left `width` x `height` pixels hold
-///     the frame kept by an earlier present frame with `keep`.
-///   3 caption: draw `pixels` (premultiplied BGRA rows, `width` x `height`) into the caption
-///     swapchain and present it.
-///   4 splash: draw the splash of a `width` x `height` client area: background `colour`
-///     (0xAARRGGBB), the icon in `pixels` (premultiplied BGRA, `icon_width` x `icon_height`,
-///     none when empty) at `dpi`.
-///   5 fill: fill the one-pixel fill swapchain with `colour` (0xAARRGGBB, opaque).
-///   6 release frame: let the frame swapchain go (the window was minimized).
-///   7 release all: let every swapchain of the window go (the window closed).
-///   8 read frame: read the newest frame back.
-///   9 tick: read what waits to be read (the band's copy, the frame statistics) and recover
-///     from a GPU reset.
-///   10 release splash: let the splash swapchain go (the first frame is shown).
+///    1 present frame: copy the frame of texture `texture_id` (its top-left `width` x `height`
+///      pixels) into the frame swapchain, which has `buffer_count` buffers of the texture's
+///      size, and present it unless `keep` (then it waits in the back buffer). `band` is the
+///      height of the title bar's band in the frame's pixels (0 for none), sampled when
+///      `probe_band`; `capture` reads the frame back; `press` starts watching the area around a
+///      traced press for its first visible change.
+///    2 present kept: present the back buffer, whose top-left `width` x `height` pixels hold
+///      the frame kept by an earlier present frame with `keep`.
+///    3 caption: draw `pixels` (premultiplied BGRA rows, `width` x `height`) into the caption
+///      swapchain and present it.
+///    4 splash: draw the splash of a `width` x `height` client area: background `colour`
+///      (0xAARRGGBB), the icon in `pixels` (premultiplied BGRA, `icon_width` x `icon_height`,
+///      none when empty) at `dpi`.
+///    5 fill: fill the one-pixel fill swapchain with `colour` (0xAARRGGBB, opaque).
+///    6 release frame: let the frame swapchain go (the window was minimized).
+///    7 release all: let every swapchain of the window go (the window closed).
+///    8 read frame: read the newest frame back.
+///    9 tick: read what waits to be read (the band's copy, the frame statistics) and recover
+///      from a GPU reset.
+///    10 release splash: let the splash swapchain go (the first frame is shown).
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SurfaceCall {
     #[prost(int32, tag = "1")]

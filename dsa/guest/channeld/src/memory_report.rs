@@ -192,9 +192,13 @@ pub fn process(pid: u32, status: &str, cmdline: &[u8]) -> Option<Process> {
 }
 
 /// The name kernel threads of one kind share: the part before any `/` (`kworker/u8:3-events`,
-/// `kdmflush/253:4`), without a trailing number (`loop12`).
+/// `kdmflush/253:4`), without a trailing number (`loop12`). A name with a `/` keeps its head
+/// whole, because there the digits belong to the name (`jbd2/dm-12-8`).
 pub fn kernel_thread_kind(name: &str) -> String {
     let head = name.split('/').next().unwrap_or(name);
+    if head.len() != name.len() {
+        return head.to_string();
+    }
     let kind = head.trim_end_matches(|c: char| c.is_ascii_digit());
     let kind = if kind.is_empty() { head } else { kind };
     kind.to_string()
