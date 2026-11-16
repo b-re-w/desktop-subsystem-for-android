@@ -6,4 +6,5 @@
 //! here, so a translation is corrected in one place.
 
 pub mod caption;
+pub mod root_approval;
 pub mod window_menu;
