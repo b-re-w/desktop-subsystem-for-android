@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 
 use dsa_host_core::app_windows::AppWindows;
 use dsa_host_core::compositor::frame_stall::{restart_in_background, Stall};
+use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue, PACE_TICK};
 use dsa_host_core::compositor::window_hosts::{to_wire, HostId, ToHost};
 use dsa_host_core::compositor::GraphicsStreamKind;
 use dsa_host_core::guest_display::display_or_smallest;
@@ -27,7 +28,6 @@ use super::launch::{installed_window_host, AppLauncher};
 use super::log;
 use super::manager::{Manager, ManagerEvent, Platform, Route};
 use super::present::Presenter;
-use super::resize_queue::ResizeQueue;
 use crate::compositor::surface_port::SurfacePorts;
 use crate::compositor::window_host::{support_folder, window_manager_socket};
 use crate::gfx::client::RendererClient;
@@ -325,18 +325,19 @@ fn serve_requests(
     host_api: PathBuf,
     requests: Receiver<TaskRequest>,
     events: Sender<ManagerEvent>,
+    drawn: DrawnFrames,
 ) {
     let _ = thread::Builder::new()
         .name("dsa-wm-requests".into())
         .spawn(move || {
             let mut client: Option<HostApiClient> = None;
-            let mut queue = ResizeQueue::new();
+            let mut queue = ResizeQueue::new(drawn);
             loop {
                 // Sizes held for a frame are looked at again every few milliseconds; with
                 // none held, the next request is waited for.
                 let mut incoming = Vec::new();
                 if queue.waiting() {
-                    match requests.recv_timeout(Duration::from_millis(4)) {
+                    match requests.recv_timeout(PACE_TICK) {
                         Ok(next) => incoming.push(next),
                         Err(RecvTimeoutError::Timeout) => {}
                         Err(RecvTimeoutError::Disconnected) => break,
@@ -422,7 +423,8 @@ fn serve(places: Places, stop: Arc<AtomicBool>) -> Result<(), String> {
         }
     };
     let links: Links = Arc::default();
-    let presenter = Arc::new(Presenter::new(Arc::clone(&links), ports));
+    let drawn = DrawnFrames::new();
+    let presenter = Arc::new(Presenter::new(Arc::clone(&links), ports, drawn.clone()));
     // The renderer runs in a process of its own, dsa-gfx, which this process starts and
     // starts again whenever it ends: a crash in the renderer or MoltenVK then ends only that
     // process, and the app windows keep their last frame. It serves the guest's streams on the
@@ -460,7 +462,7 @@ fn serve(places: Places, stop: Arc<AtomicBool>) -> Result<(), String> {
         Arc::clone(&stop),
     )?;
     let (requests, to_send) = channel();
-    serve_requests(places.host_api.clone(), to_send, events.clone());
+    serve_requests(places.host_api.clone(), to_send, events.clone(), drawn);
     watch_tasks(places.host_api.clone(), events.clone());
     watch_app_windows(places.host_api.clone(), events.clone(), Arc::clone(&stop));
     drop(events);
