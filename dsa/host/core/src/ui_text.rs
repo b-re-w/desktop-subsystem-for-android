@@ -6,3 +6,4 @@
 //! here, so a translation is corrected in one place.
 
 pub mod caption;
+pub mod window_menu;
