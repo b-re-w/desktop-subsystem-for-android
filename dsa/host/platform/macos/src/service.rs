@@ -27,6 +27,7 @@ use dsa_host_core::guest_display::{
 };
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid};
+use dsa_host_core::memory::{log_memory, HostMemory};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
@@ -810,12 +811,13 @@ pub fn serve(
         }),
     )
     .with_beside("image-version");
+    let host_memory: Arc<dyn HostMemory> = Arc::new(MacHostMemory { vm: process });
     let logs_user = user.clone();
     let identity_shared = Arc::clone(&shared);
     let mut service = HostApiService::new(androids.clone(), build)
         .with_data_reset(Arc::new(reset))
         .with_settings(Arc::clone(&settings), facts)
-        .with_host_memory(Arc::new(MacHostMemory { vm: process }))
+        .with_host_memory(Arc::clone(&host_memory))
         .with_widget_placements(Arc::new(dsa_host_core::widgets::FileWidgetPlacements::new(
             config.settings_dir(&user),
         )))
@@ -858,6 +860,17 @@ pub fn serve(
                     .and_then(|(dir, _)| dsa_host_core::arm_translation::default_package(&dir))
             })
         });
+    // The memory of the user's Android is logged every few minutes, as on the other hosts.
+    {
+        let androids = androids.clone();
+        let (worker_build, stop) = (build.to_string(), Arc::clone(&stop));
+        if let Err(error) = thread::Builder::new()
+            .name("dsa-memory-log".into())
+            .spawn(move || log_memory(&*androids, &*host_memory, &worker_build, &stop))
+        {
+            eprintln!("{build}: starting the memory log failed: {error}");
+        }
+    }
     // Google Play, for a user who asks: downloaded from LiteGapps and made ready in the
     // user's own folder.
     service = service.with_gapps(dsa_host_core::gapps::Source::new(
