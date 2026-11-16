@@ -31,6 +31,7 @@ use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{FileSettings, SettingsStore};
+use dsa_host_core::update::current::{current_image, prune_image_cache};
 use dsa_host_core::update::service::{
     check_alerting, follow_waiting_image, next_image_check, CheckNow, StoreVersions, UpdateNotices,
     UpdatingAndroid, WAITING_IMAGE_CHECK,
@@ -138,41 +139,6 @@ fn window_manager(config: &MacHostConfig) -> Option<ProgramWindowManager> {
     })
 }
 
-/// The image the next boot uses: its folder and version.
-fn current_image(
-    config: &MacHostConfig,
-    store: Option<&ImageStore>,
-) -> Result<(PathBuf, String), String> {
-    if let Some(store) = store {
-        let current = store.state().map_err(|e| e.to_string())?.current;
-        return Ok((store.image_dir(&current.version), current.version));
-    }
-    let dir = config
-        .image_dir
-        .clone()
-        .ok_or("the configuration names no image to boot")?;
-    let version = std::fs::read_to_string(dir.join("image.json"))
-        .ok()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-        .and_then(|manifest| manifest["version"].as_str().map(str::to_string))
-        .unwrap_or_else(|| "local".into());
-    Ok((dir, version))
-}
-
-/// Removes the raw copies of images other than `keep`.
-fn prune_image_cache(user: &UserFolders, keep: &str) {
-    let Some(cache) = user.image_cache(keep).parent().map(Path::to_path_buf) else {
-        return;
-    };
-    if let Ok(entries) = std::fs::read_dir(&cache) {
-        for entry in entries.flatten() {
-            if entry.file_name().to_string_lossy() != keep {
-                let _ = std::fs::remove_dir_all(entry.path());
-            }
-        }
-    }
-}
-
 /// Makes the user's disk hold image `version` from its template in `dir`, as a fresh disk
 /// for a data reset or at a first boot.
 fn bring_user_disk(user: &UserFolders, dir: &Path, version: &str) -> Result<(), String> {
@@ -193,7 +159,8 @@ struct Planner {
 
 impl Planner {
     fn plan(&self) -> Result<BootPlan, String> {
-        let (dir, version) = current_image(&self.config, self.store.as_deref())?;
+        let current = current_image(self.store.as_deref(), self.config.image_dir.as_deref())?;
+        let (dir, version) = (current.dir.clone(), current.cache_key().to_string());
         let files = image_files(&dir, GuestArch::HOST)?;
         let mut head = vec![0u8; 0x1000];
         let read = std::fs::File::open(&files.kernel)
@@ -210,12 +177,7 @@ impl Planner {
         let template = raw_disk(&files.disk_template, &cache)?;
         // A disk holding a newer Android's data than this image, after the user chose an older
         // version and agreed to erase it, starts afresh.
-        if let Some(store) = &self.store {
-            let major = store
-                .state()
-                .map_err(|e| e.to_string())?
-                .current
-                .android_major;
+        if let Some(major) = current.android_major {
             let disk = self.user.disk();
             dsa_host_core::data_reset::erase_if_newer(
                 &disk,
@@ -224,7 +186,9 @@ impl Planner {
             )?;
         }
         bring_disk_to(&self.user.disk(), &template, &version)?;
-        prune_image_cache(&self.user, &version);
+        if let Some(cache) = self.user.image_cache(&version).parent() {
+            prune_image_cache(cache, &version);
+        }
         let mut disks = Vec::new();
         if let Some(system) = &files.system_disk {
             disks.push(Disk {
@@ -799,12 +763,14 @@ pub fn serve(
             Box::new(move |_: &str| Ok(disk.clone()))
         },
         Box::new(move |disk: &Path| {
-            let (dir, version) =
-                current_image(&reset_shared.config, reset_shared.store.as_deref())?;
+            let current = current_image(
+                reset_shared.store.as_deref(),
+                reset_shared.config.image_dir.as_deref(),
+            )?;
             if disk != reset_shared.user.disk() {
                 return Err(format!("{} is not this user's disk", disk.display()));
             }
-            bring_user_disk(&reset_shared.user, &dir, &version)
+            bring_user_disk(&reset_shared.user, &current.dir, current.cache_key())
         }),
     )
     .with_beside("image-version");
@@ -839,9 +805,12 @@ pub fn serve(
         .with_device_identities(
             Arc::new(FileDeviceIdentities::new(config.settings_dir(&user))),
             Arc::new(move |_: &str| {
-                current_image(&identity_shared.config, identity_shared.store.as_deref())
-                    .ok()
-                    .and_then(|(dir, _)| ImageBuild::from_image_dir(&dir))
+                current_image(
+                    identity_shared.store.as_deref(),
+                    identity_shared.config.image_dir.as_deref(),
+                )
+                .ok()
+                .and_then(|current| ImageBuild::from_image_dir(&current.dir))
             }),
         )
         // The defaults the settings show are what this Mac says it is now.
@@ -851,9 +820,11 @@ pub fn serve(
         .with_default_arm_translation({
             let shared = Arc::clone(&shared);
             Arc::new(move |_: &str| {
-                current_image(&shared.config, shared.store.as_deref())
+                current_image(shared.store.as_deref(), shared.config.image_dir.as_deref())
                     .ok()
-                    .and_then(|(dir, _)| dsa_host_core::arm_translation::default_package(&dir))
+                    .and_then(|current| {
+                        dsa_host_core::arm_translation::default_package(&current.dir)
+                    })
             })
         });
     // Google Play, for a user who asks: downloaded from LiteGapps and made ready in the

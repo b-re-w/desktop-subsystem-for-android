@@ -40,6 +40,7 @@ use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{FileSettings, SettingsStore};
+use dsa_host_core::update::current::current_image;
 use dsa_host_core::update::program_service::{
     ProgramStatus, ProgramUpdates, Timing, WithProgramStatus,
 };
@@ -464,28 +465,32 @@ pub fn create_user_android(
             AndroidVmLauncher::with_source(
                 &user.vm_name,
                 Box::new(move || {
-                    let current = store.state().map_err(|e| e.to_string())?.current;
-                    let files = config.image_files(Some(&store.image_dir(&current.version)));
+                    let current = current_image(Some(store.as_ref()), None)?;
+                    let files = config.image_files(Some(&current.dir));
                     let mut vm = base.clone();
                     let _guard = guard_android_disk(root.as_deref(), &vm.data_disk)?;
                     // A disk holding a newer Android's data than this image, after the user
                     // chose an older version and agreed to erase it, starts afresh.
-                    dsa_host_core::data_reset::erase_if_newer(
-                        &vm.data_disk,
-                        &vm.data_disk.with_extension("image-version"),
-                        current.android_major,
-                    )?;
+                    if let Some(major) = current.android_major {
+                        dsa_host_core::data_reset::erase_if_newer(
+                            &vm.data_disk,
+                            &vm.data_disk.with_extension("image-version"),
+                            major,
+                        )?;
+                    }
                     match &files.disk_template {
                         // A new user's disk is the template; an existing one gets this
                         // image's Android and keeps the user's data.
-                        Some(template) => bring_disk_to(&vm.data_disk, template, &current.version)?,
+                        Some(template) => {
+                            bring_disk_to(&vm.data_disk, template, current.cache_key())?
+                        }
                         None => prepare_user_data_disk(&vm.data_disk, disk_size_gb)?,
                     }
                     vm.kernel = files.kernel;
                     vm.initrd = files.initrd;
                     vm.kernel_cmdline = files.kernel_cmdline;
                     vm.system_image = files.system_image;
-                    vm.image_version = Some(current.version.clone());
+                    vm.image_version = Some(current.cache_key().to_string());
                     follow_monitors(&mut vm, &owner);
                     vm.memory_mb = sizing.memory_mb();
                     traced.store(
@@ -1055,14 +1060,12 @@ fn current_image_dir(
     config: &HostConfig,
     images: Option<&ImageStore>,
 ) -> Option<std::path::PathBuf> {
-    let files = match images {
-        Some(images) => {
-            let current = images.state().ok()?.current;
-            config.image_files(Some(&images.image_dir(&current.version)))
-        }
-        None => config.image_files(None),
-    };
-    Some(files.initrd?.parent()?.to_path_buf())
+    // Without an update store the image is the one the configuration names.
+    let configured = config
+        .image_files(None)
+        .initrd
+        .and_then(|initrd| initrd.parent().map(Path::to_path_buf));
+    Some(current_image(images, configured.as_deref()).ok()?.dir)
 }
 
 /// The build of the image a user's Android starts from next, from its `image.json`.

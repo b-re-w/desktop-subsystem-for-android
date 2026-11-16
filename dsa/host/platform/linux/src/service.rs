@@ -35,6 +35,7 @@ use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::{Session, SessionState};
 use dsa_host_core::settings::{FileSettings, SettingsStore};
+use dsa_host_core::update::current::{current_image, CurrentImage};
 use dsa_host_core::update::service::{
     check_alerting, follow_waiting_image, next_image_check, CheckNow, Download, StoreVersions,
     UpdateNotices, UpdatingAndroid, WAITING_IMAGE_CHECK,
@@ -222,7 +223,11 @@ fn start_direct_mapped(
     Some(DirectMappedImages::start(
         Store::raw(folder),
         Box::new(move || {
-            let (dir, version) = current_image(&config, updates.as_ref()).ok()?;
+            let CurrentImage { dir, version, .. } = current_image(
+                updates.as_ref().map(|u| u.store.as_ref()),
+                config.image_dir.as_deref(),
+            )
+            .ok()?;
             let version = version
                 .or_else(|| dsa_host_core::direct_mapped_disk::worker::image_version(&dir))?;
             Some((version, dir))
@@ -244,7 +249,7 @@ fn check_raw_system_disk(config: &HostConfig, updates: Option<&Updates>, build: 
             if let Err(why) = lower_this_thread() {
                 eprintln!("{build}: checking the raw system disk at normal priority: {why}");
             }
-            let Ok((dir, _)) = current_image(&config, updates.as_ref()) else {
+            let Ok(CurrentImage { dir, .. }) = current_image(updates.as_ref().map(|u| u.store.as_ref()), config.image_dir.as_deref()) else {
                 return;
             };
             let had_copy = dir.join("system.img").exists();
@@ -281,30 +286,6 @@ fn lower_this_thread() -> Result<(), String> {
         }
     }
     Ok(())
-}
-
-/// The image folder the next boot starts from, and its version.
-fn current_image(
-    config: &HostConfig,
-    updates: Option<&Updates>,
-) -> Result<(PathBuf, Option<String>), String> {
-    match (updates, &config.image_dir) {
-        (Some(updates), _) => {
-            let current = updates.store.state().map_err(|e| e.to_string())?.current;
-            Ok((
-                updates.store.image_dir(&current.version),
-                Some(current.version),
-            ))
-        }
-        (None, Some(dir)) => {
-            let version = std::fs::read_to_string(dir.join("image.json"))
-                .ok()
-                .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-                .and_then(|m| m["version"].as_str().map(str::to_string));
-            Ok((dir.clone(), version))
-        }
-        (None, None) => Err("the configuration names no Android image".into()),
-    }
 }
 
 /// Reads Android's log while it boots, for what explains a boot that stalls.
@@ -390,7 +371,10 @@ pub fn create_user_android(
             user.to_string(),
         );
         Box::new(move || -> Result<BootPlan, String> {
-            let (dir, version) = current_image(&config, updates.as_ref())?;
+            let CurrentImage { dir, version, .. } = current_image(
+                updates.as_ref().map(|u| u.store.as_ref()),
+                config.image_dir.as_deref(),
+            )?;
             let mut image = image_files(&dir, config.kernel.as_deref(), &config.kernel_cmdline)?;
             // Every app starts at the density of the user's main monitor, which their window
             // manager records, so the windows that open there ask for no other.
@@ -1031,7 +1015,10 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
                 .map_err(|e| format!("reading {}: {e}", folder.display()))?
                 .uid();
             let account = Account::of_uid(owner)?;
-            let (dir, version) = current_image(&reset_config, reset_updates.as_ref())?;
+            let CurrentImage { dir, version, .. } = current_image(
+                reset_updates.as_ref().map(|u| u.store.as_ref()),
+                reset_config.image_dir.as_deref(),
+            )?;
             let image = image_files(&dir, reset_config.kernel.as_deref(), "")?;
             make_disk(
                 &account,
@@ -1074,7 +1061,11 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
         .with_device_identities(
             Arc::new(FileDeviceIdentities::new(config.settings_dir())),
             Arc::new(move |_: &str| {
-                let (dir, _) = current_image(&identity_config, identity_updates.as_ref()).ok()?;
+                let CurrentImage { dir, .. } = current_image(
+                    identity_updates.as_ref().map(|u| u.store.as_ref()),
+                    identity_config.image_dir.as_deref(),
+                )
+                .ok()?;
                 ImageBuild::from_image_dir(&dir)
             }),
         )
@@ -1083,7 +1074,11 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
         // The default ARM translator of the image the next start boots: only an x86_64 image
         // has one.
         .with_default_arm_translation(Arc::new(move |_: &str| {
-            let (dir, _) = current_image(&translator_config, translator_updates.as_ref()).ok()?;
+            let CurrentImage { dir, .. } = current_image(
+                translator_updates.as_ref().map(|u| u.store.as_ref()),
+                translator_config.image_dir.as_deref(),
+            )
+            .ok()?;
             dsa_host_core::arm_translation::default_package(&dir)
         }));
     if let Some(source) = android_version {
