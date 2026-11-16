@@ -463,6 +463,14 @@ class AndroidKernelConfigTests(unittest.TestCase):
         config = CONFIG.read_text()
         self.assertIn("CONFIG_CRYPTO_BLAKE2B=y", config)
 
+    def test_fr1_dm_verity_is_built_in_because_first_stage_loads_no_modules(self):
+        # WSL's arm64 configuration builds dm-verity as a module (its x86_64 one builds it in).
+        # The guest ships no modules, so without these lines first stage init stops with
+        # "verity: unknown target type" and reboots.
+        config = CONFIG.read_text().splitlines()
+        self.assertIn("CONFIG_DM_VERITY=y", config)
+        self.assertIn("CONFIG_DM_BUFIO=y", config)
+
     def test_pr3_hyper_v_socket_transport_is_built_into_the_guest_kernel(self):
         config = CONFIG.read_text()
         self.assertIn("CONFIG_VSOCKETS=y", config)
