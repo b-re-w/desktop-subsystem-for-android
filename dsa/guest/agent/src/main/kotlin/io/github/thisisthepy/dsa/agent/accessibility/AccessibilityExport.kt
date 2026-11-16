@@ -528,6 +528,9 @@ class AccessibilityExport(
             retired.remove(target)?.also {
                 it.keepIds = true
                 it.pending = false
+                // A watch that starts again is a new ask: its first tree is not held back by
+                // the least interval since the tree the retired watch sent last.
+                it.lastSentAt = Long.MIN_VALUE / 2
             } ?: TaskState()
         }
         state.needFull = true

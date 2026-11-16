@@ -136,9 +136,22 @@ impl SurfaceLink {
         self.calls.deliver(answer);
     }
 
-    /// The connection ended: every call waiting on it ends.
+    /// The connection ended: every call waiting on it ends, and none starts until
+    /// [`SurfaceLink::reopen`].
     pub fn close(&self) {
         self.calls.close();
+    }
+
+    /// A new window manager replaced the one that ended: calls go to it, over the sender this
+    /// link was made with, which now reaches it.
+    pub fn reopen(&self) {
+        self.calls.reopen();
+    }
+
+    /// Whether the window manager can be asked: false from the end of its connection until a
+    /// new window manager has replaced it.
+    pub fn is_up(&self) -> bool {
+        !self.calls.is_closed()
     }
 }
 
@@ -337,6 +350,9 @@ struct State {
     first_shown: bool,
     hidden: HiddenBuffers,
     newest: Option<Newest>,
+    /// A new window manager replaced the one this window's surfaces came from: the caption and
+    /// the splash are drawn again at the next tick, on the new window manager's device.
+    redraw_due: bool,
     /// The height of the title bar's band over the frame while it is shown; 0 otherwise.
     band: u32,
     band_sample: BandSample,
@@ -503,6 +519,7 @@ impl WindowPresenter {
                 first_shown: false,
                 hidden: HiddenBuffers::new(),
                 newest: None,
+                redraw_due: false,
                 band: 0,
                 band_sample: BandSample::default(),
                 frames_since_tick: false,
@@ -615,6 +632,22 @@ impl WindowPresenter {
         self.claim_released.notify_all();
         // Drawn again after this answer is taken in, so their new surfaces come with them.
         state.splash_shown = None;
+    }
+
+    /// A new window manager replaced the one that ended (a crash or a restart). What the old
+    /// one drew for this window is gone from it, but the visuals keep showing the surfaces they
+    /// had, so the window keeps its last frame. Nothing is asked of the window manager here: this
+    /// runs on the thread that reads its answers. The next frame brings new surfaces, and the
+    /// caption and the splash are drawn again at the next tick.
+    pub fn window_manager_replaced(&self) {
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if state.closed {
+            return;
+        }
+        self.wm_devices_replaced(&mut state);
+        // The new window manager's generation is taken as it is, not as a second replacement.
+        state.wm_generation = 0;
+        state.redraw_due = true;
     }
 
     /// Shows the surfaces an answer placed in this process, in place of the ones before.
@@ -971,6 +1004,11 @@ impl WindowPresenter {
         if state.tree.is_none() {
             self.recompose(&mut state);
         }
+        if state.redraw_due && self.link.is_up() {
+            state.redraw_due = false;
+            self.redraw(&mut state);
+            self.commit_visual(&mut state);
+        }
         let watching = Self::watching(&state) && state.presents.pending() > 0;
         let owed = state.frames_since_tick || state.band_pending || watching;
         let mut band_changed = None;
@@ -1098,6 +1136,11 @@ impl WindowPresenter {
     /// The window was minimized. The window manager lets its frame swapchain go: a minimized
     /// window shows nothing, and its buffers hold tens of MiB of the task's full size.
     pub fn hide(&self) {
+        // Without a window manager the surface cannot be made again when the window is shown, so
+        // it keeps showing the last frame.
+        if !self.link.is_up() {
+            return;
+        }
         let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
         if state.closed || !state.hidden.hide() {
             return;
