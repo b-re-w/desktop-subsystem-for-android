@@ -62,12 +62,12 @@ enum class Kind { DeviceLocal, HostVisible, Imported };
 /* What an imported allocation is: a ColorBuffer's memory (a handle the renderer's own device
  * exported), or a grant of the graphics memory shared with the guest (a host pointer into
  * the shared region). */
-enum class Import { None, ColorBuffer, Grant };
+enum class Import { NotImported, ColorBuffer, Grant };
 
 struct Allocation {
     uint64_t bytes = 0;
     Kind kind = Kind::DeviceLocal;
-    Import import = Import::None;
+    Import import = Import::NotImported;
 };
 
 /* Who a guest process is, as it said on its process pipe. */
@@ -129,7 +129,7 @@ Import imported(const VkMemoryAllocateInfo* info) {
                 break;
         }
     }
-    return Import::None;
+    return Import::NotImported;
 }
 
 /* The guest process the calling render thread serves, or 0 (the renderer's own threads). */
@@ -167,7 +167,7 @@ VKAPI_ATTR VkResult VKAPI_CALL counted_allocate(VkDevice device,
     if (process != 0) {
         s_device_process.emplace(device, process);
     }
-    if (allocation.import != Import::None) {
+    if (allocation.import != Import::NotImported) {
         allocation.kind = Kind::Imported;
     } else if (info->memoryTypeIndex < s_types.memoryTypeCount &&
                (s_types.memoryTypes[info->memoryTypeIndex].propertyFlags &
