@@ -72,6 +72,7 @@
 //!   and the root key of the guest's KeyMint.
 //! - [`ui_language`]: the fourteen languages DSA's own user interface is shown in, and how the
 //!   system's display language picks one.
+//! - [`ui_text`]: the words the host shows itself, kept with the policy they belong to.
 
 pub mod accessibility;
 pub mod adb_bridge;
@@ -152,6 +153,7 @@ pub mod system_settings;
 pub mod tasks;
 pub mod touch_gestures;
 pub mod ui_language;
+pub mod ui_text;
 pub mod update;
 pub mod vhdx;
 pub mod video;
