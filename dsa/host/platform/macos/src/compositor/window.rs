@@ -29,7 +29,7 @@ use objc2::sel;
 use super::metal::{FrameRef, Presenter};
 use super::sizing::{picture_in_picture, task_pixels, window_points, Rect, MIN_CONTENT_POINTS};
 use super::title_bar::{
-    appearance_name, back_label, caption_band, sample_bgra, title_layout, BandTone, Chrome, Look,
+    appearance_name, back_label, sample_bgra, title_layout, BandTone, Chrome, Look, ITEM_GAP_POINTS,
 };
 use crate::input::view::{self, InputSink};
 use crate::objc::{class, ns_string, CGPoint, CGRect, CGSize};
@@ -202,7 +202,7 @@ unsafe fn band_of(window: *mut AnyObject) -> CaptionBand {
         items.push(x_range(button));
     }
     let scale: f64 = msg_send![window, backingScaleFactor];
-    caption_band(bounds.size.width, height, &items, scale)
+    CaptionBand::from_items(bounds.size.width, height, &items, scale, ITEM_GAP_POINTS)
 }
 
 /// The size of the title bar over `window`'s content, in points: the window's width and the

@@ -541,6 +541,51 @@ pub struct CaptionBand {
     pub end_width: u32,
 }
 
+impl CaptionBand {
+    /// The band a window that lets its OS place the parts over the band is told about:
+    /// `height` units high, in a window `width` units wide, at `scale` pixels a unit. `items`
+    /// are the left and right edges (units from the window's left) of what the OS keeps over
+    /// the band. An item in the left half of the band counts toward `start_width`, how far in
+    /// from the band's left end it reaches; one in the right half toward `end_width`, from the
+    /// right end. `gap` is the space left after the outermost item, so an app's controls
+    /// never touch it. A window that shows no band (a non-positive or non-finite size) gets an
+    /// empty one; a bad `scale` counts as 1.
+    pub fn from_items(
+        width: f64,
+        height: f64,
+        items: &[(f64, f64)],
+        scale: f64,
+        gap: f64,
+    ) -> CaptionBand {
+        let scale = if scale.is_finite() && scale > 0.0 {
+            scale
+        } else {
+            1.0
+        };
+        if !(width.is_finite() && width > 0.0 && height.is_finite() && height > 0.0) {
+            return CaptionBand::default();
+        }
+        let middle = width / 2.0;
+        let (mut start, mut end) = (0.0f64, 0.0f64);
+        for &(left, right) in items {
+            if !(left.is_finite() && right.is_finite()) || right <= left {
+                continue;
+            }
+            if (left + right) / 2.0 < middle {
+                start = start.max(right.max(0.0) + gap);
+            } else {
+                end = end.max((width - left).max(0.0) + gap);
+            }
+        }
+        let pixels = |units: f64| (units.min(width) * scale).ceil() as u32;
+        CaptionBand {
+            height: (height * scale).round() as u32,
+            start_width: pixels(start),
+            end_width: pixels(end),
+        }
+    }
+}
+
 /// What a point of a task window's title bar does, the icon's cell and an app's own title
 /// bar included.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -2948,5 +2993,57 @@ mod tests {
             [0, 0, 0, 0]
         );
         assert_eq!(bar_pixel(&image, &layout, 400, 15), [0, 0, 0, 0]);
+    }
+
+    const GAP: f64 = 8.0;
+
+    #[test]
+    fn fr22_band_reaches_past_items_on_each_side() {
+        // Three buttons from 7 to 61 units, in a 600 unit window at 2x.
+        let band = CaptionBand::from_items(
+            600.0,
+            28.0,
+            &[(7.0, 21.0), (27.0, 41.0), (47.0, 61.0)],
+            2.0,
+            GAP,
+        );
+        assert_eq!(band.height, 56);
+        assert_eq!(band.start_width, ((61.0 + GAP) * 2.0) as u32);
+        assert_eq!(band.end_width, 0);
+        // An item added after the buttons widens that end only.
+        let buttons = [(7.0, 21.0), (27.0, 41.0), (47.0, 61.0), (68.0, 96.0)];
+        let with = CaptionBand::from_items(600.0, 28.0, &buttons, 1.0, GAP);
+        assert_eq!(with.start_width, (96.0 + GAP) as u32);
+        // Items in the right half count from the right end.
+        let right =
+            CaptionBand::from_items(600.0, 28.0, &[(539.0, 553.0), (579.0, 593.0)], 1.0, GAP);
+        assert_eq!(right.start_width, 0);
+        assert_eq!(right.end_width, (600.0 - 539.0 + GAP) as u32);
+    }
+
+    #[test]
+    fn fr22_hidden_band_is_empty() {
+        let items = [(7.0, 21.0)];
+        assert_eq!(
+            CaptionBand::from_items(600.0, 0.0, &items, 2.0, GAP),
+            CaptionBand::default()
+        );
+        assert_eq!(
+            CaptionBand::from_items(600.0, f64::NAN, &items, 2.0, GAP),
+            CaptionBand::default()
+        );
+        assert_eq!(
+            CaptionBand::from_items(0.0, 28.0, &items, 2.0, GAP),
+            CaptionBand::default()
+        );
+        // A bad scale counts as 1x rather than as no band.
+        assert_eq!(
+            CaptionBand::from_items(600.0, 28.0, &[], 0.0, GAP).height,
+            28
+        );
+        // An item that is empty or not a number is skipped.
+        let skipped =
+            CaptionBand::from_items(600.0, 28.0, &[(10.0, 10.0), (f64::NAN, 5.0)], 1.0, GAP);
+        assert_eq!((skipped.start_width, skipped.end_width), (0, 0));
     }
 }
