@@ -28,6 +28,10 @@ def jobs(text: str) -> dict:
     found = {}
     current = None
     for line in body.splitlines():
+        # A comment is not a step: the one above a job (naming an artifact) would otherwise
+        # count as the last step of the job before it.
+        if line.lstrip().startswith("#"):
+            continue
         m = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", line)
         if m:
             current = m.group(1)
