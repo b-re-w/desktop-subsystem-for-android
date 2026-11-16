@@ -930,6 +930,9 @@ impl UserAndroid for UpdatingAndroid {
     fn watch_log(&self, filter: crate::guest_log::LogFilter) -> Option<crate::guest_log::LogWatch> {
         UserAndroid::watch_log(&*self.session, filter)
     }
+    fn log_problem(&self) -> Option<String> {
+        UserAndroid::log_problem(&*self.session)
+    }
     fn dump_log(
         &self,
         filter: crate::guest_log::LogFilter,

@@ -13,6 +13,9 @@ use std::time::{Duration, Instant};
 use super::resize_pacing::ResizePacer;
 use crate::tasks::{coalesce, TaskRequest};
 
+/// A task id and the size, in pixels, one of its frames was drawn at.
+type DrawnSize = (i32, (u32, u32));
+
 /// How often the request thread looks for drawn frames while a size of a drag is held back.
 pub const PACE_TICK: Duration = Duration::from_millis(4);
 
@@ -22,7 +25,7 @@ pub const PACE_TICK: Duration = Duration::from_millis(4);
 /// one, and the [`ResizeQueue`] made from another clone sees them. Two lists never mix.
 #[derive(Clone, Default)]
 pub struct DrawnFrames {
-    drawn: Arc<Mutex<Vec<(i32, (u32, u32))>>>,
+    drawn: Arc<Mutex<Vec<DrawnSize>>>,
 }
 
 impl DrawnFrames {
@@ -40,7 +43,7 @@ impl DrawnFrames {
         }
     }
 
-    fn take(&self) -> Vec<(i32, (u32, u32))> {
+    fn take(&self) -> Vec<DrawnSize> {
         std::mem::take(&mut *self.drawn.lock().unwrap_or_else(|e| e.into_inner()))
     }
 }
