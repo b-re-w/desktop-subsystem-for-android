@@ -60,13 +60,16 @@
 # device loss (described in its image.json under "framework"): the files the newest passing
 # "Framework build" run on develop made for that Android version and architecture from the
 # pinned lock and patches. Run that workflow first when dsa/guest/framework changes. A
-# development build needs only the newest Android's x86_64 files, so it takes them from the
-# newest run whose job for those passed, without waiting for that run's other jobs.
+# development build needs only the newest Android's files of its architecture, so it takes
+# them from the newest run whose job for those passed, without waiting for that run's other
+# jobs.
 #
 # The Development build (dev-build.yml) calls this workflow with dev_build set, so a build for
 # testing is made by exactly these jobs and steps: the kernel, the image of the newest Android
-# for x86_64 and the Windows x64 installer, signed with the same keys. Then it publishes
-# nothing (no release, tag, image list, program list or channel) and keeps what it made as
+# for x86_64 and the Windows x64 installer, signed with the same keys. The Development build
+# (arm64) (dev-build-arm64.yml) also sets dev_arch to arm64 and makes the arm64 kernel and
+# image only, kept as development-image-arm64 and development-image-list-arm64. A development
+# build publishes nothing (no release, tag, image list, program list or channel) and keeps what it made as
 # workflow artifacts for three days: development-image and development-image-list (the image's
 # files, and the signed image list that names them), and development-installer (setup.exe).
 # Its image's version is the next pre-release revision with -dev.<run number> after it
@@ -111,14 +114,20 @@ on:
         type: boolean
         required: false
         default: true
-  # The Development build (dev-build.yml): the same jobs, for Windows x64 and the newest
-  # Android only, kept as artifacts and never published.
+  # The Development build (dev-build.yml) and the Development build (arm64)
+  # (dev-build-arm64.yml): the same jobs, for one architecture and the newest Android only,
+  # kept as artifacts and never published.
   workflow_call:
     inputs:
       dev_build:
         description: "Build for testing: Windows x64 and the newest Android only, kept as workflow artifacts, nothing published"
         type: boolean
         required: true
+      dev_arch:
+        description: "With dev_build: the guest architecture to make, x86_64 (the Development build) or arm64 (the Development build (arm64), image only)"
+        type: string
+        required: false
+        default: x86_64
       installer_version:
         description: "Also build the installer as this version; empty for the image only"
         type: string
@@ -240,16 +249,23 @@ jobs:
           "${{ inputs.rebuild_images }}" "${{ inputs.installer_version != '' }}"
 
       # A release builds every architecture and every supported Android. A development build
-      # is for one Windows x64 computer: x86_64 only, and the newest supported Android only.
+      # is for one computer: one architecture (x86_64 for the Development build, arm64 for the
+      # Development build (arm64)), and the newest supported Android only.
       - name: Choose the architectures and Android versions to build
         id: matrix
         env:
           DEV_BUILD: ${{ inputs.dev_build }}
+          DEV_ARCH: ${{ inputs.dev_arch }}
         run: |
           if [[ "$DEV_BUILD" == true ]]; then
-            echo 'programs_exclude=[{"arch":"arm64"}]' >> "$GITHUB_OUTPUT"
-            echo "images_exclude=$(jq -c '(.supported_majors | max) as $newest
-              | [.supported_majors[] | select(. != $newest) | {android: .}] + [{arch: "arm64"}]' \
+            case "$DEV_ARCH" in
+              x86_64) other=arm64 ;;
+              arm64) other=x86_64 ;;
+              *) echo "::error::dev_arch is x86_64 or arm64, not $DEV_ARCH" >&2; exit 1 ;;
+            esac
+            echo "programs_exclude=[{\"arch\":\"$other\"}]" >> "$GITHUB_OUTPUT"
+            echo "images_exclude=$(jq -c --arg other "$other" '(.supported_majors | max) as $newest
+              | [.supported_majors[] | select(. != $newest) | {android: .}] + [{arch: $other}]' \
               dsa/android-versions.json)" >> "$GITHUB_OUTPUT"
           else
             echo 'programs_exclude=[]' >> "$GITHUB_OUTPUT"
@@ -529,7 +545,7 @@ jobs:
   kernel:
     name: Build the guest kernel (x86_64)
     needs: channel
-    if: inputs.rebuild_images
+    if: inputs.rebuild_images && !(inputs.dev_build && inputs.dev_arch == 'arm64')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -568,7 +584,7 @@ jobs:
   kernel-arm64:
     name: Build the guest kernel (arm64)
     needs: channel
-    if: inputs.rebuild_images && !inputs.dev_build
+    if: inputs.rebuild_images && (!inputs.dev_build || inputs.dev_arch == 'arm64')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     permissions:
@@ -683,16 +699,17 @@ jobs:
         if: ${{ !cancelled() && inputs.framework }}
         env:
           DEV_BUILD: ${{ inputs.dev_build }}
+          DEV_ARCH: ${{ inputs.dev_arch }}
         run: |
           if [[ "$DEV_BUILD" == true ]]; then
-            # A development build makes only the newest Android's x86_64 image, so it takes the
+            # A development build makes only the newest Android's image of one architecture, so it takes the
             # files of the newest Framework build run on develop whose job for those passed,
             # while that run's other jobs are still building or after they failed. The name
             # is that of framework.yml's framework job, the one that keeps the artifact once
             # services.jar has joined the native files.
             android="android$(jq '.supported_majors | max' dsa/android-versions.json)"
-            name="framework-$android-x86_64-$(python3 dsa/guest/framework/framework_lock.py version "$android")"
-            job="Pack the framework files (ubuntu-24.04, $android, x86_64)"
+            name="framework-$android-$DEV_ARCH-$(python3 dsa/guest/framework/framework_lock.py version "$android")"
+            job="Pack the framework files (ubuntu-24.04, $android, $DEV_ARCH)"
             # A run whose services build failed still packs the native files under the same
             # name, without services.jar; the image then edits the published build's jar and
             # its dialogs keep the caption bar inset. Such a run is taken only when no run of
@@ -725,7 +742,7 @@ jobs:
               echo "run_id=$fallback" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "::error::No Framework build run on develop has a passing \"$job\" with $name. Run the Framework build workflow; with android set to $android and arch to x86_64 is enough."
+            echo "::error::No Framework build run on develop has a passing \"$job\" with $name. Run the Framework build workflow; with android set to $android and arch to $DEV_ARCH is enough."
             exit 1
           fi
           wanted=()
@@ -781,7 +798,7 @@ jobs:
     name: ${{ inputs.dev_build && 'Make' || 'Make and publish' }} the guest image (ubuntu-latest, Android ${{ matrix.android }}, ${{ matrix.arch }})
     needs: [channel, kernel, kernel-arm64, guest-programs, agent, prebuilt]
     # The prebuilt job is skipped when the release carries neither a default translator nor
-    # a patched framework, and the arm64 kernel for a development build.
+    # a patched framework, and the kernel of the other architecture for a development build.
     if: inputs.rebuild_images && !cancelled() && !failure()
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -794,7 +811,7 @@ jobs:
         android: [17, 16]
         # ARM64 Windows hosts boot the arm64 image, which is 64-bit only.
         arch: [x86_64, arm64]
-        # A development build makes the newest Android's x86_64 image only.
+        # A development build makes the newest Android's image of one architecture only.
         exclude: ${{ fromJSON(needs.channel.outputs.images_exclude) }}
     env:
       GH_TOKEN: ${{ github.token }}
@@ -1133,7 +1150,7 @@ jobs:
         if: ${{ inputs.dev_build }}
         uses: actions/upload-artifact@v4
         with:
-          name: development-image
+          name: development-image${{ inputs.dev_arch == 'arm64' && '-arm64' || '' }}
           path: .scratch/development-image
           if-no-files-found: error
           retention-days: 3
@@ -1163,8 +1180,8 @@ jobs:
 
   list:
     name: Sign and ${{ inputs.dev_build && 'keep' || 'publish' }} the release list
-    # A skipped job before the image (the arm64 kernel, which a development build does not
-    # make) would skip this one too under the implicit success() check.
+    # A skipped job before the image (the kernel of the other architecture, which a development
+    # build does not make) would skip this one too under the implicit success() check.
     needs: [channel, image]
     if: inputs.rebuild_images && !cancelled() && needs.image.result == 'success'
     runs-on: ubuntu-latest
@@ -1206,13 +1223,13 @@ jobs:
       #                                           read instead
       # A stable release writes both lists of each architecture with its images. A pre-release
       # writes the pre-release lists only, with its images and the published stable ones, and
-      # leaves the stable lists as they are. A development build writes images.json, which is
-      # kept as an artifact and never published.
+      # leaves the stable lists as they are. A development build writes images.json (or
+      # images-arm64.json for the arm64 one), which is kept as an artifact and never published.
       - name: Write the lists
         id: write
         env:
-          # A development build made the x86_64 image only.
-          ARCHES: ${{ inputs.dev_build && 'x86_64' || 'x86_64 arm64' }}
+          # A development build made the image of one architecture only.
+          ARCHES: ${{ inputs.dev_build && inputs.dev_arch || 'x86_64 arm64' }}
           IMAGE_CHANNEL: ${{ needs.channel.outputs.image_channel }}
         run: |
           mkdir -p .scratch/published-lists
@@ -1325,10 +1342,10 @@ jobs:
         if: ${{ inputs.dev_build }}
         uses: actions/upload-artifact@v4
         with:
-          name: development-image-list
+          name: development-image-list${{ inputs.dev_arch == 'arm64' && '-arm64' || '' }}
           path: |
-            images.json
-            images.json.sig
+            images${{ inputs.dev_arch == 'arm64' && '-arm64' || '' }}.json
+            images${{ inputs.dev_arch == 'arm64' && '-arm64' || '' }}.json.sig
           if-no-files-found: error
           retention-days: 3
 
