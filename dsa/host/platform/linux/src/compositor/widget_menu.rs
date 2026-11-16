@@ -433,11 +433,14 @@ mod tests {
         let menu = rows(&entries(&menu_text(EN), &clock(true), &at_default()));
         let widths = vec![80; menu.len()];
         let layout = WidgetMenuLayout::new(menu, &widths, 96);
-        // Down from nothing wraps to the last item (Remove); up from the first item wraps too.
-        let last = layout.step(None, true).unwrap();
-        assert_eq!(layout.command(last), Some(REMOVE));
-        let first = layout.step(None, false).unwrap();
+        // Down from nothing chooses the first item and up from nothing the last (Remove),
+        // as the window menu does; the names and the separator are skipped on the way.
+        let first = layout.step(None, true).unwrap();
         assert_eq!(layout.command(first), Some(SETTINGS));
+        let last = layout.step(None, false).unwrap();
+        assert_eq!(layout.command(last), Some(REMOVE));
+        // Up from the first item wraps to the last.
+        assert_eq!(layout.step(Some(first), false), Some(last));
         // The next item down from Widget settings is the first size, past Resize's name.
         let next = layout.step(Some(first), true).unwrap();
         assert!(matches!(

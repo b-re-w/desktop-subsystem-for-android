@@ -323,7 +323,9 @@ Varsa DSA başka bir görüntü indirir. Sonraki DSA sürümü bunu yeniden dene
     <value>Vulkan sürücüsü</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Android uygulamaları Vulkan ile çizer. Vulkan sürücüsü olmayan bir GPU, Microsoft'un OpenCL, OpenGL, and Vulkan Compatibility Pack'indeki Dozen'i (Vulkan on Direct3D 12) kullanabilir. Pencere yöneticisi yeniden başladığında uygulanır.</value>
+    <value>Android uygulamaları Vulkan ile çizer.
+Vulkan sürücüsü olmayan GPU, Microsoft'un OpenCL, OpenGL, and Vulkan Compatibility Pack'indeki Dozen'i (Vulkan on Direct3D 12) kullanabilir.
+Pencere yöneticisi yeniden başladığında uygulanır.</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>Otomatik: GPU'nun sürücüsü, yalnızca sürücü yoksa Dozen (önerilen)</value>
@@ -347,7 +349,9 @@ Varsa DSA başka bir görüntü indirir. Sonraki DSA sürümü bunu yeniden dene
     <value>Şu anda CPU üzerinde Dozen ile işleniyor: bu GPU'nun Direct3D 12 sürücüsü yok.</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>İşlenecek Vulkan yok, bu nedenle Android başlamaz. Compatibility Pack'i Microsoft Store'dan veya winget install Microsoft.OpenCLGLVulkanCompatibilityPack ile yükleyin, ardından oturumu kapatıp yeniden açın.</value>
+    <value>İşlenecek Vulkan yok, bu nedenle Android başlamaz.
+Compatibility Pack'i Microsoft Store'dan veya winget install Microsoft.OpenCLGLVulkanCompatibilityPack ile yükleyin,
+ardından oturumu kapatıp yeniden açın.</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Uygulamanın penceresi bir sonraki açılışında geçerli olur.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Penceresi farklı ölçekli bir monitöre taşındığında bu uygulamayı kimin ölçekleyeceği.
-• Uygulama: pencere yeni monitöre ulaşır ulaşmaz uygulama o monitörün ölçeğini alır ve o ölçekte yeniden çizer, metin keskin kalır. Bunu işlediğini belirtmeyen bir uygulamada Android ekranı durumu koruyarak yeniden oluşturur, bu yüzden kısa bir yeniden çizim olabilir.
+• Uygulama: pencere yeni monitöre ulaşır ulaşmaz uygulama o monitörün ölçeğini alır ve o ölçekte yeniden çizer, metin keskin kalır.
+Bunu işlediğini belirtmeyen bir uygulamada Android ekranı durumu koruyarak yeniden oluşturur, bu yüzden kısa bir yeniden çizim olabilir.
 • Sistem: uygulama ölçeğini korur, DSA penceresini aynı fiziksel boyuta ölçekler. Metin biraz bulanık olabilir.
-• Otomatik: YouTube gibi çalışırken ölçeği değişince bozulan uygulamalar için Sistem; diğer uygulamalarda bunu işlediğini belirtiyorsa Uygulama, belirtmiyorsa Sistem.
+• Otomatik: YouTube gibi çalışırken ölçeği değişince bozulan uygulamalar için Sistem;
+diğer uygulamalarda bunu işlediğini belirtiyorsa Uygulama, belirtmiyorsa Sistem.
 Otomatik ve Sistem uygulamayı hiçbir zaman yeniden başlatmaz.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,10 @@ Henüz kullanılamıyor: bu derlemede olmayan bir Android çerçeve değişikli�
     <value>Uygulama tam ekranı</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>Uygulamanın tam ekran isteğinin (ör. videonun tam ekran düğmesi) nerede görüneceği. Tüm ekranda başlık çubuğu üst kenarda belirir. Uygulamalar sayfasındaki uygulama seçimi önceliklidir.</value>
+    <value>Uygulamanın tam ekran isteğinin (ör.
+videonun tam ekran düğmesi) nerede görüneceği.
+Tüm ekranda başlık çubuğu üst kenarda belirir.
+Uygulamalar sayfasındaki uygulama seçimi önceliklidir.</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>Çubuklarını gizleyen uygulamalar</value>
