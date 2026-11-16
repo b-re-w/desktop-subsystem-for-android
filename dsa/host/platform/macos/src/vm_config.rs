@@ -15,7 +15,7 @@
 use std::path::{Path, PathBuf};
 
 pub use dsa_host_core::image_files::GuestArch;
-use dsa_host_core::image_files::{read_image, ImageFiles, ImageRules};
+use dsa_host_core::image_files::{ImageFiles, ImageRulesOwned};
 
 /// Whether `kernel` starts like a kernel the framework boots on `arch`: an arm64 `Image`
 /// (its magic `ARM\x64` at offset 56; a compressed kernel has none) or an x86 `bzImage`
@@ -134,21 +134,21 @@ pub fn mac_address_for(seed: &str) -> String {
     )
 }
 
-/// Reads the image in `dir` for a guest of `arch`. Raw disks (`system.img`, `data.img`,
-/// `disk.img`) are used when the folder has them; otherwise its VHDX disks, which the host
-/// converts. The framework boots an image of the published form only, so one without an
-/// `initrd.img` or a disk to make the user's from is refused.
-pub fn image_files(dir: &Path, arch: GuestArch) -> Result<ImageFiles, String> {
-    let files = read_image(
-        dir,
-        &ImageRules {
-            kernel_names: &[arch.kernel_name()],
-            disk_extensions: &["img", "vhdx"],
-            arch: Some(arch),
-            fallback_kernel: None,
-            extra_cmdline: "",
-        },
-    )?;
+/// The rules this host reads an image by for a guest of `arch`: the kernel its framework
+/// boots, and the raw disks a folder has, else the VHDX disks, which the host converts.
+pub fn image_rules(arch: GuestArch) -> ImageRulesOwned {
+    ImageRulesOwned {
+        kernel_names: vec![arch.kernel_name().into()],
+        disk_extensions: vec!["img".into(), "vhdx".into()],
+        arch: Some(arch),
+        fallback_kernel: None,
+        extra_cmdline: String::new(),
+    }
+}
+
+/// Refuses an image of `files`, read from `dir`, that is not of the published form: the
+/// framework boots an image with an `initrd.img` and a disk to make the user's from.
+pub fn check_published(dir: &Path, files: &ImageFiles) -> Result<(), String> {
     if files.initrd.is_none() {
         return Err(format!("the image in {} has no initrd.img", dir.display()));
     }
@@ -158,5 +158,15 @@ pub fn image_files(dir: &Path, arch: GuestArch) -> Result<ImageFiles, String> {
             dir.display()
         ));
     }
+    Ok(())
+}
+
+/// Reads the image in `dir` for a guest of `arch`. Raw disks (`system.img`, `data.img`,
+/// `disk.img`) are used when the folder has them; otherwise its VHDX disks, which the host
+/// converts. The framework boots an image of the published form only, so one without an
+/// `initrd.img` or a disk to make the user's from is refused.
+pub fn image_files(dir: &Path, arch: GuestArch) -> Result<ImageFiles, String> {
+    let files = image_rules(arch).read(dir)?;
+    check_published(dir, &files)?;
     Ok(files)
 }

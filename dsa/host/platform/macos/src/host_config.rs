@@ -242,9 +242,9 @@ impl UserFolders {
     pub fn addon_disk(&self) -> PathBuf {
         self.root.join("addons.img")
     }
-    /// The raw copies of image `version`'s disks.
-    pub fn image_cache(&self, version: &str) -> PathBuf {
-        self.root.join("cache").join("images").join(version)
+    /// The folder that holds the raw copies of the image disks, one folder per image version.
+    pub fn image_cache(&self) -> PathBuf {
+        self.root.join("cache").join("images")
     }
     /// Each boot's initrd, with its secret, while the VM starts.
     pub fn boot_dir(&self) -> PathBuf {

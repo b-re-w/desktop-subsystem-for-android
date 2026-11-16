@@ -23,7 +23,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-use dsa_host_core::image_files::{read_image, GuestArch, ImageRules};
+use dsa_host_core::image_files::{GuestArch, ImageRulesOwned};
 
 pub use dsa_host_core::image_files::ImageFiles;
 
@@ -317,16 +317,20 @@ pub fn image_files(
     kernel: Option<&Path>,
     extra_cmdline: &str,
 ) -> Result<ImageFiles, String> {
-    read_image(
-        dir,
-        &ImageRules {
-            kernel_names: &["bzImage", "Image"],
-            disk_extensions: &["img", "raw", "qcow2", "vhdx"],
-            arch: Some(GuestArch::HOST),
-            fallback_kernel: kernel,
-            extra_cmdline,
-        },
-    )
+    image_rules(kernel, extra_cmdline).read(dir)
+}
+
+/// The rules this host reads an image by: the kernel names it boots, the disk formats it
+/// attaches (a raw or qcow2 disk beside the published VHDX wins over it), the architecture it
+/// runs, and the `kernel` and `extra_cmdline` its own configuration supplies.
+pub fn image_rules(kernel: Option<&Path>, extra_cmdline: &str) -> ImageRulesOwned {
+    ImageRulesOwned {
+        kernel_names: vec!["bzImage".into(), "Image".into()],
+        disk_extensions: vec!["img".into(), "raw".into(), "qcow2".into(), "vhdx".into()],
+        arch: Some(GuestArch::HOST),
+        fallback_kernel: kernel.map(Path::to_path_buf),
+        extra_cmdline: extra_cmdline.to_string(),
+    }
 }
 
 /// The file beside a user's disk that earlier versions recorded the image version in.
@@ -347,7 +351,7 @@ pub fn adopt_legacy_version_record(disk: &Path) {
 }
 
 #[cfg(target_os = "linux")]
-pub use making::{bring_disk_to, make_disk, UserDisks};
+pub use making::{make_disk, UserDisks};
 
 #[cfg(target_os = "linux")]
 mod making {
@@ -382,30 +386,12 @@ mod making {
         account.own(disk)
     }
 
-    /// Brings `account`'s disk to image `version` by the host core's algorithm: a missing disk
-    /// is made from `template`, a disk of another version gets the template's Android
-    /// partitions (a one-disk image) or loses the stale ones (a two-disk image), and the
-    /// user's data stays. A qcow2 disk an earlier DSA made is kept as it is, since its
-    /// partitions are not read here, and only its version is recorded.
-    pub fn bring_disk_to(
-        account: &Account,
-        disk: &Path,
-        template: &Path,
-        version: &str,
-    ) -> Result<(), String> {
-        adopt_legacy_version_record(disk);
-        let backend = UserDisks(account);
-        if disk.exists() && DiskFormat::of(disk) == DiskFormat::Qcow2 {
-            return dsa_host_core::disk::record_disk_image_version(&backend, disk, version);
-        }
-        dsa_host_core::disk::bring_disk_to(&backend, disk, template, version)
-    }
-
     /// The disks of `account`, as the host core's disk algorithm opens and makes them: raw
-    /// files, made by [`make_disk`] and the version record written as the user.
-    pub struct UserDisks<'a>(pub &'a Account);
+    /// files, made by [`make_disk`] and the version record written as the user. A qcow2 disk
+    /// an earlier DSA made is kept as it is, since its partitions are not read here.
+    pub struct UserDisks(pub Account);
 
-    impl DiskBackend for UserDisks<'_> {
+    impl DiskBackend for UserDisks {
         type Device = <RawDiskBackend as DiskBackend>::Device;
 
         fn open(&self, disk: &Path, write: bool) -> Result<Self::Device, String> {
@@ -413,11 +399,26 @@ mod making {
         }
 
         fn create(&self, disk: &Path, template: Option<&Path>, size_gb: u32) -> Result<(), String> {
-            make_disk(self.0, disk, template, size_gb)
+            make_disk(&self.0, disk, template, size_gb)
         }
 
         fn write_beside(&self, path: &Path, bytes: &[u8]) -> Result<(), String> {
             self.0.write_private(path, bytes)
+        }
+
+        fn keeps_as_is(&self, disk: &Path) -> bool {
+            DiskFormat::of(disk) == DiskFormat::Qcow2
+        }
+
+        /// crosvm attaches raw disks, so a VHDX system disk is read into one once.
+        fn prepare_image_disk(&self, image_disk: &Path, _cache: &Path) -> Result<PathBuf, String> {
+            raw_disk(image_disk)
+        }
+
+        /// The template is copied through the disk reader, VHDX or not, so it is not
+        /// converted first.
+        fn prepare_template_disk(&self, template: &Path, _cache: &Path) -> Result<PathBuf, String> {
+            Ok(template.to_path_buf())
         }
     }
 }

@@ -10,11 +10,10 @@ use std::path::Path;
 use std::sync::Arc;
 
 use dsa_host_core::data_reset::{TemplateDataDisk, UserDataReset};
-use dsa_host_core::update::current::current_image;
 use dsa_host_core::update::store::ImageStore;
 
 use crate::host_config::HostConfig;
-use crate::user_disk::{bring_disk_to, prepare_user_data_disk};
+use crate::user_disk::{prepare_user_data_disk, VhdxBackend};
 
 /// The extension of the file beside a user's disk that records the image version it holds.
 const IMAGE_VERSION: &str = "image-version";
@@ -80,10 +79,12 @@ fn make_fresh_disk(
     let Some(store) = images else {
         return prepare_user_data_disk(disk, config.data_disk_size_gb);
     };
-    let current = current_image(Some(store), None)?;
-    let files = config.image_files(Some(&current.dir))?;
-    match &files.disk_template {
-        Some(template) => bring_disk_to(disk, template, current.cache_key()),
-        None => prepare_user_data_disk(disk, config.data_disk_size_gb),
-    }
+    dsa_host_core::boot::make_fresh_disk(
+        &VhdxBackend,
+        &config.image_rules(),
+        (Some(store), None),
+        None,
+        disk,
+        config.data_disk_size_gb,
+    )
 }

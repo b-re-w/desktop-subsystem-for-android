@@ -20,6 +20,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use dsa_host_core::boot::{BootPlanner, MemoryInputs};
 use dsa_host_core::device_identity::{BootIdentity, FileDeviceIdentities, ImageBuild};
 use dsa_host_core::diagnostics::HostFile;
 use dsa_host_core::guest_display::{
@@ -29,13 +30,13 @@ use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid};
 use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::image_files::ImageFiles;
+use dsa_host_core::memory::GrowthCeiling;
 use dsa_host_core::memory::{log_memory, HostMemory};
-use dsa_host_core::memory::{memory_plan, GrowthCeiling, MemoryPlan};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{keep_first_channel_logged, service_settings, SettingsStore};
-use dsa_host_core::update::current::{current_image, prune_image_cache};
+use dsa_host_core::update::current::current_image;
 use dsa_host_core::update::service::{
     follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
     Updates, UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
@@ -49,8 +50,10 @@ use crate::android_vm::{BootPlan, MacVmLauncher, VmSlot};
 use crate::fetch::CurlFetch;
 use crate::host_config::{MacHostConfig, UserFolders};
 use crate::host_memory::{MacHostMemory, VmProcess};
-use crate::user_disk::{bring_disk_to, ensure_pstore_disk, raw_disk};
-use crate::vm_config::{image_files, kernel_fits, mac_address_for, Disk, GuestArch, MacVmConfig};
+use crate::user_disk::{ensure_pstore_disk, MacDisks};
+use crate::vm_config::{
+    check_published, image_rules, kernel_fits, mac_address_for, Disk, GuestArch, MacVmConfig,
+};
 use crate::vsock::{Framing, VsockListener, VsockStream};
 use crate::vz::PortChannels;
 
@@ -142,20 +145,23 @@ fn window_manager(config: &MacHostConfig) -> Option<ProgramWindowManager> {
     })
 }
 
-/// The template of the user's disk, which `image_files` made sure the image has.
-fn image_template(files: &ImageFiles) -> Result<PathBuf, String> {
-    files
-        .disk_template
-        .clone()
-        .ok_or_else(|| "the image has no disk to make the user's from".to_string())
-}
-
-/// Makes the user's disk hold image `version` from its template in `dir`, as a fresh disk
-/// for a data reset or at a first boot.
-fn bring_user_disk(user: &UserFolders, dir: &Path, version: &str) -> Result<(), String> {
-    let files = image_files(dir, GuestArch::HOST)?;
-    let template = raw_disk(&image_template(&files)?, &user.image_cache(version))?;
-    bring_disk_to(&user.disk(), &template, version)
+/// The check of an image's files the framework needs before anything is made from them: the
+/// published form, and a kernel it boots.
+fn check_image(files: &ImageFiles) -> Result<(), String> {
+    let dir = files.kernel.parent().unwrap_or(Path::new(""));
+    check_published(dir, files)?;
+    let mut head = vec![0u8; 0x1000];
+    let read = std::fs::File::open(&files.kernel)
+        .and_then(|mut f| std::io::Read::read(&mut f, &mut head))
+        .map_err(|e| format!("reading the kernel {}: {e}", files.kernel.display()))?;
+    if !kernel_fits(&head[..read], GuestArch::HOST) {
+        return Err(format!(
+            "{} is not a kernel Apple's Virtualization framework boots on this Mac (an \
+             uncompressed arm64 Image on Apple silicon, a bzImage on Intel)",
+            files.kernel.display()
+        ));
+    }
+    Ok(())
 }
 
 /// Builds each boot's plan.
@@ -163,47 +169,22 @@ struct Planner {
     config: MacHostConfig,
     user: UserFolders,
     name: String,
-    store: Option<Arc<ImageStore>>,
+    boot: BootPlanner<MacDisks>,
     settings: Arc<dyn SettingsStore>,
     identity: Arc<BootIdentity>,
 }
 
 impl Planner {
     fn plan(&self) -> Result<BootPlan, String> {
-        let current = current_image(self.store.as_deref(), self.config.image_dir.as_deref())?;
-        let (dir, version) = (current.dir.clone(), current.cache_key().to_string());
-        let files = image_files(&dir, GuestArch::HOST)?;
-        let mut head = vec![0u8; 0x1000];
-        let read = std::fs::File::open(&files.kernel)
-            .and_then(|mut f| std::io::Read::read(&mut f, &mut head))
-            .map_err(|e| format!("reading the kernel {}: {e}", files.kernel.display()))?;
-        if !kernel_fits(&head[..read], GuestArch::HOST) {
-            return Err(format!(
-                "{} is not a kernel Apple's Virtualization framework boots on this Mac (an \
-                 uncompressed arm64 Image on Apple silicon, a bzImage on Intel)",
-                files.kernel.display()
-            ));
-        }
-        let cache = self.user.image_cache(&version);
-        let template = raw_disk(&image_template(&files)?, &cache)?;
-        // A disk holding a newer Android's data than this image, after the user chose an older
-        // version and agreed to erase it, starts afresh.
-        if let Some(major) = current.android_major {
-            let disk = self.user.disk();
-            dsa_host_core::data_reset::erase_if_newer(
-                &disk,
-                &dsa_host_core::disk::version_file(&disk),
-                major,
-            )?;
-        }
-        bring_disk_to(&self.user.disk(), &template, &version)?;
-        if let Some(cache) = self.user.image_cache(&version).parent() {
-            prune_image_cache(cache, &version);
-        }
+        let boot = self.boot.plan()?;
+        let files = boot.files;
+        // The image's own folder, which holds its initrd.img (the host's check made sure).
+        let initrd = files.initrd.clone().ok_or("the image has no initrd.img")?;
+        let dir = initrd.parent().map(Path::to_path_buf).unwrap_or_default();
         let mut disks = Vec::new();
         if let Some(system) = &files.system_disk {
             disks.push(Disk {
-                path: raw_disk(system, &cache)?,
+                path: system.clone(),
                 read_only: true,
             });
         }
@@ -243,29 +224,8 @@ impl Planner {
             &cmdline,
             boot_density(crate::display_power::main_display_dpi()),
         );
-        let settings = self.settings.get(&self.name).ok();
-        let limit = settings.as_ref().map_or(0, |s| s.memory_limit_mb);
-        let total_mb = MacFacts.physical_memory_kb().map(|kb| kb / 1024);
-        // Memory is shared with the GPU on a Mac, so with no limit the VM grows to half of it.
-        let plan = memory_plan(
-            self.config.memory_mb,
-            limit,
-            total_mb,
-            GrowthCeiling::HalfHost,
-        );
-        let start = u64::from(plan.start_mb);
-        let max = plan
-            .max_mb
-            .unwrap_or(start)
-            .min(crate::vz::max_memory_mb())
-            .max(start);
-        if self.config.memory_mb.is_none() {
-            let sized = MemoryPlan {
-                start_mb: plan.start_mb,
-                max_mb: (max > start).then_some(max),
-            };
-            eprintln!("{}", sized.describe(&self.name, limit));
-        }
+        let start = u64::from(boot.memory.start_mb);
+        let max = boot.memory.max_mb.unwrap_or(start);
         let mut listen_ports = vec![
             self.config.control_port,
             self.config.log_port,
@@ -275,10 +235,7 @@ impl Planner {
         listen_ports.extend(crate::host_services::listen_ports());
         let vm = MacVmConfig {
             kernel: files.kernel.clone(),
-            initrd: files
-                .initrd
-                .clone()
-                .ok_or_else(|| format!("the image in {} has no initrd.img", dir.display()))?,
+            initrd,
             cmdline,
             memory_max_mb: max,
             memory_start_mb: start,
@@ -405,7 +362,28 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
         config: config.clone(),
         user: shared.user.clone(),
         name: name.to_string(),
-        store: shared.updates.as_ref().map(|u| Arc::clone(&u.store)),
+        boot: BootPlanner {
+            store: shared.updates.as_ref().map(|u| Arc::clone(&u.store)),
+            configured_dir: config.image_dir.clone(),
+            rules: image_rules(GuestArch::HOST),
+            check: Some(Box::new(check_image)),
+            data_disk: shared.user.disk(),
+            // An image without a disk to make the user's from is refused before a blank one
+            // could be made.
+            data_disk_size_gb: 0,
+            image_cache: Some(shared.user.image_cache()),
+            backend: MacDisks,
+            memory: MemoryInputs {
+                fixed_mb: config.memory_mb,
+                settings: Arc::clone(&shared.settings),
+                user: name.to_string(),
+                // Memory is shared with the GPU on a Mac, so with no limit the VM grows to
+                // half of it, and no more than the framework allows.
+                ceiling: GrowthCeiling::HalfHost,
+                facts: Arc::new(MacFacts),
+                hypervisor_max_mb: Some(crate::vz::max_memory_mb()),
+            },
+        },
         settings: Arc::clone(&shared.settings),
         identity: Arc::clone(&boot_identity),
     };
@@ -707,14 +685,20 @@ pub fn serve(
             Box::new(move |_: &str| Ok(disk.clone()))
         },
         Box::new(move |disk: &Path| {
-            let current = current_image(
-                reset_shared.store(),
-                reset_shared.config.image_dir.as_deref(),
-            )?;
             if disk != reset_shared.user.disk() {
                 return Err(format!("{} is not this user's disk", disk.display()));
             }
-            bring_user_disk(&reset_shared.user, &current.dir, current.cache_key())
+            dsa_host_core::boot::make_fresh_disk(
+                &MacDisks,
+                &image_rules(GuestArch::HOST),
+                (
+                    reset_shared.store(),
+                    reset_shared.config.image_dir.as_deref(),
+                ),
+                Some(&reset_shared.user.image_cache()),
+                disk,
+                0,
+            )
         }),
     )
     .with_beside("image-version");

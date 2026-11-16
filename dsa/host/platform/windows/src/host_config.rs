@@ -45,7 +45,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use dsa_host_core::image_files::{read_image, GuestArch, ImageFiles, ImageRules};
+use dsa_host_core::image_files::{GuestArch, ImageFiles, ImageRulesOwned};
 use dsa_host_core::session::SessionConfig;
 use serde::Deserialize;
 
@@ -599,6 +599,21 @@ impl HostConfig {
         })
     }
 
+    /// The rules this host reads an image by: the kernel names it boots, the one disk format
+    /// it attaches, the architecture it runs, and the kernel and command line its own
+    /// configuration supplies.
+    pub fn image_rules(&self) -> ImageRulesOwned {
+        ImageRulesOwned {
+            // An x86_64 image names its kernel bzImage; an arm64 one, Image, the name the
+            // arm64 kernel build gives it.
+            kernel_names: vec!["bzImage".into(), "Image".into()],
+            disk_extensions: vec!["vhdx".into()],
+            arch: Some(GuestArch::HOST),
+            fallback_kernel: Some(self.kernel.clone()),
+            extra_cmdline: self.kernel_cmdline.clone(),
+        }
+    }
+
     /// What to boot from `image_dir`, an image folder of the update store. Without a
     /// folder, the first image's folder, or `system_image` when updates are not used.
     ///
@@ -607,6 +622,8 @@ impl HostConfig {
     /// `image.json`. An older image carries `system.vhdx`, attached beside the user's disk.
     /// The image's own kernel (`bzImage`, or `Image` for arm64) wins over `kernel` either way,
     /// and an older image without an `initrd.img` boots the configuration's.
+    ///
+    /// The rules are [`HostConfig::image_rules`].
     pub fn image_files(&self, image_dir: Option<&std::path::Path>) -> Result<ImageFiles, String> {
         let dir = image_dir.map(std::path::Path::to_path_buf).or_else(|| {
             match (&self.system_image, &self.images_dir, &self.first_image) {
@@ -623,22 +640,16 @@ impl HostConfig {
                 disk_template: None,
             });
         };
-        let mut files = read_image(
-            &dir,
-            &ImageRules {
-                // An x86_64 image names its kernel bzImage; an arm64 one, Image, the name the
-                // arm64 kernel build gives it.
-                kernel_names: &["bzImage", "Image"],
-                disk_extensions: &["vhdx"],
-                arch: Some(GuestArch::HOST),
-                fallback_kernel: Some(&self.kernel),
-                extra_cmdline: &self.kernel_cmdline,
-            },
-        )?;
+        let mut files = self.image_rules().read(&dir)?;
+        self.fill_initrd(&mut files);
+        Ok(files)
+    }
+
+    /// An older image without an `initrd.img` boots the configuration's.
+    pub fn fill_initrd(&self, files: &mut ImageFiles) {
         if files.initrd.is_none() {
             files.initrd = self.initrd.clone();
         }
-        Ok(files)
     }
 
     fn base_vm_config(

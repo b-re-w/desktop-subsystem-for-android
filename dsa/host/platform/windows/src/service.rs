@@ -35,10 +35,9 @@ use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::guest_display::{display_or_smallest, with_display_density, with_display_size};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid, UserAndroids};
-use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::input_trace::guest_traces_input;
+use dsa_host_core::memory::GrowthCeiling;
 use dsa_host_core::memory::{log_memory, HostMemory};
-use dsa_host_core::memory::{memory_plan, GrowthCeiling};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{
@@ -70,10 +69,11 @@ use crate::monitors::{recorded_density, recorded_display};
 use crate::pipe::{NamedPipeListener, DEFAULT_PIPE_SDDL};
 use crate::render_gpu::previous_render_gpu;
 use crate::setup::SetupInstaller;
-use crate::user_disk::{bring_disk_to, prepare_user_data_disk, prepare_user_disk_folder};
+use crate::user_disk::{prepare_user_data_disk, prepare_user_disk_folder};
 use crate::vm::AndroidVmConfig;
 use crate::vm_listener::VmBoundListener;
 use crate::window_manager::UserWindowManager;
+use dsa_host_core::boot::{BootPlanner, MemoryInputs};
 use dsa_host_core::boot_signs::{watch_boot_signs, BootSigns};
 use dsa_host_core::clock_trace::ClockTrace;
 
@@ -169,43 +169,6 @@ pub fn host_logs_of(config: &HostConfig, sid: &str) -> Vec<HostFile> {
         }
     }
     files
-}
-
-/// How much memory a user's VM starts with and may grow to: the configuration's `memory_mb`,
-/// fixed, when it names one; else a small start that grows to the computer's memory less what
-/// Windows keeps, or to the user's own limit.
-struct MemorySizing {
-    fixed_mb: Option<u32>,
-    store: Arc<dyn SettingsStore>,
-    user: String,
-    facts: Arc<dyn HostFacts>,
-    max: crate::android_vm::MemoryMax,
-}
-
-impl MemorySizing {
-    /// The size the VM starts with; also sets how far it may grow.
-    fn memory_mb(&self) -> u32 {
-        let limit = match self.fixed_mb {
-            Some(_) => 0,
-            None => self
-                .store
-                .get(&self.user)
-                .map(|settings| settings.memory_limit_mb)
-                .unwrap_or(0),
-        };
-        let total_mb = self.facts.physical_memory_kb().map(|kb| kb / 1024);
-        let plan = memory_plan(
-            self.fixed_mb,
-            limit,
-            total_mb,
-            GrowthCeiling::HostLessReserve,
-        );
-        *self.max.lock().unwrap_or_else(|e| e.into_inner()) = plan.max_mb;
-        if self.fixed_mb.is_none() {
-            eprintln!("{}", plan.describe(&self.user, limit));
-        }
-        plan.start_mb
-    }
 }
 
 /// The network of each user's VM, by SID, which the settings report.
@@ -374,22 +337,28 @@ pub fn create_user_android(
     // The VM's memory is sized at each start, so a changed limit, or memory added to the
     // computer, takes effect the next time Android starts.
     let memory_max = crate::android_vm::MemoryMax::default();
-    let sizing = MemorySizing {
+    let memory_inputs = || MemoryInputs {
         fixed_mb: config.memory_mb,
-        store: settings_store(config),
+        settings: settings_store(config),
         user: sid.to_string(),
+        // Memory not in use goes back to Windows, so a VM with no limit may grow to the PC's
+        // memory less what Windows keeps.
+        ceiling: GrowthCeiling::HostLessReserve,
         facts: Arc::new(crate::power::ComputerFacts),
-        max: memory_max.clone(),
+        hypervisor_max_mb: None,
     };
     let launcher = match updates {
         None => {
             let base = user.config;
+            let (memory, max) = (memory_inputs(), memory_max.clone());
             AndroidVmLauncher::with_source(
                 &user.vm_name,
                 Box::new(move || {
                     let mut vm = base.clone();
                     follow_monitors(&mut vm, &owner);
-                    vm.memory_mb = sizing.memory_mb();
+                    let plan = memory.plan();
+                    *max.lock().unwrap_or_else(|e| e.into_inner()) = plan.max_mb;
+                    vm.memory_mb = plan.start_mb;
                     traced.store(
                         guest_traces_input(&vm.full_kernel_cmdline()),
                         Ordering::Relaxed,
@@ -399,41 +368,37 @@ pub fn create_user_android(
             )
         }
         Some(updates) => {
-            let store = Arc::clone(&updates.store);
             let base = user.config;
             let config = config.clone();
             let root = user_root.clone();
+            let max = memory_max.clone();
+            let planner = BootPlanner {
+                store: Some(Arc::clone(&updates.store)),
+                configured_dir: None,
+                rules: config.image_rules(),
+                check: None,
+                data_disk: base.data_disk.clone(),
+                data_disk_size_gb: disk_size_gb,
+                image_cache: None,
+                backend: crate::user_disk::VhdxBackend,
+                memory: memory_inputs(),
+            };
             AndroidVmLauncher::with_source(
                 &user.vm_name,
                 Box::new(move || {
-                    let current = current_image(Some(store.as_ref()), None)?;
-                    let files = config.image_files(Some(&current.dir))?;
                     let mut vm = base.clone();
                     let _guard = guard_android_disk(root.as_deref(), &vm.data_disk)?;
-                    // A disk holding a newer Android's data than this image, after the user
-                    // chose an older version and agreed to erase it, starts afresh.
-                    if let Some(major) = current.android_major {
-                        dsa_host_core::data_reset::erase_if_newer(
-                            &vm.data_disk,
-                            &vm.data_disk.with_extension("image-version"),
-                            major,
-                        )?;
-                    }
-                    match &files.disk_template {
-                        // A new user's disk is the template; an existing one gets this
-                        // image's Android and keeps the user's data.
-                        Some(template) => {
-                            bring_disk_to(&vm.data_disk, template, current.cache_key())?
-                        }
-                        None => prepare_user_data_disk(&vm.data_disk, disk_size_gb)?,
-                    }
+                    let plan = planner.plan()?;
+                    let mut files = plan.files.clone();
+                    config.fill_initrd(&mut files);
+                    *max.lock().unwrap_or_else(|e| e.into_inner()) = plan.memory.max_mb;
                     vm.kernel = files.kernel;
                     vm.initrd = files.initrd;
                     vm.kernel_cmdline = files.kernel_cmdline;
                     vm.system_image = files.system_disk;
-                    vm.image_version = Some(current.cache_key().to_string());
+                    vm.image_version = Some(plan.cache_key().to_string());
                     follow_monitors(&mut vm, &owner);
-                    vm.memory_mb = sizing.memory_mb();
+                    vm.memory_mb = plan.memory.start_mb;
                     traced.store(
                         guest_traces_input(&vm.full_kernel_cmdline()),
                         Ordering::Relaxed,

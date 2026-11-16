@@ -7,11 +7,32 @@
 
 use std::path::{Path, PathBuf};
 
+use dsa_host_core::disk::DiskBackend;
 use dsa_host_unix::raw_disk::RawDiskBackend;
 
-/// Brings the user's raw `disk` to image `version`, whose disk template (raw) is `template`.
-pub fn bring_disk_to(disk: &Path, template: &Path, version: &str) -> Result<(), String> {
-    dsa_host_core::disk::bring_disk_to(&RawDiskBackend, disk, template, version)
+/// The user's disks on this Mac, as the host core's disk algorithm makes them: raw files
+/// ([`RawDiskBackend`]), with the image's VHDX disks converted into raw ones first
+/// ([`raw_disk`]).
+pub struct MacDisks;
+
+impl DiskBackend for MacDisks {
+    type Device = <RawDiskBackend as DiskBackend>::Device;
+
+    fn open(&self, disk: &Path, write: bool) -> Result<Self::Device, String> {
+        RawDiskBackend.open(disk, write)
+    }
+
+    fn create(&self, disk: &Path, template: Option<&Path>, size_gb: u32) -> Result<(), String> {
+        RawDiskBackend.create(disk, template, size_gb)
+    }
+
+    fn write_beside(&self, path: &Path, bytes: &[u8]) -> Result<(), String> {
+        RawDiskBackend.write_beside(path, bytes)
+    }
+
+    fn prepare_image_disk(&self, image_disk: &Path, cache: &Path) -> Result<PathBuf, String> {
+        raw_disk(image_disk, cache)
+    }
 }
 
 /// The raw image of the disk `image_disk` (a VHDX of an image, or already raw), converting

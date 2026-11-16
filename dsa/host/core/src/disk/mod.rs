@@ -59,6 +59,43 @@ pub trait DiskBackend {
     fn has_partitions(&self, _path: &Path) -> Result<bool, String> {
         Ok(true)
     }
+
+    /// Whether the existing `disk` is in a format whose partitions this backend does not
+    /// read (a disk an earlier version made in another format). It is kept as it is, and only
+    /// the image version is recorded for it.
+    fn keeps_as_is(&self, _disk: &Path) -> bool {
+        false
+    }
+
+    /// The disk to use for `image_disk`, a disk the image carries: the disk itself when the
+    /// host attaches it as it is, else a copy in a format it can, made in `cache` once. Used
+    /// for the image's read-only system disk.
+    fn prepare_image_disk(&self, image_disk: &Path, _cache: &Path) -> Result<PathBuf, String> {
+        Ok(image_disk.to_path_buf())
+    }
+
+    /// The same for the image's disk template, which a new user's disk is made from. A host
+    /// that reads the template as it is (through its own disk reader) leaves it alone.
+    fn prepare_template_disk(&self, template: &Path, cache: &Path) -> Result<PathBuf, String> {
+        self.prepare_image_disk(template, cache)
+    }
+}
+
+/// Makes sure the user's `disk` exists and holds the image `key`'s Android: from the image's
+/// disk `template` when it has one ([`bring_disk_to`]), else as a missing disk made empty at
+/// `size_gb`.
+pub fn prepare_user_disk<B: DiskBackend>(
+    backend: &B,
+    disk: &Path,
+    template: Option<&Path>,
+    key: &str,
+    size_gb: u32,
+) -> Result<(), String> {
+    match template {
+        Some(template) => bring_disk_to(backend, disk, template, key),
+        None if !disk.exists() => backend.create(disk, None, size_gb),
+        None => Ok(()),
+    }
 }
 
 /// The record of the image version beside `disk`.
@@ -112,6 +149,9 @@ pub fn bring_disk_to<B: DiskBackend>(
     template: &Path,
     version: &str,
 ) -> Result<(), String> {
+    if disk.exists() && backend.keeps_as_is(disk) {
+        return record_disk_image_version(backend, disk, version);
+    }
     let held = disk_image_version(disk);
     if disk.exists() && held.is_none() && is_blank_disk(backend, disk)? {
         remove(disk, "empty")?;

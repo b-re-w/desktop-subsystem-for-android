@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use dsa_host_core::boot::{BootPlanner, MemoryInputs};
 use dsa_host_core::boot_signs::{watch_boot_signs, BootSigns};
 use dsa_host_core::clock_trace::{ClockTrace, HostClock};
 use dsa_host_core::data_reset::TemplateDataDisk;
@@ -31,8 +32,8 @@ use dsa_host_core::host_api::{
 use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::host_paths::HostPaths;
 use dsa_host_core::input_trace::guest_traces_input;
+use dsa_host_core::memory::GrowthCeiling;
 use dsa_host_core::memory::{log_memory, HostMemory};
-use dsa_host_core::memory::{memory_plan, GrowthCeiling};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
@@ -48,7 +49,7 @@ use dsa_host_unix::socket::UnixLocalListener;
 
 use crate::config::HostConfig;
 use crate::crosvm::guest_cid;
-use crate::image::{bring_disk_to, image_files, make_disk, ImageFiles};
+use crate::image::{ImageFiles, UserDisks};
 use crate::launcher::{BootPlan, LauncherSetup, LinuxVmLauncher, SharedNetworkStatus};
 use crate::users::{uid_of, Account};
 use crate::vsock::{connect_stream, VsockHub};
@@ -275,82 +276,46 @@ pub fn create_user_android(
     let store = settings_store(config);
     let trace_on = Arc::new(AtomicBool::new(false));
     let plan = {
-        let (config, updates, account, store) = (
-            config.clone(),
-            updates.cloned(),
-            account.clone(),
-            Arc::clone(&store),
-        );
-        let (disk, run_dir, traced, user) = (
+        let (disk, run_dir, traced) = (
             files.data_disk.clone(),
             files.run_dir.clone(),
             Arc::clone(&trace_on),
-            user.to_string(),
         );
+        let planner = BootPlanner {
+            store: updates.map(|u| Arc::clone(&u.store)),
+            configured_dir: config.image_dir.clone(),
+            rules: crate::image::image_rules(config.kernel.as_deref(), &config.kernel_cmdline),
+            check: None,
+            data_disk: files.data_disk.clone(),
+            data_disk_size_gb: config.data_disk_size_gb,
+            image_cache: None,
+            backend: UserDisks(account.clone()),
+            memory: MemoryInputs {
+                fixed_mb: config.memory_mb,
+                settings: Arc::clone(&store),
+                user: user.to_string(),
+                ceiling: GrowthCeiling::HostLessReserve,
+                facts: Arc::new(ProcFacts),
+                hypervisor_max_mb: None,
+            },
+        };
         Box::new(move || -> Result<BootPlan, String> {
-            let CurrentImage { dir, version, .. } = current_image(
-                updates.as_ref().map(|u| u.store.as_ref()),
-                config.image_dir.as_deref(),
-            )?;
-            let mut image = image_files(&dir, config.kernel.as_deref(), &config.kernel_cmdline)?;
+            crate::image::adopt_legacy_version_record(&disk);
+            let boot = planner.plan()?;
+            let mut image = boot.files;
             // Every app starts at the density of the user's main monitor, which their window
             // manager records, so the windows that open there ask for no other.
             image.kernel_cmdline =
                 crate::monitor_density::with_boot_density(&image.kernel_cmdline, &run_dir);
-            // crosvm attaches raw disks, so a VHDX system disk is read into one once.
-            image.system_disk = image
-                .system_disk
-                .as_deref()
-                .map(crate::image::raw_disk)
-                .transpose()?;
-            crate::image::adopt_legacy_version_record(&disk);
-            // A disk holding a newer Android's data than this image, after the user chose an
-            // older version and agreed to erase it, starts afresh.
-            if let Some(updates) = &updates {
-                let major = updates
-                    .store
-                    .state()
-                    .map_err(|e| e.to_string())?
-                    .current
-                    .android_major;
-                dsa_host_core::data_reset::erase_if_newer(
-                    &disk,
-                    &dsa_host_core::disk::version_file(&disk),
-                    major,
-                )?;
-            }
-            match (&image.disk_template, &version) {
-                (Some(template), Some(version)) => {
-                    bring_disk_to(&account, &disk, template, version)?
-                }
-                (template, _) if !disk.exists() => make_disk(
-                    &account,
-                    &disk,
-                    template.as_deref(),
-                    config.data_disk_size_gb,
-                )?,
-                _ => {}
-            }
-            let limit = match config.memory_mb {
-                Some(_) => 0,
-                None => store.get(&user).map(|s| s.memory_limit_mb).unwrap_or(0),
-            };
-            let total_mb = ProcFacts.physical_memory_kb().map(|kb| kb / 1024);
-            let plan = memory_plan(
-                config.memory_mb,
-                limit,
-                total_mb,
-                GrowthCeiling::HostLessReserve,
-            );
-            if config.memory_mb.is_none() {
-                eprintln!("{}", plan.describe(&user, limit));
-            }
             traced.store(guest_traces_input(&image.kernel_cmdline), Ordering::Relaxed);
             Ok(BootPlan {
                 files: image,
-                image_version: version,
-                memory_mb: plan.start_mb,
-                memory_max_mb: plan.max_mb.map(|mb| u32::try_from(mb).unwrap_or(u32::MAX)),
+                image_version: boot.image_version,
+                memory_mb: boot.memory.start_mb,
+                memory_max_mb: boot
+                    .memory
+                    .max_mb
+                    .map(|mb| u32::try_from(mb).unwrap_or(u32::MAX)),
             })
         })
     };
@@ -788,22 +753,17 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
                 .map_err(|e| format!("reading {}: {e}", folder.display()))?
                 .uid();
             let account = Account::of_uid(owner)?;
-            let CurrentImage { dir, version, .. } = current_image(
-                reset_updates.as_ref().map(|u| u.store.as_ref()),
-                reset_config.image_dir.as_deref(),
-            )?;
-            let image = image_files(&dir, reset_config.kernel.as_deref(), "")?;
-            make_disk(
-                &account,
+            dsa_host_core::boot::make_fresh_disk(
+                &UserDisks(account),
+                &crate::image::image_rules(reset_config.kernel.as_deref(), ""),
+                (
+                    reset_updates.as_ref().map(|u| u.store.as_ref()),
+                    reset_config.image_dir.as_deref(),
+                ),
+                None,
                 disk,
-                image.disk_template.as_deref(),
                 reset_config.data_disk_size_gb,
-            )?;
-            match version {
-                Some(version) => account
-                    .write_private(&dsa_host_core::disk::version_file(disk), version.as_bytes()),
-                None => Ok(()),
-            }
+            )
         }),
     )
     .with_beside("image-version")

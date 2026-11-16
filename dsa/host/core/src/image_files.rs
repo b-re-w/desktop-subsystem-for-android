@@ -79,6 +79,34 @@ pub struct ImageRules<'a> {
     pub extra_cmdline: &'a str,
 }
 
+/// [`ImageRules`] that a host keeps for its whole run.
+#[derive(Debug, Clone)]
+pub struct ImageRulesOwned {
+    pub kernel_names: Vec<String>,
+    pub disk_extensions: Vec<String>,
+    pub arch: Option<GuestArch>,
+    pub fallback_kernel: Option<PathBuf>,
+    pub extra_cmdline: String,
+}
+
+impl ImageRulesOwned {
+    /// Reads the image in `dir` by these rules ([`read_image`]).
+    pub fn read(&self, dir: &Path) -> Result<ImageFiles, String> {
+        let kernel_names: Vec<&str> = self.kernel_names.iter().map(String::as_str).collect();
+        let disk_extensions: Vec<&str> = self.disk_extensions.iter().map(String::as_str).collect();
+        read_image(
+            dir,
+            &ImageRules {
+                kernel_names: &kernel_names,
+                disk_extensions: &disk_extensions,
+                arch: self.arch,
+                fallback_kernel: self.fallback_kernel.as_deref(),
+                extra_cmdline: &self.extra_cmdline,
+            },
+        )
+    }
+}
+
 /// Reads the image in `dir`.
 ///
 /// An image made from the published builds carries `image.json`, `initrd.img` and either
