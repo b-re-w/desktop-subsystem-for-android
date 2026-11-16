@@ -1395,6 +1395,34 @@ pub struct UpdatesConfig<'a> {
     pub boot_timeout_secs: Option<u64>,
 }
 
+/// Why image updates are off although the configuration asked for them: the store could not
+/// be opened. The service keeps running and boots the image it has; this tells the user why
+/// no image is updated, where the Android version is shown.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdatesDisabled {
+    pub reason: String,
+}
+
+impl UpdatesDisabled {
+    fn text(&self) -> String {
+        format!("image updates are off: {}", self.reason)
+    }
+}
+
+impl AndroidVersions for UpdatesDisabled {
+    fn needs_administrator(&self) -> bool {
+        false
+    }
+
+    fn report(&self) -> Result<VersionReport, String> {
+        Err(self.text())
+    }
+
+    fn choose(&self, _: Channel, _: bool) -> Result<VersionReport, ChooseError> {
+        Err(ChooseError::Store(self.text()))
+    }
+}
+
 /// Opens the update store when the configuration names one.
 /// An image that the package installed last bundled, newer than the store's current one,
 /// becomes current on trial first: the configuration kept from an earlier installation still
@@ -1448,6 +1476,19 @@ pub fn open_updates(config: UpdatesConfig<'_>, build: &str) -> Result<Option<Upd
         trial_running: Arc::new(AtomicBool::new(false)),
         check_now: Arc::new(CheckNow::default()),
     }))
+}
+
+/// [`open_updates`] for a service that keeps running without updates when the store cannot
+/// be opened: the reason is logged and handed back, for the host to show where the Android
+/// version is (`HostApiService::with_android_versions`).
+pub fn open_updates_or_disable(
+    config: UpdatesConfig<'_>,
+    build: &str,
+) -> Result<Option<Updates>, UpdatesDisabled> {
+    open_updates(config, build).map_err(|reason| {
+        eprintln!("{build}: image updates disabled: {reason}");
+        UpdatesDisabled { reason }
+    })
 }
 
 /// How soon the service tries again while it has no image to boot.

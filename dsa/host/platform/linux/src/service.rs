@@ -37,8 +37,8 @@ use dsa_host_core::session::{Session, SessionState};
 use dsa_host_core::settings::{FileSettings, SettingsStore};
 use dsa_host_core::update::current::{current_image, CurrentImage};
 use dsa_host_core::update::service::{
-    follow_waiting_image, open_updates, run_update_checks, StoreVersions, UpdateCheck, Updates,
-    UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
+    follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
+    Updates, UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
 use dsa_host_core::window_manager::WindowManagerKeeper;
 use dsa_host_unix::paths::{Layout, UnixHostPaths};
@@ -733,12 +733,12 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
     }
     let grace = Duration::from_secs(config.stop_timeout_secs + 15);
     let store = service_settings_store(&config, build);
-    let updates = match open_updates(updates_config(&config), build) {
-        Ok(updates) => updates,
-        Err(error) => {
-            eprintln!("{build}: image updates disabled: {error}");
-            None
-        }
+    // A store that cannot be opened turns image updates off; Android still starts from the
+    // image it has, and the reason is shown with the Android version.
+    let (updates, updates_disabled) = match open_updates_or_disable(updates_config(&config), build)
+    {
+        Ok(updates) => (updates, None),
+        Err(disabled) => (None, Some(disabled)),
     };
     let direct_mapped = start_direct_mapped(&config, updates.as_ref(), build);
     check_raw_system_disk(&config, updates.as_ref(), build);
@@ -964,6 +964,8 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
             check_now: Arc::clone(&updates.check_now),
             shared_by_users: true,
         }));
+    } else if let Some(disabled) = updates_disabled {
+        service = service.with_android_versions(Arc::new(disabled));
     }
     {
         let androids = androids.clone();

@@ -34,8 +34,8 @@ use dsa_host_core::session::Session;
 use dsa_host_core::settings::{FileSettings, SettingsStore};
 use dsa_host_core::update::current::{current_image, prune_image_cache};
 use dsa_host_core::update::service::{
-    follow_waiting_image, open_updates, run_update_checks, StoreVersions, UpdateCheck, Updates,
-    UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
+    follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
+    Updates, UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
 use dsa_host_core::update::store::ImageStore;
 use dsa_host_core::window_manager::{WindowManagerHost, WindowManagerKeeper};
@@ -609,7 +609,9 @@ pub fn serve(
         eprintln!("{build}: recording the release channel failed: {why}");
     }
     let settings: Arc<dyn SettingsStore> = Arc::new(files);
-    let updates = match open_updates(
+    // A store that cannot be opened turns image updates off; Android still starts from the
+    // image it has, and the reason is shown with the Android version.
+    let (updates, updates_disabled) = match open_updates_or_disable(
         UpdatesConfig {
             images_dir: config.images_dir.as_deref(),
             first_image: config.first_image.as_ref(),
@@ -618,11 +620,8 @@ pub fn serve(
         },
         build,
     ) {
-        Ok(updates) => updates,
-        Err(error) => {
-            eprintln!("{build}: image updates disabled: {error}");
-            None
-        }
+        Ok(updates) => (updates, None),
+        Err(disabled) => (None, Some(disabled)),
     };
     if let (Some(updates), Some(update)) = (&updates, config.update.clone()) {
         let check = UpdateCheck {
@@ -779,6 +778,8 @@ pub fn serve(
         service = service.with_android_version(Arc::new(move || {
             store.state().ok().map(|state| state.current.version)
         }));
+    } else if let Some(disabled) = updates_disabled {
+        service = service.with_android_versions(Arc::new(disabled));
     }
     let service = Arc::new(service);
     service.serve(Box::new(listener), Arc::clone(&stop));

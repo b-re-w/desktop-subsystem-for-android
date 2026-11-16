@@ -12,10 +12,11 @@ use dsa_host_core::settings::{FileSettings, SettingsStore};
 use dsa_host_core::update::manifest::{FileEntry, ImageEntry, Manifest, FORMAT};
 use dsa_host_core::update::policy::InstalledImage;
 use dsa_host_core::update::service::{
-    open_updates, Download, DownloadAnnouncer, UpdateCheck, UpdateChecker, UpdateNotices, Updates,
-    UpdatesConfig, FIRST_CHECK_DELAY, FIRST_IMAGE_RETRY, SETTINGS_RECHECK,
+    open_updates, open_updates_or_disable, Download, DownloadAnnouncer, UpdateCheck, UpdateChecker,
+    UpdateNotices, Updates, UpdatesConfig, FIRST_CHECK_DELAY, FIRST_IMAGE_RETRY, SETTINGS_RECHECK,
 };
 use dsa_host_core::update::store::Fetch;
+use dsa_host_core::update::versions::{AndroidVersions, Channel};
 use ed25519_dalek::{Signer, SigningKey};
 use sha2::{Digest, Sha256};
 
@@ -132,6 +133,26 @@ fn fr14_no_bundled_image_is_not_reported_broken() {
         .unwrap()
         .unwrap();
     assert!(!updates.store.has_image("none"));
+}
+
+#[test]
+fn fr14_a_store_that_cannot_be_opened_turns_updates_off_and_says_why() {
+    let root = scratch("unopenable");
+    let first = image("16.0.1", 16, 1);
+    // The state names an image that is not a plain name, which the store refuses.
+    std::fs::write(root.join("state.json"), "not json").unwrap();
+    let disabled = match open_updates_or_disable(config(&root, &first, None), "t") {
+        Err(disabled) => disabled,
+        Ok(_) => panic!("a store with a broken state opened"),
+    };
+    assert!(!disabled.reason.is_empty());
+    let why = disabled.report().unwrap_err();
+    assert!(
+        why.starts_with("image updates are off: ") && why.contains(&disabled.reason),
+        "{why}"
+    );
+    assert!(disabled.choose(Channel::Latest, false).is_err());
+    assert!(!disabled.needs_administrator());
 }
 
 struct Counting {

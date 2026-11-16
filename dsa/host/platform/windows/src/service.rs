@@ -46,7 +46,7 @@ use dsa_host_core::update::program_service::{
 };
 pub use dsa_host_core::update::service::Updates;
 use dsa_host_core::update::service::{
-    follow_waiting_image, open_updates, run_update_checks, StoreVersions, UpdateCheck,
+    follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
     UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
 use dsa_host_core::update::store::ImageStore;
@@ -1060,12 +1060,12 @@ where
     prepare_machine_tmp(&config, build);
     let grace = Duration::from_secs(config.stop_timeout_secs + 15);
     let store = service_settings_store(&config, build);
-    let updates = match open_updates(updates_config(&config), build) {
-        Ok(updates) => updates,
-        Err(error) => {
-            eprintln!("{build}: image updates disabled: {error}");
-            None
-        }
+    // A store that cannot be opened turns image updates off; Android still starts from the
+    // image it has, and the reason is shown with the Android version.
+    let (updates, updates_disabled) = match open_updates_or_disable(updates_config(&config), build)
+    {
+        Ok(updates) => (updates, None),
+        Err(disabled) => (None, Some(disabled)),
     };
     let image_updates_available = updates.is_some() && config.image_updates_available();
     let direct_mapped = start_direct_mapped(&config, updates.as_ref(), build);
@@ -1340,6 +1340,8 @@ where
     });
     if let Some(versions) = version_store {
         service = service.with_android_versions(Arc::new(versions));
+    } else if let Some(disabled) = updates_disabled {
+        service = service.with_android_versions(Arc::new(disabled));
     }
     if let Some(settings) = program {
         let check_interval = config
