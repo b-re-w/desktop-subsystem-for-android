@@ -249,12 +249,25 @@ impl PendingCalls {
         }
     }
 
-    /// The connection ended: every wait ends, and no call starts again.
+    /// The connection ended: every wait ends, and no call starts again until
+    /// [`PendingCalls::reopen`].
     pub fn close(&self) {
         let mut calls = self.calls.lock().unwrap_or_else(|e| e.into_inner());
         calls.closed = true;
         drop(calls);
         self.answered.notify_all();
+    }
+
+    /// A new connection to a window manager replaces the one that ended: calls start again.
+    pub fn reopen(&self) {
+        let mut calls = self.calls.lock().unwrap_or_else(|e| e.into_inner());
+        calls.closed = false;
+        calls.waiting.clear();
+    }
+
+    /// Whether the connection ended and no new one has replaced it.
+    pub fn is_closed(&self) -> bool {
+        self.calls.lock().unwrap_or_else(|e| e.into_inner()).closed
     }
 }
 
@@ -353,6 +366,17 @@ mod tests {
         assert_eq!(waiter.join().unwrap(), Err(CallError::Closed));
         // And nothing waits on it again.
         assert_eq!(calls.begin(), Err(CallError::Closed));
+    }
+
+    #[test]
+    fn nfr5_calls_start_again_when_a_new_window_manager_replaces_the_old() {
+        let calls = PendingCalls::new();
+        calls.close();
+        assert!(calls.is_closed());
+        assert_eq!(calls.begin(), Err(CallError::Closed));
+        calls.reopen();
+        assert!(!calls.is_closed());
+        assert!(calls.begin().is_ok());
     }
 
     #[test]
