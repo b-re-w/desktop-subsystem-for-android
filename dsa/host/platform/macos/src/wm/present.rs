@@ -384,6 +384,7 @@ impl FrameSink for Presenter {
             return;
         };
         self.frames_shown.fetch_add(1, Ordering::Relaxed);
+        super::resize_queue::frame_drawn(shown.task_id, (width, height));
         if let Some(announce) = shown.slots.written(slot, (width, height), Instant::now()) {
             announce_frame(shown, announce);
         }
