@@ -409,12 +409,12 @@ struct IdentityFieldRow: View {
                 TextField("", text: Binding(get: { vm.field(key).value }, set: { vm.edit(key, $0) }),
                           prompt: Text(field.placeholder))
                     .labelsHidden()
+                    // The placeholder is Android's own value, not the box's name.
+                    .accessibilityLabel(vm.label(field))
                     .multilineTextAlignment(.leading)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
                     .disabled(vm.isBusy)
-                    // The placeholder is Android's own value, not the box's name.
-                    .accessibilityLabel(vm.label(field))
             } label: {
                 RowLabel(title: vm.label(field), detail: vm.detail(field))
             }
