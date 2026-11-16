@@ -350,6 +350,29 @@ Never introduce anything that violates these. If a task seems to require it, sto
   freezes the guest by default.
 - **Platform neutral core (D9).** The protocol, the guest and `dsa/host/core/` never name a
   host OS API. Everything platform specific is under `dsa/host/platform/<os>/`.
+- **Policy in core, adapters thin (D9).** A behaviour that does not depend on the OS lives
+  once in `dsa/host/core/`, and every platform calls it. Examples are resize pacing, title bar
+  rules and layout, memory sizing and growth, image selection, boot planning and session
+  lifecycle. `dsa/host/platform/<os>/` holds only what must touch that OS: its window system,
+  its hypervisor, its devices, its files and its service manager. It turns those into the
+  core's types and calls.
+
+  The reason: the same logic written two or three times drifts. A fix then reaches one host
+  and not the others.
+
+  1. **Start from Windows.** Windows is the most complete host. Before writing a behaviour
+     for macOS or Linux, find the Windows implementation, move its OS-neutral part into core
+     with tests showing Windows behaves as before, and call it from the new platform. Never
+     write a second version from scratch next to the Windows one.
+  2. **Do not cross the line in either direction.** Core never names an OS API, never takes
+     an OS handle and never branches on the platform (`cfg(target_os)`). A platform crate
+     does not keep its own copy of a rule, a state machine, a queue, a formula or a localized
+     string that another platform also needs.
+  3. **When the line is unclear, draw it first.** Write down the core trait or function and
+     what each platform supplies before writing the code. An OS difference goes in the
+     platform's adapter as data or a trait method, not in core as a branch.
+  4. **Review checks it.** A change that adds platform-side logic another platform already
+     has, or OS-specific code in core, is sent back like a failing test.
 - **One protocol definition (PR-2).** Codecs are generated, never hand written. Every
   connection checks the protocol version and schema hash.
 - **Crash isolation (NFR-5).** A bad message or a dead guest never takes the host process
