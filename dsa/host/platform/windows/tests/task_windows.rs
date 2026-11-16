@@ -44,10 +44,10 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetClientRect, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsWindow,
     IsWindowVisible, IsZoomed, PostMessageW, SendMessageW, SetWindowPos, ShowWindow, SWP_NOMOVE,
-    SWP_NOZORDER, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, WM_CHAR, WM_CLOSE, WM_ENTERSIZEMOVE,
-    WM_EXITSIZEMOVE, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MOUSEWHEEL, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP,
+    SWP_NOZORDER, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, WMSZ_BOTTOMRIGHT, WM_CHAR, WM_CLOSE,
+    WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS, WM_LBUTTONDOWN,
+    WM_LBUTTONUP, WM_MOUSEWHEEL, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP,
+    WM_SIZING, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 const WAIT: Duration = Duration::from_secs(10);
@@ -645,7 +645,7 @@ fn drag_step(running: &Running, hwnd: isize, outer: (i32, i32)) -> (u32, u32) {
     );
     let size = (client.0 as u32, client.1 as u32);
     let started = Instant::now();
-    resize_to(hwnd, outer.0, outer.1);
+    drag_edge_to(hwnd, outer.0, outer.1);
     let took = started.elapsed();
     assert!(
         took < Duration::from_millis(400),
@@ -769,6 +769,30 @@ fn fr4_a_window_cannot_be_dragged_below_the_minimum_its_app_declares() {
     let expected = min_client_size(dpi_of_new_windows(), Some((1920, 1080)), Some((700, 500)));
     assert_eq!(client_size(hwnd), (expected.0 as i32, expected.1 as i32));
     unsafe { SendMessageW(hwnd as HWND, WM_EXITSIZEMOVE, 0, 0) };
+}
+
+/// One step of the user dragging the window's bottom right corner to `width` x `height`, as
+/// Windows' size loop takes it: `WM_SIZING` for the edge, then the new size. Only an edge drag
+/// holds the window to the frame it shows; a size set without one is the desktop placing the
+/// window, which takes the size as it is. Send between `WM_ENTERSIZEMOVE` and
+/// `WM_EXITSIZEMOVE`.
+fn drag_edge_to(hwnd: isize, width: i32, height: i32) {
+    let (window, _) = window_and_work_area(hwnd);
+    let mut proposed = RECT {
+        left: window.left,
+        top: window.top,
+        right: window.left + width,
+        bottom: window.top + height,
+    };
+    unsafe {
+        SendMessageW(
+            hwnd as HWND,
+            WM_SIZING,
+            WMSZ_BOTTOMRIGHT as usize,
+            &mut proposed as *mut RECT as isize,
+        )
+    };
+    resize_to(hwnd, width, height);
 }
 
 fn resize_to(hwnd: isize, width: i32, height: i32) {
@@ -942,7 +966,7 @@ fn fr4_a_dragged_window_resizes_its_task_live_and_reconfigures_it_when_let_go() 
     let before = running.android.requests.lock().unwrap().len();
     // Windows' sizing loop starts as the user takes hold of the window's edge.
     unsafe { SendMessageW(hwnd, WM_ENTERSIZEMOVE, 0, 0) };
-    resize_to(open[0].hwnd, 520, 430);
+    drag_edge_to(open[0].hwnd, 520, 430);
     wait_for("a live size to reach the guest", || {
         resizes_since(&running, before, 1)
             .iter()
@@ -950,7 +974,7 @@ fn fr4_a_dragged_window_resizes_its_task_live_and_reconfigures_it_when_let_go() 
             .then_some(())
     });
     for step in 1..10 {
-        resize_to(open[0].hwnd, 520 + step * 9, 430 + step * 4);
+        drag_edge_to(open[0].hwnd, 520 + step * 9, 430 + step * 4);
     }
     let (width, height) = client_size(open[0].hwnd);
     let size = (width as u32, height as u32);
@@ -1219,20 +1243,55 @@ fn fr4_a_window_maximised_with_a_guest_larger_than_its_monitor_fills_the_work_ar
 
 #[test]
 fn fr4_a_task_window_cannot_grow_past_what_the_guest_can_draw() {
-    let running = start(None);
+    let presenter = Arc::new(CapturingPresenter::default());
+    let running = start(Some(Arc::clone(&presenter)));
+    let Some(sink) = presenter.sink.lock().unwrap().clone() else {
+        eprintln!("skipping: no Direct3D 11 device on this machine");
+        return;
+    };
     running.android.start();
     let mut small = task_at_monitor_density(1, 400, 300);
     small.max_width = 500;
     small.max_height = 420;
     running.android.publish(TaskEvent::Updated(small));
+    running.android.publish(TaskEvent::Frames {
+        task_id: 1,
+        display_id: 3,
+    });
     let open = windows_of(&running, 1);
+    let hwnd = open[0].hwnd;
+    wait_for("display 3 to reach task 1's window", || {
+        sink.target(3, 1280, 720)
+    });
+    let (width, height) = client_size(hwnd);
+    sink.frame(3, (width as u32, height as u32));
 
-    resize_to(open[0].hwnd, 1400, 1000);
-    let (width, height) = client_size(open[0].hwnd);
+    // The user drags the corner far past what Android can draw. The window keeps the size of
+    // the frame it shows, and takes the size of the largest frame the guest draws for the task.
+    // A size the desktop sets outside a drag (a snap, maximise) is held instead, with the frame
+    // shown in its middle, so it is not checked here.
+    unsafe { SendMessageW(hwnd as HWND, WM_ENTERSIZEMOVE, 0, 0) };
+    drag_edge_to(hwnd, 1400, 1000);
+    let (width, height) = client_size(hwnd);
+    assert!(
+        width <= 500 && height <= 420,
+        "the client area grew to {width}x{height} before a frame came"
+    );
+    sink.frame(3, (500, 420));
+    wait_for("the window to take the size of the largest frame", || {
+        (client_size(hwnd) == (500, 420)).then_some(())
+    });
+    drag_edge_to(hwnd, 1400, 1000);
+    unsafe { SendMessageW(hwnd as HWND, WM_EXITSIZEMOVE, 0, 0) };
+    thread::sleep(Duration::from_millis(300));
+    let (width, height) = client_size(hwnd);
     assert!(
         width <= 500 && height <= 420,
         "the client area grew to {width}x{height}"
     );
+
+    running.android.publish(TaskEvent::Removed { task_id: 1 });
+    windows_of(&running, 0);
 }
 
 #[test]

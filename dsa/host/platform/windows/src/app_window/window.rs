@@ -879,7 +879,7 @@ unsafe extern "system" fn task_window_proc(
                 // Inside a title bar move loop Windows sends WM_SIZING when it changes the
                 // size itself (the restore as the drag starts, a snap preview, the drop on a
                 // snap zone): those sizes are taken as they are.
-                if is_edge_drag(data.loop_kind.get(), true) {
+                if data.in_move_loop.get() && is_edge_drag(data.loop_kind.get(), true) {
                     data.sizing.set(true);
                     data.drag_edges.set((
                         matches!(edge, WMSZ_LEFT | WMSZ_TOPLEFT | WMSZ_BOTTOMLEFT),
@@ -1459,7 +1459,7 @@ unsafe fn take_kept_frame(hwnd: HWND, data: &WindowData) {
     }
     // The window the user moves by its title bar keeps the size Windows gives it until the
     // drop; the frame is taken once the loop ends (WM_EXITSIZEMOVE).
-    if data.in_move_loop.get() && data.loop_kind.get() != LoopKind::Size {
+    if data.in_move_loop.get() && data.loop_kind.get() == LoopKind::Move {
         return;
     }
     let Some(presenter) = data.presenter.borrow().clone() else {
