@@ -22,7 +22,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-use dsa_host_core::image_files::{read_image, ImageRules};
+use dsa_host_core::image_files::{read_image, GuestArch, ImageRules};
 
 pub use dsa_host_core::image_files::ImageFiles;
 
@@ -321,7 +321,7 @@ pub fn image_files(
         &ImageRules {
             kernel_names: &["bzImage", "Image"],
             disk_extensions: &["img", "raw", "qcow2", "vhdx"],
-            arch: None,
+            arch: Some(GuestArch::HOST),
             fallback_kernel: kernel,
             extra_cmdline,
         },

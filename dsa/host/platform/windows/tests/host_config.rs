@@ -860,3 +860,20 @@ fn pr3_gpu_paravirtualization_is_off_unless_the_file_turns_it_on() {
     let user = config.user_vm_with(sid, &profiles).unwrap();
     assert!(user.config.gpu_paravirtualization);
 }
+
+#[test]
+fn d9_an_image_of_another_architecture_is_refused_before_boot() {
+    let config = HostConfig::parse(UPDATING).unwrap();
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("other-arch-image-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let other = if cfg!(target_arch = "aarch64") {
+        "x86_64"
+    } else {
+        "arm64"
+    };
+    std::fs::write(dir.join("image.json"), format!(r#"{{"arch": "{other}"}}"#)).unwrap();
+    let why = config.image_files(Some(&dir)).unwrap_err();
+    assert!(why.contains(&format!("is for {other}")), "{why}");
+}

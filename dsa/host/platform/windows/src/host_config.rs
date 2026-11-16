@@ -45,7 +45,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use dsa_host_core::image_files::{read_image, ImageFiles, ImageRules};
+use dsa_host_core::image_files::{read_image, GuestArch, ImageFiles, ImageRules};
 use dsa_host_core::session::SessionConfig;
 use serde::Deserialize;
 
@@ -656,7 +656,7 @@ impl HostConfig {
                 // arm64 kernel build gives it.
                 kernel_names: &["bzImage", "Image"],
                 disk_extensions: &["vhdx"],
-                arch: None,
+                arch: Some(GuestArch::HOST),
                 fallback_kernel: Some(&self.kernel),
                 extra_cmdline: &self.kernel_cmdline,
             },
