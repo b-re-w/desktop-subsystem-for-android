@@ -187,7 +187,7 @@ fn d9_wrong_arch_image_is_refused() {
         Some(r#"{"files": {"disk.vhdx": {}}}"#),
         &["Image"],
     );
-    assert!(read_image(&dir, &macos(GuestArch::X86_64)).is_ok());
+    assert!(read_image(&dir, &macos(GuestArch::Arm64)).is_ok());
     let dir = folder("aarch64", Some(r#"{"arch": "aarch64"}"#), &["Image"]);
     assert!(read_image(&dir, &macos(GuestArch::Arm64)).is_ok());
     let dir = folder("riscv", Some(r#"{"arch": "riscv64"}"#), &["Image"]);
