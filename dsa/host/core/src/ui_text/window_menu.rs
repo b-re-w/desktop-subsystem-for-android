@@ -200,7 +200,7 @@ mod tests {
                 let tag = language.tag();
                 assert!(!word.trim().is_empty(), "item {n} is empty in {tag}");
                 assert!(
-                    !word.contains('\u{2014}'),
+                    !word.contains(char::from_u32(0x2014).unwrap()),
                     "item {n} has an em dash in {tag}"
                 );
                 // A mark for an access key or a shortcut belongs to the host, not here.
