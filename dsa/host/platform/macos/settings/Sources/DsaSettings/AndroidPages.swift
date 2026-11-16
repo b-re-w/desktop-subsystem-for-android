@@ -799,6 +799,17 @@ struct LogsPage: View {
     }
 
     var body: some View {
+        // The page takes the size it is given and never offers one of its own. Every other
+        // page is a Form, which scrolls; this one is a stack with a list that fills it, and
+        // as the detail of the split view it made the split view taller than the window
+        // (1247 pt in a 656 pt window), so opening it scrolled the sidebar away and cut
+        // the page's top off.
+        GeometryReader { box in
+            page.frame(width: box.size.width, height: box.size.height)
+        }
+    }
+
+    private var page: some View {
         VStack(alignment: .leading, spacing: 10) {
             Note(text: T("LogsNote.Text"))
             if let error = vm.error {
