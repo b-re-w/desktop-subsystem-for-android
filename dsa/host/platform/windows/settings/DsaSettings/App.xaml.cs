@@ -9,17 +9,31 @@ public partial class App : Application
     internal static ITextSource Text { get; } = new ResourceText();
     private static readonly ProcessDsaCli Cli = new(ProcessDsaCli.Locate(AppContext.BaseDirectory));
     internal static DsaService Service { get; } = new(Cli);
-    internal static LogViewModel Logs { get; } = new(Cli, Service, Text);
-    internal static GeneralViewModel General { get; } = new(Service, Text);
-    internal static SettingsViewModel Settings { get; } = new(Service, Text);
-    internal static ProgramUpdateViewModel ProgramUpdate { get; } = new(Service, Text);
-    internal static MemoryViewModel Memory { get; } = new(Service, Text);
-    internal static InstallViewModel Install { get; } = new(Service, Text);
-    internal static AppsViewModel Apps { get; } = new(new AppsService(Cli), Text);
-    internal static WidgetsViewModel Widgets { get; } = new(Service, Text, Cli);
-    internal static DeviceIdentityViewModel DeviceIdentity { get; } = new(Cli, Service, Text);
-    internal static BackgroundViewModel Background { get; } = new(Service, Text);
-    internal static AndroidVersionViewModel AndroidVersion { get; } = new(Cli, Text);
+    // Each page's view model is made when it is first used, not all of them at start: a
+    // window that shows one page holds that page's state alone. The UI thread is the only
+    // one that asks, so the first use makes it once.
+    private static LogViewModel? _logs;
+    private static GeneralViewModel? _general;
+    private static SettingsViewModel? _settings;
+    private static ProgramUpdateViewModel? _programUpdate;
+    private static MemoryViewModel? _memory;
+    private static InstallViewModel? _install;
+    private static AppsViewModel? _apps;
+    private static WidgetsViewModel? _widgets;
+    private static DeviceIdentityViewModel? _deviceIdentity;
+    private static BackgroundViewModel? _background;
+    private static AndroidVersionViewModel? _androidVersion;
+    internal static LogViewModel Logs => _logs ??= new(Cli, Service, Text);
+    internal static GeneralViewModel General => _general ??= new(Service, Text);
+    internal static SettingsViewModel Settings => _settings ??= new(Service, Text);
+    internal static ProgramUpdateViewModel ProgramUpdate => _programUpdate ??= new(Service, Text);
+    internal static MemoryViewModel Memory => _memory ??= new(Service, Text);
+    internal static InstallViewModel Install => _install ??= new(Service, Text);
+    internal static AppsViewModel Apps => _apps ??= new(new AppsService(Cli), Text);
+    internal static WidgetsViewModel Widgets => _widgets ??= new(Service, Text, Cli);
+    internal static DeviceIdentityViewModel DeviceIdentity => _deviceIdentity ??= new(Cli, Service, Text);
+    internal static BackgroundViewModel Background => _background ??= new(Service, Text);
+    internal static AndroidVersionViewModel AndroidVersion => _androidVersion ??= new(Cli, Text);
 
     /// <summary>The argument that names an APK to install. Earlier releases associated APK files
     /// with the settings app and this argument; the app now hands such an APK on to the APK

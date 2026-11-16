@@ -866,7 +866,18 @@ impl CaptionLayout {
         if y < 0 || y >= self.height as i32 || x < 0 || x >= self.width as i32 {
             return CaptionHit::Client;
         }
-        if y < self.resize_border as i32 {
+        // Over the caption buttons the resize edge is one pixel deep, as at Windows' own
+        // caption buttons. Deeper, a restored window (the only one with a top edge) answers
+        // the top of the maximise button with a resize code, so the pointer reaches the button
+        // only below it and Windows 11's Snap Layouts flyout, which opens from the hover on
+        // the maximise button, hardly ever starts. A maximised window has no edge at all.
+        let over_buttons = x >= self.buttons_left();
+        let depth = if over_buttons {
+            self.resize_border.min(1)
+        } else {
+            self.resize_border
+        };
+        if y < depth as i32 {
             let corner = (self.resize_border * 2) as i32;
             return if x < corner {
                 CaptionHit::TopLeft
@@ -2215,12 +2226,30 @@ mod tests {
         assert_eq!(layout.hit(400, 7), CaptionHit::Top);
         assert_eq!(layout.hit(400, 8), CaptionHit::Caption);
         assert_eq!(layout.hit(3, 2), CaptionHit::TopLeft);
-        assert_eq!(layout.hit(790, 2), CaptionHit::TopRight);
+        assert_eq!(layout.hit(790, 0), CaptionHit::TopRight);
+        assert_eq!(layout.hit(770, 0), CaptionHit::Top);
         assert_eq!(
-            layout.hit(770, 2),
+            layout.hit(700, 0),
             CaptionHit::Top,
-            "above the close button"
+            "the edge itself, above the buttons"
         );
+    }
+
+    #[test]
+    fn fr22_the_restored_windows_maximize_button_is_hit_from_its_second_row_down() {
+        // A restored window's top edge, 8 pixels deep, took the top quarter of the buttons,
+        // and the Snap Layouts flyout opens from a hover on the maximise button.
+        let layout = at_100();
+        for y in 1..31 {
+            assert_eq!(
+                layout.hit(720, y),
+                CaptionHit::Button(CaptionButton::Maximize),
+                "row {y}"
+            );
+        }
+        assert_eq!(layout.hit(720, 0), CaptionHit::Top);
+        // Beside the buttons the edge keeps its full depth.
+        assert_eq!(layout.hit(400, 7), CaptionHit::Top);
         let maximized = CaptionLayout::new(800, 31, 96, 0);
         assert_eq!(
             maximized.hit(799, 0),

@@ -16,12 +16,11 @@ public partial class GeneralPage : Page
         InitializeComponent();
         DataContext = ViewModel;
         _timer.Tick += async (_, _) => await ViewModel.PollAsync();
+        PollingTimers.Attach(this, _timer);
         Loaded += async (_, _) =>
         {
-            _timer.Start();
             await ViewModel.RefreshAsync();
         };
-        Unloaded += (_, _) => _timer.Stop();
     }
 
     private async void OnStart(object sender, RoutedEventArgs e) => await ViewModel.StartAsync();

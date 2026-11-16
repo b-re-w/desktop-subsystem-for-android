@@ -306,6 +306,40 @@ typedef struct dsa_gfx_memory_owners {
 /* Fills `owners`. Returns 0 on success, -1 when the renderer is not running. */
 DSA_GFX_EXPORT int dsa_gfx_get_memory_owners(dsa_gfx_memory_owners* owners);
 
+/* One guest device's live allocations: by kind, and of its imports, how much is ColorBuffers
+ * (window buffers, hardware bitmaps and video frames it draws into or samples) and how much
+ * is grants of the graphics memory shared with the guest (its host-visible memory the guest
+ * maps in place). `process` is the renderer's number for the guest process it serves (0 when
+ * not known), and `pid` and `name` are who that process said it is (0 and "" when it did
+ * not). */
+typedef struct dsa_gfx_guest_device {
+    uint64_t bytes[DSA_GFX_MEMORY_KINDS];
+    uint64_t color_buffer_import_bytes;
+    uint64_t grant_bytes;
+    uint64_t process;
+    uint32_t count[DSA_GFX_MEMORY_KINDS];
+    uint32_t color_buffer_imports;
+    uint32_t grants;
+    uint32_t pid;
+    char name[56];
+} dsa_gfx_guest_device;
+
+/* Fills `devices` with up to `capacity` guest devices, those that hold the most first, and
+ * says in `total` how many there are. Returns 0 on success, -1 when the renderer is not
+ * running. */
+DSA_GFX_EXPORT int dsa_gfx_get_guest_devices(dsa_gfx_guest_device* devices,
+                                             uint32_t capacity,
+                                             uint32_t* total);
+
+/* Every live ColorBuffer as text, one moment's: a comment line with the count and the bytes,
+ * a header line, and one tab-separated line per ColorBuffer, largest first (handle, size,
+ * formats, the bytes of its Vulkan memory, reference count, whether it was opened, how long
+ * ago it was closed unopened, its age, how long ago it was last a display's frame, its role,
+ * the guest process that made it, and the guest processes that hold it open). Writes at most
+ * `capacity` bytes, ended with a 0, and returns the bytes the whole text needs with its 0;
+ * 0 when the renderer is not running. */
+DSA_GFX_EXPORT size_t dsa_gfx_describe_color_buffers(char* out, size_t capacity);
+
 /* Graphics memory shared with the guest (dsa_graphics_memory.h): the embedder's mapping of the
  * two sections the service attaches to the VM, the data region (`data`, `data_length` bytes)
  * and its grants table (`grants`, `grants_length` bytes). The renderer then puts a guest's

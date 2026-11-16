@@ -152,6 +152,29 @@ fn own_memory_kb() -> (Option<u64>, Option<u64>) {
 }
 
 /// What this process holds, with the renderer's own count.
+/// Writes every live color buffer, as the renderer lists it, to the user's
+/// `renderer-color-buffers.txt` beside the window manager's log, which the memory snapshot and
+/// the diagnostics archive take. It is rewritten at each of the window manager's memory requests
+/// (every few minutes and after a give-back), and its first line says when.
+fn save_color_buffers(adapter: &GfxstreamAdapter) -> Result<(), String> {
+    let Some(list) = adapter.color_buffer_list() else {
+        return Ok(());
+    };
+    let root = crate::paths::UserRoot::current().ok_or("the user's folder is not known")?;
+    let path = root.renderer_color_buffers();
+    let seconds = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs());
+    let text = format!(
+        "# The graphics renderer's color buffers (pid {}), at {seconds} seconds after 1970 UTC.
+{list}",
+        std::process::id()
+    );
+    let temporary = path.with_extension("txt.new");
+    std::fs::write(&temporary, text).map_err(|e| e.to_string())?;
+    std::fs::rename(&temporary, &path).map_err(|e| e.to_string())
+}
+
 fn memory(adapter: &GfxstreamAdapter) -> RendererProcessMemory {
     let (working_set_kb, private_kb) = own_memory_kb();
     RendererProcessMemory {
@@ -452,6 +475,10 @@ pub fn run(args: &[String]) -> ! {
                 // Whose the GPU memory is, for the window manager's log beside the report.
                 if let Some(owners) = adapter.counted_owners() {
                     link.note(&dsa_host_core::renderer::renderer_owners_line(&owners));
+                }
+                // Every color buffer, for the memory snapshot and the diagnostics archive.
+                if let Err(why) = save_color_buffers(&adapter) {
+                    link.note(&format!("could not save the color buffer list: {why}"));
                 }
             }
             Body::Stop(_) => break,

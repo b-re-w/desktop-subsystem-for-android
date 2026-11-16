@@ -92,6 +92,16 @@ pub fn empty_working_set() {
     }
 }
 
+/// Gives back what a window host holds for a window that was just minimized: the free memory
+/// of every heap, and then the working set. A window host has no GPU device of its own; the
+/// window manager lets the window's swapchain go and trims its own driver memory. Emptying the
+/// working set alone only pages memory out: the heap decommit is what takes private commit
+/// down.
+pub fn give_back_minimized() {
+    committed::compact_heaps();
+    empty_working_set();
+}
+
 /// What the give-back said of the video pictures shared with the guest: mapped memory, which
 /// the working set counts and the private commit does not. Empty while no video has played.
 fn pictures_line(pictures: PicturesGivenBack) -> String {

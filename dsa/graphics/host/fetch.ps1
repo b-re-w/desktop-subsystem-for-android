@@ -102,6 +102,12 @@ git -C $GfxstreamDir clean -fdx
 # <functional> used to include, and GCC 15's no longer do.
 # Without 0039 the renderer does not start on a driver that lists dma-buf export but refuses
 # a dma-buf allocation, as lavapipe does without /dev/udmabuf: it now exports an opaque fd.
+# Without 0040 the compositor cannot sample a YUV ColorBuffer, so SurfaceFlinger draws every
+# video into a client target the size of the display.
+# Without 0041 a memory report cannot list the ColorBuffers: which guest process made each,
+# which hold it open, and which is a task window's current frame.
+# Without 0042 a guest allocation that imports a ColorBuffer the renderer does not know (an
+# app that outlived a renderer restart) ends the guest's whole stream instead of failing.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -139,7 +145,10 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0036-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0037-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0038-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0039-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0039-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0040-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0041-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0042-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName

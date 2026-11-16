@@ -210,6 +210,8 @@ pub struct ImeWindow {
     imm_composing: Cell<bool>,
     /// Whether the log was told the input method composes through IMM32 in this window.
     imm_noted: Cell<bool>,
+    /// Whether making the document failed, so it is not tried for every editor.
+    document_failed: Cell<bool>,
 }
 
 impl ImeWindow {
@@ -224,20 +226,47 @@ impl ImeWindow {
             hwnd: Cell::new(0),
             imm_composing: Cell::new(false),
             imm_noted: Cell::new(false),
+            document_failed: Cell::new(false),
         }
     }
 
-    /// Gives the window `hwnd` its document, so the input method composes in it. Called once
-    /// the window exists, on its thread. The reason it could not, for the log.
-    pub fn attach(&self, hwnd: HWND) -> Result<(), String> {
+    /// The window `hwnd` exists, on its thread. Its document is made only once the guest
+    /// reports an editor that takes text ([`ImeWindow::editor_changed`]), so a window whose app
+    /// never takes text loads no text services.
+    pub fn attach(&self, hwnd: HWND) {
         self.hwnd.set(hwnd as isize);
-        let document = Document::attach(hwnd as isize, &self.shared)?;
-        if let Ok(mut slot) = self.document.try_borrow_mut() {
-            *slot = Some(document);
+    }
+
+    /// Makes the window's document, and starts the thread's text services framework for it,
+    /// if neither is there yet. Said in the log once when it cannot.
+    fn ensure_document(&self) {
+        let hwnd = self.hwnd.get();
+        if hwnd == 0
+            || self
+                .document
+                .try_borrow()
+                .map_or(true, |slot| slot.is_some())
+        {
+            return;
         }
-        // A window that has the keyboard focus already never sees it arrive.
-        self.take_framework_focus("as the window opened");
-        Ok(())
+        if self.document_failed.get() {
+            return;
+        }
+        let made = super::tsf::start_thread().and_then(|()| Document::attach(hwnd, &self.shared));
+        match made {
+            Ok(document) => {
+                if let Ok(mut slot) = self.document.try_borrow_mut() {
+                    *slot = Some(document);
+                }
+                // A window that has the keyboard focus already never sees it arrive.
+                self.take_framework_focus("as the editor was reported");
+            }
+            Err(why) => {
+                self.document_failed.set(true);
+                self.shared
+                    .note(&format!("the window takes no input method: {why}"));
+            }
+        }
     }
 
     /// Lets the document go, as the window closes.
@@ -277,6 +306,9 @@ impl ImeWindow {
     /// The guest described the task's focused editor: the document becomes its text, and the
     /// input scope follows its kind.
     pub fn editor_changed(&self, editor: ImeEditor) {
+        if editor.needs_text_document() {
+            self.ensure_document();
+        }
         let document = self.document.try_borrow().ok();
         let ended = match document.as_ref().and_then(|document| document.as_ref()) {
             Some(document) => document.described(editor),

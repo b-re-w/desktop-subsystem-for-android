@@ -1,0 +1,26 @@
+namespace Dsa.Settings.Core;
+
+/// <summary>Whether a page's polling timers run: only while the page is loaded and its window
+/// is shown and not minimised. A page nobody can see has nothing to keep current, and each
+/// poll starts a <c>dsa</c> process and allocates its answer.</summary>
+public static class PagePolling
+{
+    public static bool ShouldPoll(bool loaded, bool windowVisible, bool windowMinimized) =>
+        loaded && windowVisible && !windowMinimized;
+}
+
+/// <summary>The size an app icon is decoded at: the size it is shown at in device pixels,
+/// never more than the icon itself. Android hands out 256 px icons; a list of them decoded at
+/// that size holds 256 KiB for each, where a 32 px icon on a 150% monitor needs 9 KiB.</summary>
+public static class IconDecodeSize
+{
+    /// <param name="shownDip">The size the icon is shown at, in device independent pixels.</param>
+    /// <param name="scale">The monitor's scale (1.5 at 144 dpi); less than 1 counts as 1.</param>
+    /// <param name="sourcePixels">The icon's own width in pixels, or 0 when unknown.</param>
+    public static int Pixels(double shownDip, double scale, int sourcePixels)
+    {
+        var wanted = (int)Math.Ceiling(shownDip * Math.Max(scale, 1.0));
+        wanted = Math.Max(wanted, 1);
+        return sourcePixels > 0 ? Math.Min(wanted, sourcePixels) : wanted;
+    }
+}

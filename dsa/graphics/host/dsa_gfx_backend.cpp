@@ -148,6 +148,18 @@ bool read_fully(dsa_stream_read_fn read_cb, void* user_data, T* value) {
     return true;
 }
 
+bool read_bytes(dsa_stream_read_fn read_cb, void* user_data, char* out, size_t size) {
+    size_t received = 0;
+    while (received < size) {
+        int n = read_cb(user_data, out + received, size - received);
+        if (n < 0) {
+            return false;
+        }
+        received += static_cast<size_t>(n);
+    }
+    return true;
+}
+
 template <typename T>
 bool write_fully(dsa_stream_write_fn write_cb, void* user_data, const T& value) {
     size_t sent = 0;
@@ -433,19 +445,28 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
         return -2;
     }
 
-    uint64_t puid = dsa_gfx_on_process_create();
-    dsa_gfx_memory_process_started();
-
+    /* The process gets its ID before anything else happens on its behalf. The guest's driver
+     * waits for this answer with nothing else to go on, so nothing the renderer does for the
+     * process (registering it with the FrameBuffer) may stand in front of it. The ID comes from
+     * a counter and needs no lock. The guest uses it only on a command stream it opens after
+     * reading it, and that stream looks the process up when its first call arrives, after the
+     * registration below. */
+    const uint64_t puid = s_next_puid.fetch_add(1, std::memory_order_relaxed);
     size_t sent = 0;
     while (sent < sizeof(puid)) {
         int n = write_cb(user_data, reinterpret_cast<const char*>(&puid) + sent, sizeof(puid) - sent);
         if (n <= 0) {
-            dsa_gfx_on_process_destroy(puid);
-            dsa_gfx_memory_process_ended();
             return -3;
         }
         sent += static_cast<size_t>(n);
     }
+    {
+        const auto& renderer = android_getOpenglesRenderer();
+        if (renderer) {
+            renderer->onGuestGraphicsProcessCreate(puid);
+        }
+    }
+    dsa_gfx_memory_process_started();
 
     /* Keep the connection until the client disconnects. A client that knows the renderer
      * shares graphics memory (kGraphicsMemoryExtension) may ask for a staging grant on it;
@@ -455,6 +476,17 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
         uint32_t op = 0;
         if (!read_fully(read_cb, user_data, &op)) {
             break;
+        }
+        if (op == dsa::kIdentifyRequest) {
+            /* Who the process is, for the memory report. The rest of the word follows. */
+            dsa::ProcessIdentity identity = {};
+            char* rest = reinterpret_cast<char*>(&identity) + sizeof(op);
+            if (!read_bytes(read_cb, user_data, rest, sizeof(identity) - sizeof(op))) {
+                break;
+            }
+            identity.name[sizeof(identity.name) - 1] = ' ';
+            dsa_gfx_memory_process_identified(puid, identity.pid, identity.name);
+            continue;
         }
         if (op != dsa::kStagingRequest) {
             continue;
@@ -471,6 +503,7 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_process_pipe(dsa_stream_read_fn read_cb,
     }
 
     dsa_gfx_on_process_destroy(puid);
+    dsa_gfx_memory_process_forget(puid);
     dsa_gfx_memory_process_ended();
     return 0;
 }

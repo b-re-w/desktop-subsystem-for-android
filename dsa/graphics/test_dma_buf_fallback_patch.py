@@ -39,7 +39,7 @@ class DmaBufFallbackPatchTests(unittest.TestCase):
                 self.assertTrue(line[:1] in (" ", "+", "-"), repr(line))
 
     def test_pr3_the_fetch_applies_it_after_0038(self):
-        self.assertIn(" 0038 0039;", (HERE / "host/fetch.sh").read_text(encoding="utf-8"))
+        self.assertIn(" 0038 0039 ", (HERE / "host/fetch.sh").read_text(encoding="utf-8"))
         self.assertIn('-Filter "0039-*.patch"',
                       (HERE / "host/fetch.ps1").read_text(encoding="utf-8"))
 

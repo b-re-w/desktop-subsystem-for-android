@@ -20,13 +20,12 @@ public partial class NetworkPage : Page
         InitializeComponent();
         DataContext = ViewModel;
         _adbTimer.Tick += async (_, _) => await ViewModel.PollAdbAutoConnectAsync();
+        PollingTimers.Attach(this, _adbTimer);
         Loaded += async (_, _) =>
         {
-            _adbTimer.Start();
             await ViewModel.LoadAsync();
             await ViewModel.RefreshNetworkAsync();
         };
-        Unloaded += (_, _) => _adbTimer.Stop();
     }
 
     private async void OnRefresh(object sender, RoutedEventArgs e) => await ViewModel.RefreshNetworkAsync();

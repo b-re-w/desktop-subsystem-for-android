@@ -77,7 +77,7 @@
     <value>Der Arbeitsspeicher reicht nicht, um Android zu starten. Schließen Sie andere Apps und versuchen Sie es erneut.</value>
   </data>
   <data name="LastReason_Disk" xml:space="preserve">
-    <value>Ein Datenträgerproblem hat Android am Start gehindert. Geben Sie Platz frei oder prüfen Sie das Laufwerk und versuchen Sie es erneut.</value>
+    <value>Ein Datenträgerproblem hat den Start verhindert. Schaffen Sie Platz oder prüfen Sie das Laufwerk und starten Sie neu.</value>
   </data>
   <data name="LastReason_TimedOut" xml:space="preserve">
     <value>Android hat zu lange zum Starten gebraucht. Versuchen Sie, es erneut zu starten.</value>
@@ -323,7 +323,9 @@ DSA lädt ein anderes Abbild herunter, falls es eines gibt. Die nächste DSA-Ver
     <value>Vulkan-Treiber</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Android-Apps zeichnen über Vulkan. Eine GPU ohne Vulkan-Treiber kann Dozen (Vulkan on Direct3D 12) aus dem OpenCL, OpenGL, and Vulkan Compatibility Pack von Microsoft nutzen. Gilt nach dem Neustart des Fenstermanagers.</value>
+    <value>Android-Apps zeichnen über Vulkan.
+Eine GPU ohne Vulkan-Treiber kann Dozen (Vulkan on Direct3D 12) aus dem OpenCL, OpenGL, and Vulkan Compatibility Pack von Microsoft nutzen.
+Gilt nach dem Neustart des Fenstermanagers.</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>Automatisch: der Treiber der GPU, Dozen nur ohne Treiber (empfohlen)</value>
@@ -347,7 +349,9 @@ DSA lädt ein anderes Abbild herunter, falls es eines gibt. Die nächste DSA-Ver
     <value>Rendert gerade über Dozen auf der CPU: Diese GPU hat keinen Direct3D 12-Treiber.</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>Kein Vulkan zum Rendern, daher startet Android nicht. Installieren Sie das Compatibility Pack aus dem Microsoft Store oder mit winget install Microsoft.OpenCLGLVulkanCompatibilityPack und melden Sie sich neu an.</value>
+    <value>Kein Vulkan zum Rendern, daher startet Android nicht.
+Installieren Sie das Compatibility Pack aus dem Microsoft Store oder mit winget install Microsoft.OpenCLGLVulkanCompatibilityPack
+und melden Sie sich neu an.</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Gilt ab dem nächsten Öffnen des App-Fensters.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Wer diese App skaliert, wenn ihr Fenster auf einen Monitor mit anderer Skalierung wechselt.
-• App: Die App übernimmt die Skalierung des neuen Monitors sofort, wenn das Fenster ihn erreicht, und zeichnet in dieser Skalierung, Text bleibt scharf. Sagt eine App nicht, dass sie das selbst handhabt, baut Android ihren Bildschirm neu auf und behält den Zustand, daher kann sie kurz neu zeichnen.
+• App: Die App übernimmt die Skalierung des neuen Monitors sofort, wenn das Fenster ihn erreicht, und zeichnet neu, Text bleibt scharf.
+Handhabt eine App das nicht selbst, baut Android ihren Bildschirm neu auf und behält den Zustand, daher kann sie kurz neu zeichnen.
 • System: Die App behält ihre Skalierung, und DSA skaliert ihr Fenster auf dieselbe physische Größe. Text kann etwas unscharf wirken.
-• Automatisch: System für Apps, die bei einer Skalierungsänderung zur Laufzeit fehlerhaft werden, etwa YouTube; für jede andere App App, wenn sie angibt, das selbst zu handhaben, sonst System.
+• Automatisch: System für Apps, die bei einer Skalierungsänderung zur Laufzeit fehlerhaft werden, etwa YouTube;
+für jede andere App App, wenn sie angibt, das selbst zu handhaben, sonst System.
 Automatisch und System starten die App nie neu.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Noch nicht verfügbar: Es braucht eine Änderung am Android-Framework, die diese
     <value>Vollbild von Apps</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>Wo eine App erscheint, die Vollbild anfordert, etwa per Vollbild-Schaltfläche eines Videos. Bildschirmfüllend erscheint die Titelleiste am oberen Rand. Die Wahl pro App auf der Seite Apps hat Vorrang.</value>
+    <value>Wo eine App erscheint, die Vollbild anfordert, etwa per Vollbild-Schaltfläche eines Videos.
+Bildschirmfüllend erscheint die Titelleiste am oberen Rand.
+Die Wahl pro App auf der Seite Apps hat Vorrang.</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>Apps, die ihre Leisten ausblenden</value>

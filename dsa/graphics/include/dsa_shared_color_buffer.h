@@ -72,6 +72,12 @@ static inline uint32_t dsa_shared_color_buffer_gl_format(uint32_t drm_fourcc) {
  * so all of them pick the same format for one buffer.
  */
 #define DSA_YUV_COLOR_BUFFERS_EXTENSION "ANDROID_EMU_dsa_yuv_color_buffers"
+/*
+ * A host that composes the layers of YUV ColorBuffers itself lists this extension. It reads
+ * such a layer's matrix, range and chroma order from the layer's colour (the hwcomposer's
+ * encodeYuvColor), so SurfaceFlinger need not draw a video into its client target.
+ */
+#define DSA_YUV_COMPOSITION_EXTENSION "ANDROID_EMU_dsa_yuv_composition"
 /* Y, then two chroma planes at half width and height, in the buffer's own plane order. */
 #define DSA_COLOR_BUFFER_YUV420_THREE_PLANE 0x44534133u /* 'DSA3' */
 /* Y, then one plane of interleaved chroma pairs at half width and height. */

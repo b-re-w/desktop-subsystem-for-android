@@ -1,0 +1,185 @@
+Subject: Describe every color buffer for a memory report
+
+A memory report could say how many bytes the renderer's own device held for color buffers, but
+not which ones: whose window, which app made it, whether anything still had it open, or whether
+it was a task's current frame. FrameBuffer::describeColorBuffers lists every live ColorBuffer
+under the locks that guard the table, with its size, formats, the bytes of its Vulkan memory,
+its reference count, whether it waits for its close delay, the guest processes that hold it
+open, and the display it is the current frame of. A small history beside the table remembers
+which guest process made each ColorBuffer and when, and when it was last made a display's
+frame; entries of destroyed ColorBuffers are dropped when the table is described or when the
+history grows past twice the table. Nothing else changes.
+
+diff --git a/host/FrameBuffer.cpp b/host/FrameBuffer.cpp
+index ce14151cb..7f4aadd54 100644
+--- a/host/FrameBuffer.cpp
++++ b/host/FrameBuffer.cpp
+@@ -1251,6 +1251,23 @@ HandleType FrameBuffer::createColorBufferWithResourceHandleLocked(int p_width, i
+         }
+     }
+ 
++    {
++        // Who made it, for describeColorBuffers. What was destroyed since the last look is
++        // dropped here too, so the history stays about as large as the table.
++        RenderThreadInfo* creator = RenderThreadInfo::get();
++        std::lock_guard<std::mutex> historyLock(m_colorBufferHistoryLock);
++        if (m_colorBufferHistory.size() > 2 * m_colorbuffers.size() + 256) {
++            for (auto it = m_colorBufferHistory.begin(); it != m_colorBufferHistory.end();) {
++                it = m_colorbuffers.count(it->first) ? std::next(it)
++                                                     : m_colorBufferHistory.erase(it);
++            }
++        }
++        ColorBufferHistory& history = m_colorBufferHistory[handle];
++        history = ColorBufferHistory{};
++        history.creatorPuid = creator ? creator->m_puid : 0;
++        history.createdUs = android::base::getUnixTimeUs();
++    }
++
+     return handle;
+ }
+ 
+@@ -1431,6 +1448,66 @@ int FrameBuffer::closeDelayedColorBuffers() {
+     return after < before ? static_cast<int>(before - after) : 0;
+ }
+ 
++std::vector<FrameBuffer::ColorBufferDescription> FrameBuffer::describeColorBuffers() {
++    std::vector<ColorBufferDescription> out;
++    {
++        AutoLock mutex(m_lock);
++        AutoLock colorBufferMapLock(m_colorBufferMapLock);
++        std::unordered_map<HandleType, size_t> index;
++        out.reserve(m_colorbuffers.size());
++        for (const auto& [handle, ref] : m_colorbuffers) {
++            ColorBufferDescription d;
++            d.handle = handle;
++            if (ref.cb) {
++                d.width = ref.cb->getWidth();
++                d.height = ref.cb->getHeight();
++                d.format = static_cast<uint32_t>(ref.cb->getFormat());
++                d.frameworkFormat = static_cast<uint32_t>(ref.cb->getFrameworkFormat());
++            }
++            d.refcount = ref.refcount;
++            d.opened = ref.opened;
++            d.closedUs = ref.closedTs;
++            if (m_emulationVk) {
++                VkDeviceSize size = 0;
++                if (m_emulationVk->getColorBufferAllocationInfo(handle, &size, nullptr, nullptr,
++                                                                nullptr)) {
++                    d.allocationBytes = size;
++                }
++            }
++            index[handle] = out.size();
++            out.push_back(std::move(d));
++        }
++        for (const auto& [puid, handles] : m_procOwnedColorBuffers) {
++            for (HandleType handle : handles) {
++                const auto found = index.find(handle);
++                if (found != index.end()) {
++                    out[found->second].holders.push_back(puid);
++                }
++            }
++        }
++        std::lock_guard<std::mutex> historyLock(m_colorBufferHistoryLock);
++        for (auto it = m_colorBufferHistory.begin(); it != m_colorBufferHistory.end();) {
++            const auto found = index.find(it->first);
++            if (found == index.end()) {
++                it = m_colorBufferHistory.erase(it);
++                continue;
++            }
++            out[found->second].creatorPuid = it->second.creatorPuid;
++            out[found->second].createdUs = it->second.createdUs;
++            out[found->second].lastPostUs = it->second.lastPostUs;
++            ++it;
++        }
++    }
++    // The displays' table has its own lock, which a post takes without m_lock.
++    for (auto& d : out) {
++        uint32_t displayId = 0;
++        if (getColorBufferDisplay(d.handle, &displayId) == 0) {
++            d.displayId = displayId;
++        }
++    }
++    return out;
++}
++
+ void FrameBuffer::decColorBufferRefCountNoDestroy(HandleType p_colorbuffer) {
+     AutoLock colorBufferMapLock(m_colorBufferMapLock);
+ 
+@@ -2814,6 +2891,13 @@ int FrameBuffer::destroyDisplay(uint32_t displayId) {
+ }
+ 
+ int FrameBuffer::setDisplayColorBuffer(uint32_t displayId, uint32_t colorBuffer) {
++    {
++        std::lock_guard<std::mutex> historyLock(m_colorBufferHistoryLock);
++        const auto found = m_colorBufferHistory.find(colorBuffer);
++        if (found != m_colorBufferHistory.end()) {
++            found->second.lastPostUs = android::base::getUnixTimeUs();
++        }
++    }
+     return emugl::get_emugl_multi_display_operations().setDisplayColorBuffer(displayId,
+                                                                              colorBuffer);
+ }
+diff --git a/host/FrameBuffer.h b/host/FrameBuffer.h
+index adaef252b..6f5388d2d 100644
+--- a/host/FrameBuffer.h
++++ b/host/FrameBuffer.h
+@@ -24,7 +24,9 @@
+ #include <memory>
+ #include <optional>
+ #include <unordered_map>
++#include <mutex>
+ #include <unordered_set>
++#include <vector>
+ 
+ #include "Buffer.h"
+ #include "ColorBuffer.h"
+@@ -241,6 +243,32 @@ class FrameBuffer : public android::base::EventNotificationSupport<FrameBufferCh
+     // embedder calls it now and then.
+     int closeDelayedColorBuffers();
+ 
++    // One live ColorBuffer as a memory report lists it: its size and format, the bytes of its
++    // Vulkan memory, which guest process made it and when, the guest processes that hold it
++    // open (each as often as it opened it), the display it is the current frame of, and when
++    // it was last made a display's frame.
++    struct ColorBufferDescription {
++        HandleType handle = 0;
++        uint32_t width = 0;
++        uint32_t height = 0;
++        uint32_t format = 0;
++        uint32_t frameworkFormat = 0;
++        uint64_t allocationBytes = 0;
++        uint32_t refcount = 0;
++        bool opened = false;
++        // When the guest closed it unopened; 0 while it is not waiting for its close delay.
++        uint64_t closedUs = 0;
++        uint64_t creatorPuid = 0;
++        uint64_t createdUs = 0;
++        uint64_t lastPostUs = 0;
++        // The display it is the current frame of, or -1.
++        int64_t displayId = -1;
++        std::vector<uint64_t> holders;
++    };
++    // Every live ColorBuffer, described under the locks that guard the table, so the list is
++    // one moment's. Times are android::base::getUnixTimeUs().
++    std::vector<ColorBufferDescription> describeColorBuffers();
++
+     // Destroy a Buffer created previously. |p_buffer| is its handle value as
+     // returned by createBuffer().
+     void closeBuffer(HandleType p_colorbuffer);
+@@ -940,6 +968,16 @@ class FrameBuffer : public android::base::EventNotificationSupport<FrameBufferCh
+     ProcOwnedColorBuffers m_procOwnedColorBuffers;
+     ProcOwnedCleanupCallbacks m_procOwnedCleanupCallbacks;
+ 
++    // Who made each ColorBuffer and when, and when it was last made a display's frame, for
++    // describeColorBuffers. Its own lock: a post does not take m_lock.
++    struct ColorBufferHistory {
++        uint64_t creatorPuid = 0;
++        uint64_t createdUs = 0;
++        uint64_t lastPostUs = 0;
++    };
++    std::mutex m_colorBufferHistoryLock;
++    std::unordered_map<HandleType, ColorBufferHistory> m_colorBufferHistory;
++
+ #if GFXSTREAM_ENABLE_HOST_GLES
+     gl::EmulatedEglContextMap m_contexts;
+     gl::EmulatedEglImageMap m_images;

@@ -2706,6 +2706,11 @@ impl HostApiService {
             }
             if let Some(request::Body::CollectDiagnostics(_)) = request.body {
                 let android = self.androids.android(&peer.user);
+                // Taken first, so the memory files and the guest's part are one moment's.
+                let memory = android
+                    .as_ref()
+                    .ok()
+                    .map(|android| self.memory_of(&peer.user, &**android));
                 let host_files = self
                     .host_logs
                     .as_ref()
@@ -2717,6 +2722,7 @@ impl HostApiService {
                     request.id,
                     &host_files,
                     &self.hello.build,
+                    memory,
                 );
             }
             if let Some(request::Body::StreamInput(_)) = request.body {

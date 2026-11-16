@@ -913,6 +913,10 @@ jobs:
       # APKs made by the Android SDK's own tools, for the APK install window.
       - name: Make the test APKs
         shell: bash
+        env:
+          # Code for the other 64-bit processor than the runner's, so the window warns
+          # and still offers to install (32-bit code is refused outright).
+          MANY_ABI: ${{ matrix.arch == 'arm64' && 'x86_64' || 'arm64-v8a' }}
         run: .github/scripts/apk/make-test-apks.sh .scratch/test-apks
 
       # Double-clicking an APK runs what the .apk association names; the window then shows what
@@ -2130,12 +2134,17 @@ jobs:
             if ((Get-FileHash "$published\bzImage").Hash -ne $kernel.sha256.ToUpperInvariant()) { throw "the kernel does not match the signed list" }
             $kernelFrom = "the published image $($newest.version)"
           } else {
-            # The arm64 kernel of the newest kernel build that passed.
-            $run = gh run list --repo $env:REPO --workflow test-kernel.yml --status success --limit 20 --json databaseId --jq '.[].databaseId' |
-              Where-Object { gh api "repos/$env:REPO/actions/runs/$_/artifacts" --jq '.artifacts[].name' | Select-String -SimpleMatch -Quiet 'kernel-arm64' } |
-              Select-Object -First 1
+            # The arm64 kernel of the newest kernel build that passed: in this repository, or
+            # in the published one when this is a fork that has run no kernel build itself.
+            $run = $null
+            foreach ($source in $env:REPO, $env:PUBLISHED_REPO) {
+              $run = gh run list --repo $source --workflow test-kernel.yml --status success --limit 20 --json databaseId --jq '.[].databaseId' |
+                Where-Object { gh api "repos/$source/actions/runs/$_/artifacts" --jq '.artifacts[].name' | Select-String -SimpleMatch -Quiet 'kernel-arm64' } |
+                Select-Object -First 1
+              if ($run) { break }
+            }
             if (-not $run) { throw "no kernel build that passed has a kernel-arm64 artifact, so there is no arm64 kernel to package" }
-            gh run download $run --repo $env:REPO --name kernel-arm64 --dir .scratch\kernel-arm64
+            gh run download $run --repo $source --name kernel-arm64 --dir .scratch\kernel-arm64
             if ($LASTEXITCODE -ne 0) { throw "downloading kernel-arm64 from run $run failed" }
             $image = Get-ChildItem -Recurse -File .scratch\kernel-arm64 | Where-Object { $_.Name -like 'Image*' -and $_.Extension -notin '.gz', '.config' } | Select-Object -First 1
             if (-not $image -or $image.Length -eq 0) { throw "kernel-arm64 from run $run has no Image" }

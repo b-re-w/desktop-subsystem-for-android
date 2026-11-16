@@ -17,7 +17,7 @@
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -45,6 +45,55 @@ fn nfr5_renderer_child_process() {
     if std::env::var_os(ADDRESS_VARIABLE).is_some() {
         dsa_host_windows::renderer::process::run(&[]);
     }
+}
+
+/// Reads exactly `buf.len()` bytes from `stream`, giving up after `WAIT`.
+///
+/// A renderer that takes a stream and never answers would otherwise block the read, and the
+/// test with it, until the job's own limit. After `WAIT` the connection is shut down from a
+/// second handle, so the read returns and the test fails naming `what`.
+fn read_within(stream: &mut Box<dyn BridgeStream>, buf: &mut [u8], what: &str) {
+    let other = stream
+        .try_clone_stream()
+        .expect("a second handle on the stream");
+    let (done, finished) = mpsc::channel::<()>();
+    let timer = thread::spawn(move || {
+        if finished.recv_timeout(WAIT) == Err(mpsc::RecvTimeoutError::Timeout) {
+            other.shutdown_stream();
+            true
+        } else {
+            false
+        }
+    });
+    let read = stream.read_exact(buf);
+    let _ = done.send(());
+    if timer.join().unwrap() {
+        panic!(
+            "{what}: no answer within {} s\nwindow manager log (with the renderer's notes):\n{}",
+            WAIT.as_secs(),
+            window_manager_log()
+        );
+    }
+    read.unwrap_or_else(|error| panic!("{what}: {error}"));
+}
+
+/// Ends this test program, naming the step it was on and printing the window manager's log,
+/// when the test is not done in `limit`. A step that blocks with no limit of its own (a
+/// Direct3D call, a join on a thread that does not end) then costs minutes, not the job.
+fn watchdog(limit: Duration, stage: Arc<Mutex<&'static str>>, log: PathBuf) -> mpsc::Sender<()> {
+    let (done, finished) = mpsc::channel::<()>();
+    thread::spawn(move || {
+        if finished.recv_timeout(limit) == Err(mpsc::RecvTimeoutError::Timeout) {
+            let log = std::fs::read_to_string(&log).unwrap_or_default();
+            eprintln!(
+                "the test is not done after {} s; it was waiting for {}\nwindow manager log:\n{log}",
+                limit.as_secs(),
+                stage.lock().unwrap()
+            );
+            std::process::exit(101);
+        }
+    });
+    done
 }
 
 fn wait_until(what: &str, limit: Duration, mut done: impl FnMut() -> bool) -> bool {
@@ -103,8 +152,20 @@ fn log_file(name: &str) -> (PathBuf, Arc<CompositorLogger>) {
         .join(format!("dsa-renderer-{name}-{}", std::process::id()))
         .join("dsa-wm.log");
     let _ = std::fs::remove_file(&path);
+    let _ = LOG.set(path.clone());
     let logger = Arc::new(CompositorLogger::open(&path).unwrap());
     (path, logger)
+}
+
+/// The log of the window manager this test program plays, once a test has opened it.
+static LOG: OnceLock<PathBuf> = OnceLock::new();
+
+/// What the window manager wrote so far, including what the renderer sent it. Printed when a
+/// step gets no answer, so the reason is in the test's output.
+fn window_manager_log() -> String {
+    LOG.get()
+        .and_then(|path| std::fs::read_to_string(path).ok())
+        .unwrap_or_else(|| "(none)".into())
 }
 
 /// The window manager under test: the renderer client, its supervisor and the VM slot.
@@ -295,8 +356,11 @@ impl Guest {
         let mut pipe = Guest::open(ports.1);
         pipe.write_all(&100i32.to_le_bytes()).unwrap();
         let mut puid = [0u8; 8];
-        pipe.read_exact(&mut puid)
-            .expect("the renderer gives the process its ID");
+        read_within(
+            &mut pipe,
+            &mut puid,
+            "the renderer gives the process its ID",
+        );
         assert_ne!(u64::from_le_bytes(puid), 0);
         let mut stream = Guest::open(ports.0);
         // Every stream starts with the guest's client flags.
@@ -325,9 +389,11 @@ impl Guest {
     fn call(&mut self, opcode: u32, args: &[u32]) -> u32 {
         self.send(opcode, args);
         let mut reply = [0u8; 4];
-        self.stream
-            .read_exact(&mut reply)
-            .expect("the renderer answers");
+        read_within(
+            &mut self.stream,
+            &mut reply,
+            &format!("the renderer answers call {opcode}"),
+        );
         u32::from_le_bytes(reply)
     }
 
@@ -370,10 +436,14 @@ fn nfr5_killing_the_renderer_keeps_the_window_and_its_frame_and_frames_resume() 
         return;
     };
     let (path, logger) = log_file("frames");
+    let stage = Arc::new(Mutex::new("the renderer to start"));
+    let at = |what: &'static str| *stage.lock().unwrap() = what;
+    let _watchdog = watchdog(Duration::from_secs(300), Arc::clone(&stage), path.clone());
     let wm = WindowManager::start(1, Some(&backend), logger);
     assert!(wm.client.wait_started(WAIT), "the renderer starts");
+    at("a Direct3D device on the renderer's GPU");
     // The window's texture is made on the GPU the renderer runs on.
-    let gpu = Gpu::new(wm.client.adapter_luid(), false).expect("a Direct3D device");
+    let gpu = Gpu::new(wm.client.adapter_luid()).expect("a Direct3D device");
     let window = Arc::new(Window {
         gpu,
         texture: Mutex::new(None),
@@ -387,6 +457,7 @@ fn nfr5_killing_the_renderer_keeps_the_window_and_its_frame_and_frames_resume() 
 
     // The guest draws a frame: the renderer asks the window manager for the window's
     // texture, and, where the GPU can open it, copies the frame into it.
+    at("the first frame");
     let mut guest = Guest::connect(ports(1));
     guest.post_frame();
     assert!(
@@ -410,6 +481,7 @@ fn nfr5_killing_the_renderer_keeps_the_window_and_its_frame_and_frames_resume() 
 
     // The renderer dies. The window manager, which is this process, goes on; the window
     // keeps its texture with the last frame in it.
+    at("the renderer to be killed and start again");
     let first = wm.renderer();
     kill(first);
     assert!(
@@ -429,6 +501,7 @@ fn nfr5_killing_the_renderer_keeps_the_window_and_its_frame_and_frames_resume() 
     // The guest's streams dropped with the old renderer. It registers the process again
     // (a new process pipe and ID), makes its gralloc buffer's ColorBuffer again under the same
     // handle and size, and its next frame reaches the same window.
+    at("the frame after the restart");
     let asked = window.asked.load(Ordering::SeqCst);
     let mut guest = Guest::connect(ports(1));
     guest.post_frame();
@@ -450,6 +523,8 @@ fn nfr5_killing_the_renderer_keeps_the_window_and_its_frame_and_frames_resume() 
     assert_eq!(window.made.load(Ordering::SeqCst), 1);
     drop(guest);
 
+    at("the window manager to stop");
+    drop(wm);
     let log = std::fs::read_to_string(&path).unwrap();
     assert!(log.contains(&format!("pid {first}) ended")), "{log}");
 }

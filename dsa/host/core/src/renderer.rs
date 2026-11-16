@@ -281,6 +281,45 @@ pub struct RendererOwners {
     /// largest first.
     pub guest_devices: u32,
     pub largest_guest_devices_kb: Vec<u64>,
+    /// The guest devices that hold the most, largest first, each with the guest process it
+    /// serves; empty from a renderer that cannot say, and the line then gives only their sizes.
+    pub largest_guest_devices: Vec<GuestDevice>,
+}
+
+/// One guest process's Vulkan device in the renderer: who the process is and what the device
+/// holds, with its imports split into color buffers and grants of the shared graphics memory.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GuestDevice {
+    /// The process's name as it said it (an app's package name); empty when it did not.
+    pub name: String,
+    /// Its pid in the guest; 0 when it did not say.
+    pub pid: u32,
+    /// Everything the device holds, in KiB.
+    pub kb: u64,
+    /// Color buffers it imported (window buffers, hardware bitmaps, video frames).
+    pub color_buffers: Allocations,
+    /// Grants of the graphics memory shared with the guest (its host-visible memory).
+    pub grants: Allocations,
+}
+
+impl GuestDevice {
+    /// "name (pid N) X MiB: color buffers A MiB in a, shared grants B MiB in b".
+    fn describe(&self) -> String {
+        let who = match (self.name.is_empty(), self.pid) {
+            (true, 0) => "an unnamed process".to_string(),
+            (true, pid) => format!("pid {pid}"),
+            (false, 0) => self.name.clone(),
+            (false, pid) => format!("{} (pid {pid})", self.name),
+        };
+        format!(
+            "{who} {} MiB: color buffers {} MiB in {}, shared grants {} MiB in {}",
+            mib(self.kb),
+            mib(self.color_buffers.kb),
+            self.color_buffers.count,
+            mib(self.grants.kb),
+            self.grants.count
+        )
+    }
 }
 
 /// The log line that says whose the renderer's GPU memory is, in MiB: what the color buffers
@@ -304,7 +343,15 @@ pub fn renderer_owners_line(owners: &RendererOwners) -> String {
         .filter(|kb| **kb > 0)
         .map(|kb| mib(*kb).to_string())
         .collect();
-    let largest = if largest.is_empty() {
+    let named: Vec<String> = owners
+        .largest_guest_devices
+        .iter()
+        .filter(|device| device.kb > 0)
+        .map(GuestDevice::describe)
+        .collect();
+    let largest = if !named.is_empty() {
+        format!("the largest: {}", named.join("; "))
+    } else if largest.is_empty() {
         "none holds any".to_string()
     } else {
         format!("the largest hold {} MiB", largest.join(", "))

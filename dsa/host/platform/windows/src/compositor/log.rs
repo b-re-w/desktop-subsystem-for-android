@@ -189,6 +189,73 @@ pub fn log_panics_to(logger: Option<Arc<CompositorLogger>>) {
     }));
 }
 
+/// What a Windows exception code means, for the line a crash writes.
+pub fn exception_name(code: u32) -> &'static str {
+    match code {
+        0xC000_0005 => "access violation",
+        0xC000_00FD => "stack overflow",
+        0xC000_0094 => "integer division by zero",
+        0xC000_0095 => "integer overflow",
+        0xC000_001D => "illegal instruction",
+        0xC000_0096 => "privileged instruction",
+        0xC000_0374 => "heap corruption",
+        0xC000_0409 => "fast fail (the program stopped itself)",
+        0xC000_0017 => "no memory",
+        0x8000_0003 => "breakpoint",
+        _ => "unknown exception",
+    }
+}
+
+/// How a crash that no handler took reads in the log: the thread, the exception and where it
+/// happened. A native crash is not a panic, so the panic hook never sees it.
+pub fn crash_line(thread: Option<&str>, code: u32, address: usize) -> String {
+    let thread = thread.unwrap_or("unnamed");
+    format!(
+        "crash in thread '{thread}': {} (code {code:#010x}) at address {address:#x}; the process ends",
+        exception_name(code)
+    )
+}
+
+#[cfg(windows)]
+static CRASH_LOG: OnceLock<Arc<CompositorLogger>> = OnceLock::new();
+
+#[cfg(windows)]
+unsafe extern "system" fn write_crash(
+    info: *const windows_sys::Win32::System::Diagnostics::Debug::EXCEPTION_POINTERS,
+) -> i32 {
+    // SAFETY: Windows passes a valid pointer; the record is only read.
+    if let Some(record) = info.as_ref().and_then(|info| info.ExceptionRecord.as_ref()) {
+        let thread = std::thread::current();
+        let line = crash_line(
+            thread.name(),
+            record.ExceptionCode as u32,
+            record.ExceptionAddress as usize,
+        );
+        note(CRASH_LOG.get().map(|logger| &**logger), &line);
+    }
+    // EXCEPTION_CONTINUE_SEARCH: Windows still reports the crash as it would have.
+    0
+}
+
+/// Writes a crash that kills the process (an access violation in a driver, a stack overflow, a
+/// division by zero) to `logger` before the process ends. Without it such a death leaves no
+/// line at all, because it never reaches the panic hook.
+pub fn log_crashes_to(logger: Option<Arc<CompositorLogger>>) {
+    #[cfg(windows)]
+    if let Some(logger) = logger {
+        if CRASH_LOG.set(logger).is_ok() {
+            // SAFETY: installs a filter that only reads the exception it is given.
+            unsafe {
+                windows_sys::Win32::System::Diagnostics::Debug::SetUnhandledExceptionFilter(Some(
+                    write_crash,
+                ));
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = logger;
+}
+
 /// The trace settings this process read from the service: (input trace, resize trace).
 static TRACE_SETTINGS: OnceLock<(bool, bool)> = OnceLock::new();
 
@@ -353,6 +420,60 @@ pub fn trace_summary(
     }
 }
 
+/// Logs `stage` of `task_id`'s window placed at `pos` with `size`, when the per-stage
+/// lines are on.
+pub fn trace_place(
+    logger: Option<&CompositorLogger>,
+    task_id: i32,
+    stage: &'static str,
+    pos: (i32, i32),
+    size: (u32, u32),
+    detail: &str,
+) {
+    let line = resize_trace()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .place(
+            task_id,
+            stage,
+            pos,
+            size,
+            detail,
+            Instant::now(),
+            resize_trace::wall_now(),
+        );
+    if let Some(line) = line {
+        note(logger, &line);
+    }
+}
+
+/// Logs `task_id`'s window dragged to `pos`, a few times a second at most.
+pub fn trace_moving(
+    logger: Option<&CompositorLogger>,
+    task_id: i32,
+    pos: (i32, i32),
+    size: (u32, u32),
+) {
+    let line = resize_trace()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .moving(task_id, pos, size, Instant::now(), resize_trace::wall_now());
+    if let Some(line) = line {
+        note(logger, &line);
+    }
+}
+
+/// `task_id`'s drag has ended: logs its last move, if that was left out.
+pub fn trace_move_ended(logger: Option<&CompositorLogger>, task_id: i32) {
+    let line = resize_trace()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .move_ended(task_id);
+    if let Some(line) = line {
+        note(logger, &line);
+    }
+}
+
 /// The task's window is gone: its trace state goes too.
 pub fn trace_forget(task_id: i32) {
     resize_trace()
@@ -388,6 +509,17 @@ mod tests {
         );
         assert_eq!(renderer_line(b'I', "Destroyed VkDevice"), None);
         assert_eq!(renderer_line(b'V', "verbose"), None);
+    }
+
+    #[test]
+    fn nfr5_a_native_crash_is_logged_with_its_thread_exception_and_address() {
+        assert_eq!(
+            crash_line(Some("dsa-wm-hosts"), 0xC000_0005, 0x7ff6_1234),
+            "crash in thread 'dsa-wm-hosts': access violation (code 0xc0000005) at address \
+             0x7ff61234; the process ends"
+        );
+        assert!(crash_line(None, 0xC000_00FD, 0).contains("stack overflow"));
+        assert_eq!(exception_name(0x1234), "unknown exception");
     }
 
     #[test]

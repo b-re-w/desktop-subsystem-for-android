@@ -18,9 +18,10 @@ use dsa_protocol::host_api::types::{
 use dsa_protocol::host_api::{decode, send};
 use dsa_transport::{Connection, TransportError};
 
-use crate::diagnostics::{write_archive, HostFile};
+use crate::diagnostics::{memory_files, write_archive, HostFile};
 use crate::guest_log::{LogDumpEvent, LogEntry, LogFilter};
 use crate::host_api::{ClientError, UserAndroid};
+use crate::memory::{snapshot_json, MemorySnapshot};
 use crate::tasks::TaskRequestError;
 
 /// The most records one frame to a client carries.
@@ -265,13 +266,16 @@ fn recent_log_text(entries: &[LogEntry]) -> Vec<u8> {
 }
 
 /// Serves a `CollectDiagnostics` request on its own connection: the guest's part, when its
-/// Android runs, and the host's logs `host_files` names, as one zip archive.
+/// Android runs, and the host's logs `host_files` names, as one zip archive. `memory` is the
+/// memory snapshot taken as the request came in, which goes in as `host/memory.json` and
+/// `host/memory.txt` with the memory files ([`memory_files`]).
 pub fn serve_collect_diagnostics(
     mut connection: Box<dyn Connection>,
     android: Result<Arc<dyn UserAndroid>, String>,
     id: u64,
     host_files: &[HostFile],
     build: &str,
+    memory: Option<MemorySnapshot>,
 ) {
     let android = match android {
         Ok(android) => android,
@@ -289,14 +293,24 @@ pub fn serve_collect_diagnostics(
         Err(TaskRequestError::NotRunning(why) | TaskRequestError::Failed(why)) => (None, Some(why)),
     };
     let recent = android.recent_log();
-    let extra = if recent.is_empty() {
-        Vec::new()
-    } else {
-        vec![(
+    let mut extra = Vec::new();
+    if let Some(memory) = &memory {
+        extra.push((
+            "host/memory.json".to_string(),
+            snapshot_json(memory).to_string().into_bytes(),
+        ));
+        extra.push((
+            "host/memory.txt".to_string(),
+            memory.to_string().into_bytes(),
+        ));
+    }
+    extra.extend(memory_files(host_files));
+    if !recent.is_empty() {
+        extra.push((
             "host/android-recent.log".to_string(),
             recent_log_text(&recent),
-        )]
-    };
+        ));
+    }
     let about = format!(
         "DSA diagnostics, made by {build} for the Android of the user who asked, with the logs \
          of DSA on this computer."

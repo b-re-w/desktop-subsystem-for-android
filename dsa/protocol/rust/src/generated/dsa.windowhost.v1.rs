@@ -468,12 +468,180 @@ pub struct SetShownTask {
     #[prost(int32, tag = "2")]
     pub shown_task_id: i32,
 }
+/// Window host to window manager: one thing to do on the GPU for a task's window. The window
+/// host owns the window and its DirectComposition visuals but no Direct3D device; the window
+/// manager, which has the task's frame texture on its own device, owns each window's
+/// swapchains, each bound to a DirectComposition surface handle it places in the window host's
+/// process. `op` says what is asked (the SURFACE_OP_ values of the Rust crate):
+///    1 present frame: copy the frame of texture `texture_id` (its top-left `width` x `height`
+///      pixels) into the frame swapchain, which has `buffer_count` buffers of the texture's
+///      size, and present it unless `keep` (then it waits in the back buffer). `band` is the
+///      height of the title bar's band in the frame's pixels (0 for none), sampled when
+///      `probe_band`; `capture` reads the frame back; `press` starts watching the area around a
+///      traced press for its first visible change.
+///    2 present kept: present the back buffer, whose top-left `width` x `height` pixels hold
+///      the frame kept by an earlier present frame with `keep`.
+///    3 caption: draw `pixels` (premultiplied BGRA rows, `width` x `height`) into the caption
+///      swapchain and present it.
+///    4 splash: draw the splash of a `width` x `height` client area: background `colour`
+///      (0xAARRGGBB), the icon in `pixels` (premultiplied BGRA, `icon_width` x `icon_height`,
+///      none when empty) at `dpi`.
+///    5 fill: fill the one-pixel fill swapchain with `colour` (0xAARRGGBB, opaque).
+///    6 release frame: let the frame swapchain go (the window was minimized).
+///    7 release all: let every swapchain of the window go (the window closed).
+///    8 read frame: read the newest frame back.
+///    9 tick: read what waits to be read (the band's copy, the frame statistics) and recover
+///      from a GPU reset.
+///    10 release splash: let the splash swapchain go (the first frame is shown).
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SurfaceCall {
+    #[prost(int32, tag = "1")]
+    pub task_id: i32,
+    /// Names the answer.
+    #[prost(uint64, tag = "2")]
+    pub call_id: u64,
+    #[prost(uint32, tag = "3")]
+    pub op: u32,
+    #[prost(uint64, tag = "4")]
+    pub texture_id: u64,
+    #[prost(uint32, tag = "5")]
+    pub width: u32,
+    #[prost(uint32, tag = "6")]
+    pub height: u32,
+    #[prost(bool, tag = "7")]
+    pub keep: bool,
+    #[prost(uint32, tag = "8")]
+    pub buffer_count: u32,
+    /// The frames keep their own transparency (an app overlay's window).
+    #[prost(bool, tag = "9")]
+    pub see_through: bool,
+    #[prost(uint32, tag = "10")]
+    pub band: u32,
+    #[prost(bool, tag = "11")]
+    pub probe_band: bool,
+    #[prost(bool, tag = "12")]
+    pub capture: bool,
+    #[prost(bytes = "vec", tag = "13")]
+    pub pixels: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint32, tag = "14")]
+    pub icon_width: u32,
+    #[prost(uint32, tag = "15")]
+    pub icon_height: u32,
+    #[prost(uint32, tag = "16")]
+    pub colour: u32,
+    #[prost(uint32, tag = "17")]
+    pub dpi: u32,
+    #[prost(bool, tag = "18")]
+    pub press: bool,
+    /// The press point in the frame's pixels, and when it came on the host clock (microseconds).
+    #[prost(float, tag = "19")]
+    pub press_x: f32,
+    #[prost(float, tag = "20")]
+    pub press_y: f32,
+    #[prost(uint64, tag = "21")]
+    pub press_at_us: u64,
+    /// Whether the frame swapchain's statistics are wanted in the answer.
+    #[prost(bool, tag = "22")]
+    pub statistics: bool,
+}
+/// Window manager to window host: what a SurfaceCall did. A read frame is answered in several
+/// SurfaceAnswers of the same call_id, each with the next rows, the last one with `more`
+/// false.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SurfaceAnswer {
+    #[prost(int32, tag = "1")]
+    pub task_id: i32,
+    #[prost(uint64, tag = "2")]
+    pub call_id: u64,
+    /// Empty when it went.
+    #[prost(string, tag = "3")]
+    pub error: ::prost::alloc::string::String,
+    /// The window manager's devices were made again (a GPU reset); everything drawn before is
+    /// gone and is drawn again by the window host.
+    #[prost(uint64, tag = "4")]
+    pub generation: u64,
+    /// A surface handle placed in the window host's process when the swapchain behind it was
+    /// made (again); 0 when it did not change. The window host shows the new surface from now on
+    /// and closes the handle it had.
+    #[prost(uint64, tag = "5")]
+    pub frame_surface: u64,
+    #[prost(uint64, tag = "6")]
+    pub caption_surface: u64,
+    #[prost(uint64, tag = "7")]
+    pub splash_surface: u64,
+    #[prost(uint64, tag = "8")]
+    pub fill_surface: u64,
+    /// The size of the frame swapchain's buffers, 0 when it has none.
+    #[prost(uint32, tag = "9")]
+    pub buffer_width: u32,
+    #[prost(uint32, tag = "10")]
+    pub buffer_height: u32,
+    /// The frame swapchain was made or resized, and how long that took in microseconds.
+    #[prost(bool, tag = "11")]
+    pub remade: bool,
+    #[prost(uint64, tag = "12")]
+    pub resize_us: u64,
+    /// A present happened, and its present count when known.
+    #[prost(bool, tag = "13")]
+    pub presented: bool,
+    #[prost(bool, tag = "14")]
+    pub has_present_count: bool,
+    #[prost(uint32, tag = "15")]
+    pub present_count: u32,
+    /// The frame swapchain's statistics: the count of the newest present on the screen and the
+    /// performance counter at its vertical blank. `no_statistics` says it gives none.
+    #[prost(bool, tag = "16")]
+    pub has_statistics: bool,
+    #[prost(uint32, tag = "17")]
+    pub statistics_present_count: u32,
+    #[prost(int64, tag = "18")]
+    pub statistics_sync_qpc: i64,
+    #[prost(bool, tag = "19")]
+    pub no_statistics: bool,
+    /// The band was read and changed: its fill, its own colour, its luminance and its range,
+    /// each with whether it is known.
+    #[prost(bool, tag = "20")]
+    pub band_changed: bool,
+    #[prost(bool, tag = "21")]
+    pub has_band_fill: bool,
+    #[prost(uint32, tag = "22")]
+    pub band_fill: u32,
+    #[prost(bool, tag = "23")]
+    pub has_band_colour: bool,
+    #[prost(uint32, tag = "24")]
+    pub band_colour: u32,
+    #[prost(bool, tag = "25")]
+    pub has_band_luminance: bool,
+    #[prost(uint32, tag = "26")]
+    pub band_luminance: u32,
+    #[prost(bool, tag = "27")]
+    pub has_band_range: bool,
+    #[prost(uint32, tag = "28")]
+    pub band_darkest: u32,
+    #[prost(uint32, tag = "29")]
+    pub band_lightest: u32,
+    /// Whether a read of the band still waits, so the window host ticks again.
+    #[prost(bool, tag = "30")]
+    pub band_pending: bool,
+    /// A read frame's size and the rows of it this answer carries, as RGBA.
+    #[prost(uint32, tag = "31")]
+    pub frame_width: u32,
+    #[prost(uint32, tag = "32")]
+    pub frame_height: u32,
+    #[prost(bytes = "vec", tag = "33")]
+    pub rgba: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bool, tag = "34")]
+    pub more: bool,
+    /// The frame was read back (a capture), as opposed to there being none to read.
+    #[prost(bool, tag = "35")]
+    pub has_frame: bool,
+}
 /// The one message type on the wire. Each frame carries exactly one.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Envelope {
     #[prost(
         oneof = "envelope::Body",
-        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 30, 31, 32, 33, 34, 35, 36, 60, 61, 62, 63, 64, 65, 66"
+        tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 30, 31, 32, 33, 34, 35, 36, 60, 61, 62, 63, 64, 65, 66, 67, 68"
     )]
     pub body: ::core::option::Option<envelope::Body>,
 }
@@ -547,6 +715,10 @@ pub mod envelope {
         SetShownTask(super::SetShownTask),
         #[prost(message, tag = "66")]
         SetOverlay(super::SetOverlay),
+        #[prost(message, tag = "67")]
+        SurfaceCall(super::SurfaceCall),
+        #[prost(message, tag = "68")]
+        SurfaceAnswer(super::SurfaceAnswer),
     }
 }
 /// The protocol version. CURRENT goes up when the meaning of existing messages changes.

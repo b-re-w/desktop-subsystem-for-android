@@ -122,7 +122,8 @@ class ImageLayoutTests(unittest.TestCase):
     def test_nfr2_every_kernel_file_channeld_opens_has_an_allow_rule(self):
         here = Path(__file__).parent
         src = here.parent / "channeld" / "src"
-        literal = re.compile(r'"(/(?:proc|sys)(?:/[^"]*)?)"')
+        # A path has no space or brace: "/proc/meminfo: {e}" is a message that names one.
+        literal = re.compile(r'"(/(?:proc|sys)(?:/[^"\s{}]*)?)"')
         found = 0
         for source in sorted(src.glob("*.rs")):
             domain, policy_file = self.CHANNELD_SOURCE_DOMAINS.get(
@@ -168,7 +169,8 @@ class ImageLayoutTests(unittest.TestCase):
     }
     # Paths the daemon names but never opens, so no folder on their way needs a rule. The
     # Google apps mount point is only compared with the mount points /proc/self/mounts lists.
-    CHANNELD_NAMED_NOT_OPENED = {"/mnt/dsa-gapps"}
+    # The root shell's HOME is /data: the daemon only puts it in the shell's environment.
+    CHANNELD_NAMED_NOT_OPENED = {"/mnt/dsa-gapps", "/data"}
 
     # What each file system call in the file sharing jobs asks of the storage's label
     # (media_rw_data_file), as {class: permissions}. A call not listed here fails the test, so
@@ -2548,7 +2550,7 @@ class GuestMemoryTests(unittest.TestCase):
 
     def test_nfr1_the_guest_swaps_to_zram_of_half_its_memory(self):
         fstab = (Path(make_image.__file__).with_name("fstab.dsa")).read_text()
-        self.assertIn("/dev/block/zram0 none swap defaults zramsize=50%", fstab)
+        self.assertIn("/dev/block/zram0 none swap defaults zramsize=100%", fstab)
         with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp)) as archive:
             rc = archive.read("VENDOR/etc/init/dsa-memory.rc").decode()
             self.assertIn("swapon_all /vendor/etc/fstab.dsa", rc)
@@ -2563,7 +2565,7 @@ class GuestMemoryTests(unittest.TestCase):
                 archive.read("META/vendor_filesystem_config.txt").decode(),
             )
             for directory in make_image.FSTAB_DIRS:
-                self.assertIn(b"zramsize=50%", archive.read(directory + "fstab.dsa"))
+                self.assertIn(b"zramsize=100%", archive.read(directory + "fstab.dsa"))
 
     def test_nfr1_the_idle_reclaim_compresses_what_stays_in_zram_again_with_zstd(self):
         # LZ4 for every swap, zstd for what stays cold: zstd must be named before swapon_all
@@ -2601,7 +2603,10 @@ class GuestMemoryTests(unittest.TestCase):
         entries = [line.split() for line in fstab.splitlines() if line.startswith("/dev/block/zram0")]
         self.assertEqual(len(entries), 1)
         self.assertIn("zram_backingdev_size=512M", entries[0][4].split(","))
-        contexts = {"SYSTEM/etc/selinux/plat_file_contexts": "/system/bin/sh u:object_r:shell_exec:s0\n"}
+        contexts = {
+            "SYSTEM/etc/selinux/plat_file_contexts": "/system/bin/sh u:object_r:shell_exec:s0\n",
+            "META/filesystem_config.txt": "system/bin/sh 0 2000 755 capabilities=0x0\n",
+        }
         with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp), extra=contexts) as archive:
             for directory in make_image.FSTAB_DIRS:
                 self.assertIn(b"zram_backingdev_size=512M", archive.read(directory + "fstab.dsa"))
@@ -2985,11 +2990,45 @@ class GuestMemoryTests(unittest.TestCase):
         for line in [
             "ro.lmk.use_psi=true",
             "ro.lmk.use_minfree_levels=false",
-            "ro.lmk.swap_free_low_percentage=10",
+            "ro.lmk.swap_free_low_percentage=0",
             "ro.lmk.swap_util_max=90",
             "ro.lmk.thrashing_limit=30",
         ]:
             self.assertIn(line + "\n", props)
+
+    def test_nfr1_lmkd_kills_for_full_swap_only_with_free_memory_low(self):
+        # lmkd's swap-low kill with thrashing ignores free memory; 0 turns swap-low off, and
+        # what kills remain all need a breached watermark or a stalled guest.
+        props = make_image.edit_props("ro.debuggable=1\n")
+        self.assertIn("ro.lmk.swap_free_low_percentage=0\n", props)
+        self.assertIn("ro.lmk.swap_util_max=90\n", props)
+        self.assertNotIn("ro.lmk.swap_free_low_percentage=10\n", props)
+
+    def test_nfr1_memory_added_after_boot_gets_a_second_zram_device(self):
+        rc = (Path(make_image.__file__).with_name("dsa-memory.rc")).read_text()
+        self.assertIn("on property:vendor.dsa.memory.zram_extra=*", rc)
+        self.assertIn("    start dsa_zram_extra", rc)
+        self.assertIn("service dsa_zram_extra /vendor/bin/dsa-channeld --zram-extra", rc)
+        self.assertIn("    seclabel u:r:dsa_zram_extra:s0", rc)
+        self.assertIn("vendor.dsa.memory.zram_extra",
+                      make_image.WRITEBACK_PROPERTY_CONTEXTS)
+        policy = (Path(make_image.__file__).parent / "sepolicy" / "memory.cil").read_text()
+        for rule in [
+            "(allow init dsa_zram_extra (process (transition siginh rlimitinh)))",
+            "(allow dsa_zram_extra self (capability (sys_admin)))",
+            "(allow dsa_zram_extra ram_device (blk_file (read write open getattr ioctl)))",
+            "(allow dsa_zram_extra sysfs_zram (file (read write open getattr)))",
+            "(allow dsa_zram_extra dsa_memory_prop (file (read open getattr map)))",
+        ]:
+            self.assertIn(rule, policy)
+        # The daemon's type exists only in an image with the daemon, so the rule that names it
+        # comes with the daemon's policy, not with the memory policy every image carries.
+        self.assertNotIn("dsa_channeld_exec", policy)
+        daemon = (Path(make_image.__file__).parent / "sepolicy" / "channeld.cil").read_text()
+        self.assertIn(
+            "(allow dsa_zram_extra dsa_channeld_exec (file (entrypoint read getattr map execute open)))",
+            daemon,
+        )
 
     def test_nfr2_vendor_init_may_drop_caches_compact_and_tune_swap_only(self):
         with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp)) as archive:
@@ -3086,7 +3125,7 @@ class GuestMemoryTests(unittest.TestCase):
             writes = re.findall(r"\(allow dsa_memory_report (\S+) \((\S+) \([^)]*\b(?:write|append)\b", policy)
             self.assertEqual(sorted(writes), [("kmsg_debug_device", "chr_file"), ("kmsg_device", "chr_file")])
 
-    def test_nfr1_an_idle_reclaim_swaps_cold_pages_out_before_dropping_caches_and_waits_for_boot(self):
+    def test_nfr1_an_idle_reclaim_drops_caches_before_swapping_cold_pages_out_and_waits_for_boot(self):
         with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp), channeld=True) as archive:
             rc = archive.read("VENDOR/etc/init/dsa-channeld.rc").decode()
             start = rc.index("on property:vendor.dsa.memory.reclaim=1 && property:sys.boot_completed=1")
@@ -3097,7 +3136,9 @@ class GuestMemoryTests(unittest.TestCase):
             self.assertNotIn("256M", trigger)
             contexts = archive.read("VENDOR/etc/selinux/vendor_property_contexts").decode().splitlines()
             self.assertIn("vendor.dsa.memory.reclaim_step u:object_r:dsa_memory_prop:s0 exact int", contexts)
-            self.assertLess(trigger.rindex("cgroup/memory.reclaim"), trigger.index("drop_caches"))
+            # Cache first, then app memory to zram: the cache that could simply go does not make zram
+            # compress apps' memory.
+            self.assertLess(trigger.index("drop_caches"), trigger.index("cgroup/memory.reclaim"))
             self.assertLess(trigger.index("drop_caches"), trigger.index("compact_memory"))
 
     def test_nfr1_art_keeps_less_free_heap_without_lowering_what_an_app_may_use(self):
@@ -4140,6 +4181,7 @@ class TouchLatencyTests(unittest.TestCase):
         self.assertEqual(
             make_image.FRAMEWORK_OVERLAY_INTEGERS,
             {"config_tapTimeoutMillis": 0, "config_customizedMaxCachedProcesses": 8,
+             "config_navBarInteractionMode": make_image.NAVIGATION_MODE_GESTURAL,
              **make_image.PINNER_OVERLAY_INTEGERS},
         )
         with tempfile.TemporaryDirectory() as tmp:
@@ -8014,7 +8056,8 @@ class FrameworkImageTests(unittest.TestCase):
             # The build's own files, or a policy without the rule, are found.
             with zipfile.ZipFile(self._source(root)) as archive:
                 problems = make_image.check_framework(manifest, archive.namelist(), archive.read)
-            self.assertEqual(len([p for p in problems if "not the framework build's file" in p]), 3)
+            self.assertEqual(len([p for p in problems if "not the framework build's file" in p]),
+                             len(make_image.FRAMEWORK_FILES))
             self.assertTrue(any("never hear of a GPU reset" in p for p in problems), problems)
             # An image without a framework has nothing to check.
             self.assertEqual(make_image.check_framework({"arch": "x86_64"}, [], None), [])
@@ -8618,7 +8661,7 @@ class RootElevationImageTests(unittest.TestCase):
             if not line or line.startswith(";"):
                 continue
             self.assertTrue(
-                re.match(r"\((type|roletype|typeattributeset|typepermissive|genfscon)\s", line)
+                re.match(r"\((type|roletype|typeattribute|typeattributeset|typepermissive|genfscon)\s", line)
                 or self._rules(line),
                 line,
             )

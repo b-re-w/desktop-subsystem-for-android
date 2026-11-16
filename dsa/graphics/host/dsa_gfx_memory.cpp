@@ -34,14 +34,19 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdio>
+#include <cstring>
 #include <functional>
 #include <map>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
 
 #include "FrameBuffer.h"
+#include "RenderThreadInfo.h"
+#include "aemu/base/system/System.h"
 #include "host-common/logging.h"
 #include "vulkan/VkCommonOperations.h"
 #include "vulkan/VulkanDispatch.h"
@@ -54,9 +59,21 @@ using gfxstream::vk::VulkanDispatch;
 
 enum class Kind { DeviceLocal, HostVisible, Imported };
 
+/* What an imported allocation is: a ColorBuffer's memory (a handle the renderer's own device
+ * exported), or a grant of the graphics memory shared with the guest (a host pointer into
+ * the shared region). */
+enum class Import { Nothing, ColorBuffer, Grant };
+
 struct Allocation {
     uint64_t bytes = 0;
     Kind kind = Kind::DeviceLocal;
+    Import import = Import::Nothing;
+};
+
+/* Who a guest process is, as it said on its process pipe. */
+struct Identity {
+    uint32_t pid = 0;
+    std::string name;
 };
 
 /* The driver's entries of one device's table, which the wrapped ones call. */
@@ -77,6 +94,12 @@ DeviceEntries s_fallback;
 VkPhysicalDeviceMemoryProperties s_types = {};
 bool s_counting = false;
 std::atomic<int32_t> s_processes{0};
+/* The guest process each guest device serves: the process of the render thread that made its
+ * first allocation. Under s_mutex. */
+std::map<VkDevice, uint64_t> s_device_process;
+/* The guest processes that said who they are, by the renderer's number for them. Under
+ * s_mutex; one goes when its process pipe closes. */
+std::map<uint64_t, Identity> s_identities;
 
 /* The driver's vkDestroyDevice behind the two tables a device is destroyed through: the
  * decoder's (a guest's device) and the renderer's instance table (its own device). */
@@ -91,7 +114,7 @@ VkEmulation* emulation() {
     return &fb->getEmulationVk();
 }
 
-bool imported(const VkMemoryAllocateInfo* info) {
+Import imported(const VkMemoryAllocateInfo* info) {
     for (auto* next = static_cast<const VkBaseInStructure*>(info->pNext); next;
          next = next->pNext) {
         switch (next->sType) {
@@ -99,13 +122,20 @@ bool imported(const VkMemoryAllocateInfo* info) {
             case VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR:
 #endif
             case VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR:
+                return Import::ColorBuffer;
             case VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT:
-                return true;
+                return Import::Grant;
             default:
                 break;
         }
     }
-    return false;
+    return Import::Nothing;
+}
+
+/* The guest process the calling render thread serves, or 0 (the renderer's own threads). */
+uint64_t calling_process() {
+    gfxstream::RenderThreadInfo* info = gfxstream::RenderThreadInfo::get();
+    return info ? info->m_puid : 0;
 }
 
 DeviceEntries entries_of(VkDevice device) {
@@ -128,11 +158,16 @@ VKAPI_ATTR VkResult VKAPI_CALL counted_allocate(VkDevice device,
     }
     Allocation allocation;
     allocation.bytes = info->allocationSize;
+    allocation.import = imported(info);
+    const uint64_t process = calling_process();
     std::lock_guard<std::mutex> lock(s_mutex);
     if (!s_counting) {
         return result;
     }
-    if (imported(info)) {
+    if (process != 0) {
+        s_device_process.emplace(device, process);
+    }
+    if (allocation.import != Import::Nothing) {
         allocation.kind = Kind::Imported;
     } else if (info->memoryTypeIndex < s_types.memoryTypeCount &&
                (s_types.memoryTypes[info->memoryTypeIndex].propertyFlags &
@@ -166,6 +201,7 @@ void forget_device(VkDevice device) {
         it = s_live.erase(it);
     }
     s_devices.erase(device);
+    s_device_process.erase(device);
 }
 
 VKAPI_ATTR void VKAPI_CALL counted_destroy_through_decoder(VkDevice device,
@@ -383,4 +419,181 @@ extern "C" DSA_GFX_EXPORT int dsa_gfx_get_memory_owners(dsa_gfx_memory_owners* o
         out->largest_guest_device_bytes[i] = held[i];
     }
     return 0;
+}
+
+void dsa_gfx_memory_process_identified(uint64_t puid, uint32_t pid, const char* name) {
+    Identity identity;
+    identity.pid = pid;
+    identity.name = name ? name : "";
+    std::lock_guard<std::mutex> lock(s_mutex);
+    s_identities[puid] = std::move(identity);
+}
+
+void dsa_gfx_memory_process_forget(uint64_t puid) {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    s_identities.erase(puid);
+}
+
+namespace {
+
+void copy_name(char* out, size_t size, const std::string& name) {
+    const size_t n = std::min(size - 1, name.size());
+    std::memcpy(out, name.data(), n);
+    out[n] = '\0';
+}
+
+/* "name (pid N)", "process N" for one that never said who it is, or "the renderer" for 0.
+ * Under s_mutex. */
+std::string process_label_locked(uint64_t puid) {
+    if (puid == 0) {
+        return "the renderer";
+    }
+    const auto found = s_identities.find(puid);
+    if (found == s_identities.end()) {
+        return "process " + std::to_string(puid) + " (gone or unnamed)";
+    }
+    const std::string name = found->second.name.empty() ? "?" : found->second.name;
+    return name + " (pid " + std::to_string(found->second.pid) + ")";
+}
+
+}  // namespace
+
+extern "C" DSA_GFX_EXPORT int dsa_gfx_get_guest_devices(dsa_gfx_guest_device* out,
+                                                        uint32_t capacity,
+                                                        uint32_t* total) {
+    if (total) {
+        *total = 0;
+    }
+    VkEmulation* emu = emulation();
+    const VkDevice own = emu ? emu->getDevice() : VK_NULL_HANDLE;
+    std::lock_guard<std::mutex> lock(s_mutex);
+    if (!s_counting) {
+        return -1;
+    }
+    std::map<VkDevice, dsa_gfx_guest_device> devices;
+    for (const auto& [key, allocation] : s_live) {
+        if (key.first == own) {
+            continue;
+        }
+        dsa_gfx_guest_device& d = devices[key.first];
+        const int kind = allocation.kind == Kind::DeviceLocal   ? DSA_GFX_MEMORY_DEVICE_LOCAL
+                         : allocation.kind == Kind::HostVisible ? DSA_GFX_MEMORY_HOST_VISIBLE
+                                                                : DSA_GFX_MEMORY_IMPORTED;
+        d.bytes[kind] += allocation.bytes;
+        d.count[kind]++;
+        if (allocation.import == Import::ColorBuffer) {
+            d.color_buffer_import_bytes += allocation.bytes;
+            d.color_buffer_imports++;
+        } else if (allocation.import == Import::Grant) {
+            d.grant_bytes += allocation.bytes;
+            d.grants++;
+        }
+    }
+    std::vector<dsa_gfx_guest_device> list;
+    list.reserve(devices.size());
+    for (auto& [device, d] : devices) {
+        const auto process = s_device_process.find(device);
+        if (process != s_device_process.end()) {
+            d.process = process->second;
+            const auto identity = s_identities.find(process->second);
+            if (identity != s_identities.end()) {
+                d.pid = identity->second.pid;
+                copy_name(d.name, sizeof(d.name), identity->second.name);
+            }
+        }
+        list.push_back(d);
+    }
+    const auto held = [](const dsa_gfx_guest_device& d) {
+        return d.bytes[0] + d.bytes[1] + d.bytes[2];
+    };
+    std::sort(list.begin(), list.end(),
+              [&](const auto& a, const auto& b) { return held(a) > held(b); });
+    if (total) {
+        *total = static_cast<uint32_t>(list.size());
+    }
+    for (uint32_t i = 0; out && i < capacity && i < list.size(); i++) {
+        out[i] = list[i];
+    }
+    return 0;
+}
+
+extern "C" DSA_GFX_EXPORT size_t dsa_gfx_describe_color_buffers(char* out, size_t capacity) {
+    FrameBuffer* fb = FrameBuffer::getFB();
+    if (!fb) {
+        return 0;
+    }
+    auto buffers = fb->describeColorBuffers();
+    std::sort(buffers.begin(), buffers.end(), [](const auto& a, const auto& b) {
+        return a.allocationBytes > b.allocationBytes;
+    });
+    const uint64_t now = android::base::getUnixTimeUs();
+    const auto ago = [now](uint64_t us) -> std::string {
+        if (us == 0 || us > now) {
+            return "-";
+        }
+        char text[32];
+        std::snprintf(text, sizeof(text), "%.1f", (now - us) / 1e6);
+        return text;
+    };
+    uint64_t total = 0;
+    for (const auto& b : buffers) {
+        total += b.allocationBytes;
+    }
+    std::string text;
+    char line[512];
+    std::snprintf(line, sizeof(line),
+                  "# %zu ColorBuffers, %.1f MiB of Vulkan memory. Ages and times are seconds "
+                  "before this list was made; \"-\" is never.\n",
+                  buffers.size(), total / 1048576.0);
+    text += line;
+    text +=
+        "handle\twidth\theight\tformat\tframework_format\tbytes\trefcount\topened\t"
+        "closed_s_ago\tage_s\tlast_post_s_ago\trole\tcreator\tholders\n";
+    {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        for (const auto& b : buffers) {
+            const std::string creator = b.createdUs ? process_label_locked(b.creatorPuid) : "?";
+            std::string role;
+            if (b.displayId >= 0) {
+                role = "task frame (display " + std::to_string(b.displayId) + ")";
+            } else if (creator.find("surfaceflinger") != std::string::npos) {
+                role = "client target";
+            } else if (creator.find("composer") != std::string::npos) {
+                role = "hwcomposer target";
+            } else {
+                role = "buffer";
+            }
+            /* Each holder once, with how many times it opened the buffer. */
+            std::map<uint64_t, int> holders;
+            for (uint64_t puid : b.holders) {
+                holders[puid]++;
+            }
+            std::string held;
+            for (const auto& [puid, times] : holders) {
+                if (!held.empty()) {
+                    held += ", ";
+                }
+                held += process_label_locked(puid);
+                if (times > 1) {
+                    held += " x" + std::to_string(times);
+                }
+            }
+            if (held.empty()) {
+                held = "none";
+            }
+            std::snprintf(line, sizeof(line), "%u\t%u\t%u\t0x%x\t%u\t%llu\t%u\t%s\t%s\t%s\t%s\t",
+                          b.handle, b.width, b.height, b.format, b.frameworkFormat,
+                          static_cast<unsigned long long>(b.allocationBytes), b.refcount,
+                          b.opened ? "yes" : "no", ago(b.closedUs).c_str(),
+                          ago(b.createdUs).c_str(), ago(b.lastPostUs).c_str());
+            text += line;
+            text += role + "\t" + creator + "\t" + held + "\n";
+        }
+    }
+    if (out && capacity > 0) {
+        const size_t n = std::min(capacity - 1, text.size());
+        std::memcpy(out, text.data(), n);
+        out[n] = '\0';
+    }
+    return text.size() + 1;
 }

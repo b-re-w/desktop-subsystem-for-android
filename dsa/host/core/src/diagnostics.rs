@@ -256,6 +256,67 @@ fn read_end(path: &std::path::Path) -> io::Result<Vec<u8>> {
     Ok(data)
 }
 
+/// The last `most` lines of `data` that `keep` takes, oldest first.
+pub fn latest_lines(data: &[u8], keep: impl Fn(&str) -> bool, most: usize) -> Vec<String> {
+    let text = String::from_utf8_lossy(data);
+    let kept: Vec<&str> = text.lines().filter(|line| keep(line)).collect();
+    let skip = kept.len().saturating_sub(most);
+    kept[skip..].iter().map(|line| line.to_string()).collect()
+}
+
+/// How many of each log's memory lines the memory files keep: about the last hour of the
+/// window manager's and renderer's periodic lines.
+pub const MEMORY_LINES: usize = 60;
+/// How many of channeld's kernel log lines the memory files keep.
+pub const CHANNELD_LINES: usize = 400;
+
+/// The memory files of the archive, from the host logs `host_files` names, read now:
+/// `host/memory-lines.txt`, each log's latest lines about memory (the window manager's and
+/// the graphics renderer's periodic memory lines, the service's), and
+/// `host/channeld-kernel-log.txt`, the guest's control daemon's lines from the Android console,
+/// where its kernel log goes. Together with `host/memory.json` and the guest's
+/// `android/proc-meminfo.txt` and `android/dumpsys.txt` (meminfo, SurfaceFlinger), they are
+/// one moment's memory, so readings from different moments are never mixed.
+pub fn memory_files(host_files: &[HostFile]) -> Vec<(String, Vec<u8>)> {
+    let mut lines = String::new();
+    let mut channeld = String::new();
+    for file in host_files {
+        let Ok(data) = read_end(&file.path) else {
+            continue;
+        };
+        let data = match &file.only_user {
+            Some(user) => lines_of_user(&data, user),
+            None => data,
+        };
+        if file.name.contains("android-console") {
+            for line in latest_lines(&data, |l| l.contains("dsa-channeld"), CHANNELD_LINES) {
+                channeld.push_str(&line);
+                channeld.push('\n');
+            }
+            continue;
+        }
+        let memory = latest_lines(
+            &data,
+            |l| l.to_ascii_lowercase().contains("memory"),
+            MEMORY_LINES,
+        );
+        if !memory.is_empty() {
+            lines.push_str(&format!("== {}\n", file.name));
+            for line in memory {
+                lines.push_str(&line);
+                lines.push('\n');
+            }
+        }
+    }
+    vec![
+        ("host/memory-lines.txt".to_string(), lines.into_bytes()),
+        (
+            "host/channeld-kernel-log.txt".to_string(),
+            channeld.into_bytes(),
+        ),
+    ]
+}
+
 /// What [`write_archive`] put in the archive and what it could not.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ArchiveReport {

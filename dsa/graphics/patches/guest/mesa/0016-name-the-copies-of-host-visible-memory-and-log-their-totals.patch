@@ -1,0 +1,134 @@
+Subject: Name the copies of host-visible memory and log their totals
+
+The copies the driver keeps of an app's host-visible memory are anonymous mappings, so dumpsys
+meminfo counted them under "Unknown" with everything nobody named, and nothing said how much of
+an app's memory they were. Each copy's mapping is now named [anon:dsa-vk-copy]
+(dsa_driver_memory.h), so smaps and meminfo list them per app.
+
+The driver also counts, for its process, the live copies and grants of the graphics memory the
+host shares, and why each copied allocation was not granted: no shared memory, kept out by the
+host, or not mapped by the kernel. mapSharedMemory says which. When an allocation is made or
+freed and three minutes have passed since the last, one line with those totals goes to the log.
+
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+index ac2c29a..22d00ae 100644
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+@@ -6,6 +6,7 @@
+ #include "ResourceTracker.h"
+ 
+ #include "dsa_dirty_pages.h"
++#include "dsa_driver_memory.h"
+ #include "dsa_shadow_blocks.h"
+ #include "dsa_shadow_memory.h"
+ 
+@@ -1639,6 +1640,12 @@ static bool inputTraceRequested() {
+ // hashes every block.
+ static void logDirtyTracking(const char* message) { mesa_logi("%s", message); }
+ 
++// This process's copies and grants, at most every few minutes (dsa_driver_memory.h).
++static void logDriverMemory() {
++    dsa::driverMemoryLog().maybeLog(std::chrono::steady_clock::now(),
++                                    [](const char* line) { mesa_logi("%s", line); });
++}
++
+ void ResourceTracker::flushShadowedMemory(VkEncoder* enc, VkDevice device) {
+     const bool traced = inputTraceRequested();
+     const auto started = std::chrono::steady_clock::now();
+@@ -1991,7 +1998,11 @@ bool ResourceTracker::askSharedMemory(VkEncoder* enc, VkDevice device) {
+ }
+ 
+ uint8_t* ResourceTracker::mapSharedMemory(VkEncoder* enc, VkDevice device, VkDeviceMemory memory,
+-                                          uint64_t* offset, uint64_t* length) {
++                                          uint64_t* offset, uint64_t* length,
++                                          dsa::CopyReason* why) {
++    dsa::CopyReason unused;
++    if (!why) why = &unused;
++    *why = dsa::CopyReason::NoSharedMemory;
+     if (!askSharedMemory(enc, device)) return nullptr;
+     dsa::GraphicsMemoryDevice* shared = dsa::GraphicsMemoryDevice::get();
+     if (!shared) return nullptr;
+@@ -1999,10 +2010,12 @@ uint8_t* ResourceTracker::mapSharedMemory(VkEncoder* enc, VkDevice device, VkDev
+     // The host answers only for memory it put in the shared memory; the rest is copied.
+     if (enc->vkGetMemoryHostAddressInfoGOOGLE(device, memory, offset, length, &key,
+                                               true /* do lock */) != VK_SUCCESS) {
++        *why = dsa::CopyReason::HostKeptItOut;
+         return nullptr;
+     }
+     uint8_t* mapped = shared->map(*offset, *length, key);
+     if (!mapped) {
++        *why = dsa::CopyReason::KernelWouldNotMap;
+         static std::atomic<bool> said{false};
+         if (!said.exchange(true)) {
+             mesa_loge("the kernel would not map a grant of the memory the host shares (offset "
+@@ -3740,7 +3753,11 @@ VkResult ResourceTracker::allocateCoherentMemory(VkDevice device,
+         // pages, which the host's Vulkan memory is, and there is no copy to keep in step.
+         uint64_t sharedOffset = 0;
+         uint64_t sharedLength = 0;
+-        if (uint8_t* shared = mapSharedMemory(enc, device, mem, &sharedOffset, &sharedLength)) {
++        dsa::CopyReason why = dsa::CopyReason::NoSharedMemory;
++        if (uint8_t* shared =
++                mapSharedMemory(enc, device, mem, &sharedOffset, &sharedLength, &why)) {
++            dsa::driverMemoryLog().grantMapped(sharedLength);
++            logDriverMemory();
+             std::lock_guard<std::recursive_mutex> lock(mLock);
+             auto& stored = info_VkDeviceMemory[mem];
+             stored.allocationSize = pAllocateInfo->allocationSize;
+@@ -3761,6 +3778,13 @@ VkResult ResourceTracker::allocateCoherentMemory(VkDevice device,
+             info_VkDeviceMemory.erase(mem);
+             return VK_ERROR_OUT_OF_HOST_MEMORY;
+         }
++        // Named, so smaps and dumpsys meminfo show the copies apart from the app's own memory.
++        dsa::DriverMemoryLog& counts = dsa::driverMemoryLog();
++        counts.named(dsa::nameCopyMapping(
++            shadow, dsa::shadowMemoryLength(hostAllocationInfo.allocationSize)));
++        counts.copied(why);
++        counts.copyMade(dsa::shadowMemoryLength(hostAllocationInfo.allocationSize));
++        logDriverMemory();
+         std::lock_guard<std::recursive_mutex> lock(mLock);
+         auto& stored = info_VkDeviceMemory[mem];
+         stored.allocationSize = pAllocateInfo->allocationSize;
+@@ -4694,14 +4718,18 @@ void ResourceTracker::on_vkFreeMemory(void* context, VkDevice device, VkDeviceMe
+             // The kernel stops tracking the copy before its pages go.
+             if (info.shadowRegion) dsa::dirtyPages(logDirtyTracking).untrack(info.shadowRegion);
+             dsa::freeShadowMemory(info.ptr, info.shadowSize);
++            dsa::driverMemoryLog().copyFreed(dsa::shadowMemoryLength(info.shadowSize));
+             info_VkDeviceMemory.erase(it);
++            logDriverMemory();
+         } else if (info.sharedRegion) {
+             // Let go of the grant before the host hears of the free, so it takes the granules
+             // back at once.
+             if (auto* shared = dsa::GraphicsMemoryDevice::get()) {
+                 shared->unmap(info.ptr, info.sharedOffset, info.sharedLength);
+             }
++            dsa::driverMemoryLog().grantUnmapped(info.sharedLength);
+             info_VkDeviceMemory.erase(it);
++            logDriverMemory();
+         }
+         lock.unlock();
+         VkEncoder* enc = (VkEncoder*)context;
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+index 1440012..28ee751 100644
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+@@ -105,6 +105,7 @@ class HostConnection;
+ 
+ #include "dsa_memory_types.h"
+ #include "dsa_shadow_memory.h"
++#include "dsa_driver_memory.h"
+ #include "dsa_graphics_memory.h"
+ #include "dsa_graphics_memory_device.h"
+ 
+@@ -591,9 +592,10 @@ class ResourceTracker {
+     // host shares; true when the host shares it and it is the region the kernel maps.
+     bool askSharedMemory(VkEncoder* enc, VkDevice device);
+     // Maps `memory`'s grant of the shared graphics memory, or null when the host put it
+-    // elsewhere (then it is copied, as before).
++    // elsewhere (then it is copied, as before); `why` then says why it is copied.
+     uint8_t* mapSharedMemory(VkEncoder* enc, VkDevice device, VkDeviceMemory memory,
+-                             uint64_t* offset, uint64_t* length);
++                             uint64_t* offset, uint64_t* length,
++                             dsa::CopyReason* why = nullptr);
+     // A staging grant of the shared graphics memory for gralloc buffers' CPU uploads and read
+     // backs, at least `size` bytes, from `device`'s host-visible memory; null when there is
+     // none. The caller holds mSharedStagingMutex while it uses the grant.

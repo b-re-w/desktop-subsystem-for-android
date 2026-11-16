@@ -326,9 +326,9 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertFalse(page.contains(" | dsa "), "the Advanced page still shows the commands as one line")
         XCTAssertTrue(page.contains("ForEach(SettingsViewModel.commandLineCommands, id: \\.self) { command in"))
         XCTAssertTrue(page.contains("CommandRow(command: command)"))
-        XCTAssertTrue(page.contains("CopyButton(text: vm.adbConnect)"))
+        XCTAssertTrue(page.contains("CopyButton(text: vm.adbConnect, item:"))
         let components = try String(contentsOf: package.appendingPathComponent("Sources/DsaSettings/Components.swift"), encoding: .utf8)
-        XCTAssertTrue(components.contains("CopyButton(text: command)"))
+        XCTAssertTrue(components.contains("CopyButton(text: command, item: command)"))
         XCTAssertTrue(components.contains(".help(T(\"CopyButton.ToolTip\"))"))
         XCTAssertTrue(components.contains("copied ? \"checkmark\" : \"doc.on.doc\""))
     }

@@ -41,6 +41,7 @@ pub mod fluent_menu;
 pub mod frames;
 pub mod gamepads;
 pub mod geocode;
+pub mod gpu;
 pub mod graphics_notice;
 pub mod hosts;
 pub mod language;
@@ -57,6 +58,7 @@ pub mod print;
 pub mod share;
 pub mod shutdown;
 pub mod single_instance;
+pub mod surfaces;
 pub mod system_settings;
 pub mod tasks;
 pub mod touch_gestures;
@@ -1369,7 +1371,7 @@ impl Compositor {
             None => None,
             Some(presenter) => {
                 luid = presenter.adapter_luid();
-                match Gpu::new(luid, false) {
+                match Gpu::new(luid) {
                     Ok(gpu) => {
                         if luid.is_some() && !gpu.on_renderer_gpu() {
                             log("the renderer's GPU was not found; task windows may stay empty");
@@ -1437,6 +1439,7 @@ impl Compositor {
         let fronts = gestures_thread.as_ref().map(|_| fronts_tx);
         let idle = Arc::new(Mutex::new(IdleTrim::new(IDLE_TRIM_DELAY, Instant::now())));
         let trim_gpu = gpu.clone();
+        let gpu_for_hosts = gpu.clone();
         let trim_renderer = self.presenter.clone();
         let quiet_router = Arc::clone(&router);
         let setup = ManagerSetup {
@@ -1471,10 +1474,18 @@ impl Compositor {
         let accept_events = events_tx.clone();
         let accept_stop = Arc::clone(&manager_stop);
         let accept_logger = self.logger.clone();
+        let accept_gpu = gpu_for_hosts.clone();
         let acceptor = thread::Builder::new()
             .name("dsa-wm-hosts".into())
             .spawn(move || {
-                hosts::accept_hosts(listener, accept_events, luid, accept_stop, accept_logger)
+                hosts::accept_hosts(
+                    listener,
+                    accept_events,
+                    luid,
+                    accept_gpu,
+                    accept_stop,
+                    accept_logger,
+                )
             })
             .map_err(|e| log(&format!("could not take the app windows' connections: {e}")))
             .ok();

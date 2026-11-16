@@ -314,6 +314,8 @@ fn host(role: HostRole, pid: u32, mib: u64) -> HostProcessMemory {
         working_set_kb: mib * MIB,
         private_kb: mib * MIB / 2,
         mapped_kb: 0,
+        private_working_set_kb: None,
+        section_kb: 0,
     }
 }
 
@@ -1159,6 +1161,7 @@ fn nfr1_the_renderers_gpu_memory_is_logged_by_whose_device_it_is_on() {
         guests: [at(104, 49), at(116, 56), at(0, 0)],
         guest_devices: 10,
         largest_guest_devices_kb: vec![60 * MIB, 40 * MIB, 20 * MIB, 0],
+        ..Default::default()
     };
     assert_eq!(
         renderer_owners_line(&owners),
@@ -1210,4 +1213,93 @@ fn nfr5_the_renderers_memory_is_logged_under_its_own_process() {
     };
     assert!(renderer_line(Some(&uncounted)).contains("its GPU allocations: no count"));
     assert!(renderer_line(None).contains("not running or not answering"));
+}
+
+#[test]
+fn nfr2_the_balloon_is_the_online_memory_beyond_the_vms_size() {
+    let guest = GuestMemory {
+        kernel: dsa_host_core::memory::KernelMemory {
+            mem_online_kb: 4224 * MIB,
+            ..Default::default()
+        },
+        ..GuestMemory::default()
+    };
+    let given = guest.given(Some(3584));
+    assert_eq!(given.ballooned_kb, 640 * MIB);
+    assert_eq!(given.kernel.mem_online_kb, 3584 * MIB);
+    // No balloon when the VM is as big as the guest's blocks, or its size is unknown.
+    assert_eq!(guest.given(Some(4224)).ballooned_kb, 0);
+    assert_eq!(guest.given(None).ballooned_kb, 0);
+}
+
+#[test]
+fn nfr1_the_vms_section_pages_are_counted_once_and_survive_the_local_api() {
+    let mut vm = host(HostRole::Vm, 4, 2278);
+    vm.mapped_kb = 115 * MIB;
+    vm.section_kb = 200 * MIB;
+    vm.private_working_set_kb = Some(1963 * MIB);
+    let mut settings = host(HostRole::Settings, 40, 324);
+    settings.private_working_set_kb = Some(250 * MIB);
+    let snapshot = MemorySnapshot {
+        guest: Some(GuestMemoryReport {
+            memory: GuestMemory {
+                ballooned_kb: 640 * MIB,
+                ..GuestMemory::default()
+            },
+            age: Duration::from_secs(3),
+        }),
+        host: vec![vm, settings, host(HostRole::Service, 2, 31)],
+    };
+    assert_eq!(snapshot.host_section_kb(), 200 * MIB);
+    assert_eq!(snapshot.host_own_kb(), (2278 - 315 + 324 + 31) * MIB);
+    assert_eq!(snapshot.host_private_working_set_kb(), Some(2213 * MIB));
+    let back = snapshot_from_wire(snapshot_to_wire(&snapshot));
+    assert_eq!(back, snapshot);
+    let text = snapshot.to_string();
+    assert!(text.contains("settings app"), "{text}");
+    assert!(text.contains("service"), "{text}");
+    assert!(
+        text.contains("200 MiB of it graphics and video sections"),
+        "{text}"
+    );
+    assert!(text.contains("2213 MiB private working sets"), "{text}");
+    assert!(text.contains("balloon 640 MiB"), "{text}");
+}
+
+#[test]
+fn nfr1_the_renderers_largest_guest_devices_are_named_and_their_imports_split() {
+    use dsa_host_core::renderer::{renderer_owners_line, Allocations, GuestDevice, RendererOwners};
+    let owners = RendererOwners {
+        guest_devices: 2,
+        largest_guest_devices_kb: vec![60 * MIB, 8 * MIB],
+        largest_guest_devices: vec![
+            GuestDevice {
+                name: "com.google.android.youtube".to_string(),
+                pid: 4321,
+                kb: 60 * MIB,
+                color_buffers: Allocations {
+                    kb: 24 * MIB,
+                    count: 6,
+                },
+                grants: Allocations {
+                    kb: 30 * MIB,
+                    count: 9,
+                },
+            },
+            GuestDevice {
+                kb: 8 * MIB,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let line = renderer_owners_line(&owners);
+    assert!(
+        line.ends_with(
+            "(the largest: com.google.android.youtube (pid 4321) 60 MiB: color buffers 24 MiB \
+             in 6, shared grants 30 MiB in 9; an unnamed process 8 MiB: color buffers 0 MiB in \
+             0, shared grants 0 MiB in 0)"
+        ),
+        "{line}"
+    );
 }

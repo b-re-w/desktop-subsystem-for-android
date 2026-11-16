@@ -1530,8 +1530,8 @@ msgstr "「系統（強制）」會在不重新啟動的情況下將新的縮放
 msgid "System (recommended for this app)"
 msgstr "系統（建議用於此應用程式）"
 
-msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube; for any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
-msgstr "應用程式：視窗到達新監視器時，應用程式立即採用該監視器的縮放比例並以此比例重新繪製，文字保持清晰。\n未聲明自行處理縮放變更的應用程式會在保留狀態的情況下重新建立，因此可能會短暫重新繪製。\n系統：DSA 將視窗縮放為相同的實際大小。文字可能看起來有點模糊。\n「自動」會為執行中變更縮放比例就會出問題的應用程式（例如 YouTube）選擇「系統」；其他應用程式若聲明自行處理則選擇「應用程式」，否則選擇「系統」。\n「自動」和「系統」不會重新啟動應用程式。"
+msgid "App: the app takes the new monitor's scale as soon as the window reaches it, and redraws at that scale, so text stays sharp.\nAn app that does not say it handles this is recreated with its state kept, so it may redraw briefly.\nSystem: DSA scales the window to the same physical size. Text can look a little blurry.\nAutomatic picks System for apps that break when their scale changes while they run, such as YouTube;\nfor any other app it picks App if the app says it handles this, and System if not.\nAutomatic and System never restart the app."
+msgstr "應用程式：視窗到達新監視器時，應用程式立即採用該監視器的縮放比例並以此比例重新繪製，文字保持清晰。\n未聲明自行處理縮放變更的應用程式會在保留狀態的情況下重新建立，因此可能會短暫重新繪製。\n系統：DSA 將視窗縮放為相同的實際大小。文字可能看起來有點模糊。\n「自動」會為執行中變更縮放比例就會出問題的應用程式（例如 YouTube）選擇「系統」；\n其他應用程式若聲明自行處理則選擇「應用程式」，否則選擇「系統」。\n「自動」和「系統」不會重新啟動應用程式。"
 
 msgid "Getting the update ready"
 msgstr "正在準備更新"

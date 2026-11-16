@@ -1,0 +1,34 @@
+Subject: Fail a memory import of a ColorBuffer the renderer does not know, instead of ending the stream
+
+A guest allocation that imports a ColorBuffer asks the renderer for its allocation info. When
+the renderer has no such ColorBuffer, vkAllocateMemory aborted, which (with aemu's 0002) ended
+the guest's whole stream. That happens when a renderer started again after its window manager
+ended and an app that was already running imports a buffer the old renderer made, and when a
+ColorBuffer was closed while a guest process still named it. The guest's stream carries every
+Vulkan and OpenGL ES call of that process, so one stale handle took the agent's and
+SurfaceFlinger's rendering with it. The call now fails with VK_ERROR_INVALID_EXTERNAL_HANDLE,
+which the guest driver returns to the app, and the stream stays. A snapshot load keeps its
+placeholder.
+
+Applies after 0041 on gfxstream d047a57228332d995d36600792fa9ccc26cf8ae6.
+---
+diff --git a/host/vulkan/VkDecoderGlobalState.cpp b/host/vulkan/VkDecoderGlobalState.cpp
+--- a/host/vulkan/VkDecoderGlobalState.cpp
++++ b/host/vulkan/VkDecoderGlobalState.cpp
+@@ -5332,9 +5332,13 @@ VkResult on_vkAllocateMemory(android::base::BumpPool* pool, VkSnapshotApiCallInf
+                     &localAllocInfo.memoryTypeIndex, &colorBufferMemoryUsesDedicatedAlloc,
+                     &mappedPtr)) {
+                 if (mSnapshotState != SnapshotState::Loading) {
+-                    GFXSTREAM_ABORT(FatalError(ABORT_REASON_OTHER))
+-                        << "Failed to get allocation info for ColorBuffer:"
+-                        << importCbInfoPtr->colorBuffer;
++                    // The renderer does not know this ColorBuffer (a renderer that started again, or one
++                    // closed while the guest still names it). That is the guest's stale handle, not a
++                    // reason to end its whole stream: the call fails and the stream stays.
++                    ERR("vkAllocateMemory: the renderer has no allocation info for ColorBuffer %u; "
++                        "the call fails with VK_ERROR_INVALID_EXTERNAL_HANDLE.",
++                        importCbInfoPtr->colorBuffer);
++                    return VK_ERROR_INVALID_EXTERNAL_HANDLE;
+                 }
+                 // During snapshot load there could be invalidated references to
+                 // color buffers.

@@ -250,6 +250,7 @@ jobs:
           uv run dsa/graphics/host/test_host_renderer.py
 
       - name: Check killing the renderer process keeps the windows and frames resume
+        timeout-minutes: 10
         working-directory: dsa
         env:
           GFXSTREAM_BACKEND_PATH: ${{ github.workspace }}/.scratch/build-host/dist/bin/libgfxstream_backend.so
@@ -410,8 +411,7 @@ jobs:
           }
           $jsonObj | ConvertTo-Json | Set-Content -Path $jsonPath -Encoding utf8
 
-          New-Item -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Force | Out-Null
-          New-ItemProperty -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Name $jsonPath -Value 0 -PropertyType DWord -Force | Out-Null
+          & "$env:GITHUB_WORKSPACE/.github/scripts/graphics/register-vulkan-driver.ps1" -Manifest $jsonPath
 
       - name: Run host renderer smoke test on software Vulkan
         shell: pwsh
@@ -495,6 +495,7 @@ jobs:
           cargo test -p dsa-host-windows --test window_manager -- nfr1_the_staging_buffer_is_made_for_a_copy_and_freed_when_idle --nocapture
 
       - name: Check killing the renderer process keeps the windows and frames resume
+        timeout-minutes: 10
         shell: pwsh
         working-directory: dsa
         env:
@@ -503,6 +504,14 @@ jobs:
           GFXSTREAM_BACKEND_PATH: ${{ github.workspace }}\.scratch\build-host\dist\bin\gfxstream_backend.dll
         run: |
           cargo test -p dsa-host-windows --test renderer_process -- --nocapture
+
+      - name: Keep the window manager's and renderer's logs from the renderer process test
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renderer-process-logs-${{ matrix.artifact }}
+          path: ${{ runner.temp }}\dsa-renderer-*
+          if-no-files-found: ignore
 
       - name: Keep the host renderer library and headers
         uses: actions/upload-artifact@v4
@@ -615,12 +624,7 @@ jobs:
               ICD = [ordered]@{ api_version = "1.2.0"; library_path = $dll }
               file_format_version = "1.0.1"
           } | ConvertTo-Json | Set-Content -Path $env:DZN_ICD -Encoding utf8
-          # The runner's processes run elevated, and the Vulkan loader then ignores
-          # VK_DRIVER_FILES and VK_ICD_FILENAMES ("Loader is running with elevated permissions");
-          # it lists only the drivers in the registry. The steps below still set both, since
-          # DSA reads them to take the named drivers as they are.
-          New-Item -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Force | Out-Null
-          New-ItemProperty -Path "HKLM:\SOFTWARE\Khronos\Vulkan\Drivers" -Name $env:DZN_ICD -Value 0 -PropertyType DWord -Force | Out-Null
+          & "$env:GITHUB_WORKSPACE/.github/scripts/graphics/register-vulkan-driver.ps1" -Manifest $env:DZN_ICD
           Write-Host "Dozen at $dll, dxil.dll from $($dxil.FullName)"
           Get-ChildItem -Recurse .scratch/dzn | ForEach-Object { Write-Host "  $($_.FullName) ($($_.Length) bytes)" }
           Get-Content $env:DZN_ICD | Write-Host
@@ -665,6 +669,8 @@ jobs:
           VK_ICD_FILENAMES: ${{ env.DZN_ICD }}
           VK_DRIVER_FILES: ${{ env.DZN_ICD }}
           VK_LOADER_DEBUG: error,warn
+          # The only device here is Dozen over WARP, so the GPU asked for by name is the WARP adapter.
+          DSA_TEST_GPU_NAME: Microsoft Basic Render Driver
         run: |
           uv run dsa/graphics/host/test_host_renderer.py
 
@@ -770,6 +776,7 @@ jobs:
           uv run dsa/graphics/host/test_host_renderer.py
 
       - name: Check killing the renderer process keeps the windows and frames resume
+        timeout-minutes: 10
         working-directory: dsa
         env:
           GFXSTREAM_BACKEND_PATH: ${{ github.workspace }}/.scratch/build-host-macos/dist/bin/libgfxstream_backend.dylib
