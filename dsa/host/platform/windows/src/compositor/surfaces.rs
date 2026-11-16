@@ -30,7 +30,8 @@ use dsa_host_core::compositor::caption::{
     band_points, band_reading_owed, band_sample, describe_band_sample, BandSample, BAND_SAMPLES,
 };
 use dsa_host_core::compositor::frame_buffers::{
-    sample_points, swapchain_change, uniform_colour, SwapchainChange, SAMPLE_GRID,
+    image_bytes, sample_points, swapchain_change, uniform_colour, upload_problem, SwapchainChange,
+    SAMPLE_GRID,
 };
 use dsa_host_core::compositor::splash;
 use dsa_host_core::compositor::surface_calls::{
@@ -177,6 +178,10 @@ unsafe fn upload(
     size: (u32, u32),
     pixels: &[u8],
 ) -> Result<(), String> {
+    // A wrong size or too few bytes would read past what the driver was given.
+    if let Some(why) = upload_problem(chain.size, size, pixels.len()) {
+        return Err(why);
+    }
     let back: ID3D11Texture2D = chain
         .swapchain
         .GetBuffer(0)
@@ -419,7 +424,7 @@ impl WindowSurfaces {
                 if size.0 == 0 || size.1 == 0 {
                     return Ok(());
                 }
-                if call.pixels.len() < (size.0 * size.1 * 4) as usize {
+                if (call.pixels.len() as u64) < image_bytes(size) {
                     return Err("the caption image is smaller than its size".into());
                 }
                 let made = self.ensure_image(Image::Caption, size, place, answer)?;
@@ -434,13 +439,11 @@ impl WindowSurfaces {
                     return Ok(());
                 }
                 let icon_size = (call.icon_width, call.icon_height);
-                let icon_bytes = (icon_size.0 * icon_size.1 * 4) as usize;
-                let icon =
-                    (!call.pixels.is_empty() && call.pixels.len() >= icon_bytes).then(|| {
-                        splash::Icon {
-                            size: icon_size,
-                            pixels: &call.pixels,
-                        }
+                let icon_bytes = image_bytes(icon_size);
+                let icon = (!call.pixels.is_empty() && call.pixels.len() as u64 >= icon_bytes)
+                    .then(|| splash::Icon {
+                        size: icon_size,
+                        pixels: &call.pixels,
                     });
                 let source = icon.map_or(0, |icon| icon.size.0.min(icon.size.1));
                 let pixels = splash::compose(

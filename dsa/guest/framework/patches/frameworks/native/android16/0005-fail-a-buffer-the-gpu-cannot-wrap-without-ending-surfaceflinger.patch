@@ -1,0 +1,58 @@
+Subject: RenderEngine: do not end SurfaceFlinger when a buffer cannot be wrapped as a texture
+
+GaneshBackendTexture aborted with "Failed to create a valid texture" whenever Skia could not wrap
+an AHardwareBuffer and the GPU device was not reported lost. On the owner's PC the window manager
+(and with it the graphics renderer) restarted while an app was running: the app's next buffer
+(848x1522) named a ColorBuffer the new renderer never made, the import failed, SurfaceFlinger
+aborted in RenderEngine, and Android's user space restarted with every app. A buffer the GPU side
+does not know is that buffer's problem: the texture stays invalid, makeImage and makeSurface give
+nothing, the layer draws nothing from it, and the app's next buffer is imported on its own. A
+buffer that says it has no size stays fatal, as it is a programming error.
+
+Applies after the earlier patches for Android 16.
+---
+diff --git a/libs/renderengine/skia/compat/GaneshBackendTexture.cpp b/libs/renderengine/skia/compat/GaneshBackendTexture.cpp
+index 77e5be7..1996eff 100644
+--- a/libs/renderengine/skia/compat/GaneshBackendTexture.cpp
++++ b/libs/renderengine/skia/compat/GaneshBackendTexture.cpp
+@@ -96,6 +96,16 @@ GaneshBackendTexture::GaneshBackendTexture(sk_sp<GrDirectContext> grContext,
+         // buffer again on its new context.
+         ALOGW("Failed to create a texture for a %dx%d buffer: the GPU device is lost", desc.width,
+               desc.height);
++    } else if (!mBackendTexture.isValid() && desc.width && desc.height) {
++        // The context cannot wrap the buffer although the device is not lost. The buffer's
++        // memory is not known to the GPU side: an app that outlived a renderer restart still
++        // hands over buffers the new renderer never made, and a stream that ended fails every
++        // import. That is no programming error and must not end SurfaceFlinger, which would
++        // end every app: the texture stays invalid, the layer draws nothing from it, and the
++        // app's next buffer is imported on its own.
++        ALOGW("Failed to create a valid texture. [%p]:[%d,%d] isProtected:%d isWriteable:%d "
++              "format:%d; the layer shows nothing until its next buffer",
++              this, desc.width, desc.height, createProtectedImage, isOutputBuffer, desc.format);
+     } else if (!mBackendTexture.isValid() || !desc.width || !desc.height) {
+         LOG_ALWAYS_FATAL("Failed to create a valid texture. [%p]:[%d,%d] isProtected:%d "
+                          "isWriteable:%d format:%d",
+@@ -114,9 +124,11 @@ GaneshBackendTexture::~GaneshBackendTexture() {
+ sk_sp<SkImage> GaneshBackendTexture::makeImage(SkAlphaType alphaType, ui::Dataspace dataspace,
+                                                TextureReleaseProc releaseImageProc,
+                                                ReleaseContext releaseContext) {
+-    if (mBackendTexture.isValid()) {
+-        mUpdateProc(mImageCtx, mGrContext.get());
++    if (!mBackendTexture.isValid()) {
++        // The buffer could not be wrapped (see the constructor); there is nothing to draw.
++        return nullptr;
+     }
++    mUpdateProc(mImageCtx, mGrContext.get());
+ 
+     const SkColorType colorType = colorTypeForImage(alphaType);
+     sk_sp<SkImage> image =
+@@ -136,6 +148,9 @@ sk_sp<SkImage> GaneshBackendTexture::makeImage(SkAlphaType alphaType, ui::Datasp
+ sk_sp<SkSurface> GaneshBackendTexture::makeSurface(ui::Dataspace dataspace,
+                                                    TextureReleaseProc releaseSurfaceProc,
+                                                    ReleaseContext releaseContext) {
++    if (!mBackendTexture.isValid()) {
++        return nullptr;
++    }
+     const SkColorType colorType = internalColorType();
+     sk_sp<SkSurface> surface =
+             SkSurfaces::WrapBackendTexture(mGrContext.get(), mBackendTexture,
