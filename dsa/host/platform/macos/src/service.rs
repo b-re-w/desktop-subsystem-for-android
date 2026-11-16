@@ -27,16 +27,18 @@ use dsa_host_core::guest_display::{
 };
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid};
+use dsa_host_core::image_files::ImageFiles;
 use dsa_host_core::memory::{log_memory, HostMemory};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{keep_first_channel_logged, service_settings, SettingsStore};
+use dsa_host_core::update::current::{current_image, prune_image_cache};
 use dsa_host_core::update::service::{
-    check_alerting, follow_waiting_image, next_image_check, CheckNow, StoreVersions, UpdateNotices,
-    UpdatingAndroid, WAITING_IMAGE_CHECK,
+    follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
+    Updates, UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
-use dsa_host_core::update::store::{ImageStore, Recovery};
+use dsa_host_core::update::store::ImageStore;
 use dsa_host_core::window_manager::{WindowManagerHost, WindowManagerKeeper};
 use dsa_host_unix::socket::UnixLocalListener;
 use dsa_transport::Listener;
@@ -139,46 +141,19 @@ fn window_manager(config: &MacHostConfig) -> Option<ProgramWindowManager> {
     })
 }
 
-/// The image the next boot uses: its folder and version.
-fn current_image(
-    config: &MacHostConfig,
-    store: Option<&ImageStore>,
-) -> Result<(PathBuf, String), String> {
-    if let Some(store) = store {
-        let current = store.state().map_err(|e| e.to_string())?.current;
-        return Ok((store.image_dir(&current.version), current.version));
-    }
-    let dir = config
-        .image_dir
+/// The template of the user's disk, which `image_files` made sure the image has.
+fn image_template(files: &ImageFiles) -> Result<PathBuf, String> {
+    files
+        .disk_template
         .clone()
-        .ok_or("the configuration names no image to boot")?;
-    let version = std::fs::read_to_string(dir.join("image.json"))
-        .ok()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-        .and_then(|manifest| manifest["version"].as_str().map(str::to_string))
-        .unwrap_or_else(|| "local".into());
-    Ok((dir, version))
-}
-
-/// Removes the raw copies of images other than `keep`.
-fn prune_image_cache(user: &UserFolders, keep: &str) {
-    let Some(cache) = user.image_cache(keep).parent().map(Path::to_path_buf) else {
-        return;
-    };
-    if let Ok(entries) = std::fs::read_dir(&cache) {
-        for entry in entries.flatten() {
-            if entry.file_name().to_string_lossy() != keep {
-                let _ = std::fs::remove_dir_all(entry.path());
-            }
-        }
-    }
+        .ok_or_else(|| "the image has no disk to make the user's from".to_string())
 }
 
 /// Makes the user's disk hold image `version` from its template in `dir`, as a fresh disk
 /// for a data reset or at a first boot.
 fn bring_user_disk(user: &UserFolders, dir: &Path, version: &str) -> Result<(), String> {
     let files = image_files(dir, GuestArch::HOST)?;
-    let template = raw_disk(&files.disk_template, &user.image_cache(version))?;
+    let template = raw_disk(&image_template(&files)?, &user.image_cache(version))?;
     bring_disk_to(&user.disk(), &template, version)
 }
 
@@ -194,7 +169,8 @@ struct Planner {
 
 impl Planner {
     fn plan(&self) -> Result<BootPlan, String> {
-        let (dir, version) = current_image(&self.config, self.store.as_deref())?;
+        let current = current_image(self.store.as_deref(), self.config.image_dir.as_deref())?;
+        let (dir, version) = (current.dir.clone(), current.cache_key().to_string());
         let files = image_files(&dir, GuestArch::HOST)?;
         let mut head = vec![0u8; 0x1000];
         let read = std::fs::File::open(&files.kernel)
@@ -208,15 +184,10 @@ impl Planner {
             ));
         }
         let cache = self.user.image_cache(&version);
-        let template = raw_disk(&files.disk_template, &cache)?;
+        let template = raw_disk(&image_template(&files)?, &cache)?;
         // A disk holding a newer Android's data than this image, after the user chose an older
         // version and agreed to erase it, starts afresh.
-        if let Some(store) = &self.store {
-            let major = store
-                .state()
-                .map_err(|e| e.to_string())?
-                .current
-                .android_major;
+        if let Some(major) = current.android_major {
             let disk = self.user.disk();
             dsa_host_core::data_reset::erase_if_newer(
                 &disk,
@@ -225,7 +196,9 @@ impl Planner {
             )?;
         }
         bring_disk_to(&self.user.disk(), &template, &version)?;
-        prune_image_cache(&self.user, &version);
+        if let Some(cache) = self.user.image_cache(&version).parent() {
+            prune_image_cache(cache, &version);
+        }
         let mut disks = Vec::new();
         if let Some(system) = &files.system_disk {
             disks.push(Disk {
@@ -283,7 +256,10 @@ impl Planner {
         listen_ports.extend(crate::host_services::listen_ports());
         let vm = MacVmConfig {
             kernel: files.kernel.clone(),
-            initrd: files.initrd.clone(),
+            initrd: files
+                .initrd
+                .clone()
+                .ok_or_else(|| format!("the image in {} has no initrd.img", dir.display()))?,
             cmdline,
             memory_max_mb: max,
             memory_start_mb: start,
@@ -376,122 +352,25 @@ fn pump(a: UnixStream, b: UnixStream) {
     }
 }
 
-/// Opens the update store when the configuration names one.
-fn open_store(config: &MacHostConfig, build: &str) -> Option<Arc<ImageStore>> {
-    let (Some(root), Some(first)) = (&config.images_dir, &config.first_image) else {
-        return None;
-    };
-    let store = match ImageStore::open_as(root, first, build) {
-        Ok(store) => store,
-        Err(why) => {
-            eprintln!("{build}: image updates disabled: {why}");
-            return None;
-        }
-    };
-    match store.recover(first) {
-        Ok(Recovery::Moved { broken, current }) => eprintln!(
-            "{build}: the image {} has missing or broken files; using {} instead",
-            broken.version, current.version
-        ),
-        Ok(_) => {}
-        Err(why) => eprintln!("{build}: checking the current image: {why}"),
-    }
-    Some(Arc::new(store))
-}
-
-/// How soon the agent tries again while it has no image to boot.
-const FIRST_IMAGE_RETRY: Duration = Duration::from_secs(300);
-
-/// Checks the release list a minute after the agent starts and then every
-/// `check_interval_hours`, until `stop` is set.
-fn check_for_updates(
-    config: MacHostConfig,
-    store: Arc<ImageStore>,
-    notices: Arc<UpdateNotices>,
-    check_now: Arc<CheckNow>,
-    settings: Arc<dyn SettingsStore>,
-    build: String,
-    stop: Arc<AtomicBool>,
-) {
-    let Some(update) = config.update.clone() else {
-        return;
-    };
-    let keys = match update.keys() {
-        Ok(keys) => keys,
-        Err(why) => return eprintln!("{build}: not checking for updates: {why}"),
-    };
-    let interval = Duration::from_secs(update.check_interval_hours.max(1) * 3600);
-    let no_image = || {
-        store
-            .state()
-            .map(|state| !store.has_image(&state.current.version))
-            .unwrap_or(false)
-    };
-    let mut next = if no_image() {
-        Instant::now()
-    } else {
-        Instant::now() + Duration::from_secs(60)
-    };
-    while !stop.load(Ordering::Relaxed) {
-        next = next_image_check(next, Instant::now(), !no_image(), FIRST_IMAGE_RETRY);
-        // A user who chose another Android version waits for it now, not at the next turn.
-        if check_now.take() {
-            next = Instant::now();
-        }
-        if Instant::now() < next {
-            thread::sleep(Duration::from_secs(1));
-            continue;
-        }
-        if !no_image() && !store.switch_pending() && !settings.machine().image_updates {
-            next = Instant::now() + Duration::from_secs(60);
-            continue;
-        }
-        let mut announce = |download: &dsa_host_core::update::service::Download| {
-            if download.done == 0 {
-                eprintln!("{build}: {}", download.notice());
-            }
-            notices.set(download.notice());
-        };
-        // The computer's release channel picks the image list (on the pre-release channel
-        // the pre-release list beside the stable one) and the images it may take: a computer
-        // on the stable channel never moves to a pre-release image.
-        match check_alerting(
-            &store,
-            &CurlFetch,
-            &update.list_url,
-            &keys,
-            settings.machine().release_channel(),
-            &notices,
-            &mut announce,
-        ) {
-            Ok(Some(notice)) => {
-                eprintln!("{build}: {notice}");
-                notices.set(notice);
-            }
-            Ok(None) => {}
-            Err(why) => eprintln!("{build}: checking for updates: {why}"),
-        }
-        next = Instant::now()
-            + if no_image() {
-                FIRST_IMAGE_RETRY
-            } else {
-                interval
-            };
-    }
-}
-
 /// Everything the user's Android needs that outlives one call.
 struct Shared {
     config: MacHostConfig,
     user: UserFolders,
     build: String,
-    store: Option<Arc<ImageStore>>,
-    notices: Arc<UpdateNotices>,
+    /// The image update store, when the configuration names one and it opened.
+    updates: Option<Updates>,
     settings: Arc<dyn SettingsStore>,
     process: VmProcess,
     /// The Mac's power and sleep, handed to the user's Android.
     power: Arc<PowerHub>,
     stop: Arc<AtomicBool>,
+}
+
+impl Shared {
+    /// The store the next boot's image comes from, if there is one.
+    fn store(&self) -> Option<&ImageStore> {
+        self.updates.as_ref().map(|updates| updates.store.as_ref())
+    }
 }
 
 /// The user's Android: their VM and session.
@@ -507,7 +386,7 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
         config: config.clone(),
         user: shared.user.clone(),
         name: name.to_string(),
-        store: shared.store.clone(),
+        store: shared.updates.as_ref().map(|u| Arc::clone(&u.store)),
         settings: Arc::clone(&shared.settings),
         identity: Arc::clone(&boot_identity),
     };
@@ -629,17 +508,15 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
     {
         eprintln!("display: cannot follow the displays' refresh rate: {why}");
     }
-    Ok(match &shared.store {
+    Ok(match &shared.updates {
         None => session as Arc<dyn UserAndroid>,
-        Some(store) => {
+        Some(updates) => {
             let android = Arc::new(UpdatingAndroid {
                 session,
-                store: Arc::clone(store),
-                notices: Arc::clone(&shared.notices),
-                boot_timeout: Duration::from_secs(
-                    config.update.as_ref().map_or(300, |u| u.boot_timeout_secs),
-                ),
-                trial_running: Arc::new(AtomicBool::new(false)),
+                store: Arc::clone(&updates.store),
+                notices: Arc::clone(&updates.notices),
+                boot_timeout: updates.boot_timeout,
+                trial_running: Arc::clone(&updates.trial_running),
                 rollback: Default::default(),
                 image_restart: Default::default(),
             });
@@ -735,22 +612,32 @@ pub fn serve(
     );
     keep_first_channel_logged(&files, build);
     let settings: Arc<dyn SettingsStore> = Arc::new(files);
-    let store = open_store(&config, build);
-    let notices = Arc::new(UpdateNotices::default());
-    let check_now = Arc::new(CheckNow::default());
-    if let Some(store) = &store {
-        let (config, store, notices, check, settings, worker, stop) = (
-            config.clone(),
-            Arc::clone(store),
-            Arc::clone(&notices),
-            Arc::clone(&check_now),
-            Arc::clone(&settings),
-            build.to_string(),
-            Arc::clone(&stop),
-        );
+    // A store that cannot be opened turns image updates off; Android still starts from the
+    // image it has, and the reason is shown with the Android version.
+    let (updates, updates_disabled) = match open_updates_or_disable(
+        UpdatesConfig {
+            images_dir: config.images_dir.as_deref(),
+            first_image: config.first_image.as_ref(),
+            bundled_image: None,
+            boot_timeout_secs: config.update.as_ref().map(|u| u.boot_timeout_secs),
+        },
+        build,
+    ) {
+        Ok(updates) => (updates, None),
+        Err(disabled) => (None, Some(disabled)),
+    };
+    if let (Some(updates), Some(update)) = (&updates, config.update.clone()) {
+        let check = UpdateCheck {
+            settings: update,
+            updates: updates.clone(),
+            store: Arc::clone(&settings),
+            build: build.to_string(),
+            on_new_image: None,
+        };
+        let stop = Arc::clone(&stop);
         if let Err(why) = thread::Builder::new()
             .name("dsa-updates".into())
-            .spawn(move || check_for_updates(config, store, notices, check, settings, worker, stop))
+            .spawn(move || run_update_checks(check, &CurlFetch, stop))
         {
             eprintln!("{build}: starting the update check failed: {why}");
         }
@@ -765,8 +652,7 @@ pub fn serve(
         config: config.clone(),
         user: user.clone(),
         build: build.to_string(),
-        store: store.clone(),
-        notices,
+        updates: updates.clone(),
         settings: Arc::clone(&settings),
         process: process.clone(),
         power,
@@ -792,7 +678,7 @@ pub fn serve(
         program_updates_available: false,
         // No updater of its own here, so no release channel to follow.
         update_channel_available: false,
-        image_updates_available: store.is_some() && config.update.is_some(),
+        image_updates_available: updates.is_some() && config.update.is_some(),
         android_version: config.first_image.as_ref().map(|i| i.version.clone()),
     };
     let reset_shared = Arc::clone(&shared);
@@ -802,12 +688,14 @@ pub fn serve(
             Box::new(move |_: &str| Ok(disk.clone()))
         },
         Box::new(move |disk: &Path| {
-            let (dir, version) =
-                current_image(&reset_shared.config, reset_shared.store.as_deref())?;
+            let current = current_image(
+                reset_shared.store(),
+                reset_shared.config.image_dir.as_deref(),
+            )?;
             if disk != reset_shared.user.disk() {
                 return Err(format!("{} is not this user's disk", disk.display()));
             }
-            bring_user_disk(&reset_shared.user, &dir, &version)
+            bring_user_disk(&reset_shared.user, &current.dir, current.cache_key())
         }),
     )
     .with_beside("image-version");
@@ -843,9 +731,12 @@ pub fn serve(
         .with_device_identities(
             Arc::new(FileDeviceIdentities::new(config.settings_dir(&user))),
             Arc::new(move |_: &str| {
-                current_image(&identity_shared.config, identity_shared.store.as_deref())
-                    .ok()
-                    .and_then(|(dir, _)| ImageBuild::from_image_dir(&dir))
+                current_image(
+                    identity_shared.store(),
+                    identity_shared.config.image_dir.as_deref(),
+                )
+                .ok()
+                .and_then(|current| ImageBuild::from_image_dir(&current.dir))
             }),
         )
         // The defaults the settings show are what this Mac says it is now.
@@ -855,9 +746,11 @@ pub fn serve(
         .with_default_arm_translation({
             let shared = Arc::clone(&shared);
             Arc::new(move |_: &str| {
-                current_image(&shared.config, shared.store.as_deref())
+                current_image(shared.store(), shared.config.image_dir.as_deref())
                     .ok()
-                    .and_then(|(dir, _)| dsa_host_core::arm_translation::default_package(&dir))
+                    .and_then(|current| {
+                        dsa_host_core::arm_translation::default_package(&current.dir)
+                    })
             })
         });
     // The memory of the user's Android is logged every few minutes, as on the other hosts.
@@ -888,18 +781,20 @@ pub fn serve(
             ))
         })
     });
-    if let Some(store) = &store {
+    if let Some(updates) = &updates {
         // The agent keeps this user's own images, so the choice is theirs alone.
         service = service.with_android_versions(Arc::new(StoreVersions {
-            store: Arc::clone(store),
-            notices: Arc::clone(&shared.notices),
-            check_now: Arc::clone(&check_now),
+            store: Arc::clone(&updates.store),
+            notices: Arc::clone(&updates.notices),
+            check_now: Arc::clone(&updates.check_now),
             shared_by_users: false,
         }));
-        let store = Arc::clone(store);
+        let store = Arc::clone(&updates.store);
         service = service.with_android_version(Arc::new(move || {
             store.state().ok().map(|state| state.current.version)
         }));
+    } else if let Some(disabled) = updates_disabled {
+        service = service.with_android_versions(Arc::new(disabled));
     }
     let service = Arc::new(service);
     service.serve(Box::new(listener), Arc::clone(&stop));

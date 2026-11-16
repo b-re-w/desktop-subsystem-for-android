@@ -86,6 +86,7 @@ use dsa_host_core::accessibility::{
     from_screen, to_screen, ActionRequest, Announcement, Changes, ClientDemand, Demand,
     DemandReason, GuestAccessibility, Node, NodeAction, PresenceChange, Tree, TreeError,
 };
+#[cfg(test)]
 use dsa_host_core::compositor::caption::{CaptionButton, CaptionLayout};
 pub use dsa_host_core::compositor::caption::{CaptionCells, CaptionKind, ClientRect};
 use dsa_host_core::compositor::window_sizing::{frame_placement, FramePlacement};
@@ -2243,6 +2244,11 @@ fn sleep_unless_stopped(stop: &AtomicBool, wait: Duration) {
 
 /// UI Automation's own numbers for what [`crate::ui_automation`] names, checked here against
 /// the Windows headers.
+/// The user's display language now, which the buttons are named in.
+fn display_language() -> UiLanguage {
+    crate::ui_language::user_language()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

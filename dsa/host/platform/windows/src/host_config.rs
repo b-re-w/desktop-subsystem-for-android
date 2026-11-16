@@ -45,6 +45,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use dsa_host_core::image_files::{read_image, GuestArch, ImageFiles, ImageRules};
 use dsa_host_core::session::SessionConfig;
 use serde::Deserialize;
 
@@ -67,18 +68,6 @@ use crate::vm::{console_pipe_path, is_sid, AndroidVmConfig};
 fn user_data_disk(dir: &std::path::Path, sid: &str) -> PathBuf {
     let dir = dir.to_string_lossy();
     PathBuf::from(format!("{}\\{sid}\\data.vhdx", dir.trim_end_matches('\\')))
-}
-
-/// What a VM boots from one image.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImageFiles {
-    pub kernel: PathBuf,
-    pub initrd: Option<PathBuf>,
-    pub kernel_cmdline: String,
-    /// A separate, read-only system disk (older images).
-    pub system_image: Option<PathBuf>,
-    /// The template a user's Android disk is made from (images with `image.json`).
-    pub disk_template: Option<PathBuf>,
 }
 
 /// One user's VM: its HCS name, its configuration and how large its data disk may grow.
@@ -588,7 +577,7 @@ impl HostConfig {
                 ))
             }
         };
-        Ok(self.base_vm_config(&self.vm_name, data_disk, socket_sids))
+        self.base_vm_config(&self.vm_name, data_disk, socket_sids)
     }
 
     /// The VM of the user with SID `sid`, as the service runs it.
@@ -617,7 +606,7 @@ impl HostConfig {
         };
         let vm_name = format!("{}-{sid}", self.vm_name);
         let console_log = self.console_log_path(sid, &disk);
-        let mut config = self.base_vm_config(&vm_name, disk, vec![sid.into()]);
+        let mut config = self.base_vm_config(&vm_name, disk, vec![sid.into()])?;
         // The service writes the add-on and pstore disks as SYSTEM, so a user whose Android
         // disk is in their own profile, which they can change, has those two in the machine's
         // folder for them, which only SYSTEM and Administrators write. A `data_dir` folder is
@@ -642,8 +631,9 @@ impl HostConfig {
     /// An image made from the published AOSP builds carries `image.json`, `initrd.img` and
     /// `disk.vhdx`, the template of a user's Android disk; its kernel command line comes from
     /// `image.json`. An older image carries `system.vhdx`, attached beside the user's disk.
-    /// The image's own kernel (`bzImage`, or `Image` for arm64) wins over `kernel` either way.
-    pub fn image_files(&self, image_dir: Option<&std::path::Path>) -> ImageFiles {
+    /// The image's own kernel (`bzImage`, or `Image` for arm64) wins over `kernel` either way,
+    /// and an older image without an `initrd.img` boots the configuration's.
+    pub fn image_files(&self, image_dir: Option<&std::path::Path>) -> Result<ImageFiles, String> {
         let dir = image_dir.map(std::path::Path::to_path_buf).or_else(|| {
             match (&self.system_image, &self.images_dir, &self.first_image) {
                 (None, Some(root), Some(first)) => Some(root.join("images").join(&first.version)),
@@ -651,53 +641,30 @@ impl HostConfig {
             }
         });
         let Some(dir) = dir else {
-            return ImageFiles {
+            return Ok(ImageFiles {
                 kernel: self.kernel.clone(),
                 initrd: self.initrd.clone(),
                 kernel_cmdline: self.kernel_cmdline.clone(),
-                system_image: self.system_image.clone(),
+                system_disk: self.system_image.clone(),
                 disk_template: None,
-            };
+            });
         };
-        // An x86_64 image names its kernel bzImage; an arm64 one, Image, the name the
-        // arm64 kernel build gives it.
-        let kernel = ["bzImage", "Image"]
-            .iter()
-            .map(|name| dir.join(name))
-            .find(|own| own.exists())
-            .unwrap_or_else(|| self.kernel.clone());
-        let manifest = std::fs::read_to_string(dir.join("image.json"))
-            .ok()
-            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok());
-        match manifest {
-            Some(manifest) => {
-                let image_cmdline = manifest["kernel_cmdline"].as_str().unwrap_or_default();
-                let system_vhdx = dir.join("system.vhdx");
-                let has_two_disks =
-                    system_vhdx.exists() || manifest["files"].get("system.vhdx").is_some();
-                let (system_image, disk_template) = if has_two_disks {
-                    (Some(system_vhdx), Some(dir.join("data.vhdx")))
-                } else {
-                    (None, Some(dir.join("disk.vhdx")))
-                };
-                ImageFiles {
-                    kernel,
-                    initrd: Some(dir.join("initrd.img")),
-                    kernel_cmdline: format!("{image_cmdline} {}", self.kernel_cmdline)
-                        .trim()
-                        .to_string(),
-                    system_image,
-                    disk_template,
-                }
-            }
-            None => ImageFiles {
-                kernel,
-                initrd: self.initrd.clone(),
-                kernel_cmdline: self.kernel_cmdline.clone(),
-                system_image: Some(dir.join("system.vhdx")),
-                disk_template: None,
+        let mut files = read_image(
+            &dir,
+            &ImageRules {
+                // An x86_64 image names its kernel bzImage; an arm64 one, Image, the name the
+                // arm64 kernel build gives it.
+                kernel_names: &["bzImage", "Image"],
+                disk_extensions: &["vhdx"],
+                arch: Some(GuestArch::HOST),
+                fallback_kernel: Some(&self.kernel),
+                extra_cmdline: &self.kernel_cmdline,
             },
+        )?;
+        if files.initrd.is_none() {
+            files.initrd = self.initrd.clone();
         }
+        Ok(files)
     }
 
     fn base_vm_config(
@@ -705,8 +672,8 @@ impl HostConfig {
         vm_name: &str,
         data_disk: PathBuf,
         socket_sids: Vec<String>,
-    ) -> AndroidVmConfig {
-        let files = self.image_files(None);
+    ) -> Result<AndroidVmConfig, HostConfigError> {
+        let files = self.image_files(None).map_err(HostConfigError)?;
         let pstore_disk = Some(crate::paths::pstore_disk_beside(&data_disk));
         let addon_disk = Some(crate::paths::addon_disk_beside(&data_disk));
         // The section is named after the user the VM belongs to, who may map it.
@@ -718,14 +685,14 @@ impl HostConfig {
             socket_sids.first().map(String::as_str),
             self.graphics_shared_memory_mb,
         );
-        AndroidVmConfig {
+        Ok(AndroidVmConfig {
             owner: format!("DSA ({vm_name})"),
             kernel: files.kernel,
             initrd: files.initrd,
             kernel_cmdline: files.kernel_cmdline,
             memory_mb: self.memory_mb.unwrap_or_else(|| host_sized_memory_mb(0)),
             processors: self.processors,
-            system_image: files.system_image,
+            system_image: files.system_disk,
             data_disk,
             pstore_disk,
             addon_disk,
@@ -743,7 +710,7 @@ impl HostConfig {
             picture_region,
             graphics_region,
             gpu_paravirtualization: self.gpu_paravirtualization,
-        }
+        })
     }
 
     pub fn session_config(&self) -> SessionConfig {

@@ -23,17 +23,9 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-/// What to boot.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImageFiles {
-    pub kernel: PathBuf,
-    pub initrd: Option<PathBuf>,
-    pub kernel_cmdline: String,
-    /// The read-only system disk; `None` for an image with one disk.
-    pub system_image: Option<PathBuf>,
-    /// The template of a new user's disk.
-    pub disk_template: Option<PathBuf>,
-}
+use dsa_host_core::image_files::{read_image, GuestArch, ImageRules};
+
+pub use dsa_host_core::image_files::ImageFiles;
 
 /// The format of a disk file, from its extension.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -317,55 +309,24 @@ pub fn verify_raw_disk(dir: &Path) -> Result<bool, String> {
     Ok(true)
 }
 
-/// The disk file named `stem`, preferring a raw copy, then qcow2, then the published VHDX.
-pub fn disk_file(dir: &Path, stem: &str) -> Option<PathBuf> {
-    ["img", "raw", "qcow2", "vhdx"]
-        .iter()
-        .map(|ext| dir.join(format!("{stem}.{ext}")))
-        .find(|path| path.exists())
-}
-
 /// What to boot from the image folder `dir`, with `extra_cmdline` after the image's own
-/// kernel command line, and `kernel` when the image carries none of its own.
+/// kernel command line, and `kernel` when the image carries none of its own. A raw or qcow2
+/// disk beside the published VHDX wins over it.
 pub fn image_files(
     dir: &Path,
     kernel: Option<&Path>,
     extra_cmdline: &str,
 ) -> Result<ImageFiles, String> {
-    let kernel = ["bzImage", "Image"]
-        .iter()
-        .map(|name| dir.join(name))
-        .find(|own| own.exists())
-        .or_else(|| kernel.map(Path::to_path_buf))
-        .ok_or_else(|| format!("the image in {} has no kernel", dir.display()))?;
-    let manifest = std::fs::read_to_string(dir.join("image.json"))
-        .ok()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok());
-    let image_cmdline = manifest
-        .as_ref()
-        .and_then(|m| m["kernel_cmdline"].as_str())
-        .unwrap_or_default();
-    let kernel_cmdline = format!("{image_cmdline} {extra_cmdline}")
-        .trim()
-        .to_string();
-    let initrd = Some(dir.join("initrd.img")).filter(|p| p.exists());
-    let (system_image, disk_template) = match disk_file(dir, "system") {
-        Some(system) => (Some(system), disk_file(dir, "data")),
-        None => (None, disk_file(dir, "disk")),
-    };
-    if system_image.is_none() && disk_template.is_none() {
-        return Err(format!(
-            "the image in {} has neither system.vhdx nor disk.vhdx",
-            dir.display()
-        ));
-    }
-    Ok(ImageFiles {
-        kernel,
-        initrd,
-        kernel_cmdline,
-        system_image,
-        disk_template,
-    })
+    read_image(
+        dir,
+        &ImageRules {
+            kernel_names: &["bzImage", "Image"],
+            disk_extensions: &["img", "raw", "qcow2", "vhdx"],
+            arch: Some(GuestArch::HOST),
+            fallback_kernel: kernel,
+            extra_cmdline,
+        },
+    )
 }
 
 /// The file beside a user's disk that earlier versions recorded the image version in.
@@ -523,55 +484,6 @@ mod tests {
         assert!(!raw.exists());
         assert!(!raw_record(&raw).exists());
         let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn fr14_a_published_image_boots_its_own_kernel_and_disks() {
-        let dir = folder(
-            "two",
-            &["bzImage", "initrd.img", "system.vhdx", "data.vhdx"],
-        );
-        std::fs::write(
-            dir.join("image.json"),
-            r#"{"kernel_cmdline": "console=ttyS0 androidboot.boot_devices=vmbus"}"#,
-        )
-        .unwrap();
-        let files = image_files(&dir, None, "androidboot.dsa.x=1").unwrap();
-        assert_eq!(files.kernel, dir.join("bzImage"));
-        assert_eq!(files.initrd, Some(dir.join("initrd.img")));
-        assert_eq!(files.system_image, Some(dir.join("system.vhdx")));
-        assert_eq!(files.disk_template, Some(dir.join("data.vhdx")));
-        assert_eq!(
-            files.kernel_cmdline,
-            "console=ttyS0 androidboot.boot_devices=vmbus androidboot.dsa.x=1"
-        );
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn fr14_a_raw_copy_the_package_made_wins_over_the_vhdx() {
-        let dir = folder("raw", &["Image", "system.vhdx", "system.img", "data.vhdx"]);
-        let files = image_files(&dir, None, "").unwrap();
-        assert_eq!(files.kernel, dir.join("Image"));
-        assert_eq!(files.system_image, Some(dir.join("system.img")));
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn fr14_a_one_disk_image_is_the_template_of_the_users_disk() {
-        let dir = folder("one", &["disk.vhdx"]);
-        let files = image_files(&dir, Some(Path::new("/opt/dsa/bzImage")), "").unwrap();
-        assert_eq!(files.kernel, PathBuf::from("/opt/dsa/bzImage"));
-        assert_eq!(files.system_image, None);
-        assert_eq!(files.disk_template, Some(dir.join("disk.vhdx")));
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn fr14_an_image_without_disks_is_refused() {
-        let dir = folder("empty", &["bzImage"]);
-        assert!(image_files(&dir, None, "").is_err());
-        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

@@ -127,6 +127,7 @@ pub mod host_config;
 pub mod host_keys;
 pub mod host_memory;
 pub mod host_paths;
+pub mod image_files;
 pub mod ime;
 pub mod input;
 pub mod input_trace;

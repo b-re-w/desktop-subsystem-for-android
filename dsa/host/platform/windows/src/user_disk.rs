@@ -7,7 +7,7 @@
 //! nothing), so other users cannot read someone's Android data, and which lets Hyper-V's
 //! virtual machine processes in.
 
-use std::io::{self, Read as _, Seek as _, Write as _};
+use std::io;
 use std::path::Path;
 
 use dsa_host_core::disk::DiskBackend;

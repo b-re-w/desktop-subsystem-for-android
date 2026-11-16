@@ -10,6 +10,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use dsa_host_core::data_reset::{TemplateDataDisk, UserDataReset};
+use dsa_host_core::update::current::current_image;
 use dsa_host_core::update::store::ImageStore;
 
 use crate::host_config::HostConfig;
@@ -79,10 +80,10 @@ fn make_fresh_disk(
     let Some(store) = images else {
         return prepare_user_data_disk(disk, config.data_disk_size_gb);
     };
-    let current = store.state().map_err(|e| e.to_string())?.current;
-    let files = config.image_files(Some(&store.image_dir(&current.version)));
+    let current = current_image(Some(store), None)?;
+    let files = config.image_files(Some(&current.dir))?;
     match &files.disk_template {
-        Some(template) => bring_disk_to(disk, template, &current.version),
+        Some(template) => bring_disk_to(disk, template, current.cache_key()),
         None => prepare_user_data_disk(disk, config.data_disk_size_gb),
     }
 }
