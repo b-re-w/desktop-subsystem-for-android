@@ -74,6 +74,33 @@ pub fn swapchain_change(current: Option<(u32, u32)>, texture: (u32, u32)) -> Swa
     }
 }
 
+/// The bytes of an image of `size` pixels of four bytes each, which cannot wrap however large
+/// the size a window program names.
+pub fn image_bytes((width, height): (u32, u32)) -> u64 {
+    u64::from(width) * u64::from(height) * 4
+}
+
+/// Why an image of `size` pixels held in `pixels_len` bytes cannot be written into a swapchain
+/// whose buffers are `buffers` pixels, or `None` when it can. Writing it anyway reads past the
+/// bytes or past the back buffer, which ends the window manager inside the driver.
+pub fn upload_problem(buffers: (u32, u32), size: (u32, u32), pixels_len: usize) -> Option<String> {
+    if size.0 > buffers.0 || size.1 > buffers.1 {
+        return Some(format!(
+            "an image of {}x{} does not fit a swapchain of {}x{}",
+            size.0, size.1, buffers.0, buffers.1
+        ));
+    }
+    if (pixels_len as u64) < image_bytes(size) {
+        return Some(format!(
+            "an image of {}x{} needs {} bytes, not {pixels_len}",
+            size.0,
+            size.1,
+            image_bytes(size)
+        ));
+    }
+    None
+}
+
 /// Whether a shared texture of `current` pixels can take the frames of a ColorBuffer of
 /// `wanted` pixels. The texture is remade only when the ColorBuffer itself changes size,
 /// which the guest does only when the task passes a step of its size.
@@ -179,6 +206,17 @@ impl HiddenBuffers {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nfr5_an_image_that_does_not_fit_its_swapchain_or_its_bytes_is_not_written() {
+        // 65536 x 16384 x 4 wraps a u32 to 0: the byte count must not.
+        assert_eq!(image_bytes((65536, 16384)), 1 << 32);
+        assert!(upload_problem((100, 100), (101, 10), 1 << 20).is_some());
+        assert!(upload_problem((100, 100), (10, 101), 1 << 20).is_some());
+        assert!(upload_problem((65536, 16384), (65536, 16384), 0).is_some());
+        assert!(upload_problem((100, 100), (10, 10), 399).is_some());
+        assert_eq!(upload_problem((100, 100), (10, 10), 400), None);
+    }
 
     #[test]
     fn nfr2_a_still_window_keeps_two_buffers_and_a_drawing_one_three() {

@@ -94,6 +94,8 @@ fn main() {
     // A panic, and a fatal error in the graphics renderer, say why in the log before the
     // process ends: it has no console.
     dsa_host_windows::compositor::log::log_panics_to(logger.clone());
+    // A crash inside a driver or Windows never reaches the panic hook; this writes it too.
+    dsa_host_windows::compositor::log::log_crashes_to(logger.clone());
     dsa_host_windows::compositor::log::renderer_log_to(logger.clone());
 
     let config = CompositorConfig::default();
