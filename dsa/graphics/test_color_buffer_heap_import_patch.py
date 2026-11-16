@@ -54,7 +54,7 @@ class ColorBufferHeapImportPatchTests(unittest.TestCase):
                 self.assertTrue(line[:1] in (" ", "+", "-"), repr(line))
 
     def test_pr3_the_fetch_applies_0043_after_0042(self):
-        self.assertIn(" 0042 0043;", read(HOST / "fetch.sh"))
+        self.assertIn(" 0042 0043 ", read(HOST / "fetch.sh"))
         self.assertIn('-Filter "0043-*.patch"', read(HOST / "fetch.ps1"))
 
 
