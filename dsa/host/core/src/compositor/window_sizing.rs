@@ -1015,6 +1015,74 @@ impl WindowSizing {
     }
 }
 
+/// What a window's outer rectangle becomes when the desktop proposes `requested` (x, y, width,
+/// height) and the window would rather have the size of the frame it shows (`frame_outer`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FrameRectRequest {
+    pub requested: (i32, i32, i32, i32),
+    /// The outer size of the frame the window shows, when the guest has not drawn the
+    /// requested size yet. `None` before any frame.
+    pub frame_outer: Option<(i32, i32)>,
+    /// The user is dragging one of the window's edges right now. Nothing else holds a size:
+    /// a snap, a maximise, a restore, the keyboard and a new monitor scale are the desktop
+    /// placing the window, and its rectangle is taken as it is. The frame the guest draws for
+    /// it is shown stretched until it arrives, and the guest is asked for the window's size.
+    pub edge_drag: bool,
+    /// The edges the proposal moves (left, top): an edge drag keeps the opposite edge where
+    /// it is.
+    pub moves: (bool, bool),
+}
+
+/// The rectangle a window takes for a proposed one ([`FrameRectRequest`]). The window never
+/// leaves the place the desktop proposed: the position is the proposed top left, or, for an
+/// edge drag to a smaller frame, a point inside the proposed rectangle that keeps the edges the
+/// user is not dragging in place. It is never outside the proposed rectangle, so a window the
+/// desktop put on a monitor stays on it.
+pub fn frame_rect(request: FrameRectRequest) -> (i32, i32, i32, i32) {
+    let (x, y, width, height) = request.requested;
+    let Some((frame_width, frame_height)) = request.frame_outer.filter(|_| request.edge_drag)
+    else {
+        return request.requested;
+    };
+    let shift = |moved: bool, asked: i32, taken: i32| {
+        if moved && taken < asked {
+            asked - taken
+        } else {
+            0
+        }
+    };
+    (
+        x + shift(request.moves.0, width, frame_width),
+        y + shift(request.moves.1, height, frame_height),
+        frame_width,
+        frame_height,
+    )
+}
+
+/// What a window does when a frame of another size than its own is kept for it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeptFrame {
+    /// The window takes the frame's size.
+    TakeSize,
+    /// The window keeps its rectangle and shows the frame in it. The guest is asked for the
+    /// window's size instead.
+    HoldAndAsk,
+    /// Nothing to do: the window shows every frame as it comes.
+    Ignore,
+}
+
+/// What to do with a kept frame: a window the desktop placed in an arranged (snapped) layout
+/// keeps its rectangle, and one that holds its size already shows every frame as it comes.
+pub fn kept_frame_action(held: bool, arranged: bool) -> KeptFrame {
+    if held {
+        KeptFrame::Ignore
+    } else if arranged {
+        KeptFrame::HoldAndAsk
+    } else {
+        KeptFrame::TakeSize
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1908,5 +1976,69 @@ mod tests {
         // A task whose density the agent could not read keeps its size.
         let mut unknown = WindowSizing::new(&task(400, 300, 0));
         assert_eq!(unknown.opened(192), ((400, 300), density(262)));
+    }
+
+    #[test]
+    fn fr4_a_snapped_request_keeps_its_rectangle_while_a_frame_of_another_size_is_pending() {
+        // The trace: the desktop snaps a 854x1539 window to the top right quarter of a
+        // 2880x1704 work area, and the old frame is still the one shown.
+        let rect = frame_rect(FrameRectRequest {
+            requested: (1429, 0, 1462, 863),
+            frame_outer: Some((854, 1539)),
+            edge_drag: false,
+            moves: (true, true),
+        });
+        assert_eq!(rect, (1429, 0, 1462, 863));
+    }
+
+    #[test]
+    fn fr4_no_rule_yields_a_position_outside_the_requested_rectangle() {
+        let work = (0, 0, 2880, 1704);
+        let requested = (1429, 0, 1462, 863);
+        for frame in [(854, 1539), (300, 200), (1462, 863), (3000, 2000)] {
+            for edge_drag in [false, true] {
+                for moves in [(false, false), (true, false), (false, true), (true, true)] {
+                    let (x, y, width, height) = frame_rect(FrameRectRequest {
+                        requested,
+                        frame_outer: Some(frame),
+                        edge_drag,
+                        moves,
+                    });
+                    assert!(
+                        x >= requested.0 && y >= requested.1,
+                        "{frame:?} {edge_drag} {moves:?}"
+                    );
+                    assert!(x <= requested.0 + requested.2 && y <= requested.1 + requested.3);
+                    assert!(x >= work.0 && y >= work.1, "above or left of the work area");
+                    assert!(width > 0 && height > 0);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fr4_an_edge_drag_keeps_the_edges_the_user_does_not_drag() {
+        let rect = frame_rect(FrameRectRequest {
+            requested: (100, 50, 900, 700),
+            frame_outer: Some((800, 600)),
+            edge_drag: true,
+            moves: (true, true),
+        });
+        // The right and bottom edges stay at 1000 and 750.
+        assert_eq!(rect, (200, 150, 800, 600));
+        let right = frame_rect(FrameRectRequest {
+            requested: (100, 50, 900, 700),
+            frame_outer: Some((800, 600)),
+            edge_drag: true,
+            moves: (false, false),
+        });
+        assert_eq!(right, (100, 50, 800, 600));
+    }
+
+    #[test]
+    fn fr4_a_frame_of_another_size_for_an_arranged_window_asks_the_guest_for_the_windows_size() {
+        assert_eq!(kept_frame_action(false, true), KeptFrame::HoldAndAsk);
+        assert_eq!(kept_frame_action(false, false), KeptFrame::TakeSize);
+        assert_eq!(kept_frame_action(true, true), KeptFrame::Ignore);
     }
 }
