@@ -14,7 +14,9 @@
 //! its ends ([`caption_band`]), so the app keeps its own controls clear of them. In the band,
 //! the app's controls take the pointer and the rest drags the window ([`band_hit`]).
 
-use dsa_host_core::compositor::caption::CaptionBand;
+use dsa_host_core::compositor::caption::{
+    band_points, band_sample, shown_tone, BandSample, CaptionBand, CaptionTone,
+};
 use dsa_host_core::keys::{keycode, KeyAction, KeyEvent};
 use dsa_host_core::tasks::Bounds;
 use dsa_host_core::ui_language::UiLanguage;
@@ -93,6 +95,127 @@ pub fn band_hit(point: (f64, f64), band_height: u32, controls: &[Bounds]) -> Ban
     }
 }
 
+/// How a task window's title bar is drawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Chrome {
+    /// The unified title bar: transparent, with the app drawn up to the window's top and the
+    /// app's name in the band. The window buttons and the back button stand over it.
+    Unified,
+    /// The app draws its own title bar: as [`Chrome::Unified`], without the name.
+    AppDrawn,
+    /// AppKit's opaque title bar above the app: the app starts below it.
+    Standard,
+}
+
+impl Chrome {
+    /// The chrome of a window whose app draws its own title bar (`app_drawn`) or was set to
+    /// start below the title bar (`below`, which wins).
+    pub fn of(app_drawn: bool, below: bool) -> Chrome {
+        if below {
+            Chrome::Standard
+        } else if app_drawn {
+            Chrome::AppDrawn
+        } else {
+            Chrome::Unified
+        }
+    }
+
+    /// Whether the app's frames run under the title bar.
+    pub fn full_size_content(self) -> bool {
+        self != Chrome::Standard
+    }
+
+    /// Whether the title bar shows the window's name.
+    pub fn shows_title(self) -> bool {
+        self != Chrome::AppDrawn
+    }
+}
+
+/// The `NSAppearance` name a title bar over glyphs of `tone` takes: the title's text follows
+/// the window's appearance, dark text for dark glyphs.
+pub fn appearance_name(tone: CaptionTone) -> &'static str {
+    match tone {
+        CaptionTone::DarkGlyphs => "NSAppearanceNameAqua",
+        CaptionTone::LightGlyphs => "NSAppearanceNameDarkAqua",
+    }
+}
+
+/// What the title bar looks like over its frames: the tone of its text and a colour for a band
+/// the app leaves empty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Look {
+    pub tone: CaptionTone,
+    /// 0xAARRGGBB, opaque; the colour to fill the band with. `None` leaves the band as the
+    /// app drew it.
+    pub fill: Option<u32>,
+}
+
+/// What decides the tone and the fill of a window's title bar: the tone the app asked for,
+/// what the window read from the frame's band, and whether the app draws the band itself.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BandTone {
+    reported: Option<CaptionTone>,
+    sample: BandSample,
+    app_drawn: bool,
+    shown: Option<CaptionTone>,
+    told: Option<Look>,
+}
+
+impl BandTone {
+    fn look(&mut self) -> Option<Look> {
+        self.shown = shown_tone(self.reported, self.sample, self.app_drawn, self.shown);
+        let look = Look {
+            tone: self.shown.unwrap_or_default(),
+            fill: self.sample.fill.filter(|_| !self.app_drawn),
+        };
+        (self.told != Some(look)).then(|| {
+            self.told = Some(look);
+            look
+        })
+    }
+
+    /// The tone the app asked for changed. Returns the new look, if it changed.
+    pub fn set_reported(&mut self, reported: Option<CaptionTone>) -> Option<Look> {
+        self.reported = reported;
+        self.look()
+    }
+
+    /// The window read `sample` from its newest frame. Returns the new look, if it changed.
+    pub fn set_sample(&mut self, sample: BandSample) -> Option<Look> {
+        self.sample = sample;
+        self.look()
+    }
+
+    /// Whether the app draws its own band changed. Returns the new look, if it changed.
+    pub fn set_app_drawn(&mut self, app_drawn: bool) -> Option<Look> {
+        self.app_drawn = app_drawn;
+        self.look()
+    }
+}
+
+/// What a window reads under a band `band` pixels high from `pixels`, a frame `width` by
+/// `height` pixels of BGRA rows `stride` bytes apart, top row first.
+pub fn sample_bgra(pixels: &[u8], stride: usize, width: u32, height: u32, band: u32) -> BandSample {
+    let Some(points) = band_points((width, height), band) else {
+        return BandSample::default();
+    };
+    let last = points.below as usize * stride + (width as usize) * 4;
+    if pixels.len() < last {
+        return BandSample::default();
+    }
+    let row = |y: u32| -> Vec<u32> {
+        points
+            .columns
+            .iter()
+            .map(|&x| {
+                let at = y as usize * stride + x as usize * 4;
+                u32::from_be_bytes([pixels[at + 3], pixels[at + 2], pixels[at + 1], pixels[at]])
+            })
+            .collect()
+    };
+    band_sample(&row(points.inside), &row(points.below))
+}
+
 /// What a double click on a title bar does, as the user chose in System Settings (Desktop &
 /// Dock, "Double-click a window's title bar to").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -154,6 +277,100 @@ pub fn back_label(lang: UiLanguage) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn frame(width: u32, height: u32, band: u32, band_bgra: [u8; 4], app_bgra: [u8; 4]) -> Vec<u8> {
+        let mut pixels = Vec::new();
+        for y in 0..height {
+            let color = if y < band { band_bgra } else { app_bgra };
+            for _ in 0..width {
+                pixels.extend_from_slice(&color);
+            }
+        }
+        pixels
+    }
+
+    const WHITE: [u8; 4] = [255, 255, 255, 255];
+    const BLACK: [u8; 4] = [0, 0, 0, 255];
+
+    #[test]
+    fn fr22_every_task_window_has_the_unified_title_bar_unless_the_app_starts_below_it() {
+        assert_eq!(Chrome::of(false, false), Chrome::Unified);
+        assert!(Chrome::Unified.full_size_content() && Chrome::Unified.shows_title());
+        assert_eq!(Chrome::of(true, false), Chrome::AppDrawn);
+        assert!(Chrome::AppDrawn.full_size_content() && !Chrome::AppDrawn.shows_title());
+        assert_eq!(Chrome::of(false, true), Chrome::Standard);
+        assert_eq!(Chrome::of(true, true), Chrome::Standard);
+        assert!(!Chrome::Standard.full_size_content() && Chrome::Standard.shows_title());
+    }
+
+    #[test]
+    fn fr22_dark_glyphs_take_the_light_appearance_and_light_glyphs_the_dark_one() {
+        assert_eq!(
+            appearance_name(CaptionTone::DarkGlyphs),
+            "NSAppearanceNameAqua"
+        );
+        assert_eq!(
+            appearance_name(CaptionTone::LightGlyphs),
+            "NSAppearanceNameDarkAqua"
+        );
+    }
+
+    #[test]
+    fn fr22_the_apps_tone_is_where_the_band_starts() {
+        let mut tone = BandTone::default();
+        let look = tone.set_reported(Some(CaptionTone::LightGlyphs)).unwrap();
+        assert_eq!((look.tone, look.fill), (CaptionTone::LightGlyphs, None));
+        // The same look again is not news.
+        assert_eq!(tone.set_reported(Some(CaptionTone::LightGlyphs)), None);
+    }
+
+    #[test]
+    fn fr22_light_glyphs_an_app_asked_for_turn_dark_over_a_bar_light_from_end_to_end() {
+        let mut tone = BandTone::default();
+        tone.set_reported(Some(CaptionTone::LightGlyphs));
+        let pixels = frame(80, 80, 24, WHITE, WHITE);
+        let sample = sample_bgra(&pixels, 80 * 4, 80, 80, 24);
+        let look = tone.set_sample(sample).unwrap();
+        assert_eq!(look.tone, CaptionTone::DarkGlyphs);
+    }
+
+    #[test]
+    fn fr22_dark_glyphs_an_app_asked_for_turn_light_over_a_bar_dark_from_end_to_end() {
+        let mut tone = BandTone::default();
+        tone.set_reported(Some(CaptionTone::DarkGlyphs));
+        let pixels = frame(80, 80, 24, BLACK, BLACK);
+        let sample = sample_bgra(&pixels, 80 * 4, 80, 80, 24);
+        let look = tone.set_sample(sample).unwrap();
+        assert_eq!(look.tone, CaptionTone::LightGlyphs);
+    }
+
+    #[test]
+    fn fr22_an_app_that_leaves_the_band_empty_gets_its_top_colour_there() {
+        let mut tone = BandTone::default();
+        // A black band over a white app: filled white, and the title over it is dark.
+        let pixels = frame(80, 80, 24, BLACK, WHITE);
+        let sample = sample_bgra(&pixels, 80 * 4, 80, 80, 24);
+        let look = tone.set_sample(sample).unwrap();
+        assert_eq!(look.fill, Some(0xFFFFFFFF));
+        assert_eq!(look.tone, CaptionTone::DarkGlyphs);
+        // An app that draws its own band is never filled over.
+        let mut drawn = BandTone::default();
+        drawn.set_app_drawn(true);
+        assert_eq!(drawn.set_sample(sample).map(|look| look.fill), Some(None));
+    }
+
+    #[test]
+    fn fr22_a_frame_too_small_for_its_band_reads_as_nothing() {
+        let pixels = frame(80, 20, 24, WHITE, WHITE);
+        assert_eq!(
+            sample_bgra(&pixels, 80 * 4, 80, 20, 24),
+            BandSample::default()
+        );
+        assert_eq!(
+            sample_bgra(&pixels[..10], 80 * 4, 80, 80, 24),
+            BandSample::default()
+        );
+    }
 
     #[test]
     fn fr22_the_band_reaches_past_the_window_buttons_from_the_left() {
