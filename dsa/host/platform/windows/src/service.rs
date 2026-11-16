@@ -35,6 +35,7 @@ use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::guest_display::{display_or_smallest, with_display_density, with_display_size};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid, UserAndroids};
+use dsa_host_core::input_trace::guest_traces_input;
 use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
@@ -95,16 +96,6 @@ fn follow_monitors(vm: &mut AndroidVmConfig, sid: &str) {
         None => dsa_host_core::guest_display::boot_density(None),
     };
     vm.kernel_cmdline = with_display_density(&vm.kernel_cmdline, density);
-}
-
-/// The kernel command line setting that turns the guest's input trace on.
-pub const GUEST_INPUT_TRACE: &str = "androidboot.hardware.dsa_input_trace=1";
-
-/// Whether a guest booted with `cmdline` writes the input trace.
-pub fn guest_traces_input(cmdline: &str) -> bool {
-    cmdline
-        .split_whitespace()
-        .any(|word| word == GUEST_INPUT_TRACE)
 }
 
 /// The host's logs that go in `sid`'s diagnostics: the service's own (without the lines about
@@ -1526,21 +1517,5 @@ where
                 .collect::<Vec<_>>()
                 .join(", ")
         ))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn fr5_the_clock_is_paired_only_for_a_guest_booted_with_the_input_trace() {
-        assert!(guest_traces_input(
-            "androidboot.hardware=dsa androidboot.hardware.dsa_input_trace=1"
-        ));
-        assert!(!guest_traces_input("androidboot.hardware=dsa"));
-        assert!(!guest_traces_input(
-            "androidboot.hardware.dsa_input_trace=0"
-        ));
     }
 }

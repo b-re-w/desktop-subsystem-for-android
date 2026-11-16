@@ -30,6 +30,7 @@ use dsa_host_core::host_api::{
 };
 use dsa_host_core::host_config::DEFAULT_MEMORY_MB;
 use dsa_host_core::host_paths::HostPaths;
+use dsa_host_core::input_trace::guest_traces_input;
 use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
@@ -51,18 +52,10 @@ use crate::launcher::{BootPlan, LauncherSetup, LinuxVmLauncher, SharedNetworkSta
 use crate::users::{uid_of, Account};
 use crate::vsock::{connect_stream, VsockHub};
 
-/// The boot property that makes the guest trace input, which the clock lines pair with.
-pub const GUEST_INPUT_TRACE: &str = "androidboot.hardware.dsa_input_trace=1";
-
 /// How soon the service tries again while it has no image to boot.
 const FIRST_IMAGE_RETRY: Duration = Duration::from_secs(300);
 /// How soon an update check that the settings turned off looks at them again.
 const SETTINGS_RECHECK: Duration = Duration::from_secs(60);
-
-/// Whether the guest booted with `cmdline` traces input.
-pub fn guest_traces_input(cmdline: &str) -> bool {
-    cmdline.split_whitespace().any(|w| w == GUEST_INPUT_TRACE)
-}
 
 /// The memory a user's VM starts with and may grow to, in MiB, for a user whose limit is
 /// `limit_mb` (0 for automatic) on a computer with `total_mb`: a small start, as the guest
@@ -1150,16 +1143,6 @@ mod tests {
             files.run_dir,
             PathBuf::from("/home/ana/.local/share/dsa/tmp")
         );
-    }
-
-    #[test]
-    fn fr5_the_clock_is_paired_only_for_a_guest_booted_with_the_input_trace() {
-        assert!(guest_traces_input(
-            "androidboot.hardware.dsa_input_trace=1 a=b"
-        ));
-        assert!(!guest_traces_input(
-            "androidboot.hardware.dsa_input_trace=0"
-        ));
     }
 
     #[test]
