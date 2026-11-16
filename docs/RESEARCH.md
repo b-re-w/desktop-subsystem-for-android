@@ -3917,7 +3917,7 @@ SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운
 
 **결정.** 이 절은 조사다. 줄이는 작업은 1.0 뒤 메모리 작업에서 위 진단(1, 3, 6, 7)을 먼저 넣고 그 수치로 확인한 뒤 고른다. 설정 앱 메모리 줄이기는 위험이 낮아 먼저 해도 된다. SPEC은 바꾸지 않았다.
 
-## R56. YouTube에 남은 수정 목록 (1.0 뒤, FR-4, FR-22, PR-7)
+## R58. YouTube에 남은 수정 목록 (1.0 뒤, FR-4, FR-22, PR-7)
 
 **배경.** 2026-11-15 소유자가 창 처리를 개발 빌드 19로 되돌린 뒤(#826, #827) "YouTube 창 처리는 정상"이라고 확인했다. 남은 YouTube 문제는 위험해서 1.0 출시 뒤에 고치기로 했다. 이 절은 그 목록이다. 아직 고친 것은 없다. 각 항목의 상태는 2026-11-15 개발 빌드 28~30 기준이다.
 
@@ -4055,3 +4055,52 @@ SPEC의 수용 기준 "밝은 상태 표시줄을 쓰는 앱의 창은 어두운
 - WSL `lib` 폴더의 세 라이브러리에 붙은 라이선스 조건. 설치 폴더에도 원본 저장소에도 문서가 없다.
 - arm64 호스트의 같은 파일들. 이 PC는 x86_64다.
 - GPU-PV 할당이 유휴 메모리 반환(NFR-2)에 주는 영향.
+## R56. macOS Virtualization.framework에서 호스트와 게스트가 페이지를 함께 보는 수단과 그 최소 판 (PR-7, FR-26, FR-29)
+
+2026-11-16. PR-7은 macOS 호스트가 "macOS 27 이상(`VZCustomVirtioDevice`의 공유 메모리 영역)"에서 공유 메모리를 쓴다고 적었다(R42). 이 주장과, 페이지 공유에 쓸 만한 다른 API가 각각 어느 판에 생겼는지를 다시 확인했다.
+
+### 확인한 것과 방법
+
+Apple 개발자 문서의 기호 페이지를 마크다운 판(`https://developer.apple.com/documentation/virtualization/<기호>.md`)으로 받아, 머리의 `availability` 값을 읽었다. 2026-11-16에 받았다. WWDC 2026 세션 224("macOS 27의 가상화")가 검색에 나왔으나 영상 내용은 보지 않았다.
+
+| 기호 | 문서의 판 | 뜻 |
+|---|---|---|
+| `VZCustomVirtioDevice` | macOS 27.0 | 앱이 구현을 주는 virtio 장치 |
+| `VZCustomVirtioDeviceConfiguration.sharedMemoryRegions` | macOS 27.0 | 장치가 게스트에 알리는 virtio 공유 메모리 영역 |
+| `VZCustomVirtioDeviceConfiguration.maximumAllowedSharedMemoryRegionCount` | macOS 27.0 | 영역 수의 상한(값은 문서에 없다) |
+| `VZVirtioSharedMemoryRegionConfiguration(regionID:size:)` | macOS 27.0 | 영역 하나의 ID와 크기 |
+| `VZVirtioSharedMemoryRegion` | macOS 27.0 | 실행 중에 호스트 메모리를 영역에 매핑하고 걷는다 |
+| `VZVirtioFileSystemDevice`, `VZVirtioFileSystemDeviceConfiguration` | macOS 12.0 | virtiofs. 문서에 DAX 창이나 캐시 창 설정이 없다 |
+| `VZVirtioTraditionalMemoryBalloonDevice` | macOS 11.0 | 전통적 풍선. 목표 크기만 정한다. 공유가 아니라 반환 수단이다 |
+| `VZUSBDevice`, `VZUSBMassStorageDevice`, `VZXHCIControllerConfiguration` | macOS 15.0 | 디스크 이미지로 만든 USB 저장 장치의 핫플러그. 호스트의 실제 USB 장치를 붙이는 API는 없다 |
+
+Virtualization 문서의 "Memory" 묶음에는 풍선 장치만 있고, "Custom Virtio drivers" 묶음에 위의 맞춤 장치가 있다. 이 밖에 공개 API로 호스트와 게스트가 페이지를 함께 보는 길(pmem, IVSHMEM, 파일 기반 게스트 메모리)은 찾지 못했다.
+
+### 결론
+
+1. PR-7의 "macOS 27 이상"은 맞다. 수단은 `VZCustomVirtioDevice`에 `VZVirtioSharedMemoryRegionConfiguration`로 영역을 알리고, 실행 중에 `VZVirtioSharedMemoryRegion`으로 호스트 메모리를 그 영역에 매핑하는 것이다. 매핑 함수의 정확한 서명과 영역 수 상한, 매핑 단위(페이지 크기 정렬)는 기호 페이지 머리만으로는 확인하지 못했다. SDK 헤더나 실기로 확인할 일이다.
+2. macOS 26 이하에는 페이지를 함께 보는 공개 수단이 없다. 그 판의 macOS 호스트는 복사 경로를 쓴다.
+3. FR-29: macOS의 virtiofs(`VZVirtioFileSystemDevice`)는 macOS 12부터 있지만 DAX가 없다. 그래서 PR-7의 "파일 공유 페이지 캐시" 후보는 macOS에서 virtiofs만으로는 안 되고, 맞춤 virtio 장치의 공유 영역으로 따로 만들어야 한다. Linux는 crosvm과 virtiofsd의 DAX 지원을 따로 확인해야 한다(이번에는 확인하지 않았다).
+4. FR-26: Virtualization.framework는 호스트 USB 장치를 VM에 직접 붙이지 못한다. 그래서 일반 USB 장치는 하이퍼바이저의 직접 연결이 아니라 호스트가 IOKit으로 장치를 열고 게스트의 `vhci_hcd`로 넘기는 USB/IP 방식을 쓴다.
+
+### 확인하지 못한 것
+
+- WWDC 2026 세션 224의 내용과 macOS 27 릴리스 노트의 해당 줄. 문서의 `availability` 값만 근거로 삼았다.
+- `VZVirtioSharedMemoryRegion`의 매핑 함수가 받는 메모리의 조건(R42가 적은 "VM을 가진 프로세스의 메모리여야 한다")과 해제 뒤 페이지를 돌려주는 동작. 실기에서 재야 한다.
+- 맞춤 virtio 장치가 게스트 리눅스 커널의 어떤 드라이버와 붙는지(장치 ID 범위). DSA가 커널 드라이버를 따로 둔다는 R42의 계획을 따른다.
+
+### 자료
+
+- https://developer.apple.com/documentation/virtualization/vzcustomvirtiodevice
+- https://developer.apple.com/documentation/virtualization/vzvirtiosharedmemoryregion
+- https://developer.apple.com/documentation/virtualization/vzvirtiosharedmemoryregionconfiguration
+- https://developer.apple.com/documentation/virtualization/vzcustomvirtiodeviceconfiguration/maximumallowedsharedmemoryregioncount
+- https://developer.apple.com/documentation/virtualization/custom-drivers
+- https://developer.apple.com/documentation/virtualization/vzvirtiofilesystemdevice
+- https://developer.apple.com/documentation/virtualization/vzvirtiotraditionalmemoryballoondevice
+- https://developer.apple.com/documentation/virtualization/memory
+- https://developer.apple.com/documentation/virtualization/vzusbdevice
+- https://developer.apple.com/documentation/virtualization/vzusbmassstoragedevice
+- https://developer.apple.com/videos/play/wwdc2026/224/
+
+**결정.** PR-7의 macOS 최소 판(27)은 그대로 두고, 수단과 이 근거를 PR-7에 적었다. macOS 26 이하는 복사 경로다.
