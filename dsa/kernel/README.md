@@ -35,6 +35,13 @@ The patches touch only architecture-neutral code (VMBus's ACPI probe, which Hype
 both architectures, the command-line partition parser, cgroup v1, wakeup sources, shmem,
 free page reporting, ext4, the persistent memory drivers), so the same set applies to both builds.
 
+One patch is arm64 code, and it applies to the x86_64 source too because it only adds a check in
+a file that build does not compile. `patches/hyperv-init-needs-hyperv.patch` makes the arm64
+Hyper-V initcall return at once when the early detection found no Hyper-V. The WSL kernel moved
+that detection into `setup_arch` and left the initcall without the check, so on any other
+hypervisor it went on to Hyper-V hypercalls. On Apple's Virtualization framework the guest then
+stopped before it printed anything.
+
 The host's direct-mapped mode (off by default) attaches the read-only disks as persistent
 memory: Hyper-V's virtual persistent memory, which the kernel finds through ACPI's NFIT, or
 virtio-pmem under KVM. erofs then maps their files with DAX instead of caching them.
