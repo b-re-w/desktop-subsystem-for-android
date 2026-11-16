@@ -1396,3 +1396,29 @@ fn nfr2_the_sizing_line_names_the_user_the_start_the_limit_and_the_growth() {
          (their limit 2048 MiB)"
     );
 }
+
+#[test]
+fn nfr2_failed_growth_keeps_the_start_size() {
+    use dsa_host_core::memory::growth_failed_line;
+    assert_eq!(
+        growth_failed_line("the host refused", Some(2048)),
+        "memory: the Android VM cannot grow on this computer (the host refused); it keeps the \
+         2048 MiB it started with"
+    );
+    assert_eq!(
+        growth_failed_line("the host refused", None),
+        "memory: the Android VM cannot grow on this computer (the host refused); it keeps the \
+         memory it started with"
+    );
+}
+
+#[test]
+fn nfr2_failed_growth_is_retried_next_boot() {
+    use dsa_host_core::memory::{memory_plan, GrowthCeiling::HostLessReserve};
+    // A failure is only logged: the next start is sized by the same plan as the one that failed.
+    let before = memory_plan(None, 0, Some(16384), HostLessReserve);
+    let _ = dsa_host_core::memory::growth_failed_line("the host refused", Some(2048));
+    let after = memory_plan(None, 0, Some(16384), HostLessReserve);
+    assert_eq!(before, after);
+    assert!(after.max_mb.is_some());
+}

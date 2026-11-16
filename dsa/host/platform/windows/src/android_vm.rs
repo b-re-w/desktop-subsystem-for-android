@@ -17,6 +17,7 @@ use dsa_host_core::boot_signs::{explain_unfinished_boot, explain_unreachable_age
 use dsa_host_core::bootconfig;
 use dsa_host_core::device_identity::{append_overlay, ramdisk_overlay};
 use dsa_host_core::direct_mapped_disk::DirectMappedImages;
+use dsa_host_core::memory::growth_failed_line;
 use dsa_host_core::session::{GuestLauncher, GuestStall, MemoryResizer};
 use dsa_protocol::auth::{bootconfig_entry, BootSecret};
 
@@ -943,11 +944,7 @@ impl GuestLauncher for AndroidVmLauncher {
     fn memory_growth_failed(&mut self, why: &str) {
         // The guest keeps the memory it started with. Whether to start it larger instead is
         // a decision about idle memory, so it is reported rather than made here.
-        eprintln!(
-            "memory: the Android VM cannot grow on this computer ({why}); it keeps the {} MiB \
-             it started with",
-            self.memory_base.unwrap_or_default()
-        );
+        eprintln!("{}", growth_failed_line(why, self.memory_base));
     }
 }
 

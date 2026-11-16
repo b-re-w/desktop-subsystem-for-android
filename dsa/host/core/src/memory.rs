@@ -1313,6 +1313,19 @@ impl MemoryPlan {
     }
 }
 
+/// What the host logs when growing a VM's memory did not work, for the reason `why`, with the
+/// size the VM started at when that is known. The VM keeps that size for the rest of its run.
+/// The next start tries to grow again: the reason may be gone by then (a host short of memory
+/// for a while), and a start that never grew would stay short of memory until the service
+/// restarted.
+pub fn growth_failed_line(why: &str, start_mb: Option<u64>) -> String {
+    let kept = match start_mb {
+        Some(mb) => format!("the {mb} MiB it started with"),
+        None => "the memory it started with".to_string(),
+    };
+    format!("memory: the Android VM cannot grow on this computer ({why}); it keeps {kept}")
+}
+
 /// How much the guest has and how hard it works to find memory, as its control daemon reports
 /// it.
 #[derive(Debug, Clone, Copy, PartialEq)]

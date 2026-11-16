@@ -26,6 +26,7 @@ use dsa_host_core::bootconfig;
 use dsa_host_core::device_identity::{append_overlay, ramdisk_overlay};
 use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::host_api::NetworkStatus;
+use dsa_host_core::memory::growth_failed_line;
 use dsa_host_core::session::{GuestLauncher, GuestStall};
 use dsa_protocol::auth::{bootconfig_entry, BootSecret};
 
@@ -172,8 +173,11 @@ pub struct LinuxVmLauncher {
     boot_properties: Option<BootProperties>,
     prerequisite: Option<Prerequisite>,
     networking: Option<Networking>,
-    /// Whether the VM may grow; turned off for good when growing did not work.
+    /// Whether the VM may grow.
     grow: bool,
+    /// Whether this start gives the VM room to grow: `grow`, until a start fails for it. The
+    /// next start tries again.
+    grow_this_start: bool,
     vm: Option<RunningVm>,
     /// The guest's console.
     tail: Tail,
@@ -229,6 +233,7 @@ impl LinuxVmLauncher {
             prerequisite: None,
             networking: None,
             grow: setup.grow_memory,
+            grow_this_start: setup.grow_memory,
             vm: None,
             tail: Tail::default(),
             vmm_tail: Tail::default(),
@@ -481,7 +486,11 @@ impl LinuxVmLauncher {
         } else {
             None
         };
-        let memory_max_mb = if self.grow { plan.memory_max_mb } else { None };
+        let memory_max_mb = if self.grow_this_start {
+            plan.memory_max_mb
+        } else {
+            None
+        };
         let config = VmConfig {
             name: self.name.clone(),
             arch: self.arch,
@@ -618,8 +627,9 @@ impl GuestLauncher for LinuxVmLauncher {
             let _ = vm.child.kill();
             self.finish(vm);
         }
+        self.grow_this_start = self.grow;
         let mut started = self.start_vm(secret);
-        if started.is_err() && self.grow && self.vmm_tail.contains("guest memory") {
+        if started.is_err() && self.grow_this_start && self.vmm_tail.contains("guest memory") {
             // A host that cannot map the VM's virtio-mem region: it keeps its starting size.
             self.memory_growth_failed("crosvm could not make the VM's hot-pluggable memory");
             started = self.start_vm(secret);
@@ -762,12 +772,19 @@ impl GuestLauncher for LinuxVmLauncher {
     }
 
     fn memory_growth_failed(&mut self, why: &str) {
-        // The guest keeps the memory it has, and later VMs are made at their starting size.
-        self.grow = false;
+        // The guest keeps the memory it has, and this start retries without growth if it has
+        // not come up. The next start tries to grow again.
+        self.grow_this_start = false;
         eprintln!(
-            "uid:{}: memory: the Android VM cannot grow on this computer ({why}); it keeps the \
-             memory it started with",
-            self.account.uid
+            "uid:{}: {}",
+            self.account.uid,
+            growth_failed_line(
+                why,
+                self.vm
+                    .as_ref()
+                    .and_then(|vm| vm.memory)
+                    .map(|(start, _)| start)
+            )
         );
     }
 }
