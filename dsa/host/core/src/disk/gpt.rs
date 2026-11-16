@@ -5,8 +5,8 @@
 //! image changes, the partitions that hold Android itself (`super` and the verified boot
 //! data) are copied from the new template into the user's disk, and the ones that hold the
 //! user's data (`misc`, `metadata`, `userdata`) stay. This module does that on anything that
-//! reads and writes like a disk, so it is tested on files; the Windows service runs it on
-//! attached VHDX disks.
+//! reads and writes like a disk, so it is tested on files; the hosts run it on the disks they
+//! open (attached VHDX disks on Windows, raw files elsewhere).
 
 use std::io::{self, Read, Seek, SeekFrom, Write};
 
@@ -179,7 +179,7 @@ pub fn copy_partitions(
 }
 
 /// CRC-32 (IEEE, reflected), the checksum of a GPT header and of its entries.
-pub(crate) fn crc32(bytes: &[u8]) -> u32 {
+pub fn crc32(bytes: &[u8]) -> u32 {
     let mut crc = !0u32;
     for &b in bytes {
         crc ^= b as u32;

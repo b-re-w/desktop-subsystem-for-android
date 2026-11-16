@@ -17,7 +17,7 @@
 use std::io::{self, Read, Seek, SeekFrom};
 use std::path::Path;
 
-use crate::gpt::{crc32, SECTOR};
+use dsa_host_core::disk::gpt::{crc32, SECTOR};
 
 /// The size of the disk the guest sees: 4 MiB.
 pub const DISK_BYTES: u64 = 4 << 20;
