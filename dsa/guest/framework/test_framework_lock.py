@@ -591,6 +591,36 @@ class ApplyPatchesTests(unittest.TestCase):
             self.assertEqual((tree / "frameworks/base/libs/hwui/a.txt").read_text(), self.ORIGINAL)
             self.assertFalse((tree / "frameworks/base/libs/hwui/b.txt").exists())
 
+    def test_nfr5_a_check_takes_a_patch_on_lines_an_earlier_patch_wrote(self):
+        # A build applies the patches in order, so a later patch may change what an earlier one
+        # wrote; checking each against the bare source would fail a series a build takes.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            tree = self._tree(root)
+            patches = self._patches(root)
+            (patches / "frameworks/base/android17/0003-on-top.patch").write_text(
+                "diff --git a/libs/hwui/a.txt b/libs/hwui/a.txt\n"
+                "--- a/libs/hwui/a.txt\n+++ b/libs/hwui/a.txt\n"
+                "@@ -1,3 +1,3 @@\n first line\n-second line, patched\n+second line, patched again\n third line\n")
+            done = apply_patches.apply_patches("android17", tree, check=True, patches=patches)
+            self.assertEqual(len(done), 3)
+            self.assertEqual((tree / "frameworks/base/libs/hwui/a.txt").read_text(), self.ORIGINAL)
+            self.assertFalse((tree / "frameworks/base/libs/hwui/b.txt").exists())
+
+    def test_nfr5_a_check_that_stops_leaves_the_tree_as_it_was(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            tree = self._tree(root)
+            patches = self._patches(root)
+            (patches / "frameworks/base/android17/0003-stale.patch").write_text(
+                "diff --git a/libs/hwui/a.txt b/libs/hwui/a.txt\n"
+                "--- a/libs/hwui/a.txt\n+++ b/libs/hwui/a.txt\n"
+                "@@ -1,3 +1,3 @@\n first line\n-no such line\n+other\n third line\n")
+            with self.assertRaisesRegex(apply_patches.PatchError, "0003-stale.patch does not apply"):
+                apply_patches.apply_patches("android17", tree, check=True, patches=patches)
+            self.assertEqual((tree / "frameworks/base/libs/hwui/a.txt").read_text(), self.ORIGINAL)
+            self.assertFalse((tree / "frameworks/base/libs/hwui/b.txt").exists())
+
     def test_nfr5_a_patch_for_other_source_stops_the_build(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
