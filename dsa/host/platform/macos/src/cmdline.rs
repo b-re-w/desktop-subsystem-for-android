@@ -3,10 +3,11 @@
 //! An image's command line is written for Hyper-V: its console is a UART (`ttyS0` or
 //! `ttyAMA0`), and Android finds its partitions on the disks below VMBus
 //! (`androidboot.boot_devices=vmbus`). On the framework the console is a virtio console
-//! (`hvc0`) and every disk is a virtio-blk device on PCI bus 0. Android's first stage init
-//! names a PCI device `pci0000:00/0000:00:<slot>.0`, and the framework places its devices
-//! on slots it chooses, so every slot of the bus is named: the by-name links are made for
-//! the disks wherever they sit, and only disks are looked at.
+//! (`hvc0`) and every disk is a virtio-blk device on PCI bus 0. The framework describes its
+//! machine with a device tree, so the PCI host is a platform device (`40000000.pci`) and
+//! the disks sit below it. Android's first stage init names a disk by its platform device,
+//! not by its slot, so naming the host makes the by-name links for the disks wherever the
+//! framework places them, and only disks are looked at.
 //!
 //! Everything else the image says is kept, in its order.
 
@@ -17,15 +18,13 @@ pub const CONSOLE: &str = "console=hvc0";
 /// whenever the VM's balloon offers reporting, without waiting for whole 2 MiB blocks.
 pub const PAGE_REPORTING: &str = "page_reporting.page_reporting_order=0";
 
-/// The slots a PCI bus has.
-const PCI_SLOTS: u32 = 32;
+/// The platform device of the framework's PCI host, from its device tree: the ECAM window
+/// starts at 0x4000_0000.
+const PCI_HOST: &str = "40000000.pci";
 
-/// `androidboot.boot_devices` for every slot of PCI bus 0.
+/// `androidboot.boot_devices` for the disks below the framework's PCI host.
 pub fn boot_devices() -> String {
-    let slots: Vec<String> = (1..PCI_SLOTS)
-        .map(|slot| format!("pci0000:00/0000:00:{slot:02x}.0"))
-        .collect();
-    format!("androidboot.boot_devices={}", slots.join(","))
+    format!("androidboot.boot_devices={PCI_HOST}")
 }
 
 /// Whether `word` is a setting the macOS host replaces.
