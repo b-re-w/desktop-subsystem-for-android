@@ -20,6 +20,7 @@ use std::time::{Duration, Instant};
 
 use dsa_host_core::compositor::frame_stall::{restart_in_background, FrameStall, Stall};
 use dsa_host_core::compositor::gpu_reset::{GpuResetWindows, Report};
+use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue, PACE_TICK};
 use dsa_host_core::compositor::shown_windows::ShownWindows;
 use dsa_host_core::compositor::task_windows::{TaskWindows, WindowChange};
 use dsa_host_core::compositor::window_hosts::{FromHost, MenuWork};
@@ -321,37 +322,69 @@ fn send_input(events: Receiver<InputEvent>) {
     });
 }
 
-fn serve_requests(requests: Receiver<Request>) {
+fn serve_requests(requests: Receiver<Request>, drawn: DrawnFrames) {
     std::thread::spawn(move || {
         let mut client: Option<HostApiClient> = None;
-        for request in requests {
-            if let Request::OpenFile(file) = &request {
-                let opened = connect()
-                    .and_then(|client| client.open_file(file).map_err(|error| error.to_string()));
-                if let Err(why) = opened {
-                    log(&format!("{} did not open in Android: {why}", file.name));
+        // The sizes of a drag go once a frame of the size before has been drawn, and only the
+        // latest of the sizes in between.
+        let mut queue = ResizeQueue::new(drawn);
+        loop {
+            let mut incoming: Vec<Request> = Vec::new();
+            if queue.waiting() {
+                match requests.recv_timeout(PACE_TICK) {
+                    Ok(next) => incoming.push(next),
+                    Err(mpsc::RecvTimeoutError::Timeout) => {}
+                    Err(mpsc::RecvTimeoutError::Disconnected) => break,
                 }
-                continue;
+            } else {
+                match requests.recv() {
+                    Ok(next) => incoming.push(next),
+                    Err(_) => break,
+                }
             }
-            if client.is_none() {
-                client = connect()
-                    .map_err(|why| log(&format!("cannot reach the DSA service: {why}")))
-                    .ok();
+            incoming.extend(requests.try_iter());
+            let mut tasks = Vec::new();
+            for request in incoming {
+                match request {
+                    Request::Task(request) => tasks.push(request),
+                    Request::OpenFile(file) => {
+                        let opened = connect().and_then(|client| {
+                            client.open_file(&file).map_err(|error| error.to_string())
+                        });
+                        if let Err(why) = opened {
+                            log(&format!("{} did not open in Android: {why}", file.name));
+                        }
+                    }
+                    Request::Notification(action) => {
+                        send_to_service(&mut client, |open| open.act_on_notification(&action));
+                    }
+                }
             }
-            let Some(open) = client.as_mut() else {
-                continue;
-            };
-            let result = match &request {
-                Request::Task(request) => open.request(request),
-                Request::Notification(action) => open.act_on_notification(action),
-                Request::OpenFile(_) => Ok(()),
-            };
-            if let Err(why) = result {
-                log(&format!("a request to Android failed: {why}"));
-                client = None;
+            for request in queue.step(tasks, Instant::now()) {
+                send_to_service(&mut client, |open| open.request(&request));
             }
         }
     });
+}
+
+/// Sends one request on the connection to the service, made first when there is none, and
+/// drops the connection when it fails so the next request makes it again.
+fn send_to_service<E: std::fmt::Display>(
+    client: &mut Option<HostApiClient>,
+    send: impl FnOnce(&mut HostApiClient) -> Result<(), E>,
+) {
+    if client.is_none() {
+        *client = connect()
+            .map_err(|why| log(&format!("cannot reach the DSA service: {why}")))
+            .ok();
+    }
+    let Some(open) = client.as_mut() else {
+        return;
+    };
+    if let Err(why) = send(open) {
+        log(&format!("a request to Android failed: {why}"));
+        *client = None;
+    }
 }
 
 /// Asks the service whether an app drags out of the window a press left (`out`), on a thread
@@ -819,6 +852,8 @@ struct Main {
     stall: FrameStall,
     /// How many frames have reached a task window.
     frames_shown: u64,
+    /// Told of each frame a task window shows, so a size of a drag held back for it may go.
+    drawn: DrawnFrames,
 }
 
 impl Main {
@@ -1160,6 +1195,12 @@ impl Main {
             if self.desktop.state.windows.contains_key(&window) {
                 self.frames_shown += 1;
             }
+            // The app has drawn this size: the next size of a drag may go to it.
+            let size = match &frame {
+                Shown::Pixels(frame) => (frame.width, frame.height),
+                Shown::Gpu(frame) => (frame.width, frame.height),
+            };
+            self.drawn.frame_drawn(task_id, size);
             match frame {
                 Shown::Pixels(frame) => self.desktop.state.present(window, frame),
                 Shown::Gpu(frame) => self.desktop.state.present_gpu(window, display_id, frame),
@@ -1291,7 +1332,8 @@ pub fn run() -> Result<(), String> {
 
     watch_tasks(to_main.clone());
     send_input(input_receiver);
-    serve_requests(request_receiver);
+    let drawn = DrawnFrames::new();
+    serve_requests(request_receiver, drawn.clone());
     sync_clipboard(to_main.clone(), clipboard_receiver);
     if let Some(folders) = &folders {
         show_notifications(requests.clone(), folders.icons.join("notifications"));
@@ -1331,6 +1373,7 @@ pub fn run() -> Result<(), String> {
         resets: GpuResetWindows::new(),
         stall: FrameStall::new(),
         frames_shown: 0,
+        drawn,
     };
     // The user's window settings for apps, and the full screen choices every app follows, are
     // read when the windows start and again now and then, so a change made in the settings
