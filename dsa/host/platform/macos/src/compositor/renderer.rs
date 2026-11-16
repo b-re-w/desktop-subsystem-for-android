@@ -171,6 +171,37 @@ extern "C" fn on_copied(context: *mut c_void, display_id: u32, width: u32, heigh
 pub trait ReadWrite: Read + Write {}
 impl<T: Read + Write> ReadWrite for T {}
 
+/// Opens the Vulkan loader that sits in `dir` as `libvulkan.dylib`, if there is one, and
+/// keeps it open. The renderer opens the loader by that bare name, which the system finds
+/// only in its own search folders; a library already open under that install name answers
+/// it, so the app's own copy is found without any environment setting. Returns whether a
+/// loader was there.
+pub fn preload_vulkan_loader(dir: &Path) -> Result<bool, String> {
+    let loader = dir.join("libvulkan.dylib");
+    if !loader.is_file() {
+        return Ok(false);
+    }
+    let c_path = CString::new(loader.as_os_str().to_string_lossy().as_bytes())
+        .map_err(|_| "the Vulkan loader's path has a NUL in it".to_string())?;
+    // Never closed: the renderer needs it for as long as the process runs.
+    let handle = unsafe { libc::dlopen(c_path.as_ptr(), libc::RTLD_NOW | libc::RTLD_GLOBAL) };
+    if handle.is_null() {
+        let why = unsafe { libc::dlerror() };
+        let why = if why.is_null() {
+            String::from("unknown reason")
+        } else {
+            unsafe { CStr::from_ptr(why as *const c_char) }
+                .to_string_lossy()
+                .into_owned()
+        };
+        return Err(format!(
+            "the Vulkan loader at {} could not be loaded: {why}",
+            loader.display()
+        ));
+    }
+    Ok(true)
+}
+
 impl Renderer {
     /// Loads the renderer at `path`, starts it for a guest display of `display` pixels, and
     /// sends its frames to `sink`, on the GPU when the renderer can.
@@ -181,6 +212,11 @@ impl Renderer {
     ) -> Result<Renderer, String> {
         let c_path = CString::new(path.as_os_str().to_string_lossy().as_bytes())
             .map_err(|_| "the renderer's path has a NUL in it".to_string())?;
+        // The loader the app carries beside the renderer goes first; one that is not there
+        // is the system's to find.
+        if let Some(dir) = path.parent() {
+            preload_vulkan_loader(dir)?;
+        }
         unsafe {
             let library = libc::dlopen(c_path.as_ptr(), libc::RTLD_NOW | libc::RTLD_LOCAL);
             if library.is_null() {
