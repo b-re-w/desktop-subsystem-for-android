@@ -59,8 +59,9 @@ use dsa_host_core::compositor::window_mode::{
     caption_revealed, picture_in_picture_place, ModeState, WindowMode,
 };
 use dsa_host_core::compositor::window_sizing::{
-    maximized_outer, maximized_position, min_client_size, rescaled_rect, size_is_held,
-    to_task_position, to_task_size, to_window_position, MoveLoop, SizeProposal,
+    frame_rect, kept_frame_action, maximized_outer, maximized_position, min_client_size,
+    rescaled_rect, size_is_held, to_task_position, to_task_size, to_window_position,
+    FrameRectRequest, KeptFrame, MoveLoop, SizeProposal,
 };
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::ime::ImeCursor;
@@ -1326,6 +1327,15 @@ unsafe fn keep_to_frame(hwnd: HWND, data: &WindowData, pos: &mut WINDOWPOS) {
         presenter.scale_changed(proposed);
         return;
     }
+    // Only the user's live drag of an edge holds the window to the frame it shows. Every other
+    // size is the desktop placing the window (the end of a move loop that snaps, a snap layout,
+    // Win+arrow, a maximise or restore): its rectangle is taken as it is, never replaced by
+    // the old frame's size or moved to fit it. The guest was asked for the size above, the last
+    // frame is shown stretched until the frame of the new size arrives, and a frame of another
+    // size does not resize an arranged window (take_kept_frame).
+    if !data.sizing.get() {
+        return;
+    }
     let Some(size) = presenter.size_for(proposed) else {
         return;
     };
@@ -1333,15 +1343,17 @@ unsafe fn keep_to_frame(hwnd: HWND, data: &WindowData, pos: &mut WINDOWPOS) {
         return;
     }
     let (width, height) = window_outer(hwnd, size, dpi);
+    let left_moved = pos.flags & SWP_NOMOVE == 0 && pos.x != current.left;
+    let top_moved = pos.flags & SWP_NOMOVE == 0 && pos.y != current.top;
+    let (x, y, width, height) = frame_rect(FrameRectRequest {
+        requested: (pos.x, pos.y, pos.cx, pos.cy),
+        frame_outer: Some((width, height)),
+        edge_drag: true,
+        moves: (left_moved, top_moved),
+    });
     if pos.flags & SWP_NOMOVE == 0 {
-        let mut current: RECT = std::mem::zeroed();
-        GetWindowRect(hwnd, &mut current);
-        if pos.x != current.left {
-            pos.x += pos.cx - width;
-        }
-        if pos.y != current.top {
-            pos.y += pos.cy - height;
-        }
+        pos.x = x;
+        pos.y = y;
     }
     pos.cx = width;
     pos.cy = height;
@@ -1429,6 +1441,26 @@ unsafe fn take_kept_frame(hwnd: HWND, data: &WindowData) {
     let Some(size) = presenter.kept_size() else {
         return;
     };
+    // A window the desktop arranged (snapped) keeps its rectangle: the frame is shown in it and
+    // the guest is asked for the window's size instead of the window taking the frame's.
+    if kept_frame_action(false, IsWindowArranged(hwnd) != 0) == KeptFrame::HoldAndAsk {
+        set_held(hwnd, data, true);
+        let dpi = GetDpiForWindow(hwnd).max(96);
+        let (frame_width, frame_height) = window_outer(hwnd, (0, 0), dpi);
+        let (_, (width, height)) = window_rect(hwnd);
+        let client = (
+            (width as i32 - frame_width).max(0) as u32,
+            (height as i32 - frame_height).max(0) as u32,
+        );
+        if data.reporting.get() && client.0 > 0 && client.1 > 0 && client != size {
+            (data.report)(FromHost::Resized {
+                task_id: data.task_id,
+                width: client.0,
+                height: client.1,
+            });
+        }
+        return;
+    }
     let (width, height) = window_outer(hwnd, size, GetDpiForWindow(hwnd).max(96));
     let mut current: RECT = std::mem::zeroed();
     GetWindowRect(hwnd, &mut current);
