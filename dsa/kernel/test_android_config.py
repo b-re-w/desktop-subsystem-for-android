@@ -38,6 +38,18 @@ class AndroidKernelConfigTests(unittest.TestCase):
         self.assertIn(".unlocked_ioctl\t= shmem_file_ioctl,", patch)
         self.assertIn("config MEMFD_ASHMEM_SHIM", patch)
 
+    def test_fr1_the_arm64_hyper_v_initcall_returns_where_there_is_no_hyper_v(self):
+        # The WSL kernel moved Hyper-V detection to hyperv_early_init() and left hyperv_init()
+        # without the check, so on Apple's Virtualization framework the arm64 guest went on to
+        # Hyper-V hypercalls and stopped before it printed anything.
+        patch = (PATCHES / "hyperv-init-needs-hyperv.patch").read_text()
+        self.assertIn("+++ b/arch/arm64/hyperv/mshyperv.c", patch)
+        self.assertIn("+\tif (!hyperv_initialized)\n+\t\treturn 0;", patch)
+        hunk = re.search(r"^@@ -\d+,(\d+) \+\d+,(\d+) @@.*\n((?:[ +-].*\n?)*)", patch, re.MULTILINE)
+        old, new, body = int(hunk.group(1)), int(hunk.group(2)), hunk.group(3).splitlines()
+        self.assertEqual(sum(1 for line in body if line[:1] in " -"), old)
+        self.assertEqual(sum(1 for line in body if line[:1] in " +"), new)
+
     def test_fr28_both_families_can_redirect_dns_queries_to_the_guests_stub(self):
         # dsa-channeld --dns-redirect fills a nat OUTPUT chain for IPv4 and IPv6 that sends
         # port 53 to the daemon's stub, which hands each query to the host's resolver.
