@@ -41,6 +41,8 @@ fn main() -> std::process::ExitCode {
     }
     dsa_host_windows::compositor::log::input_trace_to(logger.clone());
     dsa_host_windows::compositor::log::log_panics_to(logger.clone());
+    // A crash inside a driver or Windows never reaches the panic hook; this writes it too.
+    dsa_host_windows::compositor::log::log_crashes_to(logger.clone());
     let args: Vec<String> = std::env::args().skip(1).collect();
     let program = std::env::current_exe().unwrap_or_default();
     // Started by the service to ask the computer's administrator to approve one of the app's

@@ -83,7 +83,7 @@ class MemoryDiagnosticsPatchTests(unittest.TestCase):
                     self.assertTrue(line[:1] in (" ", "+", "-"), repr(line))
 
     def test_pr3_the_fetch_applies_0041_after_0040(self):
-        self.assertIn(" 0040 0041;", read(HOST / "fetch.sh"))
+        self.assertIn(" 0040 0041 ", read(HOST / "fetch.sh"))
         self.assertIn('-Filter "0041-*.patch"', read(HOST / "fetch.ps1"))
 
 

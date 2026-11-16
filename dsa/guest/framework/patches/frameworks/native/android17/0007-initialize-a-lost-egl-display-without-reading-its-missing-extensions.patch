@@ -1,0 +1,31 @@
+Subject: libEGL: initialize a display whose lost GPU device gives no extension string
+
+eglInitialize on a display whose GPU device is lost can succeed while the driver's eglQueryString
+returns NULL for EGL_EXTENSIONS. egl_cache_t::initialize took the length of that string and
+crashed with a null pointer in strlen. In an app, hwui's retry after a GPU device loss
+(EglManager::deviceAnswers) runs eglInitialize every few hundred milliseconds until the host GPU
+answers, so a renderer that was gone for a moment ended the app's render thread, and with it the
+app. The cache now skips the blob cache setup when there is no extension string, and the display
+is initialized again on the next eglInitialize (0003), so hwui's probe finds no vendor string and
+tries again later.
+
+Applies to frameworks/native at ae266dcb706d083868578cfedce381ef44488a07 (Android 17).
+---
+diff --git a/opengl/libs/EGL/egl_cache.cpp b/opengl/libs/EGL/egl_cache.cpp
+index 59745c0..f79e3b4 100644
+--- a/opengl/libs/EGL/egl_cache.cpp
++++ b/opengl/libs/EGL/egl_cache.cpp
+@@ -87,6 +87,13 @@ void egl_cache_t::initialize(egl_display_t* display) {
+     egl_connection_t* const cnx = &gEGLImpl;
+     if (display && cnx->dso && cnx->major >= 0 && cnx->minor >= 0) {
+         const char* exts = display->disp.queryString.extensions;
++        if (exts == nullptr) {
++            // The driver initialized the display but gives no extension string: its GPU device
++            // is lost. There is no blob cache to set up on it, and the display is initialized
++            // again once the device is back.
++            ALOGW("eglInitialize: the driver gave no extension string; the GPU device is lost");
++            return;
++        }
+         size_t bcExtLen = strlen(BC_EXT_STR);
+         size_t extsLen = strlen(exts);
+         bool equal = !strcmp(BC_EXT_STR, exts);
