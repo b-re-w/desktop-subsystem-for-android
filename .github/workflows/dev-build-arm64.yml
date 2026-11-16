@@ -1,0 +1,75 @@
+# Builds the arm64 guest for testing on one computer, without testing or publishing it: the
+# arm64 guest kernel and the arm64 image of the newest supported Android, with the patched
+# framework from the newest Framework build whose arm64 job passed, signed with the release
+# keys from the same secrets as a release. An arm64 image carries no ARM translator, since
+# its apps run as they are. It makes them with the Image release's own jobs
+# (release-image.yml, called with dev_build and dev_arch arm64), so the image is made exactly
+# as a release makes it. The Development build (dev-build.yml) makes the x86_64 image and the
+# Windows x64 installer; this one makes the arm64 image alone, for a host that boots it, such
+# as a Mac with Apple silicon. It makes no installer.
+#
+# It publishes nothing: no release, tag, image list, program list or channel. What it made
+# stays as workflow artifacts for three days, under names that never mix with the x86_64
+# build's:
+#   development-image-arm64        the image's files, image.json and the kernel's source
+#   development-image-list-arm64   images-arm64.json and images-arm64.json.sig, the signed
+#                                  list naming them
+# The image's version is the next pre-release revision with -dev.<run number> after it, as in
+# the Development build.
+#
+# It runs only by hand, on develop, and runs no tests:
+#
+#   gh workflow run dev-build-arm64.yml --ref develop
+#
+# In a fork it runs on the fork's own runners and needs the same runs and secrets as the
+# Development build (see the top of dev-build.yml): a passing Framework build on the fork's
+# develop that includes the arm64 jobs, and the signing secrets.
+
+name: Development build (arm64)
+
+on:
+  # Started by hand only. GitHub dispatches a workflow once it is on the default branch or
+  # has run at least once; a fork runs it by hand after its first push.
+  workflow_dispatch:
+
+# A build in progress always finishes, and only the newest waiting one stays, as in the
+# Development build. The group is the workflow and the branch, never the run.
+concurrency:
+  group: dev-build-arm64-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the branch
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [[ "$REF" != refs/heads/develop ]]; then
+            echo "::error::A Development build is made from develop only, not from $REF." >&2
+            exit 1
+          fi
+
+  build:
+    name: Build
+    needs: check
+    # The release's jobs ask for these; with dev_build they publish nothing.
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: read
+      issues: read
+    uses: ./.github/workflows/release-image.yml
+    secrets: inherit
+    with:
+      dev_build: true
+      dev_arch: arm64
+      rebuild_images: true
+      # An arm64 image takes no translator.
+      arm_translation: false
