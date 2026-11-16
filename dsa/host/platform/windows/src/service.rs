@@ -39,7 +39,9 @@ use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid
 use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
-use dsa_host_core::settings::{FileSettings, SettingsStore};
+use dsa_host_core::settings::{
+    keep_first_channel_logged, service_settings, FileSettings, SettingsStore,
+};
 use dsa_host_core::update::program_service::{
     ProgramStatus, ProgramUpdates, Timing, WithProgramStatus,
 };
@@ -1075,13 +1077,15 @@ fn current_image_build(config: &HostConfig, images: Option<&ImageStore>) -> Opti
 /// whose settings record no release channel yet is on the channel of the installer that put
 /// DSA here.
 fn file_settings(config: &HostConfig) -> FileSettings {
-    FileSettings::new(config.settings_dir())
-        .with_previous_render_gpu(Box::new(|sid: &str| {
+    service_settings(
+        config.settings_dir(),
+        Some(config.installer_channel(crate::VERSION)),
+        Some(Box::new(|sid: &str| {
             crate::profile::local_app_data(sid)
                 .ok()
                 .and_then(|dir| previous_render_gpu(&dir))
-        }))
-        .with_first_channel(config.installer_channel(crate::VERSION))
+        })),
+    )
 }
 
 fn settings_store(config: &HostConfig) -> Arc<dyn SettingsStore> {
@@ -1092,10 +1096,7 @@ fn settings_store(config: &HostConfig) -> Arc<dyn SettingsStore> {
 /// yet: the installer's, so that every later upgrade keeps it.
 fn service_settings_store(config: &HostConfig, build: &str) -> Arc<dyn SettingsStore> {
     let store = file_settings(config);
-    match store.keep_first_channel() {
-        Ok(channel) => eprintln!("{build}: DSA follows the {channel} release channel"),
-        Err(why) => eprintln!("{build}: recording the release channel failed: {why}"),
-    }
+    keep_first_channel_logged(&store, build);
     Arc::new(store)
 }
 

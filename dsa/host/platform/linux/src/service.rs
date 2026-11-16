@@ -34,7 +34,7 @@ use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::{Session, SessionState};
-use dsa_host_core::settings::{FileSettings, SettingsStore};
+use dsa_host_core::settings::{keep_first_channel_logged, service_settings, SettingsStore};
 use dsa_host_core::update::service::{
     check_alerting, follow_waiting_image, next_image_check, CheckNow, Download, StoreVersions,
     UpdateNotices, UpdatingAndroid, WAITING_IMAGE_CHECK,
@@ -160,7 +160,7 @@ impl UserFiles {
 }
 
 fn settings_store(config: &HostConfig) -> Arc<dyn SettingsStore> {
-    Arc::new(FileSettings::new(config.settings_dir()))
+    Arc::new(service_settings(config.settings_dir(), None, None))
 }
 
 /// The service's settings: a computer whose settings record no release channel yet starts on
@@ -174,11 +174,8 @@ fn service_settings_store(config: &HostConfig, build: &str) -> Arc<dyn SettingsS
     let first = entries
         .channel()
         .unwrap_or_else(|| ReleaseChannel::of_version(crate::VERSION));
-    let files = FileSettings::new(config.settings_dir()).with_first_channel(first);
-    match files.keep_first_channel() {
-        Ok(channel) => eprintln!("{build}: DSA follows the {channel} release channel"),
-        Err(why) => eprintln!("{build}: recording the release channel failed: {why}"),
-    }
+    let files = service_settings(config.settings_dir(), Some(first), None);
+    keep_first_channel_logged(&files, build);
     let store = ChannelFollowingSettings::new(Arc::new(files), entries);
     match store.bring_entries_in_line() {
         Ok(changed) => {

@@ -30,7 +30,7 @@ use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
-use dsa_host_core::settings::{FileSettings, SettingsStore};
+use dsa_host_core::settings::{keep_first_channel_logged, service_settings, SettingsStore};
 use dsa_host_core::update::service::{
     check_alerting, follow_waiting_image, next_image_check, CheckNow, StoreVersions, UpdateNotices,
     UpdatingAndroid, WAITING_IMAGE_CHECK,
@@ -725,12 +725,14 @@ pub fn serve(
     }
     // A computer whose settings record no release channel yet starts on the one this version
     // was published on, and keeps it through upgrades.
-    let files = FileSettings::new(config.settings_dir(&user)).with_first_channel(
-        dsa_host_core::update::program::ReleaseChannel::of_version(crate::VERSION),
+    let files = service_settings(
+        config.settings_dir(&user),
+        Some(dsa_host_core::update::program::ReleaseChannel::of_version(
+            crate::VERSION,
+        )),
+        None,
     );
-    if let Err(why) = files.keep_first_channel() {
-        eprintln!("{build}: recording the release channel failed: {why}");
-    }
+    keep_first_channel_logged(&files, build);
     let settings: Arc<dyn SettingsStore> = Arc::new(files);
     let store = open_store(&config, build);
     let notices = Arc::new(UpdateNotices::default());
