@@ -8,7 +8,8 @@ kernel, and the user's WSL kernel is not touched.
 | `wsl-kernel.tag` | The WSL kernel tag the source comes from |
 | `android.config` | The options merged on top of that tag's `Microsoft/config-wsl` (x86_64) or `Microsoft/config-wsl-arm64` (arm64) |
 | `android-arm64.config` | The options the arm64 kernel adds after `android.config` |
-| `virtio.config` | The virtio drivers the macOS host's VM needs, merged last for both architectures |
+| `virtio.config` | The virtio drivers the macOS host's VM needs, merged after those for both architectures |
+| `dxg.config` | Hyper-V's paravirtualized GPU driver (dxgkrnl, `/dev/dxg`), merged last for both architectures. It is idle unless the host gives the VM a GPU (experimental, off by default) |
 | `patches/` | Small patches applied to the pinned source before configuration, the same for both architectures |
 | `apply-patches.sh` | Leaves a checkout of the tag with the whole patch series applied, however often it runs; the patches stack (several change `mm/page_reporting.c`), so it checks the series as a whole, not one patch at a time |
 | `build.sh` | Fetches the source into `.scratch/`, merges the configuration, checks it and builds `bzImage` (x86_64) or `Image` (arm64) |
