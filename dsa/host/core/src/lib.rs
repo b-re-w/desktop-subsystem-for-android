@@ -152,6 +152,7 @@ pub mod system_settings;
 pub mod tasks;
 pub mod touch_gestures;
 pub mod ui_language;
+pub mod ui_text;
 pub mod update;
 pub mod vhdx;
 pub mod video;

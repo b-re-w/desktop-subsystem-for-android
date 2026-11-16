@@ -20,7 +20,6 @@ use dsa_host_core::compositor::caption::{
 };
 use dsa_host_core::keys::{keycode, KeyAction, KeyEvent};
 use dsa_host_core::tasks::Bounds;
-use dsa_host_core::ui_language::UiLanguage;
 
 /// The space left after the window's own buttons in the band, in points, so an app's
 /// controls never touch them. A Mac app's toolbar starts about this far after the zoom
@@ -264,27 +263,6 @@ pub fn back_keys(task_id: i32, time_ms: u32) -> [KeyEvent; 2] {
     [key(KeyAction::Down), key(KeyAction::Up)]
 }
 
-/// The back button's name for VoiceOver and its tooltip, in `lang`, as macOS's own back
-/// buttons are named.
-pub fn back_label(lang: UiLanguage) -> &'static str {
-    match lang {
-        UiLanguage::English => "Back",
-        UiLanguage::Korean => "뒤로",
-        UiLanguage::Japanese => "戻る",
-        UiLanguage::ChineseSimplified => "返回",
-        UiLanguage::ChineseTraditional => "返回",
-        UiLanguage::Spanish => "Atrás",
-        UiLanguage::French => "Retour",
-        UiLanguage::German => "Zurück",
-        UiLanguage::PortugueseBrazil => "Voltar",
-        UiLanguage::Russian => "Назад",
-        UiLanguage::Italian => "Indietro",
-        UiLanguage::Vietnamese => "Quay lại",
-        UiLanguage::Indonesian => "Kembali",
-        UiLanguage::Turkish => "Geri",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -463,25 +441,5 @@ mod tests {
         assert_eq!(up.key_code, keycode::BACK);
         assert_eq!((down.event_time_ms, up.event_time_ms), (1234, 1234));
         assert!(!down.canceled && !up.canceled);
-    }
-
-    #[test]
-    fn fr22_the_back_button_is_named_in_the_users_language() {
-        assert_eq!(back_label(UiLanguage::Korean), "뒤로");
-        assert_eq!(back_label(UiLanguage::English), "Back");
-        assert_eq!(back_label(UiLanguage::Japanese), "戻る");
-        assert_eq!(back_label(UiLanguage::German), "Zurück");
-    }
-
-    #[test]
-    fn fr17_the_back_button_has_a_name_in_every_language() {
-        for lang in UiLanguage::ALL {
-            let label = back_label(lang);
-            assert!(!label.trim().is_empty(), "{lang:?}");
-            assert!(!crate::ui_language::has_em_dash(label), "{lang:?}");
-            if lang != UiLanguage::English {
-                assert_ne!(label, "Back", "{lang:?} is not translated");
-            }
-        }
     }
 }
