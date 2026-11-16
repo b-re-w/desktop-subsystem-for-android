@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
-use crate::signs::BootSigns;
+use dsa_host_core::boot_signs::BootSigns;
 
 /// How many of the last lines are kept for a report.
 pub const TAIL_LINES: usize = 40;

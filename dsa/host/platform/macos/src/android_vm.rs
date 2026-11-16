@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 
 use dsa_host_core::bootconfig;
 use dsa_host_core::device_identity::{append_overlay, ramdisk_overlay};
+use dsa_host_core::memory::growth_failed_line;
 use dsa_host_core::session::{GuestLauncher, GuestStall};
 use dsa_protocol::auth::{bootconfig_entry, BootSecret};
 
@@ -83,8 +84,6 @@ pub struct MacVmLauncher {
     /// The memory the running VM started with and may grow to, in MiB.
     memory: Option<(u64, u64)>,
     boots: u64,
-    /// Whether growing memory failed, so later boots start at a fixed size.
-    fixed_memory: bool,
     /// The framework's process that runs the VM, for the memory report.
     process: VmProcess,
 }
@@ -105,7 +104,6 @@ impl MacVmLauncher {
             prerequisite: None,
             memory: None,
             boots: 0,
-            fixed_memory: false,
             process: VmProcess::default(),
         }
     }
@@ -201,9 +199,6 @@ impl GuestLauncher for MacVmLauncher {
             );
         }
         let mut plan = (self.source)()?;
-        if self.fixed_memory {
-            plan.vm.memory_max_mb = plan.vm.memory_start_mb;
-        }
         self.boots += 1;
         let initrd = self.write_initrd(
             &plan.vm.initrd,
@@ -309,7 +304,9 @@ impl GuestLauncher for MacVmLauncher {
     }
 
     fn memory_growth_failed(&mut self, why: &str) {
-        eprintln!("memory: growing Android's VM failed ({why}); later boots keep their start size");
-        self.fixed_memory = true;
+        eprintln!(
+            "{}",
+            growth_failed_line(why, self.memory.map(|(start, _)| start))
+        );
     }
 }

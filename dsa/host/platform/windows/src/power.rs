@@ -63,6 +63,22 @@ pub fn read() -> Option<PowerState> {
     ))
 }
 
+/// What this computer says about itself, as Windows reports it.
+pub struct ComputerFacts;
+
+impl dsa_host_core::host_facts::HostFacts for ComputerFacts {
+    fn physical_memory_kb(&self) -> Option<u64> {
+        #[cfg(windows)]
+        {
+            read_memory().map(|(total_kb, _)| total_kb)
+        }
+        #[cfg(not(windows))]
+        {
+            None
+        }
+    }
+}
+
 /// The computer's physical memory, total and available, in KiB, or `None` when Windows
 /// cannot say.
 #[cfg(windows)]

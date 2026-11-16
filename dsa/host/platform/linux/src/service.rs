@@ -14,26 +14,28 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use dsa_host_core::boot_signs::{watch_boot_signs, BootSigns};
 use dsa_host_core::clock_trace::{ClockTrace, HostClock};
 use dsa_host_core::data_reset::TemplateDataDisk;
 use dsa_host_core::device_identity::{BootIdentity, FileDeviceIdentities, ImageBuild};
 use dsa_host_core::diagnostics::HostFile;
 use dsa_host_core::direct_mapped_disk::{DirectMappedImages, Store};
-use dsa_host_core::guest_log::{LogFilter, LogWatch, DEFAULT_BUFFERS, WARN};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{
     HostApiService, NetworkStatus, PerUser, ServiceFacts, UserAndroid, UserAndroids,
 };
-use dsa_host_core::host_config::DEFAULT_MEMORY_MB;
+use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::host_paths::HostPaths;
+use dsa_host_core::input_trace::guest_traces_input;
 use dsa_host_core::memory::{log_memory, HostMemory};
+use dsa_host_core::memory::{memory_plan, GrowthCeiling};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
-use dsa_host_core::session::{Session, SessionState};
+use dsa_host_core::session::Session;
 use dsa_host_core::settings::{keep_first_channel_logged, service_settings, SettingsStore};
 use dsa_host_core::update::current::{current_image, CurrentImage};
 use dsa_host_core::update::service::{
@@ -48,42 +50,17 @@ use crate::config::HostConfig;
 use crate::crosvm::guest_cid;
 use crate::image::{bring_disk_to, image_files, make_disk, ImageFiles};
 use crate::launcher::{BootPlan, LauncherSetup, LinuxVmLauncher, SharedNetworkStatus};
-use crate::signs::BootSigns;
 use crate::users::{uid_of, Account};
 use crate::vsock::{connect_stream, VsockHub};
 
-/// The boot property that makes the guest trace input, which the clock lines pair with.
-pub const GUEST_INPUT_TRACE: &str = "androidboot.hardware.dsa_input_trace=1";
+/// What this computer says about itself, from `/proc`.
+pub struct ProcFacts;
 
-/// Whether the guest booted with `cmdline` traces input.
-pub fn guest_traces_input(cmdline: &str) -> bool {
-    cmdline.split_whitespace().any(|w| w == GUEST_INPUT_TRACE)
-}
-
-/// The memory a user's VM starts with and may grow to, in MiB, for a user whose limit is
-/// `limit_mb` (0 for automatic) on a computer with `total_mb`: a small start, as the guest
-/// kernel keeps page records for all the memory it has, and growth to their limit or to the
-/// computer's memory less what the host keeps.
-pub fn memory_sizing(limit_mb: u32, total_mb: Option<u64>) -> (u32, Option<u32>) {
-    let start = match limit_mb {
-        0 => DEFAULT_MEMORY_MB,
-        limit => limit.clamp(2048, DEFAULT_MEMORY_MB),
-    };
-    let max = total_mb
-        .map(|total| dsa_host_core::memory::vm_memory_mb(total, limit_mb))
-        .map(|max| u32::try_from(max).unwrap_or(u32::MAX))
-        .filter(|max| *max > start);
-    (start, max)
-}
-
-fn host_total_mb() -> Option<u64> {
-    host_total_kb().map(|total_kb| total_kb / 1024)
-}
-
-/// The computer's physical memory, in KiB.
-fn host_total_kb() -> Option<u64> {
-    let text = std::fs::read_to_string("/proc/meminfo").ok()?;
-    crate::devices::power::parse_meminfo(&text).map(|(total_kb, _)| total_kb)
+impl HostFacts for ProcFacts {
+    fn physical_memory_kb(&self) -> Option<u64> {
+        let text = std::fs::read_to_string("/proc/meminfo").ok()?;
+        crate::devices::power::parse_meminfo(&text).map(|(total_kb, _)| total_kb)
+    }
 }
 
 /// The host's monotonic clock, for the clock lines.
@@ -268,46 +245,6 @@ fn lower_this_thread() -> Result<(), String> {
     Ok(())
 }
 
-/// Reads Android's log while it boots, for what explains a boot that stalls.
-fn watch_boot_signs(session: Weak<Session>, signs: Arc<Mutex<BootSigns>>) {
-    let Some(events) = session.upgrade().map(|s| s.events()) else {
-        return;
-    };
-    let mut watch: Option<LogWatch> = None;
-    loop {
-        let Some(running) = session.upgrade() else {
-            return;
-        };
-        let booting = matches!(
-            running.state(),
-            SessionState::Starting | SessionState::Stalled
-        );
-        if booting && watch.is_none() {
-            watch = Some(running.watch_log(LogFilter {
-                buffers: DEFAULT_BUFFERS,
-                tags: vec![("*".into(), WARN)],
-            }));
-        } else if !booting {
-            watch = None;
-        }
-        drop(running);
-        match &watch {
-            Some(log) => {
-                if let Ok(entry) = log.entries.recv_timeout(Duration::from_millis(500)) {
-                    let mut signs = signs.lock().unwrap_or_else(|e| e.into_inner());
-                    for entry in std::iter::once(entry).chain(log.entries.try_iter()) {
-                        signs.read_line(&format!("{}: {}", entry.tag, entry.message));
-                    }
-                }
-            }
-            None => match events.recv_timeout(Duration::from_secs(1)) {
-                Ok(_) | Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
-                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return,
-            },
-        }
-    }
-}
-
 fn vm_cid(vm_id: &str) -> std::io::Result<u32> {
     vm_id.parse().map_err(|_| {
         std::io::Error::new(
@@ -394,23 +331,26 @@ pub fn create_user_android(
                 )?,
                 _ => {}
             }
-            let (memory_mb, memory_max_mb) = match config.memory_mb {
-                Some(fixed) => (fixed, None),
-                None => {
-                    let limit = store.get(&user).map(|s| s.memory_limit_mb).unwrap_or(0);
-                    memory_sizing(limit, host_total_mb())
-                }
+            let limit = match config.memory_mb {
+                Some(_) => 0,
+                None => store.get(&user).map(|s| s.memory_limit_mb).unwrap_or(0),
             };
-            eprintln!(
-                "{user}: memory: Android starts with {memory_mb} MiB and may grow to {}",
-                memory_max_mb.map_or("its start".to_string(), |mb| format!("{mb} MiB"))
+            let total_mb = ProcFacts.physical_memory_kb().map(|kb| kb / 1024);
+            let plan = memory_plan(
+                config.memory_mb,
+                limit,
+                total_mb,
+                GrowthCeiling::HostLessReserve,
             );
+            if config.memory_mb.is_none() {
+                eprintln!("{}", plan.describe(&user, limit));
+            }
             traced.store(guest_traces_input(&image.kernel_cmdline), Ordering::Relaxed);
             Ok(BootPlan {
                 files: image,
                 image_version: version,
-                memory_mb,
-                memory_max_mb,
+                memory_mb: plan.start_mb,
+                memory_max_mb: plan.max_mb.map(|mb| u32::try_from(mb).unwrap_or(u32::MAX)),
             })
         })
     };
@@ -456,7 +396,7 @@ pub fn create_user_android(
                 + &dsa_host_core::widevine::bootconfig_for(&*store, &user, &attached)
                 // The computer's physical memory, read at each start, which Google Play sees
                 // as the device's memory.
-                + &dsa_host_core::host_memory::bootconfig(host_total_kb())
+                + &dsa_host_core::host_memory::bootconfig(ProcFacts.physical_memory_kb())
         })
     })
     .with_boot_properties({
@@ -979,22 +919,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn nfr2_the_vm_starts_small_and_may_grow_to_the_computer_less_the_hosts_share() {
-        let (start, max) = memory_sizing(0, Some(32 * 1024));
-        assert_eq!(start, DEFAULT_MEMORY_MB);
-        let max = max.unwrap();
-        assert!(max > start && max < 32 * 1024);
-        // A user's limit caps both.
-        assert_eq!(memory_sizing(2048, Some(32 * 1024)), (2048, None));
-        assert_eq!(
-            memory_sizing(8192, Some(32 * 1024)),
-            (DEFAULT_MEMORY_MB, Some(8192))
-        );
-        // Without the computer's size the VM keeps its start.
-        assert_eq!(memory_sizing(0, None), (DEFAULT_MEMORY_MB, None));
-    }
-
-    #[test]
     fn fr19_each_users_android_files_are_in_their_own_data_folder() {
         let paths = UnixHostPaths::new(
             Layout::Linux,
@@ -1021,16 +945,6 @@ mod tests {
             files.run_dir,
             PathBuf::from("/home/ana/.local/share/dsa/tmp")
         );
-    }
-
-    #[test]
-    fn fr5_the_clock_is_paired_only_for_a_guest_booted_with_the_input_trace() {
-        assert!(guest_traces_input(
-            "androidboot.hardware.dsa_input_trace=1 a=b"
-        ));
-        assert!(!guest_traces_input(
-            "androidboot.hardware.dsa_input_trace=0"
-        ));
     }
 
     #[test]

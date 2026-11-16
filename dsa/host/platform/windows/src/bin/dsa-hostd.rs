@@ -493,7 +493,8 @@ mod windows_host {
         let user = config.user_sid.clone().or(fallback_sid).unwrap_or_default();
         let console_log = config.console_log_path(&user, &vm.data_disk);
         println!("the Android console is kept in {}", console_log.display());
-        let traces_input = dsa_host_windows::service::guest_traces_input(&vm.full_kernel_cmdline());
+        let traces_input =
+            dsa_host_core::input_trace::guest_traces_input(&vm.full_kernel_cmdline());
         let launcher = AndroidVmLauncher::new(&config.vm_name, vm).with_console_log(console_log);
         let service = Guid::vsock_service(config.control_port);
         let listener = VmBoundListener::new(

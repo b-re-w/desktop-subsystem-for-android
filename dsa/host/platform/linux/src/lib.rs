@@ -80,7 +80,6 @@ pub mod secret_service;
 #[cfg(target_os = "linux")]
 pub mod service;
 pub mod shell;
-pub mod signs;
 pub mod tpm2;
 #[cfg(target_os = "linux")]
 pub mod users;

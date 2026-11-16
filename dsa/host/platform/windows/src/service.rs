@@ -25,7 +25,7 @@
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -33,10 +33,12 @@ use dsa_host_core::device_identity::{BootIdentity, FileDeviceIdentities, ImageBu
 use dsa_host_core::diagnostics::HostFile;
 use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::guest_display::{display_or_smallest, with_display_density, with_display_size};
-use dsa_host_core::guest_log::{LogFilter, LogWatch, DEFAULT_BUFFERS, WARN};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid, UserAndroids};
+use dsa_host_core::host_facts::HostFacts;
+use dsa_host_core::input_trace::guest_traces_input;
 use dsa_host_core::memory::{log_memory, HostMemory};
+use dsa_host_core::memory::{memory_plan, GrowthCeiling};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
 use dsa_host_core::settings::{
@@ -57,7 +59,7 @@ use dsa_transport::Listener;
 
 use crate::android_vm::AndroidVmLauncher;
 use crate::compositor::log::PerformanceCounterClock;
-use crate::console_log::{old_copy_path, ConsoleSigns};
+use crate::console_log::old_copy_path;
 use crate::guest_communication_services::register_graphics_service_guids;
 use crate::guid::Guid;
 use crate::host_config::{local_app_data, HostConfig};
@@ -72,6 +74,7 @@ use crate::user_disk::{bring_disk_to, prepare_user_data_disk, prepare_user_disk_
 use crate::vm::AndroidVmConfig;
 use crate::vm_listener::VmBoundListener;
 use crate::window_manager::UserWindowManager;
+use dsa_host_core::boot_signs::{watch_boot_signs, BootSigns};
 use dsa_host_core::clock_trace::ClockTrace;
 
 /// Sizes the guest's display for the monitors the user's session recorded, and gives it the
@@ -88,59 +91,6 @@ fn follow_monitors(vm: &mut AndroidVmConfig, sid: &str) {
         None => dsa_host_core::guest_display::boot_density(None),
     };
     vm.kernel_cmdline = with_display_density(&vm.kernel_cmdline, density);
-}
-
-/// The kernel command line setting that turns the guest's input trace on.
-pub const GUEST_INPUT_TRACE: &str = "androidboot.hardware.dsa_input_trace=1";
-
-/// Whether a guest booted with `cmdline` writes the input trace.
-pub fn guest_traces_input(cmdline: &str) -> bool {
-    cmdline
-        .split_whitespace()
-        .any(|word| word == GUEST_INPUT_TRACE)
-}
-
-/// Reads Android's log while it boots (`Starting` or `Stalled`), and only then, for what
-/// explains a boot that stalls: SELinux refusing the agent the channel, or the hwcomposer
-/// not reaching the renderer. Once Android is up, or stopped, the log is no longer read.
-fn watch_boot_signs(session: Weak<Session>, signs: Arc<Mutex<ConsoleSigns>>) {
-    use dsa_host_core::session::SessionState;
-    let Some(events) = session.upgrade().map(|s| s.events()) else {
-        return;
-    };
-    let mut watch: Option<LogWatch> = None;
-    loop {
-        let Some(running) = session.upgrade() else {
-            return;
-        };
-        let booting = matches!(
-            running.state(),
-            SessionState::Starting | SessionState::Stalled
-        );
-        if booting && watch.is_none() {
-            watch = Some(running.watch_log(LogFilter {
-                buffers: DEFAULT_BUFFERS,
-                tags: vec![("*".into(), WARN)],
-            }));
-        } else if !booting {
-            watch = None;
-        }
-        drop(running);
-        match &watch {
-            Some(log) => {
-                if let Ok(entry) = log.entries.recv_timeout(Duration::from_millis(500)) {
-                    let mut signs = signs.lock().unwrap_or_else(|e| e.into_inner());
-                    for entry in std::iter::once(entry).chain(log.entries.try_iter()) {
-                        signs.read_line(&format!("{}: {}", entry.tag, entry.message));
-                    }
-                }
-            }
-            None => match events.recv_timeout(Duration::from_secs(1)) {
-                Ok(_) | Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
-                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return,
-            },
-        }
-    }
 }
 
 /// The host's logs that go in `sid`'s diagnostics: the service's own (without the lines about
@@ -228,35 +178,33 @@ struct MemorySizing {
     fixed_mb: Option<u32>,
     store: Arc<dyn SettingsStore>,
     user: String,
+    facts: Arc<dyn HostFacts>,
     max: crate::android_vm::MemoryMax,
 }
 
 impl MemorySizing {
     /// The size the VM starts with; also sets how far it may grow.
     fn memory_mb(&self) -> u32 {
-        let mut max = self.max.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(fixed) = self.fixed_mb {
-            *max = None;
-            return fixed;
-        }
-        let limit = self
-            .store
-            .get(&self.user)
-            .map(|settings| settings.memory_limit_mb)
-            .unwrap_or(0);
-        let start = crate::host_config::host_sized_memory_mb(limit);
-        *max = crate::host_config::growth_max_mb(limit);
-        eprintln!(
-            "memory: {}'s Android starts with {start} MiB and may grow to {} ({})",
-            self.user,
-            max.map_or("its start".to_string(), |mb| format!("{mb} MiB")),
-            if limit > 0 {
-                format!("their limit {limit} MiB")
-            } else {
-                "automatic".to_string()
-            }
+        let limit = match self.fixed_mb {
+            Some(_) => 0,
+            None => self
+                .store
+                .get(&self.user)
+                .map(|settings| settings.memory_limit_mb)
+                .unwrap_or(0),
+        };
+        let total_mb = self.facts.physical_memory_kb().map(|kb| kb / 1024);
+        let plan = memory_plan(
+            self.fixed_mb,
+            limit,
+            total_mb,
+            GrowthCeiling::HostLessReserve,
         );
-        start
+        *self.max.lock().unwrap_or_else(|e| e.into_inner()) = plan.max_mb;
+        if self.fixed_mb.is_none() {
+            eprintln!("{}", plan.describe(&self.user, limit));
+        }
+        plan.start_mb
     }
 }
 
@@ -430,6 +378,7 @@ pub fn create_user_android(
         fixed_mb: config.memory_mb,
         store: settings_store(config),
         user: sid.to_string(),
+        facts: Arc::new(crate::power::ComputerFacts),
         max: memory_max.clone(),
     };
     let launcher = match updates {
@@ -560,7 +509,7 @@ pub fn create_user_android(
     };
     // What Android logs while it boots explains a boot that stalls; the console no longer
     // carries it.
-    let boot_signs = Arc::new(Mutex::new(ConsoleSigns::default()));
+    let boot_signs = Arc::new(Mutex::new(BootSigns::default()));
     let launcher = launcher.with_log_signs(Arc::clone(&boot_signs));
     let service = Guid::vsock_service(config.control_port);
     let listener = VmBoundListener::new(
@@ -1388,21 +1337,5 @@ where
                 .collect::<Vec<_>>()
                 .join(", ")
         ))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn fr5_the_clock_is_paired_only_for_a_guest_booted_with_the_input_trace() {
-        assert!(guest_traces_input(
-            "androidboot.hardware=dsa androidboot.hardware.dsa_input_trace=1"
-        ));
-        assert!(!guest_traces_input("androidboot.hardware=dsa"));
-        assert!(!guest_traces_input(
-            "androidboot.hardware.dsa_input_trace=0"
-        ));
     }
 }
