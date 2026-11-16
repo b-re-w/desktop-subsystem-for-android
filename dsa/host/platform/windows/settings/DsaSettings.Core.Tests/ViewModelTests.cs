@@ -60,6 +60,7 @@ internal sealed class KeyText : ITextSource
         "Backup_Apps" => "{0} apps, {1}",
         "Backup_LastError" => "problem {0}",
         "Certificate_IssuedBy" => "issued by {0}",
+        "Graphics_WithDetail" => "{0} ({1})",
         _ => key,
     };
 }

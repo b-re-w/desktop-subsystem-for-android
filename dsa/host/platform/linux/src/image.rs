@@ -581,14 +581,19 @@ mod tests {
     fn fr14_crosvm_boots_a_raw_copy_of_a_vhdx_system_disk() {
         let dir = folder("rawcopy", &[]);
         let raw = dir.join("system.img");
-        assert_eq!(raw_disk(&raw).unwrap(), raw);
+        // A raw disk that is not there, with no VHDX to make it from, is refused.
+        assert!(raw_disk(&raw).is_err());
         // A file that is not a VHDX is refused, and no partial copy is left behind.
         std::fs::write(dir.join("system.vhdx"), b"not a vhdx").unwrap();
         assert!(raw_disk(&dir.join("system.vhdx")).is_err());
         assert!(!raw.exists());
         assert!(!dir.join("system.img.partial").exists());
-        // A raw copy made earlier is used as it is.
+        // A raw copy with no VHDX beside it is checked and recorded, then used as it is.
+        std::fs::remove_file(dir.join("system.vhdx")).unwrap();
         std::fs::write(&raw, b"raw").unwrap();
+        assert_eq!(raw_disk(&raw).unwrap(), raw);
+        // A checked copy made earlier is used as it is, whatever VHDX is beside it.
+        std::fs::write(dir.join("system.vhdx"), b"not a vhdx").unwrap();
         assert_eq!(raw_disk(&dir.join("system.vhdx")).unwrap(), raw);
         std::fs::remove_dir_all(&dir).unwrap();
     }

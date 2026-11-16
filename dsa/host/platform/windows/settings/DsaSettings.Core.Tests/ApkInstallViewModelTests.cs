@@ -76,7 +76,7 @@ internal sealed class ArgsText : ITextSource
         ["ApkWindow_Less"] = 0,
     };
 
-    public string Get(string key) => Arity.GetValueOrDefault(key, 1) is var arity && arity == 0
+    public string Get(string key) => Arity.GetValueOrDefault(key, key.StartsWith("ApkWindow_Reason_", StringComparison.Ordinal) ? 0 : 1) is var arity && arity == 0
         ? key
         : key + " " + string.Join("|", Enumerable.Range(0, arity).Select(i => "{" + i + "}"));
 }

@@ -178,8 +178,9 @@ public partial class UpdatesPage : Page
             return;
         }
         // The page shows the update from here on: its phase, the version, and that DSA should
-        // be left alone, until the new service answers. No dialog waits on it meanwhile.
-        _programTimer.Start();
+        // be left alone, until the new service answers. No dialog waits on it meanwhile. The
+        // page's timer already runs while the window is shown, so nothing starts it here: a
+        // minimised window does not poll.
         var answer = await ProgramUpdate.UpdateNowAsync();
         if (ProgramUpdate.HasError)
         {

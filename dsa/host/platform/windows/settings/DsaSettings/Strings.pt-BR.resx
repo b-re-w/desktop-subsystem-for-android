@@ -323,7 +323,9 @@ O DSA baixa outra imagem, se houver uma. A próxima versão do DSA tentará esta
     <value>Driver Vulkan</value>
   </data>
   <data name="VulkanDriverCard.Description" xml:space="preserve">
-    <value>Os apps Android desenham via Vulkan. Uma GPU sem driver Vulkan pode usar o Dozen (Vulkan on Direct3D 12) do OpenCL, OpenGL, and Vulkan Compatibility Pack da Microsoft. Aplicado quando o gerenciador de janelas reinicia.</value>
+    <value>Os apps Android desenham via Vulkan.
+Uma GPU sem driver Vulkan pode usar o Dozen (Vulkan on Direct3D 12) do OpenCL, OpenGL, and Vulkan Compatibility Pack da Microsoft.
+Aplicado quando o gerenciador de janelas reinicia.</value>
   </data>
   <data name="Vulkan_Auto" xml:space="preserve">
     <value>Automático: o driver da GPU, e o Dozen só se não houver um (recomendado)</value>
@@ -347,7 +349,9 @@ O DSA baixa outra imagem, se houver uma. A próxima versão do DSA tentará esta
     <value>Renderizando agora pelo Dozen na CPU: esta GPU não tem driver Direct3D 12.</value>
   </data>
   <data name="Graphics_Unavailable" xml:space="preserve">
-    <value>Não há Vulkan para renderizar, então o Android não inicia. Instale o Compatibility Pack pela Microsoft Store ou com winget install Microsoft.OpenCLGLVulkanCompatibilityPack e saia e entre novamente.</value>
+    <value>Não há Vulkan para renderizar, então o Android não inicia.
+Instale o Compatibility Pack pela Microsoft Store ou com winget install Microsoft.OpenCLGLVulkanCompatibilityPack
+e saia e entre novamente.</value>
   </data>
   <data name="Graphics_WithDetail" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -1717,9 +1721,11 @@ Vale a partir da próxima vez que a janela do app for aberta.</value>
   </data>
   <data name="AppsDpiScaling.ToolTip" xml:space="preserve">
     <value>Quem ajusta a escala deste app quando a janela dele vai para um monitor com outra escala.
-• App: o app assume a escala do novo monitor assim que a janela chega a ele e redesenha nessa escala, então o texto fica nítido. Para um app que não diz tratar isso, o Android recria a tela e mantém o estado, então ela pode ser redesenhada por um instante.
+• App: o app assume a escala do novo monitor assim que a janela chega a ele e redesenha nessa escala, então o texto fica nítido.
+Para um app que não diz tratar isso, o Android recria a tela e mantém o estado, então ela pode ser redesenhada por um instante.
 • Sistema: o app mantém a escala e o DSA escala a janela para o mesmo tamanho físico. O texto pode ficar um pouco borrado.
-• Automático: Sistema para apps que quebram quando a escala muda durante a execução, como o YouTube; para qualquer outro app, App se ele diz tratar isso, Sistema se não.
+• Automático: Sistema para apps que quebram quando a escala muda durante a execução, como o YouTube;
+para qualquer outro app, App se ele diz tratar isso, Sistema se não.
 Automático e Sistema nunca reiniciam o app.</value>
   </data>
   <data name="Apps_DpiScaling_Auto" xml:space="preserve">
@@ -1775,7 +1781,9 @@ Ainda não disponível: exige uma alteração no framework do Android que esta c
     <value>Tela inteira dos apps</value>
   </data>
   <data name="AppFullScreenCard.Description" xml:space="preserve">
-    <value>Onde aparece o pedido de tela inteira de um app, como o botão de um vídeo. Na tela inteira, a barra de título surge na borda superior. A escolha feita para um app na página Apps prevalece.</value>
+    <value>Onde aparece o pedido de tela inteira de um app, como o botão de um vídeo.
+Na tela inteira, a barra de título surge na borda superior.
+A escolha feita para um app na página Apps prevalece.</value>
   </data>
   <data name="AppImmersiveCard.Header" xml:space="preserve">
     <value>Apps que ocultam as barras</value>
