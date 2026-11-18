@@ -474,8 +474,7 @@ impl MoveLoop {
 /// (restoring a snapped window as the drag starts, a snap preview, the drop on a snap zone).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LoopKind {
-    /// No loop is running, or none that started with `SC_SIZE` or `SC_MOVE` through the
-    /// window's own procedure.
+    /// No loop is running.
     #[default]
     None,
     /// The window is moved: every size Windows proposes is its own choice.
@@ -496,12 +495,10 @@ impl LoopKind {
     }
 }
 
-/// Whether a `WM_SIZING` inside a loop is the user dragging an edge: in any loop but a move
-/// loop. In a move loop the sizes Windows proposes are taken as they are. Windows starts every
-/// move loop with `SC_MOVE` through the window's procedure, so a loop of no known kind is not
-/// a move, and holding it to the frame it shows never shows a stretched frame at a new size.
+/// Whether a `WM_SIZING` is the user dragging an edge: only inside a size loop. In a move loop
+/// the sizes Windows proposes are taken as they are.
 pub fn is_edge_drag(kind: LoopKind, wm_sizing: bool) -> bool {
-    wm_sizing && kind != LoopKind::Move
+    wm_sizing && kind == LoopKind::Size
 }
 
 /// What a window does when its maximise button is clicked or its title bar double clicked:
@@ -2059,6 +2056,7 @@ mod tests {
         // The trace: the title bar is dragged to the top right snap zone, and Windows sends
         // WM_SIZING for the zone's 1462x863 inside the move loop.
         assert!(!is_edge_drag(LoopKind::Move, true));
+        assert!(!is_edge_drag(LoopKind::None, true));
         let rect = frame_rect(FrameRectRequest {
             requested: (1429, 0, 1462, 863),
             frame_outer: Some((914, 1252)),
@@ -2072,8 +2070,6 @@ mod tests {
     fn fr4_a_size_loop_still_keeps_the_frames_size_with_the_undragged_edges_fixed() {
         assert!(is_edge_drag(LoopKind::Size, true));
         assert!(!is_edge_drag(LoopKind::Size, false));
-        // A loop that did not start with a move command is not a move.
-        assert!(is_edge_drag(LoopKind::None, true));
         let rect = frame_rect(FrameRectRequest {
             requested: (100, 50, 900, 700),
             frame_outer: Some((800, 600)),

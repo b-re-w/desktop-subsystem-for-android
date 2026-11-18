@@ -157,6 +157,11 @@ const WM_APP_FRAME_READY: u32 = WM_APP + 4;
 /// Sent to a task window when what its presenter reads from the app's frame under the title
 /// bar changes ([`pack_band_sample`]).
 const WM_APP_BAND_COLOUR: u32 = WM_APP + 5;
+/// Sent to a task window to mark the loop it is in as a size loop, as if Windows had started it
+/// with `SC_SIZE`. A caller outside the window's thread cannot send `SC_SIZE` itself (it runs
+/// a modal loop), so the tests use this to drag an edge. The loop kind is cleared again when
+/// the loop ends (`WM_EXITSIZEMOVE`).
+pub const WM_APP_MARK_SIZE_LOOP: u32 = WM_APP + 6;
 
 /// A band sample as the parameters of [`WM_APP_BAND_COLOUR`]: the fill color in the low half
 /// of `wparam` and the band's own color in its high half, and in `lparam` bit 0 set when
@@ -879,7 +884,7 @@ unsafe extern "system" fn task_window_proc(
                 // Inside a title bar move loop Windows sends WM_SIZING when it changes the
                 // size itself (the restore as the drag starts, a snap preview, the drop on a
                 // snap zone): those sizes are taken as they are.
-                if data.in_move_loop.get() && is_edge_drag(data.loop_kind.get(), true) {
+                if is_edge_drag(data.loop_kind.get(), true) {
                     data.sizing.set(true);
                     data.drag_edges.set((
                         matches!(edge, WMSZ_LEFT | WMSZ_TOPLEFT | WMSZ_BOTTOMLEFT),
@@ -888,6 +893,12 @@ unsafe extern "system" fn task_window_proc(
                 }
             }
             DefWindowProcW(hwnd, message, wparam, lparam)
+        }
+        WM_APP_MARK_SIZE_LOOP => {
+            if let Some(data) = window_data(hwnd) {
+                data.loop_kind.set(LoopKind::Size);
+            }
+            0
         }
         WM_APP_FRAME_READY => {
             if let Some(data) = window_data(hwnd) {
@@ -1459,7 +1470,7 @@ unsafe fn take_kept_frame(hwnd: HWND, data: &WindowData) {
     }
     // The window the user moves by its title bar keeps the size Windows gives it until the
     // drop; the frame is taken once the loop ends (WM_EXITSIZEMOVE).
-    if data.in_move_loop.get() && data.loop_kind.get() == LoopKind::Move {
+    if data.in_move_loop.get() && data.loop_kind.get() != LoopKind::Size {
         return;
     }
     let Some(presenter) = data.presenter.borrow().clone() else {

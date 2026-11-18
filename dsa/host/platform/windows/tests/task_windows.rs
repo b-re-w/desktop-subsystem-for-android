@@ -23,7 +23,7 @@ use dsa_host_core::input::{buttons, PointerAction, PointerEvent, PointerTool};
 use dsa_host_core::keys::{keycode, meta, KeyAction, KeyEvent};
 use dsa_host_core::settings::MemorySettings;
 use dsa_host_core::tasks::{AppInfo, Bounds, Task, TaskEvent, TaskRequest};
-use dsa_host_windows::app_window::window::OpenWindow;
+use dsa_host_windows::app_window::window::{OpenWindow, WM_APP_MARK_SIZE_LOOP};
 use dsa_host_windows::app_window::{self, HostSetup};
 use dsa_host_windows::compositor::adapter::{DisplayPresenter, DisplaySink};
 use dsa_host_windows::compositor::hosts::HostLauncher;
@@ -773,10 +773,12 @@ fn fr4_a_window_cannot_be_dragged_below_the_minimum_its_app_declares() {
 
 /// One step of the user dragging the window's bottom right corner to `width` x `height`, as
 /// Windows' size loop takes it: `WM_SIZING` for the edge, then the new size. Only an edge drag
-/// holds the window to the frame it shows; a size set without one is the desktop placing the
-/// window, which takes the size as it is. Send between `WM_ENTERSIZEMOVE` and
-/// `WM_EXITSIZEMOVE`.
+/// in a size loop holds the window to the frame it shows; a size set without one is the desktop
+/// placing the window, which takes the size as it is. A test cannot start the real loop
+/// (`SC_SIZE` runs a modal loop on the window's thread), so the window is marked as in a size
+/// loop first. Send between `WM_ENTERSIZEMOVE` and `WM_EXITSIZEMOVE`.
 fn drag_edge_to(hwnd: isize, width: i32, height: i32) {
+    unsafe { SendMessageW(hwnd as HWND, WM_APP_MARK_SIZE_LOOP, 0, 0) };
     let (window, _) = window_and_work_area(hwnd);
     let mut proposed = RECT {
         left: window.left,
