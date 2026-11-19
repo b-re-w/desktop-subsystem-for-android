@@ -270,7 +270,7 @@ pub fn helper_mode(args: &[String]) -> Option<HelperMode> {
     };
     let text = |flag: &str| {
         value(flag)
-            .and_then(|hex| unhex(&hex))
+            .and_then(|hex| dsa_host_core::hex::decode(&hex))
             .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
             .unwrap_or_default()
     };
@@ -354,16 +354,6 @@ pub fn wait_for_answer(
             return answer_of_exit(code);
         }
     }
-}
-
-fn unhex(text: &str) -> Option<Vec<u8>> {
-    if text.len() % 2 != 0 || !text.is_ascii() {
-        return None;
-    }
-    (0..text.len())
-        .step_by(2)
-        .map(|at| u8::from_str_radix(&text[at..at + 2], 16).ok())
-        .collect()
 }
 
 #[cfg(windows)]
