@@ -82,7 +82,9 @@ mod tests {
         assert!(!is_web_url("ftp://example.invalid/releases.json"));
         let args = download_args("https://example.invalid/releases.json");
         assert!(args.windows(2).any(|w| w == ["--proto", "=https,http"]));
-        assert!(args.windows(2).any(|w| w == ["--proto-redir", "=https,http"]));
+        assert!(args
+            .windows(2)
+            .any(|w| w == ["--proto-redir", "=https,http"]));
         assert_eq!(
             &args[args.len() - 2..],
             ["--", "https://example.invalid/releases.json"]
