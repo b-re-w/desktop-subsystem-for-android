@@ -106,3 +106,64 @@ pub fn free_path(
         copy += 1;
     }
 }
+
+/// Writes `png` into `folder` (which exists) under the first name for a screenshot at `time`
+/// that no file has, and returns the path.
+///
+/// A file made between the look and the write is never written over: the write makes a new
+/// file or fails, and the next name is tried.
+pub fn save_new(
+    folder: &Path,
+    prefix: &str,
+    time: &LocalTime,
+    png: &[u8],
+) -> Result<PathBuf, String> {
+    use std::io::Write;
+    for _ in 0..3 {
+        let path = free_path(folder, prefix, time, Path::exists);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+        {
+            Ok(mut file) => {
+                return file
+                    .write_all(png)
+                    .map(|()| path.clone())
+                    .map_err(|e| format!("could not write {}: {e}", path.display()));
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(format!("could not make {}: {e}", path.display())),
+        }
+    }
+    Err(format!(
+        "every screenshot name in {} is taken",
+        folder.display()
+    ))
+}
+
+#[cfg(test)]
+mod save_tests {
+    use super::*;
+
+    #[test]
+    fn d9_two_screenshots_in_one_second_are_saved_under_two_names() {
+        let folder = std::env::temp_dir().join(format!("dsa-shots-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let time = LocalTime {
+            year: 2026,
+            month: 11,
+            day: 8,
+            hour: 14,
+            minute: 30,
+            second: 22,
+        };
+        let first = save_new(&folder, "Screenshot", &time, b"one").unwrap();
+        let second = save_new(&folder, "Screenshot", &time, b"two").unwrap();
+        assert_eq!(first, folder.join("Screenshot 2026-11-08 143022.png"));
+        assert_eq!(second, folder.join("Screenshot 2026-11-08 143022 (2).png"));
+        assert_eq!(std::fs::read(&first).unwrap(), b"one");
+        assert_eq!(std::fs::read(&second).unwrap(), b"two");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+}

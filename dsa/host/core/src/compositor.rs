@@ -36,6 +36,7 @@ pub mod resize_queue;
 pub mod shown_windows;
 pub mod splash;
 pub mod surface_calls;
+pub mod task_watch;
 pub mod task_windows;
 pub mod visible_change;
 pub mod window_hosts;

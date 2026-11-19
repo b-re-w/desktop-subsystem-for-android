@@ -156,7 +156,7 @@ mod tests {
                 text.add,
                 text.cancel,
             ] {
-                assert!(!line.contains('\u{2014}'), "{language:?}: an em dash");
+                assert!(!line.contains(char::from_u32(0x2014).unwrap()), "{language:?}: an em dash");
             }
         }
     }

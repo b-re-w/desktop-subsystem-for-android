@@ -112,35 +112,11 @@ pub fn local_time() -> LocalTime {
 /// `prefix`. Returns the file's path.
 #[cfg(unix)]
 pub fn save(png: &[u8], prefix: &str) -> Result<PathBuf, String> {
-    use std::io::Write;
     let pictures = pictures_folder().ok_or("the home folder is not known")?;
     let folder = screenshots_folder(&pictures);
     std::fs::create_dir_all(&folder)
         .map_err(|e| format!("could not make {}: {e}", folder.display()))?;
-    let time = local_time();
-    // A file made between the look and the write is never written over: the write makes a
-    // new file or fails, and the next name is tried.
-    for _ in 0..3 {
-        let path = free_path(&folder, prefix, &time, Path::exists);
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-        {
-            Ok(mut file) => {
-                return file
-                    .write_all(png)
-                    .map(|()| path.clone())
-                    .map_err(|e| format!("could not write {}: {e}", path.display()));
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(format!("could not make {}: {e}", path.display())),
-        }
-    }
-    Err(format!(
-        "every screenshot name in {} is taken",
-        folder.display()
-    ))
+    dsa_host_core::screenshot::save_new(&folder, prefix, &local_time(), png)
 }
 
 #[cfg(test)]

@@ -14,7 +14,8 @@ use std::time::{Duration, Instant};
 
 use dsa_host_core::app_windows::AppWindows;
 use dsa_host_core::compositor::frame_stall::{restart_in_background, Stall};
-use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue, PACE_TICK};
+use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue};
+use dsa_host_core::compositor::task_watch::{follow_tasks, next_batch, send_request, TaskFeed};
 use dsa_host_core::compositor::window_hosts::{to_wire, HostId, ToHost};
 use dsa_host_core::compositor::GraphicsStreamKind;
 use dsa_host_core::guest_display::display_or_smallest;
@@ -243,47 +244,25 @@ fn watch_tasks(host_api: PathBuf, events: Sender<ManagerEvent>) {
     let _ = thread::Builder::new()
         .name("dsa-wm-tasks".into())
         .spawn(move || {
-            let mut warned = false;
-            loop {
-                let watch = connect(&host_api)
-                    .and_then(|client| client.watch_tasks().map_err(|e| e.to_string()));
-                let mut stream = match watch {
-                    Ok(stream) => stream,
-                    Err(why) => {
-                        if !warned {
-                            log(&format!("waiting for the DSA service: {why}"));
-                            warned = true;
-                        }
-                        thread::sleep(RETRY);
-                        continue;
-                    }
-                };
-                warned = false;
-                if events
-                    .send(ManagerEvent::Sync(stream.current().events()))
-                    .is_err()
-                {
-                    return;
-                }
-                loop {
-                    match stream.next(Duration::from_secs(1)) {
-                        Ok(Some(event)) => {
-                            if events.send(ManagerEvent::Task(Box::new(event))).is_err() {
-                                return;
-                            }
-                        }
-                        Ok(None) => {}
-                        Err(why) => {
-                            log(&format!("the task watch ended: {why}"));
-                            break;
-                        }
-                    }
-                }
-                if events.send(ManagerEvent::Lost).is_err() {
-                    return;
-                }
-                thread::sleep(RETRY);
-            }
+            follow_tasks(
+                || {
+                    connect(&host_api)
+                        .and_then(|client| client.watch_tasks().map_err(|e| e.to_string()))
+                },
+                |feed| {
+                    events
+                        .send(match feed {
+                            TaskFeed::Sync(tasks) => ManagerEvent::Sync(tasks),
+                            TaskFeed::Task(event) => ManagerEvent::Task(Box::new(event)),
+                            TaskFeed::Lost => ManagerEvent::Lost,
+                        })
+                        .is_ok()
+                },
+                &AtomicBool::new(false),
+                RETRY,
+                Duration::from_secs(1),
+                &log,
+            );
         });
 }
 
@@ -326,36 +305,16 @@ fn serve_requests(
             loop {
                 // Sizes held for a frame are looked at again every few milliseconds; with
                 // none held, the next request is waited for.
-                let mut incoming = Vec::new();
-                if queue.waiting() {
-                    match requests.recv_timeout(PACE_TICK) {
-                        Ok(next) => incoming.push(next),
-                        Err(RecvTimeoutError::Timeout) => {}
-                        Err(RecvTimeoutError::Disconnected) => break,
-                    }
-                } else {
-                    match requests.recv() {
-                        Ok(next) => incoming.push(next),
-                        Err(_) => break,
-                    }
-                }
-                incoming.extend(requests.try_iter());
+                let Some(incoming) = next_batch(&requests, queue.waiting()) else {
+                    break;
+                };
                 for request in queue.step(incoming, Instant::now()) {
-                    if client.is_none() {
-                        client = connect(&host_api)
-                            .map_err(|why| log(&format!("cannot reach the DSA service: {why}")))
-                            .ok();
-                    }
-                    let result = match client.as_mut() {
-                        Some(open) => open.request(&request).map_err(|e| e.to_string()),
-                        None => Err("the DSA service is not reachable".to_string()),
-                    };
+                    let result = send_request(&mut client, &request, || connect(&host_api));
                     if let Err(why) = result {
                         log(&format!(
                             "{} did not reach Android: {why}",
                             request.describe()
                         ));
-                        client = None;
                         if let TaskRequest::Close { task_id } = request {
                             let _ = events.send(ManagerEvent::CloseFailed(task_id));
                         }

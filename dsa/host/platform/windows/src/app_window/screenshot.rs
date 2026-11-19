@@ -15,7 +15,7 @@
 //! The work runs on a thread of its own: reading the frame back and encoding it take a moment,
 //! and the window keeps answering meanwhile.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use dsa_host_core::screenshot::PixelOrder;
@@ -246,31 +246,8 @@ unsafe fn set_data(format: u32, bytes: &[u8]) -> Result<(), String> {
 
 /// Saves `png` in the user's Screenshots folder under a name no file has yet.
 fn save(png: &[u8], prefix: &str) -> Result<(), String> {
-    use std::io::Write;
     let folder = screenshots_folder()?;
-    let time = local_time();
-    // A file made between the look and the write is never written over: the write makes a
-    // new file or fails, and the next name is tried.
-    for _ in 0..3 {
-        let path = free_path(&folder, prefix, &time, Path::exists);
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-        {
-            Ok(mut file) => {
-                return file
-                    .write_all(png)
-                    .map_err(|e| format!("could not write {}: {e}", path.display()));
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(format!("could not make {}: {e}", path.display())),
-        }
-    }
-    Err(format!(
-        "every screenshot name in {} is taken",
-        folder.display()
-    ))
+    dsa_host_core::screenshot::save_new(&folder, prefix, &local_time(), png).map(|_| ())
 }
 
 /// The user's Screenshots folder, made when it is missing: the known folder Windows keeps for

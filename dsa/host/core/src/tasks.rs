@@ -986,6 +986,20 @@ impl TaskTable {
 
 #[cfg(test)]
 mod tests {
+    use super::PinShortcutRequest;
+
+    #[test]
+    fn fr7_the_pin_question_names_the_app_by_its_trimmed_label_else_its_package() {
+        let request = |label: &str| PinShortcutRequest {
+            package_name: "com.example.chat".into(),
+            app_label: label.into(),
+            ..PinShortcutRequest::default()
+        };
+        assert_eq!(request("  Chat ").app_name(), "Chat");
+        assert_eq!(request("   ").app_name(), "com.example.chat");
+        assert_eq!(request("").app_name(), "com.example.chat");
+    }
+
     use super::*;
 
     #[test]

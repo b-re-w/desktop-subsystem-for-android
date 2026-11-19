@@ -566,13 +566,7 @@ impl MenuLayout {
 }
 
 pub(crate) fn premultiplied(color: u32, coverage: f64) -> [f64; 4] {
-    let alpha = f64::from(color >> 24) / 255.0 * coverage;
-    [
-        f64::from(color & 0xff) / 255.0 * alpha,
-        f64::from((color >> 8) & 0xff) / 255.0 * alpha,
-        f64::from((color >> 16) & 0xff) / 255.0 * alpha,
-        alpha,
-    ]
+    dsa_host_core::color::premultiplied(color, coverage).map(|value| value / 255.0)
 }
 
 /// `top` over the premultiplied BGRA pixel `pixel`.

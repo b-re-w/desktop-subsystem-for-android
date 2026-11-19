@@ -6,8 +6,7 @@
 //! whatever program handles it, and an app in Android must never be able to do that. The
 //! link is one argument after `--`, never shell text.
 
-use dsa_host_core::links::web_url;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
@@ -23,15 +22,8 @@ pub use dsa_host_core::links::LinkOpener;
 
 /// The command that opens `url` in the user's browser.
 pub fn open_command(url: &str) -> Result<Command, String> {
-    let url = web_url(url)?;
-    let mut command = Command::new("xdg-open");
     // xdg-open takes no options, so the link cannot be read as one; it starts with http.
-    command
-        .arg(url)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    Ok(command)
+    dsa_host_core::links::open_command("xdg-open", url)
 }
 
 /// Opens links with `xdg-open`.

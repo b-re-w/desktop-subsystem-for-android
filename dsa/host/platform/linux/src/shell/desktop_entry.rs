@@ -383,7 +383,7 @@ pub fn sync(folders: &Folders, apps: &[AppInfo], program: &Path) -> io::Result<u
             None
         } else {
             let path = folders.icons.join(format!("{}.png", app.package_name));
-            write_if_changed(&path, &app.icon_png)?;
+            dsa_host_core::file_write::replace_if_changed(&path, &app.icon_png, "partial")?;
             write_theme_icon(&folders.theme_icons, &app.package_name, &app.icon_png)?;
             Some(path)
         };
@@ -391,15 +391,20 @@ pub fn sync(folders: &Folders, apps: &[AppInfo], program: &Path) -> io::Result<u
         for shortcut in jump_list_shortcuts(&app.shortcuts) {
             if !shortcut.icon_png.is_empty() {
                 let path = shortcut_icon_path(&folders.icons, &app.package_name, &shortcut.id);
-                write_if_changed(&path, &shortcut.icon_png)?;
+                dsa_host_core::file_write::replace_if_changed(
+                    &path,
+                    &shortcut.icon_png,
+                    "partial",
+                )?;
                 kept_icons.push(path);
             }
         }
         remove_shortcut_icons(folders, &app.package_name, &kept_icons);
         let text = entry_with(app, program, icon.as_deref(), Some(&folders.icons));
-        write_if_changed(
+        dsa_host_core::file_write::replace_if_changed(
             &folders.applications.join(file_name(&app.package_name)),
             text.as_bytes(),
+            "partial",
         )?;
         if let Some(desktop) = &folders.desktop {
             // A copy the user put on the desktop follows the app's name, icon and shortcuts.
@@ -583,7 +588,7 @@ pub fn place_pinned_in(
         app_icon.exists().then_some(app_icon)
     } else {
         let path = shortcut_icon_path(&folders.icons, package, &shortcut.id);
-        write_if_changed(&path, &shortcut.icon_png)
+        dsa_host_core::file_write::replace_if_changed(&path, &shortcut.icon_png, "partial")
             .map_err(|e| format!("{}: {e}", path.display()))?;
         Some(path)
     };
@@ -597,7 +602,7 @@ pub fn place_pinned_in(
 /// Writes a desktop entry to the desktop folder: executable, as file managers want before
 /// they start one, and marked trusted for GNOME's, which asks otherwise.
 fn write_desktop_file(path: &Path, content: &[u8]) -> io::Result<()> {
-    write_if_changed(path, content)?;
+    dsa_host_core::file_write::replace_if_changed(path, content, "partial")?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -660,22 +665,11 @@ fn write_theme_icon(theme: &Path, package: &str, png: &[u8]) -> io::Result<()> {
     if let Some(folder) = path.parent() {
         fs::create_dir_all(folder)?;
     }
-    write_if_changed(&path, png)?;
+    dsa_host_core::file_write::replace_if_changed(&path, png, "partial")?;
     for other in THEME_SIZES.into_iter().filter(|other| *other != size) {
         let _ = fs::remove_file(theme_icon_path(theme, package, other));
     }
     Ok(())
-}
-
-/// Writes `content` to `path` unless it already holds it, through a file beside it so a
-/// desktop reading the folder never sees half an entry.
-fn write_if_changed(path: &Path, content: &[u8]) -> io::Result<()> {
-    if fs::read(path).is_ok_and(|old| old == content) {
-        return Ok(());
-    }
-    let partial = path.with_extension("partial");
-    fs::write(&partial, content)?;
-    fs::rename(&partial, path)
 }
 
 #[cfg(test)]
