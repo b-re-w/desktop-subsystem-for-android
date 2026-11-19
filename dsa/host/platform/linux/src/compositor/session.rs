@@ -48,7 +48,6 @@ use crate::shell::dbus::{Notifier, Signal};
 use crate::shell::desktop_entry::{self, Folders};
 use crate::shell::notifications::{dsa_notice, Shown as ShownNotifications, UPDATE_PAGE_ARGUMENTS};
 use crate::shell::pin_shortcuts::{self, Questions};
-use dsa_host_core::links::app_page_arguments;
 use dsa_host_core::renderer::{spawn_supervisor, RendererHandler};
 use dsa_host_core::update::alerts::is_update_key;
 use dsa_host_unix::renderer_launch::{CurrentFds, UnixLauncher};
@@ -124,11 +123,7 @@ fn open_app_page(package: &str) -> Result<(), String> {
     let program = std::env::current_exe()
         .map_err(|e| format!("this program's place is not known: {e}"))?
         .with_file_name("dsa-settings");
-    std::process::Command::new(&program)
-        .args(app_page_arguments(package))
-        .spawn()
-        .map(drop)
-        .map_err(|e| format!("could not start {}: {e}", program.display()))
+    dsa_host_core::links::open_app_page_with(&program, package)
 }
 
 /// Opens DSA Settings on the Updates page, as a click on DSA's news about an update does.

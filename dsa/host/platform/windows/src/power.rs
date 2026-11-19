@@ -114,17 +114,7 @@ pub fn follow(
     let mut pressure = dsa_host_core::power::MemoryPressure::new();
     while !stop.load(Ordering::Relaxed) {
         if let Some((total_kb, available_kb)) = read_memory() {
-            let was_low = pressure.low();
-            let low = pressure.update(total_kb, available_kb);
-            if low != was_low {
-                eprintln!(
-                    "host memory: {} MiB of {} MiB available, {}",
-                    available_kb / 1024,
-                    total_kb / 1024,
-                    if low { "short" } else { "no longer short" }
-                );
-            }
-            hub.update_memory(low);
+            pressure.observe(&hub, total_kb, available_kb);
         }
         let mut waited = std::time::Duration::ZERO;
         while waited < POLL && !stop.load(Ordering::Relaxed) {
