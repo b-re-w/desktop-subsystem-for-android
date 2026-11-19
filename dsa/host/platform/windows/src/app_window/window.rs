@@ -161,7 +161,7 @@ const WM_APP_BAND_COLOUR: u32 = WM_APP + 5;
 /// with `SC_SIZE`. A caller outside the window's thread cannot send `SC_SIZE` itself (it runs
 /// a modal loop), so the tests use this to drag an edge. The loop kind is cleared again when
 /// the loop ends (`WM_EXITSIZEMOVE`).
-pub const WM_APP_MARK_SIZE_LOOP: u32 = WM_APP + 6;
+pub const WM_APP_MARK_SIZE_LOOP: u32 = WM_APP + 7;
 
 /// A band sample as the parameters of [`WM_APP_BAND_COLOUR`]: the fill color in the low half
 /// of `wparam` and the band's own color in its high half, and in `lparam` bit 0 set when
