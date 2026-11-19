@@ -974,6 +974,37 @@ fn nfr5_a_guest_that_dies_leaves_the_host_alive_and_can_start_again() {
     assert_eq!(launcher.processes(), 3);
 }
 
+/// A VM can end while the host's end of its control channel stays open (the Virtualization
+/// framework does not close it), so the channel alone never says the guest is gone.
+#[test]
+fn nfr5_a_guest_that_ends_while_its_channel_stays_open_is_reported_stopped() {
+    let launcher = FakeLauncher::default();
+    let (session, mut connector) = session_with(launcher.clone(), WAIT);
+    session.start();
+    let _agent = connect_agent(&mut connector, &launcher);
+    assert!(session.wait_for(SessionState::Active, WAIT));
+    {
+        let mut guest = launcher.0.lock().unwrap();
+        guest.exited = Some("Android's VM ended (the VM stopped with an error)".into());
+        guest.diagnostics = Some("last line: Out of memory".into());
+    }
+    assert!(session.wait_for(SessionState::Stopped, WAIT));
+    assert_eq!(
+        session.last_reason(),
+        Some(StopReason::GuestExited {
+            why: "Android's VM ended (the VM stopped with an error)".into(),
+            diagnostics: Some("last line: Out of memory".into()),
+        })
+    );
+    assert_eq!(launcher.processes(), 0);
+
+    // The host stays up and Android starts again.
+    launcher.0.lock().unwrap().exited = None;
+    session.start();
+    let _second_agent = connect_agent(&mut connector, &launcher);
+    assert!(session.wait_for(SessionState::Active, WAIT));
+}
+
 #[test]
 fn fr2_dropping_an_active_session_stops_the_guest() {
     let launcher = FakeLauncher::default();

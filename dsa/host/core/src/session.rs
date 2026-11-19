@@ -213,8 +213,8 @@ pub enum StopReason {
         waited: Duration,
         diagnostics: Option<String>,
     },
-    /// The guest ended by itself before the agent connected. `why` is the launcher's account
-    /// of it and `diagnostics` what it could tell about the boot.
+    /// The guest ended by itself, during boot or later. `why` is the launcher's account of it
+    /// and `diagnostics` what it could tell about the boot.
     GuestExited {
         why: String,
         diagnostics: Option<String>,
@@ -375,7 +375,9 @@ pub trait GuestLauncher: Send + 'static {
 
     /// Whether the guest has ended by itself since it was started, as a sentence saying so.
     /// The session asks while it waits for the agent, so a guest that dies during boot ends
-    /// the start at once instead of after the whole connect timeout. It must not block.
+    /// the start at once instead of after the whole connect timeout, and about once a second
+    /// while the guest runs, so a guest that dies later is reported stopped even when its
+    /// control channel stays open. It must not block.
     fn exited(&mut self) -> Option<String> {
         None
     }
@@ -1586,6 +1588,7 @@ impl Session {
             agent_lost_at: None,
             prerequisite_missing: None,
             next_prerequisite_check: Instant::now(),
+            next_exit_check: Instant::now(),
             next_diagnosis: Instant::now(),
             guest_is_idle: false,
             stall_doze: None,
@@ -4371,6 +4374,12 @@ const PROGRESS_TIMEOUT: Duration = Duration::from_secs(30);
 /// How often the session asks the launcher for what the guest cannot run without.
 const PREREQUISITE_POLL: Duration = Duration::from_secs(1);
 
+/// How often a running session asks the launcher whether the guest has ended by itself. A VM
+/// can end without its control channel closing (the Virtualization framework keeps the
+/// host's end of a vsock connection open after the guest is gone), so the channel alone does
+/// not tell the session.
+const EXIT_POLL: Duration = Duration::from_secs(1);
+
 /// How often a reported problem's detail is read again, as the counts in it grow.
 const DIAGNOSIS_POLL: Duration = Duration::from_secs(10);
 
@@ -4445,6 +4454,8 @@ struct Worker {
     /// Since when a prerequisite is missing, and what the launcher says about it.
     prerequisite_missing: Option<(Instant, String)>,
     next_prerequisite_check: Instant,
+    /// When the session next asks the launcher whether the guest has ended by itself.
+    next_exit_check: Instant,
     next_diagnosis: Instant,
     /// The agent's last word on whether the device is idle. Unknown, so false, for a new agent.
     guest_is_idle: bool,
@@ -6239,6 +6250,14 @@ impl Worker {
             return true;
         }
         let now = Instant::now();
+        if now >= self.next_exit_check {
+            self.next_exit_check = now + EXIT_POLL;
+            if let Some(why) = self.launcher.exited() {
+                eprintln!("lifecycle: {why}; Android is stopped and starts again when asked");
+                self.stop_failed_start(|diagnostics| StopReason::GuestExited { why, diagnostics });
+                return false;
+            }
+        }
         self.check_prerequisite(now);
         if let Some((since, why)) = &self.prerequisite_missing {
             if now.duration_since(*since) >= self.config.prerequisite_stop_after {

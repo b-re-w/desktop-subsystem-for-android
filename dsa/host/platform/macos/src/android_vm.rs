@@ -300,7 +300,7 @@ impl GuestLauncher for MacVmLauncher {
     fn exited(&mut self) -> Option<String> {
         let vm = self.slot.get()?;
         let ended = vm.ended()?;
-        Some(format!("Android's VM ended during boot ({ended})"))
+        Some(format!("Android's VM ended by itself ({ended})"))
     }
 
     fn diagnostics(&mut self) -> Option<String> {
