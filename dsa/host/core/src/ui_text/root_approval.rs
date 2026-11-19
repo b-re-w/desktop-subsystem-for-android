@@ -4,8 +4,9 @@
 
 use std::time::Duration;
 
-use crate::root_approval::{fill, ApprovalRequest};
+use crate::root_approval::ApprovalRequest;
 use crate::ui_language::UiLanguage;
+use crate::ui_text::fill;
 
 /// The words of the program's own dialog, which it shows when UAC is off.
 #[derive(Debug, Clone, PartialEq, Eq)]

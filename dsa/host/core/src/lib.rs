@@ -145,6 +145,7 @@ pub mod memory;
 pub mod native_abi;
 pub mod notifications;
 pub mod passkeys;
+pub mod pin_questions;
 pub mod png;
 pub mod power;
 pub mod power_hints;
