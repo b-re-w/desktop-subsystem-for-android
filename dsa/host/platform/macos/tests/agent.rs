@@ -145,3 +145,32 @@ fn fr26_every_device_port_of_the_guest_is_relayed_to_the_users_own_folder() {
     );
     assert_ne!(relay_socket(&ann, camera), relay_socket(&bob, camera));
 }
+
+#[test]
+fn fr2_every_agent_is_shown_as_dsa_in_the_login_items() {
+    use dsa_host_macos::launchd::{devices_plist, APP_BUNDLE_ID};
+    let log = Path::new("/Users/ann/Library/Logs/dsa.log");
+    for text in [
+        plist(
+            Path::new("/Applications/DSA.app/Contents/MacOS/dsa-hostd"),
+            None,
+            log,
+        ),
+        wm_plist(
+            Path::new("/Applications/DSA.app/Contents/MacOS/dsa-wm"),
+            log,
+        ),
+        devices_plist(
+            Path::new("/Applications/DSA.app/Contents/MacOS/dsa-devices"),
+            log,
+        ),
+    ] {
+        assert!(
+            text.contains(&format!(
+                "<key>AssociatedBundleIdentifiers</key>\n\t<array>\n\t\t<string>{APP_BUNDLE_ID}</string>"
+            )),
+            "{text}"
+        );
+    }
+    assert_eq!(APP_BUNDLE_ID, "org.thisisthepy.dsa");
+}
