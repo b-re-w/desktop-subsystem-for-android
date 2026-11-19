@@ -18,37 +18,23 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use dsa_host_core::screenshot::PixelOrder;
+
 use crate::compositor::log::{note, CompositorLogger};
 use crate::compositor::present::{CapturedFrame, WindowPresenter};
 
-/// A screenshot: `width` by `height` opaque pixels as RGBA rows, top row first.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Shot {
-    pub width: u32,
-    pub height: u32,
-    pub rgba: Vec<u8>,
-}
+pub use dsa_host_core::screenshot::Shot;
 
 /// The app's content of `frame`: the rows under the title bar's band, every pixel opaque.
 /// `None` when nothing is left under the band.
 pub fn app_content(frame: &CapturedFrame) -> Option<Shot> {
-    let row = frame.width as usize * 4;
-    let band = frame.band.min(frame.height);
-    let height = frame.height - band;
-    if frame.width == 0 || height == 0 || frame.rgba.len() < row * frame.height as usize {
-        return None;
-    }
-    let start = band as usize * row;
-    let mut rgba = frame.rgba[start..start + row * height as usize].to_vec();
-    // The swapchain shows a frame without its alpha, so a screenshot is what the user saw.
-    for pixel in rgba.chunks_exact_mut(4) {
-        pixel[3] = 0xFF;
-    }
-    Some(Shot {
-        width: frame.width,
-        height,
-        rgba,
-    })
+    dsa_host_core::screenshot::app_content(
+        &frame.rgba,
+        frame.width as usize * 4,
+        (frame.width, frame.height),
+        frame.band,
+        PixelOrder::Rgba,
+    )
 }
 
 pub use dsa_host_core::screenshot::{file_name, free_path, LocalTime};

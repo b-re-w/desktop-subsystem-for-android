@@ -18,7 +18,8 @@
 use dsa_host_core::compositor::caption::{
     band_points, band_sample, shown_tone, BandSample, CaptionTone,
 };
-use dsa_host_core::keys::{keycode, KeyAction, KeyEvent};
+#[cfg(test)]
+use dsa_host_core::keys::{keycode, KeyAction};
 use dsa_host_core::tasks::Bounds;
 
 /// The space left after the window's own buttons in the band, in points, so an app's
@@ -248,20 +249,7 @@ pub fn double_click_action(action: Option<&str>, minimize_legacy: bool) -> Doubl
     }
 }
 
-/// The key events a click on the back button sends the task: Back pressed and released, at
-/// `time_ms` of the host's clock.
-pub fn back_keys(task_id: i32, time_ms: u32) -> [KeyEvent; 2] {
-    let key = |action| KeyEvent {
-        task_id,
-        action,
-        key_code: keycode::BACK,
-        repeat_count: 0,
-        meta_state: 0,
-        event_time_ms: time_ms,
-        canceled: false,
-    };
-    [key(KeyAction::Down), key(KeyAction::Up)]
-}
+pub use dsa_host_core::keys::back_keys;
 
 #[cfg(test)]
 mod tests {

@@ -11,27 +11,26 @@
 
 use std::path::{Path, PathBuf};
 
+use dsa_host_core::screenshot::PixelOrder;
+
 use super::png::Rgba;
 
 /// The app's content of a frame of `XRGB8888` rows (blue, green, red, unused in memory),
 /// `width` x `height`: the rows under the title bar's `band`, as opaque RGBA. `None` when
 /// nothing is left under the band.
 pub fn app_content(pixels: &[u8], width: u32, height: u32, band: u32) -> Option<Rgba> {
-    let row = width as usize * 4;
-    let band = band.min(height);
-    let rows = height - band;
-    if width == 0 || rows == 0 || pixels.len() < row * height as usize {
-        return None;
-    }
-    let start = band as usize * row;
-    let mut out = Vec::with_capacity(row * rows as usize);
-    for pixel in pixels[start..start + row * rows as usize].chunks_exact(4) {
-        out.extend_from_slice(&[pixel[2], pixel[1], pixel[0], 0xff]);
-    }
+    let stride = width as usize * 4;
+    let shot = dsa_host_core::screenshot::app_content(
+        pixels,
+        stride,
+        (width, height),
+        band,
+        PixelOrder::Bgra,
+    )?;
     Some(Rgba {
-        width,
-        height: rows,
-        pixels: out,
+        width: shot.width,
+        height: shot.height,
+        pixels: shot.rgba,
     })
 }
 

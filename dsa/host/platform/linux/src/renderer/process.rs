@@ -10,7 +10,7 @@ use std::io::Write;
 use std::os::fd::{AsFd, FromRawFd, OwnedFd, RawFd};
 use std::sync::Arc;
 
-use dsa_host_core::memory::{HeldMemory, HostRole};
+use dsa_host_core::memory::HostRole;
 use dsa_host_core::renderer::{
     address_from, follow_device_state, open_renderer, RendererProcessMemory, WindowManagerLink,
 };
@@ -98,16 +98,11 @@ impl RendererFrames for RemoteFrames {
 /// What this process holds, with gfxstream's own count.
 fn memory(renderer: Option<&Renderer>) -> RendererProcessMemory {
     let own = crate::memory::process(std::process::id(), HostRole::Renderer);
-    RendererProcessMemory {
-        process_id: std::process::id(),
-        held: HeldMemory {
-            working_set_kb: own.as_ref().map(|p| p.working_set_kb),
-            private_kb: own.as_ref().map(|p| p.private_kb),
-            gpu_local_kb: None,
-            gpu_non_local_kb: None,
-        },
-        counted: renderer.and_then(Renderer::memory),
-    }
+    RendererProcessMemory::of_this_process(
+        own.as_ref().map(|p| p.working_set_kb),
+        own.as_ref().map(|p| p.private_kb),
+        renderer.and_then(Renderer::memory),
+    )
 }
 
 /// Runs the renderer for the compositor `args` names. Never returns: the process ends with
