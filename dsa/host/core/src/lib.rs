@@ -96,6 +96,7 @@ pub mod bootconfig;
 pub mod boundaries;
 pub mod camera;
 pub mod clipboard;
+pub mod console_log;
 pub mod clock_trace;
 pub mod compositor;
 pub mod computer_identity;

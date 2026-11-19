@@ -352,16 +352,16 @@ pub fn create_user_android(
         let (store, user) = (Arc::clone(&store), user.to_string());
         let addons = files.addon_disk.clone();
         Box::new(move |image: &ImageFiles| {
-            use dsa_host_core::addon_disk::{self, AddonDisk, Format};
+            use dsa_host_core::addon_disk::{AddonDisk, Format};
             let dir = image.initrd.as_deref().and_then(Path::parent);
             let attached = AddonDisk::new(&addons, Format::Raw).attached();
-            addon_disk::bootconfig(&attached).to_string()
-                + &dsa_host_core::arm_translation::bootconfig_for(&*store, &user, dir, &attached)
-                + &dsa_host_core::gapps::bootconfig_for(&*store, &user, &attached)
-                + &dsa_host_core::widevine::bootconfig_for(&*store, &user, &attached)
-                // The computer's physical memory, read at each start, which Google Play sees
-                // as the device's memory.
-                + &dsa_host_core::host_memory::bootconfig(ProcFacts.physical_memory_kb())
+            dsa_host_core::bootconfig::for_boot(
+                &*store,
+                &user,
+                dir,
+                &attached,
+                ProcFacts.physical_memory_kb(),
+            )
         })
     })
     .with_boot_properties({
@@ -369,12 +369,7 @@ pub fn create_user_android(
         // boots. The computer is read again at each start, so a renamed one is followed.
         let identity = Arc::clone(&boot_identity);
         Box::new(move |image: &ImageFiles| {
-            let built = image
-                .initrd
-                .as_deref()
-                .and_then(Path::parent)
-                .and_then(ImageBuild::from_image_dir);
-            Some(identity.boot_properties(built.as_ref()))
+            Some(identity.boot_properties_of_initrd(image.initrd.as_deref()))
         })
     })
     .with_direct_mapped(direct_mapped.cloned());
@@ -567,20 +562,14 @@ pub fn host_logs_of(user: &str) -> Vec<HostFile> {
     let Ok(files) = UserFiles::of(&host_paths(), user) else {
         return Vec::new();
     };
-    let mut old = files.console_log.as_os_str().to_owned();
-    old.push(".old");
-    vec![
-        HostFile {
-            name: "host/android-console.log".into(),
-            path: files.console_log,
+    dsa_host_core::console_log::diagnostic_files(&files.console_log)
+        .into_iter()
+        .map(|(name, path)| HostFile {
+            name: name.into(),
+            path,
             only_user: None,
-        },
-        HostFile {
-            name: "host/android-console.1.log".into(),
-            path: PathBuf::from(old),
-            only_user: None,
-        },
-    ]
+        })
+        .collect()
 }
 
 /// The network status of each user's running VM.
