@@ -39,6 +39,16 @@ impl BootSigns {
         }
     }
 
+    /// What a console kept as text shows, for a host whose console is a file the hypervisor
+    /// writes rather than a stream the host reads.
+    pub fn from_console(text: &str) -> BootSigns {
+        let mut signs = BootSigns::default();
+        for line in text.lines() {
+            signs.read_line(line);
+        }
+        signs
+    }
+
     /// Reads one line of the boot's console or of Android's log.
     pub fn read_line(&mut self, line: &str) {
         if line.contains("denied") && line.contains("IChannel/default") {
@@ -246,5 +256,17 @@ mod tests {
         log.read_line(&refusal("priv_app"));
         console.merge(&log);
         assert!(console.agent_refused_for_keys());
+    }
+
+    #[test]
+    fn fr21_a_console_kept_as_text_is_read_line_by_line() {
+        let text = format!(
+            "kernel up\r\n{}\nhwcomposer: cannot reach the host renderer\nhwcomposer: cannot reach the host renderer\n",
+            refusal("priv_app")
+        );
+        let signs = BootSigns::from_console(&text);
+        assert_eq!(signs.channel_denials, 1);
+        assert_eq!(signs.renderer_unreachable, 2);
+        assert!(signs.agent_refused_for_keys());
     }
 }

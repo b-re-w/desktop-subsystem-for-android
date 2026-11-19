@@ -21,6 +21,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use dsa_host_core::boot::{BootPlanner, MemoryInputs};
+use dsa_host_core::boot_signs::{watch_boot_signs, BootSigns};
 use dsa_host_core::device_identity::{BootIdentity, FileDeviceIdentities, ImageBuild};
 use dsa_host_core::diagnostics::HostFile;
 use dsa_host_core::guest_display::{
@@ -394,6 +395,8 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
         Some(shared.user.console_log()),
     )
     .with_process(shared.process.clone());
+    let boot_signs = Arc::new(Mutex::new(BootSigns::default()));
+    let launcher = launcher.with_log_signs(Arc::clone(&boot_signs));
     let launcher = match window_manager(config) {
         Some(window_manager) => {
             let mut keeper = WindowManagerKeeper::new(window_manager);
@@ -494,6 +497,15 @@ fn create_android(shared: &Shared, name: &str) -> Result<Arc<dyn UserAndroid>, S
         .with_screen_reader(Arc::new(crate::root_approval::voice_over_running)),
     ));
     let session = Arc::new(session);
+    {
+        let watched = Arc::downgrade(&session);
+        if let Err(error) = thread::Builder::new()
+            .name("dsa-boot-signs".into())
+            .spawn(move || watch_boot_signs(watched, boot_signs))
+        {
+            eprintln!("guest log: cannot read Android's boot for its problems: {error}");
+        }
+    }
     // The guest's battery follows the Mac's, and its data is on disk before the Mac sleeps.
     shared.power.attach(&session);
     // The guest's display refreshes as fast as the Mac's fastest display, and at 60 Hz in Low
