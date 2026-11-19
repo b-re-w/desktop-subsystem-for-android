@@ -231,12 +231,26 @@ rm -rf "$work"
 
 image="$out/DSA-$version.dmg"
 staging="$out/dmg"
-rm -rf "$staging" "$image"
-mkdir -p "$staging"
+writable="$out/DSA-$version-rw.dmg"
+rm -rf "$staging" "$image" "$writable"
+mkdir -p "$staging/.background"
 cp -R "$app" "$staging/"
 ln -s /Applications "$staging/Applications"
-hdiutil create -volname "DSA $version" -srcfolder "$staging" -fs HFS+ -format UDZO "$image"
+# The window's design: one TIFF holding the 1x and 2x background, and a .DS_Store that
+# make-dmg-store.swift writes on the mounted read-write image (no Finder involved), because
+# the background's alias names the volume's creation date and the file's catalog ID. A
+# placeholder of the store's size keeps room for it on the tightly sized image.
+tiffutil -cathidpicheck "$here/installer/dmg/dmg-background.png" \
+    "$here/installer/dmg/dmg-background@2x.png" -out "$staging/.background/background.tiff"
+head -c 8196 /dev/zero > "$staging/.DS_Store"
+hdiutil create -volname "DSA $version" -srcfolder "$staging" -fs HFS+ -format UDRW "$writable"
 rm -rf "$staging"
+mount="$(hdiutil attach -nobrowse -noautoopen "$writable" | awk -F '\t' '/^\/dev\/.*Apple_HFS/ { print $NF }')"
+[[ -d "$mount" ]] || { echo "could not mount $writable" >&2; exit 1; }
+swift "$here/installer/make-dmg-store.swift" "$mount" || { hdiutil detach "$mount"; exit 1; }
+hdiutil detach "$mount"
+hdiutil convert "$writable" -format UDZO -o "$image"
+rm -f "$writable"
 
 echo "Built $app"
 echo "Built $package"
