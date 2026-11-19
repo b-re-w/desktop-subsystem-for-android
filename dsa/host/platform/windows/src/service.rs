@@ -35,14 +35,13 @@ use dsa_host_core::direct_mapped_disk::DirectMappedImages;
 use dsa_host_core::guest_display::{display_or_smallest, with_display_density, with_display_size};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid, UserAndroids};
+use dsa_host_core::host_config::{updates_config, HostConfigFile};
 use dsa_host_core::input_trace::guest_traces_input;
 use dsa_host_core::memory::GrowthCeiling;
 use dsa_host_core::memory::{log_memory, HostMemory};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
-use dsa_host_core::settings::{
-    keep_first_channel_logged, service_settings, FileSettings, SettingsStore,
-};
+use dsa_host_core::settings::SettingsStore;
 use dsa_host_core::update::current::current_image;
 use dsa_host_core::update::program_service::{
     ProgramStatus, ProgramUpdates, Timing, WithProgramStatus,
@@ -50,7 +49,7 @@ use dsa_host_core::update::program_service::{
 pub use dsa_host_core::update::service::Updates;
 use dsa_host_core::update::service::{
     follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
-    UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
+    UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
 use dsa_host_core::update::store::ImageStore;
 use dsa_host_core::window_manager::WindowManagerKeeper;
@@ -644,16 +643,6 @@ pub fn create_user_android(
     })
 }
 
-/// What the configuration says about the update store.
-pub fn updates_config(config: &HostConfig) -> UpdatesConfig<'_> {
-    UpdatesConfig {
-        images_dir: config.images_dir.as_deref(),
-        first_image: config.first_image.as_ref(),
-        bundled_image: config.bundled_image.as_ref(),
-        boot_timeout_secs: config.update.as_ref().map(|u| u.boot_timeout_secs),
-    }
-}
-
 /// Starts the maker of direct-mapped system disks when the host's direct-mapped mode is on:
 /// it keeps the uncompressed copy of the current image's system disk in the machine's
 /// `direct-mapped` folder, made in the background after the image was installed or downloaded
@@ -802,32 +791,37 @@ fn current_image_build(config: &HostConfig, images: Option<&ImageStore>) -> Opti
     ImageBuild::from_image_dir(&current_image_dir(config, images)?)
 }
 
+/// The render GPU a user chose in their own `compositor.json` before they first saved
+/// settings, found by their SID.
+fn previous_gpu_of_sid() -> dsa_host_core::settings::PreviousRenderGpu {
+    Box::new(|sid: &str| {
+        crate::profile::local_app_data(sid)
+            .ok()
+            .and_then(|dir| previous_render_gpu(&dir))
+    })
+}
+
 /// The settings in the service's own folder. A user who has never saved settings starts
 /// from the render GPU in their own `compositor.json`, if they chose one there. A computer
 /// whose settings record no release channel yet is on the channel of the installer that put
 /// DSA here.
-fn file_settings(config: &HostConfig) -> FileSettings {
-    service_settings(
+fn settings_store(config: &HostConfig) -> Arc<dyn SettingsStore> {
+    dsa_host_core::host_config::settings_store(
         config.settings_dir(),
         Some(config.installer_channel(crate::VERSION)),
-        Some(Box::new(|sid: &str| {
-            crate::profile::local_app_data(sid)
-                .ok()
-                .and_then(|dir| previous_render_gpu(&dir))
-        })),
+        Some(previous_gpu_of_sid()),
     )
-}
-
-fn settings_store(config: &HostConfig) -> Arc<dyn SettingsStore> {
-    Arc::new(file_settings(config))
 }
 
 /// [`settings_store`], with the release channel recorded first when the settings record none
 /// yet: the installer's, so that every later upgrade keeps it.
 fn service_settings_store(config: &HostConfig, build: &str) -> Arc<dyn SettingsStore> {
-    let store = file_settings(config);
-    keep_first_channel_logged(&store, build);
-    Arc::new(store)
+    dsa_host_core::host_config::service_settings_store(
+        config.settings_dir(),
+        config.installer_channel(crate::VERSION),
+        Some(previous_gpu_of_sid()),
+        build,
+    )
 }
 
 /// Takes the pages of the disks each running VM maps directly (the host's direct-mapped mode)

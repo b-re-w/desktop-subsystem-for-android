@@ -19,16 +19,14 @@
 //! is in their DSA folder, `data_dir` when it is set.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use serde::Deserialize;
 
 use dsa_host_core::host_config::{
     default_connect_timeout_secs, default_control_port, default_data_disk_size_gb,
     default_doze_delay_secs, default_log_port, default_processors, default_ready_timeout_secs,
-    default_stop_timeout_secs, default_true, HostConfigError, UpdateSettings,
+    default_stop_timeout_secs, default_true, HostConfigError, HostConfigFile, UpdateSettings,
 };
-use dsa_host_core::session::SessionConfig;
 use dsa_host_core::update::policy::InstalledImage;
 
 /// The name of the configuration file.
@@ -177,19 +175,32 @@ impl MacHostConfig {
             .clone()
             .unwrap_or_else(|| user.root.join("settings"))
     }
+}
 
-    /// The session's timings.
-    pub fn session_config(&self) -> SessionConfig {
-        SessionConfig {
-            connect_timeout: Duration::from_secs(self.connect_timeout_secs),
-            ready_timeout: Duration::from_secs(self.ready_timeout_secs),
-            stop_timeout: Duration::from_secs(self.stop_timeout_secs),
-            doze_delay: Duration::from_secs(self.doze_delay_secs),
-            freeze_after: self
-                .freeze_after_minutes
-                .map(|minutes| Duration::from_secs(minutes.saturating_mul(60))),
-            ..SessionConfig::default()
-        }
+impl HostConfigFile for MacHostConfig {
+    fn images_dir(&self) -> Option<&Path> {
+        self.images_dir.as_deref()
+    }
+    fn first_image(&self) -> Option<&InstalledImage> {
+        self.first_image.as_ref()
+    }
+    fn update(&self) -> Option<&UpdateSettings> {
+        self.update.as_ref()
+    }
+    fn connect_timeout_secs(&self) -> u64 {
+        self.connect_timeout_secs
+    }
+    fn ready_timeout_secs(&self) -> u64 {
+        self.ready_timeout_secs
+    }
+    fn stop_timeout_secs(&self) -> u64 {
+        self.stop_timeout_secs
+    }
+    fn doze_delay_secs(&self) -> u64 {
+        self.doze_delay_secs
+    }
+    fn freeze_after_minutes(&self) -> Option<u64> {
+        self.freeze_after_minutes
     }
 }
 

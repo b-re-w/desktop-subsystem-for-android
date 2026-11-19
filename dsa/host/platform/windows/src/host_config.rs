@@ -46,20 +46,19 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use dsa_host_core::image_files::{GuestArch, ImageFiles, ImageRulesOwned};
-use dsa_host_core::session::SessionConfig;
 use serde::Deserialize;
 
 use dsa_host_core::host_config::{
     check_image_sources, default_connect_timeout_secs, default_control_port,
     default_data_disk_size_gb, default_doze_delay_secs, default_log_port, default_processors,
     default_ready_timeout_secs, default_stop_timeout_secs, default_true, default_vm_name,
+    HostConfigFile,
 };
 pub use dsa_host_core::host_config::{
     expand_locations, HostConfigError, UpdateSettings, DEFAULT_MEMORY_MB,
 };
 use dsa_host_core::memory::start_mb;
 use dsa_host_core::update::policy::InstalledImage;
-use dsa_host_core::update::program::ReleaseChannel;
 use dsa_host_core::update::program_service::ProgramSettings;
 
 use crate::vm::{console_pipe_path, is_sid, AndroidVmConfig};
@@ -482,25 +481,11 @@ impl HostConfig {
         }))
     }
 
-    /// Whether this installation downloads new Android images at all.
-    pub fn image_updates_available(&self) -> bool {
-        self.update.is_some() && self.images_dir.is_some()
-    }
-
     /// Whether this installation updates DSA itself at all.
     pub fn program_updates_available(&self) -> bool {
         self.update.as_ref().is_some_and(|update| {
             update.program && update.has_program_list() && update.program_dir.is_some()
         })
-    }
-
-    /// The channel of the installer that put version `running` here, which a computer whose
-    /// settings record no channel yet starts on.
-    pub fn installer_channel(&self, running: &str) -> ReleaseChannel {
-        self.update.as_ref().map_or_else(
-            || ReleaseChannel::of_version(running),
-            |update| update.installer_channel(running),
-        )
     }
 
     /// The service's log folder: the folder of `log_file`, when there is one. Split as
@@ -697,17 +682,34 @@ impl HostConfig {
             gpu_paravirtualization: self.gpu_paravirtualization,
         })
     }
+}
 
-    pub fn session_config(&self) -> SessionConfig {
-        SessionConfig {
-            connect_timeout: Duration::from_secs(self.connect_timeout_secs),
-            ready_timeout: Duration::from_secs(self.ready_timeout_secs),
-            stop_timeout: Duration::from_secs(self.stop_timeout_secs),
-            doze_delay: Duration::from_secs(self.doze_delay_secs),
-            freeze_after: self
-                .freeze_after_minutes
-                .map(|minutes| Duration::from_secs(minutes.saturating_mul(60))),
-            ..SessionConfig::default()
-        }
+impl HostConfigFile for HostConfig {
+    fn images_dir(&self) -> Option<&std::path::Path> {
+        self.images_dir.as_deref()
+    }
+    fn first_image(&self) -> Option<&InstalledImage> {
+        self.first_image.as_ref()
+    }
+    fn bundled_image(&self) -> Option<&InstalledImage> {
+        self.bundled_image.as_ref()
+    }
+    fn update(&self) -> Option<&UpdateSettings> {
+        self.update.as_ref()
+    }
+    fn connect_timeout_secs(&self) -> u64 {
+        self.connect_timeout_secs
+    }
+    fn ready_timeout_secs(&self) -> u64 {
+        self.ready_timeout_secs
+    }
+    fn stop_timeout_secs(&self) -> u64 {
+        self.stop_timeout_secs
+    }
+    fn doze_delay_secs(&self) -> u64 {
+        self.doze_delay_secs
+    }
+    fn freeze_after_minutes(&self) -> Option<u64> {
+        self.freeze_after_minutes
     }
 }

@@ -29,6 +29,7 @@ use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{
     HostApiService, NetworkStatus, PerUser, ServiceFacts, UserAndroid, UserAndroids,
 };
+use dsa_host_core::host_config::{service_file_settings, updates_config, HostConfigFile};
 use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::host_paths::HostPaths;
 use dsa_host_core::input_trace::guest_traces_input;
@@ -37,11 +38,11 @@ use dsa_host_core::memory::{log_memory, HostMemory};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
-use dsa_host_core::settings::{keep_first_channel_logged, service_settings, SettingsStore};
+use dsa_host_core::settings::SettingsStore;
 use dsa_host_core::update::current::{current_image, CurrentImage};
 use dsa_host_core::update::service::{
     follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
-    Updates, UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
+    Updates, UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
 use dsa_host_core::window_manager::WindowManagerKeeper;
 use dsa_host_unix::paths::{Layout, UnixHostPaths};
@@ -122,7 +123,7 @@ impl UserFiles {
 }
 
 fn settings_store(config: &HostConfig) -> Arc<dyn SettingsStore> {
-    Arc::new(service_settings(config.settings_dir(), None, None))
+    dsa_host_core::host_config::settings_store(config.settings_dir(), None, None)
 }
 
 /// The service's settings: a computer whose settings record no release channel yet starts on
@@ -136,8 +137,7 @@ fn service_settings_store(config: &HostConfig, build: &str) -> Arc<dyn SettingsS
     let first = entries
         .channel()
         .unwrap_or_else(|| ReleaseChannel::of_version(crate::VERSION));
-    let files = service_settings(config.settings_dir(), Some(first), None);
-    keep_first_channel_logged(&files, build);
+    let files = service_file_settings(config.settings_dir(), first, None, build);
     let store = ChannelFollowingSettings::new(Arc::new(files), entries);
     match store.bring_entries_in_line() {
         Ok(changed) => {
@@ -207,22 +207,18 @@ fn check_raw_system_disk(config: &HostConfig, updates: Option<&Updates>, build: 
             if let Err(why) = lower_this_thread() {
                 eprintln!("{build}: checking the raw system disk at normal priority: {why}");
             }
-            let Ok(CurrentImage { dir, .. }) = current_image(updates.as_ref().map(|u| u.store.as_ref()), config.image_dir.as_deref()) else {
+            let Ok(CurrentImage { dir, .. }) = current_image(
+                updates.as_ref().map(|u| u.store.as_ref()),
+                config.image_dir.as_deref(),
+            ) else {
                 return;
             };
-            let had_copy = dir.join("system.img").exists();
-            match crate::image::verify_raw_disk(&dir) {
-                Ok(true) => eprintln!(
-                    "{build}: the raw copy of {}'s system disk matches its record",
-                    dir.display()
-                ),
-                Ok(false) if had_copy => eprintln!(
-                    "{build}: the raw copy of {}'s system disk did not match the image; it was removed, and the next boot makes it again",
-                    dir.display()
-                ),
-                Ok(false) => {}
-                Err(why) => eprintln!("{build}: checking the raw system disk: {why}"),
-            }
+            dsa_host_core::disk::raw_copy::verify_raw_copy_logged(
+                &dir.join("system.img"),
+                &dir.join("system.vhdx"),
+                &dir,
+                &build,
+            );
         });
     if let Err(why) = spawned {
         eprintln!("{label}: the raw system disk is not checked: {why}");
@@ -545,16 +541,6 @@ pub fn create_user_android(
             android as Arc<dyn UserAndroid>
         }
     })
-}
-
-/// What the configuration says about the update store. A Linux package bundles no image.
-fn updates_config(config: &HostConfig) -> UpdatesConfig<'_> {
-    UpdatesConfig {
-        images_dir: config.images_dir.as_deref(),
-        first_image: config.first_image.as_ref(),
-        bundled_image: None,
-        boot_timeout_secs: config.update.as_ref().map(|u| u.boot_timeout_secs),
-    }
 }
 
 /// The host's logs that go in a user's diagnostics: the console of their Android.

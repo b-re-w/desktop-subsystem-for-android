@@ -85,6 +85,7 @@ mod windows_host {
         display_or_smallest, with_display_density, with_display_size,
     };
     use dsa_host_core::handshake::ControlHandshake;
+    use dsa_host_core::host_config::HostConfigFile;
     use dsa_host_core::power::PowerHub;
     use dsa_host_core::session::{Session, SessionState};
     use dsa_host_windows::account::current_user_sid;
