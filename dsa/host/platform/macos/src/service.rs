@@ -27,6 +27,7 @@ use dsa_host_core::guest_display::{
 };
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid};
+use dsa_host_core::host_config::InstallerPreset;
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
@@ -387,6 +388,17 @@ fn open_store(config: &MacHostConfig, build: &str) -> Option<Arc<ImageStore>> {
             return None;
         }
     };
+    // A preset installer (such as a16) carries installer-preset.json in DSA.app's resources,
+    // which fixes this computer to its Android major, once.
+    if let Some(resources) = std::env::current_exe().ok().and_then(|exe| {
+        exe.parent()?
+            .parent()
+            .map(|contents| contents.join("Resources"))
+    }) {
+        if let Some(line) = InstallerPreset::apply_from(&resources, &store) {
+            eprintln!("{build}: {line}");
+        }
+    }
     match store.recover(first) {
         Ok(Recovery::Moved { broken, current }) => eprintln!(
             "{build}: the image {} has missing or broken files; using {} instead",

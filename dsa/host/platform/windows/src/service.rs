@@ -36,6 +36,7 @@ use dsa_host_core::guest_display::{display_or_smallest, with_display_density, wi
 use dsa_host_core::guest_log::{LogFilter, LogWatch, DEFAULT_BUFFERS, WARN};
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid, UserAndroids};
+use dsa_host_core::host_config::InstallerPreset;
 use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::session::Session;
@@ -771,6 +772,16 @@ pub fn open_updates(config: &HostConfig, build: &str) -> Result<Option<Updates>,
                 "{build}: switching to the bundled image {}: {why}",
                 bundled.version
             ),
+        }
+    }
+    // A preset installer (such as a16) leaves installer-preset.json beside the program, which
+    // fixes this computer to its Android major, once.
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(Path::to_path_buf))
+    {
+        if let Some(line) = InstallerPreset::apply_from(&dir, &store) {
+            eprintln!("{build}: {line}");
         }
     }
     // An installation can find a state that names an image it cannot boot, such as a test

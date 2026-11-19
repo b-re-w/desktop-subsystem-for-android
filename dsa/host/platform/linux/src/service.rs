@@ -28,6 +28,7 @@ use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{
     HostApiService, NetworkStatus, PerUser, ServiceFacts, UserAndroid, UserAndroids,
 };
+use dsa_host_core::host_config::InstallerPreset;
 use dsa_host_core::host_config::DEFAULT_MEMORY_MB;
 use dsa_host_core::host_paths::HostPaths;
 use dsa_host_core::memory::{summary_lines, HostMemory, LOG_INTERVAL};
@@ -692,6 +693,17 @@ fn open_updates(config: &HostConfig, build: &str) -> Result<Option<Updates>, Str
         return Ok(None);
     };
     let store = ImageStore::open_as(root, first, build).map_err(|e| e.to_string())?;
+    // A preset package (such as a16) installs installer-preset.json in share/dsa beside the
+    // program's bin folder, which fixes this computer to its Android major, once.
+    if let Some(dir) = std::env::current_exe().ok().and_then(|exe| {
+        exe.parent()?
+            .parent()
+            .map(|prefix| prefix.join("share").join("dsa"))
+    }) {
+        if let Some(line) = InstallerPreset::apply_from(&dir, &store) {
+            eprintln!("{build}: {line}");
+        }
+    }
     match store.recover(first) {
         Ok(Recovery::Usable) => {}
         Ok(Recovery::Moved { broken, current }) => eprintln!(
