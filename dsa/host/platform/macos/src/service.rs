@@ -569,6 +569,42 @@ fn apply_settings(
     }
 }
 
+/// Checks the raw copy of the current image's system disk byte by byte, in the background at
+/// the lowest priority: one that changed while the agent was not running is removed, and the
+/// next boot makes it again from the image's VHDX. The same check as the Linux service's.
+fn check_raw_system_disk(
+    config: &MacHostConfig,
+    user: &UserFolders,
+    updates: Option<&Updates>,
+    build: &str,
+) {
+    let (image_dir, cache_root) = (config.image_dir.clone(), user.image_cache());
+    let store = updates.map(|u| Arc::clone(&u.store));
+    let build = build.to_string();
+    let label = build.clone();
+    let spawned = thread::Builder::new()
+        .name("dsa-check-system-disk".into())
+        .spawn(move || {
+            // SAFETY: a plain call that sets the calling thread's quality of service.
+            unsafe {
+                libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_BACKGROUND, 0);
+            }
+            let Ok(current) = current_image(store.as_deref(), image_dir.as_deref()) else {
+                return;
+            };
+            let cache = cache_root.join(current.cache_key());
+            dsa_host_core::disk::raw_copy::verify_raw_copy_logged(
+                &cache.join("system.img"),
+                &current.dir.join("system.vhdx"),
+                &current.dir,
+                &build,
+            );
+        });
+    if let Err(why) = spawned {
+        eprintln!("{label}: the raw system disk is not checked: {why}");
+    }
+}
+
 /// Serves the local API for the user whose home is `home` until `stop` is set, then stops
 /// their Android.
 pub fn serve(
@@ -637,6 +673,7 @@ pub fn serve(
             eprintln!("{build}: starting the update check failed: {why}");
         }
     }
+    check_raw_system_disk(&config, &user, updates.as_ref(), build);
     let process = VmProcess::default();
     // The Mac's battery, Low Power Mode and sleep, for every Android this agent runs.
     let power = Arc::new(PowerHub::new());

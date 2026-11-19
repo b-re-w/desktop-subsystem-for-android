@@ -7,6 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
+use dsa_host_core::disk::raw_copy::checked_raw_copy;
 use dsa_host_core::disk::DiskBackend;
 use dsa_host_unix::raw_disk::RawDiskBackend;
 
@@ -36,8 +37,9 @@ impl DiskBackend for MacDisks {
 }
 
 /// The raw image of the disk `image_disk` (a VHDX of an image, or already raw), converting
-/// it into `cache` the first time. The conversion goes through a temporary file, so a cut
-/// short one is never taken for the disk.
+/// it into `cache` the first time. The copy is checked and kept the way every host that
+/// attaches raw disks does ([`dsa_host_core::disk::raw_copy`]): its hash is recorded, a copy
+/// that changed is made again, and the image's `system_disk_raw` hash is held to.
 pub fn raw_disk(image_disk: &Path, cache: &Path) -> Result<PathBuf, String> {
     let is_vhdx = crate::vhdx::is_vhdx(image_disk)
         .map_err(|e| format!("reading {}: {e}", image_disk.display()))?;
@@ -48,17 +50,21 @@ pub fn raw_disk(image_disk: &Path, cache: &Path) -> Result<PathBuf, String> {
         .file_stem()
         .ok_or_else(|| format!("{} is not a file", image_disk.display()))?;
     let raw = cache.join(stem).with_extension("img");
-    if raw.exists() {
-        return Ok(raw);
-    }
     std::fs::create_dir_all(cache).map_err(|e| format!("creating {}: {e}", cache.display()))?;
-    let partial = raw.with_extension("img.new");
-    crate::vhdx::convert_to_raw(image_disk, &partial).map_err(|e| {
-        let _ = std::fs::remove_file(&partial);
-        format!("converting {} to a raw disk: {e}", image_disk.display())
-    })?;
-    std::fs::rename(&partial, &raw).map_err(|e| format!("placing {}: {e}", raw.display()))?;
+    let image_dir = image_disk.parent().unwrap_or(Path::new("."));
+    checked_raw_copy(&raw, Some(image_disk), image_dir, &convert_into)?;
     Ok(raw)
+}
+
+/// Reads the VHDX `from` into the raw disk `to`, through a temporary file, so a cut short
+/// conversion is never taken for the disk.
+fn convert_into(from: &Path, to: &Path) -> Result<(), String> {
+    let partial = to.with_extension("img.new");
+    crate::vhdx::convert_to_raw(from, &partial).map_err(|e| {
+        let _ = std::fs::remove_file(&partial);
+        format!("converting {} to a raw disk: {e}", from.display())
+    })?;
+    std::fs::rename(&partial, to).map_err(|e| format!("placing {}: {e}", to.display()))
 }
 
 /// Makes sure the raw pstore disk at `path` exists. One already there is kept with its

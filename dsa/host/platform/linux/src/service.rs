@@ -207,22 +207,18 @@ fn check_raw_system_disk(config: &HostConfig, updates: Option<&Updates>, build: 
             if let Err(why) = lower_this_thread() {
                 eprintln!("{build}: checking the raw system disk at normal priority: {why}");
             }
-            let Ok(CurrentImage { dir, .. }) = current_image(updates.as_ref().map(|u| u.store.as_ref()), config.image_dir.as_deref()) else {
+            let Ok(CurrentImage { dir, .. }) = current_image(
+                updates.as_ref().map(|u| u.store.as_ref()),
+                config.image_dir.as_deref(),
+            ) else {
                 return;
             };
-            let had_copy = dir.join("system.img").exists();
-            match crate::image::verify_raw_disk(&dir) {
-                Ok(true) => eprintln!(
-                    "{build}: the raw copy of {}'s system disk matches its record",
-                    dir.display()
-                ),
-                Ok(false) if had_copy => eprintln!(
-                    "{build}: the raw copy of {}'s system disk did not match the image; it was removed, and the next boot makes it again",
-                    dir.display()
-                ),
-                Ok(false) => {}
-                Err(why) => eprintln!("{build}: checking the raw system disk: {why}"),
-            }
+            dsa_host_core::disk::raw_copy::verify_raw_copy_logged(
+                &dir.join("system.img"),
+                &dir.join("system.vhdx"),
+                &dir,
+                &build,
+            );
         });
     if let Err(why) = spawned {
         eprintln!("{label}: the raw system disk is not checked: {why}");

@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 
 pub mod gpt;
 pub mod pstore;
+pub mod raw_copy;
 
 /// The partitions of a single-disk image that hold Android itself. They come from the image;
 /// every other partition holds the user's data.
