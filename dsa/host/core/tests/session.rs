@@ -2588,6 +2588,52 @@ fn nfr2_a_host_short_of_memory_tells_the_guest_when_it_changes_and_when_the_agen
     assert_eq!(next_body(&mut agent), host_memory(true));
 }
 
+/// The host-memory words the guest is sent within `within`, skipping everything else.
+fn host_memory_words(agent: &mut Box<dyn Connection>, within: Duration) -> Vec<Body> {
+    let deadline = std::time::Instant::now() + within;
+    let mut words = Vec::new();
+    loop {
+        let left = deadline.saturating_duration_since(std::time::Instant::now());
+        if left.is_zero() {
+            return words;
+        }
+        let Ok(frame) = agent.recv(Some(left)) else {
+            return words;
+        };
+        if let Some(body @ Body::HostMemory(_)) = dsa_protocol::decode(&frame).unwrap().body {
+            words.push(body);
+        }
+    }
+}
+
+#[test]
+fn nfr2_a_host_short_of_memory_asks_nothing_while_the_agent_is_gone_and_tells_it_when_it_comes_back(
+) {
+    let hub = PowerHub::new();
+    let launcher = FakeLauncher::default();
+    let (session, mut connector) = session_with(launcher.clone(), WAIT);
+    let session = Arc::new(session);
+    hub.attach(&session);
+    session.start();
+    let mut daemon = connect_agent(&mut connector, &launcher);
+    assert!(session.wait_for(SessionState::Active, WAIT));
+    // The agent goes, as when Android's framework restarts or the guest is dying.
+    report_boot(&mut daemon, true, false);
+    thread::sleep(Duration::from_millis(200));
+    hub.update_memory(true);
+    assert_eq!(
+        host_memory_words(&mut daemon, Duration::from_millis(500)),
+        Vec::<Body>::new(),
+        "nobody is asked to give memory back"
+    );
+    // The agent that comes back hears the host is still short.
+    report_boot(&mut daemon, true, true);
+    assert_eq!(
+        host_memory_words(&mut daemon, Duration::from_secs(1)),
+        [host_memory(true)]
+    );
+}
+
 fn tasks_shown(task_ids: &[i32]) -> Body {
     Body::TasksShown(dsa_protocol::control::TasksShown {
         task_ids: task_ids.to_vec(),

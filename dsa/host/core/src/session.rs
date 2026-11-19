@@ -5820,14 +5820,20 @@ impl Worker {
             return;
         }
         self.host_memory_low = low;
-        if low {
-            eprintln!("lifecycle: the host is short of memory; asking the guest to give some back");
-        }
+        // Only a guest whose agent is connected hears it; an agent that connects later is
+        // told when it does. Without one there is nobody to ask, and nothing to log.
         match self.state() {
             SessionState::Starting
             | SessionState::Stalled
             | SessionState::Active
-            | SessionState::Dozing => {
+            | SessionState::Dozing
+                if self.agent_connected =>
+            {
+                if low {
+                    eprintln!(
+                        "lifecycle: the host is short of memory; asking the guest to give some back"
+                    );
+                }
                 self.send_body(Body::HostMemory(control::HostMemory { low }));
             }
             SessionState::Frozen => self.host_memory_pending = true,
