@@ -92,10 +92,25 @@ unsafe fn optional<T: Copy>(library: *mut c_void, name: &str) -> Option<T> {
 }
 
 extern "C" fn read_stream(user: *mut c_void, buffer: *mut c_void, count: usize) -> c_int {
+    if count == 0 {
+        return 0;
+    }
     let stream = unsafe { &mut *(user as *mut &mut dyn ReadWrite) };
     let buffer = unsafe { std::slice::from_raw_parts_mut(buffer as *mut u8, count) };
-    match stream.read(buffer) {
+    read_result(stream.read(buffer))
+}
+
+/// What the renderer's read callback answers for one read of a non-empty buffer.
+///
+/// The renderer takes 0 to mean "nothing yet, ask again" and reads again at once, and only a
+/// negative answer as the end of the stream. A read of 0 bytes from a socket is its end (the
+/// guest's process closed it, or the VM went), so it is answered -1: answered 0, the stream's
+/// thread asked again forever and kept a core busy for each stream the guest had closed.
+fn read_result(read: std::io::Result<usize>) -> c_int {
+    match read {
+        Ok(0) => -1,
         Ok(n) => n.min(c_int::MAX as usize) as c_int,
+        Err(error) if error.kind() == std::io::ErrorKind::Interrupted => 0,
         Err(_) => -1,
     }
 }
@@ -335,5 +350,55 @@ impl Drop for Renderer {
         }
         (self.api.set_pixels)(None, std::ptr::null_mut());
         (self.api.teardown)();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Cursor, Error, ErrorKind};
+
+    struct Stream(Cursor<Vec<u8>>);
+
+    impl Read for Stream {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            self.0.read(buffer)
+        }
+    }
+
+    impl Write for Stream {
+        fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+            Ok(buffer.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn read_through_callback(stream: &mut Stream, buffer: &mut [u8]) -> c_int {
+        let mut stream: &mut dyn ReadWrite = stream;
+        let user = &mut stream as *mut &mut dyn ReadWrite as *mut c_void;
+        read_stream(user, buffer.as_mut_ptr() as *mut c_void, buffer.len())
+    }
+
+    #[test]
+    fn nfr3_a_guest_stream_that_closed_ends_the_read_instead_of_asking_again() {
+        let mut stream = Stream(Cursor::new(b"abc".to_vec()));
+        let mut buffer = [0u8; 8];
+        assert_eq!(read_through_callback(&mut stream, &mut buffer), 3);
+        assert_eq!(&buffer[..3], b"abc");
+        // The guest closed its end: the read says so, rather than "nothing yet".
+        assert_eq!(read_through_callback(&mut stream, &mut buffer), -1);
+    }
+
+    #[test]
+    fn nfr3_an_interrupted_read_is_asked_again_and_a_failed_one_ends_the_stream() {
+        assert_eq!(read_result(Err(Error::from(ErrorKind::Interrupted))), 0);
+        assert_eq!(
+            read_result(Err(Error::from(ErrorKind::ConnectionReset))),
+            -1
+        );
+        assert_eq!(read_result(Ok(5)), 5);
+        assert_eq!(read_result(Ok(0)), -1);
     }
 }

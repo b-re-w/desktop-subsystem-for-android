@@ -853,7 +853,7 @@ impl GuestLauncher for AndroidVmLauncher {
         let system = self.system.as_ref()?;
         system
             .wait_exited(Duration::ZERO)
-            .then(|| "the Android VM exited during boot".to_string())
+            .then(|| "the Android VM exited by itself".to_string())
     }
 
     fn diagnostics(&mut self) -> Option<String> {
