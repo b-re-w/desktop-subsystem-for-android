@@ -12,6 +12,12 @@
 # built it and is ready to be signed for distribution. DSA_INSTALLER_IDENTITY signs the
 # package the same way.
 #
+# DSA_PRESET_MAJORS names Android majors (such as "17 16") to build preset packages for, beside
+# the default ones: DSA-<version>-a<major>.pkg and .dmg. Each is the same signed programs with
+# Contents/Resources/installer-preset.json added, which fixes the computer to that major; only
+# the bundle's outer signature is made again. The release names them
+# DSA-v<version>-a<major>-macos-arm64.pkg and .dmg.
+#
 # The address data (the administrative boundaries the device lender turns Android's positions
 # into addresses with) goes into Contents/Resources/geodata: from DSA_GEODATA_DIR, a folder
 # dsa/host/core/geodata/build-geodata.py filled, or made here by that script, which downloads
@@ -229,3 +235,32 @@ rm -rf "$staging"
 echo "Built $app"
 echo "Built $package"
 echo "Built $image"
+
+for major in ${DSA_PRESET_MAJORS:-}; do
+    if [[ ! "$major" =~ ^[1-9][0-9]*$ ]]; then
+        echo "DSA_PRESET_MAJORS names $major, which is no Android major" >&2
+        exit 1
+    fi
+    preset_root="$out/preset-a$major"
+    rm -rf "$preset_root"
+    mkdir -p "$preset_root"
+    cp -R "$app" "$preset_root/"
+    preset_app="$preset_root/DSA.app"
+    printf '{\n  "android_major": %s\n}\n' "$major" > "$preset_app/Contents/Resources/installer-preset.json"
+    sign "$preset_app"
+    codesign --verify --strict --verbose=2 "$preset_app"
+    preset_package="$out/DSA-$version-a$major.pkg"
+    pkgbuild --component "$preset_app" --install-location /Applications \
+        --scripts "$here/scripts" \
+        --identifier org.thisisthepy.dsa --version "$version" \
+        ${installer_identity[@]+"${installer_identity[@]}"} "$preset_package"
+    preset_image="$out/DSA-$version-a$major.dmg"
+    rm -rf "$staging" "$preset_image"
+    mkdir -p "$staging"
+    cp -R "$preset_app" "$staging/"
+    ln -s /Applications "$staging/Applications"
+    hdiutil create -volname "DSA $version (Android $major)" -srcfolder "$staging" -fs HFS+ -format UDZO "$preset_image"
+    rm -rf "$staging" "$preset_root"
+    echo "Built $preset_package"
+    echo "Built $preset_image"
+done
