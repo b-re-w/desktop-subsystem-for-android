@@ -212,10 +212,22 @@ installer_identity=()
 if [[ -n "${DSA_INSTALLER_IDENTITY:-}" ]]; then
     installer_identity=(--sign "$DSA_INSTALLER_IDENTITY")
 fi
+# The component package (DSA.app and its postinstall) goes inside a product archive that
+# carries the installer's design: the artwork, the welcome and conclusion pages in every
+# language the Windows installer speaks, and the licence. Only the product archive is signed.
+work="$out/pkg"
+rm -rf "$work"
+mkdir -p "$work"
 pkgbuild --component "$app" --install-location /Applications \
     --scripts "$here/scripts" \
-    --identifier org.thisisthepy.dsa --version "$version" \
+    --identifier org.thisisthepy.dsa --version "$version" "$work/DSA-component.pkg"
+cp -R "$here/installer/resources" "$work/resources"
+cp "$root/LICENSE" "$work/resources/LICENSE.txt"
+sed "s/@VERSION@/$version/" "$here/installer/Distribution.xml" > "$work/Distribution.xml"
+productbuild --distribution "$work/Distribution.xml" --resources "$work/resources" \
+    --package-path "$work" \
     ${installer_identity[@]+"${installer_identity[@]}"} "$package"
+rm -rf "$work"
 
 image="$out/DSA-$version.dmg"
 staging="$out/dmg"
