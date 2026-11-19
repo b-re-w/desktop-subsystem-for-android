@@ -236,6 +236,11 @@ fn apply_list(
     if state.on_trial {
         return Ok(moved_up);
     }
+    if let Some(pinned) = state.pinned_major() {
+        if !manifest.supported_majors.contains(&pinned) {
+            return Ok(Some(super::store::pinned_unsupported(pinned)));
+        }
+    }
     let decision = match release {
         Some(release) => decide_on_channel(
             &state.current,
