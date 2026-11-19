@@ -22,7 +22,7 @@ pub enum TaskFeed {
     /// A new watch began; these are the guest's tasks now.
     Sync(Vec<TaskEvent>),
     /// A change to the guest's tasks.
-    Task(TaskEvent),
+    Task(Box<TaskEvent>),
     /// The service cannot be reached, so the guest's tasks are unknown.
     Lost,
 }
@@ -71,7 +71,7 @@ pub fn follow_tasks(
         while !stop.load(Ordering::Relaxed) {
             match stream.next(poll) {
                 Ok(Some(event)) => {
-                    if !deliver(TaskFeed::Task(event)) {
+                    if !deliver(TaskFeed::Task(Box::new(event))) {
                         return;
                     }
                 }

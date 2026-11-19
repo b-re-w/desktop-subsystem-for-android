@@ -61,9 +61,7 @@ impl InputRelay {
                     }
                 }
             }
-            let Some(connected) = self.stream.as_mut() else {
-                return None;
-            };
+            let connected = self.stream.as_mut()?;
             match connected.send_input(event) {
                 Ok(()) => return None,
                 Err(_) => self.stream = None,

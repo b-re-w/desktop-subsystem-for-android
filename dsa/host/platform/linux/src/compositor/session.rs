@@ -268,7 +268,7 @@ fn watch_tasks(to_main: ToMain) {
             |feed| {
                 to_main.send(match feed {
                     TaskFeed::Sync(tasks) => Message::Tasks(tasks),
-                    TaskFeed::Task(event) => Message::Task(event),
+                    TaskFeed::Task(event) => Message::Task(*event),
                     TaskFeed::Lost => Message::TasksLost,
                 })
             },
@@ -299,10 +299,7 @@ fn serve_requests(requests: Receiver<Request>, drawn: DrawnFrames) {
         // The sizes of a drag go once a frame of the size before has been drawn, and only the
         // latest of the sizes in between.
         let mut queue = ResizeQueue::new(drawn);
-        loop {
-            let Some(incoming) = next_batch(&requests, queue.waiting()) else {
-                break;
-            };
+        while let Some(incoming) = next_batch(&requests, queue.waiting()) {
             let mut tasks = Vec::new();
             for request in incoming {
                 match request {

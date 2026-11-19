@@ -59,7 +59,7 @@ pub fn watch(
         |feed| {
             deliver(match feed {
                 TaskFeed::Sync(tasks) => ManagerEvent::Sync(tasks),
-                TaskFeed::Task(event) => ManagerEvent::Task(Box::new(event)),
+                TaskFeed::Task(event) => ManagerEvent::Task(event),
                 TaskFeed::Lost => ManagerEvent::Lost,
             })
         },

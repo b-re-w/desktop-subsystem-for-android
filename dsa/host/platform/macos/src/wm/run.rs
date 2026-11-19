@@ -253,7 +253,7 @@ fn watch_tasks(host_api: PathBuf, events: Sender<ManagerEvent>) {
                     events
                         .send(match feed {
                             TaskFeed::Sync(tasks) => ManagerEvent::Sync(tasks),
-                            TaskFeed::Task(event) => ManagerEvent::Task(Box::new(event)),
+                            TaskFeed::Task(event) => ManagerEvent::Task(event),
                             TaskFeed::Lost => ManagerEvent::Lost,
                         })
                         .is_ok()
@@ -302,12 +302,9 @@ fn serve_requests(
         .spawn(move || {
             let mut client: Option<HostApiClient> = None;
             let mut queue = ResizeQueue::new(drawn);
-            loop {
-                // Sizes held for a frame are looked at again every few milliseconds; with
-                // none held, the next request is waited for.
-                let Some(incoming) = next_batch(&requests, queue.waiting()) else {
-                    break;
-                };
+            // Sizes held for a frame are looked at again every few milliseconds; with none
+            // held, the next request is waited for.
+            while let Some(incoming) = next_batch(&requests, queue.waiting()) {
                 for request in queue.step(incoming, Instant::now()) {
                     let result = send_request(&mut client, &request, || connect(&host_api));
                     if let Err(why) = result {
