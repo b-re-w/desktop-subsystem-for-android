@@ -16,6 +16,7 @@
 //! else English ([`crate::ui_language`]).
 
 use dsa_host_core::compositor::window_hosts::MenuAction;
+use dsa_host_core::compositor::window_menu::{android_items as shared_items, AndroidItem};
 use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::ui_text::window_menu::dsa_menu_text;
 
@@ -49,17 +50,37 @@ pub fn window_menu(new_window: bool) -> Vec<WindowMenuItem> {
 /// The Android desktop window's items alone, as the band's secondary click shows them after
 /// Minimize and Zoom.
 pub fn android_items(new_window: bool) -> Vec<WindowMenuItem> {
-    let mut items = Vec::new();
-    if new_window {
-        items.push(WindowMenuItem::NewWindow);
+    shared_items(false, new_window)
+        .into_iter()
+        .filter_map(WindowMenuItem::of_android)
+        .collect()
+}
+
+impl WindowMenuItem {
+    /// The entry of an Android item; `None` for Full screen, which macOS has of its own (the
+    /// green button and the View menu).
+    fn of_android(item: AndroidItem) -> Option<WindowMenuItem> {
+        match item {
+            AndroidItem::FullScreen => None,
+            AndroidItem::NewWindow => Some(WindowMenuItem::NewWindow),
+            AndroidItem::Screenshot => Some(WindowMenuItem::Screenshot),
+            AndroidItem::AspectRatio => Some(WindowMenuItem::AspectRatio),
+            AndroidItem::OpenByDefault => Some(WindowMenuItem::OpenByDefault),
+            AndroidItem::AppInfo => Some(WindowMenuItem::AppInfo),
+        }
     }
-    items.extend([
-        WindowMenuItem::Screenshot,
-        WindowMenuItem::AspectRatio,
-        WindowMenuItem::OpenByDefault,
-        WindowMenuItem::AppInfo,
-    ]);
-    items
+
+    /// The Android item this entry is; `None` for macOS's own entries and the separator.
+    pub fn android(self) -> Option<AndroidItem> {
+        match self {
+            WindowMenuItem::NewWindow => Some(AndroidItem::NewWindow),
+            WindowMenuItem::Screenshot => Some(AndroidItem::Screenshot),
+            WindowMenuItem::AspectRatio => Some(AndroidItem::AspectRatio),
+            WindowMenuItem::OpenByDefault => Some(AndroidItem::OpenByDefault),
+            WindowMenuItem::AppInfo => Some(AndroidItem::AppInfo),
+            _ => None,
+        }
+    }
 }
 
 /// The menu item tag that names an Android entry when it is chosen; 0 for macOS's own entries
@@ -91,13 +112,7 @@ pub fn from_tag(tag: isize) -> Option<WindowMenuItem> {
 /// What the window manager does for an entry; `None` for Screenshot, which the window host
 /// takes, and for macOS's own entries.
 pub fn action(item: WindowMenuItem) -> Option<MenuAction> {
-    match item {
-        WindowMenuItem::NewWindow => Some(MenuAction::NewWindow),
-        WindowMenuItem::AspectRatio => Some(MenuAction::AspectRatio),
-        WindowMenuItem::OpenByDefault => Some(MenuAction::OpenByDefault),
-        WindowMenuItem::AppInfo => Some(MenuAction::AppInfo),
-        _ => None,
-    }
+    item.android().and_then(AndroidItem::action)
 }
 
 /// The AppKit action macOS's own entries send down the responder chain; `None` for the

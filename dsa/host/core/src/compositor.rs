@@ -39,6 +39,7 @@ pub mod surface_calls;
 pub mod task_windows;
 pub mod visible_change;
 pub mod window_hosts;
+pub mod window_menu;
 pub mod window_mode;
 pub mod window_reconnect;
 pub mod window_sizing;

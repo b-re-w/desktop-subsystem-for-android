@@ -23,7 +23,7 @@ use dsa_host_core::notifications::Notification;
 use dsa_host_core::tasks::{AppInfo, PinShortcutRequest, TaskRequest};
 use dsa_host_unix::socket::UnixLocalConnector;
 
-use super::hosts::{self, Links, BUILD};
+use super::hosts::{self, connect, Links, BUILD};
 use super::launch::{installed_window_host, AppLauncher};
 use super::log;
 use super::manager::{Manager, ManagerEvent, Platform, Route};
@@ -40,8 +40,6 @@ use dsa_host_unix::renderer_launch::{CurrentFds, UnixLauncher};
 
 /// How long to wait for the service before trying again.
 const RETRY: Duration = Duration::from_secs(2);
-/// How long one call to the service may take.
-const TIMEOUT: Duration = Duration::from_secs(5);
 /// How often the manager looks at its timers.
 const TICK: Duration = Duration::from_millis(500);
 /// How often the presenter looks for window hosts that are late.
@@ -112,13 +110,6 @@ pub fn bundled_vulkan_driver() -> Option<PathBuf> {
     let contents = exe.parent()?.parent()?;
     let driver = contents.join("Resources/vulkan/icd.d/MoltenVK_icd.json");
     driver.is_file().then_some(driver)
-}
-
-fn connect(host_api: &Path) -> Result<HostApiClient, String> {
-    let mut connector = UnixLocalConnector {
-        path: host_api.to_path_buf(),
-    };
-    HostApiClient::connect(&mut connector, BUILD, TIMEOUT).map_err(|e| e.to_string())
 }
 
 /// What the manager does outside itself, on a Mac.

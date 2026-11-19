@@ -17,7 +17,8 @@ use std::time::{Duration, Instant};
 use dsa_host_core::compositor::window_hosts::{
     accept_window_host, answer_attached, report_from_wire, HostId,
 };
-use dsa_host_unix::socket::{current_uid, UnixLocalListener};
+use dsa_host_core::host_api::HostApiClient;
+use dsa_host_unix::socket::{current_uid, UnixLocalConnector, UnixLocalListener};
 use dsa_protocol::window_host::types::envelope::Body;
 use dsa_protocol::window_host::HandshakeError;
 use dsa_protocol::window_host::{decode, encode_body};
@@ -30,6 +31,17 @@ use super::present::Presenter;
 
 /// The build the window manager names itself by to the window hosts.
 pub const BUILD: &str = concat!("dsa-wm ", env!("CARGO_PKG_VERSION"));
+
+/// How long one call to the service may take.
+const CALL_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// A client of the service's local API at `host_api`, named by [`BUILD`].
+pub fn connect(host_api: &Path) -> Result<HostApiClient, String> {
+    let mut connector = UnixLocalConnector {
+        path: host_api.to_path_buf(),
+    };
+    HostApiClient::connect(&mut connector, BUILD, CALL_TIMEOUT).map_err(|e| e.to_string())
+}
 
 /// How long a window host may take over its handshake.
 const HANDSHAKE: Duration = Duration::from_secs(5);
