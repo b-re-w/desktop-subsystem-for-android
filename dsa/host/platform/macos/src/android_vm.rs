@@ -203,6 +203,14 @@ impl GuestLauncher for MacVmLauncher {
         let mut plan = (self.source)()?;
         if self.fixed_memory {
             plan.vm.memory_max_mb = plan.vm.memory_start_mb;
+            // A VM that does not grow has nothing more for apps to see than its own size.
+            let key = format!("{} ", dsa_host_core::host_memory::BOOTCONFIG_KEY);
+            plan.bootconfig = plan
+                .bootconfig
+                .lines()
+                .filter(|line| !line.starts_with(&key))
+                .map(|line| format!("{line}\n"))
+                .collect();
         }
         self.boots += 1;
         let initrd = self.write_initrd(

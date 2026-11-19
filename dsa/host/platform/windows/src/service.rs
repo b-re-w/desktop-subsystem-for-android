@@ -513,7 +513,7 @@ pub fn create_user_android(
             user_network(sid),
         )
     })
-    .with_memory_max(memory_max)
+    .with_memory_max(memory_max.clone())
     .with_direct_mapped(direct_mapped.cloned())
     .with_boot_dir(config.machine_root().tmp())
     .with_bootconfig({
@@ -523,6 +523,7 @@ pub fn create_user_android(
         // boot attaches.
         let store = settings_store(config);
         let user = sid.to_string();
+        let grows_to = memory_max.clone();
         Box::new(move |vm: &AndroidVmConfig| {
             use dsa_host_core::addon_disk::{self, AddonDisk, Format};
             let image = vm.initrd.as_deref().and_then(std::path::Path::parent);
@@ -535,10 +536,17 @@ pub fn create_user_android(
                 + &dsa_host_core::arm_translation::bootconfig_for(&*store, &user, image, &attached)
                 + &dsa_host_core::gapps::bootconfig_for(&*store, &user, &attached)
                 + &dsa_host_core::widevine::bootconfig_for(&*store, &user, &attached)
-                // The PC's physical memory, read at each start, which Google Play sees as the
-                // device's memory.
+                // The memory the VM may grow to (its start size when it does not grow), which
+                // apps see as the device's memory, and the PC's physical memory, which Google
+                // Play sees; read at each start.
                 + &dsa_host_core::host_memory::bootconfig(
                     crate::power::read_memory().map(|(total_kb, _)| total_kb),
+                    Some(
+                        grows_to
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner())
+                            .unwrap_or(u64::from(vm.memory_mb)),
+                    ),
                 )
         })
     })

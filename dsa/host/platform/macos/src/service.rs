@@ -309,9 +309,9 @@ impl Planner {
                 )
                 + &dsa_host_core::gapps::bootconfig_for(&*self.settings, &self.name, &attached)
                 + &dsa_host_core::widevine::bootconfig_for(&*self.settings, &self.name, &attached)
-                // The Mac's physical memory, read at each start, which Google Play sees as the
-                // device's memory.
-                + &dsa_host_core::host_memory::bootconfig(total_memory_kb()),
+                // The memory the VM may grow to, which apps see as the device's memory, and the
+                // Mac's physical memory, which Google Play sees; read at each start.
+                + &dsa_host_core::host_memory::bootconfig(total_memory_kb(), Some(max)),
         })
     }
 }

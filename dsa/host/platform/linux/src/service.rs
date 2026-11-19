@@ -376,7 +376,11 @@ pub fn create_user_android(
     };
     let store = settings_store(config);
     let trace_on = Arc::new(AtomicBool::new(false));
+    // The most this start's VM may grow to, in MiB, which the boot tells the guest so that apps
+    // see it as the device's memory. Set by each start's plan, read by its bootconfig.
+    let apps_memory_mb: Arc<Mutex<Option<u64>>> = Arc::default();
     let plan = {
+        let apps_memory = Arc::clone(&apps_memory_mb);
         let (config, updates, account, store) = (
             config.clone(),
             updates.cloned(),
@@ -445,6 +449,10 @@ pub fn create_user_android(
                 memory_max_mb.map_or("its start".to_string(), |mb| format!("{mb} MiB"))
             );
             traced.store(guest_traces_input(&image.kernel_cmdline), Ordering::Relaxed);
+            let grows_to = memory_max_mb
+                .filter(|_| config.grow_memory)
+                .unwrap_or(memory_mb);
+            *apps_memory.lock().unwrap_or_else(|e| e.into_inner()) = Some(u64::from(grows_to));
             Ok(BootPlan {
                 files: image,
                 image_version: version,
@@ -485,6 +493,7 @@ pub fn create_user_android(
         // the launcher has readied by now.
         let (store, user) = (Arc::clone(&store), user.to_string());
         let addons = files.addon_disk.clone();
+        let apps_memory = Arc::clone(&apps_memory_mb);
         Box::new(move |image: &ImageFiles| {
             use dsa_host_core::addon_disk::{self, AddonDisk, Format};
             let dir = image.initrd.as_deref().and_then(Path::parent);
@@ -493,9 +502,12 @@ pub fn create_user_android(
                 + &dsa_host_core::arm_translation::bootconfig_for(&*store, &user, dir, &attached)
                 + &dsa_host_core::gapps::bootconfig_for(&*store, &user, &attached)
                 + &dsa_host_core::widevine::bootconfig_for(&*store, &user, &attached)
-                // The computer's physical memory, read at each start, which Google Play sees
-                // as the device's memory.
-                + &dsa_host_core::host_memory::bootconfig(host_total_kb())
+                // The memory the VM may grow to, which apps see as the device's memory, and the
+                // computer's physical memory, which Google Play sees; read at each start.
+                + &dsa_host_core::host_memory::bootconfig(
+                    host_total_kb(),
+                    *apps_memory.lock().unwrap_or_else(|e| e.into_inner()),
+                )
         })
     })
     .with_boot_properties({
