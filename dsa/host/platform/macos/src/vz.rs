@@ -38,7 +38,7 @@ use objc2_virtualization::{
     VZVirtioSocketConnection, VZVirtioSocketDevice, VZVirtioSocketDeviceConfiguration,
     VZVirtioSocketListener, VZVirtioSocketListenerDelegate, VZVirtioTraditionalMemoryBalloonDevice,
     VZVirtioTraditionalMemoryBalloonDeviceConfiguration, VZVirtualMachine,
-    VZVirtualMachineConfiguration, VZVirtualMachineState,
+    VZVirtualMachineConfiguration, VZVirtualMachineDelegate, VZVirtualMachineState,
 };
 
 use crate::vm_config::MacVmConfig;
@@ -172,10 +172,64 @@ impl ListenerDelegate {
     }
 }
 
+/// What the VM's delegate holds: why the VM stopped, once the framework has said.
+pub struct VmDelegateIvars {
+    stopped: Arc<Mutex<Option<String>>>,
+}
+
+define_class!(
+    // SAFETY: NSObject has no subclassing requirements, and the class has no Drop.
+    #[unsafe(super(NSObject))]
+    #[name = "DSAVirtualMachineDelegate"]
+    #[ivars = VmDelegateIvars]
+    struct VmDelegate;
+
+    unsafe impl NSObjectProtocol for VmDelegate {}
+
+    unsafe impl VZVirtualMachineDelegate for VmDelegate {
+        #[unsafe(method(guestDidStopVirtualMachine:))]
+        fn guest_did_stop(&self, _vm: &VZVirtualMachine) {
+            self.record("Android turned its VM off".into());
+        }
+
+        #[unsafe(method(virtualMachine:didStopWithError:))]
+        fn did_stop_with_error(&self, _vm: &VZVirtualMachine, error: &NSError) {
+            self.record(format!(
+                "the Virtualization framework stopped the VM: {} (domain {}, code {})",
+                ns_error(error),
+                error.domain(),
+                error.code()
+            ));
+        }
+    }
+);
+
+impl VmDelegate {
+    fn new(stopped: Arc<Mutex<Option<String>>>) -> Retained<Self> {
+        let this = Self::alloc().set_ivars(VmDelegateIvars { stopped });
+        // SAFETY: NSObject's init on a freshly allocated object.
+        unsafe { msg_send![super(this), init] }
+    }
+
+    fn record(&self, why: String) {
+        // Said here as well, the moment it happens: the session asks for it only every so often.
+        eprintln!("vm: {why}");
+        *self
+            .ivars()
+            .stopped
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some(why);
+    }
+}
+
 /// A running (or stopped) VM and the objects it keeps.
 pub struct VirtualMachine {
     queue: DispatchRetained<DispatchQueue>,
     vm: Retained<VZVirtualMachine>,
+    // The framework holds the delegate weakly.
+    _delegate: Retained<VmDelegate>,
+    /// Why the VM stopped by itself, as its delegate heard it.
+    stopped: Arc<Mutex<Option<String>>>,
     // The listeners and their delegates: the framework holds the delegate weakly.
     _listeners: Vec<(Retained<VZVirtioSocketListener>, Retained<ListenerDelegate>)>,
 }
@@ -303,19 +357,24 @@ impl VirtualMachine {
             .iter()
             .map(|&port| (port, channels.sender(port)))
             .collect();
+        let stopped: Arc<Mutex<Option<String>>> = Arc::default();
+        let delegate = VmDelegate::new(Arc::clone(&stopped));
         let mut made = None;
         {
             let made = &mut made;
             let queue_ref = OnQueue(&*queue);
+            let delegate_ref = OnQueue(&*delegate);
             queue.exec_sync(move || {
                 let configuration = configuration;
                 let queue_ref = queue_ref;
+                let delegate_ref = delegate_ref;
                 let result = unsafe {
                     let vm = VZVirtualMachine::initWithConfiguration_queue(
                         VZVirtualMachine::alloc(),
                         &configuration.0,
                         queue_ref.0,
                     );
+                    vm.setDelegate(Some(ProtocolObject::from_ref(delegate_ref.0)));
                     let device = vm.socketDevices().firstObject();
                     match device {
                         None => Err("the VM has no socket device".to_string()),
@@ -343,6 +402,8 @@ impl VirtualMachine {
         Ok(VirtualMachine {
             queue,
             vm,
+            _delegate: delegate,
+            stopped,
             _listeners: listeners,
         })
     }
@@ -417,16 +478,26 @@ impl VirtualMachine {
         self.on_queue(|vm| unsafe { vm.state() })
     }
 
-    /// Whether the VM has stopped, by itself or with an error.
+    /// Whether the VM has stopped, by itself or with an error, and why when the framework
+    /// said.
     pub fn ended(&self) -> Option<String> {
         let state = self.state();
-        if state == VZVirtualMachineState::Stopped {
-            Some("the VM has stopped".into())
+        let what = if state == VZVirtualMachineState::Stopped {
+            "the VM has stopped"
         } else if state == VZVirtualMachineState::Error {
-            Some("the VM stopped with an error".into())
+            "the VM stopped with an error"
         } else {
-            None
-        }
+            return None;
+        };
+        let why = self
+            .stopped
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        Some(match why {
+            Some(why) => format!("{what}: {why}"),
+            None => what.to_string(),
+        })
     }
 
     /// Pauses every processor of the VM, keeping its memory.
