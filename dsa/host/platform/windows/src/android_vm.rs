@@ -27,6 +27,7 @@ use crate::guid::Guid;
 use crate::hcs::{grant_vm_access, ComputeSystem};
 use crate::vm::{AndroidVmConfig, GuestArch};
 use crate::vm_listener::VmIdSlot;
+use dsa_host_core::start_failure::FailureSide;
 
 /// How long a single HCS call (create, start, terminate) may take.
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
@@ -862,6 +863,20 @@ impl GuestLauncher for AndroidVmLauncher {
         system
             .wait_exited(Duration::ZERO)
             .then(|| "the Android VM exited during boot".to_string())
+    }
+
+    /// A start that returned an error never ran the guest: HCS or HCN refused the VM, or its
+    /// files could not be prepared. A VM that ended during boot failed on the host when its
+    /// kernel printed nothing on the console, as when the VM worker process dies at start.
+    fn failure_side(&mut self) -> FailureSide {
+        if self.system.is_none() {
+            return FailureSide::Host;
+        }
+        FailureSide::from_guest_output(
+            self.console
+                .as_ref()
+                .is_none_or(crate::console_pipe::ConsoleCapture::guest_printed),
+        )
     }
 
     fn diagnostics(&mut self) -> Option<String> {
