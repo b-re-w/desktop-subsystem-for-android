@@ -29,6 +29,7 @@ use dsa_host_core::guest_display::{
 };
 use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiService, PerUser, ServiceFacts, UserAndroid};
+use dsa_host_core::host_config::{service_settings_store, updates_config, HostConfigFile};
 use dsa_host_core::host_facts::HostFacts;
 use dsa_host_core::image_files::ImageFiles;
 use dsa_host_core::memory::GrowthCeiling;
@@ -36,11 +37,11 @@ use dsa_host_core::memory::{log_memory, HostMemory};
 use dsa_host_core::power::PowerHub;
 use dsa_host_core::root_approval::RootApproval;
 use dsa_host_core::session::Session;
-use dsa_host_core::settings::{keep_first_channel_logged, service_settings, SettingsStore};
+use dsa_host_core::settings::SettingsStore;
 use dsa_host_core::update::current::current_image;
 use dsa_host_core::update::service::{
     follow_waiting_image, open_updates_or_disable, run_update_checks, StoreVersions, UpdateCheck,
-    Updates, UpdatesConfig, UpdatingAndroid, WAITING_IMAGE_CHECK,
+    Updates, UpdatingAndroid, WAITING_IMAGE_CHECK,
 };
 use dsa_host_core::update::store::ImageStore;
 use dsa_host_core::window_manager::{WindowManagerHost, WindowManagerKeeper};
@@ -607,26 +608,16 @@ pub fn serve(
     }
     // A computer whose settings record no release channel yet starts on the one this version
     // was published on, and keeps it through upgrades.
-    let files = service_settings(
+    let settings = service_settings_store(
         config.settings_dir(&user),
-        Some(dsa_host_core::update::program::ReleaseChannel::of_version(
-            crate::VERSION,
-        )),
+        config.installer_channel(crate::VERSION),
         None,
+        build,
     );
-    keep_first_channel_logged(&files, build);
-    let settings: Arc<dyn SettingsStore> = Arc::new(files);
     // A store that cannot be opened turns image updates off; Android still starts from the
     // image it has, and the reason is shown with the Android version.
-    let (updates, updates_disabled) = match open_updates_or_disable(
-        UpdatesConfig {
-            images_dir: config.images_dir.as_deref(),
-            first_image: config.first_image.as_ref(),
-            bundled_image: None,
-            boot_timeout_secs: config.update.as_ref().map(|u| u.boot_timeout_secs),
-        },
-        build,
-    ) {
+    let (updates, updates_disabled) = match open_updates_or_disable(updates_config(&config), build)
+    {
         Ok(updates) => (updates, None),
         Err(disabled) => (None, Some(disabled)),
     };

@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use dsa_host_core::host_config::HostConfigFile;
 use dsa_host_core::memory::start_mb;
 use dsa_host_windows::host_config::{
     expand_locations, page_reporting_order_for_build, profile_disk, HostConfig,
@@ -747,9 +748,9 @@ fn fr15_a_release_list_the_user_chose_is_kept_and_reported() {
 #[cfg(windows)]
 #[test]
 fn fr15_the_service_boots_the_newer_image_an_upgrade_bundled() {
+    use dsa_host_core::host_config::updates_config;
     use dsa_host_core::update::service::open_updates;
     use dsa_host_windows::host_config::InstalledPackage;
-    use dsa_host_windows::service::updates_config;
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("fr15-bundled-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
