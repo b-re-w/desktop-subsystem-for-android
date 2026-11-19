@@ -7,7 +7,7 @@
 //! one argument, never shell text, and it starts with `http`, so `open` cannot take it for
 //! one of its options.
 
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -37,14 +37,7 @@ pub trait LinkOpener: Send {
 
 /// The command that opens `url` in the user's browser.
 pub fn open_command(url: &str) -> Result<Command, String> {
-    let url = dsa_host_core::links::web_url(url)?;
-    let mut command = Command::new(OPEN);
-    command
-        .arg(url)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    Ok(command)
+    dsa_host_core::links::open_command(OPEN, url)
 }
 
 /// Opens links with `/usr/bin/open`.

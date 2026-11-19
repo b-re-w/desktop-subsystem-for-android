@@ -5,15 +5,17 @@
 //! None of these parts names a window, so all run against the in-memory transport in tests.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{Receiver, RecvTimeoutError};
+use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue, PACE_TICK};
+use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue};
+use dsa_host_core::compositor::task_watch::{follow_tasks, next_batch, send_request, TaskFeed};
 use dsa_host_core::compositor::window_tasks::WindowTasks;
-use dsa_host_core::host_api::{HostApiClient, InputStream};
+use dsa_host_core::host_api::HostApiClient;
 use dsa_host_core::input::InputEvent;
+use dsa_host_core::input_relay::InputRelay;
 use dsa_host_core::tasks::TaskRequest;
 use dsa_transport::Connector;
 
@@ -48,57 +50,24 @@ pub fn watch(
     stop: Arc<AtomicBool>,
     logger: Option<Arc<CompositorLogger>>,
 ) {
-    let mut watching = false;
-    let mut last_error = String::new();
-    while !stop.load(Ordering::Relaxed) {
-        let stream = HostApiClient::connect(&mut *connector, BUILD, ANSWER)
-            .and_then(|client| client.watch_tasks());
-        let mut stream = match stream {
-            Ok(stream) => stream,
-            Err(error) => {
-                let error = error.to_string();
-                if error != last_error {
-                    note(
-                        logger.as_deref(),
-                        &format!("cannot watch Android's tasks: {error}"),
-                    );
-                    last_error = error;
-                }
-                if watching {
-                    watching = false;
-                    if !deliver(ManagerEvent::Lost) {
-                        return;
-                    }
-                }
-                thread::sleep(RETRY);
-                continue;
-            }
-        };
-        last_error.clear();
-        watching = true;
-        if !deliver(ManagerEvent::Sync(stream.current().events())) {
-            return;
-        }
-        while !stop.load(Ordering::Relaxed) {
-            match stream.next(POLL) {
-                Ok(Some(event)) => {
-                    if !deliver(ManagerEvent::Task(Box::new(event))) {
-                        return;
-                    }
-                }
-                Ok(None) => {}
-                Err(error) => {
-                    // Reconnect. The windows stay until the next watch says which tasks are
-                    // left, or the service cannot be reached at all.
-                    note(
-                        logger.as_deref(),
-                        &format!("the watch of Android's tasks ended: {error}"),
-                    );
-                    break;
-                }
-            }
-        }
-    }
+    follow_tasks(
+        || {
+            HostApiClient::connect(&mut *connector, BUILD, ANSWER)
+                .and_then(|client| client.watch_tasks())
+                .map_err(|error| error.to_string())
+        },
+        |feed| {
+            deliver(match feed {
+                TaskFeed::Sync(tasks) => ManagerEvent::Sync(tasks),
+                TaskFeed::Task(event) => ManagerEvent::Task(Box::new(event)),
+                TaskFeed::Lost => ManagerEvent::Lost,
+            })
+        },
+        &stop,
+        RETRY,
+        POLL,
+        &|line| note(logger.as_deref(), line),
+    );
 }
 
 /// Sends each request to the guest until `requests` closes. A close that does not reach
@@ -120,20 +89,9 @@ pub fn serve_requests(
     let mut queue = ResizeQueue::new(drawn);
     loop {
         let before = queue.held().to_vec();
-        let mut incoming: Vec<TaskRequest> = Vec::new();
-        if before.is_empty() {
-            match requests.recv() {
-                Ok(first) => incoming.push(first),
-                Err(_) => break,
-            }
-        } else {
-            match requests.recv_timeout(PACE_TICK) {
-                Ok(next) => incoming.push(next),
-                Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => break,
-            }
-        }
-        incoming.extend(requests.try_iter());
+        let Some(incoming) = next_batch(&requests, !before.is_empty()) else {
+            break;
+        };
         let go = queue.step(incoming, Instant::now());
         for request in queue.held() {
             if let TaskRequest::Resize {
@@ -157,25 +115,10 @@ pub fn serve_requests(
         }
         for request in go {
             let started = Instant::now();
-            let mut outcome = Err(String::new());
-            // A connection the service dropped is made again, once.
-            for _ in 0..2 {
-                let connected = match client.as_mut() {
-                    Some(client) => Ok(client),
-                    None => HostApiClient::connect(&mut *connector, BUILD, ANSWER)
-                        .map(|connected| client.insert(connected)),
-                };
-                outcome = match connected {
-                    Ok(connected) => connected
-                        .request(&request)
-                        .map_err(|error| error.to_string()),
-                    Err(error) => Err(error.to_string()),
-                };
-                if outcome.is_ok() {
-                    break;
-                }
-                client = None;
-            }
+            let outcome = send_request(&mut client, &request, || {
+                HostApiClient::connect(&mut *connector, BUILD, ANSWER)
+                    .map_err(|error| error.to_string())
+            });
             if let TaskRequest::Resize {
                 task_id,
                 width,
@@ -234,45 +177,19 @@ pub fn serve_window_input(
     logger: Option<Arc<CompositorLogger>>,
 ) {
     crate::scheduling::raise_this_thread();
-    let mut stream: Option<InputStream> = None;
-    let mut retry_at: Option<Instant> = None;
-    let mut last_error = String::new();
+    let mut relay = InputRelay::new(INPUT_RETRY);
     while let Ok(event) = events.recv() {
         let event = tasks.input(event);
-        for _ in 0..2 {
-            if stream.is_none() {
-                if retry_at.is_some_and(|at| Instant::now() < at) {
-                    break;
-                }
-                match HostApiClient::connect(&mut *connector, BUILD, ANSWER)
-                    .and_then(|client| client.stream_input())
-                {
-                    Ok(connected) => {
-                        stream = Some(connected);
-                        retry_at = None;
-                        last_error.clear();
-                    }
-                    Err(error) => {
-                        let error = error.to_string();
-                        if error != last_error {
-                            note(
-                                logger.as_deref(),
-                                &format!("input cannot reach Android: {error}"),
-                            );
-                            last_error = error;
-                        }
-                        retry_at = Some(Instant::now() + INPUT_RETRY);
-                        break;
-                    }
-                }
-            }
-            let Some(connected) = stream.as_mut() else {
-                break;
-            };
-            match connected.send_input(&event) {
-                Ok(()) => break,
-                Err(_) => stream = None,
-            }
+        let connect = || {
+            HostApiClient::connect(&mut *connector, BUILD, ANSWER)
+                .and_then(|client| client.stream_input())
+                .map_err(|error| error.to_string())
+        };
+        if let Some(error) = relay.send(&event, Instant::now(), connect) {
+            note(
+                logger.as_deref(),
+                &format!("input cannot reach Android: {error}"),
+            );
         }
     }
 }

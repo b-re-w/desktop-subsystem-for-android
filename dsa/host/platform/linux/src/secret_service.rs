@@ -347,7 +347,8 @@ pub fn decode_request(data: &[u8]) -> Result<HelperRequest, String> {
         ("load", None) => HelperRequest::Load(purpose),
         ("remove", None) => HelperRequest::Remove(purpose),
         ("store", Some(value)) => {
-            let mut bytes = dsa_host_core::hex::decode(value).ok_or("the key in the request is not hex")?;
+            let mut bytes =
+                dsa_host_core::hex::decode(value).ok_or("the key in the request is not hex")?;
             let secret = Secret::from_slice(&bytes);
             wipe(&mut bytes);
             HelperRequest::Store(

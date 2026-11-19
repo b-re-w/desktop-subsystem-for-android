@@ -192,11 +192,7 @@ pub struct Question {
 
 /// The question about `request`.
 pub fn question(request: &PinShortcutRequest, texts: &Texts) -> Question {
-    let app = if request.app_label.trim().is_empty() {
-        request.package_name.clone()
-    } else {
-        request.app_label.trim().to_string()
-    };
+    let app = request.app_name().to_string();
     Question {
         instruction: texts.instruction(request.shortcut.label()),
         content: texts.content(&app),

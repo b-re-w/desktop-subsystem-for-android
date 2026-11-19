@@ -347,10 +347,7 @@ pub fn app_bundle(folder: &Path, package: &str) -> Option<PathBuf> {
 
 /// Writes `content` to `path` unless it already holds it.
 fn write_if_changed(path: &Path, content: &[u8]) -> io::Result<()> {
-    if fs::read(path).is_ok_and(|old| old == content) {
-        return Ok(());
-    }
-    fs::write(path, content)
+    dsa_host_core::file_write::replace_if_changed(path, content, "partial")
 }
 
 /// Puts a copy of `window_host` in the bundle at `macos`, unless it holds the same already.

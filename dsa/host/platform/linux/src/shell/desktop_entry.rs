@@ -674,12 +674,7 @@ fn write_theme_icon(theme: &Path, package: &str, png: &[u8]) -> io::Result<()> {
 /// Writes `content` to `path` unless it already holds it, through a file beside it so a
 /// desktop reading the folder never sees half an entry.
 fn write_if_changed(path: &Path, content: &[u8]) -> io::Result<()> {
-    if fs::read(path).is_ok_and(|old| old == content) {
-        return Ok(());
-    }
-    let partial = path.with_extension("partial");
-    fs::write(&partial, content)?;
-    fs::rename(&partial, path)
+    dsa_host_core::file_write::replace_if_changed(path, content, "partial")
 }
 
 #[cfg(test)]

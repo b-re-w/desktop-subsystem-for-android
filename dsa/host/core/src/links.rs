@@ -87,9 +87,33 @@ impl LinkGate {
     }
 }
 
+/// The command that opens `url` with `program` (the host's own opener, which takes the link as
+/// its only argument), with no input and no output. The link is checked first ([`web_url`]),
+/// and it starts with `http`, so no opener reads it as an option.
+pub fn open_command(program: &str, url: &str) -> Result<std::process::Command, String> {
+    use std::process::{Command, Stdio};
+    let url = web_url(url)?;
+    let mut command = Command::new(program);
+    command
+        .arg(url)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    Ok(command)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fr9_the_open_command_carries_the_checked_link_as_its_one_argument() {
+        let command = open_command("opener", " https://example.com/a ").unwrap();
+        assert_eq!(command.get_program(), "opener");
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, ["https://example.com/a"]);
+        assert!(open_command("opener", "file:///etc/passwd").is_err());
+    }
 
     #[test]
     fn fr9_only_http_and_https_links_are_accepted() {

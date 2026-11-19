@@ -155,11 +155,7 @@ fn fill(template: &str, values: &[(&str, &str)]) -> String {
 
 /// The `Notify` call that asks the user about `request`, in `language`.
 pub fn question(request: &PinShortcutRequest, language: UiLanguage) -> Notify {
-    let app = if request.app_label.trim().is_empty() {
-        request.package_name.as_str()
-    } else {
-        request.app_label.as_str()
-    };
+    let app = request.app_name();
     let name = request.shortcut.label();
     let text = question_text(language);
     let summary = fill(text.summary, &[("name", name)]);

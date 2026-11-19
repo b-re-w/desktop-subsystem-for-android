@@ -57,11 +57,7 @@ pub fn request_of(identifier: &str) -> Option<u32> {
 
 /// The question's title and body, in `lang`.
 pub fn texts(request: &PinShortcutRequest, lang: UiLanguage) -> (String, String) {
-    let app = if request.app_label.trim().is_empty() {
-        request.package_name.as_str()
-    } else {
-        request.app_label.as_str()
-    };
+    let app = request.app_name();
     let name = request.shortcut.label();
     match lang {
         UiLanguage::English => (

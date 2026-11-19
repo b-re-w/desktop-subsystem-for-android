@@ -20,14 +20,16 @@ use std::time::{Duration, Instant};
 
 use dsa_host_core::compositor::frame_stall::{restart_in_background, FrameStall, Stall};
 use dsa_host_core::compositor::gpu_reset::{GpuResetWindows, Report};
-use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue, PACE_TICK};
+use dsa_host_core::compositor::resize_queue::{DrawnFrames, ResizeQueue};
 use dsa_host_core::compositor::shown_windows::ShownWindows;
+use dsa_host_core::compositor::task_watch::{follow_tasks, next_batch, send_request, TaskFeed};
 use dsa_host_core::compositor::task_windows::{TaskWindows, WindowChange};
 use dsa_host_core::compositor::window_hosts::{FromHost, MenuWork};
 use dsa_host_core::drag::{DragOffer, DragOut};
 use dsa_host_core::files::{FileAction, FileTransfer};
 use dsa_host_core::host_api::HostApiClient;
 use dsa_host_core::input::InputEvent;
+use dsa_host_core::input_relay::InputRelay;
 use dsa_host_core::native_abi::in_user_language;
 use dsa_host_core::notifications::{NotificationAction, NotificationEvent};
 use dsa_host_core::tasks::{AppInfo, PinShortcutRequest, TaskEvent, TaskRequest};
@@ -58,6 +60,9 @@ pub const BUILD: &str = env!("CARGO_PKG_VERSION");
 
 /// How long to wait for the service before trying again.
 const RETRY: Duration = Duration::from_secs(2);
+
+/// How long input waits after it could not reach the service before it tries again.
+const INPUT_RETRY: Duration = Duration::from_millis(500);
 
 /// How long one call to the service may take.
 const TIMEOUT: Duration = Duration::from_secs(5);
@@ -263,61 +268,31 @@ impl ToMain {
 
 fn watch_tasks(to_main: ToMain) {
     std::thread::spawn(move || {
-        let mut warned = false;
-        loop {
-            let watch = connect()
-                .and_then(|client| client.watch_tasks().map_err(|error| error.to_string()));
-            let mut stream = match watch {
-                Ok(stream) => stream,
-                Err(why) => {
-                    if !warned {
-                        log(&format!("waiting for the DSA service: {why}"));
-                        warned = true;
-                    }
-                    std::thread::sleep(RETRY);
-                    continue;
-                }
-            };
-            warned = false;
-            if !to_main.send(Message::Tasks(stream.current().events())) {
-                return;
-            }
-            loop {
-                match stream.next(Duration::from_secs(1)) {
-                    Ok(Some(event)) => {
-                        if !to_main.send(Message::Task(event)) {
-                            return;
-                        }
-                    }
-                    Ok(None) => {}
-                    Err(why) => {
-                        log(&format!("the task watch ended: {why}"));
-                        break;
-                    }
-                }
-            }
-            if !to_main.send(Message::TasksLost) {
-                return;
-            }
-            std::thread::sleep(RETRY);
-        }
+        follow_tasks(
+            || connect().and_then(|client| client.watch_tasks().map_err(|error| error.to_string())),
+            |feed| {
+                to_main.send(match feed {
+                    TaskFeed::Sync(tasks) => Message::Tasks(tasks),
+                    TaskFeed::Task(event) => Message::Task(event),
+                    TaskFeed::Lost => Message::TasksLost,
+                })
+            },
+            &AtomicBool::new(false),
+            RETRY,
+            Duration::from_secs(1),
+            &log,
+        );
     });
 }
 
 fn send_input(events: Receiver<InputEvent>) {
     std::thread::spawn(move || {
-        let mut stream = None;
+        let mut relay = InputRelay::new(INPUT_RETRY);
         for event in events {
-            if stream.is_none() {
-                stream = connect()
-                    .and_then(|client| client.stream_input().map_err(|error| error.to_string()))
-                    .map_err(|why| log(&format!("input cannot reach Android: {why}")))
-                    .ok();
-            }
-            if let Some(open) = stream.as_mut() {
-                if open.send_input(&event).is_err() {
-                    stream = None;
-                }
+            let open =
+                || connect().and_then(|client| client.stream_input().map_err(|e| e.to_string()));
+            if let Some(why) = relay.send(&event, Instant::now(), open) {
+                log(&format!("input cannot reach Android: {why}"));
             }
         }
     });
@@ -330,20 +305,9 @@ fn serve_requests(requests: Receiver<Request>, drawn: DrawnFrames) {
         // latest of the sizes in between.
         let mut queue = ResizeQueue::new(drawn);
         loop {
-            let mut incoming: Vec<Request> = Vec::new();
-            if queue.waiting() {
-                match requests.recv_timeout(PACE_TICK) {
-                    Ok(next) => incoming.push(next),
-                    Err(mpsc::RecvTimeoutError::Timeout) => {}
-                    Err(mpsc::RecvTimeoutError::Disconnected) => break,
-                }
-            } else {
-                match requests.recv() {
-                    Ok(next) => incoming.push(next),
-                    Err(_) => break,
-                }
-            }
-            incoming.extend(requests.try_iter());
+            let Some(incoming) = next_batch(&requests, queue.waiting()) else {
+                break;
+            };
             let mut tasks = Vec::new();
             for request in incoming {
                 match request {
@@ -362,7 +326,12 @@ fn serve_requests(requests: Receiver<Request>, drawn: DrawnFrames) {
                 }
             }
             for request in queue.step(tasks, Instant::now()) {
-                send_to_service(&mut client, |open| open.request(&request));
+                if let Err(why) = send_request(&mut client, &request, connect) {
+                    log(&format!(
+                        "could not ask Android to {}: {why}",
+                        request.describe()
+                    ));
+                }
             }
         }
     });
