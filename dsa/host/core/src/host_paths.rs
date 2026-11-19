@@ -48,6 +48,12 @@ pub trait HostPaths: Send + Sync {
     fn user_tmp(&self, user: &str) -> Result<PathBuf, String>;
 }
 
+/// The folder a host keeps its sealed keys in: `keys`, beside its settings folder
+/// `settings_dir`.
+pub fn keys_dir_beside(settings_dir: &Path) -> PathBuf {
+    settings_dir.with_file_name("keys")
+}
+
 /// [`HostPaths`] under two folders a test chooses, with the same layout as the hosts use:
 /// the machine's places below `machine`, and each user's root at `users/<user>`.
 #[derive(Debug, Clone, PartialEq, Eq)]

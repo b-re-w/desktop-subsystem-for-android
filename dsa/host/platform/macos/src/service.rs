@@ -254,18 +254,13 @@ impl Planner {
         Ok(BootPlan {
             vm,
             properties: Some(properties),
-            bootconfig: dsa_host_core::addon_disk::bootconfig(&attached).to_string()
-                + &dsa_host_core::arm_translation::bootconfig_for(
-                    &*self.settings,
-                    &self.name,
-                    Some(dir.as_path()),
-                    &attached,
-                )
-                + &dsa_host_core::gapps::bootconfig_for(&*self.settings, &self.name, &attached)
-                + &dsa_host_core::widevine::bootconfig_for(&*self.settings, &self.name, &attached)
-                // The Mac's physical memory, read at each start, which Google Play sees as the
-                // device's memory.
-                + &dsa_host_core::host_memory::bootconfig(MacFacts.physical_memory_kb()),
+            bootconfig: dsa_host_core::bootconfig::for_boot(
+                &*self.settings,
+                &self.name,
+                Some(dir.as_path()),
+                &attached,
+                MacFacts.physical_memory_kb(),
+            ),
         })
     }
 }

@@ -539,10 +539,7 @@ impl LinuxVmLauncher {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .insert(self.guest_cid, child.id());
-        let started = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or_default();
+        let started = SystemTime::now();
         let header = boot_header(
             started,
             plan.image_version.as_deref(),

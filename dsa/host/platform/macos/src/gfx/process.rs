@@ -17,7 +17,6 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
 use dsa_host_core::compositor::GraphicsStreamKind;
-use dsa_host_core::memory::HeldMemory;
 use dsa_host_core::renderer::{
     address_from, follow_device_state, open_renderer, RendererProcessMemory, WindowManagerLink,
     TEXTURES_PER_DISPLAY,
@@ -191,18 +190,12 @@ impl FrameSink for RemoteSink {
 }
 
 fn memory() -> RendererProcessMemory {
-    let pid = std::process::id();
-    let own = crate::host_memory::process_memory_kb(pid as i32);
-    RendererProcessMemory {
-        process_id: pid,
-        held: HeldMemory {
-            working_set_kb: own.map(|(resident, _)| resident),
-            private_kb: own.map(|(_, footprint)| footprint),
-            gpu_local_kb: None,
-            gpu_non_local_kb: None,
-        },
-        counted: None,
-    }
+    let own = crate::host_memory::process_memory_kb(std::process::id() as i32);
+    RendererProcessMemory::of_this_process(
+        own.map(|(resident, _)| resident),
+        own.map(|(_, footprint)| footprint),
+        None,
+    )
 }
 
 /// Runs the renderer for the window manager `args` names. Never returns.

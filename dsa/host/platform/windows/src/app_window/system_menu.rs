@@ -17,6 +17,7 @@
 //! ([`crate::ui_language`]).
 
 use dsa_host_core::compositor::window_hosts::MenuAction;
+use dsa_host_core::compositor::window_menu::{android_items, AndroidItem};
 use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::ui_text::window_menu::dsa_menu_text;
 
@@ -37,17 +38,41 @@ pub enum SystemMenuItem {
 /// does not support several windows, since its second task would only bring the first to the
 /// front.
 pub fn items(new_window: bool) -> Vec<SystemMenuItem> {
-    let mut items = vec![SystemMenuItem::Separator, SystemMenuItem::FullScreen];
-    if new_window {
-        items.push(SystemMenuItem::NewWindow);
-    }
-    items.extend([
-        SystemMenuItem::Screenshot,
-        SystemMenuItem::AspectRatio,
-        SystemMenuItem::OpenByDefault,
-        SystemMenuItem::AppInfo,
-    ]);
+    let mut items = vec![SystemMenuItem::Separator];
+    items.extend(
+        android_items(true, new_window)
+            .into_iter()
+            .map(SystemMenuItem::from),
+    );
     items
+}
+
+impl From<AndroidItem> for SystemMenuItem {
+    fn from(item: AndroidItem) -> SystemMenuItem {
+        match item {
+            AndroidItem::FullScreen => SystemMenuItem::FullScreen,
+            AndroidItem::NewWindow => SystemMenuItem::NewWindow,
+            AndroidItem::Screenshot => SystemMenuItem::Screenshot,
+            AndroidItem::AspectRatio => SystemMenuItem::AspectRatio,
+            AndroidItem::OpenByDefault => SystemMenuItem::OpenByDefault,
+            AndroidItem::AppInfo => SystemMenuItem::AppInfo,
+        }
+    }
+}
+
+impl SystemMenuItem {
+    /// The Android item this entry is; `None` for the separator.
+    pub fn android(self) -> Option<AndroidItem> {
+        match self {
+            SystemMenuItem::Separator => None,
+            SystemMenuItem::FullScreen => Some(AndroidItem::FullScreen),
+            SystemMenuItem::NewWindow => Some(AndroidItem::NewWindow),
+            SystemMenuItem::Screenshot => Some(AndroidItem::Screenshot),
+            SystemMenuItem::AspectRatio => Some(AndroidItem::AspectRatio),
+            SystemMenuItem::OpenByDefault => Some(AndroidItem::OpenByDefault),
+            SystemMenuItem::AppInfo => Some(AndroidItem::AppInfo),
+        }
+    }
 }
 
 /// Every entry this menu may have, for removing them all before the menu is made again.
@@ -88,13 +113,7 @@ pub fn chosen(wparam: usize) -> Option<SystemMenuItem> {
 /// What the window manager does for an entry; `None` for the separator, Screenshot and Full
 /// screen, which the window host takes.
 pub fn action(item: SystemMenuItem) -> Option<MenuAction> {
-    match item {
-        SystemMenuItem::NewWindow => Some(MenuAction::NewWindow),
-        SystemMenuItem::AspectRatio => Some(MenuAction::AspectRatio),
-        SystemMenuItem::OpenByDefault => Some(MenuAction::OpenByDefault),
-        SystemMenuItem::AppInfo => Some(MenuAction::AppInfo),
-        SystemMenuItem::Separator | SystemMenuItem::Screenshot | SystemMenuItem::FullScreen => None,
-    }
+    item.android().and_then(AndroidItem::action)
 }
 
 /// The menu's words in one language. Each label marks its access key with `&`; the keys

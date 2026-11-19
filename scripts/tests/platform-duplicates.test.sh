@@ -19,6 +19,8 @@ cd "$repo_root"
 allowed="
 advertiser   builds the advertiser from that host's own OS access (mDNS), by the same one line
 build        names the renderer by that crate's own VERSION constant
+follow       hands the links watch that crate's own BUILD name, by the same one line, because the core watch is generic
+look         hands the widget look that crate's own DEFAULT_ACCENT constant, by the same one line
 "
 
 files="$(git ls-files 'dsa/host/platform/windows/src/*.rs' 'dsa/host/platform/linux/src/*.rs' \

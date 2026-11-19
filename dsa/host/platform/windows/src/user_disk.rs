@@ -132,10 +132,7 @@ pub fn bring_disk_to(disk: &Path, template: &Path, version: &str) -> Result<(), 
 
 /// Whether `path` is a VHDX file, which starts with its signature.
 fn is_vhdx(path: &Path) -> Result<bool, String> {
-    let mut signature = [0u8; 8];
-    let mut file =
-        std::fs::File::open(path).map_err(|e| format!("opening {}: {e}", path.display()))?;
-    Ok(io::Read::read_exact(&mut file, &mut signature).is_ok() && &signature == b"vhdxfile")
+    dsa_host_core::vhdx::is_vhdx(path).map_err(|e| format!("opening {}: {e}", path.display()))
 }
 
 /// The user's disks as attached VHDX files: the disk core's backend on Windows.

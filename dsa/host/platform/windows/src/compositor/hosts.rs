@@ -21,7 +21,6 @@
 //! as soon as the window host connects: an app's splash screen is drawn once, right after
 //! launch, and would otherwise be lost, leaving the window empty until the app draws.
 
-use dsa_host_core::links::app_page_arguments;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
@@ -89,11 +88,7 @@ pub fn pipe_name(session: u32) -> String {
 fn open_app_page(package: &str) -> Result<(), String> {
     let program =
         crate::start_menu::default_uninstaller().ok_or("the settings app's place is not known")?;
-    std::process::Command::new(&program)
-        .args(app_page_arguments(package))
-        .spawn()
-        .map(drop)
-        .map_err(|e| format!("could not start {}: {e}", program.display()))
+    dsa_host_core::links::open_app_page_with(&program, package)
 }
 
 /// What the other threads tell the manager.
@@ -1635,12 +1630,10 @@ impl Manager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn fr22_app_info_opens_the_apps_page_at_the_app() {
         assert_eq!(
-            app_page_arguments("com.example.clock"),
+            dsa_host_core::links::app_page_arguments("com.example.clock"),
             ["--page", "apps", "--app", "com.example.clock"].map(String::from)
         );
     }

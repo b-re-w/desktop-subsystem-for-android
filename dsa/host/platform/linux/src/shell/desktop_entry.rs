@@ -175,11 +175,7 @@ pub fn entry_with(
     icons: Option<&Path>,
 ) -> String {
     let package = &app.package_name;
-    let name = if app.label.trim().is_empty() {
-        package.as_str()
-    } else {
-        app.label.as_str()
-    };
+    let name = app.display_name();
     let shortcuts = jump_list_shortcuts(&app.shortcuts);
     let mut text = String::new();
     text.push_str("[Desktop Entry]\n");

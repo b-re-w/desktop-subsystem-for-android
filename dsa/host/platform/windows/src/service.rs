@@ -58,7 +58,6 @@ use dsa_transport::Listener;
 
 use crate::android_vm::AndroidVmLauncher;
 use crate::compositor::log::PerformanceCounterClock;
-use crate::console_log::old_copy_path;
 use crate::guest_communication_services::register_graphics_service_guids;
 use crate::guid::Guid;
 use crate::host_config::{local_app_data, HostConfig};
@@ -134,13 +133,7 @@ pub fn host_logs_of(config: &HostConfig, sid: &str) -> Vec<HostFile> {
         crate::safe_fs::as_user(sid, check).unwrap_or_else(|_| check())
     };
     if let Ok(user) = config.user_vm(sid) {
-        for (name, path) in [
-            ("host/android-console.log", user.console_log.clone()),
-            (
-                "host/android-console.1.log",
-                old_copy_path(&user.console_log),
-            ),
-        ] {
+        for (name, path) in dsa_host_core::console_log::diagnostic_files(&user.console_log) {
             if plain_in_user_root(&path) {
                 files.push(HostFile {
                     name: name.into(),
@@ -435,22 +428,20 @@ pub fn create_user_android(
         let store = settings_store(config);
         let user = sid.to_string();
         Box::new(move |vm: &AndroidVmConfig| {
-            use dsa_host_core::addon_disk::{self, AddonDisk, Format};
+            use dsa_host_core::addon_disk::{AddonDisk, Format};
             let image = vm.initrd.as_deref().and_then(std::path::Path::parent);
             let attached = vm
                 .addon_disk
                 .as_ref()
                 .map(|path| AddonDisk::new(path, Format::Vhd).attached())
                 .unwrap_or_default();
-            addon_disk::bootconfig(&attached).to_string()
-                + &dsa_host_core::arm_translation::bootconfig_for(&*store, &user, image, &attached)
-                + &dsa_host_core::gapps::bootconfig_for(&*store, &user, &attached)
-                + &dsa_host_core::widevine::bootconfig_for(&*store, &user, &attached)
-                // The PC's physical memory, read at each start, which Google Play sees as the
-                // device's memory.
-                + &dsa_host_core::host_memory::bootconfig(
-                    crate::power::read_memory().map(|(total_kb, _)| total_kb),
-                )
+            dsa_host_core::bootconfig::for_boot(
+                &*store,
+                &user,
+                image,
+                &attached,
+                crate::power::read_memory().map(|(total_kb, _)| total_kb),
+            )
         })
     })
     .with_boot_properties({
@@ -458,12 +449,7 @@ pub fn create_user_android(
         // PC is read again at each start, so a renamed PC is followed.
         let identity = Arc::clone(&boot_identity);
         Box::new(move |vm: &AndroidVmConfig| {
-            let image = vm
-                .initrd
-                .as_deref()
-                .and_then(std::path::Path::parent)
-                .and_then(ImageBuild::from_image_dir);
-            Some(identity.boot_properties(image.as_ref()))
+            Some(identity.boot_properties_of_initrd(vm.initrd.as_deref()))
         })
     });
     let launcher = if config.keep_window_manager {

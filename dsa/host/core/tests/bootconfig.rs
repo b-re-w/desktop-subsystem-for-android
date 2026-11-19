@@ -46,3 +46,18 @@ fn pr6_padding_keeps_the_trailer_aligned_for_any_length() {
         assert_eq!(read, text);
     }
 }
+
+#[test]
+fn fr32_a_boots_bootconfig_names_the_computers_memory_and_no_add_ons_when_none_are_attached() {
+    use dsa_host_core::bootconfig::for_boot;
+    use dsa_host_core::settings::MemorySettings;
+    let store = MemorySettings::default();
+    let text = for_boot(&store, "user", None, &[], Some(16 * 1024 * 1024));
+    assert!(
+        text.contains("kernel.dsa_host_memory.total_kb = \"16777216\"\n"),
+        "{text}"
+    );
+    assert!(!text.contains("androidboot.dsa.addon_disk"), "{text}");
+    let unknown = for_boot(&store, "user", None, &[], None);
+    assert!(!unknown.contains("total_kb"), "{unknown}");
+}

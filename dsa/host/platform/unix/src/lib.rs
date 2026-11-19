@@ -17,6 +17,8 @@
 //! process, whose frames can carry file descriptors, and [`renderer_launch`] starts that
 //! process.
 //!
+//! [`fetch`] downloads the image updates through `curl`.
+//!
 //! [`https_get`] is the HTTPS fetch, through `curl`, that the passkey check reads a website's
 //! Digital Asset Links with: certificate checked, no redirect followed. [`backup_folder`]
 //! keeps the user's backup folder to its owner alone.
@@ -31,6 +33,7 @@ pub mod device_socket;
 pub mod dns_resolver;
 #[cfg(unix)]
 pub mod fd_frames;
+pub mod fetch;
 pub mod https_get;
 pub mod paths;
 #[cfg(unix)]

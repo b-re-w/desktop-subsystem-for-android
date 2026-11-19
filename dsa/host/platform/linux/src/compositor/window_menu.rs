@@ -28,6 +28,7 @@
 
 use dsa_host_core::compositor::caption::scaled;
 use dsa_host_core::compositor::window_hosts::{MenuAction, MenuWork};
+use dsa_host_core::compositor::window_menu::{android_items, AndroidItem};
 use dsa_host_core::tasks::{AppSettingsPage, TaskRequest};
 use dsa_host_core::ui_language::UiLanguage;
 use dsa_host_core::ui_text::window_menu::{dsa_menu_text, DsaMenuText};
@@ -75,19 +76,43 @@ pub fn items(maximized: bool, resizable: bool, new_window: bool) -> Vec<MenuItem
     if !maximized {
         items.push(MenuItem::Maximize);
     }
-    items.extend([MenuItem::Close, MenuItem::Separator, MenuItem::FullScreen]);
-    if new_window {
-        items.push(MenuItem::NewWindow);
-    }
-    items.extend([
-        MenuItem::Screenshot,
-        MenuItem::AspectRatio,
-        MenuItem::OpenByDefault,
-        MenuItem::AppInfo,
-        MenuItem::Separator,
-        MenuItem::MoreOptions,
-    ]);
+    items.extend([MenuItem::Close, MenuItem::Separator]);
+    items.extend(
+        android_items(true, new_window)
+            .into_iter()
+            .map(MenuItem::from),
+    );
+    items.extend([MenuItem::Separator, MenuItem::MoreOptions]);
     items
+}
+
+impl From<AndroidItem> for MenuItem {
+    fn from(item: AndroidItem) -> MenuItem {
+        match item {
+            AndroidItem::FullScreen => MenuItem::FullScreen,
+            AndroidItem::NewWindow => MenuItem::NewWindow,
+            AndroidItem::Screenshot => MenuItem::Screenshot,
+            AndroidItem::AspectRatio => MenuItem::AspectRatio,
+            AndroidItem::OpenByDefault => MenuItem::OpenByDefault,
+            AndroidItem::AppInfo => MenuItem::AppInfo,
+        }
+    }
+}
+
+impl MenuItem {
+    /// The Android item this entry is; `None` for the window's own items, the separator and
+    /// More window options.
+    pub fn android(self) -> Option<AndroidItem> {
+        match self {
+            MenuItem::FullScreen => Some(AndroidItem::FullScreen),
+            MenuItem::NewWindow => Some(AndroidItem::NewWindow),
+            MenuItem::Screenshot => Some(AndroidItem::Screenshot),
+            MenuItem::AspectRatio => Some(AndroidItem::AspectRatio),
+            MenuItem::OpenByDefault => Some(AndroidItem::OpenByDefault),
+            MenuItem::AppInfo => Some(AndroidItem::AppInfo),
+            _ => None,
+        }
+    }
 }
 
 /// Moving or sizing a window, from the window menu.
@@ -247,13 +272,7 @@ pub fn desktop_menu_point(place: MenuPlace) -> (i32, i32) {
 /// What the window rules do for an entry; `None` for the window's own items, the separator
 /// and Screenshot, which the window carries out itself.
 pub fn action(item: MenuItem) -> Option<MenuAction> {
-    match item {
-        MenuItem::NewWindow => Some(MenuAction::NewWindow),
-        MenuItem::AspectRatio => Some(MenuAction::AspectRatio),
-        MenuItem::OpenByDefault => Some(MenuAction::OpenByDefault),
-        MenuItem::AppInfo => Some(MenuAction::AppInfo),
-        _ => None,
-    }
+    item.android().and_then(AndroidItem::action)
 }
 
 /// What the window manager does for `action`, chosen in a window of the app `package`; `None`
@@ -434,13 +453,13 @@ pub fn label(text: &MenuText, item: MenuItem) -> Option<&'static str> {
         MenuItem::Move => text.move_window,
         MenuItem::Size => text.size,
         MenuItem::Close => text.close,
-        MenuItem::FullScreen => text.dsa.full_screen,
-        MenuItem::NewWindow => text.dsa.new_window,
-        MenuItem::Screenshot => text.dsa.screenshot,
-        MenuItem::AspectRatio => text.dsa.aspect_ratio,
-        MenuItem::OpenByDefault => text.dsa.open_by_default,
-        MenuItem::AppInfo => text.dsa.app_info,
         MenuItem::MoreOptions => text.dsa.more_options,
+        MenuItem::FullScreen
+        | MenuItem::NewWindow
+        | MenuItem::Screenshot
+        | MenuItem::AspectRatio
+        | MenuItem::OpenByDefault
+        | MenuItem::AppInfo => return item.android().map(|android| android.label(&text.dsa)),
     })
 }
 
