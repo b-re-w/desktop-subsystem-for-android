@@ -223,33 +223,54 @@ installer_identity=()
 if [[ -n "${DSA_INSTALLER_IDENTITY:-}" ]]; then
     installer_identity=(--sign "$DSA_INSTALLER_IDENTITY")
 fi
-# The installer always puts this DSA.app in /Applications, also over a higher version (a
-# development build over a release, or an older Android preset), and never into a copy of
-# DSA.app found elsewhere on the disk.
-pkg_root="$out/pkgroot"
-rm -rf "$pkg_root"
-mkdir -p "$pkg_root"
-cp -R "$app" "$pkg_root/"
-component_plist="$out/component.plist"
-pkgbuild --analyze --root "$pkg_root" "$component_plist"
-plutil -replace 0.BundleIsVersionChecked -bool NO "$component_plist"
-plutil -replace 0.BundleIsRelocatable -bool NO "$component_plist"
-plutil -replace 0.BundleOverwriteAction -string upgrade "$component_plist"
-pkgbuild --root "$pkg_root" --component-plist "$component_plist" \
+# The component package (DSA.app and its postinstall) goes inside a product archive that
+# carries the installer's design: the artwork, the welcome and conclusion pages in every
+# language the Windows installer speaks, and the licence. Only the product archive is signed.
+# The component always replaces /Applications/DSA.app, also over a higher version (a
+# development build over a release, or an older Android preset), and never goes into a copy
+# of DSA.app found elsewhere on the disk.
+work="$out/pkg"
+rm -rf "$work"
+mkdir -p "$work/root"
+cp -R "$app" "$work/root/"
+pkgbuild --analyze --root "$work/root" "$work/component.plist"
+plutil -replace 0.BundleIsVersionChecked -bool NO "$work/component.plist"
+plutil -replace 0.BundleIsRelocatable -bool NO "$work/component.plist"
+plutil -replace 0.BundleOverwriteAction -string upgrade "$work/component.plist"
+pkgbuild --root "$work/root" --component-plist "$work/component.plist" \
     --install-location /Applications \
     --scripts "$here/scripts" \
-    --identifier org.thisisthepy.dsa --version "$version" \
+    --identifier org.thisisthepy.dsa --version "$version" "$work/DSA-component.pkg"
+cp -R "$here/installer/resources" "$work/resources"
+cp "$root/LICENSE" "$work/resources/LICENSE.txt"
+sed "s/@VERSION@/$version/" "$here/installer/Distribution.xml" > "$work/Distribution.xml"
+productbuild --distribution "$work/Distribution.xml" --resources "$work/resources" \
+    --package-path "$work" \
     ${installer_identity[@]+"${installer_identity[@]}"} "$package"
-rm -rf "$pkg_root" "$component_plist"
+rm -rf "$work"
 
 image="$out/DSA-$version.dmg"
 staging="$out/dmg"
-rm -rf "$staging" "$image"
-mkdir -p "$staging"
+writable="$out/DSA-$version-rw.dmg"
+rm -rf "$staging" "$image" "$writable"
+mkdir -p "$staging/.background"
 cp -R "$app" "$staging/"
 ln -s /Applications "$staging/Applications"
-hdiutil create -volname "DSA $version" -srcfolder "$staging" -fs HFS+ -format UDZO "$image"
+# The window's design: one TIFF holding the 1x and 2x background, and a .DS_Store that
+# make-dmg-store.swift writes on the mounted read-write image (no Finder involved), because
+# the background's alias names the volume's creation date and the file's catalog ID. A
+# placeholder of the store's size keeps room for it on the tightly sized image.
+tiffutil -cathidpicheck "$here/installer/dmg/dmg-background.png" \
+    "$here/installer/dmg/dmg-background@2x.png" -out "$staging/.background/background.tiff"
+head -c 8196 /dev/zero > "$staging/.DS_Store"
+hdiutil create -volname "DSA $version" -srcfolder "$staging" -fs HFS+ -format UDRW "$writable"
 rm -rf "$staging"
+mount="$(hdiutil attach -nobrowse -noautoopen "$writable" | awk -F '\t' '/^\/dev\/.*Apple_HFS/ { print $NF }')"
+[[ -d "$mount" ]] || { echo "could not mount $writable" >&2; exit 1; }
+swift "$here/installer/make-dmg-store.swift" "$mount" || { hdiutil detach "$mount"; exit 1; }
+hdiutil detach "$mount"
+hdiutil convert "$writable" -format UDZO -o "$image"
+rm -f "$writable"
 
 echo "Built $app"
 echo "Built $package"
