@@ -223,10 +223,24 @@ installer_identity=()
 if [[ -n "${DSA_INSTALLER_IDENTITY:-}" ]]; then
     installer_identity=(--sign "$DSA_INSTALLER_IDENTITY")
 fi
-pkgbuild --component "$app" --install-location /Applications \
+# The installer always puts this DSA.app in /Applications, also over a higher version (a
+# development build over a release, or an older Android preset), and never into a copy of
+# DSA.app found elsewhere on the disk.
+pkg_root="$out/pkgroot"
+rm -rf "$pkg_root"
+mkdir -p "$pkg_root"
+cp -R "$app" "$pkg_root/"
+component_plist="$out/component.plist"
+pkgbuild --analyze --root "$pkg_root" "$component_plist"
+plutil -replace 0.BundleIsVersionChecked -bool NO "$component_plist"
+plutil -replace 0.BundleIsRelocatable -bool NO "$component_plist"
+plutil -replace 0.BundleOverwriteAction -string upgrade "$component_plist"
+pkgbuild --root "$pkg_root" --component-plist "$component_plist" \
+    --install-location /Applications \
     --scripts "$here/scripts" \
     --identifier org.thisisthepy.dsa --version "$version" \
     ${installer_identity[@]+"${installer_identity[@]}"} "$package"
+rm -rf "$pkg_root" "$component_plist"
 
 image="$out/DSA-$version.dmg"
 staging="$out/dmg"
