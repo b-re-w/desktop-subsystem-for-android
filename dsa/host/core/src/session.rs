@@ -213,8 +213,8 @@ pub enum StopReason {
         waited: Duration,
         diagnostics: Option<String>,
     },
-    /// The guest ended by itself before the agent connected. `why` is the launcher's account
-    /// of it and `diagnostics` what it could tell about the boot.
+    /// The guest ended by itself, during boot or later. `why` is the launcher's account of it
+    /// and `diagnostics` what it could tell about the boot.
     GuestExited {
         why: String,
         diagnostics: Option<String>,
@@ -375,7 +375,9 @@ pub trait GuestLauncher: Send + 'static {
 
     /// Whether the guest has ended by itself since it was started, as a sentence saying so.
     /// The session asks while it waits for the agent, so a guest that dies during boot ends
-    /// the start at once instead of after the whole connect timeout. It must not block.
+    /// the start at once instead of after the whole connect timeout, and about once a second
+    /// while the guest runs, so a guest that dies later is reported stopped even when its
+    /// control channel stays open. It must not block.
     fn exited(&mut self) -> Option<String> {
         None
     }
@@ -611,7 +613,8 @@ enum RefreshInput {
 }
 
 enum Command {
-    Start,
+    /// Starts the guest; the text says who asked, for the log.
+    Start(String),
     Stop,
     Send(Vec<u8>, Sender<Result<(), SessionError>>),
     Shutdown,
@@ -1445,6 +1448,10 @@ impl Shared {
     }
 }
 
+/// What [`Session::android_files_with_token`] says while Android is stopped. The files door
+/// answers it at once instead of waiting for a start nobody asked for.
+pub const ANDROID_STOPPED: &str = "Android is stopped";
+
 /// A guest session. Dropping it stops the guest if it is running.
 pub struct Session {
     commands: Sender<Command>,
@@ -1590,6 +1597,7 @@ impl Session {
             agent_lost_at: None,
             prerequisite_missing: None,
             next_prerequisite_check: Instant::now(),
+            next_exit_check: Instant::now(),
             next_diagnosis: Instant::now(),
             guest_is_idle: false,
             stall_doze: None,
@@ -1911,7 +1919,13 @@ impl Session {
             .clone()
             .ok_or_else(|| "this host cannot reach Android's files".to_string())?;
         if self.state() == SessionState::Stopped {
-            self.start();
+            // Only a caller that asked for the address itself starts Android. The files door
+            // answers whatever connects to its port, Explorer and the Web Client service
+            // included, so it must not bring back an Android the user stopped.
+            match wanted {
+                None => self.start_because("a request for the address of Android's files"),
+                Some(_) => return Err(ANDROID_STOPPED.to_string()),
+            }
         }
         let mut bridge = self
             .android_files_bridge
@@ -2016,7 +2030,13 @@ impl Session {
 
     /// Asks the session to start. Ignored unless the session is `Stopped`.
     pub fn start(&self) {
-        let _ = self.commands.send(Command::Start);
+        self.start_because("a start request");
+    }
+
+    /// As [`Session::start`], and `reason` (who asked, and why) goes to the log when the
+    /// start goes in, so that a start nobody remembers asking for can be traced.
+    pub fn start_because(&self, reason: &str) {
+        let _ = self.commands.send(Command::Start(reason.to_string()));
     }
 
     /// Asks the session to stop. From `Stopping` after a failed stop, it retries.
@@ -4038,6 +4058,20 @@ impl Session {
         })
     }
 
+    /// Why no log can come from a guest that was stopped for speaking another protocol than
+    /// this host: the handshake's account, which names both builds and both schema hashes.
+    pub fn log_problem(&self) -> Option<String> {
+        if self.state() != SessionState::Stopped {
+            return None;
+        }
+        match self.last_reason() {
+            Some(
+                reason @ (StopReason::GuestFromOtherRelease(_) | StopReason::HandshakeRejected(_)),
+            ) => Some(reason.to_string()),
+            _ => None,
+        }
+    }
+
     /// The guest's records the host holds now, oldest first.
     pub fn recent_log(&self) -> Vec<LogEntry> {
         let hub = self.shared.logs.lock().unwrap_or_else(|e| e.into_inner());
@@ -4362,6 +4396,12 @@ const PROGRESS_TIMEOUT: Duration = Duration::from_secs(30);
 /// How often the session asks the launcher for what the guest cannot run without.
 const PREREQUISITE_POLL: Duration = Duration::from_secs(1);
 
+/// How often a running session asks the launcher whether the guest has ended by itself. A VM
+/// can end without its control channel closing (the Virtualization framework keeps the
+/// host's end of a vsock connection open after the guest is gone), so the channel alone does
+/// not tell the session.
+const EXIT_POLL: Duration = Duration::from_secs(1);
+
 /// How often a reported problem's detail is read again, as the counts in it grow.
 const DIAGNOSIS_POLL: Duration = Duration::from_secs(10);
 
@@ -4436,6 +4476,8 @@ struct Worker {
     /// Since when a prerequisite is missing, and what the launcher says about it.
     prerequisite_missing: Option<(Instant, String)>,
     next_prerequisite_check: Instant,
+    /// When the session next asks the launcher whether the guest has ended by itself.
+    next_exit_check: Instant,
     next_diagnosis: Instant,
     /// The agent's last word on whether the device is idle. Unknown, so false, for a new agent.
     guest_is_idle: bool,
@@ -4495,7 +4537,7 @@ impl Worker {
                         return;
                     }
                     match self.commands.recv() {
-                        Ok(Command::Start) => self.start(),
+                        Ok(Command::Start(reason)) => self.start(&reason),
                         Ok(Command::Stop) => {}
                         Ok(Command::Send(_, reply))
                         | Ok(Command::Freeze(reply))
@@ -4530,7 +4572,7 @@ impl Worker {
                     }
                     match self.commands.recv() {
                         Ok(Command::Stop) => self.stop(StopReason::Requested),
-                        Ok(Command::Start) => {}
+                        Ok(Command::Start(_)) => {}
                         Ok(Command::Send(_, reply))
                         | Ok(Command::Freeze(reply))
                         | Ok(Command::Notification(_, reply))
@@ -4572,7 +4614,7 @@ impl Worker {
     /// has left the running states.
     fn handle_running(&mut self, command: Command) -> bool {
         match command {
-            Command::Start => true,
+            Command::Start(_) => true,
             Command::Stop => {
                 self.stop(StopReason::Requested);
                 false
@@ -5825,14 +5867,20 @@ impl Worker {
             return;
         }
         self.host_memory_low = low;
-        if low {
-            eprintln!("lifecycle: the host is short of memory; asking the guest to give some back");
-        }
+        // Only a guest whose agent is connected hears it; an agent that connects later is
+        // told when it does. Without one there is nobody to ask, and nothing to log.
         match self.state() {
             SessionState::Starting
             | SessionState::Stalled
             | SessionState::Active
-            | SessionState::Dozing => {
+            | SessionState::Dozing
+                if self.agent_connected =>
+            {
+                if low {
+                    eprintln!(
+                        "lifecycle: the host is short of memory; asking the guest to give some back"
+                    );
+                }
                 self.send_body(Body::HostMemory(control::HostMemory { low }));
             }
             SessionState::Frozen => self.host_memory_pending = true,
@@ -6255,6 +6303,14 @@ impl Worker {
             return true;
         }
         let now = Instant::now();
+        if now >= self.next_exit_check {
+            self.next_exit_check = now + EXIT_POLL;
+            if let Some(why) = self.launcher.exited() {
+                eprintln!("lifecycle: {why}; Android is stopped and starts again when asked");
+                self.stop_failed_start(|diagnostics| StopReason::GuestExited { why, diagnostics });
+                return false;
+            }
+        }
         self.check_prerequisite(now);
         if let Some((since, why)) = &self.prerequisite_missing {
             if now.duration_since(*since) >= self.config.prerequisite_stop_after {
@@ -6340,7 +6396,8 @@ impl Worker {
         }
     }
 
-    fn start(&mut self) {
+    fn start(&mut self, reason: &str) {
+        eprintln!("session: starting Android, asked by: {reason}");
         self.shared.set(SessionState::Starting, None);
         self.boot_completed_at = None;
         self.agent_connected = false;
@@ -6512,7 +6569,7 @@ impl Worker {
     /// Handles a request while starting. Returns false once the start was abandoned.
     fn handle_starting(&mut self, command: Command) -> bool {
         match command {
-            Command::Start => true,
+            Command::Start(_) => true,
             Command::Send(_, reply)
             | Command::Freeze(reply)
             | Command::Notification(_, reply)

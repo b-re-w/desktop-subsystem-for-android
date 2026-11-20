@@ -90,6 +90,17 @@ if [[ -n "$renderer" ]]; then
         install_name_tool -change "$dependency" "@loader_path/$name" \
             "$frameworks/libgfxstream_backend.dylib"
     done < <(otool -L "$renderer" | tail -n +2 | awk '{print $1}')
+    # The renderer opens the Vulkan loader by name when it runs, so nothing above listed it.
+    loader="${DSA_VULKAN_LOADER:-}"
+    if [[ -z "$loader" ]] && command -v brew >/dev/null; then
+        loader="$(brew --prefix vulkan-loader 2>/dev/null)/lib/libvulkan.dylib"
+    fi
+    if [[ -n "$loader" && -f "$loader" ]]; then
+        bash "$here/bundle-vulkan-loader.sh" "$loader" "$frameworks"
+    else
+        echo "the Vulkan loader was not found (set DSA_VULKAN_LOADER); the renderer needs it" >&2
+        exit 1
+    fi
     # MoltenVK is the Vulkan driver the loader opens; its description sits in Resources,
     # where the window manager points the loader (VK_ICD_FILENAMES).
     moltenvk="${DSA_MOLTENVK:-}"
@@ -213,24 +224,70 @@ sign "$helper"
 sign "$app"
 codesign --verify --strict --verbose=2 "$app"
 
-package="$out/DSA-$version.pkg"
 installer_identity=()
 if [[ -n "${DSA_INSTALLER_IDENTITY:-}" ]]; then
     installer_identity=(--sign "$DSA_INSTALLER_IDENTITY")
 fi
-pkgbuild --component "$app" --install-location /Applications \
-    --scripts "$here/scripts" \
-    --identifier org.thisisthepy.dsa --version "$version" \
-    ${installer_identity[@]+"${installer_identity[@]}"} "$package"
+# make_package <app> <package>: the component package (the app and its postinstall) goes
+# inside a product archive that carries the installer's design: the artwork, the welcome and
+# conclusion pages in every language the Windows installer speaks, and the licence. Only the
+# product archive is signed. The component always replaces /Applications/DSA.app, also over a
+# higher version (a development build over a release, or an older Android preset), and never
+# goes into a copy of DSA.app found elsewhere on the disk.
+make_package() {
+    local bundle="$1" target="$2"
+    local work="$out/pkg"
+    rm -rf "$work"
+    mkdir -p "$work/root"
+    cp -R "$bundle" "$work/root/"
+    pkgbuild --analyze --root "$work/root" "$work/component.plist"
+    plutil -replace 0.BundleIsVersionChecked -bool NO "$work/component.plist"
+    plutil -replace 0.BundleIsRelocatable -bool NO "$work/component.plist"
+    plutil -replace 0.BundleOverwriteAction -string upgrade "$work/component.plist"
+    pkgbuild --root "$work/root" --component-plist "$work/component.plist" \
+        --install-location /Applications \
+        --scripts "$here/scripts" \
+        --identifier org.thisisthepy.dsa --version "$version" "$work/DSA-component.pkg"
+    cp -R "$here/installer/resources" "$work/resources"
+    cp "$root/LICENSE" "$work/resources/LICENSE.txt"
+    sed "s/@VERSION@/$version/" "$here/installer/Distribution.xml" > "$work/Distribution.xml"
+    productbuild --distribution "$work/Distribution.xml" --resources "$work/resources" \
+        --package-path "$work" \
+        ${installer_identity[@]+"${installer_identity[@]}"} "$target"
+    rm -rf "$work"
+}
 
+# make_image <app> <image> <volume name>: the disk image with the window's design: one TIFF
+# holding the 1x and 2x background, and a .DS_Store that make-dmg-store.swift writes on the
+# mounted read-write image (no Finder involved), because the background's alias names the
+# volume's creation date and the file's catalog ID. A placeholder of the store's size keeps
+# room for it on the tightly sized image.
+make_image() {
+    local bundle="$1" target="$2" volume="$3"
+    local staging="$out/dmg"
+    local writable="${target%.dmg}-rw.dmg"
+    rm -rf "$staging" "$target" "$writable"
+    mkdir -p "$staging/.background"
+    cp -R "$bundle" "$staging/"
+    ln -s /Applications "$staging/Applications"
+    tiffutil -cathidpicheck "$here/installer/dmg/dmg-background.png" \
+        "$here/installer/dmg/dmg-background@2x.png" -out "$staging/.background/background.tiff"
+    head -c 8196 /dev/zero > "$staging/.DS_Store"
+    hdiutil create -volname "$volume" -srcfolder "$staging" -fs HFS+ -format UDRW "$writable"
+    rm -rf "$staging"
+    local mount
+    mount="$(hdiutil attach -nobrowse -noautoopen "$writable" | awk -F '\t' '/^\/dev\/.*Apple_HFS/ { print $NF }')"
+    [[ -d "$mount" ]] || { echo "could not mount $writable" >&2; exit 1; }
+    swift "$here/installer/make-dmg-store.swift" "$mount" || { hdiutil detach "$mount"; exit 1; }
+    hdiutil detach "$mount"
+    hdiutil convert "$writable" -format UDZO -o "$target"
+    rm -f "$writable"
+}
+
+package="$out/DSA-$version.pkg"
+make_package "$app" "$package"
 image="$out/DSA-$version.dmg"
-staging="$out/dmg"
-rm -rf "$staging" "$image"
-mkdir -p "$staging"
-cp -R "$app" "$staging/"
-ln -s /Applications "$staging/Applications"
-hdiutil create -volname "DSA $version" -srcfolder "$staging" -fs HFS+ -format UDZO "$image"
-rm -rf "$staging"
+make_image "$app" "$image" "DSA $version"
 
 echo "Built $app"
 echo "Built $package"
@@ -250,17 +307,10 @@ for major in ${DSA_PRESET_MAJORS:-}; do
     sign "$preset_app"
     codesign --verify --strict --verbose=2 "$preset_app"
     preset_package="$out/DSA-$version-a$major.pkg"
-    pkgbuild --component "$preset_app" --install-location /Applications \
-        --scripts "$here/scripts" \
-        --identifier org.thisisthepy.dsa --version "$version" \
-        ${installer_identity[@]+"${installer_identity[@]}"} "$preset_package"
+    make_package "$preset_app" "$preset_package"
     preset_image="$out/DSA-$version-a$major.dmg"
-    rm -rf "$staging" "$preset_image"
-    mkdir -p "$staging"
-    cp -R "$preset_app" "$staging/"
-    ln -s /Applications "$staging/Applications"
-    hdiutil create -volname "DSA $version (Android $major)" -srcfolder "$staging" -fs HFS+ -format UDZO "$preset_image"
-    rm -rf "$staging" "$preset_root"
+    make_image "$preset_app" "$preset_image" "DSA $version (Android $major)"
+    rm -rf "$preset_root"
     echo "Built $preset_package"
     echo "Built $preset_image"
 done
