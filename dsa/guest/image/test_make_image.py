@@ -58,7 +58,42 @@ class ImageLayoutTests(unittest.TestCase):
         self.assertRegex(cil, r"\(allow dsa_channeld self \(capability \([^)]*\bsys_nice\b[^)]*\bsys_ptrace\b")
         rc = (here / "dsa-channeld.rc").read_text()
         service = rc[rc.index("service dsa_channeld"):rc.index("on property:sys.boot_completed=1")]
-        self.assertIn("capabilities SYS_NICE SYS_PTRACE", service)
+        self.assertIn("capabilities SYS_NICE SYS_PTRACE\n", service)
+
+    def test_fr32_a_root_helper_reads_the_android_id_google_play_services_keep(self):
+        # Google Play services refuse their gservices provider to the agent and keep the ID in a
+        # file of their app user. AOSP's domain.te has a neverallow that forbids dac_read_search
+        # outside its own list of domains, and another for opening privapp_data_file. The image's
+        # secilc compile runs with -N, so it does not enforce neverallow rules and this test is
+        # DSA's own guard: the daemon and the helper's domain must not use the capability or open
+        # that data, so the helper init runs as root is permissive instead, as the approved root
+        # command's domain is, and gets the one capability the file needs from init.
+        here = Path(__file__).parent
+        rules = [line for sd in (here / "sepolicy").glob("*.cil")
+                 for line in sd.read_text().splitlines() if not line.lstrip().startswith(";")]
+        # Only these two domains are held to it. dsa_sharemount and dsa_widevine_reset carry
+        # dac_read_search for folders they own, as shipped since Nov 5 and Nov 13.
+        for line in rules:
+            if re.match(r"\(allow\s+(dsa_channeld|dsa_google_id)\s", line):
+                self.assertNotIn("dac_read_search", line, line)
+                self.assertNotIn("privapp_data_file", line, line)
+        policy = "\n".join(rules)
+        self.assertIn("(typepermissive dsa_google_id)", policy)
+        setters = re.findall(r"\(allow\s+(\S+)\s+dsa_google_id_prop\s+\(\s*property_service\s+\(([^)]*)\)", policy)
+        self.assertEqual({who for who, perms in setters if "set" in perms.split()},
+                         {"dsa_channeld", "dsa_google_id"})
+        rc = (here / "dsa-channeld.rc").read_text()
+        block = [line.strip() for line in rc[rc.index("service dsa_google_id"):].split("\n\n")[0].splitlines()]
+        for option in ["service dsa_google_id /vendor/bin/dsa-channeld --google-device-id", "user root",
+                       "capabilities DAC_READ_SEARCH", "seclabel u:r:dsa_google_id:s0", "oneshot", "disabled"]:
+            self.assertIn(option, block)
+        self.assertIn("on property:vendor.dsa.google_device_id=request\n    start dsa_google_id", rc)
+        self.assertEqual(make_image.GOOGLE_DEVICE_ID_PROPERTY_CONTEXT,
+                         "vendor.dsa.google_device_id u:object_r:dsa_google_id_prop:s0 exact string")
+        self.assertIn(make_image.GOOGLE_DEVICE_ID_PROPERTY_CONTEXT,
+                      make_image.update_vendor_property_contexts("").splitlines())
+        # The daemon reads the answer, and nothing it may reach is anything of the services'.
+        self.assertRegex(policy, r"\(allow\s+dsa_channeld\s+dsa_google_id_prop\s+\(\s*file\s+\(\s*read\b")
 
     def test_fr21_channeld_may_clear_the_pstore_records_the_host_collected(self):
         # init leaves /sys/fs/pstore read only to system; the daemon makes it writable to
@@ -85,6 +120,23 @@ class ImageLayoutTests(unittest.TestCase):
         "/proc/{pid}/status": [("appdomain", "file")],
         "/proc/{}/oom_score_adj": [("appdomain", "file")],
         "/proc/{}/maps": [("appdomain", "file")],
+        # zram's size and statistics, which the reclaim and the writeback read, and the free page
+        # reporting numbers the reclaim logs, which have a type of their own.
+        "/sys/devices/virtual/block/zram0": [("sysfs_zram", "dir"), ("sysfs_zram", "file")],
+        "/sys/devices/virtual/block/zram0/disksize": [("sysfs_zram", "dir"), ("sysfs_zram", "file")],
+        "/sys/module/page_reporting/parameters/reported_kb": [
+            ("sysfs", "dir"),
+            ("dsa_sysfs_page_reporting_stats", "file"),
+        ],
+        # The second zram device's helper: what is swapped, zram-control's hot_add, and zram1's
+        # own size and reset.
+        "/proc/swaps": [("proc_swaps", "file")],
+        "/sys/class/zram-control/hot_add": [("sysfs", "dir"), ("sysfs", "file")],
+        "/sys/devices/virtual/block/zram1": [
+            ("sysfs_zram", "dir"),
+            ("sysfs_zram", "file"),
+            ("sysfs_zram", "file", "write"),
+        ],
         # The kernel's su guard on securityfs, which only the elevation helper writes.
         "/sys/kernel/security/dsa_su/control": [
             ("securityfs", "dir"),
@@ -97,8 +149,25 @@ class ImageLayoutTests(unittest.TestCase):
     # of its own: on the guest the daemon hands each config to the elevation helper
     # (HelperGuard), because the guard refuses the daemon, which runs as system.
     CHANNELD_KERNEL_NAMED_NOT_OPENED = {("su_relay.rs", "/sys/kernel/security/dsa_su/control")}
+    # What a source's mode needs from a path where it is not what the daemon needs: the memory
+    # report lists the processes through /proc with the permission every domain has on it.
+    CHANNELD_SOURCE_PATHS = {
+        "memory_report.rs": {
+            "/proc": [("proc", "dir")],
+            "/proc/slabinfo": [("proc_slabinfo", "file")],
+            "/proc/vmallocinfo": [("proc_vmallocinfo", "file")],
+            "/sys/fs/cgroup/cgroup.stat": [("cgroup_v2", "dir"), ("cgroup_v2", "file")],
+            "/sys/module/dm_bufio/parameters/current_allocated_bytes": [
+                ("sysfs", "dir"),
+                ("sysfs", "file"),
+            ],
+        },
+    }
     # The modes init runs the same binary in, each in a domain of its own.
     CHANNELD_SOURCE_DOMAINS = {
+        "memory_report.rs": ("dsa_memory_report", "channeld.cil"),
+        # The second zram device's helper (dsa-channeld --zram-extra).
+        "zram_grow.rs": ("dsa_zram_extra", "memory.cil"),
         "share_mount.rs": ("dsa_sharemount", "files.cil"),
         "android_files.rs": ("dsa_files", "files.cil"),
         "webdav.rs": ("dsa_files", "files.cil"),
@@ -109,10 +178,15 @@ class ImageLayoutTests(unittest.TestCase):
         "keymint_key.rs": ("dsa_keymint_key", "channeld.cil"),
         # The packet filter rules that send DNS queries to the stub (dsa-channeld --dns-redirect).
         "dns_redirect.rs": ("dsa_dns_redirect", "channeld.cil"),
+        # The Google device ID helper (dsa-channeld --google-device-id). Its domain is
+        # permissive, because the platform's neverallow rules forbid any rule for the file it
+        # reads, so the scans below leave its source out (see the FR-32 test on the policy).
+        "google_id_reader.rs": ("dsa_google_id", "channeld.cil"),
     }
+    CHANNELD_PERMISSIVE_DOMAINS = {"dsa_google_id"}
     # The policy files the image installs together with the daemon, so a rule for one of its
     # domains may live in any of them (the daemon's root elevation rules are in su.cil).
-    CHANNELD_POLICY_FILES = ("channeld.cil", "files.cil", "su.cil")
+    CHANNELD_POLICY_FILES = ("channeld.cil", "files.cil", "su.cil", "memory.cil")
 
     @classmethod
     def _daemon_policy(cls, here):
@@ -129,6 +203,8 @@ class ImageLayoutTests(unittest.TestCase):
             domain, policy_file = self.CHANNELD_SOURCE_DOMAINS.get(
                 source.name, ("dsa_channeld", "channeld.cil")
             )
+            if domain in self.CHANNELD_PERMISSIVE_DOMAINS:
+                continue
             policy = self._daemon_policy(here)
             for number, line in enumerate(source.read_text().splitlines(), 1):
                 if line.strip().startswith("//"):
@@ -140,14 +216,15 @@ class ImageLayoutTests(unittest.TestCase):
                     if (source.name, path) in self.CHANNELD_KERNEL_NAMED_NOT_OPENED:
                         continue
                     where = f"{source.name}:{number} opens {path}"
+                    paths = {**self.CHANNELD_KERNEL_PATHS, **self.CHANNELD_SOURCE_PATHS.get(source.name, {})}
                     self.assertIn(
                         path,
-                        self.CHANNELD_KERNEL_PATHS,
+                        paths,
                         f"{where}, which this test does not know: add its SELinux type here "
                         f"and an allow rule for {domain} to sepolicy/{policy_file}",
                     )
                     found += 1
-                    for target, cls, *asked in self.CHANNELD_KERNEL_PATHS[path]:
+                    for target, cls, *asked in paths[path]:
                         perm = asked[0] if asked else "search" if cls == "dir" else "read"
                         self.assertRegex(
                             policy,
@@ -237,6 +314,8 @@ class ImageLayoutTests(unittest.TestCase):
             domain, policy_file = self.CHANNELD_SOURCE_DOMAINS.get(
                 source.name, ("dsa_channeld", "channeld.cil")
             )
+            if domain in self.CHANNELD_PERMISSIVE_DOMAINS:
+                continue
             policy = self._daemon_policy(here)
             for number, line in self._production_lines(source):
                 for path in literal.findall(line):
@@ -2713,8 +2792,8 @@ class GuestMemoryTests(unittest.TestCase):
             self.assertIn("(allow vendor_init dsa_sysfs_page_reporting (file (write open getattr)))", policy)
 
     def test_nfr2_the_agent_may_read_what_free_page_reporting_gave_back(self):
-        # The agent's memory report carries the kernel's counts; only it may read them, and
-        # nothing may write them.
+        # The agent's memory report carries the kernel's counts, and channeld's reclaim reads
+        # how much the last one gave back; only they may read them, and nothing may write them.
         with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp), channeld=True) as archive:
             policy = archive.read("SYSTEM/etc/selinux/plat_sepolicy.cil").decode()
             for name in ["reported_kb", "reported_total_kb", "refaulted_total_kb"]:
@@ -2724,7 +2803,8 @@ class GuestMemoryTests(unittest.TestCase):
                     policy,
                 )
             readers = re.findall(r"\(allow (\S+) dsa_sysfs_page_reporting_stats \(file \(([^)]*)\)\)\)", policy)
-            self.assertEqual(sorted(readers), [("platform_app", "read open getattr"),
+            self.assertEqual(sorted(readers), [("dsa_channeld", "read open getattr"),
+                                               ("platform_app", "read open getattr"),
                                                ("system_app", "read open getattr")])
 
     def test_nfr2_the_reclaims_compact_only_where_the_host_takes_back_whole_blocks(self):
@@ -3251,6 +3331,7 @@ class GuestMemoryTests(unittest.TestCase):
             + make_image.FILES_PROPERTY_CONTEXT + "\n"
             + make_image.ROOT_ELEVATION_PROPERTY_CONTEXT + "\n"
             + make_image.DNS_PROPERTY_CONTEXT + "\n"
+            + make_image.GOOGLE_DEVICE_ID_PROPERTY_CONTEXT + "\n"
             + make_image.HOST_MEMORY_PROPERTY_CONTEXT + "\n"
             + make_image.HOST_MEMORY_REAL_PROPERTY_CONTEXT + "\n"
             + make_image.VIDEO_PICTURES_PROPERTY_CONTEXT + "\n"
@@ -9777,6 +9858,163 @@ class AppGraphicsMemoryAccessTests(unittest.TestCase):
         header = (self.HERE.parent.parent / "graphics/include/dsa_graphics_memory_device.h").read_text(
             encoding="utf-8")
         self.assertIn('"' + make_image.VULKAN_DRIVER_GRAPHICS_DEVICE_TEXT.decode() + ", errno", header)
+
+
+class DxgDriverTests(unittest.TestCase):
+    """The image's half of the dxg graphics path: the drivers ride along only with --dxg-drivers,
+    only a boot that asks uses them, and no closed or glibc binary gets in."""
+
+    @staticmethod
+    def _library(machine=62, needed=("libc.so", "libm.so", "libdl.so", "liblog.so"), body=b""):
+        """A 64-bit ELF library for `machine` that needs `needed`."""
+        return KeyMintImageTests._elf(machine, list(needed), body)
+
+    def _drivers(self, root, machine=62, extra=None, needed=None):
+        folder = root / "dxg"
+        folder.mkdir()
+        for name in make_image.DXG_DRIVER_FILES:
+            libs = list(needed) if needed is not None else ["libc.so", "libm.so", "libdl.so", "libglapi.so"]
+            (folder / name).write_bytes(self._library(machine, libs, name.encode()))
+        (folder / "lib").mkdir()
+        (folder / "lib/libglapi.so").write_bytes(self._library(machine, ["libc.so"], b"glapi"))
+        for name, data in (extra or {}).items():
+            (folder / name).parent.mkdir(parents=True, exist_ok=True)
+            (folder / name).write_bytes(data)
+        return folder
+
+    def _modify(self, root, dxg_drivers=None, ueventd=None):
+        source = root / "target-files.zip"
+        with zipfile.ZipFile(source, "w") as archive:
+            archive.writestr("SYSTEM/etc/selinux/plat_sepolicy.cil", "(type init)\n")
+            archive.writestr("SYSTEM/build.prop", "ro.debuggable=1\n")
+            archive.writestr("META/vendor_filesystem_config.txt", "vendor/bin/sh 0 2000 755 capabilities=0x0\n")
+            archive.writestr("META/filesystem_config.txt", "system/bin/sh 0 2000 755 capabilities=0x0\n")
+            archive.writestr("PRODUCT/etc/build.prop", "ro.product.product.name=dsa\n")
+            archive.writestr("VENDOR/etc/selinux/vendor_file_contexts",
+                             "/(vendor|system/vendor)/bin/sh u:object_r:vendor_shell_exec:s0\n")
+            if ueventd is not None:
+                archive.writestr(make_image.DXG_UEVENTD, ueventd)
+        modified = root / "modified.zip"
+        make_image.modify(source, modified, dxg_drivers=dxg_drivers)
+        return zipfile.ZipFile(modified)
+
+    def test_pr3_an_image_without_dxg_drivers_has_no_trace_of_them(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self._modify(Path(tmp)) as archive:
+                names = set(archive.namelist())
+                product = archive.read("PRODUCT/etc/build.prop").decode()
+                contexts = archive.read("VENDOR/etc/selinux/vendor_file_contexts").decode()
+        for target in [*make_image.DXG_DRIVER_FILES.values(), *make_image.DXG_PROPS, make_image.DXG_UEVENTD]:
+            self.assertNotIn(target, names)
+        for line in make_image.DXG_IMPORTS:
+            self.assertNotIn(line, product)
+        self.assertNotIn("/dev/dxg", contexts)
+        # The build.prop still picks the host renderer's drivers.
+        self.assertEqual(make_image.GRAPHICS_PROPS["ro.hardware.vulkan"], "ranchu")
+        self.assertEqual(make_image.GRAPHICS_PROPS["ro.hardware.egl"], "angle")
+
+    def test_pr3_the_dxg_drivers_are_vendor_libraries_a_boot_argument_selects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            drivers = self._drivers(root)
+            with self._modify(root, dxg_drivers=drivers) as archive:
+                names = set(archive.namelist())
+                product = archive.read("PRODUCT/etc/build.prop").decode().splitlines()
+                contexts = archive.read("VENDOR/etc/selinux/vendor_file_contexts").decode().splitlines()
+                vendor_fs = archive.read("META/vendor_filesystem_config.txt").decode().splitlines()
+                system_fs = archive.read("META/filesystem_config.txt").decode().splitlines()
+                ueventd = archive.read(make_image.DXG_UEVENTD).decode().splitlines()
+                props = {name: archive.read(name).decode() for name in make_image.DXG_PROPS}
+                vulkan = archive.read("VENDOR/lib64/hw/vulkan.dxg.so")
+                glapi = archive.read("VENDOR/lib64/libglapi.so")
+            self.assertEqual(vulkan, (drivers / "vulkan.dxg.so").read_bytes())
+            self.assertEqual(glapi, (drivers / "lib/libglapi.so").read_bytes())
+        for target in make_image.DXG_DRIVER_FILES.values():
+            self.assertIn(target, names)
+            path = target[len("VENDOR/"):]
+            # Loaded into every app's process, so labelled as a same-process HAL.
+            self.assertIn(f"/vendor/{re.escape(path)} u:object_r:same_process_hal_file:s0", contexts)
+            self.assertIn(f"vendor/{path} 0 0 644 capabilities=0x0", vendor_fs)
+        # The imports come after the build's own properties, so they win; the default files say
+        # what the build.prop says, so a boot that asks for nothing renders as before.
+        for line in make_image.DXG_IMPORTS:
+            self.assertIn(line, product)
+        self.assertIn("ro.hardware.vulkan=dxg", props["SYSTEM/etc/dsa/vulkan-dxg.prop"].splitlines())
+        self.assertIn("ro.hardware.vulkan=ranchu", props["SYSTEM/etc/dsa/vulkan-ranchu.prop"].splitlines())
+        self.assertIn("ro.hardware.egl=dxg", props["SYSTEM/etc/dsa/egl-dxg.prop"].splitlines())
+        self.assertIn("ro.hardware.egl=angle", props["SYSTEM/etc/dsa/egl-angle.prop"].splitlines())
+        self.assertIn("import /system/etc/dsa/vulkan-${ro.boot.dsa.vulkan:-ranchu}.prop", product)
+        self.assertIn("import /system/etc/dsa/egl-${ro.boot.dsa.egl:-angle}.prop", product)
+        # The Google Play and ARM translation imports stay last.
+        self.assertEqual(product[-1], make_image.ARM_TRANSLATION_IMPORT)
+        self.assertLess(product.index(make_image.DXG_IMPORTS[-1]), product.index(make_image.GAPPS_IMPORT))
+        for name in make_image.DXG_PROPS:
+            self.assertIn(f"system/{name[len('SYSTEM/'):]} 0 0 644 capabilities=0x0", system_fs)
+        # Every graphics client may open the device, which has the label apps use for a GPU.
+        self.assertIn("/dev/dxg u:object_r:gpu_device:s0", contexts)
+        self.assertIn("/dev/dxg 0666 system graphics", ueventd)
+        self.assertIn("vendor/etc/ueventd.rc 0 0 644 capabilities=0x0", vendor_fs)
+
+    def test_pr3_the_vendor_ueventd_rules_keep_theirs_and_gain_the_device(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            own = "/dev/dri/* 0666 system graphics\n/dev/dxg 0600 root root\n"
+            with self._modify(root, dxg_drivers=self._drivers(root), ueventd=own) as archive:
+                rules = archive.read(make_image.DXG_UEVENTD).decode().splitlines()
+                self.assertEqual(archive.namelist().count(make_image.DXG_UEVENTD), 1)
+        self.assertIn("/dev/dri/* 0666 system graphics", rules)
+        self.assertEqual([rule for rule in rules if rule.startswith("/dev/dxg")], ["/dev/dxg 0666 system graphics"])
+
+    def test_nfr7_no_closed_direct3d_runtime_or_gpu_vendor_driver_enters_the_image(self):
+        # Mesa loads Microsoft's Direct3D 12 runtime and DXCore at run time. Those, and the
+        # vendors' user-mode drivers in their Windows driver packages, are closed binaries.
+        for name in ["libd3d12.so", "lib/libd3d12core.so", "lib/libdxcore.so", "lib/libnvwgf2umx.so",
+                     "lib/libigd12umd64.so", "lib/libigd12um64xe2.so", "lib/libcuda.so.1", "nested/libdxcore.so"]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                drivers = self._drivers(Path(tmp), extra={name: self._library()})
+                with self.assertRaises(ValueError) as caught:
+                    make_image.checked_dxg_drivers(drivers, "x86_64")
+                self.assertIn("closed Microsoft or GPU vendor binary", str(caught.exception))
+                self.assertIn(Path(name).name, str(caught.exception))
+
+    def test_pr3_a_library_built_against_glibc_is_refused(self):
+        # WSL's libraries need glibc (libc.so.6, libpthread.so.0, ...), which Android's linker
+        # cannot load.
+        with tempfile.TemporaryDirectory() as tmp:
+            drivers = self._drivers(Path(tmp), needed=["libc.so.6", "libpthread.so.0", "libdl.so.2"])
+            with self.assertRaises(ValueError) as caught:
+                make_image.checked_dxg_drivers(drivers, "x86_64")
+        message = str(caught.exception)
+        self.assertIn("built against glibc", message)
+        self.assertIn("libc.so.6", message)
+        self.assertIn("libpthread.so.0", message)
+
+    def test_pr3_drivers_for_another_architecture_or_missing_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            drivers = self._drivers(Path(tmp), machine=183)
+            with self.assertRaises(ValueError) as caught:
+                make_image.checked_dxg_drivers(drivers, "x86_64")
+            self.assertIn("not x86_64 (62)", str(caught.exception))
+            self.assertEqual(sorted(make_image.checked_dxg_drivers(drivers, "arm64")),
+                             sorted([*make_image.DXG_DRIVER_FILES.values(), "VENDOR/lib64/libglapi.so"]))
+            (drivers / "libEGL_dxg.so").unlink()
+            with self.assertRaises(ValueError) as caught:
+                make_image.checked_dxg_drivers(drivers, "arm64")
+            self.assertIn("libEGL_dxg.so is missing", str(caught.exception))
+
+    def test_pr3_a_library_the_drivers_need_must_be_in_vendor_or_the_llndk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            drivers = self._drivers(Path(tmp), needed=["libc.so", "libglapi.so", "libdrm.so", "libnativewindow.so"])
+            payloads = make_image.checked_dxg_drivers(drivers, "x86_64")
+        problems = make_image.dxg_library_problems(payloads, ["VENDOR/lib64/libc++.so"])
+        self.assertEqual(len(problems), len(make_image.DXG_DRIVER_FILES), problems)
+        self.assertTrue(all("needs libdrm.so" in problem for problem in problems), problems)
+        self.assertEqual(make_image.dxg_library_problems(payloads, ["VENDOR/lib64/libdrm.so"]), [])
+
+    def test_pr3_the_image_json_says_which_boot_arguments_select_the_drivers(self):
+        self.assertEqual(make_image.DXG_MANIFEST, {"vulkan": "dxg", "egl": "dxg"})
+        self.assertIn("ro.boot.dsa.vulkan", make_image.DXG_IMPORTS[0])
+        self.assertIn("ro.boot.dsa.egl", make_image.DXG_IMPORTS[1])
 
 
 if __name__ == "__main__":
