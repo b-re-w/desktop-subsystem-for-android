@@ -7,6 +7,7 @@
 use std::path::Path;
 
 use crate::addon_disk::{self, Addon};
+use crate::host_facts::HostFacts;
 use crate::settings::SettingsStore;
 
 /// The kernel command line word that makes the kernel read the bootconfig.
@@ -19,20 +20,24 @@ const ALIGN: usize = 4;
 /// what the add-on disk carries (`attached` is what the boot attaches of it), the ARM
 /// translator (the package the user installed, else the default one of the image in
 /// `image_dir`) while the user's setting is on, the Google apps and Widevine the user installed
-/// while their images are on the add-on disk, and the computer's physical memory
-/// (`physical_memory_kb`, read at each start), which Google Play sees as the device's memory.
+/// while their images are on the add-on disk, and the computer's physical memory and the memory
+/// it is installed with (both read from `facts` at each start), which Google Play sees as the
+/// device's memory and the advertised memory.
 pub fn for_boot(
     store: &dyn SettingsStore,
     user: &str,
     image_dir: Option<&Path>,
     attached: &[Addon],
-    physical_memory_kb: Option<u64>,
+    facts: &dyn HostFacts,
 ) -> String {
     addon_disk::bootconfig(attached).to_string()
         + &crate::arm_translation::bootconfig_for(store, user, image_dir, attached)
         + &crate::gapps::bootconfig_for(store, user, attached)
         + &crate::widevine::bootconfig_for(store, user, attached)
-        + &crate::host_memory::bootconfig(physical_memory_kb)
+        + &crate::host_memory::bootconfig(
+            facts.physical_memory_kb(),
+            facts.installed_memory_kb(),
+        )
 }
 
 /// `initrd` followed by `text` as bootconfig: the text, NUL-terminated and padded with NULs

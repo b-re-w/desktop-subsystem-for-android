@@ -260,7 +260,7 @@ impl Planner {
                 &self.name,
                 Some(dir.as_path()),
                 &attached,
-                MacFacts.physical_memory_kb(),
+                &MacFacts,
             ),
         })
     }

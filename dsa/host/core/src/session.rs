@@ -524,6 +524,9 @@ pub struct SessionConfig {
     /// freezes it on its own: a frozen guest gets no notifications, alarms or widget
     /// updates.
     pub freeze_after: Option<Duration>,
+    /// How long the same notice about one app is held back after it was shown, so an app that
+    /// fails at every start is reported once for the burst.
+    pub notice_burst: Duration,
 }
 
 /// The default of [`SessionConfig::doze_delay`].
@@ -548,6 +551,7 @@ impl Default for SessionConfig {
             stop_timeout: Duration::from_secs(30),
             doze_delay: DEFAULT_DOZE_DELAY,
             freeze_after: None,
+            notice_burst: Duration::from_secs(20),
         }
     }
 }
@@ -609,7 +613,8 @@ enum RefreshInput {
 }
 
 enum Command {
-    Start,
+    /// Starts the guest; the text says who asked, for the log.
+    Start(String),
     Stop,
     Send(Vec<u8>, Sender<Result<(), SessionError>>),
     Shutdown,
@@ -1443,6 +1448,10 @@ impl Shared {
     }
 }
 
+/// What [`Session::android_files_with_token`] says while Android is stopped. The files door
+/// answers it at once instead of waiting for a start nobody asked for.
+pub const ANDROID_STOPPED: &str = "Android is stopped";
+
 /// A guest session. Dropping it stops the guest if it is running.
 pub struct Session {
     commands: Sender<Command>,
@@ -1601,6 +1610,7 @@ impl Session {
             clipboard_last: None,
             notifications: HashMap::new(),
             notification_limit: RateLimit::new(Instant::now()),
+            notice_posted: HashMap::new(),
             dismissals: Vec::new(),
             offered_reinstalls: HashMap::new(),
             host_asleep: None,
@@ -1909,7 +1919,13 @@ impl Session {
             .clone()
             .ok_or_else(|| "this host cannot reach Android's files".to_string())?;
         if self.state() == SessionState::Stopped {
-            self.start();
+            // Only a caller that asked for the address itself starts Android. The files door
+            // answers whatever connects to its port, Explorer and the Web Client service
+            // included, so it must not bring back an Android the user stopped.
+            match wanted {
+                None => self.start_because("a request for the address of Android's files"),
+                Some(_) => return Err(ANDROID_STOPPED.to_string()),
+            }
         }
         let mut bridge = self
             .android_files_bridge
@@ -2014,7 +2030,13 @@ impl Session {
 
     /// Asks the session to start. Ignored unless the session is `Stopped`.
     pub fn start(&self) {
-        let _ = self.commands.send(Command::Start);
+        self.start_because("a start request");
+    }
+
+    /// As [`Session::start`], and `reason` (who asked, and why) goes to the log when the
+    /// start goes in, so that a start nobody remembers asking for can be traced.
+    pub fn start_because(&self, reason: &str) {
+        let _ = self.commands.send(Command::Start(reason.to_string()));
     }
 
     /// Asks the session to stop. From `Stopping` after a failed stop, it retries.
@@ -4480,6 +4502,8 @@ struct Worker {
     clipboard_last: Option<String>,
     /// The guest's notifications the watchers were given, by key.
     notifications: HashMap<String, Notification>,
+    /// When each of the host's own notices was last shown, by key.
+    notice_posted: HashMap<String, Instant>,
     /// How many notifications reach the watchers.
     notification_limit: RateLimit,
     /// Dismissals for a frozen guest, sent once it is thawed.
@@ -4513,7 +4537,7 @@ impl Worker {
                         return;
                     }
                     match self.commands.recv() {
-                        Ok(Command::Start) => self.start(),
+                        Ok(Command::Start(reason)) => self.start(&reason),
                         Ok(Command::Stop) => {}
                         Ok(Command::Send(_, reply))
                         | Ok(Command::Freeze(reply))
@@ -4548,7 +4572,7 @@ impl Worker {
                     }
                     match self.commands.recv() {
                         Ok(Command::Stop) => self.stop(StopReason::Requested),
-                        Ok(Command::Start) => {}
+                        Ok(Command::Start(_)) => {}
                         Ok(Command::Send(_, reply))
                         | Ok(Command::Freeze(reply))
                         | Ok(Command::Notification(_, reply))
@@ -4590,7 +4614,7 @@ impl Worker {
     /// has left the running states.
     fn handle_running(&mut self, command: Command) -> bool {
         match command {
-            Command::Start => true,
+            Command::Start(_) => true,
             Command::Stop => {
                 self.stop(StopReason::Requested);
                 false
@@ -4889,7 +4913,29 @@ impl Worker {
     }
 
     /// Shows one of the host's own notifications, replacing the one with its key.
+    ///
+    /// A notice about the same app within `SessionConfig::notice_burst` of the last one is the
+    /// same news told again (an app that fails at each start), and is not shown twice. A notice the watchers
+    /// still hold from before is withdrawn first: Windows updates the toast of a tag it has
+    /// without popping it up, so a notice the user left in the notification centre would
+    /// otherwise never be seen again.
     fn post_notice(&mut self, notification: Notification) {
+        let now = Instant::now();
+        if let Some(last) = self.notice_posted.get(&notification.key) {
+            if now.duration_since(*last) < self.config.notice_burst {
+                eprintln!(
+                    "notices: {} was told a moment ago; not shown again",
+                    notification.key
+                );
+                return;
+            }
+        }
+        self.notice_posted.insert(notification.key.clone(), now);
+        if self.notifications.contains_key(&notification.key) {
+            let key = notification.key.clone();
+            self.remove_notice(&key);
+        }
+        eprintln!("notices: showing {}", notification.key);
         self.deliver_notification(notification);
     }
 
@@ -5135,6 +5181,7 @@ impl Worker {
     /// Removes every notification the watchers have, as when the guest stops.
     fn clear_notifications(&mut self) {
         self.notification_limit.clear();
+        self.notice_posted.clear();
         self.dismissals.clear();
         self.offered_reinstalls.clear();
         let keys: Vec<String> = self.notifications.drain().map(|(key, _)| key).collect();
@@ -6349,7 +6396,8 @@ impl Worker {
         }
     }
 
-    fn start(&mut self) {
+    fn start(&mut self, reason: &str) {
+        eprintln!("session: starting Android, asked by: {reason}");
         self.shared.set(SessionState::Starting, None);
         self.boot_completed_at = None;
         self.agent_connected = false;
@@ -6521,7 +6569,7 @@ impl Worker {
     /// Handles a request while starting. Returns false once the start was abandoned.
     fn handle_starting(&mut self, command: Command) -> bool {
         match command {
-            Command::Start => true,
+            Command::Start(_) => true,
             Command::Send(_, reply)
             | Command::Freeze(reply)
             | Command::Notification(_, reply)

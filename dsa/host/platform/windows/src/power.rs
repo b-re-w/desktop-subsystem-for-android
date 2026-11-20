@@ -77,6 +77,17 @@ impl dsa_host_core::host_facts::HostFacts for ComputerFacts {
             None
         }
     }
+
+    fn installed_memory_kb(&self) -> Option<u64> {
+        #[cfg(windows)]
+        {
+            read_installed_memory_kb()
+        }
+        #[cfg(not(windows))]
+        {
+            None
+        }
+    }
 }
 
 /// The computer's physical memory, total and available, in KiB, or `None` when Windows
@@ -92,6 +103,19 @@ pub fn read_memory() -> Option<(u64, u64)> {
         return None;
     }
     Some((status.ullTotalPhys / 1024, status.ullAvailPhys / 1024))
+}
+
+/// The memory the computer is installed with, in KiB, as its firmware reports the modules
+/// (`GetPhysicallyInstalledSystemMemory`): 32 GiB on a "32 GB" PC, where [`read_memory`] says
+/// less, as the firmware and the graphics hardware keep some. `None` when Windows cannot say
+/// (some virtual machines).
+#[cfg(windows)]
+pub fn read_installed_memory_kb() -> Option<u64> {
+    use windows_sys::Win32::System::SystemInformation::GetPhysicallyInstalledSystemMemory;
+    let mut kb: u64 = 0;
+    // SAFETY: a valid pointer to the 64-bit figure Windows fills in.
+    let read = unsafe { GetPhysicallyInstalledSystemMemory(&mut kb) };
+    (read != 0 && kb > 0).then_some(kb)
 }
 
 /// How often [`follow`] reads the computer's memory. A guest that hears of a change some

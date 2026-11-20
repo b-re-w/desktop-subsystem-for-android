@@ -439,7 +439,7 @@ pub fn create_user_android(
                 &user,
                 image,
                 &attached,
-                crate::power::read_memory().map(|(total_kb, _)| total_kb),
+                &crate::power::ComputerFacts,
             )
         })
     })

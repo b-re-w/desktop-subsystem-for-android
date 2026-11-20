@@ -356,7 +356,7 @@ pub fn create_user_android(
                 &user,
                 dir,
                 &attached,
-                ProcFacts.physical_memory_kb(),
+                &ProcFacts,
             )
         })
     })

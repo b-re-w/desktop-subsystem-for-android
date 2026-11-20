@@ -4509,6 +4509,103 @@ fn fr25_a_32_bit_build_that_ends_at_start_is_told_to_get_its_64_bit_build() {
     );
 }
 
+/// Puts Chrome's 32-bit build in the host's list, as the agent reports it.
+fn install_chrome_32_bit(session: &Session, agent: &mut Box<dyn Connection>) {
+    let tasks = session.watch_tasks();
+    send_body(
+        agent,
+        Body::InstalledApp(dsa_protocol::control::InstalledApp {
+            package_name: "com.android.chrome".into(),
+            label: "Chrome".into(),
+            primary_abi: "x86_64".into(),
+            version_code: 495106126,
+            native_libraries: vec![
+                game_libraries("x86", &["libmonochrome.so"]),
+                game_libraries("x86_64", &["libmonochrome.so"]),
+            ],
+            ..Default::default()
+        }),
+    );
+    send_body(
+        agent,
+        Body::InstalledApps(dsa_protocol::control::InstalledApps {
+            package_names: vec!["com.android.chrome".into()],
+        }),
+    );
+    loop {
+        if let TaskEvent::Installed(apps) = tasks.events.recv_timeout(WAIT).expect("the apps") {
+            if apps
+                .iter()
+                .any(|app| app.package_name == "com.android.chrome")
+            {
+                return;
+            }
+        }
+    }
+}
+
+fn chrome_crash() -> Body {
+    Body::NativeLibraryCrash(dsa_protocol::control::NativeLibraryCrash {
+        package_name: "com.android.chrome".into(),
+        detail: "Starting in 64-bit mode requires the 64-bit native library.".into(),
+        arm64_supported: true,
+    })
+}
+
+#[test]
+fn fr25_an_app_that_fails_at_every_start_is_reported_once_for_the_burst() {
+    let (session, mut agent, _launcher) = active_session();
+    let watch = session.watch_notifications();
+    install_chrome_32_bit(&session, &mut agent);
+    send_body(&mut agent, chrome_crash());
+    assert!(matches!(
+        watch.recv_timeout(WAIT).unwrap(),
+        NotificationEvent::Posted(_)
+    ));
+    send_body(&mut agent, chrome_crash());
+    send_body(&mut agent, chrome_crash());
+    nothing_for_the_watcher(&watch);
+}
+
+#[test]
+fn fr25_a_notice_left_from_before_is_withdrawn_and_shown_again_so_it_pops_up() {
+    use dsa_host_core::native_abi::Notice;
+    let launcher = FakeLauncher::default();
+    let (listener, mut connector) = memory::pair();
+    let session = Session::new(
+        launcher.clone(),
+        Box::new(listener),
+        ControlHandshake::new("dsa-host test", WAIT),
+        SessionConfig {
+            connect_timeout: WAIT,
+            stop_timeout: WAIT,
+            notice_burst: Duration::ZERO,
+            ..SessionConfig::default()
+        },
+    );
+    session.start();
+    let mut agent = connect_agent(&mut connector, &launcher);
+    assert!(session.wait_for(SessionState::Active, WAIT));
+    let watch = session.watch_notifications();
+    install_chrome_32_bit(&session, &mut agent);
+    send_body(&mut agent, chrome_crash());
+    let key = Notice::Needs64Bit.key("com.android.chrome");
+    assert!(matches!(
+        watch.recv_timeout(WAIT).unwrap(),
+        NotificationEvent::Posted(ref n) if n.key == key
+    ));
+    // The user left it in the notification centre; the app fails again later.
+    send_body(&mut agent, chrome_crash());
+    assert_eq!(
+        watch.recv_timeout(WAIT).unwrap(),
+        NotificationEvent::Removed { key: key.clone() }
+    );
+    assert!(matches!(
+        watch.recv_timeout(WAIT).unwrap(),
+        NotificationEvent::Posted(ref n) if n.key == key
+    ));
+}
+
 #[test]
 fn fr23_installed_apps_carry_their_version_dates_sizes_and_kind() {
     let (session, mut agent, _launcher) = active_session();
@@ -7267,4 +7364,44 @@ fn fr36_a_spelling_request_with_no_host_session_to_serve_it_is_unsupported() {
         }
         other => panic!("expected a spelling result, got {other:?}"),
     }
+}
+
+#[test]
+fn fr10_android_files_under_a_key_do_not_start_a_stopped_android() {
+    let launcher = FakeLauncher::default();
+    let (session, _connector) = session_with(launcher.clone(), WAIT);
+    let (connect, _reached) = fake_adbd();
+    session.set_android_files_connect(connect);
+    let why = session.android_files_with_token("feedface").unwrap_err();
+    assert_eq!(why, dsa_host_core::session::ANDROID_STOPPED);
+    thread::sleep(Duration::from_millis(200));
+    assert_eq!(session.state(), SessionState::Stopped);
+    assert_eq!(launcher.0.lock().unwrap().starts, 0);
+}
+
+#[test]
+fn fr10_a_stop_the_user_asked_for_holds_against_the_files_door() {
+    let (session, _agent, launcher) = active_session();
+    let (connect, _reached) = fake_adbd();
+    session.set_android_files_connect(connect);
+    session.stop();
+    assert!(session.wait_for(SessionState::Stopped, WAIT));
+    for _ in 0..3 {
+        assert!(session.android_files_with_token("feedface").is_err());
+    }
+    thread::sleep(Duration::from_millis(200));
+    assert_eq!(session.state(), SessionState::Stopped);
+    assert_eq!(launcher.0.lock().unwrap().starts, 1, "no second boot");
+}
+
+#[test]
+fn fr10_a_request_for_the_address_of_android_files_starts_a_stopped_android() {
+    let launcher = FakeLauncher::default();
+    let (session, _connector) = session_with(launcher.clone(), WAIT);
+    let (connect, _reached) = fake_adbd();
+    session.set_android_files_connect(connect);
+    session.android_files().unwrap();
+    wait_until("the start goes in", || {
+        launcher.0.lock().unwrap().starts == 1
+    });
 }
