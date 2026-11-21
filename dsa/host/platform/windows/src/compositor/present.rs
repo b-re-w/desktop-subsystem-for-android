@@ -64,7 +64,7 @@ use dsa_host_core::compositor::surface_calls::{
     SURFACE_OP_TICK,
 };
 use dsa_host_core::compositor::window_sizing::{
-    frame_placement, gap_fill, to_task_length, window_size_of, FramePlacement, Scale,
+    frame_placement, to_task_length, uncovered_fill, window_size_of, FramePlacement, Scale,
 };
 use dsa_protocol::window_host::encode_body;
 use dsa_protocol::window_host::types::{envelope::Body, SurfaceAnswer, SurfaceCall};
@@ -1425,26 +1425,24 @@ impl WindowPresenter {
         };
         let view = state.follow.view();
         let placement = frame_placement(state.frame, view, state.scale, state.follow.held());
-        let colour = (!self.see_through).then(|| {
-            let theme = || splash::background(super::system_settings::read().dark_mode);
-            gap_fill(
-                state.band_sample.band,
-                state.band_sample.fill,
-                state.splash_background,
-                match (
-                    state.band_sample.band,
-                    state.band_sample.fill,
-                    state.splash_background,
-                ) {
-                    (None, None, None) => theme(),
-                    _ => 0,
-                },
-            )
-        });
+        // The window has no redirection surface (WS_EX_NOREDIRECTIONBITMAP) and paints no
+        // background (WM_ERASEBKGND), so wherever the frame's visual does not reach, beside a
+        // frame shown 1:1 in a larger window, the desktop shows through unless the fill under
+        // the frame covers it.
+        let colour = uncovered_fill(
+            self.see_through,
+            state.band_sample.band,
+            state.band_sample.fill,
+            state.splash_background,
+            || splash::background(super::system_settings::read().dark_mode),
+        );
         let wanted = (buffers, state.frame, placement, view, colour);
         if state.committed == Some(wanted) {
             return false;
         }
+        // A fill that could not be drawn is not committed as shown: the next commit asks again
+        // rather than leaving the strips beside the frame transparent.
+        let mut fill_shown = true;
         if let Some(colour) = colour {
             if state.fill_colour != Some(colour) || state.fill_surface.is_none() {
                 let call = SurfaceCall {
@@ -1454,9 +1452,13 @@ impl WindowPresenter {
                 };
                 match self.ask(state, call, CALL_WAIT) {
                     Ok(_) => state.fill_colour = Some(colour),
-                    Err(why) => note(self.logger.as_deref(), &why),
+                    Err(why) => {
+                        note(self.logger.as_deref(), &why);
+                        fill_shown = false;
+                    }
                 }
             }
+            fill_shown &= state.fill_colour == Some(colour) && state.fill_surface.is_some();
         }
         let (x, y) = frame_scale(buffers, state.frame);
         let (numerator, denominator) = placement.scale;
@@ -1504,7 +1506,7 @@ impl WindowPresenter {
         if state.first_frame.is_some() {
             state.splash_image = None;
         }
-        if committed {
+        if committed && fill_shown {
             state.committed = Some(wanted);
         }
         committed
