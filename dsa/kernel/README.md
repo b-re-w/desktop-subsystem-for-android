@@ -148,6 +148,14 @@ in probe order, which changes when the host attaches another disk.
 - **pstore on a disk (pstore/blk)**, so the kernel's last messages, an oops's report and
   Android's last log lines (pmsg) are kept on a small disk and shown in `/sys/fs/pstore` at
   the next boot. `dsa logs collect` carries what is there, and the guest then clears it.
+- **A kernel sized for the VM.** The kernel's own memory stays resident for the VM's whole
+  life, so the fragment leaves out what config-wsl carries for a WSL distribution on any
+  machine: room for 512 processors and 1024 NUMA nodes (`CONFIG_NR_CPUS=64`, no NUMA; the VM
+  has 4 processors by default and one node), unmerged slab caches and per-CPU partial slab
+  lists, the function tracer's per-function records, the virtual terminals and the
+  framebuffer layer (with which vkms also kept an fbdev buffer nobody draws), and, on arm64,
+  KVM. Tracepoints, BTF, kallsyms and `/proc/slabinfo` stay, because atrace, perfetto, netd
+  and the memory measurement use them. `android.config` says why each one goes.
 
 ## The pstore disk
 

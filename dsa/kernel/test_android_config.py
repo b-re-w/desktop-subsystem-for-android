@@ -296,6 +296,32 @@ class AndroidKernelConfigTests(unittest.TestCase):
         for option in ["CONFIG_EROFS_FS=y", "CONFIG_F2FS_FS=y"]:
             self.assertIn(option, lines)
 
+    def test_nfr1_the_kernel_is_sized_for_a_small_vm_not_any_machine(self):
+        # Processor and node counts bound static cpumasks and per-node arrays in every slab
+        # cache; config-wsl's 512 CPUs and 1024 nodes cost memory a 4-processor VM never uses.
+        lines = fragment_lines(CONFIG)
+        self.assertIn("CONFIG_NR_CPUS=64", lines)
+        self.assertIn("# CONFIG_NUMA is not set", lines)
+        # Slab: merged caches and no per-CPU partial lists hold fewer partly used slabs.
+        self.assertIn("CONFIG_SLAB_MERGE_DEFAULT=y", lines)
+        self.assertIn("# CONFIG_SLUB_CPU_PARTIAL is not set", lines)
+        # The function tracer's records, the VTs and the framebuffer layer (vkms's fbdev
+        # buffer) are resident and unused.
+        for option in ["FUNCTION_TRACER", "VT", "FB"]:
+            self.assertIn(f"# CONFIG_{option} is not set", lines)
+        self.assertIn("# CONFIG_KVM is not set", fragment_lines(ARM64_CONFIG))
+        # What Android's tracing, netd and gralloc use stays.
+        self.assertNotIn("# CONFIG_FTRACE is not set", lines)
+        self.assertNotIn("# CONFIG_DEBUG_INFO_BTF is not set", lines)
+        for option in ["CONFIG_DRM=y", "CONFIG_DRM_VKMS=y", "CONFIG_ANDROID_BINDER_IPC=y",
+                       "CONFIG_MEMFD_CREATE=y", "CONFIG_SLUB_DEBUG=y"]:
+            self.assertIn(option, lines)
+        # The host gives the VM 4 processors unless the user sets more; NR_CPUS covers that.
+        core = (Path(__file__).parents[1] / "host" / "core" / "src" / "host_config.rs").read_text()
+        default = re.search(r"fn default_processors\(\) -> u32 \{\s*(\d+)", core)
+        self.assertIsNotNone(default)
+        self.assertLessEqual(int(default.group(1)), 64)
+
     def test_nfr1_zram_has_zstd_as_a_second_compressor_for_cold_pages(self):
         # The idle reclaim compresses what stays in zram again with zstd; without
         # multi-compression the kernel refuses the second compressor and keeps LZ4 alone.
