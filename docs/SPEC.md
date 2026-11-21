@@ -126,6 +126,8 @@ Linux 호스트:
 - 수용 기준: 앱 하나를 설치하면 시작 메뉴에 나타나고, 실행하면 작업 표시줄에 그 앱 아이콘으로 따로 묶이며, 지우면 시작 메뉴에서 사라진다.
 - 수용 기준: 앱이 낸 바로 가기가 그 앱의 점프 목록에 이름과 아이콘으로 보이고, 누르면 그 바로 가기의 화면이 태스크 창으로 열린다. 바탕화면 고정 요청은 확인 뒤 바탕화면 바로 가기가 되고, 앱을 지우면 함께 사라진다. (`fr7_app_shortcuts_are_jump_list_tasks_and_desktop_shortcuts`)
 - 수용 기준: Windows 검색에 앱 이름을 입력하면 그 앱이 나오고, 누르면 안드로이드가 꺼져 있어도 켜진 뒤 그 앱이 태스크 창으로 뜬다.
+- 안드로이드가 시작하는 동안 앱을 열면 뜨는 대기 창은 "Android를 시작하는 중" 같은 글자 대신, 그 플랫폼의 DSA 로고(그 플랫폼 앱 아이콘의 로고)를 창 가운데에 보이고 안드로이드 부팅 애니메이션처럼 천천히 숨쉬듯 밝아졌다 어두워지기를 되풀이한다. 앱의 창이 열리면 로고 창이 그 위로 부드럽게 사라진다. 배경은 사용자의 밝은/어두운 테마를 따르고, 로고는 창의 DPI에 맞는 크기로 선명하게 그린다. 시스템에서 애니메이션을 끄면(동작 줄이기) 로고는 멈춘 채로 보이고 사라질 때도 바로 닫힌다. 숨는 시간, 곡선, 사라지는 시간은 호스트 코어 한 곳에서 정하고 세 플랫폼이 같이 쓴다. 창이 최소화되거나 가려져 보이지 않으면 프레임을 그리지 않고, 앱의 창이 뜬 뒤에는 대기 창이 아무것도 남기지 않는다. 화면에 보이는 글자만 없어지고, 스크린 리더에는 여전히 안드로이드가 시작하는 중이라고 읽힌다(2026-11-22 소유자 요청).
+- 수용 기준: 대기 창의 로고 밝기는 한 주기 동안 끊김 없이 정해진 범위 안에서 오르내리고, 동작 줄이기에서는 멈춰 있으며 프레임 타이머가 돌지 않는다. 사라지는 효과는 정해진 시간 안에 끝나고 끝난 뒤에는 그릴 것이 남지 않는다. 대기 창의 접근성 이름은 모든 UI 언어에서 안드로이드가 시작하는 중이라고 말한다. (`fr7_boot_splash_logo_breathes_smoothly_between_dim_and_full`, `fr7_boot_splash_reduce_motion_shows_a_still_logo_and_draws_no_frames`, `fr7_boot_splash_hidden_window_draws_no_frames`, `fr7_boot_splash_crossfade_ends_with_nothing_left_to_draw`, `fr7_boot_splash_is_drawn_at_the_windows_dpi`, `fr7_boot_splash_follows_the_theme_and_fades_the_logo_into_it`, `fr7_boot_splash_keeps_saying_android_is_starting_to_screen_readers`, 그리고 세 플랫폼에서 밝은/어두운 테마, 동작 줄이기, 125%와 200% 배율로 대기 창을 녹화해 보는 수동 확인)
 
 ### FR-8 알림 (`Agreed`)
 - 게스트 알림을 호스트 알림 센터로 보낸다. 제목, 본문, 앱 이름, 아이콘을 싣는다.
