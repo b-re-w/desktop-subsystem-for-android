@@ -93,11 +93,27 @@ pub fn to_task_size((width, height): (u32, u32), scale: Scale) -> (u32, u32) {
 /// of the size a view was turned into is that view, not the size rounded back: otherwise the
 /// window would take a size a pixel off the one the user dragged to, and the frame it asked
 /// for would never count as its size. Any other frame is its size at `scale`.
+///
+/// A frame of exactly a view's own size, which no view turns into at `scale`, is that view
+/// 1:1: the task already draws at its new monitor's density. At the end of a move the task
+/// is asked for the window's size 1:1 together with the new density, and its first frame at
+/// that density can come before the guest reports the density, while the window still
+/// shows the task at the move's scale. Measured at that scale the frame would be the ratio of
+/// the two densities too large for one frame, and the window would follow it. A frame drawn
+/// at the old density is never of a view's own size: the task was asked for each view turned
+/// into task pixels at the scale.
 pub fn window_size_of(size: (u32, u32), scale: Scale, views: &[(u32, u32)]) -> (u32, u32) {
+    let real = |view: &(u32, u32)| view.0 != 0 && view.1 != 0;
     views
         .iter()
         .copied()
-        .find(|view| view.0 != 0 && view.1 != 0 && to_task_size(*view, scale) == size)
+        .find(|view| real(view) && to_task_size(*view, scale) == size)
+        .or_else(|| {
+            views
+                .iter()
+                .copied()
+                .find(|view| real(view) && *view == size)
+        })
         .unwrap_or_else(|| to_window_size(size, scale))
 }
 
@@ -406,8 +422,10 @@ fn fit_placement(frame: (u32, u32), view: (u32, u32)) -> FramePlacement {
 }
 
 /// The solid colour (`0xAARRGGBB`, opaque) under a task's frame, which shows wherever the
-/// frame does not cover the window: beside the last frame, shown 1:1, while a frame of the
-/// new size is pending, or beside a frame the guest keeps smaller. It is the app's own
+/// frame does not cover the window: beside a frame the guest keeps smaller than a window that
+/// holds its size, once that frame is the guest's answer to the window's size
+/// ([`FrameFollow::strips_filled`](super::frame_follow::FrameFollow::strips_filled)). While a
+/// frame of the new size is pending, nothing is drawn around the last frame. It is the app's own
 /// colour, never the desktop and never a white the app did not draw: the colour of the
 /// frame's top edge
 /// (`band`, then `fill`, as the title bar's band reads it) when it is known, else the app's
@@ -1515,6 +1533,40 @@ mod tests {
         }
     }
 
+    #[test]
+    fn fr4_a_frame_at_the_new_density_before_its_report_is_shown_1_to_1() {
+        // A move from 125% to 200% ends: the task is asked for 262 dpi and the window's
+        // 1186x1693 1:1. Its first frame at 262 dpi comes before the guest reports the
+        // density, while the window still shows the task at 262:164.
+        let mut sizing = WindowSizing::new(&big(737, 1060, 164));
+        let now = Instant::now();
+        sizing.dpi_reported(120);
+        sizing.dragging(true, now);
+        sizing.dpi_changed(192);
+        sizing.view_resized((1186, 1693), now);
+        sizing.dragging(false, now);
+        assert_eq!(
+            sizing.settle(now),
+            vec![density(262).unwrap(), live_resize(1186, 1693).unwrap()]
+        );
+        let scale = sizing.scale();
+        assert_ne!(scale, (1, 1), "the report has not come yet");
+        let views = [(1186, 1693)];
+        // The frame at the new density fills the window 1:1, not 1.6 times it.
+        assert_eq!(window_size_of((1186, 1693), scale, &views), (1186, 1693));
+        // A frame still at the old density is measured at the move's scale.
+        let old = window_size_of((737, 1060), scale, &views);
+        assert_eq!(old, to_window_size((737, 1060), scale));
+        assert_ne!(old, (1186, 1693));
+        // After the report the same frame is 1:1 as well: the window never changes size.
+        assert_eq!(sizing.guest_updated(&big(1186, 1693, 262)), None);
+        assert_eq!(sizing.scale(), (1, 1));
+        assert_eq!(
+            window_size_of((1186, 1693), sizing.scale(), &views),
+            (1186, 1693)
+        );
+    }
+
     /// A task on a display large enough for a 200% monitor.
     fn big(width: i32, height: i32, density_dpi: u32) -> Task {
         Task {
@@ -1775,6 +1827,30 @@ mod tests {
             host_sizing: true,
             ..SizeProposal::default()
         }));
+    }
+
+    #[test]
+    fn fr4_a_main_monitor_maximise_places_the_last_frame_as_before_the_fill_and_scales_nothing() {
+        // Settings at 1041x1495, drawn at its window's density, maximised on the 2880x1800 main
+        // monitor: until its frame of 2880x1704 comes, the last frame is placed exactly as it was
+        // before the window ever filled or stretched anything, 1:1 and never scaled.
+        let placed = frame_placement((1041, 1495), (2880, 1704), (1, 1), true);
+        assert_eq!(
+            placed,
+            FramePlacement {
+                scale: (1, 1),
+                origin: (919, 104),
+                size: (1041, 1495),
+            }
+        );
+        // The frame of the maximised size fills the window from its top left.
+        let placed = frame_placement((2880, 1704), (2880, 1704), (1, 1), true);
+        assert_eq!(placed.origin, (0, 0));
+        assert_eq!(placed.size, (2880, 1704));
+        // A window that does not hold its size shows its frame at its top left, as it always did.
+        let placed = frame_placement((1041, 1495), (2880, 1704), (1, 1), false);
+        assert_eq!(placed.origin, (0, 0));
+        assert_eq!(placed.size, (1041, 1495));
     }
 
     #[test]
