@@ -73,6 +73,17 @@ public class Nfr1SettingsAppMemoryTests
     }
 
     [Fact]
+    public void Nfr1_the_settings_app_renders_in_software_before_its_first_window()
+    {
+        var app = File.ReadAllText(Find("DsaSettings", "App.xaml.cs"));
+        var software = app.IndexOf("RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly",
+            StringComparison.Ordinal);
+        Assert.True(software >= 0, "the settings app does not set software rendering");
+        Assert.True(software < app.IndexOf("new MainWindow()", StringComparison.Ordinal));
+        Assert.True(software < app.IndexOf("base.OnStartup(e)", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Nfr1_the_settings_app_runs_with_a_small_dotnet_footprint()
     {
         var project = XDocument.Load(Find("DsaSettings", "DsaSettings.csproj"));
