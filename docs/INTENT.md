@@ -140,7 +140,11 @@ VM 안에서도 CPU 연산과 메모리 접근은 하드웨어 가상화로 거�
 | 창 | Win32 + DirectComposition | Wayland | NSWindow + Metal |
 | IME | TSF | Wayland 텍스트 입력 | macOS 텍스트 입력 |
 
-호스트 코드는 공통 계층(`host/core`)과 플랫폼 계층(`host/platform/<os>`)으로 나눈다. Apple Silicon과 Windows on ARM에서는 대부분의 안드로이드 앱이 번역 계층 없이 돈다.
+호스트 코드는 공통 계층(`host/core`)과 플랫폼 계층(`host/platform/<os>`)으로 나눈다.
+
+운영체제에 기대지 않는 동작은 `host/core`에 한 번만 구현하고, 모든 플랫폼이 그것을 호출한다. 창 크기 조절과 그 페이싱, 채우기 색, 프레임 배치, 제목 표시줄 규칙, 메모리 정책, 이미지 선택, 세션 수명주기가 여기에 든다. 플랫폼 계층은 창 시스템, 하이퍼바이저, 장치, 파일, 서비스 관리자처럼 그 운영체제를 직접 다뤄야 하는 부분만 갖고, 그 결과를 core의 타입으로 바꿔 넘긴다. 같은 규칙을 플랫폼마다 따로 쓰면 반드시 갈라지고, 고친 것이 한 플랫폼에만 닿기 때문이다. (2026-11-21 소유자 결정)
+
+Apple Silicon과 Windows on ARM에서는 대부분의 안드로이드 앱이 번역 계층 없이 돈다.
 
 Linux 호스트의 VM:
 - 안드로이드는 사용자마다 전용 crosvm VM에서 KVM 위로 돈다. 게스트와 호스트는 vsock(vhost-vsock)으로 잇고, 포트는 Hyper-V와 같다.
