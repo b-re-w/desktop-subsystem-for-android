@@ -16,7 +16,7 @@ public partial class MemoryPage : Page
         InitializeComponent();
         DataContext = ViewModel;
         LimitSection.DataContext = App.Settings;
-        _timer.Tick += async (_, _) => await ViewModel.RefreshAsync();
+        _timer.Tick += PollingTimers.Once(ViewModel.RefreshAsync);
         PollingTimers.Attach(this, _timer);
         Loaded += async (_, _) =>
         {
