@@ -2,6 +2,7 @@
 //! backing scale (2 on a Retina display) is between them.
 
 use dsa_host_core::compositor::frame_buffers::content_region;
+use dsa_host_core::compositor::window_sizing::{min_client_size, size_is_held, SizeProposal};
 
 /// The smallest a task window's content may be, in points, so its title bar buttons and a
 /// usable part of the app always fit.
@@ -58,6 +59,46 @@ pub fn place(content: (u32, u32), buffer: (u32, u32)) -> Option<Placement> {
         drawable: region,
         copy: region,
     })
+}
+
+/// Whether a window keeps the size AppKit gives it whatever size the guest gives its task
+/// ([`size_is_held`]): while it is zoomed or in full screen. The user's drag of an edge
+/// (`live_resize`) is the user choosing a size, never held.
+pub fn holds_size(zoomed: bool, full_screen: bool, live_resize: bool) -> bool {
+    size_is_held(SizeProposal {
+        maximized: zoomed && !live_resize,
+        fills_monitor: full_screen,
+        user_sizing: live_resize,
+        host_sizing: false,
+        off_normal_size: false,
+    })
+}
+
+/// The monitor dpi the window manager is told for a display of backing scale `scale`: 96 a
+/// point, as a monitor at 100% has on every host.
+pub fn dpi_of(scale: f64) -> u32 {
+    let scale = if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    };
+    (scale * 96.0).round() as u32
+}
+
+/// The smallest the window's content may be, in points, on a display of backing scale
+/// `scale`: the core's smallest client area for the task (at least `task`, the smallest the
+/// guest gives it, within `max`), and never less than the title bar's buttons need.
+pub fn min_content_points(
+    scale: f64,
+    max: Option<(u32, u32)>,
+    task: Option<(u32, u32)>,
+) -> (f64, f64) {
+    let pixels = min_client_size(dpi_of(scale), max, task);
+    let points = window_points(pixels, scale);
+    (
+        points.0.max(MIN_CONTENT_POINTS.0),
+        points.1.max(MIN_CONTENT_POINTS.1),
+    )
 }
 
 /// A rectangle in points: origin at the bottom left, as AppKit measures a screen.
@@ -141,6 +182,32 @@ mod tests {
     fn fr4_a_size_rounds_to_whole_pixels_and_never_to_zero() {
         assert_eq!(task_pixels((100.3, 0.0), 1.5), (150, 1));
         assert_eq!(task_pixels((10.0, 10.0), f64::NAN), (10, 10));
+    }
+
+    #[test]
+    fn fr4_a_zoomed_or_full_screen_window_holds_its_size_and_a_drag_never_does() {
+        assert!(holds_size(true, false, false));
+        assert!(holds_size(false, true, false));
+        assert!(!holds_size(false, false, false));
+        assert!(!holds_size(true, false, true));
+        assert!(holds_size(false, true, true));
+    }
+
+    #[test]
+    fn fr4_a_windows_smallest_content_is_the_cores_smallest_client_area() {
+        // 220 dp at the density a Retina display (192 dpi) draws at: 360 pixels, 180 points.
+        assert_eq!(min_content_points(2.0, None, None), (240.0, 180.0));
+        // A task the guest keeps larger raises it; the most the guest can draw caps it.
+        assert_eq!(
+            min_content_points(2.0, None, Some((1000, 800))),
+            (500.0, 400.0)
+        );
+        assert_eq!(
+            min_content_points(2.0, Some((300, 300)), None),
+            (240.0, 160.0)
+        );
+        assert_eq!(dpi_of(2.0), 192);
+        assert_eq!(dpi_of(f64::NAN), 96);
     }
 
     #[test]
