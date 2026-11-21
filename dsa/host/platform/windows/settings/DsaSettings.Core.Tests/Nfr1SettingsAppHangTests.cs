@@ -167,6 +167,34 @@ public class Nfr1SettingsAppHangTests
     }
 
     [Fact]
+    public async Task Nfr1_the_memory_page_lets_go_of_its_report_when_left()
+    {
+        var cli = new FakeCli().Answer("memory --json", Report(921600, 3));
+        var vm = new MemoryViewModel(new DsaService(cli), new KeyText());
+        await vm.RefreshAsync();
+        var hostList = vm.HostRows;
+        vm.Release();
+        Assert.Null(vm.Report);
+        Assert.Empty(vm.HostRows);
+        Assert.Empty(vm.GuestProcessRows);
+        await vm.RefreshAsync();
+        Assert.Same(hostList, vm.HostRows);
+        Assert.Equal(2, vm.HostRows.Count);
+    }
+
+    [Fact]
+    public void Nfr1_pages_with_lists_let_go_of_them_when_left_and_the_app_ends_with_its_window()
+    {
+        foreach (var page in new[] { "AppsPage.xaml.cs", "BackgroundPage.xaml.cs", "MemoryPage.xaml.cs", "LogsPage.xaml.cs" })
+        {
+            var code = File.ReadAllText(SettingsSources.File("DsaSettings", "Pages", page));
+            Assert.Matches(@"Unloaded \+= \(_, _\) =>\s*(\{[^}]*)?ViewModel\.Release\(\)", code);
+        }
+        var app = File.ReadAllText(SettingsSources.File("DsaSettings", "App.xaml"));
+        Assert.Contains("ShutdownMode=\"OnLastWindowClose\"", app);
+    }
+
+    [Fact]
     public void Nfr1_page_timers_skip_a_tick_while_their_poll_runs()
     {
         var pages = Path.Combine(SettingsSources.Dir("DsaSettings", "Pages"));

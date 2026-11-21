@@ -862,6 +862,28 @@ public sealed partial class MemoryViewModel : ObservableObject
     /// Refresh button and its first showing can overlap) joins the one that runs.</summary>
     public Task RefreshAsync() => _refresh.RunAsync(RefreshOnceAsync);
 
+    /// <summary>Lets go of the report and its rows, for a page that is left: the page asks for
+    /// a new report each time it is shown. A refresh in progress keeps what it brings.</summary>
+    public void Release()
+    {
+        if (_refresh.Running)
+        {
+            return;
+        }
+        _report = null;
+        _error = null;
+        UpdateRows();
+        ChangedAll();
+    }
+
+    private void UpdateRows()
+    {
+        HostRows.Update(BuildHostRows());
+        GuestRows.Update(BuildGuestRows());
+        KernelRows.Update(BuildKernelRows());
+        GuestProcessRows.Update(BuildGuestProcessRows());
+    }
+
     private async Task RefreshOnceAsync()
     {
         try
@@ -873,10 +895,7 @@ public sealed partial class MemoryViewModel : ObservableObject
         {
             _error = Format.Problem(_text, e);
         }
-        HostRows.Update(BuildHostRows());
-        GuestRows.Update(BuildGuestRows());
-        KernelRows.Update(BuildKernelRows());
-        GuestProcessRows.Update(BuildGuestProcessRows());
+        UpdateRows();
         ChangedAll();
     }
 }

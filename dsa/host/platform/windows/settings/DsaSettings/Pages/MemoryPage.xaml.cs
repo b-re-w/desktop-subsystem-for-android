@@ -23,6 +23,8 @@ public partial class MemoryPage : Page
             await ViewModel.RefreshAsync();
             await App.Settings.LoadAsync();
         };
+        // The report and its rows go when the page is left; a new one is asked for when shown.
+        Unloaded += (_, _) => ViewModel.Release();
     }
 
     private async void OnRefresh(object sender, RoutedEventArgs e) => await ViewModel.RefreshAsync();
