@@ -21,6 +21,8 @@ guest are platform neutral so Linux and macOS hosts can follow.
   - `dsa/guest/`: the Android side: the agent (a system app), the hwcomposer, the HAL
     clients, and the image configuration.
   - `dsa/kernel/`: the guest kernel configuration (binder built in) and its build.
+  - `dsa/apps/`: the default apps the image ships, as patches over pinned upstream sources
+    (LineageOS apps and AOSP DocumentsUI) and the scripts that fetch and build them.
 - `docs/INTENT.md`: why the project exists, decisions (D1 to D13), rejected alternatives.
 - `docs/RESEARCH.md`: the investigations behind decisions: what was checked, how, and what
   was found.
