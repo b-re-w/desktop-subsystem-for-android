@@ -13,6 +13,7 @@ ARM64_CONFIG = Path(__file__).with_name("android-arm64.config")
 VIRTIO_CONFIG = Path(__file__).with_name("virtio.config")
 DXG_CONFIG = Path(__file__).with_name("dxg.config")
 DEBUG_CONFIG = Path(__file__).with_name("android-debug.config")
+PROFILE_CONFIG = Path(__file__).with_name("android-memory-profile.config")
 PATCHES = Path(__file__).with_name("patches")
 BUILD = Path(__file__).with_name("build.sh")
 APPLY = Path(__file__).with_name("apply-patches.sh")
@@ -321,6 +322,19 @@ class AndroidKernelConfigTests(unittest.TestCase):
         default = re.search(r"fn default_processors\(\) -> u32 \{\s*(\d+)", core)
         self.assertIsNotNone(default)
         self.assertLessEqual(int(default.group(1)), 64)
+
+    def test_nfr1_allocation_profiling_is_opt_in_and_the_report_can_read_it(self):
+        profile = fragment_lines(PROFILE_CONFIG)
+        self.assertIn("CONFIG_MEM_ALLOC_PROFILING=y", profile)
+        for shipped in [CONFIG, ARM64_CONFIG, VIRTIO_CONFIG, DXG_CONFIG]:
+            self.assertNotIn("MEM_ALLOC_PROFILING", shipped.read_text(), shipped.name)
+        build = BUILD.read_text()
+        self.assertIn('--memory-profile) extra+=("$kernel_dir/android-memory-profile.config")', build)
+        self.assertNotRegex(build, r'fragments=\([^)]*android-memory-profile\.config')
+        image = Path(__file__).parents[1] / "guest"
+        self.assertIn('"/proc/allocinfo"', (image / "channeld" / "src" / "memory_report.rs").read_text())
+        self.assertIn("(allow dsa_memory_report proc_allocinfo (file (read open getattr)))",
+                      (image / "image" / "sepolicy" / "channeld.cil").read_text())
 
     def test_nfr1_zram_has_zstd_as_a_second_compressor_for_cold_pages(self):
         # The idle reclaim compresses what stays in zram again with zstd; without
