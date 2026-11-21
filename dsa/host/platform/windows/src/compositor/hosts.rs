@@ -1629,6 +1629,13 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn nfr8_the_windows_manager_keeps_the_shared_timing() {
+        use dsa_host_core::compositor::window_sizing::vectors::TIMING;
+        assert_eq!(super::TICK, TIMING.tick);
+        assert_eq!(super::PRESENT_WAIT, TIMING.present_wait);
+    }
+
+    #[test]
     fn fr22_app_info_opens_the_apps_page_at_the_app() {
         assert_eq!(
             dsa_host_core::links::app_page_arguments("com.example.clock"),
