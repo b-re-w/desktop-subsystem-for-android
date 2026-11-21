@@ -21,8 +21,8 @@ use std::sync::OnceLock;
 use dsa_host_core::compositor::caption::{BandSample, CaptionBand, CaptionTone};
 use dsa_host_core::compositor::frame_follow::{Arrival, FrameFollow};
 use dsa_host_core::compositor::window_sizing::{
-    frame_rect, kept_frame_action, to_task_size, to_window_size, FrameRectRequest, KeptFrame,
-    MoveLoop,
+    frame_placement, frame_rect, kept_frame_action, to_task_size, to_window_size, FrameRectRequest,
+    KeptFrame, MoveLoop,
 };
 use dsa_host_core::tasks::Bounds;
 use dsa_host_core::ui_text::caption::back_name;
@@ -33,7 +33,8 @@ use objc2::sel;
 
 use super::metal::{FrameRef, Presenter};
 use super::sizing::{
-    holds_size, min_content_points, picture_in_picture, task_pixels, window_points, Rect,
+    fill_colour, holds_size, layer_frame, min_content_points, picture_in_picture, task_pixels,
+    window_points, Rect,
 };
 use super::surface::Surface;
 use super::title_bar::{
@@ -323,6 +324,27 @@ unsafe fn apply_look(window: *mut AnyObject, look: Look) {
     }
     let _: () = msg_send![&*layer, setHidden: false];
     layout_fill(window);
+}
+
+/// Whether the user's appearance is dark, for the theme's colour under a frame.
+fn system_dark() -> bool {
+    unsafe {
+        let Ok(defaults) = class(c"NSUserDefaults") else {
+            return false;
+        };
+        let defaults: *mut AnyObject = msg_send![defaults, standardUserDefaults];
+        if defaults.is_null() {
+            return false;
+        }
+        let key = ns_string("AppleInterfaceStyle");
+        let style: *mut AnyObject = msg_send![defaults, stringForKey: &*key];
+        if style.is_null() {
+            return false;
+        }
+        let dark = ns_string("Dark");
+        let same: bool = msg_send![style, isEqualToString: &*dark];
+        same
+    }
 }
 
 /// Dims the name in the title bar while its window is not the key window, as AppKit dims its own.
@@ -758,6 +780,8 @@ pub struct TaskWindow {
     /// A frame that arrived while the window was taking a kept frame's size, shown or kept
     /// once it has.
     waiting: Option<(u64, (u32, u32))>,
+    /// The size of the frame on the screen, in task pixels, once there is one.
+    on_screen: Option<(u32, u32)>,
 }
 
 thread_local! {
@@ -822,7 +846,7 @@ impl TaskWindow {
             let _: () = msg_send![&*window, setCollectionBehavior: BEHAVIOR_FULL_SCREEN_PRIMARY];
 
             let presenter = Presenter::new(scale)?;
-            let view = view::make(task_id, rect, presenter.layer(), input)?;
+            let view = view::make(task_id, rect, presenter.root_layer(), input)?;
             let _: () = msg_send![&*window, setContentView: &*view];
             let _: () = msg_send![&*window, makeFirstResponder: &*view];
 
@@ -862,6 +886,7 @@ impl TaskWindow {
                 follow: FrameFollow::new(task_pixels((rect.size.width, rect.size.height), scale)),
                 kept: None,
                 waiting: None,
+                on_screen: None,
             })
         }
     }
@@ -891,6 +916,9 @@ impl TaskWindow {
         }
         let content = frame.content;
         let shown = self.presenter.present(frame);
+        if shown.is_ok() && content != (0, 0) {
+            self.on_screen = Some(content);
+        }
         self.read_band(content, |rows| {
             sample_bgra(
                 frame.pixels,
@@ -900,6 +928,7 @@ impl TaskWindow {
                 rows,
             )
         });
+        self.place_frame();
         shown
     }
 
@@ -980,6 +1009,29 @@ impl TaskWindow {
                 let _ = self.present_surface(texture_id, found, content);
             }
         }
+        self.place_frame();
+    }
+
+    /// Puts the frame on the screen where core places it in the window ([`frame_placement`])
+    /// and paints the rest of the content the colour core gives it ([`fill_colour`]), so no
+    /// part of the window shows AppKit's own background and no frame is scaled unless core
+    /// scales it.
+    fn place_frame(&self) {
+        let window = self.ptr();
+        let (view, backing) = unsafe { content_pixels(window) };
+        let frame = self.on_screen.unwrap_or(view);
+        let held = self.follow.held() && !self.overlay;
+        let placement = frame_placement(frame, view, self.frame_scale, held);
+        let sample = TONES.with(|tones| {
+            tones
+                .borrow()
+                .get(&(window as usize))
+                .map(BandTone::sample)
+                .unwrap_or_default()
+        });
+        // An overlay window is transparent wherever its app draws nothing.
+        let fill = fill_colour(self.overlay, sample, None, system_dark);
+        self.presenter.place(layer_frame(placement, backing), fill);
     }
 
     /// Gives the window's content `pixels`, in client pixels.
@@ -1008,11 +1060,15 @@ impl TaskWindow {
         self.presenter
             .present_surface(texture_id, surface, content)?;
         self.shown = Some((texture_id, content));
+        if content != (0, 0) {
+            self.on_screen = Some(content);
+        }
         self.read_band(content, |rows| {
             surface
                 .read(|pixels, stride| sample_bgra(pixels, stride, content.0, content.1, rows))
                 .unwrap_or_default()
         });
+        self.place_frame();
         Ok(())
     }
 
@@ -1160,6 +1216,7 @@ impl TaskWindow {
         let taken = self.follow.scale_changed(view);
         self.follow.view_taken(taken);
         self.kept = None;
+        self.place_frame();
     }
 
     /// The window shows each of its task's pixels at `scale` (window pixels per task pixels)
@@ -1170,8 +1227,8 @@ impl TaskWindow {
             return;
         }
         self.frame_scale = scale;
-        self.presenter.set_frame_scale(scale);
         view::set_frame_scale(&self.view, scale);
+        self.place_frame();
     }
 
     /// Gives the window's content `pixels`, the size that shows its task at the window's

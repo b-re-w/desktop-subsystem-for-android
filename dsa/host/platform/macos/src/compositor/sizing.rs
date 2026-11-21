@@ -1,8 +1,12 @@
 //! Sizes on macOS: windows are measured in points, the guest in pixels, and a display's
 //! backing scale (2 on a Retina display) is between them.
 
+use dsa_host_core::compositor::caption::BandSample;
 use dsa_host_core::compositor::frame_buffers::content_region;
-use dsa_host_core::compositor::window_sizing::{min_client_size, size_is_held, SizeProposal};
+use dsa_host_core::compositor::splash;
+use dsa_host_core::compositor::window_sizing::{
+    min_client_size, size_is_held, uncovered_fill, FramePlacement, SizeProposal,
+};
 
 /// The smallest a task window's content may be, in points, so its title bar buttons and a
 /// usable part of the app always fit.
@@ -85,6 +89,16 @@ pub fn dpi_of(scale: f64) -> u32 {
     (scale * 96.0).round() as u32
 }
 
+/// The smallest client area of the window in pixels on a display of backing scale `scale`,
+/// as core decides it for every host ([`min_client_size`]).
+pub fn min_content_pixels(
+    scale: f64,
+    max: Option<(u32, u32)>,
+    task: Option<(u32, u32)>,
+) -> (u32, u32) {
+    min_client_size(dpi_of(scale), max, task)
+}
+
 /// The smallest the window's content may be, in points, on a display of backing scale
 /// `scale`: the core's smallest client area for the task (at least `task`, the smallest the
 /// guest gives it, within `max`), and never less than the title bar's buttons need.
@@ -93,8 +107,7 @@ pub fn min_content_points(
     max: Option<(u32, u32)>,
     task: Option<(u32, u32)>,
 ) -> (f64, f64) {
-    let pixels = min_client_size(dpi_of(scale), max, task);
-    let points = window_points(pixels, scale);
+    let points = window_points(min_content_pixels(scale, max, task), scale);
     (
         points.0.max(MIN_CONTENT_POINTS.0),
         points.1.max(MIN_CONTENT_POINTS.1),
@@ -141,35 +154,106 @@ pub fn picture_in_picture(visible: Rect, task: (u32, u32)) -> Rect {
     }
 }
 
-/// The layer's contents scale that shows a drawable at `frame_scale` window pixels per
-/// drawable pixel on a display of backing scale `backing`: each of the task's pixels is then
-/// `frame_scale` device pixels, and the layer scales the drawable from its top left. A task
-/// that keeps its density on a display of another scale is shown so, the same size to the eye.
-pub fn contents_scale(backing: f64, (numerator, denominator): (u32, u32)) -> f64 {
+/// Where the frame's layer goes in the window's content, in points from its top left (x, y,
+/// width, height), for the placement core gives the frame (`placement`, in client pixels) on
+/// a display of backing scale `backing`. The layer shows its drawable over exactly that
+/// rectangle, so the frame is scaled only when core scales it.
+pub fn layer_frame(placement: FramePlacement, backing: f64) -> (f64, f64, f64, f64) {
     let backing = if backing.is_finite() && backing > 0.0 {
         backing
     } else {
         1.0
     };
-    if numerator == 0 || denominator == 0 {
-        return backing;
-    }
-    backing * f64::from(denominator) / f64::from(numerator)
+    (
+        f64::from(placement.origin.0) / backing,
+        f64::from(placement.origin.1) / backing,
+        f64::from(placement.size.0) / backing,
+        f64::from(placement.size.1) / backing,
+    )
+}
+
+/// The colour under the window's frame, from core ([`uncovered_fill`]): the app's colours
+/// read from its frame (`sample`), its splash background, else the theme's, `dark` asked only
+/// when needed. A `see_through` window gets none.
+pub fn fill_colour(
+    see_through: bool,
+    sample: BandSample,
+    splash_background: Option<u32>,
+    dark: impl FnOnce() -> bool,
+) -> Option<u32> {
+    uncovered_fill(
+        see_through,
+        sample.band,
+        sample.fill,
+        splash_background,
+        || splash::background(dark()),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dsa_host_core::compositor::window_sizing::vectors;
 
     #[test]
-    fn fr4_a_task_that_keeps_its_density_is_shown_at_its_windows_scale() {
-        // One to one on a Retina display.
-        assert_eq!(contents_scale(2.0, (1, 1)), 2.0);
-        // A task at 1x on a Retina display: two device pixels a task pixel, one point.
-        assert_eq!(contents_scale(2.0, (2, 1)), 1.0);
-        // A task at twice the density of a display at 1x: half a device pixel a task pixel.
-        assert_eq!(contents_scale(1.0, (1, 2)), 2.0);
-        assert_eq!(contents_scale(f64::NAN, (0, 0)), 1.0);
+    fn nfr8_macos_places_each_frame_as_the_shared_vectors_say() {
+        use dsa_host_core::compositor::window_sizing::frame_placement;
+        for case in vectors::PLACEMENTS {
+            let placement = frame_placement(case.frame, case.view, case.scale, case.held);
+            let expected = case.expected;
+            // On a Retina display, in points.
+            assert_eq!(
+                layer_frame(placement, 2.0),
+                (
+                    f64::from(expected.origin.0) / 2.0,
+                    f64::from(expected.origin.1) / 2.0,
+                    f64::from(expected.size.0) / 2.0,
+                    f64::from(expected.size.1) / 2.0,
+                ),
+                "{case:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn nfr8_macos_fills_beside_the_frame_as_the_shared_vectors_say() {
+        for case in vectors::fills() {
+            let sample = BandSample {
+                band: case.band,
+                fill: case.fill,
+                ..BandSample::default()
+            };
+            assert_eq!(
+                fill_colour(case.see_through, sample, case.splash, || case.dark),
+                case.expected,
+                "{case:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn nfr8_macos_holds_a_windows_size_as_the_shared_vectors_say() {
+        for case in vectors::HELD {
+            let p = case.proposal;
+            assert_eq!(
+                holds_size(p.maximized, p.fills_monitor, p.user_sizing),
+                case.expected,
+                "{case:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn nfr8_macos_keeps_the_smallest_client_area_the_shared_vectors_say() {
+        for case in vectors::MIN_CLIENT {
+            let scale = f64::from(case.dpi) / 96.0;
+            assert_eq!(dpi_of(scale), case.dpi);
+            assert_eq!(
+                min_content_pixels(scale, case.max, case.task),
+                case.expected,
+                "{case:?}"
+            );
+        }
     }
 
     #[test]
@@ -185,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn fr4_a_zoomed_or_full_screen_window_holds_its_size_and_a_drag_never_does() {
+    fn nfr8_a_zoomed_or_full_screen_window_holds_its_size_and_a_drag_never_does() {
         assert!(holds_size(true, false, false));
         assert!(holds_size(false, true, false));
         assert!(!holds_size(false, false, false));
@@ -194,7 +278,7 @@ mod tests {
     }
 
     #[test]
-    fn fr4_a_windows_smallest_content_is_the_cores_smallest_client_area() {
+    fn nfr8_a_windows_smallest_content_is_the_cores_smallest_client_area() {
         // 220 dp at the density a Retina display (192 dpi) draws at: 360 pixels, 180 points.
         assert_eq!(min_content_points(2.0, None, None), (240.0, 180.0));
         // A task the guest keeps larger raises it; the most the guest can draw caps it.
