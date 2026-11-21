@@ -1877,6 +1877,12 @@ Windows의 Hyper-V VM 대신 USB로 연결한 폰의 AVF(Android Virtualization 
 - Android 16 Settings의 덤프는 없었다. 16의 이름은 소스로만 확인했고, 이미지 빌드가 대상 리소스 표로 다시 확인한다.
 - 밝은 테마와 어두운 테마에서 Settings, 파일 선택기, 권한 대화상자가 같은 규칙을 따르는지는 수동 확인이다(FR-34의 네 번째 수용 기준).
 
+### 2026-11-22 덧붙임: 오버레이 밖에서 고친 것
+- Settings, PermissionController, PackageInstaller, IntentResolver를 DocumentsUI(FR-42)처럼 Framework build의 트리에서 이미지의 고정 커밋(위 매니페스트의 커밋과 같다)으로 패치해 빌드하고, `make-image.py`가 게시된 APK 자리에 둔다(PermissionController는 권한 APEX 안). `check-image.py`는 각 화면의 기록이 `dsa/apps`의 고정 커밋과 패치와 맞는지 본다. 패치는 `dsa/apps/<앱>/patches`, SettingsLib의 패치는 `dsa/apps/settingslib/patches`에 있고, 한 패치가 16과 17 원본 모두에 `--fuzz=0`으로 붙는 것을 이 PC에서 `patch --dry-run`으로 확인했다(빌드는 하지 않았다).
+- 위 "대가와 남은 것"의 세 항목 가운데 둘이 풀린다. PermissionController의 권한 화면은 SettingsLib의 `CollapsingToolbarDelegate`가 창 높이 600 dp를 기준으로 큰 제목을 펼치거나 접어 연다(같은 액티비티의 하위 화면도 같다). Settings 첫 화면은 창 높이가 600 dp를 넘나들 때만 액티비티를 다시 만들어 `layout-h600dp`가 바뀐다. DocumentsUI의 큰 제목은 FR-42가 이미 넣었다.
+- 그 밖에 SettingsLib의 큰 제목과 접힌 제목을 굵게(가변 글꼴 굵기 포함) 하고 접힐 때 줄어들게(`scale`) 했다. PackageInstaller는 Material 3 대화상자(둥근 대화상자, 나란한 버튼)를 늘 쓰고 제목이 굵다. 권한 대화상자의 제목이 굵고, 버튼이 이미지에 없는 글꼴 대신 시스템 글꼴을 쓴다. 공유 시트 제목이 굵다. 컴파일된 APK 편집과 오버레이는 그대로 두고, 오버레이는 새 APK를 대상으로 만든다.
+- 확인하지 못한 것: 이 APK들이 트리에서 빌드되는지, PermissionController의 APK 대상 이름(`apk_pattern`)이 맞는지, 바꾼 앱이 뜨고 보기에 D27을 따르는지는 develop의 Framework build와 이미지 테스트, 소유자의 수동 확인이 처음 본다.
+
 ## R24. v0.1.9 실기 시험의 실패: GPU 리셋 뒤 프레임워크 재시작, 남은 창, 두 번째 태스크의 강제 종료 (NFR-5, FR-3, FR-14, FR-21, FR-26)
 
 ### 확인한 자료
