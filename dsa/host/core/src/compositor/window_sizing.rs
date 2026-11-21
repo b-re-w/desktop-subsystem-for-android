@@ -378,30 +378,6 @@ pub fn frame_placement(
     }
 }
 
-/// Where a window of `view` pixels shows the last frame it has (`frame` task pixels, at
-/// `scale`) while a frame of its new size is still `pending`: the window grew or shrank (the
-/// maximise button, a double click on the title bar, a snap, the keyboard, a restore, an
-/// edge) and the guest has not drawn at the new size yet. The last frame is stretched to fit
-/// the window, keeping its shape, in the window's middle, in every scaling mode, so the window
-/// never shows a small frame with the desktop around it. Once nothing is pending the frame is
-/// placed as [`frame_placement`] says.
-pub fn shown_frame_placement(
-    frame: (u32, u32),
-    view: (u32, u32),
-    scale: Scale,
-    held: bool,
-    pending: bool,
-) -> FramePlacement {
-    let placed = frame_placement(frame, view, scale, held);
-    if !pending || frame.0 == 0 || frame.1 == 0 || view.0 == 0 || view.1 == 0 {
-        return placed;
-    }
-    if to_window_size(frame, scale) == view {
-        return placed;
-    }
-    fit_placement(frame, view)
-}
-
 /// `frame` task pixels scaled to fit a window of `view` pixels, keeping their shape, centred.
 fn fit_placement(frame: (u32, u32), view: (u32, u32)) -> FramePlacement {
     // The direction that fills the window first sets the scale.
@@ -421,8 +397,8 @@ fn fit_placement(frame: (u32, u32), view: (u32, u32)) -> FramePlacement {
 }
 
 /// The solid colour (`0xAARRGGBB`, opaque) under a task's frame, which shows wherever the
-/// frame does not cover the window: beside a frame stretched while a frame of the new size is
-/// pending, or beside a frame the guest keeps smaller. It is the app's own colour, never the
+/// frame does not cover the window: beside the last frame, shown 1:1, while a frame of the
+/// new size is pending, or beside a frame the guest keeps smaller. It is the app's own colour, never the
 /// desktop and never a white the app did not draw: the colour of the frame's top edge
 /// (`band`, then `fill`, as the title bar's band reads it) when it is known, else the app's
 /// splash background, else the theme's window colour.
@@ -1059,7 +1035,7 @@ pub struct FrameRectRequest {
     /// The user is dragging one of the window's edges right now. Nothing else holds a size:
     /// a snap, a maximise, a restore, the keyboard and a new monitor scale are the desktop
     /// placing the window, and its rectangle is taken as it is. The frame the guest draws for
-    /// it is shown stretched until it arrives, and the guest is asked for the window's size.
+    /// it is awaited with the last frame shown 1:1, and the guest is asked for the window's size.
     pub edge_drag: bool,
     /// The edges the user drags (left, top), as the desktop reported them when the drag
     /// started: an edge drag keeps the opposite edge where it is, whether the window grows or
@@ -1461,31 +1437,18 @@ mod tests {
     }
 
     #[test]
-    fn fr4_a_pending_frame_is_stretched_to_fit_the_new_window_centred_in_every_mode() {
-        // App mode (1:1): a 1200x800 frame in a window maximised to 2560x1380 before the guest
-        // drew at that size. It fills the height, keeps its shape, and sits in the middle.
-        let placed = shown_frame_placement((1200, 800), (2560, 1380), (1, 1), true, true);
-        assert_eq!(placed.size, (2070, 1380));
-        assert_eq!(placed.origin, (245, 0));
-        // Without the pending frame the same capped frame stays 1:1 in the middle.
-        let capped = shown_frame_placement((1200, 800), (2560, 1380), (1, 1), true, false);
-        assert_eq!(capped.size, (1200, 800));
-        assert_eq!(
-            capped,
-            frame_placement((1200, 800), (2560, 1380), (1, 1), true)
-        );
-        // System mode (the task keeps its density): fit, centred, the same way.
-        let placed = shown_frame_placement((1600, 900), (2560, 1380), (82, 131), true, true);
-        assert_eq!(placed.size, (2453, 1380));
-        assert_eq!(placed.origin, (53, 0));
-        // A window that shrank (restore) and is not held stretches its last frame down too.
-        let placed = shown_frame_placement((2560, 1380), (1280, 690), (1, 1), false, true);
-        assert_eq!(placed.size, (1280, 690));
-        assert_eq!(placed.origin, (0, 0));
-        // A frame already the window's size is shown as it is.
-        let placed = shown_frame_placement((1000, 800), (1000, 800), (1, 1), true, true);
+    fn fr4_a_pending_frame_is_shown_unscaled_in_the_middle_of_the_window() {
+        // A 1200x800 frame in a window maximised to 2560x1380 before the guest drew at that
+        // size: shown 1:1, never stretched, in the window's middle.
+        let placed = frame_placement((1200, 800), (2560, 1380), (1, 1), true);
         assert_eq!(placed.scale, (1, 1));
-        assert_eq!(placed.size, (1000, 800));
+        assert_eq!(placed.size, (1200, 800));
+        assert_eq!(placed.origin, (680, 290));
+        // A window that is not held shows its last frame 1:1 at its top left.
+        let placed = frame_placement((2560, 1380), (1280, 690), (1, 1), false);
+        assert_eq!(placed.scale, (1, 1));
+        assert_eq!(placed.size, (2560, 1380));
+        assert_eq!(placed.origin, (0, 0));
     }
 
     #[test]

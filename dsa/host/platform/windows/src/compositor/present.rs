@@ -64,7 +64,7 @@ use dsa_host_core::compositor::surface_calls::{
     SURFACE_OP_TICK,
 };
 use dsa_host_core::compositor::window_sizing::{
-    gap_fill, shown_frame_placement, to_task_length, window_size_of, FramePlacement, Scale,
+    frame_placement, gap_fill, to_task_length, window_size_of, FramePlacement, Scale,
 };
 use dsa_protocol::window_host::encode_body;
 use dsa_protocol::window_host::types::{envelope::Body, SurfaceAnswer, SurfaceCall};
@@ -328,8 +328,6 @@ struct State {
     splash_image: Option<SplashImage>,
     splash_background: Option<u32>,
     fill_colour: Option<u32>,
-    view_seen: (u32, u32),
-    pending_from: Option<(u32, u32)>,
     /// The size of the frame swapchain's buffers: the texture's, not a frame's.
     buffers: Option<(u32, u32)>,
     buffer_count: u32,
@@ -499,8 +497,6 @@ impl WindowPresenter {
                 splash_image: None,
                 splash_background: None,
                 fill_colour: None,
-                view_seen: view,
-                pending_from: None,
                 buffers: None,
                 buffer_count: 0,
                 wanted_buffers: swapchain_buffers(),
@@ -1428,16 +1424,7 @@ impl WindowPresenter {
             return false;
         };
         let view = state.follow.view();
-        if view != state.view_seen {
-            state.view_seen = view;
-            state.pending_from = Some(state.frame);
-        }
-        let pending = state.pending_from == Some(state.frame);
-        if !pending {
-            state.pending_from = None;
-        }
-        let placement =
-            shown_frame_placement(state.frame, view, state.scale, state.follow.held(), pending);
+        let placement = frame_placement(state.frame, view, state.scale, state.follow.held());
         let colour = (!self.see_through).then(|| {
             let theme = || splash::background(super::system_settings::read().dark_mode);
             gap_fill(
