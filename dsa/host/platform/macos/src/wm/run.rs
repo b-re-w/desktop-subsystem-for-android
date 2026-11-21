@@ -514,3 +514,15 @@ fn serve(places: Places, stop: Arc<AtomicBool>) -> Result<(), String> {
     log("dsa-wm stopped");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use dsa_host_core::compositor::window_sizing::vectors::TIMING;
+
+    #[test]
+    fn nfr8_the_macos_manager_keeps_the_shared_timing() {
+        assert_eq!(super::TICK, TIMING.tick);
+        assert_eq!(super::super::frame_slots::PRESENT_WAIT, TIMING.present_wait);
+        assert!(super::PRESENT_TICK < TIMING.present_wait);
+    }
+}
