@@ -925,6 +925,22 @@ DSA 이미지는 시계, 갤러리, 카메라, 음악, 계산기, 녹음기를 �
 - 수용 기준: 이미지 검사가 일곱 앱이 위의 패키지명으로 이미지에 있고, `dsa/apps/`의 패치를 적용한 빌드인지 확인한다. (`fr42_the_default_apps_are_in_the_image_with_aosp_package_names`)
 - 수용 기준: 각 앱이 밝은 테마와 어두운 테마에서 D27의 모양 규칙을 따른다. (수동 확인)
 
+### FR-43 대체 스토어 (`Agreed`, 2026-11-22 소유자 요청)
+DSA는 앱 스토어를 싣지 않는다. 대신 설정 앱의 고급 > Google Play 아래 "대체 스토어" 항목에서 사용자가 고르면 ONE store, Aurora Store, F-Droid의 APK를 각 프로젝트의 공식 배포처에서 받아, 보통 앱과 같은 설치 경로(`dsa install`, PackageInstaller)로 설치한다. 아무것도 설치하지 않는 것이 기본이다.
+- 받는 곳: 버전을 코드에 고정하지 않고, 누를 때마다 공식 "최신" 위치를 읽는다.
+  - ONE store(`com.skt.skaf.A000Z00040`): `https://m.onestore.co.kr/ko-kr/binary/download.omp?type=V01`. 휴대폰 브라우저의 User-Agent로 요청하고, 그 주소가 넘겨 주는 `*.onestore.co.kr`의 APK를 받는다. x86_64 코드가 들어 있다.
+  - Aurora Store(`com.aurora.store`): 공식 사이트의 파일 목록(`https://auroraoss.com/api/files`)에서 `/downloads/AuroraStore/Release/AuroraStore-<버전>.apk` 중 가장 높은 버전을 고르고 `https://auroraoss.com`에서 받는다. 변형판(huawei, preload)은 고르지 않는다.
+  - F-Droid(`org.fdroid.fdroid`): `https://f-droid.org/F-Droid.apk`.
+- 검사: 받은 APK의 패키지명과 서명 인증서의 SHA-256이 코드에 기록한 값과 같아야 설치한다. 다르면 설치하지 않고 받은 파일을 지운다. 기록한 값: ONE store `77e88a40cb954b2b409bd54199106918b599c116cd51d31a2c7eb7743f56e33a`("SKT Signed System Level3"), Aurora Store `4c626157ad02bda3401a7263555f68a79663fc3e13a4d4369a12570941aa280f`(공식 사이트에 공개된 값), F-Droid `43238d512c1e5eb2d6569f4a3afbf5523418b82e0a3ed1552770abb9a9c9ccab`(F-Droid가 공개한 값). 서명 자체의 유효성은 안드로이드의 패키지 설치기가 확인한다.
+- `dsa stores [status]`와 `dsa stores install onestore|aurora|fdroid`. 상태는 각 스토어가 설치되었는지와 그 버전을 보인다. 안드로이드가 꺼져 있으면 설치할 때 켠다.
+- 설정 앱의 항목은 스토어마다 단추 하나를 둔다. 설치되지 않았으면 "설치", 설치되었으면 "설치됨"과 "열기"를 보이고, 받는 중과 설치 중에는 진행 상태를, 실패하면 그 까닭을 보인다. 제거는 보통 앱 목록에서 한다. 스토어 이름은 각 소유자의 상표이므로 이름만 쓰고 로고는 쓰지 않는다. Windows, macOS, Linux 설정 앱이 같은 일을 하고, 스토어 목록과 받는 곳, 검사, 상태 규칙은 core에 한 번 둔다(NFR-8).
+- 수용 기준: 스토어 이름에서 받는 곳과 패키지명, 인증서가 정해지고, Aurora의 파일 목록에서 변형판이 아닌 가장 높은 버전이 골라진다. (`fr43_each_store_has_its_official_source_package_and_certificate`, `fr43_the_newest_plain_aurora_release_is_chosen`)
+- 수용 기준: 다른 인증서로 서명되었거나 패키지명이 다른 APK는 거부되고 설치되지 않는다. (`fr43_an_apk_from_another_signer_is_refused`, `fr43_an_apk_of_another_package_is_refused`)
+- 수용 기준: 설치된 앱 목록에서 각 스토어의 상태(설치 안 됨, 설치됨과 버전)가 정해진다. (`fr43_the_installed_state_comes_from_the_installed_apps`)
+- 수용 기준: CLI가 `dsa stores`와 `dsa stores install <스토어>`를 읽고 모르는 스토어를 거부한다. (`fr43_dsa_stores_install_names_one_of_three_stores`)
+- 수용 기준: 세 설정 앱의 "대체 스토어" 문구가 모든 표시 언어에 있다. (`fr43_alternative_store_strings_exist_in_every_language`)
+- 수용 기준: 실제 PC에서 세 단추로 각 스토어를 설치하고 열 수 있다. (수동 확인)
+
 ## 4. 비기능 요구사항
 
 ### NFR-1 대기 메모리 (`Agreed`)
