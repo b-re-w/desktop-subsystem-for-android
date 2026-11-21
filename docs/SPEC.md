@@ -767,7 +767,7 @@ USB로 연결한 안드로이드 폰 안의 VM에서 DSA 안드로이드를 돌�
 - 수용 기준: 비보호 VM을 지원하지 않는 폰이나 USB 디버깅이 허용되지 않은 폰을 고르면, 이유를 알리고 PC VM 백엔드는 그대로 남는다.
 
 ### FR-34 시스템 화면 디자인 (`Agreed`)
-안드로이드 시스템이 그리는 화면을 One UI 계열 모양으로 그린다(INTENT D27). 앱이 자기 테마로 그리는 화면은 바꾸지 않는다.
+안드로이드 시스템이 그리는 화면을 DSA만의 디자인(INTENT D27: One UI와 Material 3 Expressive의 장점을 결합하되 어느 한쪽을 그대로 복원하는 것을 목표로 하지 않는다)으로 그린다. 앱이 자기 테마로 그리는 화면은 바꾸지 않는다.
 - 대상: 설정 앱, 파일 선택기(DocumentsUI), 권한 컨트롤러, 패키지 설치 관리자, 공유 시트, 프레임워크 대화상자와 토스트.
 - 큰 제목 영역: 화면 맨 위에 화면 제목을 크게 쓰고, 목록을 스크롤하면 보통 툴바 높이로 접힌다. 창 높이가 600dp보다 낮으면 처음부터 접혀 있다. 데스크톱 창에서 세로 공간을 아끼기 위해서다.
 - 목록: 항목을 둥근 카드로 묶고, 카드 사이에 간격을 둔다. 구분선은 카드 안에만 그린다.
@@ -905,6 +905,17 @@ WSA가 제공한 Widevine L3를 제공한다. DSA는 Google 바이너리를 싣�
 - 수용 기준: 게스트 디스플레이 전체를 덮는 오버레이는 입력을 받든 안 받든 창이 없고, hwcomposer가 그것을 모든 앱 태스크의 프레임 위에 합성하며, 알려진 오버레이가 없을 때는 디스플레이 크기의 레이어를 어느 창에도 넣지 않는다. (`fr41_a_full_display_overlay_gets_no_window`, `fr41_an_overlay_that_covers_the_display_is_composed_over_every_task`, `fr41_a_display_wide_layer_is_composed_over_tasks_only_for_a_reported_overlay`)
 - 수용 기준: 오버레이 창은 포커스를 가진 채로 열리지 않고, 포커스를 받을 수 있는 오버레이만 누를 때 활성화되며, 입력을 받지 않는 오버레이는 포인터를 통과시킨다. 작업 영역보다 큰 오버레이는 비율을 지켜 줄여 보인다. (`fr41_an_overlay_never_opens_focused_and_says_whether_it_may_take_the_focus`, `fr41_a_click_activates_only_an_overlay_that_may_take_the_focus`, `fr41_the_pointer_passes_through_an_overlay_that_takes_no_input`, `fr41_an_overlay_is_never_larger_than_its_monitors_work_area`)
 - 수용 기준: 실제 PC에서 FLO의 떠 있는 가사가 손잡이 없이 바탕화면이 비치는 창으로 뜨고, 가사를 끌면 창이 포인터 밑에서 따라와 배율이 다른 두 번째 모니터까지 옮겨지고 그 모니터의 크기로 보이며, 껐다 켜거나 안드로이드를 다시 시작해도 끌어 둔 모니터의 그 자리에 뜨고, 눌러도 쓰던 창의 포커스가 그대로이며, 앱에서 끄면 사라진다. 오버레이를 쓰는 다른 앱 하나와 화면 필터 앱 하나로도 확인한다. (수동 확인)
+
+### FR-42 기본 앱 (`Agreed`, 2026-11-22 소유자 결정)
+DSA 이미지는 시계, 갤러리, 카메라, 음악, 계산기, 녹음기를 기본 앱으로 넣고, 파일 탐색기(DocumentsUI)를 고친다. 모두 INTENT D27의 디자인을 따른다. 어떤 앱을 뺄지는 소유자가 써 본 뒤 정한다.
+- 원본: 시계는 LineageOS DeskClock, 갤러리는 Glimpse, 카메라는 Aperture, 음악은 Twelve, 계산기는 ExactCalculator, 녹음기는 Recorder(모두 LineageOS의 현재 안드로이드 브랜치), 파일 탐색기는 AOSP DocumentsUI다.
+- 패키지명: AOSP 기본 앱의 이름을 쓴다. 시계 `com.android.deskclock`, 갤러리 `com.android.gallery3d`, 카메라 `com.android.camera2`, 음악 `com.android.music`, 계산기 `com.android.calculator2`, 녹음기 `com.android.soundrecorder`, 파일 탐색기 `com.android.documentsui`. 앱 이름은 원본의 브랜드 이름이 아니라 "시계", "갤러리" 같은 일반 이름이다.
+- 소스: 원본 코드는 저장소에 넣지 않는다. 스크립트가 고정한 리비전을 `.scratch/`에 받고, `dsa/apps/<앱>/`에 둔 패치를 적용해 빌드한다.
+- 라이선스: 원본의 라이선스(Apache-2.0)를 따르고, 각 앱과 함께 들어가는 라이브러리가 NFR-7의 구성 목록에 오른다.
+- 넣지 않는 것: 캘린더는 넣지 않는다. AOSP Calendar, Gallery2, Music은 계속 뺀다(같은 패키지명은 이 기본 앱이 쓴다).
+- 카메라는 VM에 카메라 장치가 있을 때 쓸 수 있고, 장치가 없어도 앱이 죽지 않는다.
+- 수용 기준: 이미지 검사가 일곱 앱이 위의 패키지명으로 이미지에 있고, `dsa/apps/`의 패치를 적용한 빌드인지 확인한다. (`fr42_the_default_apps_are_in_the_image_with_aosp_package_names`)
+- 수용 기준: 각 앱이 밝은 테마와 어두운 테마에서 D27의 모양 규칙을 따른다. (수동 확인)
 
 ## 4. 비기능 요구사항
 
