@@ -157,24 +157,28 @@ impl ImageAssembler {
             }
             self.current = Some((piece.clip_id, piece.size, Vec::new()));
         }
-        let Some((clip_id, size, data)) = self.current.as_mut() else {
+        let Some((clip_id, size, have)) = self
+            .current
+            .as_ref()
+            .map(|(clip_id, size, data)| (*clip_id, *size, data.len() as u64))
+        else {
             return Ok(None);
         };
-        let (clip_id, size) = (*clip_id, *size);
-        if piece.size != size || piece.offset != data.len() as u64 {
+        if piece.size != size || piece.offset != have {
             return Err(self.refuse(
                 clip_id,
                 format!(
-                    "a piece at {} of {} bytes came after {} of {size}",
-                    piece.offset,
-                    piece.size,
-                    data.len()
+                    "a piece at {} of {} bytes came after {have} of {size}",
+                    piece.offset, piece.size
                 ),
             ));
         }
-        if data.len() as u64 + piece.data.len() as u64 > size {
+        if have + piece.data.len() as u64 > size {
             return Err(self.refuse(clip_id, format!("its pieces are longer than {size} bytes")));
         }
+        let Some((_, _, data)) = self.current.as_mut() else {
+            return Ok(None);
+        };
         data.extend_from_slice(&piece.data);
         if data.len() as u64 == size {
             let (_, _, png) = self.current.take().unwrap_or_default();
