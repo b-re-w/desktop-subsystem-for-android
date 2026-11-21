@@ -166,6 +166,15 @@ pub const DENSITY_AT_BASE_DPI: u32 = 130;
 /// guest that cannot give the size at all.
 pub const SETTLE: Duration = Duration::from_secs(2);
 
+/// How often a window manager looks at its windows' timers ([`WindowSizing::tick`],
+/// [`WindowSizing::settle`]) and for window hosts that are late. A quarter of [`SETTLE`], so a
+/// size the guest did not take is followed within a little more than [`SETTLE`] on every host.
+pub const MANAGER_TICK: Duration = Duration::from_millis(500);
+
+/// How long a window host may take to show a frame before the next one goes to it without
+/// its answer, on every host.
+pub const PRESENT_WAIT: Duration = Duration::from_millis(500);
+
 /// The density a task draws at on a monitor of `dpi`, so it looks the size it would at 100%:
 /// [`DENSITY_PER_SCALE`] times the monitor's scale, rounded to the nearest dpi and then down
 /// to an even number: 130 at 96 dpi (100%), 164 at 120
@@ -1458,6 +1467,15 @@ mod tests {
         // On a second monitor to the right of the primary, and on one above it.
         assert_eq!(maximized_position(1920, 2048, 2064, 8), 1912);
         assert_eq!(maximized_position(-1152, 1104, 1120, 8), -1160);
+    }
+
+    #[test]
+    fn fr4_every_host_follows_its_windows_at_the_same_pace() {
+        // The manager looks at its timers often enough that a size the guest did not take
+        // is followed soon after SETTLE, and a window host is not waited for past one tick.
+        assert!(MANAGER_TICK * 4 <= SETTLE);
+        assert!(PRESENT_WAIT <= MANAGER_TICK);
+        assert!(!PRESENT_WAIT.is_zero() && !MANAGER_TICK.is_zero());
     }
 
     #[test]
