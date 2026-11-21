@@ -23,6 +23,11 @@
 
 ## What it is
 
+<p align="center">
+  <img src=".github/assets/dsa-concept.png" alt="DSA concept image: Android apps in their own windows on the Windows desktop" width="860"><br>
+  <sub>DSA concept image</sub>
+</p>
+
 DSA runs Android in a lightweight VM of its own and shows each Android task in a native
 desktop window. Each app has its own taskbar button, Start menu entry, notifications and
 entry in the list of installed apps, as it did with the Windows Subsystem for Android
