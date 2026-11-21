@@ -37,9 +37,7 @@ what you find. Linux and macOS are in progress and not released (see
 [Supported platforms](#supported-platforms)).
 
 **DSA 1.0 is here.** The first stable release brings Android apps back to the Windows
-desktop, each in a window of its own. Watch the launch film:
-
-[![DSA 1.0 launch film](https://img.youtube.com/vi/4VgRY6QKiwM/maxresdefault.jpg)](https://www.youtube.com/watch?v=4VgRY6QKiwM)
+desktop. [Watch the launch film](https://www.youtube.com/watch?v=4VgRY6QKiwM).
 
 ## Supported platforms
 
