@@ -738,7 +738,7 @@ mod tests {
         let other = vec![9u8; 5];
         assert_eq!(
             assembler.take(image_pieces(2, &other).next().unwrap()),
-            Ok(Some(other))
+            Ok(Some(other.clone()))
         );
     }
 }
