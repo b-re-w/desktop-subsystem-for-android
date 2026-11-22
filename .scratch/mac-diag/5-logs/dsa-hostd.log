@@ -1,0 +1,500 @@
+adb auto-connect: the adb server lists 127.0.0.1:58526
+lifecycle: Android's VM restarted by itself while it ran, so DSA stopped it; stopping the VM that restarted
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android's VM restarted by itself while it ran, so DSA stopped it; Android is stopped and starts again when asked
+lifecycle: Android crashed (the VM restarted by itself); it starts again when asked
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+host certificates: 0 root certificates added on this computer
+host memory: macOS memory pressure level 2, short
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.8-arm64/system.img matches its record
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+lifecycle: Android crashed (kernel panic: Kernel panic - not syncing: EXT4-fs (device vdb3): panic forced after error); it starts again when asked
+guest log: no reader is attached; Android stops sending its log
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host certificates: 0 root certificates added on this computer
+host memory: macOS memory pressure level 2, short
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.8-arm64/system.img matches its record
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+lifecycle: Android finished booting after 30.3 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android crashed (kernel panic in free_pgtables); it starts again when asked
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host memory: macOS memory pressure level 2, short
+host certificates: 0 root certificates added on this computer
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.8-arm64/system.img matches its record
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+lifecycle: Android finished booting after 30.1 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+lifecycle: Android crashed (kernel panic in bpf_prog_destroy); it starts again when asked
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host certificates: 0 root certificates added on this computer
+host memory: macOS memory pressure level 2, short
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+lifecycle: Android finished booting after 36.8 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+dsa-hostd 0.1.0: uid:501: memory: host 17 MiB (vm 0, window manager 10, graphics renderer 7, 0 app windows 0, settings app 0, service 0); guest 1610/1973 MiB used, cache 931, apps 407, swap 64 (zram 19), processes 621 MiB (605 resident, 16 compressed in zram), Google Play services 383 MiB (375 resident, 7 compressed in zram), 134 s ago
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+local API: refused a client of uid:501: local API: the connection is closed
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+host certificates: 0 root certificates added on this computer
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host memory: macOS memory pressure level 2, short
+host certificates: 0 root certificates added on this computer
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+lifecycle: Android finished booting after 29.7 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+dsa-hostd 0.1.0: uid:501: memory: host 19 MiB (vm 0, window manager 10, graphics renderer 9, 0 app windows 0, settings app 0, service 0); guest 1120/1974 MiB used, cache 528, apps 303, swap 159 (zram 42), processes 412 MiB (379 resident, 33 compressed in zram), Google Play services 214 MiB (197 resident, 16 compressed in zram), 134 s ago
+lifecycle: the agent is gone; the tasks it reported have ended
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android crashed (kernel panic: Unable to handle kernel paging request at virtual address 0020000000000000); it starts again when asked
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+root: 2026-11-21T21:32:25.614Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh -c cat /sys/kernel/mm/lru_gen/enabled` (request 1): refused: timed out with no answer within 55 seconds
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host certificates: 0 root certificates added on this computer
+host memory: macOS memory pressure level 2, short
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.8-arm64/system.img matches its record
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+lifecycle: Android finished booting after 38.3 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+lifecycle: Android crashed (kernel panic in rmap_walk_file); it starts again when asked
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host certificates: 0 root certificates added on this computer
+host memory: macOS memory pressure level 2, short
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.8-arm64/system.img matches its record
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+lifecycle: Android finished booting after 29.9 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+dsa-hostd 0.1.0: stopping Android
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+local API: refused a client of uid:501: local API: the connection is closed
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+host certificates: 0 root certificates added on this computer
+host memory: macOS memory pressure level 2, short
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.8-arm64/system.img matches its record
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host certificates: the trust stores cannot be read: the trust settings cannot be read: I/O 오류
+host certificates: the trust stores cannot be read: the trust settings cannot be read: I/O 오류
+host certificates: the trust stores cannot be read: the trust settings cannot be read: I/O 오류
+adb auto-connect: waiting for an adb server on this computer
+local API: refused a client of uid:501: local API: the connection is closed
+local API: refused a client of uid:501: local API: the connection is closed
+local API: refused a client of uid:501: local API: the connection is closed
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+adb auto-connect: waiting for an adb server on this computer
+local API: refused a client of uid:501: local API: the connection is closed
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+local API: refused a client of uid:501: local API: the connection is closed
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+local API: refused a client of uid:501: local API: the connection is closed
+local API: refused a client of uid:501: local API: the connection is closed
+local API: refused a client of uid:501: local API: the connection is closed
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for an adb server on this computer
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host certificates: 0 root certificates added on this computer
+session: starting Android, asked by: dsa-wm widgets of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+lifecycle: Android finished booting after 10.4 s
+guest log: no reader is attached; Android stops sending its log
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.8-arm64/system.img matches its record
+dsa-hostd 0.1.0: uid:501: memory: host 87 MiB (vm 0, window manager 36, graphics renderer 50, 0 app windows 0, settings app 0, service 0); guest 796/1974 MiB used, cache 281, apps 230, swap 189 (zram 57), processes 320 MiB (273 resident, 46 compressed in zram), Google Play services 106 MiB (73 resident, 33 compressed in zram), 214 s ago
+lifecycle: the guest's display refreshes at 60 Hz (fastest monitor 75 Hz, battery saver off, live resize on)
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+local API: resize-trace task=5 size=1013x993 stage=service.forwarded utc=2026-11-22T01:07:43.017Z mono=336102.936 live=false took=7.0 since_live=362.7
+lifecycle: the guest's display refreshes at 60 Hz (fastest monitor 75 Hz, battery saver off, live resize on)
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+local API: resize-trace task=5 size=378x521 stage=service.forwarded utc=2026-11-22T01:07:46.418Z mono=339504.492 live=false took=11.6 since_live=233.8
+lifecycle: the guest's display refreshes at 60 Hz (fastest monitor 75 Hz, battery saver off, live resize on)
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+local API: resize-trace task=6 size=862x517 stage=service.forwarded utc=2026-11-22T01:08:03.402Z mono=356488.578 live=false took=1.9 since_live=221.8
+dsa-hostd 0.1.0: uid:501: memory: host 100 MiB (vm 0, window manager 32, graphics renderer 68, 0 app windows 0, settings app 0, service 0); guest 1598/1974 MiB used, cache 941, apps 362, swap 194 (zram 44), processes 704 MiB (682 resident, 22 compressed in zram), Google Play services 456 MiB (450 resident, 7 compressed in zram), 213 s ago
+host memory: macOS memory pressure level 2, short
+lifecycle: the host is short of memory; asking the guest to give some back
+dsa-hostd 0.1.0: uid:501: memory: host 68 MiB (vm 0, window manager 26, graphics renderer 41, 0 app windows 0, settings app 0, service 0); guest 980/1974 MiB used, cache 518, apps 167, swap 257 (zram 75), processes 352 MiB (304 resident, 48 compressed in zram), Google Play services 106 MiB (74 resident, 33 compressed in zram), 214 s ago
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+lifecycle: the host is short of memory; asking the guest to give some back
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android crashed (kernel panic in __anon_vma_prepare); it starts again when asked
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host certificates: 0 root certificates added on this computer
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: refused a connection on the DNS port: connection refused: the peer (dsa-channeld 0.1.0) was built from a different protocol definition (schema hash 0a785843f097), and this side (dsa-hostd 0.1.0) from one with schema hash f8dea2175014; rebuild both sides from the same control.proto
+guest log: no reader is attached; Android stops sending its log
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+host memory: macOS memory pressure level 2, short
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+session: starting Android, asked by: dsa-wm widgets of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+host certificates: 0 root certificates added on this computer
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+lifecycle: Android finished booting after 53.7 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.10-arm64/system.img matches its record
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android crashed (kernel panic in folio_lock_anon_vma_read); it starts again when asked
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+host certificates: 0 root certificates added on this computer
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.10-arm64/system.img matches its record
+session: starting Android, asked by: dsa 0.1.0 of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+window manager: started it (start 1)
+lifecycle: the DSA Window Manager is starting; Android needs its renderer
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+relay: the guest's connection is dropped, nothing of this user's                          listens on /Users/ibrew/Library/Application Support/DSA/vsock/5567.sock (Connection refused (os error 61))
+dns: the guest's DNS queries are answered by this host's resolver
+relay: the guest's connection is dropped, nothing of this user's                          listens on /Users/ibrew/Library/Application Support/DSA/vsock/5566.sock (Connection refused (os error 61))
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android crashed (kernel panic: Kernel panic - not syncing: System is deadlocked on memory); it starts again when asked
+guest log: no reader is attached; Android stops sending its log
+dsa-hostd 0.1.0: stopping Android
+dsa-hostd 0.1.0: serving the local API on /Users/ibrew/Library/Application Support/DSA/host.sock
+dsa-hostd 0.1.0: DSA follows the pre-release release channel
+developer mode: on; adb connects to 127.0.0.1:58526 (adb connect 127.0.0.1:58526)
+developer mode: advertised adb-DSA-58526 over mDNS as _adb._tcp on 127.0.0.1 only
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+session: starting Android, asked by: dsa-wm widgets of uid:501 through the local API
+guest log: a reader is attached; asking Android for its log
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+host certificates: 0 root certificates added on this computer
+device identity: Apple Macmini9,1 (Mac mini (M1, 2020)), named "irack의 Mac\u{a0}mini"
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+dns: the guest's DNS queries are answered by this host's resolver
+lifecycle: the agent is connected
+lifecycle: the guest's display refreshes at 75 Hz (fastest monitor 75 Hz, battery saver off, live resize off)
+adb bridge: adb in Android answers again
+host memory: macOS memory pressure level 2, short
+lifecycle: the host is short of memory; asking the guest to give some back
+lifecycle: Android finished booting after 11.9 s
+guest log: no reader is attached; Android stops sending its log
+adb auto-connect: the adb server lists 127.0.0.1:58526
+dsa-hostd 0.1.0: the raw copy /Users/ibrew/Library/Application Support/DSA/cache/images/17.0.0-16373615-15.1-dev.10-arm64/system.img matches its record
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+lifecycle: the host is short of memory; asking the guest to give some back
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+lifecycle: the host is short of memory; asking the guest to give some back
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+lifecycle: the host is short of memory; asking the guest to give some back
+dsa-hostd 0.1.0: uid:501: memory: host 58 MiB (vm 0, window manager 31, graphics renderer 28, 0 app windows 0, settings app 0, service 0); guest 723/1976 MiB used, cache 250, apps 133, swap 350 (zram 106), processes 325 MiB (253 resident, 72 compressed in zram), Google Play services 160 MiB (122 resident, 38 compressed in zram), 229 s ago
+host memory: macOS memory pressure level 1, no longer short
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; stopping the VM that restarted
+dns: the guest's DNS connection ended (the connection is closed)
+lifecycle: Android's kernel panicked and its VM restarted by itself, so DSA stopped it; Android is stopped and starts again when asked
+lifecycle: Android crashed (kernel panic in mt_find); it starts again when asked
+adb bridge: cannot reach adb in Android (Android is not running); is Android running? Said once until it answers again
+adb auto-connect: waiting for adb in Android to answer at 127.0.0.1:58526
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short
+host memory: macOS memory pressure level 2, short
+host memory: macOS memory pressure level 1, no longer short

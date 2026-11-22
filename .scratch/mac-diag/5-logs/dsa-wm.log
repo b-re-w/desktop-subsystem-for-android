@@ -1,0 +1,500 @@
+I1122 06:53:00.087688 d9f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa5a018
+I1122 06:53:00.087829 d9f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaed800 for application:com.google.android.gms engine:ANGLE.
+I1122 06:53:02.411641 e86b000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaed800 for application:com.google.android.gms engine:ANGLE.
+I1122 06:53:02.430508 e86b000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa5a018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:03.730557 ff13000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf0800 for application:com.android.vending engine:ANGLE.
+I1122 06:53:03.933998 ff13000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa5d018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:07.420484 ff13000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa5d018
+I1122 06:53:07.493220 ff13000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf0800 for application:com.android.vending engine:ANGLE.
+I1122 06:53:07.572337 0537000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf0800 for application:com.android.vending engine:ANGLE.
+I1122 06:53:07.655103 0537000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa5d018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:08.827034 0537000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa5d018
+I1122 06:53:08.827216 0537000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf0800 for application:com.android.vending engine:ANGLE.
+I1122 06:53:09.026646 117f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf0800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:09.325092 117f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa5d018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:09.902029 117f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa5d018
+I1122 06:53:09.902191 117f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf0800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:19.539332 2f63000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf0800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:19.941047 2f63000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa5d018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:20.073841 ff13000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf2000 for application:com.android.vending engine:ANGLE.
+I1122 06:53:20.120748 ff13000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa63018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:21.047670 2f63000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa5d018
+I1122 06:53:21.055210 2f63000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf0800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:21.080412 ff13000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa63018
+I1122 06:53:21.083064 ff13000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf2000 for application:com.android.vending engine:ANGLE.
+I1122 06:53:23.454636 117f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf2000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:23.479734 117f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa63018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:23.969243 117f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa63018
+I1122 06:53:23.972891 117f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf2000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:26.520414 f3bf000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf2000 for application:com.android.vending engine:ANGLE.
+I1122 06:53:26.593406 f3bf000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa63018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:27.343684 f3bf000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa63018
+I1122 06:53:27.345525 f3bf000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf2000 for application:com.android.vending engine:ANGLE.
+I1122 06:53:27.868688 117f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf2000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:27.901526 117f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa63018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:28.023582 117f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa63018
+I1122 06:53:28.025697 117f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf2000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:29.695401 117f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x90aaf2000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:29.717279 117f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x90aa63018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:53:30.266279 117f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa63018
+I1122 06:53:30.269458 117f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaf2000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 06:53:59.182419 bad3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa5a018
+I1122 06:53:59.183374 bad3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaed800 for application:com.google.android.gms engine:ANGLE.
+I1122 06:53:59.200005 bad3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa60018
+I1122 06:53:59.200974 bad3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaef000 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 06:53:59.215346 bad3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x90aa57018
+I1122 06:53:59.216730 bad3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x90aaec000 for application:surfaceflinger engine:ANGLE.
+dsa-wm: Android crashed: kernel panic in rmap_walk_file; the user is told
+dsa-wm: graphics: the graphics renderer (dsa-gfx, pid 87007) stopped while Android is stopped: it exited normally (exit code 0); it starts again with Android
+dsa-wm: the notifications' watch ended: the DSA service: the connection is closed
+dsa-wm: the watch of Android's tasks ended: the DSA service: the connection is closed
+dsa-wm: the widgets' connection to the service ended: the DSA service: the connection is closed
+dsa-wm: widgets cannot reach the service: local API: I/O error (NotFound): No such file or directory (os error 2)
+dsa-wm: cannot watch Android's tasks: local API: I/O error (NotFound): No such file or directory (os error 2)
+I1122 06:54:25.813818 d749e80 SharedLibrary.cpp:64] SharedLibrary::open for [libvulkan.dylib]
+I1122 06:54:25.815088 d749e80 SharedLibrary.cpp:76] SharedLibrary::open for [libvulkan.dylib]: not found in map, open for the first time
+I1122 06:54:25.815096 d749e80 SharedLibrary.cpp:186] SharedLibrary::open for [libvulkan.dylib] (posix): begin
+I1122 06:54:25.815100 d749e80 SharedLibrary.cpp:215] SharedLibrary::open for [libvulkan.dylib] (posix,darwin): call dlopen
+I1122 06:54:25.815208 d749e80 SharedLibrary.cpp:262] SharedLibrary::open succeeded for [libvulkan.dylib].
+I1122 06:54:25.815215 d749e80 VulkanDispatch.cpp:142] Added library: libvulkan.dylib
+I1122 06:54:26.026902 d749e80 opengles.cpp:106] android_startOpenglesRenderer: gpu info
+I1122 06:54:26.026919 d749e80 opengles.cpp:107] 
+I1122 06:54:26.033361 d749e80 HealthMonitor.cpp:280] HealthMonitor disabled.
+I1122 06:54:26.052277 d749e80 VkCommonOperations.cpp:1172] MoltenVK is supported, enabling Vulkan portability.
+I1122 06:54:26.062139 d749e80 VkCommonOperations.cpp:1561] Selecting Vulkan device: Apple M1, Version: 1.1.357
+I1122 06:54:26.076700 d749e80 VkCommonOperations.cpp:1926] Initializing VkEmulation features:
+I1122 06:54:26.076722 d749e80 VkCommonOperations.cpp:1927]     glInteropSupported: false
+I1122 06:54:26.076727 d749e80 VkCommonOperations.cpp:1928]     useDeferredCommands: true
+I1122 06:54:26.076731 d749e80 VkCommonOperations.cpp:1930]     createResourceWithRequirements: true
+I1122 06:54:26.076735 d749e80 VkCommonOperations.cpp:1931]     useVulkanComposition: true
+I1122 06:54:26.076738 d749e80 VkCommonOperations.cpp:1932]     useVulkanNativeSwapchain: false
+I1122 06:54:26.076741 d749e80 VkCommonOperations.cpp:1933]     enable guestRenderDoc: false
+I1122 06:54:26.076745 d749e80 VkCommonOperations.cpp:1934]     ASTC LDR emulation mode: Gpu
+I1122 06:54:26.076748 d749e80 VkCommonOperations.cpp:1935]     enable ETC2 emulation: true
+I1122 06:54:26.076751 d749e80 VkCommonOperations.cpp:1936]     enable Ycbcr emulation: false
+I1122 06:54:26.076754 d749e80 VkCommonOperations.cpp:1937]     guestVulkanOnly: true
+I1122 06:54:26.076757 d749e80 VkCommonOperations.cpp:1938]     useDedicatedAllocations: false
+I1122 06:54:26.076760 d749e80 VkCommonOperations.cpp:1959] ASTC LDR textures: native. Apple M1 samples them itself.
+I1122 06:54:26.108068 d749e80 FrameBuffer.cpp:525] Graphics Adapter Vendor N/A
+I1122 06:54:26.108095 d749e80 FrameBuffer.cpp:526] Graphics Adapter N/A
+I1122 06:54:26.108100 d749e80 FrameBuffer.cpp:527] Graphics API Version N/A
+I1122 06:54:26.108104 d749e80 FrameBuffer.cpp:528] Graphics API Extensions N/A
+I1122 06:54:26.108108 d749e80 FrameBuffer.cpp:529] Graphics Device Extensions N/A
+I1122 06:54:26.108658 d749e80 opengles.cpp:272] OpenGL Vendor=[N/A]
+I1122 06:54:26.108667 d749e80 opengles.cpp:273] OpenGL Renderer=[N/A]
+I1122 06:54:26.108670 d749e80 opengles.cpp:274] OpenGL Version=[N/A]
+dsa-wm: graphics: the renderer (dsa-gfx, pid 1190) is running again; frames go to the windows on the GPU
+I1122 06:54:32.602761 daaf000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd12b000 for application:surfaceflinger engine:ANGLE.
+I1122 06:54:32.643783 daaf000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc897018 for application:surfaceflinger engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:54:33.345131 e0d3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd12e000 for application:bootanimation engine:ANGLE.
+I1122 06:54:33.380668 e0d3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc89a018 for application:bootanimation engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:54:52.647050 f5fb000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd134000 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 06:54:52.674378 f5fb000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc89d018 for application:io.github.thisisthepy.dsa.agent engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:54:52.735401 fcab000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd137000 for application:com.android.provision engine:ANGLE.
+I1122 06:54:52.770061 fcab000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc8a0018 for application:com.android.provision engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:54:52.863448 e0d3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc89a018
+I1122 06:54:52.872194 e0d3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd12e000 for application:bootanimation engine:ANGLE.
+I1122 06:54:53.019031 bfa7000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc8a0018
+I1122 06:54:53.026448 bfa7000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd137000 for application:com.android.provision engine:ANGLE.
+failed to scan /Users/ibrew/Applications/DSA Apps/Play 스토어.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/주소록.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/설정.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/카메라.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/시계.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/파일.app: -10814
+ from spotlightdsa-wm: Launch Services did not take these app bundles: /Users/ibrew/Applications/DSA Apps/Play 스토어.app, /Users/ibrew/Applications/DSA Apps/주소록.app, /Users/ibrew/Applications/DSA Apps/설정.app, /Users/ibrew/Applications/DSA Apps/카메라.app, /Users/ibrew/Applications/DSA Apps/시계.app, /Users/ibrew/Applications/DSA Apps/파일.app
+I1122 06:55:01.669943 e903000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd137000 for application:com.google.android.gms engine:ANGLE.
+I1122 06:55:01.709129 e903000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc8a0018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:55:02.330758 e903000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc8a0018
+I1122 06:55:02.333621 e903000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd137000 for application:com.google.android.gms engine:ANGLE.
+I1122 06:55:06.896553 fcab000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd137000 for application:com.android.vending engine:ANGLE.
+I1122 06:55:06.945962 fcab000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc8a0018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:55:06.969847 07ff000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd12e000 for application:com.google.android.gms engine:ANGLE.
+I1122 06:55:07.119642 07ff000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc89a018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:55:07.597922 fcab000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc8a0018
+I1122 06:55:07.598602 fcab000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd137000 for application:com.android.vending engine:ANGLE.
+I1122 06:55:07.623403 fcab000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x7fd137000 for application:com.android.vending engine:ANGLE.
+I1122 06:55:07.675156 fcab000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x7fc8a0018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 06:55:08.350117 fcab000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc8a0018
+I1122 06:55:08.352324 fcab000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd137000 for application:com.android.vending engine:ANGLE.
+dsa-wm: the watch of Android's tasks ended: the DSA service: the connection is closed
+dsa-wm: the notifications' watch ended: the DSA service: the connection is closed
+dsa-wm: cannot watch Android's tasks: local API: I/O error (NotFound): No such file or directory (os error 2)
+dsa-wm: the widgets' connection to the service ended: the DSA service: the connection is closed
+dsa-wm: widgets cannot reach the service: local API: I/O error (NotFound): No such file or directory (os error 2)
+I1122 06:55:14.903166 bfa7000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc89d018
+I1122 06:55:14.905595 bfa7000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd134000 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 06:55:14.921135 bfa7000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc89a018
+I1122 06:55:14.921833 bfa7000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd12e000 for application:com.google.android.gms engine:ANGLE.
+I1122 06:55:14.936114 bfa7000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x7fc897018
+I1122 06:55:14.937819 bfa7000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x7fd12b000 for application:surfaceflinger engine:ANGLE.
+dsa-wm: graphics: the graphics renderer (dsa-gfx, pid 1190) stopped while Android is stopped: it exited normally (exit code 0); it starts again with Android
+dsa-wm: a crash of Android is not told until the service answers: local API: timed out
+dsa-wm: a crash of Android is not told until the service answers: local API: timed out
+dsa-wm: dsa-wm starting (version 0.1.0)
+dsa-wm: starting Android at sign-in
+I1122 10:02:23.827944 e0d9e80 SharedLibrary.cpp:64] SharedLibrary::open for [libvulkan.dylib]
+I1122 10:02:23.856949 e0d9e80 SharedLibrary.cpp:76] SharedLibrary::open for [libvulkan.dylib]: not found in map, open for the first time
+I1122 10:02:23.856958 e0d9e80 SharedLibrary.cpp:186] SharedLibrary::open for [libvulkan.dylib] (posix): begin
+I1122 10:02:23.856967 e0d9e80 SharedLibrary.cpp:215] SharedLibrary::open for [libvulkan.dylib] (posix,darwin): call dlopen
+I1122 10:02:23.857199 e0d9e80 SharedLibrary.cpp:262] SharedLibrary::open succeeded for [libvulkan.dylib].
+I1122 10:02:23.857213 e0d9e80 VulkanDispatch.cpp:142] Added library: libvulkan.dylib
+I1122 10:02:24.032278 e0d9e80 opengles.cpp:106] android_startOpenglesRenderer: gpu info
+I1122 10:02:24.032301 e0d9e80 opengles.cpp:107] 
+I1122 10:02:24.032627 e0d9e80 HealthMonitor.cpp:280] HealthMonitor disabled.
+I1122 10:02:24.046848 e0d9e80 VkCommonOperations.cpp:1172] MoltenVK is supported, enabling Vulkan portability.
+I1122 10:02:24.051566 e0d9e80 VkCommonOperations.cpp:1561] Selecting Vulkan device: Apple M1, Version: 1.1.357
+I1122 10:02:24.061699 e0d9e80 VkCommonOperations.cpp:1926] Initializing VkEmulation features:
+I1122 10:02:24.061719 e0d9e80 VkCommonOperations.cpp:1927]     glInteropSupported: false
+I1122 10:02:24.061724 e0d9e80 VkCommonOperations.cpp:1928]     useDeferredCommands: true
+I1122 10:02:24.061729 e0d9e80 VkCommonOperations.cpp:1930]     createResourceWithRequirements: true
+I1122 10:02:24.061732 e0d9e80 VkCommonOperations.cpp:1931]     useVulkanComposition: true
+I1122 10:02:24.061736 e0d9e80 VkCommonOperations.cpp:1932]     useVulkanNativeSwapchain: false
+I1122 10:02:24.061740 e0d9e80 VkCommonOperations.cpp:1933]     enable guestRenderDoc: false
+I1122 10:02:24.061743 e0d9e80 VkCommonOperations.cpp:1934]     ASTC LDR emulation mode: Gpu
+I1122 10:02:24.061746 e0d9e80 VkCommonOperations.cpp:1935]     enable ETC2 emulation: true
+I1122 10:02:24.061749 e0d9e80 VkCommonOperations.cpp:1936]     enable Ycbcr emulation: false
+I1122 10:02:24.061753 e0d9e80 VkCommonOperations.cpp:1937]     guestVulkanOnly: true
+I1122 10:02:24.061756 e0d9e80 VkCommonOperations.cpp:1938]     useDedicatedAllocations: false
+I1122 10:02:24.061761 e0d9e80 VkCommonOperations.cpp:1959] ASTC LDR textures: native. Apple M1 samples them itself.
+I1122 10:02:24.076946 e0d9e80 FrameBuffer.cpp:525] Graphics Adapter Vendor N/A
+I1122 10:02:24.076975 e0d9e80 FrameBuffer.cpp:526] Graphics Adapter N/A
+I1122 10:02:24.076985 e0d9e80 FrameBuffer.cpp:527] Graphics API Version N/A
+I1122 10:02:24.076997 e0d9e80 FrameBuffer.cpp:528] Graphics API Extensions N/A
+I1122 10:02:24.077003 e0d9e80 FrameBuffer.cpp:529] Graphics Device Extensions N/A
+I1122 10:02:24.077176 e0d9e80 opengles.cpp:272] OpenGL Vendor=[N/A]
+I1122 10:02:24.077189 e0d9e80 opengles.cpp:273] OpenGL Renderer=[N/A]
+I1122 10:02:24.077196 e0d9e80 opengles.cpp:274] OpenGL Version=[N/A]
+dsa-wm: graphics: the renderer (dsa-gfx, pid 848) is running; frames go to the windows on the GPU
+I1122 10:02:28.121806 f387000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1239800 for application:surfaceflinger engine:ANGLE.
+I1122 10:02:28.151022 f387000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e63018 for application:surfaceflinger engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:28.549253 fa37000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123b000 for application:bootanimation engine:ANGLE.
+I1122 10:02:28.566856 fa37000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e66018 for application:bootanimation engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:32.542196 0ed3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123e000 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 10:02:32.572124 0ed3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e69018 for application:io.github.thisisthepy.dsa.agent engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:32.802610 fa37000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e66018
+I1122 10:02:32.804251 fa37000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123b000 for application:bootanimation engine:ANGLE.
+failed to scan /Users/ibrew/Applications/DSA Apps/Play 스토어.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/주소록.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/카메라.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/시계.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/파일.app: -10814
+ from spotlightdsa-wm: Launch Services did not take these app bundles: /Users/ibrew/Applications/DSA Apps/Play 스토어.app, /Users/ibrew/Applications/DSA Apps/주소록.app, /Users/ibrew/Applications/DSA Apps/카메라.app, /Users/ibrew/Applications/DSA Apps/시계.app, /Users/ibrew/Applications/DSA Apps/파일.app
+I1122 10:02:36.569942 fedb000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123b000 for application:com.google.android.gms engine:ANGLE.
+I1122 10:02:36.584866 fedb000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e66018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:37.583217 04ff000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123c800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:37.623542 04ff000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6c018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:38.238606 04ff000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6c018
+I1122 10:02:38.239719 04ff000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123c800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:39.223923 1377000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123c800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:39.245372 1377000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6c018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:39.665462 1377000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6c018
+I1122 10:02:39.667323 1377000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123c800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:42.559565 1ecb000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123c800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:42.662008 1ecb000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6c018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:43.487442 1377000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6c018
+I1122 10:02:43.488721 1377000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123c800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:48.433054 2cb7000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123c800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:48.451088 2cb7000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6c018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:48.578208 1377000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123f800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:48.692796 1377000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:48.726283 2cb7000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6c018
+I1122 10:02:48.727391 2cb7000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123c800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:49.353714 1377000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:02:49.354266 1377000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123f800 for application:com.android.vending engine:ANGLE.
+I1122 10:02:50.080884 2cb7000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:50.100999 2cb7000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:50.176525 2cb7000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:02:50.178826 2cb7000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:51.325306 456b000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:51.339666 456b000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:51.426690 456b000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:02:51.426812 456b000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:55.658770 4eb3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:55.676856 4eb3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:55.760062 4eb3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:02:55.761699 4eb3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:56.233743 456b000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:02:56.262232 456b000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:02:56.384871 456b000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:02:56.387411 456b000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123f800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:07:26.340986 02f3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123c800 for application:com.android.settings engine:ANGLE.
+I1122 10:07:26.372318 02f3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.android.settings engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:07:28.941675 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:07:28.942185 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123c800 for application:com.android.settings engine:ANGLE.
+I1122 10:07:29.871167 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e66018
+I1122 10:07:29.873725 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123b000 for application:com.google.android.gms engine:ANGLE.
+I1122 10:07:30.575154 00e7000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e123b000 for application:com.android.settings engine:ANGLE.
+I1122 10:07:30.615755 00e7000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e66018 for application:com.android.settings engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:07:32.735315 1cbf000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1242800 for application:com.android.vending engine:ANGLE.
+I1122 10:07:32.750594 1cbf000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e72018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:07:32.998252 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e66018
+I1122 10:07:32.999545 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123b000 for application:com.android.settings engine:ANGLE.
+I1122 10:07:33.049470 1cbf000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e72018
+I1122 10:07:33.049986 1cbf000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1242800 for application:com.android.vending engine:ANGLE.
+I1122 10:07:35.236653 02f3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1242800 for application:com.android.settings engine:ANGLE.
+I1122 10:07:35.255753 02f3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e72018 for application:com.android.settings engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:07:51.292383 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e72018
+I1122 10:07:51.293117 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1242800 for application:com.android.settings engine:ANGLE.
+I1122 10:07:55.615860 178f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1242800 for application:com.android.deskclock engine:ANGLE.
+I1122 10:07:55.637667 178f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e72018 for application:com.android.deskclock engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:07:55.668576 1377000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1241000 for application:com.google.android.gms engine:ANGLE.
+I1122 10:07:55.722843 1377000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:07:56.109324 1377000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:07:56.109451 1377000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1241000 for application:com.google.android.gms engine:ANGLE.
+I1122 10:07:59.719141 30cf000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1244000 for application:com.google.android.gms engine:ANGLE.
+I1122 10:07:59.735307 30cf000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:07:59.785646 30cf000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:07:59.785716 30cf000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1244000 for application:com.google.android.gms engine:ANGLE.
+I1122 10:07:59.998510 30cf000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1244000 for application:com.google.android.gms engine:ANGLE.
+I1122 10:08:00.035927 30cf000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:08:00.096886 30cf000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:08:00.099206 30cf000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1244000 for application:com.google.android.gms engine:ANGLE.
+dsa-wm: closing an app window program: com.android.deskclock has no window left
+I1122 10:08:05.156331 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e72018
+I1122 10:08:05.159284 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1242800 for application:com.android.deskclock engine:ANGLE.
+I1122 10:08:05.807601 02f3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1242800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:05.839670 02f3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e72018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:08:06.127121 02f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e72018
+I1122 10:08:06.127258 02f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1242800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:06.231541 1377000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1242800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:06.262558 1377000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e72018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:08:06.628214 1377000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e72018
+I1122 10:08:06.628362 1377000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1242800 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:11.547759 236f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1242800 for application:com.android.documentsui engine:ANGLE.
+I1122 10:08:11.571342 236f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e72018 for application:com.android.documentsui engine:ANGLE ASTC emulation:off CPU decoding:off.
+dsa-wm: closing an app window program: com.android.documentsui has no window left
+I1122 10:08:13.385768 41df000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1244000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:13.403111 41df000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:08:13.580724 41df000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:08:13.580867 41df000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1244000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:15.637543 41df000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1244000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:15.690732 41df000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:08:15.981014 41df000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:08:15.981402 41df000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1244000 for application:com.google.android.gms.unstable engine:ANGLE.
+dsa-wm: com.android.documentsui's window program did not start in time; 2 window(s) stay closed
+I1122 10:08:24.852438 1ecb000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1244000 for application:com.android.vending engine:ANGLE.
+I1122 10:08:24.922488 1ecb000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:08:25.458004 1ecb000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:08:25.458251 1ecb000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1244000 for application:com.android.vending engine:ANGLE.
+I1122 10:08:27.612682 41df000 VkDecoderGlobalState.cpp:978] Created VkInstance:0x9e1244000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:08:27.630110 41df000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0x9e0e6f018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 10:08:27.748397 41df000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e6f018
+I1122 10:08:27.748537 41df000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1244000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 10:21:18.562658 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e72018
+I1122 10:21:18.565076 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1242800 for application:com.android.documentsui engine:ANGLE.
+I1122 10:21:18.579082 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e63018
+I1122 10:21:18.580461 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e1239800 for application:surfaceflinger engine:ANGLE.
+I1122 10:21:18.610692 d7f3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0x9e0e69018
+I1122 10:21:18.612844 d7f3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0x9e123e000 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+dsa-wm: Android crashed: kernel panic in __anon_vma_prepare; the user is told
+dsa-wm: graphics: the graphics renderer (dsa-gfx, pid 848) stopped while Android is stopped: it exited normally (exit code 0); it starts again with Android
+dsa-wm: the widgets' connection to the service ended: the DSA service: the connection is closed
+dsa-wm: the watch of Android's tasks ended: the DSA service: the connection is closed
+dsa-wm: the notifications' watch ended: the DSA service: the connection is closed
+dsa-wm: cannot watch Android's tasks: local API: I/O error (NotFound): No such file or directory (os error 2)
+dsa-wm: widgets cannot reach the service: local API: I/O error (NotFound): No such file or directory (os error 2)
+I1122 13:32:38.241186 e0d9e80 SharedLibrary.cpp:64] SharedLibrary::open for [libvulkan.dylib]
+I1122 13:32:38.242145 e0d9e80 SharedLibrary.cpp:76] SharedLibrary::open for [libvulkan.dylib]: not found in map, open for the first time
+I1122 13:32:38.242152 e0d9e80 SharedLibrary.cpp:186] SharedLibrary::open for [libvulkan.dylib] (posix): begin
+I1122 13:32:38.242159 e0d9e80 SharedLibrary.cpp:215] SharedLibrary::open for [libvulkan.dylib] (posix,darwin): call dlopen
+I1122 13:32:38.242314 e0d9e80 SharedLibrary.cpp:262] SharedLibrary::open succeeded for [libvulkan.dylib].
+I1122 13:32:38.242322 e0d9e80 VulkanDispatch.cpp:142] Added library: libvulkan.dylib
+I1122 13:32:38.336338 e0d9e80 opengles.cpp:106] android_startOpenglesRenderer: gpu info
+I1122 13:32:38.336396 e0d9e80 opengles.cpp:107] 
+I1122 13:32:38.337098 e0d9e80 HealthMonitor.cpp:280] HealthMonitor disabled.
+I1122 13:32:38.347556 e0d9e80 VkCommonOperations.cpp:1172] MoltenVK is supported, enabling Vulkan portability.
+I1122 13:32:38.352376 e0d9e80 VkCommonOperations.cpp:1561] Selecting Vulkan device: Apple M1, Version: 1.1.357
+I1122 13:32:38.359144 e0d9e80 VkCommonOperations.cpp:1926] Initializing VkEmulation features:
+I1122 13:32:38.359173 e0d9e80 VkCommonOperations.cpp:1927]     glInteropSupported: false
+I1122 13:32:38.359178 e0d9e80 VkCommonOperations.cpp:1928]     useDeferredCommands: true
+I1122 13:32:38.359182 e0d9e80 VkCommonOperations.cpp:1930]     createResourceWithRequirements: true
+I1122 13:32:38.359186 e0d9e80 VkCommonOperations.cpp:1931]     useVulkanComposition: true
+I1122 13:32:38.359190 e0d9e80 VkCommonOperations.cpp:1932]     useVulkanNativeSwapchain: false
+I1122 13:32:38.359194 e0d9e80 VkCommonOperations.cpp:1933]     enable guestRenderDoc: false
+I1122 13:32:38.359199 e0d9e80 VkCommonOperations.cpp:1934]     ASTC LDR emulation mode: Gpu
+I1122 13:32:38.359203 e0d9e80 VkCommonOperations.cpp:1935]     enable ETC2 emulation: true
+I1122 13:32:38.359207 e0d9e80 VkCommonOperations.cpp:1936]     enable Ycbcr emulation: false
+I1122 13:32:38.359211 e0d9e80 VkCommonOperations.cpp:1937]     guestVulkanOnly: true
+I1122 13:32:38.359214 e0d9e80 VkCommonOperations.cpp:1938]     useDedicatedAllocations: false
+I1122 13:32:38.359219 e0d9e80 VkCommonOperations.cpp:1959] ASTC LDR textures: native. Apple M1 samples them itself.
+I1122 13:32:38.373537 e0d9e80 FrameBuffer.cpp:525] Graphics Adapter Vendor N/A
+I1122 13:32:38.373562 e0d9e80 FrameBuffer.cpp:526] Graphics Adapter N/A
+I1122 13:32:38.373568 e0d9e80 FrameBuffer.cpp:527] Graphics API Version N/A
+I1122 13:32:38.373572 e0d9e80 FrameBuffer.cpp:528] Graphics API Extensions N/A
+I1122 13:32:38.373576 e0d9e80 FrameBuffer.cpp:529] Graphics Device Extensions N/A
+I1122 13:32:38.374095 e0d9e80 opengles.cpp:272] OpenGL Vendor=[N/A]
+I1122 13:32:38.374107 e0d9e80 opengles.cpp:273] OpenGL Renderer=[N/A]
+I1122 13:32:38.374113 e0d9e80 opengles.cpp:274] OpenGL Version=[N/A]
+dsa-wm: graphics: the renderer (dsa-gfx, pid 27054) is running again; frames go to the windows on the GPU
+I1122 13:33:57.006981 d393000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xbcdec4000 for application:surfaceflinger engine:ANGLE.
+I1122 13:33:57.155028 d393000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xbcc98f018 for application:surfaceflinger engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 13:33:57.945722 da43000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xbcdec5800 for application:bootanimation engine:ANGLE.
+I1122 13:33:58.029937 da43000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xbcc992018 for application:bootanimation engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 13:34:27.186765 b88b000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xbcc992018
+I1122 13:34:27.187533 b88b000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xbcdec5800 for application:bootanimation engine:ANGLE.
+I1122 13:34:27.204688 b88b000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xbcc98f018
+I1122 13:34:27.208030 b88b000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xbcdec4000 for application:surfaceflinger engine:ANGLE.
+dsa-wm: graphics: the graphics renderer (dsa-gfx, pid 27054) stopped while Android is stopped: it exited normally (exit code 0); it starts again with Android
+dsa-wm: dsa-wm stopped
+dsa-wm: the watch of Android's tasks ended: the DSA service: the connection is closed
+dsa-wm: cannot watch Android's tasks: local API: I/O error (NotFound): No such file or directory (os error 2)
+dsa-wm: dsa-wm starting (version 0.1.0)
+dsa-wm: starting Android at sign-in
+I1122 18:14:48.359841 e0d9e80 SharedLibrary.cpp:64] SharedLibrary::open for [libvulkan.dylib]
+I1122 18:14:48.360921 e0d9e80 SharedLibrary.cpp:76] SharedLibrary::open for [libvulkan.dylib]: not found in map, open for the first time
+I1122 18:14:48.360928 e0d9e80 SharedLibrary.cpp:186] SharedLibrary::open for [libvulkan.dylib] (posix): begin
+I1122 18:14:48.360934 e0d9e80 SharedLibrary.cpp:215] SharedLibrary::open for [libvulkan.dylib] (posix,darwin): call dlopen
+I1122 18:14:48.361194 e0d9e80 SharedLibrary.cpp:262] SharedLibrary::open succeeded for [libvulkan.dylib].
+I1122 18:14:48.361204 e0d9e80 VulkanDispatch.cpp:142] Added library: libvulkan.dylib
+I1122 18:14:48.438707 e0d9e80 opengles.cpp:106] android_startOpenglesRenderer: gpu info
+I1122 18:14:48.438744 e0d9e80 opengles.cpp:107] 
+I1122 18:14:48.440789 e0d9e80 HealthMonitor.cpp:280] HealthMonitor disabled.
+I1122 18:14:48.460042 e0d9e80 VkCommonOperations.cpp:1172] MoltenVK is supported, enabling Vulkan portability.
+I1122 18:14:48.470351 e0d9e80 VkCommonOperations.cpp:1561] Selecting Vulkan device: Apple M1, Version: 1.1.357
+I1122 18:14:48.485141 e0d9e80 VkCommonOperations.cpp:1926] Initializing VkEmulation features:
+I1122 18:14:48.485177 e0d9e80 VkCommonOperations.cpp:1927]     glInteropSupported: false
+I1122 18:14:48.485183 e0d9e80 VkCommonOperations.cpp:1928]     useDeferredCommands: true
+I1122 18:14:48.485188 e0d9e80 VkCommonOperations.cpp:1930]     createResourceWithRequirements: true
+I1122 18:14:48.485192 e0d9e80 VkCommonOperations.cpp:1931]     useVulkanComposition: true
+I1122 18:14:48.485196 e0d9e80 VkCommonOperations.cpp:1932]     useVulkanNativeSwapchain: false
+I1122 18:14:48.485200 e0d9e80 VkCommonOperations.cpp:1933]     enable guestRenderDoc: false
+I1122 18:14:48.485204 e0d9e80 VkCommonOperations.cpp:1934]     ASTC LDR emulation mode: Gpu
+I1122 18:14:48.485207 e0d9e80 VkCommonOperations.cpp:1935]     enable ETC2 emulation: true
+I1122 18:14:48.485211 e0d9e80 VkCommonOperations.cpp:1936]     enable Ycbcr emulation: false
+I1122 18:14:48.485214 e0d9e80 VkCommonOperations.cpp:1937]     guestVulkanOnly: true
+I1122 18:14:48.485217 e0d9e80 VkCommonOperations.cpp:1938]     useDedicatedAllocations: false
+I1122 18:14:48.485223 e0d9e80 VkCommonOperations.cpp:1959] ASTC LDR textures: native. Apple M1 samples them itself.
+I1122 18:14:48.511653 e0d9e80 FrameBuffer.cpp:525] Graphics Adapter Vendor N/A
+I1122 18:14:48.511693 e0d9e80 FrameBuffer.cpp:526] Graphics Adapter N/A
+I1122 18:14:48.511701 e0d9e80 FrameBuffer.cpp:527] Graphics API Version N/A
+I1122 18:14:48.511705 e0d9e80 FrameBuffer.cpp:528] Graphics API Extensions N/A
+I1122 18:14:48.511709 e0d9e80 FrameBuffer.cpp:529] Graphics Device Extensions N/A
+I1122 18:14:48.511973 e0d9e80 opengles.cpp:272] OpenGL Vendor=[N/A]
+I1122 18:14:48.511982 e0d9e80 opengles.cpp:273] OpenGL Renderer=[N/A]
+I1122 18:14:48.511987 e0d9e80 opengles.cpp:274] OpenGL Version=[N/A]
+dsa-wm: graphics: the renderer (dsa-gfx, pid 23065) is running; frames go to the windows on the GPU
+I1122 18:15:27.770989 0e97000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xadad31800 for application:surfaceflinger engine:ANGLE.
+I1122 18:15:27.884819 0e97000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xadb1db018 for application:surfaceflinger engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 18:15:29.010817 1753000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xadad33000 for application:bootanimation engine:ANGLE.
+I1122 18:15:29.092845 1753000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xadb1de018 for application:bootanimation engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 18:15:47.903637 2bef000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xadad36000 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 18:15:48.772035 2bef000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xadb1e1018 for application:io.github.thisisthepy.dsa.agent engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 18:15:49.571527 3213000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xadad37800 for application:com.android.provision engine:ANGLE.
+I1122 18:15:50.090816 3213000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xadb1e4018 for application:com.android.provision engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 18:15:51.393563 1753000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xadb1de018
+I1122 18:15:51.398651 1753000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xadad33000 for application:bootanimation engine:ANGLE.
+failed to scan /Users/ibrew/Applications/DSA Apps/Play 스토어.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/주소록.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/카메라.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/시계.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/파일.app: -10814
+ from spotlightdsa-wm: Launch Services did not take these app bundles: /Users/ibrew/Applications/DSA Apps/Play 스토어.app, /Users/ibrew/Applications/DSA Apps/주소록.app, /Users/ibrew/Applications/DSA Apps/카메라.app, /Users/ibrew/Applications/DSA Apps/시계.app, /Users/ibrew/Applications/DSA Apps/파일.app
+I1122 18:16:34.751950 f73f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xadb1e4018
+I1122 18:16:34.757870 f73f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xadad37800 for application:com.android.provision engine:ANGLE.
+I1122 18:16:45.315746 1e8f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xadad37800 for application:com.google.android.gms engine:ANGLE.
+I1122 18:16:45.690358 1e8f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xadb1e4018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 18:16:46.899824 1e8f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xadb1e4018
+I1122 18:16:46.900221 1e8f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xadad37800 for application:com.google.android.gms engine:ANGLE.
+I1122 18:16:54.290083 3093000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xadad37800 for application:com.google.android.gms engine:ANGLE.
+I1122 18:16:54.383186 3093000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xadb1e4018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 18:17:05.912887 f73f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xadb1e4018
+I1122 18:17:05.914058 f73f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xadad37800 for application:com.google.android.gms engine:ANGLE.
+I1122 18:17:05.948936 f73f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xadb1e1018
+I1122 18:17:05.951264 f73f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xadad36000 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 18:17:05.985773 f73f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xadb1db018
+I1122 18:17:05.992591 f73f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xadad31800 for application:surfaceflinger engine:ANGLE.
+dsa-wm: Android crashed: kernel panic in folio_lock_anon_vma_read; the user is told
+dsa-wm: graphics: the graphics renderer (dsa-gfx, pid 23065) stopped while Android is stopped: it exited normally (exit code 0); it starts again with Android
+dsa-wm: dsa-wm stopped
+dsa-wm: dsa-wm starting (version 0.1.0)
+dsa-wm: cannot watch Android's tasks: local API: the connection is closed
+dsa-wm: a crash of Android is not told until the service answers: local API: I/O error (NotFound): No such file or directory (os error 2)
+dsa-wm: the clipboard cannot reach Android: local API: I/O error (NotFound): No such file or directory (os error 2)
+dsa-wm: notifications wait for the DSA service: local API: I/O error (NotFound): No such file or directory (os error 2)
+dsa-wm: starting Android at sign-in
+I1122 19:02:21.720270 e0d9e80 SharedLibrary.cpp:64] SharedLibrary::open for [libvulkan.dylib]
+I1122 19:02:21.721874 e0d9e80 SharedLibrary.cpp:76] SharedLibrary::open for [libvulkan.dylib]: not found in map, open for the first time
+I1122 19:02:21.721884 e0d9e80 SharedLibrary.cpp:186] SharedLibrary::open for [libvulkan.dylib] (posix): begin
+I1122 19:02:21.721892 e0d9e80 SharedLibrary.cpp:215] SharedLibrary::open for [libvulkan.dylib] (posix,darwin): call dlopen
+I1122 19:02:21.722060 e0d9e80 SharedLibrary.cpp:262] SharedLibrary::open succeeded for [libvulkan.dylib].
+I1122 19:02:21.722068 e0d9e80 VulkanDispatch.cpp:142] Added library: libvulkan.dylib
+I1122 19:02:21.808130 e0d9e80 opengles.cpp:106] android_startOpenglesRenderer: gpu info
+I1122 19:02:21.808168 e0d9e80 opengles.cpp:107] 
+I1122 19:02:21.809214 e0d9e80 HealthMonitor.cpp:280] HealthMonitor disabled.
+I1122 19:02:21.823019 e0d9e80 VkCommonOperations.cpp:1172] MoltenVK is supported, enabling Vulkan portability.
+I1122 19:02:21.829154 e0d9e80 VkCommonOperations.cpp:1561] Selecting Vulkan device: Apple M1, Version: 1.1.357
+I1122 19:02:21.836632 e0d9e80 VkCommonOperations.cpp:1926] Initializing VkEmulation features:
+I1122 19:02:21.836664 e0d9e80 VkCommonOperations.cpp:1927]     glInteropSupported: false
+I1122 19:02:21.836670 e0d9e80 VkCommonOperations.cpp:1928]     useDeferredCommands: true
+I1122 19:02:21.836674 e0d9e80 VkCommonOperations.cpp:1930]     createResourceWithRequirements: true
+I1122 19:02:21.836678 e0d9e80 VkCommonOperations.cpp:1931]     useVulkanComposition: true
+I1122 19:02:21.836681 e0d9e80 VkCommonOperations.cpp:1932]     useVulkanNativeSwapchain: false
+I1122 19:02:21.836685 e0d9e80 VkCommonOperations.cpp:1933]     enable guestRenderDoc: false
+I1122 19:02:21.836689 e0d9e80 VkCommonOperations.cpp:1934]     ASTC LDR emulation mode: Gpu
+I1122 19:02:21.836692 e0d9e80 VkCommonOperations.cpp:1935]     enable ETC2 emulation: true
+I1122 19:02:21.836696 e0d9e80 VkCommonOperations.cpp:1936]     enable Ycbcr emulation: false
+I1122 19:02:21.836699 e0d9e80 VkCommonOperations.cpp:1937]     guestVulkanOnly: true
+I1122 19:02:21.836702 e0d9e80 VkCommonOperations.cpp:1938]     useDedicatedAllocations: false
+I1122 19:02:21.836707 e0d9e80 VkCommonOperations.cpp:1959] ASTC LDR textures: native. Apple M1 samples them itself.
+I1122 19:02:21.867182 e0d9e80 FrameBuffer.cpp:525] Graphics Adapter Vendor N/A
+I1122 19:02:21.867250 e0d9e80 FrameBuffer.cpp:526] Graphics Adapter N/A
+I1122 19:02:21.867263 e0d9e80 FrameBuffer.cpp:527] Graphics API Version N/A
+I1122 19:02:21.867275 e0d9e80 FrameBuffer.cpp:528] Graphics API Extensions N/A
+I1122 19:02:21.867285 e0d9e80 FrameBuffer.cpp:529] Graphics Device Extensions N/A
+I1122 19:02:21.867828 e0d9e80 opengles.cpp:272] OpenGL Vendor=[N/A]
+I1122 19:02:21.867858 e0d9e80 opengles.cpp:273] OpenGL Renderer=[N/A]
+I1122 19:02:21.867863 e0d9e80 opengles.cpp:274] OpenGL Version=[N/A]
+dsa-wm: graphics: the renderer (dsa-gfx, pid 20439) is running; frames go to the windows on the GPU
+I1122 19:02:24.891978 f4d3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab1fd800 for application:surfaceflinger engine:ANGLE.
+I1122 19:02:24.941957 f4d3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab277018 for application:surfaceflinger engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:02:25.421970 fb83000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab1ff000 for application:bootanimation engine:ANGLE.
+I1122 19:02:25.458174 fb83000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab27a018 for application:bootanimation engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:02:31.433729 0e13000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab200800 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 19:02:31.618823 0e13000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab27d018 for application:io.github.thisisthepy.dsa.agent engine:ANGLE ASTC emulation:off CPU decoding:off.
+failed to scan /Users/ibrew/Applications/DSA Apps/Play 스토어.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/갤러리.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/녹음기.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/계산기.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/주소록.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/음악.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/카메라.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/시계.app: -10814
+ from spotlightfailed to scan /Users/ibrew/Applications/DSA Apps/파일.app: -10814
+ from spotlightdsa-wm: Launch Services did not take these app bundles: /Users/ibrew/Applications/DSA Apps/Play 스토어.app, /Users/ibrew/Applications/DSA Apps/갤러리.app, /Users/ibrew/Applications/DSA Apps/녹음기.app, /Users/ibrew/Applications/DSA Apps/계산기.app, /Users/ibrew/Applications/DSA Apps/주소록.app, /Users/ibrew/Applications/DSA Apps/음악.app, /Users/ibrew/Applications/DSA Apps/카메라.app, /Users/ibrew/Applications/DSA Apps/시계.app, /Users/ibrew/Applications/DSA Apps/파일.app
+I1122 19:02:32.411473 fb83000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab27a018
+I1122 19:02:32.414978 fb83000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab1ff000 for application:bootanimation engine:ANGLE.
+I1122 19:02:40.759558 fd8f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab1ff000 for application:com.google.android.gms engine:ANGLE.
+I1122 19:02:40.865263 fd8f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab27a018 for application:com.google.android.gms engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:02:51.708897 043f000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab202000 for application:com.android.vending engine:ANGLE.
+I1122 19:02:51.872075 043f000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab280018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:02:55.271506 043f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab280018
+I1122 19:02:55.271903 043f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab202000 for application:com.android.vending engine:ANGLE.
+I1122 19:02:55.400594 1b73000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab202000 for application:com.android.vending engine:ANGLE.
+I1122 19:02:55.627134 1b73000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab280018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:02:58.563862 1b73000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab280018
+I1122 19:02:58.564108 1b73000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab202000 for application:com.android.vending engine:ANGLE.
+I1122 19:03:00.609570 2017000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab202000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 19:03:00.637155 2017000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab280018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:03:00.904749 2017000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab280018
+I1122 19:03:00.904907 2017000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab202000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 19:03:01.739808 34b3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab202000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 19:03:01.880837 34b3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab280018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:03:02.304652 34b3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab280018
+I1122 19:03:02.304823 34b3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab202000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 19:03:07.125452 34b3000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab202000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 19:03:07.244054 34b3000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab280018 for application:com.google.android.gms.unstable engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:03:07.560036 34b3000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab280018
+I1122 19:03:07.560106 34b3000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab202000 for application:com.google.android.gms.unstable engine:ANGLE.
+I1122 19:05:09.988980 1b73000 VkDecoderGlobalState.cpp:978] Created VkInstance:0xcab202000 for application:com.android.vending engine:ANGLE.
+I1122 19:05:10.016914 1b73000 VkDecoderGlobalState.cpp:2046] Created VkDevice:0xcab280018 for application:com.android.vending engine:ANGLE ASTC emulation:off CPU decoding:off.
+I1122 19:05:10.332059 1b73000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab280018
+I1122 19:05:10.332208 1b73000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab202000 for application:com.android.vending engine:ANGLE.
+I1122 19:08:01.981989 d93f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab27a018
+I1122 19:08:01.982975 d93f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab1ff000 for application:com.google.android.gms engine:ANGLE.
+I1122 19:08:01.996638 d93f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab27d018
+I1122 19:08:01.997666 d93f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab200800 for application:io.github.thisisthepy.dsa.agent engine:ANGLE.
+I1122 19:08:02.012880 d93f000 VkDecoderGlobalState.cpp:2294] Destroyed VkDevice:0xcab277018
+I1122 19:08:02.013947 d93f000 VkDecoderGlobalState.cpp:9066] Destroyed VkInstance:0xcab1fd800 for application:surfaceflinger engine:ANGLE.
+dsa-wm: Android crashed: kernel panic in mt_find; the user is told
+dsa-wm: graphics: the graphics renderer (dsa-gfx, pid 20439) stopped while Android is stopped: it exited normally (exit code 0); it starts again with Android

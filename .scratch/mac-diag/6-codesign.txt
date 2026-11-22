@@ -1,0 +1,52 @@
+== /Applications/DSA.app
+Executable=/Applications/DSA.app/Contents/MacOS/dsa-settings
+Identifier=org.thisisthepy.dsa
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20500 size=9428 flags=0x10002(adhoc,runtime) hashes=284+7 location=embedded
+VersionPlatform=1
+VersionMin=851968
+VersionSDK=1705216
+Hash type=sha256 size=32
+CandidateCDHash sha256=8ff7ebd6cd203b1b003f961ca228938bb73c6b13
+CandidateCDHashFull sha256=8ff7ebd6cd203b1b003f961ca228938bb73c6b13bca3acc979f2c9a21f6f0add
+Hash choices=sha256
+CMSDigest=8ff7ebd6cd203b1b003f961ca228938bb73c6b13bca3acc979f2c9a21f6f0add
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=1359872
+Executable Segment flags=0x1
+Page size=16384
+CDHash=8ff7ebd6cd203b1b003f961ca228938bb73c6b13
+Signature=adhoc
+Info.plist entries=22
+TeamIdentifier=not set
+Runtime Version=26.5.0
+Sealed Resources version=2 rules=13 files=36
+Internal requirements count=0 size=12
+/Applications/DSA.app: rejected
+== /Applications/DSA.app/Contents/MacOS/dsa-hostd
+Executable=/Applications/DSA.app/Contents/MacOS/dsa-hostd
+Identifier=dsa-hostd-5555494452e827e7e068324f9bd18971b25c9a12
+Format=Mach-O thin (arm64)
+CodeDirectory v=20500 size=17139 flags=0x10002(adhoc,runtime) hashes=524+7 location=embedded
+VersionPlatform=1
+VersionMin=720896
+VersionSDK=1705216
+Hash type=sha256 size=32
+CandidateCDHash sha256=113ed85bfc75ab3a03299ab762647b2f69482db1
+CandidateCDHashFull sha256=113ed85bfc75ab3a03299ab762647b2f69482db1e2b5981f4cfe30aeb63eb9d1
+Hash choices=sha256
+CMSDigest=113ed85bfc75ab3a03299ab762647b2f69482db1e2b5981f4cfe30aeb63eb9d1
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=6258688
+Executable Segment flags=0x1
+Page size=16384
+CDHash=113ed85bfc75ab3a03299ab762647b2f69482db1
+Signature=adhoc
+Info.plist=not bound
+TeamIdentifier=not set
+Runtime Version=26.5.0
+Sealed Resources=none
+Internal requirements count=0 size=12
+/Applications/DSA.app/Contents/MacOS/dsa-hostd: rejected

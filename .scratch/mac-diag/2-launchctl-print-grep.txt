@@ -1,0 +1,280 @@
+		   20437      - 	io.github.thisisthepy.dsa.wm
+		   23522      - 	application.org.thisisthepy.dsa.209319884.209319896
+		   20440      0 	io.github.thisisthepy.dsa.hostd
+		   23071      - 	io.github.thisisthepy.dsa.devices
+		 0x96e73    M   A   io.github.thisisthepy.dsa.wm
+gui/501/io.github.thisisthepy.dsa.hostd = {
+	active count = 1
+	path = /Users/ibrew/Library/LaunchAgents/io.github.thisisthepy.dsa.hostd.plist
+	type = LaunchAgent
+	state = running
+
+	program = /Applications/DSA.app/Contents/MacOS/dsa-hostd
+	arguments = {
+		/Applications/DSA.app/Contents/MacOS/dsa-hostd
+		serve
+	}
+
+	stdout path = /Users/ibrew/Library/Application Support/DSA/logs/dsa-hostd.log
+	stderr path = /Users/ibrew/Library/Application Support/DSA/logs/dsa-hostd.log
+	inherited environment = {
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.XULqgGoAJP/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		XPC_SERVICE_NAME => io.github.thisisthepy.dsa.hostd
+	}
+
+	domain = gui/501 [100002]
+	asid = 100002
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 3
+	pid = 20440
+	immediate reason = non-ipc demand
+	forks = 6
+	execs = 1
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	checked allocations = 0 (queried = 1)
+	checked allocations reason = no host
+	checked allocations flags = 0x0
+	last exit code = 0
+
+	semaphores = {
+		successful exit => 0
+	}
+
+	resource coalition = {
+		ID = 3195
+		type = resource
+		state = active
+		active count = 1
+		name = io.github.thisisthepy.dsa.hostd
+	}
+
+	jetsam coalition = {
+		ID = 3196
+		type = jetsam
+		state = active
+		active count = 1
+		name = io.github.thisisthepy.dsa.hostd
+	}
+
+	spawn type = interactive (4)
+	jetsam priority = 40
+	jetsam memory limit (active) = (unlimited)
+	jetsam memory limit (inactive) = (unlimited)
+	jetsamproperties category = daemon
+	jetsam thread limit = 32
+	cpumon = default
+	job state = running
+
+	properties = runatload | inferred program
+}
+gui/501/io.github.thisisthepy.dsa.wm = {
+	active count = 4
+	path = /Users/ibrew/Library/LaunchAgents/io.github.thisisthepy.dsa.wm.plist
+	type = LaunchAgent
+	state = running
+
+	program = /Applications/DSA.app/Contents/Helpers/DSA Window Manager.app/Contents/MacOS/dsa-wm
+	arguments = {
+		/Applications/DSA.app/Contents/Helpers/DSA Window Manager.app/Contents/MacOS/dsa-wm
+	}
+
+	stdout path = /Users/ibrew/Library/Application Support/DSA/logs/dsa-wm.log
+	stderr path = /Users/ibrew/Library/Application Support/DSA/logs/dsa-wm.log
+	inherited environment = {
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.XULqgGoAJP/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		XPC_SERVICE_NAME => io.github.thisisthepy.dsa.wm
+	}
+
+	domain = gui/501 [100002]
+	asid = 100002
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 1
+	pid = 20437
+	immediate reason = speculative
+	forks = 193
+	execs = 1
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	checked allocations = 0 (queried = 1)
+	checked allocations reason = no host
+	checked allocations flags = 0x0
+	last exit code = (never exited)
+
+	semaphores = {
+		successful exit => 0
+	}
+
+	endpoints = {
+		"io.github.thisisthepy.dsa.wm" = {
+			port = 0x96e73
+			active = 1
+			managed = 1
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+	}
+
+	pid-local endpoints = {
+		"com.apple.tsm.portname" = {
+			port = 0xda49f
+			active = 1
+			managed = 0
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+		"com.apple.axserver" = {
+			port = 0x54787
+			active = 1
+			managed = 0
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+	}
+
+	resource coalition = {
+		ID = 3503
+		type = resource
+		state = active
+		active count = 1
+		name = io.github.thisisthepy.dsa.wm
+	}
+
+	jetsam coalition = {
+		ID = 3504
+		type = jetsam
+		state = active
+		active count = 1
+		name = io.github.thisisthepy.dsa.wm
+	}
+
+	spawn type = interactive (4)
+	jetsam priority = 40
+	jetsam memory limit (active) = (unlimited)
+	jetsam memory limit (inactive) = (unlimited)
+	jetsamproperties category = daemon
+	jetsam thread limit = 32
+	cpumon = default
+	job state = running
+
+	properties = runatload | inferred program
+}
+gui/501/io.github.thisisthepy.dsa.devices = {
+	active count = 3
+	path = /Users/ibrew/Library/LaunchAgents/io.github.thisisthepy.dsa.devices.plist
+	type = LaunchAgent
+	state = running
+
+	program = /Applications/DSA.app/Contents/Helpers/DSA Devices.app/Contents/MacOS/dsa-devices
+	arguments = {
+		/Applications/DSA.app/Contents/Helpers/DSA Devices.app/Contents/MacOS/dsa-devices
+	}
+
+	stdout path = /Users/ibrew/Library/Application Support/DSA/logs/dsa-devices.log
+	stderr path = /Users/ibrew/Library/Application Support/DSA/logs/dsa-devices.log
+	inherited environment = {
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.XULqgGoAJP/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		XPC_SERVICE_NAME => io.github.thisisthepy.dsa.devices
+	}
+
+	domain = gui/501 [100002]
+	asid = 100002
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 1
+	pid = 23071
+	immediate reason = speculative
+	forks = 0
+	execs = 1
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	checked allocations = 0 (queried = 1)
+	checked allocations reason = no host
+	checked allocations flags = 0x0
+	last exit code = (never exited)
+
+	semaphores = {
+		successful exit => 0
+	}
+
+	pid-local endpoints = {
+		"com.apple.tsm.portname" = {
+			port = 0xdb2db
+			active = 1
+			managed = 0
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+		"com.apple.axserver" = {
+			port = 0x8b1a3
+			active = 1
+			managed = 0
+			reset = 0
+			hide = 0
+			watching = 0
+		}
+	}
+
+	resource coalition = {
+		ID = 3199
+		type = resource
+		state = active
+		active count = 1
+		name = io.github.thisisthepy.dsa.devices
+	}
+
+	jetsam coalition = {
+		ID = 3200
+		type = jetsam
+		state = active
+		active count = 1
+		name = io.github.thisisthepy.dsa.devices
+	}
+
+	spawn type = interactive (4)
+	jetsam priority = 40
+	jetsam memory limit (active) = (unlimited)
+	jetsam memory limit (inactive) = (unlimited)
+	jetsamproperties category = daemon
+	jetsam thread limit = 32
+	cpumon = default
+	job state = running
+
+	properties = runatload | inferred program
+}

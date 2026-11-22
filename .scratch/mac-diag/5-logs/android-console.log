@@ -1,0 +1,500 @@
+[   13.068947] init: processing action (persist.sys.zram_enabled=1 && sys-boot-completed-set) from (/vendor/etc/init/init.cutf_cvm.rc:102)
+[   13.081658] init: [libfs_mgr] mmd is recommended to set up zram over swapon_all command with fstab entry.
+[   13.121767] set_capacity_and_notify: 54 callbacks suppressed
+[   13.121775] loop63: detected capacity change from 0 to 1048576
+[   13.160698] type=1400 audit(1795341755.468:21): avc:  denied  { open } for  comm="init" path="/sys/devices/platform/40000000.pci/pci0000:00/0000:00:06.0/virtio2/block/vda/mq/0/nr_tags" dev="sysfs" ino=6766 scontext=u:r:init:s0 tcontext=u:object_r:sysfs:s0 tclass=file permissive=0
+[   13.232903] zram: Can't setup backing device for initialized device
+[   13.233360] init: [libfs_mgr] Cannot write /dev/block/loop63 in: /sys/block/zram0/backing_dev: Device or resource busy
+[   13.238739] init: [libfs_mgr] Failure of zram backing device file for '/dev/block/zram0'
+[   13.239941] zram: Cannot change disksize for initialized device
+[   13.256700] mkswap: mkswap: xwrite: Text file busy
+[   13.259639] mkswap: mkswap terminated by exit(1)
+[   13.259639] 
+[   13.268921] init: [libfs_mgr] mkswap failed for /dev/block/zram0
+[   13.274501] init: Command 'swapon_all' action=persist.sys.zram_enabled=1 && sys-boot-completed-set (/vendor/etc/init/init.cutf_cvm.rc:103) took 200ms and failed: fs_mgr_swapon_all() failed
+[   13.281331] init: Service 'dmesgd' (pid 1294) exited with status 0 oneshot service took 0.303000 seconds in background
+[   13.287973] init: Sending SIGKILL to service 'dmesgd' (pid 1294) process group...
+[   13.294881] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1086/pid_1294
+[   13.297596] init: Service 'mmd_setup' (pid 1296) exited with status 0 oneshot service took 0.297000 seconds in background
+[   13.300693] init: Sending SIGKILL to service 'mmd_setup' (pid 1296) process group...
+[   13.307985] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_0/pid_1296
+[   13.308313] init: Service 'set_adb' (pid 1300) exited with status 0 oneshot service took 0.267000 seconds in background
+[   13.309031] init: Sending SIGKILL to service 'set_adb' (pid 1300) process group...
+[   13.319457] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_0/pid_1300
+[   13.327729] init: service 'adbd' requested start, but it is already running (flags: 132, pid: 1026, started 3669ms ago)
+[   13.328504] init: Control message: Processed ctl.start for 'adbd' from pid: 662 (system_server)
+[   13.349955] init: starting service 'mdnsd'...
+[   13.376324] init: Created socket '/dev/socket/mdnsd', mode 660, user 1020, group 3003
+[   13.383150] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_1020
+[   13.386456] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_1020/pid_1329
+[   13.422248] init: ... started service 'mdnsd' has pid 1329
+[   13.424440] init: Control message: Processed ctl.start for 'mdnsd' from pid: 1026 (/apex/com.android.adbd/bin/adbd --root_seclabel=u:r:su:s0 --tim_seclabel=u:r:adbd_tradeinmode:s0)
+[   13.477706] servicemanager: Caller(pid=500,uid=1000,sid=u:r:surfaceflinger:s0) Found android.hardware.power.IPower/default in device VINTF manifest.
+[   13.580282] servicemanager: Notifying media.codeclist.generator they do (previously: don't) have clients when service is guaranteed to be in use
+[   13.587999] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc28e20) with descriptor: '(not cached)'
+[   13.722716] servicemanager: Caller(pid=1303,uid=1013,sid=u:r:mediacodeclist_generator:s0) Found android.hardware.media.c2.IComponentStore/default in device VINTF manifest.
+[   13.726061] servicemanager: Caller(pid=1303,uid=1013,sid=u:r:mediacodeclist_generator:s0) Found android.hardware.media.c2.IComponentStore/software in framework VINTF manifest.
+[   13.842785] servicemanager: Caller(pid=1162,uid=10112,sid=u:r:mediaprovider_app:s0:c112,c256,c512,c768) Found android.hardware.media.c2.IComponentStore/default in device VINTF manifest.
+[   13.853151] servicemanager: Caller(pid=1162,uid=10112,sid=u:r:mediaprovider_app:s0:c112,c256,c512,c768) Found android.hardware.media.c2.IComponentStore/default in device VINTF manifest.
+[   13.854150] servicemanager: Caller(pid=1162,uid=10112,sid=u:r:mediaprovider_app:s0:c112,c256,c512,c768) Found android.hardware.media.c2.IComponentStore/default in device VINTF manifest.
+[   14.380516] init: processing action (vendor.dsa.google_device_id=request) from (/vendor/etc/init/dsa-channeld.rc:227)
+[   14.384462] init: starting service 'dsa_google_id'...
+[   14.387273] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_0/pid_1424
+[   14.393232] init: ... started service 'dsa_google_id' has pid 1424
+[   14.404069] type=1400 audit(1795341756.712:22): avc:  denied  { search } for  comm="dsa-channeld" name="data" dev="vdb3" ino=3159025 scontext=u:r:dsa_google_id:s0 tcontext=u:object_r:system_data_file:s0:c512,c768 tclass=dir permissive=1
+[   14.404815] type=1400 audit(1795341756.712:23): avc:  denied  { search } for  comm="dsa-channeld" name="com.google.android.gms" dev="vdb3" ino=3159278 scontext=u:r:dsa_google_id:s0 tcontext=u:object_r:privapp_data_file:s0:c512,c768 tclass=dir permissive=1
+[   14.405779] type=1400 audit(1795341756.716:24): avc:  denied  { search } for  comm="dsa-channeld" name="shared_prefs" dev="vdb3" ino=3159518 scontext=u:r:dsa_google_id:s0 tcontext=u:object_r:privapp_data_file:s0:c512,c768 tclass=dir permissive=1
+[   14.406309] type=1400 audit(1795341756.716:25): avc:  denied  { dac_read_search } for  comm="dsa-channeld" capability=2  scontext=u:r:dsa_google_id:s0 tcontext=u:r:dsa_google_id:s0 tclass=capability permissive=1
+[   14.410661] init: Service 'dsa_google_id' (pid 1424) exited with status 0 oneshot service took 0.023000 seconds in background
+[   14.411876] init: Sending SIGKILL to service 'dsa_google_id' (pid 1424) process group...
+[   14.412065] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_0/pid_1424
+[   14.413441] type=1400 audit(1795341756.716:26): avc:  denied  { read } for  comm="dsa-channeld" name="Checkin.xml" dev="vdb3" ino=3159677 scontext=u:r:dsa_google_id:s0 tcontext=u:object_r:privapp_data_file:s0:c512,c768 tclass=file permissive=1
+[   14.413951] type=1400 audit(1795341756.716:27): avc:  denied  { open } for  comm="dsa-channeld" path="/data/data/com.google.android.gms/shared_prefs/Checkin.xml" dev="vdb3" ino=3159677 scontext=u:r:dsa_google_id:s0 tcontext=u:object_r:privapp_data_file:s0:c512,c768 tclass=file permissive=1
+[   14.423962] type=1400 audit(1795341756.716:28): avc:  denied  { write } for  comm="dsa-channeld" name="property_service" dev="tmpfs" ino=925 scontext=u:r:dsa_google_id:s0 tcontext=u:object_r:property_socket:s0 tclass=sock_file permissive=1
+[   14.430441] type=1400 audit(1795341756.716:29): avc:  denied  { connectto } for  comm="dsa-channeld" path="/dev/socket/property_service" scontext=u:r:dsa_google_id:s0 tcontext=u:r:init:s0 tclass=unix_stream_socket permissive=1
+[   15.978190] servicemanager: Notifying apexservice they don't (previously: do) have clients when we now have no record of a client
+[   15.980182] servicemanager: Notifying media.codeclist.generator they don't (previously: do) have clients when we now have no record of a client
+[   15.987464] libbinder.AidlLazyServiceRegistrar: Process has 0 (of 1 available) client(s) in use after notification apexservice has clients: 0
+[   15.991731] libbinder.AidlLazyServiceRegistrar: Trying to shut down the service. No clients in use for any service in process.
+[   15.993927] servicemanager: Caller(pid=328,uid=0,sid=u:r:apexd:s0) Unregistering apexservice
+[   15.995231] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc123d0) with descriptor: '(not cached)'
+[   15.997563] libbinder.AidlLazyServiceRegistrar: Unregistered all clients and exiting
+[   16.000227] servicemanager: Caller(pid=1303,uid=1013,sid=u:r:mediacodeclist_generator:s0) Unregistering media.codeclist.generator
+[   16.003016] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc29920) with descriptor: '(not cached)'
+[   16.004335] init: Service 'apexd' (pid 328) exited with status 0 oneshot service took 14.496000 seconds in background
+[   16.005800] init: Sending SIGKILL to service 'apexd' (pid 328) process group...
+[   16.009018] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_0/pid_328
+[   16.024766] init: Service 'media.codeclist.generator' (pid 1303) exited with status 0 oneshot service took 2.967000 seconds in background
+[   16.027432] init: Sending SIGKILL to service 'media.codeclist.generator' (pid 1303) process group...
+[   16.028079] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1013/pid_1303
+[   16.494863] init: Sending SIGKILL to service 'idmap2d' (pid 578) process group...
+[   16.496559] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1000/pid_578
+[   16.496959] init: Control message: Processed ctl.stop for 'idmap2d' from pid: 662 (system_server)
+[   16.500143] init: Service 'idmap2d' (pid 578) received SIGKILL
+[   16.500635] init: Sending SIGKILL to service 'idmap2d' (pid 578) process group...
+[   16.500853] libprocessgroup: Failed to write 1 to /sys/fs/cgroup/system/uid_1000/pid_578/cgroup.kill: No such file or directory
+[   17.466150] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   17.472724] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/avf in framework VINTF manifest.
+[   17.474134] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Since 'android.hardware.security.keymint.IRemotelyProvisionedComponent/avf' could not be found trying to start it as a lazy AIDL service. (if it's not configured to be a lazy service, it may be stuck starting or still starting).
+[   17.490174] init: starting service 'virtualizationservice'...
+[   17.495023] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_1000/pid_1717
+[   17.501456] init: ... started service 'virtualizationservice' has pid 1717
+[   17.504292] init: Control message: Processed ctl.interface_start for 'aidl/android.hardware.security.keymint.IRemotelyProvisionedComponent/avf' from pid: 264 (/system/bin/servicemanager)
+[   17.555908] servicemanager: Caller(pid=1717,uid=1000,sid=u:r:virtualizationservice:s0) Could not find android.hardware.security.secretkeeper.ISecretkeeper/default in the VINTF manifest. VINTF declared instances: nonsecure.
+[   17.558876] servicemanager: Caller(pid=1717,uid=1000,sid=u:r:virtualizationservice:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/avf in framework VINTF manifest.
+[   17.560786] servicemanager: Caller(pid=1717,uid=1000,sid=u:r:virtualizationservice:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/avf in framework VINTF manifest.
+[   17.561834] servicemanager: Notifying android.hardware.security.keymint.IRemotelyProvisionedComponent/avf they do (previously: don't) have clients when service is guaranteed to be in use
+[   17.562915] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc16940) with descriptor: '(not cached)'
+[   17.914291] dsa-channeld: trimming 671 MiB of cold page cache (working set target 160 MiB)
+[   17.914914] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 831 MiB droppable and 451 MiB anonymous of 1523 MiB in use
+[   17.918319] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   19.485474] servicemanager: Caller(pid=1377,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   19.490552] servicemanager: Caller(pid=1377,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   19.493098] servicemanager: Caller(pid=1377,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found mapper/minigbm in device VINTF manifest.
+[   20.163903] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 2245ms and succeeded
+[   20.164686] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   20.190844] dsa-channeld: the working set trim returned in 2272 ms: free 452 -> 822 MiB; page cache 809 -> 502 MiB; reclaimable kernel caches 21 -> 24 MiB; unreclaimable kernel caches 91 -> 92 MiB; app memory 451 -> 345 MiB; swapped 31 -> 140 MiB; zram 30 MiB in 8 -> 136 MiB in 43; taken back by the host 0 -> 0 MiB
+[   21.026291] dsa-channeld: paged out com.android.deskclock (pid 1127, oom_score_adj 905) after it woke: resident anonymous 23 -> 20 MiB, swapped out 27 -> 30 MiB, 2050 MiB asked for, 1 ranges refused, 49 ms
+[   22.653028] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   22.746799] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   23.146783] dsa-channeld: paged out com.android.permissioncontroller (pid 1066, oom_score_adj 905) after it woke: resident anonymous 28 -> 20 MiB, swapped out 32 -> 40 MiB, 2050 MiB asked for, 1 ranges refused, 90 ms
+[   24.050406] init: starting service 'idmap2d'...
+[   24.058729] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_1000/pid_1905
+[   24.069194] init: ... started service 'idmap2d' has pid 1905
+[   24.069741] init: Control message: Processed ctl.start for 'idmap2d' from pid: 662 (system_server)
+[   25.192119] dsa-channeld: trimming 572 MiB of cold page cache (working set target 160 MiB)
+[   25.195943] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 732 MiB droppable and 396 MiB anonymous of 1417 MiB in use
+[   25.208471] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   25.517673] dsa-channeld: paged out android.process.media (pid 1271, oom_score_adj 700) after it woke: resident anonymous 25 -> 20 MiB, swapped out 24 -> 28 MiB, 2058 MiB asked for, 1 ranges refused, 295 ms
+[   27.915479] dsa-channeld: paged out com.android.statementservice (pid 1703, oom_score_adj 905) after it woke: resident anonymous 23 -> 18 MiB, swapped out 29 -> 34 MiB, 2054 MiB asked for, 1 ranges refused, 253 ms
+[   28.356743] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 3147ms and succeeded
+[   28.366879] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   28.381726] dsa-channeld: the working set trim returned in 3176 ms: free 558 -> 887 MiB; page cache 707 -> 441 MiB; reclaimable kernel caches 24 -> 23 MiB; unreclaimable kernel caches 98 -> 104 MiB; app memory 396 -> 300 MiB; swapped 114 -> 243 MiB; zram 111 MiB in 41 -> 234 MiB in 68; taken back by the host 0 -> 0 MiB
+[   30.036528] dsa-channeld: paged out com.android.rkpdapp (pid 1664, oom_score_adj 905) after it woke: resident anonymous 22 -> 18 MiB, swapped out 29 -> 33 MiB, 2059 MiB asked for, 1 ranges refused, 90 ms
+[   30.155457] servicemanager: Caller(pid=1733,uid=10075,sid=u:r:priv_app_36:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   30.160997] servicemanager: Caller(pid=1733,uid=10075,sid=u:r:priv_app_36:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   30.163753] servicemanager: Caller(pid=1733,uid=10075,sid=u:r:priv_app_36:s0:c512,c768) Found mapper/minigbm in device VINTF manifest.
+[   30.979335] servicemanager: Notifying artd they don't (previously: do) have clients when we now have no record of a client
+[   31.012975] servicemanager: Caller(pid=1161,uid=1082,sid=u:r:artd:s0) Unregistering artd
+[   31.014406] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc2a790) with descriptor: '(not cached)'
+[   31.047939] init: Service 'artd' (pid 1161) exited with status 0 oneshot service took 19.834999 seconds in background
+[   31.071637] init: Sending SIGKILL to service 'artd' (pid 1161) process group...
+[   31.076360] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1082/pid_1161
+[   32.082799] dsa-channeld: paged out com.android.providers.calendar (pid 1647, oom_score_adj 905) after it woke: resident anonymous 20 -> 17 MiB, swapped out 28 -> 30 MiB, 2046 MiB asked for, 0 ranges refused, 21 ms
+[   32.559764] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   32.766403] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   32.792737] dsa-channeld: zram writes what no one has used for 1800 s to its backing file once no app has been in use for 600 s, at most 32 MiB a run and 512 MiB a day (512 MiB left today)
+[   33.386018] dsa-channeld: trimming 449 MiB of cold page cache (working set target 160 MiB)
+[   33.392040] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 609 MiB droppable and 367 MiB anonymous of 1308 MiB in use
+[   33.398204] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   34.140100] dsa-channeld: paged out android.process.acore (pid 1363, oom_score_adj 700) after it woke: resident anonymous 20 -> 16 MiB, swapped out 32 -> 36 MiB, 2059 MiB asked for, 1 ranges refused, 49 ms
+[   35.285956] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   35.494781] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 2089ms and succeeded
+[   35.503875] init: Sending SIGKILL to service 'idmap2d' (pid 1905) process group...
+[   35.518207] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1000/pid_1905
+[   35.532880] init: Control message: Processed ctl.stop for 'idmap2d' from pid: 662 (system_server)
+[   35.549299] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   35.560900] init: Service 'idmap2d' (pid 1905) received SIGKILL
+[   35.562109] init: Sending SIGKILL to service 'idmap2d' (pid 1905) process group...
+[   35.562477] libprocessgroup: Failed to write 1 to /sys/fs/cgroup/system/uid_1000/pid_1905/cgroup.kill: No such file or directory
+[   35.582081] dsa-channeld: the working set trim returned in 2184 ms: free 668 -> 883 MiB; page cache 585 -> 417 MiB; reclaimable kernel caches 24 -> 24 MiB; unreclaimable kernel caches 107 -> 107 MiB; app memory 367 -> 311 MiB; swapped 220 -> 277 MiB; zram 212 MiB in 67 -> 267 MiB in 77; taken back by the host 0 -> 0 MiB
+[   35.979116] servicemanager: Notifying android.hardware.security.keymint.IRemotelyProvisionedComponent/avf they don't (previously: do) have clients when we now have no record of a client
+[   35.982142] servicemanager: Caller(pid=1717,uid=1000,sid=u:r:virtualizationservice:s0) Unregistering android.hardware.security.keymint.IRemotelyProvisionedComponent/avf
+[   35.982584] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc29920) with descriptor: '(not cached)'
+[   35.983902] servicemanager: Caller(pid=1717,uid=1000,sid=u:r:virtualizationservice:s0) Unregistering android.system.virtualizationmaintenance
+[   35.984151] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc16940) with descriptor: '(not cached)'
+[   35.986637] servicemanager: Caller(pid=1717,uid=1000,sid=u:r:virtualizationservice:s0) Unregistering android.system.virtualizationservice
+[   35.987009] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc28950) with descriptor: '(not cached)'
+[   35.998129] init: Service 'virtualizationservice' (pid 1717) exited with status 0 oneshot service took 18.504000 seconds in background
+[   35.998295] init: Sending SIGKILL to service 'virtualizationservice' (pid 1717) process group...
+[   35.998519] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1000/pid_1717
+[   36.217538] dsa-channeld: paged out com.android.photopicker (pid 2051, oom_score_adj 905) after it woke: resident anonymous 19 -> 16 MiB, swapped out 28 -> 31 MiB, 2045 MiB asked for, 0 ranges refused, 71 ms
+[   37.118504] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   37.799185] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   37.819309] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   37.943001] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   37.957804] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   38.114039] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   38.138810] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   38.227306] dsa-channeld: paged out com.android.externalstorage (pid 2120, oom_score_adj 905) after it woke: resident anonymous 18 -> 17 MiB, swapped out 29 -> 30 MiB, 2045 MiB asked for, 0 ranges refused, 6 ms
+[   38.593205] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   38.606121] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   38.867416] servicemanager: Caller(pid=1801,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   38.872616] servicemanager: Caller(pid=1801,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   38.880958] servicemanager: Caller(pid=1801,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found mapper/minigbm in device VINTF manifest.
+[   38.935254] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   38.954000] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   40.332483] dsa-channeld: paged out com.google.android.syncadapters.calendar (pid 1888, oom_score_adj 905, Google Play services) after it woke: resident anonymous 27 -> 17 MiB, swapped out 31 -> 41 MiB, 2103 MiB asked for, 1 ranges refused, 70 ms
+[   40.583001] dsa-channeld: trimming 453 MiB of cold page cache (working set target 160 MiB)
+[   40.646404] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 613 MiB droppable and 348 MiB anonymous of 1302 MiB in use
+[   40.673921] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   40.917031] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   40.944431] servicemanager: Caller(pid=1664,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   41.665472] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 991ms and succeeded
+[   41.671116] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   41.706205] dsa-channeld: the working set trim returned in 1057 ms: free 673 -> 1008 MiB; page cache 588 -> 307 MiB; reclaimable kernel caches 25 -> 24 MiB; unreclaimable kernel caches 108 -> 109 MiB; app memory 348 -> 284 MiB; swapped 250 -> 308 MiB; zram 241 MiB in 74 -> 296 MiB in 86; taken back by the host 0 -> 0 MiB
+[   42.087165] type=1400 audit(1795341784.380:30): avc:  denied  { create } for  comm="RenderEngine" anonclass=[userfaultfd] scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:surfaceflinger:s0 tclass=anon_inode permissive=0
+[   42.123463] type=1400 audit(1795341784.432:31): avc:  denied  { getattr } for  comm="RenderEngine" path="/sys/kernel/tracing/trace_marker" dev="tracefs" ino=43 scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:debugfs_trace_marker:s0 tclass=file permissive=0
+[   42.156396] type=1400 audit(1795341784.432:32): avc:  denied  { getattr } for  comm="RenderEngine" path="socket:[14790]" dev="sockfs" ino=14790 scontext=u:r:surfaceflinger:s0 tcontext=u:r:platform_app_36:s0:c512,c768 tclass=unix_stream_socket permissive=0
+[   42.157868] type=1400 audit(1795341784.432:33): avc:  denied  { getattr } for  comm="RenderEngine" path="socket:[15145]" dev="sockfs" ino=15145 scontext=u:r:surfaceflinger:s0 tcontext=u:r:platform_app_36:s0:c512,c768 tclass=unix_stream_socket permissive=0
+[   42.302931] binder: 1664:1672 ioctl c0306201 ef0ac9c28bf0 returned -14
+[   42.439308] servicemanager: Caller(pid=662,uid=1000,sid=u:r:system_server:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   42.453655] servicemanager: Caller(pid=662,uid=1000,sid=u:r:system_server:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   42.458273] servicemanager: Caller(pid=662,uid=1000,sid=u:r:system_server:s0) Found mapper/minigbm in device VINTF manifest.
+[   42.577408] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   42.953399] servicemanager: Caller(pid=2533,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   43.053758] init: processing action (ro.boot.dsa.gapps=on && vendor.dsa.gapps.compile=*) from (/system/etc/init/dsa-gapps.rc:108)
+[   43.055310] init: starting service 'dsa_gapps_compile'...
+[   43.058931] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_2000/pid_2553
+[   43.080053] init: ... started service 'dsa_gapps_compile' has pid 2553
+[   43.234005] servicemanager: Caller(pid=662,uid=1000,sid=u:r:system_server:s0) Since 'artd' could not be found trying to start it as a lazy AIDL service. (if it's not configured to be a lazy service, it may be stuck starting or still starting).
+[   43.264379] init: starting service 'artd'...
+[   43.265705] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_1082/pid_2582
+[   43.371905] init: ... started service 'artd' has pid 2582
+[   43.372074] init: Control message: Processed ctl.interface_start for 'aidl/artd' from pid: 264 (/system/bin/servicemanager)
+[   43.408425] servicemanager: Notifying artd they do (previously: don't) have clients when service is guaranteed to be in use
+[   43.410531] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc13240) with descriptor: '(not cached)'
+[   43.819860] init: Service 'dsa_gapps_compile' (pid 2553) exited with status 0 oneshot service took 0.762000 seconds in background
+[   43.830084] init: Sending SIGKILL to service 'dsa_gapps_compile' (pid 2553) process group...
+[   43.841794] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_2000/pid_2553
+[   43.861350] init: processing action (init.svc.dsa_gapps_compile=stopped) from (/system/etc/init/dsa-gapps.rc:114)
+[   43.885750] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   43.919833] servicemanager: Caller(pid=2533,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   44.414982] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   44.543563] servicemanager: Caller(pid=2533,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   44.589284] dsa-channeld: paged out com.android.adservices.api (pid 2068, oom_score_adj 200) after it woke: resident anonymous 18 -> 16 MiB, swapped out 31 -> 34 MiB, 2049 MiB asked for, 1 ranges refused, 133 ms
+[   45.495922] init: processing action (persist.device_config.lmkd_native.thrashing_limit_critical=*) from (/system/etc/init/lmkd.rc:53)
+[   45.496906] init: processing action (lmkd.reinit=1) from (/system/etc/init/lmkd.rc:10)
+[   45.497268] init: starting service 'exec 24 (/system/bin/lmkd --reinit)'...
+[   45.506449] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_0/pid_2631
+[   45.529275] init: ... started service 'exec 24 (/system/bin/lmkd --reinit)' has pid 2631
+[   45.570996] init: Service 'exec 24 (/system/bin/lmkd --reinit)' (pid 2631) exited with status 0 oneshot service took 0.065000 seconds in background
+[   45.577030] init: Sending SIGKILL to service 'exec 24 (/system/bin/lmkd --reinit)' (pid 2631) process group...
+[   45.579148] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_0/pid_2631
+[   46.708860] dsa-channeld: trimming 470 MiB of cold page cache (working set target 160 MiB)
+[   46.709232] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 630 MiB droppable and 298 MiB anonymous of 1222 MiB in use
+[   46.710640] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   47.347850] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 636ms and succeeded
+[   47.352914] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   47.372789] dsa-channeld: the working set trim returned in 662 ms: free 753 -> 1110 MiB; page cache 605 -> 338 MiB; reclaimable kernel caches 25 -> 24 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 298 -> 211 MiB; swapped 188 -> 271 MiB; zram 180 MiB in 75 -> 262 MiB in 80; taken back by the host 0 -> 0 MiB
+[   52.380606] dsa-channeld: trimming 275 MiB of cold page cache (working set target 160 MiB)
+[   52.381323] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 435 MiB droppable and 252 MiB anonymous of 975 MiB in use
+[   52.386012] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   52.621145] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 234ms and succeeded
+[   52.621772] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   52.633631] dsa-channeld: paged out com.google.android.gms.unstable (pid 1801, oom_score_adj 905, Google Play services) after it woke: resident anonymous 17 -> 12 MiB, swapped out 43 -> 47 MiB, 2388 MiB asked for, 1 ranges refused, 27 ms
+[   52.646239] dsa-channeld: the working set trim returned in 260 ms: free 1000 -> 1263 MiB; page cache 410 -> 197 MiB; reclaimable kernel caches 24 -> 23 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 252 -> 199 MiB; swapped 230 -> 281 MiB; zram 221 MiB in 75 -> 271 MiB in 80; taken back by the host 0 -> 0 MiB
+[   54.690614] dsa-channeld: paged out com.android.vending:background (pid 2082, oom_score_adj 227, Google Play services) after it woke: resident anonymous 21 -> 13 MiB, swapped out 42 -> 51 MiB, 2375 MiB asked for, 1 ranges refused, 37 ms
+[   56.702666] dsa-channeld: paged out com.google.android.partnersetup (pid 1861, oom_score_adj 905, Google Play services) after it woke: resident anonymous 13 -> 12 MiB, swapped out 36 -> 36 MiB, 2338 MiB asked for, 1 ranges refused, 6 ms
+[   57.646945] dsa-channeld: trimming 233 MiB of cold page cache (working set target 160 MiB)
+[   57.647345] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 393 MiB droppable and 201 MiB anonymous of 888 MiB in use
+[   57.654721] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   58.006236] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 351ms and succeeded
+[   58.006610] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   58.023922] dsa-channeld: the working set trim returned in 369 ms: free 1087 -> 1207 MiB; page cache 369 -> 269 MiB; reclaimable kernel caches 24 -> 24 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 201 -> 176 MiB; swapped 278 -> 304 MiB; zram 268 MiB in 81 -> 293 MiB in 88; taken back by the host 0 -> 0 MiB
+[   58.711250] dsa-channeld: paged out com.android.rkpdapp (pid 2533, oom_score_adj 905) after it woke: resident anonymous 12 -> 12 MiB, swapped out 38 -> 38 MiB, 2057 MiB asked for, 1 ranges refused, 5 ms
+[   63.025145] dsa-channeld: trimming 270 MiB of cold page cache (working set target 160 MiB)
+[   63.026089] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 430 MiB droppable and 217 MiB anonymous of 947 MiB in use
+[   63.029159] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   63.319164] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 289ms and succeeded
+[   63.319407] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   63.357082] dsa-channeld: the working set trim returned in 328 ms: free 1028 -> 1244 MiB; page cache 405 -> 228 MiB; reclaimable kernel caches 24 -> 24 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 217 -> 178 MiB; swapped 265 -> 304 MiB; zram 256 MiB in 84 -> 293 MiB in 87; taken back by the host 0 -> 0 MiB
+[   66.835000] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 800, Google Play services) after it woke: resident anonymous 50 -> 12 MiB, swapped out 41 -> 80 MiB, 2419 MiB asked for, 1 ranges refused, 103 ms
+[   68.358747] dsa-channeld: trimming 170 MiB of cold page cache (working set target 160 MiB)
+[   68.359303] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 330 MiB droppable and 186 MiB anonymous of 820 MiB in use
+[   68.364332] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   68.540943] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 176ms and succeeded
+[   68.542873] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   68.559255] dsa-channeld: the working set trim returned in 195 ms: free 1155 -> 1308 MiB; page cache 306 -> 195 MiB; reclaimable kernel caches 24 -> 24 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 186 -> 129 MiB; swapped 298 -> 353 MiB; zram 288 MiB in 89 -> 343 MiB in 106; taken back by the host 0 -> 0 MiB
+[   72.903747] dsa-channeld: paged out com.android.vending (pid 1733, oom_score_adj 227, Google Play services) after it woke: resident anonymous 28 -> 12 MiB, swapped out 57 -> 73 MiB, 2411 MiB asked for, 1 ranges refused, 57 ms
+[   73.565398] dsa-channeld: trimming 93 MiB of cold page cache (working set target 160 MiB)
+[   73.566423] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 253 MiB droppable and 119 MiB anonymous of 695 MiB in use
+[   73.574097] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   73.703055] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 128ms and succeeded
+[   73.703512] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   73.729853] dsa-channeld: the working set trim returned in 156 ms: free 1280 -> 1352 MiB; page cache 229 -> 174 MiB; reclaimable kernel caches 24 -> 23 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 119 -> 95 MiB; swapped 361 -> 385 MiB; zram 351 MiB in 110 -> 374 MiB in 118; taken back by the host 0 -> 0 MiB
+[   78.736715] dsa-channeld: trimming 93 MiB of cold page cache (working set target 160 MiB)
+[   78.737467] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 253 MiB droppable and 105 MiB anonymous of 688 MiB in use
+[   78.744028] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   78.903373] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 159ms and succeeded
+[   78.905564] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   78.915585] dsa-channeld: the working set trim returned in 172 ms: free 1287 -> 1370 MiB; page cache 229 -> 172 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 105 -> 70 MiB; swapped 374 -> 409 MiB; zram 364 MiB in 118 -> 398 MiB in 128; taken back by the host 0 -> 0 MiB
+[   88.926744] dsa-channeld: trimming 84 MiB of cold page cache (working set target 160 MiB)
+[   88.931734] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 244 MiB droppable and 73 MiB anonymous of 657 MiB in use
+[   88.940291] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   89.081148] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 140ms and succeeded
+[   89.081452] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   89.091273] dsa-channeld: the working set trim returned in 151 ms: free 1319 -> 1396 MiB; page cache 220 -> 154 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 73 -> 55 MiB; swapped 405 -> 423 MiB; zram 395 MiB in 127 -> 412 MiB in 134; taken back by the host 0 -> 0 MiB
+[   94.092151] dsa-channeld: trimming 92 MiB of cold page cache (working set target 160 MiB)
+[   94.092869] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 252 MiB droppable and 87 MiB anonymous of 683 MiB in use
+[   94.098520] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   94.236218] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 137ms and succeeded
+[   94.236683] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   94.252635] dsa-channeld: the working set trim returned in 154 ms: free 1292 -> 1390 MiB; page cache 228 -> 153 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 87 -> 73 MiB; swapped 389 -> 404 MiB; zram 379 MiB in 132 -> 393 MiB in 125; taken back by the host 0 -> 0 MiB
+[   97.005082] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 800, Google Play services) after it woke: resident anonymous 16 -> 7 MiB, swapped out 74 -> 82 MiB, 2411 MiB asked for, 1 ranges refused, 47 ms
+[   99.099465] dsa-channeld: paged out com.google.android.gms.persistent (pid 1244, oom_score_adj 200, Google Play services) after it woke: resident anonymous 38 -> 7 MiB, swapped out 44 -> 74 MiB, 2394 MiB asked for, 1 ranges refused, 90 ms
+[   99.254209] dsa-channeld: trimming 86 MiB of cold page cache (working set target 160 MiB)
+[   99.254840] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 246 MiB droppable and 43 MiB anonymous of 638 MiB in use
+[   99.261763] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   99.327474] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 65ms and succeeded
+[   99.327902] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   99.350415] dsa-channeld: the working set trim returned in 89 ms: free 1337 -> 1418 MiB; page cache 222 -> 149 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 87 -> 87 MiB; app memory 43 -> 30 MiB; swapped 435 -> 447 MiB; zram 424 MiB in 138 -> 436 MiB in 143; taken back by the host 0 -> 0 MiB
+[  121.018245] binder: undelivered transaction 116257, process died.
+[  121.030096] binder: undelivered transaction 115634, process died.
+[  121.030388] binder: undelivered transaction 115619, process died.
+[  124.364502] dsa-channeld: reclaiming the guest's memory (HostShort, 0 tasks in use): 251 MiB droppable and 88 MiB anonymous of 670 MiB in use
+[  124.375659] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  124.430469] init (108): drop_caches: 3
+[  124.430823] init: Command 'write /proc/sys/vm/drop_caches 3' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:59) took 54ms and succeeded
+[  125.014262] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 481ms and succeeded
+[  125.015473] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  125.025646] dsa-channeld: the reclaim (HostShort) returned in 655 ms: free 1305 -> 1483 MiB; page cache 228 -> 115 MiB; reclaimable kernel caches 23 -> 19 MiB; unreclaimable kernel caches 84 -> 83 MiB; app memory 88 -> 62 MiB; swapped 336 -> 363 MiB; zram 327 MiB in 132 -> 354 MiB in 101; taken back by the host 0 -> 0 MiB
+[  125.984296] servicemanager: Notifying artd they don't (previously: do) have clients when we now have no record of a client
+[  125.986914] servicemanager: Caller(pid=2582,uid=1082,sid=u:r:artd:s0) Unregistering artd
+[  125.988419] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400e3a14bc28950) with descriptor: '(not cached)'
+[  126.037449] init: Service 'artd' (pid 2582) exited with status 0 oneshot service took 82.764999 seconds in background
+[  126.037782] init: Sending SIGKILL to service 'artd' (pid 2582) process group...
+[  126.038274] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1082/pid_2582
+[  133.227932] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 500, Google Play services) after it woke: resident anonymous 13 -> 7 MiB, swapped out 76 -> 82 MiB, 2405 MiB asked for, 1 ranges refused, 42 ms
+[  145.045275] dsa-channeld: Android has settled after its boot: evicted page cache read back now raises the working set target (now 160 MiB)
+[  145.293107] dsa-channeld: paged out com.google.android.gms.persistent (pid 1244, oom_score_adj 200, Google Play services) after it woke: resident anonymous 10 -> 7 MiB, swapped out 70 -> 73 MiB, 2393 MiB asked for, 1 ranges refused, 42 ms
+[  150.046890] dsa-channeld: reclaiming the guest's memory (Idle, 0 tasks in use): 366 MiB droppable and 233 MiB anonymous of 886 MiB in use
+[  150.051066] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  150.087474] init (108): drop_caches: 3
+[  150.232983] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:60) took 139ms and succeeded
+[  150.359103] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:61) took 121ms and succeeded
+[  150.457861] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:62) took 71ms and succeeded
+[  150.526388] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:63) took 66ms and succeeded
+[  151.140850] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 598ms and succeeded
+[  151.145563] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  151.163794] dsa-channeld: the reclaim (Idle) returned in 1112 ms: free 1089 -> 1068 MiB; page cache 346 -> 425 MiB; reclaimable kernel caches 19 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 233 -> 189 MiB; swapped 220 -> 283 MiB; zram 212 MiB in 84 -> 274 MiB in 69; taken back by the host 0 -> 0 MiB
+[  156.165079] dsa-channeld: trimming 290 MiB of cold page cache (working set target 160 MiB)
+[  156.165849] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 450 MiB droppable and 242 MiB anonymous of 962 MiB in use
+[  156.169245] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  156.398392] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 228ms and succeeded
+[  156.398871] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  156.406684] dsa-channeld: the working set trim returned in 238 ms: free 1013 -> 1312 MiB; page cache 430 -> 162 MiB; reclaimable kernel caches 20 -> 19 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 242 -> 223 MiB; swapped 226 -> 244 MiB; zram 217 MiB in 65 -> 235 MiB in 57; taken back by the host 0 -> 0 MiB
+[  157.362396] dsa-channeld: paged out com.android.vending:background (pid 2082, oom_score_adj 227, Google Play services) after it woke: resident anonymous 29 -> 10 MiB, swapped out 37 -> 57 MiB, 2377 MiB asked for, 1 ranges refused, 43 ms
+[  161.411283] dsa-channeld: trimming 149 MiB of cold page cache (working set target 160 MiB)
+[  161.412197] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 309 MiB droppable and 221 MiB anonymous of 790 MiB in use
+[  161.417336] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  161.676642] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 259ms and succeeded
+[  161.676961] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  161.691720] dsa-channeld: the working set trim returned in 274 ms: free 1185 -> 1302 MiB; page cache 289 -> 224 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 221 -> 138 MiB; swapped 243 -> 324 MiB; zram 234 MiB in 58 -> 315 MiB in 89; taken back by the host 0 -> 0 MiB
+[  163.458242] dsa-channeld: paged out com.android.vending:quick_launch (pid 2840, oom_score_adj 227, Google Play services) after it woke: resident anonymous 29 -> 12 MiB, swapped out 38 -> 55 MiB, 2077 MiB asked for, 1 ranges refused, 79 ms
+[  165.532261] dsa-channeld: paged out com.android.vending (pid 1733, oom_score_adj 227, Google Play services) after it woke: resident anonymous 23 -> 9 MiB, swapped out 60 -> 75 MiB, 2407 MiB asked for, 1 ranges refused, 62 ms
+[  166.693540] dsa-channeld: trimming 101 MiB of cold page cache (working set target 160 MiB)
+[  166.694832] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 261 MiB droppable and 141 MiB anonymous of 697 MiB in use
+[  166.700971] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  166.797409] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 96ms and succeeded
+[  166.797760] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  166.827969] dsa-channeld: the working set trim returned in 127 ms: free 1278 -> 1382 MiB; page cache 240 -> 154 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 141 -> 128 MiB; swapped 315 -> 327 MiB; zram 305 MiB in 93 -> 317 MiB in 89; taken back by the host 0 -> 0 MiB
+[  167.558716] dsa-channeld: paged out com.android.permissioncontroller (pid 2884, oom_score_adj 905) after it woke: resident anonymous 16 -> 11 MiB, swapped out 34 -> 39 MiB, 2327 MiB asked for, 1 ranges refused, 22 ms
+[  171.834084] dsa-channeld: trimming 140 MiB of cold page cache (working set target 160 MiB)
+[  171.834607] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 300 MiB droppable and 193 MiB anonymous of 775 MiB in use
+[  171.838480] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  171.991666] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 152ms and succeeded
+[  171.992052] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  172.010463] dsa-channeld: the working set trim returned in 172 ms: free 1200 -> 1348 MiB; page cache 279 -> 172 MiB; reclaimable kernel caches 21 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 193 -> 161 MiB; swapped 260 -> 291 MiB; zram 251 MiB in 79 -> 282 MiB in 75; taken back by the host 0 -> 0 MiB
+[  175.650814] dsa-channeld: paged out com.google.android.gms.persistent (pid 1244, oom_score_adj 200, Google Play services) after it woke: resident anonymous 36 -> 8 MiB, swapped out 43 -> 72 MiB, 2392 MiB asked for, 1 ranges refused, 74 ms
+[  177.011707] dsa-channeld: trimming 95 MiB of cold page cache (working set target 160 MiB)
+[  177.012513] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 255 MiB droppable and 138 MiB anonymous of 678 MiB in use
+[  177.018358] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  177.073713] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 55ms and succeeded
+[  177.074053] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  177.086116] dsa-channeld: the working set trim returned in 68 ms: free 1297 -> 1390 MiB; page cache 234 -> 147 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 138 -> 131 MiB; swapped 315 -> 321 MiB; zram 306 MiB in 86 -> 312 MiB in 88; taken back by the host 0 -> 0 MiB
+[  177.729965] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 500, Google Play services) after it woke: resident anonymous 45 -> 8 MiB, swapped out 45 -> 82 MiB, 2404 MiB asked for, 1 ranges refused, 76 ms
+[  187.093806] dsa-channeld: trimming 69 MiB of cold page cache (working set target 160 MiB)
+[  187.094432] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 229 MiB droppable and 99 MiB anonymous of 631 MiB in use
+[  187.100127] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  187.196072] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 95ms and succeeded
+[  187.196578] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  187.207199] dsa-channeld: the working set trim returned in 107 ms: free 1344 -> 1402 MiB; page cache 209 -> 172 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 99 -> 69 MiB; swapped 351 -> 382 MiB; zram 342 MiB in 102 -> 372 MiB in 111; taken back by the host 0 -> 0 MiB
+[  187.812165] dsa-channeld: paged out com.android.vending:background (pid 2082, oom_score_adj 227, Google Play services) after it woke: resident anonymous 19 -> 9 MiB, swapped out 48 -> 58 MiB, 2369 MiB asked for, 1 ranges refused, 52 ms
+[  195.923243] dsa-channeld: paged out com.android.vending (pid 1733, oom_score_adj 227, Google Play services) after it woke: resident anonymous 24 -> 9 MiB, swapped out 60 -> 75 MiB, 2410 MiB asked for, 1 ranges refused, 80 ms
+[  197.213341] dsa-channeld: trimming 64 MiB of cold page cache (working set target 160 MiB)
+[  197.215284] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 224 MiB droppable and 48 MiB anonymous of 586 MiB in use
+[  197.227336] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  197.329793] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 101ms and succeeded
+[  197.330246] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  197.339310] dsa-channeld: the working set trim returned in 112 ms: free 1389 -> 1443 MiB; page cache 204 -> 155 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 48 -> 38 MiB; swapped 396 -> 406 MiB; zram 386 MiB in 117 -> 396 MiB in 121; taken back by the host 0 -> 0 MiB
+[  202.341647] dsa-channeld: trimming 73 MiB of cold page cache (working set target 160 MiB)
+[  202.343805] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 233 MiB droppable and 76 MiB anonymous of 624 MiB in use
+[  202.352098] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  202.427292] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 74ms and succeeded
+[  202.427751] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  202.440904] dsa-channeld: the working set trim returned in 89 ms: free 1351 -> 1433 MiB; page cache 213 -> 145 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 76 -> 71 MiB; swapped 366 -> 371 MiB; zram 357 MiB in 117 -> 361 MiB in 107; taken back by the host 0 -> 0 MiB
+[  207.441852] dsa-channeld: trimming 416 MiB of cold page cache (working set target 160 MiB)
+[  207.442402] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 576 MiB droppable and 137 MiB anonymous of 1016 MiB in use
+[  207.454224] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  207.928752] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 466ms and succeeded
+[  207.935050] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  207.990572] dsa-channeld: the working set trim returned in 541 ms: free 959 -> 1137 MiB; page cache 553 -> 405 MiB; reclaimable kernel caches 23 -> 22 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 137 -> 113 MiB; swapped 318 -> 341 MiB; zram 309 MiB in 102 -> 332 MiB in 96; taken back by the host 0 -> 0 MiB
+[  208.613357] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[  209.173122] servicemanager: Caller(pid=2974,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[  210.241232] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[  210.265119] servicemanager: Caller(pid=2974,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[  210.865323] servicemanager: Caller(pid=289,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[  210.870286] servicemanager: Caller(pid=2974,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[  212.993117] dsa-channeld: reclaiming the guest's memory (Idle, 0 tasks in use): 1075 MiB droppable and 273 MiB anonymous of 1622 MiB in use
+[  212.997615] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  213.047782] init (108): drop_caches: 3
+[  213.148549] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:60) took 98ms and succeeded
+[  213.240663] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:61) took 90ms and succeeded
+[  213.352190] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:62) took 109ms and succeeded
+[  213.473733] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:63) took 120ms and succeeded
+[  213.968716] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 479ms and succeeded
+[  213.972282] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  214.002842] dsa-channeld: the reclaim (Idle) returned in 1008 ms: free 353 -> 1228 MiB; page cache 1051 -> 282 MiB; reclaimable kernel caches 23 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 273 -> 158 MiB; swapped 215 -> 330 MiB; zram 206 MiB in 62 -> 320 MiB in 82; taken back by the host 0 -> 0 MiB
+[  218.089309] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 227, Google Play services) after it woke: resident anonymous 38 -> 9 MiB, swapped out 51 -> 80 MiB, 2404 MiB asked for, 1 ranges refused, 106 ms
+[  219.005990] dsa-channeld: trimming 167 MiB of cold page cache (working set target 160 MiB)
+[  219.006857] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 327 MiB droppable and 172 MiB anonymous of 791 MiB in use
+[  219.012346] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  219.261391] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 246ms and succeeded
+[  219.262883] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  219.301901] dsa-channeld: the working set trim returned in 289 ms: free 1184 -> 1336 MiB; page cache 307 -> 180 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 84 MiB; app memory 172 -> 147 MiB; swapped 314 -> 337 MiB; zram 305 MiB in 84 -> 327 MiB in 87; taken back by the host 0 -> 0 MiB
+[  220.108402] dsa-channeld: paged out com.android.rkpdapp (pid 2974, oom_score_adj 905) after it woke: resident anonymous 14 -> 11 MiB, swapped out 36 -> 39 MiB, 2057 MiB asked for, 1 ranges refused, 16 ms
+[  222.157506] dsa-channeld: paged out com.android.vending:quick_launch (pid 2840, oom_score_adj 905, Google Play services) after it woke: resident anonymous 21 -> 8 MiB, swapped out 40 -> 54 MiB, 2350 MiB asked for, 1 ranges refused, 44 ms
+[  224.170907] dsa-channeld: paged out com.google.android.partnersetup (pid 2951, oom_score_adj 905, Google Play services) after it woke: resident anonymous 11 -> 10 MiB, swapped out 38 -> 38 MiB, 2058 MiB asked for, 1 ranges refused, 10 ms
+[  224.311905] dsa-channeld: trimming 201 MiB of cold page cache (working set target 160 MiB)
+[  224.312743] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 361 MiB droppable and 176 MiB anonymous of 828 MiB in use
+[  224.316390] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  224.496039] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 179ms and succeeded
+[  224.497848] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  224.510867] dsa-channeld: the working set trim returned in 194 ms: free 1147 -> 1346 MiB; page cache 340 -> 169 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 176 -> 149 MiB; swapped 304 -> 329 MiB; zram 294 MiB in 84 -> 319 MiB in 85; taken back by the host 0 -> 0 MiB
+[  228.286379] dsa-channeld: paged out com.android.vending (pid 1733, oom_score_adj 227, Google Play services) after it woke: resident anonymous 50 -> 10 MiB, swapped out 41 -> 81 MiB, 2440 MiB asked for, 1 ranges refused, 106 ms
+[  229.514512] dsa-channeld: trimming 88 MiB of cold page cache (working set target 160 MiB)
+[  229.515605] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 248 MiB droppable and 116 MiB anonymous of 668 MiB in use
+[  229.522897] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  229.645752] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 122ms and succeeded
+[  229.646020] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  229.674017] dsa-channeld: the working set trim returned in 151 ms: free 1307 -> 1385 MiB; page cache 227 -> 164 MiB; reclaimable kernel caches 21 -> 21 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 116 -> 91 MiB; swapped 360 -> 384 MiB; zram 350 MiB in 98 -> 374 MiB in 108; taken back by the host 0 -> 0 MiB
+[  230.368958] dsa-channeld: paged out com.android.vending:background (pid 2082, oom_score_adj 227, Google Play services) after it woke: resident anonymous 26 -> 8 MiB, swapped out 41 -> 58 MiB, 2376 MiB asked for, 1 ranges refused, 80 ms
+[  234.679709] dsa-channeld: trimming 99 MiB of cold page cache (working set target 160 MiB)
+[  234.682647] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 259 MiB droppable and 115 MiB anonymous of 675 MiB in use
+[  234.695784] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  234.943814] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 239ms and succeeded
+[  234.944098] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  234.951998] dsa-channeld: the working set trim returned in 257 ms: free 1300 -> 1397 MiB; page cache 238 -> 185 MiB; reclaimable kernel caches 21 -> 20 MiB; unreclaimable kernel caches 82 -> 82 MiB; app memory 115 -> 74 MiB; swapped 323 -> 364 MiB; zram 313 MiB in 101 -> 354 MiB in 101; taken back by the host 0 -> 0 MiB
+[  239.956260] dsa-channeld: trimming 130 MiB of cold page cache (working set target 160 MiB)
+[  239.960112] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 290 MiB droppable and 146 MiB anonymous of 730 MiB in use
+[  239.966901] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  240.094027] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 126ms and succeeded
+[  240.094464] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  240.118694] dsa-channeld: the working set trim returned in 152 ms: free 1245 -> 1396 MiB; page cache 269 -> 145 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 82 -> 82 MiB; app memory 146 -> 140 MiB; swapped 290 -> 294 MiB; zram 281 MiB in 96 -> 285 MiB in 75; taken back by the host 0 -> 0 MiB
+[  250.126218] dsa-channeld: trimming 70 MiB of cold page cache (working set target 160 MiB)
+[  250.128229] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 230 MiB droppable and 158 MiB anonymous of 660 MiB in use
+[  250.136578] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  250.304298] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 164ms and succeeded
+[  250.304783] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  250.329766] dsa-channeld: the working set trim returned in 193 ms: free 1315 -> 1382 MiB; page cache 209 -> 157 MiB; reclaimable kernel caches 20 -> 20 MiB; unreclaimable kernel caches 82 -> 82 MiB; app memory 158 -> 141 MiB; swapped 277 -> 294 MiB; zram 268 MiB in 74 -> 284 MiB in 77; taken back by the host 0 -> 0 MiB
+[  258.576069] dsa-channeld: paged out com.android.vending (pid 1733, oom_score_adj 227, Google Play services) after it woke: resident anonymous 42 -> 8 MiB, swapped out 49 -> 83 MiB, 2426 MiB asked for, 1 ranges refused, 134 ms
+[  260.716016] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 800, Google Play services) after it woke: resident anonymous 45 -> 8 MiB, swapped out 44 -> 81 MiB, 2403 MiB asked for, 1 ranges refused, 131 ms
+[  262.908136] dsa-channeld: paged out com.google.android.gms.persistent (pid 1244, oom_score_adj 200, Google Play services) after it woke: resident anonymous 37 -> 7 MiB, swapped out 42 -> 72 MiB, 2392 MiB asked for, 1 ranges refused, 186 ms
+[  275.339105] dsa-channeld: reclaiming the guest's memory (HostShort, 0 tasks in use): 210 MiB droppable and 49 MiB anonymous of 572 MiB in use
+[  275.350079] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  275.394221] init (108): drop_caches: 3
+[  275.447278] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:60) took 52ms and succeeded
+[  276.093834] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 592ms and succeeded
+[  276.101668] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  276.126544] dsa-channeld: the reclaim (HostShort) returned in 777 ms: free 1403 -> 1518 MiB; page cache 189 -> 94 MiB; reclaimable kernel caches 20 -> 19 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 49 -> 42 MiB; swapped 386 -> 394 MiB; zram 376 MiB in 115 -> 384 MiB in 105; taken back by the host 0 -> 0 MiB
+[  287.002410] dsa-channeld: paged out com.android.vending:background (pid 2082, oom_score_adj 227, Google Play services) after it woke: resident anonymous 10 -> 7 MiB, swapped out 56 -> 59 MiB, 2372 MiB asked for, 1 ranges refused, 31 ms
+[  291.053229] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 800, Google Play services) after it woke: resident anonymous 12 -> 8 MiB, swapped out 78 -> 81 MiB, 2404 MiB asked for, 1 ranges refused, 39 ms
+[  293.106345] dsa-channeld: paged out com.google.android.gms.persistent (pid 1244, oom_score_adj 200, Google Play services) after it woke: resident anonymous 15 -> 8 MiB, swapped out 64 -> 71 MiB, 2393 MiB asked for, 1 ranges refused, 50 ms
+[  311.146186] dsa-channeld: reclaiming the guest's memory (Idle, 0 tasks in use): 276 MiB droppable and 127 MiB anonymous of 701 MiB in use
+[  311.153152] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  311.183142] init (108): drop_caches: 3
+[  311.636262] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 334ms and succeeded
+[  311.638118] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  311.661971] dsa-channeld: the reclaim (Idle) returned in 509 ms: free 1274 -> 1448 MiB; page cache 256 -> 137 MiB; reclaimable kernel caches 19 -> 19 MiB; unreclaimable kernel caches 83 -> 83 MiB; app memory 127 -> 91 MiB; swapped 310 -> 348 MiB; zram 300 MiB in 99 -> 338 MiB in 85; taken back by the host 0 -> 0 MiB
+[  323.210132] dsa-channeld: paged out com.google.android.gms (pid 1377, oom_score_adj 905, Google Play services) after it woke: resident anonymous 28 -> 8 MiB, swapped out 62 -> 81 MiB, 2403 MiB asked for, 1 ranges refused, 51 ms
+[  325.242899] dsa-channeld: paged out com.google.android.gms.persistent (pid 1244, oom_score_adj 200, Google Play services) after it woke: resident anonymous 13 -> 8 MiB, swapped out 66 -> 71 MiB, 2393 MiB asked for, 1 ranges refused, 27 ms
+[  339.659420] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000
+[  339.659732] Mem abort info:
+[  339.660752]   ESR = 0x0000000096000006
+[  339.660856]   EC = 0x25: DABT (current EL), IL = 32 bits
+[  339.661134]   SET = 0, FnV = 0
+[  339.661232]   EA = 0, S1PTW = 0
+[  339.661290]   FSC = 0x06: level 2 translation fault
+[  339.661417] Data abort info:
+[  339.661500]   ISV = 0, ISS = 0x00000006, ISS2 = 0x00000000
+[  339.661662]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[  339.661774]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[  339.661872] user pgtable: 4k pages, 48-bit VAs, pgdp=00000000a6446000
+[  339.661986] [0000000000000000] pgd=08000000a6447403, p4d=08000000a6447403, pud=08000000a64a0403, pmd=0000000000000000
+[  339.662131] Internal error: Oops: 0000000096000006 [#1]  SMP
+[  339.662252] Modules linked in:
+[  339.662354] CPU: 0 UID: 1000 PID: 1855 Comm: binder:662_12 Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[  339.662522] pstate: 61400005 (nZCv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[  339.662685] pc : mas_ascend+0x68/0x294
+[  339.662913] lr : mas_next_slot+0x1ec/0x858
+[  339.663002] sp : ffff800083d73ca0
+[  339.663075] x29: ffff800083d73ca0 x28: ffff000094256780 x27: 0000000000000000
+[  339.663207] x26: 0000000000000004 x25: ffff00004541a680 x24: ffff00004541a728
+[  339.663317] x23: ffff800083d73ec0 x22: 0000000000000000 x21: 0000ef0ad05b5fff
+[  339.663461] x20: ffffffffffffffff x19: 0000000000000000 x18: ffff800083d73ce0
+[  339.663593] x17: 0000000000000000 x16: ffffb61d713f8178 x15: 0000ef0ad05b6000
+[  339.663720] x14: ffffb61d713f8178 x13: 0000ef0ad05b5fff x12: 0000ef0ace7da000
+[  339.663824] x11: 0000000000000001 x10: ffff000051f7d70c x9 : ffff000051f7d700
+[  339.663922] x8 : 0000000000000000 x7 : ffff000051f7d708 x6 : 0000000000000002
+[  339.664008] x5 : 0000000000000000 x4 : 0000000000000000 x3 : 0000000000000004
+[  339.664095] x2 : ffff000051f7d700 x1 : 0000000000000000 x0 : ffff800083d73ce0
+[  339.664186] Call trace:
+[  339.664274]  mas_ascend+0x68/0x294 (P)
+[  339.664398]  mt_find+0x360/0x460
+[  339.664633]  find_vma+0x3c/0x70
+[  339.664733]  lock_mm_and_find_vma+0x4c/0x764
+[  339.664834]  do_page_fault+0x168/0x75c
+[  339.664902]  do_translation_fault+0x4c/0x78
+[  339.664947]  do_mem_abort+0x44/0x94
+[  339.665117]  el0_ia+0x68/0x15c
+[  339.665181]  el0t_64_sync_handler+0xe0/0xe4
+[  339.665233]  el0t_64_sync+0x1b0/0x1b4
+[  339.665285] Code: 54000941 9278dc61 b27e0063 f9000c03 (f9400021) 
+[  339.665352] ---[ end trace 0000000000000000 ]---
+[  339.665400] Kernel panic - not syncing: Oops: Fatal exception
+[  339.665524] SMP: stopping secondary CPUs
+[  339.665637] Kernel Offset: 0x361cf0200000 from 0xffff800080000000
+[  339.665946] PHYS_OFFSET: 0x40000000
+[  339.665995] CPU features: 0x000000,00006000,42242281,9407f723
+[  339.666060] Memory Limit: none

@@ -1,0 +1,500 @@
+[   94.337911]  el0_ia+0x68/0x15c
+[   94.337915]  el0t_64_sync_handler+0xe0/0xe4
+[   94.337919]  el0t_64_sync+0x1b0/0x1b4
+[   94.337921] Mem-Info:
+[   94.489197] active_anon:310703 inactive_anon:148169 isolated_anon:0
+[   94.489197]  active_file:152 inactive_file:102 isolated_file:0
+[   94.489197]  unevictable:1162 dirty:0 writeback:0
+[   94.489197]  slab_reclaimable:3469 slab_unreclaimable:11707
+[   94.489197]  mapped:920 shmem:106 pagetables:5479
+[   94.489197]  sec_pagetables:0 bounce:0
+[   94.489197]  kernel_misc_reclaimable:0
+[   94.489197]  free:4136 free_pcp:0 free_cma:1703
+[   94.490512] Node 0 active_anon:1246172kB inactive_anon:589316kB active_file:608kB inactive_file:408kB unevictable:4648kB isolated(anon):0kB isolated(file):0kB mapped:3680kB dirty:0kB writeback:0kB shmem:424kB shmem_thp:0kB shmem_pmdmapped:0kB anon_thp:0kB kernel_stack:5536kB pagetables:21916kB sec_pagetables:0kB all_unreclaimable? no Balloon:0kB
+[   94.491003] DMA free:16544kB boost:0kB min:22528kB low:28160kB high:33792kB reserved_highatomic:2048KB free_highatomic:212KB active_anon:1246424kB inactive_anon:589064kB active_file:608kB inactive_file:408kB unevictable:4648kB writepending:0kB zspages:21816kB present:2097152kB managed:2023488kB mlocked:4648kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:6812kB
+[   94.491433] lowmem_reserve[]: 0 0 0 0 0
+[   94.491499] DMA: 380*4kB (UMEHC) 316*8kB (UMEHC) 163*16kB (UEHC) 119*32kB (UEC) 63*64kB (UMEC) 16*128kB (UMEC) 0*256kB 0*512kB 0*1024kB 0*2048kB 0*4096kB = 16544kB
+[   94.491741] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=1048576kB
+[   94.491889] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=32768kB
+[   94.492037] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=2048kB
+[   94.492132] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=64kB
+[   94.492279] 1221 total pagecache pages
+[   94.492345] 0 pages in swap cache
+[   94.492402] Free swap  = 401408kB
+[   94.492460] Total swap = 2023484kB
+[   94.492517] 524288 pages RAM
+[   94.492594] 0 pages HighMem/MovableOnly
+[   94.492655] 18416 pages reserved
+[   94.492715] 4096 pages cma reserved
+[   94.492782] 0 pages hwpoisoned
+[  104.341180] warn_alloc: 9115810 callbacks suppressed
+[  104.341189] dsa-channeld: page allocation failure: order:0, mode:0xc0de0(GFP_KERNEL|__GFP_HIGH|__GFP_ZERO|__GFP_COMP|__GFP_NOMEMALLOC), nodemask=(null),cpuset=/,mems_allowed=0
+[  104.342678] CPU: 1 UID: 1000 PID: 510 Comm: dsa-channeld Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[  104.342686] Call trace:
+[  104.342687]  show_stack+0x18/0x24 (C)
+[  104.342694]  dump_stack_lvl+0x7c/0xf0
+[  104.342701]  dump_stack+0x18/0x24
+[  104.342728]  warn_alloc+0x11c/0x1a0
+[  104.342735]  __alloc_frozen_pages_noprof+0x834/0xf34
+[  104.342738]  __folio_alloc_noprof+0x14/0x68
+[  104.342739]  isolate_lock_cluster.isra.0+0x18c/0x26c
+[  104.342741]  cluster_alloc_swap_entry+0x160/0x350
+[  104.342742]  folio_alloc_swap+0x20c/0x684
+[  104.342743]  shrink_folio_list+0x81c/0x113c
+[  104.342746]  evict_folios+0x264/0x77c
+[  104.342748]  try_to_shrink_lruvec+0x17c/0x2b8
+[  104.342749]  shrink_one+0x7c/0x220
+[  104.342751]  shrink_node+0xa84/0xd8c
+[  104.342753]  do_try_to_free_pages+0xe4/0x55c
+[  104.342755]  try_to_free_pages+0x114/0x264
+[  104.342756]  __alloc_frozen_pages_noprof+0x588/0xf34
+[  104.342758]  __folio_alloc_noprof+0x14/0x68
+[  104.342760]  __filemap_get_folio+0x250/0x438
+[  104.342761]  filemap_fault+0x11c/0xb54
+[  104.342762]  __do_fault+0x3c/0x200
+[  104.342764]  do_fault+0x320/0x598
+[  104.342766]  __handle_mm_fault+0x344/0x540
+[  104.342768]  handle_mm_fault+0x198/0x33c
+[  104.342770]  do_page_fault+0x108/0x75c
+[  104.342772]  do_translation_fault+0x4c/0x78
+[  104.342772]  do_mem_abort+0x44/0x94
+[  104.342773]  el0_ia+0x68/0x15c
+[  104.342788]  el0t_64_sync_handler+0xe0/0xe4
+[  104.342790]  el0t_64_sync+0x1b0/0x1b4
+[  104.342792] Mem-Info:
+[  104.433159] active_anon:240066 inactive_anon:218977 isolated_anon:0
+[  104.433159]  active_file:141 inactive_file:113 isolated_file:0
+[  104.433159]  unevictable:1162 dirty:0 writeback:0
+[  104.433159]  slab_reclaimable:3469 slab_unreclaimable:11707
+[  104.433159]  mapped:920 shmem:106 pagetables:5479
+[  104.433159]  sec_pagetables:0 bounce:0
+[  104.433159]  kernel_misc_reclaimable:0
+[  104.433159]  free:4136 free_pcp:0 free_cma:1703
+[  104.434085] Node 0 active_anon:962028kB inactive_anon:874144kB active_file:564kB inactive_file:452kB unevictable:4648kB isolated(anon):0kB isolated(file):0kB mapped:3680kB dirty:0kB writeback:0kB shmem:424kB shmem_thp:0kB shmem_pmdmapped:0kB anon_thp:0kB kernel_stack:5536kB pagetables:21916kB sec_pagetables:0kB all_unreclaimable? no Balloon:0kB
+[  104.434287] DMA free:16544kB boost:0kB min:22528kB low:28160kB high:33792kB reserved_highatomic:0KB free_highatomic:0KB active_anon:962028kB inactive_anon:874144kB active_file:564kB inactive_file:452kB unevictable:4648kB writepending:0kB zspages:21816kB present:2097152kB managed:2023488kB mlocked:4648kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:6812kB
+[  104.434573] lowmem_reserve[]: 0 0 0 0 0
+[  104.434689] DMA: 380*4kB (UMEC) 316*8kB (UMEC) 163*16kB (UEC) 119*32kB (UEC) 63*64kB (UMEC) 16*128kB (UMEC) 0*256kB 0*512kB 0*1024kB 0*2048kB 0*4096kB = 16544kB
+[  104.434862] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=1048576kB
+[  104.435100] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=32768kB
+[  104.435250] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=2048kB
+[  104.435388] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=64kB
+[  104.435519] 1221 total pagecache pages
+[  104.435622] 0 pages in swap cache
+[  104.435723] Free swap  = 401408kB
+[  104.435828] Total swap = 2023484kB
+[  104.435971] 524288 pages RAM
+[  104.436001] 0 pages HighMem/MovableOnly
+[  104.436104] 18416 pages reserved
+[  104.436205] 4096 pages cma reserved
+[  104.436241] 0 pages hwpoisoned
+[  105.563424] surfaceflinger invoked oom-killer: gfp_mask=0x440dc0(GFP_KERNEL_ACCOUNT|__GFP_ZERO|__GFP_COMP), order=0, oom_score_adj=-1000
+[  105.580346] CPU: 0 UID: 1000 PID: 534 Comm: surfaceflinger Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[  105.580353] Call trace:
+[  105.580355]  show_stack+0x18/0x24 (C)
+[  105.580362]  dump_stack_lvl+0x7c/0xf0
+[  105.580367]  dump_stack+0x18/0x24
+[  105.580370]  dump_header+0x3c/0x1a4
+[  105.580374]  out_of_memory+0x264/0x340
+[  105.580376]  __alloc_frozen_pages_noprof+0xdc8/0xf34
+[  105.580381]  __alloc_pages_noprof+0x10/0x28
+[  105.580384]  __pte_alloc+0x44/0x198
+[  105.580389]  do_anonymous_page+0x568/0x8fc
+[  105.580393]  __handle_mm_fault+0x538/0x540
+[  105.580396]  handle_mm_fault+0x198/0x33c
+[  105.580399]  do_page_fault+0x108/0x75c
+[  105.580402]  do_translation_fault+0x4c/0x78
+[  105.580404]  do_mem_abort+0x44/0x94
+[  105.580406]  el0_da+0x34/0x100
+[  105.580410]  el0t_64_sync_handler+0xd0/0xe4
+[  105.580413]  el0t_64_sync+0x1b0/0x1b4
+[  105.580415] Mem-Info:
+[  105.590613] active_anon:24900 inactive_anon:434100 isolated_anon:0
+[  105.590613]  active_file:234 inactive_file:20 isolated_file:0
+[  105.590613]  unevictable:1162 dirty:0 writeback:0
+[  105.590613]  slab_reclaimable:3469 slab_unreclaimable:11707
+[  105.590613]  mapped:920 shmem:106 pagetables:5479
+[  105.590613]  sec_pagetables:0 bounce:0
+[  105.590613]  kernel_misc_reclaimable:0
+[  105.590613]  free:4136 free_pcp:0 free_cma:1703
+[  105.591124] Node 0 active_anon:100608kB inactive_anon:1735392kB active_file:936kB inactive_file:80kB unevictable:4648kB isolated(anon):0kB isolated(file):0kB mapped:3680kB dirty:0kB writeback:0kB shmem:424kB shmem_thp:0kB shmem_pmdmapped:0kB anon_thp:0kB kernel_stack:5536kB pagetables:21916kB sec_pagetables:0kB all_unreclaimable? no Balloon:0kB
+[  105.591447] DMA free:16544kB boost:0kB min:22528kB low:28160kB high:33792kB reserved_highatomic:0KB free_highatomic:0KB active_anon:101448kB inactive_anon:1734720kB active_file:936kB inactive_file:80kB unevictable:4648kB writepending:0kB zspages:21816kB present:2097152kB managed:2023488kB mlocked:4648kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:6812kB
+[  105.591728] lowmem_reserve[]: 0 0 0 0 0
+[  105.591830] DMA: 380*4kB (UMEC) 316*8kB (UMEC) 163*16kB (UEC) 119*32kB (UEC) 63*64kB (UMEC) 16*128kB (UMEC) 0*256kB 0*512kB 0*1024kB 0*2048kB 0*4096kB = 16544kB
+[  105.592012] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=1048576kB
+[  105.592084] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=32768kB
+[  105.592157] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=2048kB
+[  105.592235] Node 0 hugepages_total=0 hugepages_free=0 hugepages_surp=0 hugepages_size=64kB
+[  105.592304] 1221 total pagecache pages
+[  105.592341] 0 pages in swap cache
+[  105.592383] Free swap  = 401408kB
+[  105.592580] Total swap = 2023484kB
+[  105.592741] 524288 pages RAM
+[  105.592877] 0 pages HighMem/MovableOnly
+[  105.593134] 18416 pages reserved
+[  105.593344] 4096 pages cma reserved
+[  105.593402] 0 pages hwpoisoned
+[  105.593458] Tasks state (memory values in pages):
+[  105.593921] [  pid  ]   uid  tgid total_vm      rss rss_anon rss_file rss_shmem pgtables_bytes swapents oom_score_adj name
+[  105.594136] [    108]     0   108  2745403      451       32      355        64   221184      352         -1000 init
+[  105.594323] [    109]     0   109  2710940      615      201      372        42   253952      192         -1000 ueventd
+[  105.594424] [    254]  1092   254  2715065      899      166      669        64   208896      128         -1000 prng_seeder
+[  105.594740] [    260]  1036   260  2732034      954       65      823        66   241664      448         -1000 logd
+[  105.595188] [    261]  1069   261  2728812     1125      198      863        64   200704        0         -1000 lmkd
+[  105.595556] [    262]  1000   262  2727360      720      327      329        64   233472       64         -1000 servicemanager
+[  105.595748] [    272]     0   272  2730507      905      133      706        66   266240      352         -1000 binder:272_2
+[  105.596034] [    285]  1000   285  2724416      836      103      686        47   200704      128         -1000 android.system.
+[  105.596353] [    286]  1017   286  2770994     1477      455      958        64   299008      160         -1000 keystore2
+[  105.596818] [    287]  9999   287  2721370      956      245      647        64   253952      192         -1000 dsa-keymint
+[  105.598620] [    288]     0   288  2709006      804       94      643        67   176128      128         -1000 suspend_blocker
+[  105.600266] [    291]     0   291  2699391      888      160      681        47   221184       64         -1000 android.hardwar
+[  105.601921] [    296]  1000   296  2712260      869      160      663        46   192512       96         -1000 android.hardwar
+[  105.602296] [    317]  1058   317  2701169      747      103      577        67   135168       32         -1000 tombstoned
+[  105.602627] [    324]     0   324  2741339      623      200      357        66   266240      416         -1000 apexd
+[  105.602967] [    415]  1000   415  2694415      823      105      651        67   118784       64         -1000 rpmb_dev.test.s
+[  105.603141] [    418]     0   418  2774333     1085      232      789        64   286720      192         -1000 binder:418_3
+[  105.603432] [    419]  1066   419  2728471      834       96      671        67   212992      224         -1000 statsd
+[  105.603620] [    420]     0   420  2973544     3761     2687     1010        64   651264     4768         -1000 zygote64
+[  105.605929] [    421]     0   421  2695575      703       73      566        64   208896      160         -1000 iptables-restor
+[  105.609518] [    422]     0   422  2704279      684       72      548        64   212992      160         -1000 ip6tables-resto
+[  105.611218] [    425]  1041   425  2701177      918      167      687        64   229376      128         -1000 android.hardwar
+[  105.611407] [    429]  1041   429  2792066     1091      288      739        64   286720       32         -1000 dsa-audio
+[  105.612279] [    432]  1047   432  2718372      915      160      723        32   208896      128         -1000 dsa-camera
+[  105.612477] [    438]  1046   438  2720282      956      257      653        46   225280       32         -1000 dsa-codec2
+[  105.612566] [    443]  1021   443  2721485      844       96      684        64   184320      128         -1000 dsa-gnss
+[  105.612907] [    447]  1000   447  2721476      873      159      668        46   188416       64         -1000 dsa-health
+[  105.613017] [    449]  1000   449  2716487      914      127      723        64   208896       64         -1000 dsa-hwcomposer
+[  105.613315] [    450]  1000   450  2731712      865      159      642        64   188416       96         -1000 dsa-power
+[  105.613465] [    451]  1000   451  2715339      919      188      667        64   180224        0         -1000 dsa-sensors
+[  105.613548] [    452]  1080   452  2735751      835       97      674        64   184320      128         -1000 android.hardwar
+[  105.613645] [    457]  1041   457  2763698      784       79      641        64   282624      416         -1000 android.hardwar
+[  105.613733] [    470]  1041   470  2741227     1070      352      671        47   258048        0         -1000 android.hardwar
+[  105.613822] [    480]  1013   480  2721311      839      160      632        47   180224       64         -1000 android.hardwar
+[  105.613911] [    481]  9999   481  2717370      813       96      653        64   200704      128         -1000 android.hardwar
+[  105.614000] [    482]  9999   482  2726076      836       96      673        67   196608      128         -1000 android.hardwar
+[  105.614089] [    483]  9999   483  2704466      802       96      642        64   176128       96         -1000 android.hardwar
+[  105.614185] [    484]  1010   484  2719868      915      224      627        64   196608        0         -1000 android.hardwar
+[  105.614281] [    485]  1000   485  2725737      855      160      631        64   208896      160         -1000 android.hardwar
+[  105.614375] [    486]  9999   486  2717361      838      128      663        47   188416      128         -1000 android.hardwar
+[  105.614515] [    487]  9999   487  2699210      885      192      646        47   180224       32         -1000 android.hardwar
+[  105.614621] [    491]  1041   491  2892688     1707      557     1022       128   438272      928         -1000 audioserver
+[  105.614709] [    493]  1076   493  2713440      831      105      662        64   192512      192         -1000 credstore
+[  105.614794] [    494]  1072   494  2720555      862       40      758        64   204800      288         -1000 binder:494_2
+[  105.614890] [    496]  1000   496  3668756   449696   448823      805        68  7057408   386619         -1000 surfaceflinger
+[  105.614991] [    497]  1000   497  2791007      889      128      715        46   319488      256         -1000 dsa-channeld
+[  105.615087] [    535]     0   535  2727567      822      127      631        64   139264       32         -1000 socket_vsock_pr
+[  105.617503] [    548]  1019   548  2718165      865      169      650        46   237568      160         -1000 drmserver
+[  105.622283] [    552]  9999   552  2717207      897      167      666        64   184320       32         -1000 traced_probes
+[  105.622566] [    553]  9999   553  2700475      860      104      692        64   188416      128         -1000 traced
+[  105.622827] [    564]  1047   564  2774640     1643      648      931        64   393216      416         -1000 cameraserver
+[  105.623035] [    566]  1000   566  2712421      844      104      676        64   196608      128         -1000 binder:566_2
+[  105.623376] [    568]  1067   568  2727102      873      136      673        64   200704      128         -1000 binder:568_2
+[  105.623638] [    570]     0   570  2719410      885      105      716        64   192512      128         -1000 binder:570_2
+[  105.623837] [    575]  1040   575  2809565     1595      584      945        66   393216      480         -1000 mediaextractor
+[  105.623981] [    578]  1013   578  2746090     1148      327      757        64   253952       32         -1000 mediametrics
+[  105.624158] [    581]  1013   581  2850071     1731      712      955        64   397312      352         -1000 mediaserver
+[  105.624285] [    583]     0   583  2739010      936      201      671        64   204800       32         -1000 storaged
+[  105.624466] [    587]  1046   587  2842882     1163      154      945        64   417792     1024         -1000 mediaswcodec
+[  105.624603] [    590]  1000   590  2695029      825      136      642        47   176128       96         -1000 gatekeeperd
+[  105.624734] [    591]     0   591  2738688      872       72      736        64   241664      320         -1000 update_engine
+[  105.624883] [    593]     0   593  2708899      736       62      607        67   122880       64         -1000 tombstone_trans
+[  105.625040] Out of memory and no killable processes...
+[  105.629108] Kernel panic - not syncing: System is deadlocked on memory
+[  105.629343] CPU: 0 UID: 1000 PID: 534 Comm: surfaceflinger Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[  105.630096] Call trace:
+[  105.630284]  show_stack+0x18/0x24 (C)
+[  105.630552]  dump_stack_lvl+0xc4/0xf0
+[  105.630715]  dump_stack+0x18/0x24
+[  105.630810]  vpanic+0x2ec/0x30c
+[  105.631159]  nmi_panic+0x0/0x64
+[  105.631205]  pagefault_out_of_memory+0x0/0xb4
+[  105.631611]  __alloc_frozen_pages_noprof+0xdc8/0xf34
+[  105.631698]  __alloc_pages_noprof+0x10/0x28
+[  105.631730]  __pte_alloc+0x44/0x198
+[  105.631807]  do_anonymous_page+0x568/0x8fc
+[  105.631920]  __handle_mm_fault+0x538/0x540
+[  105.631969]  handle_mm_fault+0x198/0x33c
+[  105.632021]  do_page_fault+0x108/0x75c
+[  105.632142]  do_translation_fault+0x4c/0x78
+[  105.632179]  do_mem_abort+0x44/0x94
+[  105.634169]  el0_da+0x34/0x100
+[  105.634297]  el0t_64_sync_handler+0xd0/0xe4
+[  105.634375]  el0t_64_sync+0x1b0/0x1b4
+[  105.634423] SMP: stopping secondary CPUs
+[  105.634825] Kernel Offset: 0x1ff762200000 from 0xffff800080000000
+[  105.635284] PHYS_OFFSET: 0x40000000
+[  105.635725] CPU features: 0x000000,00006000,42242281,9407f723
+[  105.636957] Memory Limit: none
+[    0.179849] random: crng init done
+[    0.180175] [drm] Initialized vgem 1.0.0 for vgem on minor 0
+[    0.180542] [drm] Initialized vkms 1.0.0 for vkms on minor 1
+[    0.182636] loop: module loaded
+[    0.183009] virtio_blk virtio2: 1/0/0 default/read/poll queues
+[    0.183387] virtio_blk virtio2: [vda] 17326080 512-byte logical blocks (8.87 GB/8.26 GiB)
+[    0.184171]  vda: vda1(vbmeta_a) vda2(vbmeta_system_a) vda3(vbmeta_system_dlkm_a) vda4(vbmeta_vendor_dlkm_a) vda5(boot_a) vda6(init_boot_a) vda7(vendor_boot_a) vda8(super)
+[    0.185451] virtio_blk virtio3: 1/0/0 default/read/poll queues
+[    0.186066] virtio_blk virtio3: [vdb] 134217728 512-byte logical blocks (68.7 GB/64.0 GiB)
+[    0.188413]  vdb: vdb1 vdb2 vdb3
+[    0.189241] virtio_blk virtio4: 1/0/0 default/read/poll queues
+[    0.190085] virtio_blk virtio4: [vdc] 8192 512-byte logical blocks (4.19 MB/4.00 MiB)
+[    0.192381]  vdc: vdc1
+[    0.192863] virtio_blk virtio5: 1/0/0 default/read/poll queues
+[    0.193282] virtio_blk virtio5: [vdd] 655360 512-byte logical blocks (336 MB/320 MiB)
+[    0.195546]  vdd: vdd1 vdd2
+[    0.195933] zram: Added device: zram0
+[    0.196220] Loading iSCSI transport class v2.0-870.
+[    0.196496] hv_vmbus: registering driver hv_storvsc
+[    0.197070] tun: Universal TUN/TAP device driver, 1.6
+[    0.198143] hv_vmbus: registering driver hv_netvsc
+[    0.198263] hv_vmbus: registering driver hyperv_keyboard
+[    0.198413] mousedev: PS/2 mouse device common for all mice
+[    0.198769] rtc-pl031 20050000.pl031: registered as rtc0
+[    0.198863] rtc-pl031 20050000.pl031: setting system clock to 2026-11-22T10:02:00 UTC (1795341720)
+[    0.199085] device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled. Duplicate IMA measurements will not be recorded in the IMA log.
+[    0.199284] device-mapper: uevent: version 1.0.3
+[    0.199429] device-mapper: ioctl: 4.50.0-ioctl (2025-04-28) initialised: dm-devel@lists.linux.dev
+[    0.199680] hid: raw HID events driver (C) Jiri Kosina
+[    0.199790] hv_utils: Registering HyperV Utility Driver
+[    0.199902] hv_vmbus: registering driver hv_utils
+[    0.199966] hv_vmbus: registering driver hv_balloon
+[    0.200084] hv_vmbus: registering driver dxgkrnl
+[    0.200150] misc dxg: dxgk: dxg_drv_init: vmbus_driver_register failed: -19
+[    0.200327] drop_monitor: Initializing network drop monitor service
+[    0.200491] Mirror/redirect action on
+[    0.200633] u32 classifier
+[    0.200698]     Performance counters on
+[    0.200803]     input device check on
+[    0.200836]     Actions configured
+[    0.201705] xt_time: kernel timezone is -0000
+[    0.201937] gre: GRE over IPv4 demultiplexer driver
+[    0.202068] IPv4 over IPsec tunneling driver
+[    0.202329] Initializing XFRM netlink socket
+[    0.202408] IPsec XFRM device driver
+[    0.202559] NET: Registered PF_INET6 protocol family
+[    0.203064] Segment Routing with IPv6
+[    0.203169] In-situ OAM (IOAM) with IPv6
+[    0.203296] mip6: Mobile IPv6
+[    0.203513] NET: Registered PF_PACKET protocol family
+[    0.203656] NET: Registered PF_KEY protocol family
+[    0.203906] 9pnet: Installing 9P2000 support
+[    0.204062] Key type dns_resolver registered
+[    0.204204] NET: Registered PF_VSOCK protocol family
+[    0.206184] Loading compiled-in X.509 certificates
+[    0.207579] Key type .fscrypt registered
+[    0.207632] Key type fscrypt-provisioning registered
+[    0.207719] pstore_zone: total_size must be a multiple of 4096
+[    0.251380] Freeing initrd memory: 17048K
+[    0.254504] Key type encrypted registered
+[    0.254663] ima: No TPM chip found, activating TPM-bypass!
+[    0.254753] ima: Allocated hash algorithm: sha256
+[    0.254811] ima: No architecture policies found
+[    0.262068] cfg80211: Loading compiled-in X.509 certificates for regulatory database
+[    0.263029] Loaded X.509 cert 'sforshee: 00b28ddf47aef9cea7'
+[    0.263274] Loaded X.509 cert 'wens: 61c038651aabdcf94bd0ac7ff06c7248db18c600'
+[    0.263518] faux_driver regulatory: Direct firmware load for regulatory.db failed with error -2
+[    0.263639] cfg80211: failed to load regulatory.db
+[    0.263750] clk: Disabling unused clocks
+[    0.263875] PM: genpd: Disabling unused power domains
+[    0.264556] Freeing unused kernel memory: 4672K
+[    0.267898] Checked W+X mappings: passed, no W+X pages found
+[    0.268053] Run /init as init process
+[    0.269259] init: init first stage started!
+[    0.269604] init: Copied ramdisk prop to /second_stage_resources/system/etc/ramdisk/build.prop
+[    0.269687] init: Using generic ramdisk copy of snapuserd /system/bin/snapuserd_ramdisk
+[    0.269925] init: hard linking /system/bin/snapuserd_ramdisk to /first_stage_ramdisk/system/bin/snapuserd succeeded
+[    0.270917] init: Switching root to '/first_stage_ramdisk'
+[    0.271297] init: [libfstab] Using Android DT directory /proc/device-tree/firmware/android/
+[    0.276771] init: [libfs_mgr] superblock s_max_mnt_count:65535,/dev/block/by-name/metadata
+[    0.277338] init: [libfs_mgr] Filesystem on /dev/block/by-name/metadata was not cleanly shutdown; state flags: 0x1, incompat feature flags: 0x46
+[    0.301569] EXT4-fs (vdb2): recovery complete
+[    0.306356] EXT4-fs (vdb2): mounted filesystem 1104f57e-193b-42b5-814d-89332e0871d9 r/w with ordered data mode. Quota mode: none.
+[    0.306709] init: [libfs_mgr] check_fs(): mount(/dev/block/by-name/metadata,/metadata,ext4)=0: Success
+[    0.307199] EXT4-fs (vdb2): unmounting filesystem 1104f57e-193b-42b5-814d-89332e0871d9.
+[    0.311424] init: [libfs_mgr] umount_retry(): unmount(/metadata) succeeded
+[    0.311641] init: [libfs_mgr] Not running /system/bin/e2fsck on /dev/block/vdb2 (executable not in system image)
+[    0.311772] init: [libfs_mgr] fsck on /metadata took 33ms
+[    0.318593] EXT4-fs (vdb2): mounted filesystem 1104f57e-193b-42b5-814d-89332e0871d9 r/w with ordered data mode. Quota mode: none.
+[    0.319054] init: [libfs_mgr] __mount(source=/dev/block/by-name/metadata,target=/metadata,type=ext4)=0: Success
+[    0.320548] init: Failed to copy /avb into /metadata/gsi/dsu/avb/: No such file or directory
+[    0.322906] init: [libfs_mgr] Created logical partition product_a on device /dev/block/dm-0
+[    0.323390] init: [libfs_mgr] Skipping zero-length logical partition: product_b
+[    0.323702] init: [libfs_mgr] Created logical partition system_a on device /dev/block/dm-1
+[    0.323970] init: [libfs_mgr] Created logical partition system_b on device /dev/block/dm-2
+[    0.324492] init: [libfs_mgr] Created logical partition system_ext_a on device /dev/block/dm-3
+[    0.324753] init: [libfs_mgr] Skipping zero-length logical partition: system_ext_b
+[    0.325764] init: [libfs_mgr] Created logical partition system_dlkm_a on device /dev/block/dm-4
+[    0.325832] init: [libfs_mgr] Skipping zero-length logical partition: system_dlkm_b
+[    0.327530] init: [libfs_mgr] Created logical partition odm_a on device /dev/block/dm-5
+[    0.327813] init: [libfs_mgr] Skipping zero-length logical partition: odm_b
+[    0.328323] init: [libfs_mgr] Created logical partition vendor_a on device /dev/block/dm-6
+[    0.328470] init: [libfs_mgr] Skipping zero-length logical partition: vendor_b
+[    0.329037] init: [libfs_mgr] Created logical partition vendor_dlkm_a on device /dev/block/dm-7
+[    0.329181] init: [libfs_mgr] Skipping zero-length logical partition: vendor_dlkm_b
+[    0.329653] init: [libfs_mgr] Created logical partition odm_dlkm_a on device /dev/block/dm-8
+[    0.330005] init: [libfs_mgr] Skipping zero-length logical partition: odm_dlkm_b
+[    0.330193] init: DSU not detected, proceeding with normal boot
+[    0.342046] init: [libfs_avb] Invalid hash size: 
+[    0.342235] init: [libfs_avb] Failed to verify vbmeta digest
+[    0.342362] init: [libfs_avb] Returning avb_handle with status: Success
+[    0.343115] init: [libfs_avb] : Error verifying vbmeta image: OK_NOT_SIGNED
+[    0.343383] init: [libfs_avb] public key data shouldn't be empty for /system
+[    0.343529] init: [libfs_avb] Found unknown public key used to sign /system
+[    0.343573] init: [libfs_avb] Returning avb_handle for '/system' with status: VerificationError
+[    0.343676] init: [libfs_avb] Built verity table: '1 /dev/block/dm-1 /dev/block/dm-1 4096 4096 233795 233795 sha256 cf606fe56af6be2c4a3b6f29dda8ab2af7b0005def2f866be2fa495a3b5ec1dd e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-1 fec_roots 2 fec_blocks 235638 fec_start 235638 restart_on_corruption ignore_zero_blocks'
+[    0.344464] device-mapper: verity: sha256 using "sha256-lib"
+[    0.347259] erofs (device dm-9): mounted with root inode @ nid 55.
+[    0.347499] init: [libfs_mgr] __mount(source=/dev/block/dm-9,target=/system,type=erofs)=0: Success
+[    0.347757] init: Switching root to '/system'
+[    0.348986] init: [libfs_avb] Built verity table: '1 /dev/block/dm-3 /dev/block/dm-3 4096 4096 51917 51917 blake2b-256 78c85ccdd697a8f24d2c96ebe6b264c690a047a04264d73d5c0d1fc9e7d3d88f e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-3 fec_roots 2 fec_blocks 52328 fec_start 52328 restart_on_corruption ignore_zero_blocks'
+[    0.350051] device-mapper: verity: blake2b-256 using "blake2b-256-generic"
+[    0.351680] erofs (device dm-10): mounted with root inode @ nid 39.
+[    0.351914] init: [libfs_mgr] __mount(source=/dev/block/dm-10,target=/system_ext,type=erofs)=0: Success
+[    0.352279] init: [libfs_avb] Built verity table: '1 /dev/block/dm-0 /dev/block/dm-0 4096 4096 43060 43060 sha256 0409fd2459166c0e14d8d8e00e31aeb6bc95c5b81cddacd7a79a63be67df757a e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-0 fec_roots 2 fec_blocks 43401 fec_start 43401 restart_on_corruption ignore_zero_blocks'
+[    0.352902] device-mapper: verity: sha256 using "sha256-lib"
+[    0.357449] erofs (device dm-11): mounted with root inode @ nid 40.
+[    0.357772] init: [libfs_mgr] __mount(source=/dev/block/dm-11,target=/product,type=erofs)=0: Success
+[    0.358098] init: [libfs_avb] Built verity table: '1 /dev/block/dm-6 /dev/block/dm-6 4096 4096 50776 50776 sha256 0a46acc136e6bdb7ebda5ab7c4a3e8d7f74434461f7b5c53ada00449f2021bde e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-6 fec_roots 2 fec_blocks 51178 fec_start 51178 restart_on_corruption ignore_zero_blocks'
+[    0.358943] device-mapper: verity: sha256 using "sha256-lib"
+[    0.360963] erofs (device dm-12): mounted with root inode @ nid 46.
+[    0.361330] init: [libfs_mgr] __mount(source=/dev/block/dm-12,target=/vendor,type=erofs)=0: Success
+[    0.363383] init: [libfs_avb] Built verity table: '1 /dev/block/dm-5 /dev/block/dm-5 4096 4096 107 107 sha256 f92a6c31abc160d8709d31df1c6805f95df56905c8e4003ca213f6ce1b32c892 e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-5 fec_roots 2 fec_blocks 108 fec_start 108 restart_on_corruption ignore_zero_blocks'
+[    0.363961] device-mapper: verity: sha256 using "sha256-lib"
+[    0.365910] erofs (device dm-13): mounted with root inode @ nid 38.
+[    0.366200] init: [libfs_mgr] __mount(source=/dev/block/dm-13,target=/odm,type=erofs)=0: Success
+[    0.367336] init: [libfs_avb] : Error verifying vbmeta image: OK_NOT_SIGNED
+[    0.367636] init: [libfs_avb] public key data shouldn't be empty for /system_dlkm
+[    0.367786] init: [libfs_avb] Found unknown public key used to sign /system_dlkm
+[    0.367949] init: [libfs_avb] Returning avb_handle for '/system_dlkm' with status: VerificationError
+[    0.368129] init: Image rollback detected for /system_dlkm, SPL switches from '' to ''
+[    0.368315] init: Allowing rollbacked standalone image when the device is unlocked
+[    0.368468] init: [libfs_avb] Built verity table: '1 /dev/block/dm-4 /dev/block/dm-4 4096 4096 5 5 sha256 9bc66eb4e0fe0858b180bf8faeca12eae322e401e4adf27aa4b73457efe8f529 e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-4 fec_roots 2 fec_blocks 6 fec_start 6 restart_on_corruption ignore_zero_blocks'
+[    0.369227] device-mapper: verity: sha256 using "sha256-lib"
+[    0.371120] erofs (device dm-14): mounted with root inode @ nid 38.
+[    0.371324] init: [libfs_mgr] __mount(source=/dev/block/dm-14,target=/system_dlkm,type=erofs)=0: Success
+[    0.371810] init: [libfs_avb] Built verity table: '1 /dev/block/dm-7 /dev/block/dm-7 4096 4096 6 6 sha256 79f9472a9ef2e7a80b243b8fb84a75eaab4573065ce2d9a41d6e4e8da4e346cc e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-7 fec_roots 2 fec_blocks 7 fec_start 7 restart_on_corruption ignore_zero_blocks'
+[    0.372494] device-mapper: verity: sha256 using "sha256-lib"
+[    0.374126] erofs (device dm-15): mounted with root inode @ nid 39.
+[    0.374489] init: [libfs_mgr] __mount(source=/dev/block/dm-15,target=/vendor_dlkm,type=erofs)=0: Success
+[    0.374883] init: [libfs_avb] Built verity table: '1 /dev/block/dm-8 /dev/block/dm-8 4096 4096 2 2 sha256 6fe8e74c250e72b4faee24557aa3c5cfe70c122c60b587541c0db2545d196130 e28bfc413468b2c3c5356475090fc88062397e566f02669f84bbe66f5889a0c1 10 use_fec_from_device /dev/block/dm-8 fec_roots 2 fec_blocks 3 fec_start 3 restart_on_corruption ignore_zero_blocks'
+[    0.375621] device-mapper: verity: sha256 using "sha256-lib"
+[    0.377193] erofs (device dm-16): mounted with root inode @ nid 38.
+[    0.377293] init: [libfs_mgr] __mount(source=/dev/block/dm-16,target=/odm_dlkm,type=erofs)=0: Success
+[    0.384313] init: Skipped setting INIT_AVB_VERSION (not in recovery mode)
+[    0.449028] init: [libfstab] Using Android DT directory /proc/device-tree/firmware/android/
+[    0.452554] init: Opening SELinux policy
+[    0.458382] init: Loading SELinux policy
+[    0.468023] SELinux:  Permission watch_mountns in class file not defined in policy.
+[    0.468216] SELinux:  Permission watch_mountns in class dir not defined in policy.
+[    0.468315] SELinux:  Permission watch_mountns in class lnk_file not defined in policy.
+[    0.468402] SELinux:  Permission watch_mountns in class chr_file not defined in policy.
+[    0.468497] SELinux:  Permission watch_mountns in class blk_file not defined in policy.
+[    0.468609] SELinux:  Permission watch_mountns in class sock_file not defined in policy.
+[    0.468723] SELinux:  Permission watch_mountns in class fifo_file not defined in policy.
+[    0.468855] SELinux:  Permission watch_mountns in class anon_inode not defined in policy.
+[    0.468931] SELinux: the above unknown classes and permissions will be denied
+[    0.470011] SELinux:  policy capability network_peer_controls=1
+[    0.470154] SELinux:  policy capability open_perms=1
+[    0.470235] SELinux:  policy capability extended_socket_class=1
+[    0.470318] SELinux:  policy capability always_check_network=0
+[    0.470399] SELinux:  policy capability cgroup_seclabel=0
+[    0.470467] SELinux:  policy capability nnp_nosuid_transition=1
+[    0.470568] SELinux:  policy capability genfs_seclabel_symlinks=0
+[    0.470650] SELinux:  policy capability ioctl_skip_cloexec=0
+[    0.470754] SELinux:  policy capability userspace_initial_context=0
+[    0.470849] SELinux:  policy capability netlink_xperm=1
+[    0.470931] SELinux:  policy capability netif_wildcard=0
+[    0.471010] SELinux:  policy capability genfs_seclabel_wildcard=0
+[    0.471092] SELinux:  policy capability functionfs_seclabel=1
+[    0.471171] SELinux:  unknown policy capability 13
+[    0.491624] audit: type=1403 audit(1795341720.788:2): auid=4294967295 ses=4294967295 lsm=selinux res=1
+[    0.491975] audit: type=1404 audit(1795341720.788:3): enforcing=1 old_enforcing=0 auid=4294967295 ses=4294967295 enabled=1 old-enabled=1 lsm=selinux res=1
+[    0.506496] selinux: SELinux: Loaded file context from:
+[    0.506567] selinux: 		/system/etc/selinux/plat_file_contexts
+[    0.506641] selinux: 		/system_ext/etc/selinux/system_ext_file_contexts
+[    0.506694] selinux: 		/product/etc/selinux/product_file_contexts
+[    0.506716] selinux: 		/vendor/etc/selinux/vendor_file_contexts
+[    0.506793] selinux: 		/odm/etc/selinux/odm_file_contexts
+[    0.510656] init: init second stage started!
+[    0.515127] selinux: SELinux: Loaded file context from:
+[    0.515210] selinux: 		/system/etc/selinux/plat_file_contexts
+[    0.515292] selinux: 		/system_ext/etc/selinux/system_ext_file_contexts
+[    0.515349] selinux: 		/product/etc/selinux/product_file_contexts
+[    0.515401] selinux: 		/vendor/etc/selinux/vendor_file_contexts
+[    0.515443] selinux: 		/odm/etc/selinux/odm_file_contexts
+[    0.524252] init: [libfstab] Using Android DT directory /proc/device-tree/firmware/android/
+[    0.526411] init: Overriding previous property 'ro.product.system.brand':'Apple' with new value 'DSA'
+[    0.526670] init: Overriding previous property 'ro.product.system.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.526835] init: Overriding previous property 'ro.product.system.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.527002] init: Overriding previous property 'ro.system.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.527361] init: Overriding previous property 'ro.build.description':'dsa_arm64-user 17 CP2A.260605.016 16373615.dsa26c779250f3f release-keys' with new value 'dsa_arm64-user 17 CP2A.260605.016 16373615 release-keys'
+[    0.528298] init: Overriding previous property 'ro.product.system_ext.brand':'Apple' with new value 'DSA'
+[    0.528567] init: Overriding previous property 'ro.product.system_ext.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.528710] init: Overriding previous property 'ro.product.system_ext.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.528820] init: Overriding previous property 'ro.system_ext.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.529257] init: Overriding previous property 'ro.product.system_dlkm.brand':'Apple' with new value 'DSA'
+[    0.529357] init: Overriding previous property 'ro.product.system_dlkm.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.529477] init: Overriding previous property 'ro.product.system_dlkm.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.529604] init: Overriding previous property 'ro.system_dlkm.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.530768] init: Overriding previous property 'ro.product.vendor.brand':'Apple' with new value 'DSA'
+[    0.531017] init: Overriding previous property 'ro.product.vendor.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.531170] init: Overriding previous property 'ro.product.vendor.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.531332] init: Overriding previous property 'ro.vendor.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.532039] init: Overriding previous property 'ro.soc.manufacturer':'Apple' with new value 'Google'
+[    0.532186] init: Overriding previous property 'ro.soc.model':'M1' with new value 'vsoc_arm64_only'
+[    0.532368] init: Overriding previous property 'ro.product.vendor_dlkm.brand':'Apple' with new value 'DSA'
+[    0.532593] init: Overriding previous property 'ro.product.vendor_dlkm.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.532935] init: Overriding previous property 'ro.product.vendor_dlkm.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.533065] init: Overriding previous property 'ro.vendor_dlkm.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.533428] init: Overriding previous property 'ro.product.odm_dlkm.brand':'Apple' with new value 'DSA'
+[    0.533535] init: Overriding previous property 'ro.product.odm_dlkm.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.533727] init: Overriding previous property 'ro.product.odm_dlkm.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.533896] init: Overriding previous property 'ro.odm_dlkm.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.534226] init: Overriding previous property 'ro.product.odm.brand':'Apple' with new value 'DSA'
+[    0.534302] init: Overriding previous property 'ro.product.odm.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.534391] init: Overriding previous property 'ro.product.odm.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.534500] init: Overriding previous property 'ro.odm.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.535758] init: Overriding previous property 'ro.product.product.brand':'Apple' with new value 'DSA'
+[    0.535886] init: Overriding previous property 'ro.product.product.manufacturer':'Apple' with new value 'thisisthepy'
+[    0.535977] init: Overriding previous property 'ro.product.product.model':'Macmini9,1' with new value 'Desktop Subsystem for Android'
+[    0.536081] init: Overriding previous property 'ro.product.build.fingerprint':'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.536382] init: Overriding previous property 'ro.config.notification_sound':'OnTheHunt.ogg' with new value 'pixiedust.ogg'
+[    0.536479] init: Overriding previous property 'ro.com.android.dataroaming':'false' with new value 'true'
+[    0.536708] init: Overriding previous property 'ro.product.system.brand':'DSA' with new value 'Apple'
+[    0.536788] init: Overriding previous property 'ro.product.system_ext.brand':'DSA' with new value 'Apple'
+[    0.536874] init: Overriding previous property 'ro.product.vendor.brand':'DSA' with new value 'Apple'
+[    0.536987] init: Overriding previous property 'ro.product.product.brand':'DSA' with new value 'Apple'
+[    0.537097] init: Overriding previous property 'ro.product.odm.brand':'DSA' with new value 'Apple'
+[    0.537166] init: Overriding previous property 'ro.product.vendor_dlkm.brand':'DSA' with new value 'Apple'
+[    0.537244] init: Overriding previous property 'ro.product.odm_dlkm.brand':'DSA' with new value 'Apple'
+[    0.537348] init: Overriding previous property 'ro.product.system_dlkm.brand':'DSA' with new value 'Apple'
+[    0.537432] init: Overriding previous property 'ro.product.system.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.537517] init: Overriding previous property 'ro.product.system_ext.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.537602] init: Overriding previous property 'ro.product.vendor.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.537661] init: Overriding previous property 'ro.product.product.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.537786] init: Overriding previous property 'ro.product.odm.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.537875] init: Overriding previous property 'ro.product.vendor_dlkm.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.537957] init: Overriding previous property 'ro.product.odm_dlkm.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.538040] init: Overriding previous property 'ro.product.system_dlkm.manufacturer':'thisisthepy' with new value 'Apple'
+[    0.538123] init: Overriding previous property 'ro.product.system.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.538243] init: Overriding previous property 'ro.product.system_ext.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.538411] init: Overriding previous property 'ro.product.vendor.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.538552] init: Overriding previous property 'ro.product.product.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.538654] init: Overriding previous property 'ro.product.odm.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.538792] init: Overriding previous property 'ro.product.vendor_dlkm.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.538936] init: Overriding previous property 'ro.product.odm_dlkm.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.539032] init: Overriding previous property 'ro.product.system_dlkm.model':'Desktop Subsystem for Android' with new value 'Macmini9,1'
+[    0.539186] init: Overriding previous property 'ro.product.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.539352] init: Overriding previous property 'ro.build.description':'dsa_arm64-user 17 CP2A.260605.016 16373615 release-keys' with new value 'dsa_arm64-user 17 CP2A.260605.016 16373615.dsa26c779250f3f release-keys'
+[    0.539510] init: Overriding previous property 'ro.system.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.539685] init: Overriding previous property 'ro.system_ext.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.539852] init: Overriding previous property 'ro.vendor.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.540104] init: Overriding previous property 'ro.odm.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.540320] init: Overriding previous property 'ro.vendor_dlkm.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.540494] init: Overriding previous property 'ro.odm_dlkm.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.540874] init: Overriding previous property 'ro.system_dlkm.build.fingerprint':'DSA/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys' with new value 'Apple/dsa_arm64/dsa_arm64:17/CP2A.260605.016/16373615.dsa26c779250f3f:user/release-keys'
+[    0.541338] init: Overriding previous property 'ro.soc.manufacturer':'Google' with new value 'Apple'
+[    0.541570] init: Overriding previous property 'ro.soc.model':'vsoc_arm64_only' with new value 'M1'
+[    0.542807] init: Overriding previous property 'ro.control_privapp_permissions':'enforce' with new value 'log'
+[    0.545076] init: Setting property 'ro.product.cpu.abilist' to 'arm64-v8a'
+[    0.545267] init: Setting property 'ro.product.cpu.abilist32' to ''
+[    0.545365] init: Setting property 'ro.product.cpu.abilist64' to 'arm64-v8a'
+[    0.546631] init: Running restorecon...

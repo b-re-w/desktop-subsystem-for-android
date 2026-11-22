@@ -1,0 +1,10 @@
+app: 1.0.1-dev.11 build 1.0.1-dev.11
+hostd dir: /Applications/DSA.app/Contents/MacOS
+dsa-hostd 0.1.0
+package-id: org.thisisthepy.dsa
+version: 1.0.1-dev.11
+volume: /
+location: Applications
+install-time: 1795338888
+installed now: DSA-1.0.1-dev.11.pkg built locally from develop 77d53ffe; image 17.0.0-16373615-15.1-dev.10-arm64 (run 44982244143, 77d53ffe)
+previous: dev.10 host package + dev.8 image (android-17-dev8); Android booted on both but guest kernel panics within minutes (memory corruption), see dsa-hostd.log
