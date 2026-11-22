@@ -1,0 +1,525 @@
+[   31.028031] dsa-channeld: paged out com.android.rkpdapp (pid 1598, oom_score_adj 905) after it woke: resident anonymous 22 -> 18 MiB, swapped out 28 -> 31 MiB, 2334 MiB asked for, 1 ranges refused, 59 ms
+[   31.920383] dsa-channeld: trimming 700 MiB of cold page cache (working set target 160 MiB)
+[   31.923100] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 860 MiB droppable and 460 MiB anonymous of 1686 MiB in use
+[   31.923508] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   32.307775] dsa-channeld: zram writes what no one has used for 1800 s to its backing file once no app has been in use for 600 s, at most 32 MiB a run and 512 MiB a day (512 MiB left today)
+[   32.807168] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 883ms and succeeded
+[   32.814710] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   32.840052] dsa-channeld: the working set trim returned in 916 ms: free 289 -> 786 MiB; page cache 833 -> 446 MiB; reclaimable kernel caches 27 -> 27 MiB; unreclaimable kernel caches 108 -> 108 MiB; app memory 460 -> 320 MiB; swapped 301 -> 438 MiB; zram 290 MiB in 100 -> 424 MiB in 131; taken back by the host 0 -> 0 MiB
+[   33.063996] dsa-channeld: paged out com.android.managedprovisioning (pid 1527, oom_score_adj 905) after it woke: resident anonymous 16 -> 15 MiB, swapped out 31 -> 33 MiB, 2317 MiB asked for, 1 ranges refused, 29 ms
+[   35.076891] dsa-channeld: paged out com.android.ondevicepersonalization.services (pid 1539, oom_score_adj 905) after it woke: resident anonymous 16 -> 15 MiB, swapped out 31 -> 33 MiB, 2319 MiB asked for, 1 ranges refused, 5 ms
+[   35.338484] binder: undelivered transaction 79473, process died.
+[   35.338668] binder: undelivered transaction 79472, process died.
+[   35.339659] binder: undelivered transaction 79461, process died.
+[   35.339701] binder: undelivered transaction 79465, process died.
+[   35.339729] binder: undelivered transaction 79468, process died.
+[   35.339818] binder: undelivered transaction 79458, process died.
+[   35.339850] binder: undelivered transaction 79474, process died.
+[   35.339908] binder: undelivered transaction 79475, process died.
+[   35.409107] binder: 661:712 ioctl 400c620e e346a9df5f1c returned -22
+[   35.441223] init: processing action (ro.boot.dsa.gapps=on && vendor.dsa.gapps.compile=*) from (/system/etc/init/dsa-gapps.rc:108)
+[   35.441511] init: starting service 'dsa_gapps_compile'...
+[   35.465559] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_2000/pid_2786
+[   35.471133] init: ... started service 'dsa_gapps_compile' has pid 2786
+[   35.471395] init: processing action (ro.boot.dsa.gapps=on && vendor.dsa.gapps.compile=*) from (/system/etc/init/dsa-gapps.rc:108)
+[   35.472732] init: service 'dsa_gapps_compile' requested start, but it is already running (flags: 134, pid: 2786, started 17ms ago)
+[   36.429803] type=1400 audit(1795350402.760:44): avc:  denied  { create } for  comm="RenderEngine" anonclass=[userfaultfd] scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:surfaceflinger:s0 tclass=anon_inode permissive=0
+[   36.503828] type=1400 audit(1795350402.780:45): avc:  denied  { getattr } for  comm="RenderEngine" path="/sys/kernel/tracing/trace_marker" dev="tracefs" ino=1065 scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:debugfs_trace_marker:s0 tclass=file permissive=0
+[   36.508962] type=1400 audit(1795350402.780:46): avc:  denied  { getattr } for  comm="RenderEngine" path="socket:[13828]" dev="sockfs" ino=13828 scontext=u:r:surfaceflinger:s0 tcontext=u:r:platform_app_36:s0:c512,c768 tclass=unix_stream_socket permissive=0
+[   36.513339] type=1400 audit(1795350402.780:47): avc:  denied  { getattr } for  comm="RenderEngine" path="socket:[13848]" dev="sockfs" ino=13848 scontext=u:r:surfaceflinger:s0 tcontext=u:r:platform_app_36:s0:c512,c768 tclass=unix_stream_socket permissive=0
+[   36.639941] servicemanager: Caller(pid=661,uid=1000,sid=u:r:system_server:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   36.647442] servicemanager: Caller(pid=661,uid=1000,sid=u:r:system_server:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   36.647921] servicemanager: Caller(pid=661,uid=1000,sid=u:r:system_server:s0) Found mapper/minigbm in device VINTF manifest.
+[   36.691192] binder: undelivered transaction 79555, process died.
+[   36.694482] binder: undelivered transaction 79640, process died.
+[   37.160580] init: processing action (ro.boot.dsa.gapps=on && vendor.dsa.gapps.compile=*) from (/system/etc/init/dsa-gapps.rc:108)
+[   37.162391] init: service 'dsa_gapps_compile' requested start, but it is already running (flags: 134, pid: 2786, started 1706ms ago)
+[   37.840486] dsa-channeld: trimming 696 MiB of cold page cache (working set target 160 MiB)
+[   37.840807] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 856 MiB droppable and 360 MiB anonymous of 1511 MiB in use
+[   37.841717] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   38.500820] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 658ms and succeeded
+[   38.501154] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   38.517048] dsa-channeld: the working set trim returned in 675 ms: free 464 -> 1003 MiB; page cache 825 -> 412 MiB; reclaimable kernel caches 30 -> 28 MiB; unreclaimable kernel caches 84 -> 84 MiB; app memory 360 -> 239 MiB; swapped 177 -> 309 MiB; zram 170 MiB in 91 -> 297 MiB in 90; taken back by the host 0 -> 0 MiB
+[   43.518015] dsa-channeld: reclaiming the guest's memory (Idle, 0 tasks in use): 1074 MiB droppable and 451 MiB anonymous of 1816 MiB in use
+[   43.518492] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[   43.568432] init (108): drop_caches: 3
+[   43.673622] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:60) took 104ms and succeeded
+[   43.782943] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:61) took 108ms and succeeded
+[   43.893582] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:62) took 109ms and succeeded
+[   43.985601] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:63) took 91ms and succeeded
+[   44.395515] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 402ms and succeeded
+[   44.399873] init: Service 'dsa_gapps_compile' (pid 2786) exited with status 0 oneshot service took 8.941000 seconds in background
+[   44.401759] init: Sending SIGKILL to service 'dsa_gapps_compile' (pid 2786) process group...
+[   44.401924] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_2000/pid_2786
+[   44.403287] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[   44.404853] init: processing action (init.svc.dsa_gapps_compile=stopped) from (/system/etc/init/dsa-gapps.rc:114)
+[   44.424335] dsa-channeld: the reclaim (Idle) returned in 905 ms: free 159 -> 1151 MiB; page cache 1042 -> 366 MiB; reclaimable kernel caches 32 -> 23 MiB; unreclaimable kernel caches 85 -> 84 MiB; app memory 451 -> 140 MiB; swapped 208 -> 336 MiB; zram 200 MiB in 71 -> 326 MiB in 90; taken back by the host 0 -> 0 MiB
+[   48.103214] servicemanager: Caller(pid=2970,uid=10075,sid=u:r:priv_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   48.104504] servicemanager: Caller(pid=2970,uid=10075,sid=u:r:priv_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   48.108996] servicemanager: Caller(pid=2970,uid=10075,sid=u:r:priv_app:s0:c512,c768) Found mapper/minigbm in device VINTF manifest.
+[   49.426114] dsa-channeld: trimming 486 MiB of cold page cache (working set target 160 MiB)
+[   49.426482] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 646 MiB droppable and 269 MiB anonymous of 1199 MiB in use
+[   49.429062] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   49.669608] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 238ms and succeeded
+[   49.671591] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   49.685634] dsa-channeld: the working set trim returned in 256 ms: free 776 -> 1273 MiB; page cache 622 -> 189 MiB; reclaimable kernel caches 24 -> 23 MiB; unreclaimable kernel caches 84 -> 84 MiB; app memory 269 -> 223 MiB; swapped 212 -> 257 MiB; zram 204 MiB in 76 -> 248 MiB in 64; taken back by the host 0 -> 0 MiB
+[   54.686191] dsa-channeld: trimming 542 MiB of cold page cache (working set target 160 MiB)
+[   54.686466] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 702 MiB droppable and 245 MiB anonymous of 1214 MiB in use
+[   54.687894] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   54.966244] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 278ms and succeeded
+[   54.966445] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   54.974627] dsa-channeld: the working set trim returned in 286 ms: free 761 -> 1211 MiB; page cache 673 -> 253 MiB; reclaimable kernel caches 29 -> 24 MiB; unreclaimable kernel caches 84 -> 84 MiB; app memory 245 -> 210 MiB; swapped 244 -> 276 MiB; zram 235 MiB in 62 -> 267 MiB in 72; taken back by the host 0 -> 0 MiB
+[   55.164198] dsa-channeld: paged out com.android.vending:quick_launch (pid 3057, oom_score_adj 100, Google Play services) after it woke: resident anonymous 23 -> 15 MiB, swapped out 49 -> 57 MiB, 2090 MiB asked for, 1 ranges refused, 25 ms
+[   57.205788] dsa-channeld: paged out com.google.android.gms (pid 2504, oom_score_adj 227, Google Play services) after it woke: resident anonymous 35 -> 14 MiB, swapped out 45 -> 66 MiB, 2379 MiB asked for, 1 ranges refused, 39 ms
+[   59.218625] dsa-channeld: paged out com.google.android.partnersetup (pid 3216, oom_score_adj 905, Google Play services) after it woke: resident anonymous 14 -> 14 MiB, swapped out 35 -> 35 MiB, 2055 MiB asked for, 1 ranges refused, 9 ms
+[   59.976214] dsa-channeld: reclaiming the guest's memory (Idle, 0 tasks in use): 668 MiB droppable and 556 MiB anonymous of 1510 MiB in use
+[   59.977578] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[   60.016036] init (108): drop_caches: 3
+[   60.188096] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:60) took 171ms and succeeded
+[   60.393588] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:61) took 205ms and succeeded
+[   60.519522] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:62) took 125ms and succeeded
+[   60.678982] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:63) took 159ms and succeeded
+[   61.079215] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 393ms and succeeded
+[   61.081029] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[   61.104846] dsa-channeld: the reclaim (Idle) returned in 1127 ms: free 465 -> 752 MiB; page cache 643 -> 513 MiB; reclaimable kernel caches 25 -> 24 MiB; unreclaimable kernel caches 84 -> 84 MiB; app memory 556 -> 367 MiB; swapped 290 -> 398 MiB; zram 281 MiB in 80 -> 388 MiB in 109; taken back by the host 0 -> 0 MiB
+[   62.128888] binder_debug: 7 callbacks suppressed
+[   62.128897] binder: undelivered transaction 97728, process died.
+[   62.129024] binder: undelivered transaction 97730, process died.
+[   62.129059] binder: undelivered transaction 97732, process died.
+[   62.129087] binder: undelivered transaction 97736, process died.
+[   62.129112] binder: undelivered transaction 97738, process died.
+[   62.129144] binder: undelivered transaction 97739, process died.
+[   62.129172] binder: undelivered transaction 97740, process died.
+[   62.129199] binder: undelivered transaction 97742, process died.
+[   62.240324] init: processing action (ro.boot.dsa.gapps=on && vendor.dsa.gapps.compile=*) from (/system/etc/init/dsa-gapps.rc:108)
+[   62.241800] init: starting service 'dsa_gapps_compile'...
+[   62.245027] libprocessgroup: Created cgroup /sys/fs/cgroup/system/uid_2000/pid_3433
+[   62.255646] init: ... started service 'dsa_gapps_compile' has pid 3433
+[   62.255788] init: processing action (ro.boot.dsa.gapps=on && vendor.dsa.gapps.compile=*) from (/system/etc/init/dsa-gapps.rc:108)
+[   62.255892] init: service 'dsa_gapps_compile' requested start, but it is already running (flags: 134, pid: 3433, started 13ms ago)
+[   64.303658] servicemanager: Caller(pid=3427,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   64.318342] servicemanager: Caller(pid=3427,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   64.322170] servicemanager: Caller(pid=3427,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found mapper/minigbm in device VINTF manifest.
+[   65.710611] servicemanager: Caller(pid=284,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   65.914947] servicemanager: Caller(pid=3714,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   66.105225] dsa-channeld: trimming 788 MiB of cold page cache (working set target 160 MiB)
+[   66.113821] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 948 MiB droppable and 652 MiB anonymous of 1862 MiB in use
+[   66.116859] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   66.533262] servicemanager: Caller(pid=284,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   66.556931] servicemanager: Caller(pid=3714,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   66.878049] servicemanager: Caller(pid=284,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   66.900141] servicemanager: Caller(pid=3714,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   67.137029] servicemanager: Caller(pid=284,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   67.152946] servicemanager: Caller(pid=3714,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   67.176121] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 1059ms and succeeded
+[   67.177749] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   67.190431] dsa-channeld: the working set trim returned in 1073 ms: free 113 -> 643 MiB; page cache 923 -> 533 MiB; reclaimable kernel caches 25 -> 25 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 652 -> 454 MiB; swapped 208 -> 407 MiB; zram 200 MiB in 47 -> 392 MiB in 108; taken back by the host 0 -> 0 MiB
+[   68.125243] servicemanager: Caller(pid=3648,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   68.126134] servicemanager: Caller(pid=3648,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+[   68.126307] servicemanager: Caller(pid=3648,uid=10073,sid=u:r:gmscore_app:s0:c512,c768) Found mapper/minigbm in device VINTF manifest.
+[   68.198299] binder: release 3427:3529 transaction 105731 out, still active
+[   68.198406] binder: undelivered TRANSACTION_COMPLETE
+[   68.520795] binder: 3661:3648 reply target not found
+[   68.520881] binder: 3648:3661 transaction reply to 0:0 failed 110666/29189/0, code 0 size 16-0 line 3184
+[   68.520923] binder: send failed reply for transaction 105731, target dead
+[   69.087213] servicemanager: Caller(pid=284,uid=1017,sid=u:r:keystore:s0) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   69.089761] servicemanager: Caller(pid=3714,uid=10107,sid=u:r:rkpdapp:s0:c107,c256,c512,c768) Found android.hardware.security.keymint.IRemotelyProvisionedComponent/default in device VINTF manifest.
+[   69.653625] binder: 3778:3858 cannot find target node
+[   69.653686] binder: 3778:3858 transaction async to 0:0 failed 114049/29189/-22, code 1 size 160-0 line 3252
+[   70.981641] binder: 3778:3858 cannot find target node
+[   70.981812] binder: 3778:3858 transaction async to 0:0 failed 114844/29189/-22, code 1 size 160-0 line 3252
+[   71.483300] dsa-channeld: paged out com.android.vending:background (pid 3056, oom_score_adj 925, Google Play services) after it woke: resident anonymous 34 -> 13 MiB, swapped out 41 -> 62 MiB, 2392 MiB asked for, 1 ranges refused, 210 ms
+[   72.194553] dsa-channeld: trimming 764 MiB of cold page cache (working set target 160 MiB)
+[   72.194835] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 924 MiB droppable and 553 MiB anonymous of 1793 MiB in use
+[   72.195342] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   73.018979] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 823ms and succeeded
+[   73.019380] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   73.045938] dsa-channeld: the working set trim returned in 850 ms: free 182 -> 648 MiB; page cache 896 -> 536 MiB; reclaimable kernel caches 27 -> 26 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 553 -> 397 MiB; swapped 297 -> 533 MiB; zram 285 MiB in 101 -> 523 MiB in 154; taken back by the host 0 -> 0 MiB
+[   75.589701] init: Service 'dsa_gapps_compile' (pid 3433) exited with status 0 oneshot service took 13.345000 seconds in background
+[   75.589837] init: Sending SIGKILL to service 'dsa_gapps_compile' (pid 3433) process group...
+[   75.589994] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_2000/pid_3433
+[   75.590228] init: processing action (init.svc.dsa_gapps_compile=stopped) from (/system/etc/init/dsa-gapps.rc:114)
+[   77.637284] dsa-channeld: paged out com.google.android.gms.unstable (pid 3648, oom_score_adj 905, Google Play services) after it woke: resident anonymous 51 -> 15 MiB, swapped out 45 -> 81 MiB, 2127 MiB asked for, 1 ranges refused, 103 ms
+[   78.049832] dsa-channeld: trimming 694 MiB of cold page cache (working set target 160 MiB)
+[   78.050709] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 854 MiB droppable and 208 MiB anonymous of 1369 MiB in use
+[   78.063778] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   78.274615] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 210ms and succeeded
+[   78.277264] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   78.305088] dsa-channeld: the working set trim returned in 241 ms: free 606 -> 1302 MiB; page cache 828 -> 182 MiB; reclaimable kernel caches 26 -> 24 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 208 -> 168 MiB; swapped 301 -> 339 MiB; zram 292 MiB in 94 -> 327 MiB in 90; taken back by the host 0 -> 0 MiB
+[   79.641324] dsa-channeld: paged out com.android.rkpdapp (pid 3714, oom_score_adj 915) after it woke: resident anonymous 13 -> 13 MiB, swapped out 38 -> 38 MiB, 2058 MiB asked for, 1 ranges refused, 2 ms
+[   83.306157] dsa-channeld: trimming 281 MiB of cold page cache (working set target 160 MiB)
+[   83.307174] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 441 MiB droppable and 177 MiB anonymous of 917 MiB in use
+[   83.324702] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   83.577621] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 252ms and succeeded
+[   83.577803] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   83.603468] dsa-channeld: the working set trim returned in 279 ms: free 1058 -> 1278 MiB; page cache 417 -> 246 MiB; reclaimable kernel caches 24 -> 23 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 177 -> 102 MiB; swapped 329 -> 402 MiB; zram 319 MiB in 90 -> 392 MiB in 117; taken back by the host 0 -> 0 MiB
+[   88.612051] dsa-channeld: trimming 168 MiB of cold page cache (working set target 160 MiB)
+[   88.612944] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 328 MiB droppable and 106 MiB anonymous of 762 MiB in use
+[   88.634078] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   88.740928] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 106ms and succeeded
+[   88.741178] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   88.763308] dsa-channeld: the working set trim returned in 129 ms: free 1213 -> 1376 MiB; page cache 304 -> 162 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 106 -> 82 MiB; swapped 399 -> 422 MiB; zram 389 MiB in 119 -> 412 MiB in 124; taken back by the host 0 -> 0 MiB
+[   91.682045] dsa-channeld: paged out com.android.vending (pid 3557, oom_score_adj 915, Google Play services) after it woke: resident anonymous 11 -> 11 MiB, swapped out 54 -> 54 MiB, 2372 MiB asked for, 1 ranges refused, 12 ms
+[   93.764401] dsa-channeld: trimming 124 MiB of cold page cache (working set target 160 MiB)
+[   93.765280] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 284 MiB droppable and 83 MiB anonymous of 697 MiB in use
+[   93.787651] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   93.880173] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 92ms and succeeded
+[   93.880385] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   93.900291] dsa-channeld: the working set trim returned in 113 ms: free 1278 -> 1396 MiB; page cache 260 -> 159 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 83 -> 60 MiB; swapped 415 -> 438 MiB; zram 405 MiB in 123 -> 426 MiB in 130; taken back by the host 0 -> 0 MiB
+[   98.901777] dsa-channeld: trimming 68 MiB of cold page cache (working set target 160 MiB)
+[   98.902355] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 228 MiB droppable and 57 MiB anonymous of 624 MiB in use
+[   98.920467] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   99.001521] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 80ms and succeeded
+[   99.001930] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   99.033246] dsa-channeld: the working set trim returned in 113 ms: free 1351 -> 1398 MiB; page cache 204 -> 160 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 57 -> 52 MiB; swapped 440 -> 445 MiB; zram 429 MiB in 132 -> 434 MiB in 133; taken back by the host 0 -> 0 MiB
+[  104.034718] dsa-channeld: trimming 119 MiB of cold page cache (working set target 160 MiB)
+[  104.035351] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 279 MiB droppable and 83 MiB anonymous of 698 MiB in use
+[  104.045974] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  104.113660] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 67ms and succeeded
+[  104.113889] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  104.132907] dsa-channeld: the working set trim returned in 87 ms: free 1277 -> 1403 MiB; page cache 255 -> 142 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 83 -> 78 MiB; swapped 413 -> 418 MiB; zram 402 MiB in 128 -> 407 MiB in 122; taken back by the host 0 -> 0 MiB
+[  111.844193] dsa-channeld: paged out com.google.android.gms (pid 3778, oom_score_adj 200, Google Play services) after it woke: resident anonymous 46 -> 8 MiB, swapped out 54 -> 93 MiB, 2367 MiB asked for, 1 ranges refused, 115 ms
+[  124.145149] dsa-channeld: trimming 156 MiB of cold page cache (working set target 160 MiB)
+[  124.146231] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 316 MiB droppable and 46 MiB anonymous of 707 MiB in use
+[  124.165101] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  124.266894] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 101ms and succeeded
+[  124.267110] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  124.294267] dsa-channeld: the working set trim returned in 129 ms: free 1269 -> 1416 MiB; page cache 293 -> 162 MiB; reclaimable kernel caches 23 -> 23 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 46 -> 24 MiB; swapped 450 -> 473 MiB; zram 440 MiB in 137 -> 462 MiB in 145; taken back by the host 0 -> 0 MiB
+[  129.295024] dsa-channeld: trimming 188 MiB of cold page cache (working set target 160 MiB)
+[  129.295223] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 348 MiB droppable and 37 MiB anonymous of 737 MiB in use
+[  129.299125] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  129.335995] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  129.348585] dsa-channeld: the working set trim returned in 49 ms: free 1238 -> 1429 MiB; page cache 325 -> 143 MiB; reclaimable kernel caches 23 -> 22 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 37 -> 33 MiB; swapped 459 -> 463 MiB; zram 448 MiB in 144 -> 452 MiB in 140; taken back by the host 0 -> 0 MiB
+[  139.355351] dsa-channeld: trimming 129 MiB of cold page cache (working set target 160 MiB)
+[  139.356252] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 289 MiB droppable and 36 MiB anonymous of 672 MiB in use
+[  139.372808] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  139.438788] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 65ms and succeeded
+[  139.439011] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  139.462260] dsa-channeld: the working set trim returned in 89 ms: free 1303 -> 1430 MiB; page cache 266 -> 144 MiB; reclaimable kernel caches 22 -> 22 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 36 -> 29 MiB; swapped 460 -> 467 MiB; zram 449 MiB in 140 -> 456 MiB in 142; taken back by the host 0 -> 0 MiB
+[  149.466978] dsa-channeld: trimming 94 MiB of cold page cache (working set target 160 MiB)
+[  149.467775] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 254 MiB droppable and 31 MiB anonymous of 635 MiB in use
+[  149.482551] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  149.515232] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  149.535352] dsa-channeld: the working set trim returned in 53 ms: free 1340 -> 1435 MiB; page cache 231 -> 137 MiB; reclaimable kernel caches 22 -> 22 MiB; unreclaimable kernel caches 85 -> 85 MiB; app memory 31 -> 31 MiB; swapped 465 -> 465 MiB; zram 454 MiB in 142 -> 454 MiB in 142; taken back by the host 0 -> 0 MiB
+[  151.987880] dsa-channeld: paged out com.google.android.gms (pid 3778, oom_score_adj 200, Google Play services) after it woke: resident anonymous 10 -> 5 MiB, swapped out 90 -> 95 MiB, 2367 MiB asked for, 1 ranges refused, 36 ms
+[  156.022193] binder: 661:1876 ioctl 400c620e e3462f01e96c returned -11
+[  156.041394] binder: 661:1876 ioctl 400c620e e3462f01e96c returned -11
+[  156.045030] binder: undelivered transaction 97794, process died.
+[  156.045124] binder: undelivered transaction 97810, process died.
+[  156.045173] binder: undelivered transaction 97761, process died.
+[  156.078894] binder: undelivered transaction 117239, process died.
+[  156.078979] binder: undelivered transaction 117244, process died.
+[  156.079301] binder: undelivered transaction 117238, process died.
+[  156.090288] binder: 661:1034 ioctl 400c620e e3465c62696c returned -11
+[  156.105999] binder: 661:1034 ioctl 400c620e e3465c62696c returned -11
+[  156.109546] binder: undelivered transaction 97792, process died.
+[  156.109639] binder: undelivered transaction 97808, process died.
+[  156.109710] binder: undelivered transaction 97727, process died.
+[  156.109838] binder: undelivered transaction 97729, process died.
+[  159.540747] dsa-channeld: trimming 97 MiB of cold page cache (working set target 160 MiB)
+[  159.541777] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 257 MiB droppable and 82 MiB anonymous of 628 MiB in use
+[  159.561320] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  159.615948] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 54ms and succeeded
+[  159.616286] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  159.632809] dsa-channeld: the working set trim returned in 72 ms: free 1347 -> 1486 MiB; page cache 234 -> 139 MiB; reclaimable kernel caches 23 -> 21 MiB; unreclaimable kernel caches 78 -> 78 MiB; app memory 82 -> 80 MiB; swapped 257 -> 259 MiB; zram 249 MiB in 108 -> 251 MiB in 68; taken back by the host 0 -> 0 MiB
+[  182.099911] dsa-channeld: paged out com.google.android.gms (pid 3778, oom_score_adj 200, Google Play services) after it woke: resident anonymous 8 -> 5 MiB, swapped out 92 -> 95 MiB, 2367 MiB asked for, 1 ranges refused, 22 ms
+[  194.653598] dsa-channeld: trimming 159 MiB of cold page cache (working set target 160 MiB)
+[  194.654276] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 319 MiB droppable and 84 MiB anonymous of 652 MiB in use
+[  194.669890] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  194.813001] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 142ms and succeeded
+[  194.813264] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  194.843355] dsa-channeld: the working set trim returned in 174 ms: free 1323 -> 1463 MiB; page cache 296 -> 187 MiB; reclaimable kernel caches 22 -> 21 MiB; unreclaimable kernel caches 78 -> 78 MiB; app memory 84 -> 39 MiB; swapped 255 -> 300 MiB; zram 247 MiB in 68 -> 292 MiB in 85; taken back by the host 0 -> 0 MiB
+[  204.850762] dsa-channeld: trimming 121 MiB of cold page cache (working set target 160 MiB)
+[  204.851825] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 281 MiB droppable and 41 MiB anonymous of 587 MiB in use
+[  204.863480] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  204.914368] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  204.933273] dsa-channeld: the working set trim returned in 70 ms: free 1388 -> 1508 MiB; page cache 259 -> 145 MiB; reclaimable kernel caches 22 -> 22 MiB; unreclaimable kernel caches 78 -> 78 MiB; app memory 41 -> 34 MiB; swapped 297 -> 304 MiB; zram 289 MiB in 85 -> 296 MiB in 86; taken back by the host 0 -> 0 MiB
+[  209.934951] dsa-channeld: trimming 78 MiB of cold page cache (working set target 160 MiB)
+[  209.936064] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 238 MiB droppable and 36 MiB anonymous of 541 MiB in use
+[  209.955323] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  210.001553] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  210.026411] dsa-channeld: the working set trim returned in 71 ms: free 1434 -> 1512 MiB; page cache 215 -> 142 MiB; reclaimable kernel caches 22 -> 22 MiB; unreclaimable kernel caches 78 -> 78 MiB; app memory 36 -> 31 MiB; swapped 303 -> 308 MiB; zram 295 MiB in 86 -> 300 MiB in 87; taken back by the host 0 -> 0 MiB
+[  212.187843] dsa-channeld: paged out com.google.android.gms (pid 3778, oom_score_adj 200, Google Play services) after it woke: resident anonymous 8 -> 5 MiB, swapped out 92 -> 95 MiB, 2367 MiB asked for, 1 ranges refused, 25 ms
+[  310.087952] dsa-channeld: trimming 68 MiB of cold page cache (working set target 160 MiB)
+[  310.088852] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 228 MiB droppable and 45 MiB anonymous of 542 MiB in use
+[  310.099866] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  310.138663] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  310.147087] dsa-channeld: the working set trim returned in 47 ms: free 1434 -> 1506 MiB; page cache 205 -> 138 MiB; reclaimable kernel caches 22 -> 22 MiB; unreclaimable kernel caches 77 -> 77 MiB; app memory 45 -> 44 MiB; swapped 297 -> 298 MiB; zram 289 MiB in 88 -> 289 MiB in 83; taken back by the host 0 -> 0 MiB
+[  320.788995] servicemanager: Notifying artd they don't (previously: do) have clients when we now have no record of a client
+[  320.794843] servicemanager: Caller(pid=1149,uid=1082,sid=u:r:artd:s0) Unregistering artd
+[  320.795014] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400f0073f41d000) with descriptor: '(not cached)'
+[  320.810555] init: Service 'artd' (pid 1149) exited with status 0 oneshot service took 314.569000 seconds in background
+[  320.810782] init: Sending SIGKILL to service 'artd' (pid 1149) process group...
+[  320.813857] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1082/pid_1149
+[  325.154870] dsa-channeld: trimming 66 MiB of cold page cache (working set target 160 MiB)
+[  325.155755] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 226 MiB droppable and 78 MiB anonymous of 562 MiB in use
+[  325.167719] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  325.208083] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  325.235280] dsa-channeld: the working set trim returned in 68 ms: free 1413 -> 1487 MiB; page cache 204 -> 143 MiB; reclaimable kernel caches 22 -> 22 MiB; unreclaimable kernel caches 77 -> 77 MiB; app memory 78 -> 74 MiB; swapped 257 -> 260 MiB; zram 249 MiB in 77 -> 253 MiB in 68; taken back by the host 0 -> 0 MiB
+[  370.255324] dsa-channeld: trimming 183 MiB of cold page cache (working set target 160 MiB)
+[  370.258065] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 343 MiB droppable and 84 MiB anonymous of 677 MiB in use
+[  370.266362] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  370.455118] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 188ms and succeeded
+[  370.455676] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  370.481631] dsa-channeld: the working set trim returned in 215 ms: free 1298 -> 1474 MiB; page cache 321 -> 167 MiB; reclaimable kernel caches 22 -> 21 MiB; unreclaimable kernel caches 77 -> 77 MiB; app memory 84 -> 57 MiB; swapped 251 -> 278 MiB; zram 243 MiB in 68 -> 270 MiB in 76; taken back by the host 0 -> 0 MiB
+[  375.484700] dsa-channeld: reclaiming the guest's memory (HostShort, 0 tasks in use): 275 MiB droppable and 59 MiB anonymous of 590 MiB in use
+[  375.505963] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  375.563806] init (108): drop_caches: 3
+[  375.564557] init: Command 'write /proc/sys/vm/drop_caches 3' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:59) took 57ms and succeeded
+[  376.299307] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 606ms and succeeded
+[  376.303324] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  376.320098] dsa-channeld: the reclaim (HostShort) returned in 820 ms: free 1385 -> 1602 MiB; page cache 253 -> 64 MiB; reclaimable kernel caches 21 -> 19 MiB; unreclaimable kernel caches 77 -> 76 MiB; app memory 59 -> 38 MiB; swapped 276 -> 298 MiB; zram 268 MiB in 76 -> 290 MiB in 74; taken back by the host 0 -> 0 MiB
+[  387.700987] _swap_info_get: Unused swap offset entry 00001d10
+[  387.701859] _swap_info_get: Unused swap offset entry 00001d01
+[  392.723995] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.724757] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.725613] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.725942] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.726320] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.726758] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.727313] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.728072] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.728430] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  392.728533] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.724787] pagefault_out_of_memory: 14476258 callbacks suppressed
+[  397.725099] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.725761] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.725937] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.726044] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.726045] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.726045] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.726046] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.726046] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.726047] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  397.726047] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.728796] pagefault_out_of_memory: 30631278 callbacks suppressed
+[  402.728804] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.728992] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.729245] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.731171] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.731175] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.731176] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.731177] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.731178] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.731179] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.731180] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  402.743640] _swap_info_get: Unused swap offset entry 00001d10
+[  402.756858] _swap_info_get: Unused swap offset entry 00001d01
+[  402.760535] _swap_info_get: Unused swap offset entry 00000cdf
+[  402.761265] _swap_info_get: Unused swap offset entry 00000cdf
+[  402.761383] _swap_info_get: Unused swap offset entry 00000cdf
+[  402.780236] _swap_info_get: Unused swap offset entry 00001eba
+[  407.732796] pagefault_out_of_memory: 30086374 callbacks suppressed
+[  407.732804] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.732805] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.732809] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.733603] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.734009] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.734010] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.734010] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.734011] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.734011] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  407.734012] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.736769] pagefault_out_of_memory: 31248067 callbacks suppressed
+[  412.736774] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.736820] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.737473] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.743543] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.747143] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.748157] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.749000] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.749002] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.749003] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  412.749004] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.740880] pagefault_out_of_memory: 28345783 callbacks suppressed
+[  417.740961] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.741010] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.741513] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.741782] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.741886] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.742014] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.742016] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.742017] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.742018] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  417.742117] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.744782] pagefault_out_of_memory: 28011667 callbacks suppressed
+[  422.744787] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.745240] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.745292] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.745526] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.745548] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.746141] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.746233] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.746358] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.746425] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  422.747129] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.748848] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.748847] pagefault_out_of_memory: 24538206 callbacks suppressed
+[  427.748903] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749428] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749430] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749431] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749431] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749432] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749432] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749433] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  427.749433] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752781] pagefault_out_of_memory: 32319587 callbacks suppressed
+[  432.752785] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752820] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752976] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752977] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752977] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752978] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752978] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752978] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752979] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  432.752979] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  436.341978] dsa-channeld: reclaiming the guest's memory (HostShort, 0 tasks in use): 187 MiB droppable and 79 MiB anonymous of 514 MiB in use
+[  436.357420] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  436.474725] init (108): drop_caches: 3
+[  436.474931] init: Command 'write /proc/sys/vm/drop_caches 3' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:59) took 117ms and succeeded
+[  436.613823] ------------[ cut here ]------------
+[  436.613920] WARNING: CPU: 1 PID: 108 at mm/swap_state.c:155 swap_cache_add_folio+0x7c/0x1ac
+[  436.614008] Modules linked in:
+[  436.614041] CPU: 1 UID: 0 PID: 108 Comm: init Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[  436.614077] pstate: 61400005 (nZCv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[  436.614112] pc : swap_cache_add_folio+0x7c/0x1ac
+[  436.614144] lr : swap_cache_add_folio+0x70/0x1ac
+[  436.614183] sp : ffff8000807b3160
+[  436.614207] x29: ffff8000807b3160 x28: 0000000000000001 x27: 0000000000000000
+[  436.614245] x26: 00000000000012d2 x25: 00000000000000d3 x24: 0000000000000001
+[  436.614277] x23: 0000000000000001 x22: 0000000000000000 x21: ffff000047960120
+[  436.614306] x20: 00000000000000d2 x19: fffffdffc1879b40 x18: 00000000000000e8
+[  436.614335] x17: 0000000000000023 x16: ffff8000827b96de x15: 0000000000000000
+[  436.614364] x14: 000000000000000a x13: 0000000000000000 x12: 0000000000000057
+[  436.614387] x11: ffff800081462000 x10: 00000000000012d3 x9 : 00000000000012d3
+[  436.614409] x8 : 0000000000000000 x7 : 0000000000260021 x6 : ffff8000814645a4
+[  436.614445] x5 : fffffdffc14d20c0 x4 : ffff000090d9b000 x3 : 0000000000000690
+[  436.614477] x2 : 0000000000000001 x1 : ffff000090d9b690 x0 : ffff000047960120
+[  436.614512] Call trace:
+[  436.614524]  swap_cache_add_folio+0x7c/0x1ac (P)
+[  436.614565]  folio_alloc_swap+0x3d8/0x684
+[  436.614584]  shrink_folio_list+0x81c/0x113c
+[  436.614603]  evict_folios+0x264/0x77c
+[  436.614624]  try_to_shrink_lruvec+0x17c/0x2b8
+[  436.614650]  shrink_one+0x7c/0x220
+[  436.614674]  shrink_node+0xa84/0xd8c
+[  436.614689]  do_try_to_free_pages+0xe4/0x55c
+[  436.614712]  try_to_free_mem_cgroup_pages+0x104/0x280
+[  436.614738]  user_proactive_reclaim+0x194/0x430
+[  436.614766]  memory_reclaim+0x2c/0x48
+[  436.614791]  cgroup_file_write+0xa4/0x198
+[  436.614818]  kernfs_fop_write_iter+0x148/0x1d8
+[  436.614857]  vfs_write+0x218/0x338
+[  436.614879]  ksys_write+0x6c/0x104
+[  436.614905]  __arm64_sys_write+0x1c/0x28
+[  436.614920]  invoke_syscall+0x58/0xc8
+[  436.614938]  el0_svc_common.constprop.0+0x40/0xe0
+[  436.614959]  do_el0_svc+0x1c/0x28
+[  436.614971]  el0_svc+0x3c/0x168
+[  436.615002]  el0t_64_sync_handler+0xa0/0xe4
+[  436.615023]  el0t_64_sync+0x1b0/0x1b4
+[  436.615037] ---[ end trace 0000000000000000 ]---
+[  437.540825] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 879ms and succeeded
+[  437.546397] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  437.756763] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756763] pagefault_out_of_memory: 31600087 callbacks suppressed
+[  437.756766] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756768] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756868] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756894] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756895] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756895] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756896] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756896] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  437.756896] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.760784] pagefault_out_of_memory: 34902182 callbacks suppressed
+[  442.760790] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.760811] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761303] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761304] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761305] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761305] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761306] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761306] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761307] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  442.761307] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.764781] pagefault_out_of_memory: 26868765 callbacks suppressed
+[  447.764806] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.764989] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.766079] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.768235] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.768238] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.768238] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.768239] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.768239] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.768240] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  447.768240] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  451.385279] dsa-channeld: the reclaim (HostShort) returned in 15028 ms: free 1461 -> 1536 MiB; page cache 168 -> 125 MiB; reclaimable kernel caches 19 -> 19 MiB; unreclaimable kernel caches 76 -> 76 MiB; app memory 79 -> 55 MiB; swapped 256 -> 281 MiB; zram 248 MiB in 69 -> 272 MiB in 61; taken back by the host 0 -> 0 MiB
+[  452.768798] pagefault_out_of_memory: 25240606 callbacks suppressed
+[  452.768805] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.768814] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769101] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769985] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769989] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769990] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769991] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769992] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769993] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  452.769994] Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF
+[  455.616151] Unable to handle kernel paging request at virtual address 74c1a762c22cc9c4
+[  455.617990] Mem abort info:
+[  455.618039]   ESR = 0x0000000096000004
+[  455.618114]   EC = 0x25: DABT (current EL), IL = 32 bits
+[  455.618170]   SET = 0, FnV = 0
+[  455.618269]   EA = 0, S1PTW = 0
+[  455.618302]   FSC = 0x04: level 0 translation fault
+[  455.618374] Data abort info:
+[  455.618547]   ISV = 0, ISS = 0x00000004, ISS2 = 0x00000000
+[  455.618621]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[  455.618706]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[  455.618771] [74c1a762c22cc9c4] address between user and kernel address ranges
+[  455.618876] Internal error: Oops: 0000000096000004 [#1]  SMP
+[  455.618953] Modules linked in:
+[  455.619013] CPU: 1 UID: 2000 PID: 4197 Comm: cut Tainted: G        W           6.18.54.1-dsa #1 PREEMPT(full) 
+[  455.619102] Tainted: [W]=WARN
+[  455.619155] pstate: 214000c5 (nzCv daIF +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[  455.619224] pc : __kmem_cache_alloc_bulk+0x9c/0x294
+[  455.619324] lr : __kmem_cache_alloc_bulk+0x60/0x294
+[  455.619464] sp : ffff80008412b8b0
+[  455.619518] x29: ffff80008412b8b0 x28: ffff00007e950220 x27: ffff0000afbd7e60
+[  455.619596] x26: 0000000000000000 x25: 0000000000000000 x24: 0000000000000020
+[  455.619674] x23: 0000000000000001 x22: ffffd80029cf4ef8 x21: 0000000000000cc0
+[  455.619756] x20: 0000000000000000 x19: ffff000033805900 x18: 0000e08d93650fff
+[  455.619901] x17: 0000000000000000 x16: ffffd80028df8178 x15: 0000e08d93750fff
+[  455.619978] x14: 0000000000000000 x13: 1fffe0001339f741 x12: 0000e08d93650fff
+[  455.620055] x11: ffff000099cfba08 x10: 0000000000000001 x9 : 0000000000000000
+[  455.620132] x8 : ffffd80029cf4000 x7 : 0000000000000006 x6 : 74c1a762c22cc944
+[  455.620701] x5 : ffff00009a7fb3c0 x4 : f4596ffbc22c36bb x3 : ffff00007e950220
+[  455.620822] x2 : 0000000000000020 x1 : c4c92cc262a7c174 x0 : 0000000000000080
+[  455.620911] Call trace:
+[  455.620953]  __kmem_cache_alloc_bulk+0x9c/0x294 (P)
+[  455.621051]  kmem_cache_prefill_sheaf+0xf8/0x2f4
+[  455.621112]  mas_alloc_nodes+0xe0/0x10c
+[  455.621171]  mas_preallocate+0x16c/0x340
+[  455.621224]  __split_vma+0xe0/0x30c
+[  455.621276]  vms_gather_munmap_vmas+0x58/0x2d0
+[  455.621335]  do_vmi_align_munmap+0xcc/0x17c
+[  455.621387]  do_vmi_munmap+0xac/0x124
+[  455.621439]  __vm_munmap+0x11c/0x19c
+[  455.621512]  __arm64_sys_munmap+0x20/0x30
+[  455.621639]  invoke_syscall+0x58/0xc8
+[  455.621695]  el0_svc_common.constprop.0+0x40/0xe0
+[  455.621757]  do_el0_svc+0x1c/0x28
+[  455.621808]  el0_svc+0x3c/0x168
+[  455.621859]  el0t_64_sync_handler+0xa0/0xe4
+[  455.621911]  el0t_64_sync+0x1b0/0x1b4
+[  455.622048] Code: b9403260 f9405e64 8b0000c1 dac00c21 (f86068c5) 
+[  455.622118] ---[ end trace 0000000000000000 ]---
+[  455.622181] Kernel panic - not syncing: Oops: Fatal exception
+[  455.622267] SMP: stopping secondary CPUs
+[  455.622436] Kernel Offset: 0x57ffa7c00000 from 0xffff800080000000
+[  455.622526] PHYS_OFFSET: 0x40000000
+[  455.622679] CPU features: 0x000000,00006000,42242281,9407f723
+[  455.622786] Memory Limit: none

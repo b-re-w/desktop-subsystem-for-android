@@ -1,0 +1,5 @@
+Result: current image 17.0.0-16373615-15.1-dev.10-arm64 (77d53ffe) on host dev.11, memory_mb 2048 fixed.
+Panic at 455 s (warning at 436 s in swap_cache_add_folio, Oops in __kmem_cache_alloc_bulk, bad pointer 74c1a762c22cc9c4).
+MemTotal stays 2023488 kB (= VM size); apps see Total RAM 2023488K. Just before panic MemFree 1571984 kB, MemAvailable 1524040 kB: not memory exhaustion.
+The 105 s OOM in the first bundle came from an experiment with the renderer removed (surfaceflinger grew), not the real fault.
+No arm64 image exists from before a1d70378 (run 44689201753 at b8a171565 built x86_64 only).
