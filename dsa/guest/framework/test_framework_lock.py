@@ -822,7 +822,7 @@ class ServicesTests(unittest.TestCase):
     def test_fr22_the_native_build_leaves_the_java_patches_to_the_services_build(self):
         for android in ("android16", "android17"):
             java = [p for _, p in framework_lock.patch_files(android) if framework_lock.java_only(p)]
-            self.assertEqual(len(java), 6, android)
+            self.assertEqual(len(java), 7, android)
             native = [p for _, p in framework_lock.patch_files(android) if not framework_lock.java_only(p)]
             self.assertTrue(native, android)
         with tempfile.TemporaryDirectory() as tmp:
