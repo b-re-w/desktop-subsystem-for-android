@@ -59,6 +59,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import math
 import os
 import re
 import shutil
@@ -1490,12 +1491,9 @@ def settings_overlay_map():
     Settings' ids."""
     mapping = {name: name for name in SETTINGS_OVERLAID}
     mapping.update({f"bool/{name}": f"bool/{name}" for name in SETTINGS_OVERLAY_BOOLEANS})
-    mapping.update({f"drawable/{name}": f"drawable/{name}" for name in SETTINGS_CARDS})
-    mapping["dimen/settingslib_preference_corner_radius"] = "dimen/settingslib_preference_corner_radius"
     mapping[f"style/{SETTINGS_TITLE_THEME}"] = "style/DsaAppBarTheme"
     mapping[f"style/{SETTINGS_TITLE_THEME_PARENT}"] = f"style/{SETTINGS_TITLE_THEME_PARENT}"
     mapping["attr/expanded"] = "attr/expanded"
-    mapping.update({f"style/{name}": f"style/{ours}" for name, (ours, _) in SETTINGS_TITLE_STYLES.items()})
     mapping[f"layout/{SETTINGS_HOME_LAYOUT}"] = f"layout/{SETTINGS_HOME_LAYOUT}"
     mapping.update({f"id/{name}": f"id/{name}" for name in SETTINGS_HOME_IDS})
     mapping.update({f"attr/{name}": f"attr/{name}" for name in SETTINGS_HOME_ATTRS})
@@ -1516,9 +1514,6 @@ def settings_overlay_files():
         "res/values/dsa_config.xml": resources_xml(
             [f'<bool name="{name}">{str(value).lower()}</bool>'
              for name, value in SETTINGS_OVERLAY_BOOLEANS.items()]),
-        "res/values-v36/dsa_design.xml": resources_xml(
-            [f'<dimen name="settingslib_preference_corner_radius">{DESIGN_CORNER_DP}dp</dimen>']
-            + [design_style(ours, "", f"{size}dp") for ours, size in SETTINGS_TITLE_STYLES.values()]),
         f"res/layout/{SETTINGS_HOME_LAYOUT}.xml": settings_home_layout(large_title=False),
         f"res/layout-h{DESIGN_TALL_WINDOW_DP}dp/{SETTINGS_HOME_LAYOUT}.xml": settings_home_layout(large_title=True),
         f"res/drawable/{SETTINGS_SEARCH_ICON}.xml": search_icon(),
@@ -1532,39 +1527,9 @@ def settings_overlay_files():
         [f'<style name="{SETTINGS_TITLE_THEME_PARENT}" parent="" />'])
     for folder, theme in (("drawable-v36", "light"), ("drawable-night-v36", "dark")):
         files[f"res/{folder}/{SETTINGS_BACK_ICON}.xml"] = settings_back_icon(theme)
-        for name, (top, bottom) in SETTINGS_CARDS.items():
-            files[f"res/{folder}/{name}.xml"] = settings_card(top, bottom, theme)
     for folder, theme in (("drawable", "light"), ("drawable-night", "dark")):
         files[f"res/{folder}/{SETTINGS_SEARCH_ICON}_background.xml"] = search_background(theme)
     return files
-
-
-def settings_card(top, bottom, theme):
-    """One of SettingsLib's group backgrounds: the row's surface, inset from the list's sides
-    as SettingsLib insets it, with the group's outer corners rounded (`top`, `bottom`) and
-    square corners where the next row of the same group joins it. The 32 dp padding is
-    SettingsLib's own, which its adapter gives the row."""
-    top_dp, bottom_dp = (DESIGN_CORNER_DP if top else 0), (DESIGN_CORNER_DP if bottom else 0)
-    return (
-        XML_HEADER
-        + f'<ripple {ANDROID_XMLNS}\n'
-        '    android:color="?android:attr/colorControlHighlight"\n'
-        '    android:paddingStart="32dp"\n'
-        '    android:paddingEnd="32dp">\n'
-        '    <item\n'
-        '        android:start="?android:attr/listPreferredItemPaddingStart"\n'
-        '        android:end="?android:attr/listPreferredItemPaddingEnd">\n'
-        '        <shape android:shape="rectangle">\n'
-        f'            <solid android:color="@*android:color/system_surface_bright_{theme}" />\n'
-        '            <corners\n'
-        f'                android:topLeftRadius="{top_dp}dp"\n'
-        f'                android:topRightRadius="{top_dp}dp"\n'
-        f'                android:bottomLeftRadius="{bottom_dp}dp"\n'
-        f'                android:bottomRightRadius="{bottom_dp}dp" />\n'
-        '        </shape>\n'
-        '    </item>\n'
-        '</ripple>\n'
-    )
 
 
 def search_icon():
@@ -2170,7 +2135,7 @@ def system_overlay_targets(z, otatools, work, env, replaced=None):
     the bytes the image carries instead (a default app in the published app's place, DocumentsUI)
     is read from there, so the overlay is built against the app the image has."""
     replaced = replaced or {}
-    names = sorted(set(z.namelist()) | set(replaced))
+    names = sorted(set(z.namelist()) | (set(replaced) - {PERMISSION_CONTROLLER_IMAGE}))
     tables = {}
     for overlay in SYSTEM_OVERLAYS:
         if overlay["target_apk"] is not None:
@@ -2189,7 +2154,9 @@ def system_overlay_targets(z, otatools, work, env, replaced=None):
         apks = sorted(payload.rglob(PERMISSION_CONTROLLER_APK))
         if not apks:
             raise ValueError(f"{apex} has no {PERMISSION_CONTROLLER_APK}, which {overlay['apk']} overlays")
-        tables[overlay["apk"]] = apk_resource_table(apks[0].read_bytes())
+        # The overlay is built against the PermissionController the image carries.
+        built = replaced.get(PERMISSION_CONTROLLER_IMAGE)
+        tables[overlay["apk"]] = apk_resource_table(built if built is not None else apks[0].read_bytes())
         shutil.rmtree(folder, ignore_errors=True)
     return tables
 
@@ -3109,6 +3076,10 @@ def edit_settings_apk(data, name):
 #   restores a trace that was running before the reboot. Opening System Tracing, or its
 #   quick setting, starts the app as before.
 BOOT_RECEIVER_FREE_APKS = ["/DynamicSystemInstallationService.apk", "/DeviceDiagnostics.apk", "/Traceur.apk"]
+# System apps a phone has that open only from Settings, so no launcher lists them: System
+# Tracing (Traceur, in developer options) and the Android logo (EasterEgg, opened by tapping
+# the Android version in About). check-image.py refuses an image without them.
+SETTINGS_ONLY_APKS = ["SYSTEM/app/Traceur/Traceur.apk", "SYSTEM/app/EasterEgg/EasterEgg.apk"]
 BOOT_ACTIONS = {"android.intent.action.BOOT_COMPLETED", "android.intent.action.LOCKED_BOOT_COMPLETED"}
 
 
@@ -3255,15 +3226,15 @@ def image_services_jar(data):
 
 
 def edit_permission_controller_apk(data, name):
-    """PermissionController.apk with its preference lists grouped in cards with Settings'
-    corners, and with the room Settings' lists keep below their last row."""
+    """PermissionController.apk with the room Settings' lists keep below their last row. Its
+    cards are SettingsLib's own as dsa/apps patches them (SOURCE_OWNED_SETTINGSLIB)."""
     return edit_apk(data, name, dimensions=permission_controller_edits())
 
 
 def permission_controller_edits():
-    """The compiled XML edits PermissionController.apk gets: its cards, and the room below
-    the last row of its lists, as Settings' have it."""
-    return {**PERMISSION_CONTROLLER_CARDS, **PERMISSION_CONTROLLER_LIST_END}
+    """The compiled XML edits PermissionController.apk gets: the room below the last row of
+    its lists, as Settings' have it."""
+    return dict(PERMISSION_CONTROLLER_LIST_END)
 
 
 # Properties the vendor and odm build.prop files may not set. init reads those two files as
@@ -5332,9 +5303,34 @@ DEFAULT_APP_CERTIFICATE = "build/make/target/product/security/{}.x509.pem"
 DEFAULT_APP_PRIVATE_KEY = "build/make/target/product/security/{}.pk8"
 
 
-def default_apps():
-    """The default apps apps.json lists."""
+def image_apps():
+    """Every app apps.json lists: the default apps and the system screens."""
     return json.loads(DEFAULT_APPS_SOURCE.read_text(encoding="utf-8"))["apps"]
+
+
+def default_apps():
+    """The default apps apps.json lists (a clock, a gallery and the rest), not the system screens."""
+    return [app for app in image_apps() if app.get("role") != "system"]
+
+
+# The system screens apps.json lists (role "system"): Settings, PermissionController,
+# PackageInstaller and the share sheet (IntentResolver), each built in the Framework build's
+# tree from the image's own pin with DSA's design, in place of the published app. They keep
+# their AOSP names, packages and configuration; only the APK changes. PermissionController is
+# inside the permission APEX, so its "image" path is the APEX's followed by the APK's name, and
+# make-image.py puts it into the APEX's payload (edit_permission_apex).
+def system_screen_apps():
+    """The system screens apps.json lists."""
+    return [app for app in image_apps() if app.get("role") == "system"]
+
+
+def in_apex(app):
+    """Whether `app` is inside an APEX (PermissionController) rather than an APK of its own."""
+    return "apex" in app["build"]
+
+
+# Where the permission APEX's PermissionController goes in the default apps' payloads.
+PERMISSION_CONTROLLER_IMAGE = "SYSTEM/apex/com.android.permission.apex/PermissionController.apk"
 
 
 def _apps_script():
@@ -5370,7 +5366,7 @@ def load_default_apps(folder, android):
     is not the one this repository makes."""
     folder = Path(folder)
     payloads, records, problems = {}, [], []
-    for app in default_apps():
+    for app in image_apps():
         record_path = folder / f"{app['name']}.json"
         if not record_path.is_file():
             problems.append(f"{folder} has no {record_path.name}, so the image would have no {app['label']} app")
@@ -5424,19 +5420,29 @@ def default_apps_permissions(apps):
 def default_app_apkcerts(app):
     """The apkcerts.txt line that has signing give a default app its certificate."""
     key = app.get("certificate", "testkey")
+    partition = app["image"].split("/", 1)[0].lower()
     return (f'name="{Path(app["image"]).name}" certificate="{DEFAULT_APP_CERTIFICATE.format(key)}" '
-            f'private_key="{DEFAULT_APP_PRIVATE_KEY.format(key)}" partition="system"')
+            f'private_key="{DEFAULT_APP_PRIVATE_KEY.format(key)}" partition="{partition}"')
+
+
+def fs_config_path(name):
+    """The filesystem_config.txt path of a target_files member: its partition folder in lower
+    case (SYSTEM/ is system/) and the rest exactly as it is. mkfs.erofs looks paths up with
+    their case, so system/app/dsacalculator does not match system/app/DsaCalculator and the
+    image fails to build."""
+    partition, _, rest = name.partition("/")
+    return f"{partition.lower()}/{rest}" if rest else partition.lower()
 
 
 def default_apps_fs_config(apps):
     """The filesystem_config.txt lines of the default apps' folders, APKs and configuration."""
     lines = []
     for app in apps:
-        folder = Path(app["image"]).parent.as_posix().lower()
+        folder = fs_config_path(Path(app["image"]).parent.as_posix())
         lines.append(f"{folder} 0 0 755 capabilities=0x0")
-        lines.append(f"{app['image'].lower()} 0 0 644 capabilities=0x0")
-    lines.append(f"{DEFAULT_APPS_SYSCONFIG.lower()} 0 0 644 capabilities=0x0")
-    lines.append(f"{DEFAULT_APPS_PERMISSIONS.lower()} 0 0 644 capabilities=0x0")
+        lines.append(f"{fs_config_path(app['image'])} 0 0 644 capabilities=0x0")
+    lines.append(f"{fs_config_path(DEFAULT_APPS_SYSCONFIG)} 0 0 644 capabilities=0x0")
+    lines.append(f"{fs_config_path(DEFAULT_APPS_PERMISSIONS)} 0 0 644 capabilities=0x0")
     return lines
 
 
@@ -5491,6 +5497,74 @@ def default_apps_problems(names, read, records, android):
     for name in sorted(names):
         if name.endswith(".apk") and (replaced_by_default_apps(name, apps) or "/Calendar/" in name):
             problems.append(f"{name} is still in the image, beside the default app that replaces it")
+    return problems
+
+
+def system_screen_override_problems():
+    """What in the image would override what the patched SettingsLib owns
+    (SOURCE_OWNED_SETTINGSLIB): a Settings or PermissionController overlay resource, or a
+    compiled edit of PermissionController.apk, that replaces one of them."""
+    owned = set(SOURCE_OWNED_SETTINGSLIB)
+    problems = [f"DsaSettingsOverlay.apk replaces {name}, which the patched SettingsLib owns"
+                for name in sorted(owned & set(settings_overlay_map()))]
+    overlay_files = settings_overlay_files()
+    for path in sorted(overlay_files):
+        parts = path.split("/")
+        if len(parts) == 3 and parts[0] == "res":
+            kind = parts[1].split("-")[0]
+            if f"{kind}/{Path(parts[2]).stem}" in owned:
+                problems.append(f"DsaSettingsOverlay.apk has {path}, which the patched SettingsLib owns")
+        if path.endswith(".xml") and path.startswith("res/values"):
+            for name in re.findall(r'<(?:dimen|color|style) name="([^"]+)"', overlay_files[path]):
+                for kind in ("dimen", "color", "style"):
+                    if f"{kind}/{name}" in owned and f'<{kind} name="{name}"' in overlay_files[path]:
+                        problems.append(f"DsaSettingsOverlay.apk sets {kind}/{name} in {path}, which the "
+                                        "patched SettingsLib owns")
+    for xml in permission_controller_edits():
+        kind_folder, name = xml.split("/")[1], Path(xml).stem
+        if f"{kind_folder.split('-')[0]}/{name}" in owned:
+            problems.append(f"PermissionController.apk's {xml} is edited, which the patched SettingsLib owns")
+    for overlay in DESIGN_OVERLAYS:
+        if overlay == "DsaPermissionControllerOverlay.apk":
+            for name in sorted(owned & set(design_overlay_resources(overlay)[1])):
+                problems.append(f"{overlay} replaces {name}, which the patched SettingsLib owns")
+    return problems
+
+
+def system_screens_problems(names, read, records, android):
+    """What is wrong with the system screens of a signed target_files whose members are `names`
+    and read with `read`: one missing or under another package, or built from another pin or
+    other patches than dsa/apps has now (`records`, image.json's "default_apps"), so the image
+    would show the published AOSP screen and not DSA's design. PermissionController is inside
+    the permission APEX, which takes otatools to open, so for it the APEX must be there and the
+    record must match."""
+    problems = []
+    names = set(names)
+    recorded = {r.get("name"): r for r in records or []}
+    for app in system_screen_apps():
+        label = app["label"]
+        if in_apex(app):
+            if not any(apex in names for apex in PERMISSION_APEXES):
+                problems.append(f"the image has no permission APEX, so it has no {label} screens")
+        elif app["image"] not in names:
+            problems.append(f"{app['image']} is missing, so the image has no {label} screens")
+            continue
+        else:
+            try:
+                package = apk_manifest_package(read(app["image"]))
+            except (ValueError, KeyError, zipfile.BadZipFile) as e:
+                problems.append(f"{app['image']} has no readable manifest ({e})")
+                continue
+            if package != app["package"]:
+                problems.append(f"{app['image']} is {package}, not {app['package']}")
+        wanted = default_app_provenance(app, android)
+        record = recorded.get(app["name"])
+        if record is None:
+            problems.append(f"image.json does not say what the {label} screens were built from, so the "
+                            "image may carry the published AOSP app without DSA's design")
+        elif {key: record.get(key) for key in wanted} != wanted:
+            problems.append(f"the {label} screens were built from another source or other patches than "
+                            "dsa/apps has now")
     return problems
 
 
@@ -5818,9 +5892,172 @@ DESIGN_BLUE_TONES = {
     400: "#4F8AFF", 500: "#2B6EF2", 600: "#1A5AD7", 700: "#0D46AE", 800: "#053486", 900: "#001B4A",
     1000: "#000000",
 }
+
+
+# Every other colour role comes from the same blue, the way Material's tonal spot scheme makes
+# them: the secondary palette is the blue with little colour, the tertiary the blue's hue turned
+# 60 degrees towards cyan (towards violet it reads as a dull purple beside the blue), the
+# neutrals the blue nearly grey. A palette's tone is its CIE L* (0 black, 100 white), so two
+# roles a fixed number of tones apart have the same contrast whatever their hue; hue and chroma
+# are OKLCh's, which keeps a hue as it gets lighter (blue stays blue, not violet). Without
+# this, every role the design does not set keeps the framework's own grey violet scheme, and
+# the apps mix the blue primary with lavender containers, a violet tertiary and dark theme
+# surfaces of another hue. The agent makes the same palettes from the host's accent at run time.
+DESIGN_SEED = "#2B6EF2"
+# Each palette: its hue offset from the seed's (degrees) and its chroma (OKLCh). The first
+# accent keeps at least this chroma, more when the seed has more.
+DESIGN_PALETTES = {
+    "accent1": (0, 0.09), "accent2": (0, 0.04), "accent3": (-60, 0.06),
+    "neutral1": (0, 0.008), "neutral2": (0, 0.018),
+}
+# Each shade of a framework palette (system_accent1_500 and so on) and the tone it has.
+DESIGN_SHADE_TONES = {0: 100, 10: 99, 50: 95, 100: 90, 200: 80, 300: 70, 400: 60, 500: 50,
+                      600: 40, 700: 30, 800: 20, 900: 10, 1000: 0}
+# Each colour role of each theme: the palette and the tone it takes.
+DESIGN_ROLE_TONES = {
+    "light": {
+        "primary": ("accent1", 40), "on_primary": ("accent1", 100),
+        "primary_container": ("accent1", 90), "on_primary_container": ("accent1", 10),
+        "inverse_primary": ("accent1", 80), "surface_tint": ("accent1", 40),
+        "primary_dim": ("accent1", 35), "control_activated": ("accent1", 90),
+        "secondary": ("accent2", 40), "on_secondary": ("accent2", 100),
+        "secondary_container": ("accent2", 90), "on_secondary_container": ("accent2", 10),
+        "secondary_dim": ("accent2", 35),
+        "tertiary": ("accent3", 40), "on_tertiary": ("accent3", 100),
+        "tertiary_container": ("accent3", 90), "on_tertiary_container": ("accent3", 10),
+        "tertiary_dim": ("accent3", 35),
+        "on_background": ("neutral1", 10), "on_surface": ("neutral1", 10),
+        "surface_variant": ("neutral2", 90), "on_surface_variant": ("neutral2", 30),
+        "control_normal": ("neutral2", 30),
+        "outline": ("neutral2", 50), "outline_variant": ("neutral2", 80),
+        "inverse_surface": ("neutral1", 20), "inverse_on_surface": ("neutral1", 95),
+        "palette_key_color_primary": ("accent1", 50), "palette_key_color_secondary": ("accent2", 50),
+        "palette_key_color_tertiary": ("accent3", 50), "palette_key_color_neutral": ("neutral1", 50),
+        "palette_key_color_neutral_variant": ("neutral2", 50),
+    },
+    "dark": {
+        "primary": ("accent1", 80), "on_primary": ("accent1", 20),
+        "primary_container": ("accent1", 30), "on_primary_container": ("accent1", 90),
+        "inverse_primary": ("accent1", 40), "surface_tint": ("accent1", 80),
+        "primary_dim": ("accent1", 75), "control_activated": ("accent1", 30),
+        "secondary": ("accent2", 80), "on_secondary": ("accent2", 20),
+        "secondary_container": ("accent2", 30), "on_secondary_container": ("accent2", 90),
+        "secondary_dim": ("accent2", 75),
+        "tertiary": ("accent3", 80), "on_tertiary": ("accent3", 20),
+        "tertiary_container": ("accent3", 30), "on_tertiary_container": ("accent3", 90),
+        "tertiary_dim": ("accent3", 75),
+        "on_background": ("neutral1", 90), "on_surface": ("neutral1", 90),
+        "surface_variant": ("neutral2", 30), "on_surface_variant": ("neutral2", 80),
+        "control_normal": ("neutral2", 80),
+        "outline": ("neutral2", 60), "outline_variant": ("neutral2", 30),
+        "inverse_surface": ("neutral1", 90), "inverse_on_surface": ("neutral1", 20),
+        "palette_key_color_primary": ("accent1", 50), "palette_key_color_secondary": ("accent2", 50),
+        "palette_key_color_tertiary": ("accent3", 50), "palette_key_color_neutral": ("neutral1", 50),
+        "palette_key_color_neutral_variant": ("neutral2", 50),
+    },
+}
+# The fixed roles, the same in both themes.
+DESIGN_FIXED_ROLE_TONES = {
+    **{f"{role}_fixed": (palette, 90) for role, palette in
+       (("primary", "accent1"), ("secondary", "accent2"), ("tertiary", "accent3"))},
+    **{f"{role}_fixed_dim": (palette, 80) for role, palette in
+       (("primary", "accent1"), ("secondary", "accent2"), ("tertiary", "accent3"))},
+    **{f"on_{role}_fixed": (palette, 10) for role, palette in
+       (("primary", "accent1"), ("secondary", "accent2"), ("tertiary", "accent3"))},
+    **{f"on_{role}_fixed_variant": (palette, 30) for role, palette in
+       (("primary", "accent1"), ("secondary", "accent2"), ("tertiary", "accent3"))},
+}
+def _linear(channel):
+    c = channel / 255
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _gamma(value):
+    v = 12.92 * value if value <= 0.0031308 else 1.055 * value ** (1 / 2.4) - 0.055
+    return round(min(max(v, 0.0), 1.0) * 255)
+
+
+def color_lch(color):
+    """The OKLCh lightness (0 to 100), chroma and hue (degrees) of a #RRGGBB colour."""
+    value = color.lstrip("#")
+    r, g, b = (_linear(int(value[i:i + 2], 16)) for i in (0, 2, 4))
+    l_, m_, s_ = (math.copysign(abs(v) ** (1 / 3), v) for v in (
+        0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
+        0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+        0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b))
+    lightness = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+    a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+    b_ = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+    return lightness * 100, math.hypot(a, b_), math.degrees(math.atan2(b_, a)) % 360
+
+
+def _lch_linear_rgb(lightness, chroma, hue):
+    a, b = chroma * math.cos(math.radians(hue)), chroma * math.sin(math.radians(hue))
+    lightness /= 100
+    l_ = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m_ = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s_ = (lightness - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    return (4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_,
+            -1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_,
+            -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076147010 * s_)
+
+
+def tone_color(hue, chroma, tone):
+    """The #RRGGBB colour of a tone (CIE L*, 0 to 100) at an OKLCh hue, with the given chroma
+    or, where the screen cannot show that much, the most it can."""
+    if tone >= 100:
+        return "#FFFFFF"
+    if tone <= 0:
+        return "#000000"
+    # The OKLab lightness of a grey with that L*: the cube root of its luminance.
+    f = (tone + 16) / 116
+    luminance = f ** 3 if f ** 3 > 216 / 24389 else (116 * f - 16) / (24389 / 27)
+    lightness = 100 * luminance ** (1 / 3)
+
+    def inside(c):
+        return all(-1e-4 <= v <= 1 + 1e-4 for v in _lch_linear_rgb(lightness, c, hue))
+
+    low, high = 0.0, float(chroma)
+    if not inside(high):
+        for _ in range(24):
+            middle = (low + high) / 2
+            low, high = (middle, high) if inside(middle) else (low, middle)
+        high = low
+    return "#" + "".join(f"{_gamma(v):02X}" for v in _lch_linear_rgb(lightness, high, hue))
+
+
+def dynamic_palettes(seed):
+    """The five framework palettes of a seed colour: {palette: (hue, chroma)}."""
+    _, chroma, hue = color_lch(seed)
+    palettes = {}
+    for name, (turn, amount) in DESIGN_PALETTES.items():
+        palettes[name] = ((hue + turn) % 360, max(chroma, amount) if name == "accent1" else amount)
+    return palettes
+
+
+def dynamic_scheme(seed):
+    """The framework colours of a seed colour: each palette's shades in both themes, and each
+    colour role."""
+    palettes = dynamic_palettes(seed)
+    colors = {}
+    for name, (hue, chroma) in palettes.items():
+        for shade, tone in DESIGN_SHADE_TONES.items():
+            value = tone_color(hue, chroma, tone)
+            for theme in ("light", "dark"):
+                colors[f"system_{name}_{shade}_{theme}"] = value
+    for theme, roles in DESIGN_ROLE_TONES.items():
+        for role, (palette, tone) in roles.items():
+            colors[f"system_{role}_{theme}"] = tone_color(*palettes[palette], tone)
+    for role, (palette, tone) in DESIGN_FIXED_ROLE_TONES.items():
+        colors[f"system_{role}"] = tone_color(*palettes[palette], tone)
+    return colors
+
+
 # The page is a light grey (or black) and the cards on it white (or a dark grey), so the
-# cards stand out; dialogs and sheets sit a step above the page.
+# cards stand out; dialogs and sheets sit a step above the page. The values set here by hand
+# replace the scheme's.
 DESIGN_COLORS = {
+    **dynamic_scheme(DESIGN_SEED),
     **{f"system_accent1_{tone}_{theme}": value for tone, value in DESIGN_BLUE_TONES.items()
        for theme in ("light", "dark")},
     "system_primary_light": "#0B64D8",
@@ -5889,16 +6126,26 @@ FRAMEWORK_DESIGN_OVERLAID = (
     + [f"layout/{DIALOG_BUTTON_BAR_LAYOUT}", f"layout/{TOAST_LAYOUT}", f"drawable/{TOAST_FRAME}"]
 )
 
-# Settings: SettingsLib's group backgrounds round the outer corners of a group by
-# settingslib_preference_corner_radius and the inner ones by 4 dp, so every row is a card of
-# its own. Here the inner corners are square, and a group reads as one card; the 2 dp
-# SettingsLib keeps below each row shows the page through as the line between rows.
-SETTINGS_CARDS = {
-    "settingslib_round_background": (True, True),
-    "settingslib_round_background_top": (True, False),
-    "settingslib_round_background_center": (False, False),
-    "settingslib_round_background_bottom": (False, True),
-}
+# What SettingsLib, as dsa/apps patches it, owns in Settings and PermissionController: the cards
+# of a preference group (their shape, the shape a pressed row morphs to, their surface colour in
+# light and dark, their corner radius), the room between groups, and the large and folded
+# titles. The patched source is the one place that says them, so neither the Settings overlay
+# nor an edit of a compiled APK replaces any of them: an override would put the published
+# values back over the design (system_screen_override_problems checks it).
+SOURCE_OWNED_SETTINGSLIB = [
+    "drawable/settingslib_round_background",
+    "drawable/settingslib_round_background_top",
+    "drawable/settingslib_round_background_center",
+    "drawable/settingslib_round_background_bottom",
+    "dimen/settingslib_preference_corner_radius",
+    "color/settingslib_dsa_card",
+    "dimen/settingslib_dsa_inner_corner",
+    "dimen/settingslib_dsa_group_gap",
+    "style/ExpressivePreferenceCategoryRootLayoutStyle",
+    "style/ExpressivePreferenceCategoryTitleStyle",
+    "style/SettingsLibCollapsingToolbarTitle.Expanded",
+    "style/SettingsLibCollapsingToolbarTitle.Collapsed",
+]
 # The large title of a SettingsLib page opens expanded in a window 600 dp tall or more and
 # folded below it. SettingsLib's app bar takes the theme overlay SETTINGS_TITLE_THEME (an
 # empty style over Material's theme); the overlay's version of it says whether the app bar
@@ -5909,10 +6156,6 @@ SETTINGS_CARDS = {
 SETTINGS_TITLE_THEME = "SettingsLibTheme.CollapsingToolbar.Expressive"
 SETTINGS_TITLE_THEME_PARENT = "Theme.MaterialComponents.DayNight"
 SETTINGS_TITLE_EXPANDS = {"values-v36": False, f"values-h{DESIGN_TALL_WINDOW_DP}dp-v36": True}
-SETTINGS_TITLE_STYLES = {
-    "SettingsLibCollapsingToolbarTitle.Expanded": ("DsaLargeTitle", DESIGN_LARGE_TITLE_DP),
-    "SettingsLibCollapsingToolbarTitle.Collapsed": ("DsaToolbarTitle", DESIGN_TOOLBAR_TITLE_DP),
-}
 # Settings' home page has no title: its app bar holds only the search bar. The overlay's
 # layout puts the large title above the search bar in windows 600 dp tall or more, where it
 # scrolls away and leaves the search bar as the toolbar. The ids are Settings' own, which the
@@ -5941,7 +6184,8 @@ SETTINGS_SEARCH_ICON = "dsa_search"
 # option. Its layouts are not overlayable, so it gets no large title.
 DOCUMENTSUI_DESIGN = {"bool/force_material3": "true"}
 # PermissionController lets an overlay replace only what it declares overlayable: the
-# permission dialog's title is, its list backgrounds are not (PERMISSION_CONTROLLER_CARDS).
+# permission dialog's title is, its list backgrounds are not (the patched SettingsLib draws
+# them, SOURCE_OWNED_SETTINGSLIB).
 PERMISSION_TITLE_STYLE = "PermissionGrantTitleMessageExpressive"
 # PackageInstaller's dialog titles, for its DeviceDefault and Material 3 themes.
 PACKAGE_INSTALLER_TITLES = {
@@ -5992,7 +6236,7 @@ SETTINGS_LIST_END = {
 # The permission pages Settings opens (the permission manager, an app's permissions) are
 # PermissionController's, with the same preference list and the same missing inset. Its
 # <overlayable> lets no overlay replace the layout, so the compiled one in its APK gets the
-# room (the APK is edited for its cards already, see PERMISSION_CONTROLLER_CARDS).
+# room (its cards are the patched SettingsLib's, see SOURCE_OWNED_SETTINGSLIB).
 PERMISSION_CONTROLLER_LIST_END = {
     "res/layout/preference_recyclerview.xml": [(RECYCLER_VIEW, *_LIST_END)],
 }
@@ -6003,35 +6247,6 @@ SETTINGS_LIST_END_CLASSES = [
     f"{_SPA}/framework/compose/VerticalPaddingValues;->calculateBottomPadding-D9Ej5fM",
     f"{_SPA}/widget/scaffold/SearchScaffoldKt;->SearchScaffold",
 ]
-
-# PermissionController's lists are SettingsLib's, but the app declares <overlayable> and its
-# list backgrounds are not in it, so idmap2 refuses any overlay of them. Their compiled
-# drawables in the APK get the corners Settings' cards have instead: outer corners of
-# DESIGN_CORNER_DP, square inner ones.
-ANDROID_RADIUS = 0x010101A8
-ANDROID_TOP_LEFT_RADIUS = 0x010101A9
-ANDROID_TOP_RIGHT_RADIUS = 0x010101AA
-ANDROID_BOTTOM_LEFT_RADIUS = 0x010101AB
-ANDROID_BOTTOM_RIGHT_RADIUS = 0x010101AC
-
-
-def card_corner_edits(top, bottom, single):
-    """The corner edits of one of SettingsLib's group backgrounds: a whole-card one names one
-    radius, the others the four corners."""
-    if single:
-        return [("corners", ANDROID_RADIUS, DESIGN_CORNER_DP if top else 0)]
-    top_dp, bottom_dp = (DESIGN_CORNER_DP if top else 0), (DESIGN_CORNER_DP if bottom else 0)
-    return [("corners", ANDROID_TOP_LEFT_RADIUS, top_dp), ("corners", ANDROID_TOP_RIGHT_RADIUS, top_dp),
-            ("corners", ANDROID_BOTTOM_LEFT_RADIUS, bottom_dp), ("corners", ANDROID_BOTTOM_RIGHT_RADIUS, bottom_dp)]
-
-
-# The center and single backgrounds name one radius for all four corners; the top and bottom
-# ones name each corner.
-PERMISSION_CONTROLLER_CARDS = {
-    f"res/drawable-v36/{name}.xml": card_corner_edits(top, bottom, single=name in (
-        "settingslib_round_background", "settingslib_round_background_center"))
-    for name, (top, bottom) in SETTINGS_CARDS.items()
-}
 
 SYSTEM_EXT_FS_CONFIG = "META/system_ext_filesystem_config.txt"
 AGENT_FS_CONFIG = [
@@ -6810,10 +7025,15 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
     `default_apps_payloads`, the default apps' APKs by their target_files names
     (load_default_apps), the image carries them with their configuration, in place of the AOSP
     apps they replace."""
-    apps_in_image = [app for app in default_apps() if app["image"] in (default_apps_payloads or {})]
+    apps_in_image = [app for app in image_apps() if app["image"] in (default_apps_payloads or {})]
+    # The default apps get their own configuration; the system screens keep the build's.
+    default_apps_in_image = [app for app in apps_in_image if app.get("role") != "system"]
+    permission_controller_payload = None
     if default_apps_payloads is not None:
         default_apps_payloads = dict(default_apps_payloads)
-        unknown = sorted(set(default_apps_payloads) - {app["image"] for app in default_apps()})
+        # PermissionController goes into the permission APEX, not to a path of its own.
+        permission_controller_payload = default_apps_payloads.pop(PERMISSION_CONTROLLER_IMAGE, None)
+        unknown = sorted(set(default_apps_payloads) - {app["image"] for app in image_apps()})
         if unknown:
             raise ValueError(f"{', '.join(unknown)} is not where apps.json puts a default app")
     fstab = (HERE / "fstab.dsa").read_bytes()
@@ -6932,11 +7152,11 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
                 added_fs_config.setdefault(config, []).extend(rules)
         for folder in added_gapps_folders:
             config = GAPPS_PARTITION_FS_CONFIG[folder.split("/", 1)[0]]
-            added_fs_config.setdefault(config, []).append(f"{folder.lower()} 0 0 755 capabilities=0x0")
+            added_fs_config.setdefault(config, []).append(f"{fs_config_path(folder)} 0 0 755 capabilities=0x0")
         if default_apps_payloads is not None:
             # A default app replaced in place (DocumentsUI) keeps the build's own lines.
             added_fs_config.setdefault(SYSTEM_FS_CONFIG, []).extend(
-                default_apps_fs_config([app for app in apps_in_image if app["image"] not in names]))
+                default_apps_fs_config([app for app in default_apps_in_image if app["image"] not in names]))
         for name in names:
             if name.endswith(".cil"):
                 cil_map[name] = zin.read(name)
@@ -7109,9 +7329,12 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
                 data = framework[name]
                 replaced_framework.add(name)
             elif default_apps_payloads is not None and name in default_apps_payloads:
-                # A default app in the published app's place (DocumentsUI).
-                print(f"replacing {name} with the default app built from dsa/apps", flush=True)
+                # A default app or a system screen in the published app's place (DocumentsUI,
+                # Settings, PackageInstaller, IntentResolver). Settings still gets its edits.
+                print(f"replacing {name} with the app built from dsa/apps", flush=True)
                 data = default_apps_payloads.pop(name)
+                if name.endswith(SETTINGS_APK):
+                    data = edit_settings_apk(data, name)
             else:
                 data = zin.read(name)
                 if name in PROP_FILES:
@@ -7145,7 +7368,8 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
                 elif name == SERVICES_JAR:
                     data = edit_services_jar(data, name)
                 elif name in PERMISSION_APEXES:
-                    data = edit_permission_apex(data, name, otatools, Path(dest).parent)
+                    data = edit_permission_apex(data, name, otatools, Path(dest).parent,
+                                                replacement=permission_controller_payload)
                 elif name.endswith("lib/modules/modules.load") or name.endswith("lib/modules/modules.dep"):
                     data = b""
                 elif name == "META/apexkeys.txt":
@@ -7161,12 +7385,13 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
                         if not any(f'name="{a}.apk"' in line.decode()
                                    for a in REMOVED_APPS + ["DsaAgent"]
                                    + [Path(overlay).stem for overlay in SYSTEM_OVERLAY_FILES]
-                                   + ([Path(app["image"]).stem for app in apps_in_image]
+                                   + ([Path(app["image"]).stem for app in apps_in_image if not in_apex(app)]
                                       + [r for app in default_apps() for r in app["replaces"]]
                                       if default_apps_payloads is not None else []))
                     )
                     for app in apps_in_image:
-                        data += default_app_apkcerts(app).encode() + b"\n"
+                        if not in_apex(app):
+                            data += default_app_apkcerts(app).encode() + b"\n"
                     if agent_payload is not None:
                         data += AGENT_APKCERTS.encode() + b"\n"
                     if overlay_payload is not None:
@@ -7357,8 +7582,8 @@ def modify(source, dest, graphics_library=None, vulkan_driver=None, otatools=Non
             for path, payload in default_apps_payloads.items():
                 print(f"adding the default app {path}", flush=True)
                 zout.writestr(path, payload)
-            zout.writestr(DEFAULT_APPS_SYSCONFIG, default_apps_sysconfig(apps_in_image))
-            zout.writestr(DEFAULT_APPS_PERMISSIONS, default_apps_permissions(apps_in_image))
+            zout.writestr(DEFAULT_APPS_SYSCONFIG, default_apps_sysconfig(default_apps_in_image))
+            zout.writestr(DEFAULT_APPS_PERMISSIONS, default_apps_permissions(default_apps_in_image))
         if agent_payload is not None:
             zout.writestr(AGENT_APK, agent_payload)
             zout.writestr(AGENT_PERMISSIONS, AGENT_PERMISSIONS_SOURCE.read_bytes())
@@ -8067,10 +8292,11 @@ def edit_apex_apks(data, name, edit, otatools, work):
     return result
 
 
-def edit_permission_apex(data, name, otatools, work):
+def edit_permission_apex(data, name, otatools, work, replacement=None):
     """The permission APEX with PermissionController's lists edited (see
-    permission_controller_edits). Without otatools nothing can pack it again, and it is
-    left as it is."""
+    permission_controller_edits), and with `replacement`, PermissionController built from
+    dsa/apps, in place of the published APK first. Without otatools nothing can pack it again,
+    and it is left as it is."""
     if otatools is None:
         print(f"not editing {name}: there is no otatools to pack it again", flush=True)
         return data
@@ -8078,6 +8304,9 @@ def edit_permission_apex(data, name, otatools, work):
     def edit(apk, apk_name):
         if not apk_name.endswith("/" + PERMISSION_CONTROLLER_APK):
             return apk
+        if replacement is not None:
+            print(f"replacing {apk_name} with the app built from dsa/apps", flush=True)
+            apk = replacement
         return edit_permission_controller_apk(apk, apk_name)
 
     return edit_apex_apks(data, name, edit, otatools, work)
@@ -8134,9 +8363,8 @@ def settings_list_end_problems(apk):
 
 
 def permission_controller_problems(signed, otatools, work, env):
-    """What is wrong with PermissionController in a signed target_files: its lists without
-    their cards' corners or the room below their last row, looked for in the permission APEX
-    the image ships."""
+    """What is wrong with PermissionController in a signed target_files: its lists without the
+    room below their last row, looked for in the permission APEX the image ships."""
     with zipfile.ZipFile(signed) as z:
         found = [n for n in PERMISSION_APEXES if n in z.namelist()]
         if not found:
@@ -8150,7 +8378,7 @@ def permission_controller_problems(signed, otatools, work, env):
         left = apk_edits_left(apk.read_bytes(), dimensions=permission_controller_edits())
         if left:
             problems.append(f"{found[0]}:{apk.relative_to(payload).as_posix()} still has {'; '.join(left)}, "
-                            "so its lists keep corners of their own or end on the window's bottom edge")
+                            "so its lists end on the window's bottom edge")
     shutil.rmtree(folder, ignore_errors=True)
     return problems
 

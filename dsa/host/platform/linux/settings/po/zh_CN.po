@@ -1845,8 +1845,8 @@ msgstr "Android 会停止并重新启动。\n\n它的应用窗口会关闭。启
 msgid "Alternative stores"
 msgstr "其他应用商店"
 
-msgid "DSA downloads a store from its official site, checks who signed it, and installs it like any other app. DSA does not ship these stores, and each name is a trademark of its owner. Remove a store from the list of apps."
-msgstr "DSA 从官方网站下载应用商店，确认签名者后，像其他应用一样安装。DSA 不附带这些应用商店，各名称是其所有者的商标。在应用列表中移除应用商店。"
+msgid "DSA downloads a store from its official site, checks who signed it, and installs it like any other app. DSA does not ship these stores, and each name is a trademark of its owner. Installed stores appear in the app list like any other app, and you uninstall them there."
+msgstr "DSA 从官方网站下载应用商店，确认签名者后，像其他应用一样安装。DSA 不附带这些应用商店，各名称是其所有者的商标。已安装的应用商店会像其他应用一样显示在应用列表中，卸载也在应用列表中进行。"
 
 msgid "Installed, version {0}"
 msgstr "已安装，版本 {0}"
@@ -1856,3 +1856,21 @@ msgstr "正在下载并安装…"
 
 msgid "Not installed: {0}"
 msgstr "未安装：{0}"
+
+msgid "Memory that several processes use together, such as window images and graphics buffers. It is freed when the apps using it close."
+msgstr "多个进程共用的内存，例如窗口画面和图形缓冲区。使用它的应用关闭后即释放。"
+
+msgid "Memory nothing uses right now. Android hands it back to the PC, so it does not take up the PC's RAM."
+msgstr "当前没有任何东西在用的内存。Android 会把它还给电脑，因此不占用电脑的内存。"
+
+msgid "Working space the kernel keeps for every running thread. It shrinks as apps close."
+msgstr "内核为每个运行中的线程保留的工作空间。关闭应用后会减少。"
+
+msgid "The maps that tell the processor where each app's memory is in RAM. They shrink as apps close."
+msgstr "告诉处理器每个应用的内存位于内存条何处的映射表。关闭应用后会减少。"
+
+msgid "Large buffers the kernel and its drivers set aside, for graphics among others. They are freed when no longer needed."
+msgstr "内核及其驱动预留的大块缓冲区，用于图形等。不再需要时释放。"
+
+msgid "Data the kernel keeps once for each processor core. Its size is fixed when Android starts."
+msgstr "内核为每个处理器核心各保留一份的数据。大小在 Android 启动时确定。"

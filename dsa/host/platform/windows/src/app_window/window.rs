@@ -59,9 +59,10 @@ use dsa_host_core::compositor::window_mode::{
     caption_revealed, picture_in_picture_place, ModeState, WindowMode,
 };
 use dsa_host_core::compositor::window_sizing::{
-    frame_rect, is_edge_drag, kept_frame_action, maximized_outer, maximized_position,
-    min_client_size, rescaled_rect, size_is_held, to_task_position, to_task_size,
-    to_window_position, FrameRectRequest, KeptFrame, LoopKind, MoveLoop, SizeProposal,
+    edge_drag_proposal, frame_rect, is_edge_drag, kept_frame_action, maximized_outer,
+    maximized_position, min_client_size, rescaled_rect, size_is_held, to_task_position,
+    to_task_size, to_window_position, FrameRectRequest, KeptFrame, LoopKind, MoveLoop,
+    SizeProposal,
 };
 use dsa_host_core::compositor::window_tasks::WindowTasks;
 use dsa_host_core::ime::ImeCursor;
@@ -343,6 +344,8 @@ struct WindowData {
     /// Which edges the user drags (left, top), so a window that takes the size of a frame
     /// keeps the other edges where they are.
     drag_edges: Cell<(bool, bool)>,
+    /// The rectangle the pointer last asked for in an edge drag (WM_SIZING); `None` outside one.
+    drag_pointer: Cell<Option<(i32, i32, i32, i32)>>,
     /// Whether the move loop has moved the window or dragged an edge yet: only then is the
     /// user dragging it.
     move_loop: Cell<MoveLoop>,
@@ -820,6 +823,7 @@ unsafe extern "system" fn task_window_proc(
                 if message == WM_ENTERSIZEMOVE {
                     data.drag_edges.set((false, false));
                 }
+                data.drag_pointer.set(None);
                 // WM_SIZING says when the drag is of an edge.
                 data.sizing.set(false);
                 if message == WM_EXITSIZEMOVE {
@@ -887,7 +891,15 @@ unsafe extern "system" fn task_window_proc(
                     ));
                 }
             }
-            DefWindowProcW(hwnd, message, wparam, lparam)
+            let result = DefWindowProcW(hwnd, message, wparam, lparam);
+            // Where the pointer has the window now: the size loop's last proposal may come from
+            // an older rectangle (edge_drag_proposal).
+            if let Some(data) = window_data(hwnd).filter(|data| data.sizing.get()) {
+                let (pos, size) = rect_parts(&*(lparam as *const RECT));
+                data.drag_pointer
+                    .set(Some((pos.0, pos.1, size.0 as i32, size.1 as i32)));
+            }
+            result
         }
         WM_APP_FRAME_READY => {
             if let Some(data) = window_data(hwnd) {
@@ -998,6 +1010,24 @@ unsafe extern "system" fn task_window_proc(
                     // A maximised, snapped or full screen window keeps the size proposed,
                     // whatever size the guest gives its task. A new monitor scale changes
                     // nothing about that.
+                    // In the user's edge drag the window goes where the pointer has it, the
+                    // size loop's closing proposal included, which Windows may build from a
+                    // rectangle the window was held to earlier in the drag.
+                    let user_drag = data.sizing.get()
+                        && !data.self_sizing.get()
+                        && !data.following.get()
+                        && !data.rescaling.get();
+                    let (x, y, cx, cy) = edge_drag_proposal(
+                        data.drag_pointer.get(),
+                        (pos.x, pos.y, pos.cx, pos.cy),
+                        user_drag,
+                    );
+                    if pos.flags & SWP_NOMOVE == 0 {
+                        pos.x = x;
+                        pos.y = y;
+                    }
+                    pos.cx = cx;
+                    pos.cy = cy;
                     if !data.rescaling.get() {
                         set_held(hwnd, data, holds_proposed_size(hwnd, data, pos));
                     }
@@ -1098,8 +1128,15 @@ unsafe extern "system" fn task_window_proc(
             }
             // A maximized window is kept to its monitor by Windows, and one that fills its
             // monitor covers more than the work area.
+            //
+            // While the user drags the window, it keeps the size the desktop suggests up to the
+            // whole monitor, as a native window does: cut to the work area, it would come out
+            // shorter than the desktop's size to the eye (the taskbar's height), take another
+            // shape under the user's hand, and come back a different size when dragged back.
+            // Only a window larger than the monitor is cut, so it cannot reach the next one.
+            let dragged = data.is_some_and(|data| data.in_move_loop.get());
             if !zoomed && data.is_some_and(titled) {
-                if let Some(work) = work_area(suggested) {
+                if let Some(work) = area_near(suggested, !dragged) {
                     limit = (
                         limit.0.min(work.right - work.left),
                         limit.1.min(work.bottom - work.top),
@@ -1126,7 +1163,8 @@ unsafe extern "system" fn task_window_proc(
                     "win.dpi_changed",
                     window_rect(hwnd),
                     &format!(
-                        "dpi={dpi} suggested={sx},{sy},{sw}x{sh} limit={}x{} held={held}",
+                        "dpi={dpi} suggested={sx},{sy},{sw}x{sh} limit={}x{} held={held} \
+                         dragged={dragged}",
                         limit.0.min(99_999),
                         limit.1.min(99_999)
                     ),
@@ -1958,9 +1996,29 @@ unsafe fn set_pos_traced(
     why: &str,
 ) {
     let traced = data.filter(|_| trace_detailed());
-    let before = traced.map(|_| window_rect(hwnd));
+    let before = window_rect(hwnd);
     SetWindowPos(hwnd, after, rect.0, rect.1, rect.2, rect.3, flags);
-    if let (Some(data), Some(((bx, by), (bw, bh)))) = (traced, before) {
+    // Every size DSA gives a window itself is logged with its reason, trace or no trace: a
+    // window that changes size without the user is the first thing a report asks about.
+    if let Some(data) = data {
+        let after_size = window_rect(hwnd).1;
+        if after_size != before.1 {
+            note(
+                data.logger.as_deref(),
+                &format!(
+                    "task {}: the window was resized from {}x{} to {}x{}: {}",
+                    data.task_id,
+                    before.1 .0,
+                    before.1 .1,
+                    after_size.0,
+                    after_size.1,
+                    size_change_reason(why)
+                ),
+            );
+        }
+    }
+    if let Some(data) = traced {
+        let ((bx, by), (bw, bh)) = before;
         let detail = format!(
             "why={why} asked={},{},{}x{} {} before={bx},{by},{bw}x{bh}",
             rect.0,
@@ -1971,6 +2029,25 @@ unsafe fn set_pos_traced(
         );
         trace_window(data, "wm.set_pos", window_rect(hwnd), &detail);
     }
+}
+
+/// Why DSA gave a window a size itself, in words, for the `why` [`set_pos_traced`] is called
+/// with. The tag itself follows, so the line can be matched with the resize trace.
+fn size_change_reason(why: &str) -> String {
+    let words = match why {
+        "dpi_changed" => {
+            "the window moved onto a monitor of another scale and took the size Windows \
+             suggests there, which keeps it the same size to the eye"
+        }
+        "frame_arrived" => "the app drew a frame of another size, and the window took its size",
+        "guest_size" => "Android gave the task another size",
+        "guest_size_fullscreen" => "Android gave the task another size in full screen",
+        "mode_titled" => "the window got its title bar back",
+        "mode_untopmost" => "the window left picture in picture",
+        "mode_pip" => "the window went to picture in picture",
+        _ => "DSA placed the window",
+    };
+    format!("{words} ({why})")
 }
 
 /// Sizes and places `hwnd` for itself, not as the user: a fixed-size window takes it too.
@@ -2161,6 +2238,18 @@ unsafe fn work_area(rect: &RECT) -> Option<RECT> {
     (GetMonitorInfoW(monitor, &mut info) != 0).then_some(info.rcWork)
 }
 
+/// The work area (`work`) or the whole of the monitor nearest `rect`.
+unsafe fn area_near(rect: &RECT, work: bool) -> Option<RECT> {
+    let monitor = MonitorFromRect(rect, MONITOR_DEFAULTTONEAREST);
+    let mut info: MONITORINFO = std::mem::zeroed();
+    info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+    (GetMonitorInfoW(monitor, &mut info) != 0).then_some(if work {
+        info.rcWork
+    } else {
+        info.rcMonitor
+    })
+}
+
 /// The largest client area a window can have on its monitor's work area.
 unsafe fn usable_client_area(hwnd: HWND, dpi: u32) -> (u32, u32) {
     let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
@@ -2300,6 +2389,9 @@ impl Ui {
                                 if let Some(presenter) = data.presenter.borrow().as_deref() {
                                     presenter.set_scale(scale);
                                 }
+                            }
+                            if let Some(presenter) = data.presenter.borrow().as_deref() {
+                                presenter.set_limit(max);
                             }
                             // A window that holds its size shows a frame of the new size
                             // elsewhere in it.
@@ -2511,6 +2603,7 @@ impl Ui {
                 self.setup.input.clone(),
             ),
             drag_edges: Cell::new((false, false)),
+            drag_pointer: Cell::new(None),
             move_loop: Cell::new(MoveLoop::default()),
             in_move_loop: Cell::new(false),
             loop_kind: Cell::new(LoopKind::None),
@@ -2599,6 +2692,7 @@ impl Ui {
             *data.presenter.borrow_mut() = presenter.clone();
             if let Some(presenter) = presenter.as_deref() {
                 presenter.set_held(data.held.get());
+                presenter.set_limit(data.max_client.get());
             }
         }
         if let Some(presenter) = presenter {

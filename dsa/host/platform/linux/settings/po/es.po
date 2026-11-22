@@ -1845,8 +1845,8 @@ msgstr "Android se detiene y vuelve a iniciarse.\n\nSus ventanas de aplicaciones
 msgid "Alternative stores"
 msgstr "Tiendas alternativas"
 
-msgid "DSA downloads a store from its official site, checks who signed it, and installs it like any other app. DSA does not ship these stores, and each name is a trademark of its owner. Remove a store from the list of apps."
-msgstr "DSA descarga una tienda desde su sitio oficial, comprueba quién la firmó y la instala como cualquier otra app. DSA no incluye estas tiendas y cada nombre es una marca de su propietario. Una tienda se quita desde la lista de apps."
+msgid "DSA downloads a store from its official site, checks who signed it, and installs it like any other app. DSA does not ship these stores, and each name is a trademark of its owner. Installed stores appear in the app list like any other app, and you uninstall them there."
+msgstr "DSA descarga una tienda desde su sitio oficial, comprueba quién la firmó y la instala como cualquier otra app. DSA no incluye estas tiendas y cada nombre es una marca de su propietario. Las tiendas instaladas aparecen en la lista de apps como cualquier otra app, y se desinstalan desde allí."
 
 msgid "Installed, version {0}"
 msgstr "Instalada, versión {0}"
@@ -1856,3 +1856,21 @@ msgstr "Descargando e instalando…"
 
 msgid "Not installed: {0}"
 msgstr "No instalada: {0}"
+
+msgid "Memory that several processes use together, such as window images and graphics buffers. It is freed when the apps using it close."
+msgstr "Memoria que comparten varios procesos, como las imágenes de las ventanas y los búferes gráficos. Se libera al cerrar las apps que la usan."
+
+msgid "Memory nothing uses right now. Android hands it back to the PC, so it does not take up the PC's RAM."
+msgstr "Memoria que nada usa ahora. Android la devuelve al PC, así que no ocupa la RAM del PC."
+
+msgid "Working space the kernel keeps for every running thread. It shrinks as apps close."
+msgstr "Espacio de trabajo que el kernel guarda para cada hilo en ejecución. Se reduce al cerrar apps."
+
+msgid "The maps that tell the processor where each app's memory is in RAM. They shrink as apps close."
+msgstr "Los mapas que indican al procesador dónde está en la RAM la memoria de cada app. Se reducen al cerrar apps."
+
+msgid "Large buffers the kernel and its drivers set aside, for graphics among others. They are freed when no longer needed."
+msgstr "Búferes grandes que reservan el kernel y sus controladores, entre otros para gráficos. Se liberan cuando ya no hacen falta."
+
+msgid "Data the kernel keeps once for each processor core. Its size is fixed when Android starts."
+msgstr "Datos que el kernel guarda una vez por cada núcleo del procesador. Su tamaño se fija al iniciar Android."
