@@ -939,10 +939,13 @@ impl WindowPresenter {
             }
         }
         let committed = self.commit_visual(&mut state);
+        // Not while the window moves onto a monitor of another scale: this runs inside the
+        // desktop's SetWindowPos of the suggested rectangle, which the wait held up.
+        let wait = committed && state.follow.waits_for_commit();
         let device = state.tree.as_ref().map(|tree| tree.device.clone());
         drop(state);
         self.claim_released.notify_all();
-        if committed {
+        if wait {
             if let Some(device) = device {
                 // SAFETY: a plain COM call on the device.
                 unsafe {
@@ -1827,8 +1830,8 @@ fn frame_transform(
     frame: (u32, u32),
     placement: FramePlacement,
 ) -> (f32, f32, f32, f32) {
-    // Each axis on its own: a frame stretched over a window of another shape while the
-    // window waits for the app scales its two axes differently.
+    // Each axis on its own: a frame stretched over the window while it moves onto a monitor
+    // of another scale may be a pixel off on one axis. Any other placement keeps its shape.
     let (x, y) = placement_ratios(frame, placement);
     (
         buffer_scale.0 * x as f32,
