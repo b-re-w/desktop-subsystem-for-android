@@ -7320,6 +7320,7 @@ impl Worker {
             | Some(Body::CloseTask(_))
             | Some(Body::LaunchApp(_))
             | Some(Body::ResizeTask(_))
+            | Some(Body::RequestTaskFrame(_))
             | Some(Body::SetTaskDensity(_))
             | Some(Body::LaunchPlacement(_))
             | Some(Body::CaptionCompat(_))

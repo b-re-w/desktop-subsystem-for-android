@@ -5699,7 +5699,8 @@ impl HostApiService {
                         | request::Body::WatchShares(_)
                         | request::Body::ReportShare(_)
                         | request::Body::WatchAppAudio(_)
-                        | request::Body::SetAppVolume(_) => unreachable!("answered above"),
+                        | request::Body::SetAppVolume(_)
+                        | request::Body::RequestTaskFrame(_) => unreachable!("answered above"),
                     }
                     status(android.as_ref())
                 }
