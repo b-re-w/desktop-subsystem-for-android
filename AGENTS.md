@@ -221,6 +221,25 @@ These bind the agent and whoever dispatches it equally.
    image, the guest kernel and gfxstream stay forbidden. A clean check is not a test result:
    CI still decides.
 
+## Window behaviour changes
+
+Window sizing, maximize, restore, snap, edge drags, moves between monitors and the
+compositor that draws them (`dsa/host/core/src/compositor/`, the platform compositors and
+window code) share one code path, so a fix for one case easily breaks another. These rules
+come from 2026-11-22, when a dozen window pull requests in two days, each from a different
+agent with its own idea of the original behaviour, left the windows worse than 1.0.
+
+1. **One agent at a time.** Never run two agents on window behaviour in parallel.
+2. **The brief states the whole behaviour.** What must change, and what must stay as it is
+   in 1.0.0, for every case in SPEC FR-4 (on `develop`): maximize and restore, the size
+   limit, edge drags, moves between monitors. "The original behaviour" means 1.0.0 unless
+   the owner says otherwise; an agent never picks its own baseline from the history.
+3. **Verified on the PC before it is called fixed.** The dispatching session installs the
+   build and runs `scripts/window-capture.ps1` on the main and the secondary monitor, and
+   compares the captures with 1.0.0. Until then the change is "merged, not verified".
+4. **A requirement does not move to fit the code.** If SPEC and the owner's description
+   disagree, ask; do not edit FR-4 to match an implementation.
+
 ## Writing
 
 The house style is `docs/style/writing.md` in `thisisthepy/pythonx-compose`, on its
