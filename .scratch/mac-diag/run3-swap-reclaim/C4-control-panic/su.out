@@ -1,0 +1,16 @@
+--- su attempt 1 at 17:31:33
+su: the root request timed out waiting for the computer's administrator
+--- su attempt 2 at 17:32:31
+--- su attempt 3 at 17:33:12
+adb: device offline
+--- su attempt 4 at 17:33:15
+adb: device offline
+--- su attempt 5 at 17:33:18
+adb: device offline
+--- su attempt 6 at 17:33:21
+adb: device offline
+--- su attempt 7 at 17:33:24
+adb: device offline
+--- su attempt 8 at 17:33:27
+adb: device offline
+--- su session ended at 17:33:30

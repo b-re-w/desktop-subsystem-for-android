@@ -1,0 +1,46 @@
+swapoff: Needs 1 argument (see "swapoff --help")
+swapoff done uptime 790.43
+== uptime 790.43
+MemTotal:        2023488 kB
+MemFree:         1543284 kB
+MemAvailable:    1502496 kB
+SwapTotal:       2023484 kB
+SwapFree:        1772240 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		251244		-2
+== uptime 850.50
+MemTotal:        2023488 kB
+MemFree:         1516556 kB
+MemAvailable:    1524796 kB
+SwapTotal:       2023484 kB
+SwapFree:        1744704 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		278780		-2
+== uptime 910.57
+MemTotal:        2023488 kB
+MemFree:         1525604 kB
+MemAvailable:    1494872 kB
+SwapTotal:       2023484 kB
+SwapFree:        1762356 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		261128		-2
+== uptime 970.62
+MemTotal:        2023488 kB
+MemFree:         1497784 kB
+MemAvailable:    1513756 kB
+SwapTotal:       2023484 kB
+SwapFree:        1730408 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		293076		-2
+== uptime 1030.70
+MemTotal:        2023488 kB
+MemFree:         1336120 kB
+MemAvailable:    1302224 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== now uptime 1039.21
+MemFree:         1313856 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority

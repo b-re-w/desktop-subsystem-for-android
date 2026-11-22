@@ -1,0 +1,12 @@
+root: 2026-11-22T14:38:37.848Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 2): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:39:35.978Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 3): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:40:34.095Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 4): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:41:32.221Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 5): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:42:30.342Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 6): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:43:28.456Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 7): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:44:26.560Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 8): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:54:03.902Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 1): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:55:02.120Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 2): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:56:00.240Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 3): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:56:58.344Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 4): refused: timed out with no answer within 55 seconds
+root: 2026-11-22T14:57:56.425Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA2.sh` (request 5): refused: timed out with no answer within 55 seconds

@@ -1,0 +1,51 @@
+run3 (swap / reclaim), Mac guest kernel panic. 2026-11-22 UTC.
+Host DSA dev.11, image 17.0.0-16373615-15.1-dev.10-arm64, kernel 6.18.54.1-dsa, VM 2048 MB, 2 vCPU.
+
+STATUS: tests A (swap off) and B (reclaim blocked) DID NOT RUN. Both need the guest su
+approval on the Mac after each Android restart (a restart clears the 15 min grace), and every
+prompt timed out unanswered: 8 times 14:36-14:44, 4 times 14:53-14:57, 1 time 17:31.
+What exists instead is four untouched boots with swap on (controls), two of which panicked.
+
+Boots (all swap on, no app opened, Android dozing):
+  boot UTC  dir                 outcome                               full reclaims / trims before end
+  14:18     A0-invalid          no panic up to uptime ~1040 s         15 / 31
+  14:36     C2-control          no panic up to uptime 944 s           8 / 30
+  14:53     C3-control-panic    panic at 291.09 s                     2 / 19
+  17:31     C4-control-panic    panic at 103.12 s                     1 / 13
+
+C3: 160.49 s "BUG: Bad rss-counter state ... type:MM_FILEPAGES val:26 Comm:Profile Saver";
+    291.09 s NULL dereference at 0x68, pc shmem_mapping <- show_smap <- seq_read (a /proc
+    smaps read, Comm lowpool[19], UID 10073); Kernel panic.
+C4: 103.11 s "kernel BUG at lib/list_debug.c:62", __list_del_entry_valid_or_report <-
+    list_lru_del <- workingset_update_node <- xas_store <- __filemap_add_folio <-
+    page_cache_ra_order <- filemap_fault (Comm binder:449_2, UID 1000); Kernel panic.
+Neither trace is inside a memory.reclaim write; both are page cache / VMA bookkeeping found
+corrupt later. In all four boots swap already held 250-340 MiB within the first minute.
+
+Findings that change the test plan:
+1. The previous session's test A was invalid. runA.sh used "swapoff -a", which this toybox
+   rejects ("swapoff: Needs 1 argument"); swap stayed on. It also started at uptime 790 s, not
+   at boot. "swapoff /dev/block/zram0" works (done at 994 s in that boot, SwapTotal 0 after).
+2. The panic is not deterministic: two boots ran 15 minutes with swap on and many reclaims
+   and trims, two died at 103 s and 291 s. One clean 15 minute run of A or B proves nothing;
+   each condition needs several boots.
+3. A property loop cannot block the reclaim after boot: init queues the trigger's actions
+   when the property becomes 1, so setting it back to 0 is too late. Root (u:r:dsa_su_root)
+   shares init's mount namespace and "mount --bind <file> <target>" works there, so
+   scripts/runB.sh binds a plain file over /sys/fs/cgroup/memory.reclaim. That blocks the
+   trim's write too (same kernel path, user_proactive_reclaim); drop_caches and the zram
+   idle/recompress/compact writes still run. setprop vendor.dsa.memory.reclaim works as root.
+4. The installed image's trim writes "swappiness=30" (console: dsa-channeld.rc:112), while
+   develop's dsa-channeld.rc says "swappiness=0". The image under test is older than the source.
+5. C4 died 103 s after boot, before any approval could be given by hand. A test that needs
+   a human approval after boot cannot cover the early window. A way to apply the condition
+   without the prompt is needed (for example "dsa apps root com.android.shell remember",
+   which is the owner's setting to change, or a kernel command line / image change).
+
+Ready to run once approvals are possible: scripts/runA2.sh (swapoff zram0, 18 min log),
+scripts/runB.sh (bind over memory.reclaim, 18 min log, counts reclaim/trim requests),
+scripts/drive.sh <script> <outdir> <marker> (foreground su session, then collects logs).
+Both scripts are already in the guest's /data/local/tmp.
+
+Files: <dir>/android-console.txt (guest console of that boot), meminfo-swaps.txt,
+su.out (su attempts), hostd-root.txt (host log "root:" lines).
