@@ -240,6 +240,25 @@ agent with its own idea of the original behaviour, left the windows worse than 1
 4. **A requirement does not move to fit the code.** If SPEC and the owner's description
    disagree, ask; do not edit FR-4 to match an implementation.
 
+## Answering the owner
+
+These come from 2026-11-22, when a session answered from its own summary instead of the
+sources: it called an installed app missing, measured the wrong kind of focus for an issue,
+quoted figures from before 1.0 as current, and made issues when asked for pull requests.
+
+1. **Read the source before answering about it.** An issue: its title and its last comment.
+   A behaviour: its SPEC item and the owner's own description. A summary of the
+   conversation is not a source.
+2. **The baseline is 1.0.0.** Compare with 1.0.0 and what came after it. History from
+   before 1.0 is not brought up unless the owner asks for it.
+3. **Do what was asked, the way it was asked.** "Make a PR" means a work branch and a
+   pull request, not an issue. If the asked way cannot work, say so in one line and ask;
+   never substitute another mechanism.
+4. **Check that a lookup found the thing asked for** (the exact app, package or window)
+   before reporting it as found or missing.
+5. **Use the owner's words for a behaviour.** Do not restate it in your own terms; a
+   rewording that changes the meaning is how a wrong fix gets briefed.
+
 ## Writing
 
 The house style is `docs/style/writing.md` in `thisisthepy/pythonx-compose`, on its
