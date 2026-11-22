@@ -945,6 +945,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
             "list_widget_providers",
             wrap(Body::ListWidgetProviders(ListWidgetProviders {
                 request_id: 7,
+                lazy_previews: false,
             })),
         ),
         (
@@ -953,6 +954,7 @@ fn cases() -> BTreeMap<&'static str, Envelope> {
                 request_id: 7,
                 providers: vec![clock_provider()],
                 complete: true,
+                app_icons: Vec::new(),
             })),
         ),
         (
