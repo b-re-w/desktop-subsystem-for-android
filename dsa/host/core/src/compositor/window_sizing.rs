@@ -701,10 +701,6 @@ pub struct WindowSizing {
     /// the sizes it reports until the drag ends are the desktop's rescaling of it, not sizes
     /// for the task ([`view_resized`](Self::view_resized)).
     rescaled_in_drag: bool,
-    /// The density of the window's monitor when the drag under way began: a drag that ends on
-    /// a monitor of another density moved the window across scales
-    /// ([`dragging`](Self::dragging)).
-    drag_density: u32,
 }
 
 /// The most task pixels, in either direction, by which the size a desktop gives a window for
@@ -762,7 +758,6 @@ impl WindowSizing {
             ignored: None,
             late_echo: None,
             rescaled_in_drag: false,
-            drag_density: 0,
         }
     }
 
@@ -1061,13 +1056,12 @@ impl WindowSizing {
     /// gives the task the window's size and reconfigures it for that size. It is sent even
     /// when the task has that size already: the live steps left the task with the
     /// configuration it had when the drag began. A drag that only moved the window asks
-    /// nothing, unless it ended on a monitor of another scale at a size other than the task's
-    /// there: the task is then given the window's size live, as a maximise gives it.
+    /// nothing, unless it crossed monitor scales and ended at a size other than the task's: the
+    /// task is then given the window's size live, as a maximise gives it.
     pub fn dragging(&mut self, active: bool, now: Instant) -> Option<TaskRequest> {
         if active {
             if !self.dragging {
                 self.dragging = true;
-                self.drag_density = self.monitor_density;
                 self.passed.clear();
                 self.drag_ended = None;
                 self.ignored = None;
@@ -1110,12 +1104,13 @@ impl WindowSizing {
                     live: false,
                 });
             }
-            if size == current || self.monitor_density == self.drag_density {
+            if size == current {
                 return None;
             }
-            // Dropped on a monitor of another scale at a size a few pixels off the task's: the
-            // window shows frames of the task's size only once they are of its own size, so
-            // without this request no frame the app draws would ever be shown. The window keeps
+            // Dropped after a move across scales (back on the monitor it began on, or not) at a
+            // size a few pixels off the task's: since the scale changed, the window shows only
+            // frames of its own size, so without this request no frame the app draws would ever
+            // be shown again. The window keeps
             // the size the desktop gave it, and the task takes that size live, like a maximise,
             // so an app that does not handle a change of size is laid out again rather than
             // recreated; it is reconfigured at that size afterwards
@@ -2692,11 +2687,23 @@ mod tests {
             assert_eq!(sizing.view_resized((595, 857), now), None, "{mode:?}");
             assert_eq!(sizing.dpi_changed(192), None);
             assert_eq!(sizing.view_resized((1188, 1712), now), None, "{mode:?}");
-            // Back where it began: the task keeps its size, and nothing is due.
-            assert_eq!(sizing.dragging(false, now), None, "{mode:?}");
+            // Back where it began, at the desktop's size a pixel or two off the task's: the drop
+            // gives the task the window's size live, so a frame of the window's size comes and
+            // is shown. Without it every frame of 1186x1711 stayed out of sight.
+            assert_eq!(
+                sizing.dragging(false, now),
+                live_resize(1188, 1712),
+                "{mode:?}"
+            );
             assert_eq!(sizing.settle(now), vec![], "{mode:?}");
-            assert_eq!(sizing.task_size().0, (1186, 1711));
             assert_eq!(sizing.scale(), (1, 1));
+            // The window keeps the size it ends at when the guest takes it.
+            assert_eq!(
+                sizing.guest_updated(&big(1188, 1712, 262)),
+                None,
+                "{mode:?}"
+            );
+            assert_eq!(sizing.task_size().0, (1188, 1712));
         }
     }
 
@@ -2813,25 +2820,30 @@ mod tests {
 
     #[test]
     fn fr4_no_move_across_scales_leaves_every_frame_of_the_task_stale_with_nothing_asked() {
-        // A drag from one monitor scale to another, for both ways a task follows its monitor,
-        // in both directions, with the desktop's size for the new monitor a few pixels either
-        // side of the task's. However it ends, the frame the task draws once the guest has
-        // answered what the drop asked (or at once, when nothing was asked) is shown, and the
-        // window keeps the size the desktop gave it.
+        // A drag from one monitor scale to another, or there and back to the monitor it began
+        // on, for both ways a task follows its monitor, in both directions, with the desktop's
+        // size where the drag ends a few pixels either side of the task's. However it ends, the
+        // frame the task draws once the guest has answered what the drop asked (or at once,
+        // when nothing was asked) is shown, and the window keeps the size the desktop gave it.
         use crate::compositor::frame_follow::{Arrival, FrameFollow};
-        let moves = [
-            (120, 192),
-            (192, 120),
-            (96, 192),
-            (192, 96),
-            (96, 144),
-            (144, 120),
+        let moves: [&[u32]; 10] = [
+            &[120, 192],
+            &[192, 120],
+            &[96, 192],
+            &[192, 96],
+            &[96, 144],
+            &[144, 120],
+            &[192, 96, 192],
+            &[192, 120, 192],
+            &[120, 192, 120],
+            &[96, 144, 96],
         ];
         let offsets = [(0, 0), (1, 0), (0, 1), (2, 3), (4, 4), (-1, -2), (-3, 2)];
         for mode in [ScalingMode::System, ScalingMode::App] {
-            for (from, to) in moves {
+            for path in moves {
+                let from = path[0];
                 for (dx, dy) in offsets {
-                    let case = format!("{mode:?} {from} to {to} dpi, desktop off by {dx},{dy}");
+                    let case = format!("{mode:?} {path:?} dpi, desktop off by {dx},{dy}");
                     let density_dpi = match mode {
                         ScalingMode::System => 262,
                         ScalingMode::App => density_for_dpi(from),
@@ -2855,19 +2867,29 @@ mod tests {
                         "{case}"
                     );
 
-                    sizing.dragging(true, now);
-                    assert_eq!(sizing.dpi_changed(to), None, "{case}");
-                    let rescaled = rescale(view, from, to);
-                    let suggested = (
-                        (rescaled.0 as i32 + dx).max(1) as u32,
-                        (rescaled.1 as i32 + dy).max(1) as u32,
-                    );
-                    follow.scale_changed(suggested);
-                    follow.view_taken(suggested);
-                    let old = in_window(&sizing, suggested);
-                    assert_ne!(follow.rescaled(old), Arrival::Keep, "{case}");
-                    assert_eq!(sizing.view_resized(suggested, now), None, "{case}");
-                    assert_ne!(follow.frame_arrived(old), Arrival::Keep, "{case}");
+                    assert_eq!(sizing.dragging(true, now), None, "{case}");
+                    let (mut dpi, mut suggested) = (from, view);
+                    for (step, &to) in path[1..].iter().enumerate() {
+                        // The desktop's own rounding is put where the drag ends.
+                        let (dx, dy) = if step + 2 == path.len() {
+                            (dx, dy)
+                        } else {
+                            (0, 0)
+                        };
+                        assert_eq!(sizing.dpi_changed(to), None, "{case}");
+                        let rescaled = rescale(suggested, dpi, to);
+                        suggested = (
+                            (rescaled.0 as i32 + dx).max(1) as u32,
+                            (rescaled.1 as i32 + dy).max(1) as u32,
+                        );
+                        dpi = to;
+                        follow.scale_changed(suggested);
+                        follow.view_taken(suggested);
+                        let old = in_window(&sizing, suggested);
+                        assert_ne!(follow.rescaled(old), Arrival::Keep, "{case}");
+                        assert_eq!(sizing.view_resized(suggested, now), None, "{case}");
+                        assert_ne!(follow.frame_arrived(old), Arrival::Keep, "{case}");
+                    }
 
                     let mut requests: Vec<TaskRequest> =
                         sizing.dragging(false, now).into_iter().collect();
@@ -2955,6 +2977,8 @@ mod tests {
         sizing.dpi_reported(96);
         sizing.dragging(true, now);
         assert_eq!(sizing.dpi_changed(192), None);
+        // The desktop gives the window the task's size at its new scale.
+        assert_eq!(sizing.view_resized((806, 605), now), None);
         assert_eq!(sizing.dragging(false, now), None);
         assert_eq!(sizing.settle(now), vec![]);
         assert_eq!(sizing.dpi_changed(120), None);
