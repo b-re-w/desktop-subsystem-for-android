@@ -3411,6 +3411,7 @@ impl Session {
             TaskRequest::WindowsShown { shown } => return self.windows_shown(shown),
             TaskRequest::TasksShown { task_ids } => return self.tasks_shown(task_ids),
             TaskRequest::Close { task_id } => Body::CloseTask(control::CloseTask { task_id }),
+            TaskRequest::Focus { task_id } => Body::FocusTask(control::FocusTask { task_id }),
             TaskRequest::CaptionCompat { below_title_bar } => {
                 return self.caption_compat(below_title_bar)
             }
@@ -7116,6 +7117,7 @@ impl Worker {
                     native_libraries: NativeLibraries::from_control(&app.native_libraries),
                     primary_abi: native_abi::checked_abi(&app.primary_abi),
                     shared_user_id: app.shared_user_id,
+                    game: app.game,
                     ..Default::default()
                 });
             }
@@ -7438,6 +7440,7 @@ impl Worker {
             | Some(Body::HostMemory(_))
             | Some(Body::HostSleep(_))
             | Some(Body::CloseTask(_))
+            | Some(Body::FocusTask(_))
             | Some(Body::LaunchApp(_))
             | Some(Body::ResizeTask(_))
             | Some(Body::RequestTaskFrame(_))
