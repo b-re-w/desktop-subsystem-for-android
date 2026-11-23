@@ -415,6 +415,17 @@ public interface EnvelopeOrBuilder extends
   io.github.thisisthepy.dsa.control.v1.DisplayRefresh getDisplayRefresh();
 
   /**
+   * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+   * @return Whether the displaySize field is set.
+   */
+  boolean hasDisplaySize();
+  /**
+   * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+   * @return The displaySize.
+   */
+  io.github.thisisthepy.dsa.control.v1.DisplaySize getDisplaySize();
+
+  /**
    * <code>.dsa.control.v1.PowerHint power_hint = 110;</code>
    * @return Whether the powerHint field is set.
    */
@@ -2272,6 +2283,17 @@ public interface EnvelopeOrBuilder extends
    * @return The captionCompat.
    */
   io.github.thisisthepy.dsa.control.v1.CaptionCompat getCaptionCompat();
+
+  /**
+   * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+   * @return Whether the focusTask field is set.
+   */
+  boolean hasFocusTask();
+  /**
+   * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+   * @return The focusTask.
+   */
+  io.github.thisisthepy.dsa.control.v1.FocusTask getFocusTask();
 
   /**
    * <code>.dsa.control.v1.GetWidgetPreviews get_widget_previews = 740;</code>

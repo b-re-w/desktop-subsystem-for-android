@@ -57,6 +57,7 @@ public  final class Envelope extends
     TASKS_SHOWN(46),
     POWER_STATE(41),
     DISPLAY_REFRESH(407),
+    DISPLAY_SIZE(416),
     POWER_HINT(110),
     DEVELOPER_MODE(140),
     ARM_TRANSLATION_REMOVE(152),
@@ -226,6 +227,7 @@ public  final class Envelope extends
     DNS_ANSWER(691),
     LAUNCH_PLACEMENT(710),
     CAPTION_COMPAT(715),
+    FOCUS_TASK(750),
     GET_WIDGET_PREVIEWS(740),
     WIDGET_PREVIEWS(741),
     BODY_NOT_SET(0);
@@ -280,6 +282,7 @@ public  final class Envelope extends
         case 46: return TASKS_SHOWN;
         case 41: return POWER_STATE;
         case 407: return DISPLAY_REFRESH;
+        case 416: return DISPLAY_SIZE;
         case 110: return POWER_HINT;
         case 140: return DEVELOPER_MODE;
         case 152: return ARM_TRANSLATION_REMOVE;
@@ -449,6 +452,7 @@ public  final class Envelope extends
         case 691: return DNS_ANSWER;
         case 710: return LAUNCH_PLACEMENT;
         case 715: return CAPTION_COMPAT;
+        case 750: return FOCUS_TASK;
         case 740: return GET_WIDGET_PREVIEWS;
         case 741: return WIDGET_PREVIEWS;
         case 0: return BODY_NOT_SET;
@@ -2317,6 +2321,56 @@ public  final class Envelope extends
    */
   private void clearDisplayRefresh() {
     if (bodyCase_ == 407) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
+  public static final int DISPLAY_SIZE_FIELD_NUMBER = 416;
+  /**
+   * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+   */
+  @java.lang.Override
+  public boolean hasDisplaySize() {
+    return bodyCase_ == 416;
+  }
+  /**
+   * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.DisplaySize getDisplaySize() {
+    if (bodyCase_ == 416) {
+       return (io.github.thisisthepy.dsa.control.v1.DisplaySize) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.DisplaySize.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+   */
+  private void setDisplaySize(io.github.thisisthepy.dsa.control.v1.DisplaySize value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 416;
+  }
+  /**
+   * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+   */
+  private void mergeDisplaySize(io.github.thisisthepy.dsa.control.v1.DisplaySize value) {
+    value.getClass();
+  if (bodyCase_ == 416 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.DisplaySize.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.DisplaySize.newBuilder((io.github.thisisthepy.dsa.control.v1.DisplaySize) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 416;
+  }
+  /**
+   * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+   */
+  private void clearDisplaySize() {
+    if (bodyCase_ == 416) {
       bodyCase_ = 0;
       body_ = null;
     }
@@ -10772,6 +10826,56 @@ public  final class Envelope extends
     }
   }
 
+  public static final int FOCUS_TASK_FIELD_NUMBER = 750;
+  /**
+   * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+   */
+  @java.lang.Override
+  public boolean hasFocusTask() {
+    return bodyCase_ == 750;
+  }
+  /**
+   * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+   */
+  @java.lang.Override
+  public io.github.thisisthepy.dsa.control.v1.FocusTask getFocusTask() {
+    if (bodyCase_ == 750) {
+       return (io.github.thisisthepy.dsa.control.v1.FocusTask) body_;
+    }
+    return io.github.thisisthepy.dsa.control.v1.FocusTask.getDefaultInstance();
+  }
+  /**
+   * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+   */
+  private void setFocusTask(io.github.thisisthepy.dsa.control.v1.FocusTask value) {
+    value.getClass();
+  body_ = value;
+    bodyCase_ = 750;
+  }
+  /**
+   * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+   */
+  private void mergeFocusTask(io.github.thisisthepy.dsa.control.v1.FocusTask value) {
+    value.getClass();
+  if (bodyCase_ == 750 &&
+        body_ != io.github.thisisthepy.dsa.control.v1.FocusTask.getDefaultInstance()) {
+      body_ = io.github.thisisthepy.dsa.control.v1.FocusTask.newBuilder((io.github.thisisthepy.dsa.control.v1.FocusTask) body_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      body_ = value;
+    }
+    bodyCase_ = 750;
+  }
+  /**
+   * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+   */
+  private void clearFocusTask() {
+    if (bodyCase_ == 750) {
+      bodyCase_ = 0;
+      body_ = null;
+    }
+  }
+
   public static final int GET_WIDGET_PREVIEWS_FIELD_NUMBER = 740;
   /**
    * <code>.dsa.control.v1.GetWidgetPreviews get_widget_previews = 740;</code>
@@ -12756,6 +12860,54 @@ public  final class Envelope extends
     public Builder clearDisplayRefresh() {
       copyOnWrite();
       instance.clearDisplayRefresh();
+      return this;
+    }
+
+    /**
+     * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+     */
+    @java.lang.Override
+    public boolean hasDisplaySize() {
+      return instance.hasDisplaySize();
+    }
+    /**
+     * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.DisplaySize getDisplaySize() {
+      return instance.getDisplaySize();
+    }
+    /**
+     * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+     */
+    public Builder setDisplaySize(io.github.thisisthepy.dsa.control.v1.DisplaySize value) {
+      copyOnWrite();
+      instance.setDisplaySize(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+     */
+    public Builder setDisplaySize(
+        io.github.thisisthepy.dsa.control.v1.DisplaySize.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDisplaySize(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+     */
+    public Builder mergeDisplaySize(io.github.thisisthepy.dsa.control.v1.DisplaySize value) {
+      copyOnWrite();
+      instance.mergeDisplaySize(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.DisplaySize display_size = 416;</code>
+     */
+    public Builder clearDisplaySize() {
+      copyOnWrite();
+      instance.clearDisplaySize();
       return this;
     }
 
@@ -20872,6 +21024,54 @@ public  final class Envelope extends
     }
 
     /**
+     * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+     */
+    @java.lang.Override
+    public boolean hasFocusTask() {
+      return instance.hasFocusTask();
+    }
+    /**
+     * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+     */
+    @java.lang.Override
+    public io.github.thisisthepy.dsa.control.v1.FocusTask getFocusTask() {
+      return instance.getFocusTask();
+    }
+    /**
+     * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+     */
+    public Builder setFocusTask(io.github.thisisthepy.dsa.control.v1.FocusTask value) {
+      copyOnWrite();
+      instance.setFocusTask(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+     */
+    public Builder setFocusTask(
+        io.github.thisisthepy.dsa.control.v1.FocusTask.Builder builderForValue) {
+      copyOnWrite();
+      instance.setFocusTask(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+     */
+    public Builder mergeFocusTask(io.github.thisisthepy.dsa.control.v1.FocusTask value) {
+      copyOnWrite();
+      instance.mergeFocusTask(value);
+      return this;
+    }
+    /**
+     * <code>.dsa.control.v1.FocusTask focus_task = 750;</code>
+     */
+    public Builder clearFocusTask() {
+      copyOnWrite();
+      instance.clearFocusTask();
+      return this;
+    }
+
+    /**
      * <code>.dsa.control.v1.GetWidgetPreviews get_widget_previews = 740;</code>
      */
     @java.lang.Override
@@ -21145,6 +21345,7 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.SuDecision.class,
             io.github.thisisthepy.dsa.control.v1.AddonImageRead.class,
             io.github.thisisthepy.dsa.control.v1.AddonImagePart.class,
+            io.github.thisisthepy.dsa.control.v1.DisplaySize.class,
             io.github.thisisthepy.dsa.control.v1.GeocodeRequest.class,
             io.github.thisisthepy.dsa.control.v1.GeocodeResult.class,
             io.github.thisisthepy.dsa.control.v1.ShareToHost.class,
@@ -21193,9 +21394,10 @@ public  final class Envelope extends
             io.github.thisisthepy.dsa.control.v1.RequestTaskFrame.class,
             io.github.thisisthepy.dsa.control.v1.GetWidgetPreviews.class,
             io.github.thisisthepy.dsa.control.v1.WidgetPreviews.class,
+            io.github.thisisthepy.dsa.control.v1.FocusTask.class,
           };
           java.lang.String info =
-              "\u0000\u00d0\u0001\u0000\u0001\u02e5\u00d0\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u00d2\u0001\u0000\u0001\u02ee\u00d2\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
               "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
               "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000" +
@@ -21216,15 +21418,15 @@ public  final class Envelope extends
               "\u015e<\u0000\u015f<\u0000\u0160<\u0000\u0161<\u0000\u0162<\u0000\u0179<\u0000\u017c" +
               "<\u0000\u017d<\u0000\u017e<\u0000\u017f<\u0000\u0192<\u0000\u0193<\u0000\u0194<\u0000" +
               "\u0195<\u0000\u0196<\u0000\u0197<\u0000\u0198<\u0000\u0199<\u0000\u019a<\u0000\u019b" +
-              "<\u0000\u019c<\u0000\u019d<\u0000\u019e<\u0000\u019f<\u0000\u01d6<\u0000\u01d7<\u0000" +
-              "\u01d8<\u0000\u01d9<\u0000\u026c<\u0000\u026d<\u0000\u026e<\u0000\u026f<\u0000\u0270" +
-              "<\u0000\u0271<\u0000\u0272<\u0000\u0273<\u0000\u0274<\u0000\u0275<\u0000\u0276<\u0000" +
-              "\u0277<\u0000\u0280<\u0000\u0281<\u0000\u0282<\u0000\u0283<\u0000\u0284<\u0000\u0285" +
-              "<\u0000\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289<\u0000\u028a<\u0000\u028b<\u0000" +
-              "\u028c<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000\u0290<\u0000\u0291<\u0000\u0292" +
-              "<\u0000\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab<\u0000\u02ac<\u0000\u02b2<\u0000" +
-              "\u02b3<\u0000\u02c6<\u0000\u02cb<\u0000\u02da<\u0000\u02db<\u0000\u02e4<\u0000\u02e5" +
-              "<\u0000";
+              "<\u0000\u019c<\u0000\u019d<\u0000\u019e<\u0000\u019f<\u0000\u01a0<\u0000\u01d6<\u0000" +
+              "\u01d7<\u0000\u01d8<\u0000\u01d9<\u0000\u026c<\u0000\u026d<\u0000\u026e<\u0000\u026f" +
+              "<\u0000\u0270<\u0000\u0271<\u0000\u0272<\u0000\u0273<\u0000\u0274<\u0000\u0275<\u0000" +
+              "\u0276<\u0000\u0277<\u0000\u0280<\u0000\u0281<\u0000\u0282<\u0000\u0283<\u0000\u0284" +
+              "<\u0000\u0285<\u0000\u0286<\u0000\u0287<\u0000\u0288<\u0000\u0289<\u0000\u028a<\u0000" +
+              "\u028b<\u0000\u028c<\u0000\u028d<\u0000\u028e<\u0000\u028f<\u0000\u0290<\u0000\u0291" +
+              "<\u0000\u0292<\u0000\u02a8<\u0000\u02a9<\u0000\u02aa<\u0000\u02ab<\u0000\u02ac<\u0000" +
+              "\u02b2<\u0000\u02b3<\u0000\u02c6<\u0000\u02cb<\u0000\u02da<\u0000\u02db<\u0000\u02e4" +
+              "<\u0000\u02e5<\u0000\u02ee<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
