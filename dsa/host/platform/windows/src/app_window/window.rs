@@ -58,6 +58,7 @@ use dsa_host_core::compositor::window_hosts::{FromHost, ToHost};
 use dsa_host_core::compositor::window_mode::{
     caption_revealed, picture_in_picture_place, ModeState, WindowMode,
 };
+use dsa_host_core::compositor::window_monitor::{placed_on, Area, DesktopMonitor};
 use dsa_host_core::compositor::window_sizing::{
     edge_drag_proposal, frame_rect, is_edge_drag, kept_frame_action, maximized_outer,
     maximized_position, min_client_size, rescaled_rect, size_is_held, to_task_position,
@@ -2675,7 +2676,16 @@ impl Ui {
                 self.log(&why);
             }
         }
+        // The window goes onto the monitor the window manager sized it for, before it takes
+        // its size there and before anything is shown.
+        let target = crate::window_monitors::opening_monitor_now(None);
+        if let Some(target) = &target {
+            put_on_monitor(hwnd, target);
+        }
         let client = apply_size(hwnd, size);
+        if let Some(target) = &target {
+            keep_inside(hwnd, target.work);
+        }
         let presenter = match WindowPresenter::new(
             task_id,
             Arc::clone(&self.setup.surfaces),
@@ -2760,6 +2770,48 @@ impl Ui {
             );
         }
         self.open.insert(task_id, hwnd);
+    }
+}
+
+/// Moves the window `hwnd`, which the desktop has just placed and not shown, onto `target`
+/// when the desktop put it on another monitor: as far in from `target`'s work area as the
+/// desktop put it in its own. A window the desktop put on `target` stays where it is, as in 1.0.
+/// Crossing to a monitor of another scale, the window hears the new DPI before it is sized.
+unsafe fn put_on_monitor(hwnd: HWND, target: &DesktopMonitor) {
+    let Some(current) = crate::window_monitors::monitor_of_window(hwnd as isize) else {
+        return;
+    };
+    if current.id == target.id {
+        return;
+    }
+    let ((x, y), (width, height)) = window_rect(hwnd);
+    let (x, y) = placed_on(
+        (x, y),
+        (width as i32, height as i32),
+        current.work,
+        target.work,
+    );
+    place_self(
+        hwnd,
+        std::ptr::null_mut(),
+        (x, y, 0, 0),
+        SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+        "opening_monitor",
+    );
+}
+
+/// Moves the window `hwnd` back inside the work area `work` where its size took it past an edge.
+unsafe fn keep_inside(hwnd: HWND, work: Area) {
+    let ((x, y), (width, height)) = window_rect(hwnd);
+    let inside = placed_on((x, y), (width as i32, height as i32), work, work);
+    if inside != (x, y) {
+        place_self(
+            hwnd,
+            std::ptr::null_mut(),
+            (inside.0, inside.1, 0, 0),
+            SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+            "opening_monitor",
+        );
     }
 }
 

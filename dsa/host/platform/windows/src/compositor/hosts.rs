@@ -42,6 +42,7 @@ use dsa_host_core::compositor::window_hosts::{
     accept_window_host, answer_attached, report_from_wire, to_wire, FromHost, HostAction, HostId,
     MediaButtons, MenuWork, ToHost, WindowHosts,
 };
+use dsa_host_core::compositor::window_monitor::opening_monitor;
 use dsa_host_core::memory::IdleTrim;
 use dsa_host_core::tasks::{AppInfo, TaskEvent, TaskRequest};
 use dsa_protocol::window_host::types::{envelope::Body, Frame, SurfaceAnswer, SurfaceCall};
@@ -1010,6 +1011,23 @@ impl Manager {
         note(self.setup.logger.as_deref(), message);
     }
 
+    /// Tells the task rules the DPI of the monitor each new task's window opens on, before
+    /// they decide its window: the same monitor its window host puts it on.
+    fn note_opening_monitors(&mut self, events: &[TaskEvent]) {
+        let mut monitors = None;
+        for event in events {
+            let TaskEvent::Updated(task) = event else {
+                continue;
+            };
+            if task.is_overlay() || self.windows.package_of(task.task_id).is_some() {
+                continue;
+            }
+            let monitors = monitors.get_or_insert_with(crate::window_monitors::desktop_monitors);
+            let dpi = opening_monitor(None, monitors).map(|monitor| monitor.dpi);
+            self.windows.set_opening_dpi(&task.package_name, dpi);
+        }
+    }
+
     fn handle(&mut self, event: ManagerEvent) {
         let now = Instant::now();
         match event {
@@ -1023,6 +1041,7 @@ impl Manager {
                         self.carry_out(actions);
                     }
                 }
+                self.note_opening_monitors(&current);
                 let changes = self.windows.sync(&current);
                 self.guest_change(changes, now);
             }
@@ -1031,6 +1050,7 @@ impl Manager {
                     let actions = self.hosts.app(app, now);
                     self.carry_out(actions);
                 }
+                self.note_opening_monitors(std::slice::from_ref(&*event));
                 let changes = self.windows.apply(&event);
                 for note in self.windows.take_notes() {
                     self.log(&note);
