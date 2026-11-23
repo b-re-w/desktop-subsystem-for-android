@@ -58,7 +58,9 @@ use dsa_host_core::compositor::window_hosts::{FromHost, ToHost};
 use dsa_host_core::compositor::window_mode::{
     caption_revealed, picture_in_picture_place, ModeState, WindowMode,
 };
-use dsa_host_core::compositor::window_monitor::{placed_on, Area, DesktopMonitor};
+use dsa_host_core::compositor::window_monitor::{
+    placed_on, remember_monitor, remembered_monitor, Area, DesktopMonitor,
+};
 use dsa_host_core::compositor::window_sizing::{
     edge_drag_proposal, frame_rect, is_edge_drag, kept_frame_action, maximized_outer,
     maximized_position, min_client_size, rescaled_rect, size_is_held, to_task_position,
@@ -286,8 +288,8 @@ pub struct UiSetup {
     pub drags: Option<DragStarter>,
     /// The app's package, which the place of its overlay windows is remembered under.
     pub package: String,
-    /// The folder the places of apps' overlay windows are remembered in. `None` remembers
-    /// none.
+    /// The folder the places of apps' overlay windows are remembered in, and the monitor each
+    /// app's last window closed on. `None` remembers none.
     pub overlay_places: Option<std::path::PathBuf>,
 }
 
@@ -2560,6 +2562,17 @@ impl Ui {
     }
 
     fn close(&mut self, task_id: i32) {
+        // The app's next window opens on the monitor this one closes on.
+        if let (Some(hwnd), Some(dir)) = (
+            self.open.get(&task_id).copied(),
+            self.setup.overlay_places.as_deref(),
+        ) {
+            if let Some(monitor) = crate::window_monitors::monitor_of_window(hwnd as isize) {
+                if let Err(why) = remember_monitor(dir, &self.setup.package, &monitor.id) {
+                    self.log(&format!("the monitor of task {task_id}'s window: {why}"));
+                }
+            }
+        }
         let presenter = self
             .setup
             .presenters
@@ -2678,7 +2691,13 @@ impl Ui {
         }
         // The window goes onto the monitor the window manager sized it for, before it takes
         // its size there and before anything is shown.
-        let target = crate::window_monitors::opening_monitor_now(None);
+        // That is the monitor the app's last window closed on, while it is connected.
+        let last = self
+            .setup
+            .overlay_places
+            .as_deref()
+            .and_then(|dir| remembered_monitor(dir, &self.setup.package));
+        let target = crate::window_monitors::opening_monitor_now(last.as_deref());
         if let Some(target) = &target {
             put_on_monitor(hwnd, target);
         }

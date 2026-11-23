@@ -6,6 +6,17 @@
 //! the main monitor's density and size, then shrank on a monitor of a lower scale while the app
 //! redrew. Each side asks [`opening_monitor`] with the monitors the desktop has now, so both
 //! come to the same one.
+//!
+//! The monitor an app's last window closed on is remembered for it, in a small file of its own
+//! beside the places of its overlay windows ([`remember_monitor`], [`remembered_monitor`]), so
+//! the app opens there again the next time, also after DSA or Windows started again. A monitor
+//! that is not connected any more is passed over for the main one.
+
+use std::path::{Path, PathBuf};
+
+use serde::{Deserialize, Serialize};
+
+use super::window_hosts::is_valid_package;
 
 /// A monitor of the desktop, as the platform describes it: an ID that names the same monitor
 /// whatever order the desktop lists the monitors in, its DPI (96 is 100%), whether it is the
@@ -32,6 +43,58 @@ pub fn opening_monitor<'a>(
         .and_then(|id| monitors.iter().find(|monitor| monitor.id == id))
         .or_else(|| monitors.iter().find(|monitor| monitor.main))
         .or_else(|| monitors.first())
+}
+
+/// The longest monitor ID kept: a Windows device interface path is under 200 characters.
+pub const MAX_MONITOR_ID: usize = 512;
+
+/// What is remembered of an app's last window.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct LastWindow {
+    /// The ID of the monitor it closed on.
+    monitor: String,
+}
+
+/// Whether `id` can be a monitor's ID: not empty, not too long, one line of text.
+fn usable_id(id: &str) -> bool {
+    !id.is_empty() && id.len() <= MAX_MONITOR_ID && !id.chars().any(char::is_control)
+}
+
+/// The file the monitor of `package`'s last window is remembered in, in `dir`; `None` for a
+/// name that is no package.
+fn record_file(dir: &Path, package: &str) -> Option<PathBuf> {
+    is_valid_package(package).then(|| dir.join(format!("{package}.monitor.json")))
+}
+
+/// The ID of the monitor `package`'s last window closed on, as remembered in `dir`, if one was
+/// and it can be read.
+pub fn remembered_monitor(dir: &Path, package: &str) -> Option<String> {
+    let path = record_file(dir, package)?;
+    let last = crate::settings::read_json::<LastWindow>(&path)
+        .ok()
+        .flatten()?;
+    usable_id(&last.monitor).then_some(last.monitor)
+}
+
+/// Remembers, in `dir`, that `package`'s last window closed on the monitor `id`.
+pub fn remember_monitor(dir: &Path, package: &str, id: &str) -> Result<(), String> {
+    if !usable_id(id) {
+        return Err(format!(
+            "{id:?} is not a monitor's ID; it is not remembered"
+        ));
+    }
+    let path = record_file(dir, package).ok_or_else(|| {
+        format!("{package} is not a package name; its window's monitor is not remembered")
+    })?;
+    if remembered_monitor(dir, package).as_deref() == Some(id) {
+        return Ok(());
+    }
+    crate::settings::write_json(
+        &path,
+        &LastWindow {
+            monitor: id.to_string(),
+        },
+    )
 }
 
 /// Where a window goes on the monitor whose work area is `to`, when the desktop put it at the
@@ -82,6 +145,63 @@ mod tests {
         unnamed[0].main = false;
         assert_eq!(opening_monitor(None, &unnamed).unwrap().id, "main");
         assert_eq!(opening_monitor(None, &[]), None);
+    }
+
+    #[test]
+    fn fr4_an_app_opens_again_on_the_monitor_its_last_window_closed_on() {
+        let monitors = owners();
+        // The two 125% monitors look alike; only the ID tells them apart.
+        assert_eq!(
+            opening_monitor(Some("right"), &monitors).unwrap().id,
+            "right"
+        );
+        assert_eq!(opening_monitor(Some("left"), &monitors).unwrap().id, "left");
+        // That monitor is not connected any more: the main one.
+        let unplugged: Vec<DesktopMonitor> = monitors
+            .iter()
+            .filter(|monitor| monitor.id != "right")
+            .cloned()
+            .collect();
+        assert_eq!(
+            opening_monitor(Some("right"), &unplugged).unwrap().id,
+            "main"
+        );
+        // Whatever order the desktop lists them in.
+        let mut reordered = owners();
+        reordered.reverse();
+        assert_eq!(
+            opening_monitor(Some("left"), &reordered).unwrap().id,
+            "left"
+        );
+    }
+
+    #[test]
+    fn fr4_the_monitor_an_apps_last_window_closed_on_is_remembered_for_it() {
+        let dir = std::env::temp_dir().join(format!(
+            "dsa-window-monitor-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let flo = "skplanet.musicmate";
+        assert_eq!(remembered_monitor(&dir, flo), None);
+        let id = r"\\?\DISPLAY#GSM5B09#5&2bd7ba7f&0&UID4352#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
+        remember_monitor(&dir, flo, id).unwrap();
+        assert_eq!(remembered_monitor(&dir, flo).as_deref(), Some(id));
+        // Each app has its own.
+        assert_eq!(remembered_monitor(&dir, "com.example.notes"), None);
+        remember_monitor(&dir, flo, r"\\.\DISPLAY2").unwrap();
+        assert_eq!(
+            remembered_monitor(&dir, flo).as_deref(),
+            Some(r"\\.\DISPLAY2")
+        );
+        // Nothing is kept for a name that is no package, or an ID that is no ID.
+        assert!(remember_monitor(&dir, "../evil", id).is_err());
+        assert!(remember_monitor(&dir, flo, "").is_err());
+        assert!(remember_monitor(&dir, flo, "two\nlines").is_err());
+        assert!(remember_monitor(&dir, flo, &"x".repeat(MAX_MONITOR_ID + 1)).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

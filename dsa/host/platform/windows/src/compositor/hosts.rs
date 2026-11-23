@@ -42,7 +42,7 @@ use dsa_host_core::compositor::window_hosts::{
     accept_window_host, answer_attached, report_from_wire, to_wire, FromHost, HostAction, HostId,
     MediaButtons, MenuWork, ToHost, WindowHosts,
 };
-use dsa_host_core::compositor::window_monitor::opening_monitor;
+use dsa_host_core::compositor::window_monitor::{opening_monitor, remembered_monitor};
 use dsa_host_core::memory::IdleTrim;
 use dsa_host_core::tasks::{AppInfo, TaskEvent, TaskRequest};
 use dsa_protocol::window_host::types::{envelope::Body, Frame, SurfaceAnswer, SurfaceCall};
@@ -1015,6 +1015,7 @@ impl Manager {
     /// they decide its window: the same monitor its window host puts it on.
     fn note_opening_monitors(&mut self, events: &[TaskEvent]) {
         let mut monitors = None;
+        let apps = crate::paths::UserRoot::current().map(|root| root.apps());
         for event in events {
             let TaskEvent::Updated(task) = event else {
                 continue;
@@ -1023,7 +1024,11 @@ impl Manager {
                 continue;
             }
             let monitors = monitors.get_or_insert_with(crate::window_monitors::desktop_monitors);
-            let dpi = opening_monitor(None, monitors).map(|monitor| monitor.dpi);
+            // The monitor the app's last window closed on, while it is connected.
+            let last = apps
+                .as_deref()
+                .and_then(|dir| remembered_monitor(dir, &task.package_name));
+            let dpi = opening_monitor(last.as_deref(), monitors).map(|monitor| monitor.dpi);
             self.windows.set_opening_dpi(&task.package_name, dpi);
         }
     }
