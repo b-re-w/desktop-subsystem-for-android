@@ -258,6 +258,11 @@ quoted figures from before 1.0 as current, and made issues when asked for pull r
    before reporting it as found or missing.
 5. **Use the owner's words for a behaviour.** Do not restate it in your own terms; a
    rewording that changes the meaning is how a wrong fix gets briefed.
+6. **Answer first, then work.** When the owner asks or objects, reply to that in words before
+   any tool call that changes something (a commit, a revert, a push, a build, an install).
+   Say what you will do and wait when the next step is the owner's choice. On 2026-11-23 a
+   session started reverting a merged change while the owner's question was still
+   unanswered.
 
 ## Writing
 
