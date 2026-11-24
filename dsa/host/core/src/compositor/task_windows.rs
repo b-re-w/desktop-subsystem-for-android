@@ -712,6 +712,24 @@ impl TaskWindows {
             .forced_on(&task.package_name, task.forced_density_available)
     }
 
+    /// Whether the density `task` takes before its window opens goes out forced: its app is
+    /// set to System (forced) scaling and DSA's image carries the framework change for it.
+    ///
+    /// The window decides once, on the task's first report, whether it waits for its
+    /// monitor's density, and that report may not say yet that the guest can give one without
+    /// a relaunch. A window that opened on that report opened on a 125% monitor at the main
+    /// monitor's density, shown scaled, and its task took the monitor's density only later,
+    /// while the window followed the frames the app drew (forced YouTube did exactly this). So
+    /// the opening density of such a task is asked for as an App mode task's is, always
+    /// forced: the agent marks the task first and gives the density only once it is marked, so
+    /// the app is never relaunched for it. A guest that cannot mark it gives no density, and
+    /// the window opens after the wait, scaled, as a System task's.
+    fn opening_forced_of(&self, task: &Task) -> bool {
+        DpiScaling::FORCED_AVAILABLE
+            && self.dpi_scaling_of(task).resolved_for(&task.package_name)
+                == DpiScaling::SystemForced
+    }
+
     /// A new record of how `task`'s window follows its task.
     fn sizing_for(&self, task: &Task) -> WindowSizing {
         let mut sizing = WindowSizing::with_mode(task, self.scaling_of(task));
@@ -793,9 +811,13 @@ impl TaskWindows {
     /// The density `task` is to draw at when its window opens, when that differs from the one
     /// it has: the density of the monitor the window opens on, for a task that follows its
     /// monitor. A task that keeps its density is shown scaled instead, and asked for nothing.
+    ///
+    /// A task of an app set to System (forced) scaling takes it as an App mode task does
+    /// ([`Self::opening_forced_of`]), whatever its first report says of the guest.
     fn opening_density(&self, task: &Task) -> Option<u32> {
         let dpi = *self.opening_dpi.get(&task.package_name)?;
-        if task.density_dpi == 0 || self.scaling_of(task) != ScalingMode::App {
+        let follows = self.scaling_of(task) == ScalingMode::App || self.opening_forced_of(task);
+        if task.density_dpi == 0 || !follows {
             return None;
         }
         let wanted = density_for_dpi(dpi);
@@ -1665,7 +1687,9 @@ impl TaskWindows {
         let forced: BTreeMap<i32, bool> = self
             .pending
             .keys()
-            .filter_map(|task_id| Some((*task_id, self.forced_of(self.tasks.get(task_id)?))))
+            .filter_map(|task_id| {
+                Some((*task_id, self.opening_forced_of(self.tasks.get(task_id)?)))
+            })
             .collect();
         for (task_id, pending) in &mut self.pending {
             if pending.asked.is_none() && !self.closing.contains(task_id) {
@@ -4330,5 +4354,48 @@ mod tests {
         );
         let changes = windows.apply(&TaskEvent::Updated(flo(false)));
         assert_eq!(opened_size(&changes), Some((626, 1002)), "{changes:?}");
+    }
+
+    #[test]
+    fn fr4_a_forced_window_takes_its_monitors_density_forced_before_it_opens() {
+        // Its first report does not say yet that the guest can give a density without a
+        // relaunch: the window still waits for the monitor's density, as an App mode one does,
+        // and the density goes out forced, so the agent marks the task before it gives it.
+        let mut windows = on_the_secondary(DpiScaling::SystemForced);
+        let mut first = flo(false);
+        first.forced_density_available = false;
+        assert_eq!(windows.apply(&TaskEvent::Updated(first.clone())), vec![]);
+        let requests = windows.reconfigures(Instant::now());
+        assert_eq!(
+            requests.first(),
+            Some(&TaskRequest::SetDensity {
+                task_id: 1,
+                density_dpi: 164,
+                forced: true,
+            }),
+            "{requests:?}"
+        );
+        let mut taken = first.clone();
+        taken.forced_density_available = true;
+        taken.density_dpi = 164;
+        taken.bounds.right = taken.bounds.left + 626;
+        taken.bounds.bottom = taken.bounds.top + 1002;
+        let changes = windows.apply(&TaskEvent::Updated(taken));
+        assert_eq!(opened_size(&changes), Some((626, 1002)), "{changes:?}");
+        assert_eq!(windows.scale(1), (1, 1));
+
+        // A guest that cannot mark the task gives it no density: the window opens after the
+        // wait, scaled as a System one, and the app is never asked for a density unforced,
+        // which would relaunch it.
+        let mut windows = on_the_secondary(DpiScaling::SystemForced);
+        windows.apply(&TaskEvent::Updated(first));
+        let now = Instant::now();
+        windows.reconfigures(now);
+        let changes = windows.tick(now + SETTLE);
+        assert!(opened_size(&changes).is_some(), "{changes:?}");
+        assert!(!windows
+            .reconfigures(now + SETTLE)
+            .iter()
+            .any(|request| matches!(request, TaskRequest::SetDensity { forced: false, .. })));
     }
 }
