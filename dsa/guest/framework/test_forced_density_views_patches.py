@@ -22,11 +22,11 @@ CORE = "core/java/android"
 DRAWABLE = "graphics/java/android/graphics/drawable"
 RESCALE = f"{CORE}/view/DsaDensityRescale.java"
 ITEM = f"{CORE}/app/servertransaction/ActivityConfigurationChangeItem.java"
-TYPED_ARRAY = f"{CORE}/content/res/TypedArray.java"
+ASSETS = f"{CORE}/content/res/AssetManager.java"
 FILES = [
     f"{CORE}/app/ActivityThread.java",
     ITEM,
-    TYPED_ARRAY,
+    ASSETS,
     RESCALE,
     f"{CORE}/view/View.java",
     f"{CORE}/view/ViewGroup.java",
@@ -321,10 +321,10 @@ class ForcedDensityViewsPatchTests(unittest.TestCase):
             self.assertLessEqual(abs(gap(back, *at_main) - gap(read_at_main, *at_main)), 1, android)
             self.assertEqual(gap(moved, *at_main), -69, android)  # before: behind the tab bar
 
-    def test_fr4_only_a_field_that_holds_a_size_read_from_the_attributes_is_converted(self):
+    def test_fr4_only_a_field_that_holds_a_size_from_the_layout_is_converted(self):
         for android in VERSIONS:
             joined = added(patch(android), RESCALE)
-            # As read (a float field from getDimension), cut or rounded to whole pixels.
+            # As worked out (a float field from getDimension), cut or rounded to whole pixels.
             self.assertTrue(is_attribute_size(joined, 183.4, [183.4]), android)
             self.assertTrue(is_attribute_size(joined, 183, [183.4]), android)
             self.assertTrue(is_attribute_size(joined, 184, [183.5]), android)
@@ -334,7 +334,7 @@ class ForcedDensityViewsPatchTests(unittest.TestCase):
             # 0 and a pixel either way say nothing about a field and stay as they are anyway.
             for value in (0, 1, -1):
                 self.assertFalse(is_attribute_size(joined, value, [value, 183]), (android, value))
-            find = method(joined, "private static Field[] findAttributeFields(View view, float[] sizes, int count) {")
+            find = method(joined, "private static Field[] findAttributeFields(View view, float[] sizes) {")
             # Only the app's own classes, up to the first of the framework's, which converts its
             # own fields itself; only instance int and float fields.
             self.assertIn("c != null && !isFrameworkClass(c);", find, android)
@@ -342,51 +342,87 @@ class ForcedDensityViewsPatchTests(unittest.TestCase):
             self.assertIn("(type != int.class && type != float.class)", find, android)
             self.assertIn("return c.getClassLoader() == View.class.getClassLoader();", joined, android)
             fields = method(joined, "static void rescaleAttributeFields(View view, int fromDpi, int toDpi) {")
-            # Found once, while the fields still hold the sizes as read, then the same fields
-            # are converted at every change after that.
-            self.assertIn("if (view.mDsaAttributeFields == null) {", fields, android)
+            # A framework view is never looked at; an app view's fields are found once, at the
+            # density it was made at, then the same fields are converted at every change.
+            self.assertLess(fields.index("if (isFrameworkClass(view.getClass())) {\n            return;"),
+                            fields.index("layoutSizes(view, fromDpi)"), android)
+            self.assertIn("fields = findAttributeFields(view, layoutSizes(view, fromDpi));", fields, android)
             self.assertIn("field.setInt(view, scale(field.getInt(view), fromDpi, toDpi));", fields, android)
             self.assertIn("field.setFloat(view, scale(field.getFloat(view), fromDpi, toDpi));", fields, android)
-            note = method(joined, "static void noteConstructed(View view, AttributeSet attrs) {")
-            # Sizes are noted for a view of the app's own class; a view of the framework's ends
-            # the noting for the attributes it was made from.
-            self.assertIn("if (isFrameworkClass(view.getClass())) {\n            madeFrom.remove(attrs);", note)
-            self.assertIn("madeFrom.put(attrs, new WeakReference<>(view));", note, android)
 
-    def test_fr4_the_sizes_a_view_reads_from_its_attributes_are_noted(self):
+    def test_fr4_the_sizes_come_from_the_views_layout_at_its_old_density(self):
         for android in VERSIONS:
-            typed = added(patch(android), TYPED_ARRAY)
-            # Each getter that reads a dimension from XML notes what it returns.
-            for convert, kind in (("complexToDimension(", "float"),
-                                  ("complexToDimensionPixelOffset(", "int"),
-                                  ("complexToDimensionPixelSize(", "int")):
-                self.assertIn(f"            final {kind} size = TypedValue.{convert}\n"
-                              "                    data[index + STYLE_DATA], mMetrics);\n", typed, (android, convert))
-            self.assertEqual(typed.count("android.view.DsaDensityRescale.noteAttributeSize(mXml, size);\n"
-                                         "            return size;\n"), 3, android)
-            # Layout parameters convert their own sizes; getLayoutDimension notes nothing.
-            text = patch(android)
-            section = text[text.index("+++ b/" + TYPED_ARRAY):text.index("diff --git a/" + RESCALE)]
-            self.assertNotIn("getLayoutDimension", section, android)
-            # At the end of the view constructor that takes the attributes, so what the app's
-            # subclass reads after it is noted for that view.
-            self.assertIn("         computeOpaqueFlags();\n"
-                          "+\n"
-                          "+        // DSA: the sizes a subclass of the app's reads from attrs from here on are noted, so\n"
-                          "+        // that its fields holding them are converted with it (DsaDensityRescale).\n"
-                          "+        DsaDensityRescale.noteConstructed(this, attrs);\n"
-                          "     }\n", text, android)
-            rescale = method(added(patch(android), f"{CORE}/view/View.java"),
-                             "protected void onDsaRescale(int fromDpi, int toDpi) {")
-            self.assertTrue(rescale.endswith("        DsaDensityRescale.rescaleAttributeFields(this, fromDpi, toDpi);\n    }"),
-                            (android, rescale))
             joined = added(patch(android), RESCALE)
-            note = method(joined, "public static void noteAttributeSize(AttributeSet attrs, float size) {")
-            # Noting converts nothing: it only keeps the size for the view.
-            self.assertNotIn("scale(", note, android)
-            self.assertIn("if (attrs == null || Math.abs(size) <= 1f) {", note, android)
-            # Weak, so a view or a parser noted here is not kept alive.
-            self.assertIn("ThreadLocal<WeakHashMap<AttributeSet, WeakReference<View>>>", joined, android)
+            sizes = method(joined, "static float[] layoutSizes(View view, int fromDpi) {")
+            # The element the view was inflated from, read again from the layout every view
+            # records, with the dimensions worked out at the density the view was made at.
+            self.assertIn("final int layout = view.getSourceLayoutResId();", sizes, android)
+            self.assertIn("try (XmlResourceParser parser = res.getLayout(layout)) {", sizes, android)
+            self.assertIn("old.densityDpi = fromDpi;", sizes, android)
+            self.assertIn("old.density = fromDpi / (float) DisplayMetrics.DENSITY_DEFAULT;", sizes, android)
+            add = method(joined, "private static float[] addSizes(View view, Resources res, XmlResourceParser parser,")
+            # What is written on the element and in its style; each attribute once, in order.
+            self.assertIn("parser.getAttributeNameResource(i)", add, android)
+            self.assertIn("res.getAssets().getStyleAttributes(style)", add, android)
+            self.assertIn("Arrays.sort(attrs);", add, android)
+            self.assertIn("value.type == TypedValue.TYPE_DIMENSION", add, android)
+            self.assertIn("TypedValue.complexToDimension(value.data, old)", add, android)
+            self.assertIn("a.recycle();", add, android)
+            element = method(joined, "private static boolean isElementOf(View view, XmlResourceParser parser) {")
+            # A tag with a package names the view's own class; a short tag the first framework
+            # class above it (AppCompat's TextView for a TextView), never any class that
+            # merely ends with the same name.
+            self.assertIn("if (!name.equals(c.getName())) {", element, android)
+            self.assertIn("if (framework == null || !name.equals(framework.getSimpleName())) {", element, android)
+            self.assertNotIn("endsWith", element, android)
+            self.assertIn('parser.getAttributeResourceValue(ANDROID_NS, "id", View.NO_ID) == id', element)
+            # AssetManager's style attributes, reachable from android.view and still hidden.
+            asset = patch(android)
+            self.assertIn("+     * @hide DSA: public for android.view.DsaDensityRescale, which reads the sizes in a view's\n"
+                          "+     * style to convert the fields a view of the app's keeps them in.\n"
+                          "      */\n"
+                          "-    @AttrRes int[] getStyleAttributes(@StyleRes int resId) {\n"
+                          "+    public @AttrRes int[] getStyleAttributes(@StyleRes int resId) {\n", asset, android)
+            # Read once per element in a pass over an activity's windows, then let go.
+            windows = method(joined, "public static void rescaleWindowsOf(IBinder token) {")
+            self.assertLess(windows.index("sPassSizes = new HashMap<>();"), windows.index("rescaleTree(view);"))
+            self.assertTrue(windows.endswith("        sPassSizes = null;\n        sPassThread = null;\n    }"),
+                            (android, windows))
+
+    def test_fr4_a_process_that_is_not_forced_keeps_and_does_nothing_more(self):
+        # The 180 apps that are not set to System (forced) pay nothing for FLO: no field on
+        # every view, no hook while a view is made or reads its attributes. The fields are looked
+        # for only from View.onDsaRescale, which runs only once a forced change reached the
+        # process (dsaRescaleIfActive and rescaleWindowsOf).
+        for android in VERSIONS:
+            text = patch(android)
+            view = added(text, f"{CORE}/view/View.java")
+            self.assertNotIn("TypedArray.java", text, android)
+            self.assertNotIn("noteConstructed", text, android)
+            self.assertNotIn("noteAttributeSize", text, android)
+            # The only instance field 0010 adds to View is the density its sizes are in.
+            self.assertEqual(re.findall(r"^    (?!static)[\w.\[\]<>]+ mDsa\w+;$", view, re.M),
+                             ["    int mDsaDensityDpi;"], android)
+            # Reached from onDsaRescale only.
+            calls = re.findall(r"DsaDensityRescale\.rescaleAttributeFields\(", text)
+            self.assertEqual(len(calls), 1, android)
+            body = method(view, "protected void onDsaRescale(int fromDpi, int toDpi) {")
+            self.assertTrue(body.endswith("        DsaDensityRescale.rescaleAttributeFields(this, fromDpi, toDpi);\n    }"),
+                            (android, body))
+            joined = added(text, RESCALE)
+            # DsaDensityRescale loads in every process (a view joining a parent asks it), so it
+            # makes nothing more when it loads: the map and the empty arrays are in a class of
+            # their own, loaded the first time a view of the app's is converted.
+            for line in re.findall(r"^    (?:private )?static (?!final class).*;$", joined, re.M):
+                self.assertNotIn(" new ", line, (android, line))
+            holder = method(joined, "private static final class AttributeFields {")
+            self.assertIn("static final WeakHashMap<View, Field[]> sFields = new WeakHashMap<>();", holder)
+            fields = method(joined, "static void rescaleAttributeFields(View view, int fromDpi, int toDpi) {")
+            self.assertLess(fields.index("if (isFrameworkClass(view.getClass())) {"),
+                            fields.index("AttributeFields.sFields"), android)
+            # The per-pass cache is made only in rescaleWindowsOf, which only a forced change calls.
+            self.assertIn("private static HashMap<String, float[]> sPassSizes;", joined, android)
+            self.assertEqual(joined.count("sPassSizes = new HashMap<>();"), 1, android)
 
     def test_fr4_the_new_rescaling_class_hunk_counts_its_lines(self):
         for android in VERSIONS:
