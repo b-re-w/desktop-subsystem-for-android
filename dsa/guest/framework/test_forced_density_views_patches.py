@@ -22,9 +22,11 @@ CORE = "core/java/android"
 DRAWABLE = "graphics/java/android/graphics/drawable"
 RESCALE = f"{CORE}/view/DsaDensityRescale.java"
 ITEM = f"{CORE}/app/servertransaction/ActivityConfigurationChangeItem.java"
+TYPED_ARRAY = f"{CORE}/content/res/TypedArray.java"
 FILES = [
     f"{CORE}/app/ActivityThread.java",
     ITEM,
+    TYPED_ARRAY,
     RESCALE,
     f"{CORE}/view/View.java",
     f"{CORE}/view/ViewGroup.java",
@@ -112,6 +114,34 @@ def scale(joined, px, from_dpi, to_dpi):
     if rounded == 0:
         return 1 if px > 0 else -1
     return rounded
+
+
+def is_attribute_size(joined, value, sizes):
+    """DsaDensityRescale.isAttributeSize(float, float[], int), run as the patch writes it."""
+    body = method(joined, "static boolean isAttributeSize(float value, float[] sizes, int count) {")
+    expected = ("static boolean isAttributeSize(float value, float[] sizes, int count) {\n"
+                "        if (Math.abs(value) <= 1f) {\n"
+                "            return false;\n"
+                "        }\n"
+                "        for (int i = 0; i < count; i++) {\n"
+                "            final float size = sizes[i];\n"
+                "            if (value == size || value == (int) size || value == Math.round(size)) {\n"
+                "                return true;\n"
+                "            }\n"
+                "        }\n"
+                "        return false;\n"
+                "    }")
+    assert body == expected, body
+    if abs(value) <= 1:
+        return False
+    # (int) cuts toward zero; Math.round is the floor of x + 0.5.
+    return any(value in (size, math.trunc(size), math.floor(size + 0.5)) for size in sizes)
+
+
+def pixel_size(dp, dpi):
+    """TypedValue.complexToDimensionPixelSize for a size in dp at `dpi`, as TypedArray reads it."""
+    f = dp * dpi / 160
+    return max(1, math.trunc(f + 0.5)) if dp > 0 else 0
 
 
 class ForcedDensityViewsPatchTests(unittest.TestCase):
@@ -256,6 +286,107 @@ class ForcedDensityViewsPatchTests(unittest.TestCase):
             self.assertIn("        view.forceLayout();\n", relayout, android)
             self.assertIn("relayoutTree(child);", relayout, android)
             self.assertNotIn("dsaRescale", relayout, android)
+
+    def test_fr4_a_size_a_custom_view_keeps_from_its_attributes_follows_the_density(self):
+        # FLO's player panel (a SlidingUpPanelLayout of its own) reads its collapsed height,
+        # 112 dp, from its XML attributes into a field once, in its constructor, and places the
+        # panel from it at every layout. Opened at 262 dpi and moved to a 164 dpi monitor, the
+        # field kept 183 px: the player bar (57 px there) stood 69 px above the tab bar (57 px)
+        # where a fresh start leaves 1 px, and after the move back it slid behind the tab bar.
+        main, secondary = 262, 164
+        for android in VERSIONS:
+            joined = added(patch(android), RESCALE)
+            read_at_main = pixel_size(112, main)
+            self.assertEqual(read_at_main, 183, android)
+            # The field holds the size as its constructor read it, so it is found ...
+            self.assertTrue(is_attribute_size(joined, read_at_main, [read_at_main]), android)
+            # ... and converted with the view, to what a fresh start at 164 dpi reads.
+            moved = scale(joined, read_at_main, main, secondary)
+            self.assertEqual(moved, pixel_size(112, secondary), android)
+
+            def gap(panel, player_bar, tab_bar):
+                # The panel's top is the window's bottom less its collapsed height; the player
+                # bar is at the top of the panel and the tab bar at the window's bottom.
+                return panel - player_bar - tab_bar
+
+            # The bars' own heights, from the view dumps (they were already converted).
+            at_secondary, at_main = (57, 57), (92, 92)
+            fresh = gap(pixel_size(112, secondary), *at_secondary)
+            self.assertEqual(fresh, 1, android)
+            self.assertEqual(gap(read_at_main, *at_secondary), 69, android)  # before: the field kept
+            self.assertEqual(gap(moved, *at_secondary), fresh, android)
+            # Moved back, the same field is converted again, to within the pixel any converted
+            # size rounds to.
+            back = scale(joined, moved, secondary, main)
+            self.assertLessEqual(abs(gap(back, *at_main) - gap(read_at_main, *at_main)), 1, android)
+            self.assertEqual(gap(moved, *at_main), -69, android)  # before: behind the tab bar
+
+    def test_fr4_only_a_field_that_holds_a_size_read_from_the_attributes_is_converted(self):
+        for android in VERSIONS:
+            joined = added(patch(android), RESCALE)
+            # As read (a float field from getDimension), cut or rounded to whole pixels.
+            self.assertTrue(is_attribute_size(joined, 183.4, [183.4]), android)
+            self.assertTrue(is_attribute_size(joined, 183, [183.4]), android)
+            self.assertTrue(is_attribute_size(joined, 184, [183.5]), android)
+            # A count, a flag, a size the app worked out itself: left alone.
+            self.assertFalse(is_attribute_size(joined, 3, [183, 64]), android)
+            self.assertFalse(is_attribute_size(joined, 182, [183]), android)
+            # 0 and a pixel either way say nothing about a field and stay as they are anyway.
+            for value in (0, 1, -1):
+                self.assertFalse(is_attribute_size(joined, value, [value, 183]), (android, value))
+            find = method(joined, "private static Field[] findAttributeFields(View view, float[] sizes, int count) {")
+            # Only the app's own classes, up to the first of the framework's, which converts its
+            # own fields itself; only instance int and float fields.
+            self.assertIn("c != null && !isFrameworkClass(c);", find, android)
+            self.assertIn("Modifier.isStatic(field.getModifiers())", find, android)
+            self.assertIn("(type != int.class && type != float.class)", find, android)
+            self.assertIn("return c.getClassLoader() == View.class.getClassLoader();", joined, android)
+            fields = method(joined, "static void rescaleAttributeFields(View view, int fromDpi, int toDpi) {")
+            # Found once, while the fields still hold the sizes as read, then the same fields
+            # are converted at every change after that.
+            self.assertIn("if (view.mDsaAttributeFields == null) {", fields, android)
+            self.assertIn("field.setInt(view, scale(field.getInt(view), fromDpi, toDpi));", fields, android)
+            self.assertIn("field.setFloat(view, scale(field.getFloat(view), fromDpi, toDpi));", fields, android)
+            note = method(joined, "static void noteConstructed(View view, AttributeSet attrs) {")
+            # Sizes are noted for a view of the app's own class; a view of the framework's ends
+            # the noting for the attributes it was made from.
+            self.assertIn("if (isFrameworkClass(view.getClass())) {\n            madeFrom.remove(attrs);", note)
+            self.assertIn("madeFrom.put(attrs, new WeakReference<>(view));", note, android)
+
+    def test_fr4_the_sizes_a_view_reads_from_its_attributes_are_noted(self):
+        for android in VERSIONS:
+            typed = added(patch(android), TYPED_ARRAY)
+            # Each getter that reads a dimension from XML notes what it returns.
+            for convert, kind in (("complexToDimension(", "float"),
+                                  ("complexToDimensionPixelOffset(", "int"),
+                                  ("complexToDimensionPixelSize(", "int")):
+                self.assertIn(f"            final {kind} size = TypedValue.{convert}\n"
+                              "                    data[index + STYLE_DATA], mMetrics);\n", typed, (android, convert))
+            self.assertEqual(typed.count("android.view.DsaDensityRescale.noteAttributeSize(mXml, size);\n"
+                                         "            return size;\n"), 3, android)
+            # Layout parameters convert their own sizes; getLayoutDimension notes nothing.
+            text = patch(android)
+            section = text[text.index("+++ b/" + TYPED_ARRAY):text.index("diff --git a/" + RESCALE)]
+            self.assertNotIn("getLayoutDimension", section, android)
+            # At the end of the view constructor that takes the attributes, so what the app's
+            # subclass reads after it is noted for that view.
+            self.assertIn("         computeOpaqueFlags();\n"
+                          "+\n"
+                          "+        // DSA: the sizes a subclass of the app's reads from attrs from here on are noted, so\n"
+                          "+        // that its fields holding them are converted with it (DsaDensityRescale).\n"
+                          "+        DsaDensityRescale.noteConstructed(this, attrs);\n"
+                          "     }\n", text, android)
+            rescale = method(added(patch(android), f"{CORE}/view/View.java"),
+                             "protected void onDsaRescale(int fromDpi, int toDpi) {")
+            self.assertTrue(rescale.endswith("        DsaDensityRescale.rescaleAttributeFields(this, fromDpi, toDpi);\n    }"),
+                            (android, rescale))
+            joined = added(patch(android), RESCALE)
+            note = method(joined, "public static void noteAttributeSize(AttributeSet attrs, float size) {")
+            # Noting converts nothing: it only keeps the size for the view.
+            self.assertNotIn("scale(", note, android)
+            self.assertIn("if (attrs == null || Math.abs(size) <= 1f) {", note, android)
+            # Weak, so a view or a parser noted here is not kept alive.
+            self.assertIn("ThreadLocal<WeakHashMap<AttributeSet, WeakReference<View>>>", joined, android)
 
     def test_fr4_the_new_rescaling_class_hunk_counts_its_lines(self):
         for android in VERSIONS:
