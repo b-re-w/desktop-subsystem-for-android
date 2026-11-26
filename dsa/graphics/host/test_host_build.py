@@ -368,5 +368,13 @@ class HostGraphicsBuildTests(unittest.TestCase):
         self.assertNotIn("Rule::None", patch)
         self.assertNotIn("Rule::None", (HERE / "dsa_gfx_backend.cpp").read_text(encoding="utf-8"))
 
+    def test_nfr1_windows_build_prefers_visual_studios_clang(self):
+        # Visual Studio's C++ library refuses a clang older than the one it ships with, so
+        # a standalone LLVM earlier on PATH must not be the compiler.
+        script = (HERE / "build.ps1").read_text(encoding="utf-8")
+        self.assertIn('VC\\Tools\\Llvm\\$VsLlvmArch\\bin', script)
+        self.assertLess(script.index("$VsClangBin;$env:PATH"),
+                        script.index("$HasClangCl = "))
+
 if __name__ == "__main__":
     unittest.main()
