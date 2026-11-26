@@ -4113,7 +4113,28 @@ Virtualization 문서의 "Memory" 묶음에는 풍선 장치만 있고, "Custom 
 
 **결정.** PR-7의 macOS 최소 판(27)은 그대로 두고, 수단과 이 근거를 PR-7에 적었다. macOS 26 이하는 복사 경로다.
 
-## R57. 시스템 강제 배율에서 FLO의 플레이어 바와 탭 바 사이가 벌어지는 까닭 (FR-4)
+## R59. 다른 안드로이드 앱 창으로 포커스가 넘어갈 때 게임이 멈추는 신호와 그것을 막는 곳 (FR-44)
+
+2026-11-27. FR-44의 "게임 포커스 유지"는 켠 앱이 다른 안드로이드 앱 창으로 포커스가 넘어가도 멈추지 않는 것이다. #1022의 방식(호스트가 `setFocusedTask`로 게스트 포커스를 옮긴다)은 이 경우에 효과가 없었다. 안드로이드에는 포커스를 가진 창이 하나뿐이고, 키가 그 창으로 가야 하므로 게임은 어차피 포커스를 잃는다.
+
+### 확인한 것과 방법
+- 소스: `frameworks/base`를 framework-lock.json이 고정한 리비전(Android 16 `45034f06`, Android 17 `94b4c163`)으로 `android.googlesource.com`에서 파일 단위로 받아 0001~0010을 적용한 사본에서 읽었다. 빌드하지 않았다.
+- 앱이 포커스를 잃었다고 듣는 길은 둘이다.
+  1. `onTopResumedActivityChanged(false)`: 다른 태스크가 맨 위 재개 활동이 되면 `ActivityRecord.scheduleTopResumedActivityChanged`가 `TopResumedActivityChangeItem`을 보내고, 앱 프로세스의 `ActivityThread.handleTopResumedActivityChanged`가 활동이 재개 상태일 때 `reportTopResumedActivityChanged`로 알린다. 항목의 `postExecute`는 처리 결과(`activityTopResumedStateLost`)를 윈도 매니저에 돌려준다. 윈도 매니저는 다음 활동에 맨 위를 주기 전에 이것을 기다리므로, 서버에서 항목을 보내지 않으면 다음 앱이 시간 초과까지 기다린다.
+  2. `onWindowFocusChanged(false)`: 입력 디스패처가 포커스 창을 옮기면 `ViewRootImpl.windowFocusChanged`, `handleWindowFocusChanged`, `dispatchFocusEvent`를 거쳐 `mView.dispatchWindowFocusChanged`가 뷰와 `DecorView`를 통해 활동에 알린다. 같은 곳에서 `mAttachInfo.mHasWindowFocus`, `ImeFocusController`, 입력 단계, 포인터 캡처가 포커스를 따른다. 키가 가는 곳은 이 창 포커스다.
+- Unity가 반응하는 신호: `ViewRootImpl.dispatchCompatFakeFocus`의 주석과 로그("unity bug workaround")가 Unity 같은 엔진이 창 포커스를 기다린다고 적는다. Unity의 `UnityPlayerActivity`는 `onWindowFocusChanged`를 엔진에 넘긴다. 2026-11-23 소유자 PC의 로그(`.scratch/mv-click/logcat.txt`)에서 다른 창을 누를 때마다 `input_focus: ViewRootImpl focus=false for com.ustwo.monumentvalley/...`가 남는다.
+
+### 결정
+- 패치 0011(`frameworks/base`, android16과 android17)이 두 신호를 모두 앱 프로세스에서 막는다. 윈도 매니저의 셸 명령 `dsa-keep-focus set [PACKAGE...]`가 패키지 목록을 정하고, 모든 `TopResumedActivityChangeItem`이 그 활동의 패키지가 목록에 있는지 싣는다.
+- `ActivityThread`는 표시된 활동이 재개 상태인 동안 맨 위 잃음을 알리지 않는다. 상태 기록과 `activityTopResumedStateLost`는 그대로라 다음 활동이 기다리지 않는다. 멈출 때(`performPauseActivityIfNeeded`)는 안드로이드가 원래 하듯 `onPause` 전에 알린다.
+- `ViewRootImpl`은 다른 앱의 태스크가 맨 위이고 창이 보이는 동안 창 포커스 잃음을 뷰에 알리지 않는다. 창 포커스 자체(`mHasWindowFocus`, IME, 입력 단계)는 그대로 따르므로 키와 IME 입력은 포커스를 가진 창에만 간다. 맨 위 잃음 소식보다 창 포커스 잃음이 먼저 오면 300 ms 기다리고, 그 안에 오지 않으면(같은 앱의 다른 창으로 간 경우) 알린다. 창이 숨으면 그때 알린다.
+- 목록은 기존 앱별 목록 메시지 `CaptionCompat`(`keep_focus`)로 호스트에서 에이전트로 가고, 에이전트가 셸 명령으로 넘긴다. #1022의 `FocusTask`와 호스트의 `FocusKeeper`는 지웠다.
+
+### 확인하지 못한 것
+- 빌드와 실행 전부. 실제 PC에서 Monument Valley를 켠 채 다른 앱 창을 눌러 계속 도는지, 끈 채로는 지금처럼 멈추는지, 키가 포커스 창에만 가는지는 프레임워크 빌드 뒤 손으로 확인해야 한다.
+- Monument Valley가 `onTopResumedActivityChanged`에도 반응하는지는 앱 코드를 보지 않아 모른다. 두 신호를 모두 막으므로 결과는 같다.
+
+## R60. 시스템 강제 배율에서 FLO의 플레이어 바와 탭 바 사이가 벌어지는 까닭 (FR-4)
 
 2026-11-27. 1.0.1-dev.31(#1034 포함)에서 FLO(`skplanet.musicmate`)를 시스템 강제로 두면 다른 크기는 맞는데 플레이어 바와 아래 탭 바 사이 여백만 이상했다(주, 보조 모니터 모두). 기기에는 손대지 않고, 이미 받아 둔 뷰 덤프와 FLO APK만 읽었다.
 
