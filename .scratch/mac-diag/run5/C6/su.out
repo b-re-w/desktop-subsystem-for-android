@@ -1,0 +1,122 @@
+START C uptime 6.63
+== uptime 6.67
+MemFree:          361596 kB
+MemAvailable:    1287036 kB
+SwapTotal:       2023484 kB
+SwapFree:        2023484 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		0		-2
+== uptime 66.76
+MemFree:         1494936 kB
+MemAvailable:    1470132 kB
+SwapTotal:       2023484 kB
+SwapFree:        1721324 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		300648		-2
+== uptime 126.82
+MemFree:         1477704 kB
+MemAvailable:    1499356 kB
+SwapTotal:       2023484 kB
+SwapFree:        1684712 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		338760		-2
+== uptime 186.91
+MemFree:         1494860 kB
+MemAvailable:    1478688 kB
+SwapTotal:       2023484 kB
+SwapFree:        1755720 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		267736		-2
+== uptime 246.95
+MemFree:         1473344 kB
+MemAvailable:    1475720 kB
+SwapTotal:       2023484 kB
+SwapFree:        1757736 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		265748		-2
+== uptime 306.99
+MemFree:         1463556 kB
+MemAvailable:    1488340 kB
+SwapTotal:       2023484 kB
+SwapFree:        1732000 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		291308		-2
+== uptime 367.06
+MemFree:         1449780 kB
+MemAvailable:    1474012 kB
+SwapTotal:       2023484 kB
+SwapFree:        1754732 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		268748		-2
+== uptime 427.10
+MemFree:         1473088 kB
+MemAvailable:    1486176 kB
+SwapTotal:       2023484 kB
+SwapFree:        1752128 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		271356		-2
+== uptime 487.15
+MemFree:         1467272 kB
+MemAvailable:    1485528 kB
+SwapTotal:       2023484 kB
+SwapFree:        1752160 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		271324		-2
+== uptime 547.21
+MemFree:         1477260 kB
+MemAvailable:    1500632 kB
+SwapTotal:       2023484 kB
+SwapFree:        1727856 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		295628		-2
+== uptime 607.27
+MemFree:         1490632 kB
+MemAvailable:    1506860 kB
+SwapTotal:       2023484 kB
+SwapFree:        1714940 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		308544		-2
+== uptime 667.33
+MemFree:         1472752 kB
+MemAvailable:    1509896 kB
+SwapTotal:       2023484 kB
+SwapFree:        1710808 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		312676		-2
+== uptime 727.38
+MemFree:         1510268 kB
+MemAvailable:    1508348 kB
+SwapTotal:       2023484 kB
+SwapFree:        1711716 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		311600		-2
+== uptime 787.43
+MemFree:         1492792 kB
+MemAvailable:    1507820 kB
+SwapTotal:       2023484 kB
+SwapFree:        1711980 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		311504		-2
+== uptime 847.48
+MemFree:         1488888 kB
+MemAvailable:    1507280 kB
+SwapTotal:       2023484 kB
+SwapFree:        1712252 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		311232		-2
+== uptime 907.53
+MemFree:         1484796 kB
+MemAvailable:    1506348 kB
+SwapTotal:       2023484 kB
+SwapFree:        1712712 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		310772		-2
+== uptime 967.57
+MemFree:         1533600 kB
+MemAvailable:    1506888 kB
+SwapTotal:       2023484 kB
+SwapFree:        1712248 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		311228		-2
+END C uptime 967.61
+--- su session ended 2026-11-27T09:26:05

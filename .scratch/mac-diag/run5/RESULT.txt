@@ -1,0 +1,80 @@
+run5, Mac guest kernel panic: bigger samples and splitting controls. 2026-11-27 05:27 to 11:06 UTC.
+Host DSA 1.0.1-dev.11, image 17.0.0-16373615-15.1-dev.10-arm64, kernel 6.18.54.1-dsa, VM 2048 MB,
+2 vCPU. Root by "dsa apps root com.android.shell remember" (one approval), set back to "ask" after.
+One su call per boot at uptime 6-18 s, 15 minutes per boot, no app opened. 22 boots.
+
+RESULTS (panics / boots)
+  C  control, nothing changed                                         0 / 6   (C3: "Bad rss-counter ... MM_SWAPENTS val:32" at 570.8 s, no panic)
+  Z  zram reset and comp_algorithm lz4 -> lzo-rle at ~9 s             2 / 4   (Z1 75.5 s, Z3 972.8 s)
+  K  zram idle / recompress / compact writes blocked (bind mounts)    1 / 3   (K2 77.5 s)
+  P  virtio_balloon unbound at 6.6 s (the only run time way found
+     to stop free page reporting; see below)                          0 / 3
+  T  init's memory.reclaim blocked; root writes "64M swappiness=30"
+     every 30 s through a second cgroup2 mount                        0 / 3
+  I  init's memory.reclaim blocked; root writes "64M swappiness=200"
+     four times every 60 s                                            0 / 3
+Before the series: the boot found running had been up 15460 s with swap on, 112 full reclaims,
+148 trims, and no panic or warning (probe/long-boot-android-console.txt).
+
+ALL BOOTS SO FAR ON THIS INSTALL (run3 + run4 + run5)
+  init's own reclaim and trim running, swap on (C, Z, K, run3 controls, long boot): 5 panics / 18
+  the same with the balloon unbound (P):                                            0 / 3
+  init's memory.reclaim writes blocked, or swap off (A, B, T, I):                   0 / 14
+5/18 against 0/14 is p = 0.043 (Fisher, one sided). Suggestive, not settled. The control rate
+is low and uneven: 2 of 4 on 11-22, 0 of 6 on 11-27. P at 0/3 says nothing yet.
+
+EVERY PANIC AND FIRST WARNING (full text in stacks/ and in run3's consoles)
+  run3 C3  160.5 s  BUG: Bad rss-counter state, MM_FILEPAGES val:26 (Profile Saver exiting)
+           291.1 s  NULL deref, shmem_mapping <- show_smap <- seq_read (smaps read; a VMA with a bad vm_file)
+  run3 C4  103.1 s  kernel BUG lib/list_debug.c:62, list_lru_del <- workingset_update_node <- xas_store
+                    <- __filemap_add_folio <- page_cache_ra_order <- filemap_fault (xarray node list corrupt)
+  run5 Z1   75.5 s  paging request at vmalloc address (pte 0), packet_rcv <- __netif_receive_skb_core
+                    <- virtnet_poll (softirq, over fscrypt decrypt_work); 0.8 s after a 157 MiB trim
+  run5 K2   77.48 s WARNING mm/vma.c:502 __split_vma <- vms_gather_munmap_vmas <- do_vmi_munmap <- munmap
+            77.49 s NULL deref, anon_vma_name <- vm_area_dup <- __split_vma (same munmap); 2.1 s after a trim
+  run5 Z3  972.8 s  paging request at a vmemmap address, zs_free <- zram_free_page <- zram_slot_free_notify
+                    <- swap_entries_free <- free_swap_and_cache_nr <- unmap_page_range <- exit_mmap (sh exiting)
+  run5 C3  570.8 s  BUG: Bad rss-counter state, MM_SWAPENTS val:32 (no panic in the 15 minutes)
+  earlier (run3 brief) 436 s warning in swap_cache_add_folio <- user_proactive_reclaim, Oops in
+                    __kmem_cache_alloc_bulk; and a boot found dead on 11-26 in rmap_walk_anon.
+Where they are: only Z3 is inside zram (freeing a slot whose zsmalloc handle is garbage). None
+is in zram write/compress, in swap-in, in free page reporting or in the balloon. The victims
+are unrelated objects: a VMA (three times: smaps, munmap, rmap), an xarray node, a vmalloc
+mapping, a zsmalloc handle, two rss counters. That is the picture of memory being written or
+reused after free by something else, with whoever touches it next dying; not of one faulty path.
+Three of five panics came 75 to 103 s after boot, within a few seconds of the first large
+trims after "Android has settled after its boot".
+
+WHAT THE SPLITS RULE OUT
+- The lz4 compressor: panics with lzo-rle (2 of 4). A zram reset also drops the recompress
+  algorithm (recomp_algorithm reads empty after it), so Z ran without zstd recompression too.
+- zram idle marking, recompression and compaction: K2 panicked with all three writes failing.
+- Free page reporting as the source: reported_total_kb and reported_kb read 0 on this host
+  before anything was changed, nr_balloon_pages 0. Nothing is reported on the Mac, with or
+  without the balloon. /sys/module/page_reporting/parameters has no switch to turn it off
+  (delay_ms, fault_cluster_order, page_reporting_order, rereport, counters); unbinding
+  virtio8 from virtio_balloon was the method used for P.
+- Proactive reclaim by itself: T and I pushed anonymous memory to zram through memory.reclaim
+  for 15 minutes (swap use 250-330 MiB, like the controls) and A reclaimed page cache without
+  swap, 0 of 10. MADV_PAGEOUT by dsa-channeld ("paged out ... after it woke") ran 12-23 times
+  in every boot, clean ones included.
+NOT SEPARATED
+- What init's own trigger does that T and I do not: sizes chosen by dsa-channeld (157 MiB in
+  one trim against 64), "drop_caches 3", "page_reporting rereport 1", and the timing against
+  the boot. In B, T and I the full reclaim trigger still ran 1-3 times per boot (drop_caches,
+  zram writes, rereport), against 1-12 in the controls, so those are reduced, not removed.
+- Real "only the idle reclaim blocked" / "only the trim blocked": init's writes cannot be told
+  apart at the bind mount, so T and I are synthetic writers, not dsa-channeld's own schedule.
+
+NEXT, in order of what it would tell (none done; each needs the owner):
+1. A kernel command line that catches the writer instead of the victim: slub_debug=FZPU,
+   page_poison=1, init_on_free=1, page_owner=on (or a KASAN build). The command line is the
+   host's, so this is a host or image change.
+2. Block only "drop_caches" and only "rereport" (bind mounts as in K), 6 boots each, with
+   controls interleaved.
+3. 10 more controls: at 5/18 the rate itself is still loose.
+
+FILES
+<run>/android-console.txt (whole guest console of that boot), su.out (meminfo and /proc/swaps
+every 60 s, and the variant's own setup lines), start.txt, hostd-root.txt; stacks/ (first
+warning to panic, per boot); probe/probe.txt; scripts/; summary.txt.

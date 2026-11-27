@@ -1,0 +1,20 @@
+START K uptime 8.38
+bind idle rc=0
+bind recompress rc=0
+bind compact rc=0
+binds done uptime 8.49
+== uptime 8.52
+MemFree:          981936 kB
+MemAvailable:    1340212 kB
+SwapTotal:       2023484 kB
+SwapFree:        2019244 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		4356		-2
+== uptime 68.66
+MemFree:         1320720 kB
+MemAvailable:    1419360 kB
+SwapTotal:       2023484 kB
+SwapFree:        1764480 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		257504		-2
+--- su session ended 2026-11-27T07:28:53

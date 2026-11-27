@@ -1,0 +1,94 @@
+[   71.041863] servicemanager: Notifying artd they don't (previously: do) have clients when we now have no record of a client
+[   71.044991] servicemanager: Caller(pid=2277,uid=1082,sid=u:r:artd:s0) Unregistering artd
+[   71.045247] libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0xb400f873bdc1edf0) with descriptor: '(not cached)'
+[   71.058650] init: Service 'artd' (pid 2277) exited with status 0 oneshot service took 32.002998 seconds in background
+[   71.059015] init: Sending SIGKILL to service 'artd' (pid 2277) process group...
+[   71.060212] libprocessgroup: Removed cgroup /sys/fs/cgroup/system/uid_1082/pid_2277
+[   74.971788] dsa-channeld: trimming 224 MiB of cold page cache (working set target 160 MiB)
+[   74.974065] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 384 MiB droppable and 123 MiB anonymous of 769 MiB in use
+[   74.985847] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   75.311872] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 325ms and succeeded
+[   75.317778] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   75.347767] dsa-channeld: the working set trim returned in 362 ms: free 1207 -> 1427 MiB; page cache 364 -> 185 MiB; reclaimable kernel caches 19 -> 19 MiB; unreclaimable kernel caches 75 -> 75 MiB; app memory 123 -> 82 MiB; swapped 237 -> 278 MiB; zram 226 MiB in 79 -> 267 MiB in 81; taken back by the host 0 -> 0 MiB
+[   77.483549] ------------[ cut here ]------------
+[   77.483818] WARNING: CPU: 1 PID: 2064 at mm/vma.c:502 __split_vma+0x298/0x30c
+[   77.484080] Modules linked in:
+[   77.484167] CPU: 1 UID: 10112 PID: 2064 Comm: pool-4-thread-2 Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[   77.484267] pstate: 81400005 (Nzcv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[   77.484354] pc : __split_vma+0x298/0x30c
+[   77.484417] lr : vms_gather_munmap_vmas+0x58/0x2d0
+[   77.484497] sp : ffff800081313790
+[   77.484559] x29: ffff8000813137e0 x28: ffff0000a80bd640 x27: 0000000000000000
+[   77.484655] x26: 0000000000000000 x25: 0000000000000000 x24: 0000000000000001
+[   77.484800] x23: 0000000000000001 x22: ffff800081313a00 x21: 0000f8cda8569000
+[   77.484896] x20: ffff8000813138e0 x19: ffff0000a4cb8780 x18: 0000f8cda8678fff
+[   77.484991] x17: 0000000000000000 x16: ffffd05ee8ff8178 x15: 0000f8cda856cfff
+[   77.485217] x14: 0000f8cda6200000 x13: 1fffe0000a90a781 x12: ffff000054853c0c
+[   77.485317] x11: ffff800081313a00 x10: ffff000054853c00 x9 : 0000f8cda62f3fff
+[   77.485447] x8 : ffff8000813138e0 x7 : 0000000000000000 x6 : 0000000000000001
+[   77.485506] x5 : ffff8000813139f0 x4 : ffff0000a80bd640 x3 : 0000000000000001
+[   77.485576] x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000000
+[   77.485662] Call trace:
+[   77.485749]  __split_vma+0x298/0x30c (P)
+[   77.485826]  vms_gather_munmap_vmas+0x58/0x2d0
+[   77.485909]  do_vmi_align_munmap+0xcc/0x17c
+[   77.485972]  do_vmi_munmap+0xac/0x124
+[   77.486034]  __vm_munmap+0x11c/0x19c
+[   77.486096]  __arm64_sys_munmap+0x20/0x30
+[   77.486158]  invoke_syscall+0x58/0xc8
+[   77.486222]  el0_svc_common.constprop.0+0xc0/0xe0
+[   77.486300]  do_el0_svc+0x1c/0x28
+[   77.486377]  el0_svc+0x3c/0x168
+[   77.486463]  el0t_64_sync_handler+0xa0/0xe4
+[   77.486527]  el0t_64_sync+0x1b0/0x1b4
+[   77.486592] ---[ end trace 0000000000000000 ]---
+[   77.487649] Unable to handle kernel NULL pointer dereference at virtual address 00000000000000a8
+[   77.488965] Mem abort info:
+[   77.489002]   ESR = 0x0000000096000006
+[   77.489057]   EC = 0x25: DABT (current EL), IL = 32 bits
+[   77.489148]   SET = 0, FnV = 0
+[   77.489269]   EA = 0, S1PTW = 0
+[   77.489344]   FSC = 0x06: level 2 translation fault
+[   77.489426] Data abort info:
+[   77.489564]   ISV = 0, ISS = 0x00000006, ISS2 = 0x00000000
+[   77.489658]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[   77.489734]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[   77.489808] user pgtable: 4k pages, 48-bit VAs, pgdp=00000000c731c000
+[   77.489921] [00000000000000a8] pgd=08000000c731d403, p4d=08000000c731d403, pud=08000000c731e403, pmd=0000000000000000
+[   77.490093] Internal error: Oops: 0000000096000006 [#1]  SMP
+[   77.490291] Modules linked in:
+[   77.490340] CPU: 1 UID: 10112 PID: 2064 Comm: pool-4-thread-2 Tainted: G        W           6.18.54.1-dsa #1 PREEMPT(full) 
+[   77.490516] Tainted: [W]=WARN
+[   77.490563] pstate: 61400005 (nZCv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[   77.490661] pc : anon_vma_name+0x8/0x10
+[   77.490721] lr : vm_area_dup+0xb4/0x144
+[   77.490783] sp : ffff800081313760
+[   77.491292] x29: ffff800081313760 x28: ffff0000a80bd640 x27: 0000000000000000
+[   77.491491] x26: 0000000000000000 x25: 0000000000000000 x24: 0000000000000001
+[   77.491595] x23: 0000000000000001 x22: ffff800081313a00 x21: 0000f8cda8569000
+[   77.491843] x20: ffff0000a4cb8780 x19: ffff000034293540 x18: 0000f8cda8678fff
+[   77.492712] x17: 0000000000000000 x16: ffffd05ee8ff8178 x15: 0000f8cda856cfff
+[   77.492810] x14: 0000f8cda6200000 x13: 1fffe0000a90a781 x12: ffff000054853c0c
+[   77.493025] x11: ffff800081313a00 x10: ffff000054853c00 x9 : 0000f8cda62f3fff
+[   77.493163] x8 : ffff8000813138e0 x7 : ffff0000a80bd640 x6 : ffff0000afbd5280
+[   77.493292] x5 : 0000000000000000 x4 : 0000000000000000 x3 : 0000000000000000
+[   77.494007] x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000000
+[   77.494182] Call trace:
+[   77.494229]  anon_vma_name+0x8/0x10 (P)
+[   77.494313]  __split_vma+0x80/0x30c
+[   77.494378]  vms_gather_munmap_vmas+0x58/0x2d0
+[   77.494531]  do_vmi_align_munmap+0xcc/0x17c
+[   77.494571]  do_vmi_munmap+0xac/0x124
+[   77.494632]  __vm_munmap+0x11c/0x19c
+[   77.494687]  __arm64_sys_munmap+0x20/0x30
+[   77.494739]  invoke_syscall+0x58/0xc8
+[   77.495711]  el0_svc_common.constprop.0+0xc0/0xe0
+[   77.497201]  do_el0_svc+0x1c/0x28
+[   77.497261]  el0_svc+0x3c/0x168
+[   77.497320]  el0t_64_sync_handler+0xa0/0xe4
+[   77.497582]  el0t_64_sync+0x1b0/0x1b4
+[   77.497757] Code: d50323bf d65f03c0 f9400801 f9405400 (f9405421) 
+[   77.497857] ---[ end trace 0000000000000000 ]---
+[   77.497938] Kernel panic - not syncing: Oops: Fatal exception
+[   77.498027] SMP: stopping secondary CPUs
+[   77.498140] Kernel Offset: 0x505e67e00000 from 0xffff800080000000

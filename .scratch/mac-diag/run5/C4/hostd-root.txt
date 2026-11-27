@@ -1,0 +1,1 @@
+root: 2026-11-27T08:03:00.871Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runC.sh` (request 1): approved without asking (the app may keep root)

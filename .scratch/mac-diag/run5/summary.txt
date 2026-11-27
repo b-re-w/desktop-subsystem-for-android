@@ -1,0 +1,24 @@
+Z1 | started=1 ended=0 | last uptime 69.16 | panic: [   75.503492] Kernel panic - not syncing: Oops: Fatal exception in interrupt | first sign: [   75.498162] Unable to handle kernel paging request at virtual address ffff800083c47002
+K1 | started=1 ended=1 | last uptime 978.73 | panic: none | first sign: none
+P1 | started=1 ended=1 | last uptime 967.91 | panic: none | first sign: none
+T1 | started=1 ended=1 | last uptime 971.10 | panic: none | first sign: none
+I1 | started=1 ended=1 | last uptime 970.99 | panic: none | first sign: none
+series done 2026-11-27T06:36:32
+C1 | started=1 ended=1 | last uptime 967.31 | panic: none | first sign: none
+Z2 | started=1 ended=1 | last uptime 967.75 | panic: none | first sign: none
+C2 | started=1 ended=1 | last uptime 967.50 | panic: none | first sign: none
+K2 | started=1 ended=0 | last uptime 68.66 | panic: [   77.497938] Kernel panic - not syncing: Oops: Fatal exception | first sign: [   77.483818] WARNING: CPU: 1 PID: 2064 at mm/vma.c:502 __split_vma+0x298/0x30c
+C3 | started=1 ended=1 | last uptime 980.20 | panic: none | first sign: [  570.849017] BUG: Bad rss-counter state mm:0000000061d139ff type:MM_SWAPENTS val:32 Comm:kworker/0:0 Pid:9
+T2 | started=1 ended=1 | last uptime 977.47 | panic: none | first sign: none
+C4 | started=1 ended=1 | last uptime 970.21 | panic: none | first sign: none
+I2 | started=1 ended=1 | last uptime 970.81 | panic: none | first sign: none
+C5 | started=1 ended=1 | last uptime 971.11 | panic: none | first sign: none
+P2 | started=1 ended=1 | last uptime 967.93 | panic: none | first sign: none
+C6 | started=1 ended=1 | last uptime 967.57 | panic: none | first sign: none
+Z3 | started=1 ended=1 | last uptime 972.76 | panic: [  972.803680] Kernel panic - not syncing: Oops: Fatal exception | first sign: [  972.800008] Unable to handle kernel paging request at virtual address fffffdffbf000028
+K3 | started=1 ended=1 | last uptime 969.81 | panic: none | first sign: none
+T3 | started=1 ended=1 | last uptime 972.73 | panic: none | first sign: none
+I3 | started=1 ended=1 | last uptime 970.90 | panic: none | first sign: none
+P3 | started=1 ended=1 | last uptime 967.56 | panic: none | first sign: none
+Z4 | started=1 ended=1 | last uptime 967.71 | panic: none | first sign: none
+series done 2026-11-27T11:06:24

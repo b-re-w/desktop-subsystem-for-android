@@ -1,0 +1,27 @@
+START Z uptime 8.31
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		25128		-2
+lzo-rle lzo [lz4] zstd 
+swapoff rc=0
+reset rc=0
+alg rc=0
+disksize rc=0
+Swapspace size: 2023484k, UUID=3389634f-88ac-4594-b388-a990e06f34ef
+mkswap rc=0
+swapon rc=0 uptime 8.97
+[lzo-rle] lzo lz4 zstd 
+== uptime 8.99
+MemFree:          786960 kB
+MemAvailable:    1314440 kB
+SwapTotal:       2023484 kB
+SwapFree:        2023484 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		0		-2
+== uptime 69.16
+MemFree:         1486004 kB
+MemAvailable:    1455256 kB
+SwapTotal:       2023484 kB
+SwapFree:        1761112 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		262396		-2
+--- su session ended 2026-11-27T05:29:41

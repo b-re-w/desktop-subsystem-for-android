@@ -1,0 +1,1 @@
+root: 2026-11-27T06:54:15.755Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runZ.sh` (request 1): approved without asking (the app may keep root)

@@ -1,0 +1,140 @@
+START I uptime 6.61
+cg mount rc=0
+bind rc=0 uptime 6.68
+== uptime 6.71
+MemFree:          378984 kB
+MemAvailable:    1322704 kB
+SwapTotal:       2023484 kB
+SwapFree:        2023484 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		0		-2
+idle writes rc=0000 uptime 6.96
+== uptime 66.98
+MemFree:          335072 kB
+MemAvailable:    1287640 kB
+SwapTotal:       2023484 kB
+SwapFree:        1962788 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		60696		-2
+idle writes rc=0000 uptime 67.15
+== uptime 127.22
+MemFree:          957964 kB
+MemAvailable:    1352152 kB
+SwapTotal:       2023484 kB
+SwapFree:        1925332 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		98152		-2
+idle writes rc=0000 uptime 127.73
+== uptime 187.75
+MemFree:         1061228 kB
+MemAvailable:    1417616 kB
+SwapTotal:       2023484 kB
+SwapFree:        1827856 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		195628		-2
+idle writes rc=0000 uptime 187.97
+== uptime 248.00
+MemFree:         1174504 kB
+MemAvailable:    1444352 kB
+SwapTotal:       2023484 kB
+SwapFree:        1793544 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		229936		-2
+idle writes rc=0000 uptime 248.20
+== uptime 308.27
+MemFree:         1248304 kB
+MemAvailable:    1439576 kB
+SwapTotal:       2023484 kB
+SwapFree:        1793852 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		229548		-2
+idle writes rc=0000 uptime 308.73
+== uptime 368.76
+MemFree:         1301408 kB
+MemAvailable:    1484588 kB
+SwapTotal:       2023484 kB
+SwapFree:        1741716 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		281768		-2
+idle writes rc=0000 uptime 368.92
+== uptime 428.98
+MemFree:         1434528 kB
+MemAvailable:    1495212 kB
+SwapTotal:       2023484 kB
+SwapFree:        1728452 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		295032		-2
+idle writes rc=0000 uptime 429.19
+== uptime 489.24
+MemFree:         1511760 kB
+MemAvailable:    1519500 kB
+SwapTotal:       2023484 kB
+SwapFree:        1700264 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		323216		-2
+idle writes rc=0001 uptime 489.58
+== uptime 549.60
+MemFree:         1331368 kB
+MemAvailable:    1475016 kB
+SwapTotal:       2023484 kB
+SwapFree:        1742480 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		280996		-2
+idle writes rc=0000 uptime 549.78
+== uptime 609.80
+MemFree:         1419792 kB
+MemAvailable:    1510844 kB
+SwapTotal:       2023484 kB
+SwapFree:        1703172 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		320304		-2
+idle writes rc=0000 uptime 609.95
+== uptime 669.96
+MemFree:         1501940 kB
+MemAvailable:    1511096 kB
+SwapTotal:       2023484 kB
+SwapFree:        1705876 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		317608		-2
+idle writes rc=0001 uptime 670.13
+== uptime 730.18
+MemFree:         1510708 kB
+MemAvailable:    1516392 kB
+SwapTotal:       2023484 kB
+SwapFree:        1698356 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		325108		-2
+idle writes rc=0001 uptime 730.38
+== uptime 790.42
+MemFree:         1507680 kB
+MemAvailable:    1517588 kB
+SwapTotal:       2023484 kB
+SwapFree:        1697596 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		325880		-2
+idle writes rc=0001 uptime 790.61
+== uptime 850.63
+MemFree:         1539264 kB
+MemAvailable:    1524000 kB
+SwapTotal:       2023484 kB
+SwapFree:        1692064 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		331412		-2
+idle writes rc=0011 uptime 850.80
+== uptime 910.83
+MemFree:         1433648 kB
+MemAvailable:    1513488 kB
+SwapTotal:       2023484 kB
+SwapFree:        1701048 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		322424		-2
+idle writes rc=0000 uptime 910.97
+== uptime 970.99
+MemFree:         1484264 kB
+MemAvailable:    1479048 kB
+SwapTotal:       2023484 kB
+SwapFree:        1741788 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		281684		-2
+END I uptime 971.03
+--- su session ended 2026-11-27T06:36:26

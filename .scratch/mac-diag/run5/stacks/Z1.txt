@@ -1,0 +1,82 @@
+[   69.177043] audit: rate limit exceeded
+[   69.177085] type=1400 audit(1795757374.520:76): avc:  denied  { getattr } for  comm="grep" path="pipe:[16348]" dev="pipefs" ino=16348 scontext=u:r:dsa_su_root:s0 tcontext=u:r:dsa_su:s0 tclass=fifo_file permissive=1
+[   69.217191] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.reclaim_step}M swappiness=200' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:60) took 57ms and succeeded
+[   69.346216] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 1ms and failed: Unable to write to file '/sys/devices/virtual/block/zram0/recompress': Unable to write file contents: Invalid argument
+[   69.347337] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[   69.362832] dsa-channeld: the reclaim (HostShort) returned in 275 ms: free 1315 -> 1479 MiB; page cache 276 -> 147 MiB; reclaimable kernel caches 23 -> 19 MiB; unreclaimable kernel caches 75 -> 75 MiB; app memory 105 -> 66 MiB; swapped 254 -> 292 MiB; zram 242 MiB in 70 -> 282 MiB in 82; taken back by the host 0 -> 0 MiB
+[   74.365573] dsa-channeld: trimming 157 MiB of cold page cache (working set target 160 MiB)
+[   74.368679] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 317 MiB droppable and 81 MiB anonymous of 661 MiB in use
+[   74.385163] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[   74.704897] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 319ms and succeeded
+[   74.709561] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[   74.739926] dsa-channeld: the working set trim returned in 355 ms: free 1314 -> 1459 MiB; page cache 297 -> 187 MiB; reclaimable kernel caches 19 -> 19 MiB; unreclaimable kernel caches 75 -> 75 MiB; app memory 81 -> 40 MiB; swapped 277 -> 313 MiB; zram 267 MiB in 82 -> 302 MiB in 89; taken back by the host 0 -> 0 MiB
+[   75.498162] Unable to handle kernel paging request at virtual address ffff800083c47002
+[   75.498790] Mem abort info:
+[   75.498827]   ESR = 0x0000000096000007
+[   75.498922]   EC = 0x25: DABT (current EL), IL = 32 bits
+[   75.498990]   SET = 0, FnV = 0
+[   75.499128]   EA = 0, S1PTW = 0
+[   75.499212]   FSC = 0x07: level 3 translation fault
+[   75.499299] Data abort info:
+[   75.499361]   ISV = 0, ISS = 0x00000007, ISS2 = 0x00000000
+[   75.499436]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[   75.499510]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[   75.499590] swapper pgtable: 4k pages, 48-bit VAs, pgdp=0000000071b73000
+[   75.499680] [ffff800083c47002] pgd=1000000073905403, p4d=1000000073905403, pud=1000000073906403, pmd=100000007988d403, pte=0000000000000000
+[   75.499859] Internal error: Oops: 0000000096000007 [#1]  SMP
+[   75.499950] Modules linked in:
+[   75.500005] CPU: 0 UID: 0 PID: 315 Comm: kworker/u9:1 Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[   75.500116] Workqueue: fscrypt_read_queue decrypt_work
+[   75.500230] pstate: 21400005 (nzCv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[   75.500308] pc : packet_rcv+0xdc/0x4dc
+[   75.500379] lr : packet_rcv+0xcc/0x4dc
+[   75.500417] sp : ffff8000800039e0
+[   75.500454] x29: ffff8000800039e0 x28: 0000000000000001 x27: ffff000062af8580
+[   75.500523] x26: 000000000000008d x25: ffff000079eba02e x24: 000000000000007f
+[   75.500592] x23: 000000000000008d x22: ffff0000349c4000 x21: ffff0000349c4000
+[   75.500660] x20: ffff000062af8000 x19: ffff00006282dc00 x18: 00000000000000a1
+[   75.500751] x17: ffff2e9fb8709000 x16: ffff800080000000 x15: 0000000000000118
+[   75.500798] x14: 00000000141879ce x13: 000000008bf2adc7 x12: 0000000036e83585
+[   75.500917] x11: 0000000000000000 x10: ffff800080003d28 x9 : 0000000000000000
+[   75.501004] x8 : 00000000000000ad x7 : 00000000001f0000 x6 : ffff000079eba000
+[   75.501075] x5 : 000000000000008d x4 : ffffd160f7b3acc0 x3 : ffff000079eba020
+[   75.501144] x2 : 0000000000000020 x1 : ffff000039aa9140 x0 : ffff800083c47000
+[   75.501208] Call trace:
+[   75.501230]  packet_rcv+0xdc/0x4dc (P)
+[   75.501299]  __netif_receive_skb_core.constprop.0+0x730/0x1188
+[   75.501408]  __netif_receive_skb_list_core+0x120/0x2b8
+[   75.501454]  netif_receive_skb_list_internal+0x244/0x374
+[   75.501500]  napi_complete_done+0x80/0x1f0
+[   75.501538]  virtnet_poll+0x474/0xd58
+[   75.501610]  __napi_poll+0x38/0x208
+[   75.501659]  net_rx_action+0x310/0x3c4
+[   75.501702]  handle_softirqs+0x11c/0x368
+[   75.501773]  __do_softirq+0x14/0x20
+[   75.501864]  ____do_softirq+0x10/0x1c
+[   75.501915]  call_on_irq_stack+0x30/0x48
+[   75.501961]  do_softirq_own_stack+0x1c/0x28
+[   75.502010]  __irq_exit_rcu+0xcc/0x104
+[   75.502057]  irq_exit_rcu+0x10/0x1c
+[   75.502096]  el1_interrupt+0x50/0xb0
+[   75.502158]  el1h_64_irq_handler+0x18/0x24
+[   75.502205]  el1h_64_irq+0x84/0x88
+[   75.502243]  crypto_aes_decrypt+0x570/0xe40 (P)
+[   75.502306]  crypto_ecb_decrypt2+0x5c/0x98
+[   75.502349]  crypto_lskcipher_crypt_sg+0xc8/0x138
+[   75.502391]  crypto_lskcipher_decrypt_sg+0x20/0x2c
+[   75.502431]  crypto_skcipher_decrypt+0x4c/0x60
+[   75.502472]  xts_decrypt+0x98/0xd8
+[   75.502503]  crypto_skcipher_decrypt+0x3c/0x60
+[   75.502553]  fscrypt_crypt_data_unit+0x100/0x1d0
+[   75.502620]  fscrypt_decrypt_pagecache_blocks+0xb4/0x128
+[   75.502676]  fscrypt_decrypt_bio+0xa0/0x1d8
+[   75.502709]  decrypt_work+0x20/0x54
+[   75.502743]  process_one_work+0x184/0x414
+[   75.502776]  worker_thread+0x18c/0x31c
+[   75.502809]  kthread+0x144/0x21c
+[   75.502841]  ret_from_fork+0x10/0x20
+[   75.503014] Code: 2a1703fa f9407e80 b40000e0 f9400c00 (79400401) 
+[   75.503117] ---[ end trace 0000000000000000 ]---
+[   75.503492] Kernel panic - not syncing: Oops: Fatal exception in interrupt
+[   75.503597] SMP: stopping secondary CPUs
+[   75.503685] Kernel Offset: 0x516075800000 from 0xffff800080000000

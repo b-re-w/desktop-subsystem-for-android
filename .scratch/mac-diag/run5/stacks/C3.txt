@@ -1,0 +1,17 @@
+[  559.011679] dsa-channeld: the working set trim returned in 29 ms: free 1451 -> 1521 MiB; page cache 217 -> 148 MiB; reclaimable kernel caches 19 -> 19 MiB; unreclaimable kernel caches 73 -> 73 MiB; app memory 36 -> 35 MiB; swapped 296 -> 297 MiB; zram 286 MiB in 76 -> 286 MiB in 76; taken back by the host 0 -> 0 MiB
+[  564.013318] dsa-channeld: trimming 89 MiB of cold page cache (working set target 160 MiB)
+[  564.014118] dsa-channeld: reclaiming the guest's memory (Gradual, 0 tasks in use): 249 MiB droppable and 41 MiB anonymous of 541 MiB in use
+[  564.020165] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:112)
+[  564.081579] init: Command 'write /sys/fs/cgroup/memory.reclaim ${vendor.dsa.memory.trim_size}M swappiness=30' action=vendor.dsa.memory.trim=1 (/vendor/etc/init/dsa-channeld.rc:113) took 57ms and succeeded
+[  564.081970] init: processing action (vendor.dsa.memory.trim=1) from (/vendor/etc/init/dsa-channeld.rc:118)
+[  564.105968] dsa-channeld: the working set trim returned in 86 ms: free 1434 -> 1520 MiB; page cache 229 -> 147 MiB; reclaimable kernel caches 19 -> 19 MiB; unreclaimable kernel caches 73 -> 73 MiB; app memory 41 -> 36 MiB; swapped 292 -> 296 MiB; zram 281 MiB in 76 -> 286 MiB in 76; taken back by the host 0 -> 0 MiB
+[  565.928692] dsa-channeld: paged out com.google.android.gms (pid 1267, oom_score_adj 200, Google Play services) after it woke: resident anonymous 10 -> 4 MiB, swapped out 82 -> 87 MiB, 2392 MiB asked for, 1 ranges refused, 35 ms
+[  570.813499] init: Untracked process (pid: 2431 name: (crash_dump64) ppid: 1 pgrp: 2430 state: Z) exited with status 0
+[  570.813610] init: Untracked process (pid: 2431 name: (crash_dump64) ppid: 1 pgrp: 2430 state: Z) did not have an associated service entry and will not be reaped
+[  570.813833] init: Untracked process (pid: 2433 name: (lowpool[5]) ppid: 1 pgrp: 2433 state: Z) exited with status 0
+[  570.813893] init: Untracked process (pid: 2433 name: (lowpool[5]) ppid: 1 pgrp: 2433 state: Z) did not have an associated service entry and will not be reaped
+[  570.849017] BUG: Bad rss-counter state mm:0000000061d139ff type:MM_SWAPENTS val:32 Comm:kworker/0:0 Pid:9
+[  570.893111] init: Untracked process (pid: 2439 name: (pbtombstone) ppid: 1 pgrp: 419 state: Z) exited with status 1
+[  570.893203] init: Untracked process (pid: 2439 name: (pbtombstone) ppid: 1 pgrp: 419 state: Z) did not have an associated service entry and will not be reaped
+[  574.108819] dsa-channeld: reclaiming the guest's memory (Idle, 0 tasks in use): 603 MiB droppable and 74 MiB anonymous of 914 MiB in use
+[  574.110937] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)

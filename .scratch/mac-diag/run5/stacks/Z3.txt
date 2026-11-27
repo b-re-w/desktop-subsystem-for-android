@@ -1,0 +1,69 @@
+[  915.043751] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  915.061817] dsa-channeld: the reclaim (Idle) returned in 311 ms: free 1353 -> 1578 MiB; page cache 272 -> 74 MiB; reclaimable kernel caches 18 -> 18 MiB; unreclaimable kernel caches 73 -> 73 MiB; app memory 76 -> 54 MiB; swapped 255 -> 277 MiB; zram 245 MiB in 80 -> 266 MiB in 76; taken back by the host 0 -> 0 MiB
+[  925.064573] dsa-channeld: reclaiming the guest's memory (Idle, 0 tasks in use): 267 MiB droppable and 91 MiB anonymous of 599 MiB in use
+[  925.069193] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:58)
+[  925.098913] init (108): drop_caches: 3
+[  925.204494] init: Command 'write /sys/devices/virtual/block/zram0/recompress type=idle max_pages=16384' action=sys.boot_completed=1 && vendor.dsa.memory.reclaim=1 (/vendor/etc/init/dsa-channeld.rc:65) took 0ms and failed: Unable to write to file '/sys/devices/virtual/block/zram0/recompress': Unable to write file contents: Invalid argument
+[  925.208672] init: processing action (sys.boot_completed=1 && vendor.dsa.memory.reclaim=1) from (/vendor/etc/init/dsa-channeld.rc:71)
+[  925.218822] dsa-channeld: the reclaim (Idle) returned in 150 ms: free 1376 -> 1583 MiB; page cache 249 -> 64 MiB; reclaimable kernel caches 18 -> 18 MiB; unreclaimable kernel caches 73 -> 73 MiB; app memory 91 -> 64 MiB; swapped 240 -> 267 MiB; zram 230 MiB in 67 -> 257 MiB in 72; taken back by the host 0 -> 0 MiB
+[  927.592499] dsa-channeld: paged out com.google.android.gms (pid 1280, oom_score_adj 200, Google Play services) after it woke: resident anonymous 38 -> 5 MiB, swapped out 52 -> 85 MiB, 2368 MiB asked for, 1 ranges refused, 88 ms
+[  972.789071] type=1400 audit(1795772577.115:110): avc:  denied  { search } for  comm="cat" name="zram0" dev="sysfs" ino=7669 scontext=u:r:dsa_su_root:s0 tcontext=u:object_r:sysfs_zram:s0 tclass=dir permissive=1
+[  972.789546] type=1400 audit(1795772577.115:111): avc:  denied  { read } for  comm="cat" name="comp_algorithm" dev="sysfs" ino=7709 scontext=u:r:dsa_su_root:s0 tcontext=u:object_r:sysfs_zram:s0 tclass=file permissive=1
+[  972.789677] type=1400 audit(1795772577.115:112): avc:  denied  { open } for  comm="cat" path="/sys/devices/virtual/block/zram0/comp_algorithm" dev="sysfs" ino=7709 scontext=u:r:dsa_su_root:s0 tcontext=u:object_r:sysfs_zram:s0 tclass=file permissive=1
+[  972.800008] Unable to handle kernel paging request at virtual address fffffdffbf000028
+[  972.800127] Mem abort info:
+[  972.800206]   ESR = 0x0000000096000006
+[  972.800247]   EC = 0x25: DABT (current EL), IL = 32 bits
+[  972.800325]   SET = 0, FnV = 0
+[  972.800403]   EA = 0, S1PTW = 0
+[  972.800435]   FSC = 0x06: level 2 translation fault
+[  972.800509] Data abort info:
+[  972.800579]   ISV = 0, ISS = 0x00000006, ISS2 = 0x00000000
+[  972.800624]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[  972.800703]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[  972.800778] swapper pgtable: 4k pages, 48-bit VAs, pgdp=0000000071b73000
+[  972.800871] [fffffdffbf000028] pgd=10000000efbf3403, p4d=10000000efbf3403, pud=100000007423a403, pmd=0000000000000000
+[  972.800990] Internal error: Oops: 0000000096000006 [#1]  SMP
+[  972.801107] Modules linked in:
+[  972.801165] CPU: 1 UID: 0 PID: 1259 Comm: sh Not tainted 6.18.54.1-dsa #1 PREEMPT(full) 
+[  972.801238] pstate: 41400005 (nZcv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[  972.801388] pc : zs_free+0x5c/0xfc
+[  972.801510] lr : zs_free+0x3c/0xfc
+[  972.801569] sp : ffff8000806db550
+[  972.801660] x29: ffff8000806db550 x28: ffff0000346b8190 x27: ffff000048670c00
+[  972.801723] x26: 000000000000a868 x25: ffff000045b40a80 x24: 0000000000000000
+[  972.801784] x23: 000000000000a867 x22: ffff0000866fd848 x21: 000000000000a867
+[  972.801844] x20: ffff0000866fd000 x19: ffff00003483ab28 x18: ffff8000806db8b0
+[  972.801885] x17: 0000000000000000 x16: 0000000000000000 x15: 0000f301e328d000
+[  972.801954] x14: 0000000000000001 x13: ffff000047b9f408 x12: 0000000000000001
+[  972.802011] x11: ffff8000808f2000 x10: 000000000000a868 x9 : 000000000000a868
+[  972.802051] x8 : ffff80008087f867 x7 : 0000000000620060 x6 : ffff8000809070cc
+[  972.802145] x5 : 0000000000000000 x4 : fffffdffbf5f2950 x3 : 00000000000150ce
+[  972.802310] x2 : 0000000000000000 x1 : fffffdffc0000000 x0 : fffffdffbf000000
+[  972.802362] Call trace:
+[  972.802371]  zs_free+0x5c/0xfc (P)
+[  972.802452]  zram_free_page+0xdc/0x204
+[  972.802540]  zram_slot_free_notify+0x64/0x140
+[  972.802632]  swap_entries_free+0x100/0x24c
+[  972.802684]  swap_entries_put_map+0xb8/0x240
+[  972.802737]  free_swap_and_cache_nr+0x70/0x138
+[  972.802754]  unmap_page_range+0x9b4/0x12e8
+[  972.802781]  unmap_single_vma.isra.0+0x88/0x104
+[  972.802855]  unmap_vmas+0x84/0x190
+[  972.802926]  exit_mmap+0xb8/0x404
+[  972.802942]  __mmput+0x30/0x13c
+[  972.803008]  mmput+0x6c/0x7c
+[  972.803065]  do_exit+0x270/0xa8c
+[  972.803077]  do_group_exit+0x34/0x90
+[  972.803115]  pid_child_should_wake+0x0/0x5c
+[  972.803167]  invoke_syscall+0x58/0xc8
+[  972.803199]  el0_svc_common.constprop.0+0x40/0xe0
+[  972.803280]  do_el0_svc+0x1c/0x28
+[  972.803320]  el0_svc+0x3c/0x168
+[  972.803376]  el0t_64_sync_handler+0xa0/0xe4
+[  972.803436]  el0t_64_sync+0x1b0/0x1b4
+[  972.803513] Code: f2dfbfe1 d358ff02 cb803040 8b001820 (f9401417) 
+[  972.803611] ---[ end trace 0000000000000000 ]---
+[  972.803680] Kernel panic - not syncing: Oops: Fatal exception
+[  972.803750] SMP: stopping secondary CPUs
+[  972.803785] Kernel Offset: 0x4114e8400000 from 0xffff800080000000
