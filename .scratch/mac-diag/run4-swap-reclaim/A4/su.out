@@ -1,0 +1,108 @@
+START A uptime 6.32 boot_completed=1
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		0		-2
+swapoff rc=0 uptime 6.38
+== uptime 6.39 boot_completed=1
+MemFree:          468512 kB
+MemAvailable:    1309648 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 66.48 boot_completed=1
+MemFree:         1283724 kB
+MemAvailable:    1250112 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 126.56 boot_completed=1
+MemFree:         1274968 kB
+MemAvailable:    1271136 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 186.62 boot_completed=1
+MemFree:         1171196 kB
+MemAvailable:    1292668 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 246.67 boot_completed=1
+MemFree:         1287728 kB
+MemAvailable:    1294584 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 306.70 boot_completed=1
+MemFree:         1258100 kB
+MemAvailable:    1293224 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 366.79 boot_completed=1
+MemFree:         1270296 kB
+MemAvailable:    1293764 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 426.83 boot_completed=1
+MemFree:         1282380 kB
+MemAvailable:    1294868 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 486.89 boot_completed=1
+MemFree:         1304092 kB
+MemAvailable:    1294820 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 546.95 boot_completed=1
+MemFree:         1304124 kB
+MemAvailable:    1293948 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 607.00 boot_completed=1
+MemFree:         1287080 kB
+MemAvailable:    1296336 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 667.06 boot_completed=1
+MemFree:         1312348 kB
+MemAvailable:    1296644 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 727.11 boot_completed=1
+MemFree:         1312644 kB
+MemAvailable:    1297012 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 787.16 boot_completed=1
+MemFree:         1288884 kB
+MemAvailable:    1296144 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 847.21 boot_completed=1
+MemFree:         1288108 kB
+MemAvailable:    1295404 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 907.26 boot_completed=1
+MemFree:         1287820 kB
+MemAvailable:    1295556 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+== uptime 967.31 boot_completed=1
+MemFree:         1290244 kB
+MemAvailable:    1295064 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Filename				Type		Size		Used		Priority
+END A uptime 967.35
+--- su session ended 2026-11-27T00:36:43

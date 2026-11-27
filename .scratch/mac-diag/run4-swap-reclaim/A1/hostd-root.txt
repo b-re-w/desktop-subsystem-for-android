@@ -1,0 +1,2 @@
+root: 2026-11-26T22:39:49.456Z uid:501: adb shell (com.android.shell, uid 0) asked to run root without asking each time: approved by the computer's administrator
+root: 2026-11-26T22:40:51.237Z uid:501: adb shell (com.android.shell, uid 2000) asked to run `sh /data/local/tmp/runA.sh` (request 1): approved without asking (the app may keep root)

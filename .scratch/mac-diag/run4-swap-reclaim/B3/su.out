@@ -1,0 +1,118 @@
+START B uptime 6.32 boot_completed=1 reclaim= trim=
+bind rc=0 uptime 6.38
+2390 48 254:19 /local/tmp/reclaim.sink /sys/fs/cgroup/memory.reclaim rw,nosuid,nodev,noatime shared:33 - ext4 /dev/block/vdb3 rw,seclabel,errors=panic
+== uptime 6.40 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          426576 kB
+MemAvailable:    1316936 kB
+SwapTotal:       2023484 kB
+SwapFree:        2023484 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		0		-2
+== uptime 69.50 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          362832 kB
+MemAvailable:    1280452 kB
+SwapTotal:       2023484 kB
+SwapFree:        1975868 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		47616		-2
+== uptime 132.68 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          397340 kB
+MemAvailable:    1314724 kB
+SwapTotal:       2023484 kB
+SwapFree:        1963700 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		59784		-2
+== uptime 196.14 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          401224 kB
+MemAvailable:    1319064 kB
+SwapTotal:       2023484 kB
+SwapFree:        1973180 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		50304		-2
+== uptime 259.58 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          398808 kB
+MemAvailable:    1316664 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974464 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		49020		-2
+== uptime 323.01 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          402012 kB
+MemAvailable:    1320220 kB
+SwapTotal:       2023484 kB
+SwapFree:        1973032 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		50452		-2
+== uptime 386.46 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          400820 kB
+MemAvailable:    1319024 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974232 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		49252		-2
+== uptime 449.97 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          400312 kB
+MemAvailable:    1318516 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974232 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		49252		-2
+== uptime 513.48 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          399460 kB
+MemAvailable:    1317664 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974604 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		48880		-2
+== uptime 576.81 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          401840 kB
+MemAvailable:    1320044 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974644 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		48840		-2
+== uptime 640.29 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          960456 kB
+MemAvailable:    1331276 kB
+SwapTotal:       2023484 kB
+SwapFree:        1973768 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		49716		-2
+== uptime 703.81 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          959940 kB
+MemAvailable:    1330844 kB
+SwapTotal:       2023484 kB
+SwapFree:        1973964 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		49520		-2
+== uptime 767.27 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          962472 kB
+MemAvailable:    1333376 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974636 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		48848		-2
+== uptime 830.53 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          962296 kB
+MemAvailable:    1333200 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974976 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		48508		-2
+== uptime 893.92 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          961248 kB
+MemAvailable:    1332152 kB
+SwapTotal:       2023484 kB
+SwapFree:        1974976 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		48508		-2
+== uptime 957.29 boot_completed=1 reclaim_seen=0 trim_seen=0 sink_bytes=0
+MemFree:          960752 kB
+MemAvailable:    1331728 kB
+SwapTotal:       2023484 kB
+SwapFree:        1975872 kB
+Filename				Type		Size		Used		Priority
+/dev/block/zram0                        partition	2023484		47612		-2
+sink content:
+END B umount rc=0 uptime 957.35
+--- su session ended 2026-11-27T00:20:00

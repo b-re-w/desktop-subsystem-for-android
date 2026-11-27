@@ -1,0 +1,47 @@
+run4 (swap / reclaim), Mac guest kernel panic. 2026-11-26 22:40 to 2026-11-27 00:53 UTC.
+Host DSA 1.0.1-dev.11, image 17.0.0-16373615-15.1-dev.10-arm64, kernel 6.18.54.1-dsa, VM 2048 MB, 2 vCPU.
+Root: "dsa apps root com.android.shell remember" (one approval by the owner), set back to "ask"
+after the series. One su call per boot, no prompt.
+
+RESULT: 8 of 8 boots ran 15 minutes with no panic and no BUG / WARNING / Oops line in the console.
+  A (swapoff /dev/block/zram0 at uptime ~6.3 s, before any page was swapped): A1 A2 A3 A4 clean.
+  B (plain file bound over /sys/fs/cgroup/memory.reclaim at uptime ~6.4-6.7 s, swap on): B1 B2 B3 B4 clean.
+Controls on the same install, swap on, nothing changed (run3): 2 of 4 boots panicked (103 s,
+291 s), plus the earlier control (455 s) and the boot found dead on 2026-11-26 (rmap_walk_anon).
+
+Per run (console counts):
+  run  last uptime  full reclaims  trims  failed memory.reclaim writes  lowest SwapFree kB
+  A1   967          1              34     1                             0 (swap off)
+  B1   957          2              188    196                           1963168
+  A2   967          1              30     1                             0 (swap off)
+  B2   951          2              187    195                           1962332
+  A3   968          1              36     1                             0 (swap off)
+  B3   957          2              188    196                           1963700
+  A4   967          1              29     1                             0 (swap off)
+  B4   952          2              187    195                           1962836
+
+What each condition actually did:
+- A: memory.reclaim was still written about 30 times per boot and succeeded (page cache only,
+  there being no swap). So proactive reclaim of page cache alone did not corrupt anything in
+  four boots.
+- B: every write to memory.reclaim failed (init is denied the bound file by SELinux, the avc
+  lines are in the console), so neither the reclaim's swappiness=200 steps nor the trim ran.
+  dsa-channeld then asked for a trim about every 5 s (page cache stayed above its target),
+  hence 187 trims. drop_caches and the zram idle/recompress/compact writes still ran. Swap
+  stayed on but at most ~60 MiB of 1976 MiB was ever used (the controls held 250-340 MiB
+  within the first minute), so B also removed almost all swap traffic.
+
+Reading: both conditions take away the same thing, anonymous memory pushed to zram by the
+proactive reclaim and read back, and both are clean, while A shows that proactive reclaim
+without swap is clean. That points at the swap-out / swap-in path under memory.reclaim
+(zram swap, swap cache; the run3 control's first warning was in swap_cache_add_folio from
+user_proactive_reclaim), not at memory.reclaim as such. It is not proof: 0 of 8 against
+about half of the controls, and no control was interleaved in this series.
+Not separated yet: swap on with only the swappiness=200 steps blocked (trim allowed), and
+swap on a non-zram device.
+
+Note: /proc/uptime read 6 s with sys.boot_completed=1 when the su session began, right after
+"dsa start --wait" returned.
+
+Files per run: su.out (meminfo and /proc/swaps every 60 s), android-console.txt, start.txt,
+hostd-root.txt. scripts/: runA.sh, runB.sh, series.sh. summary.txt: one line per run.

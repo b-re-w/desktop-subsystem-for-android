@@ -1,0 +1,9 @@
+A1 | started=1 ended=1 | last uptime 967.37 | panic: none | first sign: none
+B1 | started=1 ended=1 | last uptime 957.57 | panic: none | first sign: none
+A2 | started=1 ended=1 | last uptime 967.34 | panic: none | first sign: none
+B2 | started=1 ended=1 | last uptime 951.94 | panic: none | first sign: none
+A3 | started=1 ended=1 | last uptime 968.92 | panic: none | first sign: none
+B3 | started=1 ended=1 | last uptime 957.29 | panic: none | first sign: none
+A4 | started=1 ended=1 | last uptime 967.31 | panic: none | first sign: none
+B4 | started=1 ended=1 | last uptime 952.54 | panic: none | first sign: none
+series done 2026-11-27T00:53:18
