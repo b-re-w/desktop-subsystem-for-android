@@ -1,0 +1,76 @@
+run6 result (Mac host dev.11, image 17.0.0-16373615-15.1-dev.10-arm64, 2048 MB, 2 vCPU)
+
+STATUS
+- Part 2 (KASAN kernel): done. 16 boots of 15 min. KASAN reports: 0. Panics: 1 (boot5, 393 s).
+- Part 1 (drop_caches-only / rereport-only blocks): NOT RUN. It needs root "remember" for
+  com.android.shell. The one approval request (sent after a notification) timed out and was
+  not repeated, as instructed. Scripts are ready: scripts/runD.sh, runR.sh, runC.sh,
+  series.sh (./scripts/series.sh C1 D1 R1 C2 D2 R2 ... C6 D6 R6, about 5 hours).
+- No root cause found yet.
+
+KASAN KERNEL
+- PR #1057 (merged, upstream develop 4bc3b864) adds CONFIG_KASAN=y, CONFIG_KASAN_GENERIC=y,
+  CONFIG_KASAN_VMALLOC=y to dsa/kernel/android-debug.config and to its test.
+- Built by test-kernel.yml run 45989567936 on b-re-w (debug=true), arm64 and x86_64 green.
+  Config kept in kasan/kernel-config.txt: KASAN generic, inline, stack, vmalloc; DEBUG_VM,
+  PAGE_OWNER, KFENCE built in (the host command line keeps kfence.sample_interval=0).
+  The debug fragment also turns CONFIG_LRU_GEN_ENABLED off, so these boots ran without MGLRU.
+- Booted with no host change: the host does not check the Image hash in image.json and no
+  kernel_cmdline addition was needed. MemTotal 1691456 kB (KASAN shadow takes the rest).
+- Every boot prints 7 warnings at mm/slab_common.c:109 at 0.36 s: dm-verity creates the
+  slab cache "dm_verity_fec_buffers" several times. DEBUG_VM only, not related.
+
+KASAN BOOTS (kasan-summary.txt, raw console per boot in kasan/boot<n>/)
+- boot1-4, boot6-16: no KASAN report, no panic, no warning after boot. In each of them the
+  init reclaim and the channeld trims ran as usual and swap was in use (about 200 MiB).
+- boot5: panic at 393.22 s, kasan/boot5-panic-futex_wake.txt.
+    Unable to handle kernel paging request at virtual address dfff800000000000
+    KASAN: null-ptr-deref in range [0x0000000000000000-0x0000000000000007]
+    pc futex_wake+0x1dc <- do_futex <- __arm64_sys_futex, task lowpool[14], uid 10073
+  This is not a use-after-free or out-of-bounds report. dfff800000000000 is the KASAN shadow
+  address of pointer 0: futex_wake walked a futex hash bucket chain and the next pointer was
+  NULL (x19 = NULL - 0x18, the offset of list.node_list in struct futex_q; x28 = 0).
+  The last trim before it ended at 387.55 s, 5.7 s earlier; nothing else is in the log.
+
+WHAT THIS SAYS
+- In about 4 hours of KASAN run time with swap and reclaim active, no slab, page, stack or
+  vmalloc use-after-free and no out-of-bounds access was seen. If the corruption came from
+  kernel code touching freed or foreign memory through a checked access, KASAN would very
+  likely have reported at least once.
+- The one crash is again a pointer field that reads as 0 in an object that is in use. The
+  earlier panics have the same shape: run5 Z1 (vmalloc PTE 0 in packet_rcv), run5 K2
+  (anon_vma_name NULL), run5 C3 (rss counter), run3 (rb-tree and list nodes). So the picture
+  is "memory in use loses its content" rather than "a stale pointer is used". My reading,
+  not proven: something clears or replaces page contents outside the checked accesses
+  (the host side of the VM, a device, or page contents lost on the reclaim/swap path).
+- It is also possible that the boot5 crash is a separate bug in the 6.18 futex private hash
+  code. One sample cannot tell.
+- Rate: 1 of 16 here versus 5 of 18 for the shipped kernel with reclaim and swap (run3-5).
+  Fisher p about 0.18: not a significant drop. KASAN timing and MGLRU off both differ, so
+  this does not say MGLRU is involved.
+- Looked at the DSA kernel patches that touch memory: page-reporting-rereport,
+  -taken-clusters, -no-delay, dsa-host-memory. Nothing wrong found by reading. On the Mac
+  page reporting reports nothing (reported_total_kb = 0 in run5), so rereport is most likely
+  a no-op there; part 1 would confirm it.
+
+DOES IT AFFECT WINDOWS
+- Not known, because the cause is not found. The guest kernel, the init reclaim sequence and
+  dsa-channeld's trims are the same on Windows, so a guest-side bug in that path would hit
+  Windows too. The evidence here leans to memory content being lost outside the kernel's own
+  checked accesses, which would be specific to how the host backs guest memory
+  (Virtualization.framework here, Hyper-V on Windows) and then need not affect Windows.
+  Whether Windows shows the same panics with the same image is the direct check.
+
+NEXT STEPS PROPOSED
+1. Part 1 once the owner can approve root once (scripts ready).
+2. A debug kernel with MGLRU left on (drop the LRU_GEN_ENABLED line from the debug
+   fragment for one build) to see whether the shipped rate comes back under KASAN.
+3. A check for lost page contents: boot with page_poison=1 init_on_free=1 and
+   CONFIG_PAGE_POISONING, or a guest test that fills memory with a pattern, runs the
+   reclaim sequence and verifies it, on Mac and on Windows.
+
+CLEANUP DONE
+- Shipped Image restored (sha256 1fcbc1a2634ef730..., uname shows the Nov 22 build),
+  Image.shipped removed, dsa-hostd.json was never changed (backup compared and removed),
+  .scratch/kasan-kernel deleted, no Java or Gradle process left, root setting for
+  com.android.shell is still ask, Android running as found.

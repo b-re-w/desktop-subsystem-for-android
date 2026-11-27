@@ -1,0 +1,17 @@
+boot1 | kasan reports=0 | panic: none | first sign: none
+boot2 | kasan reports=0 | panic: none | first sign: none
+boot3 | kasan reports=0 | panic: none | first sign: none
+boot4 | kasan reports=0 | panic: none | first sign: none
+boot5 | kasan reports=0 | panic: [  393.224180] Kernel panic - not syncing: Oops: Fatal exception | first sign: [  393.221617] Unable to handle kernel paging request at virtual address dfff800000000000
+boot6 | kasan reports=0 | panic: none | first sign: none
+boot7 | kasan reports=0 | panic: none | first sign: none
+boot8 | kasan reports=0 | panic: none | first sign: none
+boot9 | kasan reports=0 | panic: none | first sign: none
+boot10 | kasan reports=0 | panic: none | first sign: none
+boot11 | kasan reports=0 | panic: none | first sign: none
+boot12 | kasan reports=0 | panic: none | first sign: none
+boot13 | kasan reports=0 | panic: none | first sign: none
+boot14 | kasan reports=0 | panic: none | first sign: none
+boot15 | kasan reports=0 | panic: none | first sign: none
+boot16 | kasan reports=0 | panic: none | first sign: none
+kasan series done 2026-11-27T16:06:34

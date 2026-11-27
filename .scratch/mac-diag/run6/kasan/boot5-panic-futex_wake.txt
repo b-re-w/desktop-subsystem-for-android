@@ -1,0 +1,49 @@
+[  393.221617] Unable to handle kernel paging request at virtual address dfff800000000000
+[  393.221767] KASAN: null-ptr-deref in range [0x0000000000000000-0x0000000000000007]
+[  393.221861] Mem abort info:
+[  393.221896]   ESR = 0x0000000096000005
+[  393.221942]   EC = 0x25: DABT (current EL), IL = 32 bits
+[  393.222001]   SET = 0, FnV = 0
+[  393.222038]   EA = 0, S1PTW = 0
+[  393.222076]   FSC = 0x05: level 1 translation fault
+[  393.222120] Data abort info:
+[  393.222149]   ISV = 0, ISS = 0x00000005, ISS2 = 0x00000000
+[  393.222188]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[  393.222231]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[  393.222268] [dfff800000000000] address between user and kernel address ranges
+[  393.222344] Internal error: Oops: 0000000096000005 [#1]  SMP
+[  393.222405] Modules linked in:
+[  393.222466] CPU: 1 UID: 10073 PID: 2304 Comm: lowpool[14] Tainted: G        W           6.18.54.1-dsa #1 PREEMPT(full) 
+[  393.222539] Tainted: [W]=WARN
+[  393.222588] pstate: 01400005 (nzcv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+[  393.222642] pc : futex_wake+0x1dc/0x3f8
+[  393.222732] lr : futex_wake+0x17c/0x3f8
+[  393.222764] sp : ffff800084697a40
+[  393.222805] x29: ffff800084697b00 x28: 0000000000000000 x27: dfff800000000000
+[  393.222878] x26: 0000000000000000 x25: 0000000000000003 x24: ffff000045e03248
+[  393.222952] x23: ffff800084697a80 x22: 0000000000000001 x21: 1ffff000108d2f4c
+[  393.223019] x20: 00000000ffffffff x19: ffffffffffffffe8 x18: 0000000000000000
+[  393.223092] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+[  393.223177] x14: 0000000000000000 x13: 0000000000000000 x12: ffff7000108d2f3b
+[  393.223257] x11: 1ffff000108d2f3a x10: ffff7000108d2f3a x9 : dfff800000000000
+[  393.223334] x8 : 0000000000000004 x7 : 0000000000000003 x6 : 0000000000000001
+[  393.223406] x5 : ffff8000846979d0 x4 : ffffffffffffffe8 x3 : 0000000000000000
+[  393.223477] x2 : 0000000000000000 x1 : ffff8000869175d0 x0 : 0000000000000000
+[  393.223563] Call trace:
+[  393.223611]  futex_wake+0x1dc/0x3f8 (P)
+[  393.223687]  do_futex+0x16c/0x238
+[  393.223737]  __arm64_sys_futex+0x1d0/0x300
+[  393.223781]  invoke_syscall+0xc8/0x238
+[  393.223819]  el0_svc_common.constprop.0+0x16c/0x240
+[  393.223867]  do_el0_svc+0x48/0x68
+[  393.223911]  el0_svc+0x58/0xf0
+[  393.223978]  el0t_64_sync_handler+0xa0/0xe8
+[  393.224025]  el0t_64_sync+0x1b0/0x1b8
+[  393.224062] Code: 52800079 1400000b 9100627c d343ff80 (38fb6800) 
+[  393.224120] ---[ end trace 0000000000000000 ]---
+[  393.224180] Kernel panic - not syncing: Oops: Fatal exception
+[  393.224253] SMP: stopping secondary CPUs
+[  393.224340] Kernel Offset: 0x32eecd800000 from 0xffff800080000000
+[  393.224484] PHYS_OFFSET: 0x40000000
+[  393.224560] CPU features: 0x000000,00006000,42242281,9407f723
+[  393.224647] Memory Limit: none

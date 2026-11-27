@@ -1,0 +1,7 @@
+12:55:18 up= MemFree: 631752 kB SwapFree: 1691452 kB 
+12:56:18 up= MemFree: 878964 kB SwapFree: 1510904 kB 
+12:57:18 up= MemFree: 985360 kB SwapFree: 1419628 kB 
+12:58:19 up= MemFree: 986000 kB SwapFree: 1440712 kB 
+12:59:19 up= MemFree: 951692 kB SwapFree: 1445260 kB 
+13:00:19 up= MemFree: 964256 kB SwapFree: 1467632 kB 
+13:01:19 up= MemFree: 979060 kB SwapFree: 1463440 kB 

@@ -1,0 +1,16 @@
+14:09:42 up= MemFree: 525676 kB SwapFree: 1691452 kB 
+14:10:43 up= MemFree: 956328 kB SwapFree: 1505992 kB 
+14:11:43 up= MemFree: 906376 kB SwapFree: 1481904 kB 
+14:12:43 up= MemFree: 941428 kB SwapFree: 1482160 kB 
+14:13:43 up= MemFree: 941868 kB SwapFree: 1481676 kB 
+14:14:43 up= MemFree: 931976 kB SwapFree: 1480060 kB 
+14:15:43 up= MemFree: 935228 kB SwapFree: 1476768 kB 
+14:16:44 up= MemFree: 956808 kB SwapFree: 1475780 kB 
+14:17:44 up= MemFree: 988840 kB SwapFree: 1475260 kB 
+14:18:44 up= MemFree: 957688 kB SwapFree: 1476736 kB 
+14:19:44 up= MemFree: 943376 kB SwapFree: 1471328 kB 
+14:20:44 up= MemFree: 993740 kB SwapFree: 1467348 kB 
+14:21:44 up= MemFree: 985784 kB SwapFree: 1467508 kB 
+14:22:44 up= MemFree: 975132 kB SwapFree: 1468136 kB 
+14:23:45 up= MemFree: 940960 kB SwapFree: 1468944 kB 
+14:24:45 up= MemFree: 935064 kB SwapFree: 1468944 kB 
