@@ -4199,3 +4199,39 @@ Virtualization 문서의 "Memory" 묶음에는 풍선 장치만 있고, "Custom 
 - 모두 PC에서 확인해야 한다: 콘솔의 `SLUB: ... MinObjects=1`, 보고의 `slab task_struct ... 1 1`과 `slab-unreclaimable`, `debugfs_inode_cache` 줄이 없어진 것, `/sys/module/loop/parameters/hw_queue_depth`가 32인 것, 그리고 SUnreclaim과 "unaccounted"가 dev.39보다 준 양.
 - `slab_min_objects=1`의 CPU 비용. 큰 객체는 할당과 해제마다 페이지 할당기를 거친다(8 KiB를 넘는 kmalloc은 원래 그렇다). 재지 않았다.
 - `kernfs_node_cache`와 범용 kmalloc의 주인. `--memory-profile` 커널의 `allocinfo` 줄이 있어야 나뉜다.
+
+## R62. 설정 앱 하나를 연 DSA의 967 MiB: 1분 측정이 잡는 것 (NFR-1, NFR-2)
+
+2026-11-29. 1.0.1-dev.40(이미지 `17.0.0-16373615-15.1-dev.40`)에서 설정 앱 하나를 열고 1분 뒤 `dsa memory`가 private 작업 집합 합 967 MiB를 보였다(dev.37은 950 MiB). 같은 시점의 `dsa memory snapshot`과 앱 없이 10분의 스냅숏, dev.39의 스냅숏을 읽어 몫을 나눴다. 빌드도 실행도 하지 않았고, 기기와 바탕 화면은 건드리지 않았다. **확인**은 파일과 줄로 증명된 값, **추정**은 그렇지 않은 값이다.
+
+### 기준
+
+| 자료 | 버전 |
+|---|---|
+| `dsa memory` 출력, 스냅숏의 `android/{proc-meminfo,proc-vmstat-*,kernel-memory-report,meminfo-detail,dumpsys,logcat,getprop}.txt`, `host/{memory.json,renderer-color-buffers.txt,dsa-wm.log,dsa-hostd.log}` | 1.0.1-dev.40, Windows 11, Intel Arc 내장 GPU. 입력 추적과 크기 조절 추적이 켜진 상태 |
+| 비교: 앱 없이 10분 스냅숏, dev.39 스냅숏 | 1.0.1-dev.40, 1.0.1-dev.39 |
+| 코드 | develop 6eb17383c, `.scratch/gfxstream`(`VkEmulatedPhysicalDeviceMemory.cpp`) |
+
+### 결과
+
+- 프로세스별(확인): VM 838, 창 관리자 58, 렌더러 47, 앱 창 8, 서비스 16. 앱 없이 10분은 VM 459, 창 관리자 11, 렌더러 23, 서비스 15다. 그래픽과 영상 섹션 80 MiB와 VM이 매핑한 디스크 파일 27 MiB는 VM의 공유 작업 집합이라 967에 없다(945 resident = 838 + 80 + 27).
+- VM 838(확인): 쓰는 메모리 773(페이지 캐시 229, 앱 익명 216, 커널 307, 버퍼와 회수 가능한 slab 21) + 부팅 예약 62 + 돌려주지 않은 빈 메모리 3. 커널 307은 zram 저장소 66(압축 전 243), 페이지 구조 62, 회수할 수 없는 slab 77, vmalloc 44(커널 스택 17, BPF 맵 8.6, zram 슬롯 표 6.2, netvsc 5.0), 페이지 표 32, 스왑 캐시 31, per-CPU 6이고, 스왑 캐시 가운데 약 11 MiB는 앱 익명 메모리와 겹친다(합 318).
+- 페이지 캐시(확인): 측정 15초 전의 트림이 491에서 144 MiB로 줄였고, 측정 때 229였다. 그 1분 동안 블록 장치에서 750 MiB를 읽었다. `Mapped`(343 MiB)가 파일 LRU(233 MiB)보다 커서, 적어도 109 MiB의 매핑은 DAX 시스템 디스크 페이지(호스트 파일 캐시)다. 그래서 프로세스별 PSS는 VM 몫보다 크고 서로 더할 수 없다. 남은 페이지 캐시가 어느 파일인지는 커널 보고에 없어 나누지 못했다(추정: `/data`의 Play 서비스와 Play 스토어 코드, APEX, 압축 erofs).
+- Play 스토어(확인): 창이 보이자 에이전트가 강제 Doze를 풀고 화면을 켰고(15:47:31.6), 미뤄진 MX Player의 작업(15:47:34.6)이 Play 서비스를 거쳐 Play 스토어의 `DeveloperGroupIdInfoService`를 묶어 `com.android.vending`(15:47:35.2)과 `:background`(15:47:45.6)가 떴다. 둘은 `oom_score_adj 100`으로 약 55초 머물렀고, 스냅숏 때 캐시가 된 지 2.8초였다. 에이전트는 캐시로 30초 쉰 뒤 끝낸다(부팅 때 같은 둘이 그렇게 끝났다). 1분 측정에 둘의 약 146 MiB(PSS에서 SwapPss를 뺀 값, 익명은 약 27)가 들어간다.
+- 창 관리자(확인): 창 하나가 창 크기 버퍼 33.4 MiB(텍스처 1536x1536 9.0, 스왑체인 2 x 1536x1536 18.0, 입력 추적의 마지막 프레임 사본 6.4)를 쥐고, 커밋이 30에서 89 MiB로 는다(기본 힙 22 → 42 중 DSA 자신 8 → 11, GPU-mapped 0 → 22, 직접 3 → 11). 1208x1383 창의 버퍼가 hwcomposer의 512 px 올림을 따라 1536x1536이다.
+- 렌더러(확인): 커밋 186 → 217 MiB, GPU-mapped 12 → 34. 설정 앱 장치의 GPU-only 할당이 20.2 MiB다(10.2 MiB 이미지, 8 MiB, 1 MiB 둘). 모듈 데이터 36 MiB(Intel DXVA 드라이버 DLL 포함)는 앱 없이도 같다.
+- 섹션(확인): SurfaceFlinger의 장치가 공유 그래픽 메모리에서 64 MiB 허가(캐시 가능한 호스트 가시 형식)를 부팅부터 쥔다. dev.39에는 이 허가가 없고 1 MiB 허가 둘뿐이다. 섹션이 17에서 80 MiB가 된 것은 영상 그림 영역이 아니라 이 허가다. 무엇이 부르는지는 증명하지 못했다(추정: SurfaceFlinger의 Skia GL이 쓰는 ANGLE의 읽기 버퍼 블록). gfxstream은 게스트에 보이는 힙을 2 GiB로 자르므로 VMA의 작은 힙 규칙(힙의 8분의 1)은 아니다.
+- 로그(확인): 로거는 줄마다 덧붙이고 비울 뿐 메모리를 쥐지 않는다. 64 MiB는 진단 묶음이 파일마다 끝 64 MiB만 넣은 값이다. 창 관리자, 앱 창, 서비스 로그는 돌려 쓰지 않아 디스크가 계속 는다. 마지막 2만 줄 가운데 63%가 입력 추적, 21%가 30초마다 다시 보내는 시스템 설정 줄이다.
+- 부팅(확인): Play가 있는 부팅마다 1536에서 2048, 2560, 때로 3072 MiB까지 PSI 10-16%로 커졌다가 2048로 줄었다. 더한 메모리의 페이지 구조는 VM이 끝날 때까지 남는다.
+
+### 결정
+
+- 코드는 바꾸지 않았다. 증명된 원인은 모두 SPEC이 정한 동작(NFR-2의 30초, NFR-1의 1분 측정, NFR-2의 1.5 GiB 시작), 창 동작 규칙에 걸리는 버퍼 크기, 또는 원인이 증명되지 않은 것(SurfaceFlinger의 64 MiB, 페이지 캐시의 파일)이다. 각각의 제안과 비용은 소유자에게 따로 올린다.
+- 1분 측정은 트림 시각에 따라 페이지 캐시만 144-491 MiB로 흔들리고, 화면이 켜질 때 몰리는 다른 앱의 일을 함께 잰다. 비교는 같은 방법으로, 가능하면 1분과 3분을 함께 적는다.
+
+### 확인하지 못한 것
+
+- Play 스토어 두 프로세스가 실제로 30-45초 뒤 끝났는지(스냅숏 뒤의 로그가 없다).
+- 창 관리자의 GPU-mapped 22 MiB가 스왑체인인지, 두 번째 창의 증가가 첫 창과 같은지.
+- SurfaceFlinger의 64 MiB 허가를 부르는 호출과, 그것이 dev.40의 이미지 변경인지 호스트 변경인지.
+- 페이지 캐시 229 MiB의 파일별 몫.
