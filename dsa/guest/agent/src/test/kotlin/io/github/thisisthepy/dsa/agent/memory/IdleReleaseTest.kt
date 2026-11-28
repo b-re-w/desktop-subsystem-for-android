@@ -66,6 +66,20 @@ class IdleReleaseTest {
     }
 
     @Test
+    fun nfr1_the_agents_renderer_is_trimmed_once_a_second_after_the_last_starting_window_goes() {
+        var trims = 0
+        val renderer = IdleRelease(scheduler, { scheduler.now }, 1_000) { trims++ }
+        // Two apps opened together: their starting windows go half a second apart.
+        renderer.used()
+        scheduler.advance(500)
+        renderer.used()
+        scheduler.advance(999)
+        assertEquals(0, trims)
+        scheduler.advance(1)
+        assertEquals(1, trims)
+    }
+
+    @Test
     fun nfr1_nothing_is_released_before_the_first_use() {
         scheduler.advance(60_000)
         assertEquals(0, releases)
