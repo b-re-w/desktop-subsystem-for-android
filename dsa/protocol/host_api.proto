@@ -1712,6 +1712,9 @@ message GuestProcessMemory {
   uint64 swap_pss_kb = 4;
   // The process belongs to Google Play services (the Google apps the user installed).
   bool google_play = 5;
+  // How much of pss_kb is files on a disk the guest maps in place (the system disk), in KiB:
+  // the host's file cache, not memory the VM holds. 0 when the guest could not say.
+  uint64 dax_pss_kb = 6;
 }
 
 // How Android uses the guest's memory, as it last reported it. Sizes in KiB; 0 when Android

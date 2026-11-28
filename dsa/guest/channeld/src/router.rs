@@ -65,8 +65,8 @@ use std::time::Duration;
 use dsa_protocol::control::envelope::Body;
 use dsa_protocol::control::{
     AddonImage, AddonImagePart, AddonImageRead, AndroidFiles, ArmTranslationState, Envelope,
-    FileSharing, GappsState, GoogleDeviceId, GuestBoot, GuestSharedMemory, HostCertificates,
-    LocationRequest, PowerHintKind, RootElevationConfig,
+    FileSharing, GappsState, GoogleDeviceId, GuestBoot, GuestMemory, GuestSharedMemory,
+    HostCertificates, LocationRequest, PowerHintKind, RootElevationConfig,
 };
 
 use crate::arm_translation::ArmTranslation;
@@ -294,6 +294,9 @@ pub struct Router {
     gapps: Option<Arc<Gapps>>,
     /// Reads the Android ID where Google Play services keep it, for when the agent has none.
     google_device_id: Option<GoogleDeviceIdSource>,
+    /// Reads how much of a process's PSS is the system disk mapped in place, for the agent's
+    /// memory report.
+    dax_share: Option<DaxShareSource>,
     /// The gamepad devices of the host's controllers.
     gamepads: Option<Arc<GamepadDevices>>,
     /// Drives the kernel's su guard for the host's root elevation config.
@@ -329,6 +332,10 @@ type RootElevationSwitch = Box<dyn Fn(&RootElevationConfig) + Send + Sync>;
 /// The Google Services Framework Android ID, read from Google Play services' own files.
 type GoogleDeviceIdSource = Box<dyn Fn() -> Option<String> + Send + Sync>;
 
+/// How much of one process's PSS, in KiB, is files on a disk the guest maps in place; `None`
+/// when its mappings could not be read.
+type DaxShareSource = Box<dyn Fn(i32) -> Option<u64> + Send + Sync>;
+
 /// Says whether the caller of the current call is the agent. It runs on the caller's thread.
 type AgentCheck = Box<dyn Fn(Peer) -> Result<(), String> + Send + Sync>;
 
@@ -351,6 +358,7 @@ impl Router {
             arm_translation: None,
             gapps: None,
             google_device_id: None,
+            dax_share: None,
             gamepads: None,
             root_elevation: None,
             su_relay: None,
@@ -461,6 +469,18 @@ impl Router {
         read: impl Fn() -> Option<String> + Send + Sync + 'static,
     ) -> Router {
         self.google_device_id = Some(Box::new(read));
+        self
+    }
+
+    /// Fills in, from `read`, how much of each process the agent's memory report lists is the
+    /// system disk mapped in place (DAX): the agent may not read another process's mappings,
+    /// the daemon may. Those pages are the host's file cache, so without this the host showed
+    /// them as the VM's memory (system_server's 145 MiB held about 80 of them).
+    pub fn on_dax_share(
+        mut self,
+        read: impl Fn(i32) -> Option<u64> + Send + Sync + 'static,
+    ) -> Router {
+        self.dax_share = Some(Box::new(read));
         self
     }
 
@@ -853,8 +873,17 @@ impl Router {
     pub fn from_guest(&self, sender: Peer, mut frame: Vec<u8>) -> Result<(), SendError> {
         dsa_transport::check_frame_len(frame.len())
             .map_err(|error| SendError::Malformed(error.to_string()))?;
-        let envelope = dsa_protocol::decode(&frame)
+        let mut envelope = dsa_protocol::decode(&frame)
             .map_err(|error| SendError::Malformed(error.to_string()))?;
+        // Read before the state is locked: reading a process's mappings takes a moment, and
+        // other frames need not wait for it.
+        if let (Some(Body::GuestMemory(memory)), Some(read)) =
+            (envelope.body.as_mut(), self.dax_share.as_ref())
+        {
+            if fill_dax_shares(memory, read.as_ref()) {
+                frame = dsa_protocol::encode(&envelope);
+            }
+        }
         let mut state = self.lock();
         match envelope.body {
             None => {
@@ -1045,4 +1074,21 @@ impl Router {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
+}
+
+/// Sets each listed process's share of the disks the guest maps in place from `read`, never
+/// more than its PSS. True when any share changed, so the frame is encoded again.
+fn fill_dax_shares(memory: &mut GuestMemory, read: &dyn Fn(i32) -> Option<u64>) -> bool {
+    let mut changed = false;
+    for process in &mut memory.top_processes {
+        let Some(kib) = read(process.pid) else {
+            continue;
+        };
+        let kib = kib.min(process.pss_kb);
+        if kib != process.dax_pss_kb {
+            process.dax_pss_kb = kib;
+            changed = true;
+        }
+    }
+    changed
 }

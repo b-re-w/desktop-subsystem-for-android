@@ -928,3 +928,73 @@ fn fr36_only_the_agent_sends_backups_and_passkey_requests() {
     assert!(router.from_guest(AGENT, keymint).is_err());
     assert!(host.try_recv().is_err());
 }
+
+#[test]
+fn nfr1_the_daemon_fills_in_each_listed_process_share_of_the_system_disk() {
+    use dsa_protocol::control::{GuestMemory, ProcessMemory};
+    let (to_host, host) = mpsc::channel();
+    let router = Router::new(to_host, |_| Ok(())).on_dax_share(|pid| match pid {
+        655 => Some(80 * 1024),
+        3433 => Some(12 * 1024),
+        // A process that ended before the daemon read it.
+        _ => None,
+    });
+    let process = |pid: i32, name: &str| ProcessMemory {
+        pid,
+        name: name.into(),
+        pss_kb: 100 * 1024,
+        ..ProcessMemory::default()
+    };
+    let report = frame(Body::GuestMemory(GuestMemory {
+        top_processes: vec![
+            process(655, "system"),
+            process(3433, "com.android.settings"),
+            process(9999, "gone"),
+        ],
+        ..GuestMemory::default()
+    }));
+    router.from_guest(AGENT, report).unwrap();
+    let sent = dsa_protocol::decode(&host.try_recv().unwrap()).unwrap();
+    let Some(Body::GuestMemory(memory)) = sent.body else {
+        panic!("expected GuestMemory, got {sent:?}");
+    };
+    let shares: Vec<(i32, u64)> = memory
+        .top_processes
+        .iter()
+        .map(|p| (p.pid, p.dax_pss_kb))
+        .collect();
+    assert_eq!(shares, [(655, 80 * 1024), (3433, 12 * 1024), (9999, 0)]);
+    // Never more than the process's PSS, which it is part of.
+    let (to_host, host) = mpsc::channel();
+    let router = Router::new(to_host, |_| Ok(())).on_dax_share(|_| Some(500 * 1024));
+    router
+        .from_guest(
+            AGENT,
+            frame(Body::GuestMemory(GuestMemory {
+                top_processes: vec![process(655, "system")],
+                ..GuestMemory::default()
+            })),
+        )
+        .unwrap();
+    let sent = dsa_protocol::decode(&host.try_recv().unwrap()).unwrap();
+    let Some(Body::GuestMemory(memory)) = sent.body else {
+        panic!("expected GuestMemory");
+    };
+    assert_eq!(memory.top_processes[0].dax_pss_kb, 100 * 1024);
+}
+
+#[test]
+fn nfr1_without_a_dax_source_the_memory_report_passes_unchanged() {
+    use dsa_protocol::control::{GuestMemory, ProcessMemory};
+    let (router, host) = router();
+    let report = frame(Body::GuestMemory(GuestMemory {
+        top_processes: vec![ProcessMemory {
+            pid: 655,
+            pss_kb: 1024,
+            ..ProcessMemory::default()
+        }],
+        ..GuestMemory::default()
+    }));
+    router.from_guest(AGENT, report.clone()).unwrap();
+    assert_eq!(host.try_recv().unwrap(), report);
+}

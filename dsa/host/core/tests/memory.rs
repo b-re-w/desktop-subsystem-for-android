@@ -10,9 +10,9 @@ use dsa_host_core::handshake::ControlHandshake;
 use dsa_host_core::host_api::{HostApiClient, HostApiService, PerUser, UserAndroid, UserAndroids};
 use dsa_host_core::host_api_conformance::RunningService;
 use dsa_host_core::memory::{
-    held_line, snapshot_from_wire, snapshot_to_wire, summary_lines, GooglePlayMemory, GuestMemory,
-    GuestMemoryReport, HeldMemory, HostMemory, HostProcessMemory, HostRole, IdleTrim,
-    MemorySnapshot, ProcessMemory,
+    held_line, snapshot_from_wire, snapshot_json, snapshot_to_wire, summary_lines,
+    GooglePlayMemory, GuestMemory, GuestMemoryReport, HeldMemory, HostMemory, HostProcessMemory,
+    HostRole, IdleTrim, MemorySnapshot, ProcessMemory,
 };
 
 fn pressure(total_mb: u64, available_mb: u64, stall: f64) -> memory_pressure::GuestPressure {
@@ -960,6 +960,7 @@ fn nfr2_a_swap_total_larger_than_the_pss_does_not_make_every_total_zero_resident
         pss_kb,
         swap_pss_kb,
         google_play,
+        dax_pss_kb: 0,
     };
     let guest = GuestMemory {
         zram_original_kb: 432 * MIB,
@@ -1760,4 +1761,73 @@ fn fr32_apps_see_the_start_size_of_a_vm_that_does_not_grow() {
         max_mb: Some(14 * 1024),
     };
     assert_eq!(growing.grows_to_mb(), 14 * 1024);
+}
+
+#[test]
+fn nfr1_each_process_line_says_how_much_of_it_is_the_system_disk_mapped_in_place() {
+    // dev.40, one minute after Settings opened: system_server's 145 MiB held about 80 MiB of
+    // code on the system disk, which the guest maps in place, so those pages are the host's
+    // file cache and not the VM's memory.
+    let mut control = report();
+    control.top_processes = vec![
+        control::ProcessMemory {
+            pid: 655,
+            name: "system".into(),
+            pss_kb: 145 * MIB,
+            dax_pss_kb: 80 * MIB,
+            ..Default::default()
+        },
+        control::ProcessMemory {
+            pid: 3433,
+            name: "com.android.settings".into(),
+            pss_kb: 50 * MIB,
+            ..Default::default()
+        },
+    ];
+    let snapshot = MemorySnapshot {
+        guest: Some(GuestMemoryReport {
+            memory: GuestMemory::from_control(control),
+            age: Duration::from_secs(1),
+        }),
+        host: Vec::new(),
+    };
+    let text = snapshot.to_string();
+    let system = text
+        .lines()
+        .find(|line| line.contains("655    system"))
+        .unwrap_or_else(|| panic!("no system line in {text}"));
+    assert!(system.contains("80 of it system disk"), "{text}");
+    let settings = text
+        .lines()
+        .find(|line| line.contains("com.android.settings"))
+        .unwrap();
+    assert!(!settings.contains("system disk"), "{text}");
+    // Said once what "system disk" means.
+    assert_eq!(
+        text.matches("which are the host's file cache").count(),
+        1,
+        "{text}"
+    );
+    // It crosses the local API to `dsa memory` and goes into the JSON.
+    let wire = snapshot_to_wire(&snapshot);
+    assert_eq!(
+        wire.guest.as_ref().unwrap().top_processes[0].dax_pss_kb,
+        80 * MIB
+    );
+    assert_eq!(snapshot_from_wire(wire), snapshot);
+    let json = snapshot_json(&snapshot);
+    assert_eq!(
+        json["guest"]["top_processes"][0]["dax_pss_kb"],
+        serde_json::json!(80 * MIB)
+    );
+    // A guest that does not say has no such part.
+    let without = MemorySnapshot {
+        guest: Some(GuestMemoryReport {
+            memory: GuestMemory::from_control(report()),
+            age: Duration::from_secs(1),
+        }),
+        host: Vec::new(),
+    }
+    .to_string();
+    assert!(!without.contains("system disk"), "{without}");
 }

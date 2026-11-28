@@ -154,6 +154,14 @@
 ; asks for: sys_nice for advising another process, sys_ptrace for reading the address space of
 ; a process of another user. init gives the daemon both (dsa-channeld.rc).
 (allow dsa_channeld self (capability (sys_nice sys_ptrace)))
+;
+; The agent's memory report lists the processes with the largest PSS, and the daemon fills in
+; how much of each is the system disk mapped in place (DAX), from /proc/<pid>/smaps and its own
+; /proc/self/mountinfo: those pages are the host's file cache, not the VM's memory. The list is
+; apps (appdomain, above) and system_server, whose smaps the kernel checks as a read of its
+; address space (the file read here, and sys_ptrace above). Reads only.
+(allow dsa_channeld system_server (dir (search getattr)))
+(allow dsa_channeld system_server (file (read open getattr)))
 
 (dontaudit dsa_channeld domain (dir (search getattr)))
 (dontaudit dsa_channeld domain (file (read open getattr)))

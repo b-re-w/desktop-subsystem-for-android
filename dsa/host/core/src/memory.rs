@@ -39,6 +39,9 @@ pub struct ProcessMemory {
     pub swap_pss_kb: u64,
     /// It belongs to Google Play services (the Google apps the user installed).
     pub google_play: bool,
+    /// The part of `pss_kb` that is files on a disk the guest maps in place (the system disk):
+    /// the host's file cache, not memory the VM holds. 0 when the guest could not say.
+    pub dax_pss_kb: u64,
 }
 
 impl ProcessMemory {
@@ -418,6 +421,7 @@ impl GuestMemory {
                     pss_kb: p.pss_kb,
                     swap_pss_kb: p.swap_pss_kb,
                     google_play: p.google_play,
+                    dax_pss_kb: p.dax_pss_kb,
                 })
                 .collect(),
             kernel: KernelMemory {
@@ -870,11 +874,20 @@ impl fmt::Display for MemorySnapshot {
             )?,
             None => writeln!(f, "  Google Play services: not running")?,
         }
-        for p in &g.top_processes {
-            let share = g.process_share(p);
+        if g.top_processes.iter().any(|p| p.dax_pss_kb > 0) {
             writeln!(
                 f,
-                "    {:>6} MiB  {:<6} {}{} ({} resident, {} compressed)",
+                "    (\"system disk\": files of the disk Android maps in place, which are the host's \
+                 file cache, not memory the VM holds)"
+            )?;
+        }
+        for p in &g.top_processes {
+            let share = g.process_share(p);
+            // Pages mapped in place are never swapped out, so they are all resident.
+            let dax_kb = p.dax_pss_kb.min(share.resident_kb);
+            writeln!(
+                f,
+                "    {:>6} MiB  {:<6} {}{} ({} resident{}, {} compressed)",
                 mib(share.total_kb()),
                 p.pid,
                 p.name,
@@ -884,6 +897,11 @@ impl fmt::Display for MemorySnapshot {
                     ""
                 },
                 mib(share.resident_kb),
+                if dax_kb > 0 {
+                    format!(", {} of it system disk", mib(dax_kb))
+                } else {
+                    String::new()
+                },
                 share
                     .compressed_kb
                     .map_or("?".to_string(), |kb| mib(kb).to_string())
@@ -967,6 +985,7 @@ pub fn snapshot_json(memory: &MemorySnapshot) -> serde_json::Value {
                     "pss_kb": p.pss_kb,
                     "swap_pss_kb": p.swap_pss_kb,
                     "google_play": p.google_play,
+                    "dax_pss_kb": p.dax_pss_kb,
                     "resident_kb": cost.resident_kb,
                     "compressed_kb": cost.compressed_kb,
                 })
@@ -1021,6 +1040,7 @@ pub fn snapshot_to_wire(snapshot: &MemorySnapshot) -> types::Memory {
                         pss_kb: p.pss_kb,
                         swap_pss_kb: p.swap_pss_kb,
                         google_play: p.google_play,
+                        dax_pss_kb: p.dax_pss_kb,
                     })
                     .collect(),
                 swap_pss_kb: g.swap_pss_kb,
@@ -1099,6 +1119,7 @@ pub fn snapshot_from_wire(memory: types::Memory) -> MemorySnapshot {
                         pss_kb: p.pss_kb,
                         swap_pss_kb: p.swap_pss_kb,
                         google_play: p.google_play,
+                        dax_pss_kb: p.dax_pss_kb,
                     })
                     .collect(),
                 swap_pss_kb: g.swap_pss_kb,

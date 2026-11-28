@@ -1602,6 +1602,11 @@ message ProcessMemory {
   // (Google Play services, the Play Store, the services framework and the other system apps
   // the Google apps image brings).
   bool google_play = 5;
+  // How much of pss_kb is files on a disk the guest maps in place (DAX, the system disk), in
+  // KiB: the host's file cache, not memory the VM holds. The agent leaves it 0; the guest's
+  // control daemon fills it in from the process's /proc/<pid>/smaps as the report passes. 0
+  // when the daemon could not read it.
+  uint64 dax_pss_kb = 6;
 }
 
 // Guest to host, from the agent: how the guest uses its memory. Sent every few minutes, and

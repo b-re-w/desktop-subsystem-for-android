@@ -1919,6 +1919,7 @@ fn fr17_dsa_memory_json_carries_the_guest_breakdown_and_the_host_processes() {
                     pss_kb: 150 * 1024,
                     swap_pss_kb: 0,
                     google_play: false,
+                    dax_pss_kb: 0,
                 }],
                 ..GuestMemory::default()
             },
@@ -2016,6 +2017,7 @@ fn nfr2_dsa_memory_json_counts_zram_compressed_and_google_play_services_apart() 
                     pss_kb: 81 * MIB,
                     swap_pss_kb: 75 * MIB,
                     google_play: true,
+                    dax_pss_kb: 0,
                 }],
                 google_play: Some(GooglePlayMemory {
                     processes: 2,

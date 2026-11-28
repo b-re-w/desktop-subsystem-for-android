@@ -1365,6 +1365,14 @@ mod daemon {
                     let source = google_device_id_source();
                     move || source.read()
                 })
+                // The mounts are read each time: an image mounted in place later (the Google
+                // apps' or the ARM translator's) counts too.
+                .on_dax_share(|pid| {
+                    let pid = u32::try_from(pid).ok()?;
+                    let mappings = dsa_guest_channeld::smaps::read_mappings(pid)?;
+                    let mounts = dsa_guest_channeld::smaps::read_mounts();
+                    Some(dsa_guest_channeld::smaps::process_shares(&mappings, &mounts).dax_kib)
+                })
                 .on_gamepads(gamepads)
                 .on_root_elevation(Arc::clone(&su_relay), move |config| {
                     su_config.apply(config);
