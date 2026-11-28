@@ -683,14 +683,19 @@ mod daemon {
         asked: Option<u64>,
         /// zram0's size has been logged.
         told_zram0: bool,
+        /// When the daemon last looked whether zram1 is larger than needed and empty.
+        looked_at_zram1: Option<std::time::Instant>,
     }
 
     /// Asks init for a second zram device when the guest has more memory than zram0 was sized
-    /// for at boot, and for none when it is back (see `zram_grow`). zram0 not yet on asks
-    /// nothing.
+    /// for at boot, and for none when it is back (see `zram_grow`), and again, once a minute at
+    /// most, while zram1 is larger than needed and has emptied. zram0 not yet on asks nothing.
     #[cfg(target_os = "android")]
     fn ask_for_zram_extra(memory: &dsa_guest_channeld::reclaim::MemInfo, state: &mut ZramExtra) {
-        use dsa_guest_channeld::zram_grow::{extra_mib, ZRAM_EXTRA_PROPERTY, ZRAM_PERCENT};
+        use dsa_guest_channeld::zram_grow::{
+            ask_again, extra_mib, stored_bytes, REASK_INTERVAL, ZRAM_EXTRA_PROPERTY, ZRAM_PERCENT,
+        };
+        const ZRAM1: &str = "/sys/devices/virtual/block/zram1";
         let zram0 = std::fs::read_to_string("/sys/devices/virtual/block/zram0/disksize")
             .ok()
             .and_then(|v| v.trim().parse::<u64>().ok())
@@ -709,6 +714,40 @@ mod daemon {
         let target = extra_mib(memory.mem_total_kb, zram0);
         let asked = &mut state.asked;
         if *asked == Some(target) || (asked.is_none() && target == 0) {
+            // Nothing new to ask. The helper leaves a zram1 larger than the target while it holds
+            // pages; once it is empty it is asked again, and a daemon started again finds a zram1
+            // its last run asked for the same way.
+            if state
+                .looked_at_zram1
+                .is_some_and(|at| at.elapsed() < REASK_INTERVAL)
+            {
+                return;
+            }
+            state.looked_at_zram1 = Some(std::time::Instant::now());
+            let zram1_mib = std::fs::read_to_string(format!("{ZRAM1}/disksize"))
+                .ok()
+                .and_then(|v| v.trim().parse::<u64>().ok())
+                .unwrap_or(0)
+                / (1024 * 1024);
+            if zram1_mib == 0 {
+                return;
+            }
+            let stored = std::fs::read_to_string(format!("{ZRAM1}/mm_stat"))
+                .map(|text| stored_bytes(&text))
+                .unwrap_or(u64::MAX);
+            if !ask_again(target, zram1_mib, stored) {
+                return;
+            }
+            say!(
+                "zram1 swaps {zram1_mib} MiB and holds {} KiB, where {target} MiB is needed: asking \
+                 init again to cut it back",
+                stored / 1024
+            );
+            if let Err(why) = set_property(ZRAM_EXTRA_PROPERTY, &target.to_string()) {
+                say!("could not ask init for zram1: {why}");
+            } else {
+                *asked = Some(target);
+            }
             return;
         }
         say!(

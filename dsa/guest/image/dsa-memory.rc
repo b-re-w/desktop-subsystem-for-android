@@ -119,7 +119,9 @@ on early-boot
 # with memory still free. When MemTotal outgrows what zram0 was sized for, dsa-channeld sets
 # vendor.dsa.memory.zram_extra to half the MiB added (0 when the guest is back), and init starts the
 # helper, which adds zram1 through zram-control, sizes it, writes its swap header and turns it on
-# below zram0's priority, so zram0 fills first. It takes zram1 off again only once it is empty.
+# below zram0's priority, so zram0 fills first. It takes zram1 off again only once it is empty
+# (under 1 MiB swapped); while it is not, dsa-channeld looks each minute and sets the property
+# again, to the same value, once it is, which starts the helper again.
 # It runs as root, which swapon needs, in a domain that may touch only zram (memory.cil).
 service dsa_zram_extra /vendor/bin/dsa-channeld --zram-extra
     user root

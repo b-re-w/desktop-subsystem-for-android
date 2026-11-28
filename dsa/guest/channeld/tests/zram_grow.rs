@@ -40,10 +40,36 @@ fn nfr1_the_second_device_grows_and_goes_only_when_empty() {
     // More memory again: remade larger, even with pages in it.
     assert_eq!(step(1024, 512, 100 * MIB), Step::Make(1024));
     // Memory gone: the device stays while it holds pages, goes once empty.
-    assert_eq!(step(0, 512, 1), Step::Leave);
+    assert_eq!(step(0, 512, 100 * MIB), Step::Leave);
     assert_eq!(step(0, 512, 0), Step::Remove);
     assert_eq!(step(256, 512, 0), Step::Make(256));
-    assert_eq!(step(256, 512, 1), Step::Leave);
+    assert_eq!(step(256, 512, 100 * MIB), Step::Leave);
+}
+
+#[test]
+fn nfr2_zram1_goes_once_it_holds_nothing_and_is_asked_for_again_until_then() {
+    use dsa_guest_channeld::zram_grow::{ask_again, EMPTY_BELOW_BYTES, REASK_INTERVAL};
+    // The owner's PC, 1.0.1-dev.37: memory added at 5832 s went back 18 s later, and zram1 was
+    // left with "it still holds 0 MiB of swapped pages", under a MiB. The daemon asked only when
+    // its target changed, so zram1 stayed for the rest of the boot.
+    assert_eq!(EMPTY_BELOW_BYTES, MIB);
+    // Under a MiB is nothing: taking it off reads that little back.
+    assert_eq!(step(0, 512, 600 * 1024), Step::Remove);
+    assert_eq!(step(0, 512, MIB - 1), Step::Remove);
+    assert_eq!(step(0, 512, MIB), Step::Leave);
+    assert_eq!(step(256, 512, 600 * 1024), Step::Make(256));
+    // The daemon asks again for a device larger than it needs once it is empty, and not while
+    // it holds pages, nor for a device that is gone or the size it should be.
+    assert!(ask_again(0, 512, 0));
+    assert!(ask_again(0, 512, 600 * 1024));
+    assert!(ask_again(256, 512, 0));
+    assert!(!ask_again(0, 512, 100 * MIB));
+    assert!(!ask_again(0, 0, 0));
+    assert!(!ask_again(512, 512, 0));
+    // A larger target is asked for when it changes, not again.
+    assert!(!ask_again(1024, 512, 0));
+    // It looks at most once a minute.
+    assert_eq!(REASK_INTERVAL, std::time::Duration::from_secs(60));
 }
 
 #[test]

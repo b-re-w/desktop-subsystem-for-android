@@ -12,7 +12,8 @@
 //! applies it ([`step`], [`swap_header`]): it adds the device through zram-control, sizes it,
 //! writes the swap header and turns it on with a priority below zram0's, so zram0 fills first.
 //! A device in use is never cut back while it holds pages: taking it off would read them all
-//! back into memory the guest no longer has.
+//! back into memory the guest no longer has. The daemon looks again every minute and asks once
+//! more when such a device has emptied ([`ask_again`]).
 
 /// The property the daemon sets to the MiB the second zram device should have, 0 for none.
 pub const ZRAM_EXTRA_PROPERTY: &str = "vendor.dsa.memory.zram_extra";
@@ -63,23 +64,43 @@ pub enum Step {
     Remove,
 }
 
+/// A device holding less than this, before compression, counts as empty: taking it off reads
+/// that little back into memory, and keeping it costs its slot table (some 3 MiB for 512 MiB)
+/// for as long as the guest runs. On the owner's PC a zram1 kept for "0 MiB of swapped pages",
+/// under a MiB, stayed for the rest of the boot.
+pub const EMPTY_BELOW_BYTES: u64 = 1024 * 1024;
+
+/// How often the daemon looks whether a second device it was told to cut back is empty now.
+pub const REASK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
+
 /// The step for a target of `target_mib`, with the device now `current_mib` large (0 when it is
 /// not in use) and holding `stored_bytes` of swapped pages.
 ///
 /// A larger target remakes the device: taking it off reads what it holds back into memory, which
-/// the guest has just gained. A smaller one, or none, takes it off only once it is empty.
+/// the guest has just gained. A smaller one, or none, takes it off only once it is empty (it holds
+/// less than [`EMPTY_BELOW_BYTES`]).
 pub fn step(target_mib: u64, current_mib: u64, stored_bytes: u64) -> Step {
     if target_mib == current_mib {
         Step::Leave
     } else if target_mib > current_mib {
         Step::Make(target_mib)
-    } else if stored_bytes > 0 {
+    } else if stored_bytes >= EMPTY_BELOW_BYTES {
         Step::Leave
     } else if target_mib == 0 {
         Step::Remove
     } else {
         Step::Make(target_mib)
     }
+}
+
+/// Whether the daemon asks again for a target of `target_mib` it already asked for, with the
+/// device `current_mib` large (its `disksize`, 0 when it is gone) and holding `stored_bytes`.
+///
+/// The helper leaves a device larger than the target while it holds pages, and the daemon asks
+/// only when the target changes, so such a device stayed until the guest stopped. It is asked for
+/// again once the step would now cut it back, at most every [`REASK_INTERVAL`].
+pub fn ask_again(target_mib: u64, current_mib: u64, stored_bytes: u64) -> bool {
+    current_mib > target_mib && step(target_mib, current_mib, stored_bytes) != Step::Leave
 }
 
 /// The first page of a swap area of `size_bytes` with pages of `page_size` bytes: what mkswap
