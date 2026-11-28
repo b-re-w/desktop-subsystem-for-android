@@ -1155,6 +1155,99 @@ fn fr14_a_host_failure_of_an_earlier_start_does_not_excuse_the_next_trial() {
     assert_eq!(state.failed, ["16.0.2"]);
 }
 
+/// What an installation without a bundled image finds: Android 17 and Android 16 offered.
+fn both_majors() -> MemoryFetch {
+    server(
+        &[16, 17],
+        &[("17.0.0-1", 17, 1), ("16.0.0-1", 16, 1)],
+        &key(),
+    )
+}
+
+/// Boots the image on trial in `store` on a guest where the images in `broken` do not start,
+/// and waits until the trial is over.
+fn run_trial(store: &Arc<ImageStore>, broken: &[&str]) -> String {
+    let (android, done) = updating_android(store, broken);
+    android.start();
+    let notice = wait_for_notice(&android);
+    let deadline = Instant::now() + WAIT;
+    while android.trial_running.load(Ordering::SeqCst) {
+        assert!(Instant::now() < deadline, "the trial did not end");
+        thread::sleep(Duration::from_millis(10));
+    }
+    done.store(true, Ordering::Relaxed);
+    notice
+}
+
+#[test]
+fn fr14_when_every_image_failed_here_the_check_says_which_why_and_how_to_try_again() {
+    // #1065: the first image (17) failed its first boot, then the next one (16) did too.
+    let store = store_without_an_image();
+    let broken = ["17.0.0-1", "16.0.0-1"];
+    check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+    assert_eq!(store.state().unwrap().current.version, "17.0.0-1");
+    run_trial(&store, &broken);
+    check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+    assert_eq!(store.state().unwrap().current.version, "16.0.0-1");
+    run_trial(&store, &broken);
+    let state = store.state().unwrap();
+    assert_eq!(state.current.version, "none");
+    assert_eq!(state.failed, ["17.0.0-1", "16.0.0-1"]);
+
+    let notice = check(&store, &both_majors(), "mem://list.json", &trusted())
+        .unwrap()
+        .unwrap();
+    assert!(
+        notice.starts_with("No Android image is installed"),
+        "{notice}"
+    );
+    for said in [
+        // Which versions failed here, and why each did.
+        "Android 17.0.0-1 did not start",
+        "17.0.0-1 does not boot",
+        "Android 16.0.0-1 did not start",
+        "16.0.0-1 does not boot",
+        // How to try again, and how to report it.
+        "settings app",
+        "dsa android use 17",
+        "dsa logs collect -o",
+    ] {
+        assert!(notice.contains(said), "{said:?} is missing: {notice}");
+    }
+    assert!(
+        !notice.contains("Android 0") && !notice.contains("(none)"),
+        "{notice}"
+    );
+
+    // The periodic check does not download them again on its own, and says the same.
+    let again = check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+    assert_eq!(again.as_deref(), Some(notice.as_str()));
+    let state = store.state().unwrap();
+    assert_eq!(state.current.version, "none");
+    assert_eq!(state.failed, ["17.0.0-1", "16.0.0-1"]);
+}
+
+#[test]
+fn fr14_with_no_image_and_none_offered_nothing_says_android_0() {
+    let store = store_without_an_image();
+    let notice = check(
+        &store,
+        &server(&[16, 17], &[], &key()),
+        "mem://list.json",
+        &trusted(),
+    )
+    .unwrap()
+    .unwrap();
+    assert!(
+        notice.starts_with("No Android image is installed"),
+        "{notice}"
+    );
+    assert!(
+        !notice.contains("Android 0") && !notice.contains("(none)"),
+        "{notice}"
+    );
+}
+
 #[test]
 fn fr14_losing_the_only_image_brings_the_next_check_forward() {
     let now = Instant::now();

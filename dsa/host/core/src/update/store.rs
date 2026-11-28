@@ -12,6 +12,7 @@
 //! replaced atomically (written beside, then renamed), so a crash leaves either the old
 //! state or the new one.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
@@ -67,6 +68,11 @@ pub struct State {
     /// Versions that failed to boot here and are not tried again by the same build.
     #[serde(default)]
     pub failed: Vec<String>,
+    /// Why each version in `failed` did not start, when that was recorded: the first line of
+    /// the trial's reason. Left out of the file while empty, so a store without failures reads
+    /// the same to a build from before it was kept.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub failed_reasons: BTreeMap<String, String>,
     /// The DSA build that saw them fail. A failure can be the host's fault rather than the
     /// image's, so a new build of the host tries those images again.
     #[serde(default)]
@@ -227,6 +233,7 @@ impl ImageStore {
         let mut state = store.state()?;
         if !state.failed.is_empty() && state.failed_build.as_deref() != Some(build) {
             state.failed.clear();
+            state.failed_reasons.clear();
             state.failed_build = None;
             store.write_state(&state)?;
         }
@@ -254,6 +261,7 @@ impl ImageStore {
                 previous: None,
                 on_trial: false,
                 failed: Vec::new(),
+                failed_reasons: BTreeMap::new(),
                 failed_build: None,
                 channel: Channel::Latest,
                 older_allowed: false,
@@ -544,6 +552,16 @@ impl ImageStore {
     /// Goes back to the previous image after the current one failed to boot. The failed
     /// version is remembered and its files removed. Returns the image now current.
     pub fn roll_back(&self) -> Result<InstalledImage, UpdateError> {
+        self.give_up(None)
+    }
+
+    /// [`roll_back`](Self::roll_back), keeping `reason` (its first line) as why the image
+    /// failed, so the user can still be told once later news has replaced the trial's.
+    pub fn roll_back_because(&self, reason: &str) -> Result<InstalledImage, UpdateError> {
+        self.give_up(Some(reason))
+    }
+
+    fn give_up(&self, reason: Option<&str>) -> Result<InstalledImage, UpdateError> {
         let mut state = self.state()?;
         let previous = state.previous.take().ok_or_else(|| {
             UpdateError::Store(format!(
@@ -552,7 +570,21 @@ impl ImageStore {
             ))
         })?;
         let failed = std::mem::replace(&mut state.current, previous);
-        state.failed.push(failed.version.clone());
+        if !state.failed.contains(&failed.version) {
+            state.failed.push(failed.version.clone());
+        }
+        let first_line =
+            reason.and_then(|reason| reason.lines().map(str::trim).find(|line| !line.is_empty()));
+        match first_line {
+            Some(line) => {
+                state
+                    .failed_reasons
+                    .insert(failed.version.clone(), line.to_string());
+            }
+            None => {
+                state.failed_reasons.remove(&failed.version);
+            }
+        }
         state.failed_build = self.build.clone();
         state.on_trial = false;
         self.write_state(&state)?;

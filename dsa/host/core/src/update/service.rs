@@ -1,6 +1,7 @@
 //! Updates as the service runs them: the periodic check, and a user's Android that boots a
 //! new image on trial.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::RecvTimeoutError;
@@ -264,6 +265,12 @@ fn apply_list(
     match decision {
         Decision::UpToDate => Ok(moved_up),
         Decision::Unsupported(why) => Ok(Some(why)),
+        Decision::FailedHere(images) => Ok(Some(failed_here_notice(
+            &state.current,
+            &images,
+            &state.failed_reasons,
+            &manifest.supported_majors,
+        ))),
         Decision::Apply(image) => {
             let total = image.files.iter().map(|file| file.size).sum();
             downloading(&Download {
@@ -284,6 +291,58 @@ fn apply_list(
             )))
         }
     }
+}
+
+/// How to collect the logs to report a failure with, as the user types it.
+const COLLECT_LOGS: &str = "dsa logs collect -o dsa-logs.zip";
+
+/// The news when nothing can be installed because every image that would replace `installed`
+/// (no longer supported, or no image at all) failed to start on this computer: which images,
+/// why each did as far as `reasons` recorded it, how to try again, and how to report it.
+fn failed_here_notice(
+    installed: &InstalledImage,
+    failed: &[ImageEntry],
+    reasons: &BTreeMap<String, String>,
+    supported: &[u32],
+) -> String {
+    let mut words = vec![if installed.is_none() {
+        "No Android image is installed, because the images available for this computer failed \
+         to start on it."
+            .to_string()
+    } else {
+        format!(
+            "Android {} ({}) is no longer supported (supported: Android {}), and the images to \
+             move to failed to start on this computer.",
+            installed.android_major,
+            installed.version,
+            supported
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }];
+    for image in failed {
+        words.push(match reasons.get(&image.version) {
+            Some(why) => format!(
+                "Android {} did not start: {}.",
+                image.version,
+                why.trim_end_matches('.')
+            ),
+            None => format!("Android {} did not start.", image.version),
+        });
+    }
+    let major = failed.first().map_or_else(
+        || "latest".to_string(),
+        |image| image.android_major.to_string(),
+    );
+    words.push(format!(
+        "The service does not download them again by itself. To try again, choose a version \
+         under Updates in the settings app (or press Check now there), or run `dsa android use \
+         {major}`. If it fails again, collect the logs with `{COLLECT_LOGS}` and attach the \
+         file to your report."
+    ));
+    words.join(" ")
 }
 
 /// [`check_on_channel`], and raises on `notices` the alert that an image is downloaded and
@@ -561,9 +620,10 @@ fn kept_notice(image: &InstalledImage, first: bool) -> String {
 /// What happens to an image that failed its trial, in words for the user.
 fn not_retried(failed: &InstalledImage) -> String {
     format!(
-        "Android {} is not tried again until a newer build of it, or a new version of DSA, \
-         is available",
-        failed.version
+        "Android {} is not tried again until a newer build of it or a new version of DSA is \
+         available, or until Android {} is chosen again in the settings app (dsa android use \
+         {})",
+        failed.version, failed.android_major, failed.android_major
     )
 }
 
@@ -1187,9 +1247,10 @@ impl UserAndroid for UpdatingAndroid {
                 ),
                 Ok(Outcome::GaveUp { failed, reason }) => format!(
                     "Android {} did not start ({reason}); no other image is installed. The \
-                     service downloads another image if there is one, and the next \
-                     version of DSA tries this one again",
-                    failed.version
+                     service downloads another image if there is one. To try this one \
+                     again, choose Android {} in the settings app (dsa android use {}); \
+                     the next version of DSA also tries it again",
+                    failed.version, failed.android_major, failed.android_major
                 ),
                 Ok(Outcome::Undecided { image, reason }) => format!(
                     "Android {} is kept on trial and is not to blame: {reason}",
