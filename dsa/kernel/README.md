@@ -184,8 +184,9 @@ in probe order, which changes when the host attaches another disk.
   machine: room for 512 processors and 1024 NUMA nodes (`CONFIG_NR_CPUS=64`, no NUMA; the VM
   has 4 processors by default and one node), unmerged slab caches and per-CPU partial slab
   lists, the function tracer's per-function records, the virtual terminals and the
-  framebuffer layer (with which vkms also kept an fbdev buffer nobody draws), and, on arm64,
-  KVM. It also leaves out built-in features Android's userspace never asks for: System V IPC
+  framebuffer layer (with which vkms also kept an fbdev buffer nobody draws), debugfs's files
+  (`CONFIG_DEBUG_FS_ALLOW_NONE`: the kernel makes none, and a user build reads none; the debug
+  kernel turns them back on for `page_owner`), and, on arm64, KVM. It also leaves out built-in features Android's userspace never asks for: System V IPC
   and POSIX message queues (bionic has neither), `/dev/mem`, hibernation, kexec, IMA,
   AppArmor (SELinux is the one major security module), nftables (netd uses the legacy
   iptables tables), VXLAN, AF_XDP, the SCSI CD-ROM and generic SCSI drivers, and hugetlbfs
