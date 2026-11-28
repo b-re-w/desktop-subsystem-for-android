@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
 #include <string>
 
 namespace dsa {
@@ -145,6 +146,32 @@ inline std::string allocationColumns(const AllocationRecord& record) {
     return std::to_string(record.bytes) + "\t" + std::to_string(record.memoryType) + "\t" +
            memoryTypeText(record.typeFlags) + "\t" + dedicatedText(record.dedicated) + "\t" +
            allocationWhyText(record.why);
+}
+
+// How long ago an allocation was made, in seconds with one decimal, as the list's last column.
+inline std::string ageText(uint64_t nowUs, uint64_t madeUs) {
+    if (madeUs == 0 || madeUs > nowUs) return "-";
+    char text[32];
+    std::snprintf(text, sizeof(text), "%.1f", static_cast<double>(nowUs - madeUs) / 1e6);
+    return text;
+}
+
+// A grant of the shared graphics memory larger than this is named again above the list, with
+// its age, so it can be matched with the guest driver's own line for it ("dsa-vk large grant:"
+// in the guest's log, which says what the grant is for).
+inline constexpr uint64_t kLargeGrantNoteBytes = uint64_t(16) << 20;
+
+inline bool isLargeGrantRecord(const AllocationRecord& record) {
+    return record.why == AllocationWhy::Granted && record.bytes > kLargeGrantNoteBytes;
+}
+
+// The line above the list for a large grant.
+inline std::string largeGrantNote(const std::string& process, const AllocationRecord& record,
+                                  const std::string& age) {
+    return "# Large grant: " + process + ", " + std::to_string(record.bytes) +
+           " bytes, memory type " + std::to_string(record.memoryType) + " (" +
+           memoryTypeText(record.typeFlags) + "), made " + age +
+           " s ago. The guest's log names what it is for (dsa-vk large grant).";
 }
 
 }  // namespace dsa

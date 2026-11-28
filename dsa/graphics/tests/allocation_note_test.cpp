@@ -80,7 +80,36 @@ static void nfr1_a_line_names_the_type_the_dedicated_target_and_why() {
     EXPECT(std::string(dsa::dedicatedText(dsa::Dedicated::Image)) == "image");
 }
 
+// nfr1: a grant over 16 MiB is named again above the list with its process, size, memory type
+// and age, so it can be matched with the guest's line that says what it is for; every line
+// ends with its age.
+static void nfr1_a_large_grant_is_named_with_its_age() {
+    dsa::AllocationRecord grant;
+    grant.bytes = 67174400;
+    grant.memoryType = 2;
+    grant.typeFlags = dsa::kTypeDeviceLocal | dsa::kTypeHostVisible | dsa::kTypeHostCoherent |
+                      dsa::kTypeHostCached;
+    grant.why = dsa::AllocationWhy::Granted;
+    EXPECT(dsa::isLargeGrantRecord(grant));
+    const std::string note = dsa::largeGrantNote("/system/bin/surfaceflinger (pid 500)", grant,
+                                                 dsa::ageText(5000000, 1500000));
+    EXPECT(note ==
+           "# Large grant: /system/bin/surfaceflinger (pid 500), 67174400 bytes, memory type 2 "
+           "(device-local host-visible coherent cached), made 3.5 s ago. The guest's log names "
+           "what it is for (dsa-vk large grant).");
+    dsa::AllocationRecord small = grant;
+    small.bytes = 1114112;
+    EXPECT(!dsa::isLargeGrantRecord(small));
+    dsa::AllocationRecord gpuOnly = grant;
+    gpuOnly.why = dsa::AllocationWhy::GpuOnly;
+    EXPECT(!dsa::isLargeGrantRecord(gpuOnly));
+    EXPECT(dsa::ageText(10, 0) == "-");
+    EXPECT(dsa::ageText(10, 20) == "-");
+    EXPECT(dsa::ageText(2000000, 1000000) == "1.0");
+}
+
 int main() {
+    nfr1_a_large_grant_is_named_with_its_age();
     nfr1_an_allocation_without_a_note_is_the_renderers_own();
     nfr1_a_note_goes_to_the_next_allocation_only();
     nfr1_a_note_stays_on_its_thread();

@@ -14,7 +14,8 @@
 // The driver also counts, per process, the live copies and grants and why an allocation was
 // copied rather than granted, and logs one line with those totals at most every few minutes,
 // when an allocation is made or freed. A process that allocates nothing logs nothing, since
-// nothing it holds changed.
+// nothing it holds changed. The staging grants a device keeps for gralloc buffers' CPU copies
+// count among its grants too, and a grant over 16 MiB gets a line of its own (below).
 
 #pragma once
 
@@ -144,6 +145,61 @@ class DriverMemoryLog {
 inline DriverMemoryLog& driverMemoryLog() {
     static DriverMemoryLog log;
     return log;
+}
+
+// A grant of the shared graphics memory larger than this gets a log line of its own when it is
+// made and when it goes: which process, how large, which memory type and what it is for. The
+// renderer's memory report lists every grant with its process, size and memory type, but not
+// what the guest made it for, so a large one could not be traced to the code that asked.
+inline constexpr uint64_t kLargeGrantBytes = uint64_t(16) << 20;
+
+inline constexpr bool isLargeGrant(uint64_t bytes) { return bytes > kLargeGrantBytes; }
+
+// The line for a large grant made (`made`) or let go of. `typeText` is the memory type's flags
+// in words (dsa::memoryTypeText), `purpose` what the grant is for.
+inline void largeGrantLine(char* out, size_t size, bool made, const char* process, uint64_t bytes,
+                           uint32_t typeIndex, const char* typeText, const char* purpose) {
+    std::snprintf(out, size,
+                  "dsa-vk large grant: %s %s %.1f MiB (%" PRIu64
+                  " bytes) of the shared graphics memory, memory type %" PRIu32 " (%s), for %s",
+                  process, made ? "made" : "let go of", static_cast<double>(bytes) / 1048576.0,
+                  bytes, typeIndex, typeText, purpose);
+}
+
+// This process's name: the first word of /proc/self/cmdline, which an app's process sets to
+// its package. "?" where there is none.
+inline const char* processNameFromCmdline(const char* cmdline, size_t length, char* out,
+                                          size_t size) {
+    if (size == 0) return out;
+    size_t n = 0;
+    while (n < length && n + 1 < size && cmdline[n] != '\0') {
+        out[n] = cmdline[n];
+        ++n;
+    }
+    out[n] = '\0';
+    if (n == 0 && size > 1) {
+        out[0] = '?';
+        out[1] = '\0';
+    }
+    return out;
+}
+
+// Read once, at the first large grant (a static's initialisation is thread safe).
+inline const char* thisProcessName() {
+    struct Name {
+        char text[128] = {};
+        Name() {
+            char cmdline[128] = {};
+            size_t length = 0;
+            if (FILE* file = std::fopen("/proc/self/cmdline", "rb")) {
+                length = std::fread(cmdline, 1, sizeof(cmdline), file);
+                std::fclose(file);
+            }
+            processNameFromCmdline(cmdline, length, text, sizeof(text));
+        }
+    };
+    static const Name name;
+    return name.text;
 }
 
 }  // namespace dsa

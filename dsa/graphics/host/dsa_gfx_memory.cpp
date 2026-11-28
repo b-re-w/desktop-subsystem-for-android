@@ -80,6 +80,8 @@ struct Allocation {
     uint32_t memory_type = 0;
     dsa::Dedicated dedicated = dsa::Dedicated::Nothing;
     dsa::AllocationWhy why = dsa::AllocationWhy::RendererOwn;
+    /* When it was made (Unix time in microseconds), for its age in the list. */
+    uint64_t created_us = 0;
 };
 
 /* Who a guest process is, as it said on its process pipe. */
@@ -193,6 +195,7 @@ VKAPI_ATTR VkResult VKAPI_CALL counted_allocate(VkDevice device,
     allocation.memory_type = info->memoryTypeIndex;
     allocation.dedicated = dedicated_to(info);
     allocation.why = why;
+    allocation.created_us = android::base::getUnixTimeUs();
     const uint64_t process = calling_process();
     std::lock_guard<std::mutex> lock(s_mutex);
     if (!s_counting) {
@@ -744,7 +747,10 @@ extern "C" DSA_GFX_EXPORT size_t dsa_gfx_describe_guest_allocations(char* out, s
                       "vkAllocateMemory on a guest process's device.\n",
                       lines.size(), held.size(), total / 1048576.0);
         text += line;
-        text += "device\tprocess\tkind\tbytes\tmemory_type\ttype_flags\tdedicated\twhy\n";
+        const uint64_t now = android::base::getUnixTimeUs();
+        /* Grants over 16 MiB again, above the list, to match with the guest's own line. */
+        std::string notes;
+        std::string body;
         for (const Line& entry : lines) {
             const auto process = s_device_process.find(entry.device);
             const std::string label = process != s_device_process.end()
@@ -762,10 +768,17 @@ extern "C" DSA_GFX_EXPORT size_t dsa_gfx_describe_guest_allocations(char* out, s
                                    : 0;
             record.dedicated = entry.allocation.dedicated;
             record.why = entry.allocation.why;
+            const std::string age = dsa::ageText(now, entry.allocation.created_us);
+            if (dsa::isLargeGrantRecord(record)) {
+                notes += dsa::largeGrantNote(label, record, age) + "\n";
+            }
             std::snprintf(line, sizeof(line), "%p\t", static_cast<void*>(entry.device));
-            text += line;
-            text += label + "\t" + kind + "\t" + dsa::allocationColumns(record) + "\n";
+            body += line;
+            body += label + "\t" + kind + "\t" + dsa::allocationColumns(record) + "\t" + age + "\n";
         }
+        text += notes;
+        text += "device\tprocess\tkind\tbytes\tmemory_type\ttype_flags\tdedicated\twhy\tage_s\n";
+        text += body;
     }
     if (out && capacity > 0) {
         const size_t n = std::min(capacity - 1, text.size());

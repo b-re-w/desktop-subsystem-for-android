@@ -103,6 +103,11 @@ mkdir -p "$out"
     "$here/graphics_memory_test.cpp" -o "$out/graphics_memory_test"
 "$out/graphics_memory_test"
 
+# The guest driver's own line for each grant over 16 MiB (guest/mesa 0019).
+"$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -I"$here/../include" \
+    "$here/driver_memory_test.cpp" -o "$out/driver_memory_test"
+"$out/driver_memory_test"
+
 # Why each allocation on a guest's device is what it is, for the renderer's list (patch 0048).
 "$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -pthread -I"$here/../include" \
     "$here/allocation_note_test.cpp" -o "$out/allocation_note_test"

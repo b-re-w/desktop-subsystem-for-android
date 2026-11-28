@@ -1,0 +1,260 @@
+Subject: Name each large grant of the shared graphics memory in the log
+
+The renderer's memory report lists every grant of the shared graphics memory with its process,
+size and memory type, but not what the guest made it for, so a 64 MiB grant on SurfaceFlinger's
+device could not be traced to the code that asked. The driver's totals line (0016) also left
+out the staging grants a device keeps for gralloc buffers' CPU copies (0015).
+
+A grant over 16 MiB (dsa::isLargeGrant) now gets a line of its own when it is made and when it
+goes: "dsa-vk large grant: <process> made|let go of <size> of the shared graphics memory, memory
+type <n> (<flags>), for <purpose>", where the purpose is an app's host-visible allocation, or a
+CPU read back or upload of a <width>x<height> gralloc buffer through the staging grant. The
+staging grants now count among the process's grants in the totals line.
+
+Applies after 0018 in patches/guest/mesa, on Mesa 224e91e39836d3ca31f80df2e0379e55c70574f8.
+---
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+index 97a95e6..831ab93 100644
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+@@ -5,6 +5,7 @@
+ 
+ #include "ResourceTracker.h"
+ 
++#include "dsa_allocation_note.h"
+ #include "dsa_dirty_pages.h"
+ #include "dsa_driver_memory.h"
+ #include "dsa_shadow_blocks.h"
+@@ -1646,6 +1647,25 @@ static void logDriverMemory() {
+                                     [](const char* line) { mesa_logi("%s", line); });
+ }
+ 
++// A grant over 16 MiB, made or let go of, on a line of its own (dsa_driver_memory.h).
++static void logLargeGrant(bool made, uint64_t bytes, uint32_t typeIndex, uint32_t typeFlags,
++                          const char* purpose) {
++    if (!dsa::isLargeGrant(bytes)) return;
++    char line[512];
++    dsa::largeGrantLine(line, sizeof(line), made, dsa::thisProcessName(), bytes, typeIndex,
++                        dsa::memoryTypeText(typeFlags).c_str(), purpose);
++    mesa_logi("%s", line);
++}
++
++static constexpr const char kAllocationPurpose[] = "an app's host-visible allocation";
++
++uint32_t ResourceTracker::memoryTypeFlags(VkDevice device, uint32_t typeIndex) {
++    std::lock_guard<std::recursive_mutex> lock(mLock);
++    auto it = info_VkDevice.find(device);
++    if (it == info_VkDevice.end() || typeIndex >= it->second.memProps.memoryTypeCount) return 0;
++    return it->second.memProps.memoryTypes[typeIndex].propertyFlags;
++}
++
+ void ResourceTracker::flushShadowedMemory(VkEncoder* enc, VkDevice device) {
+     const bool traced = inputTraceRequested();
+     const auto started = std::chrono::steady_clock::now();
+@@ -1870,13 +1890,24 @@ void ResourceTracker::readBackForCpu(VkEncoder* enc, VkDevice device) {
+     // The host answers once the device's work is done, so the ColorBuffers hold the drawing.
+     if (enc->vkDeviceWaitIdle(device, true /* do lock */) == VK_SUCCESS) {
+         uint64_t largest = 0;
++        AHardwareBuffer* largestBuffer = nullptr;
+         for (AHardwareBuffer* ahb : buffers) {
+-            largest = std::max(largest, mGralloc->cpuReadbackBytes(mGralloc->getNativeHandle(ahb)));
++            const uint64_t bytes = mGralloc->cpuReadbackBytes(mGralloc->getNativeHandle(ahb));
++            if (bytes > largest) {
++                largest = bytes;
++                largestBuffer = ahb;
++            }
++        }
++        char purpose[96] = "a CPU read back of a gralloc buffer (staging)";
++        if (largestBuffer) {
++            std::snprintf(purpose, sizeof(purpose),
++                          "a CPU read back of a %ux%u gralloc buffer (staging)",
++                          mGralloc->getWidth(largestBuffer), mGralloc->getHeight(largestBuffer));
+         }
+         // Into the process's staging grant of the graphics memory the host shares, where it
+         // has one, rather than through the stream.
+         std::lock_guard<std::mutex> stagingLock(mSharedStagingMutex);
+-        const dsa::SharedStaging* staging = sharedStagingLocked(enc, device, largest);
++        const dsa::SharedStaging* staging = sharedStagingLocked(enc, device, largest, purpose);
+         for (AHardwareBuffer* ahb : buffers) {
+             mGralloc->readBackForCpu(mGralloc->getNativeHandle(ahb), staging);
+         }
+@@ -1936,14 +1967,25 @@ void ResourceTracker::uploadForGpu(VkEncoder* enc, VkQueue queue) {
+         if (queueIt != info_VkQueue.end()) device = queueIt->second.device;
+     }
+     uint64_t largest = 0;
++    AHardwareBuffer* largestBuffer = nullptr;
+     for (AHardwareBuffer* ahb : buffers) {
+-        largest = std::max(largest, mGralloc->cpuUploadBytes(ahb));
++        const uint64_t bytes = mGralloc->cpuUploadBytes(ahb);
++        if (bytes > largest) {
++            largest = bytes;
++            largestBuffer = ahb;
++        }
++    }
++    char purpose[96] = "a CPU upload of a gralloc buffer (staging)";
++    if (largestBuffer) {
++        std::snprintf(purpose, sizeof(purpose),
++                      "a CPU upload of a %ux%u gralloc buffer (staging)",
++                      mGralloc->getWidth(largestBuffer), mGralloc->getHeight(largestBuffer));
+     }
+     // Packed into the process's staging grant of the graphics memory the host shares, where it
+     // has one, rather than sent through the stream.
+     std::lock_guard<std::mutex> stagingLock(mSharedStagingMutex);
+     const dsa::SharedStaging* staging =
+-        device != VK_NULL_HANDLE ? sharedStagingLocked(enc, device, largest) : nullptr;
++        device != VK_NULL_HANDLE ? sharedStagingLocked(enc, device, largest, purpose) : nullptr;
+     for (AHardwareBuffer* ahb : buffers) {
+         mGralloc->uploadForGpu(ahb, staging);
+         AHardwareBuffer_release(ahb);
+@@ -2032,7 +2074,8 @@ uint8_t* ResourceTracker::mapSharedMemory(VkEncoder* enc, VkDevice device, VkDev
+ }
+ 
+ const dsa::SharedStaging* ResourceTracker::sharedStagingLocked(VkEncoder* enc, VkDevice device,
+-                                                               uint64_t size) {
++                                                               uint64_t size,
++                                                               const char* purpose) {
+     if (size == 0) return nullptr;
+     auto found = mSharedStaging.find(device);
+     if (found != mSharedStaging.end() && found->second.grant.holds(size)) {
+@@ -2040,6 +2083,7 @@ const dsa::SharedStaging* ResourceTracker::sharedStagingLocked(VkEncoder* enc, V
+     }
+     if (!askSharedMemory(enc, device)) return nullptr;
+     uint32_t typeIndex = UINT32_MAX;
++    uint32_t typeFlags = 0;
+     {
+         std::lock_guard<std::recursive_mutex> lock(mLock);
+         auto it = info_VkDevice.find(device);
+@@ -2050,6 +2094,7 @@ const dsa::SharedStaging* ResourceTracker::sharedStagingLocked(VkEncoder* enc, V
+         for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+             if ((memProps.memoryTypes[i].propertyFlags & kWanted) == kWanted) {
+                 typeIndex = i;
++                typeFlags = memProps.memoryTypes[i].propertyFlags;
+                 break;
+             }
+         }
+@@ -2058,10 +2103,7 @@ const dsa::SharedStaging* ResourceTracker::sharedStagingLocked(VkEncoder* enc, V
+     // A smaller grant goes first; the new one is the next MiB up, so a stream of pictures of
+     // one size makes it once.
+     if (found != mSharedStaging.end()) {
+-        if (auto* shared = dsa::GraphicsMemoryDevice::get()) {
+-            shared->unmap(found->second.grant.ptr, found->second.grant.offset,
+-                          found->second.grant.length);
+-        }
++        forgetStagingLocked(found->second);
+         enc->vkFreeMemory(device, found->second.memory, nullptr, true /* do lock */);
+         mSharedStaging.erase(found);
+     }
+@@ -2074,26 +2116,40 @@ const dsa::SharedStaging* ResourceTracker::sharedStagingLocked(VkEncoder* enc, V
+     DeviceStaging staging;
+     staging.memory = memory;
+     staging.allocationSize = info.allocationSize;
++    staging.typeIndex = typeIndex;
++    staging.typeFlags = typeFlags;
++    staging.purpose = purpose ? purpose : "a gralloc buffer's CPU copy (staging)";
+     staging.grant.ptr = mapSharedMemory(enc, device, memory, &staging.grant.offset,
+                                         &staging.grant.length);
+     if (!staging.grant.ptr) {
+         enc->vkFreeMemory(device, memory, nullptr, true /* do lock */);
+         return nullptr;
+     }
++    // Counted among the process's grants, and named on its own line when it is large.
++    dsa::driverMemoryLog().grantMapped(staging.grant.length);
++    logLargeGrant(true, staging.grant.length, typeIndex, typeFlags, staging.purpose.c_str());
++    logDriverMemory();
+     auto& stored = mSharedStaging[device] = staging;
+     return &stored.grant;
+ }
+ 
++void ResourceTracker::forgetStagingLocked(const DeviceStaging& staging) {
++    // Unmapped before the host hears of the free, so it takes the granules back at once.
++    if (auto* shared = dsa::GraphicsMemoryDevice::get()) {
++        shared->unmap(staging.grant.ptr, staging.grant.offset, staging.grant.length);
++    }
++    dsa::driverMemoryLog().grantUnmapped(staging.grant.length);
++    logLargeGrant(false, staging.grant.length, staging.typeIndex, staging.typeFlags,
++                  staging.purpose.c_str());
++    logDriverMemory();
++}
++
+ void ResourceTracker::releaseLargeStagingLocked(VkEncoder* enc, VkDevice device) {
+     auto found = mSharedStaging.find(device);
+     if (found == mSharedStaging.end() || dsa::keepStagingGrant(found->second.allocationSize)) {
+         return;
+     }
+-    // Unmapped before the host hears of the free, so it takes the granules back at once.
+-    if (auto* shared = dsa::GraphicsMemoryDevice::get()) {
+-        shared->unmap(found->second.grant.ptr, found->second.grant.offset,
+-                      found->second.grant.length);
+-    }
++    forgetStagingLocked(found->second);
+     enc->vkFreeMemory(device, found->second.memory, nullptr, true /* do lock */);
+     mSharedStaging.erase(found);
+ }
+@@ -2777,10 +2833,7 @@ void ResourceTracker::on_vkDestroyDevice_pre(void* context, VkDevice device,
+         std::lock_guard<std::mutex> stagingLock(mSharedStagingMutex);
+         auto staging = mSharedStaging.find(device);
+         if (staging != mSharedStaging.end()) {
+-            if (auto* shared = dsa::GraphicsMemoryDevice::get()) {
+-                shared->unmap(staging->second.grant.ptr, staging->second.grant.offset,
+-                              staging->second.grant.length);
+-            }
++            forgetStagingLocked(staging->second);
+             mSharedStaging.erase(staging);
+         }
+     }
+@@ -3775,6 +3828,9 @@ VkResult ResourceTracker::allocateCoherentMemory(VkDevice device,
+         if (uint8_t* shared =
+                 mapSharedMemory(enc, device, mem, &sharedOffset, &sharedLength, &why)) {
+             dsa::driverMemoryLog().grantMapped(sharedLength);
++            logLargeGrant(true, sharedLength, hostAllocationInfo.memoryTypeIndex,
++                          memoryTypeFlags(device, hostAllocationInfo.memoryTypeIndex),
++                          kAllocationPurpose);
+             logDriverMemory();
+             std::lock_guard<std::recursive_mutex> lock(mLock);
+             auto& stored = info_VkDeviceMemory[mem];
+@@ -4746,6 +4802,8 @@ void ResourceTracker::on_vkFreeMemory(void* context, VkDevice device, VkDeviceMe
+                 shared->unmap(info.ptr, info.sharedOffset, info.sharedLength);
+             }
+             dsa::driverMemoryLog().grantUnmapped(info.sharedLength);
++            logLargeGrant(false, info.sharedLength, info.memoryTypeIndex,
++                          memoryTypeFlags(device, info.memoryTypeIndex), kAllocationPurpose);
+             info_VkDeviceMemory.erase(it);
+             logDriverMemory();
+         }
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+index bb8c02d..4c5949f 100644
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+@@ -598,9 +598,13 @@ class ResourceTracker {
+                              dsa::CopyReason* why = nullptr);
+     // A staging grant of the shared graphics memory for gralloc buffers' CPU uploads and read
+     // backs, at least `size` bytes, from `device`'s host-visible memory; null when there is
+-    // none. The caller holds mSharedStagingMutex while it uses the grant.
++    // none. The caller holds mSharedStagingMutex while it uses the grant. `purpose` says what
++    // the copy is, for the log line of a grant over 16 MiB (dsa_driver_memory.h).
+     const dsa::SharedStaging* sharedStagingLocked(VkEncoder* enc, VkDevice device,
+-                                                  uint64_t size);
++                                                  uint64_t size, const char* purpose = nullptr);
++    // The flags of `device`'s memory type `typeIndex`, as the driver keeps them for the device
++    // (the index the host allocates with); 0 when unknown.
++    uint32_t memoryTypeFlags(VkDevice device, uint32_t typeIndex);
+     // Lets go of `device`'s staging grant once a copy through it is done, when it is larger
+     // than a device keeps (dsa::keepStagingGrant). The caller holds mSharedStagingMutex.
+     void releaseLargeStagingLocked(VkEncoder* enc, VkDevice device);
+@@ -1020,9 +1024,16 @@ class ResourceTracker {
+         VkDeviceMemory memory = VK_NULL_HANDLE;
+         // What was asked of the host: the copy's size, the next MiB up.
+         uint64_t allocationSize = 0;
++        // Its memory type and what it was made for, for the log line of a large grant.
++        uint32_t typeIndex = 0;
++        uint32_t typeFlags = 0;
++        std::string purpose;
+         dsa::SharedStaging grant;
+     };
+     std::unordered_map<VkDevice, DeviceStaging> mSharedStaging;
++    // Unmaps `staging`'s grant and counts it gone, before its memory is freed or its device
++    // destroyed. The caller holds mSharedStagingMutex.
++    void forgetStagingLocked(const DeviceStaging& staging);
+ 
+     std::unique_ptr<gfxstream::SyncHelper> mSyncHelper = nullptr;
+ 
