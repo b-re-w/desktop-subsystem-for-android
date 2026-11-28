@@ -3408,13 +3408,17 @@ pub fn android_versions_json(report: &VersionReport) -> Value {
 
 /// The version report in words.
 pub fn android_versions_text(report: &VersionReport) -> String {
-    let mut lines = vec![format!(
-        "Android {} ({}), build {}, security patch {}",
-        report.android_major,
-        report.version,
-        report.build_id.as_deref().unwrap_or("unknown"),
-        report.security_patch.as_deref().unwrap_or("unknown"),
-    )];
+    let mut lines = vec![if report.has_image() {
+        format!(
+            "Android {} ({}), build {}, security patch {}",
+            report.android_major,
+            report.version,
+            report.build_id.as_deref().unwrap_or("unknown"),
+            report.security_patch.as_deref().unwrap_or("unknown"),
+        )
+    } else {
+        "No Android image is installed".to_string()
+    }];
     lines.push(match report.channel {
         Channel::Latest => format!(
             "Follows: the newest supported version (Android {})",

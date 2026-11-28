@@ -304,6 +304,16 @@ impl ImageStore {
         self.image_dir(version).is_dir()
     }
 
+    /// The version of the image the next start boots, or `None` while no image is installed:
+    /// the current image is only a name (`none`, from an installer without an image), whose
+    /// files are not here.
+    pub fn installed_version(&self) -> Option<String> {
+        self.state()
+            .ok()
+            .map(|state| state.current.version)
+            .filter(|version| self.has_image(version))
+    }
+
     pub fn state(&self) -> Result<State, UpdateError> {
         let path = self.state_path();
         let text = fs::read(&path).map_err(|e| store_error("reading", &path, e))?;

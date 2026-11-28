@@ -1316,6 +1316,20 @@ fn fr14_check_now_on_the_newest_version_tries_its_failed_images_again() {
 }
 
 #[test]
+fn fr14_with_no_image_installed_no_android_version_is_reported() {
+    let store = store_without_an_image();
+    assert_eq!(store.installed_version(), None, "`none` is not a version");
+    check(
+        &store,
+        &server(&[16], &[("16.0.2", 16, 2)], &key()),
+        "mem://list.json",
+        &trusted(),
+    )
+    .unwrap();
+    assert_eq!(store.installed_version().as_deref(), Some("16.0.2"));
+}
+
+#[test]
 fn fr14_losing_the_only_image_brings_the_next_check_forward() {
     let now = Instant::now();
     let retry = Duration::from_secs(300);

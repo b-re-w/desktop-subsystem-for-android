@@ -655,7 +655,7 @@ pub fn serve(config: HostConfig, build: &str, stop: Arc<AtomicBool>) -> Result<(
     let android_version: Option<dsa_host_core::host_api::AndroidVersionSource> =
         updates.as_ref().map(|updates| {
             let store = Arc::clone(&updates.store);
-            Arc::new(move || store.state().ok().map(|state| state.current.version))
+            Arc::new(move || store.installed_version())
                 as dsa_host_core::host_api::AndroidVersionSource
         });
     // Every user's Android follows the computer's power and sleep.

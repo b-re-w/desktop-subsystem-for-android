@@ -839,9 +839,7 @@ pub fn serve(
             shared_by_users: false,
         }));
         let store = Arc::clone(&updates.store);
-        service = service.with_android_version(Arc::new(move || {
-            store.state().ok().map(|state| state.current.version)
-        }));
+        service = service.with_android_version(Arc::new(move || store.installed_version()));
     } else if let Some(disabled) = updates_disabled {
         service = service.with_android_versions(Arc::new(disabled));
     }

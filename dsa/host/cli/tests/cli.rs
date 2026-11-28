@@ -4215,6 +4215,61 @@ fn fr14_dsa_android_shows_the_version_and_moves_down_only_with_erase_data() {
     assert!(parse(&args("android use")).is_err());
 }
 
+/// Android versions of an installation that bundled no image and has none yet.
+struct NoImageVersions;
+
+impl dsa_host_core::update::versions::AndroidVersions for NoImageVersions {
+    fn needs_administrator(&self) -> bool {
+        false
+    }
+    fn report(&self) -> Result<dsa_host_core::update::versions::VersionReport, String> {
+        use dsa_host_core::update::versions::{Channel, VersionReport};
+        Ok(VersionReport {
+            version: "none".into(),
+            android_major: 0,
+            build: 0,
+            build_id: None,
+            security_patch: None,
+            channel: Channel::Latest,
+            supported_majors: vec![16, 17],
+            target_major: 17,
+            on_trial: false,
+            notice: Some("No Android image is installed, because the images failed".into()),
+            restart_pending: None,
+        })
+    }
+    fn choose(
+        &self,
+        _: dsa_host_core::update::versions::Channel,
+        _: bool,
+    ) -> Result<
+        dsa_host_core::update::versions::VersionReport,
+        dsa_host_core::update::versions::ChooseError,
+    > {
+        self.report()
+            .map_err(dsa_host_core::update::versions::ChooseError::Store)
+    }
+}
+
+#[test]
+fn fr14_dsa_android_version_with_no_image_says_none_is_installed() {
+    use dsa_host_core::host_api::HostApiService;
+    let ((listener, _, _), endpoint) = local_pair();
+    let service = HostApiService::new(Arc::new(FakeAndroids::default()), "test service")
+        .with_android_versions(Arc::new(NoImageVersions));
+    let _service = RunningService::start_service(listener, service);
+
+    let shown = stdout(&dsa(&endpoint, "android version"));
+    assert!(
+        shown.starts_with("No Android image is installed\n"),
+        "{shown}"
+    );
+    assert!(!shown.contains("Android 0"), "{shown}");
+    assert!(!shown.contains("(none)"), "{shown}");
+    assert!(!shown.contains("unknown"), "{shown}");
+    assert!(shown.contains("Supported: Android 16, 17"), "{shown}");
+}
+
 #[test]
 fn fr14_dsa_android_install_image_takes_the_folder_and_refuses_one_without_a_list() {
     let parsed = parse(&args("android install-image dev-build")).unwrap();
