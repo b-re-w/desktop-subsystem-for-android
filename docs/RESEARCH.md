@@ -4154,3 +4154,48 @@ Virtualization 문서의 "Memory" 묶음에는 풍선 장치만 있고, "Custom 
 - 실기. 프레임워크 빌드 뒤 PC에서 FLO를 시스템 강제로 두고, 주와 보조 모니터에서 새로 연 것과 옮긴 것의 플레이어 바와 탭 바 사이를 dp로 견줘야 한다. 옮긴 뒤의 뷰 덤프는 아직 없다.
 - 앱이 코드에서 화면 밀도로 계산한 크기(`density * 68` 같은 기본값)와 뷰 밖의 객체에 둔 크기는 여전히 바뀌지 않는다.
 - 우연히 레이아웃의 치수와 같은 값을 가진, 크기가 아닌 필드도 바뀐다. 0과 ±1을 빼고, 그 뷰가 만들어진 요소의 치수와 같은 것만 보므로 드물다고 보지만, 실제 앱에서 세어 보지는 않았다. 기본 style(`defStyleAttr`)에서만 오는 치수는 보지 않는다.
+
+## R61. 쉬는 게스트 커널의 영구 메모리 페이지 구조와 회수할 수 없는 slab (NFR-1)
+
+2026-11-28. 1.0.1-dev.39(#1058부터 #1062까지 포함)를 앱 없이 켜 두면 VM이 여전히 약 540 MiB였다. 부팅 10분 뒤 `dsa memory snapshot`에서 "page structures of the mapped disks and of added memory"가 68 MiB, 회수할 수 없는 slab이 81 MiB였다. 이 둘 가운데 커널 몫을 나눴다. 기기와 바탕 화면은 건드리지 않았고, 빌드도 실행도 하지 않았다.
+
+### 기준
+
+| 자료 | 버전 |
+|---|---|
+| 스냅숏 `android/kernel-memory-report.txt`, `android/proc-meminfo.txt`, `host/memory.txt`, `host/cur.log`(그 부팅의 콘솔) | 1.0.1-dev.39, 이미지 `17.0.0-16373615-15.1-dev.39`, 커널 `6.18.54.1-dsa` |
+| 커널 원본 `mm/slub.c`, `mm/memremap.c`, `mm/mm_init.c`, `fs/dax.c`, `drivers/nvdimm/pmem.c`, `fs/debugfs/inode.c`, `kernel/trace/trace.c`, `drivers/android/binder.c`, `drivers/block/loop.c`, `block/blk-mq.c`, `block/blk-sysfs.c`, `lib/Kconfig.debug`, `Microsoft/config-wsl{,-arm64}` | `linux-msft-wsl-6.18.54.1`(`.scratch/kernel-memmap-slab/src`, sparse) |
+| AOSP `system/sepolicy/private/genfs_contexts`, `system/apex/apexd/apexd_loop.cpp` | `main`, 2026-11-28 |
+
+### 영구 메모리의 페이지 구조
+
+- 콘솔(`cur.log` 251-256): `namespace0.0: maps 2420 MiB of its 2420 MiB region`(시스템 디스크), `namespace1.0: maps 370 MiB of its 2420 MiB region`(추가 기능 디스크). 페이지 구조는 4 KiB마다 64바이트이므로 시스템 디스크 37.8 MiB, 추가 기능 디스크 5.8 MiB다(계산). #1061의 GPT 크기 패치는 시스템 디스크에서는 줄일 것이 없지만, 추가 기능 디스크에서는 2050 MiB 몫인 32 MiB를 줄이고 있다. 죽은 코드가 아니므로 둔다.
+- 장치에 두기(`map=dev`, altmap). pfn 정보 블록과 그 뒤의 페이지 구조 자리를 이름 공간 안에 두고, 커널이 부팅 때 모든 페이지 구조를 그 자리에 쓴다(`memmap_init_zone_device`). 영역은 호스트가 읽기 전용으로 매핑한 이미지이고(`ReadOnly`, `ND_REGION_READONLY`) 모든 사용자의 VM이 같은 사본을 연다. `nd_pfn_init`도 읽기 전용 영역에는 정보 블록을 쓰지 않는다. HCS의 `ReadOnly`는 장치 단위라, 쓸 수 있는 조각을 같은 장치에 겹칠(`Mappings`) 수도 없다. 쓸 수 없다.
+- 페이지 구조 없는 DAX. 6.18의 fsdax는 매핑할 때마다 페이지 구조에 폴리오를 만든다(`fs/dax.c`의 `dax_folio_init`이 `prep_compound_page`를 부른다). pmem은 페이지를 매핑할 때만 블록 장치에 DAX를 준다(`pmem.c` 509). 그래서 구조 없이 매핑하려면 mm과 fs의 깊은 곳을 바꿔야 한다.
+- 꼬리 페이지 구조 공유(`vmemmap_shift`, `ARCH_WANT_OPTIMIZE_DAX_VMEMMAP`). device-dax만 쓰고, fsdax는 위처럼 꼬리 구조에 쓰므로 읽기 전용으로 공유할 수 없다.
+- 쓰는 부분만 매핑하기. DAX로 마운트하는 것은 super 안의 논리 파티션뿐이고, 그 앞의 GPT, vbmeta, boot, init_boot, vendor_boot는 141 MiB(2.2 MiB의 페이지 구조)다. super는 2 MiB에 맞지 않는 자리(141 MiB)에서 시작하고, 페이지 구조가 없는 앞쪽을 DAX로 마운트하면 커널이 없는 구조를 읽는다. 블록 I/O에는 이어진 커널 매핑이 하나 있어야 하는데, 앞은 `memremap`, 뒤는 `devm_memremap_pages`로 나누면 이어지지 않는다. 2 MiB를 위해 이 위험을 지지 않는다.
+- 결론: 시스템 디스크의 37.8 MiB는 이 커널에서 DAX를 쓰는 값이다. 줄이려면 DAX를 쓸지(게스트 페이지 캐시를 덜 쓰는 것과 맞바꾼다)를 소유자가 다시 정해야 한다.
+
+### 회수할 수 없는 slab
+
+- `meminfo`: Slab 106 MiB, SReclaimable 23 MiB, SUnreclaim 81 MiB. `slab-total 199 98396 28305`: 캐시 199개, 96 MiB, 그 가운데 28 MiB는 쓰는 객체가 없는 자리다. 보고는 가장 큰 40개(89 MiB)만 적었고, 회수 가능 여부는 적지 않았다. 아래 분류는 캐시 이름으로 한 것이다(회수 가능으로 센 7개의 합 21.3 MiB가 SReclaimable 23 MiB와 맞는다).
+- 프로세스 수를 따르는 것(약 27 MiB): `vm_area_struct` 11.5, `task_struct` 5.3, `maple_node` 3.1, `anon_vma` 1.9, `anon_vma_chain` 1.8, `filp` 1.8, `sighand_cache`, `pid`. 스레드 846개, system_server 238개. 커널 설정으로는 줄지 않고 프로세스를 줄여야 한다.
+- 범용 kmalloc(약 25 MiB): 4k 5.2, 1k 3.6, 2k 3.1, 8k 3.0, 512 2.1, 192 1.8, cg-4k 1.2, cg-2k 1.0 등. 누가 잡았는지는 `/proc/allocinfo`(`build.sh --memory-profile`)로만 나뉜다.
+- sysfs와 cgroup의 `kernfs_node_cache` 4.3 MiB(32330개). slab마다의 sysfs 항목(캐시마다 약 30개), cgroup 134개의 파일, 루프 장치 64개의 블록 장치 파일이 큰 몫으로 보이지만 세지 않았다.
+- 설정과 정책으로 정해진 것: `ftrace_event_field` 1.2 MiB(커널에 들어 있는 추적점의 필드, Android 추적이 쓴다), `avtab_node`와 `ebitmap_node` 1.8 MiB(SELinux 정책). 해시 표는 slab이 아니고 이미 명령줄로 줄였다.
+- 부분적으로 쓰이는 slab. `task_struct`(4032바이트)와 `kmalloc-4k`는 32 KiB slab에 8개씩 들고, slab은 8개가 다 풀려야 돌아간다. 각각 2.0, 2.5 MiB가 빈 자리다. SLUB는 slab 크기를 최소 객체 수(4코어에서 16)로 정한다. `slab_min_objects=1`이면 낭비가 16분의 1을 넘지 않는 가장 작은 크기를 고르므로(`calculate_order`), 이 둘은 한 페이지에 하나가 되어 빈 자리가 없다(합 4.6 MiB, `kmalloc-cg-4k`, `biovec-max` 포함, 계산). 잘 맞지 않는 크기(`sighand_cache` 2112바이트 등)는 지금처럼 큰 slab에 남는다. 2k, 1k, 512 캐시도 slab당 객체가 줄어 빈 자리가 줄 것이지만 얼마인지는 객체가 풀리는 순서에 달려 계산하지 않았다.
+- debugfs. `debugfs_inode_cache` 1.9 MiB(2961개)와 그 dentry(약 0.5 MiB, 계산)는 VM이 사는 동안 고정된다. blk-mq가 루프 장치마다, binder가 프로세스마다 파일을 만든다. 사용자 빌드는 부팅 동안만 마운트하고(`init-debug.rc`) 읽지 않는다. `CONFIG_DEBUG_FS_ALLOW_NONE`이면 `debugfs_create_*`가 아무것도 만들지 않는다(`DISALLOW_MOUNT`는 파일을 그대로 만든다). binder, hv_balloon, zram, drm, blk-mq는 오류 값을 그대로 넘기고, 추적은 tracefs(`/sys/kernel/tracing`)만 쓴다.
+- 루프 장치(slab 밖, "unaccounted"). 루프 장치는 만들 때 요청 128개의 풀을 한 번에 잡는다(`blk_mq_alloc_rqs`, 64 KiB 블록 하나). apexd가 64개를 둔다. `loop.hw_queue_depth=32`면 16 KiB씩, 합 약 3 MiB가 준다(계산). apexd는 받침 장치의 깊이로 `nr_requests`를 올리려다 실패하면 경고만 하고(`apexd_loop.cpp`의 `ConfigureQueueDepth`, 줄일 때만 실패를 알린다), 직접 매핑 모드에서는 pmem에 `mq`가 없어 처음부터 읽지 못한다.
+
+### 결정
+
+- 커널 설정: `CONFIG_DEBUG_FS_ALLOW_NONE`(디버그 커널은 `page_owner` 때문에 되돌린다).
+- 게스트 명령줄(모든 호스트 공통, `guest_boot_memory_cmdline`): `slab_min_objects=1`, `loop.hw_queue_depth=32`.
+- 메모리 보고: 모든 slab 캐시를 slab당 객체 수, slab당 페이지 수, `/sys/kernel/slab/<cache>/reclaim_account`의 회수 가능 여부와 함께 적고, `slab-unreclaimable` 합계 줄을 둔다. 그 경로는 `sysfs` 레이블이고 합쳐진 캐시는 링크라서, 보고 도메인에 `sysfs` `lnk_file` 읽기를 더했다.
+- `CONFIG_SLAB_MERGE_DEFAULT`와 per-CPU partial 끄기는 이미 들어가 있다.
+
+### 확인하지 못한 것
+
+- 모두 PC에서 확인해야 한다: 콘솔의 `SLUB: ... MinObjects=1`, 보고의 `slab task_struct ... 1 1`과 `slab-unreclaimable`, `debugfs_inode_cache` 줄이 없어진 것, `/sys/module/loop/parameters/hw_queue_depth`가 32인 것, 그리고 SUnreclaim과 "unaccounted"가 dev.39보다 준 양.
+- `slab_min_objects=1`의 CPU 비용. 큰 객체는 할당과 해제마다 페이지 할당기를 거친다(8 KiB를 넘는 kmalloc은 원래 그렇다). 재지 않았다.
+- `kernfs_node_cache`와 범용 kmalloc의 주인. `--memory-profile` 커널의 `allocinfo` 줄이 있어야 나뉜다.
