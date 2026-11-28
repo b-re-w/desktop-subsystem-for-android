@@ -87,6 +87,10 @@ pub struct GuestMemory {
     pub slab_reclaimable_kb: u64,
     pub swap_total_kb: u64,
     pub swap_free_kb: u64,
+    /// The swap cache (SwapCached): pages read back from zram that zram still holds. Cached
+    /// leaves them out; those a process maps are in `anon_pages_kb` too, the rest in no other
+    /// field. 0 from a guest that does not send it.
+    pub swap_cached_kb: u64,
     pub zram_original_kb: u64,
     pub zram_used_kb: u64,
     pub total_pss_kb: u64,
@@ -144,6 +148,9 @@ impl PageReporting {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct KernelMemory {
     pub slab_unreclaimable_kb: u64,
+    /// The threads' kernel stacks. The guest's kernel allocates them with vmalloc
+    /// (`CONFIG_VMAP_STACK`, on in the x86_64 and arm64 configurations it is built from), so
+    /// `vmalloc_used_kb` has them in it already.
     pub kernel_stack_kb: u64,
     pub page_tables_kb: u64,
     pub vmalloc_used_kb: u64,
@@ -153,6 +160,14 @@ pub struct KernelMemory {
     /// The memory the kernel was given: its online memory blocks, or the VM's size when the
     /// host set it smaller ([`GuestMemory::given`]).
     pub mem_online_kb: u64,
+    /// The page structures the kernel made after boot (`nr_memmap_pages`): those of the
+    /// persistent memory the guest maps directly (its disks read in place) and of memory
+    /// hot-added while it ran. They come out of MemTotal and no /proc/meminfo field names
+    /// them. 0 when the guest does not say.
+    pub memmap_kb: u64,
+    /// The page structures the kernel made at boot (`nr_memmap_boot_pages`), part of what it
+    /// reserved before MemTotal. 0 when the guest does not say.
+    pub memmap_boot_kb: u64,
 }
 
 /// The guest's last report and how old it is.
@@ -389,6 +404,7 @@ impl GuestMemory {
             slab_reclaimable_kb: memory.slab_reclaimable_kb,
             swap_total_kb: memory.swap_total_kb,
             swap_free_kb: memory.swap_free_kb,
+            swap_cached_kb: memory.swap_cached_kb,
             zram_original_kb: memory.zram_original_kb,
             zram_used_kb: memory.zram_used_kb,
             total_pss_kb: memory.total_pss_kb,
@@ -412,22 +428,35 @@ impl GuestMemory {
                 cma_total_kb: memory.cma_total_kb,
                 hugetlb_kb: memory.hugetlb_kb,
                 mem_online_kb: memory.mem_online_kb,
+                memmap_kb: memory.memmap_kb,
+                memmap_boot_kb: memory.memmap_boot_kb,
             },
         }
     }
 
+    /// What vmalloc and the kernel stacks hold together. The stacks are vmalloc'd
+    /// ([`KernelMemory::kernel_stack_kb`]), so this is VmallocUsed; a kernel built without
+    /// that would show more stack than vmalloc, and then the stacks are the least it is.
+    pub fn vmalloc_and_stacks_kb(&self) -> u64 {
+        self.kernel.vmalloc_used_kb.max(self.kernel.kernel_stack_kb)
+    }
+
     /// What of [`other_kb`](Self::other_kb) no counter names: memory drivers took for
-    /// themselves, such as GPU and DMA buffers.
+    /// themselves, such as GPU and DMA buffers. The page structures of the mapped disks and of
+    /// added memory, and the swap cache, are named apart ([`KernelMemory::memmap_kb`],
+    /// [`GuestMemory::swap_cached_kb`]). Swap cache pages a process maps are in AnonPages as
+    /// well, so with many of them this reads low by that part, never below 0.
     pub fn unaccounted_kb(&self) -> u64 {
         let k = &self.kernel;
         self.other_kb().saturating_sub(
             k.slab_unreclaimable_kb
-                + k.kernel_stack_kb
                 + k.page_tables_kb
-                + k.vmalloc_used_kb
+                + self.vmalloc_and_stacks_kb()
                 + k.percpu_kb
                 + k.hugetlb_kb
-                + self.zram_used_kb,
+                + self.zram_used_kb
+                + k.memmap_kb
+                + self.swap_cached_kb,
         )
     }
 
@@ -756,24 +785,44 @@ impl fmt::Display for MemorySnapshot {
         writeln!(f, "  app memory (anonymous) {} MiB", mib(g.anon_pages_kb))?;
         writeln!(f, "  kernel and everything else {} MiB", mib(g.other_kb()))?;
         let k = &g.kernel;
+        // The stacks are vmalloc'd, so they are shown as part of vmalloc, not beside it.
+        let mut named = String::new();
+        if k.memmap_kb > 0 {
+            named.push_str(&format!(
+                "page structures of the mapped disks and of added memory {}, ",
+                mib(k.memmap_kb)
+            ));
+        }
+        if g.swap_cached_kb > 0 {
+            named.push_str(&format!("swap cache {}, ", mib(g.swap_cached_kb)));
+        }
         writeln!(
             f,
-            "    unreclaimable slab {}, kernel stacks {}, page tables {}, vmalloc {}, per-CPU {}, \
-             huge pages {}, zram store {}, unaccounted (drivers, GPU and DMA buffers) {} MiB",
+            "    unreclaimable slab {}, page tables {}, vmalloc {} (kernel stacks {} of it), \
+             per-CPU {}, huge pages {}, zram store {}, {named}unaccounted (drivers, GPU and DMA \
+             buffers) {} MiB",
             mib(k.slab_unreclaimable_kb),
-            mib(k.kernel_stack_kb),
             mib(k.page_tables_kb),
-            mib(k.vmalloc_used_kb),
+            mib(g.vmalloc_and_stacks_kb()),
+            mib(k.kernel_stack_kb),
             mib(k.percpu_kb),
             mib(k.hugetlb_kb),
             mib(g.zram_used_kb),
             mib(g.unaccounted_kb())
         )?;
         if let Some(reserved) = g.reserved_at_boot_kb() {
+            let boot_memmap = if k.memmap_boot_kb > 0 {
+                format!(
+                    "; the page structures made at boot {} MiB",
+                    mib(k.memmap_boot_kb)
+                )
+            } else {
+                String::new()
+            };
             writeln!(
                 f,
                 "  reserved by the kernel at boot {} MiB of {} MiB given (code, page structures, \
-                 swiotlb, pstore); contiguous area (CMA) {} MiB",
+                 swiotlb, pstore{boot_memmap}); contiguous area (CMA) {} MiB",
                 mib(reserved),
                 mib(k.mem_online_kb),
                 mib(k.cma_total_kb)
@@ -879,6 +928,7 @@ pub fn snapshot_json(memory: &MemorySnapshot) -> serde_json::Value {
             "slab_reclaimable_kb": guest.slab_reclaimable_kb,
             "swap_total_kb": guest.swap_total_kb,
             "swap_free_kb": guest.swap_free_kb,
+            "swap_cached_kb": guest.swap_cached_kb,
             "zram_original_kb": guest.zram_original_kb,
             "zram_used_kb": guest.zram_used_kb,
             "total_pss_kb": guest.total_pss_kb,
@@ -894,6 +944,8 @@ pub fn snapshot_json(memory: &MemorySnapshot) -> serde_json::Value {
                 "cma_total_kb": guest.kernel.cma_total_kb,
                 "hugetlb_kb": guest.kernel.hugetlb_kb,
                 "mem_online_kb": guest.kernel.mem_online_kb,
+                "memmap_kb": guest.kernel.memmap_kb,
+                "memmap_boot_kb": guest.kernel.memmap_boot_kb,
                 "unaccounted_kb": guest.unaccounted_kb(),
                 "reserved_at_boot_kb": guest.reserved_at_boot_kb(),
             },
@@ -994,6 +1046,9 @@ pub fn snapshot_to_wire(snapshot: &MemorySnapshot) -> types::Memory {
                     .page_reporting
                     .is_some_and(|r| r.reported_kb_per_minute.is_some()),
                 ballooned_kb: g.ballooned_kb,
+                swap_cached_kb: g.swap_cached_kb,
+                memmap_kb: g.kernel.memmap_kb,
+                memmap_boot_kb: g.kernel.memmap_boot_kb,
             }
         }),
         host: snapshot
@@ -1030,6 +1085,7 @@ pub fn snapshot_from_wire(memory: types::Memory) -> MemorySnapshot {
                 slab_reclaimable_kb: g.slab_reclaimable_kb,
                 swap_total_kb: g.swap_total_kb,
                 swap_free_kb: g.swap_free_kb,
+                swap_cached_kb: g.swap_cached_kb,
                 zram_original_kb: g.zram_original_kb,
                 zram_used_kb: g.zram_used_kb,
                 total_pss_kb: g.total_pss_kb,
@@ -1071,6 +1127,8 @@ pub fn snapshot_from_wire(memory: types::Memory) -> MemorySnapshot {
                     cma_total_kb: g.cma_total_kb,
                     hugetlb_kb: g.hugetlb_kb,
                     mem_online_kb: g.mem_online_kb,
+                    memmap_kb: g.memmap_kb,
+                    memmap_boot_kb: g.memmap_boot_kb,
                 },
             },
         }),

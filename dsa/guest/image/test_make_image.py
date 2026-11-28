@@ -3144,6 +3144,15 @@ class GuestMemoryTests(unittest.TestCase):
                 self.assertIn(f"(allow {app} dsa_sysfs_memory (dir (search read open getattr)))", policy)
                 self.assertIn(f"(allow {app} dsa_sysfs_memory (file (read open getattr)))", policy)
 
+    def test_nfr1_the_agent_may_read_the_page_structures_the_kernel_made_after_boot(self):
+        # nr_memmap_pages in /proc/vmstat: the page structures of the disks mapped in place and
+        # of added memory, which `dsa memory` shows apart from the unaccounted rest.
+        with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp)) as archive:
+            policy = archive.read("SYSTEM/etc/selinux/plat_sepolicy.cil").decode()
+            for app in ("system_app", "platform_app"):
+                self.assertIn(f"(allow {app} proc_vmstat (file (read open getattr)))", policy)
+            self.assertNotRegex(policy, r"\(allow \S+ proc_vmstat \(file \([^)]*write")
+
     def test_fr5_the_audio_hal_and_software_codecs_can_share_memory_through_memfds(self):
         # Refused, libcutils falls back to an ashmem device DSA's kernel does not have: audio
         # policy never starts, system_server retries ten times a second, and every click

@@ -356,6 +356,9 @@ fn report() -> control::GuestMemory {
         free_reported_kb: 2000 * MIB,
         reported_total_kb: 9000 * MIB,
         refaulted_total_kb: 300 * MIB,
+        swap_cached_kb: 6 * MIB,
+        memmap_kb: 75 * MIB,
+        memmap_boot_kb: 64 * MIB,
     }
 }
 
@@ -586,13 +589,69 @@ fn nfr1_the_report_dsa_memory_prints_names_every_part() {
          before compression)",
         "Google Play services: 51 MiB (15 resident, 36 compressed in zram) in 2 processes",
         "kernel and everything else 358 MiB",
-        "unreclaimable slab 60, kernel stacks 10, page tables 20, vmalloc 30, per-CPU 2",
-        "zram store 30, unaccounted (drivers, GPU and DMA buffers) 206 MiB",
-        "reserved by the kernel at boot 104 MiB of 4200 MiB given",
+        "unreclaimable slab 60, page tables 20, vmalloc 30 (kernel stacks 10 of it), per-CPU 2",
+        "zram store 30, page structures of the mapped disks and of added memory 75, swap cache 6, \
+         unaccounted (drivers, GPU and DMA buffers) 135 MiB",
+        "reserved by the kernel at boot 104 MiB of 4200 MiB given (code, page structures, \
+         swiotlb, pstore; the page structures made at boot 64 MiB)",
         "system",
     ] {
         assert!(text.contains(part), "{part:?} missing from:\n{text}");
     }
+}
+
+#[test]
+fn nfr1_unaccounted_memory_leaves_out_what_the_kernel_names_elsewhere() {
+    // 358 MiB besides the page cache, buffers, app memory and reclaimable slab.
+    let guest = GuestMemory::from_control(report());
+    assert_eq!(guest.other_kb(), 358 * MIB);
+    // The guest kernel allocates thread stacks with vmalloc (VMAP_STACK), so VmallocUsed has
+    // KernelStack in it already: taking both away took the stacks twice. The page structures
+    // of the mapped disks and of added memory, and the swap cache, are named on lines of their
+    // own: 358 - (60 slab + 20 page tables + 30 vmalloc + 2 per-CPU + 30 zram) - 75 - 6 = 135.
+    assert_eq!(guest.unaccounted_kb(), 135 * MIB);
+
+    // A guest that does not send the page structures or the swap cache (an older agent or a
+    // kernel before 6.11): only the stacks are no longer taken twice.
+    let mut older = report();
+    older.swap_cached_kb = 0;
+    older.memmap_kb = 0;
+    older.memmap_boot_kb = 0;
+    let older = GuestMemory::from_control(older);
+    assert_eq!(older.unaccounted_kb(), 216 * MIB);
+    let text = MemorySnapshot {
+        guest: Some(GuestMemoryReport {
+            memory: older,
+            age: Duration::from_secs(1),
+        }),
+        host: Vec::new(),
+    }
+    .to_string();
+    assert!(text.contains("zram store 30, unaccounted"), "{text}");
+    assert!(!text.contains("page structures made at boot"), "{text}");
+
+    // A kernel whose stacks are not in vmalloc would show more stack than vmalloc: the
+    // larger of the two is what both hold, never less than the stacks.
+    let mut separate = report();
+    separate.kernel_stack_kb = 40 * MIB;
+    separate.vmalloc_used_kb = 30 * MIB;
+    assert_eq!(
+        GuestMemory::from_control(separate).unaccounted_kb(),
+        125 * MIB
+    );
+
+    // The parts cross the local API and the JSON unchanged.
+    let snapshot = snapshot();
+    let back = snapshot_from_wire(snapshot_to_wire(&snapshot));
+    let guest = &back.guest.as_ref().unwrap().memory;
+    assert_eq!(guest.swap_cached_kb, 6 * MIB);
+    assert_eq!(guest.kernel.memmap_kb, 75 * MIB);
+    assert_eq!(guest.kernel.memmap_boot_kb, 64 * MIB);
+    let json = dsa_host_core::memory::snapshot_json(&snapshot);
+    assert_eq!(json["guest"]["swap_cached_kb"], 6 * MIB);
+    assert_eq!(json["guest"]["kernel"]["memmap_kb"], 75 * MIB);
+    assert_eq!(json["guest"]["kernel"]["memmap_boot_kb"], 64 * MIB);
+    assert_eq!(json["guest"]["kernel"]["unaccounted_kb"], 135 * MIB);
 }
 
 #[test]
