@@ -76,7 +76,7 @@ mod windows_host {
     use std::time::Duration;
 
     use windows_sys::core::BOOL;
-    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
     use windows_sys::Win32::System::Console::{
         SetConsoleCtrlHandler, SetStdHandle, STD_ERROR_HANDLE,
     };
@@ -452,28 +452,65 @@ mod windows_host {
         }))
     }
 
-    /// Sends everything written to standard error to the end of `path`.
+    /// Sends everything written to standard error to the end of `path`, and keeps the file
+    /// bounded as every host log is (`dsa_host_core::log_file`): it moves aside now when it is
+    /// over the limit, and a thread looks again every minute while the service runs.
     fn redirect_stderr(path: &std::path::Path) -> Result<(), String> {
+        use dsa_host_core::console_log::rotate_if_large;
+        use dsa_host_core::log_file::{CHECK_INTERVAL, ROTATE_AT_BYTES};
+
         if let Some(folder) = path.parent() {
             std::fs::create_dir_all(folder)
                 .map_err(|e| format!("creating {}: {e}", folder.display()))?;
         }
-        let file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)
-            .map_err(|e| format!("opening the log {}: {e}", path.display()))?;
-        // The handle stays open for the life of the process.
-        let handle = file.into_raw_handle();
-        // SAFETY: a valid file handle that is never closed.
-        if unsafe { SetStdHandle(STD_ERROR_HANDLE, handle as HANDLE) } == 0 {
+        let _ = rotate_if_large(path, ROTATE_AT_BYTES);
+        let handle = open_stderr_log(path)?;
+        // SAFETY: a valid file handle, closed only once another has replaced it.
+        if unsafe { SetStdHandle(STD_ERROR_HANDLE, handle) } == 0 {
             return Err(format!(
                 "writing the log to {}: {}",
                 path.display(),
                 std::io::Error::last_os_error()
             ));
         }
+        let path = path.to_path_buf();
+        let mut current = handle as usize;
+        thread::Builder::new()
+            .name("service log rotation".into())
+            .spawn(move || loop {
+                thread::sleep(CHECK_INTERVAL);
+                // Moved aside while the handle is open (Rust opens files so they may be);
+                // the old handle then writes to the older copy until it is replaced.
+                if !matches!(rotate_if_large(&path, ROTATE_AT_BYTES), Ok(true)) {
+                    continue;
+                }
+                let Ok(next) = open_stderr_log(&path) else {
+                    continue;
+                };
+                // SAFETY: a valid file handle; the one it replaces is closed below.
+                if unsafe { SetStdHandle(STD_ERROR_HANDLE, next) } == 0 {
+                    // SAFETY: the handle just opened, which nothing else has.
+                    unsafe { CloseHandle(next) };
+                    continue;
+                }
+                let old = std::mem::replace(&mut current, next as usize);
+                // A write that took the old handle just before the switch finishes first.
+                thread::sleep(Duration::from_secs(5));
+                // SAFETY: the handle opened before, which standard error no longer uses.
+                unsafe { CloseHandle(old as HANDLE) };
+            })
+            .map_err(|e| format!("starting the log rotation: {e}"))?;
         Ok(())
+    }
+
+    /// Opens `path` to append to, as a raw handle for standard error.
+    fn open_stderr_log(path: &std::path::Path) -> Result<HANDLE, String> {
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .map_err(|e| format!("opening the log {}: {e}", path.display()))?;
+        Ok(file.into_raw_handle() as HANDLE)
     }
 
     fn one_vm(config: HostConfig) -> Result<(), String> {

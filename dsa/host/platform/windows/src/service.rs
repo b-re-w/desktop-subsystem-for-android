@@ -23,7 +23,7 @@
 //! (`settings_dir`). Turning either kind of update off there stops the checks while the
 //! service runs; the render GPU is for each user's window manager, which asks for it.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -117,12 +117,25 @@ fn follow_monitors(vm: &mut AndroidVmConfig, sid: &str) {
 /// session. Never another user's.
 pub fn host_logs_of(config: &HostConfig, sid: &str) -> Vec<HostFile> {
     let mut files = Vec::new();
+    // Each host log with the older copy it moved aside to when it grew too large
+    // (dsa_host_core::log_file).
+    let with_old_copy = |name: &str, path: PathBuf| {
+        [
+            (name.to_string(), path.clone()),
+            (
+                dsa_host_core::log_file::old_copy_name(name),
+                dsa_host_core::console_log::old_copy_path(&path),
+            ),
+        ]
+    };
     if let Some(log) = &config.log_file {
-        files.push(HostFile {
-            name: "host/dsa-hostd.log".into(),
-            path: log.clone(),
-            only_user: Some(sid.to_string()),
-        });
+        for (name, path) in with_old_copy("host/dsa-hostd.log", log.clone()) {
+            files.push(HostFile {
+                name,
+                path,
+                only_user: Some(sid.to_string()),
+            });
+        }
     }
     let user_root = local_app_data(sid)
         .ok()
@@ -164,17 +177,20 @@ pub fn host_logs_of(config: &HostConfig, sid: &str) -> Vec<HostFile> {
         }
     }
     if let Some(root) = &user_root {
-        for (name, path) in [
-            ("host/dsa-wm.log", root.window_manager_log()),
-            ("host/dsa-app-window.log", root.app_window_log()),
-            (
-                "host/renderer-color-buffers.txt",
+        let logs = with_old_copy("host/dsa-wm.log", root.window_manager_log())
+            .into_iter()
+            .chain(with_old_copy(
+                "host/dsa-app-window.log",
+                root.app_window_log(),
+            ))
+            .chain([(
+                "host/renderer-color-buffers.txt".to_string(),
                 root.renderer_color_buffers(),
-            ),
-        ] {
+            )]);
+        for (name, path) in logs {
             if plain_in_user_root(&path) {
                 files.push(HostFile {
-                    name: name.into(),
+                    name,
                     path,
                     only_user: None,
                 });

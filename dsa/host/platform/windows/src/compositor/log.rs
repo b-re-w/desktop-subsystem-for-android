@@ -1,12 +1,11 @@
 //! Logging to the user's LocalAppData DSA directory.
 
-use std::fs::{create_dir_all, File, OpenOptions};
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime};
 
 use dsa_host_core::input_trace as input_trace_line;
+use dsa_host_core::log_file::RotatingLog;
 use dsa_host_core::resize_trace::{self, ResizeTrace};
 
 /// Returns the default log folder for the current user: `%LOCALAPPDATA%\DSA\logs`.
@@ -30,27 +29,22 @@ pub fn default_app_window_log_file() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("logs").join("dsa-app-window.log"))
 }
 
-/// A thread-safe file logger.
+/// A thread-safe file logger. The file is bounded as every host log is
+/// (`dsa_host_core::log_file`): over 32 MiB it moves to `<name>.1` and a new file starts.
 pub struct CompositorLogger {
-    file: Mutex<Option<File>>,
+    file: Mutex<RotatingLog>,
     path: PathBuf,
 }
 
 impl CompositorLogger {
-    /// Opens or creates the log file at `path`.
+    /// Opens or creates the log file at `path`, making its folder, and moves it aside first
+    /// when it is over the limit.
     pub fn open(path: impl AsRef<Path>) -> Result<CompositorLogger, String> {
         let path = path.as_ref().to_path_buf();
-        if let Some(parent) = path.parent() {
-            create_dir_all(parent)
-                .map_err(|e| format!("could not create log directory {}: {e}", parent.display()))?;
-        }
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
+        let file = RotatingLog::open(&path)
             .map_err(|e| format!("could not open log file {}: {e}", path.display()))?;
         Ok(CompositorLogger {
-            file: Mutex::new(Some(file)),
+            file: Mutex::new(file),
             path,
         })
     }
@@ -59,11 +53,8 @@ impl CompositorLogger {
     pub fn log(&self, message: &str) {
         let timestamp = humantime_now();
         let formatted = format!("[{timestamp}] {message}\n");
-        if let Ok(mut lock) = self.file.lock() {
-            if let Some(file) = lock.as_mut() {
-                let _ = file.write_all(formatted.as_bytes());
-                let _ = file.flush();
-            }
+        if let Ok(mut file) = self.file.lock() {
+            let _ = file.write(formatted.as_bytes());
         }
     }
 

@@ -156,6 +156,7 @@ pub mod language;
 pub mod links;
 pub mod loaded_modules;
 pub mod location;
+pub mod log_file;
 pub mod memory;
 pub mod native_abi;
 pub mod notifications;
