@@ -113,6 +113,11 @@ mkdir -p "$out"
     "$here/device_gone_trim_test.cpp" -o "$out/device_gone_trim_test"
 "$out/device_gone_trim_test"
 
+# What an app's window surface costs in stencil on the GPU, for the renderer's log.
+"$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -I"$here/../include" \
+    "$here/stencil_format_test.cpp" -o "$out/stencil_format_test"
+"$out/stencil_format_test"
+
 # The upstream headers are not ours to warn about.
 upstream=(
     -isystem "$scratch/gfxstream/guest/OpenglSystemCommon"

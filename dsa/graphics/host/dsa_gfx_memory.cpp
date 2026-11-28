@@ -32,6 +32,7 @@
 #include "dsa_gfx_backend.h"
 #include "dsa_gfx_memory.h"
 #include "dsa_graphics_memory.h"
+#include "dsa_stencil_format.h"
 
 #include <algorithm>
 #include <atomic>
@@ -397,6 +398,25 @@ void stop_trim() {
     }
 }
 
+/* Says once which depth-stencil buffer an app's window surface gets on this GPU
+ * (dsa_stencil_format.h): the guest's ANGLE takes a stencil-only one where the GPU renders to
+ * VK_FORMAT_S8_UINT, which the guest sees as the renderer's device reports it. */
+void say_window_stencil(VulkanDispatch* ivk, VkPhysicalDevice physical) {
+    if (!ivk || !ivk->vkGetPhysicalDeviceFormatProperties || physical == VK_NULL_HANDLE) {
+        return;
+    }
+    const auto renders = [&](VkFormat format) {
+        VkFormatProperties properties = {};
+        ivk->vkGetPhysicalDeviceFormatProperties(physical, format, &properties);
+        return (properties.optimalTilingFeatures &
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0;
+    };
+    const std::string note = dsa::windowStencilNote(renders(VK_FORMAT_S8_UINT),
+                                                    renders(VK_FORMAT_D24_UNORM_S8_UINT),
+                                                    renders(VK_FORMAT_D32_SFLOAT_S8_UINT));
+    dsa_gfx_log_line('N', note.c_str());
+}
+
 }  // namespace
 
 void dsa_gfx_memory_install(void) {
@@ -408,6 +428,7 @@ void dsa_gfx_memory_install(void) {
     if (ivk && ivk->vkGetPhysicalDeviceMemoryProperties) {
         ivk->vkGetPhysicalDeviceMemoryProperties(emu->getPhysicalDevice(), &s_types);
     }
+    say_window_stencil(ivk, emu->getPhysicalDevice());
     wrap_destroy(gfxstream::vk::vkDispatch(), counted_destroy_through_decoder, &s_decoder_destroy);
     wrap_destroy(ivk, counted_destroy_through_instance, &s_instance_destroy);
     {
