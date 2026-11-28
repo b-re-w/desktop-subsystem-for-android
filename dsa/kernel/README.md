@@ -64,6 +64,11 @@ disk image the region holds: the GPT at its start says where the image ends (its
 is the last sector), and the mapping is rounded up to the 2 MiB the kernel maps persistent
 memory in. A region without a valid GPT is mapped whole, as before. The console log says which
 it did, per namespace: `maps 370 MiB of its 2422 MiB region: the disk image its GPT describes`.
+The system disk fills its region, so its page structs (about 38 MiB for 2.4 GiB) stay: fsdax
+in this kernel needs a page struct for every page it may map, and builds compound pages in
+them as it maps, so they can neither be left out nor shared. Keeping them on the device instead
+(a pfn info block, `map=dev`) would have the kernel write them into the image, which the host
+maps read only and every VM shares.
 
 Memory the guest frees goes back to the host at once. Upstream free page reporting waits two
 seconds before each pass, and again after each pass that used up its budget, so a large
