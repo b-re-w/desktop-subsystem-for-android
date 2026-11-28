@@ -14,9 +14,14 @@
 //! zram (cgroup `memory.reclaim`), where they take about a third of their size.
 //!
 //! Memory the guest no longer uses goes back at once, not over minutes: the first look after
-//! the last task closes reclaims, and while idle every look that finds memory grown back
-//! reclaims again, grown from the least the idle guest was found at since the last reclaim. Dropping caches costs reading those files again later, so the full drop
-//! with tasks open waits for cache to dominate, at most every few minutes.
+//! the last task closes reclaims. While idle the reclaim runs again once memory has grown back,
+//! from the least the idle guest was found at since the last reclaim, but no sooner than
+//! [`ReclaimPolicy::idle_repeat`] after it, and twice as long each time memory was back before
+//! that wait ended ([`Reclaimer::idle_repeat_wait`]): memory back within seconds is the
+//! processes still running reading their pages again, and a reclaim then returns nothing that
+//! lasts. The page cache that grows back meanwhile goes to the trim. Dropping caches costs
+//! reading those files again later, so the full drop with tasks open waits for cache to
+//! dominate, at most every few minutes.
 //! When the host says it is short of memory, the guest gives back what it can at once, as a
 //! phone's low memory killer would: the agent ends the cached app processes first, and the
 //! daemon's next look reclaims whatever that and the caches freed, whether tasks are open or
@@ -382,8 +387,20 @@ pub struct ReclaimPolicy {
     /// The least droppable cache worth a reclaim, in KiB: below it the cost of reading the
     /// files again outweighs what the host gets back. While idle, anonymous memory counts too.
     pub min_droppable_kb: u64,
-    /// The least time between two idle reclaims in one idle stretch.
+    /// The least time between two idle reclaims in one idle stretch, the first time: the
+    /// stretch's first reclaim never waits, a repeat waits this long after the reclaim before it.
+    ///
+    /// Three minutes: on the owner's PC (1.0.1-dev.39), with no app open and no wait, the idle
+    /// reclaim ran ten times in ten minutes, the later ones 10 to 90 s apart. Each left some 80
+    /// MiB reclaimable and found it back near 200 MiB 40 s later, as the processes still running
+    /// read their pages back from zram and their files from the disk, so what each returned to
+    /// the host lasted seconds and cost a read of all of it.
     pub idle_repeat: Duration,
+    /// The longest the wait between two idle reclaims grows to. Each repeat that finds memory
+    /// grown back before its wait ended (its saving did not outlast the wait) doubles the wait
+    /// for the next; one that does not sets it back to `idle_repeat`. The page cache that grows
+    /// back meanwhile still goes to the trim.
+    pub idle_repeat_max: Duration,
     /// How much reclaimable memory must have come back since the last idle reclaim for
     /// another, in KiB. A guest that stays small is left alone.
     pub idle_growth_kb: u64,
@@ -486,7 +503,8 @@ impl Default for ReclaimPolicy {
             min_gap: Duration::from_secs(10 * 60),
             cache_percent: 50,
             min_droppable_kb: 128 * 1024,
-            idle_repeat: Duration::ZERO,
+            idle_repeat: Duration::from_secs(3 * 60),
+            idle_repeat_max: Duration::from_secs(24 * 60),
             idle_growth_kb: 64 * 1024,
             trim_gap: Duration::ZERO,
             keep_cache_kb: 160 * 1024,
@@ -526,6 +544,14 @@ pub struct Reclaimer {
     /// The floor the last [`Reason::Idle`] counted growth from, when it was a repeat in its idle
     /// stretch rather than the stretch's first.
     idle_grew_from_kb: Option<u64>,
+    /// How long the next repeat of the idle reclaim waits after the last reclaim
+    /// ([`ReclaimPolicy::idle_repeat`]).
+    idle_wait: Duration,
+    /// How long after the last reclaim a look first found memory grown back by
+    /// [`ReclaimPolicy::idle_growth_kb`] while no task is in use; `None` while none has.
+    regrown_since_reclaim: Option<Duration>,
+    /// The same as it was at the last repeat of the idle reclaim, for the log.
+    last_idle_regrown_after: Option<Duration>,
     /// The host said it is short of memory.
     host_short: bool,
     /// The page cache the apps are taken to need, in KiB: the working set trim leaves this much.
@@ -640,6 +666,9 @@ impl Reclaimer {
             measure_floor: false,
             idle_floor_kb: None,
             idle_grew_from_kb: None,
+            idle_wait: policy.idle_repeat,
+            regrown_since_reclaim: None,
+            last_idle_regrown_after: None,
             host_short: false,
             target_kb: policy.keep_cache_kb,
             last_refaults_kb: None,
@@ -968,6 +997,19 @@ impl Reclaimer {
         self.idle_grew_from_kb
     }
 
+    /// For the log: how long after the reclaim before it the last repeat of [`Reason::Idle`]
+    /// first found memory grown back. `None` before the first repeat of an idle stretch.
+    pub fn idle_regrown_after(&self) -> Option<Duration> {
+        self.last_idle_regrown_after
+    }
+
+    /// How long the next repeat of the idle reclaim waits after the last reclaim: from
+    /// [`ReclaimPolicy::idle_repeat`], doubling up to [`ReclaimPolicy::idle_repeat_max`] while
+    /// memory keeps coming back before the wait ends.
+    pub fn idle_repeat_wait(&self) -> Duration {
+        self.idle_wait
+    }
+
     /// How much the last [`Reason::Gradual`] asks for, in whole MiB.
     pub fn trim_mib(&self) -> u64 {
         self.trim_kb / 1024
@@ -1058,6 +1100,7 @@ impl Reclaimer {
             self.idle_reclaimed = true;
         }
         self.last_reclaim = Some(now);
+        self.regrown_since_reclaim = None;
         self.last_trim = Some(now);
         self.measure_floor = true;
         self.refault_settle = REFAULT_SETTLE_LOOKS;
@@ -1090,6 +1133,8 @@ impl Reclaimer {
         if tasks > 0 {
             self.idle_since = None;
             self.idle_reclaimed = false;
+            // The next idle stretch starts its repeats from the shortest wait.
+            self.idle_wait = self.policy.idle_repeat;
         } else if self.idle_since.is_none() {
             self.idle_since = Some(now);
         }
@@ -1132,15 +1177,21 @@ impl Reclaimer {
                 .idle_since
                 .is_some_and(|since| now.saturating_sub(since) >= self.policy.idle_after);
         // Background work during a long idle stretch, and a boot still under way at the first
-        // reclaim, bring memory back that nothing would otherwise return.
-        let idle_grew = self.idle_reclaimed
+        // reclaim, bring memory back that nothing would otherwise return. But memory found grown
+        // back within seconds of a reclaim is the processes still running reading their pages
+        // straight back: reclaiming it again returns nothing that lasts. So a repeat waits
+        // `idle_wait` after the last reclaim, longer each time memory was back before that.
+        let since_reclaim = self.last_reclaim.map(|last| now.saturating_sub(last));
+        let grown_back = tasks == 0
+            && self.idle_reclaimed
             && self.idle_since.is_some()
-            && self
-                .last_reclaim
-                .is_some_and(|last| now.saturating_sub(last) >= self.policy.idle_repeat)
             && self
                 .idle_floor_kb
                 .is_some_and(|floor| memory.reclaimable_kb() >= floor + self.policy.idle_growth_kb);
+        if grown_back && self.regrown_since_reclaim.is_none() {
+            self.regrown_since_reclaim = since_reclaim;
+        }
+        let idle_grew = grown_back && since_reclaim.is_some_and(|since| since >= self.idle_wait);
         let mostly_cache = memory.droppable_kb().saturating_mul(100)
             >= memory.used_kb().saturating_mul(self.policy.cache_percent);
         // Going idle is the moment the guest stops needing its cache, so the gap does not hold
@@ -1182,6 +1233,22 @@ impl Reclaimer {
         let reason = if (idle_due || idle_grew) && idle_worth_it {
             self.idle_reclaimed = true;
             self.idle_grew_from_kb = if idle_due { None } else { self.idle_floor_kb };
+            if idle_due {
+                self.last_idle_regrown_after = None;
+            } else {
+                // A repeat: if memory was back before the wait ended, what the last reclaim
+                // returned did not outlast the wait, and the next waits twice as long.
+                let regrown = self.regrown_since_reclaim;
+                self.last_idle_regrown_after = regrown;
+                self.idle_wait = if regrown.is_some_and(|after| after < self.idle_wait) {
+                    self.idle_wait
+                        .saturating_mul(2)
+                        .min(self.policy.idle_repeat_max)
+                        .max(self.policy.idle_repeat)
+                } else {
+                    self.policy.idle_repeat
+                };
+            }
             Some(Reason::Idle)
         } else if host_short_due {
             self.host_short_reclaimed = true;
@@ -1204,6 +1271,7 @@ impl Reclaimer {
         };
         if reason.is_some() {
             self.last_reclaim = Some(now);
+            self.regrown_since_reclaim = None;
             // A full reclaim also counts as the latest trim: no second one right behind it.
             self.last_trim = Some(now);
             self.measure_floor = true;

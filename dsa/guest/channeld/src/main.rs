@@ -678,9 +678,15 @@ mod daemon {
                 // often the idle reclaim runs again and what each run costs.
                 let repeat = match (reason, reclaimer.idle_grew_from_kb()) {
                     (Reason::Idle, Some(floor)) => format!(
-                        "; again in this idle stretch, {} MiB reclaimable grown from a low of {} MiB",
+                        "; again in this idle stretch, {} MiB reclaimable grown from a low of {} \
+                         MiB, first found grown back {} s after the last reclaim; the next repeat \
+                         waits at least {} s",
                         memory.reclaimable_kb() / 1024,
-                        floor / 1024
+                        floor / 1024,
+                        reclaimer
+                            .idle_regrown_after()
+                            .map_or(0, |after| after.as_secs()),
+                        reclaimer.idle_repeat_wait().as_secs()
                     ),
                     _ => String::new(),
                 };

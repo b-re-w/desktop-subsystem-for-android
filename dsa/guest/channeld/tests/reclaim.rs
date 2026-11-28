@@ -670,7 +670,7 @@ fn nfr1_anonymous_memory_alone_is_worth_an_idle_reclaim_but_not_a_busy_one() {
 }
 
 #[test]
-fn nfr2_an_idle_guest_reclaims_again_on_the_next_look_that_finds_memory_grown_back() {
+fn nfr2_an_idle_guest_reclaims_again_once_memory_has_grown_back_and_three_minutes_have_passed() {
     let mut reclaimer = Reclaimer::new(sized());
     assert_eq!(
         reclaimer.decide(secs(0), 0, &anon_only(900)),
@@ -680,10 +680,14 @@ fn nfr2_an_idle_guest_reclaims_again_on_the_next_look_that_finds_memory_grown_ba
     assert_eq!(reclaimer.decide(secs(5), 0, &anon_only(300)), None);
     // It stayed small.
     assert_eq!(reclaimer.decide(secs(10), 0, &anon_only(350)), None);
-    // Grown back: reclaimed at once, which is also how a reclaim made during boot gets its
-    // second go.
+    // Grown back, but only seconds after the last reclaim: reclaiming again now would only make
+    // the processes still running read their pages straight back.
+    assert_eq!(reclaimer.decide(secs(15), 0, &anon_only(500)), None);
+    assert_eq!(reclaimer.decide(secs(175), 0, &anon_only(500)), None);
+    // Three minutes after the last: again, which is also how a reclaim made during boot gets
+    // its second go.
     assert_eq!(
-        reclaimer.decide(secs(15), 0, &anon_only(500)),
+        reclaimer.decide(secs(180), 0, &anon_only(500)),
         Some(Reason::Idle)
     );
 }
@@ -1592,4 +1596,58 @@ fn nfr1_the_trim_log_says_what_was_read_back_since_the_last_trim() {
         VmCounters::parse("nr_free_pages 1\n", 4),
         VmCounters::default()
     );
+}
+
+#[test]
+fn nfr2_the_idle_reclaim_repeats_at_most_every_three_minutes_and_waits_longer_while_memory_comes_straight_back(
+) {
+    // The owner's PC, 1.0.1-dev.39, no app open: ten idle reclaims in ten minutes, the last six
+    // 10 to 90 s apart. Each left some 80 MiB reclaimable, and 40 s later it was back near
+    // 195 MiB: the processes still running read their pages back from zram and their files
+    // from the disk, so what each reclaim returned did not last.
+    let policy = ReclaimPolicy::default();
+    assert_eq!(policy.idle_repeat, secs(180));
+    assert_eq!(policy.idle_repeat_max, secs(24 * 60));
+    let mut reclaimer = Reclaimer::new(policy);
+    let mut idle = Vec::new();
+    let mut last: Option<u64> = None;
+    for t in (0..3600).step_by(5) {
+        let grown_back = last.is_none_or(|last| t - last >= 40);
+        let memory = anon_only(if grown_back { 195 } else { 80 });
+        if reclaimer.decide_under(secs(t), 0, &memory, false) == Some(Reason::Idle) {
+            idle.push(t);
+            last = Some(t);
+        }
+    }
+    // Three minutes after the first, then twice as long each time the memory was back before the
+    // wait ended, up to 24 minutes: 5 in the hour, where the dev.39 rule ran 90.
+    assert_eq!(idle, [0, 180, 540, 1260, 2700]);
+    assert_eq!(reclaimer.idle_regrown_after(), Some(secs(40)));
+    assert_eq!(reclaimer.idle_repeat_wait(), secs(24 * 60));
+
+    // A reclaim whose saving outlasts the wait keeps the wait at three minutes.
+    let mut lasting = Reclaimer::new(policy);
+    assert_eq!(
+        lasting.decide_under(secs(0), 0, &anon_only(195), false),
+        Some(Reason::Idle)
+    );
+    for t in (5..300).step_by(5) {
+        assert_eq!(
+            lasting.decide_under(secs(t), 0, &anon_only(80), false),
+            None,
+            "{t} s"
+        );
+    }
+    assert_eq!(
+        lasting.decide_under(secs(300), 0, &anon_only(195), false),
+        Some(Reason::Idle)
+    );
+    assert_eq!(lasting.idle_regrown_after(), Some(secs(300)));
+    assert_eq!(lasting.idle_repeat_wait(), secs(180));
+    // An app opening starts a new idle stretch, and its wait starts at three minutes again.
+    assert_eq!(
+        lasting.decide_under(secs(305), 1, &anon_only(80), false),
+        None
+    );
+    assert_eq!(lasting.idle_repeat_wait(), secs(180));
 }
