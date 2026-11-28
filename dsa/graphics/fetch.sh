@@ -85,6 +85,8 @@ fi
 # flush then compares only the pages the kernel saw the app write (dsa_dirty_pages.h). A
 # command recorded into no command buffer (VK_NULL_HANDLE) is dropped and logged once rather
 # than followed to address 0, and a failed vkAllocateCommandBuffers leaves no handle behind.
+# A staging grant larger than 16 MiB (a capture of a whole display) goes back to the host once
+# the copy that needed it is done, rather than staying with the device for good.
 for patch in "$patch_dir"/guest/mesa/*.patch; do
     git -C "$mesa_dir" apply --recount --check "$patch"
     git -C "$mesa_dir" apply --recount "$patch"

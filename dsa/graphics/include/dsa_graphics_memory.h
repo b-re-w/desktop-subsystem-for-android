@@ -821,6 +821,24 @@ struct SharedStaging {
     uint64_t dmaAddress() const { return kGraphicsDmaTag | offset; }
 };
 
+// A staging grant is the next MiB up from the copy that needs it, so a stream of pictures of
+// one size asks for it once.
+inline constexpr uint64_t stagingGrantBytes(uint64_t needed) {
+    return (needed + (uint64_t(1) << 20) - 1) & ~((uint64_t(1) << 20) - 1);
+}
+
+// A staging grant up to this size stays with its device for the next copy. A larger one is
+// let go of as soon as its copy is done, and its pages go back to the host. A device used to
+// keep its largest grant for its whole life, so one capture of a 4096x4096 display (64 MiB)
+// held 64 MiB of the shared memory in SurfaceFlinger from then on, though nothing that size
+// was copied again. 16 MiB still keeps the copies that come in a stream: a 4K video picture
+// (12 MiB) and a 2560x1440 window (15 MiB).
+inline constexpr uint64_t kStagingKeepBytes = uint64_t(16) << 20;
+
+inline constexpr bool keepStagingGrant(uint64_t grantBytes) {
+    return grantBytes <= kStagingKeepBytes;
+}
+
 // The process pipe's request for a staging grant (hwcomposer, which has no Vulkan device):
 // after the handshake the guest writes {kStagingRequest, 0, size} and the renderer answers
 // {0 or -errno, 0, offset, length, key}. A size of 0 lets the process's staging grant go.

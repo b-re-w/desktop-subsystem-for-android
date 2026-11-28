@@ -541,7 +541,26 @@ static void pr7_the_layout_is_the_kernels() {
     EXPECT(dsa::graphicsAckBytes(1024 * kMiB) == 2 * kGranule);
 }
 
+// nfr1: a staging grant is the next MiB up from its copy, and only one up to 16 MiB stays with
+// its device: a 4096x4096 capture's 64 MiB goes back once its copy is done, while a 4K video
+// picture and a 2560x1440 window, which come in streams, keep theirs.
+static void nfr1_a_staging_grant_larger_than_16_mib_is_not_kept() {
+    EXPECT(dsa::stagingGrantBytes(1) == kMiB);
+    EXPECT(dsa::stagingGrantBytes(kMiB) == kMiB);
+    EXPECT(dsa::stagingGrantBytes(kMiB + 1) == 2 * kMiB);
+    const uint64_t display = dsa::stagingGrantBytes(4096ull * 4096 * 4);
+    EXPECT(display == 64 * kMiB);
+    EXPECT(!dsa::keepStagingGrant(display));
+    // A 3840x2160 NV12 picture: 12 MiB.
+    EXPECT(dsa::keepStagingGrant(dsa::stagingGrantBytes(3840ull * 2160 * 3 / 2)));
+    // A 2560x1440 RGBA window: 15 MiB.
+    EXPECT(dsa::keepStagingGrant(dsa::stagingGrantBytes(2560ull * 1440 * 4)));
+    EXPECT(dsa::keepStagingGrant(16 * kMiB));
+    EXPECT(!dsa::keepStagingGrant(17 * kMiB));
+}
+
 int main() {
+    nfr1_a_staging_grant_larger_than_16_mib_is_not_kept();
     pr7_grants_are_whole_granules_after_the_release_slots();
     pr7_an_allocation_the_region_cannot_hold_takes_the_copy_path();
     pr7_a_table_that_is_not_the_services_is_refused();

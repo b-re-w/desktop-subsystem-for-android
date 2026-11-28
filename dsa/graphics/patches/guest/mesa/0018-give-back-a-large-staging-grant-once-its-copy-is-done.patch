@@ -1,0 +1,97 @@
+Subject: Give back a large staging grant once its copy is done
+
+Each device kept one staging grant of the graphics memory the host shares for gralloc buffers'
+CPU uploads and read backs (0015), made the next MiB up from the largest copy so far and held
+until the device went. SurfaceFlinger's device lives as long as Android does, and every screen
+capture is read back for the CPU, so one capture of the 4096x4096 display made a 64 MiB grant
+that stayed for good: the 64 MiB grant of type "host-visible coherent cached" a memory report
+showed on SurfaceFlinger's device from boot, with no buffer that size left.
+
+A grant larger than a device keeps (dsa::keepStagingGrant, 16 MiB) is now let go of as soon as
+the read back or upload that needed it is done, so the host takes its granules back and their
+pages go back to the system. A grant up to 16 MiB stays for the next copy as before, so a 4K
+video picture or a 2560x1440 window, which come in streams, still ask for it once.
+
+Applies after 0017 in patches/guest/mesa, on Mesa 224e91e39836d3ca31f80df2e0379e55c70574f8.
+---
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+index 22d00ae..97a95e6 100644
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.cpp
+@@ -1880,6 +1880,8 @@ void ResourceTracker::readBackForCpu(VkEncoder* enc, VkDevice device) {
+         for (AHardwareBuffer* ahb : buffers) {
+             mGralloc->readBackForCpu(mGralloc->getNativeHandle(ahb), staging);
+         }
++        // A capture of a whole display needs a grant few copies need again.
++        releaseLargeStagingLocked(enc, device);
+     }
+     for (AHardwareBuffer* ahb : buffers) {
+         AHardwareBuffer_release(ahb);
+@@ -1946,6 +1948,7 @@ void ResourceTracker::uploadForGpu(VkEncoder* enc, VkQueue queue) {
+         mGralloc->uploadForGpu(ahb, staging);
+         AHardwareBuffer_release(ahb);
+     }
++    if (device != VK_NULL_HANDLE) releaseLargeStagingLocked(enc, device);
+ #else
+     (void)enc;
+     (void)queue;
+@@ -2063,13 +2066,14 @@ const dsa::SharedStaging* ResourceTracker::sharedStagingLocked(VkEncoder* enc, V
+         mSharedStaging.erase(found);
+     }
+     VkMemoryAllocateInfo info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr,
+-                                 (size + (1u << 20) - 1) & ~uint64_t((1u << 20) - 1), typeIndex};
++                                 dsa::stagingGrantBytes(size), typeIndex};
+     VkDeviceMemory memory = VK_NULL_HANDLE;
+     if (enc->vkAllocateMemory(device, &info, nullptr, &memory, true /* do lock */) != VK_SUCCESS) {
+         return nullptr;
+     }
+     DeviceStaging staging;
+     staging.memory = memory;
++    staging.allocationSize = info.allocationSize;
+     staging.grant.ptr = mapSharedMemory(enc, device, memory, &staging.grant.offset,
+                                         &staging.grant.length);
+     if (!staging.grant.ptr) {
+@@ -2080,6 +2084,20 @@ const dsa::SharedStaging* ResourceTracker::sharedStagingLocked(VkEncoder* enc, V
+     return &stored.grant;
+ }
+ 
++void ResourceTracker::releaseLargeStagingLocked(VkEncoder* enc, VkDevice device) {
++    auto found = mSharedStaging.find(device);
++    if (found == mSharedStaging.end() || dsa::keepStagingGrant(found->second.allocationSize)) {
++        return;
++    }
++    // Unmapped before the host hears of the free, so it takes the granules back at once.
++    if (auto* shared = dsa::GraphicsMemoryDevice::get()) {
++        shared->unmap(found->second.grant.ptr, found->second.grant.offset,
++                      found->second.grant.length);
++    }
++    enc->vkFreeMemory(device, found->second.memory, nullptr, true /* do lock */);
++    mSharedStaging.erase(found);
++}
++
+ uint32_t ResourceTracker::getStreamFeatures() const { return ResourceTracker::streamFeatureBits; }
+ 
+ bool ResourceTracker::supportsDeferredCommands() const {
+diff --git a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+index 28ee751..bb8c02d 100644
+--- a/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
++++ b/src/gfxstream/guest/vulkan_enc/ResourceTracker.h
+@@ -601,6 +601,9 @@ class ResourceTracker {
+     // none. The caller holds mSharedStagingMutex while it uses the grant.
+     const dsa::SharedStaging* sharedStagingLocked(VkEncoder* enc, VkDevice device,
+                                                   uint64_t size);
++    // Lets go of `device`'s staging grant once a copy through it is done, when it is larger
++    // than a device keeps (dsa::keepStagingGrant). The caller holds mSharedStagingMutex.
++    void releaseLargeStagingLocked(VkEncoder* enc, VkDevice device);
+     uint32_t getStreamFeatures() const;
+     uint32_t getApiVersionFromInstance(VkInstance instance);
+     uint32_t getApiVersionFromDevice(VkDevice device);
+@@ -1015,6 +1018,8 @@ class ResourceTracker {
+     std::mutex mSharedStagingMutex;
+     struct DeviceStaging {
+         VkDeviceMemory memory = VK_NULL_HANDLE;
++        // What was asked of the host: the copy's size, the next MiB up.
++        uint64_t allocationSize = 0;
+         dsa::SharedStaging grant;
+     };
+     std::unordered_map<VkDevice, DeviceStaging> mSharedStaging;
