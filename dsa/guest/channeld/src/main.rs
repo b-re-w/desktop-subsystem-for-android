@@ -794,7 +794,9 @@ mod daemon {
     #[cfg(target_os = "android")]
     fn page_out_after_wakes(router: Arc<Router>) {
         use dsa_guest_channeld::pageout::system::{page_out, samples, Refused};
-        use dsa_guest_channeld::pageout::{Pageout, PageoutPolicy, SAMPLE_INTERVAL};
+        use dsa_guest_channeld::pageout::{
+            is_resident_service, Pageout, PageoutPolicy, SAMPLE_INTERVAL,
+        };
         // The daemon runs ahead of apps so pointer events never wait; a pageout is work that
         // may wait for them, so this thread runs behind them.
         // SAFETY: setpriority on this thread's own id has no other effect.
@@ -824,6 +826,7 @@ mod daemon {
             };
             let windows = router.task_packages();
             for target in pageout.look(start.elapsed(), &looked, &windows) {
+                let resident = is_resident_service(&target.name);
                 match page_out(&target) {
                     Ok(done) => {
                         pageout.paged(target.pid, done.after.rss_anon_kb);
@@ -834,7 +837,9 @@ mod daemon {
                             target.name,
                             target.pid,
                             target.oom_score_adj,
-                            if target.google_play {
+                            if resident {
+                                ", resident service"
+                            } else if target.google_play {
                                 ", Google Play services"
                             } else {
                                 ""
@@ -849,6 +854,15 @@ mod daemon {
                         );
                     }
                     Err(Refused::Skipped(_)) => {}
+                    Err(Refused::NotAllowed(why)) if resident => {
+                        // The resident services run under other users and SELinux domains than
+                        // the apps: a refusal for one says nothing about the apps.
+                        say!(
+                            "WARNING: {why}. The resident services stay resident after they wake \
+                             until the next idle reclaim; apps are still paged out."
+                        );
+                        pageout.stop_resident_services();
+                    }
                     Err(Refused::NotAllowed(why)) => {
                         say!(
                             "WARNING: {why}. Apps woken in the background stay resident until \
