@@ -332,16 +332,32 @@ pub fn next_image_check(
 
 /// Boots a session as [`trial::start`] needs it. The session's launcher reads the current
 /// image from the store itself, so the image folder passed in is not used here.
-pub struct SessionBoot(pub Arc<Session>);
+pub struct SessionBoot {
+    session: Arc<Session>,
+    /// Why the last boot stopped, when it stopped rather than stalled or ran out of time.
+    stopped: Option<StopReason>,
+}
+
+impl SessionBoot {
+    pub fn new(session: Arc<Session>) -> SessionBoot {
+        SessionBoot {
+            session,
+            stopped: None,
+        }
+    }
+}
 
 impl Boot for SessionBoot {
     /// A disk made under other signing keys stops the agent whichever image runs on it, and a
-    /// start the host refused never ran the image at all.
+    /// start the host refused never ran the image at all. Only this boot's own stop counts:
+    /// the session keeps the reason of an earlier stop until the next one, and a boot that ran
+    /// the guest and then stalled or ran out of time is the image's even when the start before
+    /// it was refused by the host.
     fn image_to_blame(&self) -> bool {
         !matches!(
-            self.0.problem(),
+            self.session.problem(),
             Some(BootProblem::DiskFromOtherKeys { .. })
-        ) && !matches!(self.0.last_reason(), Some(StopReason::HostFailed { .. }))
+        ) && !matches!(self.stopped, Some(StopReason::HostFailed { .. }))
     }
 
     fn boot(
@@ -350,7 +366,8 @@ impl Boot for SessionBoot {
         _image_dir: &std::path::Path,
         timeout: Duration,
     ) -> Result<(), String> {
-        let session = &self.0;
+        self.stopped = None;
+        let session = Arc::clone(&self.session);
         let events = session.events();
         session.start();
         let mut deadline = Instant::now() + timeout;
@@ -380,10 +397,11 @@ impl Boot for SessionBoot {
                     Some(problem) => return Err(problem.to_string()),
                 },
                 Ok(event) if event.state == SessionState::Stopped => {
+                    self.stopped = event.reason.clone();
                     return Err(event
                         .reason
                         .map(|reason| reason.to_string())
-                        .unwrap_or_else(|| "it stopped while starting".into()))
+                        .unwrap_or_else(|| "it stopped while starting".into()));
                 }
                 Ok(_) => {}
                 Err(RecvTimeoutError::Timeout) if Instant::now() < deadline => {}
@@ -401,9 +419,9 @@ impl Boot for SessionBoot {
         // A stop that failed leaves the session in Stopping, where a start is ignored; asking
         // again retries it, so the previous image is not kept from booting by it.
         for _ in 0..2 {
-            self.0.stop();
+            self.session.stop();
             if self
-                .0
+                .session
                 .wait_for(SessionState::Stopped, Duration::from_secs(120))
             {
                 return;
@@ -485,7 +503,7 @@ impl Boot for TrialBoot {
         if on {
             self.rollback.begin();
         } else if self.rollback.end() {
-            self.session.0.stop();
+            self.session.session.stop();
         }
     }
 }
@@ -1120,7 +1138,7 @@ impl UserAndroid for UpdatingAndroid {
         let image_restart = Arc::clone(&self.image_restart);
         thread::spawn(move || {
             let mut guest = TrialBoot {
-                session: SessionBoot(session),
+                session: SessionBoot::new(session),
                 rollback,
             };
             let outcome = trial::start(&store, &mut guest, timeout);

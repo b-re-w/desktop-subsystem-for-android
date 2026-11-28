@@ -1063,6 +1063,98 @@ fn fr14_a_first_image_that_does_not_boot_is_given_up_without_booting_the_placeho
     done.store(true, Ordering::Relaxed);
 }
 
+/// Starts a guest whose next start the host refuses, and whose agent never connects
+/// otherwise.
+struct HostThenSilentGuest {
+    refuse_next: Arc<AtomicBool>,
+    refused: bool,
+}
+
+impl GuestLauncher for HostThenSilentGuest {
+    fn start(&mut self, _: &BootSecret) -> Result<(), String> {
+        self.refused = self.refuse_next.swap(false, Ordering::SeqCst);
+        if self.refused {
+            return Err("the hypervisor refused to create the VM".into());
+        }
+        Ok(())
+    }
+    fn stop(&mut self, _: Duration) -> Result<(), String> {
+        Ok(())
+    }
+    fn failure_side(&mut self) -> FailureSide {
+        if self.refused {
+            FailureSide::Host
+        } else {
+            FailureSide::Guest
+        }
+    }
+}
+
+#[test]
+fn fr14_a_host_failure_of_an_earlier_start_does_not_excuse_the_next_trial() {
+    let store = fresh_store();
+    check(
+        &store,
+        &server(&[16], &[("16.0.2", 16, 2)], &key()),
+        "mem://list.json",
+        &trusted(),
+    )
+    .unwrap();
+    let refuse_next = Arc::new(AtomicBool::new(true));
+    let (listener, _connector) = memory::pair();
+    let session = Arc::new(Session::new(
+        HostThenSilentGuest {
+            refuse_next: Arc::clone(&refuse_next),
+            refused: false,
+        },
+        Box::new(listener),
+        ControlHandshake::new("test host", WAIT),
+        SessionConfig {
+            connect_timeout: Duration::from_secs(60),
+            stop_timeout: WAIT,
+            ..SessionConfig::default()
+        },
+    ));
+    let android = UpdatingAndroid {
+        session,
+        store: Arc::clone(&store),
+        notices: Arc::new(UpdateNotices::default()),
+        boot_timeout: Duration::from_secs(2),
+        trial_running: Arc::new(AtomicBool::new(false)),
+        rollback: Default::default(),
+        image_restart: Default::default(),
+    };
+    let wait_for = |what: &str| {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        loop {
+            let notice = android.update_notice().unwrap_or_default();
+            if notice.contains(what) && !android.trial_running.load(Ordering::SeqCst) {
+                return notice;
+            }
+            assert!(Instant::now() < deadline, "no {what:?}: {notice}");
+            thread::sleep(Duration::from_millis(20));
+        }
+    };
+
+    // The host refuses the first start: the image is not to blame.
+    android.start();
+    wait_for("16.0.2 is kept on trial");
+    assert!(store.state().unwrap().failed.is_empty());
+    assert!(android.session.wait_for(SessionState::Stopped, WAIT));
+
+    // The next start runs the guest, which never finishes booting: that is the image's, even
+    // though the reason the session last stopped for is still the host's refusal.
+    android.start();
+    let notice = wait_for("16.0.2 did not start");
+    assert!(
+        notice.contains("Android 16.0.1 is in use again"),
+        "{notice}"
+    );
+    let state = store.state().unwrap();
+    assert_eq!(state.current.version, "16.0.1");
+    assert_eq!(state.failed, ["16.0.2"]);
+}
+
 #[test]
 fn fr14_losing_the_only_image_brings_the_next_check_forward() {
     let now = Instant::now();
