@@ -536,6 +536,44 @@ class AndroidKernelConfigTests(unittest.TestCase):
             self.assertEqual(sum(1 for line in body if line[:1] in (" ", "-")), old, hunks[at])
             self.assertEqual(sum(1 for line in body if line[:1] in (" ", "+")), new, hunks[at])
 
+    def test_nfr1_a_persistent_memory_region_maps_only_the_disk_image_it_holds(self):
+        # Hyper-V sizes every persistent memory device of a VM like the largest one, so the
+        # 370 MiB add-on disk sat in a 2422 MiB region and the guest kept page structs for all
+        # of it (32 MiB for nothing). On a read-only region the pmem driver maps only the disk
+        # image the region's GPT describes, and says in the boot log what it mapped.
+        patch = (PATCHES / "pmem-disk-image-size.patch").read_text().replace("\r\n", "\n")
+        self.assertIn("drivers/nvdimm/pmem.c", patch)
+        self.assertIn("+static u64 pmem_disk_image_bytes(struct nd_namespace_common *ndns,", patch)
+        self.assertIn("+\t\t     test_bit(ND_REGION_READONLY, &nd_region->flags);", patch)
+        self.assertIn("-\t\tpmem->pgmap.range.end = res->end;\n"
+                      "+\t\tpmem->pgmap.range.end = res->start + pmem->size - 1;", patch)
+        # The size comes only from a GPT header whose checksum holds and whose disk ends inside
+        # the region; the mapping can only shrink, and stays a whole number of sections.
+        self.assertIn("+\tif ((crc32_le(~0U, sector, header_size) ^ ~0U) != crc)", patch)
+        self.assertIn("+\tif (alternate < 2 || alternate >= namespace_bytes / SECTOR_SIZE)", patch)
+        self.assertIn("+\t\tu64 mapped = min_t(u64, ALIGN(image_bytes, memremap_compat_align()),", patch)
+        self.assertIn("+\tselect CRC32", patch)
+        # What the PC check reads from the console log.
+        self.assertIn('"maps %llu MiB of its %llu MiB region: the disk image its GPT describes\\n"', patch)
+        self.assertIn('"maps all %llu MiB of its region: no GPT tells the disk image\'s size\\n"', patch)
+        # It reads the read-only flag pmem-dax.patch adds, so it applies after it.
+        names = sorted(p.name for p in PATCHES.glob("*.patch"))
+        self.assertLess(names.index("pmem-dax.patch"), names.index("pmem-disk-image-size.patch"))
+        self.assert_hunks_count_their_lines("pmem-disk-image-size.patch")
+
+    def assert_hunks_count_their_lines(self, name):
+        text = (PATCHES / name).read_text().replace("\r\n", "\n")
+        hunks = re.split(r"(?m)^(@@ -\d+,(\d+) \+\d+,(\d+) @@.*)$", text)
+        self.assertGreater(len(hunks), 1, name)
+        for at in range(1, len(hunks), 4):
+            old, new = int(hunks[at + 1]), int(hunks[at + 2])
+            body = [line for line in hunks[at + 3].strip("\n").split("\n")
+                    if not line.startswith(("diff --git ", "--- a/", "+++ b/"))]
+            self.assertEqual(sum(1 for line in body if line[:1] in (" ", "-")), old,
+                             f"{name}: {hunks[at]}")
+            self.assertEqual(sum(1 for line in body if line[:1] in (" ", "+")), new,
+                             f"{name}: {hunks[at]}")
+
     def test_fr1_binder_device_nodes_are_created_for_android_init(self):
         config = CONFIG.read_text()
         self.assertIn('CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder"', config)

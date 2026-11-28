@@ -55,6 +55,16 @@ a boot device, and the host names those two in such a boot. It also makes every 
 memory region read only (`ND_REGION_READONLY`), so its disk refuses writes, as the read-only
 SCSI disk does outside the mode: each one is a disk image the host maps read only.
 
+Hyper-V gives every persistent memory device of a VM one size, the controller's, which the host
+sets to fit the largest image. The add-on disk (about 370 MiB) then sat in a region as large as
+the system disk (about 2.4 GiB), and the guest kept page structs, 64 bytes for each 4 KiB, for
+the whole region: 32 MiB of memory it never gets back, for space no file is in.
+`patches/pmem-disk-image-size.patch` has the pmem driver map, on a read-only region, only the
+disk image the region holds: the GPT at its start says where the image ends (its backup header
+is the last sector), and the mapping is rounded up to the 2 MiB the kernel maps persistent
+memory in. A region without a valid GPT is mapped whole, as before. The console log says which
+it did, per namespace: `maps 370 MiB of its 2422 MiB region: the disk image its GPT describes`.
+
 Memory the guest frees goes back to the host at once. Upstream free page reporting waits two
 seconds before each pass, and again after each pass that used up its budget, so a large
 free reached the host slice by slice over many seconds; `patches/page-reporting-no-delay.patch`
