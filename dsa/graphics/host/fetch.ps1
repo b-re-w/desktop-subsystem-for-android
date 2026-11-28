@@ -116,6 +116,8 @@ git -C $GfxstreamDir clean -fdx
 # zeros show as a solid green frame.
 # Without 0046 a composition may write a ColorBuffer the presentation is still copying into a
 # task window, so the hwcomposer keeps two ColorBuffers of the task's size for every task.
+# Without 0047 every window buffer a guest app draws into keeps a mapped staging buffer of its
+# own size that nothing reads, since a Vulkan-only renderer never copies a window image back.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -160,7 +162,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0043-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0044-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0045-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0046-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0046-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0047-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName
