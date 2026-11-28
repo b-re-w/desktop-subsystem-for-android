@@ -22,8 +22,17 @@
 //! [`VMSTAT_INTERVAL`] apart ([`vmstat_files`]), so the page cache's churn between the two can
 //! be read, and the report lists what the processes that read and write the most did
 //! (`/proc/<pid>/io`, which only root may read for another user's process).
+//!
+//! It also names the files the page cache holds, as far as processes map them: each process's
+//! `/proc/<pid>/smaps` gives its share of every mapped file, and the shares summed over all
+//! processes are the file's mapped pages ([`crate::smaps`]). Files on the disks the guest maps
+//! in place (DAX) are listed apart: their pages are the host's, not the page cache's. What the
+//! page cache holds of files nobody maps (read, not mapped) is one number, since the kernel
+//! names no file for it.
 
 use std::time::Duration;
+
+use crate::smaps::{cached_files, mounts, Mapping};
 
 /// What starts every line of the report in the kernel log, after the daemon's own prefix.
 pub const MARK: &str = "memory report: ";
@@ -57,6 +66,8 @@ pub const VMALLOC_LINES: usize = 30;
 pub const THREAD_LINES: usize = 40;
 pub const PAGE_TABLE_LINES: usize = 15;
 pub const ALLOCATION_LINES: usize = 40;
+pub const PAGE_CACHE_FILE_LINES: usize = 40;
+pub const DAX_FILE_LINES: usize = 15;
 
 /// The `/proc/meminfo` lines the report repeats, so its parts can be read against them.
 pub const MEMINFO_KEYS: [&str; 11] = [
@@ -476,6 +487,12 @@ pub struct Sources {
     /// (SUnreclaim), by name, from `/sys/kernel/slab/<cache>/reclaim_account`. A cache missing
     /// here is reported as unknown.
     pub slab_reclaim: Vec<(String, bool)>,
+    /// The file mappings of each process whose `/proc/<pid>/smaps` could be read, for which
+    /// files the mapped page cache holds ([`crate::smaps`]).
+    pub file_mappings: Vec<Vec<Mapping>>,
+    /// `/proc/self/mountinfo`, which says which of those files are on a disk the guest maps in
+    /// place (DAX) and so not in the page cache.
+    pub mounts: Option<String>,
 }
 
 /// Where the kernel lists its slab caches, one directory (or, for a merged cache, a link to
@@ -508,6 +525,13 @@ pub fn slab_reclaim_path(cache: &str) -> Option<String> {
 /// - `cgroups <descendants> <dying>`
 /// - `bufio <bytes>`
 /// - `allocinfo-total <sites> <KiB>`, then `allocinfo <file:line> <function> <KiB> <calls>`
+/// - `mapped-files <processes> <page cache KiB> <DAX KiB>`: what the processes' file mappings
+///   hold, summed over the processes with a file mapping; `page-cache-unmapped <KiB>`, the page
+///   cache beyond shared memory and those mappings (files read, not mapped); then
+///   `page-cache-file <KiB> <path>` for the files of the page cache the processes map the most
+///   of, and `dax-file <KiB> <path>` for those on a disk the guest maps in place, which are the
+///   host's pages and not in the page cache. A path is the line's last field and may hold
+///   spaces.
 /// - `missing <what> <why>` for a part that could not be read
 pub fn report(sources: &Sources) -> Vec<String> {
     let mut lines = vec!["begin".to_string()];
@@ -670,7 +694,45 @@ pub fn report(sources: &Sources) -> Vec<String> {
                 .into(),
         ),
     }
+    lines.extend(mapped_file_lines(sources));
     lines.push("end".into());
+    lines
+}
+
+/// The report's lines about the files the processes map (see [`report`]).
+fn mapped_file_lines(sources: &Sources) -> Vec<String> {
+    let read: Vec<&[Mapping]> = sources
+        .file_mappings
+        .iter()
+        .filter(|m| !m.is_empty())
+        .map(Vec::as_slice)
+        .collect();
+    if read.is_empty() {
+        return vec![
+            "missing mapped-files no process's /proc/<pid>/smaps could be read".to_string(),
+        ];
+    }
+    let mounts = mounts(sources.mounts.as_deref().unwrap_or(""));
+    let processes = read.len();
+    let (cached, dax) = cached_files(read, &mounts);
+    let cached_kib: u64 = cached.iter().map(|f| f.kib).sum();
+    let dax_kib: u64 = dax.iter().map(|f| f.kib).sum();
+    let mut lines = vec![format!("mapped-files {processes} {cached_kib} {dax_kib}")];
+    if let Some(meminfo) = &sources.meminfo {
+        if let Some(page_cache) = meminfo_kib(meminfo, "Cached") {
+            let shmem = meminfo_kib(meminfo, "Shmem").unwrap_or(0);
+            lines.push(format!(
+                "page-cache-unmapped {}",
+                page_cache.saturating_sub(shmem).saturating_sub(cached_kib)
+            ));
+        }
+    }
+    for f in cached.iter().take(PAGE_CACHE_FILE_LINES) {
+        lines.push(format!("page-cache-file {} {}", f.kib, f.path));
+    }
+    for f in dax.iter().take(DAX_FILE_LINES) {
+        lines.push(format!("dax-file {} {}", f.kib, f.path));
+    }
     lines
 }
 
@@ -679,6 +741,7 @@ pub fn report(sources: &Sources) -> Vec<String> {
 pub fn read_sources() -> Sources {
     let read = |path: &str| std::fs::read_to_string(path).ok();
     let mut processes = Vec::new();
+    let mut file_mappings = Vec::new();
     if let Ok(entries) = std::fs::read_dir("/proc") {
         for entry in entries.flatten() {
             let Some(pid) = entry
@@ -701,6 +764,11 @@ pub fn read_sources() -> Sources {
                     .as_deref()
                     .and_then(process_io);
                 processes.push(p);
+                // Read as /proc/<pid>/io is (the same ptrace read check); a kernel thread has
+                // no mappings.
+                if let Some(mappings) = crate::smaps::read_mappings(pid) {
+                    file_mappings.push(mappings);
+                }
             }
         }
     }
@@ -726,6 +794,8 @@ pub fn read_sources() -> Sources {
         bufio_bytes: read("/sys/module/dm_bufio/parameters/current_allocated_bytes"),
         allocinfo: read("/proc/allocinfo"),
         slab_reclaim,
+        file_mappings,
+        mounts: read("/proc/self/mountinfo"),
     }
 }
 

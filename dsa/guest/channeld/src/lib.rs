@@ -55,6 +55,7 @@ pub mod reclaim;
 pub mod router;
 pub mod share_mount;
 pub mod shared_memory;
+pub mod smaps;
 pub mod su_args;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub mod su_helper;

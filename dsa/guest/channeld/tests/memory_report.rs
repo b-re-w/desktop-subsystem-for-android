@@ -133,6 +133,8 @@ fn nfr1_the_report_has_every_part_between_begin_and_end_and_says_what_it_could_n
         bufio_bytes: Some("41943040\n".into()),
         allocinfo: None,
         slab_reclaim: Vec::new(),
+        file_mappings: Vec::new(),
+        mounts: None,
     });
     assert_eq!(lines.first().map(String::as_str), Some("begin"));
     assert_eq!(lines.last().map(String::as_str), Some("end"));
@@ -354,4 +356,61 @@ fn nfr1_the_diagnostics_take_the_last_whole_kernel_memory_report_from_the_log() 
     assert_eq!(REPORT_FILE, "android/kernel-memory-report.txt");
     // The property only the daemon may set, which init's trigger for the diagnostics reads.
     assert_eq!(SNAPSHOT_PROPERTY, "vendor.dsa.memory.report");
+}
+
+#[test]
+fn nfr1_the_report_names_the_files_the_mapped_page_cache_holds() {
+    use dsa_guest_channeld::smaps::mappings;
+    let mounts = "\
+20 1 253:0 / / ro,relatime - erofs /dev/block/dm-0 ro,dax=always\n\
+22 20 253:5 / /data rw,nosuid - ext4 /dev/block/dm-5 rw,seclabel\n";
+    let system_server = mappings(
+        "7f0000000000-7f0000100000 r--p 00000000 fd:00 11   /system/framework/framework.jar\n\
+         Pss:                 3000 kB\n\
+         Anonymous:              0 kB\n\
+         7f0000100000-7f0000200000 r--p 00000000 fd:05 21   /data/app/~~a/com.google.android.gms-1/base.apk\n\
+         Pss:                 2000 kB\n\
+         Anonymous:              0 kB\n",
+    );
+    let gms = mappings(
+        "7f1000000000-7f1000100000 r--p 00000000 fd:05 21   /data/app/~~a/com.google.android.gms-1/base.apk\n\
+         Pss:                 6000 kB\n\
+         Anonymous:              0 kB\n\
+         7f1000100000-7f1000200000 r--p 00000000 fd:05 22   /data/app/~~a/com.google.android.gms-1/oat/x86_64/base.odex\n\
+         Pss:                 1500 kB\n\
+         Anonymous:              0 kB\n",
+    );
+    let lines = report(&Sources {
+        meminfo: Some("Cached:  235560 kB\nShmem:  2048 kB\n".into()),
+        file_mappings: vec![system_server, gms, Vec::new()],
+        mounts: Some(mounts.into()),
+        ..Sources::default()
+    });
+    // Two processes read, 9500 KiB of page cache mapped, 3000 KiB of the system disk.
+    assert!(
+        lines.contains(&"mapped-files 2 9500 3000".to_string()),
+        "{lines:?}"
+    );
+    // What Cached holds beyond shared memory and the mapped files: read, not mapped.
+    assert!(
+        lines.contains(&"page-cache-unmapped 224012".to_string()),
+        "{lines:?}"
+    );
+    let files: Vec<&String> = lines
+        .iter()
+        .filter(|l| l.starts_with("page-cache-file "))
+        .collect();
+    assert_eq!(
+        files,
+        [
+            "page-cache-file 8000 /data/app/~~a/com.google.android.gms-1/base.apk",
+            "page-cache-file 1500 /data/app/~~a/com.google.android.gms-1/oat/x86_64/base.odex",
+        ]
+    );
+    assert!(lines.contains(&"dax-file 3000 /system/framework/framework.jar".to_string()));
+    // Without smaps the report says so.
+    let without = report(&Sources::default());
+    assert!(without
+        .iter()
+        .any(|l| l.starts_with("missing mapped-files ")));
 }

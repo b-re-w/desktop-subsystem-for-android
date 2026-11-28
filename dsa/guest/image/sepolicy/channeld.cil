@@ -306,6 +306,8 @@
 ; file is its owner's alone (0400), so root reads another user's with dac_read_search, and the
 ; kernel checks the read as a ptrace read of the process (sys_ptrace, then the file read on the
 ; process's domain allowed above). Both are read checks: the domain still writes nothing.
+; /proc/<pid>/smaps, for which files the mapped page cache holds, is checked the same way, and
+; /proc/self/mountinfo is the domain's own.
 (allow dsa_memory_report self (capability (dac_read_search sys_ptrace)))
 
 ; The Google Services Framework Android ID, which Google's page for uncertified devices asks for.
