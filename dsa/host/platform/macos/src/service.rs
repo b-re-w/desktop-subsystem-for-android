@@ -668,6 +668,13 @@ pub fn serve(
         Ok(updates) => (updates, None),
         Err(disabled) => (None, Some(disabled)),
     };
+    // Images an older build blamed for this computer's fault are tried again: a start that
+    // fails for the computer's sake now is not blamed on them.
+    if let Some(line) = updates.as_ref().and_then(|updates| {
+        dsa_host_core::update::service::retry_host_failures(&updates.store, true)
+    }) {
+        eprintln!("{build}: {line}");
+    }
     if let (Some(updates), Some(update)) = (&updates, config.update.clone()) {
         let check = UpdateCheck {
             settings: update,

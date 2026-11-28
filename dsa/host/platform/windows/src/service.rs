@@ -1042,6 +1042,16 @@ where
             dsa_host_core::start_failure::HYPERVISOR_NOT_RUNNING
         );
     }
+    // Images an older build blamed for this computer's fault are tried again once it can run
+    // VMs.
+    if let Some(line) = updates.as_ref().and_then(|updates| {
+        dsa_host_core::update::service::retry_host_failures(
+            &updates.store,
+            hypervisor != Some(false),
+        )
+    }) {
+        eprintln!("{build}: {line}");
+    }
     let image_updates_available = updates.is_some() && config.image_updates_available();
     let direct_mapped = start_direct_mapped(&config, updates.as_ref(), build);
     if let (Some(updates), Some(settings)) = (&updates, config.update.clone()) {

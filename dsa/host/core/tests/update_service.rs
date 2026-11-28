@@ -1314,6 +1314,57 @@ fn fr14_virtualization_off_found_at_the_services_start_is_said_before_any_image_
     assert_eq!(starts.load(Ordering::SeqCst), 0);
 }
 
+#[test]
+fn fr14_images_that_failed_only_because_of_the_host_are_tried_again_once_it_can_run_vms() {
+    use dsa_host_core::start_failure::host_problem;
+    use dsa_host_core::update::service::retry_host_failures;
+    // A failed list left by a build that blamed the image for the host's refusal (17), beside
+    // an image that did fail on its own (16).
+    let store = store_without_an_image();
+    check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+    store
+        .roll_back_because(&format!(
+            "the guest did not start: {REFUSED_WITHOUT_HYPERVISOR}"
+        ))
+        .unwrap();
+    check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+    store
+        .roll_back_because("16.0.0-1 did not finish booting within 300 seconds")
+        .unwrap();
+    assert_eq!(store.state().unwrap().failed, ["17.0.0-1", "16.0.0-1"]);
+
+    // While the computer still cannot run a VM, nothing changes.
+    assert_eq!(retry_host_failures(&store, false), None);
+    assert_eq!(store.state().unwrap().failed, ["17.0.0-1", "16.0.0-1"]);
+
+    // Once it can, the host's failures are tried again, and the image's own failure is not.
+    let line = retry_host_failures(&store, true).unwrap();
+    assert!(
+        line.contains("17.0.0-1") && !line.contains("16.0.0-1"),
+        "{line}"
+    );
+    let state = store.state().unwrap();
+    assert_eq!(state.failed, ["16.0.0-1"]);
+    assert!(!state.failed_reasons.contains_key("17.0.0-1"));
+    let news = check(&store, &both_majors(), "mem://list.json", &trusted())
+        .unwrap()
+        .unwrap();
+    assert!(news.contains("17.0.0-1 is downloaded"), "{news}");
+    // Nothing more to try again.
+    assert_eq!(retry_host_failures(&store, true), None);
+
+    // A failure the session reported as the host's is the host's too.
+    let store = store_without_an_image();
+    check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+    store
+        .roll_back_because(&host_problem(
+            "the network service refused the VM's adapter",
+        ))
+        .unwrap();
+    assert!(retry_host_failures(&store, true).is_some());
+    assert!(store.state().unwrap().failed.is_empty());
+}
+
 /// What an installation without a bundled image finds: Android 17 and Android 16 offered.
 fn both_majors() -> MemoryFetch {
     server(

@@ -379,6 +379,28 @@ pub fn check_alerting(
     Ok(news)
 }
 
+/// At a service's start: tries the images again that failed here only because of the host
+/// ([`ImageStore::forget_host_failures`]), when `host_can_run_vms` says that cause is gone.
+/// While the computer still cannot run a VM they stay where they are: a start fails for the
+/// computer's sake either way, and is not blamed on any image. Returns the line for the
+/// service's log, when there is news.
+pub fn retry_host_failures(store: &ImageStore, host_can_run_vms: bool) -> Option<String> {
+    if !host_can_run_vms {
+        return None;
+    }
+    match store.forget_host_failures() {
+        Ok(forgotten) if forgotten.is_empty() => None,
+        Ok(forgotten) => Some(format!(
+            "Android {} failed here only because of this computer, which can run Android now; \
+             the service downloads and tries them again",
+            forgotten.join(", ")
+        )),
+        Err(error) => Some(format!(
+            "the images that failed here because of this computer are not tried again: {error}"
+        )),
+    }
+}
+
 /// When the image check runs next. A check scheduled while an image was in place stands,
 /// unless none is left now (the first image failed its first boot): then waiting for the
 /// regular interval would leave the user with no Android for that long, so it runs now if

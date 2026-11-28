@@ -599,6 +599,40 @@ impl ImageStore {
         self.give_up(None)
     }
 
+    /// Forgets the failures whose recorded reason says the host, not the image, kept the image
+    /// from starting ([`crate::start_failure::host_side_reason`]), so they are downloaded and
+    /// tried again. A host's service calls this when it starts on a computer that can run VMs
+    /// again: an older build, or one that could not tell the sides apart, blamed those images
+    /// for the computer's fault, and the user would otherwise be left with no image to start.
+    /// Returns the versions forgotten.
+    pub fn forget_host_failures(&self) -> Result<Vec<String>, UpdateError> {
+        let mut state = self.state()?;
+        let host_side: Vec<String> = state
+            .failed
+            .iter()
+            .filter(|version| {
+                state
+                    .failed_reasons
+                    .get(*version)
+                    .is_some_and(|reason| crate::start_failure::host_side_reason(reason))
+            })
+            .cloned()
+            .collect();
+        if host_side.is_empty() {
+            return Ok(host_side);
+        }
+        state.failed.retain(|version| !host_side.contains(version));
+        let failed = &state.failed;
+        state
+            .failed_reasons
+            .retain(|version, _| failed.contains(version));
+        if state.failed.is_empty() {
+            state.failed_build = None;
+        }
+        self.write_state(&state)?;
+        Ok(host_side)
+    }
+
     /// [`roll_back`](Self::roll_back), keeping `reason` (its first line) as why the image
     /// failed, so the user can still be told once later news has replaced the trial's.
     pub fn roll_back_because(&self, reason: &str) -> Result<InstalledImage, UpdateError> {
