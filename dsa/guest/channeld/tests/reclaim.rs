@@ -363,12 +363,19 @@ fn nfr2_with_no_task_in_use_the_page_cache_trims_to_the_floor() {
         Some(Reason::Gradual)
     );
     assert_eq!(reclaimer.trim_mib(), 700 - 256);
-    // What that trim took comes back: with no app in use, still the floor.
+    // What that trim took comes back. The target stays at the floor (no idle guest keeps more
+    // than this policy's 256 MiB), but the next trim waits a minute rather than taking the same
+    // files again on the next look.
     refaults += 300 * MIB;
     reclaimer.refaults(refaults);
     assert_eq!(reclaimer.working_set_target_kb(), 256 * MIB);
+    assert_eq!(reclaimer.trim_backoff(), secs(60));
     assert_eq!(
         reclaimer.decide_under(secs(205), 0, &memory(3000, 600), false),
+        None
+    );
+    assert_eq!(
+        reclaimer.decide_under(secs(260), 0, &memory(3000, 600), false),
         Some(Reason::Gradual)
     );
     assert_eq!(reclaimer.trim_mib(), 600 - 256);
@@ -1596,6 +1603,106 @@ fn nfr1_the_trim_log_says_what_was_read_back_since_the_last_trim() {
         VmCounters::parse("nr_free_pages 1\n", 4),
         VmCounters::default()
     );
+}
+
+#[test]
+fn nfr2_with_no_app_open_a_trim_whose_cache_comes_back_backs_off_from_the_first_trim() {
+    // The owner's PC, 1.0.1-dev.39, no app open: from 38 s to 123 s after the boot a trim ran on
+    // every look ("wait between trims 0 s", working set target 64 MiB), and each time 56 to 594
+    // MiB of what it took was read back before the next one: some 2.2 GB in 90 s, while the
+    // page cache stayed where it was. With no task in use the trim never waited, and Android
+    // had not settled after its boot, so nothing it read back counted. Here the guest reads 70
+    // MiB of what each trim took back on the look after it and fills the cache back to 214 MiB.
+    let policy = ReclaimPolicy::default();
+    let mut reclaimer = Reclaimer::new(policy);
+    reclaimer.booted(false);
+    reclaimer.refaults(0);
+    let guest = MemInfo {
+        anon_pages_kb: 120 * MIB,
+        ..memory(1500, 214)
+    };
+    let mut trims = Vec::new();
+    let mut refaults = 0;
+    let mut trimmed_last_look = false;
+    let mut highest_target = 0;
+    for t in (32..632).step_by(5) {
+        if trimmed_last_look {
+            refaults += 70;
+        }
+        reclaimer.booted(true);
+        reclaimer.tasks_seen(secs(t), 0, 0);
+        reclaimer.refaults(refaults * MIB);
+        let reason = reclaimer.decide_under(secs(t), 0, &guest, false);
+        if t == 32 {
+            assert_eq!(reason, Some(Reason::Idle));
+        }
+        trimmed_last_look = reason == Some(Reason::Gradual);
+        if trimmed_last_look {
+            trims.push(t);
+        }
+        if t == 42 {
+            // The first trim came back on the look after it: the next waits a minute, though
+            // Android is still settling after its boot and no app is open.
+            assert_eq!(reclaimer.trim_backoff(), secs(60));
+        }
+        highest_target = highest_target.max(reclaimer.working_set_target_kb());
+    }
+    assert_eq!(trims.first(), Some(&37));
+    // A trim every look would be 120 in these ten minutes.
+    assert!(trims.len() <= 6, "{trims:?}");
+    for pair in trims.windows(2) {
+        assert!(pair[1] - pair[0] >= 60, "{trims:?}");
+    }
+    // Once Android has settled, what comes back raises the floor with no app open too, but never
+    // past what an idle guest may keep.
+    assert!(
+        highest_target > policy.idle_keep_cache_kb,
+        "{highest_target}"
+    );
+    assert!(
+        highest_target <= policy.idle_keep_cache_max_kb,
+        "{highest_target}"
+    );
+}
+
+#[test]
+fn nfr2_an_idle_guest_keeps_at_most_160_mib_of_page_cache_for_what_it_reads_back() {
+    // With no app the floor is 64 MiB; what trims read back may raise it to 160 MiB, the floor
+    // with an app open, and no further: a guest with no app does not keep more cache than one
+    // with an app.
+    let policy = ReclaimPolicy::default();
+    assert_eq!(policy.idle_keep_cache_kb, 64 * MIB);
+    assert_eq!(policy.idle_keep_cache_max_kb, 160 * MIB);
+    assert_eq!(policy.idle_keep_cache_max_kb, policy.keep_cache_kb);
+    let mut reclaimer = Reclaimer::new(policy);
+    reclaimer.refaults(0);
+    let guest = |cached: u64| MemInfo {
+        anon_pages_kb: 100 * MIB,
+        ..memory(3000, cached)
+    };
+    assert_eq!(
+        reclaimer.decide_under(secs(0), 0, &guest(400), false),
+        Some(Reason::Idle)
+    );
+    // Past the full reclaim's own settling: the cache grows back with files read once.
+    for t in (5..40).step_by(5) {
+        reclaimer.refaults(0);
+        reclaimer.decide_under(secs(t), 0, &guest(100), false);
+    }
+    assert_eq!(
+        reclaimer.decide_under(secs(40), 0, &guest(400), false),
+        Some(Reason::Gradual)
+    );
+    assert_eq!(reclaimer.trim_mib(), 400 - 64);
+    // 300 MiB of it comes back: the floor rises to the most an idle guest keeps.
+    reclaimer.refaults(300 * MIB);
+    assert_eq!(reclaimer.working_set_target_kb(), 160 * MIB);
+    assert_eq!(reclaimer.trim_backoff(), secs(60));
+    // An app opens: its floor and allowance as before, nothing of the idle guest's carried over.
+    reclaimer.tasks_seen(secs(45), 1, 1);
+    reclaimer.refaults(300 * MIB);
+    reclaimer.decide_under(secs(45), 1, &guest(200), false);
+    assert_eq!(reclaimer.working_set_target_kb(), 160 * MIB);
 }
 
 #[test]

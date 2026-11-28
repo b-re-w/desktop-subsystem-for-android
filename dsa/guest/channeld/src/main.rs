@@ -611,11 +611,20 @@ mod daemon {
                 );
             }
             let vmstat = vmstat.ok();
+            let backoff_before = reclaimer.trim_backoff();
             if let Some(refaults) = vmstat
                 .as_deref()
                 .and_then(|text| file_refaults_kb(text, page_kb))
             {
                 reclaimer.refaults(refaults);
+            }
+            if reclaimer.trim_backoff() > backoff_before {
+                say!(
+                    "the last trim is being read back ({tasks} tasks in use): the next trim waits \
+                     {} s after it, working set target {} MiB",
+                    reclaimer.trim_backoff().as_secs(),
+                    reclaimer.working_set_target_kb() / 1024
+                );
             }
             if reclaimer.learns_working_set() != learnt_before {
                 say!(

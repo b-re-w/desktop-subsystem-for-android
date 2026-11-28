@@ -40,9 +40,10 @@
 //! working set, so it is not counted ([`Reclaimer::booted`]). Nor is what an app reads back in
 //! the first minute after its task appears ([`ReclaimPolicy::launch_settle`]): its APK, its
 //! compiled code and the Google Play services files it starts with are read once, not over and
-//! over. With no task in use there is no app to keep cache for, so the target stays at its
-//! floor; each task whose window is shown may raise it by a little, and a minimized one by less
-//! ([`Reclaimer::tasks_seen`]).
+//! over. With no task in use there is no app to keep cache for, so the target stays near its
+//! floor: only trims the system reads back raise it, up to
+//! [`ReclaimPolicy::idle_keep_cache_max_kb`]. Each task whose window is shown may raise it by a
+//! little, and a minimized one by less ([`Reclaimer::tasks_seen`]).
 //!
 //! A trim whose cache comes straight back was taken from the apps' working set, and trimming it
 //! again only makes them read it again: on the owner's PC, with YouTube and FLO shown, a trim
@@ -50,9 +51,12 @@
 //! average page cache stayed where it was. So such a trim sets the target to what it left plus
 //! what came back, past the shown tasks' allowance if need be (never past
 //! [`ReclaimPolicy::keep_cache_max_kb`]), and the next trim waits longer, doubling each time
-//! ([`ReclaimPolicy::refault_backoff_min`]). The first trim nobody reads back ends the wait and
-//! starts the target back down, and cache past [`ReclaimPolicy::backoff_ceiling_kb`] is trimmed
-//! whatever the wait. While a window is shown the trim takes page cache only
+//! ([`ReclaimPolicy::refault_backoff_min`]). The wait holds from the first trim, with no app
+//! open as with apps, and while Android boots and settles: with no app open on the owner's PC
+//! (1.0.1-dev.39) a trim ran on every look in the 90 s after the boot, and 2.2 GB of what they
+//! took was read back. The first trim nobody reads back ends the wait and starts the target
+//! back down, and cache past [`ReclaimPolicy::backoff_ceiling_kb`] is trimmed whatever the
+//! wait. While a window is shown the trim takes page cache only
 //! ([`Reclaimer::trim_swappiness`]).
 //!
 //! This module is the decision alone, so it runs and is tested on any platform; the daemon
@@ -416,7 +420,8 @@ pub struct ReclaimPolicy {
     /// system_server and SurfaceFlinger read back. The 256 MiB this was before kept the cold
     /// part too.
     pub keep_cache_kb: u64,
-    /// The same while no task is in use, in KiB: the target then stays at it.
+    /// The same while no task is in use, in KiB: the target then starts at it and falls back to
+    /// it, and only trims read back raise it ([`ReclaimPolicy::idle_keep_cache_max_kb`]).
     ///
     /// 64 MiB: on the owner's PC (1.0.1-dev.37), with no app open, a floor of 160 MiB kept the
     /// page cache between 160 and 224 MiB between idle reclaims, while an idle reclaim leaves 25
@@ -425,6 +430,16 @@ pub struct ReclaimPolicy {
     /// cache too. With no app there is no working set to keep: what the trim takes is mostly
     /// what background work read once.
     pub idle_keep_cache_kb: u64,
+    /// The most the working set target rises to while no task is in use, in KiB, when trims
+    /// are read back. 160 MiB, the floor with a task in use: a guest with no app keeps no more
+    /// page cache than one with an app.
+    ///
+    /// On the owner's PC (1.0.1-dev.39), with no app open, the target held at the 64 MiB floor
+    /// and trims every 5 to 20 s took files the system read straight back (56 to 594 MiB before
+    /// the next trim, 2.2 GB in the 90 s after the boot), while the page cache sat near 100 MiB
+    /// anyway. What a trim with no app open finds read back now raises the target as it does for
+    /// an app, up to this.
+    pub idle_keep_cache_max_kb: u64,
     /// The most the working set target rises to, in KiB, however often evicted files are read
     /// back and however many tasks are in use. 768 MiB is the floor and the allowance of six
     /// shown tasks ([`ReclaimPolicy::task_cache_kb`]): beyond that, an app's files are
@@ -509,6 +524,7 @@ impl Default for ReclaimPolicy {
             trim_gap: Duration::ZERO,
             keep_cache_kb: 160 * 1024,
             idle_keep_cache_kb: 64 * 1024,
+            idle_keep_cache_max_kb: 160 * 1024,
             keep_cache_max_kb: 768 * 1024,
             min_trim_kb: 64 * 1024,
             max_trim_kb: u64::MAX,
@@ -602,12 +618,13 @@ pub struct Reclaimer {
     /// How long the next trim waits after the last, while trims keep coming back
     /// ([`ReclaimPolicy::refault_backoff_min`]). Zero when they do not.
     backoff: Duration,
-    /// The last trim while tasks were in use not yet found read back, for the wait: the refault
-    /// count when it ran and what it took, in KiB. Unlike `trim_mark` it is judged during a
-    /// launch and while Android settles after its boot too. What comes back then does not raise
-    /// the target, since it is read once, but trimming it again on the next look makes the app
-    /// read it a third time: on the owner's PC Settings alone, still starting, was trimmed
-    /// every 10 s.
+    /// The last trim not yet found read back, for the wait: the refault count when it ran and
+    /// what it took, in KiB. Unlike `trim_mark` it is judged during a launch and while Android
+    /// settles after its boot too, with tasks in use or none. What comes back then does not
+    /// raise the target, since it is read once, but trimming it again on the next look makes it
+    /// read a third time: on the owner's PC Settings alone, still starting, was trimmed every
+    /// 10 s, and with no app open, in the 90 s after the boot, a trim ran on every look and
+    /// 2.2 GB of what they took was read back.
     backoff_mark: Option<(u64, u64)>,
 }
 
@@ -794,14 +811,15 @@ impl Reclaimer {
     /// Holds the target and its floor to what `tasks` tasks in use may keep: `keep_cache_kb`,
     /// [`ReclaimPolicy::task_cache_kb`] for each shown and
     /// [`ReclaimPolicy::minimized_task_cache_kb`] for each minimized, or what trims read back
-    /// proved they need if that is more; with none in use, `idle_keep_cache_kb`. Neither goes
-    /// below the floor for that many tasks, so the first task after an idle stretch has
-    /// `keep_cache_kb` again.
+    /// proved they need if that is more; with none in use, `idle_keep_cache_kb`, or what trims
+    /// read back proved the idle guest needs, up to [`ReclaimPolicy::idle_keep_cache_max_kb`].
+    /// Neither goes below the floor for that many tasks, so the first task after an idle
+    /// stretch has `keep_cache_kb` again.
     fn cap_to_tasks(&mut self, tasks: usize) {
         let p = self.policy;
         let keep = self.keep_kb(tasks);
         let cap = if tasks == 0 {
-            keep
+            self.proven_kb.min(p.idle_keep_cache_max_kb).max(keep)
         } else {
             let shown = self.shown_tasks.map_or(tasks, |shown| shown.min(tasks));
             let minimized = tasks - shown;
@@ -836,17 +854,15 @@ impl Reclaimer {
     /// Android boots is not judged: what comes back then is the boot reading its files. Nor is
     /// one while an app launches, for the same reason.
     ///
-    /// For the wait, a trim with tasks in use is judged during a launch and the boot's settling
-    /// too (`backoff_mark`); the trim before it, if it never came back, ends the
+    /// For the wait, every trim is judged, with tasks in use or none, during a launch and the
+    /// boot's settling too (`backoff_mark`); the trim before it, if it never came back, ends the
     /// wait.
     fn mark_trim(&mut self, took_kb: u64) {
         self.quiet_looks = 0;
         if self.backoff_mark.take().is_some() {
             self.backoff = Duration::ZERO;
         }
-        if self.last_tasks.unwrap_or(0) > 0 {
-            self.backoff_mark = self.last_refaults_kb.map(|refaults| (refaults, took_kb));
-        }
+        self.backoff_mark = self.last_refaults_kb.map(|refaults| (refaults, took_kb));
         if self.trim_mark.take().is_some() {
             self.step_floor_down();
         }
@@ -902,9 +918,14 @@ impl Reclaimer {
                 let quiet = grown.is_some_and(|g| g.saturating_mul(4) <= p.refault_limit_kb);
                 if (looks >= BOOT_SETTLE_LOOKS && quiet) || looks >= BOOT_SETTLE_MAX_LOOKS {
                     // From here refaults are the apps' own; what the boot taught is dropped,
-                    // and the settling covered any full reclaim's own wait.
+                    // and the settling covered any full reclaim's own wait. The trim's wait is
+                    // kept: it says trims are being read back, which the boot ending does not
+                    // change, and the next trim nobody reads back ends it.
                     self.boot = Boot::Settled;
+                    let (backoff, backoff_mark) = (self.backoff, self.backoff_mark);
                     self.forget_working_set();
+                    self.backoff = backoff;
+                    self.backoff_mark = backoff_mark;
                     self.refault_settle = 0;
                 } else {
                     self.boot = Boot::Settling(looks);
@@ -935,13 +956,18 @@ impl Reclaimer {
                     .floor_kb
                     .max(mark.left_kb.saturating_add(back))
                     .min(p.keep_cache_max_kb);
-                if self.last_tasks.unwrap_or(0) > 0 {
-                    // The tasks in use read back what it took: they need it, allowance or not.
-                    self.proven_kb = self
-                        .proven_kb
-                        .max(mark.left_kb.saturating_add(back))
-                        .min(p.keep_cache_max_kb);
-                }
+                // The tasks in use read back what it took: they need it, allowance or not. With
+                // none in use the system's own background work read it back, and an idle guest
+                // keeps at most `idle_keep_cache_max_kb` for that.
+                let most = if self.last_tasks.unwrap_or(0) > 0 {
+                    p.keep_cache_max_kb
+                } else {
+                    p.idle_keep_cache_max_kb.max(p.idle_keep_cache_kb)
+                };
+                self.proven_kb = self
+                    .proven_kb
+                    .max(mark.left_kb.saturating_add(back))
+                    .min(most);
                 self.target_kb = self.target_kb.max(self.floor_kb);
                 learnt = true;
             }
@@ -1148,7 +1174,8 @@ impl Reclaimer {
             _ => {}
         }
         self.last_tasks = Some(tasks);
-        // With no task in use the target is the floor: no app is reading its files.
+        // With no task in use the target is the floor, raised only by trims read back: no app
+        // is reading its files.
         self.cap_to_tasks(tasks);
         let settled = self
             .tasks_changed
@@ -1216,11 +1243,12 @@ impl Reclaimer {
             && self
                 .last_trim
                 .is_none_or(|last| now.saturating_sub(last) >= self.policy.trim_gap)
-            // With no task in use there is no app to spare reading its files again.
-            && (tasks == 0 || self.backoff_over(now, memory))
+            // With no task in use too: what the system reads back straight after a trim is
+            // read from the disk again, and the trim gives the host nothing that lasts.
+            && self.backoff_over(now, memory)
             && memory.droppable_kb() >= self.target_kb + self.policy.min_trim_kb;
         // Refaults hold the trim back for an app's sake, for a few looks at most; with none in
-        // use there is no working set to protect, and the target is the floor.
+        // use there is no app's working set to protect, and only the trim's wait holds it.
         let held = trim_due
             && self.refaulting
             && tasks > 0
