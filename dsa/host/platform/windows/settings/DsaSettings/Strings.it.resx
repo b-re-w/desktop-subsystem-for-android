@@ -119,7 +119,7 @@ Le finestre delle sue app si chiudono. Riapri le app quando si è avviato.</valu
   </data>
   <data name="UpdateNotice_AndroidRolledBack" xml:space="preserve">
     <value>Android {0} non si è avviato ({1}), quindi è di nuovo in uso Android {2}.
-Android {0} verrà riprovato quando ne uscirà una build più recente o una nuova versione di DSA.</value>
+Android {0} verrà riprovato quando ne uscirà una build più recente o una nuova versione di DSA, oppure quando sceglierai di nuovo la sua versione o selezionerai Controlla ora.</value>
   </data>
   <data name="UpdateNotice_AndroidRolledBackNotReady" xml:space="preserve">
     <value>Android {0} non si è avviato ({1}), quindi è di nuovo in uso Android {2}.
@@ -127,10 +127,20 @@ Android {2} non ha ancora terminato l'avvio ({3}). Avvia di nuovo Android per av
   </data>
   <data name="UpdateNotice_AndroidGaveUp" xml:space="preserve">
     <value>Android {0} non si è avviato ({1}) e non è installata nessun'altra immagine.
-DSA scarica un'altra immagine, se disponibile. La prossima versione di DSA riproverà questa.</value>
+DSA scarica un'altra immagine, se disponibile. Per riprovare questa, scegli la sua versione o seleziona Controlla ora. Anche la prossima versione di DSA la riproverà.</value>
   </data>
   <data name="UpdateNotice_AndroidOnTrial" xml:space="preserve">
     <value>Android {0} resta in prova e non è la causa: {1}</value>
+  </data>
+  <data name="UpdateNotice_AndroidFailedHere" xml:space="preserve">
+    <value>Nessuna immagine di Android installata, perché le immagini disponibili per questo computer non si sono avviate: {0}
+Per riprovare, scegli una versione o seleziona Controlla ora (oppure esegui dsa android use {1}). Se non riesce di nuovo, raccogli i log con dsa logs collect -o dsa-logs.zip e allega il file alla segnalazione.</value>
+  </data>
+  <data name="UpdateNotice_AndroidNoImageAvailable" xml:space="preserve">
+    <value>Nessuna immagine di Android installata e nessuna è ancora disponibile da installare (supportate: Android {0}). DSA continua a controllare.</value>
+  </data>
+  <data name="UpdateNotice_AndroidRetried" xml:space="preserve">
+    <value>Android {0} in precedenza non si è avviato su questo computer e viene riprovato. DSA lo scarica ora e lo usa al prossimo avvio di Android; se non riesce di nuovo, DSA torna indietro.</value>
   </data>
   <data name="UpdateNotice_DsaUpdated" xml:space="preserve">
     <value>DSA è stato aggiornato a {0}.</value>
@@ -2150,6 +2160,9 @@ L'operazione non può essere annullata.</value>
   </data>
   <data name="Android_Unknown" xml:space="preserve">
     <value>Sconosciuto</value>
+  </data>
+  <data name="Android_NoImage" xml:space="preserve">
+    <value>Nessuna immagine di Android installata</value>
   </data>
   <data name="Android_Supported" xml:space="preserve">
     <value>Versioni supportate: Android {0}</value>
