@@ -1,6 +1,6 @@
 # The guest's memory, kept small so the host gets back what the guest is not using.
 #
-# Compressed swap: fstab.dsa declares a zram device as large as the guest's memory at boot. Idle apps'
+# Compressed swap: fstab.dsa declares a zram device half as large as the guest's memory at boot. Idle apps'
 # pages are kept there compressed (about a third of their size) instead of resident, and the
 # memory they leave is free for page reporting to hand back to Hyper-V. When the guest itself
 # runs short, the kernel takes clean page cache before it compresses app memory: swappiness 60,
@@ -116,8 +116,8 @@ on early-boot
 
 # A second zram device for memory the guest gains after boot. fs_mgr sizes zram0 once, from the
 # memory at boot, and a device in use cannot be resized, so a guest that grew would fill zram0
-# with memory still free. When MemTotal outgrows zram0, dsa-channeld sets
-# vendor.dsa.memory.zram_extra to the MiB added (0 when the guest is back), and init starts the
+# with memory still free. When MemTotal outgrows what zram0 was sized for, dsa-channeld sets
+# vendor.dsa.memory.zram_extra to half the MiB added (0 when the guest is back), and init starts the
 # helper, which adds zram1 through zram-control, sizes it, writes its swap header and turns it on
 # below zram0's priority, so zram0 fills first. It takes zram1 off again only once it is empty.
 # It runs as root, which swapon needs, in a domain that may touch only zram (memory.cil).

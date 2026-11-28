@@ -500,7 +500,7 @@ mod daemon {
         let mut failures = ReadFailures::default();
         let mut closed = router.apps_closed();
         // The second zram device's size last asked for, so init is asked only on a change.
-        let mut zram_extra_asked: Option<u64> = None;
+        let mut zram_extra = ZramExtra::default();
         // What /proc/vmstat counted at the last trim, so each trim's line says what was read
         // back and swapped since.
         let mut last_trim_counters: Option<VmCounters> = None;
@@ -536,7 +536,7 @@ mod daemon {
                     return;
                 }
             };
-            ask_for_zram_extra(&memory, &mut zram_extra_asked);
+            ask_for_zram_extra(&memory, &mut zram_extra);
             let tasks = router.tasks_in_use();
             reclaimer.host_short(router.host_memory_low());
             // Pressure stall information is optional in the kernel: unreadable counts as busy.
@@ -675,12 +675,22 @@ mod daemon {
         }
     }
 
+    /// What the daemon has asked of the second zram device and said of the first.
+    #[cfg(target_os = "android")]
+    #[derive(Default)]
+    struct ZramExtra {
+        /// The second device's size last asked for, so init is asked only on a change.
+        asked: Option<u64>,
+        /// zram0's size has been logged.
+        told_zram0: bool,
+    }
+
     /// Asks init for a second zram device when the guest has more memory than zram0 was sized
     /// for at boot, and for none when it is back (see `zram_grow`). zram0 not yet on asks
     /// nothing.
     #[cfg(target_os = "android")]
-    fn ask_for_zram_extra(memory: &dsa_guest_channeld::reclaim::MemInfo, asked: &mut Option<u64>) {
-        use dsa_guest_channeld::zram_grow::{extra_mib, ZRAM_EXTRA_PROPERTY};
+    fn ask_for_zram_extra(memory: &dsa_guest_channeld::reclaim::MemInfo, state: &mut ZramExtra) {
+        use dsa_guest_channeld::zram_grow::{extra_mib, ZRAM_EXTRA_PROPERTY, ZRAM_PERCENT};
         let zram0 = std::fs::read_to_string("/sys/devices/virtual/block/zram0/disksize")
             .ok()
             .and_then(|v| v.trim().parse::<u64>().ok())
@@ -688,7 +698,16 @@ mod daemon {
         if zram0 == 0 {
             return;
         }
+        if !state.told_zram0 {
+            state.told_zram0 = true;
+            say!(
+                "zram0 swaps {} MiB, {ZRAM_PERCENT}% of the memory it was sized for; the guest has {} MiB",
+                zram0 / (1024 * 1024),
+                memory.mem_total_kb / 1024
+            );
+        }
         let target = extra_mib(memory.mem_total_kb, zram0);
+        let asked = &mut state.asked;
         if *asked == Some(target) || (asked.is_none() && target == 0) {
             return;
         }

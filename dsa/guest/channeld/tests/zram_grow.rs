@@ -1,26 +1,36 @@
 //! The second zram device for memory the guest gains after boot.
 
 use dsa_guest_channeld::zram_grow::{
-    extra_mib, step, stored_bytes, swap_header, swapped_on, Step, ZRAM_EXTRA_PROPERTY,
+    extra_mib, step, stored_bytes, swap_header, swapped_on, Step, ZRAM_EXTRA_PROPERTY, ZRAM_PERCENT,
 };
 
 const MIB: u64 = 1024 * 1024;
 
 #[test]
 fn nfr1_memory_added_after_boot_gets_a_second_zram_device() {
-    // Booted with 2 GiB (zram0 the same), grown to 4 GiB.
-    assert_eq!(extra_mib(4096 * 1024, 2048 * MIB), 2048);
-    // Rounded down to 64 MiB steps.
-    assert_eq!(extra_mib((2048 + 1000) * 1024, 2048 * MIB), 960);
+    // Booted with 2 GiB (zram0 half of it), grown to 4 GiB: zram1 swaps half of what was added.
+    assert_eq!(extra_mib(4096 * 1024, 1024 * MIB), 1024);
+    // Rounded down to 64 MiB steps: 1000 MiB added, a 500 MiB device, 448.
+    assert_eq!(extra_mib((2048 + 1000) * 1024, 1024 * MIB), 448);
     assert_eq!(ZRAM_EXTRA_PROPERTY, "vendor.dsa.memory.zram_extra");
 }
 
 #[test]
+fn nfr1_zram0_swaps_half_the_memory_at_boot_and_asks_for_no_second_device_then() {
+    // fstab.dsa sizes zram0 as half of the memory at boot: the boot's own memory is covered,
+    // and no zram1 is asked for until memory is added.
+    assert_eq!(ZRAM_PERCENT, 50);
+    assert_eq!(extra_mib(2048 * 1024, 1024 * MIB), 0);
+    // MemTotal is a little under the VM's size, and fs_mgr sizes zram0 from it.
+    assert_eq!(extra_mib(1_950_000, 1_950_000 * 1024 / 2), 0);
+}
+
+#[test]
 fn nfr1_small_changes_in_memory_ask_for_no_device() {
-    assert_eq!(extra_mib(2048 * 1024, 2048 * MIB), 0);
-    assert_eq!(extra_mib((2048 + 255) * 1024, 2048 * MIB), 0);
+    assert_eq!(extra_mib(2048 * 1024, 1024 * MIB), 0);
+    assert_eq!(extra_mib((2048 + 255) * 1024, 1024 * MIB), 0);
     // A guest smaller than at boot asks for none.
-    assert_eq!(extra_mib(1024 * 1024, 2048 * MIB), 0);
+    assert_eq!(extra_mib(1024 * 1024, 1024 * MIB), 0);
 }
 
 #[test]
