@@ -26,6 +26,7 @@
  * passed, the Vulkan objects of destroyed color buffers, whose GPU work has finished, and the
  * staging buffer once no copy used it for a while). */
 
+#include "dsa_allocation_note.h"
 #include "dsa_gfx_backend.h"
 #include "dsa_gfx_memory.h"
 #include "dsa_graphics_memory.h"
@@ -68,6 +69,11 @@ struct Allocation {
     uint64_t bytes = 0;
     Kind kind = Kind::DeviceLocal;
     Import import = Import::Nothing;
+    /* The host memory type, what the memory is dedicated to, and why it is what it is, for the
+     * list of a guest's allocations (dsa_allocation_note.h). */
+    uint32_t memory_type = 0;
+    dsa::Dedicated dedicated = dsa::Dedicated::Nothing;
+    dsa::AllocationWhy why = dsa::AllocationWhy::RendererOwn;
 };
 
 /* Who a guest process is, as it said on its process pipe. */
@@ -132,6 +138,23 @@ Import imported(const VkMemoryAllocateInfo* info) {
     return Import::Nothing;
 }
 
+/* What the allocation `info` describes is dedicated to: an image, a buffer, or nothing. */
+dsa::Dedicated dedicated_to(const VkMemoryAllocateInfo* info) {
+    for (auto* next = static_cast<const VkBaseInStructure*>(info->pNext); next;
+         next = next->pNext) {
+        if (next->sType == VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO) {
+            const auto* dedicated = reinterpret_cast<const VkMemoryDedicatedAllocateInfo*>(next);
+            if (dedicated->image != VK_NULL_HANDLE) {
+                return dsa::Dedicated::Image;
+            }
+            if (dedicated->buffer != VK_NULL_HANDLE) {
+                return dsa::Dedicated::Buffer;
+            }
+        }
+    }
+    return dsa::Dedicated::Nothing;
+}
+
 /* The guest process the calling render thread serves, or 0 (the renderer's own threads). */
 uint64_t calling_process() {
     gfxstream::RenderThreadInfo* info = gfxstream::RenderThreadInfo::get();
@@ -148,6 +171,8 @@ VKAPI_ATTR VkResult VKAPI_CALL counted_allocate(VkDevice device,
                                                 const VkMemoryAllocateInfo* info,
                                                 const VkAllocationCallbacks* callbacks,
                                                 VkDeviceMemory* memory) {
+    /* Taken whatever happens, so a note never reaches a later allocation on this thread. */
+    const dsa::AllocationWhy why = dsa::takeAllocationNote();
     const DeviceEntries entries = entries_of(device);
     if (!entries.allocate) {
         return VK_ERROR_INITIALIZATION_FAILED;
@@ -159,6 +184,9 @@ VKAPI_ATTR VkResult VKAPI_CALL counted_allocate(VkDevice device,
     Allocation allocation;
     allocation.bytes = info->allocationSize;
     allocation.import = imported(info);
+    allocation.memory_type = info->memoryTypeIndex;
+    allocation.dedicated = dedicated_to(info);
+    allocation.why = why;
     const uint64_t process = calling_process();
     std::lock_guard<std::mutex> lock(s_mutex);
     if (!s_counting) {
@@ -588,6 +616,78 @@ extern "C" DSA_GFX_EXPORT size_t dsa_gfx_describe_color_buffers(char* out, size_
                           ago(b.createdUs).c_str(), ago(b.lastPostUs).c_str());
             text += line;
             text += role + "\t" + creator + "\t" + held + "\n";
+        }
+    }
+    if (out && capacity > 0) {
+        const size_t n = std::min(capacity - 1, text.size());
+        std::memcpy(out, text.data(), n);
+        out[n] = '\0';
+    }
+    return text.size() + 1;
+}
+
+extern "C" DSA_GFX_EXPORT size_t dsa_gfx_describe_guest_allocations(char* out, size_t capacity) {
+    VkEmulation* emu = emulation();
+    const VkDevice own = emu ? emu->getDevice() : VK_NULL_HANDLE;
+    struct Line {
+        VkDevice device;
+        uint64_t device_bytes;
+        Allocation allocation;
+    };
+    std::vector<Line> lines;
+    std::string text;
+    {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        if (!s_counting) {
+            return 0;
+        }
+        std::map<VkDevice, uint64_t> held;
+        for (const auto& [key, allocation] : s_live) {
+            if (key.first != own) {
+                held[key.first] += allocation.bytes;
+            }
+        }
+        uint64_t total = 0;
+        for (const auto& [key, allocation] : s_live) {
+            if (key.first == own) {
+                continue;
+            }
+            lines.push_back({key.first, held[key.first], allocation});
+            total += allocation.bytes;
+        }
+        /* The devices that hold the most first, each device's largest first. */
+        std::sort(lines.begin(), lines.end(), [](const Line& a, const Line& b) {
+            if (a.device_bytes != b.device_bytes) return a.device_bytes > b.device_bytes;
+            if (a.device != b.device) return a.device < b.device;
+            return a.allocation.bytes > b.allocation.bytes;
+        });
+        char line[160];
+        std::snprintf(line, sizeof(line),
+                      "# %zu allocations on %zu guest devices, %.1f MiB. Each line is one "
+                      "vkAllocateMemory on a guest process's device.\n",
+                      lines.size(), held.size(), total / 1048576.0);
+        text += line;
+        text += "device\tprocess\tkind\tbytes\tmemory_type\ttype_flags\tdedicated\twhy\n";
+        for (const Line& entry : lines) {
+            const auto process = s_device_process.find(entry.device);
+            const std::string label = process != s_device_process.end()
+                                          ? process_label_locked(process->second)
+                                          : std::string("?");
+            const char* kind = entry.allocation.kind == Kind::DeviceLocal   ? "GPU-only"
+                               : entry.allocation.kind == Kind::HostVisible ? "CPU-mapped"
+                               : entry.allocation.import == Import::Grant   ? "imported grant"
+                                                                            : "imported";
+            dsa::AllocationRecord record;
+            record.bytes = entry.allocation.bytes;
+            record.memoryType = entry.allocation.memory_type;
+            record.typeFlags = entry.allocation.memory_type < s_types.memoryTypeCount
+                                   ? s_types.memoryTypes[entry.allocation.memory_type].propertyFlags
+                                   : 0;
+            record.dedicated = entry.allocation.dedicated;
+            record.why = entry.allocation.why;
+            std::snprintf(line, sizeof(line), "%p\t", static_cast<void*>(entry.device));
+            text += line;
+            text += label + "\t" + kind + "\t" + dsa::allocationColumns(record) + "\n";
         }
     }
     if (out && capacity > 0) {
