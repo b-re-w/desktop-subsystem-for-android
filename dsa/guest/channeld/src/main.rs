@@ -816,7 +816,7 @@ mod daemon {
     fn write_back_cold_zram(router: Arc<Router>) {
         use dsa_guest_channeld::writeback::{
             day_of, has_backing_device, BackingStat, Day, Run, Writeback, WritebackPolicy,
-            ZramStat, CHECK_INTERVAL, RUN_WAIT_LIMIT, WRITEBACK_AFTER_PROPERTY,
+            ZramStat, CHECK_INTERVAL, PAGE_KB, RUN_WAIT_LIMIT, WRITEBACK_AFTER_PROPERTY,
             WRITEBACK_AGE_PROPERTY, WRITEBACK_DAY_PROPERTY, WRITEBACK_PAGES_PROPERTY,
             WRITEBACK_PROPERTY, ZRAM,
         };
@@ -859,19 +859,27 @@ mod daemon {
             &read_property(WRITEBACK_AGE_PROPERTY),
         );
         let start = std::time::Instant::now();
+        // What zram's backing device took this boot counts against the boot's budget, so a
+        // daemon started again within the boot does not get the budget twice. Earlier boots'
+        // files went with them, and what they wrote counts only against the day's cap.
+        let boot_written = backing_stat().map_or(0, |stat| stat.written_kb / PAGE_KB);
         let mut writeback = Writeback::new(
             policy,
             today(),
             Day::parse(&read_property(WRITEBACK_DAY_PROPERTY)),
-        );
+        )
+        .with_boot_written(boot_written);
         say!(
             "zram writes what no one has used for {} s to its backing file once no app has been \
-             in use for {} s, at most {} MiB a run and {} MiB a day ({} MiB left today)",
+             in use for {} s, at most {} MiB a run, {} MiB a boot and {} MiB a day ({} MiB left \
+             this boot, {} MiB left today)",
             policy.age.as_secs(),
             policy.idle_after.as_secs(),
-            policy.run_pages * 4 / 1024,
-            policy.daily_pages * 4 / 1024,
-            writeback.left_pages() * 4 / 1024
+            policy.run_pages * PAGE_KB / 1024,
+            policy.boot_pages * PAGE_KB / 1024,
+            policy.daily_pages * PAGE_KB / 1024,
+            writeback.boot_left_pages() * PAGE_KB / 1024,
+            writeback.day_left_pages() * PAGE_KB / 1024
         );
         loop {
             thread::sleep(CHECK_INTERVAL);
@@ -902,6 +910,8 @@ mod daemon {
                 backing_before,
                 backing_after: backing_stat().unwrap_or(backing_before),
                 took: began.elapsed(),
+                boot_left_pages: 0,
+                boot_pages: policy.boot_pages,
                 left_pages: 0,
                 daily_pages: policy.daily_pages,
             };
@@ -912,7 +922,8 @@ mod daemon {
             say!(
                 "{}",
                 Run {
-                    left_pages: writeback.left_pages(),
+                    boot_left_pages: writeback.boot_left_pages(),
+                    left_pages: writeback.day_left_pages(),
                     ..run
                 }
                 .line()

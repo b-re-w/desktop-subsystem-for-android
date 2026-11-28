@@ -76,8 +76,9 @@ on property:vendor.dsa.memory.reclaim=1 && property:sys.boot_completed=1
 # (fstab.dsa), so the host keeps disk space for it instead of memory. dsa-channeld sets this
 # only after no app has been open for vendor.dsa.memory.writeback_after seconds, at most every
 # ten minutes, and gives it vendor.dsa.memory.writeback_pages, the 4 KiB pages this run may
-# write: what is left of the day's budget, and at most 32 MiB, so init is busy for a fraction
-# of a second. zram counts the budget down as it writes and stops at zero, and it is set back
+# write: what is left of the boot's budget (512 MiB, the backing file's size, which is made new
+# each boot) and of the day's across boots (2 GiB), and at most 32 MiB, so init is busy for a
+# fraction of a second. zram counts the budget down as it writes and stops at zero, and it is set back
 # to zero afterwards, so nothing else writes. Only pages untouched for
 # vendor.dsa.memory.writeback_age seconds are marked idle (zram keeps when each page was last
 # read or written, and compressing one again with zstd is not a use). Incompressible pages go

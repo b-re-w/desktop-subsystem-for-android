@@ -32,7 +32,7 @@
 # which costs the host disk space instead of memory. Writing wears the user's disk, so zram
 # writes nothing until dsa-channeld hands it a budget: with the limit on and no budget, a
 # writeback writes nothing. The daemon writes back only while no app is open, only pages no one
-# has used for vendor.dsa.memory.writeback_age seconds, and within a daily budget
+# has used for vendor.dsa.memory.writeback_age seconds, and within a budget for the boot and the day
 # (dsa-channeld.rc). The boot can set both times (androidboot.dsa.zram_writeback_after and
 # androidboot.dsa.zram_writeback_age), for a check that cannot wait for the defaults.
 #
