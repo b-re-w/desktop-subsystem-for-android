@@ -920,6 +920,13 @@ impl UserAndroid for UpdatingAndroid {
     }
     fn last_reason(&self) -> Option<String> {
         if self.no_image_yet() {
+            // A computer whose virtualization is off cannot run any image: that is what the
+            // user has to fix first, while the image downloads.
+            let own = self.session.last_reason().map(|reason| reason.to_string());
+            if let Some(own) = own.filter(|reason| crate::start_failure::virtualization_off(reason))
+            {
+                return Some(own);
+            }
             return Some(NO_IMAGE_YET.into());
         }
         if let Some(StopReason::GuestFromOtherRelease(why)) = self.session.last_reason() {

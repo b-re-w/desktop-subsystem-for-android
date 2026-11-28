@@ -1157,6 +1157,163 @@ fn fr14_a_host_failure_of_an_earlier_start_does_not_excuse_the_next_trial() {
     assert_eq!(state.failed, ["16.0.2"]);
 }
 
+/// What the Windows host's start says when its hypervisor service refuses the VM on all three
+/// attempts (with the memory shared for graphics, without it, and without the memory for
+/// decoded video pictures) because no hypervisor runs, as the logs of #1065 show it.
+const REFUSED_WITHOUT_HYPERVISOR: &str = "HcsCreateComputeSystem failed (HRESULT 0x80370102): \
+    {\"Error\":-2143878910,\"ErrorMessage\":\"The virtual machine could not be started because \
+    a required feature is not installed.\",\"ErrorEvents\":[{\"Message\":\"Cannot create system \
+    'dsa-android' since Hyper-V is not installed on the host.\",\"EventId\":11008}]} (on all 3 \
+    attempts, with and without shared memory)";
+
+/// A computer whose virtualization is off: every start is refused before the guest runs.
+struct VirtualizationOff {
+    /// What the launcher says about the side of its failure. A launcher that cannot tell
+    /// says the guest's; the refusal still says it was the host's.
+    side: FailureSide,
+    /// The starts asked of it.
+    starts: Arc<AtomicU32>,
+}
+
+impl GuestLauncher for VirtualizationOff {
+    fn start(&mut self, _: &BootSecret) -> Result<(), String> {
+        self.starts.fetch_add(1, Ordering::SeqCst);
+        Err(REFUSED_WITHOUT_HYPERVISOR.into())
+    }
+    fn stop(&mut self, _: Duration) -> Result<(), String> {
+        Ok(())
+    }
+    fn failure_side(&mut self) -> FailureSide {
+        self.side
+    }
+}
+
+/// A user's Android over `store` on a computer whose virtualization is off.
+fn android_without_virtualization(
+    store: &Arc<ImageStore>,
+    side: FailureSide,
+) -> (UpdatingAndroid, Arc<AtomicU32>) {
+    let starts = Arc::new(AtomicU32::new(0));
+    let (listener, _connector) = memory::pair();
+    let session = Arc::new(Session::new(
+        VirtualizationOff {
+            side,
+            starts: Arc::clone(&starts),
+        },
+        Box::new(listener),
+        ControlHandshake::new("test host", WAIT),
+        SessionConfig {
+            connect_timeout: WAIT,
+            stop_timeout: WAIT,
+            ..SessionConfig::default()
+        },
+    ));
+    (
+        UpdatingAndroid {
+            session,
+            store: Arc::clone(store),
+            notices: Arc::new(UpdateNotices::default()),
+            boot_timeout: Duration::from_secs(5),
+            trial_running: Arc::new(AtomicBool::new(false)),
+            rollback: Default::default(),
+            image_restart: Default::default(),
+        },
+        starts,
+    )
+}
+
+/// Starts `android` and waits until its trial is over; returns the trial's notice.
+fn trial_over(android: &UpdatingAndroid) -> String {
+    android.start();
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let notice = android.update_notice().unwrap_or_default();
+        if !notice.is_empty() && !android.trial_running.load(Ordering::SeqCst) {
+            return notice;
+        }
+        assert!(Instant::now() < deadline, "the trial did not end: {notice}");
+        thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn fr14_a_computer_with_virtualization_off_keeps_the_new_image_on_trial() {
+    use dsa_host_core::start_failure::{localized_host_problem, virtualization_off};
+    // #1065 on 1.0.0: an installation without a bundled image downloads Android 17, and its
+    // first start is refused by the host three times over (0x80370102). 1.0.0 put the image on
+    // the failed list and went back to `none`. Both launchers are covered: one that says the
+    // host refused (as the Windows launcher does when no VM was made) and one that cannot tell.
+    for side in [FailureSide::Host, FailureSide::Guest] {
+        let store = store_without_an_image();
+        check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+        assert_eq!(store.state().unwrap().current.version, "17.0.0-1");
+        let (android, starts) = android_without_virtualization(&store, side);
+
+        let notice = trial_over(&android);
+        assert!(
+            notice.contains("17.0.0-1 is kept on trial"),
+            "{side:?}: {notice}"
+        );
+        // The user tries again: the same.
+        trial_over(&android);
+        assert_eq!(starts.load(Ordering::SeqCst), 2, "{side:?}");
+
+        let state = store.state().unwrap();
+        assert_eq!(
+            state.current.version, "17.0.0-1",
+            "{side:?}: the store did not go back"
+        );
+        assert!(state.on_trial, "{side:?}: still on trial");
+        assert!(state.failed.is_empty(), "{side:?}: not on the failed list");
+        assert!(state.failed_reasons.is_empty(), "{side:?}");
+        assert!(store.has_image("17.0.0-1"), "{side:?}: its files are kept");
+        // The next check leaves it there instead of moving on to Android 16.
+        check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+        assert_eq!(
+            store.state().unwrap().current.version,
+            "17.0.0-1",
+            "{side:?}"
+        );
+
+        // The status says virtualization is off, and how to turn it on.
+        assert_eq!(android.state(), SessionState::Stopped);
+        let reason = android.last_reason().unwrap();
+        assert!(virtualization_off(&reason), "{side:?}: {reason}");
+        let shown = localized_host_problem(UiLanguage::English, &reason).unwrap();
+        for words in [
+            "virtualization is off",
+            "Virtual Machine Platform",
+            "hypervisorlaunchtype",
+        ] {
+            assert!(shown.contains(words), "{side:?}: {words:?} in {shown}");
+        }
+    }
+}
+
+#[test]
+fn fr14_virtualization_off_found_at_the_services_start_is_said_before_any_image_is_there() {
+    use dsa_host_core::start_failure::{virtualization_off, HYPERVISOR_NOT_RUNNING};
+    let store = store_without_an_image();
+    let (android, starts) = android_without_virtualization(&store, FailureSide::Host);
+    // Before the service has found anything, the status says no image is there yet.
+    let reason = android.last_reason().unwrap_or_default();
+    assert!(
+        reason.contains("no Android image is installed yet"),
+        "{reason}"
+    );
+    // The service found at its start that no hypervisor runs.
+    android.session.report_host_unready(HYPERVISOR_NOT_RUNNING);
+    for _ in 0..2 {
+        let reason = android.last_reason().unwrap_or_default();
+        assert!(virtualization_off(&reason), "{reason}");
+        assert!(!reason.contains("no Android image"), "{reason}");
+        assert_eq!(android.state(), SessionState::Stopped);
+        // A start while no image is there boots nothing and says the same.
+        android.start();
+    }
+    assert_eq!(starts.load(Ordering::SeqCst), 0);
+}
+
 /// What an installation without a bundled image finds: Android 17 and Android 16 offered.
 fn both_majors() -> MemoryFetch {
     server(

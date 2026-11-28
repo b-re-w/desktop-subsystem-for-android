@@ -403,6 +403,45 @@ fn fr17_dsa_status_gives_each_mapped_code_its_sentence() {
 }
 
 #[test]
+fn fr14_dsa_status_says_virtualization_is_off_and_how_to_turn_it_on() {
+    use dsa_host_core::host_api::Status;
+    use dsa_host_core::start_failure::{host_problem, HYPERVISOR_NOT_RUNNING};
+    // The start the host refused on every attempt, as the session reports it, and the
+    // service's own finding at its start that no hypervisor runs.
+    let refused = "HcsCreateComputeSystem failed (HRESULT 0x80370102): {\"Error\":-2143878910,\
+        \"ErrorMessage\":\"The virtual machine could not be started because a required feature \
+        is not installed.\",\"ErrorEvents\":[{\"Message\":\"Cannot create system 'dsa-android' \
+        since Hyper-V is not installed on the host.\"}]}";
+    for why in [refused, HYPERVISOR_NOT_RUNNING] {
+        let line = dsa_cli::describe(&Status {
+            state: SessionState::Stopped,
+            last_reason: Some(format!("{}\nconsole tail", host_problem(why))),
+            update_notice: None,
+            problem: None,
+            program_update: None,
+        });
+        let first = line.lines().next().unwrap();
+        for words in [
+            "virtualization is off",
+            "VT-x",
+            "AMD-V",
+            "Virtualization: Enabled",
+            "Virtual Machine Platform",
+            "hypervisorlaunchtype",
+            "The Android version in use is kept",
+        ] {
+            assert!(first.contains(words), "{words:?} in {line}");
+        }
+        assert!(!first.contains("no Android image"), "{line}");
+        // The raw account is still there, below the sentence.
+        assert!(
+            line.contains(&format!("details: {}", host_problem(why))),
+            "{line}"
+        );
+    }
+}
+
+#[test]
 fn fr2_dsa_says_what_keeps_a_stalled_android_from_being_ready() {
     use dsa_host_core::host_api::Status;
     let status = Status {
