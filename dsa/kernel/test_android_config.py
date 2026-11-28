@@ -298,6 +298,30 @@ class AndroidKernelConfigTests(unittest.TestCase):
         for option in ["CONFIG_EROFS_FS=y", "CONFIG_F2FS_FS=y"]:
             self.assertIn(option, lines)
 
+    def test_nfr1_kernel_features_android_never_asks_for_are_left_out(self):
+        # Built in by config-wsl on both architectures, resident for the VM's life, and never
+        # used: bionic has no System V IPC or message queues, the guest never hibernates or
+        # kexecs, loads no IMA policy, starts SELinux and not AppArmor, filters with legacy
+        # iptables, has no VXLAN, AF_XDP, CD-ROM or SCSI generic users, and maps no hugetlbfs.
+        lines = fragment_lines(CONFIG)
+        for option in ["SYSVIPC", "POSIX_MQUEUE", "DEVMEM", "HIBERNATION", "KEXEC_FILE", "IMA",
+                       "SECURITY_APPARMOR", "NF_TABLES", "VXLAN", "XDP_SOCKETS", "BLK_DEV_SR",
+                       "CHR_DEV_SG", "HUGETLBFS"]:
+            self.assertIn(f"# CONFIG_{option} is not set", lines)
+        # What Android does use from the same areas stays: wake locks need suspend (not
+        # hibernation), netd needs the legacy tables, and SELinux stays first among the LSMs.
+        for option in ["CONFIG_PM_WAKELOCKS=y", "CONFIG_IP_NF_IPTABLES_LEGACY=y",
+                       "CONFIG_IP6_NF_IPTABLES_LEGACY=y", "CONFIG_IP_NF_NAT=y",
+                       "CONFIG_NETFILTER_XT_TARGET_REDIRECT=y"]:
+            self.assertIn(option, lines)
+        self.assertNotIn("# CONFIG_SUSPEND is not set", lines)
+        self.assertNotIn("# CONFIG_TRANSPARENT_HUGEPAGE is not set", lines)
+        # Every option named here is one both architectures have, so the merged configuration
+        # of each keeps the line; the debug fragment decides none of them.
+        debug = DEBUG_CONFIG.read_text()
+        for option in ["SYSVIPC", "HIBERNATION", "KEXEC_FILE", "HUGETLBFS", "NF_TABLES"]:
+            self.assertNotIn(f"CONFIG_{option}", debug)
+
     def test_nfr1_the_kernel_is_sized_for_a_small_vm_not_any_machine(self):
         # Processor and node counts bound static cpumasks and per-node arrays in every slab
         # cache; config-wsl's 512 CPUs and 1024 nodes cost memory a 4-processor VM never uses.

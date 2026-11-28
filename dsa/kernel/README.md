@@ -185,8 +185,13 @@ in probe order, which changes when the host attaches another disk.
   has 4 processors by default and one node), unmerged slab caches and per-CPU partial slab
   lists, the function tracer's per-function records, the virtual terminals and the
   framebuffer layer (with which vkms also kept an fbdev buffer nobody draws), and, on arm64,
-  KVM. Tracepoints, BTF, kallsyms and `/proc/slabinfo` stay, because atrace, perfetto, netd
-  and the memory measurement use them. `android.config` says why each one goes.
+  KVM. It also leaves out built-in features Android's userspace never asks for: System V IPC
+  and POSIX message queues (bionic has neither), `/dev/mem`, hibernation, kexec, IMA,
+  AppArmor (SELinux is the one major security module), nftables (netd uses the legacy
+  iptables tables), VXLAN, AF_XDP, the SCSI CD-ROM and generic SCSI drivers, and hugetlbfs
+  (ART uses transparent huge pages, which stay). Tracepoints, BTF, kallsyms and
+  `/proc/slabinfo` stay, because atrace, perfetto, netd and the memory measurement use them.
+  `android.config` says why each one goes.
 
 ## The pstore disk
 
