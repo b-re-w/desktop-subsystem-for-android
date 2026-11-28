@@ -389,8 +389,9 @@ pub struct ReclaimPolicy {
     pub idle_growth_kb: u64,
     /// The least time between two working set trims.
     pub trim_gap: Duration,
-    /// The least page cache the working set trim leaves alone, in KiB: warm files of the open
-    /// apps. It is where the working set target starts and the lowest it goes.
+    /// The least page cache the working set trim leaves alone while a task is in use, in KiB:
+    /// warm files of the open apps. It is where the working set target starts and the lowest it
+    /// goes while tasks are in use.
     ///
     /// 160 MiB: in a memory audit of 1.0.1-dev.7, idle after one app had been open, the guest
     /// held 236 MiB of page cache, of which some 110 MiB was on the inactive list, the files
@@ -398,6 +399,15 @@ pub struct ReclaimPolicy {
     /// system_server and SurfaceFlinger read back. The 256 MiB this was before kept the cold
     /// part too.
     pub keep_cache_kb: u64,
+    /// The same while no task is in use, in KiB: the target then stays at it.
+    ///
+    /// 64 MiB: on the owner's PC (1.0.1-dev.37), with no app open, a floor of 160 MiB kept the
+    /// page cache between 160 and 224 MiB between idle reclaims, while an idle reclaim leaves 25
+    /// to 53 MiB, the files the running processes map. The 160 MiB was set before the system
+    /// partitions were mapped straight from the host, when the framework's own files were page
+    /// cache too. With no app there is no working set to keep: what the trim takes is mostly
+    /// what background work read once.
+    pub idle_keep_cache_kb: u64,
     /// The most the working set target rises to, in KiB, however often evicted files are read
     /// back and however many tasks are in use. 768 MiB is the floor and the allowance of six
     /// shown tasks ([`ReclaimPolicy::task_cache_kb`]): beyond that, an app's files are
@@ -421,7 +431,7 @@ pub struct ReclaimPolicy {
     pub host_short_gap: Duration,
     /// How much the working set target may rise above `keep_cache_kb` for each task in use
     /// whose window is shown, in KiB, up to `keep_cache_max_kb`. With no task in use the target
-    /// stays at `keep_cache_kb`: what is read back then is the system's background work, and
+    /// stays at `idle_keep_cache_kb`: what is read back then is the system's background work, and
     /// keeping cache for it is what left some 650 MiB of page cache in an idle guest on the
     /// owner's PC.
     ///
@@ -480,6 +490,7 @@ impl Default for ReclaimPolicy {
             idle_growth_kb: 64 * 1024,
             trim_gap: Duration::ZERO,
             keep_cache_kb: 160 * 1024,
+            idle_keep_cache_kb: 64 * 1024,
             keep_cache_max_kb: 768 * 1024,
             min_trim_kb: 64 * 1024,
             max_trim_kb: u64::MAX,
@@ -736,30 +747,49 @@ impl Reclaimer {
         .min(p.refault_backoff_max);
     }
 
+    /// The least page cache the trim leaves with `tasks` tasks in use:
+    /// [`ReclaimPolicy::keep_cache_kb`] with any, [`ReclaimPolicy::idle_keep_cache_kb`] with
+    /// none.
+    fn keep_kb(&self, tasks: usize) -> u64 {
+        if tasks == 0 {
+            self.policy.idle_keep_cache_kb
+        } else {
+            self.policy.keep_cache_kb
+        }
+    }
+
     /// Holds the target and its floor to what `tasks` tasks in use may keep: `keep_cache_kb`,
     /// [`ReclaimPolicy::task_cache_kb`] for each shown and
     /// [`ReclaimPolicy::minimized_task_cache_kb`] for each minimized, or what trims read back
-    /// proved they need if that is more, so with none in use, the floor.
+    /// proved they need if that is more; with none in use, `idle_keep_cache_kb`. Neither goes
+    /// below the floor for that many tasks, so the first task after an idle stretch has
+    /// `keep_cache_kb` again.
     fn cap_to_tasks(&mut self, tasks: usize) {
         let p = self.policy;
-        let shown = self.shown_tasks.map_or(tasks, |shown| shown.min(tasks));
-        let minimized = tasks - shown;
-        let proven = if tasks > 0 { self.proven_kb } else { 0 };
-        let cap = p
-            .keep_cache_kb
-            .saturating_add(p.task_cache_kb.saturating_mul(shown as u64))
-            .saturating_add(p.minimized_task_cache_kb.saturating_mul(minimized as u64))
-            .max(proven)
-            .min(p.keep_cache_max_kb)
-            .max(p.keep_cache_kb);
-        self.floor_kb = self.floor_kb.min(cap);
-        self.target_kb = self.target_kb.min(cap);
+        let keep = self.keep_kb(tasks);
+        let cap = if tasks == 0 {
+            keep
+        } else {
+            let shown = self.shown_tasks.map_or(tasks, |shown| shown.min(tasks));
+            let minimized = tasks - shown;
+            p.keep_cache_kb
+                .saturating_add(p.task_cache_kb.saturating_mul(shown as u64))
+                .saturating_add(p.minimized_task_cache_kb.saturating_mul(minimized as u64))
+                .max(self.proven_kb)
+                .min(p.keep_cache_max_kb)
+                .max(p.keep_cache_kb)
+        };
+        self.floor_kb = self.floor_kb.min(cap).max(keep);
+        self.target_kb = self.target_kb.min(cap).max(keep);
     }
 
-    /// Steps the floor down toward `keep_cache_kb`: half the way, at least `min_trim_kb`. What
-    /// trims had proven steps down with it.
+    /// Steps the floor down toward the least page cache the trim leaves for the tasks in use
+    /// ([`Reclaimer::keep_kb`]): half the way, at least `min_trim_kb`. What trims had proven
+    /// steps down with it.
     fn step_floor_down(&mut self) {
-        let keep = self.policy.keep_cache_kb;
+        let keep = self
+            .last_tasks
+            .map_or(self.policy.keep_cache_kb, |tasks| self.keep_kb(tasks));
         let step = (self.floor_kb.saturating_sub(keep) / 2).max(self.policy.min_trim_kb);
         self.floor_kb = self.floor_kb.saturating_sub(step).max(keep);
         self.proven_kb = self.proven_kb.min(self.floor_kb);

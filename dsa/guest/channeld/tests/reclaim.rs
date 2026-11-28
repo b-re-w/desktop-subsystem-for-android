@@ -24,11 +24,12 @@ fn memory(free: u64, cached: u64) -> MemInfo {
 }
 
 /// The policy the trim's behaviour is tested with: the defaults, with the page cache sizes these
-/// tests were written for (a 256 MiB floor, 192 MiB for a shown task, 64 for a minimized one).
-/// The default sizes have tests of their own.
+/// tests were written for (a 256 MiB floor with tasks in use and without, 192 MiB for a shown
+/// task, 64 for a minimized one). The default sizes have tests of their own.
 fn sized() -> ReclaimPolicy {
     ReclaimPolicy {
         keep_cache_kb: 256 * MIB,
+        idle_keep_cache_kb: 256 * MIB,
         task_cache_kb: 192 * MIB,
         minimized_task_cache_kb: 64 * MIB,
         ..ReclaimPolicy::default()
@@ -1205,6 +1206,50 @@ fn nfr1_one_shown_app_keeps_at_most_256_mib_of_page_cache() {
     assert_eq!(target_after_refaults_with(policy, 2, 1, 20), 160 + 96 + 32);
     // The cap still holds: six shown tasks reach it, more add nothing.
     assert_eq!(target_after_refaults_with(policy, 7, 7, 40), 768);
+}
+
+#[test]
+fn nfr1_with_no_task_in_use_the_page_cache_floor_is_64_mib() {
+    // The owner's PC, 1.0.1-dev.37, no app open: the trim kept 160 to 224 MiB of page cache
+    // between idle reclaims, a floor set from a memory audit of 1.0.1-dev.7, before the system
+    // partitions were mapped straight from the host. With no app there is no working set to keep
+    // it for; with tasks in use the floor stays where it was.
+    let policy = ReclaimPolicy::default();
+    assert_eq!(policy.idle_keep_cache_kb, 64 * MIB);
+    assert_eq!(policy.keep_cache_kb, 160 * MIB);
+    let with = |cached: u64, anon: u64| MemInfo {
+        anon_pages_kb: anon * MIB,
+        ..memory(3000, cached)
+    };
+    let mut reclaimer = Reclaimer::new(policy);
+    assert_eq!(
+        reclaimer.decide_under(secs(0), 0, &with(400, 300), false),
+        Some(Reason::Idle)
+    );
+    assert_eq!(reclaimer.working_set_target_kb(), 64 * MIB);
+    // Under the floor and a trim's worth above it: kept.
+    assert_eq!(
+        reclaimer.decide_under(secs(5), 0, &with(100, 200), false),
+        None
+    );
+    // Background work reads files back: the trim takes the cache back down to 64 MiB.
+    assert_eq!(
+        reclaimer.decide_under(secs(10), 0, &with(200, 140), false),
+        Some(Reason::Gradual)
+    );
+    assert_eq!(reclaimer.trim_mib(), 200 - 64);
+    // An app opens: its working set gets the floor with tasks in use again, and its allowance.
+    reclaimer.tasks_seen(secs(20), 1, 1);
+    assert_eq!(
+        reclaimer.decide_under(secs(20), 1, &with(200, 300), false),
+        None
+    );
+    assert_eq!(reclaimer.working_set_target_kb(), 160 * MIB);
+    assert_eq!(
+        reclaimer.decide_under(secs(60), 1, &with(250, 300), false),
+        Some(Reason::Gradual)
+    );
+    assert_eq!(reclaimer.trim_mib(), 250 - 160);
 }
 
 #[test]
