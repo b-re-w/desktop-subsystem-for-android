@@ -121,6 +121,8 @@ git -C $GfxstreamDir clean -fdx
 # Without 0048 the renderer's list of the guests' allocations cannot say why host-visible memory
 # was not taken from the graphics memory shared with the guest, and two of those reasons are
 # never logged.
+# Without 0049 the renderer cannot hand back what its command pool grew to, so after an app
+# closes while other windows stay open, that memory stays.
 # A patch that does not apply stops the fetch.
 $PatchDir = Join-Path $RepoRoot "dsa/graphics/patches"
 $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
@@ -167,7 +169,8 @@ $Patches = @(Get-ChildItem -Path $PatchDir -Filter "0001-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0045-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0046-*.patch") +
     @(Get-ChildItem -Path $PatchDir -Filter "0047-*.patch") +
-    @(Get-ChildItem -Path $PatchDir -Filter "0048-*.patch")
+    @(Get-ChildItem -Path $PatchDir -Filter "0048-*.patch") +
+    @(Get-ChildItem -Path $PatchDir -Filter "0049-*.patch")
 foreach ($Patch in $Patches) {
     Write-Host "Applying patch: $($Patch.Name)"
     git -C $GfxstreamDir apply --recount $Patch.FullName

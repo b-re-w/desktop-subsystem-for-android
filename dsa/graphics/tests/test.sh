@@ -108,6 +108,11 @@ mkdir -p "$out"
     "$here/allocation_note_test.cpp" -o "$out/allocation_note_test"
 "$out/allocation_note_test"
 
+# When the renderer trims what a guest's device left behind (patch 0049, dsa_gfx_memory.cpp).
+"$cxx" -std=c++17 -O2 -Wall -Wextra -Werror -I"$here/../include" \
+    "$here/device_gone_trim_test.cpp" -o "$out/device_gone_trim_test"
+"$out/device_gone_trim_test"
+
 # The upstream headers are not ours to warn about.
 upstream=(
     -isystem "$scratch/gfxstream/guest/OpenglSystemCommon"

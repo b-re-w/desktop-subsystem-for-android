@@ -24,9 +24,11 @@
  * And the trim: a thread that, once a second, lets go of what nothing uses any more without
  * waiting for the guest's next call (the color buffers the guest closed whose close delay has
  * passed, the Vulkan objects of destroyed color buffers, whose GPU work has finished, and the
- * staging buffer once no copy used it for a while). */
+ * staging buffer once no copy used it for a while), and, a moment after a guest's device went
+ * away, what that device left in the renderer's command pool and heaps. */
 
 #include "dsa_allocation_note.h"
+#include "dsa_device_gone_trim.h"
 #include "dsa_gfx_backend.h"
 #include "dsa_gfx_memory.h"
 #include "dsa_graphics_memory.h"
@@ -51,6 +53,9 @@
 #include "host-common/logging.h"
 #include "vulkan/VkCommonOperations.h"
 #include "vulkan/VulkanDispatch.h"
+
+/* The embedder's log (dsa_gfx_backend.cpp). */
+void dsa_gfx_log_line(char severity, const char* message);
 
 namespace {
 
@@ -232,10 +237,18 @@ void forget_device(VkDevice device) {
     s_device_process.erase(device);
 }
 
+/* Guest devices that went away, for the trim of what they left behind (dsa_device_gone_trim.h). */
+std::mutex s_gone_mutex;
+dsa::DeviceGoneTrim s_gone;
+
 VKAPI_ATTR void VKAPI_CALL counted_destroy_through_decoder(VkDevice device,
                                                            const VkAllocationCallbacks* callbacks) {
     forget_device(device);
     s_decoder_destroy(device, callbacks);
+    /* Only a guest's device is destroyed through the decoder. The trim thread gives back what
+     * it left once no other device has gone for a moment; nothing waits for it here. */
+    std::lock_guard<std::mutex> lock(s_gone_mutex);
+    s_gone.deviceGone(dsa::DeviceGoneTrim::Clock::now());
 }
 
 VKAPI_ATTR void VKAPI_CALL counted_destroy_through_instance(VkDevice device,
@@ -286,6 +299,46 @@ constexpr std::chrono::seconds kTrimInterval{1};
  * writes uses it every frame and keeps it; a screenshot makes it again in a millisecond. */
 constexpr std::chrono::seconds kStagingIdle{5};
 
+/* Once guest devices went away and no other has gone for a moment: the renderer's command pool
+ * gives back what its command buffers grew to, and the heaps their freed blocks. The working
+ * set is left alone, since windows may be open. The log line says how much private memory it
+ * gave back, which is how to tell on a computer whether the trim is worth its cost. */
+void trim_after_devices_gone() {
+    unsigned gone = 0;
+    {
+        std::lock_guard<std::mutex> lock(s_gone_mutex);
+        if (!s_gone.due(dsa::DeviceGoneTrim::Clock::now())) {
+            return;
+        }
+        gone = s_gone.takeGone();
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const uint64_t before = dsa_gfx_private_bytes();
+    if (VkEmulation* emu = emulation()) {
+        emu->trimCommandPool();
+    }
+    dsa_gfx_compact_heaps();
+    const uint64_t after = dsa_gfx_private_bytes();
+    const double took_ms = std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - started)
+                               .count();
+    char line[320];
+    if (before != 0 && after != 0) {
+        std::snprintf(line, sizeof(line),
+                      "%u guest Vulkan device(s) went away: the renderer trimmed its command pool "
+                      "and compacted its heaps in %.1f ms; private memory %.1f -> %.1f MiB "
+                      "(%.1f MiB given back)",
+                      gone, took_ms, before / 1048576.0, after / 1048576.0,
+                      (static_cast<double>(before) - static_cast<double>(after)) / 1048576.0);
+    } else {
+        std::snprintf(line, sizeof(line),
+                      "%u guest Vulkan device(s) went away: the renderer trimmed its command pool "
+                      "and compacted its heaps in %.1f ms",
+                      gone, took_ms);
+    }
+    dsa_gfx_log_line('N', line);
+}
+
 void trim_run() {
     std::unique_lock<std::mutex> lock(s_trim_mutex);
     while (!s_trim_wake.wait_for(lock, kTrimInterval, [] { return s_trim_stop; })) {
@@ -315,6 +368,9 @@ void trim_run() {
          * still held it: once the guest kernel says it let go, the pages are zeroed and given
          * back here, rather than when the next allocation looks (dsa_graphics_memory.h). */
         dsa::graphicsMemory().reclaim();
+        /* What a guest's device that went away left behind, while windows may still be open:
+         * before, the heaps were compacted only once no task window was left. */
+        trim_after_devices_gone();
         lock.lock();
     }
 }
