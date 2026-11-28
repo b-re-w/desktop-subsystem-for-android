@@ -15,7 +15,7 @@
 //!
 //! Memory the guest no longer uses goes back at once, not over minutes: the first look after
 //! the last task closes reclaims, and while idle every look that finds memory grown back
-//! reclaims again. Dropping caches costs reading those files again later, so the full drop
+//! reclaims again, grown from the least the idle guest was found at since the last reclaim. Dropping caches costs reading those files again later, so the full drop
 //! with tasks open waits for cache to dominate, at most every few minutes.
 //! When the host says it is short of memory, the guest gives back what it can at once, as a
 //! phone's low memory killer would: the agent ends the cached app processes first, and the
@@ -509,7 +509,8 @@ pub struct Reclaimer {
     last_trim: Option<Duration>,
     /// Whether the next look at memory is the first since a reclaim, which sets `idle_floor_kb`.
     measure_floor: bool,
-    /// What was left reclaimable just after the last reclaim, in KiB.
+    /// What was left reclaimable just after the last reclaim, in KiB, and while no task is in
+    /// use, the least any look has found since (see [`Reclaimer::idle_floor_kb`]).
     idle_floor_kb: Option<u64>,
     /// The host said it is short of memory.
     host_short: bool,
@@ -918,6 +919,14 @@ impl Reclaimer {
         self.target_kb
     }
 
+    /// The reclaimable memory the next idle reclaim counts growth from, in KiB: what the look
+    /// after the last reclaim found, or, while no task is in use, the least any look has found
+    /// since. The idle reclaim runs again once the guest holds
+    /// [`ReclaimPolicy::idle_growth_kb`] more than this. `None` before the first reclaim.
+    pub fn idle_floor_kb(&self) -> Option<u64> {
+        self.idle_floor_kb
+    }
+
     /// How much the last [`Reason::Gradual`] asks for, in whole MiB.
     pub fn trim_mib(&self) -> u64 {
         self.trim_kb / 1024
@@ -1061,6 +1070,16 @@ impl Reclaimer {
         if self.measure_floor {
             self.measure_floor = false;
             self.idle_floor_kb = Some(memory.reclaimable_kb());
+        } else if tasks == 0 && self.idle_reclaimed {
+            // The look right after a reclaim may catch the guest busy: after the last app
+            // closes, the processes that start behind it read their files for a few seconds.
+            // Measured there, the floor stood above anything the idle guest grew back to, and
+            // the idle reclaim never ran again in that stretch. So the floor follows the least
+            // the idle guest is found at, and growth counts from there.
+            self.idle_floor_kb =
+                Some(self.idle_floor_kb.map_or(memory.reclaimable_kb(), |floor| {
+                    floor.min(memory.reclaimable_kb())
+                }));
         }
         let worth_it = memory.droppable_kb() >= self.policy.min_droppable_kb;
         let idle_worth_it = memory.reclaimable_kb() >= self.policy.min_droppable_kb;

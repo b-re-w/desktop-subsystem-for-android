@@ -688,6 +688,48 @@ fn nfr2_an_idle_guest_reclaims_again_on_the_next_look_that_finds_memory_grown_ba
 }
 
 #[test]
+fn nfr1_the_idle_reclaim_repeats_after_the_last_app_closes_once_memory_grows_back() {
+    // The owner's PC, 1.0.1-dev.37: FLO, the last app, closed. The first look after the close's
+    // reclaim found Play Store, the permission controller and contacts starting, 671 MiB
+    // reclaimable, and took that as the idle floor. Background work then grew the guest from
+    // 270 to 340 MiB reclaimable, and no idle reclaim ran again for the 16 minutes until the
+    // snapshot: it waited for 671 + 64 MiB.
+    let mut reclaimer = Reclaimer::new(ReclaimPolicy::default());
+    let with = |free: u64, cached: u64, anon: u64| MemInfo {
+        anon_pages_kb: anon * MIB,
+        ..memory(free, cached)
+    };
+    assert_eq!(
+        reclaimer.decide_under(secs(0), 1, &with(2000, 200, 300), false),
+        None
+    );
+    assert_eq!(
+        reclaimer.app_closed(secs(100), 0, &with(2000, 451, 280)),
+        Some(Reason::AppClosed)
+    );
+    // Right after the close: processes starting behind it read their files.
+    assert_eq!(
+        reclaimer.decide_under(secs(105), 0, &with(2600, 443, 228), false),
+        Some(Reason::Gradual)
+    );
+    // They have finished and been trimmed: this is how small the idle guest is.
+    assert_eq!(
+        reclaimer.decide_under(secs(110), 0, &with(3000, 100, 120), false),
+        None
+    );
+    assert_eq!(
+        reclaimer.decide_under(secs(115), 0, &with(3000, 110, 130), false),
+        None
+    );
+    // Memory grows back by more than 64 MiB over that low: the idle reclaim runs again.
+    assert_eq!(
+        reclaimer.decide_under(secs(400), 0, &with(3000, 120, 170), false),
+        Some(Reason::Idle)
+    );
+    assert_eq!(reclaimer.idle_floor_kb(), Some(220 * MIB));
+}
+
+#[test]
 fn nfr2_open_tasks_get_cold_cache_trimmed_on_every_look_it_is_found() {
     use dsa_guest_channeld::reclaim::TRIM_PROPERTY;
     assert!(TRIM_PROPERTY.starts_with("vendor."));
