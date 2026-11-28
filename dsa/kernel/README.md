@@ -80,6 +80,17 @@ never offers those a second time. `patches/page-reporting-rereport.patch` adds
 `page_reporting.rereport`: writing 1 empties the per-CPU free lists and reports every free
 page again. The guest's idle reclaim writes it after it has compacted memory.
 
+The Hyper-V network adapter's driver (`hv_netvsc`) keeps a receive buffer the host copies
+incoming packets into, for as long as the adapter exists. Upstream sizes it at 16 MiB, for a
+server's adapter; `patches/hv-netvsc-desktop-buffers.patch` makes it 4 MiB, about 2400 packets
+of 1500 bytes in flight, or 32 ms of a 1 Gbps download. The send buffer keeps upstream's 1 MiB.
+The command line can give a new adapter another size (`hv_netvsc.recv_buffer_kb=16384` for
+upstream's), so throughput can be compared without another kernel, and the boot log says what
+the adapter holds, such as `receive buffer 4096 KiB (2427 sections of 1728 bytes), send buffer
+1020 KiB (170 sections of 6144 bytes), ring 516 KiB each way for each channel` (the host
+decides the receive sections; the number of channels is the count of `rx-*` queues in
+`/sys/class/net/<adapter>/queues`).
+
 zram writes pages that stay cold for long to a backing file on the guest's data disk
 (`CONFIG_ZRAM_WRITEBACK`), chosen by the time each page was last used
 (`CONFIG_ZRAM_TRACK_ENTRY_ACTIME`). Upstream clears that time when it compresses a page again,

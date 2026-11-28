@@ -574,6 +574,26 @@ class AndroidKernelConfigTests(unittest.TestCase):
             self.assertEqual(sum(1 for line in body if line[:1] in (" ", "+")), new,
                              f"{name}: {hunks[at]}")
 
+    def test_nfr1_the_network_adapter_keeps_a_desktop_sized_receive_buffer(self):
+        # hv_netvsc's receive buffer is guest memory (vmalloc) for as long as the adapter
+        # exists. Upstream's 16 MiB is a server's; a desktop VM behind the host's NAT keeps 4.
+        patch = (PATCHES / "hv-netvsc-desktop-buffers.patch").read_text().replace("\r\n", "\n")
+        self.assertIn("-#define NETVSC_RECEIVE_BUFFER_DEFAULT\t\t(1024 * 1024 * 16)\n", patch)
+        self.assertIn("+#define NETVSC_RECEIVE_BUFFER_DEFAULT\t\t(1024 * 1024 * 4)\n", patch)
+        # The command line can give a new adapter another size (hv_netvsc.recv_buffer_kb), so
+        # throughput can be compared without another kernel; it stays within the host's limits.
+        self.assertIn("+module_param(recv_buffer_kb, uint, 0444);", patch)
+        self.assertIn("+\t\tdev_info->recv_sections = netvsc_default_rx_sections();", patch)
+        self.assertIn("+\treturn clamp_t(u64, sections, NETVSC_MIN_RX_SECTIONS,", patch)
+        # The boot log says what the adapter holds, for the measurement.
+        self.assertIn('+\tnetdev_info(ndev, "receive buffer %u KiB (%u sections of %u bytes), '
+                      'send buffer %u KiB (%u sections of %u bytes), ring %u KiB each way for '
+                      'each channel\\n",', patch)
+        # The send buffer keeps upstream's 1 MiB: the patch does not touch it.
+        self.assertNotIn("NETVSC_SEND_BUFFER_DEFAULT\t\t(1024 * 1024 *", patch)
+        self.assertIn("CONFIG_HYPERV_NET=y", fragment_lines(CONFIG))
+        self.assert_hunks_count_their_lines("hv-netvsc-desktop-buffers.patch")
+
     def test_fr1_binder_device_nodes_are_created_for_android_init(self):
         config = CONFIG.read_text()
         self.assertIn('CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder"', config)
