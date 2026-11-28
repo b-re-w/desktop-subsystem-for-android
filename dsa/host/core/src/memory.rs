@@ -1219,6 +1219,9 @@ pub fn log_memory(
 ///   is freed only when every object in it is, so caches of large objects kept many partly
 ///   used 32 KiB slabs: with no app open, task_struct and kmalloc-4k held 4.5 MiB beyond their
 ///   objects in 8-object slabs. In one-page slabs of one object they hold none.
+/// - `loop.hw_queue_depth=32`: each loop device allocates its whole request pool when it is
+///   made, used or not, and apexd keeps 64 of them. 32 requests instead of 128 take a 16 KiB
+///   block instead of 64 KiB per device, about 3 MiB less in all.
 pub fn guest_boot_memory_cmdline(arch: GuestArch) -> String {
     let swiotlb = match arch {
         GuestArch::X86_64 => "swiotlb=noforce",
@@ -1230,7 +1233,7 @@ pub fn guest_boot_memory_cmdline(arch: GuestArch) -> String {
 /// The settings of [`guest_boot_memory_cmdline`] that are the same for every architecture.
 const GUEST_BOOT_MEMORY_WORDS: &str = "kfence.sample_interval=0 \
      dhash_entries=65536 ihash_entries=32768 thash_entries=16384 uhash_entries=1024 \
-     slab_min_objects=1";
+     slab_min_objects=1 loop.hw_queue_depth=32";
 
 /// The kernel command line word that has the guest compact its memory after each reclaim
 /// and in the background (the image's `dsa-memory.rc` and `dsa-channeld.rc` read it as

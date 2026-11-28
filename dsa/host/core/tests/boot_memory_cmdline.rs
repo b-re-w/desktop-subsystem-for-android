@@ -55,6 +55,16 @@ fn nfr1_slab_caches_of_large_objects_use_one_page_slabs() {
 }
 
 #[test]
+fn nfr1_loop_devices_keep_a_desktop_sized_request_pool() {
+    // apexd keeps 64 loop devices (dev.39's console log), each with a pool of 128 requests
+    // allocated at once whether the device is used or not (a 64 KiB block each). 32 requests
+    // in flight still cover an APEX's reads.
+    for arch in [GuestArch::X86_64, GuestArch::Arm64] {
+        assert_eq!(value_of(arch, "loop.hw_queue_depth"), ["32"], "{arch:?}");
+    }
+}
+
+#[test]
 fn nfr1_both_architectures_size_the_rest_of_the_boot_memory_alike() {
     for arch in [GuestArch::X86_64, GuestArch::Arm64] {
         let words = words(arch);
@@ -65,6 +75,7 @@ fn nfr1_both_architectures_size_the_rest_of_the_boot_memory_alike() {
             "thash_entries=16384",
             "uhash_entries=1024",
             "slab_min_objects=1",
+            "loop.hw_queue_depth=32",
         ] {
             assert_eq!(
                 words.iter().filter(|w| *w == word).count(),
