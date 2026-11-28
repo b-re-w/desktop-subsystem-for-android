@@ -3229,6 +3229,25 @@ class GuestMemoryTests(unittest.TestCase):
             writes = re.findall(r"\(allow dsa_memory_report (\S+) \((\S+) \([^)]*\b(?:write|append)\b", policy)
             self.assertEqual(sorted(writes), [("kmsg_debug_device", "chr_file"), ("kmsg_device", "chr_file")])
 
+    def test_nfr1_the_host_diagnostics_get_the_kernel_memory_report_without_developer_mode(self):
+        # `dsa memory snapshot` carries the report (slab, vmalloc by caller, threads, page tables,
+        # what the processes read and wrote) whether or not developer mode is on: the daemon sets
+        # a property only it and init may set, and init runs the same read-only root report.
+        with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp), channeld=True) as archive:
+            rc = archive.read("VENDOR/etc/init/dsa-channeld.rc").decode().splitlines()
+            trigger = rc.index("on property:vendor.dsa.memory.report=*")
+            self.assertEqual(rc[trigger + 1], "    start dsa_memory_report")
+            contexts = archive.read(make_image.VENDOR_PROPERTY_CONTEXTS).decode()
+            self.assertIn("vendor.dsa.memory.report u:object_r:dsa_memory_prop:s0 exact int", contexts)
+            policy = archive.read("SYSTEM/etc/selinux/plat_sepolicy.cil").decode()
+            setters = re.findall(r"\(allow\s+(\S+)\s+dsa_memory_prop\s+\(\s*property_service\s+\(([^)]*)\)", policy)
+            self.assertEqual({who for who, perms in setters if "set" in perms.split()},
+                             {"dsa_channeld", "vendor_init"})
+            # /proc/<pid>/io is its owner's alone: root reads it with two read-only capabilities.
+            self.assertIn("(allow dsa_memory_report self (capability (dac_read_search sys_ptrace)))", policy)
+            writes = re.findall(r"\(allow dsa_memory_report (\S+) \((\S+) \([^)]*\b(?:write|append)\b", policy)
+            self.assertEqual(sorted(writes), [("kmsg_debug_device", "chr_file"), ("kmsg_device", "chr_file")])
+
     def test_nfr1_an_idle_reclaim_drops_caches_before_swapping_cold_pages_out_and_waits_for_boot(self):
         with tempfile.TemporaryDirectory() as tmp, self._modify(Path(tmp), channeld=True) as archive:
             rc = archive.read("VENDOR/etc/init/dsa-channeld.rc").decode()
