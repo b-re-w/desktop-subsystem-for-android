@@ -1,13 +1,15 @@
-"""Tests for the HWUI patch that lets go of what a window keeps while it draws nothing (0014, in
-libhwui).
+"""Tests for the HWUI patches that let go of what a window keeps while it draws nothing (0014 and
+0015, in libhwui).
 
 DSA shows each task in its own desktop window, so a window the user can see but does not touch
 stays on screen for a long time, and Android trims an app's GPU memory only once its UI is
 hidden. After 30 seconds without a frame, the render thread frees Skia's GPU resources that
-nothing holds and submits once more, waited on, so ANGLE frees what it deferred (0014). Whether
-the patch applies to the pinned source, in order, is checked by
-.github/scripts/framework/check-patches.sh in the framework build; these tests check what it
-changes."""
+nothing holds and submits once more, waited on, so ANGLE frees what it deferred (0014). Each
+window then also lets go of its GPU surface and keeps its native window, which disconnects its
+buffer queue and frees every buffer in it but the one on screen; the next frame makes the
+surface again (0015). Whether the patches apply to the pinned source, in order, is checked by
+.github/scripts/framework/check-patches.sh in the framework build; these tests check what they
+change."""
 
 import unittest
 from pathlib import Path
@@ -18,7 +20,9 @@ VERSIONS = ("android16", "android17")
 COMMITS = {"android16": "45034f0663f960d9ee5fb0a101a4732b71f6e2f4",
            "android17": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d"}
 CACHES = "0014"
+SURFACES = "0015"
 CACHE_MANAGER = "libs/hwui/renderthread/CacheManager.cpp"
+CANVAS_CONTEXT = "libs/hwui/renderthread/CanvasContext.cpp"
 
 
 def patch(android, number):
@@ -126,10 +130,58 @@ class IdleWindowCacheTests(unittest.TestCase):
             self.assertEqual(lines(text, "-"), [], android)
 
 
+class IdleWindowSurfaceTests(unittest.TestCase):
+    def test_nfr1_each_idle_window_lets_go_of_its_surface_before_the_caches_go(self):
+        for android in VERSIONS:
+            text = added(patch(android, SURFACES), CACHE_MANAGER)
+            self.assertIn("if (context->releaseSurfaceWhileIdle()) windows++;", text, android)
+            self.assertIn("let go of the surfaces of %zu windows", text, android)
+
+    def test_nfr1_both_pipelines_destroy_the_surface_and_keep_the_window(self):
+        for android in VERSIONS:
+            gl = added(patch(android, SURFACES), "libs/hwui/pipeline/skia/SkiaOpenGLPipeline.cpp")
+            self.assertIn("if (mHardwareBuffer || !mNativeWindow || mEglSurface == EGL_NO_SURFACE) {", gl, android)
+            self.assertIn("mEglManager.destroySurface(mEglSurface);\n    mEglSurface = EGL_NO_SURFACE;", gl, android)
+            self.assertNotIn("mNativeWindow = nullptr", gl, android)
+            vk = added(patch(android, SURFACES), "libs/hwui/pipeline/skia/SkiaVulkanPipeline.cpp")
+            self.assertIn("if (mHardwareBuffer || !mNativeWindow || !mVkSurface) {", vk, android)
+            self.assertIn("vulkanManager().destroySurface(mVkSurface);\n    mVkSurface = nullptr;", vk, android)
+
+    def test_nfr1_a_pipeline_without_such_a_surface_lets_go_of_nothing(self):
+        for android in VERSIONS:
+            self.assertIn("virtual bool releaseSurfaceWhileIdle() { return false; }",
+                          added(patch(android, SURFACES), "libs/hwui/renderthread/IRenderPipeline.h"), android)
+
+    def test_nfr1_the_next_frame_makes_the_surface_again_and_draws_all_of_the_window(self):
+        for android in VERSIONS:
+            text = added(patch(android, SURFACES), CANVAS_CONTEXT)
+            # A frame the UI thread syncs calls makeCurrent() first; one the render thread draws
+            # on its own (doFrame, prepareAndDraw) does it here.
+            self.assertEqual(text.count("if (mSurfaceReleasedWhileIdle && !makeCurrent()) return;"), 2, android)
+            release = function(text, "bool CanvasContext::releaseSurfaceWhileIdle() {")
+            self.assertIn("mSurfaceReleasedWhileIdle = true;", release, android)
+            self.assertIn("mHaveNewSurface = true;", release, android)
+            self.assertIn("const bool remakesIdleSurface = std::exchange(mSurfaceReleasedWhileIdle, false);",
+                          text, android)
+
+    def test_nfr1_what_the_disconnect_forgot_is_set_on_the_window_again(self):
+        for android in VERSIONS:
+            text = added(patch(android, SURFACES), CANVAS_CONTEXT)
+            self.assertEqual(text.count("setWindowOptions(mNativeSurface->getNativeWindow());"), 2, android)
+            options = function(text, "void CanvasContext::setWindowOptions(ANativeWindow* window) {")
+            self.assertIn("native_window_enable_frame_timestamps(window, true);", options, android)
+            self.assertIn("native_window_set_scaling_mode(window, NATIVE_WINDOW_SCALING_MODE_FREEZE);",
+                          options, android)
+        # Android 17's setupPipelineSurface also turns producer throttling off; Android 16's does not.
+        self.assertIn("native_window_set_producer_throttling_enabled(window, false);",
+                      added(patch("android17", SURFACES), CANVAS_CONTEXT))
+        self.assertNotIn("producer_throttling", patch("android16", SURFACES))
+
+
 class IdleWindowPatchFormTests(unittest.TestCase):
     def test_nfr1_every_hunk_counts_its_lines(self):
         for android in VERSIONS:
-            for number in (CACHES,):
+            for number in (CACHES, SURFACES):
                 for start, old_count, new_count, body in hunks(patch(android, number)):
                     for line in body:
                         self.assertIn(line[:1], (" ", "+", "-"), (android, number, start, line))
@@ -142,16 +194,18 @@ class IdleWindowPatchFormTests(unittest.TestCase):
             self.assertEqual(names, sorted(set(names)), android)
             self.assertIn(f"Applies to frameworks/base at {commit}", patch(android, CACHES), android)
             self.assertIn("after 0013.", patch(android, CACHES), android)
+            self.assertIn(f"Applies to frameworks/base at {commit}", patch(android, SURFACES), android)
+            self.assertIn("after 0014.", patch(android, SURFACES), android)
 
     def test_nfr1_only_libhwui_changes(self):
         for android in VERSIONS:
-            for number in (CACHES,):
+            for number in (CACHES, SURFACES):
                 for path in paths(patch(android, number)):
                     self.assertTrue(path.startswith("libs/hwui/"), (android, number, path))
 
     def test_nfr1_no_em_dash(self):
         for android in VERSIONS:
-            for number in (CACHES,):
+            for number in (CACHES, SURFACES):
                 self.assertNotIn(chr(0x2014), patch(android, number), (android, number))
 
 
