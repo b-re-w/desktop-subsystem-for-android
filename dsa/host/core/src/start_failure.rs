@@ -32,6 +32,15 @@ impl FailureSide {
             FailureSide::Host
         }
     }
+
+    /// The side of a boot that ended, from its console: `Some(printed)` when the console was
+    /// kept, `None` when it could not be kept for this boot. Without a console nothing shows
+    /// that the guest's kernel ran, and a VM process that died at start looks the same as a
+    /// guest that died later, so the image is not blamed: it stays on trial, and the next
+    /// start tries it again.
+    pub fn from_console(printed: Option<bool>) -> FailureSide {
+        FailureSide::from_guest_output(printed.unwrap_or(false))
+    }
 }
 
 /// What a host-side failure's reason starts with, in the session's English account of it

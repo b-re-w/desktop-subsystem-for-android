@@ -878,15 +878,16 @@ impl GuestLauncher for AndroidVmLauncher {
 
     /// A start that returned an error never ran the guest: HCS or HCN refused the VM, or its
     /// files could not be prepared. A VM that ended during boot failed on the host when its
-    /// kernel printed nothing on the console, as when the VM worker process dies at start.
+    /// kernel printed nothing on the console, as when the VM worker process dies at start, and
+    /// when no console could be kept for the boot, since then nothing shows the kernel ran.
     fn failure_side(&mut self) -> FailureSide {
         if self.system.is_none() {
             return FailureSide::Host;
         }
-        FailureSide::from_guest_output(
+        FailureSide::from_console(
             self.console
                 .as_ref()
-                .is_none_or(crate::console_pipe::ConsoleCapture::guest_printed),
+                .map(crate::console_pipe::ConsoleCapture::guest_printed),
         )
     }
 

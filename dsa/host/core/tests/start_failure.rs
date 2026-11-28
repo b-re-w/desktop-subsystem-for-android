@@ -13,6 +13,15 @@ fn fr14_a_guest_that_printed_nothing_failed_on_the_host() {
 }
 
 #[test]
+fn fr14_a_boot_whose_console_was_not_kept_does_not_blame_the_image() {
+    // Without a console nothing shows that the guest's kernel ran: a VM worker that died at
+    // start looks the same as a guest that died later.
+    assert_eq!(FailureSide::from_console(None), FailureSide::Host);
+    assert_eq!(FailureSide::from_console(Some(false)), FailureSide::Host);
+    assert_eq!(FailureSide::from_console(Some(true)), FailureSide::Guest);
+}
+
+#[test]
 fn fr14_a_host_problem_keeps_its_reason() {
     let reason = host_problem("HcsStartComputeSystem failed (HRESULT 0x8007042b)");
     assert_eq!(
