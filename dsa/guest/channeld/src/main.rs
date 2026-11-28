@@ -874,10 +874,15 @@ mod daemon {
                 match page_out(&target) {
                     Ok(done) => {
                         pageout.paged(target.pid, done.after.rss_anon_kb);
+                        // The wait grows while each wake reads back all a pageout took.
+                        let wait = pageout
+                            .interval(target.pid)
+                            .map_or(0, |wait| wait.as_secs());
                         say!(
                             "paged out {} (pid {}, oom_score_adj {}{}) after it woke: resident \
                              anonymous {} -> {} MiB, swapped out {} -> {} MiB, {} MiB asked for, \
-                             {} ranges refused, {} ms",
+                             {} ranges refused, {} ms; the next pageout of it waits at least \
+                             {wait} s",
                             target.name,
                             target.pid,
                             target.oom_score_adj,
