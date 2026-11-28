@@ -103,6 +103,22 @@ impl State {
         self.preset_major
             .filter(|major| self.channel == Channel::Major(*major))
     }
+
+    /// Forgets the failures of the images of Android `major`, so they are downloaded and tried
+    /// again. Returns the versions forgotten.
+    fn forget_failures_of(&mut self, major: u32) -> Vec<String> {
+        let (forgotten, kept): (Vec<String>, Vec<String>) = std::mem::take(&mut self.failed)
+            .into_iter()
+            .partition(|version| versions::major_of_version(version) == Some(major));
+        self.failed = kept;
+        let failed = &self.failed;
+        self.failed_reasons
+            .retain(|version, _| failed.contains(version));
+        if self.failed.is_empty() {
+            self.failed_build = None;
+        }
+        forgotten
+    }
 }
 
 /// The news for a computer fixed to Android `major` once that major lost support.
@@ -448,7 +464,23 @@ impl ImageStore {
     /// Chooses which images this computer takes. A channel that leads to an older major than
     /// the current image is taken only with `erase_data`, since Android cannot read data a
     /// newer major wrote.
+    ///
+    /// A choice is the user asking for that version, so the images of the major it leads to
+    /// that failed to start here are forgotten: the next check downloads them and boots them on
+    /// trial again, rolling back as before when they fail. Only a choice does this; the
+    /// periodic check keeps skipping them. Choosing the version already followed (the settings
+    /// app's Check now) counts as asking again.
     pub fn choose(&self, channel: Channel, erase_data: bool) -> Result<(), ChooseError> {
+        self.choose_retrying(channel, erase_data).map(|_| ())
+    }
+
+    /// [`choose`](Self::choose), returning the versions that failed here before and are now
+    /// tried again.
+    pub fn choose_retrying(
+        &self,
+        channel: Channel,
+        erase_data: bool,
+    ) -> Result<Vec<String>, ChooseError> {
         let store = |e: UpdateError| ChooseError::Store(e.to_string());
         let supported = self.supported_majors().map_err(store)?;
         let list = supported
@@ -478,7 +510,9 @@ impl ImageStore {
         }
         state.channel = channel;
         state.older_allowed = older;
-        self.write_state(&state).map_err(store)
+        let retried = state.forget_failures_of(target);
+        self.write_state(&state).map_err(store)?;
+        Ok(retried)
     }
 
     /// The Android version as a user sees it, reading the build ID and security patch from

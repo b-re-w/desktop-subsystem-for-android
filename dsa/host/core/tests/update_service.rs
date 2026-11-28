@@ -17,9 +17,11 @@ use dsa_host_core::update::manifest::{self, FileEntry, ImageEntry, Manifest, FOR
 use dsa_host_core::update::policy::InstalledImage;
 use dsa_host_core::update::program::ReleaseChannel;
 use dsa_host_core::update::service::{
-    check, check_reporting, next_image_check, Download, UpdateNotices, UpdatingAndroid,
+    check, check_reporting, next_image_check, CheckNow, Download, StoreVersions, UpdateNotices,
+    UpdatingAndroid,
 };
 use dsa_host_core::update::store::{Fetch, ImageStore};
+use dsa_host_core::update::versions::{AndroidVersions, Channel};
 use dsa_host_core::update::UpdateError;
 use dsa_protocol::auth::BootSecret;
 use dsa_protocol::control::Role;
@@ -1246,6 +1248,71 @@ fn fr14_with_no_image_and_none_offered_nothing_says_android_0() {
         !notice.contains("Android 0") && !notice.contains("(none)"),
         "{notice}"
     );
+}
+
+/// A store where both images of [`both_majors`] failed their first boot, as in #1065.
+fn store_where_every_image_failed() -> Arc<ImageStore> {
+    let store = store_without_an_image();
+    for version in ["17.0.0-1", "16.0.0-1"] {
+        check(&store, &both_majors(), "mem://list.json", &trusted()).unwrap();
+        assert_eq!(store.state().unwrap().current.version, version);
+        store
+            .roll_back_because(&format!("{version} does not boot"))
+            .unwrap();
+    }
+    store
+}
+
+fn versions_of(store: &Arc<ImageStore>, check_now: &Arc<CheckNow>) -> StoreVersions {
+    StoreVersions {
+        store: Arc::clone(store),
+        notices: Arc::new(UpdateNotices::default()),
+        check_now: Arc::clone(check_now),
+        shared_by_users: true,
+    }
+}
+
+#[test]
+fn fr14_choosing_a_version_tries_its_failed_images_again() {
+    let store = store_where_every_image_failed();
+    let check_now = Arc::new(CheckNow::default());
+    // "Version to use: Android 16" in the settings app, or `dsa android use 16`.
+    let report = versions_of(&store, &check_now)
+        .choose(Channel::Major(16), false)
+        .unwrap();
+    let state = store.state().unwrap();
+    assert_eq!(
+        state.failed,
+        ["17.0.0-1"],
+        "only the images of the chosen version are tried again"
+    );
+    assert!(!state.failed_reasons.contains_key("16.0.0-1"));
+    let notice = report.notice.unwrap_or_default();
+    assert!(notice.contains("Android 16"), "{notice}");
+    assert!(check_now.take(), "the service checks at once");
+
+    let news = check(&store, &both_majors(), "mem://list.json", &trusted())
+        .unwrap()
+        .unwrap();
+    assert!(news.contains("16.0.0-1 is downloaded"), "{news}");
+    let state = store.state().unwrap();
+    assert_eq!(state.current.version, "16.0.0-1");
+    assert!(state.on_trial, "it boots on trial again, with the rollback");
+}
+
+#[test]
+fn fr14_check_now_on_the_newest_version_tries_its_failed_images_again() {
+    let store = store_where_every_image_failed();
+    let check_now = Arc::new(CheckNow::default());
+    // The settings app's Check now chooses the version already followed: the newest.
+    versions_of(&store, &check_now)
+        .choose(Channel::Latest, false)
+        .unwrap();
+    assert_eq!(store.state().unwrap().failed, ["16.0.0-1"]);
+    let news = check(&store, &both_majors(), "mem://list.json", &trusted())
+        .unwrap()
+        .unwrap();
+    assert!(news.contains("17.0.0-1 is downloaded"), "{news}");
 }
 
 #[test]

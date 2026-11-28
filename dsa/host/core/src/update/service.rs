@@ -105,8 +105,15 @@ impl AndroidVersions for StoreVersions {
     }
 
     fn choose(&self, channel: Channel, erase_data: bool) -> Result<VersionReport, ChooseError> {
-        self.store.choose(channel, erase_data)?;
-        if self.store.switch_pending() {
+        let retried = self.store.choose_retrying(channel, erase_data)?;
+        if !retried.is_empty() {
+            self.notices.set(format!(
+                "Android {} did not start on this computer before and is tried again: the \
+                 service downloads it now, and it boots the next time Android starts (going \
+                 back if it fails again)",
+                retried.join(", ")
+            ));
+        } else if self.store.switch_pending() {
             let report = self.report().map_err(ChooseError::Store)?;
             let notice = format!(
                 "Android {} is chosen; the service downloads it now and it is used the next \
