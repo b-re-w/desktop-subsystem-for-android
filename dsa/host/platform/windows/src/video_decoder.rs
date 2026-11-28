@@ -1158,7 +1158,7 @@ mod system {
     /// and Media Foundation that the open decoders share go with the last of them.
     pub struct MediaFoundationDecoders {
         supported: OnceLock<Vec<CodecSupport>>,
-        log: Box<dyn Fn(&str) + Send + Sync>,
+        log: Arc<dyn Fn(&str) + Send + Sync>,
         /// What the open decoders share, while any is open.
         platform: Mutex<Weak<Platform>>,
         /// A decoder was opened since the last time every one closed.
@@ -1169,6 +1169,50 @@ mod system {
         /// The memory shared with the guest for decoded pictures, while a stream uses it: the
         /// streams of one view share its slots, and the view goes with the last of them.
         picture_slots: Mutex<Weak<PictureSlots>>,
+    }
+
+    /// Unloads the decoder libraries nothing uses any more, once the last decoder has closed,
+    /// and logs which went.
+    ///
+    /// Each decoder is a COM object (Windows' own or the GPU vendor's hardware decoder, such
+    /// as Intel's), and COM keeps a library it loaded for an object until the process asks it
+    /// to free the unused ones: closing the decoder, its device and Media Foundation left the
+    /// libraries and their writable data in the window manager. `CoFreeUnusedLibrariesEx`
+    /// frees those whose `DllCanUnloadNow` says nothing of theirs is alive, which is the only
+    /// safe way: a library the driver loaded for itself is never unloaded here. A free-threaded
+    /// library goes at the second call after its delay, so it is called twice, on a thread of
+    /// its own so the video service does not wait.
+    ///
+    /// The graphics renderer does not decode video: Intel's video acceleration libraries in
+    /// it are loaded by the driver while gfxstream starts its Vulkan device (its log says so),
+    /// and they stay as long as that device does.
+    fn unload_decoder_libraries(log: Arc<dyn Fn(&str) + Send + Sync>) {
+        use windows::Win32::System::Com::{CoFreeUnusedLibrariesEx, CoUninitialize};
+        let _ = std::thread::Builder::new()
+            .name("dsa-wm-video-unload".into())
+            .spawn(move || {
+                let before = crate::renderer::process::loaded_modules();
+                // SAFETY: joins the process's multithreaded apartment, where the decoders'
+                // libraries were loaded; balanced below.
+                let joined = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }.is_ok();
+                for _ in 0..2 {
+                    // SAFETY: frees only the libraries COM loaded that say they may go.
+                    unsafe { CoFreeUnusedLibrariesEx(0, None) };
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                }
+                if joined {
+                    // SAFETY: pairs the successful CoInitializeEx above.
+                    unsafe { CoUninitialize() };
+                }
+                let after = crate::renderer::process::loaded_modules();
+                if let Some(line) = dsa_host_core::loaded_modules::unloaded_line(
+                    "the last video decoder closed",
+                    before,
+                    after,
+                ) {
+                    log(&format!("video: {line}"));
+                }
+            });
     }
 
     /// How long the probe may take before it is given up, and no format is offered.
@@ -1205,7 +1249,7 @@ mod system {
         ) -> MediaFoundationDecoders {
             MediaFoundationDecoders {
                 supported: OnceLock::new(),
-                log,
+                log: Arc::from(log),
                 platform: Mutex::new(Weak::new()),
                 opened: AtomicBool::new(false),
                 let_go: Arc::from(let_go),
@@ -1281,6 +1325,7 @@ mod system {
             (self.log)(
                 "video: the last decoder closed; its GPU device and Media Foundation were let go",
             );
+            unload_decoder_libraries(Arc::clone(&self.log));
             (self.let_go)();
         }
 

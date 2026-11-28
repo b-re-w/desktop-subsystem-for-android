@@ -185,7 +185,7 @@ fn own_memory_kb() -> (Option<u64>, Option<u64>) {
 
 /// The file names of the libraries loaded in this process now, for [`ModuleWatch`]. Empty
 /// when Windows does not list them.
-fn loaded_modules() -> Vec<String> {
+pub(crate) fn loaded_modules() -> Vec<String> {
     // SAFETY: our own process's pseudo handle.
     let process = unsafe { GetCurrentProcess() };
     let mut handles: Vec<HMODULE> = vec![std::ptr::null_mut(); 512];

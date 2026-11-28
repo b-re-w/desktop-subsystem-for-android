@@ -53,9 +53,56 @@ impl ModuleWatch {
     }
 }
 
+/// The log line for the libraries among `before` that are not among `after`, as unloaded
+/// when `stage` ended, in order of name; `None` when none went. Names compare without regard
+/// to case.
+pub fn unloaded_line(
+    stage: &str,
+    before: impl IntoIterator<Item = String>,
+    after: impl IntoIterator<Item = String>,
+) -> Option<String> {
+    let after: BTreeSet<String> = after.into_iter().map(|name| name.to_lowercase()).collect();
+    let mut gone: Vec<String> = before
+        .into_iter()
+        .filter(|name| !after.contains(&name.to_lowercase()))
+        .collect();
+    if gone.is_empty() {
+        return None;
+    }
+    gone.sort_by_key(|name| name.to_lowercase());
+    gone.dedup_by_key(|name| name.to_lowercase());
+    Some(format!(
+        "libraries unloaded once {stage} ({}): {}",
+        gone.len(),
+        gone.join(", ")
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nfr1_the_libraries_a_closed_decoder_left_are_named_when_they_go() {
+        let before = names(&[
+            "dsa-wm.exe",
+            "msmpeg2vdec.dll",
+            "mfx_mft_h264vd_64.dll",
+            "d3d11.dll",
+        ]);
+        let after = names(&["DSA-WM.EXE", "d3d11.dll"]);
+        assert_eq!(
+            unloaded_line("the last video decoder closed", before, after).as_deref(),
+            Some(
+                "libraries unloaded once the last video decoder closed (2): \
+                 mfx_mft_h264vd_64.dll, msmpeg2vdec.dll"
+            )
+        );
+        assert_eq!(
+            unloaded_line("x", names(&["a.dll"]), names(&["A.DLL"])),
+            None
+        );
+    }
 
     fn names(list: &[&str]) -> Vec<String> {
         list.iter().map(|name| name.to_string()).collect()
