@@ -1857,6 +1857,59 @@ pub fn committed_line(c: &CommittedMemory) -> String {
     line
 }
 
+/// What the GPU's own counters say one process uses, in KiB: on Windows the `GPU Process
+/// Memory` performance counters, which count every allocation the process's GPU devices
+/// made, whatever the graphics API.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GpuProcessMemory {
+    /// System memory the GPU uses for the process (Windows: `Shared Usage`).
+    pub shared_kb: u64,
+    /// The GPU's own memory the process uses (Windows: `Dedicated Usage`). An integrated GPU
+    /// has little or none of its own, and its allocations are shared system memory.
+    pub dedicated_kb: u64,
+}
+
+/// One process for [`gpu_process_memory_line`]: what it is, its private commit, and what the
+/// GPU's counters say it uses; `None` for what could not be read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GpuMemoryOf<'a> {
+    pub name: &'a str,
+    pub pid: u32,
+    pub private_kb: Option<u64>,
+    pub gpu: Option<GpuProcessMemory>,
+}
+
+/// The log line that puts the GPU's own count of each process beside its private commit, in
+/// MiB. A GPU allocation the driver keeps outside the process's address space is in the GPU
+/// counters and not in the private commit; on an integrated GPU it is system memory all the
+/// same, so a shared usage much larger than what the process maps write-combined says how
+/// much of the host's memory the private totals leave out.
+pub fn gpu_process_memory_line(processes: &[GpuMemoryOf]) -> String {
+    let show = |kb: Option<u64>| kb.map_or("?".to_string(), |kb| mib(kb).to_string());
+    let parts: Vec<String> = processes
+        .iter()
+        .map(|p| {
+            format!(
+                "{} pid {}: private {} MiB, GPU shared {} MiB, GPU dedicated {} MiB",
+                p.name,
+                p.pid,
+                show(p.private_kb),
+                show(p.gpu.map(|g| g.shared_kb)),
+                show(p.gpu.map(|g| g.dedicated_kb)),
+            )
+        })
+        .collect();
+    format!(
+        "GPU memory beside the private commit (the GPU's own counters; private commit may leave \
+         GPU-only memory out): {}",
+        if parts.is_empty() {
+            "no process".to_string()
+        } else {
+            parts.join("; ")
+        }
+    )
+}
+
 /// How long the window manager waits after the last task window closed before it gives back
 /// the memory it is not using: not at all. Memory no window uses goes back on the trim's next
 /// check, within a second; pages touched again come back from the standby list on their own.

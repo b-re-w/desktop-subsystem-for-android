@@ -1224,6 +1224,55 @@ fn nfr2_the_window_managers_committed_memory_is_broken_down_by_owner() {
 }
 
 #[test]
+fn nfr1_the_gpu_counters_are_logged_beside_the_private_commit() {
+    // Both diagnoses left open whether GPU-only allocations sit outside the private totals: on
+    // an integrated GPU they are system memory either way. The line puts the GPU's own count of
+    // each process beside its private commit, so one log answers it.
+    use dsa_host_core::memory::{gpu_process_memory_line, GpuMemoryOf, GpuProcessMemory};
+    let line = gpu_process_memory_line(&[
+        GpuMemoryOf {
+            name: "window manager",
+            pid: 10,
+            private_kb: Some(53 * MIB),
+            gpu: Some(GpuProcessMemory {
+                shared_kb: 45 * MIB,
+                dedicated_kb: 0,
+            }),
+        },
+        GpuMemoryOf {
+            name: "graphics renderer",
+            pid: 20,
+            private_kb: Some(307 * MIB),
+            gpu: Some(GpuProcessMemory {
+                shared_kb: 112 * MIB,
+                dedicated_kb: 3 * MIB,
+            }),
+        },
+    ]);
+    assert_eq!(
+        line,
+        "GPU memory beside the private commit (the GPU's own counters; private commit may leave \
+         GPU-only memory out): window manager pid 10: private 53 MiB, GPU shared 45 MiB, GPU \
+         dedicated 0 MiB; graphics renderer pid 20: private 307 MiB, GPU shared 112 MiB, GPU \
+         dedicated 3 MiB"
+    );
+    // What could not be read shows as ?, and no process says so.
+    let unknown = gpu_process_memory_line(&[GpuMemoryOf {
+        name: "graphics renderer",
+        pid: 20,
+        private_kb: None,
+        gpu: None,
+    }]);
+    assert!(
+        unknown.ends_with(
+            "graphics renderer pid 20: private ? MiB, GPU shared ? MiB, GPU dedicated ? MiB"
+        ),
+        "{unknown}"
+    );
+    assert!(gpu_process_memory_line(&[]).ends_with(": no process"));
+}
+
+#[test]
 fn nfr1_the_renderers_gpu_memory_is_logged_by_whose_device_it_is_on() {
     use dsa_host_core::renderer::{renderer_owners_line, Allocations, RendererOwners};
     let at = |mib: u64, count: u32| Allocations {
