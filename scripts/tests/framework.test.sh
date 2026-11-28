@@ -16,6 +16,7 @@ uv run dsa/guest/framework/test_forced_density_views_patches.py
 uv run dsa/guest/framework/test_keep_focus_patches.py
 uv run dsa/guest/framework/test_overlay_density_patches.py
 uv run dsa/guest/framework/test_hidden_trim_patches.py
+uv run dsa/guest/framework/test_idle_window_patches.py
 
 out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
