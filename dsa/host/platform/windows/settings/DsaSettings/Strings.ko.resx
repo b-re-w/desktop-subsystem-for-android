@@ -76,7 +76,7 @@
     <value>DSA를 업데이트하고 있습니다. 업데이트가 끝나면 Android를 다시 시작하십시오.</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>가상화가 꺼져 있거나 Hyper-V가 없습니다. 가상 머신 플랫폼을 켠 뒤 PC를 다시 시작하십시오.</value>
+    <value>가상화가 꺼져 있어 이 컴퓨터에서 Android를 실행할 수 없습니다. 쓰던 Android 버전은 그대로 유지됩니다. 다음 세 가지를 확인한 뒤 컴퓨터를 다시 시작하십시오. 1. 컴퓨터의 UEFI/BIOS 설정에서 가상화(Intel VT-x 또는 AMD-V)를 켭니다. 켜져 있으면 작업 관리자의 성능, CPU에 "가상화: 사용"이라고 표시됩니다. 2. Windows 기능 "가상 머신 플랫폼"을 켭니다(Windows 기능 켜기/끄기). 3. 부팅 구성에서 하이퍼바이저가 꺼져 있으면 안 됩니다. bcdedit에 "hypervisorlaunchtype Off"가 보이면 관리자 권한으로 "bcdedit /set hypervisorlaunchtype auto"를 실행합니다.</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows가 Android 가상 머신의 설정을 거부했습니다. DSA를 업데이트하거나 다시 설치하십시오.</value>

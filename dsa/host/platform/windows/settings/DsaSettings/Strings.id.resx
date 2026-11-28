@@ -76,7 +76,7 @@ Jendela aplikasinya ditutup. Buka aplikasi lagi setelah Android selesai dimulai.
     <value>DSA sedang diperbarui. Mulai Android lagi setelah pembaruan selesai.</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>Virtualisasi nonaktif atau Hyper-V tidak ada. Aktifkan Platform Mesin Virtual, lalu mulai ulang PC.</value>
+    <value>Komputer ini tidak dapat menjalankan Android karena virtualisasi mati. Versi Android yang digunakan tetap dipertahankan. Periksa tiga hal ini, lalu mulai ulang komputer: 1. Aktifkan virtualisasi (Intel VT-x atau AMD-V) di pengaturan UEFI/BIOS komputer; jika sudah aktif, Pengelola Tugas menampilkan "Virtualisasi: Diaktifkan" di Kinerja, CPU. 2. Aktifkan fitur Windows "Platform Mesin Virtual" (Aktifkan atau nonaktifkan fitur Windows). 3. Hypervisor tidak boleh dimatikan di konfigurasi boot: jika bcdedit menampilkan "hypervisorlaunchtype Off", jalankan "bcdedit /set hypervisorlaunchtype auto" sebagai administrator.</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows menolak pengaturan untuk mesin virtual Android. Perbarui atau instal ulang DSA.</value>

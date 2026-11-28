@@ -76,7 +76,7 @@
     <value>正在更新 DSA。更新完成后，请再次启动 Android。</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>虚拟化已关闭或缺少 Hyper-V。请开启“虚拟机平台”，然后重启电脑。</value>
+    <value>此电脑的虚拟化已关闭，因此无法运行 Android。正在使用的 Android 版本会保留。请检查以下三项，然后重新启动电脑：1. 在电脑的 UEFI/BIOS 设置中开启虚拟化（Intel VT-x 或 AMD-V）。开启后，任务管理器的“性能”&gt;“CPU”中会显示“虚拟化: 已启用”。2. 开启 Windows 功能“虚拟机平台”（启用或关闭 Windows 功能）。3. 启动配置中不能关闭虚拟机监控程序：如果 bcdedit 显示“hypervisorlaunchtype Off”，请以管理员身份运行“bcdedit /set hypervisorlaunchtype auto”。</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows 拒绝了 Android 虚拟机的设置。请更新或重新安装 DSA。</value>

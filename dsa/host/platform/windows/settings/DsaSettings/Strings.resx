@@ -76,7 +76,7 @@ Its app windows close. Open the apps again once it has started.</value>
     <value>DSA is being updated. Start Android again when the update finishes.</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>Virtualization is off or Hyper-V is missing. Turn on Virtual Machine Platform, then restart the PC.</value>
+    <value>This computer cannot run Android because virtualization is off. The Android version in use is kept. Check these three, then restart the computer: 1. Turn on virtualization (Intel VT-x or AMD-V) in the computer's UEFI/BIOS settings; when it is on, Task Manager shows "Virtualization: Enabled" under Performance, CPU. 2. Turn on the Windows feature "Virtual Machine Platform" (Turn Windows features on or off). 3. The hypervisor must not be turned off in the boot configuration: if bcdedit shows "hypervisorlaunchtype Off", run "bcdedit /set hypervisorlaunchtype auto" as an administrator.</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows refused the settings for Android's virtual machine. Update or reinstall DSA.</value>

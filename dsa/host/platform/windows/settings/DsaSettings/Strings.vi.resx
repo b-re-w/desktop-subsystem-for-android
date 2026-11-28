@@ -76,7 +76,7 @@ Các cửa sổ ứng dụng của nó sẽ đóng. Hãy mở lại ứng dụng
     <value>DSA đang được cập nhật. Hãy khởi động lại Android khi cập nhật xong.</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>Ảo hóa đang tắt hoặc thiếu Hyper-V. Hãy bật Nền tảng Máy ảo, rồi khởi động lại PC.</value>
+    <value>Máy tính này không chạy được Android vì ảo hóa đang tắt. Phiên bản Android đang dùng được giữ nguyên. Hãy kiểm tra ba điều sau rồi khởi động lại máy tính: 1. Bật ảo hóa (Intel VT-x hoặc AMD-V) trong cài đặt UEFI/BIOS của máy tính; khi đã bật, Trình quản lý Tác vụ hiển thị "Ảo hóa: Đã bật" trong Hiệu suất, CPU. 2. Bật tính năng Windows "Nền tảng Máy ảo" (Bật hoặc tắt tính năng Windows). 3. Hypervisor không được tắt trong cấu hình khởi động: nếu bcdedit hiển thị "hypervisorlaunchtype Off", hãy chạy "bcdedit /set hypervisorlaunchtype auto" với quyền quản trị.</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows đã từ chối cài đặt cho máy ảo của Android. Hãy cập nhật hoặc cài đặt lại DSA.</value>

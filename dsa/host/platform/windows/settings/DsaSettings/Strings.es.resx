@@ -76,7 +76,7 @@ Sus ventanas de aplicaciones se cierran. Vuelve a abrir las aplicaciones cuando 
     <value>DSA se está actualizando. Vuelva a iniciar Android cuando termine la actualización.</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>La virtualización está desactivada o falta Hyper-V. Active Plataforma de máquina virtual y reinicie el equipo.</value>
+    <value>Este equipo no puede ejecutar Android porque la virtualización está desactivada. Se conserva la versión de Android en uso. Compruebe estos tres puntos y reinicie el equipo: 1. Active la virtualización (Intel VT-x o AMD-V) en la configuración UEFI/BIOS del equipo; cuando está activada, el Administrador de tareas muestra "Virtualización: Habilitado" en Rendimiento, CPU. 2. Active la característica de Windows "Plataforma de máquina virtual" (Activar o desactivar las características de Windows). 3. El hipervisor no debe estar desactivado en la configuración de arranque: si bcdedit muestra "hypervisorlaunchtype Off", ejecute "bcdedit /set hypervisorlaunchtype auto" como administrador.</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows rechazó la configuración de la máquina virtual de Android. Actualice o reinstale DSA.</value>

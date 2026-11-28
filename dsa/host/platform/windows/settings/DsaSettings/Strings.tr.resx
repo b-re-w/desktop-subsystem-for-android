@@ -76,7 +76,7 @@ Uygulama pencereleri kapanır. Başladıktan sonra uygulamaları yeniden açın.
     <value>DSA güncelleniyor. Güncelleme bitince Android'i yeniden başlatın.</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>Sanallaştırma kapalı veya Hyper-V yok. Sanal Makine Platformu'nu açın, ardından bilgisayarı yeniden başlatın.</value>
+    <value>Sanallaştırma kapalı olduğu için bu bilgisayar Android'i çalıştıramıyor. Kullanılan Android sürümü korunur. Şu üç noktayı denetleyin, ardından bilgisayarı yeniden başlatın: 1. Bilgisayarın UEFI/BIOS ayarlarında sanallaştırmayı (Intel VT-x veya AMD-V) açın; açıkken Görev Yöneticisi Performans, CPU altında "Sanallaştırma: Etkin" gösterir. 2. "Sanal Makine Platformu" Windows özelliğini açın (Windows özelliklerini aç veya kapat). 3. Hipervizör önyükleme yapılandırmasında kapatılmamış olmalıdır: bcdedit "hypervisorlaunchtype Off" gösteriyorsa "bcdedit /set hypervisorlaunchtype auto" komutunu yönetici olarak çalıştırın.</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows, Android'in sanal makinesi için ayarları reddetti. DSA'yı güncelleyin veya yeniden yükleyin.</value>

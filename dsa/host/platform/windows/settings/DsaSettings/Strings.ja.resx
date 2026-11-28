@@ -76,7 +76,7 @@
     <value>DSA を更新しています。更新が終わったら Android を再び開始してください。</value>
   </data>
   <data name="LastReason_Virtualization" xml:space="preserve">
-    <value>仮想化がオフになっているか、Hyper-V がありません。仮想マシン プラットフォームをオンにしてから、PC を再起動してください。</value>
+    <value>仮想化がオフになっているため、このコンピューターで Android を実行できません。使用中の Android のバージョンはそのまま保たれます。次の 3 つを確認してから、コンピューターを再起動してください。1. コンピューターの UEFI/BIOS 設定で仮想化 (Intel VT-x または AMD-V) をオンにします。オンのときは、タスク マネージャーの [パフォーマンス] の CPU に「仮想化: 有効」と表示されます。2. Windows の機能「仮想マシン プラットフォーム」をオンにします ([Windows の機能の有効化または無効化])。3. ブート構成でハイパーバイザーがオフになっていてはいけません。bcdedit に「hypervisorlaunchtype Off」と表示される場合は、管理者として「bcdedit /set hypervisorlaunchtype auto」を実行します。</value>
   </data>
   <data name="LastReason_InvalidConfiguration" xml:space="preserve">
     <value>Windows が Android の仮想マシンの設定を拒否しました。DSA を更新するか、再インストールしてください。</value>
