@@ -523,6 +523,9 @@ pub struct Reclaimer {
     /// What was left reclaimable just after the last reclaim, in KiB, and while no task is in
     /// use, the least any look has found since (see [`Reclaimer::idle_floor_kb`]).
     idle_floor_kb: Option<u64>,
+    /// The floor the last [`Reason::Idle`] counted growth from, when it was a repeat in its idle
+    /// stretch rather than the stretch's first.
+    idle_grew_from_kb: Option<u64>,
     /// The host said it is short of memory.
     host_short: bool,
     /// The page cache the apps are taken to need, in KiB: the working set trim leaves this much.
@@ -636,6 +639,7 @@ impl Reclaimer {
             last_trim: None,
             measure_floor: false,
             idle_floor_kb: None,
+            idle_grew_from_kb: None,
             host_short: false,
             target_kb: policy.keep_cache_kb,
             last_refaults_kb: None,
@@ -957,6 +961,13 @@ impl Reclaimer {
         self.idle_floor_kb
     }
 
+    /// For the log: the floor the last [`Reason::Idle`] counted growth from, in KiB, when it
+    /// repeated an idle stretch's reclaim because memory grew back; `None` for the first of a
+    /// stretch.
+    pub fn idle_grew_from_kb(&self) -> Option<u64> {
+        self.idle_grew_from_kb
+    }
+
     /// How much the last [`Reason::Gradual`] asks for, in whole MiB.
     pub fn trim_mib(&self) -> u64 {
         self.trim_kb / 1024
@@ -1170,6 +1181,7 @@ impl Reclaimer {
         }
         let reason = if (idle_due || idle_grew) && idle_worth_it {
             self.idle_reclaimed = true;
+            self.idle_grew_from_kb = if idle_due { None } else { self.idle_floor_kb };
             Some(Reason::Idle)
         } else if host_short_due {
             self.host_short_reclaimed = true;

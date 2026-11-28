@@ -640,9 +640,19 @@ mod daemon {
                     }
                     RECLAIM_PROPERTY
                 };
+                // A repeat in an idle stretch says what low it grew from, so the log shows how
+                // often the idle reclaim runs again and what each run costs.
+                let repeat = match (reason, reclaimer.idle_grew_from_kb()) {
+                    (Reason::Idle, Some(floor)) => format!(
+                        "; again in this idle stretch, {} MiB reclaimable grown from a low of {} MiB",
+                        memory.reclaimable_kb() / 1024,
+                        floor / 1024
+                    ),
+                    _ => String::new(),
+                };
                 say!(
                     "reclaiming the guest's memory ({reason:?}, {tasks} tasks in use): {} MiB \
-                     droppable and {} MiB anonymous of {} MiB in use",
+                     droppable and {} MiB anonymous of {} MiB in use{repeat}",
                     memory.droppable_kb() / 1024,
                     memory.anon_pages_kb / 1024,
                     memory.used_kb() / 1024

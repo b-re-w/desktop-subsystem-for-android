@@ -728,6 +728,15 @@ fn nfr1_the_idle_reclaim_repeats_after_the_last_app_closes_once_memory_grows_bac
         Some(Reason::Idle)
     );
     assert_eq!(reclaimer.idle_floor_kb(), Some(220 * MIB));
+    // The log says it repeated, and from what.
+    assert_eq!(reclaimer.idle_grew_from_kb(), Some(220 * MIB));
+    // The first idle reclaim of a stretch is no repeat.
+    let mut first = Reclaimer::new(ReclaimPolicy::default());
+    assert_eq!(
+        first.decide_under(secs(0), 0, &with(3000, 400, 300), false),
+        Some(Reason::Idle)
+    );
+    assert_eq!(first.idle_grew_from_kb(), None);
 }
 
 #[test]
