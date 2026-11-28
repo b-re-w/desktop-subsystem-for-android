@@ -1275,7 +1275,8 @@ pub struct MemoryPlan {
 
 /// The memory a VM starts with for a user whose limit is `limit_mb` (0 for automatic):
 /// [`DEFAULT_MEMORY_MB`](crate::host_config::DEFAULT_MEMORY_MB), or the user's limit when it
-/// is smaller.
+/// is smaller. A limit is never taken below [`VM_MEMORY_MIN_MB`], which is above the default
+/// start, so every VM starts at the default and a limit says only how far it grows.
 ///
 /// The VM starts small because the guest kernel keeps its page records for all the memory
 /// it has resident, about 1.6% of it, used or not: a VM made at the computer's size from the
@@ -1285,7 +1286,7 @@ pub fn start_mb(limit_mb: u32) -> u32 {
     let default = crate::host_config::DEFAULT_MEMORY_MB;
     match limit_mb {
         0 => default,
-        limit => limit.clamp(VM_MEMORY_MIN_MB as u32, default),
+        limit => limit.max(VM_MEMORY_MIN_MB as u32).min(default),
     }
 }
 
