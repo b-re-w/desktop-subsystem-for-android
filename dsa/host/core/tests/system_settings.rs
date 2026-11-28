@@ -366,6 +366,63 @@ fn fr30_a_change_to_the_hosts_settings_reaches_android() {
     follower.join().unwrap();
 }
 
+#[test]
+fn fr30_the_resend_of_unchanged_settings_writes_no_log_line() {
+    // dev.40: a fifth of the window manager's last 20,000 log lines were the same "Android
+    // follows" line, written at every resend every 30 s though nothing had changed.
+    let android = Arc::new(Following::default());
+    let (connector, _service) = service(Arc::clone(&android));
+    let host = FakeHostSettings::default();
+    host.change(seoul());
+    let lines = Arc::new(Mutex::new(Vec::<String>::new()));
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let follower = {
+        let (mut source, stop, lines) = (host.clone(), Arc::clone(&stop), Arc::clone(&lines));
+        let mut connector = connector.clone();
+        thread::spawn(move || {
+            dsa_host_core::system_settings::follow_rereading_every(
+                &mut connector,
+                "test",
+                &mut source,
+                &stop,
+                &|line: &str| lines.lock().unwrap().push(line.to_string()),
+                Duration::from_millis(20),
+            )
+        })
+    };
+    // Sent again and again, so a service that restarted still gets them.
+    assert!(android.settings(4).len() >= 4);
+    let follows = |lines: &[String]| {
+        lines
+            .iter()
+            .filter(|l| l.contains("Android follows"))
+            .count()
+    };
+    assert_eq!(
+        follows(&lines.lock().unwrap()),
+        1,
+        "{:?}",
+        lines.lock().unwrap()
+    );
+    // A change is logged.
+    host.change(SystemSettings {
+        dark_mode: false,
+        ..seoul()
+    });
+    let deadline = Instant::now() + WAIT;
+    while follows(&lines.lock().unwrap()) < 2 && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(
+        follows(&lines.lock().unwrap()),
+        2,
+        "{:?}",
+        lines.lock().unwrap()
+    );
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    follower.join().unwrap();
+}
+
 /// Controllers a test plugs in, presses and unplugs, and the rumble they were given.
 #[derive(Clone, Default)]
 struct FakePads {

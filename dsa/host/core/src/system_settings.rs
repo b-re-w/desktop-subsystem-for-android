@@ -219,6 +219,20 @@ pub fn follow(
     stop: &AtomicBool,
     log: &dyn Fn(&str),
 ) {
+    follow_rereading_every(connector, build, source, stop, log, REREAD);
+}
+
+/// [`follow`], reading and sending the settings again every `reread`. The settings go to
+/// `log` only when they differ from those last sent on this connection: the resend of the
+/// same settings wrote the same line every 30 s, a fifth of the window manager's log.
+pub fn follow_rereading_every(
+    connector: &mut dyn Connector,
+    build: &str,
+    source: &mut dyn SystemSettingsSource,
+    stop: &AtomicBool,
+    log: &dyn Fn(&str),
+    reread_every: Duration,
+) {
     let mut warned = false;
     while !stop.load(Ordering::Relaxed) {
         let mut client = match HostApiClient::connect(connector, build, CONNECT_TIMEOUT) {
@@ -239,19 +253,22 @@ pub fn follow(
         let mut last_read = Instant::now();
         let mut changed = true;
         while !stop.load(Ordering::Relaxed) {
-            let reread = last_read.elapsed() >= REREAD;
+            let reread = last_read.elapsed() >= reread_every;
             if changed || reread {
                 last_read = Instant::now();
                 let settings = source.read().checked();
+                let new = told.as_ref() != Some(&settings);
                 // Sent again now and then even when nothing changed: a service that restarted
                 // has none of them.
-                if told.as_ref() != Some(&settings) || reread {
+                if new || reread {
                     if let Err(why) = client.set_system_settings(&settings) {
                         log(&format!(
                             "system settings: the service connection ended: {why}"
                         ));
                         break;
                     }
+                }
+                if new {
                     log(&format!(
                         "system settings: Android follows time zone {:?}, languages {:?}, \
                          {} theme, text size {}%",
